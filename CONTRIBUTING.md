@@ -100,14 +100,80 @@ pnpm --filter @cmdr/desktop tauri dev
 
 Module paths follow the Rust crate structure: `cmdr_lib::mcp`, `cmdr_lib::network`, `cmdr_lib::licensing`, etc.
 
-## Workflow (Claude Code commands)
+## Working with AI agents
 
-These are slash commands for Claude Code (type `/command-name` in the CLI):
+AI agents write almost all of Cmdr's code, and the repo is set up so any agent can do well here. This section helps you
+mirror the maintainer's setup, whether you use Claude Code, Codex, or something else.
 
-- `/plan`: use when starting a feature
-- `/wrap-up`: use before finishing work
-- `/release`: prepare a release (changelog, versioning, roadmap)
-- `/commit-draft`: draft a commit message for staged changes
+### What your agent reads
+
+- **`AGENTS.md`** at the root is the hub, and every project rule lives in it. Claude Code loads it through the root
+  `CLAUDE.md` (a one-line `@AGENTS.md`); Codex, Cursor, and most other agents load it on their own.
+- **Colocated `CLAUDE.md` files** hold each area's must-knows (with a `DETAILS.md` beside each for depth). Claude Code
+  loads them automatically when it touches a directory. Other agents don't, so `AGENTS.md` tells them to read the chain
+  before working in a directory. To confirm yours does, ask it which instruction files it read before its first edit.
+- **Codex specifics**: it reads `AGENTS.md` files only on the path from the repo root to the directory you launch it in,
+  and caps them at 32 KiB in total (`project_doc_max_bytes`). Launch it at the repo root; the root `AGENTS.md` fits
+  comfortably. Setting `project_doc_fallback_filenames = ["CLAUDE.md"]` doesn't help here, since it covers the same
+  root-to-launch-dir path only.
+
+### MCP servers
+
+`.mcp.json` lists three, and Claude Code picks them up from there:
+
+- **`cmdr-dev`** (`http://127.0.0.1:19225/mcp`) and **`cmdr-prod`** (`http://127.0.0.1:19224/mcp`): Cmdr's own MCP
+  server inside a running dev or prod build, for driving the app and reading its state. Every request needs a bearer
+  token: start Cmdr with `CMDR_MCP_TOKEN` exported and send it as `Authorization: Bearer <token>`. Details:
+  `docs/tooling/mcp.md` § Authentication.
+- **`tauri`**: [MCP Server Tauri](https://github.com/hypothesi/mcp-server-tauri), for screenshots, clicks, the DOM, and
+  front-end logs. For `claude-code`, `cursor`, `vscode`, or `windsurf`, there's autoconfig:
+  `npx -y install-mcp @hypothesi/tauri-mcp-server --client <your-client>`.
+
+Codex reads MCP servers from TOML instead: put this in `~/.codex/config.toml`, or in a project `.codex/config.toml`
+(Codex reads that one only after you mark the repo as trusted):
+
+```toml
+[mcp_servers.cmdr-dev]
+url = "http://127.0.0.1:19225/mcp"
+bearer_token_env_var = "CMDR_MCP_TOKEN"
+
+[mcp_servers.cmdr-prod]
+url = "http://127.0.0.1:19224/mcp"
+bearer_token_env_var = "CMDR_MCP_TOKEN"
+
+[mcp_servers.tauri]
+command = "npx"
+args = ["-y", "@hypothesi/tauri-mcp-server"]
+```
+
+For any other client, check its MCP docs ([Claude Desktop](https://docs.anthropic.com/en/docs/agents-and-tools/mcp),
+[Cursor](https://docs.cursor.com/context/model-context-protocol)) and translate the same three entries.
+
+### CodeGraph (optional, recommended)
+
+[CodeGraph](https://github.com/colbymchenry/codegraph) indexes the repo into a local knowledge graph and serves it over
+MCP, so your agent finds symbols, callers, and flows in one call instead of a grep-and-read loop. `AGENTS.md` tells
+agents to use it when it's there.
+
+1. Install it: `npm i -g @colbymchenry/codegraph`.
+2. Wire it into your agent: `codegraph install` detects Claude Code, Codex, Cursor, and others, and registers
+   `codegraph serve --mcp` with each.
+3. Index the repo: `codegraph init` at the repo root (`.codegraph/` is gitignored).
+4. Expose the full tool set, not just `codegraph_explore`: set
+   `CODEGRAPH_MCP_TOOLS=explore,search,callers,callees,impact,node,files,status` in the environment your agent starts
+   MCP servers with.
+
+The maintainer runs a fork with a Tauri IPC resolver
+([upstream PR #878](https://github.com/colbymchenry/codegraph/pull/878)), which links each `#[tauri::command]` to its
+frontend `invoke` callers. Without it, "who calls this command?" comes back empty, so treat an empty callers list as
+"none found" rather than "unused".
+
+### Workflow
+
+- **Work in a git worktree.** `pnpm check` and `pnpm dev` refuse to run in the main clone, so give each task its own
+  worktree under `.claude/worktrees/<slug>` (gitignored). `apps/desktop/CLAUDE.md` covers what a fresh worktree needs.
+- **Releasing** (maintainers): ask your agent to follow `docs/guides/releasing.md`.
+- **A multi-milestone effort**: `docs/guides/multi-agent-refactors.md` is the playbook for planning and running one.
 
 ### Translating the app to a new language
 
@@ -225,41 +291,6 @@ For an universal installer:
 - Then `cd apps/desktop && pnpm tauri build --target universal-apple-darwin` each time.
 - Then the binary is at
   `apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/Cmdr_0.1.0_universal.dmg`
-
-## Agent integration (MCP)
-
-The app uses [MCP Server Tauri](https://github.com/hypothesi/mcp-server-tauri) to let AI assistants (Claude Code,
-Cursor, etc.) control this app: take screenshots, click buttons, read front-end logs, etc. It's quite helpful.
-
-### Setting up your AI assistant
-
-For `claude-code`, `cursor`, `vscode`, or `windsurf`, there is autoconfig available. Run this command in your terminal
-for your specific client: `npx -y install-mcp @hypothesi/tauri-mcp-server --client <your-client>`.
-([source](https://github.com/hypothesi/mcp-server-tauri)).
-
-If the automated setup doesn't work for you, check the MCP documentation for your specific client. For example:
-
-- [Claude Desktop](https://docs.anthropic.com/en/docs/agents-and-tools/mcp)
-- [Cursor](https://docs.cursor.com/context/model-context-protocol)
-- [Antigravity](https://medium.com/google-developer-experts/google-antigravity-custom-mcp-server-integration-to-improve-vibe-coding-f92ddbc1c22d)
-
-This snippet will likely come handy:
-
-```json
-{
-  "mcpServers": {
-    "tauri": {
-      "command": "npx",
-      "args": ["-y", "@hypothesi/tauri-mcp-server"]
-    }
-  }
-}
-```
-
-Or add it via CLI like:
-
-Since the agent shares the context with your IDE/client, enabling the MCP server makes the tools available to the agent
-automatically.
 
 ## Cloudflare access (API server)
 
