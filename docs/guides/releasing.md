@@ -1,8 +1,8 @@
 # Releasing
 
-How to release a new version of Cmdr. An agent runs the whole flow via the `/release` command: it arms `caffeinate`,
-monitors the build, verifies the public surface afterwards, and handles failure recovery. The human's role is to review
-the CHANGELOG draft, confirm the version, and click any macOS permission prompts.
+How to release a new version of Cmdr. An agent runs the whole flow by following § The release procedure: it drafts the
+CHANGELOG, monitors the build, verifies the public surface afterwards, and handles failure recovery. The human's role is
+to review the CHANGELOG draft, confirm the version, and click any macOS permission prompts.
 
 Related guides for the signing and distribution steps: `apple-signing-and-notarization.md` and `homebrew-cask.md`.
 
@@ -56,13 +56,14 @@ the variable alone.
    - The Tauri CLI won't bundle without an updater key once the config has a pubkey, and the archive must still come out
      of the bundler in the shape `ci` mode ships. So each build job makes a throwaway key (a mismatch the bundler only
      warns about) and keeps its signatures on the runner (`uploadUpdaterSignatures: false`).
-3. **On the laptop, `./scripts/release-finish.sh X.Y.Z`** (the `/release` skill starts it right after the push). It
-   waits for that run to go green, downloads the three archives, and runs `gh attestation verify` on each, pinned to
-   `release-pipeline.yml` at the tag's commit (`--signer-digest`, `--source-digest`, `--source-ref`) on a GitHub-hosted
-   runner. It refuses to sign anything that doesn't verify. Then it signs with `tauri signer sign`, the key and password
-   read from sops (`CMDR_TAURI_SIGNING_PRIVATE_KEY`, `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) into the signer's
-   environment only, verifies each new signature against the pubkey in `tauri.conf.json` with its own minisign verifier
-   (the check the app runs), uploads the `.sig` files, reads them back, and dispatches `release.yml` on the tag.
+3. **On the laptop, `./scripts/release-finish.sh X.Y.Z`** (step 8 of § The release procedure starts it right after the
+   push). It waits for that run to go green, downloads the three archives, and runs `gh attestation verify` on each,
+   pinned to `release-pipeline.yml` at the tag's commit (`--signer-digest`, `--source-digest`, `--source-ref`) on a
+   GitHub-hosted runner. It refuses to sign anything that doesn't verify. Then it signs with `tauri signer sign`, the
+   key and password read from sops (`CMDR_TAURI_SIGNING_PRIVATE_KEY`, `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) into
+   the signer's environment only, verifies each new signature against the pubkey in `tauri.conf.json` with its own
+   minisign verifier (the check the app runs), uploads the `.sig` files, reads them back, and dispatches `release.yml`
+   on the tag.
 4. **The dispatched run** finishes it: `guard` (it also refuses a dispatch on a branch), then `publish`, which verifies
    every archive's `.sig` against the app's public key, publishes the draft, and then runs exactly the `ci` mode steps
    (`latest.json` from the `.sig` assets, checksums, release notes, the commit to `main`, the website deploy), then
@@ -110,18 +111,190 @@ is its own proof of origin.
      so the values never reach the shell history or the screen:
      `secret CMDR_TAURI_SIGNING_PRIVATE_KEY | gh secret set TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`,
      then the same for `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD` into `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-  3. Release as usual. The `/release` skill reads the variable and skips `release-finish.sh` in `ci` mode.
+  3. Release as usual. § The release procedure reads the variable and skips `release-finish.sh` in `ci` mode.
 
 ### After the first `local` release ships
 
 The `TAURI_SIGNING_*` secrets stay in the `release` environment until then, so `ci` mode keeps working while the new
 flow proves itself. Until they're gone, `local` mode protects nothing against a leak from GitHub. Once the first `local`
-release has passed the `/release` skill's checks (the manifest, the three archive URLs, the attestations) and an
-installed copy has updated to it:
+release has passed the checks in step 12 of § The release procedure (the manifest, the three archive URLs, the
+attestations) and an installed copy has updated to it:
 
 1. Delete the updater pair from GitHub: `gh secret delete TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`, the
    same for `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. From then on, going back to `ci` takes step 2 of the revert.
 2. Update § Signing secrets and the release-chain bullets in `docs/threat-model.md`, which are phrased for this point.
+
+## The release procedure
+
+1. **Check the prerequisites**: find out who signs the update archives,
+   `gh variable get RELEASE_UPDATE_SIGNING -R vdavid/cmdr` (an error means unset, which is `ci`; § Who signs the update
+   archives).
+   - **`ci`**: run `gh secret list --env release` and verify that `TAURI_SIGNING_PRIVATE_KEY` and
+     `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` both exist. If either is missing, warn the user and stop (§ Switching modes
+     puts them back).
+   - **`local`**: verify the key is readable from sops without printing it:
+     `secret CMDR_TAURI_SIGNING_PRIVATE_KEY > /dev/null && secret CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD > /dev/null`.
+     If it fails, warn the user and stop.
+2. **Push `main` and start the CI gate now**: `git pull --rebase origin main && git push origin main`, then run
+   `./scripts/release-ci-gate.sh` in the background. It starts a full (`run_all`) CI run on the pushed commit and waits
+   for it (~25 min), overlapping it with the drafting below; `release.sh` re-runs it before tagging and aborts unless
+   it's green. If it goes red, fix on `main` (a worktree as usual), push, and restart the gate: the new commit needs its
+   own run, and the changelog hashes stay valid since nothing got rebased. Details: § Release gates that abort before
+   tagging.
+3. **Draft the CHANGELOG** from the git commits since the last release, per § Writing the CHANGELOG, and present the
+   draft for review.
+4. **Self-hosted runner only** (`release-pipeline.yml`'s `build.runs-on` is GitHub-hosted `macos-26` today, so normally
+   skip): right after presenting the draft, read the runner node's Finder Automation `auth_value` per § "`bundle_dmg.sh`
+   hangs ~2 minutes then fails on every matrix job", so a denial surfaces before anything is tagged. `0` blocks the
+   release until fixed; empty or `1` means the user stays at the keyboard to click Allow.
+5. **Apply the roadmap and feature-status updates** (edit the files, don't just advise; the user reviews before
+   committing).
+   - **Roadmap** (`apps/website/src/lib/roadmap.ts`, the milestones; `roadmap.astro` is only the layout): add a dated
+     milestone for each major development this release, and tick off or remove any "coming soon" item that just shipped.
+     Match the existing curation: milestones only, not every release. Group under the month of the actual main
+     development (from the commits), not the release date, adding a new `<h3>` when the month rolls over.
+   - **Feature status** (`feature-status.json` at the repo root, the single source of truth behind the `/features` page
+     and the in-app badges): review every feature against what shipped. Flip `planned` → `alpha` for a feature that just
+     launched, graduate `alpha` → `beta` → `stable` as one matures, and refresh any note the release made stale. Keep
+     notes to one honest line, website voice (no "I"/"we"). Schema and consumers: `docs/feature-status.md`. Graduating
+     `search` or `select-files` out of `alpha` also means updating the pinned assertion in
+     `apps/desktop/src/lib/feature-status.test.ts`. Present the diff for review.
+6. **Advise the version** (patch: bug fixes, minor: new features, major: major launches), and give the user the
+   `./scripts/release.sh x.x.x` command.
+7. **Offer to run the release script**, and wait for confirmation before running it.
+8. **Push immediately** with `git push origin main --tags` IFF the release script completed cleanly. Else: stop and ask.
+   - **`local` mode: start `./scripts/release-finish.sh X.Y.Z` right after the push**, as a background command. It waits
+     for the build run (about an hour), verifies each update archive's provenance, signs on this laptop, uploads the
+     signatures, and dispatches the finishing run that publishes, then waits for that too. It's resumable: if it stops
+     (a red job, a closed laptop), fix the cause and run it again; never sign or publish by hand. Its failure messages
+     map to § `release-finish.sh` stopped. The laptop has to stay on until it ends, so tell the user that instead of the
+     "laptop is free" note in step 10.
+9. **Confirm the build started**: wait ~30 seconds, then run `gh run view <release-run-id> --json jobs` and check the
+   `Build (...)` jobs. On GitHub-hosted runners all three should be `in_progress` together. Self-hosted: see § Keep the
+   Mac awake during the build.
+10. **Monitor the build.** Tell the user their laptop is free (the build runs on GitHub's hardware). Poll `gh run view`
+    every few minutes in the background and report progress (which jobs are done, which are still running). Report when
+    all jobs complete; if one fails, show the failure details and advise how to fix it. Suggest the user also track it
+    at https://github.com/vdavid/cmdr/actions.
+11. **Make the standalone `CI` run happen, then watch it.**
+    - **First, check whether CI is disabled.** David sometimes disables it to save GHA minutes; `gh workflow list --all`
+      then shows `CI` as `disabled_manually` (a push to main won't fire it). CI matters for a release: its
+      `deploy-website` job publishes the roadmap, feature-status, and landing-page changes (the release workflow only
+      refreshes `latest.json`), and the full suite gives a quality signal on the release commit. If it's disabled,
+      re-enable and trigger it: `gh workflow enable CI`, then `gh workflow run CI --ref main` (`run_all` defaults to
+      true). Tell the user, and ask whether they want it left enabled or disabled again after the run.
+    - The pre-tag gate already proved every lane green on the commit before the release commit, so a red run here points
+      at the release commit itself (version bumps, CHANGELOG, visual baselines). It doesn't block the shipped release:
+      fix it in the background, and surface the failure when convenient without interrupting build reporting.
+12. **After the release run succeeds (in `local` mode: after `release-finish.sh` reports the finishing run green),
+    verify the public surface**:
+    - `gh release view vX.Y.Z --json assets,tagName,publishedAt`: confirm the three DMGs are attached
+      (`Cmdr_X.Y.Z_aarch64.dmg`, `_x64.dmg`, `_universal.dmg`) and their sizes look reasonable. Once the installer
+      certificate is set up, `Cmdr_X.Y.Z_universal.pkg` too; until then the `pkg` job skips with a notice (§ The
+      installer package).
+    - Wait ~30 seconds for the website auto-deploy, then `curl -s https://getcmdr.com/latest.json | jq -r .version` and
+      confirm it says `X.Y.Z`. Still the old version after ~2 minutes means the deploy webhook may have failed silently:
+      tell the user (the fix is re-triggering the website-deploy workflow via `workflow_dispatch`), but don't block
+      release success on it, since the GitHub release is what users download.
+    - Confirm the updater payload behind that manifest resolves for all three platform keys:
+      `curl -s https://getcmdr.com/latest.json | jq -r '.platforms[].url' | sort -u | xargs -I{} curl -sIL -o /dev/null -w '%{http_code} {}\n' {}`
+      should print `200` three times. The workflow spells these `.app.tar.gz` names out by hand, so a naming change in
+      `tauri-action` surfaces here and nowhere else until installs stop updating.
+    - Confirm the `attest` job went green (in `local` mode, in both the tag push's run and the finishing run) and the
+      three `.cdx.json` SBOMs are among the assets, then download one DMG and run both `gh attestation verify` commands
+      in § Provenance and SBOM attestations. A red `attest` or `sbom` job doesn't block release success: see § "The
+      attest or sbom job failed".
+    - **First `local` release only**: once the checks above pass and an installed copy has updated to it, hand David the
+      step in § After the first `local` release ships (deleting the updater key from GitHub). Don't delete secrets
+      without David's go-ahead.
+13. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
+    app-directory listings.
+
+## Writing the CHANGELOG
+
+Mechanics, which the release script and the `changelog-links` check depend on:
+
+- **Run `git pull --rebase origin main` before reading a single hash.** `release.sh` pulls too, and when `origin/main`
+  has moved (the release workflow's `latest.json` commit moves it after every release), that rebase rewrites every
+  unpushed commit's hash, stranding the refs you cite. Pulling first makes the script's pull a no-op.
+- **Read every commit's title AND body.** An entry may cite several commits.
+- **Add a `## [Unreleased]` heading** right after the format preamble (before the first versioned section), and put the
+  entries under it. The release script replaces it with the versioned heading, so the committed changelog has no
+  `[Unreleased]` section between releases: you create it fresh each time.
+- **Cite commits as bare hashes in a trailing group**: `- Some change (b626d7a4b, 2d41cc147)`. ❌ Never a markdown link:
+  the website and the What's new popup linkify (or strip) the hashes themselves, and `changelog-links` rejects a
+  `…/commit/<sha>` URL.
+- **Get hashes from `git log --format='%h' --abbrev=9`**, ❌ never by extending a 7-char `--oneline` prefix by guessing.
+  `changelog-links` enforces exactly 9 characters and rejects fabricated hashes, aborting the release either way. git
+  widens `%h` when a prefix would be ambiguous, so a 10-character one means the whole file needs re-deriving one
+  character wider: don't trim it by hand, raise it with David.
+
+**Audience.** One file, two readers:
+
+- **Primary: Cmdr users.** The lead and the Added / Changed / Fixed / Security sections become the GitHub release notes
+  and the in-app "What's new" popup, rendered with hashes stripped and Non-app dropped. Every entry must work
+  standalone, in plain English, with zero internals.
+- **Secondary: David and agents tracing changes**, served by the hashes and the Non-app section. Non-app is the only
+  place internals (tooling, refactors, infra, website) belong, and only the major ones.
+
+**Scope: no inflated fixes.** A changelog is the diff between the last release and this one, not a diary of the work. A
+bug earns a Fixed line only if a USER COULD HAVE HIT IT: the defect existed in the previous release's tree. A bug
+introduced and fixed inside this release window doesn't qualify. `git cat-file -e v<prev>:<path>` helps when in doubt.
+
+**Style: plain-sentence, dense, impact-focused.**
+
+- **Write a short lead** under the `## [Unreleased]` heading, before `### Added`: what this release means for users,
+  naming the highlights. It opens the release notes and the What's new popup, and it's the part most people read. Any
+  CommonMark works (paragraphs, a numbered list of highlights, bullets nested under a highlight with a three-space
+  indent); see recent releases for examples.
+- **File each entry where a user would look for it.** A fix to previously shipped behavior is Fixed even when this
+  release also adds a feature in that area; perf and behavior tweaks are Changed; pure internals go to Non-app. Only
+  Added / Changed / Fixed / Security / Non-app; never invent sections like "Improved".
+- **Each entry is one sentence**, and the headline IS the entry (no `**Bold title:** Body.`). Most land under 20 words,
+  many under 10. Only a tentpole feature bundling many commits (think Linux alpha) runs several lines. Wrote a period
+  and kept going? Merge with a colon or cut the rest.
+- **No trailing benefit clauses**: delete ", so you always know…" and every other ", so [reader benefit]" ending. A
+  well-written entry implies the benefit.
+- **No em-dashes**: use parens, commas, colons, or rephrase (en-dashes in ranges are fine). Vary the connector rather
+  than defaulting to `;`.
+- **Lead with a verb often**: `Add X`, `Fix X`, `Make Y`, `Drop Z`.
+- **Cut aggressively**: strip internal type names, file paths, code fragments, and "why we picked X"; git history has
+  those. Keep impactful, interesting value details.
+- **Omit low-impact entries.** Tooling-only commits like "release script now stages oxfmt fixes" don't earn a line.
+- **Calibrate on the two most recent release sections plus the bottom 160 lines** of the file; both are curated. Don't
+  pattern-match on anything else, and never on your own draft: verbosity compounds release over release that way.
+
+Before / after examples:
+
+- Don't: "**Dynamic text size.** New `Settings > Appearance > Text size` slider (75–150 %, default 100 %) that compounds
+  with the macOS Accessibility text-size setting. New `View > Zoom` submenu with `⌘+` / `⌘-` / `⌘0`…" Do: "Add dynamic
+  text size slider in Settings (75–150%, ⌘+/⌘-/⌘0 shortcuts)".
+- Don't: "Brief network blips no longer kick you out of the folder; only a real not-found triggers eviction". Do: "Fix
+  temp network issues kicking users out of folders".
+- Don't: "Friendly errors for the git browser: damaged repos, orphaned worktrees, shallow-boundary commits, locked
+  indexes get plain-language explanations and a next step". Do: "Add friendly errors for git browser".
+- Don't (multi-sentence narration): "Folders always merge on copy and move. A folder landing on a same-named folder now
+  blends into it instead of asking you to overwrite, skip, or rename the whole folder. Your conflict choice…" Do:
+  "Folders always merge on copy and move: your conflict choice (skip, overwrite, or rename) applies to the clashing
+  files inside, and dest-only files survive".
+- Don't (trailing benefit): "Add per-feature stability badges (ALPHA, BETA) in the app and a Feature status page on the
+  website, so you always know how solid each feature is". Do: "Add stability badges (ALPHA, BETA) in the app and a
+  feature status page on the website".
+- Long is right for a true tentpole: "Add Linux support (alpha): volumes via /proc/mounts, file ops with reflink
+  support, trash via FreeDesktop spec, inotify file watching, MTP ungated, SMB via mDNS + smbclient fallback, … (13
+  SHAs)".
+
+**Self-edit pass (mandatory)**, after drafting and before presenting:
+
+- **Hold every entry to the UI-copy bar** of `docs/style-guide.md`: the What's new popup renders these exact sections.
+- **Check every Fixed and Security entry against the scope rule above**: name the release the bug shipped in. If that's
+  this release, fold the hash into the feature's Added entry and delete the line. This is the easiest pass to skip and
+  the one that inflates a release most.
+- Cut any entry over ~20 words unless it's a genuine tentpole, and merge or delete any second sentence.
+- Delete any trailing ", so [benefit]" clause.
+- Merge entries that share hashes or describe one change from two angles (a real past draft had a Fixed entry whose
+  hashes were a strict subset of an Added entry's).
+- Strip internal symbol names, file paths, and enum variants that survived the first pass.
 
 ## Which runner builds the release
 
@@ -169,9 +342,9 @@ tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, four are worth kno
   never saw an unpushed commit) and a successful `CI` run on that exact commit, started via `workflow_dispatch` with
   `run_all`. ❗ A push run doesn't count: CI's change detection skips unchanged lanes, so a docs-only HEAD reads green
   while the commit before it broke Rust. The gate reuses a full run already on the commit, starts one otherwise, and
-  waits (~25 min), so `/release` pushes and starts it early to overlap it with changelog drafting. A flaky red run:
-  `gh run rerun <id> --failed`, then re-run the release. The release commit itself (version bumps, CHANGELOG) lands
-  after the gate; the `oxfmt --ci` gate and the post-tag CI run cover it.
+  waits (~25 min), so the release procedure (step 2) pushes and starts it early to overlap it with changelog drafting. A
+  flaky red run: `gh run rerun <id> --failed`, then re-run the release. The release commit itself (version bumps,
+  CHANGELOG) lands after the gate; the `oxfmt --ci` gate and the post-tag CI run cover it.
   - **How a run proves it was full:** the runs API carries no inputs, so `ci.yml` has a `Full run (run_all)` job that
     runs only with `run_all` on (`if: inputs.run_all`, no needs). Both gates count a run only when that job succeeded,
     so a dispatch with `run_all` off never passes. They match the job by name: renaming it means updating both.
@@ -189,8 +362,8 @@ tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, four are worth kno
 
 - **Changelog refs must survive the script's own rebase.** The script's `git pull --rebase` rewrites every unpushed hash
   whenever `origin/main` moved, so right after it, `pnpm check changelog-links --fresh` fails the release on any ref no
-  longer reachable from HEAD. Fix: re-derive the stranded refs from the rebased commits, then re-run. The `/release`
-  skill pulls before drafting, so this normally stays quiet. Why `--fresh`: `scripts/check/checks/DETAILS.md` §
+  longer reachable from HEAD. Fix: re-derive the stranded refs from the rebased commits, then re-run. § Writing the
+  CHANGELOG pulls before drafting, so this normally stays quiet. Why `--fresh`: `scripts/check/checks/DETAILS.md` §
   "CHANGELOG commit refs".
 - **Visual baselines are auto-refreshed (Docker required).** After the CHANGELOG/roadmap/version are finalized, the
   script runs `apps/website/scripts/update-visual-baselines.sh`, which re-shoots any stale website baseline in a pinned
@@ -264,9 +437,17 @@ screen LOOKS, which no test can judge.
 
 ## Keep the Mac awake during the build (self-hosted only)
 
-**Not needed today**: `runs-on` is `macos-latest`, so the build happens on GitHub's hardware, this Mac can sleep, and
-the laptop can close with no effect on the release. Everything below applies only if a self-hosted runner is ever set up
-again.
+**Not needed today**: `runs-on` is a GitHub-hosted image, so the build happens on GitHub's hardware, this Mac can sleep,
+and the laptop can close with no effect on the release. Everything below applies only if a self-hosted runner is ever
+set up again.
+
+How a self-hosted build looks from the outside: exactly one `Build (...)` job goes `in_progress` and the other two stay
+`queued` (one machine, serialized), at ~5 min each for aarch64 and x86_64 and ~7 min for universal on a warm cache, so
+the user keeps the laptop open for ~15 minutes. If all three are still `queued` after ~30 s, the runner is down: confirm
+with `launchctl list | grep cmdr` (look for `actions.runner.vdavid-cmdr.*`) and restart with
+`cd ~/actions-runner && ./svc.sh start`, falling back to `launchctl bootout` + `bootstrap` if `svc.sh` errors with "Load
+failed: 5: Input/output error". Queued jobs pick up automatically once the runner reports in; no re-trigger or re-tag
+needed.
 
 A self-hosted runner would live on this Mac. If the machine sleeps (even briefly, or just the display), GitHub Actions
 drops the runner connection and every in-flight matrix job fails with
@@ -411,7 +592,7 @@ Why it's shaped this way:
 - **The public claim is Level 3** on `/trust` and `/trust/development` (verified on v0.51.0, the first release through
   `release-pipeline.yml`, with the `--signer-workflow` check below, 2026-10-08).
 
-Checking a release (the `/release` command does this after the run):
+Checking a release (step 12 of § The release procedure does this after the run):
 
 ```bash
 gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr --format json \
@@ -752,8 +933,8 @@ runs. `2` is fine. `0` blocks every DMG build until it's cleared, and clearing i
 After a reset, start a build with the user at the keyboard: the prompt lands within a second or two of
 `Running bundle_dmg.sh`, and one Allow authorizes that runner-node path until the runner auto-updates again.
 
-Prevention: step 4 of `.claude/commands/release.md` reads the resolved path's `auth_value` right after the CHANGELOG
-draft, so a denial is found before anything is tagged rather than after three jobs burn.
+Prevention: step 4 of § The release procedure reads the resolved path's `auth_value` right after the CHANGELOG draft, so
+a denial is found before anything is tagged rather than after three jobs burn.
 
 ### `bundle_dmg.sh` fails fast (~3 s) on the universal/aarch64/x86_64 build
 

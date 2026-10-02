@@ -62,9 +62,9 @@ not "1.0 frozen".
 
 ## Updating a status
 
-Every release is a review point: the `/release` flow (step 4) walks this file against what shipped, flipping `planned` →
-`alpha`, graduating maturing features, and refreshing stale notes, alongside the roadmap update. Do it then, or any time
-a status genuinely changes.
+Every release is a review point: the release procedure (`docs/guides/releasing.md`, step 5) walks this file against what
+shipped, flipping `planned` → `alpha`, graduating maturing features, and refreshing stale notes, alongside the roadmap
+update. Do it then, or any time a status genuinely changes.
 
 Edit `feature-status.json`, then run `pnpm check` (the desktop unit tests pin the JSON shape and the alpha set). The
 website picks the change up at build time; the app at compile time. No code changes needed for a status flip unless a

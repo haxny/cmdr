@@ -365,7 +365,7 @@ func finish(cfg config) error {
 		switch action {
 		case actionDone:
 			step("%s is out: the finishing run went green (%s).", cfg.tag, runURL(r.ID))
-			fmt.Println("    Next: check getcmdr.com/latest.json, the archive URLs, and the attestations (the release skill's last steps).")
+			fmt.Println("    Next: check getcmdr.com/latest.json, the archive URLs, and the attestations (step 12 of docs/guides/releasing.md § The release procedure).")
 			return nil
 		case actionWait:
 			if err := waitRun(r.ID); err != nil {

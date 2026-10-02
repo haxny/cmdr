@@ -9,8 +9,8 @@
 # (`ci.yml`, `if: inputs.run_all`) didn't skip; a dispatch with run_all off doesn't count.
 #
 # Idempotent: it reuses a full run that already exists on the commit (finished or still going),
-# starts one if there's none, waits for it, and exits non-zero unless it succeeded. So `/release`
-# calls it early to overlap the ~25-minute run with changelog drafting, and `release.sh` calls it
+# starts one if there's none, waits for it, and exits non-zero unless it succeeded. So the release
+# procedure calls it early to overlap the ~25-minute run with changelog drafting, and `release.sh` calls it
 # again before tagging, where it returns at once.
 #
 # Emergency bypass (a hotfix while CI is red for a reason outside the repo): RELEASE_SKIP_CI_GATE=1.

@@ -17,7 +17,7 @@ fi
 
 # Check for uncommitted changes. The release-prep edits are allowed through and get included in
 # the release commit: the changelog, the roadmap (content in roadmap.ts, layout in roadmap.astro),
-# and the feature-status source of truth. See the `release` skill for the steps that produce them.
+# and the feature-status source of truth. See docs/guides/releasing.md § The release procedure for the steps that produce them.
 EXCLUDE=(
   ':!CHANGELOG.md'
   ':!feature-status.json'
@@ -69,7 +69,7 @@ pnpm check changelog-links -m --fresh
 
 # Release gate: only a commit with a fully green CI run ships (a `run_all` run, since push runs
 # skip unchanged lanes). It also refuses unpushed commits, which CI never saw. Starts the run if
-# `/release` didn't already, and waits for it. See docs/guides/releasing.md.
+# the release procedure didn't already, and waits for it. See docs/guides/releasing.md.
 ./scripts/release-ci-gate.sh
 
 echo "Releasing version $VERSION..."

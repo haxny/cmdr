@@ -1,8 +1,7 @@
 # Multi-agent refactors
 
 The orchestration loop that shipped the explorer architecture refactor (4 phases, ~40 agents, zero regressions) and the
-command-handler-record refactor. Use it for any multi-milestone refactor in Cmdr. `/plan` and `/execute` are the command
-entry points; this is the playbook they assume.
+command-handler-record refactor. Use it for any multi-milestone effort in Cmdr.
 
 ## The loop
 
@@ -22,6 +21,16 @@ entry points; this is the playbook they assume.
    a failure in the change's own surface is real.
 5. **Close out.** An end-of-phase adversarial conformance review agent (against the invariants register) plus a
    docs-audit agent that reads ALL commit bodies and verifies every touched `CLAUDE.md`.
+
+Lead's guardrails, learned the hard way:
+
+- **Plans capture intent, not just steps**, so an executing agent can adapt when the code disagrees with the plan.
+- **Give each agent a clear, bounded scope** and ask for the whole of it: agents both skip parts of their scope and run
+  past their milestone into the next one. Have each one ask itself "is this solid AND elegant?" before reporting done.
+- **Strip milestone tags before merging.** "M1", "Milestone 3", "Phase 2" leak into comments, `reason` strings, test
+  helper names, and `CLAUDE.md` text; `rg -n '\b(M[0-9][a-z]?|Milestone\s*[0-9]|Phase\s*[0-9])\b' <touched paths>` finds
+  them, and each becomes a descriptive name ("the watcher", "the hook contract"). The plan file keeps its own.
+- **Rebase onto current local `main` right before the fast-forward merge**: it moves mid-effort.
 
 ## Fan-out sweeps (parallel research or generation over a list)
 
