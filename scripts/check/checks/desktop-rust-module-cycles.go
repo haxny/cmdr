@@ -25,7 +25,7 @@ import (
 // ratchets, so this one collapses parent-child hubs before it counts.
 //
 // Warn-only, like the other allowlist gauges: raising a number needs David's OK
-// (`.claude/rules/file-length-allowlist.md`), and the fix is to cut the edge.
+// (`scripts/check/checks/DETAILS.md` § Allowlist consent), and the fix is to cut the edge.
 
 // cargoModulesVersion pins the tool the baseline was measured with. The absolute
 // numbers move between releases (0.26.0 reports `cmdr` at 128 of 528 modules in a
@@ -578,7 +578,7 @@ func formatModuleCyclesRegressions(regressions []moduleCyclesRegression, measure
 	sb.WriteString("\nCut one edge and the tangle opens. ⚠️ Read the direction carefully first: cargo-modules attributes " +
 		"an `impl` to the module defining the type it PRODUCES, so an edge can point the opposite way from the code " +
 		"(`scripts/check/checks/DETAILS.md` § \"Rust module cycles\"). Raising a number needs David's OK " +
-		"(`.claude/rules/file-length-allowlist.md`).")
+		"(`scripts/check/checks/DETAILS.md` § Allowlist consent).")
 	return sb.String()
 }
 

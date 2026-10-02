@@ -51,7 +51,8 @@ Xcode hasn't run its first launch: `xcodebuild -runFirstLaunch`.
 
 ## Then refresh two baselines
 
-Both pin the old bytes and will fail until you do. Neither needs consent, per `.claude/rules/file-length-allowlist.md`.
+Both pin the old bytes and will fail until you do. Neither needs consent, per `scripts/check/checks/DETAILS.md` §
+"Allowlist consent".
 
 ```bash
 rm scripts/check/checks/website-bundle-size-baseline.json && pnpm check website-bundle-size

@@ -425,8 +425,7 @@ New feature dir `apps/desktop/src/lib/file-operations/transfer-tree/` (with `CLA
   its existing announcements.
 - **Strings**: every label and accessible name in `messages/en/fileOperations.json` with `@key` descriptions; the
   active-row verb keyed by op type (copying / moving / compressing). Translations come from translator agents
-  (`.claude/rules/translations-by-a-translator-agent.md`) in the SAME milestone, because `desktop-i18n-coverage` is an
-  error-level gate.
+  (`AGENTS.md` § Hard rules) in the SAME milestone, because `desktop-i18n-coverage` is an error-level gate.
 
 ### The dialog (`TransferProgressDialog.svelte`)
 

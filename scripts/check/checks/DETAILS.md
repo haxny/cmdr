@@ -16,14 +16,14 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
   builds on; `tool-install.go` the pinned-tool installer (dev secrets, checksum-pinned binaries, `cargo-nextest`, the Go
   analyzers); `inputs.go` holds the shared `Inputs` path sets.
 - **An allowlist is a sibling JSON named `<check>-allowlist.json`**, and it's NEVER hand-edited: the owning check
-  shrink-wraps it on local runs, so you run the check and commit its rewrite (`.claude/rules/file-length-allowlist.md`).
-  The shared staleness policy, and why it lives inside each check rather than a meta-check, is § "Allowlist
-  shrink-wrap". Twelve exist today; `a11y-coverage-allowlist.json` and `ui-primitive-coverage-allowlist.json` are the
-  two with no § of their own (both are exempt-with-reason lists whose checks FAIL on a dead or redundant entry rather
-  than auto-removing it). `macos-availability-selectors.json` is a sibling JSON that isn't an allowlist: it's the SDK's
-  own answer, cached so the Linux CI lanes can enforce it (§ "macOS availability"). Neither is
-  `third-party-vendored.json`, the hand-kept credit list `third-party-notices` merges into its outputs; its loader and
-  validator live in `third-party-vendored.go` (§ "Vendored credits").
+  shrink-wraps it on local runs, so you run the check and commit its rewrite (§ "Allowlist consent"). The shared
+  staleness policy, and why it lives inside each check rather than a meta-check, is § "Allowlist shrink-wrap". Twelve
+  exist today; `a11y-coverage-allowlist.json` and `ui-primitive-coverage-allowlist.json` are the two with no § of their
+  own (both are exempt-with-reason lists whose checks FAIL on a dead or redundant entry rather than auto-removing it).
+  `macos-availability-selectors.json` is a sibling JSON that isn't an allowlist: it's the SDK's own answer, cached so
+  the Linux CI lanes can enforce it (§ "macOS availability"). Neither is `third-party-vendored.json`, the hand-kept
+  credit list `third-party-notices` merges into its outputs; its loader and validator live in `third-party-vendored.go`
+  (§ "Vendored credits").
 - **Not every file here is a registry check.** `e2e-durations.go` is embedded in the two E2E checks (§ "E2E test
   duration flagger" has the why), `docs_graph.go` is a shared library behind both `docs-reachable` and the
   `--docs-graph` renderer in `../docs_graph_render.go`, and three files carve the Playwright lane into stages so
@@ -278,7 +278,7 @@ mirrors the growth buffer so routine small edits don't churn the JSON.
 **A long file that isn't allowlisted FAILS the check** (as does an entry with no reason); the shrink-wrap path stays
 advisory, a local auto-fix and a CI warn, since that's bookkeeping rather than somebody's unfinished work. A warn had no
 owner: it outlived the run that caused it and reached David as a separate triage pass. An agent may add an entry itself
-now, with a reason, and says so in the commit; see `.claude/rules/file-length-allowlist.md` (repo-level) for the rule.
+now, with a reason, and says so in the commit; see § "Allowlist consent" for the rule.
 
 ## CLAUDE.md length
 
@@ -362,9 +362,8 @@ rise warns; any fall gets ratcheted in, so the improvement lands in the diff.
 `invariant-density-allowlist.json` has one `subsystems` section mapping a subsystem root to its accepted `❌` count.
 Shrink-wrap on local runs drops a subsystem that's gone or has reached zero and ratchets every entry down to the current
 count; CI only reports what a local run would change. A subsystem missing from the allowlist warns rather than being
-auto-added: entries are added deliberately, with David's OK
-([the same consent contract](../../../.claude/rules/file-length-allowlist.md) the length allowlists carry). A warn names
-the three rule-heaviest docs of the regressed subsystem, so it points somewhere.
+auto-added: entries are added deliberately, with David's OK (the same consent contract the length allowlists carry, §
+"Allowlist consent"). A warn names the three rule-heaviest docs of the regressed subsystem, so it points somewhere.
 
 **⚠️ Known limitation: the count conflates two different things, so a rise on its own never means "this change made the
 code worse".** One rule at a type definition and ten scattered prose warnings a reader must remember both count as `+1`
@@ -450,8 +449,8 @@ a buffer to absorb, and a buffer would let a clone grow for free.
 
 Shrink-wrap on local runs drops a pair with no duplication left and ratchets every entry down to what's actually there;
 CI only reports what a local run would change. A pair missing from the allowlist warns rather than being auto-added,
-under the same consent contract as the length allowlists (`.claude/rules/file-length-allowlist.md`). The allowlist also
-doubles as the complete inventory: every duplicated file pair in the repo is a line in it.
+under the same consent contract as the length allowlists (§ "Allowlist consent"). The allowlist also doubles as the
+complete inventory: every duplicated file pair in the repo is a line in it.
 
 ### A `pairs` entry can carry its reason
 
@@ -562,8 +561,8 @@ How reachability is decided (`BuildDocGraph`):
 
 `docs-reachable-allowlist.json` maps a doc path → the reason it's intentionally unreachable. The goal is an empty list:
 connect docs rather than exempt them. Shrink-wrap drops entries whose file is gone or which became reachable; adding or
-keeping one needs David's OK (`.claude/rules/file-length-allowlist.md`). To inspect the whole tree and spot
-deeply-nested or orphaned docs visually, run `pnpm check --docs-graph`.
+keeping one needs David's OK (§ "Allowlist consent"). To inspect the whole tree and spot deeply-nested or orphaned docs
+visually, run `pnpm check --docs-graph`.
 
 ## Docs dead links
 
@@ -597,7 +596,7 @@ require that the entry ENDS with a parenthetical whose every comma-separated ite
 to the end of the entry is what keeps prose safe: entries routinely close on `(~40x speed-up!)`, `(smb2 0.8.0)`, or
 `(photo.JPG to photo.jpg)`, and a hex-looking word mid-sentence is never even considered.
 
-**Every ref must be exactly 9 characters**, which is what `.claude/commands/release.md` produces
+**Every ref must be exactly 9 characters**, which is what `docs/guides/releasing.md` § Writing the CHANGELOG produces
 (`git log --format='%h' --abbrev=9`) and what the whole file is normalized to. A wrong length is a finding at every site
 it appears, not once per unique hash, so one pass fixes them all.
 
@@ -874,8 +873,7 @@ largest assets with their baseline sizes. Asset names are content-hash-normalize
 so rebuilds compare stably. The baseline follows the file-length ratchet discipline: local runs rewrite it downward when
 `dist/` shrinks past the 10% band; raising it is a deliberate act but needs no approval — delete the baseline file and
 run `pnpm check bundle-size` against a fresh build. A missing baseline is created on the spot locally and reported as a
-warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in
-`.claude/rules/file-length-allowlist.md`.
+warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in § "Allowlist consent".
 
 ## Website CSP connect-src
 
@@ -908,7 +906,7 @@ commands"; this is how the scan reads it.
   production code and in `apps/desktop/test/e2e-*` counts too.
 - **The allowlist** has `wrappers` (by name) and `commands` (by snake_case name), each value a mandatory reason; a blank
   reason fails. Shrink-wrap drops an entry whose wrapper or command is gone or now has a caller; CI only warns. Adding
-  one needs David's OK (`.claude/rules/file-length-allowlist.md`).
+  one needs David's OK (§ "Allowlist consent").
 - **Events are out of scope**: an `events.*` entry nothing listens to has no `commands` entry, so only its `on…`
   wrapper, if one exists, is checked.
 - **Verified** against the tree before the audit's deletion (`128e9f10b^`, 2026-10-03): it named every command and
@@ -945,6 +943,24 @@ External tools enforce the same principle natively: knip (`treatConfigHintsAsErr
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
 slow eslint lane (`reportUnusedDisableDirectives`). The one list nothing can verify automatically is `audit.toml`'s
 RUSTSEC ignores — that's a quarterly task in `docs/maintenance.md`.
+
+## Allowlist consent
+
+Who may change an allowlist, and when. The short form is in `AGENTS.md` § Hard rules.
+
+- **Tightening never needs asking**: drop an entry a check calls unneeded, lower a number, drop an `exempt`. A
+  bundle-size baseline (`desktop-bundle-size`, `website-bundle-size`) refreshes free too: delete it, re-run, report the
+  growth.
+- **`file-length`, `claude-md-length`, and `jscpd-rust` / `jscpd-frontend` FAIL, and the call is the agent's**: split
+  when that's a genuine architectural win, bump otherwise. Every entry carries a `reason` for that call, or
+  `TODO: <why it should be split, and how>` when the bump shouldn't stay; the commit says which.
+- **Every other allowlist needs David's explicit consent to loosen**: a new entry, a raised number, a new `exempt`. That
+  covers `module-cycles`, the coverage allowlist, the E2E duration allowlist, and the error-level `docs-reachable` /
+  `desktop-i18n-doc-citations` (connect the orphan, or repoint the citation).
+- **Three carve-outs**: an i18n `decisionsBytes` budget rises when new rulings need room (distill first);
+  `invariant-density` is mothballed (no lane runs it, its allowlist is hand-bumpable); an `index-crate-isolation`
+  ceiling rises when the wider surface is genuinely better, said in `handle/DETAILS.md` and the commit, ❌ never merely
+  to pass.
 
 ## svelte-tests coverage isolation
 
@@ -1538,7 +1554,7 @@ independent tangles genuinely share a home (`write_operations::transfer::volume`
 one hide behind a bigger one.
 
 A home over its allowance, or a home not in the allowlist at all, warns. Local runs shrink-wrap the list down; raising a
-number needs David's OK (`.claude/rules/file-length-allowlist.md`), and the fix is to cut an edge.
+number needs David's OK (§ "Allowlist consent"), and the fix is to cut an edge.
 
 ### The tool version is pinned, and a mismatch skips
 
@@ -2328,8 +2344,7 @@ parser can't resolve is left alone rather than guessed at.
 **Decision**: the allowlist keys on the FILE, valued in its site count. **Why**: same reasoning as the jscpd lanes — a
 `file:line` key moves the moment anything above the site changes, while a count only moves when somebody writes or
 removes a swallow. No slack buffer, for the same reason. Shrink-wrap ratchets an entry down to the current count and
-drops a file that reaches zero, so the number only goes down; raising one needs David's OK
-(`.claude/rules/file-length-allowlist.md`).
+drops a file that reaches zero, so the number only goes down; raising one needs David's OK (§ "Allowlist consent").
 
 **Decision**: `mtp-dropping-timeout` check to keep wall-clock timeouts and task aborts away from mtp-rs calls. **Why**:
 A PTP transaction is command → data → response over one bulk pipe, so dropping its future mid-data-phase leaves the

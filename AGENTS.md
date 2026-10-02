@@ -47,17 +47,18 @@ may speak as David where deliberately personal (onboarding, About).
 Two colocated tiers per code area, enforced by checks:
 
 - We often call `CLAUDE.md` and `DETAILS.md` `C.md` and `D.md`, `C+D.md` together.
-- **`C.md`** Auto-injected by the CC harness whenever a (sub)agent touches a dir, every session and wt. ONLY must-knows:
-  gotchas, guardrails, a 2–3 line module map, and pointer to `DETAILS.md`. **Aim for 300–400 words.** `claude-md-length`
-  fails past 600, but that's the alarm, not the target.
+- **Before reading or editing code in a dir, read its `C.md` and every ancestor `C.md` up to the root, once.** Claude
+  Code autoloads them; other agents must do it by hand.
+- **`C.md`** ONLY must-knows: gotchas, guardrails, a 2–3 line module map, and pointer to `DETAILS.md`. **Aim for 300–400
+  words.** `claude-md-length` fails past 600, but that's the alarm, not the target.
 - **`D.md`** the rest. Read on demand. Architecture, data flows, decision rationale, edge-case catalogs. No length
   limit, but stay concise to stay token-efficient. When writing, default to `D.md`; promote to `C.md`.
 - `claude-md-details-sibling` enforces all `C.md` and `D.md` to exist in pairs. Never `@`-import `D.md` from a `C.md`!
 - Cut `C.md` radically: make each part sound like a tweet, move depth to `D.md`, and split the module if it can't reach
   300–400 words that way.
 - `docs-reachable` keeps the doc graph linked (no orphans), `docs-dead-links` and `docs-link-text` catch broken or
-  path-shaped references, and `resident-doc-budget` stops the always-resident bundle (this file, its `@`-imports,
-  `.claude/rules/`) silently regrowing. Keep this section crisp: it's the contract every agent replicates.
+  path-shaped references, and `resident-doc-budget` stops the always-resident bundle (this file and its `@`-imports)
+  silently regrowing. Keep this section crisp: it's the contract every agent replicates.
 
 Writing them:
 
@@ -67,9 +68,9 @@ Writing them:
 - **Single-source.** A load-bearing claim or mechanism lives in exactly ONE canonical doc (the `D.md` nearest the code);
   everywhere else points to it by path, never restates it. Copied prose rots independently. `docs/architecture.md` is a
   map: what + where + a pointer, never how.
-- **Describe current state.** Git holds the history. Drop narration of previous shapes; keep the non-obvious why,
-  actionable guardrails, and past pain that encodes a constraint the code must defend. Full drop/keep lists and
-  code-comment carve-outs: David's user-level `describe-current-not-history` rule.
+- **Describe current state, not history.** Git holds the history. Drop narration of earlier shapes, "no longer applies"
+  gotchas, and dated milestone tags; keep the non-obvious why, regression guardrails, and past pain that justifies a
+  constraint. In code comments, test regression anchors stay, and when in doubt, leave it.
 - **Evidence-anchor volatile claims.** OS/external behavior, versions, empirical findings carry
   `(verified on <version/env>, <method>, <date-or-commit>)`. Undated confident claims about drifting behavior become
   landmines.
@@ -82,9 +83,9 @@ Writing them:
 
 ## Where to look (router)
 
-- **Editing code**: reach for codegraph before reading files (`codegraph_explore`, `codegraph_search`; deferred, load
-  via `ToolSearch` first). The harness autoloads `C.md`s when you touch a dir. Read a subsystem's `C.md` proactively
-  when running its tooling/tests without touching it (like `test/e2e-playwright/CLAUDE.md` before the E2E suite).
+- **Editing code**: if you have codegraph, reach for it before reading files (`codegraph_explore`, `codegraph_search`;
+  deferred, load via `ToolSearch` first). Read a subsystem's `C.md` proactively when running its tooling/tests without
+  touching it (like `test/e2e-playwright/CLAUDE.md` before the E2E suite).
 - **Before planning**, read `docs/architecture.md`: the subsystem map (what + where + a pointer per area).
 - **A procedure** (release, screenshots, deps, adding a window): `docs/guides/` and the skills. Building a dialog,
   settings screen, window, or form control: `docs/guides/building-ui.md` (house primitives, and where each deeper doc
@@ -145,7 +146,12 @@ inventory). Desktop-specific test, MCP, and E2E mechanics live in `apps/desktop/
 
 ## Hard rules
 
-- Project hard rules are focused, autoloaded files in `.claude/rules` (non-Claude agents: read them manually!).
+- **Allowlists shrink-wrap themselves**: ❌ never hand-edit a number; run the check and commit its rewrite. Tightening
+  is always free. A `file-length`, `claude-md-length`, or `jscpd-*` failure is your call: split if that's a real
+  architectural win, else bump with a `reason` (or `TODO: <split plan>`). ❌ Loosening any other allowlist needs David's
+  OK. Carve-outs: `scripts/check/checks/DETAILS.md` § "Allowlist consent".
+- ❌ **Never translate the strings you add**: write the English plus a good `@key` description. A separate translator
+  agent translates, following `docs/guides/i18n-translation.md`.
 - Don't ignore linter warnings. Fix them, or justify the exception with a comment. Don't leave them unaddressed.
 - ❌ **Never classify errors, state, or control flow by string-matching** a message, stderr, or title: wording is for
   users and breaks silently on copy edits, OS localization, or upstream reformatting. Use a typed enum variant, an

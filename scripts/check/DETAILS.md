@@ -778,7 +778,8 @@ output arrives right after whatever the author last edited, so reverting a good 
 fires on an author's own missing crate, which must stay reported as their mistake; a registry path alone shows up in
 ordinary output constantly (a deprecation inside a dependency, a backtrace frame). Together they mean the unreconcilable
 crate was built from source the author never edited, so their change can't be the cause. Matched on the error CODE, a
-stable identifier, never on the sentence around it (same reasoning as `.claude/rules`' string-matching ban).
+stable identifier, never on the sentence around it (same reasoning as the string-matching ban in `AGENTS.md` § Hard
+rules).
 
 **Decision**: names the problem, never auto-recovers. **Why**: lanes run concurrently, so a mid-run `cargo clean` pulls
 `target/` out from under lanes still building, and a post-run one silently spends a cold rebuild (12 minutes, measured

@@ -430,7 +430,7 @@ func formatJscpdRegressions(regressions []jscpdRegression) string {
 		}
 	}
 	sb.WriteString("\nExtract the shared code, or get David's OK to raise the number " +
-		"(`.claude/rules/file-length-allowlist.md`).")
+		"(`scripts/check/checks/DETAILS.md` § Allowlist consent).")
 	return sb.String()
 }
 

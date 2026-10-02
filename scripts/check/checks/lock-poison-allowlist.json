@@ -1,5 +1,5 @@
 {
-  "$comment": "Accepted count of silently-discarded poisoned-lock results per file, seeded from the state at the swallow lane's introduction. A strict ratchet: local runs lower an entry to the current count and drop a file that reaches zero, and raising one needs David's OK (.claude/rules/file-length-allowlist.md). The fix for a file over its number is to recover with lock_ignore_poison(), hand the failure to the caller, or abort with .expect(\"<lock> poisoned: <why>\") — not to bump the number.",
+  "$comment": "Accepted count of silently-discarded poisoned-lock results per file, seeded from the state at the swallow lane's introduction. A strict ratchet: local runs lower an entry to the current count and drop a file that reaches zero, and raising one needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a file over its number is to recover with lock_ignore_poison(), hand the failure to the caller, or abort with .expect(\"<lock> poisoned: <why>\") — not to bump the number.",
   "files": {
     "apps/desktop/src-tauri/src/child_window_state.rs": 2,
     "apps/desktop/src-tauri/src/drag_image_swap.rs": 3,

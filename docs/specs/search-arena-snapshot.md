@@ -116,8 +116,8 @@ These are the ones an agent gets wrong by default. Every milestone is bound by a
    journal alongside the database.
 6. ❌ **Never build an arena in front of a user action.** The builder is background, idle-gated, disk-space-gated, and
    cancelable. A first run with no arena serves from the fallback loader and builds behind it.
-7. ❌ **Never hand-edit a check allowlist number.** Run the check, commit the rewrite
-   (`.claude/rules/file-length-allowlist.md`).
+7. ❌ **Never hand-edit a check allowlist number.** Run the check, commit the rewrite (`scripts/check/checks/DETAILS.md`
+   § "Allowlist consent").
 8. **Results must be bit-identical across backends.** The heap and mapped backends answer the same query over the same
    database with the same rows in the same order. This is pinned by a differential test, not by inspection.
 
@@ -292,10 +292,10 @@ the record format, the appender type, the replayer, and truncation on rebuild.
 
 **Landmines**: rule 1 (atomic rename, never in place). Rule 2 (no search vocabulary in this crate). `id_width` selection
 and the `names_len` guard. The `logical_size` NULL must round-trip as `None`, never `0`. `index-crate-isolation`
-ceilings move here, and per `.claude/rules/file-length-allowlist.md` that needs David's consent plus a written rationale
-in `handle/DETAILS.md` and the commit body; the whole new surface gets designed and argued at once, not bumped per
-method. `memmap2` is the mapping crate: 0.9.11, published 2026-06-22, 346 M downloads, repo alive (not archived, last
-push 2026-08-20), Apache-2.0. Run `cargo deny check` when adding it.
+ceilings move here, and per `scripts/check/checks/DETAILS.md` § "Allowlist consent" that needs David's consent plus a
+written rationale in `handle/DETAILS.md` and the commit body; the whole new surface gets designed and argued at once,
+not bumped per method. `memmap2` is the mapping crate: 0.9.11, published 2026-06-22, 346 M downloads, repo alive (not
+archived, last push 2026-08-20), Apache-2.0. Run `cargo deny check` when adding it.
 
 **Test plan**: round-trip over a synthetic database; torn-tail truncation; bad CRC; wrong `format_version`; checksum
 mismatch; `id_width` 4 and 8; empty index; a names blob near the `u32` limit (synthetic header, not 4 GB of data); NULL

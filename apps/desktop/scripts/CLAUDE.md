@@ -41,7 +41,7 @@ Wrapper architecture, decisions, instance-isolation reference: `DETAILS.md`, `do
   `package.json`.
 - **Don't bypass the wrapper.** Raw `cargo tauri dev` / `cargo build` skips the env composition AND the
   `beforeBuildCommand` chain (llama-server download + frontend build), so the app launches with the prod identifier or
-  no embedded frontend. See the `rust` rule in `.claude/rules/`.
+  no embedded frontend.
 - **`pnpm dev` refuses to run in the main clone** (a dev launch regenerates `bindings.ts` and runs the wrong instance;
   the workflow always devs from a worktree). Detection: `--git-dir` == `--git-common-dir` (`isMainWorkingTree`). `build`
   is exempt (CI runs in the main checkout); override with `--allow-main` / `-m`. Same guard in the check runner.

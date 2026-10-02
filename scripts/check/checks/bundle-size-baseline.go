@@ -17,7 +17,7 @@ import (
 // Warn-only by design, and the ratchet is one-directional: a bundle may shrink
 // freely, and growth past the budget is a warning nobody can silence by editing
 // a number (raising a baseline means deleting it and regenerating, with David's
-// OK, per `.claude/rules/file-length-allowlist.md`).
+// OK, per `scripts/check/checks/DETAILS.md` § Allowlist consent).
 //
 // One implementation rather than one per app: the two lanes differ only in which
 // directory they measure, what produces it, and what the message tells you to

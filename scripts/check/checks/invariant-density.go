@@ -22,7 +22,7 @@ import (
 // that reaches zero. ❗ Unlike every other allowlist in this package, RAISING an
 // entry here needs no sign-off: a rule earns its place on whether the invariant is
 // worth stating, which the number can't judge
-// (`.claude/rules/file-length-allowlist.md`).
+// (`scripts/check/checks/DETAILS.md` § Allowlist consent).
 
 const (
 	// invariantRuleMarker is the house convention for "never do X" in an agent doc.

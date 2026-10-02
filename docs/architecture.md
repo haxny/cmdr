@@ -304,7 +304,7 @@ All under `apps/desktop/src-tauri/src/`.
 - `main_window_visibility.rs`: whether the main window can be seen, as its webview reports it; the idle redraw work
   holds on it
 - `fda_gate.rs`: Full Disk Access startup gate: blocks TCC reads + `NSWorkspace` icon calls until FDA is decided. See
-  the `tauri-apis` rule in `.claude/rules/`
+  `apps/desktop/src-tauri/CLAUDE.md` § Tauri commands and capabilities
 - `instance_lock.rs`: Single-instance guard: one process per data dir, claimed at startup. See
   `tooling/instance-isolation.md` § Instance lock
 - `quit/`: The quit gate. Every exit path asks it first (the two Tauri handlers and the MCP `quit` tool); with

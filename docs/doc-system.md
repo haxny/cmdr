@@ -8,14 +8,18 @@ slimming pass. Read this before any broad doc cleanup, or before slimming a `CLA
 
 Docs load in three concentric rings, by how often an agent needs them:
 
-- **Resident (Ring 0)**: the repo-root `CLAUDE.md` (which `@`-imports only `AGENTS.md`) plus `.claude/rules/*.md`. Loads
-  in EVERY session, worktree, and subagent: this is the whole always-paid budget, so it stays tiny. It holds what Cmdr
-  is, the 4-app map, the router, the universal rails, the doc contract, and the writing-voice core. `architecture.md`,
-  `style-guide.md`, and `design-principles.md` are deliberately NOT resident; they're read on demand via the router.
-- **Path-scoped (colocated `CLAUDE.md`)**: auto-injected when an agent touches a directory. Must-knows only. Area rules
-  live here too (Rust + Tauri rules in `apps/desktop/src-tauri/CLAUDE.md`, frontend rules in
-  `apps/desktop/src/CLAUDE.md`, testing rules in `apps/desktop/test/CLAUDE.md`), so an agent working on another app
-  never loads them.
+- **Resident (Ring 0)**: `AGENTS.md`, which the repo-root `CLAUDE.md` `@`-imports. Loads in EVERY session, worktree, and
+  subagent: this is the whole always-paid budget, so it stays tiny. It holds what Cmdr is, the 4-app map, the router,
+  the universal rails, the doc contract, and the writing-voice core. `architecture.md`, `style-guide.md`, and
+  `design-principles.md` are deliberately NOT resident; they're read on demand via the router.
+- **Harness-neutral by design**: contributors also use Codex and other agents, which load the root `AGENTS.md` and
+  nothing else: no `.claude/rules/`, no colocated `CLAUDE.md`, and no `@`-imports. So the project keeps no
+  `.claude/rules/` (every project rule lives in `AGENTS.md`), `AGENTS.md` itself tells agents to read the `C.md` chain,
+  and a rule an agent needs never lives only in David's user-level `~/.claude/`. Contributor setup: `CONTRIBUTING.md`.
+- **Path-scoped (colocated `CLAUDE.md`)**: Claude Code auto-injects them when an agent touches a directory; other agents
+  read them because `AGENTS.md` § Docs says to. Must-knows only. Area rules live here too (Rust + Tauri rules in
+  `apps/desktop/src-tauri/CLAUDE.md`, frontend rules in `apps/desktop/src/CLAUDE.md`, testing rules in
+  `apps/desktop/test/CLAUDE.md`), so an agent working on another app never loads them.
 - **On-demand (`DETAILS.md`, `docs/guides/`, the `architecture.md` map)**: read when the task calls for it, found via
   the router, colocated pointers, and CodeGraph. Unlimited length.
 
@@ -73,8 +77,8 @@ checks (they mutate shared allowlists mid-run), and review every diff yourself. 
 - **Evidence-anchor volatile claims**: OS, version, and empirical claims carry `(verified on <env>, <method>, <date>)`.
 - **Agent-facing style** (`style-guide.md` § Agent-facing docs): no two-column tables and no column wider than 100 chars
   (bullet lists instead), sentence case, en-dash not em-dash, Oxford comma. Docs are a token stream, not a 2D layout.
-- **Trim or split before you bump an allowlist** (`.claude/rules/file-length-allowlist.md`): a bump is a real second
-  answer, and the entry then has to say why in its `reason` field.
+- **Trim or split before you bump an allowlist** (`scripts/check/checks/DETAILS.md` § "Allowlist consent"): a bump is a
+  real second answer, and the entry then has to say why in its `reason` field.
 
 ## The rule budget
 
@@ -97,8 +101,9 @@ check counts and how the buckets are derived: `scripts/check/checks/DETAILS.md`.
 Convention rots; checks don't. Each invariant is a check (sources in `scripts/check/checks/`, detail in its
 `scripts/check/checks/DETAILS.md`):
 
-- **`resident-doc-budget`** (warn): caps the always-resident bundle (root `CLAUDE.md` + its `@`-imports +
-  `.claude/rules/`); the cap ratchets DOWN only. Guards against silent regrowth of the per-session cost.
+- **`resident-doc-budget`** (warn): caps the always-resident bundle (root `CLAUDE.md` + its `@`-imports, plus
+  `.claude/rules/` if one ever reappears); the cap ratchets DOWN only. Guards against silent regrowth of the per-session
+  cost.
 - **`claude-md-length`** (fails): fails past 600 words per `CLAUDE.md`; shrink-wraps its allowlist, and every entry
   needs a `reason`. The authored target is 300-400 (see § C vs D), so it catches files that drifted well past where they
   should sit, not files that are merely at their limit.

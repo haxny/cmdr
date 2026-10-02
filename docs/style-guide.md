@@ -62,8 +62,8 @@ Comments: Only add docs that actually add info. No tautologies.
 
 ### Agent-facing docs
 
-Agent-facing docs (`CLAUDE.md`, `DETAILS.md`, `AGENTS.md`, everything under `docs/`, and `.claude/rules/`) are read by
-AI agents as a linear token stream, not a 2D layout. So:
+Agent-facing docs (`CLAUDE.md`, `DETAILS.md`, `AGENTS.md`, and everything under `docs/`) are read by AI agents as a
+linear token stream, not a 2D layout. So:
 
 - **No two-column tables.** Use a bullet list instead, one item per row, formatted `- **Title**: details`: a bold title,
   then a literal ": " (colon + space) separator, then the rest of the row. Never a dash or em-dash as the separator. The
@@ -79,9 +79,8 @@ AI agents as a linear token stream, not a 2D layout. So:
   several columns, a comparison table) is legitimately 2D, so keep it. The check flags only the two-column case and
   oversized columns, never a real matrix whose cells stay short.
 
-This is the doc-specific form of the user-level `agent-facing-docs` rule (skip column-alignment padding; prefer simple
-bulleted lists). Human-facing markdown is exempt: `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, and everything under
-`apps/website/` and `brand/` stay human-optimized and may use tables freely.
+Human-facing markdown is exempt: `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, and everything under `apps/website/`
+and `brand/` stay human-optimized and may use tables freely.
 
 ## Design
 

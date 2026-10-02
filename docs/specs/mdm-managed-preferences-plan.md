@@ -28,8 +28,8 @@ checkboxes.
    `data.reason`, update and report outcomes). The `error-string-match` checks apply.
 8. **TDD, real red first.** The parse rules, precedence, ceiling compare, host matching, and every gate get a failing
    test before the code.
-9. **i18n: English plus `@key` descriptions only.** A translator agent does the other languages later
-   (`.claude/rules/translations-by-a-translator-agent.md`). Copy below is a draft for David's review.
+9. **i18n: English plus `@key` descriptions only.** A translator agent does the other languages later (`AGENTS.md` §
+   Hard rules). Copy below is a draft for David's review.
 10. **Docs single-sourced.** The key catalog lives in exactly one canonical doc: `managed_policy/DETAILS.md`. The
     `/trust` page and the sample profile are the public mirror, guarded by a test (M8).
 

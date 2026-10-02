@@ -1,5 +1,5 @@
 {
-  "$comment": "Accepted duplicated lines per file pair, plus generated files whose duplication is the generator's output shape. Each `pairs` value is {\"lines\": N, \"reason\": \"…\"}: the reason is mandatory and says why this duplication stays, or starts with `TODO: ` when it should be extracted and the reason says how. `pnpm check jscpd-frontend` shrink-wraps the numbers, so a reason is the only part written by hand. See `.claude/rules/file-length-allowlist.md`.",
+  "$comment": "Accepted duplicated lines per file pair, plus generated files whose duplication is the generator's output shape. Each `pairs` value is {\"lines\": N, \"reason\": \"…\"}: the reason is mandatory and says why this duplication stays, or starts with `TODO: ` when it should be extracted and the reason says how. `pnpm check jscpd-frontend` shrink-wraps the numbers, so a reason is the only part written by hand. See `scripts/check/checks/DETAILS.md § Allowlist consent`.",
   "pairs": {
     "apps/desktop/src/lib/servers/S3EndpointFields.svelte ↔ apps/desktop/src/lib/servers/ServerFormFields.svelte": {
       "lines": 25,

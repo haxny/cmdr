@@ -52,5 +52,5 @@ window-creation perms are checked against the *calling* window.
   feature, so every other build rejects it as unknown. It sits in the sibling `capabilities-e2e/`, globbed only by
   feature builds (`DETAILS.md` § The E2E capability).
 
-See the `tauri-apis` rule in `.claude/rules/` for the higher-level callout. Architecture, flows, and decisions:
+Architecture, flows, and decisions:
 `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or advising.
