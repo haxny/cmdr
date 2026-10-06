@@ -335,6 +335,10 @@
   "@menu.view.clonePane": {
     "description": "View menu item that opens the focused pane's folder in the other pane too, so both panes show the same folder. \"Pane\" is one of the two side-by-side file lists."
   },
+  "menu.view.calculateFolderSizes": "Calculate folder sizes",
+  "@menu.view.calculateFolderSizes": {
+    "description": "View menu item (Alt+Shift+Enter): shows the total size of every folder in the focused file list that doesn't have one yet."
+  },
 
   "menu.view.commandPalette": "Command palette…",
   "@menu.view.commandPalette": {

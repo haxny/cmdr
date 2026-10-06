@@ -50,6 +50,7 @@ let networkEnabled = $state<boolean>(true)
 let nearbyServersGroup = $state<NearbyServersGroupChoice>('auto')
 let typeToJumpResetDelay = $state<number>(1000)
 let typeToJumpMode = $state<TypeToJumpMode>('filter')
+let spaceCalculatesFolderSize = $state<boolean>(true)
 let driveIndexingEnabled = $state<boolean>(true)
 let mediaIndexEnabled = $state<boolean>(false)
 let mediaIndexShowFileStatusIcons = $state<boolean>(true)
@@ -110,6 +111,7 @@ async function runInit(options?: { restrictedWindow?: boolean }): Promise<void> 
     nearbyServersGroup = nearbyServersGroupChoiceOf(getSetting('network.nearbyServersGroup'))
     typeToJumpResetDelay = getSetting('fileExplorer.typeToJump.resetDelay')
     typeToJumpMode = getSetting('fileExplorer.typeToJump.mode')
+    spaceCalculatesFolderSize = getSetting('listing.spaceCalculatesFolderSize')
     driveIndexingEnabled = getSetting('indexing.enabled')
     mediaIndexEnabled = getSetting('mediaIndex.enabled')
     mediaIndexShowFileStatusIcons = getSetting('mediaIndex.showFileStatusIcons')
@@ -207,6 +209,8 @@ function applySettingChange(id: string, value: unknown): void {
       break
     case 'fileExplorer.typeToJump.mode':
       typeToJumpMode = value as TypeToJumpMode
+    case 'listing.spaceCalculatesFolderSize':
+      spaceCalculatesFolderSize = value as boolean
       break
     case 'indexing.enabled':
       driveIndexingEnabled = value as boolean
@@ -390,6 +394,11 @@ function nearbyServersGroupChoiceOf(value: unknown): NearbyServersGroupChoice {
  */
 export function getTypeToJumpResetDelay(): number {
   return typeToJumpResetDelay
+}
+
+/** Whether Space on a folder also calculates its size (`listing.spaceCalculatesFolderSize`). */
+export function getSpaceCalculatesFolderSize(): boolean {
+  return spaceCalculatesFolderSize
 }
 
 /**
