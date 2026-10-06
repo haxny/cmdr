@@ -495,7 +495,7 @@ export const appearanceSettings: SettingDefinitionSource[] = [
     descriptionKey: 'settings.fileExplorer.typeToJump.mode.description',
     keywords: ['type', 'jump', 'filter', 'quick filter', 'quick search', 'narrow', 'total commander', 'keystroke'],
     type: 'enum',
-    default: 'jump',
+    default: 'filter',
     component: 'toggle-group',
     constraints: {
       options: [
