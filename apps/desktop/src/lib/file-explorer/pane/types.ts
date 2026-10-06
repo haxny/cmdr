@@ -89,6 +89,13 @@ export interface CancelLoadingPayload {
 export interface CopyPathBetweenPanesArgs {
   source: 'left' | 'right'
   target: 'left' | 'right'
+  /**
+   * When the source pane is focused, let the cursor refine the destination (a
+   * folder under the cursor opens instead of the pane's own folder). Default
+   * `true`, the ⌘→ / ⌘← behavior; `pane.clone` passes `false` to copy the pane's
+   * location exactly.
+   */
+  followCursor?: boolean
 }
 
 /**
@@ -265,6 +272,17 @@ export interface FilePaneAPI {
   isJumpActive(): boolean
   /** Type-to-jump: clear the buffer + hide the indicator immediately. */
   clearJumpState(): void
+
+  /** Quick filter: true when typing in this pane narrows the list instead of jumping (the setting). */
+  isQuickFilterMode(): boolean
+  /** Quick filter: true while a pattern narrows the list. */
+  isQuickFilterActive(): boolean
+  /** Quick filter: append one printable character to the pattern. */
+  appendQuickFilter(char: string): void
+  /** Quick filter: drop the pattern's last character. */
+  backspaceQuickFilter(): void
+  /** Quick filter: clear the pattern and show every row again. */
+  clearQuickFilter(): void
 
   /** Debug only: inject a FriendlyError into this pane's error state. */
   injectError(friendly: FriendlyError): void
