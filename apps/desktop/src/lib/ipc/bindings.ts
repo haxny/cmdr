@@ -61,6 +61,30 @@ export const commands = {
   setListingIncludeHidden: (listingId: string, includeHidden: boolean) =>
     typedError<null, ListingLookupError>(__TAURI_INVOKE('set_listing_include_hidden', { listingId, includeHidden })),
   /**
+   *  Sets the quick filter of the pane showing `listing_id` (an empty or `null`
+   *  pattern clears it), and returns the new row count plus where the cursor's
+   *  file and the selected files landed in the filtered rows. With
+   *  `refuse_empty`, a pattern that matches nothing is refused (`accepted: false`).
+   */
+  setListingNameFilter: (
+    listingId: string,
+    pattern: string | null,
+    includeHidden: boolean,
+    cursorFilename: string | null,
+    selectedIndices: number[],
+    refuseEmpty: boolean,
+  ) =>
+    typedError<NameFilterResult, ListingLookupError>(
+      __TAURI_INVOKE('set_listing_name_filter', {
+        listingId,
+        pattern,
+        includeHidden,
+        cursorFilename,
+        selectedIndices,
+        refuseEmpty,
+      }),
+    ),
+  /**
    *  Re-reads a directory listing, emitting any diff.
    *
    *  `force` says whose idea the refresh was. `true` is an explicit "re-read this
@@ -453,19 +477,6 @@ export const commands = {
     typedError<number | null, ListingLookupError>(
       __TAURI_INVOKE('find_file_index', { listingId, name, includeHidden }),
     ),
-  /**
-   *  Calculates the sizes of folders the pane shows (⌥⇧⏎; `paths` for Space on a
-   *  folder), sending each reading as `listing-index-sizes-changed`. A request
-   *  while a count of the same listing runs joins its queue. Resolves when the
-   *  count ends: done, or stopped by [`cancel_folder_size_count`]. See
-   *  `listing_index_sizes/count/`.
-   */
-  countFolderSizes: (listingId: string, includeHidden: boolean, paths: string[] | null) =>
-    typedError<FolderSizeCountOutcome, CountFolderSizesError>(
-      __TAURI_INVOKE('count_folder_sizes', { listingId, includeHidden, paths }),
-    ),
-  // Stops the folder-size count running for `listing_id` (Esc). Reports whether one was running.
-  cancelFolderSizeCount: (listingId: string) => __TAURI_INVOKE<boolean>('cancel_folder_size_count', { listingId }),
   findFileIndices: (listingId: string, names: string[], includeHidden: boolean) =>
     typedError<{ [key in string]: number }, ListingLookupError>(
       __TAURI_INVOKE('find_file_indices', { listingId, names, includeHidden }),
@@ -6375,13 +6386,6 @@ export type CostSummary = {
 // The operation a dialog is about to start.
 export type CostedOperation = 'copy' | 'move' | 'delete'
 
-// Why a count didn't start. Typed, so the frontend never reads a message.
-export type CountFolderSizesError =
-  // The pane's listing is no longer cached (it moved on).
-  | { type: 'gone'; listingId: string }
-  // No volume answers for the listing's folder (unplugged, disconnected).
-  | { type: 'notConnected'; volumeId: string }
-
 /**
  *  What ground a run's answer was drawn from: the index, a live walk, or both.
  *
@@ -7744,22 +7748,6 @@ export type FolderCoverage = {
   eligible: number
   // Of those, how many have a stored `done`/`failed` row (both count as accounted).
   accounted: number
-}
-
-// How a count ended. A request that joined a running count gets that count's outcome.
-export type FolderSizeCountOutcome = {
-  /**
-   *  Folders whose size landed in a pane that still shows them (exact, or a
-   *  lower bound when parts couldn't be read).
-   */
-  counted: number
-  /**
-   *  Folders it couldn't read, wholly (their rows went back to what they showed)
-   *  or in part (their size is a lower bound).
-   */
-  unreadable: number
-  // Stopped early: Esc, or the listing closing.
-  cancelled: boolean
 }
 
 // One folder row's fresh index reading.
@@ -10870,6 +10858,38 @@ export type MutationError =
       detail: string
     }
 
+/**
+ *  Where the pane's cursor and selection land after a quick-filter change, in
+ *  the new row space.
+ */
+export type NameFilterResult = {
+  /**
+   *  Whether the listing took the new pattern. `false` only when the caller
+   *  asked to refuse a pattern nothing matches: the listing then keeps its
+   *  previous filter, and the rest of this answer describes that one.
+   */
+  accepted: boolean
+  // How many rows the pane shows under the new filter.
+  totalCount: number
+  /**
+   *  The row of the file that was under the cursor, or `None` when the new
+   *  filter leaves it out (or no file was given).
+   */
+  newCursorIndex: number | null
+  /**
+   *  The rows of the previously selected files the new filter still shows. A
+   *  selected file the filter leaves out drops out of the selection, so no
+   *  operation ever acts on a row the user can't see.
+   */
+  newSelectedIndices: number[]
+  /**
+   *  The diff sequence the new row space starts at, when the filter changed. Every
+   *  `directory-diff` numbered up to it describes the old rows: the pane takes it
+   *  as its last applied sequence and skips them. `None` when nothing changed.
+   */
+  sequence: number | null
+}
+
 export type NegotiatedSummaryDto = {
   dialect: string
   max_read_size: number
@@ -11479,6 +11499,13 @@ export type PaneState = {
    *  resource layer suppresses the section when it's `None`.
    */
   typeToJump?: TypeToJumpInfo | null
+  /**
+   *  The quick filter's pattern while it narrows the pane (`None` when off). The
+   *  files, counts, and indices here are then the FILTERED rows, which is what
+   *  an agent must know before reading an absent file as gone. Always on the wire,
+   *  like `type_to_jump`; the YAML layer prints it only when set.
+   */
+  quickFilter?: string | null
   /**
    *  Set while a mount the pane tried didn't go through, whichever way the pane
    *  is showing it (the "Couldn't mount share" pane, or the login form an

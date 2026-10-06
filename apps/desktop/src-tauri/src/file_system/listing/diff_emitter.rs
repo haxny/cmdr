@@ -18,7 +18,7 @@ use std::time::Duration;
 use tauri_specta::Event as _;
 
 use crate::file_system::listing::diff::{DiffChange, DirectoryDiff};
-use crate::file_system::listing::increment_sequence;
+use crate::file_system::listing::sequence_changes;
 use crate::file_system::watcher::WATCHER_MANAGER;
 
 /// Trailing flush window. Below human perception for single events; at high
@@ -112,14 +112,15 @@ fn flush(listing_id: &str) {
         return;
     }
 
-    let sequence = increment_sequence(listing_id);
+    // Listing gone, or every change was read at a quick filter the pane has left.
+    let numbered = sequence_changes(listing_id, changes);
     if let Ok(mut pending) = PENDING_DIFFS.lock()
         && let Some(entry) = pending.get_mut(listing_id)
     {
         entry.in_flight = false;
     }
-    let Some(sequence) = sequence else {
-        return; // listing gone
+    let Some((sequence, changes)) = numbered else {
+        return;
     };
 
     let app_handle = match WATCHER_MANAGER.read() {
