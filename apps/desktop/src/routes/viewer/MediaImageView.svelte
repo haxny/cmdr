@@ -6,6 +6,10 @@
    * Interactions (all keyboard-reachable):
    *   - Fit-to-window by default; click (or Enter / Space) toggles 100% / fit.
    *   - Scroll / pinch to zoom (`+` / `-` keys too); drag to pan; `0` resets to fit.
+   *   - The keys reach it from anywhere in the window: the page routes them through
+   *     `handleKey` before its own shortcuts, so they work without clicking the image
+   *     first. `1`–`3` stay the viewer's mode keys (Text / Binary / Hex); actual size
+   *     is Enter / Space.
    *   - Checkerboard behind transparency, fixed in screen space.
    *
    * Loading + error states ship from the start: a spinner until `load` / `error`
@@ -81,33 +85,33 @@
     zoomBy(factor)
   }
 
-  function handleKeyDown(e: KeyboardEvent): void {
-    if (e.metaKey || e.ctrlKey || e.altKey) return
+  /**
+   * The image's keys, routed here by the page's window-level keydown so they work
+   * whatever has focus. Returns true when it consumed the key.
+   */
+  export function handleKey(e: KeyboardEvent): boolean {
+    if (e.metaKey || e.ctrlKey || e.altKey) return false
     switch (e.key) {
       case 'Enter':
       case ' ':
-        e.preventDefault()
         toggleClickZoom()
         break
       case '+':
       case '=':
-        e.preventDefault()
         zoomBy(1.25)
         break
       case '-':
-        e.preventDefault()
         zoomBy(1 / 1.25)
         break
       case '0':
-        e.preventDefault()
+        // Also the viewer's "Media" mode key, which this view already is.
         resetToFit()
         break
-      case '1':
-        e.preventDefault()
-        mode = 'actual'
-        zoom = 1
-        break
+      default:
+        return false
     }
+    e.preventDefault()
+    return true
   }
 
   function handlePointerDown(e: PointerEvent): void {
@@ -169,7 +173,6 @@
   aria-label={fileName}
   tabindex="0"
   onwheel={handleWheel}
-  onkeydown={handleKeyDown}
   onpointerdown={recordPointerDown}
   onpointermove={handlePointerMove}
   onpointerup={endDrag}

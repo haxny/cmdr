@@ -203,6 +203,7 @@
     // composable: nothing else needs it, and the cursor is the only thing measured
     // against the spacer rather than the scroll container.
     let spacerRef = $state<HTMLDivElement>()
+    let imageViewRef = $state<{ handleKey: (e: KeyboardEvent) => boolean }>()
 
     // Window lifecycle state. `canClose` prevents closing before WebKit has settled the
     // mount; it flips right after mount, NOT when the open resolves, because a pull off
@@ -641,10 +642,11 @@
      * Window-level keydown router. In text mode it delegates to the full viewer
      * keyboard (search, selection, copy, navigation). In media mode the text
      * shortcuts don't apply (there are no lines to search / select / copy), so only
-     * Escape closes the window; the image's own fit / zoom / pan keys are handled by
-     * the focused `MediaImageView` stage, and the PDF embed owns its own keys.
+     * Escape closes the window; an image gets first claim on its fit / zoom keys
+     * (`MediaImageView.handleKey`) whatever has focus, and the PDF embed owns its own keys.
      */
     function handleWindowKeyDown(e: KeyboardEvent) {
+        if (!isTextView && media.kind === 'image' && imageViewRef?.handleKey(e)) return
         const mode = modeForKey(e, availableMediaKind(media.kind, media.lastMediaKind) !== null)
         const target = e.target
         const editing = target instanceof HTMLElement && target.closest('input, textarea, [contenteditable="true"], [role="combobox"]')
@@ -1247,7 +1249,7 @@
             />
         {/key}
     {:else if media.kind === 'image'}
-        <MediaImageView src={media.mediaSrc} {fileName} />
+        <MediaImageView bind:this={imageViewRef} src={media.mediaSrc} {fileName} />
     {:else if media.kind === 'pdf'}
         <MediaPdfView src={media.mediaSrc} {fileName} />
     {:else}
