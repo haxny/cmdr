@@ -1716,5 +1716,9 @@
   "fileExplorer.dragOut.partial": "{summary}{count, plural, =1 {無法複製「{name}」。} other {無法複製 {countText} 個項目。}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "無法在這裡計算資料夾大小：這個位置現在沒有連線。",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

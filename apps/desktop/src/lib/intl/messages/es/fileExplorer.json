@@ -1723,5 +1723,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {No se ha podido copiar “{name}”.} one {No se ha podido copiar {countText} elemento.} many {No se han podido copiar {countText} elementos.} other {No se han podido copiar {countText} elementos.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "No se pueden calcular tamaños de carpetas aquí: esta ubicación no está conectada ahora mismo.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

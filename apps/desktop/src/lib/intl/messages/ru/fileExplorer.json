@@ -1718,5 +1718,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {Не удалось скопировать «{name}».} one {Не удалось скопировать {countText} объект.} few {Не удалось скопировать {countText} объекта.} many {Не удалось скопировать {countText} объектов.} other {Не удалось скопировать {countText} объекта.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "Не удается вычислить размеры папок здесь: это место сейчас не подключено.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

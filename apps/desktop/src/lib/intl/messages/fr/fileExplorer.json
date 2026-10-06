@@ -1727,5 +1727,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {Copie de « {name} » impossible.} one {Copie de {countText} élément impossible.} many {Copie de {countText} éléments impossible.} other {Copie de {countText} éléments impossible.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "Calcul de la taille des dossiers impossible ici : cet emplacement n’est pas connecté pour le moment.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

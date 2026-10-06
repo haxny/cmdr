@@ -1719,5 +1719,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {Không thể sao chép “{name}”.} other {Không thể sao chép {countText} mục.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "Không thể tính kích cỡ thư mục ở đây: vị trí này hiện không được kết nối.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

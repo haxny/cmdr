@@ -1719,5 +1719,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {Nem sikerült átmásolni: „{name}”.} one {Nem sikerült átmásolni {countText} elemet.} other {Nem sikerült átmásolni {countText} elemet.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "Itt nem lehet kiszámítani a mappaméreteket: ez a hely most nincs csatlakoztatva.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }

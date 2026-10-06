@@ -1724,5 +1724,9 @@
   "fileExplorer.dragOut.partial": "{summary} {count, plural, =1 {„{name}“ ließ sich nicht kopieren.} one {{countText} Objekt ließ sich nicht kopieren.} other {{countText} Objekte ließen sich nicht kopieren.}}",
   "@fileExplorer.dragOut.partial": {
     "sourceHash": "9215226"
+  },
+  "fileExplorer.folderSizes.notConnected": "Ordnergrößen lassen sich hier nicht berechnen: Dieser Ort ist gerade nicht verbunden.",
+  "@fileExplorer.folderSizes.notConnected": {
+    "sourceHash": "8b51988"
   }
 }
