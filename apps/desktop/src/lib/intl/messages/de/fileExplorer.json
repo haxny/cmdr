@@ -1728,5 +1728,9 @@
   "fileExplorer.folderSizes.notConnected": "Ordnergrößen lassen sich hier nicht berechnen: Dieser Ort ist gerade nicht verbunden.",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, one {# Ordner ließ sich nicht vollständig lesen, deshalb ist seine Größe vielleicht unvollständig.} other {# Ordner ließen sich nicht vollständig lesen, deshalb sind ihre Größen vielleicht unvollständig.}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }

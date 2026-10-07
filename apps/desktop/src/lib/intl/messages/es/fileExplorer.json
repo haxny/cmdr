@@ -1727,5 +1727,9 @@
   "fileExplorer.folderSizes.notConnected": "No se pueden calcular tamaños de carpetas aquí: esta ubicación no está conectada ahora mismo.",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, one {No se ha podido leer por completo # carpeta, así que puede que su tamaño esté incompleto.} many {No se han podido leer por completo # carpetas, así que puede que sus tamaños estén incompletos.} other {No se han podido leer por completo # carpetas, así que puede que sus tamaños estén incompletos.}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }

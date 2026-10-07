@@ -1735,5 +1735,9 @@
   "fileExplorer.folderSizes.notConnected": "Kan hier geen mapgroottes berekenen: deze locatie is nu niet verbonden.",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, one {Kon # map niet volledig lezen, dus de grootte ervan is misschien onvolledig.} other {Kon # mappen niet volledig lezen, dus de groottes ervan zijn misschien onvolledig.}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }

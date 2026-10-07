@@ -1720,5 +1720,9 @@
   "fileExplorer.folderSizes.notConnected": "無法在這裡計算資料夾大小：這個位置現在沒有連線。",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, other {有 # 個資料夾無法完整讀取，所以資料夾大小可能不完整。}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }

@@ -1723,5 +1723,9 @@
   "fileExplorer.folderSizes.notConnected": "Không thể tính toán kích cỡ thư mục ở đây: vị trí này hiện không được kết nối.",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, other {Có # thư mục không đọc được hết, nên kích cỡ có thể không đầy đủ.}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }

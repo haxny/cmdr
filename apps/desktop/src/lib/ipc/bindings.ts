@@ -61,30 +61,6 @@ export const commands = {
   setListingIncludeHidden: (listingId: string, includeHidden: boolean) =>
     typedError<null, ListingLookupError>(__TAURI_INVOKE('set_listing_include_hidden', { listingId, includeHidden })),
   /**
-   *  Sets the quick filter of the pane showing `listing_id` (an empty or `null`
-   *  pattern clears it), and returns the new row count plus where the cursor's
-   *  file and the selected files landed in the filtered rows. With
-   *  `refuse_empty`, a pattern that matches nothing is refused (`accepted: false`).
-   */
-  setListingNameFilter: (
-    listingId: string,
-    pattern: string | null,
-    includeHidden: boolean,
-    cursorFilename: string | null,
-    selectedIndices: number[],
-    refuseEmpty: boolean,
-  ) =>
-    typedError<NameFilterResult, ListingLookupError>(
-      __TAURI_INVOKE('set_listing_name_filter', {
-        listingId,
-        pattern,
-        includeHidden,
-        cursorFilename,
-        selectedIndices,
-        refuseEmpty,
-      }),
-    ),
-  /**
    *  Re-reads a directory listing, emitting any diff.
    *
    *  `force` says whose idea the refresh was. `true` is an explicit "re-read this
@@ -478,30 +454,11 @@ export const commands = {
       __TAURI_INVOKE('find_file_index', { listingId, name, includeHidden }),
     ),
   /**
-   *  Compare directories (⇧F2): which rows each pane should mark against the
-   *  other. A pure read of the two cached listings; see `listing/compare.rs`.
-   */
-  compareDirectories: (
-    leftListingId: string,
-    leftIncludeHidden: boolean,
-    rightListingId: string,
-    rightIncludeHidden: boolean,
-    mode: CompareDirectoriesMode,
-  ) =>
-    typedError<CompareDirectoriesResult, CompareDirectoriesError>(
-      __TAURI_INVOKE('compare_directories', {
-        leftListingId,
-        leftIncludeHidden,
-        rightListingId,
-        rightIncludeHidden,
-        mode,
-      }),
-    ),
-  /**
    *  Calculates the sizes of folders the pane shows (⌥⇧⏎; `paths` for Space on a
-   *  folder), sending each reading as `listing-index-sizes-changed`. Resolves when
-   *  the count ends: done, or stopped by [`cancel_folder_size_count`] or a newer
-   *  count of the same listing. See `listing_index_sizes/count.rs`.
+   *  folder), sending each reading as `listing-index-sizes-changed`. A request
+   *  while a count of the same listing runs joins its queue. Resolves when the
+   *  count ends: done, or stopped by [`cancel_folder_size_count`]. See
+   *  `listing_index_sizes/count/`.
    */
   countFolderSizes: (listingId: string, includeHidden: boolean, paths: string[] | null) =>
     typedError<FolderSizeCountOutcome, CountFolderSizesError>(
@@ -6060,50 +6017,6 @@ export type CloudAiConsentWriteError =
   // `main.db` refused the write. `detail` is for logs only.
   | { kind: 'storeRefused'; detail: string }
 
-// Why a comparison didn't answer. Typed, so the frontend never reads a message.
-export type CompareDirectoriesError =
-  // A pane's listing is no longer cached (its pane moved on).
-  | { type: 'gone'; listingId: string }
-  // The comparison didn't finish within its deadline.
-  | { type: 'timedOut' }
-  // The comparison's worker failed; `detail` is log text only.
-  | { type: 'internal'; detail: string }
-
-/**
- *  Which copies count as different, beyond the files missing on the other side
- *  (marked in every mode).
- */
-export type CompareDirectoriesMode =
-  /**
-   *  Total Commander's default: the newer copy of a file is marked, the older
-   *  one isn't.
-   */
-  | 'newerAndMissing'
-  // Only the files the other side doesn't have.
-  | 'missing'
-  // Both copies of a file whose size differs, whichever is newer.
-  | 'sizeAndMissing'
-
-/**
- *  The rows to mark in each pane, in that pane's row space (no `..` offset), and
- *  which state of each listing they were read from.
- */
-export type CompareDirectoriesResult = {
-  left: number[]
-  right: number[]
-  /**
-   *  The listing's diff sequence the rows were read at. A pane may mark them
-   *  only while its last applied `directory-diff` sequence is exactly this.
-   */
-  leftSequence: number
-  rightSequence: number
-  /**
-   *  No change was waiting to reach either pane while the rows were read. When
-   *  false, the cache was ahead of the panes and the rows may name other files.
-   */
-  settled: boolean
-}
-
 /**
  *  Estimated compressed output size for a Compress operation, split by
  *  compressibility class so the frontend can re-scale to the selected deflate
@@ -7833,11 +7746,19 @@ export type FolderCoverage = {
   accounted: number
 }
 
-// How a count ended.
+// How a count ended. A request that joined a running count gets that count's outcome.
 export type FolderSizeCountOutcome = {
-  // Folders whose exact size landed in a pane that still shows them.
+  /**
+   *  Folders whose size landed in a pane that still shows them (exact, or a
+   *  lower bound when parts couldn't be read).
+   */
   counted: number
-  // Stopped early: by [`cancel`] (Esc), a newer count, or the listing closing.
+  /**
+   *  Folders it couldn't read, wholly (their rows went back to what they showed)
+   *  or in part (their size is a lower bound).
+   */
+  unreadable: number
+  // Stopped early: Esc, or the listing closing.
   cancelled: boolean
 }
 
@@ -10948,32 +10869,6 @@ export type MutationError =
       // What the layer below reported, for the log and the details disclosure.
       detail: string
     }
-
-/**
- *  Where the pane's cursor and selection land after a quick-filter change, in
- *  the new row space.
- */
-export type NameFilterResult = {
-  /**
-   *  Whether the listing took the new pattern. `false` only when the caller
-   *  asked to refuse a pattern nothing matches: the listing then keeps its
-   *  previous filter, and the rest of this answer describes that one.
-   */
-  accepted: boolean
-  // How many rows the pane shows under the new filter.
-  totalCount: number
-  /**
-   *  The row of the file that was under the cursor, or `None` when the new
-   *  filter leaves it out (or no file was given).
-   */
-  newCursorIndex: number | null
-  /**
-   *  The rows of the previously selected files the new filter still shows. A
-   *  selected file the filter leaves out drops out of the selection, so no
-   *  operation ever acts on a row the user can't see.
-   */
-  newSelectedIndices: number[]
-}
 
 export type NegotiatedSummaryDto = {
   dialect: string

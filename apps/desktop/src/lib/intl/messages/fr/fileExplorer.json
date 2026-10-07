@@ -1731,5 +1731,9 @@
   "fileExplorer.folderSizes.notConnected": "Calcul de la taille des dossiers impossible ici : cet emplacement n’est pas connecté pour le moment.",
   "@fileExplorer.folderSizes.notConnected": {
     "sourceHash": "8b51988"
+  },
+  "fileExplorer.folderSizes.unreadable": "{count, plural, one {Lecture complète impossible pour # dossier : sa taille est donc peut-être incomplète.} many {Lecture complète impossible pour # dossiers : leurs tailles sont donc peut-être incomplètes.} other {Lecture complète impossible pour # dossiers : leurs tailles sont donc peut-être incomplètes.}}",
+  "@fileExplorer.folderSizes.unreadable": {
+    "sourceHash": "ad31a56"
   }
 }
