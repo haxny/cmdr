@@ -77,32 +77,6 @@ export const commands = {
       }),
     ),
   /**
-   *  Sets the quick filter of the pane showing `listing_id` (an empty or `null`
-   *  pattern clears it), and returns the new row count plus where the cursor's
-   *  file and the selected files landed in the filtered rows. With
-   *  `refuse_empty`, a pattern that matches nothing is refused (`accepted: false`).
-   */
-  setListingNameFilter: (
-    listingId: string,
-    pattern: string | null,
-    includeHidden: boolean,
-    cursorFilename: string | null,
-    selectedIndices: number[],
-    refuseEmpty: boolean,
-    expectedSequence: number | null,
-  ) =>
-    typedError<NameFilterResult, ListingLookupError>(
-      __TAURI_INVOKE('set_listing_name_filter', {
-        listingId,
-        pattern,
-        includeHidden,
-        cursorFilename,
-        selectedIndices,
-        refuseEmpty,
-        expectedSequence,
-      }),
-    ),
-  /**
    *  Re-reads a directory listing, emitting any diff.
    *
    *  `force` says whose idea the refresh was. `true` is an explicit "re-read this
@@ -652,30 +626,27 @@ export const commands = {
   storedSpellings: (volumeId: string, paths: string[]) =>
     __TAURI_INVOKE<TimedOut<string[]>>('stored_spellings', { volumeId, paths }),
   /**
-   *  Creates a folder. Thin pass-through to the managed create op
-   *  (`write_operations::create`): expand tilde (root only), answer within
-   *  `MUTATION_REPLY_DEADLINE`, and ship the typed `MutationError` the frontend
-   *  renders its words from. A create still running at the deadline answers
-   *  `StillRunning` and reports its end on `mutation-settled`
-   *  (`write_operations/mutation_reply.rs`).
+   *  Creates a folder and returns its new path. Thin pass-through to the managed
+   *  create op (`write_operations::create`): expand tilde (root only), wrap in the
+   *  5 s write timeout, and ship the typed `MutationError` the frontend renders
+   *  its words from.
    */
   createDirectory: (
     volumeId: string | null,
     parentPath: string,
     name: string,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
-  ) =>
-    typedError<MutationReply, MutationError>(
-      __TAURI_INVOKE('create_directory', { volumeId, parentPath, name, initiator }),
-    ),
-  // Creates an empty file. Same shape as [`create_directory`].
+  ) => typedError<string, MutationError>(__TAURI_INVOKE('create_directory', { volumeId, parentPath, name, initiator })),
+  /**
+   *  Creates an empty file and returns its new path. Same shape as
+   *  [`create_directory`].
+   */
   createFile: (
     volumeId: string | null,
     parentPath: string,
     name: string,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
-  ) =>
-    typedError<MutationReply, MutationError>(__TAURI_INVOKE('create_file', { volumeId, parentPath, name, initiator })),
+  ) => typedError<string, MutationError>(__TAURI_INVOKE('create_file', { volumeId, parentPath, name, initiator })),
   /**
    *  Stores `password` for the archive at `archive_path` on `parent_volume_id`,
    *  overwriting any previous one (so a fresh attempt replaces a rejected password).
@@ -1302,9 +1273,7 @@ export const commands = {
    *  When `volume_id` is provided and not `"root"`, routes through the Volume trait
    *  (needed for MTP and other non-local volumes). Otherwise uses `std::fs::rename`.
    *  The mutation runs as a managed instant op (busy-marks the volume, appears
-   *  briefly in the queue). A rename still running at `MUTATION_REPLY_DEADLINE`
-   *  answers `StillRunning` and reports its end on `mutation-settled`
-   *  (`write_operations/mutation_reply.rs`).
+   *  briefly in the queue), still inline and result-returning.
    */
   renameFile: (
     from: string,
@@ -1312,8 +1281,36 @@ export const commands = {
     force: boolean,
     volumeId: string | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
+  ) => typedError<null, MutationError>(__TAURI_INVOKE('rename_file', { from, to, force, volumeId, initiator })),
+  /**
+   *  The live preview: each row's new name and whether it can take it. `rows` are
+   *  backend row numbers in rename order; `None` previews every row the pane shows.
+   */
+  previewMultiRename: (listingId: string, includeHidden: boolean, rows: number[] | null, spec: MultiRenameSpec) =>
+    typedError<PreviewRow[], MultiRenameError>(
+      __TAURI_INVOKE('preview_multi_rename', { listingId, includeHidden, rows, spec }),
+    ),
+  /**
+   *  Renames the rows the user saw as ready (`expected`, from the preview they
+   *  started from), as one operation the queue shows and Undo reverses. Refuses
+   *  with `previewOutOfDate` when the folder changed since that preview.
+   */
+  applyMultiRename: (
+    listingId: string,
+    includeHidden: boolean,
+    rows: number[] | null,
+    spec: MultiRenameSpec,
+    expected: ExpectedRename[],
   ) =>
-    typedError<MutationReply, MutationError>(__TAURI_INVOKE('rename_file', { from, to, force, volumeId, initiator })),
+    typedError<MultiRenameStarted, MultiRenameError>(
+      __TAURI_INVOKE('apply_multi_rename', { listingId, includeHidden, rows, spec, expected }),
+    ),
+  // The saved presets, newest first.
+  getMultiRenamePresets: () => __TAURI_INVOKE<MultiRenamePreset[]>('get_multi_rename_presets'),
+  // Saves a preset; one with the same name is replaced.
+  saveMultiRenamePreset: (preset: MultiRenamePreset) => __TAURI_INVOKE<void>('save_multi_rename_preset', { preset }),
+  // Deletes a preset by id. No-op when it isn't there.
+  deleteMultiRenamePreset: (id: string) => __TAURI_INVOKE<void>('delete_multi_rename_preset', { id }),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -1638,11 +1635,8 @@ export const commands = {
   quickLookSetPath: (path: string, volumeId: string) =>
     typedError<null, string>(__TAURI_INVOKE('quick_look_set_path', { path, volumeId })),
   quickLookClose: () => typedError<null, string>(__TAURI_INVOKE('quick_look_close')),
-  /**
-   *  Opens Finder's Get Info window for a file, or says why macOS won't let it
-   *  (`file_system::get_info`).
-   */
-  getInfo: (path: string) => typedError<null, GetInfoError>(__TAURI_INVOKE('get_info', { path })),
+  // Open the Get Info window for a file (macOS only, no-op on other platforms)
+  getInfo: (path: string) => typedError<null, string>(__TAURI_INVOKE('get_info', { path })),
   /**
    *  Opens a file in the text editor `app_choice` names.
    *
@@ -3486,20 +3480,24 @@ export const commands = {
   readClipboardText: () => typedError<string | null, string>(__TAURI_INVOKE('read_clipboard_text')),
   /**
    *  Reads the highest-intent non-file clipboard flavor (image / PDF / text) and
-   *  writes it into `directory` as a new `pasted.<ext>` file. Answers
-   *  `Done { file }` with the created file's name + kind (`file: None` = nothing
-   *  pasteable, the typed no-op the frontend treats as "no file created", NOT an
-   *  error), or `StillRunning` past the reply deadline with the real end on
-   *  `clipboard-paste-settled`.
+   *  writes it into `directory` as a new `pasted.<ext>` file, returning the created
+   *  file's name + kind. `Ok(None)` = nothing pasteable on the clipboard — the
+   *  typed no-op the frontend treats as "no file created", NOT an error toast.
    *
    *  Thin edge: reads the RAW pasteboard flavors on the main thread (NSPasteboard is
    *  main-thread-only), then picks the flavor + converts TIFF→PNG OFF the main
    *  thread (that decode can be hundreds of ms — never on the UI thread), and hands
-   *  the result to `write_operations::write_payload_replying`.
+   *  the result to `write_operations::write_payload_to_dir` under the write timeout.
    *  `directory` is tilde-expanded for the local `root` volume only.
    */
   pasteClipboardAsFile: (volumeId: string | null, directory: string) =>
-    typedError<PasteClipboardReply, MutationError>(__TAURI_INVOKE('paste_clipboard_as_file', { volumeId, directory })),
+    typedError<
+      {
+        name: string
+        kind: PastedKind
+      } | null,
+      MutationError
+    >(__TAURI_INVOKE('paste_clipboard_as_file', { volumeId, directory })),
   // Clears the in-process cut state without touching the system clipboard.
   clearClipboardCutState: () => __TAURI_INVOKE<void>('clear_clipboard_cut_state'),
   /**
@@ -4787,7 +4785,6 @@ export const events = {
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
   askCmdrTurn: makeEvent<AskCmdrTurn>('ask-cmdr-turn'),
-  clipboardPasteSettled: makeEvent<ClipboardPasteSettled>('clipboard-paste-settled'),
   closeAbout: makeEvent<CloseAbout>('close-about'),
   closeAllFileViewers: makeEvent<CloseAllFileViewers>('close-all-file-viewers'),
   closeConfirmation: makeEvent<CloseConfirmation>('close-confirmation'),
@@ -4854,7 +4851,6 @@ export const events = {
   mtpPtpcameradRestored: makeEvent<MtpPtpcameradRestored>('mtp-ptpcamerad-restored'),
   mtpPtpcameradSuppressed: makeEvent<MtpPtpcameradSuppressed>('mtp-ptpcamerad-suppressed'),
   mtpStorageRemoved: makeEvent<MtpStorageRemoved>('mtp-storage-removed'),
-  mutationSettled: makeEvent<MutationSettled>('mutation-settled'),
   networkDiscoveryStateChanged: makeEvent<NetworkDiscoveryStateChanged>('network-discovery-state-changed'),
   networkHostContextAction: makeEvent<NetworkHostContextAction>('network-host-context-action'),
   networkHostFound: makeEvent<NetworkHostFound>('network-host-found'),
@@ -5930,6 +5926,16 @@ export type CancelRollbackOutcome =
   // The reversal ran but left items behind — see [`CancelRollback::skips`].
   | 'partiallyRolledBack'
 
+// The case step, after search & replace.
+export type CaseChange =
+  | 'unchanged'
+  | 'lower'
+  | 'upper'
+  // The first letter upper, the rest lower.
+  | 'firstUpper'
+  // Every word's first letter upper, the rest lower.
+  | 'words'
+
 // What the person answered.
 export type CheckboxConfirm =
   // The confirming button, with the checkbox as it was left.
@@ -6020,32 +6026,6 @@ export type ClipModelStatus = {
   configured: boolean
   // The total download size in bytes, for the honest "~X MB" copy.
   downloadBytes: number
-}
-
-// How a paste that outlived its deadline ended.
-export type ClipboardPasteOutcome =
-  // It landed as `file`.
-  | {
-      type: 'landed'
-      // The created file.
-      file: PastedClipboardFile | null
-    }
-  // It didn't, for this reason: the same refusal an in-time reply carries.
-  | {
-      type: 'refused'
-      // Why.
-      error: MutationError
-    }
-
-/**
- *  `clipboard-paste-settled`: how a paste that answered `StillRunning` ended.
- *  Broadcast; the waiting caller picks its own by `pending_id`.
- */
-export type ClipboardPasteSettled = {
-  // The id the `StillRunning` reply carried.
-  pendingId: string
-  // How it ended.
-  outcome: ClipboardPasteOutcome
 }
 
 export type ClipboardReadResult = {
@@ -7605,6 +7585,13 @@ export type ExecuteCommand = {
  */
 export type ExecutionStatus = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
 
+// One row the user saw in the preview they started from.
+export type ExpectedRename = {
+  row: number
+  oldName: string
+  newName: string
+}
+
 /**
  *  User-selectable text encoding for the file viewer.
  *
@@ -8057,21 +8044,6 @@ export type FuzzyJumpError =
     // The listing the caller asked about.
     listingId: string
   }
-
-// Why `open_get_info` couldn't ask Finder for the window.
-export type GetInfoError =
-  /**
-   *  The user turned off Cmdr's control of Finder (System Settings > Privacy &
-   *  Security > Automation), so macOS would drop the ask without a word.
-   */
-  | { type: 'automationDenied' }
-  /**
-   *  `osascript` couldn't be spawned. Carries the OS errno where there is one, so
-   *  nothing has to read the message.
-   */
-  | { type: 'launchRefused'; errno: number | null }
-  // The ask didn't finish inside the command's deadline.
-  | { type: 'timedOut' }
 
 /**
  *  What a [`GitEntryMeta::Count`] is counting.
@@ -8899,6 +8871,13 @@ export type IndexStatusResponse = {
  *  it, so crediting the agent alone would be a lie about who chose those names.
  */
 export type Initiator = 'user' | 'aiClient' | 'agent' | 'agentEdited'
+
+export type InvalidNameReason =
+  | { type: 'empty' }
+  | { type: 'disallowedCharacter'; character: string }
+  | { type: 'tooLong' }
+  // `.` and `..` name the folder itself and its parent.
+  | { type: 'reserved' }
 
 /**
  *  The per-item outcome. A canceled/failed op keeps `Done` rows for what it
@@ -10021,6 +10000,13 @@ export type ManualConnectResult = {
   sharePath: string | null
 }
 
+// Why a mask doesn't parse. Typed, so the frontend words it.
+export type MaskError =
+  // A `[` with no `]`; `at` is its character position, from 0.
+  | { type: 'unclosed'; at: number }
+  // A placeholder Cmdr doesn't know, as typed between the brackets.
+  | { type: 'unknown'; placeholder: string }
+
 /**
  *  `mcp-settings-close`: ask the settings window to close itself. Emitted via a
  *  distinct static `emit_to("settings", …)` (NOT through the generic `mcp-*`
@@ -10928,6 +10914,60 @@ export type MtpStorageRemoved = {
   storageId: number
 }
 
+// Why a preview or an apply didn't answer. Typed, so the frontend words it.
+export type MultiRenameError =
+  // The pane's listing is no longer cached (it moved on).
+  | { type: 'gone'; listingId: string }
+  // The spec doesn't parse; the sheet shows it under its field.
+  | { type: 'spec'; error: SpecError }
+  // No row is ready to rename.
+  | { type: 'nothingToRename' }
+  // No volume answers for the folder (unplugged, disconnected).
+  | { type: 'notConnected'; volumeId: string }
+  // The executor refused before renaming anything.
+  | { type: 'couldntStart'; reason: RenameStartError }
+  // The folder changed since the preview the user started from: re-preview.
+  | { type: 'previewOutOfDate' }
+  // The folder is read-only (inside an archive or a `.git` portal).
+  | { type: 'readOnly' }
+  // The preview didn't finish within its deadline.
+  | { type: 'timedOut' }
+  // The preview's worker failed; `detail` is log text only.
+  | { type: 'internal'; detail: string }
+
+// One saved preset.
+export type MultiRenamePreset = {
+  id: string
+  name: string
+  spec: MultiRenameSpec
+}
+
+// Everything the sheet sets.
+export type MultiRenameSpec = {
+  nameMask: string
+  extensionMask: string
+  search: string
+  replace: string
+  caseSensitive: boolean
+  firstOnly: boolean
+  includeExtension: boolean
+  regex: boolean
+  substitute: boolean
+  case: CaseChange
+  removeDiacritics: boolean
+  counterStart: number
+  counterStep: number
+  counterDigits: number
+}
+
+// A started rename.
+export type MultiRenameStarted = {
+  // The operation, for its progress, the queue, and Undo.
+  operationId: string
+  // How many rows it renames.
+  renaming: number
+}
+
 /**
  *  A typed refusal from `rename_file`, `create_directory`, `create_file`, or
  *  `check_rename_permission`.
@@ -11042,77 +11082,6 @@ export type MutationError =
       // What the layer below reported, for the log and the details disclosure.
       detail: string
     }
-
-/**
- *  The reply of `create_directory`, `create_file`, and `rename_file`. A refusal
- *  inside the deadline is the command's `Err(MutationError)`, as before.
- */
-export type MutationReply =
-  // It landed.
-  | { type: 'done' }
-  /**
-   *  The deadline passed with the work still running. A [`MutationSettled`]
-   *  carrying this `pending_id` follows when it ends.
-   */
-  | {
-      type: 'stillRunning'
-      // Names this one mutation on the settle event.
-      pendingId: string
-    }
-
-/**
- *  `mutation-settled`: how a mutation that answered `StillRunning` ended.
- *  Broadcast; the waiting caller picks its own by `pending_id`.
- */
-export type MutationSettled = {
-  // The id the `StillRunning` reply carried.
-  pendingId: string
-  // How it ended.
-  outcome: MutationSettledOutcome
-}
-
-// How a mutation that outlived its deadline ended.
-export type MutationSettledOutcome =
-  // It landed.
-  | { type: 'landed' }
-  // It didn't, for this reason: the same refusal an in-time reply carries.
-  | {
-      type: 'refused'
-      // Why.
-      error: MutationError
-    }
-
-/**
- *  Where the pane's cursor and selection land after a quick-filter change, in
- *  the new row space.
- */
-export type NameFilterResult = {
-  /**
-   *  Whether the listing took the new pattern. `false` only when the caller
-   *  asked to refuse a pattern nothing matches: the listing then keeps its
-   *  previous filter, and the rest of this answer describes that one.
-   */
-  accepted: boolean
-  // How many rows the pane shows under the new filter.
-  totalCount: number
-  /**
-   *  The row of the file that was under the cursor, or `None` when the new
-   *  filter leaves it out (or no file was given).
-   */
-  newCursorIndex: number | null
-  /**
-   *  The rows of the previously selected files the new filter still shows. A
-   *  selected file the filter leaves out drops out of the selection, so no
-   *  operation ever acts on a row the user can't see.
-   */
-  newSelectedIndices: number[]
-  /**
-   *  The diff sequence the new row space starts at, when the filter changed. Every
-   *  `directory-diff` numbered up to it describes the old rows: the pane takes it
-   *  as its last applied sequence and skips them. `None` when nothing changed.
-   */
-  sequence: number | null
-}
 
 export type NegotiatedSummaryDto = {
   dialect: string
@@ -11724,13 +11693,6 @@ export type PaneState = {
    */
   typeToJump?: TypeToJumpInfo | null
   /**
-   *  The quick filter's pattern while it narrows the pane (`None` when off). The
-   *  files, counts, and indices here are then the FILTERED rows, which is what
-   *  an agent must know before reading an absent file as gone. Always on the wire,
-   *  like `type_to_jump`; the YAML layer prints it only when set.
-   */
-  quickFilter?: string | null
-  /**
    *  Set while a mount the pane tried didn't go through, whichever way the pane
    *  is showing it (the "Couldn't mount share" pane, or the login form an
    *  auth-class failure routes to). Without it a failed mount is invisible from
@@ -11752,26 +11714,6 @@ export type ParsedScope = {
   includePaths: string[]
   excludePatterns: string[]
 }
-
-/**
- *  What `paste_clipboard_as_file` answers within its reply deadline. A refusal
- *  inside the deadline is the command's `Err(MutationError)`. Same contract as
- *  `MutationReply` (`write_operations/mutation_reply.rs`), with the created
- *  file riding along.
- */
-export type PasteClipboardReply =
-  // It ended in time: the file it created, or `None` for nothing pasteable.
-  | {
-      type: 'done'
-      // The created file.
-      file: PastedClipboardFile | null
-    }
-  // The write is still running; a [`ClipboardPasteSettled`] with this id follows.
-  | {
-      type: 'stillRunning'
-      // Names this one paste on the settle event.
-      pendingId: string
-    }
 
 /**
  *  Result of pasting clipboard content as a file: the created file's name and
@@ -11946,6 +11888,15 @@ export type PrepareResult = {
    *  that declined indexing never searches at all.
    */
   loading: boolean
+}
+
+// One row of the preview.
+export type PreviewRow = {
+  // The pane row (backend index, no `..`).
+  row: number
+  oldName: string
+  newName: string
+  status: RowStatus
 }
 
 /**
@@ -12792,6 +12743,18 @@ export type RowBeside = 'previous' | 'next'
  *  search hits inside a top-level move/trash unit, and are never reversed.
  */
 export type RowRole = 'rollbackUnit' | 'searchOnly'
+
+// Whether a row can be renamed to its new name.
+export type RowStatus =
+  | { type: 'ready' }
+  // The new name is the old one: nothing to do.
+  | { type: 'unchanged' }
+  // The new name isn't a name a file can have.
+  | { type: 'invalidName'; reason: InvalidNameReason }
+  // Another row of the batch gets the same name.
+  | { type: 'duplicate' }
+  // Something that stays in the folder already has the name.
+  | { type: 'targetExists' }
 
 /**
  *  The mimalloc heap split into live data and allocator slack.
@@ -14773,6 +14736,12 @@ export type SpaceShortfall =
   | 'refuse'
   // Skip the check: the person chose to copy anyway.
   | 'proceed'
+
+// Why the spec itself can't run (the sheet shows it under the field).
+export type SpecError =
+  | { type: 'nameMask'; error: MaskError }
+  | { type: 'extensionMask'; error: MaskError }
+  | { type: 'badRegex'; detail: string }
 
 /**
  *  SQLite's page memory: the one process-wide slab every store's cached database
