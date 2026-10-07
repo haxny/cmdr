@@ -477,6 +477,39 @@ export const commands = {
     typedError<number | null, ListingLookupError>(
       __TAURI_INVOKE('find_file_index', { listingId, name, includeHidden }),
     ),
+  /**
+   *  Compare directories (⇧F2): which rows each pane should mark against the
+   *  other. A pure read of the two cached listings; see `listing/compare.rs`.
+   */
+  compareDirectories: (
+    leftListingId: string,
+    leftIncludeHidden: boolean,
+    rightListingId: string,
+    rightIncludeHidden: boolean,
+    mode: CompareDirectoriesMode,
+  ) =>
+    typedError<CompareDirectoriesResult, CompareDirectoriesError>(
+      __TAURI_INVOKE('compare_directories', {
+        leftListingId,
+        leftIncludeHidden,
+        rightListingId,
+        rightIncludeHidden,
+        mode,
+      }),
+    ),
+  /**
+   *  Calculates the sizes of folders the pane shows (⌥⇧⏎; `paths` for Space on a
+   *  folder), sending each reading as `listing-index-sizes-changed`. A request
+   *  while a count of the same listing runs joins its queue. Resolves when the
+   *  count ends: done, or stopped by [`cancel_folder_size_count`]. See
+   *  `listing_index_sizes/count/`.
+   */
+  countFolderSizes: (listingId: string, includeHidden: boolean, paths: string[] | null) =>
+    typedError<FolderSizeCountOutcome, CountFolderSizesError>(
+      __TAURI_INVOKE('count_folder_sizes', { listingId, includeHidden, paths }),
+    ),
+  // Stops the folder-size count running for `listing_id` (Esc). Reports whether one was running.
+  cancelFolderSizeCount: (listingId: string) => __TAURI_INVOKE<boolean>('cancel_folder_size_count', { listingId }),
   findFileIndices: (listingId: string, names: string[], includeHidden: boolean) =>
     typedError<{ [key in string]: number }, ListingLookupError>(
       __TAURI_INVOKE('find_file_indices', { listingId, names, includeHidden }),
@@ -6067,6 +6100,50 @@ export type CloudAiConsentWriteError =
   // `main.db` refused the write. `detail` is for logs only.
   | { kind: 'storeRefused'; detail: string }
 
+// Why a comparison didn't answer. Typed, so the frontend never reads a message.
+export type CompareDirectoriesError =
+  // A pane's listing is no longer cached (its pane moved on).
+  | { type: 'gone'; listingId: string }
+  // The comparison didn't finish within its deadline.
+  | { type: 'timedOut' }
+  // The comparison's worker failed; `detail` is log text only.
+  | { type: 'internal'; detail: string }
+
+/**
+ *  Which copies count as different, beyond the files missing on the other side
+ *  (marked in every mode).
+ */
+export type CompareDirectoriesMode =
+  /**
+   *  Total Commander's default: the newer copy of a file is marked, the older
+   *  one isn't.
+   */
+  | 'newerAndMissing'
+  // Only the files the other side doesn't have.
+  | 'missing'
+  // Both copies of a file whose size differs, whichever is newer.
+  | 'sizeAndMissing'
+
+/**
+ *  The rows to mark in each pane, in that pane's row space (no `..` offset), and
+ *  which state of each listing they were read from.
+ */
+export type CompareDirectoriesResult = {
+  left: number[]
+  right: number[]
+  /**
+   *  The listing's diff sequence the rows were read at. A pane may mark them
+   *  only while its last applied `directory-diff` sequence is exactly this.
+   */
+  leftSequence: number
+  rightSequence: number
+  /**
+   *  No change was waiting to reach either pane while the rows were read. When
+   *  false, the cache was ahead of the panes and the rows may name other files.
+   */
+  settled: boolean
+}
+
 /**
  *  Estimated compressed output size for a Compress operation, split by
  *  compressibility class so the frontend can re-scale to the selected deflate
@@ -6424,6 +6501,13 @@ export type CostSummary = {
 
 // The operation a dialog is about to start.
 export type CostedOperation = 'copy' | 'move' | 'delete'
+
+// Why a count didn't start. Typed, so the frontend never reads a message.
+export type CountFolderSizesError =
+  // The pane's listing is no longer cached (it moved on).
+  | { type: 'gone'; listingId: string }
+  // No volume answers for the listing's folder (unplugged, disconnected).
+  | { type: 'notConnected'; volumeId: string }
 
 /**
  *  What ground a run's answer was drawn from: the index, a live walk, or both.
@@ -7794,6 +7878,22 @@ export type FolderCoverage = {
   eligible: number
   // Of those, how many have a stored `done`/`failed` row (both count as accounted).
   accounted: number
+}
+
+// How a count ended. A request that joined a running count gets that count's outcome.
+export type FolderSizeCountOutcome = {
+  /**
+   *  Folders whose size landed in a pane that still shows them (exact, or a
+   *  lower bound when parts couldn't be read).
+   */
+  counted: number
+  /**
+   *  Folders it couldn't read, wholly (their rows went back to what they showed)
+   *  or in part (their size is a lower bound).
+   */
+  unreadable: number
+  // Stopped early: Esc, or the listing closing.
+  cancelled: boolean
 }
 
 // One folder row's fresh index reading.
