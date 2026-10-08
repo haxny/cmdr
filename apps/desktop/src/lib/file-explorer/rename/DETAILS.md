@@ -169,9 +169,9 @@ The step, in the order it must happen:
    the edit intact. Running off the end of a directory is the user finding the edge, not a decision about the name
    they're typing.
 2. **Capture the entry** beside the row the editor is drawn on: from the loaded window, or with `getFileBeside` when the
-   window can't answer for that row. Capturing BEFORE the save goes out is what makes the hop land where the user was
-   looking: the rename may re-sort the listing and carry the renamed file far away, and the row they meant is the one
-   that sat beside the editor when they pressed the key.
+   window can't answer for that row (`../pane/rename-neighbour.ts`). Capturing BEFORE the save goes out is what makes
+   the hop land where the user was looking: the rename may re-sort the listing and carry the renamed file far away, and
+   the row they meant is the one that sat beside the editor when they pressed the key.
 3. **Decide the edit's fate** (`decideStepFate`), and fire the save unawaited when it's a save. Chaining stays fast on
    slow volumes (SMB, MTP), where awaiting each save would stall every step.
 4. **Hop**: move the cursor (`applyNavigation`, which also scrolls the row into view) and activate on the captured

@@ -1,4 +1,4 @@
-import { getFileBeside, refreshListing } from '$lib/tauri-commands'
+import { refreshListing } from '$lib/tauri-commands'
 import { moveToTrash, type RenameValidityResult } from '$lib/tauri-commands'
 import { asMutationError } from '$lib/file-operations/mutation-error'
 import { renderMutationError } from '$lib/file-operations/mutation-error-messages'
@@ -19,6 +19,7 @@ import { resolveStepIndex, type RenameStepDirection } from '../rename/rename-ste
 import { createChainReports } from '../rename/chain-reports'
 import { createSiblingNames, type ListingScope } from '../rename/sibling-names'
 import { createChainMoveDialog } from './rename-move-dialog'
+import { createRenameNeighbour } from './rename-neighbour'
 
 export interface RenameFlowDeps {
   rename: ReturnType<typeof createRenameState>
@@ -246,54 +247,15 @@ export function createRenameFlow(deps: RenameFlowDeps) {
     activateRename(entry)
   }
 
-  /**
-   * The row beside the one the editor is drawn on, read out of the loaded window
-   * the user is looking at.
-   *
-   * ❌ Never `getEntryAt(cursorIndex ± 1)`. A pane holds three listings that
-   * disagree for a beat each time a chain's own rename lands: the backend mutates
-   * its listing the moment a rename does, the cursor is reconciled when the
-   * `directory-diff` for it arrives 50 ms later, and the window those rows are
-   * READ from is refetched on a throttle after that. An index means a different
-   * row in each of them, so a step that carries one across skips a row, or
-   * reopens the editor on the file whose rename it just sent (which the diff for
-   * that rename then closes, ending the chain with nothing said).
-   *
-   * The editor's own file is the one thing all three agree on, because the editor
-   * mounts BY PATH: find the row it's drawn on and the row beside it is the row
-   * beside it, in whichever listing answered. Here that's the window, which is
-   * also literally what's on screen, so the chain lands where the user was
-   * looking. It costs a `findIndex` over the loaded rows and no round trip.
-   */
-  function neighbourInLoadedWindow(direction: RenameStepDirection): FileEntry | undefined {
-    const targetPath = rename.target?.path
-    if (targetPath === undefined) return undefined
-    const editorRow = deps.indexOfEntry(targetPath)
-    if (editorRow === undefined) return undefined
-    const beside = direction === 'down' ? editorRow + 1 : editorRow - 1
-    // `..` is nothing to rename, and the window would hand it over happily.
-    if (beside < (deps.getHasParent() ? 1 : 0)) return undefined
-    return deps.getEntryAt(beside)
-  }
-
-  /**
-   * The same question, asked of the backend when the window can't answer for the
-   * row (a chain that has outrun the pane's prefetch).
-   *
-   * Anchored on the editor's own file for the same reason, and in ONE call:
-   * resolving the anchor's index and reading beside it separately lets a rename
-   * land in between and move the row out from under the index.
-   */
-  async function fetchNeighbour(direction: RenameStepDirection): Promise<FileEntry | undefined> {
-    const originalName = rename.target?.originalName
-    if (originalName === undefined) return undefined
-    try {
-      const side = direction === 'down' ? 'next' : 'previous'
-      return (await getFileBeside(deps.getListingId(), originalName, side, deps.getIncludeHidden())) ?? undefined
-    } catch {
-      return undefined
-    }
-  }
+  // The row beside the editor for a chained step, anchored on the editor's own file (`rename-neighbour.ts`).
+  const neighbour = createRenameNeighbour({
+    getTarget: () => rename.target ?? undefined,
+    getListingId: deps.getListingId,
+    getIncludeHidden: deps.getIncludeHidden,
+    getHasParent: deps.getHasParent,
+    getEntryAt: deps.getEntryAt,
+    indexOfEntry: deps.indexOfEntry,
+  })
 
   /**
    * Decides what becomes of the edit the user is stepping away from.
@@ -776,7 +738,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
       })
       if (index === undefined) return
 
-      const entry = neighbourInLoadedWindow(direction)
+      const entry = neighbour.inLoadedWindow(direction)
       if (entry) {
         stepTo(index, entry)
         return
@@ -787,7 +749,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
       // costs a round trip, in which the user can end the rename or start
       // another one, so the session has to answer for itself again before the
       // step lands.
-      void fetchNeighbour(direction).then((fetched) => {
+      void neighbour.fetch(direction).then((fetched) => {
         if (!fetched || !rename.active || rename.isSuperseded(sessionId)) return
         stepTo(index, fetched)
       })
