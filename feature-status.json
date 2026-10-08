@@ -113,7 +113,7 @@
       "id": "file-operations",
       "name": "File operations",
       "status": "stable",
-      "note": "Copy, move, delete, rename, and new folders with progress, conflict handling, rollback, backgrounding, and parallel processing when possible. A drive pulled mid-transfer keeps every original. The most-tested code in the app."
+      "note": "Copy, move, delete, rename, and new folders with progress, conflict handling, rollback, backgrounding, and parallel processing when possible. A drive pulled mid-transfer keeps every original, and copies keep file and folder dates wherever the destination can store them. The most-tested code in the app."
     },
     {
       "id": "file-viewer",

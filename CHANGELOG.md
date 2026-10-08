@@ -5,6 +5,110 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.0] - 2026-10-08
+
+Some missing Total Commander features got in (thanks for the contributions to [haxny](https://github.com/haxny) ❤️):
+
+1. Calculate folder sizes with `Space` (under cursor) and `⌥⇧⏎` (all folders) for the current moment. This allows you to
+   turn off drive indexing if you don't like it. It also works on servers and archives!
+2. Compare folders with `⇧F2`
+3. Clone pane with `⌘⇧C`—`⌘→`and `⌘←` have already worked, but some prefer `⌘⇧C`
+4. Go to root folder with `⌘/`.
+
+Also:
+
+- A quick filter (just type to narrow the file list rather than jump—configurable in Settings)
+- Sizes now calculated like Finder (kB/MB/GB, not KiB/MiB/GiB) by default, and the correct units are used in all
+  languages,
+- PC keyboards work: `⌦` (PC-style Delete), Insert, and star (`*`), plus (`+`), and minus (`-`) consistently across
+  keyboard layouts.
+
+Plus a bunch of fixes and security hardnings. Enjoy!
+
+### Added
+
+- Add a quick filter: typing in a pane narrows the list to matching names, with Jump mode one setting away (679d269b6,
+  c22edef24, 5164fea05, 758468c05)
+- Add Compare folders (⇧F2): each pane selects the files the other lacks and the newer copies, like Total Commander
+  (753d8e374, 1fd302fa1, 98b9a3d21)
+- Add Calculate folder sizes (⌥⇧⏎) and Space on a folder, with running totals, on SFTP, WebDAV, S3, and in archives too
+  (2f9b3b198, 90956188b, 22b4508e5)
+- Add Clone pane (⌘⇧C) to open the focused pane's folder in the other pane (8945f2358)
+- Add Go > Root folder (⌘/) (1bbef562f)
+- Add Compress to the file right-click menu (9cfdfde86)
+- Let IT manage Cmdr through MDM: turn off usage stats, reports, updates, AI, or cloud AI, with locked settings that say
+  why, plus ready-made profiles for these and for Full Disk Access (659a6b3db, 3ac0e6e4b, 344706ede, 3d4ba05d9,
+  eafac4e43, a7feeac2b, 484dddba9, 8769b5520, 21bb92cbd, 6f513a562, d61c1d8fa, 80d01362c, f09234efb, 2918d71c0,
+  7e5ac9cbc, f7967c427, b83bc570a)
+- Ship a signed, notarized .pkg installer for MDM deployment (177ef667d)
+- Work behind corporate proxies: PAC files, automatic proxy discovery, the macOS bypass list, and SOCKS, while on-device
+  AI and local servers go direct (743651ca2, ff994f22f, 0de5f8060)
+- Link each rollback in the operation log to the operation it undid (59dfea25c)
+- Show a countdown ring on toasts that close on their own, paused while you hover (709ae4730)
+- Say when a local AI model download stops during onboarding, with a button to Settings (7c82c54ae)
+
+### Changed
+
+- Show sizes in SI units (kB, MB, GB) by default like Finder, with binary sizes as KiB, MiB, GiB, and translated unit
+  names (c0aee606e, 976719d9c, f6db11767, b8483c062, eccc25cb4, 35b94b9c5)
+- Make ⌦ move to trash, PC Insert select, and `+` / `-` / `*` work on any keyboard layout (eed077e56)
+- Keep a perpetual license valid offline forever: only a signed revocation from the server can drop it (e549cd35f,
+  4b88237f6)
+- Keep the drive index out of Time Machine backups (d7c36f5bc)
+- Stop a burst of deletes from rescanning a whole project folder (89d68ef7a)
+- Make new folders, new files, and renames on a busy NAS start right away (653cf518c, 75298010a)
+- Name ADB in the "Tint device panes" setting (b36a15650)
+
+### Fixed
+
+- Fix copies onto and off phones, servers, NAS shares, and archives dating every file and folder to the copy (14b8f89e5,
+  1fd205106, 0bc7cefca, 4430d5db5, 6d71963aa, 5e7f4a92f, a2d56a9b5, 7ed2430f4, 3796cabe8)
+- Fix phone (MTP) dates listing hours or a day off (2912a6cf1, b7c67f78c)
+- Fix new folder, new file, rename, and paste on a slow volume reporting a timeout for something that then appeared:
+  Cmdr says it's still working and reports the real end (a7f7eabe6, 846ab9b4e, 2eba57459)
+- Fix a pane left idle for hours going stale, with F3–F6 failing until you navigated away (4d555c080, 995885a25)
+- Fix a renamed drive going stale until a restart: panes, tabs, and its index now follow it (073b970ae, 1779515da,
+  de600ccfa)
+- Fix "Sort folders: Always by name" showing folders Z→A when sorting by date or size (37d538a66)
+- Fix writing a file to an SMB share right after deleting one of the same name failing (05c341639)
+- Fix renaming a folder with a dot in its name asking to confirm an extension change (4947c6a1e)
+- Fix drag-selecting past the edge in the viewer flinging you to the end of the file (25b51bb90)
+- Fix right-click menus near the screen edge opening partly off-screen (cb774e1b4)
+- Fix the "macOS notifications are off" notice never showing (5070209bb)
+- Fix Get info doing nothing once Finder control was denied: Cmdr now explains how to turn it back on (0906e6722)
+- Fix rebinding the Downloads hotkey to a taken combo leaving no hotkey at all (842dd4135, ce24e9247)
+- Fix approved rename suggestions not running, and refused suggestions vanishing without a reason (c4bcaa78c, a690787a3)
+- Fix the scan before a copy off a phone counting files outside your selection (064ebf775)
+- Fix cloud sync badges sometimes taking two seconds to appear (16fc3fcb9)
+- Fix Ask Cmdr's cost footer and wake indicator showing stale states, and a key error showing under the wrong AI
+  provider (c35bf49da, 872caad9d)
+
+### Security
+
+- Harden Cmdr against hostile phones, servers, archives, and PDFs that could crash it or exhaust its memory, found by
+  new fuzzing (1df8773d5, a0b3fa497, 05b0cfca1, 956ec3481, 0bdc2164a)
+- Never write outside the destination when a phone or server lists a malicious file name (e0a61ed44)
+- Never run a repo's own filter commands when showing its git status (92d0f3f19, 1ee85c46a)
+- Refuse an update that isn't newer than the running version (bbac86b1a)
+- Keep AI search and selection requests, and many more file paths, out of error reports (a313aa195, 7bfc57ccf)
+
+### Non-app
+
+- Harden the supply chain: signing secrets only reachable from release tags, CodeQL and OpenSSF Scorecard on every push,
+  read-only workflow tokens, digest-pinned Docker images, and weekly fuzzing of eight parsers (b6d7f7499, 13dc06245,
+  93c2c3101, 4e06d8a21, 2a1d713e2, 76c33316b, 5281044ca)
+- Publish a whole-app threat model (63d7b18f4)
+- Add an optional release mode that signs update archives on David's laptop, so the updater key never lives on GitHub
+  (60d4fc6dc)
+- Cut `main`'s red CI rate from 44% to 15% with a macOS CI lane and more pre-push checks (6bdc0271e, dcb3f5f6b,
+  1299f2ca7, 3699a7882)
+- Fix beta and newsletter signups that never sent their confirmation email, and keep email addresses out of Discord
+  (8819a4914, 080d6deff, c627cb031)
+- Revoke a license on a full refund or chargeback, and stop mailing new keys on every subscription renewal (215f26d85,
+  7d7619837)
+- Rate-limit license activation and validation, and refuse replayed payment webhooks (0a7ced1d8, 6b519f51e, 10f0358fb)
+- Delete error-report bundles after 90 days, as the privacy policy promises (5c67ba4fc)
+
 ## [0.50.0] - 2026-10-03
 
 The highlights:
