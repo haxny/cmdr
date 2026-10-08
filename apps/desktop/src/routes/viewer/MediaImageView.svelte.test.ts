@@ -63,4 +63,25 @@ describe('MediaImageView.handleKey', () => {
     expect(view.handleKey(key('0', { altKey: true }))).toBe(false)
     destroy()
   })
+
+  it('leaves keys to a focused control, so Enter / Space on the mode picker open it without toggling the zoom', () => {
+    const { view, img, destroy } = mountView()
+    const picker = document.createElement('button')
+    picker.setAttribute('role', 'combobox')
+    document.body.appendChild(picker)
+    for (const k of ['Enter', ' ', '+']) {
+      const e = key(k, { bubbles: true })
+      picker.dispatchEvent(e)
+      expect(view.handleKey(e)).toBe(false)
+    }
+    flushSync()
+    expect(img().style.transform).toBe('none')
+
+    // A key a control already handled (Ark's listbox picks an option on Enter) stays handled.
+    const handled = key('Enter')
+    handled.preventDefault()
+    expect(view.handleKey(handled)).toBe(false)
+    picker.remove()
+    destroy()
+  })
 })

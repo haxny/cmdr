@@ -19,6 +19,9 @@
   import { clampZoom, nextClickZoom, type ImageViewMode } from './media-view'
   import { tString } from '$lib/intl/messages.svelte'
 
+  const CONTROL_SELECTOR =
+    'button, a[href], input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"]'
+
   type Props = {
     /** `cmdr-media://localhost/<token>` URL for the image bytes. */
     src: string
@@ -88,9 +91,14 @@
   /**
    * The image's keys, routed here by the page's window-level keydown so they work
    * whatever has focus. Returns true when it consumed the key.
+   *
+   * A focused control keeps its own keys: Enter / Space on the toolbar's mode picker
+   * opens it, and Ark's listbox picks an option on Enter (and marks it handled), so
+   * neither may also toggle the zoom.
    */
   export function handleKey(e: KeyboardEvent): boolean {
-    if (e.metaKey || e.ctrlKey || e.altKey) return false
+    if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return false
+    if (e.target instanceof Element && e.target.closest(CONTROL_SELECTOR)) return false
     switch (e.key) {
       case 'Enter':
       case ' ':

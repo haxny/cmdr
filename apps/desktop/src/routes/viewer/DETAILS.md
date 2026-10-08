@@ -115,9 +115,9 @@ branches on `viewMode`: text uses the line pipeline; binary and hex use original
 
 - **Text-only paths are data-gated, not just hidden.** Every page `$effect` driving the line machinery early-returns
   unless `viewMode === 'text'`, `openViewerSession` skips the line/index/tail/encoding setup for media, and the window
-  keydown router only handles Escape in media mode (image keys live on the focused `MediaImageView` stage; the PDF embed
-  owns its own). A media session has empty text fields, so don't undo these guards or the empty line code runs and can
-  throw.
+  keydown router only handles Escape in media mode (an image first gets `MediaImageView.handleKey`, which skips keys
+  aimed at a focused control; the PDF embed owns its own). A media session has empty text fields, so don't undo these
+  guards or the empty line code runs and can throw.
 - **Two-way switch between rendered media and raw text.** A viewer window shows exactly one file for its life, so the
   file's natural media kind stays recoverable on the frontend: `media.setFromOpenResult` stamps `lastMediaKind` on any
   media open, and `reset()` PRESERVES it across the switch to text. "View as text" (`media.viewAsText()`) resets the
