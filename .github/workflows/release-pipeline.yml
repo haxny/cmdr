@@ -1098,6 +1098,9 @@ jobs:
   bump-tap:
     name: Bump Homebrew tap
     needs: [publish]
+    # ❗ Explicit, because the default `success()` reads every job upstream, and `draft` always
+    # skips in `ci` mode: without this the tap silently never bumped (v0.51.0 had to be bumped by hand).
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
