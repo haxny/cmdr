@@ -242,12 +242,11 @@ risk.
     `apps/desktop/src/lib/updates/DETAILS.md`).
   - **Release builds are Developer ID signed and notarized** (`docs/guides/apple-signing-and-notarization.md`).
   - **The release pipeline**: release tags are SSH-signed and verified against `.github/release-signers` before a build
-    starts; only admins can create `v*` tags (a repository ruleset); the only job that signs runs in a `release`
-    environment that only `v*` tags can deploy to (all eight signing secrets are in it; their repo-level copies stay
-    until the first release through the environment succeeds, so until then a branch workflow could still read them:
-    `docs/guides/releasing.md` § Signing secrets); a release waits for a full, green CI run of its commit; every
-    third-party action is pinned to a commit SHA; each release publishes SHA-256 checksums, SLSA build provenance, and
-    signed SBOMs (`docs/guides/releasing.md`).
+    starts; only admins can create `v*` tags (a repository ruleset); the only jobs that sign run in a `release`
+    environment that only `v*` tags can deploy to, and no signing secret exists at repo level, so a branch workflow
+    can't read them (`docs/guides/releasing.md` § Signing secrets); a release waits for a full, green CI run of its
+    commit; every third-party action is pinned to a commit SHA; each release publishes SHA-256 checksums, SLSA build
+    provenance, and signed SBOMs (`docs/guides/releasing.md`).
   - **The updater key signs on the maintainer's laptop, not in CI**, from the first release in `local` signing mode
     (`docs/guides/releasing.md` § Who signs the update archives). CI builds, notarizes, and attests into a draft
     release; the laptop verifies each update archive's build provenance (the release workflow, at the signed tag's

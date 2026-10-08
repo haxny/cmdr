@@ -15,26 +15,20 @@ Related guides for the signing and distribution steps: `apple-signing-and-notari
 ## Signing secrets
 
 The secrets that sign, notarize, and updater-sign a build live in the `release` environment on `vdavid/cmdr`, and only
-the `build` job declares `environment: release`. The environment's deployment policy admits `v*` tags only, with no
-required reviewers (releases run unattended), so once the repo-level copies are gone (below), a workflow on a branch
-can't reach them. Where each value comes from: the vault note `projects/Cmdr/workflow/Cmdr signing keys.md`.
+the `build` and `pkg` jobs declare `environment: release`. The environment's deployment policy admits `v*` tags only,
+with no required reviewers (releases run unattended), and no signing secret exists at repo level, so a workflow on a
+branch can't reach them. Where each value comes from: the vault note `projects/Cmdr/workflow/Cmdr signing keys.md`.
 
-- **In the environment** (set 2026-10-05): `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`,
-  `APPLE_API_KEY`, `APPLE_API_KEY_BASE64`, `APPLE_API_ISSUER`, `APPLE_SIGNING_IDENTITY`. The updater key was checked
-  against the app's key ID `A2601F36BB168C0A` and the notarization trio against Apple's notary API before setting.
-- **Still repo-level only**: `APPLE_CERTIFICATE` and `APPLE_CERTIFICATE_PASSWORD`. Their only copy outside GitHub is in
-  Bitwarden, which agents can't reach. Set them from there:
-  `gh secret set APPLE_CERTIFICATE --env release -R vdavid/cmdr` (it prompts for the value), same for the password.
-- **Not set yet**: `APPLE_INSTALLER_CERTIFICATE` and `APPLE_INSTALLER_CERTIFICATE_PASSWORD`, the Developer ID Installer
-  certificate that signs the `.pkg`. Environment-only from the start (no repo-level copy). Until they exist the `pkg`
-  job skips (§ The installer package).
-- **Repo-level copies still exist** for all eight. A job in an environment sees both, and the environment value wins on
-  a name clash, so nothing breaks while the move is partial.
-
-**Follow-up once the first release through the environment succeeds** (with all eight in the environment): delete the
-repo-level copies, `gh secret delete <NAME> -R vdavid/cmdr` for each of the eight, then confirm the next release still
-signs and notarizes. The updater pair (`TAURI_SIGNING_*`) leaves GitHub entirely once a `local` release has shipped: §
-Who signs the update archives.
+- **The ten secrets**: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `APPLE_API_KEY`,
+  `APPLE_API_KEY_BASE64`, `APPLE_API_ISSUER`, `APPLE_SIGNING_IDENTITY`, `APPLE_CERTIFICATE`,
+  `APPLE_CERTIFICATE_PASSWORD`, `APPLE_INSTALLER_CERTIFICATE`, and `APPLE_INSTALLER_CERTIFICATE_PASSWORD`. The `.p12`
+  files and their passwords come from Bitwarden, which agents can't reach; set or replace one with
+  `gh secret set <NAME> --env release -R vdavid/cmdr` (it prompts for the value).
+- ❌ **Never add a signing secret at repo level.** `release.yml` calls the pipeline with `secrets: inherit`, so a
+  repo-level copy reaches every job, and any branch workflow could read it. (The repo-level copies were deleted on
+  2026-10-08, after v0.51.0 signed and notarized from the environment alone.)
+- The updater pair (`TAURI_SIGNING_*`) leaves GitHub entirely once a `local` release has shipped: § Who signs the update
+  archives.
 
 ## Who signs the update archives
 
@@ -120,14 +114,13 @@ is its own proof of origin.
 
 ### After the first `local` release ships
 
-The `TAURI_SIGNING_*` secrets stay in the `release` environment (and at repo level) until then, so `ci` mode keeps
-working while the new flow proves itself. Until they're gone, `local` mode protects nothing against a leak from GitHub.
-Once the first `local` release has passed the `/release` skill's checks (the manifest, the three archive URLs, the
-attestations) and an installed copy has updated to it:
+The `TAURI_SIGNING_*` secrets stay in the `release` environment until then, so `ci` mode keeps working while the new
+flow proves itself. Until they're gone, `local` mode protects nothing against a leak from GitHub. Once the first `local`
+release has passed the `/release` skill's checks (the manifest, the three archive URLs, the attestations) and an
+installed copy has updated to it:
 
 1. Delete the updater pair from GitHub: `gh secret delete TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`, the
-   same for `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and both repo-level copies (`gh secret delete <NAME> -R vdavid/cmdr`).
-   From then on, going back to `ci` takes step 2 of the revert.
+   same for `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. From then on, going back to `ci` takes step 2 of the revert.
 2. Update § Signing secrets and the release-chain bullets in `docs/threat-model.md`, which are phrased for this point.
 
 ## Which runner builds the release
@@ -415,24 +408,24 @@ Why it's shaped this way:
   (verified against GitHub's "Using artifact attestations and reusable workflows to achieve SLSA v1 Build Level 3",
   2026-10-05). ❌ Don't move jobs back into `release.yml`. Inside the call, `github.*` and `vars.*` are the caller's
   (the tag, this repo's variables), and job names show as `Release / <job>`.
-- **The public claim is still Level 2** until a real release passes the `--signer-workflow` check below. The first
-  release built through `release-pipeline.yml` hasn't happened yet.
+- **The public claim is Level 3** on `/trust` and `/trust/development` (verified on v0.51.0, the first release through
+  `release-pipeline.yml`, with the `--signer-workflow` check below, 2026-10-08).
 
 Checking a release (the `/release` command does this after the run):
 
 ```bash
-gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr \
+gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr --format json \
   --signer-workflow vdavid/cmdr/.github/workflows/release-pipeline.yml
-gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr --predicate-type https://cyclonedx.org/bom
+gh attestation verify Cmdr_X.Y.Z_aarch64.dmg --repo vdavid/cmdr --format json \
+  --predicate-type https://cyclonedx.org/bom
 ```
 
 The first checks provenance and that the reusable workflow signed it, the second the SBOM binding. Earlier releases were
 signed by `release.yml` itself, so check those with `--signer-workflow` pointing at `release.yml`. The public
 instruction on `/trust` is the shorter `gh attestation verify <file> --repo vdavid/cmdr`.
 
-**Once the first check passes on a real release**, move the public claim to Level 3: the SLSA mentions on `/trust`
-(`apps/website/src/pages/trust.astro`, linking `slsa.dev/spec/v1.0/levels#build-l2`) and `/trust/development`
-(`apps/website/src/pages/trust/development.astro`), then this paragraph and the bullet above.
+**Gotcha**: without `--format json`, `gh attestation verify` prints nothing when its output isn't a terminal (an agent's
+shell, a pipe), only exit 0. Read the exit code, or keep the flag to see what it verified (`gh` 2.x, 2026-10-08).
 
 ## The installer package
 

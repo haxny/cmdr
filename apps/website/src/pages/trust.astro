@@ -281,9 +281,11 @@ const toc = [
     <h3 id="mdm-deploy">Deploying Cmdr</h3>
     <ul>
         <li>
-            <strong>Installing</strong>: today Cmdr ships as a disk image (DMG) and a Homebrew cask. An installer package
-            (<code>.pkg</code>), signed and notarized, is ready in the release pipeline and waits on its signing
-            certificate. It installs Cmdr to <code>/Applications</code>, owned by the system, and runs no scripts.
+            <strong>Installing</strong>: each release includes a signed, notarized installer package,
+            <code>Cmdr_X.Y.Z_universal.pkg</code>, on its
+            <a href="https://github.com/vdavid/cmdr/releases/latest">GitHub release page</a>. It installs Cmdr to
+            <code>/Applications</code>, owned by the system, and runs no scripts. Cmdr also ships as a disk image (DMG)
+            and a Homebrew cask.
         </li>
         <li>
             <strong>Updates on a managed Mac</strong>: when Cmdr sits in an <code>/Applications</code> folder the user
@@ -317,9 +319,7 @@ const toc = [
         </li>
     </ul>
     <DevTodo>
-        The pkg: once David adds the Developer ID Installer certificate (<code>docs/guides/releasing.md</code> § The
-        installer package) and a release ships <code>Cmdr_X.Y.Z_universal.pkg</code>, change the "Installing" bullet
-        to say releases include it, link it, and drop the matching "Not in place yet" line. The PPPC profile: test it
+        The PPPC profile: test it
         on a real MDM-enrolled Mac (the profile installs, System Settings shows Cmdr under Full Disk Access as managed,
         and onboarding's step 1 shows the "already granted" variant), then drop that gap line and tick the box in
         <a href="https://github.com/vdavid/cmdr/issues/118">#118</a>.
@@ -446,14 +446,13 @@ const toc = [
             The <a href="/mdm/cmdr-full-disk-access.mobileconfig" download>Full Disk Access profile</a> uses it.
         </li>
         <li>
-            <strong>Downloads</strong>: a disk image (DMG) from GitHub Releases, or the Homebrew cask. Each release
-            publishes SHA-256 checksums. There's no <code>.pkg</code> installer yet (<a href="#mdm-deploy"
-                >deploying Cmdr</a
-            >).
+            <strong>Downloads</strong>: a disk image (DMG) or an installer package (<code>.pkg</code>, signed with
+            Apple's Developer ID Installer certificate) from GitHub Releases, or the Homebrew cask. Each release
+            publishes SHA-256 checksums (<a href="#mdm-deploy">deploying Cmdr</a>).
         </li>
         <li>
             <strong>Build provenance</strong>: every file in a release carries a signed
-            attestation (<a href="https://slsa.dev/spec/v1.0/levels#build-l2">SLSA Build Level 2</a>) saying which
+            attestation (<a href="https://slsa.dev/spec/v1.0/levels#build-l3">SLSA Build Level 3</a>) saying which
             commit and which GitHub workflow built it. To check a download, run
             <code>gh attestation verify &lt;file&gt; --repo vdavid/cmdr</code> with the
             <a href="https://cli.github.com/">GitHub CLI</a>.

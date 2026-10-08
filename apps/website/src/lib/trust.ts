@@ -15,7 +15,7 @@
  */
 
 /** The release and date the page's claims were checked against. */
-export const verifiedAgainst = { version: '0.50.0', date: '2026-10-05' }
+export const verifiedAgainst = { version: '0.51.0', date: '2026-10-08' }
 
 /**
  * The app's designated requirement, exactly as `codesign -d -r-` prints it for a release build.
@@ -325,15 +325,14 @@ export const notInPlaceYet: string[] = [
   '<strong>Usage stats and crash reports are on by default.</strong> Each user can turn them off, and IT can turn them off for everyone (<a href="#mdm">central management</a>).',
   "<strong>No update channels and no staged rollout.</strong> IT can turn updates off or hold Cmdr at a version, but can't install an older release through the updater.",
   '<strong>No managed preference turns off the remaining traffic</strong>: license checks, S3 prices, and the image-search model download (<a href="#mdm-not-covered">why each one stays</a>).',
-  '<strong>No <code>.pkg</code> installer yet.</strong> The release pipeline is ready to build a signed one and waits on its signing certificate (<a href="#mdm-deploy">deploying Cmdr</a>).',
   "<strong>The Full Disk Access profile hasn't been tested on a real MDM yet.</strong> Its code requirement is checked against the released app.",
   "<strong>Data leaves the EU</strong> (see above), and Cloudflare storage isn't locked to the EU jurisdiction.",
   '<strong>No data processing agreement (DPA)</strong> ready to sign.',
   '<strong>Error-report cleaning has a known gap</strong>: a file name logged on its own, with no path on the same line, can be included.',
   '<strong>No reproducible builds.</strong> Each release publishes SHA-256 checksums, signed build provenance, and signed SBOMs, and its tag is signed.',
   '<strong>No second-person code review.</strong> Cmdr has one maintainer, and development is AI-assisted. Automated checks stand in for a reviewer (<a href="/trust/development#review">details</a>).',
-  '<strong>One maintainer account can publish a release</strong> to every install, and the signing keys are GitHub repository secrets without a protected environment.',
-  "<strong>Checks on GitHub run after a change lands</strong>, on Linux. A release waits for a full, green run of the commit it's cut from, checked by both the maintainer's release script and the release workflow on GitHub. The macOS-only code and the macOS end-to-end tests run only on the maintainer's Mac.",
+  '<strong>One maintainer account can publish a release</strong> to every install. The signing keys sit in a protected GitHub environment that only signed release tags reach.',
+  "<strong>Checks on GitHub run after a change lands</strong>, on Linux and macOS. A release waits for a full, green run of the commit it's cut from, checked by both the maintainer's release script and the release workflow on GitHub. The macOS end-to-end tests run only on the maintainer's Mac.",
   '<strong>No automated tests on older macOS versions.</strong> A release-time check catches system frameworks and functions that are too new for them.',
   '<strong>No third-party audit or penetration test, and no SOC 2 or ISO 27001.</strong>',
   "<strong>One person maintains Cmdr</strong> and holds all signing keys. There's no continuity clause in the terms and no written support commitment.",

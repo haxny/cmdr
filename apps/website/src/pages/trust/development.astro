@@ -337,14 +337,14 @@ const toc = [
         </li>
         <li>
             <strong>Provenance and SBOMs</strong>: once a release is published, a separate step downloads every file
-            back from it and signs a build attestation for each one (SLSA Build Level 2). It also publishes CycloneDX
+            back from it and signs a build attestation for each one (SLSA Build Level 3). It also publishes CycloneDX
             SBOMs (software bills of materials) for the Rust and JavaScript dependencies, signed and tied to the builds
             they describe. Check any download with
             <code>gh attestation verify &lt;file&gt; --repo vdavid/cmdr</code>.
         </li>
         <li>
-            <strong>Not in place</strong>: the signing keys are stored as GitHub repository secrets without a protected
-            environment, and there's no reproducible build.
+            <strong>Signing keys</strong> sit in a protected GitHub environment that only signed release tags reach.
+            <strong>Not in place</strong>: a reproducible build.
         </li>
     </ul>
 
