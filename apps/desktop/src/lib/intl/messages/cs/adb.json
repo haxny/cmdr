@@ -1,0 +1,83 @@
+{
+  "adb.connect.adbNotInstalled": "Cmdr nenašel nástroje platformy Android.",
+  "@adb.connect.adbNotInstalled": {
+    "sourceHash": "a842454"
+  },
+  "adb.connect.openSettings": "Otevřít Nastavení",
+  "@adb.connect.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "adb.connect.serverUnreachable": "Nástroje pro Android na tomto Macu neodpověděly.",
+  "@adb.connect.serverUnreachable": {
+    "sourceHash": "b53716b"
+  },
+  "adb.connect.deviceGone": "Tvůj telefon už není připojený.",
+  "@adb.connect.deviceGone": {
+    "sourceHash": "00d5254"
+  },
+  "adb.connect.unauthorized": "Zkontroluj telefon a klepni na „Povolit“.",
+  "@adb.connect.unauthorized": {
+    "sourceHash": "6c2cf77"
+  },
+  "adb.connect.deviceTooOld": "Tento telefon má příliš starou verzi Androidu, takže ho Cmdr nemůže procházet.",
+  "@adb.connect.deviceTooOld": {
+    "sourceHash": "9ce52c1"
+  },
+  "adb.connect.timedOut": "Tvůj telefon neodpověděl včas.",
+  "@adb.connect.timedOut": {
+    "sourceHash": "20ddfdc"
+  },
+  "adb.connect.transport": "Cmdr ztratil připojení k tvému telefonu.",
+  "@adb.connect.transport": {
+    "sourceHash": "d90c37c"
+  },
+  "adb.connect.cancelled": "Otevírání telefonu bylo zastaveno.",
+  "@adb.connect.cancelled": {
+    "sourceHash": "bc525aa"
+  },
+  "adb.connect.waitingHint": "Cmdr otevře telefon, jakmile to uděláš.",
+  "@adb.connect.waitingHint": {
+    "sourceHash": "d1df048"
+  },
+  "adb.readiness.waitingForAuthorization": "Čeká se, až na telefonu klepneš na „Povolit“",
+  "@adb.readiness.waitingForAuthorization": {
+    "sourceHash": "679558e"
+  },
+  "adb.readiness.offline": "Tvůj telefon neodpovídá. Probuď jeho obrazovku, nebo vytáhni kabel a zase ho zapoj.",
+  "@adb.readiness.offline": {
+    "sourceHash": "6061885"
+  },
+  "adb.readiness.noPermissions": "Tvůj telefon je pro tento Mac přes USB nedostupný. Zkus jiný kabel nebo port.",
+  "@adb.readiness.noPermissions": {
+    "sourceHash": "265d7ed"
+  },
+  "adb.hint.text": "Chceš celý souborový systém? Zapni ladění přes USB.",
+  "@adb.hint.text": {
+    "sourceHash": "51bd05a"
+  },
+  "adb.hint.how": "Jak na to",
+  "@adb.hint.how": {
+    "sourceHash": "7470bd3"
+  },
+  "adb.hint.dismiss": "Zavřít",
+  "@adb.hint.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "adb.disconnectDeviceAriaLabel": "Odpojit zařízení {name}",
+  "@adb.disconnectDeviceAriaLabel": {
+    "sourceHash": "8f755cb"
+  },
+  "adb.disconnectBusyTooltip": "Cmdr ještě pracuje se soubory na tomto zařízení. Odpojíš ho, až bude hotovo.",
+  "@adb.disconnectBusyTooltip": {
+    "sourceHash": "73c355e"
+  },
+  "adb.disconnectingDeviceAriaLabel": "Odpojování zařízení {name}…",
+  "@adb.disconnectingDeviceAriaLabel": {
+    "sourceHash": "50be3d4"
+  },
+  "adb.volumeLabelWithSuffix": "{deviceName} (ADB)",
+  "@adb.volumeLabelWithSuffix": {
+    "sourceHash": "98d6c20",
+    "sameAsSourceJustification": "Placeholder plus ADB, the Android Debug Bridge tool name kept verbatim per the key description; nothing translatable."
+  }
+}

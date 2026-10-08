@@ -1,0 +1,95 @@
+{
+  "updates.failure.check": "Cmdru se nepodařilo vyhledat aktualizace. {reason}",
+  "@updates.failure.check": {
+    "sourceHash": "5fb454c"
+  },
+  "updates.failure.checkUntyped": "Cmdru se nepodařilo vyhledat aktualizace. Zkontroluj připojení k internetu a zkus to později znovu.",
+  "@updates.failure.checkUntyped": {
+    "sourceHash": "233f5d9"
+  },
+  "updates.failure.download": "Cmdru se nepodařilo stáhnout aktualizaci. Zkus to později znovu.",
+  "@updates.failure.download": {
+    "sourceHash": "1becb1b"
+  },
+  "updates.failure.install": "Cmdru se nepodařilo nainstalovat aktualizaci. Zkus to později znovu, nebo si stáhni nejnovější Cmdr z getcmdr.com.",
+  "@updates.failure.install": {
+    "sourceHash": "05a4714"
+  },
+  "updates.checkToast.sendErrorReport": "Odeslat zprávu o chybě",
+  "@updates.checkToast.sendErrorReport": {
+    "sourceHash": "c327e68"
+  },
+  "updates.toast.ready": "Nová verze Cmdru je připravená.",
+  "@updates.toast.ready": {
+    "sourceHash": "622668e"
+  },
+  "updates.toast.readyDetail": "Znovu spusť Cmdr hned teď, nebo novou verzi dostaneš, až ho příště otevřeš.",
+  "@updates.toast.readyDetail": {
+    "sourceHash": "42ce099"
+  },
+  "updates.toast.versionChange": "v{prev} → v{next}",
+  "@updates.toast.versionChange": {
+    "sourceHash": "41b26f1",
+    "sameAsSourceJustification": "Version numbers and an arrow only; Czech writes version numbers the same way."
+  },
+  "updates.toast.versionChangeAria": "Aktualizace z verze {prev} na verzi {next}",
+  "@updates.toast.versionChangeAria": {
+    "sourceHash": "911d79c"
+  },
+  "updates.toast.later": "Později",
+  "@updates.toast.later": {
+    "sourceHash": "73b6e48"
+  },
+  "updates.toast.restart": "Znovu spustit teď",
+  "@updates.toast.restart": {
+    "sourceHash": "09af100"
+  },
+  "updates.moveToApplicationsDialog.title": "Přesunout Cmdr do složky Aplikace",
+  "@updates.moveToApplicationsDialog.title": {
+    "sourceHash": "97f87a0"
+  },
+  "updates.moveToApplicationsDialog.translocated": "Nová verze je připravená, ale macOS spouští Cmdr z dočasné kopie jen ke čtení. To se stává, když aplikaci otevřeš přímo z místa, kam se stáhla, a znamená to, že se aktualizace nemají kam nainstalovat.",
+  "@updates.moveToApplicationsDialog.translocated": {
+    "sourceHash": "ed64953"
+  },
+  "updates.moveToApplicationsDialog.readOnlyVolume": "Nová verze je připravená, ale Cmdr běží z místa jen ke čtení, obvykle z obrazu disku, který je pořád připojený. Aktualizace se proto nemají kam nainstalovat.",
+  "@updates.moveToApplicationsDialog.readOnlyVolume": {
+    "sourceHash": "a23ef5a"
+  },
+  "updates.moveToApplicationsDialog.howTo": "Ukonči Cmdr, přetáhni ho do složky Aplikace a otevři ho odtamtud. Každá další aktualizace pak dorazí sama.",
+  "@updates.moveToApplicationsDialog.howTo": {
+    "sourceHash": "76a136d"
+  },
+  "updates.moveToApplicationsDialog.gotIt": "Rozumím",
+  "@updates.moveToApplicationsDialog.gotIt": {
+    "sourceHash": "5ad3dbd"
+  },
+  "updates.status.noUpdates": "Nebyly nalezeny žádné aktualizace. Aktuální verze: v{version}",
+  "@updates.status.noUpdates": {
+    "sourceHash": "63a4ecb"
+  },
+  "updates.status.checking": "Kontrola…",
+  "@updates.status.checking": {
+    "sourceHash": "ec963ff"
+  },
+  "updates.status.downloading": "Nalezena aktualizace, stahování v{next} (aktuální: v{prev})…",
+  "@updates.status.downloading": {
+    "sourceHash": "480c6da"
+  },
+  "updates.status.installing": "Instaluje se v{next} (aktuální: v{prev})…",
+  "@updates.status.installing": {
+    "sourceHash": "214ef12"
+  },
+  "updates.status.managedOff": "Aktualizace Cmdru spravuje tvoje organizace.",
+  "@updates.status.managedOff": {
+    "sourceHash": "aa342dc"
+  },
+  "updates.status.heldByPolicy": "Vyšla verze Cmdr {available}, ale tvoje organizace drží tento Mac na verzi {ceiling} nebo starší.",
+  "@updates.status.heldByPolicy": {
+    "sourceHash": "5c9b196"
+  },
+  "updates.status.ready": "Aktualizace v{next} je připravená. Použije se po restartu.",
+  "@updates.status.ready": {
+    "sourceHash": "2c226ff"
+  }
+}

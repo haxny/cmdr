@@ -1,0 +1,210 @@
+{
+  "multiRename.title": "Hromadné přejmenování",
+  "@multiRename.title": {
+    "sourceHash": "5ceb1a2"
+  },
+  "multiRename.nameMask": "Maska názvu",
+  "@multiRename.nameMask": {
+    "sourceHash": "3dcc6e4"
+  },
+  "multiRename.extensionMask": "Přípona",
+  "@multiRename.extensionMask": {
+    "sourceHash": "395aeb9"
+  },
+  "multiRename.insertPlaceholder": "Vložit zástupný symbol",
+  "@multiRename.insertPlaceholder": {
+    "sourceHash": "f467cda"
+  },
+  "multiRename.search": "Hledat",
+  "@multiRename.search": {
+    "sourceHash": "6ea8f74"
+  },
+  "multiRename.replace": "Nahradit za",
+  "@multiRename.replace": {
+    "sourceHash": "8382d31"
+  },
+  "multiRename.caseSensitive": "Rozlišovat velká a malá písmena",
+  "@multiRename.caseSensitive": {
+    "sourceHash": "6198801"
+  },
+  "multiRename.firstOnly": "Jen první shoda",
+  "@multiRename.firstOnly": {
+    "sourceHash": "1ddb563"
+  },
+  "multiRename.includeExtension": "Včetně přípony",
+  "@multiRename.includeExtension": {
+    "sourceHash": "10c3dc5"
+  },
+  "multiRename.regex": "Regulární výraz",
+  "@multiRename.regex": {
+    "sourceHash": "9f896c3"
+  },
+  "multiRename.substitute": "Nahradit celý název",
+  "@multiRename.substitute": {
+    "sourceHash": "1cee1b2"
+  },
+  "multiRename.case": "Velikost písmen",
+  "@multiRename.case": {
+    "sourceHash": "9785096"
+  },
+  "multiRename.case.unchanged": "Beze změny",
+  "@multiRename.case.unchanged": {
+    "sourceHash": "88b6f74"
+  },
+  "multiRename.case.lower": "malá písmena",
+  "@multiRename.case.lower": {
+    "sourceHash": "46ede93"
+  },
+  "multiRename.case.upper": "VELKÁ PÍSMENA",
+  "@multiRename.case.upper": {
+    "sourceHash": "9755f22"
+  },
+  "multiRename.case.firstUpper": "První písmeno velké",
+  "@multiRename.case.firstUpper": {
+    "sourceHash": "4da45d5"
+  },
+  "multiRename.case.words": "Každé Slovo Velkým Písmenem",
+  "@multiRename.case.words": {
+    "sourceHash": "fdeb85e"
+  },
+  "multiRename.removeDiacritics": "Odstranit diakritiku",
+  "@multiRename.removeDiacritics": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.counterStart": "Počítadlo od",
+  "@multiRename.counterStart": {
+    "sourceHash": "562151d"
+  },
+  "multiRename.counterStep": "Krok",
+  "@multiRename.counterStep": {
+    "sourceHash": "8e6a6cc"
+  },
+  "multiRename.counterDigits": "Počet číslic",
+  "@multiRename.counterDigits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.presets": "Předvolba",
+  "@multiRename.presets": {
+    "sourceHash": "7252e7c"
+  },
+  "multiRename.presetPlaceholder": "Načíst předvolbu",
+  "@multiRename.presetPlaceholder": {
+    "sourceHash": "e07d83e"
+  },
+  "multiRename.preset.default": "Beze změny",
+  "@multiRename.preset.default": {
+    "sourceHash": "41f9d57"
+  },
+  "multiRename.preset.removeDiacritics": "Odstranit diakritiku",
+  "@multiRename.preset.removeDiacritics": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.presetName": "Název předvolby",
+  "@multiRename.presetName": {
+    "sourceHash": "e534a66"
+  },
+  "multiRename.savePreset": "Uložit předvolbu",
+  "@multiRename.savePreset": {
+    "sourceHash": "362a137"
+  },
+  "multiRename.deletePreset": "Smazat předvolbu",
+  "@multiRename.deletePreset": {
+    "sourceHash": "f307af8"
+  },
+  "multiRename.preview": "Náhled",
+  "@multiRename.preview": {
+    "sourceHash": "324b134"
+  },
+  "multiRename.oldName": "Původní název",
+  "@multiRename.oldName": {
+    "sourceHash": "f192b20"
+  },
+  "multiRename.newName": "Nový název",
+  "@multiRename.newName": {
+    "sourceHash": "04eea2a"
+  },
+  "multiRename.statusColumn": "Stav",
+  "@multiRename.statusColumn": {
+    "sourceHash": "920e413"
+  },
+  "multiRename.status.unchanged": "Beze změny",
+  "@multiRename.status.unchanged": {
+    "sourceHash": "41f9d57"
+  },
+  "multiRename.status.duplicate": "Stejný název jako jiný soubor",
+  "@multiRename.status.duplicate": {
+    "sourceHash": "ff0347b"
+  },
+  "multiRename.status.targetExists": "Název je obsazený",
+  "@multiRename.status.targetExists": {
+    "sourceHash": "629f53b"
+  },
+  "multiRename.status.invalidName": "Neplatný název",
+  "@multiRename.status.invalidName": {
+    "sourceHash": "f1e6391"
+  },
+  "multiRename.status.disallowedCharacter": "Nesmí obsahovat znak {character}",
+  "@multiRename.status.disallowedCharacter": {
+    "sourceHash": "2f21c26"
+  },
+  "multiRename.error.unclosed": "Zástupnému symbolu chybí uzavírací „]“",
+  "@multiRename.error.unclosed": {
+    "sourceHash": "aa4efba"
+  },
+  "multiRename.error.unknown": "Cmdr nezná zástupný symbol [{placeholder}]",
+  "@multiRename.error.unknown": {
+    "sourceHash": "7845fb5"
+  },
+  "multiRename.error.badRegex": "Regulární výraz není platný",
+  "@multiRename.error.badRegex": {
+    "sourceHash": "176cb2f"
+  },
+  "multiRename.error.gone": "Tato složka už není otevřená. Zavři okno Hromadné přejmenování a otevři ho znovu.",
+  "@multiRename.error.gone": {
+    "sourceHash": "8420f29"
+  },
+  "multiRename.error.nothingToRename": "Není co přejmenovat: všechny nové názvy jsou stejné jako původní, nebo mají problém",
+  "@multiRename.error.nothingToRename": {
+    "sourceHash": "cf68ee2"
+  },
+  "multiRename.error.notConnected": "Toto umístění teď není připojené",
+  "@multiRename.error.notConnected": {
+    "sourceHash": "21b3bd0"
+  },
+  "multiRename.error.couldntStart": "Přejmenování se nepodařilo spustit. Zkus to za chvíli znovu.",
+  "@multiRename.error.couldntStart": {
+    "sourceHash": "4b123be"
+  },
+  "multiRename.moreRows": "{count, plural, one {# další soubor se nezobrazuje, ale bude přejmenován} few {# další soubory se nezobrazují, ale budou přejmenovány} many {# dalšího souboru se nezobrazuje, ale bude přejmenováno} other {# dalších souborů se nezobrazuje, ale bude přejmenováno}}",
+  "@multiRename.moreRows": {
+    "sourceHash": "8c036bb"
+  },
+  "multiRename.counts": "{ready, plural, one {# k přejmenování} few {# k přejmenování} many {# k přejmenování} other {# k přejmenování}} · {unchanged, plural, one {# beze změny} few {# beze změny} many {# beze změny} other {# beze změny}} · {problems, plural, one {# problém} few {# problémy} many {# problému} other {# problémů}}",
+  "@multiRename.counts": {
+    "sourceHash": "7464938"
+  },
+  "multiRename.cancel": "Zrušit",
+  "@multiRename.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "multiRename.rename": "{count, plural, =0 {Přejmenovat} one {Přejmenovat # soubor} few {Přejmenovat # soubory} many {Přejmenovat # souboru} other {Přejmenovat # souborů}}",
+  "@multiRename.rename": {
+    "sourceHash": "9789ca5"
+  },
+  "multiRename.started": "{count, plural, one {Přejmenovává se # soubor} few {Přejmenovávají se # soubory} many {Přejmenovává se # souboru} other {Přejmenovává se # souborů}}. Vrátit změny můžeš v protokolu operací.",
+  "@multiRename.started": {
+    "sourceHash": "55b4878"
+  },
+  "multiRename.error.previewOutOfDate": "Složka se od zobrazení náhledu změnila. Zkontroluj nový náhled a pak přejmenuj znovu.",
+  "@multiRename.error.previewOutOfDate": {
+    "sourceHash": "46432fe"
+  },
+  "multiRename.error.readOnly": "V této složce nelze přejmenovávat: je uvnitř archivu nebo na jiném místě jen ke čtení",
+  "@multiRename.error.readOnly": {
+    "sourceHash": "f576c74"
+  },
+  "multiRename.hiddenProblems": "{count, plural, one {# soubor za zobrazenými řádky má problém a nebude přejmenován} few {# soubory za zobrazenými řádky mají problém a nebudou přejmenovány} many {# souboru za zobrazenými řádky má problém a nebude přejmenováno} other {# souborů za zobrazenými řádky má problém a nebude přejmenováno}}",
+  "@multiRename.hiddenProblems": {
+    "sourceHash": "aea1ba2"
+  }
+}

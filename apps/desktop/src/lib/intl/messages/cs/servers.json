@@ -1,0 +1,719 @@
+{
+  "servers.sheet.usernamePlaceholder": "Příklad: jan",
+  "@servers.sheet.usernamePlaceholder": {
+    "sourceHash": "1b5b09c"
+  },
+  "servers.pinHint.title": "Tvoje skupina Síť je čím dál delší",
+  "@servers.pinHint.title": {
+    "sourceHash": "0cf001a"
+  },
+  "servers.pinHint.body": "V místní nabídce serveru vyber „Odepnout z přepínače“, nebo v paletě příkazů použij „{command}“. Server zůstane v seznamu Servery.",
+  "@servers.pinHint.body": {
+    "sourceHash": "c2545d0"
+  },
+  "servers.pinHint.gotIt": "Rozumím",
+  "@servers.pinHint.gotIt": {
+    "sourceHash": "5ad3dbd"
+  },
+  "servers.hub.colName": "Název",
+  "@servers.hub.colName": {
+    "sourceHash": "dcd1d52"
+  },
+  "servers.hub.colType": "Typ",
+  "@servers.hub.colType": {
+    "sourceHash": "baaddf7"
+  },
+  "servers.hub.colAddress": "Adresa",
+  "@servers.hub.colAddress": {
+    "sourceHash": "56ef8f2"
+  },
+  "servers.hub.colStatus": "Stav",
+  "@servers.hub.colStatus": {
+    "sourceHash": "920e413"
+  },
+  "servers.hub.colLastUsed": "Naposledy použito",
+  "@servers.hub.colLastUsed": {
+    "sourceHash": "830ec7f"
+  },
+  "servers.hub.addServer": "Přidat server…",
+  "@servers.hub.addServer": {
+    "sourceHash": "9574f8e"
+  },
+  "servers.hub.status.connected": "Připojeno",
+  "@servers.hub.status.connected": {
+    "sourceHash": "2296556"
+  },
+  "servers.hub.status.saved": "Uloženo",
+  "@servers.hub.status.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "servers.hub.status.foundNearby": "Nalezeno v okolí",
+  "@servers.hub.status.foundNearby": {
+    "sourceHash": "a7fdf7d"
+  },
+  "servers.hub.status.signedOut": "Odhlášeno",
+  "@servers.hub.status.signedOut": {
+    "sourceHash": "80c6e7c"
+  },
+  "servers.hub.status.waitingForKey": "Čeká, až zkontroluješ klíč",
+  "@servers.hub.status.waitingForKey": {
+    "sourceHash": "f0a43e8"
+  },
+  "servers.hub.neverUsed": "Nikdy",
+  "@servers.hub.neverUsed": {
+    "sourceHash": "6300ef8"
+  },
+  "servers.hub.shareAccount": "jako {username}",
+  "@servers.hub.shareAccount": {
+    "sourceHash": "56f57a1"
+  },
+  "servers.hub.guestAccount": "jako host",
+  "@servers.hub.guestAccount": {
+    "sourceHash": "74d19ba"
+  },
+  "servers.hub.editPickHint": "Vyber server, který chceš upravit.",
+  "@servers.hub.editPickHint": {
+    "sourceHash": "08e6752"
+  },
+  "servers.hub.editShareHint": "Sdílená složka nemá nic k úpravě. Pokud chceš upravit její server, vyber řádek serveru.",
+  "@servers.hub.editShareHint": {
+    "sourceHash": "8cc5e87"
+  },
+  "servers.hub.editNearbyHint": "Server {name} byl nalezen v okolí a není uložený, takže tu není co upravit.",
+  "@servers.hub.editNearbyHint": {
+    "sourceHash": "64653de"
+  },
+  "servers.hub.s3AllBuckets": "Všechny buckety",
+  "@servers.hub.s3AllBuckets": {
+    "sourceHash": "2a5828a"
+  },
+  "servers.hub.openAccountHint": "Účet {name} se otevřít nedá. Otevři některý z bucketů pod ním.",
+  "@servers.hub.openAccountHint": {
+    "sourceHash": "c52ee6f"
+  },
+  "servers.hub.forgetAccountConfirm": "Zapomenout účet {name} a všechny buckety uložené pod ním? Cmdr ukončí jejich připojení a přestane je vypisovat. Tvoje soubory v bucketech zůstanou.",
+  "@servers.hub.forgetAccountConfirm": {
+    "sourceHash": "e1c636e"
+  },
+  "servers.hub.forgetSecretKeyToo": "Zapomenout i tajný přístupový klíč účtu",
+  "@servers.hub.forgetSecretKeyToo": {
+    "sourceHash": "4f3ac6d"
+  },
+  "servers.hub.forgetShare": "Zapomenout sdílenou složku",
+  "@servers.hub.forgetShare": {
+    "sourceHash": "8888a9d"
+  },
+  "servers.hub.forgetShareConfirmTitle": "Zapomenout sdílenou složku",
+  "@servers.hub.forgetShareConfirmTitle": {
+    "sourceHash": "8888a9d"
+  },
+  "servers.hub.forgetShareConfirm": "Zapomenout sdílenou složku {name}? Cmdr ji přestane vypisovat. Pokud je připojená, zůstane připojená a tvoje soubory na serveru zůstanou.",
+  "@servers.hub.forgetShareConfirm": {
+    "sourceHash": "8c14aaa"
+  },
+  "servers.hub.nearbyGroup": "{count, plural, one {{countText} server nalezený v okolí} few {{countText} servery nalezené v okolí} many {{countText} serveru nalezeného v okolí} other {{countText} serverů nalezených v okolí}}",
+  "@servers.hub.nearbyGroup": {
+    "sourceHash": "cd7a44d"
+  },
+  "servers.hub.discoveryOff": "Vyhledávání v místní síti je vypnuté.",
+  "@servers.hub.discoveryOff": {
+    "sourceHash": "cadcceb"
+  },
+  "servers.hub.discoveryOffLink": "Zapni ho v Nastavení",
+  "@servers.hub.discoveryOffLink": {
+    "sourceHash": "818571b"
+  },
+  "servers.hub.emptyTitle": "Zatím žádné servery",
+  "@servers.hub.emptyTitle": {
+    "sourceHash": "7846930"
+  },
+  "servers.hub.emptyMessage": "Přidej server níže, nebo ve své síti zapni Mac či NAS a Cmdr ho najde.",
+  "@servers.hub.emptyMessage": {
+    "sourceHash": "04bdc26"
+  },
+  "servers.hub.rowCount": "{count, plural, one {{countText} server} few {{countText} servery} many {{countText} serveru} other {{countText} serverů}}",
+  "@servers.hub.rowCount": {
+    "sourceHash": "7ef87d1"
+  },
+  "servers.paneState.connecting": "Připojování k serveru {name}…",
+  "@servers.paneState.connecting": {
+    "sourceHash": "7fb114e"
+  },
+  "servers.paneState.connectingHint": "Může to trvat pár sekund.",
+  "@servers.paneState.connectingHint": {
+    "sourceHash": "c830378"
+  },
+  "servers.paneState.cancel": "Zrušit",
+  "@servers.paneState.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "servers.paneState.tryAgain": "Zkusit znovu",
+  "@servers.paneState.tryAgain": {
+    "sourceHash": "d8b8392"
+  },
+  "servers.paneState.disconnect": "Odpojit",
+  "@servers.paneState.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "servers.refusal.authenticationRejected": "Toto heslo pro účet {username} nefungovalo.",
+  "@servers.refusal.authenticationRejected": {
+    "sourceHash": "ac235d2"
+  },
+  "servers.refusal.needsCredentials": "Tento server vyžaduje heslo.",
+  "@servers.refusal.needsCredentials": {
+    "sourceHash": "f5f689b"
+  },
+  "servers.refusal.accountNotPermitted": "Účet {username} sem nemá přístup. Zkus jiný účet.",
+  "@servers.refusal.accountNotPermitted": {
+    "sourceHash": "baa82ef"
+  },
+  "servers.refusal.authMethodUnsupported": "Tento server používá způsob přihlášení, který Cmdr zatím nepodporuje.",
+  "@servers.refusal.authMethodUnsupported": {
+    "sourceHash": "48b9b15"
+  },
+  "servers.refusal.certificateUntrusted": "macOS nedůvěřuje certifikátu tohoto serveru. Přidej ho do Klíčenky a pak to zkus znovu.",
+  "@servers.refusal.certificateUntrusted": {
+    "sourceHash": "b8f3b4a"
+  },
+  "servers.refusal.notAWebdavServer": "Na této adrese neodpovídá žádný server WebDAV.",
+  "@servers.refusal.notAWebdavServer": {
+    "sourceHash": "4c702d4"
+  },
+  "servers.refusal.invalidUrl": "Tohle nevypadá jako adresa serveru.",
+  "@servers.refusal.invalidUrl": {
+    "sourceHash": "d3f5f7d"
+  },
+  "servers.refusal.timedOut": "Server {host} neodpověděl včas.",
+  "@servers.refusal.timedOut": {
+    "sourceHash": "b2f0e52"
+  },
+  "servers.refusal.unreachable": "Server {host} je pro Cmdr nedostupný.",
+  "@servers.refusal.unreachable": {
+    "sourceHash": "6fcba90"
+  },
+  "servers.refusal.localNetworkHint": "Pokud je server zapnutý, zkontroluj, že má Cmdr povolené oprávnění „{localNetwork}“.",
+  "@servers.refusal.localNetworkHint": {
+    "sourceHash": "baa1753"
+  },
+  "servers.refusal.hostKeyUntrusted": "Cmdr zatím nedůvěřuje klíči serveru {host}.",
+  "@servers.refusal.hostKeyUntrusted": {
+    "sourceHash": "83dc719"
+  },
+  "servers.refusal.hostKeyRevoked": "Klíč serveru {host} je v nastavení SSH na tomto Macu označený jako kompromitovaný. Cmdr se k tomuto serveru nepřipojí.",
+  "@servers.refusal.hostKeyRevoked": {
+    "sourceHash": "7a25d93"
+  },
+  "servers.refusal.startFolderOutsideRoot": "Počáteční složka musí být kořenová složka nebo složka v ní.",
+  "@servers.refusal.startFolderOutsideRoot": {
+    "sourceHash": "a1d1efb"
+  },
+  "servers.refusal.rootNotFound": "Cmdr nemůže otevřít tuto složku na serveru {host}. Zkontroluj, že existuje a že ji tvůj účet smí číst.",
+  "@servers.refusal.rootNotFound": {
+    "sourceHash": "aa029f8"
+  },
+  "servers.refusal.startFolderNotFound": "Cmdr nemůže otevřít tuto počáteční složku na serveru {host}. Zkontroluj, že existuje a že ji tvůj účet smí číst.",
+  "@servers.refusal.startFolderNotFound": {
+    "sourceHash": "0997a8d"
+  },
+  "servers.refusal.passwordMissing": "Zadej heslo pro účet {username}.",
+  "@servers.refusal.passwordMissing": {
+    "sourceHash": "521941e"
+  },
+  "servers.refusal.saveUnconfirmed": "Server {host} neodpověděl včas, takže se nic neuložilo. Zkus to za chvíli znovu.",
+  "@servers.refusal.saveUnconfirmed": {
+    "sourceHash": "3fb55a6"
+  },
+  "servers.refusal.secretNotStored": "Cmdr nedokázal uložit toto heslo do svazku klíčů. Zkus to znovu, nebo vypni „Pamatovat si ve svazku klíčů“ a přihlas se bez uložení hesla.",
+  "@servers.refusal.secretNotStored": {
+    "sourceHash": "20957fe"
+  },
+  "servers.refusal.savedSecretNotUpdated": "Cmdr změny uložil, ale heslo ve svazku klíčů nedokázal aktualizovat. Zkus to znovu tlačítkem Uložit.",
+  "@servers.refusal.savedSecretNotUpdated": {
+    "sourceHash": "2ae1e2b"
+  },
+  "servers.refusal.s3AuthenticationRejected": "Tento tajný přístupový klíč nefungoval.",
+  "@servers.refusal.s3AuthenticationRejected": {
+    "sourceHash": "14f90c8"
+  },
+  "servers.refusal.s3NeedsCredentials": "Tento účet vyžaduje tajný přístupový klíč.",
+  "@servers.refusal.s3NeedsCredentials": {
+    "sourceHash": "23695df"
+  },
+  "servers.refusal.s3SecretMissing": "Zadej tajný přístupový klíč.",
+  "@servers.refusal.s3SecretMissing": {
+    "sourceHash": "f1f32f2"
+  },
+  "servers.refusal.s3SecretNotStored": "Cmdr nedokázal uložit tento tajný přístupový klíč do svazku klíčů. Zkus to znovu, nebo vypni „Pamatovat si ve svazku klíčů“ a přihlas se bez uložení klíče.",
+  "@servers.refusal.s3SecretNotStored": {
+    "sourceHash": "f7a9fb0"
+  },
+  "servers.refusal.s3SavedSecretNotUpdated": "Cmdr změny uložil, ale tajný přístupový klíč ve svazku klíčů nedokázal aktualizovat. Zkus to znovu tlačítkem Uložit.",
+  "@servers.refusal.s3SavedSecretNotUpdated": {
+    "sourceHash": "1d2889d"
+  },
+  "servers.refusal.accessDenied": "Tento klíč nemá přístup k tomuto bucketu. Zkontroluj název bucketu a tajný přístupový klíč a také to, že klíč smí bucket číst.",
+  "@servers.refusal.accessDenied": {
+    "sourceHash": "8372e73"
+  },
+  "servers.refusal.bucketListRefused": "Tento klíč nemůže zobrazit seznam bucketů v tomto účtu. Napiš název bucketu, který chceš otevřít, nebo zkontroluj tajný přístupový klíč.",
+  "@servers.refusal.bucketListRefused": {
+    "sourceHash": "1b9ebf5"
+  },
+  "servers.refusal.bucketNotFound": "Na serveru {host} není žádný bucket s tímto názvem.",
+  "@servers.refusal.bucketNotFound": {
+    "sourceHash": "0f5a04d"
+  },
+  "servers.refusal.regionMismatch": "Tento bucket je v jiné oblasti. Vyber jeho oblast a zkus to znovu.",
+  "@servers.refusal.regionMismatch": {
+    "sourceHash": "27a37f8"
+  },
+  "servers.refusal.regionMismatchNamed": "Tento bucket je v oblasti {region}. Vyber tuto oblast a zkus to znovu.",
+  "@servers.refusal.regionMismatchNamed": {
+    "sourceHash": "30abb0d"
+  },
+  "servers.refusal.clockSkewed": "Hodiny tohoto Macu se rozcházejí o víc než 15 minut, takže server nepřijme požadavky aplikace Cmdr. V Nastavení systému nastav datum a čas automaticky a pak to zkus znovu.",
+  "@servers.refusal.clockSkewed": {
+    "sourceHash": "cdee0ef"
+  },
+  "servers.refusal.notAnS3Endpoint": "Na této adrese neodpovídá žádné úložiště S3.",
+  "@servers.refusal.notAnS3Endpoint": {
+    "sourceHash": "78557ec"
+  },
+  "servers.refusal.s3FieldMalformed": "Použij tady jen malá písmena, číslice a pomlčky.",
+  "@servers.refusal.s3FieldMalformed": {
+    "sourceHash": "ac8fbea"
+  },
+  "servers.refusal.endpointMalformed": "Zadej koncový bod jako http:// nebo https:// a název hostitele, například https://s3.example.com.",
+  "@servers.refusal.endpointMalformed": {
+    "sourceHash": "beb63dd"
+  },
+  "servers.sheet.addTitle": "Přidat server",
+  "@servers.sheet.addTitle": {
+    "sourceHash": "1099b2a"
+  },
+  "servers.sheet.signInTitle": "Přihlášení: {name}",
+  "@servers.sheet.signInTitle": {
+    "sourceHash": "47e7f20"
+  },
+  "servers.sheet.editTitle": "Upravit: {name}",
+  "@servers.sheet.editTitle": {
+    "sourceHash": "2313fe2"
+  },
+  "servers.sheet.addAndOpen": "Přidat a otevřít",
+  "@servers.sheet.addAndOpen": {
+    "sourceHash": "b37158e"
+  },
+  "servers.sheet.add": "Přidat",
+  "@servers.sheet.add": {
+    "sourceHash": "9fd728c"
+  },
+  "servers.sheet.addAnyway": "Přesto přidat",
+  "@servers.sheet.addAnyway": {
+    "sourceHash": "d0652ad"
+  },
+  "servers.sheet.addAnywayHelp": "Cmdr tento server nedokázal zkontrolovat, takže „Přesto přidat“ ho uloží přesně tak, jak je napsaný.",
+  "@servers.sheet.addAnywayHelp": {
+    "sourceHash": "3704aa5"
+  },
+  "servers.sheet.addedToast": "Server {name} je uložený v seznamu Servery.",
+  "@servers.sheet.addedToast": {
+    "sourceHash": "f6ef7bb"
+  },
+  "servers.sheet.signIn": "Přihlásit se",
+  "@servers.sheet.signIn": {
+    "sourceHash": "bfd402b"
+  },
+  "servers.sheet.save": "Uložit",
+  "@servers.sheet.save": {
+    "sourceHash": "1509f56"
+  },
+  "servers.sheet.cancel": "Zrušit",
+  "@servers.sheet.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "servers.sheet.connecting": "Připojování…",
+  "@servers.sheet.connecting": {
+    "sourceHash": "72021eb"
+  },
+  "servers.sheet.protocolLegend": "Protokol",
+  "@servers.sheet.protocolLegend": {
+    "sourceHash": "cf08833"
+  },
+  "servers.sheet.protocolSmb": "SMB",
+  "@servers.sheet.protocolSmb": {
+    "sourceHash": "f54ab2d",
+    "sameAsSourceJustification": "Protocol name, kept verbatim (@key: keep it as-is; SMB is in BRAND_WORDS)."
+  },
+  "servers.sheet.protocolSftp": "SFTP",
+  "@servers.sheet.protocolSftp": {
+    "sourceHash": "b07c0f4",
+    "sameAsSourceJustification": "Protocol name, kept verbatim (@key: keep it as-is); Czech tooling (mc cs: sftp) keeps it."
+  },
+  "servers.sheet.protocolWebdav": "WebDAV",
+  "@servers.sheet.protocolWebdav": {
+    "sourceHash": "d92634e",
+    "sameAsSourceJustification": "Protocol name, kept verbatim (@key: keep it as-is)."
+  },
+  "servers.sheet.address": "Adresa",
+  "@servers.sheet.address": {
+    "sourceHash": "56ef8f2"
+  },
+  "servers.sheet.addressPlaceholder": "nas.local",
+  "@servers.sheet.addressPlaceholder": {
+    "sourceHash": "5e0ec1d",
+    "sameAsSourceJustification": "Example hostname, kept verbatim per the @key description (leave it as-is)."
+  },
+  "servers.sheet.addressHelpSftp": "Název hostitele, zkopírovaná adresa nebo celý řádek s příkazem ssh.",
+  "@servers.sheet.addressHelpSftp": {
+    "sourceHash": "1e21d29"
+  },
+  "servers.sheet.addressHelpSmb": "Název hostitele, IP adresa nebo zkopírovaná adresa smb://.",
+  "@servers.sheet.addressHelpSmb": {
+    "sourceHash": "4ab75e8"
+  },
+  "servers.sheet.addressHelpWebdav": "Zkopírovaná webová adresa, např. https://nas.local/dav, nebo název hostitele.",
+  "@servers.sheet.addressHelpWebdav": {
+    "sourceHash": "a8349b3"
+  },
+  "servers.sheet.addressLooksLikeSmb": "Tohle vypadá jako adresa SMB. Pokud to tak má být, vyber nahoře SMB.",
+  "@servers.sheet.addressLooksLikeSmb": {
+    "sourceHash": "86fc72a"
+  },
+  "servers.sheet.addressLooksLikeSftp": "Tohle vypadá jako adresa SFTP. Pokud to tak má být, vyber nahoře SFTP.",
+  "@servers.sheet.addressLooksLikeSftp": {
+    "sourceHash": "81f95e3"
+  },
+  "servers.sheet.addressLooksLikeWebdav": "Tohle vypadá jako adresa WebDAV. Pokud to tak má být, vyber nahoře WebDAV.",
+  "@servers.sheet.addressLooksLikeWebdav": {
+    "sourceHash": "a1185f1"
+  },
+  "servers.sheet.addressLocked": "Tento server je určený svou adresou. Pokud chceš použít jinou, zapomeň tento server a přidej ho znovu.",
+  "@servers.sheet.addressLocked": {
+    "sourceHash": "b476060"
+  },
+  "servers.sheet.identityLocked": "Tento server je určený svou adresou a účtem. Pokud je chceš změnit, zapomeň tento server a přidej ho znovu.",
+  "@servers.sheet.identityLocked": {
+    "sourceHash": "c16657d"
+  },
+  "servers.sheet.username": "Uživatelské jméno",
+  "@servers.sheet.username": {
+    "sourceHash": "e3b89e9"
+  },
+  "servers.sheet.password": "Heslo",
+  "@servers.sheet.password": {
+    "sourceHash": "e7cf3ef"
+  },
+  "servers.sheet.secretKeptPlaceholder": "Uloženo ve svazku klíčů. Pro zachování nech prázdné.",
+  "@servers.sheet.secretKeptPlaceholder": {
+    "sourceHash": "8711f6c"
+  },
+  "servers.sheet.smbUsernamePlaceholder": "Nepovinné",
+  "@servers.sheet.smbUsernamePlaceholder": {
+    "sourceHash": "59be713"
+  },
+  "servers.sheet.smbUsernameHelp": "Vyplň, pokud tvůj NAS vyžaduje účet. Cmdr se na heslo zeptá, až otevřeš sdílenou složku.",
+  "@servers.sheet.smbUsernameHelp": {
+    "sourceHash": "68ea372"
+  },
+  "servers.sheet.passphrase": "Heslo ke klíči",
+  "@servers.sheet.passphrase": {
+    "sourceHash": "2510031"
+  },
+  "servers.sheet.remember": "Pamatovat si ve svazku klíčů",
+  "@servers.sheet.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "servers.sheet.connectionModeLegend": "Způsob připojení",
+  "@servers.sheet.connectionModeLegend": {
+    "sourceHash": "2198ec8"
+  },
+  "servers.sheet.connectAsGuest": "Připojit se jako host",
+  "@servers.sheet.connectAsGuest": {
+    "sourceHash": "d3cee9e"
+  },
+  "servers.sheet.signInWithCredentials": "Přihlásit se uživatelským jménem a heslem",
+  "@servers.sheet.signInWithCredentials": {
+    "sourceHash": "d71eef0"
+  },
+  "servers.sheet.advanced": "Pokročilé",
+  "@servers.sheet.advanced": {
+    "sourceHash": "9f088db"
+  },
+  "servers.sheet.name": "Název",
+  "@servers.sheet.name": {
+    "sourceHash": "dcd1d52"
+  },
+  "servers.sheet.protocolS3": "S3",
+  "@servers.sheet.protocolS3": {
+    "sourceHash": "44d6a8a",
+    "sameAsSourceJustification": "Protocol name, kept verbatim (@key: keep it as-is)."
+  },
+  "servers.sheet.s3Provider": "Poskytovatel",
+  "@servers.sheet.s3Provider": {
+    "sourceHash": "472590a"
+  },
+  "servers.sheet.s3ProviderAws": "Amazon S3",
+  "@servers.sheet.s3ProviderAws": {
+    "sourceHash": "a4f6352",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderR2": "Cloudflare R2",
+  "@servers.sheet.s3ProviderR2": {
+    "sourceHash": "9f2f1ed",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderB2": "Backblaze B2",
+  "@servers.sheet.s3ProviderB2": {
+    "sourceHash": "ed40187",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderWasabi": "Wasabi",
+  "@servers.sheet.s3ProviderWasabi": {
+    "sourceHash": "493861e",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderHetzner": "Hetzner Object Storage",
+  "@servers.sheet.s3ProviderHetzner": {
+    "sourceHash": "a339b4f",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderGcs": "Google Cloud Storage",
+  "@servers.sheet.s3ProviderGcs": {
+    "sourceHash": "53fa0ba",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3ProviderDigitalOcean": "DigitalOcean Spaces",
+  "@servers.sheet.s3ProviderDigitalOcean": {
+    "sourceHash": "c3f48e3",
+    "sameAsSourceJustification": "Product name, kept verbatim per the @key description."
+  },
+  "servers.sheet.s3GcsKeyHelp": "Přihlas se klíčem HMAC ze záložky Interoperability v nastavení Cloud Storage.",
+  "@servers.sheet.s3GcsKeyHelp": {
+    "sourceHash": "acb72a4"
+  },
+  "servers.sheet.s3ProviderOther": "Jiné úložiště kompatibilní se S3",
+  "@servers.sheet.s3ProviderOther": {
+    "sourceHash": "13d2bdc"
+  },
+  "servers.sheet.s3Region": "Oblast",
+  "@servers.sheet.s3Region": {
+    "sourceHash": "d3a008e"
+  },
+  "servers.sheet.s3RegionOptionalPlaceholder": "Nepovinné. Bez vyplnění se použije us-east-1",
+  "@servers.sheet.s3RegionOptionalPlaceholder": {
+    "sourceHash": "12dd731"
+  },
+  "servers.sheet.s3AccountId": "ID účtu",
+  "@servers.sheet.s3AccountId": {
+    "sourceHash": "919bb4c"
+  },
+  "servers.sheet.s3AccountIdHelp": "ID účtu ze stránky s přehledem Cloudflare R2.",
+  "@servers.sheet.s3AccountIdHelp": {
+    "sourceHash": "963d1f5"
+  },
+  "servers.sheet.s3Location": "Umístění",
+  "@servers.sheet.s3Location": {
+    "sourceHash": "15b6197"
+  },
+  "servers.sheet.s3Endpoint": "Koncový bod",
+  "@servers.sheet.s3Endpoint": {
+    "sourceHash": "3df9726"
+  },
+  "servers.sheet.s3PathStyle": "Používat adresování ve stylu cesty (path-style)",
+  "@servers.sheet.s3PathStyle": {
+    "sourceHash": "627c522"
+  },
+  "servers.sheet.s3PathStyleHelp": "Většina serverů s vlastním hostingem, např. MinIO a Garage, to vyžaduje.",
+  "@servers.sheet.s3PathStyleHelp": {
+    "sourceHash": "bc6e240"
+  },
+  "servers.sheet.s3Bucket": "Bucket",
+  "@servers.sheet.s3Bucket": {
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "cs terms.json bucket ruling keeps the AWS/S3 term bucket (avoid kbelík, kontejner); capitalized as a label."
+  },
+  "servers.sheet.s3BucketHelp": "Když pole necháš prázdné, uvidíš všechny buckety. Pokud je tvůj klíč omezený na jeden bucket, napiš jeho název.",
+  "@servers.sheet.s3BucketHelp": {
+    "sourceHash": "8d380d9"
+  },
+  "servers.sheet.s3UseRegion": "Použít {region}",
+  "@servers.sheet.s3UseRegion": {
+    "sourceHash": "5734184"
+  },
+  "servers.sheet.accessKeyId": "ID přístupového klíče",
+  "@servers.sheet.accessKeyId": {
+    "sourceHash": "14eb0f9"
+  },
+  "servers.sheet.secretAccessKey": "Tajný přístupový klíč",
+  "@servers.sheet.secretAccessKey": {
+    "sourceHash": "3de6b75"
+  },
+  "servers.sheet.examplePlaceholder": "Příklad: {example}",
+  "@servers.sheet.examplePlaceholder": {
+    "sourceHash": "9c7df45"
+  },
+  "servers.sheet.identityLockedS3": "Toto místo je určené poskytovatelem, ID přístupového klíče a bucketem. Pokud je chceš změnit, zapomeň toto místo a přidej ho znovu.",
+  "@servers.sheet.identityLockedS3": {
+    "sourceHash": "fe4d469"
+  },
+  "servers.sheet.identityLockedS3Account": "Tento účet je určený poskytovatelem a ID přístupového klíče. Pokud je chceš změnit, zapomeň tento účet a přidej ho znovu.",
+  "@servers.sheet.identityLockedS3Account": {
+    "sourceHash": "e03a769"
+  },
+  "servers.sheet.namePlaceholder": "Bez vyplnění se použije {label}",
+  "@servers.sheet.namePlaceholder": {
+    "sourceHash": "fc88cb0"
+  },
+  "servers.sheet.rootFolder": "Kořenová složka",
+  "@servers.sheet.rootFolder": {
+    "sourceHash": "6d92528"
+  },
+  "servers.sheet.rootFolderHelp": "Cmdr na serveru nikdy nepřejde nad tuto složku.",
+  "@servers.sheet.rootFolderHelp": {
+    "sourceHash": "688d735"
+  },
+  "servers.sheet.startFolder": "Počáteční složka",
+  "@servers.sheet.startFolder": {
+    "sourceHash": "ef05c31"
+  },
+  "servers.sheet.startFolderHelp": "Kde se server otevře. Když pole necháš prázdné, otevře se kořenová složka.",
+  "@servers.sheet.startFolderHelp": {
+    "sourceHash": "514018e"
+  },
+  "servers.sheet.keyFile": "Soubor s klíčem",
+  "@servers.sheet.keyFile": {
+    "sourceHash": "33c7999"
+  },
+  "servers.sheet.browse": "Procházet…",
+  "@servers.sheet.browse": {
+    "sourceHash": "93c6b66"
+  },
+  "servers.sheet.useAgent": "Používat ssh-agent",
+  "@servers.sheet.useAgent": {
+    "sourceHash": "21f2e2c"
+  },
+  "servers.sheet.autoReconnect": "Automaticky znovu připojovat",
+  "@servers.sheet.autoReconnect": {
+    "sourceHash": "a56b579"
+  },
+  "servers.sheet.autoReconnectHelp": "Když připojení vypadne, Cmdr se k tomuto serveru sám znovu připojí. Neznamená to, že se Cmdr připojí hned, jak se spustí: připojí se, až server otevřeš v panelu.",
+  "@servers.sheet.autoReconnectHelp": {
+    "sourceHash": "559525d"
+  },
+  "servers.sheet.autoReconnectInfoLabel": "Další informace o volbě „Automaticky znovu připojovat“",
+  "@servers.sheet.autoReconnectInfoLabel": {
+    "sourceHash": "edb9b82"
+  },
+  "servers.sheet.needsStoredSecret": "Automatické opětovné připojení potřebuje zapamatované heslo. Zapni „Pamatovat si ve svazku klíčů“ a jednou se přihlas.",
+  "@servers.sheet.needsStoredSecret": {
+    "sourceHash": "32336f3"
+  },
+  "servers.sheet.tryNextcloudAddress": "Zkusit adresu pro Nextcloud",
+  "@servers.sheet.tryNextcloudAddress": {
+    "sourceHash": "1afdfc7"
+  },
+  "servers.hostKey.firstContactTitle": "První připojení k serveru {host}",
+  "@servers.hostKey.firstContactTitle": {
+    "sourceHash": "6282d68"
+  },
+  "servers.hostKey.firstContactBody": "Ověř otisk níže podle toho, který ti dal vlastník serveru, a teprve pak klíči důvěřuj.",
+  "@servers.hostKey.firstContactBody": {
+    "sourceHash": "f207466"
+  },
+  "servers.hostKey.changedTitle": "Klíč serveru {host} se změnil",
+  "@servers.hostKey.changedTitle": {
+    "sourceHash": "2613248"
+  },
+  "servers.hostKey.changedBody": "Může to znamenat, že byl server přeinstalován, nebo že mezi tebou a serverem něco stojí. Než klíči začneš důvěřovat, ověř si otisk u vlastníka serveru.",
+  "@servers.hostKey.changedBody": {
+    "sourceHash": "42491c4"
+  },
+  "servers.hostKey.changedDisclosure": "Mám to zkontrolované",
+  "@servers.hostKey.changedDisclosure": {
+    "sourceHash": "4051d39"
+  },
+  "servers.hostKey.fingerprintLabel": "Otisk klíče",
+  "@servers.hostKey.fingerprintLabel": {
+    "sourceHash": "26f8639"
+  },
+  "servers.hostKey.trustAndConnect": "Důvěřovat a připojit",
+  "@servers.hostKey.trustAndConnect": {
+    "sourceHash": "0cce535"
+  },
+  "servers.hostKey.trustNewKey": "Důvěřovat novému klíči",
+  "@servers.hostKey.trustNewKey": {
+    "sourceHash": "772baac"
+  },
+  "servers.paneState.signedOut": "Odhlášeno ze serveru {name}",
+  "@servers.paneState.signedOut": {
+    "sourceHash": "b1d908f"
+  },
+  "servers.paneState.notConnected": "Nepřipojeno: {name}",
+  "@servers.paneState.notConnected": {
+    "sourceHash": "5020fac"
+  },
+  "servers.paneState.unreachable": "Server {name} je pro Cmdr nedostupný.",
+  "@servers.paneState.unreachable": {
+    "sourceHash": "a7bc9bc"
+  },
+  "servers.paneState.goBack": "Přejít zpět",
+  "@servers.paneState.goBack": {
+    "sourceHash": "6aadac2"
+  },
+  "servers.paneState.signIn": "Přihlásit se…",
+  "@servers.paneState.signIn": {
+    "sourceHash": "a6a5723"
+  },
+  "servers.paneState.hostKeyChanged": "Cmdr se k serveru {name} nepřipojí",
+  "@servers.paneState.hostKeyChanged": {
+    "sourceHash": "c73ddf3"
+  },
+  "servers.paneState.hostKeyChangedHint": "Klíč serveru se změnil. Může to znamenat, že byl server přeinstalován, nebo že mezi tebou a serverem něco stojí. Než se znovu připojíš, zkontroluj nový klíč.",
+  "@servers.paneState.hostKeyChangedHint": {
+    "sourceHash": "866b619"
+  },
+  "servers.paneState.checkHostKey": "Zkontrolovat klíč",
+  "@servers.paneState.checkHostKey": {
+    "sourceHash": "fefa256"
+  },
+  "servers.paneState.reconnecting": "Opětovné připojování k serveru {name}…",
+  "@servers.paneState.reconnecting": {
+    "sourceHash": "dce8cef"
+  },
+  "servers.paneState.signedOutNothingToAsk": "Tento server používá k přihlášení klíč, ne heslo, takže není co zadat. Pro nový pokus server znovu otevři.",
+  "@servers.paneState.signedOutNothingToAsk": {
+    "sourceHash": "95e6bd0"
+  },
+  "servers.paneState.retryProgressAriaLabel": "Čas do dalšího pokusu o opětovné připojení",
+  "@servers.paneState.retryProgressAriaLabel": {
+    "sourceHash": "d4341c3"
+  },
+  "servers.paneState.retryNow": "Zkusit hned",
+  "@servers.paneState.retryNow": {
+    "sourceHash": "5148c3e"
+  },
+  "servers.paneState.retryNowTooltip": "Zkusit se hned znovu připojit.",
+  "@servers.paneState.retryNowTooltip": {
+    "sourceHash": "11525f0"
+  },
+  "servers.paneState.cancelCycleTooltip": "Zatím zastavit pokusy. Připojení zůstane k dispozici. Když se sem přepneš zpět, zkusí se to znovu.",
+  "@servers.paneState.cancelCycleTooltip": {
+    "sourceHash": "377638b"
+  },
+  "servers.paneState.disconnectCycleTooltip": "Zastavit pokusy a odpojit se od serveru.",
+  "@servers.paneState.disconnectCycleTooltip": {
+    "sourceHash": "8fba8b0"
+  },
+  "servers.paneState.retryKeepsTrying": "Cmdr to bude zkoušet celkem {duration}.",
+  "@servers.paneState.retryKeepsTrying": {
+    "sourceHash": "e4d25b7"
+  },
+  "servers.paneState.retryTotalSeconds": "{seconds, plural, one {{secondsText} sekundu} few {{secondsText} sekundy} many {{secondsText} sekundy} other {{secondsText} sekund}}",
+  "@servers.paneState.retryTotalSeconds": {
+    "sourceHash": "9e6c4f8"
+  },
+  "servers.paneState.retryTotalMinutes": "{minutes, plural, one {{minutesText} minutu} few {{minutesText} minuty} many {{minutesText} minuty} other {{minutesText} minut}}",
+  "@servers.paneState.retryTotalMinutes": {
+    "sourceHash": "fc262c3"
+  }
+}

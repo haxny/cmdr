@@ -1,0 +1,154 @@
+{
+  "suggestedOps.title": "Navržené operace",
+  "@suggestedOps.title": {
+    "sourceHash": "4f24ca6"
+  },
+  "suggestedOps.description": "Tohle jsou návrhy od AI. Nic se nespustí, dokud to neschválíš.",
+  "@suggestedOps.description": {
+    "sourceHash": "73255a0"
+  },
+  "suggestedOps.empty": "Teď na tebe nic nečeká.",
+  "@suggestedOps.empty": {
+    "sourceHash": "b93eccd"
+  },
+  "suggestedOps.loadFailed": "Cmdr nedokázal načíst návrhy. Zavři toto okno a otevři ho znovu.",
+  "@suggestedOps.loadFailed": {
+    "sourceHash": "ef0da3e"
+  },
+  "suggestedOps.agentReason": "Zdůvodnění AI",
+  "@suggestedOps.agentReason": {
+    "sourceHash": "e3acab8"
+  },
+  "suggestedOps.cmdrFacts": "Co ví Cmdr",
+  "@suggestedOps.cmdrFacts": {
+    "sourceHash": "9851c12"
+  },
+  "suggestedOps.fileCount": "{count, plural, one {# soubor} few {# soubory} many {# souboru} other {# souborů}}",
+  "@suggestedOps.fileCount": {
+    "sourceHash": "e60f4a2"
+  },
+  "suggestedOps.approve": "Schválit",
+  "@suggestedOps.approve": {
+    "sourceHash": "6007acb"
+  },
+  "suggestedOps.reject": "Odmítnout",
+  "@suggestedOps.reject": {
+    "sourceHash": "ab604a3"
+  },
+  "suggestedOps.approveCount": "Schválit {count, plural, one {# soubor} few {# soubory} many {# souboru} other {# souborů}}",
+  "@suggestedOps.approveCount": {
+    "sourceHash": "649d66f"
+  },
+  "suggestedOps.review": "Posoudit soubory",
+  "@suggestedOps.review": {
+    "sourceHash": "b8d04b3"
+  },
+  "suggestedOps.collapse": "Skrýt soubory",
+  "@suggestedOps.collapse": {
+    "sourceHash": "ced24ea"
+  },
+  "suggestedOps.reversibleRestoreMove": "Tohle můžeš odvolat",
+  "@suggestedOps.reversibleRestoreMove": {
+    "sourceHash": "de7f6ff"
+  },
+  "suggestedOps.reversibleDeleteWritten": "Odvolat jde smazáním toho, co se zapíše",
+  "@suggestedOps.reversibleDeleteWritten": {
+    "sourceHash": "997843a"
+  },
+  "suggestedOps.irreversible": "Tohle nelze odvolat",
+  "@suggestedOps.irreversible": {
+    "sourceHash": "b583829"
+  },
+  "suggestedOps.folderWillBeCreated": "Cmdr tuto složku vytvoří",
+  "@suggestedOps.folderWillBeCreated": {
+    "sourceHash": "26243e5"
+  },
+  "suggestedOps.folderWillBeCreatedTooltip": "Cílová složka zatím neexistuje. Schválením se vytvoří, přesně jako při přesunu spuštěném ručně.",
+  "@suggestedOps.folderWillBeCreatedTooltip": {
+    "sourceHash": "2d28b7c"
+  },
+  "suggestedOps.destinationUnknown": "Cmdr nedokázal zkontrolovat cílovou složku",
+  "@suggestedOps.destinationUnknown": {
+    "sourceHash": "dc78d1d"
+  },
+  "suggestedOps.fromPattern": "Vybráno podle vzoru",
+  "@suggestedOps.fromPattern": {
+    "sourceHash": "20e88a9"
+  },
+  "suggestedOps.changedUnderReview": "AI tento návrh změnila, zatímco ho čteš.",
+  "@suggestedOps.changedUnderReview": {
+    "sourceHash": "5d07c7c"
+  },
+  "suggestedOps.showNewVersion": "Zobrazit novou verzi",
+  "@suggestedOps.showNewVersion": {
+    "sourceHash": "2b92d18"
+  },
+  "suggestedOps.columnFile": "Soubor",
+  "@suggestedOps.columnFile": {
+    "sourceHash": "50009ce"
+  },
+  "suggestedOps.columnNewName": "Nový název",
+  "@suggestedOps.columnNewName": {
+    "sourceHash": "04eea2a"
+  },
+  "suggestedOps.columnSize": "Velikost při návrhu",
+  "@suggestedOps.columnSize": {
+    "sourceHash": "20d36bd"
+  },
+  "suggestedOps.columnChanged": "Naposledy změněno",
+  "@suggestedOps.columnChanged": {
+    "sourceHash": "d8c5670"
+  },
+  "suggestedOps.noIndexData": "Není v indexu",
+  "@suggestedOps.noIndexData": {
+    "sourceHash": "104d8cb"
+  },
+  "suggestedOps.includeFile": "Zahrnout tento soubor",
+  "@suggestedOps.includeFile": {
+    "sourceHash": "71075a7"
+  },
+  "suggestedOps.loadingFiles": "Načítání souborů…",
+  "@suggestedOps.loadingFiles": {
+    "sourceHash": "83257e6"
+  },
+  "suggestedOps.filesLoadFailed": "Cmdr nedokázal načíst tyto soubory.",
+  "@suggestedOps.filesLoadFailed": {
+    "sourceHash": "01f1b86"
+  },
+  "suggestedOps.retryFiles": "Zkusit znovu",
+  "@suggestedOps.retryFiles": {
+    "sourceHash": "d8b8392"
+  },
+  "suggestedOps.decisionNotRecorded": "Cmdr nedokázal uložit tvoji odpověď. Zkus to znovu.",
+  "@suggestedOps.decisionNotRecorded": {
+    "sourceHash": "9eae594"
+  },
+  "suggestedOps.approvalUnsure": "Cmdr si není jistý, jestli schválení prošlo. Než návrh schválíš znovu, zkontroluj frontu operací.",
+  "@suggestedOps.approvalUnsure": {
+    "sourceHash": "fba515a"
+  },
+  "suggestedOps.refusal.label": "Proč se to nespustilo",
+  "@suggestedOps.refusal.label": {
+    "sourceHash": "e176570"
+  },
+  "suggestedOps.refusal.nothingToRun.message": "Při schválení Cmdr nedokázal přečíst žádný z těchto souborů, takže se nic nespustilo.",
+  "@suggestedOps.refusal.nothingToRun.message": {
+    "sourceHash": "3018819"
+  },
+  "suggestedOps.refusal.nothingToRun.suggestion": "Zkontroluj, že tyto soubory pořád existují, a pak návrh schval znovu, nebo ho odmítni.",
+  "@suggestedOps.refusal.nothingToRun.suggestion": {
+    "sourceHash": "f4cfc9e"
+  },
+  "suggestedOps.refusal.couldNotStart.message": "Cmdr nedokázal z tohoto návrhu vytvořit operaci, takže se nic nespustilo.",
+  "@suggestedOps.refusal.couldNotStart.message": {
+    "sourceHash": "77ef48b"
+  },
+  "suggestedOps.refusal.couldNotStart.suggestion": "Návrh odmítni a požádej AI, ať ho navrhne znovu.",
+  "@suggestedOps.refusal.couldNotStart.suggestion": {
+    "sourceHash": "5b5b779"
+  },
+  "suggestedOps.indicatorTooltip": "Čekají návrhy od AI. Klikni a posuď je.",
+  "@suggestedOps.indicatorTooltip": {
+    "sourceHash": "4508b0b"
+  }
+}

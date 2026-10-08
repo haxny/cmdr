@@ -1,0 +1,196 @@
+{
+  "errorReporter.dialog.title": "Odeslat zprávu o chybě",
+  "@errorReporter.dialog.title": {
+    "sourceHash": "c327e68"
+  },
+  "errorReporter.dialog.description": "Tímto odešleš týmu poslední soubory protokolu Cmdru, abychom mohli opravit, co se pokazilo. Protokoly se anonymizují už v aplikaci: cesty k souborům, názvy hostitelů, IP adresy a e‑maily se před odesláním odstraní.",
+  "@errorReporter.dialog.description": {
+    "sourceHash": "ba4012f"
+  },
+  "errorReporter.dialog.referenceIdLabel": "Referenční ID:",
+  "@errorReporter.dialog.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.dialog.copy": "Zkopírovat",
+  "@errorReporter.dialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "errorReporter.dialog.copied": "Zkopírováno",
+  "@errorReporter.dialog.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.dialog.noteLabel": "Přidat poznámku (nepovinné)",
+  "@errorReporter.dialog.noteLabel": {
+    "sourceHash": "6bb0c6b"
+  },
+  "errorReporter.dialog.counter": "{currentText} / {maxText}",
+  "@errorReporter.dialog.counter": {
+    "sourceHash": "36ca789",
+    "sameAsSourceJustification": "Two already-formatted numbers around a slash; nothing to translate"
+  },
+  "errorReporter.dialog.notePlaceholder": "Co se snažíš udělat? Co by se podle tebe mělo stát?",
+  "@errorReporter.dialog.notePlaceholder": {
+    "sourceHash": "003300b"
+  },
+  "errorReporter.dialog.noteTooLong": "Poznámka je příliš dlouhá. Maximum je {maxText} {max, plural, one {znak} few {znaky} many {znaku} other {znaků}}.",
+  "@errorReporter.dialog.noteTooLong": {
+    "sourceHash": "afcefac"
+  },
+  "errorReporter.dialog.detailsToggle": "Co se odešle",
+  "@errorReporter.dialog.detailsToggle": {
+    "sourceHash": "f57398b"
+  },
+  "errorReporter.dialog.manifestHeading": "Manifest",
+  "@errorReporter.dialog.manifestHeading": {
+    "sourceHash": "3c99f1f",
+    "sameAsSourceJustification": "Manifest is the standard Czech technical term (MS terminology keeps manifest; cs proposal manifest)"
+  },
+  "errorReporter.dialog.sampleFirstHeading": "{count, plural, one {Ukázka prvního řádku} few {Ukázka prvních # řádků} many {Ukázka prvních # řádku} other {Ukázka prvních # řádků}}",
+  "@errorReporter.dialog.sampleFirstHeading": {
+    "sourceHash": "7a2e538"
+  },
+  "errorReporter.dialog.sampleLastHeading": "{count, plural, one {Ukázka posledního řádku} few {Ukázka posledních # řádků} many {Ukázka posledních # řádku} other {Ukázka posledních # řádků}}",
+  "@errorReporter.dialog.sampleLastHeading": {
+    "sourceHash": "a36f420"
+  },
+  "errorReporter.dialog.noLogLines": "(žádné řádky protokolu nejsou k dispozici)",
+  "@errorReporter.dialog.noLogLines": {
+    "sourceHash": "a2d54fd"
+  },
+  "errorReporter.dialog.totalLines": "Celkem řádků protokolu (po anonymizaci): {countText}",
+  "@errorReporter.dialog.totalLines": {
+    "sourceHash": "9c5cab7"
+  },
+  "errorReporter.dialog.preparing": "Připravuje se náhled…",
+  "@errorReporter.dialog.preparing": {
+    "sourceHash": "11e66e1"
+  },
+  "errorReporter.dialog.prepareFailed": "Náhled se nepodařilo sestavit.",
+  "@errorReporter.dialog.prepareFailed": {
+    "sourceHash": "24cd5ba"
+  },
+  "errorReporter.dialog.tryAgain": "Zkusit znovu",
+  "@errorReporter.dialog.tryAgain": {
+    "sourceHash": "d8b8392"
+  },
+  "errorReporter.dialog.bundleUnavailable": "Cmdr nedokázal posbírat svoje protokoly do zprávy. Zkus to za chvíli znovu.",
+  "@errorReporter.dialog.bundleUnavailable": {
+    "sourceHash": "15bc5b8"
+  },
+  "errorReporter.dialog.saveToDisk": "Uložit balíček na disk (ladění)",
+  "@errorReporter.dialog.saveToDisk": {
+    "sourceHash": "36d6589"
+  },
+  "errorReporter.dialog.managedOff": "Tvoje organizace vypnula odesílání zpráv. Zprávu ale můžeš pořád uložit na disk a předat ji dál.",
+  "@errorReporter.dialog.managedOff": {
+    "sourceHash": "9309a39"
+  },
+  "errorReporter.dialog.saveToDiskManaged": "Uložit na disk",
+  "@errorReporter.dialog.saveToDiskManaged": {
+    "sourceHash": "5a5d775"
+  },
+  "errorReporter.dialog.cancel": "Zrušit",
+  "@errorReporter.dialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "errorReporter.dialog.send": "Odeslat zprávu",
+  "@errorReporter.dialog.send": {
+    "sourceHash": "a44d353"
+  },
+  "errorReporter.dialog.sending": "Odesílání…",
+  "@errorReporter.dialog.sending": {
+    "sourceHash": "b8ed527"
+  },
+  "errorReporter.dialog.sendFailedToast": "Zprávu o chybě se nepodařilo odeslat. {reason}",
+  "@errorReporter.dialog.sendFailedToast": {
+    "sourceHash": "1eedf49"
+  },
+  "errorReporter.dialog.saveFailedToast": "Balíček se nepodařilo uložit: {error}",
+  "@errorReporter.dialog.saveFailedToast": {
+    "sourceHash": "6405cca"
+  },
+  "errorReporter.amend.title": "Přidat ke zprávě o chybě",
+  "@errorReporter.amend.title": {
+    "sourceHash": "b19796b"
+  },
+  "errorReporter.amend.description": "Cmdr už tuto zprávu odeslal. Napiš poznámku nebo přilož svůj e‑mail a Cmdr to přidá k tomu, co už tým má.",
+  "@errorReporter.amend.description": {
+    "sourceHash": "9e1a80f"
+  },
+  "errorReporter.amend.noteLabel": "Tvoje poznámka",
+  "@errorReporter.amend.noteLabel": {
+    "sourceHash": "5331e47"
+  },
+  "errorReporter.amend.detailsToggle": "Co bylo odesláno",
+  "@errorReporter.amend.detailsToggle": {
+    "sourceHash": "cb2415e"
+  },
+  "errorReporter.amend.submit": "Přidat ke zprávě",
+  "@errorReporter.amend.submit": {
+    "sourceHash": "e05fdbe"
+  },
+  "errorReporter.amend.submitting": "Přidávání…",
+  "@errorReporter.amend.submitting": {
+    "sourceHash": "c6de6f4"
+  },
+  "errorReporter.amend.unavailable": "K této zprávě už nejde přidat poznámku. Pokud chceš své poznámky dostat k týmu, odešli novou zprávu z nabídky Nápověda.",
+  "@errorReporter.amend.unavailable": {
+    "sourceHash": "08ab034"
+  },
+  "errorReporter.amend.close": "Zavřít",
+  "@errorReporter.amend.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "errorReporter.amend.addFailedToast": "Poznámku se nepodařilo přidat. {reason}",
+  "@errorReporter.amend.addFailedToast": {
+    "sourceHash": "02f82ce"
+  },
+  "errorReporter.sentToast.message": "Zpráva o chybě byla odeslána. Tvoje referenční ID je",
+  "@errorReporter.sentToast.message": {
+    "sourceHash": "75be6ba"
+  },
+  "errorReporter.sentToast.dismiss": "Zavřít",
+  "@errorReporter.sentToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.sentToast.copyId": "Zkopírovat ID",
+  "@errorReporter.sentToast.copyId": {
+    "sourceHash": "72ac0d5"
+  },
+  "errorReporter.sentToast.copied": "Zkopírováno",
+  "@errorReporter.sentToast.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.amendedToast.message": "Poznámka byla přidána ke zprávě. Tvoje referenční ID je",
+  "@errorReporter.amendedToast.message": {
+    "sourceHash": "5471d7f"
+  },
+  "errorReporter.bundleSavedToast.message": "Balíček byl uložen na disk",
+  "@errorReporter.bundleSavedToast.message": {
+    "sourceHash": "7c1604d"
+  },
+  "errorReporter.bundleSavedToast.dismiss": "Zavřít",
+  "@errorReporter.bundleSavedToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.bundleSavedToast.reveal": "Zobrazit ve Finderu",
+  "@errorReporter.bundleSavedToast.reveal": {
+    "sourceHash": "cc84938"
+  },
+  "errorReporter.autoSentToast.title": "Zpráva o chybě odeslána",
+  "@errorReporter.autoSentToast.title": {
+    "sourceHash": "b69ee37"
+  },
+  "errorReporter.autoSentToast.referenceIdLabel": "Referenční ID:",
+  "@errorReporter.autoSentToast.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.autoSentToast.changeSettings": "Změnit nastavení",
+  "@errorReporter.autoSentToast.changeSettings": {
+    "sourceHash": "873512a"
+  },
+  "errorReporter.autoSentToast.viewOrAddNotes": "Zobrazit zprávu nebo přidat poznámky",
+  "@errorReporter.autoSentToast.viewOrAddNotes": {
+    "sourceHash": "81a00a0"
+  }
+}

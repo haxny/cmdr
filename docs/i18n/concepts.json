@@ -3649,5 +3649,23 @@
     "en": "diacritics",
     "sense": "Accents and other marks on letters (á, ž, ß) that the Multi-Rename Tool can strip to plain letters.",
     "match": ["diacritics", "diacritic"]
+  },
+  "acknowledgements": {
+    "en": "Acknowledgements",
+    "match": ["acknowledgements"],
+    "sense": "The window and app-menu item crediting the open-source libraries Cmdr ships."
+  },
+  "website": {
+    "en": "website",
+    "match": ["website"],
+    "sense": "A web site Cmdr opens in the browser: Cmdr's own site (getcmdr.com) or a provider's site such as Google Drive.",
+    "notMatch": [],
+    "distinct": ["page"]
+  },
+  "batch": {
+    "en": "batch",
+    "match": ["batch", "batches"],
+    "sense": "One reviewed group of Ask Cmdr renames the user approved and Cmdr applied together; the unit an undo reverses.",
+    "distinct": ["operation", "rename"]
   }
 }
