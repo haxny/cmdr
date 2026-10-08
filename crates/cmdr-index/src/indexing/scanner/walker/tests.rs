@@ -329,11 +329,18 @@ fn a_read_that_stops_delivering_is_abandoned_promptly() {
         reader
     };
 
+    // ❗ 250 ms, not `fast_cfg`'s 50: the two delivering batches sleep 10 ms each, and a
+    // loaded macOS CI runner overshot that by enough to read as a stall BEFORE the read
+    // reached its real one. Still far under the 5 s block, so only the stall rule ends it.
+    let cfg = WalkConfig {
+        stall_timeout: Duration::from_millis(250),
+        ..fast_cfg(2)
+    };
     let visitor = Arc::new(RecordingVisitor::new());
     let start = Instant::now();
     let stats = walk(
         root_task("/r"),
-        fast_cfg(2),
+        cfg,
         reader,
         visitor.clone(),
         VolumeWork::for_test("walker-test"),
