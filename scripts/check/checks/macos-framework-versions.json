@@ -1,10 +1,11 @@
 {
-  "comment": "When each macOS system framework first shipped as a top-level framework, for desktop-macos-framework-floor. Hand-recorded from Apple's documentation: nothing in the SDK carries a framework's own introduction version (its headers annotate only what is newer than the framework itself), so this can't be derived. A framework the binary loads and this file doesn't name fails the check, which is what keeps the list honest. Several entries are the year the framework moved OUT of an umbrella and became loadable on its own, which is the date that matters here: CoreGraphics, CoreText, and ImageIO left ApplicationServices in 10.8, CoreImage left QuartzCore in 10.11, and ColorSync left ApplicationServices in 10.13. Adding an entry above the floor doesn't make the app work there; the dependency has to go instead.",
+  "comment": "When each macOS system framework first shipped as a top-level framework, for desktop-macos-framework-floor. Hand-recorded from Apple's documentation: nothing in the SDK carries a framework's own introduction version (its headers annotate only what is newer than the framework itself), so this can't be derived. A framework the binary loads and this file doesn't name fails the check, which is what keeps the list honest. Several entries are the year the framework moved OUT of an umbrella and became loadable on its own, which is the date that matters here: CoreGraphics, CoreText, and ImageIO left ApplicationServices in 10.8, CFNetwork left CoreServices in 10.8, CoreImage left QuartzCore in 10.11, and ColorSync left ApplicationServices in 10.13. Adding an entry above the floor doesn't make the app work there; the dependency has to go instead.",
   "floor": "10.15",
   "frameworks": {
     "AVFoundation": "10.7",
     "AppKit": "10.0",
     "ApplicationServices": "10.0",
+    "CFNetwork": "10.8",
     "Carbon": "10.0",
     "CloudKit": "10.10",
     "ColorSync": "10.13",
