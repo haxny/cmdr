@@ -2140,7 +2140,7 @@
     "selection.recentSelections.maxCount": 1000,
     "theme.mode": "system",
     "updates.attachEmailToReports": false,
-    "updates.autoCheck": true,
+    "updates.autoCheck": false,
     "updates.crashReports": true,
     "updates.errorReports": false,
     "viewer.showTextCursor": false,

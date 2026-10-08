@@ -22,7 +22,8 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     descriptionKey: 'settings.updates.autoCheck.description',
     keywords: ['update', 'auto', 'check', 'version', 'background'],
     type: 'boolean',
-    default: true,
+    // Off in this fork's build: an official update would replace it with upstream Cmdr.
+    default: false,
     component: 'switch',
   },
   {

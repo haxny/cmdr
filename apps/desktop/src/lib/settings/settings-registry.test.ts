@@ -79,8 +79,9 @@ describe('getDefaultValue', () => {
   })
 
   it('should return correct defaults for boolean settings', () => {
+    // Off in the haxny fork build: an official update would replace it with upstream Cmdr.
     const value = getDefaultValue('updates.autoCheck')
-    expect(value).toBe(true)
+    expect(value).toBe(false)
   })
 
   it('hides hidden files by default', () => {
