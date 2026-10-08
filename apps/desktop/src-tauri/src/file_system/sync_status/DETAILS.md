@@ -206,6 +206,11 @@ would substitute, and lets the batch keep running so the answer is ready next ti
 `commands/sync_status.rs` still owns the *value* of the deadline, so the "every FS-touching command is timed" contract
 holds; it just hands it down rather than wrapping.
 
+**Gotcha:** a batch's "done" is a `watch::Sender` with no receiver of its own, so it's set with `send_replace`. A plain
+`send` drops the value when nobody has subscribed yet, which is the common case: an out-of-domain probe answers in
+microseconds, before the caller reaches `wait`. That lost signal made a fully answered ask sit out its whole 2 s deadline
+and report `timed_out`. Pinned by `a_batch_that_finishes_before_anyone_waits_is_still_done`.
+
 ## Testing
 
 - `../framework_pool.rs` tests pin the properties that matter with jobs that block on a channel, standing in for a provider that

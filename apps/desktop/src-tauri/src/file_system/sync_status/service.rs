@@ -66,6 +66,9 @@ struct Batch {
     cancelled: AtomicBool,
     /// Jobs not yet finished. The one that takes it to zero marks the batch done.
     pending: AtomicUsize,
+    /// Set with `send_replace`, ❌ never `send`: the sender holds no receiver of its own,
+    /// and `send` drops the value when nobody has subscribed yet, which is the usual case
+    /// when the pool answers before the caller reaches `wait`.
     done: watch::Sender<bool>,
     started: Instant,
 }
@@ -97,12 +100,12 @@ impl Batch {
     /// synchronous provider call still have to come back on their own.
     fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
-        let _ = self.done.send(true);
+        self.done.send_replace(true);
     }
 
     fn finish_one(&self) {
         if self.pending.fetch_sub(1, Ordering::SeqCst) == 1 {
-            let _ = self.done.send(true);
+            self.done.send_replace(true);
         }
     }
 
@@ -475,6 +478,21 @@ mod tests {
         assert!(!timed_out);
         assert_eq!(statuses.len(), 20);
         assert_eq!(probed_count(&probed), 20);
+    }
+
+    /// A batch whose jobs all finish before anyone waits on it is still done. The
+    /// out-of-domain probe answers in microseconds, so the pool often beats the
+    /// caller's subscribe; a lost "done" made that caller sit out its whole deadline,
+    /// and left the batch looking in flight for every later ask to join.
+    #[tokio::test]
+    async fn a_batch_that_finishes_before_anyone_waits_is_still_done() {
+        let batch = Batch::new(&["/cloud/a.txt".to_string()]);
+        batch.finish_one();
+
+        assert!(batch.is_done(), "the last job's finish is remembered without a waiter");
+        tokio::time::timeout(Duration::from_millis(100), batch.wait())
+            .await
+            .expect("a late waiter returns at once instead of waiting out its deadline");
     }
 
     /// A second identical request costs no provider calls at all. Pre-fix, the
