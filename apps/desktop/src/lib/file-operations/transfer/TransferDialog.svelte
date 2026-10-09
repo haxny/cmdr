@@ -15,6 +15,13 @@
     } from '#lib/utils/filename-validation.js'
     import { createTransferDestExistsCheck } from './transfer-dest-exists.svelte'
     import { conflictPolicyFromMcpName } from './conflict-policy'
+    import {
+        dispatchedConflictPolicy,
+        overwriteNoteReach,
+        readRememberedConflictPolicy,
+        rememberConflictPolicy,
+        type ConflictPolicySource,
+    } from './remembered-conflict-policy'
     import CompressLevelControl from './CompressLevelControl.svelte'
     import CompressEstimateLine from './CompressEstimateLine.svelte'
     import S3CostLine from '../S3CostLine.svelte'
@@ -191,12 +198,14 @@
     // handler silently awaits is how a click reads as "nothing happened".
     let confirmPending = $state(false)
 
-    // "Ask for each" unless an auto-confirming caller named a policy. The map is
+    // An auto-confirming caller's named policy ("Ask for each" when it named none),
+    // else the person's saved one (`remembered-conflict-policy.ts`). The MCP map is
     // shared with the `dialog confirm` path (`conflict-policy.ts`); the two used
     // to keep private copies that had drifted on the conditional names.
     let conflictPolicy = $state<ConflictResolution>(
-        (autoConfirm ? conflictPolicyFromMcpName(autoConfirmOnConflict) : undefined) ?? 'stop',
+        autoConfirm ? (conflictPolicyFromMcpName(autoConfirmOnConflict) ?? 'stop') : readRememberedConflictPolicy(),
     )
+    let conflictPolicySource = $state<ConflictPolicySource>(autoConfirm ? 'explicit' : 'remembered')
 
     // Filter to only actual volumes (not favorites)
     const actualVolumes = $derived(volumes.filter((v) => v.category !== 'favorite' && v.category !== 'network'))
@@ -299,6 +308,22 @@
     )
     const hasTypeMismatchConflict = $derived(conflicts.hasTypeMismatchConflict)
     const isCheckingConflicts = $derived(conflicts.isCheckingConflicts)
+    /** The policy radios are on screen: the check answered and found a clash or a merge. */
+    const conflictChoiceVisible = $derived(
+        !isCheckingConflicts && !conflicts.conflictCheckUnknown && (totalConflictCount > 0 || mergeFolderCount > 0),
+    )
+    /** What a confirm sends right now: a remembered policy nobody can see yet asks instead. */
+    const dispatchPolicy = $derived(
+        dispatchedConflictPolicy({
+            policy: conflictPolicy,
+            source: conflictPolicySource,
+            choiceVisible: conflictChoiceVisible,
+        }),
+    )
+    /** Set while the radios sit on a remembered policy that overwrites: the note under them says so. */
+    const rememberedOverwriteReach = $derived(
+        overwriteNoteReach({ policy: conflictPolicy, source: conflictPolicySource }),
+    )
 
     let showConflictSpinner = $state(false)
     $effect(() => {
@@ -340,7 +365,7 @@
     // clashes, once it has answered (rename mode's new name is never taken).
     const costClashes = $derived(
         conflicts.conflictCheckComplete && !isRenameMode
-            ? { resolution: conflictPolicy, clashes: conflicts.fileClashes }
+            ? { resolution: dispatchPolicy, clashes: conflicts.fileClashes }
             : null,
     )
     const costRequest = $derived(
@@ -616,7 +641,17 @@
      * minutes on a big remote folder.
      */
     function needsConflictNames(isAuto: boolean): boolean {
-        return isAuto && conflictPolicy === 'skip'
+        return isAuto && dispatchPolicy === 'skip'
+    }
+
+    /** The policy this confirm sends, saving a person's pick as the new default on the way. */
+    function commitConflictPolicy(): ConflictResolution {
+        rememberConflictPolicy({
+            policy: conflictPolicy,
+            source: conflictPolicySource,
+            operationType: activeOperationType,
+        })
+        return dispatchPolicy
     }
 
     /** Resolves `true` once the press reached `onConfirm`, `false` when a guard
@@ -688,7 +723,7 @@
             destinationName: namedTarget?.name,
             volumeId: targetVolumeId,
             previewId,
-            conflictResolution: conflictPolicy,
+            conflictResolution: commitConflictPolicy(),
             operationType: activeOperationType,
             preKnownConflicts: conflicts.conflictNames,
             ...(isRenameMode ? { newName: renameTarget.leaf } : {}),
@@ -710,6 +745,7 @@
     // operation's id; a press a guard stopped says so here.
     const unregisterConfirmer = registerConfirmer?.(async (policy, options) => {
         conflictPolicy = policy
+        conflictPolicySource = 'explicit'
         return (await handleConfirm(false, options)) ? 'pressed' : 'notStarted'
     })
 
@@ -963,7 +999,7 @@
                 </span>
                 <span>{tString('fileOperations.transferDialog.conflictsUnknown')}</span>
             </p>
-        {:else if totalConflictCount > 0 || mergeFolderCount > 0}
+        {:else if conflictChoiceVisible}
             <!-- A card, not a full-bleed band: it's one more block in the dialog's column,
              so it obeys the same inset as the fields above it. Warning-toned only when a
              known clash can overwrite something; merges alone are a neutral heads-up. -->
@@ -1010,9 +1046,28 @@
                     <RadioGroup
                         items={conflictPolicyItems}
                         value={conflictPolicy}
-                        onValueChange={(v) => (conflictPolicy = v as ConflictResolution)}
+                        onValueChange={(v) => {
+                            conflictPolicy = v as ConflictResolution
+                            conflictPolicySource = 'picked'
+                        }}
                         columns={3}
+                        ariaDescribedBy={rememberedOverwriteReach ? 'transfer-remembered-overwrite' : undefined}
                     />
+                    <!-- The dialog opened on a saved policy that overwrites: say so in words
+                     beside the warning tint, so nobody overwrites without noticing. Gone
+                     once the person picks anything. -->
+                    {#if rememberedOverwriteReach}
+                        <p class="remembered-overwrite-note" id="transfer-remembered-overwrite">
+                            <span class="remembered-overwrite-icon" aria-hidden="true">
+                                <Icon name="triangle-alert" size={16} />
+                            </span>
+                            <span>
+                                {tString('fileOperations.transferDialog.rememberedOverwriteNote', {
+                                    reach: rememberedOverwriteReach,
+                                })}
+                            </span>
+                        </p>
+                    {/if}
                 </div>
 
                 <!-- Cross-type guardrail: when a clash mixes a file and a same-named
@@ -1286,6 +1341,31 @@
         display: inline-flex;
         align-items: center;
         color: var(--color-error-text);
+        margin-top: 1px;
+    }
+
+    /* A saved overwriting policy, flagged under the radios. Warning text with an
+       icon and a warning rule on the dialog's own background, so it stands apart
+       from the card's softer tint and doesn't rely on color alone. */
+    .remembered-overwrite-note {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        margin: var(--spacing-sm) 0 0;
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--color-bg-primary);
+        color: var(--color-warning-text);
+        border: 1px solid var(--color-warning);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+
+    .remembered-overwrite-icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        color: var(--color-warning-text);
         margin-top: 1px;
     }
 

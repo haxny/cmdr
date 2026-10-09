@@ -685,6 +685,13 @@
     "description": "Radio option: decide per clashing file during the transfer instead of choosing now. Shown when folders will merge but nobody knows yet how many files inside them clash, maybe none, maybe many. Short control label.",
     "screenshot": "transfer-confirmation-copy.png"
   },
+  "fileOperations.transferDialog.rememberedOverwriteNote": "{reach, select, smaller {Your saved choice overwrites files already there that are smaller.} older {Your saved choice overwrites files already there that are older.} other {Your saved choice overwrites the files already there.}}",
+  "@fileOperations.transferDialog.rememberedOverwriteNote": {
+    "description": "Warning note under the 'files already exist' options in the copy/move dialog. Shown when the dialog opened on an overwriting option the user saved earlier (their last confirmed choice, or the 'When files already exist' setting), so nobody overwrites files without noticing. 'saved choice' = the remembered default option. Disappears once the user picks any option.",
+    "placeholders": {
+      "reach": "which files the saved option overwrites: 'smaller' (only files at the destination that are smaller), 'older' (only older ones), or anything else for every clashing file"
+    }
+  },
 
   "fileOperations.transferDialog.typeMismatchWarning": "Some clashes mix a file and a folder by the same name. Overwriting will replace items of a different type, including the entire contents of a folder.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

@@ -30,7 +30,7 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
 - **Speed, ETA, and bars are backend-owned and SHARED with the queue window** (`../TransferProgressReadout.svelte`): ❌
   no second rate here.
 - **A stall drops the ETA and says why** (`transfer-stall.ts`): the BACKEND classifies, this side owns the threshold. ❌
-  Never infer a stall from event timing: a wedge emits no events at all. DETAILS § "The stalled-transfer notice".
+  Never infer a stall from event timing: a wedge emits no events. DETAILS § "The stalled-transfer notice".
 - **A cancel's reversal drains its bar to zero, so the TOAST says what actually stayed** (`cancel-rollback-toast.ts`,
   off `event.rollback`). ❌ Never read the verb off the view's config: an ADOPTED dialog's is inert, and a move's
   reversal worded as a delete is a data-safety lie. ❌ Never colour a deliberate skip as a warning. DETAILS § "What a
@@ -46,6 +46,8 @@ Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. 
   in `../../file-explorer/pane/confirmation-skip.ts`.
 - **Compress swaps the conflict-policy UI for a dest-exists overwrite check**; its MCP auto-confirm ❌ never silently
   overwrites.
+- **Radios open on the saved policy; only a person's confirm saves it**, ❌ never MCP. DETAILS § "The remembered
+  conflict policy".
 - **ONE map from an MCP `onConflict` name to a policy** (`conflict-policy.ts`), and ONE confirm path: `dialog confirm`
   presses `handleConfirm` via `registerConfirmer`. ❌ Never a second map (an unmapped name silently becomes `skip`) or a
   payload built from the opening props.

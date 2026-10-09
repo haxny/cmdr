@@ -6,8 +6,10 @@
      *   1. **Navigation** — the `behavior.doubleClickPaneNavigatesToParent` switch
      *      (double-click the empty pane background to go up one folder).
      *   2. **File operations** — the file-extension-change confirmation radio, what
-     *      ⌘V does with non-file clipboard content, and the switch that skips the
-     *      copy/move/trash confirmations. The conflict/progress settings live in
+     *      ⌘V does with non-file clipboard content, the switch that skips the
+     *      copy/move/trash confirmations, and the copy/move dialog's starting "files
+     *      already exist" choice (`fileOperations.defaultConflictPolicy`, which the
+     *      dialog also writes back). The conflict-preview and progress tuning settings live in
      *      Advanced (their single home); this page holds only its own settings,
      *      never a mirror.
      *   3. **Text editor** — which app F4 opens files in (`TextEditorSelect`).
@@ -59,6 +61,7 @@
     const extensionChangesDef = getSettingDefinition('fileOperations.allowFileExtensionChanges') ?? defaultDef
     const pasteAsFileDef = getSettingDefinition('fileOperations.pasteClipboardAsFile') ?? defaultDef
     const skipConfirmationDef = getSettingDefinition('fileOperations.skipConfirmation') ?? defaultDef
+    const conflictPolicyDef = getSettingDefinition('fileOperations.defaultConflictPolicy') ?? defaultDef
     const textEditorAppDef = getSettingDefinition('behavior.textEditorApp') ?? defaultDef
     const openTerminalHereAppDef = getSettingDefinition('behavior.openTerminalHereApp') ?? defaultDef
     const operationLogEnabledDef = getSettingDefinition('operationLog.enabled') ?? defaultDef
@@ -82,7 +85,13 @@
         </SectionCard>
     {/if}
 
-    {#if anyVisible(shouldShow, 'fileOperations.allowFileExtensionChanges', 'fileOperations.pasteClipboardAsFile', 'fileOperations.skipConfirmation')}
+    {#if anyVisible(
+        shouldShow,
+        'fileOperations.allowFileExtensionChanges',
+        'fileOperations.pasteClipboardAsFile',
+        'fileOperations.skipConfirmation',
+        'fileOperations.defaultConflictPolicy',
+    )}
         <SectionCard label={tString('settings.navigationAndFileOps.card.fileOperations')}>
             {#if shouldShow('fileOperations.allowFileExtensionChanges')}
                 <SettingRow
@@ -112,6 +121,17 @@
                     {searchQuery}
                 >
                     <SettingSwitch id="fileOperations.skipConfirmation" />
+                </SettingRow>
+            {/if}
+            {#if shouldShow('fileOperations.defaultConflictPolicy')}
+                <SettingRow
+                    id="fileOperations.defaultConflictPolicy"
+                    label={conflictPolicyDef.label}
+                    description={conflictPolicyDef.description}
+                    split
+                    {searchQuery}
+                >
+                    <SettingSelect id="fileOperations.defaultConflictPolicy" />
                 </SettingRow>
             {/if}
         </SectionCard>
