@@ -784,3 +784,9 @@ share options → `Nincs megosztási lehetőség`.
 - manage → `kezel` (ms): `A szervezeted kezeli`; IT team → `IT-csapat`, the shipped `errors.*` form; the card's Off →
   `Ki`, a switch state that agrees with no label.
 - `{ceiling}` sits in a colon slot (`legfeljebb ezt a verziót engedi: {ceiling}`): a version's article can't be known.
+
+## Csoportos átnevezés: előbeállítások, Eredménylista, visszavonás (`multiRename.presetsMenu.*`, `multiRename.results.*`, `multiRename.undo*`)
+
+- Results → `Eredménylista` (TC MRT gombja betű szerint); prózában `az Eredménylista gombra`, a címke nem kap ragot.
+- Greek to Latin → `Görög betűk átírása latinra`, Normalize Unicode → `Unicode-normalizálás` (MS: átírás, normalizálás).
+- preset marad `előbeállítás` (a TC `beállítás` szava ütközne a settingsszel); Undo → `Visszavonás` (TC `Visszavon`).

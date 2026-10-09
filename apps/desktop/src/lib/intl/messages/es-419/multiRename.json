@@ -3,6 +3,18 @@
   "@multiRename.error.couldntStart": {
     "sourceHash": "8b5d5ce"
   },
+  "multiRename.results.discard": "Volver a usar la configuración",
+  "@multiRename.results.discard": {
+    "sourceHash": "3f96e0a"
+  },
+  "multiRename.results.couldntOpen": "No se pudo abrir la lista de nombres en tu editor de texto. Puedes elegir un editor en Configuración.",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "ccc6be8"
+  },
+  "multiRename.error.couldntWriteNames": "No se pudo escribir la lista de nombres. Comprueba que tu disco de arranque tiene espacio libre.",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "2057912"
+  },
   "multiRename.error.previewOutOfDate": "La carpeta cambió desde la vista previa. Comprueba la nueva vista previa y vuelve a renombrar.",
   "@multiRename.error.previewOutOfDate": {
     "sourceHash": "ef34c2b"

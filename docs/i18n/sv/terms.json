@@ -2305,6 +2305,10 @@
     "chosen": "byt namn",
     "confidence": "high",
     "decision": "Rename toasts",
+    "exceptions": {
+      "multiRename.undoStarted": "Renaming back is ger tillbaka det gamla namnet, the rollback family's idiom (fileOperations.rollbackConfirm.bodyUndoByRenamingBack); byter tillbaka namnet reads as a swap.",
+      "multiRename.undoTooltip": "Same reversal idiom as multiRename.undoStarted: Ger tillbaka de gamla namnen till # filer."
+    },
     "forms": "Byt namn på …; noun namnbyte (ett namnbyte, namnbytet, namnbyten), which takes av: namnbytet av ”X”",
     "sources": "macOS Finder (Byt namn på …), Thunar/Dolphin (Namnbyte)"
   },

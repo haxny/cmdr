@@ -68,6 +68,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `Ký hiệu định dạng`; `tùy chọn đặt trước` for a saved rename preset (the tentative preset ruling) runs long on
   `Lưu`/`Xóa`/`Tên tùy chọn đặt trước`, and `thiết lập đã lưu` is the alternative; `Viết Hoa Đầu Mỗi Từ` is title-cased
   on purpose to show the result (EN `Every Word Capitalized`); `Bỏ dấu` for Remove diacritics.
+- **Multi-rename presets and Results** (`multiRename.greekToLatin`, `multiRename.results`,
+  `multiRename.results.discard`): `Chữ Hy Lạp sang Latinh` (TC 2058 `Hy Lạp`; `Latinh` has no pile source),
+  `Chuẩn hóa Unicode` (MS normalize → `chuẩn hóa`), Results → TC 6624 `Danh sách kết quả`, and `Dùng lại thiết lập` (not
+  `cài đặt`, so the button doesn't read as the Settings window named in `multiRename.results.couldntOpen`).
 
 ## Layout
 

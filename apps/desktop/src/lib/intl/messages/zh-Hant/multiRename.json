@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
+  "multiRename.greekToLatin": "希臘字母轉拉丁字母",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "正規化 Unicode",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
   "multiRename.counterStart": "計數器起始於",
   "@multiRename.counterStart": {
     "sourceHash": "562151d"
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.presets": "預設組合",
-  "@multiRename.presets": {
-    "sourceHash": "7252e7c"
-  },
-  "multiRename.presetPlaceholder": "載入預設組合",
-  "@multiRename.presetPlaceholder": {
-    "sourceHash": "e07d83e"
-  },
   "multiRename.preset.default": "沒有變更",
   "@multiRename.preset.default": {
     "sourceHash": "41f9d57"
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "移除變音符號",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "希臘字母轉拉丁字母",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "正規化 Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
   },
   "multiRename.presetName": "預設組合名稱",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "sourceHash": "362a137"
   },
-  "multiRename.deletePreset": "刪除預設組合",
-  "@multiRename.deletePreset": {
-    "sourceHash": "f307af8"
+  "multiRename.presetsMenu": "預設組合",
+  "@multiRename.presetsMenu": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presetsMenu.builtIn": "內建",
+  "@multiRename.presetsMenu.builtIn": {
+    "sourceHash": "78a6a8f"
+  },
+  "multiRename.presetsMenu.saved": "你的預設組合",
+  "@multiRename.presetsMenu.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presetsMenu.noSaved": "還沒有儲存的預設組合",
+  "@multiRename.presetsMenu.noSaved": {
+    "sourceHash": "f4a93a3"
+  },
+  "multiRename.presetsMenu.saveAs": "另存為新的預設組合⋯",
+  "@multiRename.presetsMenu.saveAs": {
+    "sourceHash": "927ee5f"
+  },
+  "multiRename.presetsMenu.save": "儲存「{name}」",
+  "@multiRename.presetsMenu.save": {
+    "sourceHash": "3db3798"
+  },
+  "multiRename.presetsMenu.delete": "刪除「{name}」",
+  "@multiRename.presetsMenu.delete": {
+    "sourceHash": "9dfb093"
   },
   "multiRename.preview": "預覽",
   "@multiRename.preview": {
@@ -186,6 +218,54 @@
   "multiRename.cancel": "取消",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "還原重新命名",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, other {把 # 個檔案改回原本的名稱}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoNothing": "還沒有可以還原的重新命名。「還原重新命名」會把 Cmdr 這次啟動以來的最後一次多檔重新命名改回去。",
+  "@multiRename.undoNothing": {
+    "sourceHash": "d480f2e"
+  },
+  "multiRename.results": "結果列表",
+  "@multiRename.results": {
+    "sourceHash": "219c4a6"
+  },
+  "multiRename.results.editing": "在文字編輯器裡編輯新名稱，然後儲存檔案。回到這個視窗時，新名稱就會顯示在這裡。",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.results.edited": "{count, plural, other {# 個名稱來自你編輯過的列表}}。",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "立即讀取名稱",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "重新套用設定",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.couldntOpen": "無法在你的文字編輯器裡開啟名稱列表。你可以在「設定」裡選一個編輯器。",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "f3c5f0b"
+  },
+  "multiRename.results.gone": "名稱列表不見了。請再開啟一次「結果列表」，重新寫一份。",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.undoStarted": "{count, plural, other {正在把 # 個檔案改回原本的名稱}}。",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.error.couldntWriteNames": "無法寫入名稱列表。請確認你的啟動磁碟還有可用空間。",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
   },
   "multiRename.rename": "{count, plural, =0 {重新命名} other {重新命名 # 個檔案}}",
   "@multiRename.rename": {

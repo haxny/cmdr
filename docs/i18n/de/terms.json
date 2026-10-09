@@ -1001,7 +1001,7 @@
     "sources": "macOS Finder (Ablage > Duplizieren N154, Dupliziert Objekte an ihrem aktuellen Ort), verified 2026-08-19"
   },
   "edit": {
-    "accept": ["bearbeitet", "Bearbeitung"],
+    "accept": ["bearbeitet", "Bearbeitung", "Bearbeite"],
     "chosen": "bearbeiten",
     "confidence": "high",
     "exceptions": {
@@ -2499,6 +2499,10 @@
     "accept": ["umbenannt", "Umbenennung", "umbenenn", "benenne", "benenn"],
     "chosen": "umbenennen",
     "confidence": "high",
+    "exceptions": {
+      "multiRename.undoTooltip": "renaming files BACK to their old names takes the undo ruling's zurücksetzen (like askCmdr.renameUndo.undone), not umbenennen",
+      "multiRename.undoStarted": "renaming files BACK to their old names takes the undo ruling's zurücksetzen (like askCmdr.renameUndo.undone), not umbenennen"
+    },
     "forms": "Rename all → Alle umbenennen; progress Wird umbenannt; noun Umbenennung/Umbenennungen; rename cycle → Umbenennungszyklus",
     "sources": "macOS Finder (Umbenennen …), Double Commander, Nautilus (wird … umbenannt)"
   },
@@ -3535,6 +3539,7 @@
     "sources": "catalog errors.volume.invalidName, errors.write.invalidName.message (gespeichert per the save trap: storing data); a secret in the keychain → sichern (servers.refusal.secretNotStored, the save button’s verb); a disk image sitting there → liegt"
   },
   "batch-rename": {
+    "accept": ["Umbenennen"],
     "chosen": "Mehrfach umbenennen",
     "confidence": "high",
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen",

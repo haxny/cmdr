@@ -92,3 +92,6 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
 - `multiRename.case.lower` / `.upper` / `.words` (`alles klein`, `ALLES GROSS`, `Jeder Wortanfang Groß`): written in
   their own result like the English; `Groß` capitalized on purpose, and `GROSS` without ẞ. Check they read as intended.
 - `multiRename.firstOnly` (`Nur den ersten Treffer`) leaves `ersetzen` implicit, as the English does.
+- `multiRename.results` (`Ergebnisliste`): TC de says `Resultatliste` (6624); the everyday `Ergebnis` keeps TC's list
+  shape. `multiRename.presetsMenu.builtIn` (`Integriert`, macOS `Integrierter Bildschirm`) could also read
+  `Mitgeliefert`. Check both read naturally.

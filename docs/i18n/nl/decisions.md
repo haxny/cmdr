@@ -633,7 +633,6 @@ points at `deze gedeelde map`, since `hij` floats between two de-words.
 
 ## Wijzig meerdere namen (`multiRename.title`, `commands.fileMultiRename.label`, `menu.file.multiRename`)
 
-- `Wijzig meerdere namen` over TC `Uitgebreid hernoemen` / DC `Meervoudig hernoemen` (no `hernoemen`); Finder
-  `Wijzig naam van ^0 onderdelen…`.
-- TC 6612–6619: `Vervang door`, `Teller`, `Stapgrootte`, `Cijfers`; `Hoofdlettergebruik` (MS) for letter case;
-  `Opmerking` for the status column.
+- Not TC `Uitgebreid hernoemen` (rename). TC 6612–6619: `Vervang door`, `Teller`, `Stapgrootte`, `Cijfers`.
+- `multiRename.results` → TC `Resultatenlijst`; `multiRename.presetsMenu` → DC `Voorinstellingen`; `multiRename.undo` →
+  `Ongedaan maken` (not TC `Herstellen`); MS `normaliseren`.

@@ -33,6 +33,10 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   (`settings.askCmdr.spend.disclaimer`), `alternador de apps` (`shortcuts.system.appSwitcher`), `Consulta` for the query
   criterion (`queryUi.results.criteria.query`).
 
+- **Multi-rename extras** (`multiRename.greekToLatin`, `multiRename.presetsMenu.builtIn`, `multiRename.results`):
+  `Grego para latino` (no pile source; Microsoft has only `transliteração`), `Integradas` for Built in (macOS
+  `integrado`; Microsoft `interno`, Dolphin `embutido`), and `Resultados` (TC pt-BR 6624 says `Ver resultados`).
+
 ## Phrasing
 
 - **`uma chave` sem `SSH`** (`servers.paneState.signedOutNothingToAsk`): in the same pane `chave` is the HOST key

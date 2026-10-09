@@ -87,3 +87,7 @@ item once settled, and record the outcome in `terms.json` or `decisions.md`.
   and `обозначение` for the [N]/[C] tokens. Natural for TC users?
 - **Hidden rows** (`multiRename.hiddenProblems`, `multiRename.moreRows`): «за пределами показанных строк» and «Еще #
   файл не показан» both mean past the 1,000 shown rows. Clear enough?
+- **Multi-Rename Results and presets** (`multiRename.results`, `multiRename.greekToLatin`, `multiRename.presetsMenu`):
+  the Results button is `Список имен`, not TC's `Протокол` (TC 6624), because Cmdr's `журнал` is the log and the button
+  opens the names list the other strings name; `Греческий в латиницу` and `Наборы настроек` (TC/DC say `шаблон`). Do TC
+  users find them?

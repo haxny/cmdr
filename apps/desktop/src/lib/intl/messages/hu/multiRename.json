@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
+  "multiRename.greekToLatin": "Görög betűk átírása latinra",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "Unicode-normalizálás",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
   "multiRename.counterStart": "Számláló kezdőértéke",
   "@multiRename.counterStart": {
     "sourceHash": "562151d"
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.presets": "Előbeállítás",
-  "@multiRename.presets": {
-    "sourceHash": "7252e7c"
-  },
-  "multiRename.presetPlaceholder": "Előbeállítás betöltése",
-  "@multiRename.presetPlaceholder": {
-    "sourceHash": "e07d83e"
-  },
   "multiRename.preset.default": "Nincs változás",
   "@multiRename.preset.default": {
     "sourceHash": "41f9d57"
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "Ékezetek eltávolítása",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "Görög betűk átírása latinra",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "Unicode-normalizálás",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
   },
   "multiRename.presetName": "Előbeállítás neve",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "sourceHash": "362a137"
   },
-  "multiRename.deletePreset": "Előbeállítás törlése",
-  "@multiRename.deletePreset": {
-    "sourceHash": "f307af8"
+  "multiRename.presetsMenu": "Előbeállítások",
+  "@multiRename.presetsMenu": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presetsMenu.builtIn": "Beépített",
+  "@multiRename.presetsMenu.builtIn": {
+    "sourceHash": "78a6a8f"
+  },
+  "multiRename.presetsMenu.saved": "Az előbeállításaid",
+  "@multiRename.presetsMenu.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presetsMenu.noSaved": "Még nincs mentett előbeállítás",
+  "@multiRename.presetsMenu.noSaved": {
+    "sourceHash": "f4a93a3"
+  },
+  "multiRename.presetsMenu.saveAs": "Mentés új előbeállításként…",
+  "@multiRename.presetsMenu.saveAs": {
+    "sourceHash": "927ee5f"
+  },
+  "multiRename.presetsMenu.save": "„{name}” mentése",
+  "@multiRename.presetsMenu.save": {
+    "sourceHash": "3db3798"
+  },
+  "multiRename.presetsMenu.delete": "„{name}” törlése",
+  "@multiRename.presetsMenu.delete": {
+    "sourceHash": "9dfb093"
   },
   "multiRename.preview": "Előnézet",
   "@multiRename.preview": {
@@ -186,6 +218,54 @@
   "multiRename.cancel": "Mégsem",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "Átnevezés visszavonása",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, one {Visszaállítja # fájl régi nevét} other {Visszaállítja # fájl régi nevét}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoNothing": "Még nincs mit visszavonni. Az „Átnevezés visszavonása” gomb a Cmdr indítása óta végzett utolsó csoportos átnevezést vonja vissza.",
+  "@multiRename.undoNothing": {
+    "sourceHash": "d480f2e"
+  },
+  "multiRename.results": "Eredménylista",
+  "@multiRename.results": {
+    "sourceHash": "219c4a6"
+  },
+  "multiRename.results.editing": "Szerkeszd az új neveket a szövegszerkesztődben, és mentsd a fájlt. Amikor visszajössz ebbe az ablakba, itt megjelennek.",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.results.edited": "{count, plural, one {# név a szerkesztett listádból származik} other {# név a szerkesztett listádból származik}}.",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "Nevek beolvasása most",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "Újra a beállítások szerint",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.couldntOpen": "Nem sikerült megnyitni a névlistát a szövegszerkesztődben. Szerkesztőt a Beállításokban választhatsz.",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "f3c5f0b"
+  },
+  "multiRename.results.gone": "A névlista már nincs meg. Kattints újra az Eredménylista gombra, és a Cmdr kiír egy új listát, majd megnyitja.",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.undoStarted": "{count, plural, one {# fájl régi nevének visszaállítása folyamatban van} other {# fájl régi nevének visszaállítása folyamatban van}}.",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.error.couldntWriteNames": "Nem sikerült kiírni a névlistát. Nézd meg, van-e szabad hely az indítólemezeden.",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
   },
   "multiRename.rename": "{count, plural, =0 {Átnevezés} one {# fájl átnevezése} other {# fájl átnevezése}}",
   "@multiRename.rename": {

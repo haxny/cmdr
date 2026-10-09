@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
+  "multiRename.greekToLatin": "Griego a latino",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "Normalizar Unicode",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
   "multiRename.counterStart": "Contador desde",
   "@multiRename.counterStart": {
     "sourceHash": "562151d"
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.presets": "Preajuste",
-  "@multiRename.presets": {
-    "sourceHash": "7252e7c"
-  },
-  "multiRename.presetPlaceholder": "Cargar un preajuste",
-  "@multiRename.presetPlaceholder": {
-    "sourceHash": "e07d83e"
-  },
   "multiRename.preset.default": "Sin cambios",
   "@multiRename.preset.default": {
     "sourceHash": "41f9d57"
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "Quitar diacríticos",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "Griego a latino",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "Normalizar Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
   },
   "multiRename.presetName": "Nombre del preajuste",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "sourceHash": "362a137"
   },
-  "multiRename.deletePreset": "Eliminar preajuste",
-  "@multiRename.deletePreset": {
-    "sourceHash": "f307af8"
+  "multiRename.presetsMenu": "Preajustes",
+  "@multiRename.presetsMenu": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presetsMenu.builtIn": "Incluidos",
+  "@multiRename.presetsMenu.builtIn": {
+    "sourceHash": "78a6a8f"
+  },
+  "multiRename.presetsMenu.saved": "Tus preajustes",
+  "@multiRename.presetsMenu.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presetsMenu.noSaved": "Aún no hay preajustes guardados",
+  "@multiRename.presetsMenu.noSaved": {
+    "sourceHash": "f4a93a3"
+  },
+  "multiRename.presetsMenu.saveAs": "Guardar como preajuste nuevo…",
+  "@multiRename.presetsMenu.saveAs": {
+    "sourceHash": "927ee5f"
+  },
+  "multiRename.presetsMenu.save": "Guardar “{name}”",
+  "@multiRename.presetsMenu.save": {
+    "sourceHash": "3db3798"
+  },
+  "multiRename.presetsMenu.delete": "Eliminar “{name}”",
+  "@multiRename.presetsMenu.delete": {
+    "sourceHash": "9dfb093"
   },
   "multiRename.preview": "Vista previa",
   "@multiRename.preview": {
@@ -186,6 +218,54 @@
   "multiRename.cancel": "Cancelar",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "Deshacer renombrado",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, one {Restaura el nombre anterior de # archivo} many {Restaura los nombres anteriores de # archivos} other {Restaura los nombres anteriores de # archivos}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoNothing": "Aún no hay nada que deshacer. “Deshacer renombrado” anula el último renombrado múltiple hecho desde que se inició Cmdr.",
+  "@multiRename.undoNothing": {
+    "sourceHash": "d480f2e"
+  },
+  "multiRename.results": "Resultados",
+  "@multiRename.results": {
+    "sourceHash": "219c4a6"
+  },
+  "multiRename.results.editing": "Edita los nombres nuevos en tu editor de texto y guarda el archivo. Aparecerán aquí cuando vuelvas a esta ventana.",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.results.edited": "{count, plural, one {# nombre viene de tu lista editada} many {# nombres vienen de tu lista editada} other {# nombres vienen de tu lista editada}}.",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "Leer los nombres ahora",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "Volver a usar los ajustes",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.couldntOpen": "No se ha podido abrir la lista de nombres en tu editor de texto. Puedes elegir un editor en Ajustes.",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "f3c5f0b"
+  },
+  "multiRename.results.gone": "La lista de nombres ya no existe. Vuelve a abrir “Resultados” para escribir una nueva.",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.undoStarted": "{count, plural, one {Restaurando el nombre anterior de # archivo} many {Restaurando los nombres anteriores de # archivos} other {Restaurando los nombres anteriores de # archivos}}.",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.error.couldntWriteNames": "No se ha podido escribir la lista de nombres. Comprueba que tu disco de arranque tiene espacio libre.",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
   },
   "multiRename.rename": "{count, plural, =0 {Renombrar} one {Renombrar # archivo} many {Renombrar # archivos} other {Renombrar # archivos}}",
   "@multiRename.rename": {

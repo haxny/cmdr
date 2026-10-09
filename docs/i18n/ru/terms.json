@@ -4221,7 +4221,11 @@
     ],
     "confidence": "high",
     "sources": "Nautilus: No matches in “%s” → Нет совпадений в «%s»; MS: hit (record matching a query) → совпадение, search results → результаты поиска; DC and Dolphin: Search results → Результаты поиска",
-    "note": "The two Russian words split by surface: a hit inside a file or a counted match is «совпадение»; the list the Search dialog returns is «результаты поиска»."
+    "note": "The two Russian words split by surface: a hit inside a file or a counted match is «совпадение»; the list the Search dialog returns is «результаты поиска».",
+    "exceptions": {
+      "multiRename.results": "Not a search result: TC's Multi-Rename «Results» button opens the old/new names list in a text editor, so it's named for that list («Список имен», as the sibling strings call it). TC's own «Протокол» (6624) would collide with «журнал» (log).",
+      "multiRename.results.gone": "Quotes the «Список имен» button of `multiRename.results`."
+    }
   },
   "search-walk": {
     "chosen": "сканирование",

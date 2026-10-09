@@ -313,7 +313,16 @@
     "en": "Back",
     "match": ["=back", "back to"],
     "note": "A standalone back button in a list you drill into differs from the paired previous/next of a wizard or the Go menu in many locales.",
-    "notMatch": ["tied back", "comes back", "come back", "chat back", "take you back", "switch back"],
+    "notMatch": [
+      "tied back",
+      "comes back",
+      "come back",
+      "chat back",
+      "take you back",
+      "switch back",
+      "back to its old",
+      "back to their old"
+    ],
     "sense": "Returning to the previous step, screen, or location."
   },
   "background": {

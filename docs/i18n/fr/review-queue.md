@@ -68,7 +68,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   the result, as in English; French has no title case, so a native should confirm it reads as a demo, not a typo);
   `Retirer les accents` for « Remove diacritics » (covers ç, ü, ß→ss in practice, though only some of those are «
   accents »); `Première correspondance uniquement`; `Début du compteur`; `une recherche avec remplacement`
-  (`commands.fileMultiRename.description`).
+  (`commands.fileMultiRename.description`). Second batch: `Grec en caractères latins` (`greekToLatin`) and
+  `Normaliser l’Unicode` (`normalizeUnicode`) are coined, no pile source has either option.
 
 ## Overflow (check against the `en-XA` pseudolocale)
 
@@ -80,3 +81,4 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   arm of `queue.failureToast.title` (`Le placement dans la corbeille n’a pas pu se terminer`).
 - `Placement dans la corbeille impossible` as the trash error title (the five `errors.write.*.title.trash` keys).
 - The online-only delete warning banner, long text in a narrow strip above the list.
+- `Enregistrer comme nouvelle présélection…` in the Multi-Rename presets menu (40 characters against 19).

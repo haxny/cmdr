@@ -2620,13 +2620,14 @@
         "why": "Apple's old Save word; the viewer's save-selection family carried it"
       }
     ],
+    "accept": ["另存为"],
     "chosen": "保存",
     "confidence": "confirmed",
     "exceptions": {
       "askCmdr.tool.memoryWrite.doing": "Saving a note about the user is 记下 (jot down), the memory tool line's verb.",
       "askCmdr.tool.memoryWrite.done": "Saving a note about the user is 记下 (jot down), the memory tool line's verb."
     },
-    "sources": "macOS AppKit"
+    "sources": "macOS AppKit; 另存为 (Save as…) from Total Commander zh-CN WCMD.LNG 1516 将设置另存为"
   },
   "scan": {
     "chosen": "扫描",

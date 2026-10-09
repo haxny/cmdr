@@ -2221,7 +2221,9 @@
     "sources": "macOS Finder (Renombrar; RN1/RN2 Deshacer/Rehacer cambio de nombre)",
     "exceptions": {
       "errors.write.originalsKeptAside.suggestion.many": "Rename back = give the original name again: volver a ponerle su nombre.",
-      "errors.write.originalsKeptAside.suggestion.one": "Rename back = give the original name again: volver a ponerle su nombre."
+      "errors.write.originalsKeptAside.suggestion.one": "Rename back = give the original name again: volver a ponerle su nombre.",
+      "multiRename.undoStarted": "Rename back = restore the old name: restaurar for names, as askCmdr.renameUndo.undone says it.",
+      "multiRename.undoTooltip": "Rename back = restore the old name: restaurar for names, as askCmdr.renameUndo.undone says it."
     },
     "decision": "Palabras que se separaron sin que ningún check pudiera verlo"
   },

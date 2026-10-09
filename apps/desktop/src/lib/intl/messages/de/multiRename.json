@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
+  "multiRename.greekToLatin": "Griechisch in Lateinschrift",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "Unicode normalisieren",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
   "multiRename.counterStart": "Zähler ab",
   "@multiRename.counterStart": {
     "sourceHash": "562151d"
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.presets": "Voreinstellung",
-  "@multiRename.presets": {
-    "sourceHash": "7252e7c"
-  },
-  "multiRename.presetPlaceholder": "Voreinstellung laden",
-  "@multiRename.presetPlaceholder": {
-    "sourceHash": "e07d83e"
-  },
   "multiRename.preset.default": "Keine Änderung",
   "@multiRename.preset.default": {
     "sourceHash": "41f9d57"
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "Diakritische Zeichen entfernen",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "Griechisch in Lateinschrift",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "Unicode normalisieren",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
   },
   "multiRename.presetName": "Name der Voreinstellung",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "sourceHash": "362a137"
   },
-  "multiRename.deletePreset": "Voreinstellung löschen",
-  "@multiRename.deletePreset": {
-    "sourceHash": "f307af8"
+  "multiRename.presetsMenu": "Voreinstellungen",
+  "@multiRename.presetsMenu": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presetsMenu.builtIn": "Integriert",
+  "@multiRename.presetsMenu.builtIn": {
+    "sourceHash": "78a6a8f"
+  },
+  "multiRename.presetsMenu.saved": "Deine Voreinstellungen",
+  "@multiRename.presetsMenu.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presetsMenu.noSaved": "Noch keine gespeicherten Voreinstellungen",
+  "@multiRename.presetsMenu.noSaved": {
+    "sourceHash": "f4a93a3"
+  },
+  "multiRename.presetsMenu.saveAs": "Als neue Voreinstellung sichern …",
+  "@multiRename.presetsMenu.saveAs": {
+    "sourceHash": "927ee5f"
+  },
+  "multiRename.presetsMenu.save": "„{name}“ sichern",
+  "@multiRename.presetsMenu.save": {
+    "sourceHash": "3db3798"
+  },
+  "multiRename.presetsMenu.delete": "„{name}“ löschen",
+  "@multiRename.presetsMenu.delete": {
+    "sourceHash": "9dfb093"
   },
   "multiRename.preview": "Vorschau",
   "@multiRename.preview": {
@@ -187,6 +219,54 @@
   "multiRename.cancel": "Abbrechen",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "Umbenennen widerrufen",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, one {Setzt # Datei auf ihren alten Namen zurück} other {Setzt # Dateien auf ihre alten Namen zurück}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoNothing": "Noch nichts zu widerrufen. „Umbenennen widerrufen“ setzt das letzte mehrfache Umbenennen seit dem Start von Cmdr zurück.",
+  "@multiRename.undoNothing": {
+    "sourceHash": "d480f2e"
+  },
+  "multiRename.results": "Ergebnisliste",
+  "@multiRename.results": {
+    "sourceHash": "219c4a6"
+  },
+  "multiRename.results.editing": "Bearbeite die neuen Namen in deinem Text-Editor und sichere die Datei. Die Namen erscheinen hier, sobald du zu diesem Fenster zurückkehrst.",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.results.edited": "{count, plural, one {# Name stammt aus deiner bearbeiteten Liste} other {# Namen stammen aus deiner bearbeiteten Liste}}.",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "Namen jetzt einlesen",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "Wieder die Einstellungen verwenden",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.couldntOpen": "Die Namensliste ließ sich nicht in deinem Text-Editor öffnen. Du kannst in den Einstellungen einen Editor auswählen.",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "f3c5f0b"
+  },
+  "multiRename.results.gone": "Die Namensliste ist nicht mehr da. Öffne „Ergebnisliste“ erneut, um eine neue Liste zu schreiben.",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.undoStarted": "{count, plural, one {Der Name von # Datei wird zurückgesetzt} other {Die Namen von # Dateien werden zurückgesetzt}}.",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.error.couldntWriteNames": "Die Namensliste ließ sich nicht schreiben. Prüfe, ob auf deinem Startvolume noch Speicherplatz frei ist.",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
   },
   "multiRename.rename": "{count, plural, =0 {Umbenennen} one {# Datei umbenennen} other {# Dateien umbenennen}}",
   "@multiRename.rename": {

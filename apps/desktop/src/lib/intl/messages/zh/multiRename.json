@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
+  "multiRename.greekToLatin": "希腊字母转拉丁字母",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "规范化 Unicode",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
   "multiRename.counterStart": "计数器起始值",
   "@multiRename.counterStart": {
     "sourceHash": "562151d"
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.presets": "预设",
-  "@multiRename.presets": {
-    "sourceHash": "7252e7c"
-  },
-  "multiRename.presetPlaceholder": "加载预设",
-  "@multiRename.presetPlaceholder": {
-    "sourceHash": "e07d83e"
-  },
   "multiRename.preset.default": "无变化",
   "@multiRename.preset.default": {
     "sourceHash": "41f9d57"
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "移除变音符号",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "希腊字母转拉丁字母",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "规范化 Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
   },
   "multiRename.presetName": "预设名称",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "sourceHash": "362a137"
   },
-  "multiRename.deletePreset": "删除预设",
-  "@multiRename.deletePreset": {
-    "sourceHash": "f307af8"
+  "multiRename.presetsMenu": "预设",
+  "@multiRename.presetsMenu": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presetsMenu.builtIn": "内置",
+  "@multiRename.presetsMenu.builtIn": {
+    "sourceHash": "78a6a8f"
+  },
+  "multiRename.presetsMenu.saved": "你的预设",
+  "@multiRename.presetsMenu.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presetsMenu.noSaved": "还没有保存的预设",
+  "@multiRename.presetsMenu.noSaved": {
+    "sourceHash": "f4a93a3"
+  },
+  "multiRename.presetsMenu.saveAs": "另存为新预设…",
+  "@multiRename.presetsMenu.saveAs": {
+    "sourceHash": "927ee5f"
+  },
+  "multiRename.presetsMenu.save": "保存“{name}”",
+  "@multiRename.presetsMenu.save": {
+    "sourceHash": "3db3798"
+  },
+  "multiRename.presetsMenu.delete": "删除“{name}”",
+  "@multiRename.presetsMenu.delete": {
+    "sourceHash": "9dfb093"
   },
   "multiRename.preview": "预览",
   "@multiRename.preview": {
@@ -186,6 +218,54 @@
   "multiRename.cancel": "取消",
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "撤销重命名",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, other {把 # 个文件改回原来的名称}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoNothing": "还没有要撤销的内容。“撤销重命名”会撤回 Cmdr 启动以来的最后一次批量重命名。",
+  "@multiRename.undoNothing": {
+    "sourceHash": "d480f2e"
+  },
+  "multiRename.results": "结果列表",
+  "@multiRename.results": {
+    "sourceHash": "219c4a6"
+  },
+  "multiRename.results.editing": "在文本编辑器里编辑新名称，然后保存文件。回到这个窗口时，新名称就会显示在这里。",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.results.edited": "{count, plural, other {# 个名称来自你编辑过的列表}}。",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "立即读取名称",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "重新使用设置",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.couldntOpen": "无法在你的文本编辑器里打开名称列表。可以在“设置”里选一个编辑器。",
+  "@multiRename.results.couldntOpen": {
+    "sourceHash": "f3c5f0b"
+  },
+  "multiRename.results.gone": "名称列表不见了。再次打开“结果列表”，就会写入一份新的。",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.undoStarted": "{count, plural, other {正在把 # 个文件改回原来的名称}}。",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.error.couldntWriteNames": "无法写入名称列表。请确认你的启动磁盘还有剩余空间。",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
   },
   "multiRename.rename": "{count, plural, =0 {重命名} other {重命名 # 个文件}}",
   "@multiRename.rename": {

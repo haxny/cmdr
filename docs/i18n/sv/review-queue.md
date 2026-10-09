@@ -76,6 +76,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `Versal Först I Varje Ord` is the attested alternative. Confirm it reads as an option, not a typo.
 - **`Räkna från`** / **`Steg`** / **`Antal siffror`** (`multiRename.counterStart`/`.counterStep`/`.counterDigits`): TC
   says `Börja med:`, `Steglängd:`, `Antal siffror:`; confirm `Räkna från` reads as the counter's start value.
+- **`Grekiska till latinska bokstäver`** / **`Normalisera Unicode`** (`multiRename.greekToLatin`,
+  `multiRename.normalizeUnicode`): no source names either option; `normalisera` is MS terminology's verb, `bokstäver`
+  avoids reading `latin` as the language. Confirm both read as checkbox labels.
+- **`Resultatlista`** (`multiRename.results`): TC's own Swedish button name, longer than English `Results`; check the
+  footer fits.
 
 ## Layout (overflow-check against the pseudolocale)
 

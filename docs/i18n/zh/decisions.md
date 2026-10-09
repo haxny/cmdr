@@ -677,3 +677,5 @@ in prose.
   `计数器` / `起始值` / `步长` / `位数`, case menu `不变` / `全部小写` / `全部大写`.
 - Search & replace is `查找` / `替换为` (Finder BulkRename `查找：`, TC 6613), not the file-search `搜索`; the status
   column is `状态`, not the user-note `备注`.
+- `multiRename.presetsMenu` keeps `预设`, not TC's `设置`; `multiRename.results` is TC's `结果列表` (6624), not bare
+  `结果`.

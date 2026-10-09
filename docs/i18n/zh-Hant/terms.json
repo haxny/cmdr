@@ -324,10 +324,10 @@
     "sources": "catalog commands.cloudMakeOffline.label, menu.context.makeAvailableOffline; MS offline → 離線"
   },
   "back": {
-    "accept": ["回到", "回頭", "回來", "上一步"],
+    "accept": ["回到", "回頭", "回來", "上一步", "改回"],
     "chosen": "返回",
     "confidence": "high",
-    "forms": "a standalone back button → 返回; back to a view → 回到…; the wizard's back step → 上一步 (pairs with 下一步)",
+    "forms": "a standalone back button → 返回; back to a view → 回到…; the wizard's back step → 上一步 (pairs with 下一步); rename back to the old name → 改回原本的名稱 (multiRename.undoTooltip, multiRename.undoStarted)",
     "sources": "AP-TW = AP-HK SystemSettings accessibility labels; MS is useless here (BACK 鍵)"
   },
   "background": {
@@ -1413,6 +1413,13 @@
     "confidence": "high",
     "forms": "frame rate → 影格率",
     "sources": "AP QuickTime (TW = HK; HK frame rate 格率)"
+  },
+  "free-space": {
+    "accept": ["磁碟空間", "空間"],
+    "chosen": "可用空間",
+    "confidence": "high",
+    "forms": "has free space → 還有可用空間; disk space (an amount, a cap, a low-space warning) → 磁碟空間 (磁碟空間不足, 佔用多少磁碟空間); no room left → 沒有空間",
+    "sources": "style.md TW/HK table (可用空間 TW + MS, over HK 未使用空間); TC zh-TW 1521 可用空間; catalog lowDiskSpace.*, settings low-space copy"
   },
   "full-disk-access": {
     "avoid": [
@@ -3273,6 +3280,12 @@
     "confidence": "high",
     "sources": "MS (HKG, TWN)"
   },
+  "start-up": {
+    "chosen": "啟動",
+    "confidence": "high",
+    "forms": "since Cmdr started → Cmdr 這次啟動以來; when the app starts → App 啟動時; next start → 下次啟動時",
+    "sources": "catalog (App 啟動時, 下次啟動時, 重新啟動 Cmdr); restart ruling 重新啟動"
+  },
   "startup-disk": {
     "chosen": "啟動磁碟",
     "confidence": "confirmed",
@@ -3917,7 +3930,7 @@
   "preset": {
     "chosen": "預設組合",
     "confidence": "high",
-    "forms": "Preset (menu label) → 預設組合; Load a preset → 載入預設組合; Preset name → 預設組合名稱; Save/Delete preset → 儲存/刪除預設組合; Multi-rename's built-in presets are named by what they do (沒有變更, 移除變音符號)",
+    "forms": "Preset (menu label) → 預設組合; Load a preset → 載入預設組合; Preset name → 預設組合名稱; Save/Delete preset → 儲存/刪除預設組合; Save as new preset → 另存為新的預設組合⋯ (TC 1516 另存設定檔為); Presets menu sections Built in / Saved → 內建 (MS built-in) / 已儲存; Multi-rename's built-in presets are named by what they do (沒有變更, 移除變音符號, 希臘字母轉拉丁字母, 正規化 Unicode)",
     "avoid": [
       {
         "form": "預設",

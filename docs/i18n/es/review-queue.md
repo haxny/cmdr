@@ -62,4 +62,7 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Renombrado múltiple** (`multiRename.*`): `Quitar diacríticos` (`multiRename.removeDiacritics`, the preset of the
   same name) is accurate (ž, ß too) but bookish; `Quitar acentos` is the casual reserve if a reader finds it clear
   enough. `marcador` for a mask token (`Insertar marcador`, `A un marcador le falta el ] de cierre`) is tentative;
-  Microsoft's full `marcador de posición` is the reserve.
+  Microsoft's full `marcador de posición` is the reserve. `Resultados` (`multiRename.results`) is literal; Total
+  Commander's Spanish says `Ver cambios` (WCMD.LNG 6624), skipped because Cmdr's button opens the list for editing, not
+  just viewing. `Griego a latino` (`multiRename.greekToLatin`) is tentative; `Griego a alfabeto latino` is the reserve
+  if `latino` reads as the language.

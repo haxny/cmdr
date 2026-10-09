@@ -1001,7 +1001,7 @@
     "sources": "macOS Finder fr (Fichier > Dupliquer, N154; verified on macOS 26.6.1, 2026-08-19)"
   },
   "edit": {
-    "accept": ["modification", "modifié", "modifiable", "Édition"],
+    "accept": ["modification", "modifié", "modifiable", "modifiez", "Édition"],
     "chosen": "Modifier",
     "confidence": "high",
     "exceptions": {

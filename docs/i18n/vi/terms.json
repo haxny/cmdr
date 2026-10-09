@@ -2005,7 +2005,7 @@
   "preset": {
     "chosen": "đặt trước",
     "confidence": "tentative",
-    "forms": "tùy chọn đặt trước (bare đặt trước can read \"reserved\"); back to presets → Quay lại tùy chọn đặt trước",
+    "forms": "tùy chọn đặt trước (bare đặt trước can read \"reserved\"); back to presets → Quay lại tùy chọn đặt trước; the multi-rename Presets menu → Tùy chọn đặt trước, its headings Tích hợp sẵn (MS built-in → tích hợp sẵn) / Đã lưu, Save as new preset… → Lưu thành tùy chọn đặt trước mới… (TC 1516 Lưu cài đặt thành:)",
     "sources": "MS terminology (khung thời gian đặt trước)"
   },
   "preview": {
@@ -2223,6 +2223,10 @@
   "rename": {
     "chosen": "đổi tên",
     "confidence": "high",
+    "exceptions": {
+      "multiRename.undoTooltip": "\"Renames # files back to their old names\" is the undo, so the ruled undo phrase `đặt lại tên cũ` (as `askCmdr.renameUndo.undone`), not `đổi tên`.",
+      "multiRename.undoStarted": "Same undo as `multiRename.undoTooltip`: `Đang đặt lại tên cũ cho # tệp`."
+    },
     "forms": "this rename (one row) → lần đổi tên này; the renames → các lần đổi tên; the rename of X → việc đổi tên \"{name}\"",
     "sources": "GNOME (Đổi tên)"
   },
