@@ -4,6 +4,7 @@ import { tString } from '$lib/intl/messages.svelte'
 import type { McpSelectMode, ConfirmDialogType } from '$lib/commands'
 import { routeTypingKey } from './type-to-jump-keys'
 import { capabilitiesFor } from './volume-capabilities'
+import { readSelectedPathsForCopy as readSelectedPathsForCopyFrom, type SelectedPathsRead } from './selected-paths-read'
 import type { SelectionActionArgs } from '../../../routes/(main)/explorer-api'
 import type { FilePaneAPI } from './types'
 import type { FileEntry, FriendlyError } from '../types'
@@ -119,6 +120,11 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     const focusedPane = access.getFocusedPane()
     if (access.getPaneRef(focusedPane)?.getFilenameUnderCursor() !== '..') return null
     return access.getPanePath(focusedPane) || null
+  }
+
+  /** The focused pane's selection as paths for copy-path / copy-filename (`selected-paths-read.ts`). */
+  function readSelectedPathsForCopy(): Promise<SelectedPathsRead> {
+    return readSelectedPathsForCopyFrom(access)
   }
 
   /**
@@ -583,6 +589,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     closeHeaderMenus,
     getFileAndPathUnderCursor,
     getPathToCopyUnderCursor,
+    readSelectedPathsForCopy,
     getCursorRowForTerminal,
     toggleTagOnFocusedSelection,
     sendKeyToFocusedPane,

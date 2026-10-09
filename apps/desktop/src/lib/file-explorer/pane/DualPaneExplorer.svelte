@@ -93,6 +93,7 @@
     import { createClipboardOperations } from './clipboard-operations'
     import { createFileOperationCommands } from './file-operation-commands'
     import { createPaneCommands, type MultiRenameSelection } from './pane-commands'
+    import type { SelectedPathsRead } from './selected-paths-read'
     import { createSortOperations } from './sort-operations'
     import { createSwapPanes } from './swap-panes'
     import { createVolumeSelection, type VolumeSelectOutcome } from './volume-selection'
@@ -947,6 +948,10 @@
 
     export function getPathToCopyUnderCursor(): string | null {
         return paneCommands.getPathToCopyUnderCursor()
+    }
+
+    export function readSelectedPathsForCopy(): Promise<SelectedPathsRead> {
+        return paneCommands.readSelectedPathsForCopy()
     }
 
     export function getCursorRowForTerminal(): Promise<{ name: string; path: string; isDirectory: boolean } | null> {

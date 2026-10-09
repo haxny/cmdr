@@ -20,6 +20,7 @@ import type { NavigateIntent, NavigateResult } from '$lib/file-explorer/pane/nav
 import type { VolumeSelectOutcome } from '$lib/file-explorer/pane/volume-selection'
 import type { FavoriteOpenedEvent } from '$lib/file-explorer/navigation/favorites-analytics'
 import type { MultiRenameSelection } from '$lib/file-explorer/pane/pane-commands'
+import type { SelectedPathsRead } from '$lib/file-explorer/pane/selected-paths-read'
 import type {
   CopyPathBetweenPanesArgs,
   OpenDeleteDialogArgs,
@@ -105,6 +106,14 @@ export interface ExplorerAPI {
    * (open, rename, Get Info, …) must keep treating `..` as "no entry".
    */
   getPathToCopyUnderCursor: () => string | null
+  /**
+   * The focused pane's SELECTION as paths, for copy-path / copy-filename. Reads the
+   * selected indices synchronously at call time and resolves them against the
+   * pane's last-seen listing revision; `changed` when the listing moved on.
+   * `noSelection` sends the caller back to its cursor-row read.
+   * `$lib/file-explorer/pane/selected-paths-read.ts`.
+   */
+  readSelectedPathsForCopy: () => Promise<SelectedPathsRead>
   /**
    * The focused pane's cursor row as "Open terminal here" reads it: name, path, and
    * whether it's a folder. `..` comes back as a real row (the command treats it as
