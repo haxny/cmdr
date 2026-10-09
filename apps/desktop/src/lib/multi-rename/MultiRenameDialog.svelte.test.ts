@@ -3,7 +3,8 @@
  * answer gets its own words, Enter in a mask starts while Enter in the preset
  * name saves, a placeholder button inserts into the name mask, F2's menu loads,
  * saves, and deletes presets, ⌥⏎ hands Results to the editor and reads it back,
- * ⌥⌫ undoes the last run, and closing remembers the settings.
+ * ⌥⇧⌫ undoes the last run (plain ⌥⌫ stays a field's word-delete), ⌥⇧↓ opens a
+ * field's history and a pick fills the field, and closing remembers the settings.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -22,6 +23,7 @@ const ipc = vi.hoisted(() => ({
   getMultiRenameLastSpec: vi.fn(),
   saveMultiRenameLastSpec: vi.fn(),
   rollbackOperation: vi.fn(),
+  getMultiRenameHistory: vi.fn(),
 }))
 const openFileInEditor = vi.hoisted(() => vi.fn())
 
@@ -59,8 +61,8 @@ async function mountSheet(onApplied = vi.fn(), onUndoStarted = vi.fn()): Promise
   return target
 }
 
-function altKey(el: Element, k: string): void {
-  el.dispatchEvent(new KeyboardEvent('keydown', { key: k, altKey: true, bubbles: true, cancelable: true }))
+function altKey(el: Element, k: string, shiftKey = false): void {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: k, altKey: true, shiftKey, bubbles: true, cancelable: true }))
 }
 
 function menuItem(label: RegExp): HTMLElement | undefined {
@@ -85,6 +87,11 @@ describe('MultiRenameDialog', () => {
     ipc.saveMultiRenamePreset.mockResolvedValue(undefined)
     ipc.deleteMultiRenamePreset.mockResolvedValue(undefined)
     ipc.getMultiRenameLastSpec.mockResolvedValue(null)
+    ipc.getMultiRenameHistory.mockResolvedValue([
+      { id: 'h1', field: 'search', value: 'IMG_' },
+      { id: 'h2', field: 'nameMask', value: '[N]_[C]' },
+      { id: 'h3', field: 'search', value: 'DSC' },
+    ])
     ipc.saveMultiRenameLastSpec.mockResolvedValue(undefined)
     setLastMultiRenameRun(null)
   })
@@ -197,10 +204,10 @@ describe('MultiRenameDialog', () => {
     expect(root.querySelector('[role="alert"]')?.textContent.trim()).toBeTruthy()
   })
 
-  it('⌥⌫ rolls the last run back and hands it up; with no run it does nothing', async () => {
+  it('⌥⇧⌫ rolls the last run back and hands it up; with no run it does nothing', async () => {
     const onUndoStarted = vi.fn()
     let root = await mountSheet(vi.fn(), onUndoStarted)
-    altKey(inputs(root)[0], 'Backspace')
+    altKey(inputs(root)[0], 'Backspace', true)
     await settle()
     expect(ipc.rollbackOperation).not.toHaveBeenCalled()
     if (mounted) await unmount(mounted)
@@ -211,8 +218,24 @@ describe('MultiRenameDialog', () => {
     root = await mountSheet(vi.fn(), onUndoStarted)
     altKey(inputs(root)[0], 'Backspace')
     await settle()
+    expect(ipc.rollbackOperation, 'plain ⌥⌫ is the field’s delete-a-word').not.toHaveBeenCalled()
+    altKey(inputs(root)[0], 'Backspace', true)
+    await settle()
     expect(ipc.rollbackOperation).toHaveBeenCalledWith('op9')
     expect(onUndoStarted).toHaveBeenCalledWith({ operationId: 'op9', renaming: 3 })
+  })
+
+  it('⌥⇧↓ in Search lists only what Search held, newest first, and a pick fills the field', async () => {
+    const root = await mountSheet()
+    const search = inputs(root).find((i) => i.getAttribute('aria-label') === 'Search for') as HTMLInputElement
+    altKey(search, 'ArrowDown', true)
+    await settle()
+    const rows = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((el) => el.textContent.trim())
+    expect(rows).toEqual(['IMG_', 'DSC'])
+    menuItem(/^DSC$/)?.click()
+    await vi.waitFor(() => {
+      expect((ipc.previewMultiRename.mock.calls.at(-1)?.[3] as { search: string }).search).toBe('DSC')
+    })
   })
 
   it('remembers the settings when it closes', async () => {

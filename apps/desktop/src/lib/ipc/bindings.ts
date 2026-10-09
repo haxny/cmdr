@@ -1398,6 +1398,8 @@ export const commands = {
     } | null>('get_multi_rename_last_spec'),
   // Remembers the settings the sheet closes with, for the next ⌃M.
   saveMultiRenameLastSpec: (spec: MultiRenameSpec) => __TAURI_INVOKE<void>('save_multi_rename_last_spec', { spec }),
+  // The text fields' history, newest first, every field together.
+  getMultiRenameHistory: () => __TAURI_INVOKE<FieldHistoryEntry[]>('get_multi_rename_history'),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -7706,6 +7708,13 @@ export type ExpectedRename = {
   newName: string
 }
 
+// One value a field had when a rename ran.
+export type FieldHistoryEntry = {
+  id: string
+  field: HistoryField
+  value: string
+}
+
 /**
  *  User-selectable text encoding for the file viewer.
  *
@@ -8399,6 +8408,9 @@ export type HistoryEntry = {
   excludeSystemDirs: boolean
   resultCount: number
 }
+
+// The sheet's text fields that keep a history.
+export type HistoryField = 'nameMask' | 'extensionMask' | 'search' | 'replace'
 
 // Filter slice of a history entry. Mirrors what the dialog carries on the wire.
 export type HistoryFilters = {

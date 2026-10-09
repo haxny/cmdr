@@ -214,6 +214,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::multi_rename::read_multi_rename_names,
                     crate::commands::multi_rename::get_multi_rename_last_spec,
                     crate::commands::multi_rename::save_multi_rename_last_spec,
+                    crate::commands::multi_rename::get_multi_rename_history,
                     crate::commands::rename::move_to_trash,
                     crate::commands::rename::get_trash_dir,
                     crate::commands::restricted_paths::get_restricted_paths,

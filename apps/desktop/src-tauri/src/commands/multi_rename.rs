@@ -7,7 +7,10 @@ use tokio::time::Duration;
 use crate::deadline::blocking_typed_result_with_timeout;
 use crate::multi_rename::names_file::{NameEdit, NamesFileError, read_back};
 use crate::multi_rename::plan::{MultiRenameSpec, PreviewRow};
-use crate::multi_rename::presets::{LAST_SPEC, LastSpec, MAX_PRESETS, MultiRenamePreset, PRESETS};
+use crate::multi_rename::presets::{
+    FIELD_HISTORY, FieldHistoryEntry, LAST_SPEC, LastSpec, MAX_FIELD_HISTORY, MAX_PRESETS, MultiRenamePreset, PRESETS,
+    history_entries,
+};
 use crate::multi_rename::run::{
     ExpectedRename, MultiRenameError, MultiRenameStarted, apply, preview_rows, write_names,
 };
@@ -48,8 +51,21 @@ pub async fn apply_multi_rename(
     edits: Vec<NameEdit>,
     expected: Vec<ExpectedRename>,
 ) -> Result<MultiRenameStarted, MultiRenameError> {
-    let events = Arc::new(crate::file_system::write_operations::TauriEventSink::new(app));
-    apply(events, listing_id, include_hidden, rows, spec, edits, expected).await
+    let events = Arc::new(crate::file_system::write_operations::TauriEventSink::new(app.clone()));
+    let history = history_entries(&spec);
+    let started = apply(events, listing_id, include_hidden, rows, spec, edits, expected).await?;
+    // What the fields held when a rename ran: TC's per-field history (⌥⇧↓).
+    for entry in history {
+        FIELD_HISTORY.add(&app, entry, MAX_FIELD_HISTORY);
+    }
+    Ok(started)
+}
+
+/// The text fields' history, newest first, every field together.
+#[tauri::command]
+#[specta::specta]
+pub fn get_multi_rename_history() -> Vec<FieldHistoryEntry> {
+    FIELD_HISTORY.entries(None)
 }
 
 /// Results (⌥⏎): writes the preview as `old<TAB>new` lines to a text file and

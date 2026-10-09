@@ -13,6 +13,7 @@
 import {
   applyMultiRename,
   deleteMultiRenamePreset,
+  getMultiRenameHistory,
   getMultiRenameLastSpec,
   getMultiRenamePresets,
   previewMultiRename,
@@ -20,6 +21,8 @@ import {
   saveMultiRenameLastSpec,
   saveMultiRenamePreset,
   writeMultiRenameNames,
+  type FieldHistoryEntry,
+  type HistoryField,
   type MultiRenameError,
   type MultiRenamePreset,
   type MultiRenameSpec,
@@ -51,6 +54,9 @@ export interface MultiRenameState {
   readonly pending: boolean
   readonly presets: MultiRenamePreset[]
   readonly applying: boolean
+  /** What each text field held when renames ran, newest first (⌥⇧↓). */
+  historyOf: (field: HistoryField) => string[]
+  loadHistory: () => Promise<void>
   /** Names the user typed in Results, by old name. Empty until they read some back. */
   readonly edits: NameEdit[]
   update: (patch: Partial<MultiRenameSpec>) => void
@@ -80,6 +86,7 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
   let rows = $state.raw<PreviewRow[]>([])
   let error = $state<MultiRenameError | null>(null)
   let presets = $state.raw<MultiRenamePreset[]>([])
+  let history = $state.raw<FieldHistoryEntry[]>([])
   let applying = $state(false)
   let applyError = $state<MultiRenameError | null>(null)
   let waiting = $state(0)
@@ -160,6 +167,12 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
     },
     get edits() {
       return edits
+    },
+    historyOf(field) {
+      return history.filter((h) => h.field === field).map((h) => h.value)
+    },
+    async loadHistory() {
+      history = await getMultiRenameHistory()
     },
     get pending() {
       return waiting > 0

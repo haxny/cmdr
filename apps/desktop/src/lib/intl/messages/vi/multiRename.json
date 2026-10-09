@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },
+  "multiRename.history": "Lịch sử",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.historyTooltip": "Giá trị trước đây (⌥⇧↓)",
+  "@multiRename.historyTooltip": {
+    "sourceHash": "f9c2c40"
+  },
+  "multiRename.historyEmpty": "Chưa có gì ở đây. Mỗi lần đổi tên, giá trị sẽ được lưu lại.",
+  "@multiRename.historyEmpty": {
+    "sourceHash": "1eb3a52"
+  },
   "multiRename.savePreset": "Lưu tùy chọn đặt trước",
   "@multiRename.savePreset": {
     "sourceHash": "362a137"

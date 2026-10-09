@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },
+  "multiRename.history": "歷史記錄",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.historyTooltip": "先前的值（⌥⇧↓）",
+  "@multiRename.historyTooltip": {
+    "sourceHash": "f9c2c40"
+  },
+  "multiRename.historyEmpty": "這裡還沒有內容。每次重新命名時，都會儲存當時的值。",
+  "@multiRename.historyEmpty": {
+    "sourceHash": "1eb3a52"
+  },
   "multiRename.savePreset": "儲存預設組合",
   "@multiRename.savePreset": {
     "sourceHash": "362a137"

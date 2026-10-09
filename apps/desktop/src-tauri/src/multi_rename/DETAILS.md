@@ -95,5 +95,9 @@ taken name replaces it. Built-in presets (No change, Remove diacritics, Greek to
 frontend (`spec.ts`) so their names are translated. A field added later carries `#[serde(default)]`, so an older
 preset still loads.
 
+The field history is `RecentsFile<FieldHistoryEntry>` in `multi-rename-history.json`, all four fields in one list
+(200 entries), deduped by field and value. `apply_multi_rename` adds the spec's fields after a successful start
+(`history_entries`: a field at its no-change default or empty is skipped, and a replacement only beside a search).
+
 The last settings are a one-entry `RecentsFile<LastSpec>` in `multi-rename-last.json`: the sheet saves them when it
 closes and opens on them, as TC does. "No change" in the presets menu resets.

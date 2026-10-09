@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "description": "Label of the field where the user names the current settings to save them as a preset."
   },
+  "multiRename.history": "History",
+  "@multiRename.history": {
+    "description": "Accessible name of the small button at the end of the name mask, extension mask, search, and replace fields, and of the menu it opens: what the field held when earlier renames ran."
+  },
+  "multiRename.historyTooltip": "Earlier values (⌥⇧↓)",
+  "@multiRename.historyTooltip": {
+    "description": "Tooltip of the history button at the end of a text field. ⌥⇧↓ is the keyboard shortcut that opens the same list; keep it as is."
+  },
+  "multiRename.historyEmpty": "Nothing here yet. A value is kept when a rename runs.",
+  "@multiRename.historyEmpty": {
+    "description": "Shown in a text field’s history menu before any rename has run with a value in that field."
+  },
   "multiRename.savePreset": "Save preset",
   "@multiRename.savePreset": {
     "description": "Button that saves the current rename settings under the name in the Preset name field; an existing preset with that name is replaced."

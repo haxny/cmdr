@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },
+  "multiRename.history": "历史记录",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.historyTooltip": "之前的值（⌥⇧↓）",
+  "@multiRename.historyTooltip": {
+    "sourceHash": "f9c2c40"
+  },
+  "multiRename.historyEmpty": "这里还没有内容。每次重命名时，都会保存当时的值。",
+  "@multiRename.historyEmpty": {
+    "sourceHash": "1eb3a52"
+  },
   "multiRename.savePreset": "保存预设",
   "@multiRename.savePreset": {
     "sourceHash": "362a137"

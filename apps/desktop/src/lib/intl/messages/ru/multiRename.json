@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },
+  "multiRename.history": "История",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.historyTooltip": "Предыдущие значения (⌥⇧↓)",
+  "@multiRename.historyTooltip": {
+    "sourceHash": "f9c2c40"
+  },
+  "multiRename.historyEmpty": "Пока здесь пусто. Значение сохраняется при каждом переименовании.",
+  "@multiRename.historyEmpty": {
+    "sourceHash": "1eb3a52"
+  },
   "multiRename.savePreset": "Сохранить набор настроек",
   "@multiRename.savePreset": {
     "sourceHash": "362a137"

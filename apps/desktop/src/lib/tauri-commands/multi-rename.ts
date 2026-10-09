@@ -4,6 +4,8 @@
 import {
   commands,
   type ExpectedRename,
+  type FieldHistoryEntry,
+  type HistoryField,
   type MultiRenameError,
   type MultiRenamePreset,
   type MultiRenameSpec,
@@ -15,6 +17,8 @@ import {
 
 export type {
   ExpectedRename,
+  FieldHistoryEntry,
+  HistoryField,
   MultiRenameError,
   MultiRenamePreset,
   MultiRenameSpec,
@@ -82,6 +86,11 @@ export async function readMultiRenameNames(): Promise<
 /** The settings the sheet last closed with, or `null` before the first close. */
 export async function getMultiRenameLastSpec(): Promise<MultiRenameSpec | null> {
   return commands.getMultiRenameLastSpec()
+}
+
+/** What the text fields held when renames ran, newest first, every field together (⌥⇧↓). */
+export async function getMultiRenameHistory(): Promise<FieldHistoryEntry[]> {
+  return commands.getMultiRenameHistory()
 }
 
 /** Remembers the settings the sheet closes with, for the next ⌃M. */

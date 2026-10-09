@@ -1009,9 +1009,12 @@ export {
   readMultiRenameNames,
   getMultiRenameLastSpec,
   saveMultiRenameLastSpec,
+  getMultiRenameHistory,
 } from './multi-rename'
 export type {
   ExpectedRename,
+  FieldHistoryEntry,
+  HistoryField,
   MultiRenameError,
   MultiRenamePreset,
   MultiRenameResult,

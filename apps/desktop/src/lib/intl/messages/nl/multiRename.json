@@ -111,6 +111,18 @@
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },
+  "multiRename.history": "Geschiedenis",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.historyTooltip": "Eerdere waarden (⌥⇧↓)",
+  "@multiRename.historyTooltip": {
+    "sourceHash": "f9c2c40"
+  },
+  "multiRename.historyEmpty": "Nog niets hier. Bij elke naamwijziging wordt de waarde bewaard.",
+  "@multiRename.historyEmpty": {
+    "sourceHash": "1eb3a52"
+  },
   "multiRename.savePreset": "Bewaar voorinstelling",
   "@multiRename.savePreset": {
     "sourceHash": "362a137"

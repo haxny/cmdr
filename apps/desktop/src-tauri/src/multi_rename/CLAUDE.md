@@ -11,7 +11,7 @@ and a live preview. The sheet is `src/lib/multi-rename/`.
 - `plan.rs` the preview over a folder's entries: each row's new name and status. Pure.
 - `run.rs` preview and apply off the pane's cached listing; apply runs `start_renames` (Ask Cmdr's executor).
 - `names_file.rs` Results: the preview as `old<TAB>new` lines, and the user's edits read back.
-- `presets.rs` named presets and the last settings, on `crate::recents`.
+- `presets.rs` named presets, the last settings, and the fields' history, on `crate::recents`.
 
 ## Must-knows
 
