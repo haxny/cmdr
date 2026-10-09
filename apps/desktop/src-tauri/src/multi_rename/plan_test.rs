@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use super::names_file::{NameEdit, NameEdits};
 use super::plan::{Compiled, InvalidNameReason, MultiRenameSpec, RowStatus, SpecError, preview};
 use super::transform::CaseChange;
 use crate::file_system::listing::metadata::FileEntry;
@@ -28,6 +29,8 @@ fn spec(name_mask: &str) -> MultiRenameSpec {
         substitute: false,
         case: CaseChange::Unchanged,
         remove_diacritics: false,
+        greek_to_latin: false,
+        normalize_unicode: false,
         counter_start: 1,
         counter_step: 1,
         counter_digits: 2,
@@ -42,7 +45,7 @@ fn run(spec: &MultiRenameSpec, folder: &[FileEntry], batch: &[&str]) -> Vec<(Str
         .enumerate()
         .filter(|(_, e)| batch.contains(&e.name.as_str()))
         .collect();
-    preview(&compiled, Path::new(DIR), &rows, folder)
+    preview(&compiled, Path::new(DIR), &rows, folder, &NameEdits::default())
         .into_iter()
         .map(|p| (p.new_name, p.status))
         .collect()
@@ -212,4 +215,85 @@ fn a_huge_counter_width_is_capped() {
     };
     let out = run(&wide, &folder, &["a.txt"]);
     assert_eq!(out[0].0.len(), 64 + ".txt".len());
+}
+
+/// Previews `folder` with names the user typed in Results.
+fn run_edited(spec: &MultiRenameSpec, folder: &[FileEntry], edits: &[(&str, &str)]) -> Vec<(String, RowStatus)> {
+    let compiled = Compiled::new(spec).expect("a valid spec");
+    let rows: Vec<(usize, &FileEntry)> = folder.iter().enumerate().collect();
+    let edits: Vec<NameEdit> = edits
+        .iter()
+        .map(|(old, new)| NameEdit {
+            old_name: old.to_string(),
+            new_name: new.to_string(),
+        })
+        .collect();
+    preview(&compiled, Path::new(DIR), &rows, folder, &NameEdits::new(&edits))
+        .into_iter()
+        .map(|p| (p.new_name, p.status))
+        .collect()
+}
+
+#[test]
+fn a_decomposed_name_counts_as_unchanged_unless_the_spec_normalizes() {
+    let decomposed = "Z\u{030C}adost.pdf"; // Ž as Z + combining caron, as macOS and SMB hand it over
+    let folder = [file(decomposed)];
+    assert_eq!(run(&spec("[N]"), &folder, &[decomposed])[0].1, RowStatus::Unchanged);
+
+    let normalize = MultiRenameSpec {
+        normalize_unicode: true,
+        ..spec("[N]")
+    };
+    let renamed = run(&normalize, &folder, &[decomposed]);
+    assert_eq!(renamed[0], ("\u{017D}adost.pdf".to_string(), RowStatus::Ready));
+
+    let composed = [file("\u{017D}adost.pdf")];
+    assert_eq!(
+        run(&normalize, &composed, &["\u{017D}adost.pdf"])[0].1,
+        RowStatus::Unchanged,
+        "an already composed name has nothing to do"
+    );
+}
+
+#[test]
+fn greek_to_latin_runs_through_the_spec() {
+    let s = MultiRenameSpec {
+        greek_to_latin: true,
+        ..spec("[N]")
+    };
+    let folder = [file("Ρόδος 01.jpg")];
+    assert_eq!(run(&s, &folder, &["Ρόδος 01.jpg"])[0].0, "Rodos 01.jpg");
+}
+
+#[test]
+fn a_typed_name_replaces_the_computed_one_by_old_name() {
+    let folder = [file("a.txt"), file("b.txt"), file("c.txt")];
+    let out = run_edited(&spec("[N]-x"), &folder, &[("b.txt", "bee.txt"), ("gone.txt", "z.txt")]);
+    assert_eq!(out[0].0, "a-x.txt");
+    assert_eq!(out[1], ("bee.txt".to_string(), RowStatus::Ready));
+    assert_eq!(out[2].0, "c-x.txt", "a line for a name that isn't here touches nothing");
+}
+
+#[test]
+fn a_typed_name_is_checked_like_any_other() {
+    let folder = [file("a.txt"), file("b.txt"), file("keep.txt")];
+    let out = run_edited(
+        &spec("[N]"),
+        &folder,
+        &[
+            ("a.txt", "same.txt"),
+            ("b.txt", "same.txt"),
+            ("keep.txt", "bad/name.txt"),
+        ],
+    );
+    assert_eq!(out[0].1, RowStatus::Duplicate);
+    assert_eq!(out[1].1, RowStatus::Duplicate);
+    assert!(matches!(out[2].1, RowStatus::InvalidName { .. }));
+}
+
+#[test]
+fn a_typed_name_matches_an_old_name_in_either_unicode_form() {
+    let folder = [file("Z\u{030C}adost.pdf")];
+    let out = run_edited(&spec("[N]"), &folder, &[("\u{017D}adost.pdf", "Zadost.pdf")]);
+    assert_eq!(out[0], ("Zadost.pdf".to_string(), RowStatus::Ready));
 }

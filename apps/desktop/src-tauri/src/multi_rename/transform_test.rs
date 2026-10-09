@@ -200,3 +200,13 @@ fn other_scripts_keep_their_marks() {
     assert_eq!(remove_diacritics("हिन्दी"), "हिन्दी", "Devanagari vowel signs stay");
     assert_eq!(remove_diacritics("Ελληνικά άέ"), "Ελληνικα αε", "Greek accents go");
 }
+
+#[test]
+fn greek_to_latin_comes_before_diacritics() {
+    let t = Transform {
+        greek_to_latin: true,
+        remove_diacritics: true,
+        ..Transform::default()
+    };
+    assert_eq!(run(&t, "Αθήνα Café", "jpg").0, "Athina Cafe");
+}

@@ -1005,6 +1005,10 @@ export {
   getMultiRenamePresets,
   saveMultiRenamePreset,
   deleteMultiRenamePreset,
+  writeMultiRenameNames,
+  readMultiRenameNames,
+  getMultiRenameLastSpec,
+  saveMultiRenameLastSpec,
 } from './multi-rename'
 export type {
   ExpectedRename,
@@ -1013,5 +1017,7 @@ export type {
   MultiRenameResult,
   MultiRenameSpec,
   MultiRenameStarted,
+  NameEdit,
+  NamesFileError,
   PreviewRow,
 } from './multi-rename'

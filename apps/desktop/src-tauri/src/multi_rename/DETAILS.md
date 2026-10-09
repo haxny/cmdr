@@ -10,8 +10,10 @@ Per row, in rename order (`position` counts from 0 and is what `[C]` counts):
 1. `Mask::render` the name mask and the extension mask over `RowFacts` (name, extension, parent, grandparent, modified
    time in local time, position).
 2. `Transform::apply`: search & replace on the name (and the extension with `include_extension`), then the case step on
-   both, then `remove_diacritics` on both.
+   both, then Greek to Latin on both, then `remove_diacritics` on both.
 3. `name` + `.` + `extension`, or just `name` when the extension renders empty.
+4. A row named by hand in Results takes that name instead of steps 1-3.
+5. `Compiled::finish`: composed (NFC) when the spec normalizes, a typed name too.
 
 ## Placeholders (`mask.rs`)
 
@@ -25,7 +27,7 @@ Per row, in rename order (`position` counts from 0 and is what `[C]` counts):
 - `[[` is a literal `[`.
 
 Not in v1, all planned in #372: `[T4]` EXIF date, alphabetic counters, `[=plugin.field]` / tag fields, `\` to move into
-subfolders (the executor's one-parent rule refuses it today), "next step" chaining, and editing names in an editor.
+subfolders (the executor's one-parent rule refuses it today), and "next step" chaining.
 
 ## Search & replace (`transform.rs`)
 
@@ -36,6 +38,37 @@ subfolders (the executor's one-parent rule refuses it today), "next step" chaini
 - A broken regex is a spec error (`SpecError::BadRegex`), checked once in `Compiled::new`, never per row.
 - `remove_diacritics`: NFD with the combining marks dropped, a table for the letters that don't decompose (`ł` `đ` `ø`
   `ß` `æ` `œ` `þ` `ð` `ı` `ħ` `ŧ`), then NFC. Like foobar2000's `$ascii()`.
+
+## Greek to Latin (`transliterate.rs`)
+
+ELOT 743 (Greek passports and road signs, close to ISO 843 type 2): letter by letter with the digraphs that read as one
+sound (`ου` → `ou`; `αυ` / `ευ` / `ηυ` → `av` / `ev` / `iv` before a vowel or voiced consonant, else `af` / `ef` /
+`if`; `γγ` `γξ` `γχ` → `ng` `nx` `nch`). Tonos goes; a dialytika splits a pair (`Ταΰγετος` → `Taygetos`). A capital
+digraph is capitalized (`Θ` → `Th`), or all caps when the next letter is a capital too. **Decision: ELOT over ISO 843
+type 1** (`η` → `ī`): file names want plain ASCII, and ELOT is what Greeks themselves write.
+
+## Unicode normalization
+
+**Decision: names are composed before the mask anyway, so `normalize_unicode` only changes what counts as unchanged**:
+off, a name equal to its new one in another Unicode form is `Unchanged` (macOS treats them as one name); on, only the
+exact spelling is, so a decomposed name renames to its composed form. That's what a share read from Windows or Linux
+needs: macOS and SMB often store `Ž` as `Z` + a combining caron. Renaming between the two forms works on APFS (verified
+on macOS 27, `normalizing_renames_a_decomposed_name_to_its_composed_spelling_on_disk`, 2026-10-09).
+
+## Results (`names_file.rs`)
+
+TC's "Edit names": the preview written as one `old<TAB>new` line per row to `$TMPDIR/cmdr-multi-rename/
+multi-rename-names.txt`, which the sheet opens in the user's editor and reads back when its window gets focus.
+
+- **Decision: matched by old name, not by line.** Why: a file appearing in the folder between writing and reading
+  would shift every line onto the next row. A line whose old name isn't in the batch does nothing; one without a tab
+  is skipped. The new name is what follows the LAST tab (an old name may hold one), trimmed.
+- **Decision: the backend reads only the file it wrote** (`WRITTEN`). Why: a read-a-path command would read any file
+  the frontend names.
+- **Decision: plain text over CSV or JSON.** Why: one name per line edits well in any editor, column selection
+  included; CSV opens in a spreadsheet that may reformat names, JSON needs escaping.
+- Typed names go through the same statuses as computed ones, and the edits travel with apply, so the
+  `ExpectedRename` check covers them.
 
 ## Preview and apply (`plan.rs`, `run.rs`)
 
@@ -58,5 +91,9 @@ subfolders (the executor's one-parent rule refuses it today), "next step" chaini
 ## Presets (`presets.rs`)
 
 `RecentsFile<MultiRenamePreset>` in `multi-rename-presets.json`, keyed by the trimmed, lowercased name: saving under a
-taken name replaces it. Built-in presets (No change, Remove diacritics) live in the frontend (`spec.ts`) so their names
-are translated.
+taken name replaces it. Built-in presets (No change, Remove diacritics, Greek to Latin, Normalize Unicode) live in the
+frontend (`spec.ts`) so their names are translated. A field added later carries `#[serde(default)]`, so an older
+preset still loads.
+
+The last settings are a one-entry `RecentsFile<LastSpec>` in `multi-rename-last.json`: the sheet saves them when it
+closes and opens on them, as TC does. "No change" in the presets menu resets.

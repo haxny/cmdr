@@ -19,15 +19,25 @@ export const DEFAULT_SPEC: MultiRenameSpec = {
   substitute: false,
   case: 'unchanged',
   removeDiacritics: false,
+  greekToLatin: false,
+  normalizeUnicode: false,
   counterStart: 1,
   counterStep: 1,
   counterDigits: 1,
 }
 
+/** `spec` with every field set: a preset saved before a field existed leaves it out. */
+export function completeSpec(spec: MultiRenameSpec): MultiRenameSpec {
+  return { ...DEFAULT_SPEC, ...spec }
+}
+
 /** A preset that ships with Cmdr. Its name is a message key, so it's translated. */
 export interface BuiltInPreset {
   id: string
-  nameKey: 'multiRename.preset.removeDiacritics'
+  nameKey:
+    | 'multiRename.preset.removeDiacritics'
+    | 'multiRename.preset.greekToLatin'
+    | 'multiRename.preset.normalizeUnicode'
   spec: MultiRenameSpec
 }
 
@@ -36,6 +46,16 @@ export const BUILT_IN_PRESETS: BuiltInPreset[] = [
     id: 'builtin:remove-diacritics',
     nameKey: 'multiRename.preset.removeDiacritics',
     spec: { ...DEFAULT_SPEC, removeDiacritics: true },
+  },
+  {
+    id: 'builtin:greek-to-latin',
+    nameKey: 'multiRename.preset.greekToLatin',
+    spec: { ...DEFAULT_SPEC, greekToLatin: true },
+  },
+  {
+    id: 'builtin:normalize-unicode',
+    nameKey: 'multiRename.preset.normalizeUnicode',
+    spec: { ...DEFAULT_SPEC, normalizeUnicode: true },
   },
 ]
 

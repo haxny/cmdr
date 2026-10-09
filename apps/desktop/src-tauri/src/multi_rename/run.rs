@@ -22,6 +22,7 @@ use crate::file_system::write_operations::{BulkRenameRow, RenameStartError, Sour
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::operation_log::types::Initiator;
 
+use super::names_file::{NameEdit, NameEdits};
 use super::plan::{Compiled, MultiRenameSpec, PreviewRow, SpecError, preview};
 
 /// Why a preview or an apply didn't answer. Typed, so the frontend words it.
@@ -44,6 +45,8 @@ pub enum MultiRenameError {
     ReadOnly,
     /// The preview didn't finish within its deadline.
     TimedOut,
+    /// Results couldn't write its names file; `detail` is log text only.
+    CouldntWriteNames { detail: String },
     /// The preview's worker failed; `detail` is log text only.
     Internal { detail: String },
 }
@@ -90,10 +93,20 @@ fn snapshot(listing_id: &str, include_hidden: bool, rows: Option<&[usize]>) -> R
     })
 }
 
-fn previewed(snapshot: &Snapshot, spec: &MultiRenameSpec) -> Result<Vec<PreviewRow>, MultiRenameError> {
+fn previewed(
+    snapshot: &Snapshot,
+    spec: &MultiRenameSpec,
+    edits: &[NameEdit],
+) -> Result<Vec<PreviewRow>, MultiRenameError> {
     let compiled = Compiled::new(spec).map_err(|error| MultiRenameError::Spec { error })?;
     let rows: Vec<(usize, &FileEntry)> = snapshot.rows.iter().map(|(row, entry)| (*row, entry)).collect();
-    Ok(preview(&compiled, &snapshot.dir, &rows, &snapshot.siblings))
+    Ok(preview(
+        &compiled,
+        &snapshot.dir,
+        &rows,
+        &snapshot.siblings,
+        &NameEdits::new(edits),
+    ))
 }
 
 /// The sheet's live preview.
@@ -102,8 +115,23 @@ pub(crate) fn preview_rows(
     include_hidden: bool,
     rows: Option<&[usize]>,
     spec: &MultiRenameSpec,
+    edits: &[NameEdit],
 ) -> Result<Vec<PreviewRow>, MultiRenameError> {
-    previewed(&snapshot(listing_id, include_hidden, rows)?, spec)
+    previewed(&snapshot(listing_id, include_hidden, rows)?, spec, edits)
+}
+
+/// Results (⌥⏎): writes the preview as `old<TAB>new` lines for the user's
+/// editor and returns the file's path. `super::names_file` reads it back.
+pub(crate) fn write_names(
+    listing_id: &str,
+    include_hidden: bool,
+    rows: Option<&[usize]>,
+    spec: &MultiRenameSpec,
+    edits: &[NameEdit],
+) -> Result<PathBuf, MultiRenameError> {
+    let rows = preview_rows(listing_id, include_hidden, rows, spec, edits)?;
+    super::names_file::write(&super::names_file::default_dir(), &rows)
+        .map_err(|e| MultiRenameError::CouldntWriteNames { detail: e.to_string() })
 }
 
 /// One row the user saw in the preview they started from.
@@ -130,10 +158,11 @@ fn prepare(
     include_hidden: bool,
     rows: Option<&[usize]>,
     spec: &MultiRenameSpec,
+    edits: &[NameEdit],
     expected: &[ExpectedRename],
 ) -> Result<Prepared, MultiRenameError> {
     let snapshot = snapshot(listing_id, include_hidden, rows)?;
-    let ready: Vec<PreviewRow> = previewed(&snapshot, spec)?
+    let ready: Vec<PreviewRow> = previewed(&snapshot, spec, edits)?
         .into_iter()
         .filter(|row| row.status.is_ready())
         .collect();
@@ -177,6 +206,7 @@ pub(crate) async fn apply(
     include_hidden: bool,
     rows: Option<Vec<usize>>,
     spec: MultiRenameSpec,
+    edits: Vec<NameEdit>,
     expected: Vec<ExpectedRename>,
 ) -> Result<MultiRenameStarted, MultiRenameError> {
     // Off the IPC thread: the listing clone and a mask and regex per row.
@@ -184,7 +214,7 @@ pub(crate) async fn apply(
         Duration::from_secs(5),
         || MultiRenameError::TimedOut,
         |detail| MultiRenameError::Internal { detail },
-        move || prepare(&listing_id, include_hidden, rows.as_deref(), &spec, &expected),
+        move || prepare(&listing_id, include_hidden, rows.as_deref(), &spec, &edits, &expected),
     )
     .await?;
 

@@ -71,6 +71,14 @@
   "@multiRename.removeDiacritics": {
     "description": "Option: turn letters with accents and other diacritics into plain letters (á becomes a, ž becomes z, ß becomes ss), in every language."
   },
+  "multiRename.greekToLatin": "Greek to Latin",
+  "@multiRename.greekToLatin": {
+    "description": "Checkbox that writes Greek letters in Latin ones, the way Greek passports do (ELOT 743): Αθήνα becomes Athina."
+  },
+  "multiRename.normalizeUnicode": "Normalize Unicode",
+  "@multiRename.normalizeUnicode": {
+    "description": "Checkbox that renames names whose accented letters are stored as a letter plus a separate accent mark (as macOS and network drives often store them) to the single-character form Windows, Linux, and websites expect. The names look the same before and after."
+  },
   "multiRename.counterStart": "Counter from",
   "@multiRename.counterStart": {
     "description": "Label of the number the counter placeholder [C] starts at."
@@ -83,14 +91,6 @@
   "@multiRename.counterDigits": {
     "description": "Label of how many digits the counter placeholder [C] has; shorter numbers get leading zeros."
   },
-  "multiRename.presets": "Preset",
-  "@multiRename.presets": {
-    "description": "Label of the menu of saved rename settings (presets) to load."
-  },
-  "multiRename.presetPlaceholder": "Load a preset",
-  "@multiRename.presetPlaceholder": {
-    "description": "Placeholder of the preset menu before one is chosen."
-  },
   "multiRename.preset.default": "No change",
   "@multiRename.preset.default": {
     "description": "Built-in preset that resets every setting, so all names stay as they are (Total Commander's <Default>)."
@@ -98,6 +98,14 @@
   "multiRename.preset.removeDiacritics": "Remove diacritics",
   "@multiRename.preset.removeDiacritics": {
     "description": "Built-in preset that keeps names as they are but removes diacritics (á becomes a, ž becomes z)."
+  },
+  "multiRename.preset.greekToLatin": "Greek to Latin",
+  "@multiRename.preset.greekToLatin": {
+    "description": "Built-in preset that writes Greek letters in Latin ones (Αθήνα becomes Athina) and changes nothing else."
+  },
+  "multiRename.preset.normalizeUnicode": "Normalize Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "description": "Built-in preset that only stores accented letters in the single-character form Windows, Linux, and websites expect; the names look the same."
   },
   "multiRename.presetName": "Preset name",
   "@multiRename.presetName": {
@@ -107,9 +115,33 @@
   "@multiRename.savePreset": {
     "description": "Button that saves the current rename settings under the name in the Preset name field; an existing preset with that name is replaced."
   },
-  "multiRename.deletePreset": "Delete preset",
-  "@multiRename.deletePreset": {
-    "description": "Button that deletes the chosen saved preset."
+  "multiRename.presetsMenu": "Presets",
+  "@multiRename.presetsMenu": {
+    "description": "Button (and its menu) for loading saved rename settings, saving the current ones, and deleting a saved one. F2 opens it, as in Total Commander."
+  },
+  "multiRename.presetsMenu.builtIn": "Built in",
+  "@multiRename.presetsMenu.builtIn": {
+    "description": "Heading of the presets that come with Cmdr, in the presets menu."
+  },
+  "multiRename.presetsMenu.saved": "Your presets",
+  "@multiRename.presetsMenu.saved": {
+    "description": "Heading of the presets the user saved, in the presets menu (beside the Built in heading)."
+  },
+  "multiRename.presetsMenu.noSaved": "No saved presets yet",
+  "@multiRename.presetsMenu.noSaved": {
+    "description": "Shown under the Your presets heading of the presets menu when the user hasn’t saved any."
+  },
+  "multiRename.presetsMenu.saveAs": "Save as new preset…",
+  "@multiRename.presetsMenu.saveAs": {
+    "description": "Presets menu item that asks for a name and saves the current settings under it."
+  },
+  "multiRename.presetsMenu.save": "Save “{name}”",
+  "@multiRename.presetsMenu.save": {
+    "description": "Presets menu item that overwrites the loaded saved preset with the current settings. {name} is the preset’s name."
+  },
+  "multiRename.presetsMenu.delete": "Delete “{name}”",
+  "@multiRename.presetsMenu.delete": {
+    "description": "Presets menu item that deletes the loaded saved preset. {name} is the preset’s name."
   },
   "multiRename.preview": "Preview",
   "@multiRename.preview": {
@@ -186,6 +218,54 @@
   "multiRename.cancel": "Cancel",
   "@multiRename.cancel": {
     "description": "Button that closes the tool without renaming."
+  },
+  "multiRename.undo": "Undo rename",
+  "@multiRename.undo": {
+    "description": "Footer button that reverses the last multi-rename of this session (all its files at once). It sits beside Cancel (multiRename.cancel), so the two must read differently."
+  },
+  "multiRename.undoTooltip": "{count, plural, one {Renames # file back to its old name} other {Renames # files back to their old names}}",
+  "@multiRename.undoTooltip": {
+    "description": "Tooltip of the Undo button. {count} is how many files the last multi-rename renamed."
+  },
+  "multiRename.undoNothing": "Nothing to undo yet. Undo rename reverses the last multi-rename since Cmdr started.",
+  "@multiRename.undoNothing": {
+    "description": "Tooltip of the Undo button while there’s nothing to undo."
+  },
+  "multiRename.results": "Results",
+  "@multiRename.results": {
+    "description": "Footer button (Total Commander’s name) that opens the list of old and new names in the user’s text editor, so they can edit the new names by hand."
+  },
+  "multiRename.results.editing": "Edit the new names in your text editor and save the file. They show here when you come back to this window.",
+  "@multiRename.results.editing": {
+    "description": "Shown while the names list is open in the text editor. Each line is an old name, a tab, and the new name."
+  },
+  "multiRename.results.edited": "{count, plural, one {# name comes from your edited list} other {# names come from your edited list}}.",
+  "@multiRename.results.edited": {
+    "description": "Shown when the preview uses names the user typed in the text editor. {count} is how many lines were read."
+  },
+  "multiRename.results.readNow": "Read names now",
+  "@multiRename.results.readNow": {
+    "description": "Button that reads the edited names list back right away, instead of waiting for the user to come back to the window."
+  },
+  "multiRename.results.discard": "Use the settings again",
+  "@multiRename.results.discard": {
+    "description": "Button that drops the names typed in the text editor, so every file shows the name the settings give it."
+  },
+  "multiRename.results.couldntOpen": "Couldn’t open the names list in your text editor. You can pick an editor in Settings.",
+  "@multiRename.results.couldntOpen": {
+    "description": "Shown when the text editor didn’t open the names list."
+  },
+  "multiRename.results.gone": "The names list is gone. Open Results again to write a new one.",
+  "@multiRename.results.gone": {
+    "description": "Shown when the edited names list can’t be read back (it was deleted or moved)."
+  },
+  "multiRename.undoStarted": "{count, plural, one {Renaming # file back} other {Renaming # files back}}.",
+  "@multiRename.undoStarted": {
+    "description": "Toast after Undo started reversing the last multi-rename. {count} is how many files."
+  },
+  "multiRename.error.couldntWriteNames": "Couldn’t write the names list. Check that your startup disk has free space.",
+  "@multiRename.error.couldntWriteNames": {
+    "description": "Shown when Results couldn’t create its text file in the temporary folder."
   },
   "multiRename.rename": "{count, plural, =0 {Rename} one {Rename # file} other {Rename # files}}",
   "@multiRename.rename": {

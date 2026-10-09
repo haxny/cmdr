@@ -1,6 +1,8 @@
 /**
  * The Multi-Rename sheet's state: the spec the fields edit, the live preview, the
- * presets, and Start. One instance per open sheet.
+ * presets, the names typed in Results, and Start. One instance per open sheet.
+ *
+ * It opens on the settings the last sheet closed with (`persist`), as TC does.
  *
  * The preview reruns 120 ms after the last edit, and a generation counter drops
  * an answer a newer edit overtook, so fast typing never shows an older preview.
@@ -11,16 +13,21 @@
 import {
   applyMultiRename,
   deleteMultiRenamePreset,
+  getMultiRenameLastSpec,
   getMultiRenamePresets,
   previewMultiRename,
+  readMultiRenameNames,
+  saveMultiRenameLastSpec,
   saveMultiRenamePreset,
+  writeMultiRenameNames,
   type MultiRenameError,
   type MultiRenamePreset,
   type MultiRenameSpec,
   type MultiRenameStarted,
+  type NameEdit,
   type PreviewRow,
 } from '$lib/tauri-commands'
-import { DEFAULT_SPEC, countPreview, type PreviewCounts } from './spec'
+import { DEFAULT_SPEC, completeSpec, countPreview, type PreviewCounts } from './spec'
 
 /** What the sheet renames: a pane's listing and its selected rows (backend numbers), or all of them. */
 export interface MultiRenameTarget {
@@ -44,12 +51,22 @@ export interface MultiRenameState {
   readonly pending: boolean
   readonly presets: MultiRenamePreset[]
   readonly applying: boolean
+  /** Names the user typed in Results, by old name. Empty until they read some back. */
+  readonly edits: NameEdit[]
   update: (patch: Partial<MultiRenameSpec>) => void
   /** Replaces the whole spec (loading a preset). */
   load: (spec: MultiRenameSpec) => void
   loadPresets: () => Promise<void>
   savePreset: (name: string) => Promise<void>
   deletePreset: (id: string) => Promise<void>
+  /** Results: writes the preview to a text file. Its path, or `null` when it couldn't (`applyError` says why). */
+  writeNames: () => Promise<string | null>
+  /** Reads the Results file back into `edits`. False when there was nothing to read. */
+  readNames: () => Promise<boolean>
+  /** Drops the typed names: every row shows its computed name again. */
+  discardEdits: () => void
+  /** Remembers the settings for the next sheet. */
+  persist: () => Promise<void>
   /** Starts the rename. Resolves with the operation, or `null` when it didn't start (`error` says why). */
   apply: () => Promise<MultiRenameStarted | null>
   dispose: () => void
@@ -57,6 +74,9 @@ export interface MultiRenameState {
 
 export function createMultiRenameState(target: MultiRenameTarget): MultiRenameState {
   let spec = $state<MultiRenameSpec>({ ...DEFAULT_SPEC })
+  let edits = $state.raw<NameEdit[]>([])
+  // An edit made before the last settings arrive wins over them.
+  let touched = false
   let rows = $state.raw<PreviewRow[]>([])
   let error = $state<MultiRenameError | null>(null)
   let presets = $state.raw<MultiRenamePreset[]>([])
@@ -71,7 +91,13 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
     waiting++
     let answer
     try {
-      answer = await previewMultiRename(target.listingId, target.includeHidden, target.rows, $state.snapshot(spec))
+      answer = await previewMultiRename(
+        target.listingId,
+        target.includeHidden,
+        target.rows,
+        $state.snapshot(spec),
+        edits,
+      )
     } finally {
       waiting--
     }
@@ -97,8 +123,18 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
     }, PREVIEW_DELAY_MS)
   }
 
-  // The first preview: the default spec shows every name as it is.
-  void refresh()
+  // The first preview, on the settings the last sheet closed with.
+  async function start(): Promise<void> {
+    let last: MultiRenameSpec | null = null
+    try {
+      last = await getMultiRenameLastSpec()
+    } catch {
+      // No remembered settings: the default ones.
+    }
+    if (last && !touched) spec = completeSpec(last)
+    await refresh()
+  }
+  void start()
 
   return {
     get spec() {
@@ -122,15 +158,20 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
     get applyError() {
       return applyError
     },
+    get edits() {
+      return edits
+    },
     get pending() {
       return waiting > 0
     },
     update(patch) {
+      touched = true
       spec = { ...spec, ...patch }
       schedule()
     },
     load(next) {
-      spec = { ...next }
+      touched = true
+      spec = completeSpec(next)
       schedule()
     },
     async loadPresets() {
@@ -151,6 +192,32 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
       await deleteMultiRenamePreset(id)
       presets = await getMultiRenamePresets()
     },
+    async writeNames() {
+      const answer = await writeMultiRenameNames(
+        target.listingId,
+        target.includeHidden,
+        target.rows,
+        $state.snapshot(spec),
+        edits,
+      )
+      if (answer.ok) return answer.value
+      applyError = answer.error
+      return null
+    },
+    async readNames() {
+      const answer = await readMultiRenameNames()
+      if (!answer.ok) return false
+      edits = answer.value
+      schedule()
+      return true
+    },
+    discardEdits() {
+      edits = []
+      schedule()
+    },
+    async persist() {
+      await saveMultiRenameLastSpec($state.snapshot(spec))
+    },
     async apply() {
       if (applying || waiting > 0) return null
       applying = true
@@ -164,6 +231,7 @@ export function createMultiRenameState(target: MultiRenameTarget): MultiRenameSt
           target.includeHidden,
           target.rows,
           $state.snapshot(spec),
+          edits,
           expected,
         )
         if (answer.ok) return answer.value

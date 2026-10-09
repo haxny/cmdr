@@ -41,3 +41,45 @@ impl RecentEntry for MultiRenamePreset {
         self.name.trim().to_lowercase()
     }
 }
+
+/// The settings the sheet last closed with, so the next ⌃M opens where the last
+/// one left off (TC keeps them too). One entry, in its own file.
+pub static LAST_SPEC: RecentsFile<LastSpec> = RecentsFile::new();
+
+/// The one entry `LAST_SPEC` keeps.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LastSpec {
+    pub id: String,
+    pub spec: MultiRenameSpec,
+}
+
+impl LastSpec {
+    const ID: &'static str = "last";
+
+    pub fn new(spec: MultiRenameSpec) -> Self {
+        Self {
+            id: Self::ID.to_string(),
+            spec,
+        }
+    }
+}
+
+impl RecentEntry for LastSpec {
+    const FILENAME: &'static str = "multi-rename-last.json";
+    const LOG_TARGET: &'static str = "multi_rename::presets";
+    const LOG_NAME: &'static str = "multi-rename last settings";
+
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
+
+    /// Always the same entry, so saving replaces it.
+    fn dedupe_key(&self) -> String {
+        Self::ID.to_string()
+    }
+}

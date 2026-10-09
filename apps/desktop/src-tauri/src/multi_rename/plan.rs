@@ -16,6 +16,7 @@ use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::validation::{ValidationError, validate_filename};
 
 use super::mask::{Counter, Mask, MaskError, RowFacts};
+use super::names_file::NameEdits;
 use super::transform::{CaseChange, Replace, ReplaceError, Transform};
 
 /// Everything the sheet sets.
@@ -33,6 +34,15 @@ pub struct MultiRenameSpec {
     pub substitute: bool,
     pub case: CaseChange,
     pub remove_diacritics: bool,
+    /// Greek letters written in Latin ones (ELOT 743). Off in a preset saved
+    /// before it existed.
+    #[serde(default)]
+    pub greek_to_latin: bool,
+    /// Renames a name that differs only in its Unicode form, to the composed
+    /// (NFC) one Windows, Linux, and the web expect; macOS and SMB often hand
+    /// over decomposed names. Off, such a name counts as unchanged.
+    #[serde(default)]
+    pub normalize_unicode: bool,
     pub counter_start: i64,
     pub counter_step: i64,
     pub counter_digits: u32,
@@ -99,6 +109,7 @@ pub(crate) struct Compiled {
     extension_mask: Mask,
     transform: Transform,
     counter: Counter,
+    normalize_unicode: bool,
 }
 
 impl Compiled {
@@ -117,6 +128,7 @@ impl Compiled {
         let transform = Transform {
             replace,
             case: spec.case,
+            greek_to_latin: spec.greek_to_latin,
             remove_diacritics: spec.remove_diacritics,
         };
         // A broken regex is a spec problem, not a per-row one: ask once.
@@ -132,6 +144,7 @@ impl Compiled {
                 step: spec.counter_step,
                 digits: spec.counter_digits.clamp(1, super::mask::MAX_COUNTER_DIGITS),
             },
+            normalize_unicode: spec.normalize_unicode,
         })
     }
 
@@ -159,10 +172,31 @@ impl Compiled {
         // `Compiled::new` proved the regex; a later failure can't happen, so the
         // unchanged parts are the safe answer.
         let (name, extension) = self.transform.apply(&name, &extension).unwrap_or((name, extension));
-        if extension.is_empty() {
+        self.finish(if extension.is_empty() {
             name
         } else {
             format!("{name}.{extension}")
+        })
+    }
+
+    /// The last step every new name takes, a typed one too: composed when the
+    /// spec normalizes.
+    fn finish(&self, name: String) -> String {
+        if self.normalize_unicode {
+            name.nfc().collect()
+        } else {
+            name
+        }
+    }
+
+    /// Whether `new_name` leaves `old_name` as it is. The same name in another
+    /// Unicode form is the same name, unless the spec normalizes: then only the
+    /// exact spelling is.
+    fn same_name(&self, new_name: &str, old_name: &str) -> bool {
+        if self.normalize_unicode {
+            new_name == old_name
+        } else {
+            new_name.nfc().eq(old_name.nfc())
         }
     }
 }
@@ -173,22 +207,26 @@ fn local_time(unix_seconds: u64) -> Option<NaiveDateTime> {
 }
 
 /// The preview for `rows` (in rename order) of the folder at `dir`, whose every
-/// entry, hidden ones included, is in `siblings`.
+/// entry, hidden ones included, is in `siblings`. A row the user named by hand
+/// in Results (`edits`) takes that name instead of the computed one.
 pub(crate) fn preview(
     compiled: &Compiled,
     dir: &Path,
     rows: &[(usize, &FileEntry)],
     siblings: &[FileEntry],
+    edits: &NameEdits,
 ) -> Vec<PreviewRow> {
     let mut preview: Vec<PreviewRow> = rows
         .iter()
         .enumerate()
         .map(|(position, (row, entry))| {
-            let new_name = compiled.new_name(entry, dir, position);
+            let new_name = match edits.get(&entry.name) {
+                Some(typed) => compiled.finish(typed.to_string()),
+                None => compiled.new_name(entry, dir, position),
+            };
             let status = match invalid(&new_name) {
                 Some(reason) => RowStatus::InvalidName { reason },
-                // The same name in another Unicode form is the same name.
-                None if new_name.nfc().eq(entry.name.nfc()) => RowStatus::Unchanged,
+                None if compiled.same_name(&new_name, &entry.name) => RowStatus::Unchanged,
                 None => RowStatus::Ready,
             };
             PreviewRow {

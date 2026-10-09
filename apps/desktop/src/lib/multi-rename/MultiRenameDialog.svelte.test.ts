@@ -1,13 +1,15 @@
 /**
  * Behavior tests for `MultiRenameDialog.svelte`: every error the backend can
  * answer gets its own words, Enter in a mask starts while Enter in the preset
- * name saves, a placeholder button inserts into the name mask, and presets save
- * and delete.
+ * name saves, a placeholder button inserts into the name mask, F2's menu loads,
+ * saves, and deletes presets, ⌥⏎ hands Results to the editor and reads it back,
+ * ⌥⌫ undoes the last run, and closing remembers the settings.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, tick } from 'svelte'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
+import { setLastMultiRenameRun } from './last-run.svelte'
 
 const ipc = vi.hoisted(() => ({
   previewMultiRename: vi.fn(),
@@ -15,13 +17,20 @@ const ipc = vi.hoisted(() => ({
   getMultiRenamePresets: vi.fn(),
   saveMultiRenamePreset: vi.fn(),
   deleteMultiRenamePreset: vi.fn(),
+  writeMultiRenameNames: vi.fn(),
+  readMultiRenameNames: vi.fn(),
+  getMultiRenameLastSpec: vi.fn(),
+  saveMultiRenameLastSpec: vi.fn(),
+  rollbackOperation: vi.fn(),
 }))
+const openFileInEditor = vi.hoisted(() => vi.fn())
 
 vi.mock('$lib/tauri-commands', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   ...ipc,
 }))
+vi.mock('$lib/text-editor/open-file-in-editor', () => ({ openFileInEditor }))
 
 const READY = [{ row: 0, oldName: 'Ž.pdf', newName: 'Z.pdf', status: { type: 'ready' } }]
 
@@ -32,15 +41,32 @@ async function settle(): Promise<void> {
   }
 }
 
-async function mountSheet(onApplied = vi.fn()): Promise<HTMLElement> {
+let mounted: ReturnType<typeof mount> | null = null
+
+async function mountSheet(onApplied = vi.fn(), onUndoStarted = vi.fn()): Promise<HTMLElement> {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  mount(MultiRenameDialog, {
+  mounted = mount(MultiRenameDialog, {
     target,
-    props: { target: { listingId: 'L', includeHidden: false, rows: null }, onApplied, onClose: vi.fn() },
+    props: {
+      target: { listingId: 'L', includeHidden: false, rows: null },
+      onApplied,
+      onUndoStarted,
+      onClose: vi.fn(),
+    },
   })
   await settle()
   return target
+}
+
+function altKey(el: Element, k: string): void {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: k, altKey: true, bubbles: true, cancelable: true }))
+}
+
+function menuItem(label: RegExp): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
+    label.test(el.textContent.trim()),
+  )
 }
 
 function inputs(root: HTMLElement): HTMLInputElement[] {
@@ -58,6 +84,15 @@ describe('MultiRenameDialog', () => {
     ipc.getMultiRenamePresets.mockResolvedValue([{ id: 'p1', name: 'Mine', spec: {} }])
     ipc.saveMultiRenamePreset.mockResolvedValue(undefined)
     ipc.deleteMultiRenamePreset.mockResolvedValue(undefined)
+    ipc.getMultiRenameLastSpec.mockResolvedValue(null)
+    ipc.saveMultiRenameLastSpec.mockResolvedValue(undefined)
+    setLastMultiRenameRun(null)
+  })
+
+  afterEach(async () => {
+    if (mounted) await unmount(mounted)
+    mounted = null
+    document.body.innerHTML = ''
   })
 
   it.each([
@@ -108,20 +143,83 @@ describe('MultiRenameDialog', () => {
     })
   })
 
-  it('saves a preset from Enter in its name, never starting a rename, and deletes it', async () => {
+  it('F2 opens the presets menu; Save as names a preset from Enter, never starting a rename', async () => {
     const root = await mountSheet()
-    const name = inputs(root).at(-1) as HTMLInputElement
-    name.value = 'Mine'
+    key(inputs(root)[0], 'F2')
+    await settle()
+    menuItem(/Save as new preset/)?.click()
+    await settle()
+    const name = inputs(root).find((i) => i.getAttribute('aria-label') === 'Preset name') as HTMLInputElement
+    name.value = 'Fotky'
     name.dispatchEvent(new Event('input', { bubbles: true }))
     await settle()
     key(name, 'Enter')
     await settle()
-    expect(ipc.saveMultiRenamePreset).toHaveBeenCalled()
+    expect(ipc.saveMultiRenamePreset).toHaveBeenCalledWith(expect.objectContaining({ name: 'Fotky' }))
     expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+  })
 
-    const del = [...root.querySelectorAll('button')].find((b) => !b.disabled && /delete/i.test(b.textContent))
-    del?.click()
+  it('loads a saved preset from the menu, then deletes it from there', async () => {
+    const root = await mountSheet()
+    key(inputs(root)[0], 'F2')
+    await settle()
+    menuItem(/^Mine$/)?.click()
+    await settle()
+    key(inputs(root)[0], 'F2')
+    await settle()
+    menuItem(/Delete “Mine”/)?.click()
     await settle()
     expect(ipc.deleteMultiRenamePreset).toHaveBeenCalledWith('p1')
+  })
+
+  it('⌥⏎ hands the names to the editor, and coming back reads them into the preview', async () => {
+    ipc.writeMultiRenameNames.mockResolvedValue({ ok: true, value: '/tmp/names.txt' })
+    ipc.readMultiRenameNames.mockResolvedValue({ ok: true, value: [{ oldName: 'Ž.pdf', newName: 'mine.pdf' }] })
+    openFileInEditor.mockResolvedValue(true)
+    const root = await mountSheet()
+    altKey(inputs(root)[0], 'Enter')
+    await settle()
+    expect(openFileInEditor).toHaveBeenCalledWith('/tmp/names.txt')
+    expect(ipc.applyMultiRename).not.toHaveBeenCalled()
+
+    window.dispatchEvent(new Event('focus'))
+    await vi.waitFor(() => {
+      expect(ipc.previewMultiRename.mock.calls.at(-1)?.[4]).toEqual([{ oldName: 'Ž.pdf', newName: 'mine.pdf' }])
+    })
+  })
+
+  it('says so when the editor did not open the names', async () => {
+    ipc.writeMultiRenameNames.mockResolvedValue({ ok: true, value: '/tmp/names.txt' })
+    openFileInEditor.mockResolvedValue(false)
+    const root = await mountSheet()
+    altKey(inputs(root)[0], 'Enter')
+    await settle()
+    expect(root.querySelector('[role="alert"]')?.textContent.trim()).toBeTruthy()
+  })
+
+  it('⌥⌫ rolls the last run back and hands it up; with no run it does nothing', async () => {
+    const onUndoStarted = vi.fn()
+    let root = await mountSheet(vi.fn(), onUndoStarted)
+    altKey(inputs(root)[0], 'Backspace')
+    await settle()
+    expect(ipc.rollbackOperation).not.toHaveBeenCalled()
+    if (mounted) await unmount(mounted)
+    document.body.innerHTML = ''
+
+    setLastMultiRenameRun({ operationId: 'op9', renaming: 3 })
+    ipc.rollbackOperation.mockResolvedValue({ inverseOpId: 'inv' })
+    root = await mountSheet(vi.fn(), onUndoStarted)
+    altKey(inputs(root)[0], 'Backspace')
+    await settle()
+    expect(ipc.rollbackOperation).toHaveBeenCalledWith('op9')
+    expect(onUndoStarted).toHaveBeenCalledWith({ operationId: 'op9', renaming: 3 })
+  })
+
+  it('remembers the settings when it closes', async () => {
+    await mountSheet()
+    if (mounted) await unmount(mounted)
+    mounted = null
+    await settle()
+    expect(ipc.saveMultiRenameLastSpec).toHaveBeenCalledWith(expect.objectContaining({ nameMask: '[N]' }))
   })
 })

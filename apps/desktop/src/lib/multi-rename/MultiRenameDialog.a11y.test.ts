@@ -40,6 +40,7 @@ async function mountSheet(): Promise<HTMLElement> {
     props: {
       target: { listingId: 'L', includeHidden: false, rows: null },
       onApplied: () => {},
+      onUndoStarted: () => {},
       onClose: () => {},
     },
   })

@@ -18,6 +18,7 @@
     import SelectionDialog from '$lib/selection-dialog/SelectionDialog.svelte'
     import MultiRenameDialog from '$lib/multi-rename/MultiRenameDialog.svelte'
     import type { MultiRenameTarget } from '$lib/multi-rename/multi-rename-state.svelte'
+    import type { MultiRenameRun } from '$lib/multi-rename/last-run.svelte'
     import type { MultiRenameStarted } from '$lib/tauri-commands'
     import GoToPathDialog from '$lib/go-to-path/GoToPathDialog.svelte'
     import WhatsNewDialog from '$lib/whats-new/WhatsNewDialog.svelte'
@@ -583,6 +584,11 @@
         closeMultiRename()
     }
 
+    function handleMultiRenameUndoStarted(run: MultiRenameRun): void {
+        addToast(tString('multiRename.undoStarted', { count: run.renaming }), { level: 'info' })
+        closeMultiRename()
+    }
+
     function handleSelectionDialogClose() {
         showSelectionDialog = null
         selectionDialogSnapshot = null
@@ -796,6 +802,7 @@
             <MultiRenameDialog
                 target={multiRenameTarget}
                 onApplied={handleMultiRenameApplied}
+                onUndoStarted={handleMultiRenameUndoStarted}
                 onClose={closeMultiRename}
             />
         {/if}

@@ -25,6 +25,8 @@ fn strip_diacritics() -> MultiRenameSpec {
         substitute: false,
         case: CaseChange::Unchanged,
         remove_diacritics: true,
+        greek_to_latin: false,
+        normalize_unicode: false,
         counter_start: 1,
         counter_step: 1,
         counter_digits: 1,
@@ -55,7 +57,7 @@ async fn the_folder_comes_out_without_diacritics_and_the_rest_is_left_alone() {
         .entries(list_directory_core(&dir).expect("the dir lists"))
         .insert("multi-rename-apply");
 
-    let preview = preview_rows(listing.id(), false, None, &strip_diacritics()).expect("a preview");
+    let preview = preview_rows(listing.id(), false, None, &strip_diacritics(), &[]).expect("a preview");
     let ready = preview.iter().filter(|r| r.status == RowStatus::Ready).count();
     assert_eq!(ready, 2, "{preview:?}");
 
@@ -66,6 +68,7 @@ async fn the_folder_comes_out_without_diacritics_and_the_rest_is_left_alone() {
         false,
         None,
         strip_diacritics(),
+        Vec::new(),
         expected(&preview),
     )
     .await
@@ -102,6 +105,7 @@ async fn nothing_ready_starts_nothing() {
         None,
         strip_diacritics(),
         Vec::new(),
+        Vec::new(),
     )
     .await;
 
@@ -111,7 +115,7 @@ async fn nothing_ready_starts_nothing() {
 #[test]
 fn a_gone_listing_is_refused() {
     assert!(matches!(
-        preview_rows("no-such-listing", false, None, &strip_diacritics()),
+        preview_rows("no-such-listing", false, None, &strip_diacritics(), &[]),
         Err(MultiRenameError::Gone { .. })
     ));
 }
@@ -125,14 +129,69 @@ async fn a_folder_that_changed_since_the_preview_is_refused() {
         .path(dir.to_path_buf())
         .entries(list_directory_core(&dir).expect("the dir lists"))
         .insert("multi-rename-stale");
-    let preview = preview_rows(listing.id(), false, None, &strip_diacritics()).expect("a preview");
+    let preview = preview_rows(listing.id(), false, None, &strip_diacritics(), &[]).expect("a preview");
     let mut seen = expected(&preview);
     // What the user saw differs from what the folder holds now.
     seen[0].old_name = "plán-old.txt".to_string();
 
     let events = Arc::new(CollectorEventSink::new());
-    let outcome = apply(events, listing.id().to_string(), false, None, strip_diacritics(), seen).await;
+    let outcome = apply(
+        events,
+        listing.id().to_string(),
+        false,
+        None,
+        strip_diacritics(),
+        Vec::new(),
+        seen,
+    )
+    .await;
 
     assert!(matches!(outcome, Err(MultiRenameError::PreviewOutOfDate)));
     assert!(dir.join("plán.txt").exists(), "nothing was renamed");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn normalizing_renames_a_decomposed_name_to_its_composed_spelling_on_disk() {
+    let dir = TestDir::new("multi-rename-normalize");
+    let decomposed = "Z\u{030C}adost.pdf";
+    std::fs::write(dir.join(decomposed), b"x").expect("scratch dir is writable");
+    let listing = TestListing::new()
+        .volume("root")
+        .path(dir.to_path_buf())
+        .entries(list_directory_core(&dir).expect("the dir lists"))
+        .insert("multi-rename-normalize");
+    let spec = MultiRenameSpec {
+        remove_diacritics: false,
+        normalize_unicode: true,
+        ..strip_diacritics()
+    };
+    let preview = preview_rows(listing.id(), false, None, &spec, &[]).expect("a preview");
+    assert_eq!(preview[0].status, RowStatus::Ready, "{preview:?}");
+
+    let events = Arc::new(CollectorEventSink::new());
+    apply(
+        events.clone(),
+        listing.id().to_string(),
+        false,
+        None,
+        spec,
+        Vec::new(),
+        expected(&preview),
+    )
+    .await
+    .expect("the rename starts");
+    wait_until_async(std::time::Duration::from_secs(10), "the rename to settle", || {
+        !events.settled.lock_ignore_poison().is_empty()
+    })
+    .await;
+
+    let names: Vec<String> = std::fs::read_dir(&*dir)
+        .expect("the dir reads")
+        .map(|e| e.expect("an entry").file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(
+        names,
+        vec!["\u{017D}adost.pdf".to_string()],
+        "the composed bytes are on disk"
+    );
 }

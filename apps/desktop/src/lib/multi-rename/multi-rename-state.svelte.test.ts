@@ -1,7 +1,8 @@
 /**
  * The Multi-Rename sheet's state: the preview follows edits after a short delay,
  * a stale answer never lands, errors keep or clear the rows, presets round-trip,
- * and Start returns the operation or the reason it didn't start.
+ * Start returns the operation or the reason it didn't start, the sheet opens on
+ * the last settings, and Results' names reach the preview and the rename.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -12,6 +13,10 @@ const { ipc } = vi.hoisted(() => ({
     getMultiRenamePresets: vi.fn(),
     saveMultiRenamePreset: vi.fn(),
     deleteMultiRenamePreset: vi.fn(),
+    writeMultiRenameNames: vi.fn(),
+    readMultiRenameNames: vi.fn(),
+    getMultiRenameLastSpec: vi.fn(),
+    saveMultiRenameLastSpec: vi.fn(),
   },
 }))
 vi.mock('$lib/tauri-commands', () => ipc)
@@ -22,8 +27,7 @@ const target = { listingId: 'L', includeHidden: false, rows: [2, 5] }
 const ready = (oldName: string, newName: string) => ({ row: 0, oldName, newName, status: { type: 'ready' } })
 
 async function settle(): Promise<void> {
-  await Promise.resolve()
-  await Promise.resolve()
+  for (let i = 0; i < 6; i++) await Promise.resolve()
 }
 
 describe('createMultiRenameState', () => {
@@ -32,6 +36,8 @@ describe('createMultiRenameState', () => {
     vi.clearAllMocks()
     ipc.previewMultiRename.mockResolvedValue({ ok: true, value: [ready('a.txt', 'a.txt')] })
     ipc.getMultiRenamePresets.mockResolvedValue([])
+    ipc.getMultiRenameLastSpec.mockResolvedValue(null)
+    ipc.saveMultiRenameLastSpec.mockResolvedValue(undefined)
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -107,7 +113,7 @@ describe('createMultiRenameState', () => {
     await settle()
     ipc.applyMultiRename.mockResolvedValueOnce({ ok: true, value: { operationId: 'op1', renaming: 1 } })
     expect(await tool.apply()).toEqual({ operationId: 'op1', renaming: 1 })
-    expect(ipc.applyMultiRename.mock.calls[0][4]).toEqual([{ row: 0, oldName: 'ž.txt', newName: 'z.txt' }])
+    expect(ipc.applyMultiRename.mock.calls[0][5]).toEqual([{ row: 0, oldName: 'ž.txt', newName: 'z.txt' }])
 
     ipc.applyMultiRename.mockResolvedValueOnce({ ok: false, error: { type: 'nothingToRename' } })
     expect(await tool.apply()).toBeNull()
@@ -125,6 +131,65 @@ describe('createMultiRenameState', () => {
     expect(ipc.applyMultiRename).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
     expect(tool.pending).toBe(false)
+    tool.dispose()
+  })
+
+  it('opens on the settings the last sheet closed with, filling fields an older save lacks', async () => {
+    ipc.getMultiRenameLastSpec.mockResolvedValue({ nameMask: '[N]-old', extensionMask: '[E]' })
+    const tool = createMultiRenameState(target)
+    await settle()
+    expect(tool.spec.nameMask).toBe('[N]-old')
+    expect(tool.spec.normalizeUnicode).toBe(false)
+    expect((ipc.previewMultiRename.mock.calls[0][3] as { nameMask: string }).nameMask).toBe('[N]-old')
+
+    tool.update({ nameMask: '[N]-new' })
+    await tool.persist()
+    expect(ipc.saveMultiRenameLastSpec).toHaveBeenCalledWith(expect.objectContaining({ nameMask: '[N]-new' }))
+    tool.dispose()
+  })
+
+  it('keeps an edit made before the last settings arrived', async () => {
+    let release: (v: unknown) => void = () => {}
+    ipc.getMultiRenameLastSpec.mockReturnValue(new Promise((r) => (release = r)))
+    const tool = createMultiRenameState(target)
+    tool.update({ nameMask: 'typed' })
+    release({ nameMask: 'remembered', extensionMask: '[E]' })
+    await settle()
+    expect(tool.spec.nameMask).toBe('typed')
+    tool.dispose()
+  })
+
+  it('previews and renames with the names read back from Results, until they are discarded', async () => {
+    const edits = [{ oldName: 'a.txt', newName: 'typed.txt' }]
+    ipc.writeMultiRenameNames.mockResolvedValue({ ok: true, value: '/tmp/names.txt' })
+    ipc.readMultiRenameNames.mockResolvedValue({ ok: true, value: edits })
+    const tool = createMultiRenameState(target)
+    await settle()
+    expect(await tool.writeNames()).toBe('/tmp/names.txt')
+
+    expect(await tool.readNames()).toBe(true)
+    expect(tool.edits).toEqual(edits)
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.previewMultiRename.mock.calls.at(-1)?.[4]).toEqual(edits)
+    ipc.applyMultiRename.mockResolvedValueOnce({ ok: true, value: { operationId: 'op', renaming: 1 } })
+    await tool.apply()
+    expect(ipc.applyMultiRename.mock.calls[0][4]).toEqual(edits)
+
+    tool.discardEdits()
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS)
+    expect(ipc.previewMultiRename.mock.calls.at(-1)?.[4]).toEqual([])
+    tool.dispose()
+  })
+
+  it('says why Results could not write, and that a gone file reads nothing', async () => {
+    ipc.writeMultiRenameNames.mockResolvedValue({ ok: false, error: { type: 'couldntWriteNames', detail: 'x' } })
+    ipc.readMultiRenameNames.mockResolvedValue({ ok: false, error: { type: 'noFile' } })
+    const tool = createMultiRenameState(target)
+    await settle()
+    expect(await tool.writeNames()).toBeNull()
+    expect(tool.applyError?.type).toBe('couldntWriteNames')
+    expect(await tool.readNames()).toBe(false)
+    expect(tool.edits).toEqual([])
     tool.dispose()
   })
 

@@ -43,6 +43,8 @@ pub enum CaseChange {
 pub struct Transform {
     pub replace: Option<Replace>,
     pub case: CaseChange,
+    /// Greek letters written in Latin ones (ELOT 743), before diacritics go.
+    pub greek_to_latin: bool,
     pub remove_diacritics: bool,
 }
 
@@ -53,7 +55,8 @@ pub enum ReplaceError {
 }
 
 impl Transform {
-    /// The `(name, extension)` after search & replace, case, and diacritics.
+    /// The `(name, extension)` after search & replace, case, Greek to Latin, and
+    /// diacritics, in that order.
     pub fn apply(&self, name: &str, ext: &str) -> Result<(String, String), ReplaceError> {
         let (mut name, mut ext) = (name.to_string(), ext.to_string());
         if let Some(replace) = self.replace.as_ref().filter(|r| !r.search.is_empty())
@@ -66,6 +69,10 @@ impl Transform {
         }
         name = change_case(&name, self.case);
         ext = change_case(&ext, self.case);
+        if self.greek_to_latin {
+            name = super::transliterate::greek_to_latin(&name);
+            ext = super::transliterate::greek_to_latin(&ext);
+        }
         if self.remove_diacritics {
             name = remove_diacritics(&name);
             ext = remove_diacritics(&ext);
