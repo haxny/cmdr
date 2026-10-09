@@ -7,7 +7,8 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
 - `multi-rename-state.svelte.ts` the spec (opened on the last settings), the debounced preview (a generation counter
   drops stale answers), presets, Results' edits, Start.
 - `spec.ts` the default spec, built-in presets, counts, placeholder insertion. Pure. `preset-menu.ts` F2's rows.
-- `last-run.svelte.ts` the session's last run, for Undo (⌥⇧⌫). `HistoryButton.svelte` a field's history button.
+- `last-run.svelte.ts` the session's last run, for Undo (⌥⇧⌫). `field-history-menu.svelte.ts` + `HistoryButton.svelte`
+  the fields' history (⌥⇧↓).
 
 ## Must-knows
 

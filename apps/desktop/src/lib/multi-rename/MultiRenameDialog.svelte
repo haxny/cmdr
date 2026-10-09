@@ -26,7 +26,7 @@
     import type { MessageKey } from '$lib/intl/keys.gen'
     import { getAppLogger } from '$lib/logging/logger'
     import { rollbackOperation, type MultiRenameError, type MultiRenameStarted, type PreviewRow } from '$lib/tauri-commands'
-    import type { CaseChange, HistoryField } from '$lib/ipc/bindings'
+    import type { CaseChange } from '$lib/ipc/bindings'
     import { openFileInEditor } from '$lib/text-editor/open-file-in-editor'
     import { asRollbackRefusal } from '$lib/operation-log/rollback-refusal'
     import { rollbackRefusalNotice } from '$lib/operation-log/operation-log-labels'
@@ -34,6 +34,7 @@
     import { getLastMultiRenameRun, setLastMultiRenameRun, type MultiRenameRun } from './last-run.svelte'
     import { presetMenuSections, type PresetMenuPick } from './preset-menu'
     import HistoryButton from './HistoryButton.svelte'
+    import { createFieldHistoryMenu } from './field-history-menu.svelte'
     import { BUILT_IN_PRESETS, DEFAULT_SPEC, insertAtCaret } from './spec'
 
     interface Props {
@@ -55,11 +56,6 @@
     let extensionMaskInput = $state<HTMLInputElement>()
     let searchInput = $state<HTMLInputElement>()
     let replaceInput = $state<HTMLInputElement>()
-    /** The field whose history menu is up. */
-    let historyField = $state<HistoryField>('nameMask')
-
-    /** How many history entries a field's menu offers. */
-    const HISTORY_SHOWN = 30
     let presetsButton = $state<HTMLElement>()
     let presetNameInput = $state<HTMLInputElement>()
     let presetName = $state('')
@@ -98,54 +94,14 @@
         },
     })
 
-    function fieldInput(field: HistoryField): HTMLInputElement | undefined {
-        switch (field) {
-            case 'nameMask':
-                return nameMaskInput
-            case 'extensionMask':
-                return extensionMaskInput
-            case 'search':
-                return searchInput
-            case 'replace':
-                return replaceInput
-        }
-    }
-
-    function fieldOf(target: EventTarget | null): HistoryField | null {
-        if (target === nameMaskInput) return 'nameMask'
-        if (target === extensionMaskInput) return 'extensionMask'
-        if (target === searchInput) return 'search'
-        if (target === replaceInput) return 'replace'
-        return null
-    }
-
-    // TC's per-field history: what the field held when renames ran, newest first.
-    const historyMenu = createMenu<string>({
-        getSections: () => [
-            {
-                id: 'history',
-                items: tool.historyOf(historyField).slice(0, HISTORY_SHOWN).map((value, i) => ({
-                    value: String(i),
-                    label: value,
-                    data: value,
-                })),
-                emptyLabel: tString('multiRename.historyEmpty'),
-            },
-        ],
-        onSelect: (item) => {
-            if (item.data !== undefined) tool.update({ [historyField]: item.data })
-        },
-        restoreFocus: () => {
-            fieldInput(historyField)?.focus()
+    const history = createFieldHistoryMenu({
+        historyOf: (field) => tool.historyOf(field),
+        inputOf: (field) =>
+            ({ nameMask: nameMaskInput, extensionMask: extensionMaskInput, search: searchInput, replace: replaceInput })[field],
+        fill: (field, value) => {
+            tool.update({ [field]: value })
         },
     })
-
-    function openHistory(field: HistoryField): void {
-        const input = fieldInput(field)
-        if (!input) return
-        historyField = field
-        historyMenu.openUnder(input)
-    }
 
     const lastRun = $derived(getLastMultiRenameRun())
     const canResults = $derived(tool.rows.length > 0 && tool.error === null && !tool.pending)
@@ -168,7 +124,7 @@
 
     onDestroy(() => {
         presetMenu.destroy()
-        historyMenu.destroy()
+        history.destroy()
         tool.dispose()
         // The next ⌃M opens where this one left off.
         tool.persist().catch((e: unknown) => {
@@ -357,10 +313,10 @@
     }
 
     function openHistoryFrom(e: KeyboardEvent): void {
-        const field = fieldOf(e.target)
+        const field = history.fieldOf(e.target)
         if (!field) return
         e.preventDefault()
-        openHistory(field)
+        history.open(field)
     }
 
     function statusText(row: PreviewRow): string {
@@ -434,7 +390,7 @@
                     invalid={tool.error?.type === 'spec' && tool.error.error.type === 'nameMask'}
                 >
                     {#snippet trailing()}
-                        <HistoryButton onopen={() => { openHistory('nameMask') }} />
+                        <HistoryButton onopen={() => { history.open('nameMask') }} />
                     {/snippet}
                 </TextInput>
             </label>
@@ -449,7 +405,7 @@
                     invalid={tool.error?.type === 'spec' && tool.error.error.type === 'extensionMask'}
                 >
                     {#snippet trailing()}
-                        <HistoryButton onopen={() => { openHistory('extensionMask') }} />
+                        <HistoryButton onopen={() => { history.open('extensionMask') }} />
                     {/snippet}
                 </TextInput>
             </label>
@@ -471,7 +427,7 @@
                     invalid={tool.error?.type === 'spec' && tool.error.error.type === 'badRegex'}
                 >
                     {#snippet trailing()}
-                        <HistoryButton onopen={() => { openHistory('search') }} />
+                        <HistoryButton onopen={() => { history.open('search') }} />
                     {/snippet}
                 </TextInput>
             </label>
@@ -484,7 +440,7 @@
                     ariaLabel={tString('multiRename.replace')}
                 >
                     {#snippet trailing()}
-                        <HistoryButton onopen={() => { openHistory('replace') }} />
+                        <HistoryButton onopen={() => { history.open('replace') }} />
                     {/snippet}
                 </TextInput>
             </label>
@@ -585,7 +541,7 @@
             {/if}
         </div>
         <Menu menu={presetMenu} ariaLabel={tString('multiRename.presetsMenu')} />
-        <Menu menu={historyMenu} ariaLabel={tString('multiRename.history')} />
+        <Menu menu={history.menu} ariaLabel={tString('multiRename.history')} />
 
         {#if resultsOpen || tool.edits.length > 0}
             <div class="results" role="status">
