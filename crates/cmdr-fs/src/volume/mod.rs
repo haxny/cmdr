@@ -1283,6 +1283,20 @@ pub trait Volume: Send + Sync {
         None
     }
 
+    /// The one local FILE this volume presents as a folder: an archive whose
+    /// `.zip` (or tar, 7z) sits on a local filesystem. `None` for every other
+    /// backend, and for an archive on a remote parent (direct SMB, MTP) or inside
+    /// another archive, where no `std::fs` call reaches it.
+    ///
+    /// The copy engine reads that file's own `com.apple.quarantine` here, once per
+    /// extract, to hand it to every item the extract creates (Gatekeeper's rule).
+    /// It's a question about the volume's backing, so the engine asks it without
+    /// knowing which backend it holds, and the backend never reads its own
+    /// parent's metadata.
+    fn local_backing_file(&self) -> Option<&Path> {
+        None
+    }
+
     /// Returns true if this volume supports streaming read/write operations.
     fn supports_streaming(&self) -> bool {
         false

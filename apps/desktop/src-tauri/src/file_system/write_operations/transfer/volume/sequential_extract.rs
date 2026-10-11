@@ -180,9 +180,11 @@ pub(super) async fn extract_sequential_subtree(
                 return Err(e).at(&file.source_path);
             }
         };
-        // Before the rename, exactly as `stream_pipe_file` does it: the mode the
-        // planning pass read off the archive listing goes on the staged bytes,
-        // so what appears under the real name has never worn the wrong one.
+        // Before the rename, exactly as `stream_pipe_file` does it: the archive's
+        // quarantine, then the mode the planning pass read off the archive
+        // listing, go on the staged bytes, so what appears under the real name
+        // has never worn the wrong metadata. The xattr before the `chmod`.
+        super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, staged.target());
         super::landed_mode::apply_source_mode(
             source_volume,
             &file.source_path,

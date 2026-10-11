@@ -477,6 +477,9 @@ async fn merge_level<'a>(
             match dest_volume.create_directory(dest_path).await {
                 Ok(()) => {
                     created.record_dir(dest_path.to_path_buf());
+                    // Made here, so it is the extract's to quarantine, now rather than
+                    // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
+                    super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, dest_path);
                     made_here = true;
                     false
                 }
@@ -497,6 +500,14 @@ async fn merge_level<'a>(
                 match dest_volume.create_directory(dest_path).await {
                     Ok(()) => {
                         created.record_dir(dest_path.to_path_buf());
+                        // Made here, so it is the extract's to quarantine, now rather than
+                        // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
+                        super::extract_quarantine::quarantine_created_item(
+                            state,
+                            source_volume,
+                            dest_volume,
+                            dest_path,
+                        );
                         made_here = true;
                         false
                     }

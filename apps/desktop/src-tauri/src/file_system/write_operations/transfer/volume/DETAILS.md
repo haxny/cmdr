@@ -804,6 +804,33 @@ inside a folder — the two shapes take different routes through the engine), `m
 (`a_cross_volume_move_carries_the_executable_bit`), and `strategy_sequential_tests.rs`
 (`a_sequential_extract_carries_the_executable_bit`).
 
+## An extract carries the archive's quarantine
+
+**The rule: everything an extract CREATES out of a quarantined local archive wears the archive's
+`com.apple.quarantine`, byte for byte**, like `ditto -x` and bsdtar (verified, `docs/notes/transfer-metadata-experiments-2026-10-11.md`
+§ "The quirks"). It's a Gatekeeper fix: without it an app extracted from a downloaded zip launched unchecked.
+`extract_quarantine.rs` is the whole of it; its header says why and what travels.
+
+- **Read once per operation**, cached on `WriteOperationState::extract_quarantine` and keyed by the archive's path
+  (an operation reads from one source volume, so the key only guards a future second one). The engine finds the archive
+  file through `Volume::local_backing_file`, which only `ArchiveVolume` answers, and only for a local parent: `None` for
+  a remote parent (direct SMB, MTP) or a nested archive. `cmdr-archive` never reads its parent's xattrs itself. Every
+  non-archive source answers `None` with no syscall. A trait method, ❌ not a downcast plus a `pub` accessor: the engine
+  stays backend-blind, and `cmdr-archive`'s public surface stays at its `index-crate-isolation` ceiling.
+- **Files: on the staged temp, before `apply_source_mode`**, at the same two hooks as the mode (`stream_pipe_file` and
+  `sequential_extract.rs`'s data pass). The xattr goes first because a path xattr write on a `0444` file is `EACCES`.
+- **Folders: the moment `merge.rs`'s level creates one** (the `Ok(())` arms beside `created.record_dir`), so a folder
+  the walk merged into keeps its own metadata, and a zip's implicit folders, a cancelled walk's folders, and the
+  one-pass extractor's plan-mode folders (made before any byte) are all covered. ❌ Not in `folder_dates.rs`, which
+  skips exactly those.
+- **The user's destination folder isn't the extract's**: `copy.rs`'s Phase 0.5 `create_directory_all` makes the folder
+  the user extracts INTO, not something out of the archive, so it gets nothing.
+- A move out of a zip (`archive_edit/move_out.rs`) extracts through this same engine, so it's covered with no hook of
+  its own.
+
+Pinned by the `quarantine` cells in `copy_extract_out_tests.rs` (zip with an implicit folder, a merged-into folder, an
+unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out).
+
 ## Copies keep the source's date
 
 **The rule: the source REPORTS its file's modification date on the read stream, the destination WRITES it.** This is

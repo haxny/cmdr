@@ -1,7 +1,7 @@
 # Cross-volume transfer (copy + move)
 
-Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive): the phase runner (`copy.rs`), the moves, and the
-merge/staging engine (`strategy.rs`, `merge.rs`). File map: `DETAILS.md` § Files. Shared scaffolding: `../CLAUDE.md`.
+Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive). File map: `DETAILS.md` § Files. Shared:
+`../CLAUDE.md`.
 
 - **A facade: outside code reaches it only as `transfer::volume::<item>`**; a new caller re-exports from `mod.rs`,
   ❌ never widens a submodule.
@@ -30,12 +30,14 @@ merge/staging engine (`strategy.rs`, `merge.rs`). File map: `DETAILS.md` § File
 
 - **A cross-volume file write stages on `.cmdr-tmp-<uuid>`**, renamed in after its last byte. Ask
   `../staged_write.rs::resolve_staging`; ❌ only single-shot or whole-publish earns an exemption, NEVER smallness.
-- **The SOURCE's mode goes on the temp BEFORE that rename** (`landed_mode.rs`), local destinations only, never wider
-  than created; `0` means none, ❌ never guessed. A new write path owes the call.
+- **Pre-rename, the temp takes an archive's quarantine, then the SOURCE's mode** (`extract_quarantine.rs`,
+  `landed_mode.rs`), local destinations only. Mode: never wider than created, `0` means none (❌ never guessed).
+  Folders take it at creation, ❌ never in `folder_dates.rs` (skips cancelled subtrees). New write or mkdir paths owe
+  both.
 - **Every file copy asks `Volume::copy_on_server` first**; the BACKEND picks its sources, ❌ never a path. Staged unless
   whole-publish; anything but a cancel or a taken name falls back to streaming.
 - **A same-volume move whose `rename_work` says copy takes the copy-then-delete engine**, ❌ never `rename`.
-- **A staged temp the destination won't release is REPORTED** (`CancelRollback::staged_leftovers`), ❌ never only
+- **A staged temp the destination won't release is REPORTED** (`CancelRollback::staged_leftovers`), ❌ not just
   logged.
 - **Only `cleanup.rs::remove_tree` recurses** (its `TreeRemoval` names who authorized it); cleanup and rollback list
   before deleting.

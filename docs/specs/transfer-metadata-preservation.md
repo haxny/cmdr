@@ -7,10 +7,11 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: M0 (characterization) done, M1 next (2026-10-11); review rounds 1 (correctness and data safety), 2
-(architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code,
-fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the
-file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
+**Status**: M0 (characterization) and M2 (extract quarantine) done, M1 next (2026-10-11); review rounds 1 (correctness
+and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced
+against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file
+above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused
+milestone agent run).
 
 ## Loud rules
 
@@ -274,8 +275,8 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 - **Local ↔ MTP**: mtime keep; birth to verify (`DateCreated` is a field Android likely ignores), folder dates n/a.
 - **Local ↔ ADB**: mtime keep; mode sends a fixed `0660` (low value: `/sdcard` ignores modes); birth and folder dates
   n/a.
-- **Archive → local** (copy or move out): mtime and mode keep; xattrs from `__MACOSX` LOST; quarantine LOST (security);
-  tar pax xattrs LOST; folder dates keep.
+- **Archive → local** (copy or move out): mtime and mode keep; xattrs from `__MACOSX` LOST; quarantine keep (M2); tar
+  pax xattrs LOST; folder dates keep.
 - **Local → zip** (fresh or into an existing one): mtime and mode keep; xattrs LOST; birth n/a in zip.
 
 ## Best practice (what the tools keep)
@@ -584,6 +585,16 @@ decided; then the ask itself, creation and modification dates on files AND folde
   quarantined), a quarantined `.tar.gz` (the sequential path), a move-out cell, an unquarantined zip (nothing added).
 - **Lanes**: `pnpm check rust-tests clippy cfg-gate`, then `clippy-linux`.
 - **DONE**: extracting a quarantined Finder-made zip yields quarantined files and folders.
+- **As built** (2026-10-11), where it differs from the sketch above:
+  - The write lives in its own module, `T/volume/extract_quarantine.rs`, called right BEFORE `apply_source_mode` at both
+    hooks and beside `created.record_dir` in `merge.rs`. `landed_mode.rs` is untouched. M5a moves the file half into the
+    decorator stream and the folder half into `FolderMetadata`.
+  - "The engine's operation context" is `WriteOperationState::extract_quarantine` (macOS-only), keyed by the archive's
+    path. The engine reaches the archive file through a new default-`None` trait method, `Volume::local_backing_file`,
+    which `ArchiveVolume` alone answers (`None` for a remote parent or a nested archive). That override is the one
+    `cmdr-archive` change, and the trait method the one `cmdr-fs` change; the crate still never reads its parent's
+    xattrs.
+  - Extra cell beyond the plan: a folder the extract merged into stays unquarantined (rule 4).
 
 ### M3: Local files keep everything (birth, flags, symlinks). Size: M (1–2 sessions)
 

@@ -549,11 +549,13 @@ pub(super) async fn stream_pipe_file(
             }
         };
 
-        // Past the last byte, and BEFORE the rename: put the source's mode on
-        // what was written, so the file never wears one mode under its real name
-        // and then flips to another. A no-op unless the destination is a local
-        // filesystem and the source had a mode to report (`landed_mode.rs`);
-        // never fails the copy, whatever the destination thinks of `chmod`.
+        // Past the last byte, and BEFORE the rename: an archive's quarantine,
+        // then the source's mode, go on what was written, so the file never
+        // wears the wrong metadata under its real name. The xattr goes first: a
+        // path xattr write on a `0444` file is refused. Both are no-ops unless
+        // the destination is a local filesystem and the source has something to
+        // carry (`extract_quarantine.rs`, `landed_mode.rs`); neither fails the copy.
+        super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, staged.target());
         super::landed_mode::apply_source_mode(
             source_volume,
             source_path,

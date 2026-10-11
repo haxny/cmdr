@@ -19,6 +19,7 @@ mod copy_concurrent_source;
 mod copy_concurrent_task;
 mod copy_serial;
 mod displaced_destination;
+mod extract_quarantine;
 // Both carry their own `//!` headers. ❌ No outer `///` here: rustdoc
 // concatenates it with the child's header and resolves the merged doc in THIS
 // scope, so the child's links to its own items break.

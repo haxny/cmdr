@@ -633,6 +633,12 @@ impl Volume for ArchiveVolume {
         None
     }
 
+    /// The archive file itself, when the parent stores it locally (the same test
+    /// that picks the `LocalFileSource` fast path, [`Self::parent_is_local`]).
+    fn local_backing_file(&self) -> Option<&Path> {
+        self.parent_is_local().then_some(self.archive_path.as_path())
+    }
+
     /// `false`: inner paths can't be stat'd or read via `std::fs` (they live
     /// inside the zip), so the legacy synthetic-diff path must be skipped.
     fn supports_local_fs_access(&self) -> bool {

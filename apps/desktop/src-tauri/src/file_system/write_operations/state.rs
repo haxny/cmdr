@@ -212,6 +212,12 @@ pub struct WriteOperationState {
     last_progress: std::sync::Mutex<Option<WriteProgressEvent>>,
     /// The names it handed out but hasn't written yet: [`super::unique_name::ClaimedNames`].
     pub(crate) claimed_names: super::unique_name::ClaimedNames,
+    /// The `com.apple.quarantine` of the local archive this operation extracts
+    /// from, keyed by that archive's path and read once per operation. Every file
+    /// and folder the extract creates carries it:
+    /// `transfer/volume/extract_quarantine.rs`.
+    #[cfg(target_os = "macos")]
+    pub(crate) extract_quarantine: std::sync::OnceLock<(PathBuf, Option<Vec<u8>>)>,
     /// "This operation is still going." Dropped by [`end_liveness`](Self::end_liveness)
     /// when it settles.
     ///
@@ -252,6 +258,8 @@ impl WriteOperationState {
             last_progress: std::sync::Mutex::new(None),
             liveness: std::sync::Mutex::new(Some(Arc::new(()))),
             claimed_names: super::unique_name::ClaimedNames::default(),
+            #[cfg(target_os = "macos")]
+            extract_quarantine: std::sync::OnceLock::new(),
         }
     }
 
