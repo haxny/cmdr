@@ -47,8 +47,8 @@ pub use operations::{get_files_at_indices, get_paths_at_indices};
 
 // Internal re-exports for file_system module internals (pub(crate) for crate-internal use)
 pub(crate) use caching::{
-    find_listings_for_path, get_cached_listing, get_listing_volume_id_and_path, has_entry, insert_entry_sorted,
-    remove_entries_by_paths, update_entry_sorted,
+    get_cached_listing, get_listing_volume_id_and_path, has_entry, insert_entry_sorted, remove_entries_by_paths,
+    update_entry_sorted,
 };
 pub(crate) use orphan_reaper::start_orphan_listing_reaper;
 // Notification API for volume mutations

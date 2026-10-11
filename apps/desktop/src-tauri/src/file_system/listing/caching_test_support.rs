@@ -22,7 +22,7 @@ use crate::ignore_poison::RwLockIgnorePoison;
 /// things go wrong without a guard: two tests that pick the same literal listing
 /// id clobber each other's entries; a test whose assertion fails before its
 /// manual `cache.remove(...)` leaks the entry into every later test's view of the
-/// cache; and any test that asserts on cache-WIDE state (`find_listings_for_path`
+/// cache; and any test that asserts on cache-WIDE state (`find_listings_for_path_on_volume`
 /// counts, an orphan sweep) sees foreign listings. A UNIQUE id, teardown from
 /// `Drop` (which runs on unwind, so a panicking test cleans up too), and a
 /// unique path per cache-wide assertion fix all three.

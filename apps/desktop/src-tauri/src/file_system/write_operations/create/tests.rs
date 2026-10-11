@@ -493,3 +493,40 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
         "a pre-checked duplicate must not build a temp, found {temps:?}"
     );
 }
+
+// ============================================================================
+// Synthetic listing diff: the instant row lands only in panes on the create's volume
+// ============================================================================
+
+/// A create writes through ONE volume, so its instant row belongs only to panes
+/// on that volume. A pane on another volume showing the same path string (an
+/// SFTP pane on a remote `/tmp` beside a local `/tmp`) must not gain it; a local
+/// pane on a different volume picks the entry up from its own watch instead.
+#[test]
+fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
+    use crate::file_system::listing::caching_test_support::TestListing;
+
+    let tmp = create_test_dir("synthetic_diff_volume");
+    let new_path = tmp.path().join("made");
+    fs::create_dir(&new_path).expect("create the new folder on disk");
+
+    let on_root = TestListing::new().path(tmp.path()).insert("synthetic-diff-root");
+    let other_volume_id = unique("synthetic-diff-remote");
+    let on_other = TestListing::new()
+        .volume(&other_volume_id)
+        .path(tmp.path())
+        .insert("synthetic-diff-remote");
+
+    // `None` is the local filesystem, `root`.
+    emit_synthetic_entry_diff(None, &new_path, tmp.path());
+
+    assert_eq!(
+        on_root.entry_names(),
+        vec!["made"],
+        "the create's own volume gains the row"
+    );
+    assert!(
+        on_other.entry_names().is_empty(),
+        "a pane on another volume showing the same path stays untouched"
+    );
+}

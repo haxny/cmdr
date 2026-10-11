@@ -494,6 +494,10 @@ both gain it). This path has no `has_app` gate, so the cell runs in the test bin
 **DONE.** The cell red then green; `create.rs` no longer names `find_listings_for_path`; lanes: `desktop-rust-tests`,
 `desktop-rust-clippy`.
 
+Executor note: the fix left the volume-less wrapper `find_listings_for_path` with no production caller, so it went (dead
+code fails clippy); its tests call `find_listings_for_path_on_volume(None, …)`, which `listing_watch_coverage` already
+used. Public API's `listings_for_local_path` replaces that `None` form.
+
 ### M0: Characterize what the seams will cut through
 
 **Scope.** Tests only, app-side, against today's code. One allowed production change: extracting the side-effect half of

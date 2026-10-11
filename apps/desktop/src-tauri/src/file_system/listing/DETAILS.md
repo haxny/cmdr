@@ -153,7 +153,7 @@ Three failure modes follow, and `caching_test_support.rs` closes all three:
 - **Leaks on a failed assertion.** A hand-rolled `cache.remove(...)` placed after the assertions never runs when one
   fails, so the entry stays visible to every later test. `TestListingGuard`'s `Drop` tears down through the production
   `list_directory_end` (entry, watcher, and pending coalesced diff together), and `Drop` runs on unwind.
-- **Cache-wide assertions.** `find_listings_for_path`, `find_listings_on_volume`, and the orphan sweep all scan the
+- **Cache-wide assertions.** `find_listings_for_path_on_volume`, `find_listings_on_volume`, and the orphan sweep all scan the
   whole map, so a shared path or volume id makes a count assertion depend on what else is running. Those tests derive a
   unique path / volume id per test. For the sweep, `reap_orphaned_listings_at_for(now, window, only)` restricts the
   wired teardown to the ids the test owns; production keeps calling the unrestricted `reap_orphaned_listings_at`.
@@ -548,10 +548,8 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
 
 Used by the watcher's incremental path and synthetic mkdir to patch listings without full re-reads:
 
-- `find_listings_for_path(path)`: all listing IDs whose directory matches the path (multiple panes/tabs may show the
-  same directory).
-- `find_listings_for_path_on_volume(volume_id, path)`: same, also filtered by volume ID. Prevents false matches when two
-  volumes serve overlapping paths.
+- `find_listings_for_path_on_volume(volume_id, path)`: all listing IDs whose directory matches the path on that volume
+  (multiple panes/tabs may show the same directory). `None` matches verbatim across every volume (below).
 - `try_get_authoritative_listing(volume_id, path)`: the fresh-listing oracle for write-op pre-flight scans and the
   look-alike check before a new name (`write_operations/look_alike.rs`). Returns
   `Some(entries)` when a cached listing exists for `(volume_id, path)` and `listing_watch_coverage(path) == WatchCoverage::EveryWriter`
@@ -595,8 +593,10 @@ ERR-46A6B, v0.44.0). MTP canonicalizes to the inner spelling because its rows, t
 use it. ADB, SFTP, and WebDAV rows carry their full app URL, and SMB, archive, and git-portal rows share their root's
 spelling, so they keep the default. Pinned by `mtp_listing_path_test.rs`.
 
-`find_listings_for_path(parent_path)` has no volume id and compares verbatim; only local callers use it, and a local
-path has one spelling.
+`find_listings_for_path_on_volume(None, parent_path)` has no volume id and compares verbatim across EVERY volume, so a remote pane showing the same path string matches too. Only
+`LocalPosixVolume::listing_watch_coverage` relies on it, because the volume doesn't know its own id. A caller that knows
+its volume passes it: the create op's synthetic row (`write_operations/create.rs`) once landed in an SFTP pane showing a
+remote `/tmp` beside a local one.
 
 ## A pane path the volume stores another way (`foreign_path.rs`)
 

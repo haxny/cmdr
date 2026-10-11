@@ -3,9 +3,8 @@
 use std::path::PathBuf;
 
 use super::caching::{
-    apply_tags_to_listing, carry_forward_tags, find_listings_for_path, find_listings_for_path_on_volume, has_entry,
-    insert_entry_sorted, notify_added, notify_removed, remove_entries_by_paths, remove_entry_by_name,
-    update_entry_sorted,
+    apply_tags_to_listing, carry_forward_tags, find_listings_for_path_on_volume, has_entry, insert_entry_sorted,
+    notify_added, notify_removed, remove_entries_by_paths, remove_entry_by_name, update_entry_sorted,
 };
 use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
 use super::diff::PaneRows;
@@ -81,18 +80,18 @@ fn insert_test_listing_on_volume(
 }
 
 // ============================================================================
-// find_listings_for_path tests
+// find_listings_for_path_on_volume(None, …) tests (the volume-less match)
 // ============================================================================
 
 #[test]
 fn test_find_listings_for_path_zero_matches() {
-    let results = find_listings_for_path(&PathBuf::from("/nonexistent/path"));
+    let results = find_listings_for_path_on_volume(None, &PathBuf::from("/nonexistent/path"));
     assert!(results.is_empty());
 }
 
 #[test]
 fn test_find_listings_for_path_one_match() {
-    // A path unique to this test: `find_listings_for_path` searches the whole
+    // A path unique to this test: the volume-less lookup searches the whole
     // process-global cache, so a shared path would also match a sibling test's
     // listing and break the count assertion.
     let path = format!("/home/user/{}", unique_test_id("find-1match"));
@@ -105,7 +104,7 @@ fn test_find_listings_for_path_one_match() {
         vec![],
     );
 
-    let results = find_listings_for_path(&PathBuf::from(&path));
+    let results = find_listings_for_path_on_volume(None, &PathBuf::from(&path));
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].0, listing.id());
     assert_eq!(results[0].1, SortColumn::Name);
@@ -135,7 +134,7 @@ fn test_find_listings_for_path_two_matches() {
         vec![],
     );
 
-    let results = find_listings_for_path(&PathBuf::from(&path));
+    let results = find_listings_for_path_on_volume(None, &PathBuf::from(&path));
     assert_eq!(results.len(), 2);
 
     // Both IDs should be present (order unspecified since HashMap is unordered)

@@ -469,8 +469,9 @@ pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
 /// `pub(super)` so the sibling paste-clipboard writer reuses it (see
 /// `should_emit_synthetic_diff`).
 pub(super) fn emit_synthetic_entry_diff(volume_id: Option<&str>, entry_path: &Path, parent_path: &Path) {
+    use crate::file_system::listing::caching::find_listings_for_path_on_volume;
+    use crate::file_system::listing::insert_entry_sorted;
     use crate::file_system::listing::reading::get_single_entry;
-    use crate::file_system::listing::{find_listings_for_path, insert_entry_sorted};
 
     // 1. Construct a FileEntry for the new entry
     let mut entry = match get_single_entry(entry_path) {
@@ -486,8 +487,11 @@ pub(super) fn emit_synthetic_entry_diff(volume_id: Option<&str>, entry_path: &Pa
     let volume_id = volume_id.unwrap_or(cmdr_index::ROOT_VOLUME_ID);
     crate::index_host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
 
-    // 3. Find affected listings
-    let listings = find_listings_for_path(parent_path);
+    // 3. Find the listings on the create's own volume. A pane on another volume
+    // that shows the same path string (an SFTP pane on a remote `/tmp`) holds a
+    // different directory; a local pane on another volume id gets the entry from
+    // its own watch.
+    let listings = find_listings_for_path_on_volume(Some(volume_id), parent_path);
     if listings.is_empty() {
         return;
     }

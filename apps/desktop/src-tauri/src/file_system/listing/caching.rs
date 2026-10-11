@@ -50,22 +50,15 @@ pub fn snapshot_listings() -> Vec<ListingSummary> {
     out
 }
 
-/// Finds all cached listings whose directory path matches `parent_path`.
+/// Finds all cached listings whose directory is `parent_path` on `volume_id`,
+/// matching `parent_path` in that volume's one spelling ([`ListingPath`]).
 ///
-/// When `volume_id` is `Some`, also filters by volume. This prevents false matches
-/// when two volumes serve overlapping paths.
+/// With `volume_id` `None` the path compares verbatim across EVERY volume, so a
+/// remote pane showing the same path string matches too. Only a local caller
+/// that doesn't know its own volume id may rely on that.
 ///
 /// Returns `(listing_id, sort_by, sort_order, directory_sort_mode)` for each match.
 /// Typically 0 (no pane showing that dir), 1, or 2 (both panes showing the same dir).
-pub fn find_listings_for_path(parent_path: &Path) -> Vec<(String, SortColumn, SortOrder, DirectorySortMode)> {
-    find_listings_for_path_on_volume(None, parent_path)
-}
-
-/// Like `find_listings_for_path`, but also filters by `volume_id`, matching
-/// `parent_path` in that volume's one spelling ([`ListingPath`]).
-///
-/// With `volume_id` `None` the path compares verbatim, which only a local caller
-/// may rely on: a local path has one spelling.
 pub fn find_listings_for_path_on_volume(
     volume_id: Option<&str>,
     parent_path: &Path,
