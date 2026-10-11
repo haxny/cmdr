@@ -35,6 +35,11 @@ later WASM build harder for free.
   `NameCollator` data) stay where they are; neither is listing state.
 - **A seam is called per read or per mutation, never per entry** (`crates/cmdr-fs/src/volume/host/CLAUDE.md` § "The
   dispatch rule"). Hoist and batch: `ListingIndex::enrich` takes a slice.
+- **No seam, observer, or overlay is called while an engine lock is held**, and a closure the API runs under the cache
+  lock (`with_rows`, `folder_entries_named`, `entries_named`, `update_index_sizes`) must not call back into `Listings`.
+  Today's code already honors this (`listing_lifecycle::snapshot`, enrich outside the lock), and the index-size observer
+  READS the cache from inside `listing_opened`, so a call under the write lock would deadlock on the first open. Resolve
+  the collator (`ReadingLocale`) and the scratch visibility BEFORE taking the cache lock and pass them in as values.
 - **Event payload types, their `tauri_specta` derives, and every English word stay app-side.** The engine reports typed
   facts; the app decides what the user sees. `index-crate-isolation` forbids `tauri-specta` in the crate anyway.
 - **Never a bare `cd`** in an executor (it moves every agent). Use `git -C` or `(cd /abs && …)`, foreground only.
@@ -47,8 +52,10 @@ later WASM build harder for free.
 1. **The engine becomes a handle, `cmdr_listing::Listings`**, built by `Listings::builder()`, cloned cheaply (`Arc`
    inside), held app-side in a `OnceLock` behind `listing_host::listings()`, exactly the `index_host::index()` shape.
    The alternative, keeping `LISTING_CACHE` and the five other statics as crate statics, would be a smaller diff and the
-   wrong end state: it keeps every test serialized behind `TestListingGuard`, keeps the cache global for any future
-   consumer, and contradicts the module's own "new listing state hangs off a struct" rule.
+   wrong end state: it keeps every test sharing one cache (unique ids, scoped reaper sweeps, and the `ShowTempsGuard`
+   mutex that serializes every scratch-visibility test), keeps the cache global for any future consumer, and contradicts
+   the module's own "new listing state hangs off a struct" rule. (`TestListingGuard` itself is RAII teardown, not a
+   lock.)
 2. **The seams are eight small traits in `cmdr_listing::host`** (§ "Seam design"), mirroring `cmdr-index`'s
    `indexing/host/`, not one fat `ListingHost` trait. Each one answers one question, degrades to a no-op, and carries a
    recording fake under the `testing` feature.
@@ -110,13 +117,20 @@ Sizes: 7,706 lines of production code in 28 non-test files, 9,879 lines of tests
   `caching.rs`, `diff_emitter.rs`, `foreign_path.rs`): **(c)** the watcher becomes a `ListingObserver`; its `app_handle`
   uses become `ListingEvents`.
 - `priority::foreground::lease_foreground_on` (`streaming.rs`): **(c)** `ForegroundLeases`.
-- `intl::active_locale` (`collation.rs`): **(c)** `ReadingLocale`.
+- `intl::active_locale` (`collation.rs`): **(c)** `ReadingLocale`. ❗ `entry_comparator` is NOT pure today: it calls
+  `active_collator()` inside, as does `sort_entries`. Both gain an explicit `&NameCollator` parameter, and every
+  internal caller (`insert_entry_sorted`, `update_entry_sorted`, resort, `CachedListing` replace) resolves it from the
+  handle before taking the cache lock. `commands/search.rs` passes `listings().collator()`.
 - `volumes::mount_type_and_source_for` (macOS), `file_system::linux_mounts::mount_entry_for_path` (Linux)
   (`stalled_on.rs`): **(c)** `MountTable`. `file_system::index_provider::mount_is_local_disk` is a pure string
   allowlist: **(b)** `cmdr_fs::filesystem_kind`.
 - `file_system::staging::{show_staging_temps, show_safe_save_files, could_be_hidden_from_listings, hidden_with_settings}`
   (`visible_rows.rs`): the pure name rules **(b)** `cmdr_fs::staging`; the two user settings become engine state
-  (`Listings::set_scratch_visibility`), which the app's settings live-apply calls.
+  (`Listings::set_scratch_visibility`), which the app's settings live-apply calls. ❗ `ScratchProjection::for_entries`
+  and the drift checks are methods on `CachedListing` / `VisibleRows` that read the globals today, including from
+  `CachedListing::new` OUTSIDE the cache lock; they take a `Copy` `ScratchVisibility` argument instead, read once per
+  operation from the handle. `CachedListing` never holds a back-reference to the engine. Drift stays lazy
+  (`reconciled_cache` passes the current value), exactly as today.
 - `analytics::events::capture`, `mcp::listing_errors::record` ×2, `restricted_paths::{record_denial, clear_path}`
   (`streaming.rs`): **(c)** the app's `ListingEvents` adapter.
 - `font_metrics::calculate_max_width_with_suffixes` (`brief_columns.rs`): `brief_columns.rs` stays in the app.
@@ -162,6 +176,19 @@ answer:
   `mcp/executor/tags.rs` (`apply_tags_to_listing`), `mcp/resources/mod.rs` and `priority/host_policy.rs`
   (`snapshot_listings`), `agent/tools/read/pane_listing.rs` (`get_cached_listing`),
   `file_system/write_operations/types.rs` (`SortColumn`, `SortOrder`).
+- **Missed by the first survey (review round 1):**
+  - `write_operations/create.rs::emit_synthetic_entry_diff` (production, also the paste writer): stats the new entry,
+    enriches it itself, then `find_listings_for_path` (volume-LESS) + `insert_entry_sorted` per listing. It bypasses the
+    composer (no index apply, no badge invalidation) and `notify_added`'s upsert. M4a maps it explicitly; see M4a.
+  - `commands/e2e.rs::flush_file_watcher` → `watcher::flush_all_watchers` → `handle_directory_change` per watch, then
+    `diff_emitter::flush_all_pending`. E2E relies on the re-read having LANDED when it returns (behavior change 3).
+  - `commands/settings.rs::set_show_virtual_git_portal` → git wiring's refresh; its "async is load-bearing because
+    `notify_directory_changed` calls `tokio::spawn`" comment goes stale once spawns use the injected runtime (M2a
+    updates it).
+  - `listing/listing_host.rs` (`AppListings`, the backends' `cmdr_fs` `ListingHost`) collides by name with the new app
+    module `crate::listing_host`. M2a moves it in as `crate::listing_host::backends`.
+  - Test-support users outside `listing/`: `volume/manager/git_routing.rs` (`WatchCoverageVolume`),
+    `volume/mount_registration.rs` (`unique_test_id`), `file_system/tags.rs` (`list_directory_core`, moves with M1).
 - **Tests outside `listing/` that drive the engine:** `adb/volume_wiring_test.rs`, `server_volumes_test.rs`,
   `file_system/volume/inmemory_test.rs` (`STREAMING_STATE`, `read_directory_with_progress`), and about 20 files using
   `caching_test_support::{TestListing, TestListingGuard, unique_test_id, WatchCoverageVolume}`.
@@ -231,7 +258,7 @@ exists so the IPC pass-throughs read one-to-one.
   index-size and multi-rename readers (by name, never by position).
 - **Housekeeping:** `start_orphan_reaper()`, `collator() -> Arc<NameCollator>` (for search's sort),
   `flush_pending_diffs()` behind the `playwright-e2e` feature.
-- **Pure functions at the root:** `entry_comparator`, `SortableEntry`, `stored_spellings(volume, paths)`.
+- **Pure functions at the root:** `entry_comparator(collator, …)`, `SortableEntry`, `stored_spellings(volume, paths)`.
 - **Types at the root:** `Listings`, `ListingsBuilder`, `ListingRequest`, `SortColumn`, `SortOrder`,
   `DirectorySortMode`, `NameCollator`, `VisibleRows`, `DirectoryDiffBatch`, `DiffChange`, `DiffChangeType`,
   `ListingLookupError`, `ListingStats`, `ResortResult`, `RowBeside`, `SelectionSnapshot`, `NameFilterResult`,
@@ -272,9 +299,13 @@ fake under `testing`.
 4. **`ListingOverlay`: rows a pane sees that no volume holds.** Today's trait, unchanged in shape, moved in. Builder
    input `.overlay(Arc<dyn ListingOverlay>)`, in registration order. App: the git portal's `GitPortalOverlay`.
 5. **`ListingObserver`: what keeps something alive while a pane shows a directory.** Today's `ListingLifecycle`, renamed
-   for the crate's vocabulary. Builder input `.observer(…)`, called in registration order on open (after the cache
-   insert) and close (after the cache removal). App, in this order: the FSEvents watcher (arms only when
-   `volume.can_watch_listings()`), the git portal's `GitPortalListings`, `listing_index_sizes`' `IndexSizeListings`.
+   for the crate's vocabulary. Builder input `.observer(…)`, called in registration order, outside every engine lock, on
+   open (after the cache insert, and after the respell kick-off in the streaming path, as today) and close (after the
+   cache removal). App, in this order: the FSEvents watcher (arms only when `volume.can_watch_listings()`), the git
+   portal's `GitPortalListings`, `listing_index_sizes`' `IndexSizeListings`. ❗ `listing_opened` receives the listing's
+   `volume_id` and stored `ListingPath` spelling alongside the volume: `IndexSizeListings` reads both back out of
+   `LISTING_CACHE` today, and through a handle that reach would have to go via `listing_host::listings()`, which in a
+   test engine is the WRONG engine. Passing the facts makes the reach unnecessary.
 6. **`ForegroundLeases`: the user is waiting on this volume.** `hold(volume_id) -> ForegroundHold`, where
    `ForegroundHold` is a `#[must_use]` RAII box. App: `AppLeases` over `priority::foreground::lease_foreground_on`.
    Default: a hold that holds nothing. The engine stores the hold inside its `ReadSession` (M3b), so "never bind it to
@@ -301,12 +332,28 @@ Each one lands as its own commit with a red test first, and the commit body name
 2. **The FSEvents watch disarms after the cache removal, not before**, because it's now an observer. Safe for the same
    reason the existing close-after-removal rule exists: `arm_and_reconcile` already reconciles against membership, and
    an event landing in the gap finds no listing.
-3. **The watcher's full re-read (⌘R, the post-operation top-up, the over-500 and unknown-kind fallback) takes the
-   per-directory refresh turnstile.** Today it doesn't, so it can interleave with a `FullRefresh` of the same directory
-   and land an older read last, which is exactly what `notify_full_refresh`'s turnstile exists to stop. A fix, not a
-   refactor necessity; the reviewer may veto it, in which case `refresh` keeps today's unserialized path.
-4. **A backend's `Replaced` re-read goes through the one pipeline step**, so the overlays are asked whether they apply.
-   None applies to a device backend today, so the stored count stays zero; M0 pins that.
+3. **No full re-read of a listing can land after a newer one already did.** Today the watcher's re-read (⌘R, the
+   post-operation top-up, the over-500 / unknown-kind / root-identity fallbacks, `flush_file_watcher`) skips the
+   per-directory turnstile, so it can interleave with a `FullRefresh` or a respell and land an older read last. ❌ Don't
+   fix it by putting `refresh` through the turnstile (the first draft did); review round 1 found three breaks: (a)
+   `notify_full_refresh` RETURNS EARLY when the waiting berth is taken, so an awaited `refresh` would return before its
+   read landed and `flush_file_watcher` (E2E) would go flaky; (b) a turn held by a read that stalled on a dead mount is
+   held forever (invariant 9: never aborted), so after `note_root_failure` moves the volume, ⌘R would queue behind the
+   corpse instead of reading through the recovered mount; (c) the turnstile keys on the notifier's raw `parent_path`,
+   while the watcher and respell key on the listing's `ListingPath`, which differ for MTP (`mtp://…` vs `/DCIM`), so the
+   two would not even share a slot. **Instead:** every full re-read (FullRefresh, respell, `refresh`,
+   `refresh_from_entries`, `Replaced`) takes a per-listing read generation from the handle at the moment it STARTS
+   reading, and the replace step drops the result under the cache write lock when a newer generation already published.
+   The turnstile stays for what it's good at (bounding a storm to two reads), unchanged. Red test: a slow `FullRefresh`
+   started first and a ⌘R started second that finishes first; the older read must not land. The reviewer may still veto,
+   in which case `refresh` keeps today's unserialized path.
+4. **A backend's `Replaced` re-read asks the overlays whether they apply.** ❗ The `Replaced` arm is SYNCHRONOUS today
+   (`notify_directory_changed` runs on the backend's thread) and `decorate` is async (`extra_entries` on the blocking
+   pool). Awaiting the full pipeline there would make the patch land later than an `Added` / `Removed` the same backend
+   sends right after it, reordering the cache. So `Replaced` checks the sync, zero-I/O `applies_to` of each overlay:
+   none applies (every device backend today, which M0 pins as a stored count of zero) → `Prepared::without_overlays`,
+   applied synchronously exactly as today; one applies → escalate to a spawned full re-read of that directory instead of
+   decorating in place. Red test for the escalation branch with a test overlay that applies to an in-memory volume.
 
 ## Milestones
 
@@ -336,6 +383,14 @@ plain function both call, so a test can drive it without an `AppHandle`. Zero be
 - A golden ordering for a fixed corpus (NFC and NFD spellings of one name, numerics, `_` prefixes, case pairs) under two
   locales, so the collator's move from a global to an injected locale is provably identical.
 - The documented "three read paths" in `listing/CLAUDE.md` becomes five in the docs, since the survey found two more.
+- A listing opened in the TEST binary arms a watch on a watchable volume (today unconditional, through
+  `start_watching_detached`), so M2a's observer move can't silently drop arming from the tests that depend on it
+  (`local_posix_test::test_listing_watch_coverage_flips_with_watcher_lifecycle`, `caching_reaper_test`,
+  `archive_watch_integration_test`).
+- `flush_all_watchers` returns only after every listing's re-read landed in the cache.
+- `emit_synthetic_entry_diff` on a path the listing already holds emits nothing (today's `insert_entry_sorted` duplicate
+  guard), so M4a's re-route either keeps that or names a fifth behavior change.
+- Poison: none. Don't pin poisoned-lock behavior; M3a changes it deliberately (see there).
 
 **Landmines.** `analytics::events::capture` may have no test observer; if it doesn't, pin the category string the
 extracted function computes rather than adding a global hook. Use the existing `CollectorListingEventSink`; don't build
@@ -392,6 +447,7 @@ used: accessors resolve a slot today and become handle fields in M3a with no cal
   `volume_host::install`), passing the git overlay, then the observers in order: the watcher, git arming, index sizes.
   `git::overlay::register`, `git::arming::register`, and `listing_index_sizes::start`'s registration call become
   constructors handed to `install`.
+- `listing/listing_host.rs` (`AppListings`) moves to `crate::listing_host::backends`, so there is one `listing_host`.
 - The watcher becomes an observer (behavior change 2, own commit, M0's close-ordering pin updated with the reason).
 - The `has_app` gate goes (behavior change 1, own commit).
 
@@ -399,10 +455,24 @@ used: accessors resolve a slot today and become handle fields in M3a with no cal
 
 **Landmines.** Removing the `has_app` gate makes `notify_directory_changed` live in the test binary for the first time:
 write-operation and local-backend tests that hold a `TestListing` on a directory they then mutate will start seeing
-patches. Run the whole `desktop-rust-tests` lane, and fix a test only by understanding what it asserted. Registration in
-tests (`overlay_refresh_test`, git `overlay_tests`, `arming_tests`) moves to installing a test host; keep it per test,
-never a second global. `install` must run before anything reads the slot: give the slot a fallback that wires the app
-adapters with no-op events (the shape `index()` uses), so tests that never install still resolve volumes.
+patches, and `FullRefresh` arms now spawn background re-reads onto the fallback runtime that can outlive their test. Run
+the whole `desktop-rust-tests` lane, and fix a test only by understanding what it asserted.
+
+- **Test registration stays global until M4b.** There is one process-wide slot in M2a, so a per-test host is not
+  possible yet: `overlay_refresh_test`, git `overlay_tests`, and `arming_tests` keep registering into the slot's lists
+  (first registration per id wins, as today). Per-test engines arrive with the handle.
+- **The fallback must include the watcher observer.** Today every listing on a watchable volume arms a watch with no
+  registration at all; if the test-binary fallback wires observers only when `install` runs, the M0 arming pin goes red,
+  or worse, a test that asserts "no watch" passes vacuously.
+- **A read before `install` must be loud, never a silent permanent fallback.** `index()` uses `get_or_init`, so an early
+  read wins the `OnceLock` forever and `install` can only log; for listings that would mean an engine whose events go
+  nowhere, and every pane would sit on "loading". In non-test builds, a read before `install` is a `log_error!` plus the
+  same report `index_host::install` makes; the event-less fallback exists only under `any(test, feature = "testing")`.
+- **Adapters resolve the app per call, never at construction.** `listing_host::install` runs before
+  `index_host::install` (line order in `lib.rs::setup`), so an adapter that captured `index()` at build would win
+  `INDEX`'s `OnceLock` with an unconfigured index. Same for the volume manager.
+- **Only the observer VALUES move to `install`.** `listing_index_sizes::start` keeps starting its worker where it does
+  today (it needs the `AppHandle` and its channel); `git::overlay::register` / `arming::register` become constructors.
 
 **Test plan.** M0's matrix passes unchanged against `TauriListingEvents`' reaction function. A new cell builds a host
 with `RecordingEvents` and checks the event sequence of a streaming listing end to end.
@@ -440,18 +510,31 @@ nothing else; lanes as M2a plus `desktop-rust-module-cycles` (slow) and `desktop
 **Scope.** Introduce `Listings` (an `Arc<Inner>`), `ListingsBuilder`, and `Listings::detached()`. Every static in the
 survey list becomes a field; the host slot becomes the handle's fields; every free function in `listing/` becomes a
 method or takes `&Inner`. `listing_host::install` builds the engine and stores it in a `OnceLock`;
-`listing_host::listings()` hands it out, falling back to the app-wired, event-less build like `index()` does. For
-callers outside `listing/` (and the tests), keep the old free functions as thin `pub(crate)` shims over
-`listing_host::listings()`, each marked `// shim: removed in M4b`.
+`listing_host::listings()` hands it out, falling back to the app-wired, event-less build only under
+`any(test, feature = "testing")` (M2a landmine: in the app a pre-`install` read is loud). For callers outside `listing/`
+(and the tests), keep the old free functions as thin `pub(crate)` shims over `listing_host::listings()`, each marked
+`// shim: removed in M4b`.
 
-**Intentions.** Mechanical de-static with zero behavior delta; the test suite stays as it is and passes through the
-shims.
+**Intentions.** Mechanical de-static with zero behavior delta outside a poisoned lock; the test suite stays as it is and
+passes through the shims.
 
 **Landmines.** Code inside `listing/` must use `self` / its `Inner`, never the app accessor: an engine method that
-reaches for the global would quietly work in the app and break for every other consumer. Lock-poison: convert each
-listing entry in `lock-poison-allowlist.json` to `*_ignore_poison` / `.expect` with a reason, and let the check shrink
-the allowlist to zero for these files. The orphan reaper's spawn moves to `Listings::start_orphan_reaper`, called from
-`lib.rs` where `start_orphan_listing_reaper` is today.
+reaches for the global would quietly work in the app and break for every other consumer.
+
+- **Lock-poison is the one deliberate delta here, and only on a poisoned lock.** The 22 allowlisted sites are
+  `.read().ok()?` / `if let Ok(..) = .write()` shapes that today SKIP their work on poison (the streaming insert
+  silently drops the listing, then emits `listing-complete` for it). Convert them all to `*_ignore_poison`, never
+  `.expect`: a panic would turn one poisoned cache into a crash on every later IPC. Name the change in the commit body;
+  healthy runs see no difference. Let the check shrink the allowlist to zero for these files.
+- **`start` registers the cancel token synchronously before it returns**, as `list_directory_start_streaming` does
+  today, so a `cancel` that follows immediately still finds the read.
+- **Background tasks must not keep the engine alive forever.** The orphan reaper's loop holds a `Weak<Inner>` and ends
+  when the upgrade fails; per-event tasks (the 50 ms diff flush, a refresh) may hold a strong `Arc` because they end.
+  Otherwise a dropped test engine leaks a reaper per test and the "two engines side by side" test can't show the first
+  one went away.
+- The orphan reaper's spawn moves to `Listings::start_orphan_reaper`, called from `lib.rs` where
+  `start_orphan_listing_reaper` is today. `reconciled_cache`'s `RwLockReadGuard<'static>` becomes a guard borrowed from
+  `&Inner`.
 
 **Test plan.** Whole suite green through the shims, unchanged. One new test builds two engines side by side and shows a
 listing in one is invisible to the other.
@@ -498,9 +581,12 @@ builds its `StreamingListingStartResult` app-side), `ipc.rs` registrations, `lis
 `commands/search.rs` (`collator()`), `agent/tools/read/pane_listing.rs`, and the watcher: `observe_children` replaces
 its incremental classification, `refresh` replaces `handle_directory_change`'s body (the watcher keeps the OS half:
 debounce, rebasing, the stat, the fallback decision, `directory-deleted`), and `refresh_from_entries` takes its
-`std::fs` fallback. Behavior change 3 lands here, own commit, red test first. `brief_columns.rs` moves to
-`font_metrics/brief_columns.rs` and reads rows through `with_rows`. Production shims are deleted; test-only shims stay
-`#[cfg(test)]`.
+`std::fs` fallback. `refresh` returns only once its read landed (or was superseded by a newer one), which
+`flush_all_watchers` and the ⌘R command's 2 s `TimedOut` wait both depend on. `create.rs::emit_synthetic_entry_diff`
+moves onto a panes-only intake call that keeps today's insert-if-absent semantics (M0's pin), or, if the executor routes
+it through `directory_changed`'s upsert, that is behavior change 5 and needs David's OK first. Behavior change 3 lands
+here, own commit, red test first. `brief_columns.rs` moves to `font_metrics/brief_columns.rs` and reads rows through
+`with_rows`. Production shims are deleted; test-only shims stay `#[cfg(test)]`.
 
 **Intentions.** Nothing outside `listing/` names a `listing::` path other than the re-export list.
 
@@ -600,7 +686,7 @@ Carried from `file_system/listing/CLAUDE.md` (where each now lives is M6's job):
    emitter coalesces transport only; indices are pane rows; scratch drift reconciles before mutation or guarded index
    consumption, then the expected revision is checked.
 3. Quick-filter changes share that revision and drop superseded batches under the cache write lock.
-4. Refreshes of one directory are serialized (and, after change 3, every full re-read is).
+4. Refreshes of one directory are serialized, and (after change 3) no full re-read lands after a newer one did.
 5. Overlay rows are folded in between enrich and sort on every read path, and a decorated listing never answers the
    fresh-listing oracle.
 6. Observers hear a close after the cache removal.
@@ -627,3 +713,31 @@ Added by this refactor:
 21. `index → badges → panes` is the order every directory change is applied in, owned by the app's composer.
 22. Observers run in registration order: the FSEvents watcher, the git portal, index sizes.
 23. Gate behavior on `any(test, feature = "testing")`, never `cfg(test)` alone.
+24. No seam, observer, or overlay runs under an engine lock; closures run under the cache lock never re-enter
+    `Listings`.
+25. Background loops hold the engine weakly; a dropped `Listings` stops its reaper.
+
+## Review round 1 (correctness and behavior preservation)
+
+- Loud rules: added "no seam/observer/overlay under an engine lock; API closures never re-enter" (the index-size
+  observer reads the cache from `listing_opened`).
+- Decision 1: corrected the claim that `TestListingGuard` serializes tests; `ShowTempsGuard` is the real serializer.
+- Survey: scratch visibility is read inside `CachedListing` methods (even outside the lock), so it becomes a passed
+  `Copy` value; `entry_comparator` / `sort_entries` aren't pure (they call `active_collator()`), so they take
+  `&NameCollator`.
+- Survey: added missed callers (`create.rs` synthetic diff, `commands/e2e.rs` flush, `commands/settings.rs` comment, the
+  `listing_host` name collision, three test-support users).
+- Seam 5: observers run outside locks and receive volume id + stored path, so `IndexSizeListings` stops reaching back
+  into a possibly wrong engine.
+- Behavior change 3: replaced "take the turnstile" (early return breaks E2E flush, a stalled read blocks ⌘R forever, raw
+  vs `ListingPath` keys differ on MTP) with a per-listing read generation checked at replace time.
+- Behavior change 4: `Replaced` is synchronous and `decorate` async; it now gates on sync `applies_to` and escalates to
+  a re-read instead of reordering patches.
+- M0: added pins for test-binary watch arming, `flush_all_watchers` landing, and the synthetic-diff duplicate guard.
+- M2a: test registration stays global until M4b; the fallback includes the watcher observer; a pre-`install` read is
+  loud and test-only; adapters resolve `index()` per call; only observer values move to `install`; `AppListings` moves
+  into `crate::listing_host::backends`.
+- M3a: lock-poison conversion is a named poisoned-state delta (`*_ignore_poison`, never `.expect`); `start` registers
+  its cancel token synchronously; the reaper holds `Weak<Inner>`.
+- M4a: `refresh` returns only after its read landed; the synthetic-diff re-route keeps insert-if-absent or asks first.
+- Invariants: 4 reworded for the generation check; added 24 and 25.
