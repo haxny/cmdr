@@ -4,7 +4,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- Read: **streaming.rs** (its end's app bookkeeping: **listing_end.rs**), **stall.rs**. Cache and
+- Read: **streaming.rs**, **stall.rs**. Seams the app answers: **host/** (events, runtime, …). Cache and
   mutate: **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**,
   **path_index.rs**, **name_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
   `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
@@ -32,7 +32,8 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 - ❌ **A listing never aborts a read**, on cancel or when a retry wins: detaching lets it unwind; aborting wedges an
   MTP phone. A read quiet for `stall_after` emits `listing-stalled` and keeps waiting, ❌ never a deadline that ends
   it. `DETAILS.md` § "Stalled listings".
-- **FullRefresh goes through `caching::spawn_full_refresh`**: on a watcher's OS thread a bare `tokio::spawn` panics.
+- **Every spawn goes through `host::runtime()`** (FullRefresh via `caching::spawn_full_refresh`): on a watcher's OS
+  thread a bare `tokio::spawn` panics.
 - **Sorting has ONE comparator**, `entry_comparator` over `SortableEntry` (`FileEntry` plus a search-results row). ❌
   Never add a second. A sort change invalidates the frontend's cached range, so bump `cacheGeneration`.
 - **Names rank by Unicode collation (`collation.rs`), ❌ never code points or `to_lowercase`** (macOS holds NFC and NFD

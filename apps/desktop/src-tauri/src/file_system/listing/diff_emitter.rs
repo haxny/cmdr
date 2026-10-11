@@ -6,13 +6,12 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 
-use tauri_specta::Event as _;
-
 #[cfg(test)]
 use crate::file_system::listing::diff::DiffChange;
-use crate::file_system::listing::diff::{DirectoryDiff, DirectoryDiffBatch};
-use crate::file_system::watcher::WATCHER_MANAGER;
-use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use crate::file_system::listing::diff::DirectoryDiffBatch;
+use crate::file_system::listing::host;
+use crate::file_system::listing::listing_id::ListingId;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 const FLUSH_WINDOW_MS: u64 = 50;
 
@@ -42,7 +41,7 @@ pub(crate) fn enqueue_diff(listing_id: &str, batch: DirectoryDiffBatch) {
     };
     if needs_schedule {
         let lid = listing_id.to_string();
-        tauri::async_runtime::spawn(async move {
+        host::runtime().spawn(async move {
             tokio::time::sleep(Duration::from_millis(FLUSH_WINDOW_MS)).await;
             flush(&lid);
         });
@@ -68,15 +67,7 @@ fn flush(listing_id: &str) {
     if batches.is_empty() {
         return;
     }
-    let app_handle = WATCHER_MANAGER.read_ignore_poison().app_handle.clone();
-    let Some(app) = app_handle else { return };
-    let diff = DirectoryDiff {
-        listing_id: listing_id.to_string(),
-        batches,
-    };
-    if let Err(e) = diff.emit(&app) {
-        log::warn!("diff_emitter: couldn't emit batched event: {}", e);
-    }
+    host::events().diff(&ListingId::new(listing_id), batches);
 }
 
 #[cfg(feature = "playwright-e2e")]

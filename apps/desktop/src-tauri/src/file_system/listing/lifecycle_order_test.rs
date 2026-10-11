@@ -21,15 +21,15 @@ use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_end;
 use super::seam_test_support::{Heard, heard, record_lifecycle_of};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use super::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use super::streaming::{StreamingListingState, read_directory_with_progress};
+use crate::file_system::listing::host::ListingEvents;
+use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::InMemoryVolume;
 
 async fn stream(listing_id: &str, volume_id: &str, path: &Path) {
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     read_directory_with_progress(
         &events,
         listing_id,

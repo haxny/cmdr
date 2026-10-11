@@ -450,9 +450,9 @@ pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: Dir
     }
 
     // Skip if no AppHandle is registered yet (test or pre-init context): every arm
-    // below ends in `enqueue_diff`, whose coalesced flush needs the handle to emit,
-    // so the whole re-read would be wasted work. This says nothing about async
-    // context — see `spawn_full_refresh` for why the runtime is resolved globally.
+    // below ends in `enqueue_diff`, whose coalesced flush has nobody to tell, so
+    // the whole re-read would be wasted work. This says nothing about async
+    // context — see `spawn_full_refresh` for how the runtime is resolved.
     let has_app = WATCHER_MANAGER.read().ok().and_then(|m| m.app_handle.clone()).is_some();
     if !has_app {
         return;
@@ -563,20 +563,20 @@ fn notify_modified(listing_id: &str, mut entry: FileEntry) {
     let _ = update_entry_sorted(listing_id, entry);
 }
 
-/// Dispatches a `FullRefresh` re-read onto Tauri's global async runtime.
+/// Dispatches a `FullRefresh` re-read onto the host's runtime.
 ///
 /// Every `FullRefresh` producer (the notify-rs debouncer, the git watcher, the SMB
 /// and MTP watcher threads) runs on a plain OS thread with no Tokio runtime in
 /// thread-local context, so a bare `tokio::spawn` panics with "there is no reactor
-/// running" and takes the app down. `tauri::async_runtime::spawn` resolves the
-/// process-global runtime instead of a thread-local one, so it works from any
-/// thread. Same rule as `file_system::watcher` and `cmdr_archive::watch`.
+/// running" and takes the app down. `host::runtime()` RESOLVES the injected
+/// runtime instead of inheriting a thread-local one, so it works from any thread.
+/// Same rule as `file_system::watcher` and `cmdr_archive::watch`.
 pub(super) fn spawn_full_refresh(
     volume_id: String,
     parent_path: PathBuf,
     listings: Vec<(String, SortColumn, SortOrder, DirectorySortMode)>,
 ) {
-    tauri::async_runtime::spawn(notify_full_refresh(volume_id, parent_path, listings));
+    crate::file_system::listing::host::runtime().spawn(notify_full_refresh(volume_id, parent_path, listings));
 }
 
 /// One directory's refresh turnstile: an async lock plus a flag saying whether a

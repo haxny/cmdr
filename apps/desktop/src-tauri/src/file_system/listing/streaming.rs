@@ -1,29 +1,23 @@
 //! Streaming directory listing: types, state, and async implementation.
 //!
 //! Provides non-blocking directory reading with progress events and cancellation.
-//! The implementation spawns background tasks and emits Tauri events.
+//! The read runs on the host's runtime and reports through the `ListingEvents`
+//! seam (`host/`); the host turns those facts into what the pane sees.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, LazyLock, RwLock};
-use tauri_specta::Event;
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
-pub(crate) use crate::file_system::listing::listing_end::ListingEventSink;
-use crate::file_system::listing::listing_end::{
-    AppListingEndEffects, error_analytics_category, finish_streaming_listing,
-};
+use crate::file_system::listing::host::{self, ListingEnd, ListingEvents};
+use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
-use crate::file_system::listing::stalled_on::StalledOn;
 use crate::file_system::watcher::start_watching_detached;
 use cmdr_fs::benchmark;
-#[cfg(test)]
-use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::friendly_error::{ListingError, listing_error_for_restricted_empty_root};
 use cmdr_fs::volume::{Volume, VolumeError};
 
 // ============================================================================
@@ -47,84 +41,6 @@ pub struct StreamingListingStartResult {
     pub listing_id: String,
     /// Always `Loading`.
     pub status: ListingStatus,
-}
-
-/// Progress event payload
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-progress")]
-pub struct ListingProgressEvent {
-    pub listing_id: String,
-    pub loaded_count: usize,
-}
-
-/// Completion event payload
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-complete")]
-pub struct ListingCompleteEvent {
-    pub listing_id: String,
-    pub total_count: usize,
-    /// Root path of the volume this listing belongs to
-    pub volume_root: String,
-    /// The directory in its volume's own spelling, when that differs from the
-    /// path the listing was asked for: a foreign path (typed, restored, carried
-    /// over from the kernel mount) that a byte-exact volume stores under another
-    /// spelling (`foreign_path.rs`). The pane adopts it, so its tab, history, and
-    /// every child path carry the stored bytes. `None` for a path that listed as
-    /// given, which is nearly every listing.
-    pub stored_path: Option<String>,
-}
-
-/// Error event payload
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-error")]
-pub struct ListingErrorEvent {
-    pub listing_id: String,
-    /// Raw message kept for the FE's non-display logic (MTP fallback, deleted-path
-    /// detection); the user-facing copy is rendered from `error`.
-    pub message: String,
-    /// Typed, word-free classification when available. `None` for internal errors
-    /// (task panics). The FE renders all copy from this.
-    pub error: Option<ListingError>,
-}
-
-/// Cancelled event payload
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-cancelled")]
-pub struct ListingCancelledEvent {
-    pub listing_id: String,
-}
-
-/// Read-complete event payload (emitted when read_dir finishes, before sorting/caching)
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-read-complete")]
-pub struct ListingReadCompleteEvent {
-    pub listing_id: String,
-    pub total_count: usize,
-}
-
-/// Opening event payload (emitted just before read_dir starts - the slow part for network folders)
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-opening")]
-pub struct ListingOpeningEvent {
-    pub listing_id: String,
-}
-
-/// Stalled event payload: the read has gone `StallPolicy::stall_after` without
-/// a new entry. The listing keeps waiting and retrying (`stall.rs`); a later
-/// progress, complete, error, or cancelled event for the same id supersedes it.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-stalled")]
-pub struct ListingStalledEvent {
-    pub listing_id: String,
-    /// What the folder lives on, which picks the screen's wording (`stalled_on.rs`).
-    pub stalled_on: StalledOn,
 }
 
 /// State for an in-progress streaming listing
@@ -156,192 +72,20 @@ impl StreamingListingState {
 pub(crate) static STREAMING_STATE: LazyLock<RwLock<HashMap<String, Arc<StreamingListingState>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-/// Tauri-backed listing event sink: calls `app.emit()` for each event.
-pub(crate) struct TauriListingEventSink {
-    app: tauri::AppHandle,
-}
-
-impl TauriListingEventSink {
-    pub(crate) fn new(app: tauri::AppHandle) -> Self {
-        Self { app }
-    }
-}
-
-impl ListingEventSink for TauriListingEventSink {
-    fn emit_opening(&self, listing_id: &str) {
-        let _ = ListingOpeningEvent {
-            listing_id: listing_id.to_string(),
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn) {
-        let _ = ListingStalledEvent {
-            listing_id: listing_id.to_string(),
-            stalled_on,
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize) {
-        let _ = ListingProgressEvent {
-            listing_id: listing_id.to_string(),
-            loaded_count,
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_read_complete(&self, listing_id: &str, total_count: usize) {
-        let _ = ListingReadCompleteEvent {
-            listing_id: listing_id.to_string(),
-            total_count,
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>) {
-        let _ = ListingCompleteEvent {
-            listing_id: listing_id.to_string(),
-            total_count,
-            volume_root,
-            stored_path,
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
-        // PII-free analytics: a listing failed with a categorized error. Only the
-        // category enum crosses; never the path, message, or any provider detail.
-        if let Some(category) = error_analytics_category(error.as_ref()) {
-            crate::analytics::events::capture("error_encountered", serde_json::json!({ "category": category }));
-        }
-        let _ = ListingErrorEvent {
-            listing_id: listing_id.to_string(),
-            message,
-            error,
-        }
-        .emit(&self.app);
-    }
-
-    fn emit_cancelled(&self, listing_id: &str) {
-        let _ = ListingCancelledEvent {
-            listing_id: listing_id.to_string(),
-        }
-        .emit(&self.app);
-    }
-}
-
-/// Test listing event sink: stores events for inspection.
-#[cfg(test)]
-pub(crate) struct CollectorListingEventSink {
-    pub opening: std::sync::Mutex<Vec<String>>,
-    pub stalled: std::sync::Mutex<Vec<(String, StalledOn)>>,
-    pub progress: std::sync::Mutex<Vec<(String, usize)>>,
-    pub read_complete: std::sync::Mutex<Vec<(String, usize)>>,
-    pub complete: std::sync::Mutex<Vec<(String, usize)>>,
-    /// Per completed listing, the stored spelling it reported (`None` = as asked).
-    pub stored_paths: std::sync::Mutex<Vec<(String, Option<String>)>>,
-    pub errors: std::sync::Mutex<Vec<(String, String)>>,
-    /// Per error, the typed classification it carried.
-    pub classified: std::sync::Mutex<Vec<(String, Option<ListingError>)>>,
-    pub cancelled: std::sync::Mutex<Vec<String>>,
-    /// Every event's kind (`"opening"`, `"progress"`, …), in emit order.
-    pub sequence: std::sync::Mutex<Vec<&'static str>>,
-}
-
-#[cfg(test)]
-impl CollectorListingEventSink {
-    pub fn new() -> Self {
-        Self {
-            opening: std::sync::Mutex::new(Vec::new()),
-            stalled: std::sync::Mutex::new(Vec::new()),
-            progress: std::sync::Mutex::new(Vec::new()),
-            read_complete: std::sync::Mutex::new(Vec::new()),
-            complete: std::sync::Mutex::new(Vec::new()),
-            stored_paths: std::sync::Mutex::new(Vec::new()),
-            errors: std::sync::Mutex::new(Vec::new()),
-            classified: std::sync::Mutex::new(Vec::new()),
-            cancelled: std::sync::Mutex::new(Vec::new()),
-            sequence: std::sync::Mutex::new(Vec::new()),
-        }
-    }
-
-    /// The kinds of every event so far, in emit order.
-    pub fn sequence(&self) -> Vec<&'static str> {
-        self.sequence.lock_ignore_poison().clone()
-    }
-
-    fn note(&self, kind: &'static str) {
-        self.sequence.lock_ignore_poison().push(kind);
-    }
-}
-
-#[cfg(test)]
-impl ListingEventSink for CollectorListingEventSink {
-    fn emit_opening(&self, listing_id: &str) {
-        self.note("opening");
-        self.opening.lock_ignore_poison().push(listing_id.to_string());
-    }
-
-    fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn) {
-        self.note("stalled");
-        self.stalled
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), stalled_on));
-    }
-
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize) {
-        self.note("progress");
-        self.progress
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), loaded_count));
-    }
-
-    fn emit_read_complete(&self, listing_id: &str, total_count: usize) {
-        self.note("read_complete");
-        self.read_complete
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), total_count));
-    }
-
-    fn emit_complete(&self, listing_id: &str, total_count: usize, _volume_root: String, stored_path: Option<String>) {
-        self.note("complete");
-        self.complete
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), total_count));
-        self.stored_paths
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), stored_path));
-    }
-
-    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
-        self.note("error");
-        self.errors.lock_ignore_poison().push((listing_id.to_string(), message));
-        self.classified
-            .lock_ignore_poison()
-            .push((listing_id.to_string(), error));
-    }
-
-    fn emit_cancelled(&self, listing_id: &str) {
-        self.note("cancelled");
-        self.cancelled.lock_ignore_poison().push(listing_id.to_string());
-    }
-}
-
 // ============================================================================
 // Streaming implementation
 // ============================================================================
 
-/// Starts a streaming directory listing that returns immediately and emits progress events.
+/// Starts a streaming directory listing that returns immediately and reports
+/// its progress through the installed `ListingEvents`.
 ///
-/// This is non-blocking - the actual directory reading happens in a background task.
-/// Progress is reported via Tauri events every ~200ms.
+/// This is non-blocking: the actual directory reading happens in a task on the
+/// host's runtime. Progress is reported every ~200ms.
 #[allow(
     clippy::too_many_arguments,
     reason = "Streaming operation requires many state parameters"
 )]
 pub async fn list_directory_start_streaming(
-    app: tauri::AppHandle,
     volume_id: &str,
     path: &Path,
     include_hidden: bool,
@@ -354,33 +98,65 @@ pub async fn list_directory_start_streaming(
     benchmark::reset_epoch();
     benchmark::log_event_value("list_directory_start_streaming CALLED", path.display());
 
+    start_streaming_listing(
+        host::events(),
+        StreamingRequest {
+            listing_id: listing_id.clone(),
+            volume_id: volume_id.to_string(),
+            path: path.to_path_buf(),
+            include_hidden,
+            sort_by,
+            sort_order,
+            dir_sort_mode,
+        },
+    );
+
+    benchmark::log_event("list_directory_start_streaming RETURNING");
+    Ok(StreamingListingStartResult {
+        listing_id,
+        status: ListingStatus::Loading,
+    })
+}
+
+/// What a pane asked to list.
+pub(crate) struct StreamingRequest {
+    pub listing_id: String,
+    pub volume_id: String,
+    pub path: std::path::PathBuf,
+    pub include_hidden: bool,
+    pub sort_by: SortColumn,
+    pub sort_order: SortOrder,
+    pub dir_sort_mode: DirectorySortMode,
+}
+
+/// Registers the listing's cancel token, then spawns its read onto the host's
+/// runtime, reporting to `events`. The token is registered BEFORE this returns,
+/// so a cancel that follows at once still finds the read.
+pub(crate) fn start_streaming_listing(events: Arc<dyn ListingEvents>, request: StreamingRequest) {
     // Create streaming state with cancellation flag
     let state = Arc::new(StreamingListingState::new());
 
     // Store state for cancellation
     if let Ok(mut cache) = STREAMING_STATE.write() {
-        cache.insert(listing_id.clone(), Arc::clone(&state));
+        cache.insert(request.listing_id.clone(), Arc::clone(&state));
     }
 
-    // Clone values for the spawned task
-    let listing_id_for_spawn = listing_id.clone();
-    let path_owned = path.to_path_buf();
-    let path_for_error = path.to_path_buf();
-    let volume_id_owned = volume_id.to_string();
-    let events: Arc<dyn ListingEventSink> = Arc::new(TauriListingEventSink::new(app));
-
-    // Spawn background task
-    tokio::spawn(async move {
-        // Clone again for use after the listing call
-        let listing_id_for_cleanup = listing_id_for_spawn.clone();
-        let events_for_error = Arc::clone(&events);
-
+    host::runtime().spawn(async move {
+        let StreamingRequest {
+            listing_id,
+            volume_id,
+            path,
+            include_hidden,
+            sort_by,
+            sort_order,
+            dir_sort_mode,
+        } = request;
         let result = read_directory_with_progress(
             &events,
-            &listing_id_for_spawn,
+            &listing_id,
             &state,
-            &volume_id_owned,
-            &path_owned,
+            &volume_id,
+            &path,
             include_hidden,
             sort_by,
             sort_order,
@@ -390,24 +166,33 @@ pub async fn list_directory_start_streaming(
 
         // Clean up streaming state
         if let Ok(mut cache) = STREAMING_STATE.write() {
-            cache.remove(&listing_id_for_cleanup);
+            cache.remove(&listing_id);
         }
 
-        finish_streaming_listing(
-            events_for_error.as_ref(),
-            &AppListingEndEffects,
-            &listing_id_for_cleanup,
-            &volume_id_owned,
-            &path_for_error,
-            result,
-        );
+        report_failure(events.as_ref(), &listing_id, &volume_id, &path, result);
     });
+}
 
-    benchmark::log_event("list_directory_start_streaming RETURNING");
-    Ok(StreamingListingStartResult {
-        listing_id,
-        status: ListingStatus::Loading,
-    })
+/// Reports a read that [`read_directory_with_progress`] returned as an error:
+/// the one `finished` it doesn't report itself, since the read's own task removes
+/// its cancel token first. An `Ok` was already reported, as complete or cancelled.
+pub(crate) fn report_failure(
+    events: &dyn ListingEvents,
+    listing_id: &str,
+    volume_id: &str,
+    path: &Path,
+    result: Result<(), VolumeError>,
+) {
+    if let Err(error) = result {
+        events.finished(
+            &ListingId::new(listing_id),
+            ListingEnd::Failed {
+                volume_id: volume_id.to_string(),
+                path: path.to_path_buf(),
+                error,
+            },
+        );
+    }
 }
 
 /// How long the last-chance mount adoption may take before the listing gives up
@@ -462,7 +247,7 @@ async fn missing_volume_error(volume_id: &str, path: &Path) -> VolumeError {
     reason = "Streaming operation requires many state parameters"
 )]
 pub(crate) async fn read_directory_with_progress(
-    events: &Arc<dyn ListingEventSink>,
+    events: &Arc<dyn ListingEvents>,
     listing_id: &str,
     state: &Arc<StreamingListingState>,
     volume_id: &str,
@@ -491,14 +276,20 @@ pub(crate) async fn read_directory_with_progress(
         path.display()
     );
 
+    let id = ListingId::new(listing_id);
+    let cancelled = || ListingEnd::Cancelled {
+        volume_id: volume_id.to_string(),
+        path: path.to_path_buf(),
+    };
+
     // Emit opening event - this is the slow part for network folders
     // (SMB connection establishment, directory handle creation, MTP queries)
-    events.emit_opening(listing_id);
+    events.opening(&id);
 
     // Check cancellation before starting
     if state.cancel.is_cancelled() {
         benchmark::log_event("read_directory_with_progress CANCELLED (before read)");
-        events.emit_cancelled(listing_id);
+        events.finished(&id, cancelled());
         return Ok(());
     }
 
@@ -530,11 +321,11 @@ pub(crate) async fn read_directory_with_progress(
     // answers again (`stall.rs`).
     let total_start = std::time::Instant::now();
     let read_start = std::time::Instant::now();
-    let on_stalled = |stalled_on| events.emit_stalled(listing_id, stalled_on);
+    let on_stalled = |stalled_on| events.stalled(&id, stalled_on);
     let on_progress: Arc<dyn Fn(usize) + Send + Sync> = {
         let events = Arc::clone(events);
-        let listing_id = listing_id.to_string();
-        Arc::new(move |loaded| events.emit_progress(&listing_id, loaded))
+        let id = id.clone();
+        Arc::new(move |loaded| events.progress(&id, loaded))
     };
     let outcome = read_until_answered(
         ListingRead {
@@ -558,13 +349,14 @@ pub(crate) async fn read_directory_with_progress(
             // abandons an in-flight PTP transaction and wedges the phone
             // (`mtp/connection/CLAUDE.md`). The backend sees the token and unwinds
             // at its own safe boundary while the user gets a prompt cancel.
-            events.emit_cancelled(listing_id);
+            events.finished(&id, cancelled());
             return Ok(());
         }
     };
     // From here on the listing is the directory as its volume spells it: the cache
     // key, the watch, the overlays, and every log line use the stored spelling.
     let stored_path = listed.stored_spelling_of(path);
+    let asked_path = path;
     let Listed {
         path: listed_path,
         mut entries,
@@ -574,12 +366,12 @@ pub(crate) async fn read_directory_with_progress(
     benchmark::log_event_value("read_dir COMPLETE, entries", entries.len());
 
     // Emit read-complete event (before sorting/caching) so UI can show "All N files loaded"
-    events.emit_read_complete(listing_id, entries.len());
+    events.read_complete(&id, entries.len());
 
     // Check cancellation one more time before finalizing
     if state.cancel.is_cancelled() {
         benchmark::log_event("read_directory_with_progress CANCELLED (after read)");
-        events.emit_cancelled(listing_id);
+        events.finished(&id, cancelled());
         return Ok(());
     }
 
@@ -633,7 +425,7 @@ pub(crate) async fn read_directory_with_progress(
         // Check cancellation while holding the lock - makes check+insert atomic
         if state.cancel.is_cancelled() {
             benchmark::log_event("read_directory_with_progress CANCELLED (at cache insert)");
-            events.emit_cancelled(listing_id);
+            events.finished(&id, cancelled());
             return Ok(());
         }
 
@@ -661,36 +453,25 @@ pub(crate) async fn read_directory_with_progress(
     // Volume root for the event (the FE uses it to decide "at volume root"). For
     // an archive this is the `.zip` path, so the FE breadcrumb renders
     // `…/foo.zip/inner` and treats the archive root as the volume root.
-    let volume_root_path = Some(volume.root().to_path_buf());
-    let volume_root = volume_root_path
-        .as_ref()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| "/".to_string());
-
-    // Restricted-empty hint: if the listing succeeded but came back empty AT the
-    // volume root, and the volume is one we know is commonly hidden by macOS TCC
-    // (e.g. iCloud Drive without Full Disk Access), surface a friendly hint instead
-    // of a blank pane. Real "I have zero files at the volume root" is rare enough
-    // that this hint is acceptable noise, and the FE shows a "Try again" button.
-    if total_count == 0
-        && volume_root_path.as_deref() == Some(path)
-        && let Some(listing_error) = listing_error_for_restricted_empty_root(volume_id, path)
-    {
-        let message = listing_error.raw_detail.clone();
-        crate::mcp::listing_errors::record(
-            listing_id,
-            volume_id,
-            &path.to_string_lossy(),
-            &message,
-            Some(&listing_error),
-        );
-        events.emit_error(listing_id, message, Some(listing_error));
-        return Ok(());
-    }
+    let volume_root = volume.root().to_path_buf();
+    // An empty listing AT the volume root is what macOS TCC makes of a hidden
+    // volume (iCloud Drive without Full Disk Access); the host decides whether
+    // that reads as a hint instead of a blank pane.
+    let empty_at_volume_root = total_count == 0 && volume_root == path;
 
     // Emit completion event
     let emit_t = std::time::Instant::now();
-    events.emit_complete(listing_id, total_count, volume_root, stored_path);
+    events.finished(
+        &id,
+        ListingEnd::Complete {
+            volume_id: volume_id.to_string(),
+            path: asked_path.to_path_buf(),
+            total_count,
+            volume_root,
+            stored_path,
+            empty_at_volume_root,
+        },
+    );
     let to_complete_emit_ms = emit_t.elapsed().as_millis();
     let total_ms = total_start.elapsed().as_millis();
 

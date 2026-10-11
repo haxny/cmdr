@@ -105,7 +105,8 @@ The rule that replaced it:
   the catalog and running `pnpm intl:keys`, never touching the `.ts` factories.
 - **The error screen's buttons** (which way out renders, and why each gate exists):
   `apps/desktop/src/lib/file-explorer/pane/DETAILS.md` § The error screen's ways out.
-- **Emitting the event**: `apps/desktop/src-tauri/src/file_system/listing/streaming.rs`.
+- **Emitting the event**: `apps/desktop/src-tauri/src/listing_host/events.rs` (`TauriListingEvents`, which classifies
+  the engine's `ListingEnd::Failed`).
 - **Mutation refusals**: the enum is `apps/desktop/src-tauri/src/file_system/write_operations/mutation_error.rs`; the
   words are `apps/desktop/src/lib/file-operations/mutation-error-messages.ts`, and
   `apps/desktop/src/lib/file-operations/mutation-error.ts` is what keeps the typed value alive across the throw.

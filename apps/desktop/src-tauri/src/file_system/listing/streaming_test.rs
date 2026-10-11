@@ -1,6 +1,6 @@
 //! Tests for the streaming directory listing pipeline.
 //!
-//! Uses `CollectorListingEventSink` and `InMemoryVolume` to test
+//! Uses `RecordingEvents` and `InMemoryVolume` to test
 //! `read_directory_with_progress` without a Tauri runtime.
 
 use std::future::Future;
@@ -11,10 +11,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::caching_test_support::TestListingGuard;
+use crate::file_system::listing::host::ListingEvents;
+use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::priority::foreground;
@@ -67,7 +67,7 @@ async fn test_streaming_list_populates_cache() {
     ];
     register_test_volume(volume_id, entries);
 
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = new_state();
 
     let result = read_directory_with_progress(
@@ -96,9 +96,9 @@ async fn test_streaming_list_populates_cache() {
     });
 
     // Verify complete event
-    let collector = events.as_ref() as *const dyn ListingEventSink as *const CollectorListingEventSink;
-    // SAFETY: (test) `events` was constructed just above as `Arc::new(CollectorListingEventSink::new())`,
-    // so the trait object's concrete type is statically known to be `CollectorListingEventSink`. The
+    let collector = events.as_ref() as *const dyn ListingEvents as *const RecordingEvents;
+    // SAFETY: (test) `events` was constructed just above as `Arc::new(RecordingEvents::new())`,
+    // so the trait object's concrete type is statically known to be `RecordingEvents`. The
     // pointer comes straight from that live `Arc` (no provenance gap), so the downcast and reborrow are
     // valid for the borrow's lifetime.
     let collector = unsafe { &*collector };
@@ -116,8 +116,8 @@ async fn test_streaming_list_emits_opening_and_complete() {
 
     register_test_volume(volume_id, vec![test_entry("file.txt", false)]);
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = new_state();
 
     let result = read_directory_with_progress(
@@ -147,7 +147,7 @@ async fn test_streaming_list_emits_opening_and_complete() {
     assert_eq!(read_complete.len(), 1);
 
     // No errors or cancellations
-    assert!(sink.errors.lock().unwrap().is_empty());
+    assert!(sink.failed.lock().unwrap().is_empty());
     assert!(sink.cancelled.lock().unwrap().is_empty());
 
     cleanup(volume_id);
@@ -160,8 +160,8 @@ async fn test_streaming_list_cancellation() {
 
     register_test_volume(volume_id, vec![test_entry("file.txt", false)]);
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = new_state();
 
     // Set cancelled BEFORE calling
@@ -201,7 +201,7 @@ async fn test_streaming_list_volume_not_found() {
     let listing = TestListingGuard::adopt(unique_test_id("streaming-notfound"));
     let volume_id = &format!("nonexistent-volume-{}", uuid::Uuid::new_v4());
 
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = new_state();
 
     let result = read_directory_with_progress(
@@ -230,8 +230,8 @@ async fn test_streaming_list_empty_directory() {
 
     register_test_volume(volume_id, vec![]);
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = new_state();
 
     let result = read_directory_with_progress(
@@ -281,8 +281,8 @@ async fn a_foreign_spelling_lands_the_listing_on_the_stored_path() {
     let volume = SpelledVolume::new(inner).resolving(foreign, Ok(Some(stored)));
     get_volume_manager().register(volume_id, Arc::new(volume));
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let result = read_directory_with_progress(
         &events,
         listing.id(),
@@ -445,8 +445,8 @@ async fn test_cancel_unwinds_the_listing_instead_of_aborting_it() {
     let aborted = Arc::clone(&volume.aborted);
     get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = new_state();
 
     let read = {
@@ -518,8 +518,8 @@ async fn a_local_directory_read_emits_progress_events() {
         Arc::new(LocalPosixVolume::local_folder("Test Volume", &*dir)),
     );
 
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = new_state();
 
     let result = read_directory_with_progress(
@@ -573,7 +573,7 @@ async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
         "nobody has listed this volume yet"
     );
 
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = new_state();
     let read = {
         let events = Arc::clone(&events);
@@ -632,7 +632,7 @@ async fn a_listing_that_fails_gives_its_lease_back() {
     let volume_id = &format!("test-lease-missing-{}", uuid::Uuid::new_v4());
     let listing = TestListingGuard::adopt(unique_test_id("streaming-lease-error"));
 
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = new_state();
     let result = read_directory_with_progress(
         &events,
@@ -665,7 +665,7 @@ async fn two_concurrent_listings_on_one_volume_both_have_to_finish() {
     let spawn_listing = |listing_id: String, state: Arc<StreamingListingState>| {
         let volume_id = volume_id.clone();
         tokio::spawn(async move {
-            let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+            let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
             read_directory_with_progress(
                 &events,
                 &listing_id,
@@ -718,7 +718,7 @@ async fn dropping_the_listing_task_mid_flight_gives_the_lease_back() {
     let started = Arc::clone(&volume.started);
     get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = new_state();
     let read = {
         let volume_id = volume_id.clone();

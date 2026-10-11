@@ -2466,11 +2466,11 @@ export const commands = {
    *  virtual `.git/...` listing keep their cached children until the next
    *  navigation. We refresh every cached listing under any subscribed repo's
    *  `.git/` so the change is visible immediately.
-   *  `async` is load-bearing here: the body fans out to `notify_directory_changed`
-   *  which calls `tokio::spawn` to emit cache-refresh events. Sync Tauri commands
-   *  run on the IPC main thread, which has no Tokio reactor: `spawn` panicked
-   *  there with "there is no reactor running" (see crash report 2026-05-05).
-   *  Marking the command `async` puts it on a Tokio worker, where `spawn` works.
+   *  `async` keeps the fan-out off the IPC main thread, where a sync Tauri command
+   *  runs. The refreshes it starts spawn onto the listing engine's injected runtime
+   *  (`file_system::listing::host::runtime`), which resolves from any thread; a bare
+   *  `tokio::spawn` from a sync command once panicked with "there is no reactor
+   *  running" (crash report 2026-05-05).
    */
   setShowVirtualGitPortal: (enabled: boolean) => __TAURI_INVOKE<void>('set_show_virtual_git_portal', { enabled }),
   /**
@@ -10124,9 +10124,9 @@ export type ListingReadCompleteEvent = {
  *  `listing-respelled`: an open listing now shows its directory under another
  *  spelling of the same path, which the pane adopts as its own.
  *
- *  Sent by [`respell_listings_on_volume`] after a backend swap; a listing that
- *  lands on a stored spelling when it's first opened says so in
- *  `listing-complete` instead.
+ *  Sent after a backend swap re-reads a listing (`foreign_path.rs`'s
+ *  `respell_listings_on_volume`); a listing that lands on a stored spelling when
+ *  it's first opened says so in `listing-complete` instead.
  */
 export type ListingRespelledEvent = {
   listingId: string

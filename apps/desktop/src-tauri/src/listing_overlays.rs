@@ -27,27 +27,9 @@ use std::sync::{Arc, LazyLock, RwLock};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+pub(crate) use crate::file_system::listing::host::overlays::ListingOverlay;
 use crate::file_system::volume::Volume;
 use cmdr_fs::entry::FileEntry;
-
-/// A source of extra rows for one kind of directory.
-pub(crate) trait ListingOverlay: Send + Sync + 'static {
-    /// The contributor's stable name (`"git-portal"`), the key the registry
-    /// dedupes on.
-    fn id(&self) -> &'static str;
-
-    /// Whether this overlay has anything to say about `path` on `volume`.
-    ///
-    /// ❗ Cheap and zero-I/O: this runs on EVERY directory listing in the app,
-    /// so it has to be a look at the path and the volume's capability flags.
-    /// The expensive half is [`extra_entries`](Self::extra_entries), which only
-    /// runs when this answered `true`.
-    fn applies_to(&self, volume: &dyn Volume, path: &Path) -> bool;
-
-    /// The rows to fold in. Runs on the blocking pool, so it may open a
-    /// repository or hit the disk.
-    fn extra_entries(&self, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
-}
 
 /// The registered contributors, in registration order.
 static OVERLAYS: LazyLock<RwLock<Vec<Arc<dyn ListingOverlay>>>> = LazyLock::new(|| RwLock::new(Vec::new()));

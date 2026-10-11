@@ -433,7 +433,7 @@ fn spawn_read(read: &ListingRead<'_>, slot: ReadSlot, beat: Arc<Beat>, cancel: C
     let path: PathBuf = read.path.to_path_buf();
     let report_progress = Arc::clone(&read.on_progress);
     let listing_id = read.listing_id.to_string();
-    let task = tokio::spawn(async move {
+    let task = crate::file_system::listing::host::runtime().spawn(async move {
         // Stall-probe: marker logged as the FIRST executable line inside the spawned task.
         // If `read_directory_with_progress: entry` fires but this `task started` line doesn't,
         // the tokio runtime didn't schedule this task (worker starvation). If both fire but

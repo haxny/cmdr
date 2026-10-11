@@ -88,6 +88,7 @@ pub mod licensing;
 pub(crate) mod linux_distro;
 #[cfg(target_os = "linux")]
 mod linux_icons;
+mod listing_host;
 mod listing_index_sizes;
 mod listing_lifecycle;
 mod listing_overlays;
@@ -243,6 +244,11 @@ pub fn run() {
     // it lives in one place off the spine; see `tauri_builder.rs`.
     tauri_builder::configure(tauri::Builder::default())
         .setup(move |app| {
+            // Everything the listing engine needs from this app, first: nothing may
+            // open a listing before its events and runtime are wired. Mirror of
+            // `file_system::listing::host`, which declares the other side of each seam.
+            listing_host::install(app.handle());
+
             // Everything a storage backend needs from this app, in one place.
             // Must run before any volume is constructed. Mirror of
             // `cmdr_fs::volume::host`, which declares the other side of each seam.

@@ -4,7 +4,7 @@
 //! place, or moved to a new sorted position. Rows are the pane's (`visible_rows.rs`),
 //! so a change to an entry the pane shows on neither side is no change at all, and
 //! a listing whose hidden entries alone changed emits nothing. `diff_emitter`
-//! coalesces these into the `directory-diff` event; the single-entry cache helpers
+//! coalesces these into one `ListingEvents::diff` report per flush; the single-entry cache helpers
 //! build them through [`DiffChange::for_pane`], while the full re-read path derives
 //! them here with [`diff_rows`] over the committed projections.
 //!
@@ -110,14 +110,6 @@ impl DiffChange {
 pub struct PaneRows {
     pub before: Option<usize>,
     pub after: Option<usize>,
-}
-
-/// `directory-diff` event sent to the frontend.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
-#[serde(rename_all = "camelCase")]
-pub struct DirectoryDiff {
-    pub listing_id: String,
-    pub batches: Vec<DirectoryDiffBatch>,
 }
 
 /// One committed transition, with indices in its own old/new row spaces.

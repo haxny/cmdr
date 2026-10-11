@@ -21,9 +21,9 @@ use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_start_with_volume;
 use super::seam_test_support::{MARKER_ROW, MARKER_VOLUME_NAME, ensure_seam_overlay};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use super::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use super::streaming::{StreamingListingState, read_directory_with_progress};
+use crate::file_system::listing::host::ListingEvents;
+use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
@@ -86,7 +86,7 @@ fn assert_decorated(listing: &TestListingGuard) {
 async fn the_streaming_read_folds_in_overlay_rows() {
     let volume = MarkerVolume::new("overlay-path-streaming");
     let listing = TestListingGuard::adopt(unique_test_id("overlay-path-streaming"));
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
 
     read_directory_with_progress(
         &events,

@@ -344,7 +344,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   window helper every entry point funnels through, so it counts all dozen of them and covers a new one for free. Why
   `surface` is a required first param and why `section` stays out: `apps/desktop/src/lib/settings/DETAILS.md` § "Every
   open funnels through `openSettingsWindow`".
-- `error_encountered` (backend, `listing/streaming.rs` `TauriListingEventSink::emit_error`): `category` enum (from the
+- `error_encountered` (backend, `apps/desktop/src-tauri/src/listing_host/events.rs`, the `AppHandle` wire's `emit_error`): `category` enum (from the
   ListingError); never the path/message/provider.
 - `first_index_started` / `first_index_home_covered` / `first_index_completed` (backend, `first_index.rs`): no props on
   the first, a `duration_bucket` on the other two. See below.

@@ -20,7 +20,6 @@
 
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::OverlayRows;
@@ -111,21 +110,6 @@ pub(crate) async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -
     stored
 }
 
-/// `listing-respelled`: an open listing now shows its directory under another
-/// spelling of the same path, which the pane adopts as its own.
-///
-/// Sent by [`respell_listings_on_volume`] after a backend swap; a listing that
-/// lands on a stored spelling when it's first opened says so in
-/// `listing-complete` instead.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, tauri_specta::Event)]
-#[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "listing-respelled")]
-pub struct ListingRespelledEvent {
-    pub listing_id: String,
-    /// The directory in its volume's own spelling.
-    pub path: String,
-}
-
 /// Re-reads every pane listing on `volume_id` through the backend now serving
 /// it, landing each on its stored spelling.
 ///
@@ -141,7 +125,7 @@ pub struct ListingRespelledEvent {
 /// turn so it can't interleave with a watcher's re-read of the same directory.
 pub(crate) fn respell_listings_on_volume(volume_id: &str) {
     for (listing_id, path, ..) in super::caching::find_listings_on_volume(volume_id) {
-        tauri::async_runtime::spawn(respell_listing(volume_id.to_string(), listing_id, path));
+        crate::file_system::listing::host::runtime().spawn(respell_listing(volume_id.to_string(), listing_id, path));
     }
 }
 
@@ -166,7 +150,7 @@ pub(crate) fn respell_if_read_by_a_replaced_backend(
             "listing {listing_id} was read by a backend replaced mid-read; re-reading {}",
             path.display()
         );
-        tauri::async_runtime::spawn(respell_listing(
+        crate::file_system::listing::host::runtime().spawn(respell_listing(
             volume_id.to_string(),
             listing_id.to_string(),
             path.to_path_buf(),
@@ -217,7 +201,6 @@ pub(super) async fn respell_listing(volume_id: String, listing_id: String, path:
 fn rekey_listing(listing_id: &str, volume_id: &str, stored: &Path) {
     use crate::file_system::listing::cached_listing::{LISTING_CACHE, ListingPath};
     use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-    use tauri_specta::Event;
 
     // Built before taking the cache: it reads the volume registry.
     let key = ListingPath::on_volume(volume_id, stored);
@@ -229,19 +212,10 @@ fn rekey_listing(listing_id: &str, volume_id: &str, stored: &Path) {
         listing.path = key;
     }
     log::info!("listing {listing_id} respelled to the volume's own spelling");
-    let app = crate::file_system::watcher::WATCHER_MANAGER
-        .read_ignore_poison()
-        .app_handle
-        .clone();
-    if let Some(app) = app {
-        let event = ListingRespelledEvent {
-            listing_id: listing_id.to_string(),
-            path: stored.to_string_lossy().into_owned(),
-        };
-        if let Err(e) = event.emit(&app) {
-            log::warn!("respell_listing: couldn't emit listing-respelled: {e}");
-        }
-    }
+    crate::file_system::listing::host::events().respelled(
+        &crate::file_system::listing::listing_id::ListingId::new(listing_id),
+        stored,
+    );
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@ use std::pin::Pin;
 
 use cmdr_fs::volume::host::listings::ListingHost;
 
-use super::caching;
+use crate::file_system::listing::caching;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::DirectoryChange;
 
@@ -34,7 +34,7 @@ impl ListingHost for AppListings {
     }
 
     fn volumes_with_open_listings(&self, volume_id_prefix: &str) -> Vec<String> {
-        super::volume_ids_with_listings(volume_id_prefix)
+        crate::file_system::listing::volume_ids_with_listings(volume_id_prefix)
     }
 
     fn refresh_archive_listings<'a>(
@@ -203,7 +203,8 @@ mod tests {
             .entries(vec![entry_at(root, "stale.txt")])
             .insert("listing-host-archive");
 
-        tauri::async_runtime::block_on(AppListings.refresh_archive_listings(&volume_id, &PathBuf::from(root)));
+        crate::file_system::listing::host::runtime()
+            .block_on(AppListings.refresh_archive_listings(&volume_id, &PathBuf::from(root)));
 
         assert_eq!(
             listing.entry_names(),

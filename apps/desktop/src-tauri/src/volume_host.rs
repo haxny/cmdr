@@ -5,7 +5,7 @@
 //! answers. Each answer is a small adapter living next to the subsystem that can
 //! actually give it; all this does is collect them.
 //!
-//! - listings — `file_system::listing::listing_host::AppListings`
+//! - listings — `listing_host::backends::AppListings`
 //! - events — `events::volume_mapping::TauriVolumeEvents`
 //! - credentials — `network::credential_store::KeychainCredentials`
 //! - host keys — `network::sftp_host_keys::AppHostKeys`
@@ -55,7 +55,7 @@ const BACKEND_STATE_DIR: &str = "backend-state";
 /// the two answers that need a running app.
 fn wire(events: Option<Arc<dyn VolumeEventSink>>, state_root: Option<&std::path::Path>) -> VolumeHost {
     let builder = VolumeHost::builder()
-        .listings(Arc::new(crate::file_system::listing::listing_host::AppListings))
+        .listings(Arc::new(crate::listing_host::backends::AppListings))
         .credentials(Arc::new(crate::network::credential_store::KeychainCredentials))
         .host_keys(Arc::new(crate::network::sftp_host_keys::AppHostKeys))
         // Mapped rather than passed through: a backend crate must not depend on

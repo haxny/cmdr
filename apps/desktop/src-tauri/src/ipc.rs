@@ -58,10 +58,6 @@ use crate::events::index_mapping::{
     IndexScanProgressEvent, IndexScanStartedEvent, MediaEnrichProgressEvent, MediaEnrichTerminalEvent,
 };
 use crate::file_system::git::wiring::GitStateChangedPayload;
-use crate::file_system::listing::streaming::{
-    ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent, ListingProgressEvent,
-    ListingReadCompleteEvent, ListingStalledEvent,
-};
 use crate::file_system::volume::eject::VolumesEjectingChanged;
 use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, MoveLeftoversKeptEvent, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
@@ -72,6 +68,10 @@ use crate::file_system::write_operations::{
 use crate::file_system::write_operations::{MutationSettled, OperationsChanged, VolumesBusyChanged};
 use crate::file_viewer::ViewerPullProgress;
 use crate::file_viewer::open_with_extract::OpenWithCopyRefused;
+use crate::listing_host::events::{
+    DirectoryDiff, ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent,
+    ListingProgressEvent, ListingReadCompleteEvent, ListingRespelledEvent, ListingStalledEvent,
+};
 use crate::listing_index_sizes::ListingIndexSizesChanged;
 use crate::managed_policy::ManagedPolicyChanged;
 use crate::mtp::{
@@ -102,8 +102,6 @@ use crate::ai::{
 use crate::downloads::global_shortcut::GlobalShortcutFired;
 use crate::downloads::watcher::DownloadDetectedEvent;
 use crate::error_reporter::auto_dispatcher::ErrorReportAutoSent;
-use crate::file_system::listing::DirectoryDiff;
-use crate::file_system::listing::foreign_path::ListingRespelledEvent;
 use crate::file_system::watcher::DirectoryDeletedEvent;
 use crate::menu::{MediaIndexFolderChoice, MediaIndexFolderExclusion, MenuSort, SettingsChanged, ViewModeChanged};
 use crate::quick_look::{QuickLookClosed, QuickLookKeyEvent};

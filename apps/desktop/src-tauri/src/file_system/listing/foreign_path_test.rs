@@ -190,10 +190,10 @@ impl Volume for SwappedMidListing {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelling() {
     use crate::file_system::listing::caching_test_support::TestListingGuard;
+    use crate::file_system::listing::host::ListingEvents;
+    use crate::file_system::listing::host::testing::RecordingEvents;
     use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-    use crate::file_system::listing::streaming::{
-        CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-    };
+    use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::test_support::wait_until_async;
     use cmdr_fs::testing::unique_test_id;
@@ -214,7 +214,7 @@ async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelli
     get_volume_manager().register(&volume_id, std::sync::Arc::new(swapped));
     let listing = TestListingGuard::adopt(unique_test_id("respell-mid-listing"));
 
-    let events: std::sync::Arc<dyn ListingEventSink> = std::sync::Arc::new(CollectorListingEventSink::new());
+    let events: std::sync::Arc<dyn ListingEvents> = std::sync::Arc::new(RecordingEvents::new());
     let state = std::sync::Arc::new(StreamingListingState::new());
     read_directory_with_progress(
         &events,

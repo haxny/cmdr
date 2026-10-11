@@ -640,6 +640,31 @@ with `RecordingEvents` and checks the event sequence of a streaming listing end 
 `desktop-bindings-fresh` zero diff; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-clippy-linux`,
 `desktop-rust-tests-linux`, `desktop-ipc-unused`, `desktop-rust-discarded-outcome`, `desktop-rust-lock-poison`.
 
+Executor notes:
+
+- The slot (`host::ListingSeams`, filled by `host::install`) holds only events and the runtime; the other six seams
+  exist as traits and `No*` defaults under a module-level `#[expect(dead_code)]` that M2c drops once all are routed.
+  `ListingOverlay` moved into `host/overlays.rs` (`listing_overlays.rs` re-exports it; its registry stays until M2b);
+  `ListingObserver` + `OpenedListing` sit beside today's `ListingLifecycle` until M2b swaps them. `ListingId` exists
+  (`listing_id.rs`) because the events seam takes it; engine internals still pass `&str` until later milestones.
+- The read reports `finished(Complete | Cancelled)` itself at today's emit points; a refused read is reported by its
+  task (`streaming::report_failure`) after the cancel token is gone, as the error was. `Complete.path` is the path as
+  asked (what `clear_restricted` always got) and the adapter derives the listed path from `stored_path` for the
+  restricted-root hint, so both stay byte-identical. Log-only deltas: `listing_done` now also logs for the
+  restricted-empty root, and complete/cancel's `clear_restricted` runs before the token is dropped (unobservable).
+- The app has no `testing` feature, so the test-only fallback is `cfg(test)`; M5 widens it. A pre-`install` read outside
+  tests warns (`log-error-macro` bans a raw `log::error!`, and the engine can't name the app's macro) and answers from a
+  separate detached value without claiming the slot; `install` then returns `ReadBeforeInstall`, which
+  `listing_host::install` reports with `log_error!`.
+- The M0 matrix runs against `TauriListingEvents::with(WireCollector, RecordingEffects)`. Its restricted-root cell now
+  sees the MCP record through the effects seam (it read the real ring before), so its effect list is
+  `[RecentError, ClearRestricted]`. Engine tests record facts with `host::testing::RecordingEvents`.
+- `bindings.ts` changed in two doc comments only (the `settings.rs` comment this milestone rewrites, and
+  `ListingRespelledEvent`'s, whose intra-doc link can't resolve from `listing_host/events.rs`); no name or shape moved.
+- `desktop-rust-module-cycles` still warns `cmdr::file_system` [6] vs allowlist [2] (`cached_listing`, `caching`,
+  `name_filter`, `operations`, `visible_rows`, `watcher`), present before M2a: `name_filter → operations`
+  (`ListingLookupError`, `check_expected`) plus `operations ↔ watcher`. M2b's observer move cuts `operations → watcher`.
+
 ### M2b: Overlays and observers become host lists; the watcher is an observer
 
 **Scope.**

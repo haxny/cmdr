@@ -487,7 +487,8 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
 ## Decisions
 
 - **Streaming with a background task, not chunked IPC**: chunked needs multiple IPC calls and complex state tracking.
-  Streaming spawns a `tokio::spawn` task and emits events; the frontend stays responsive (Tab works, ESC cancels).
+  Streaming spawns a task on the host runtime and reports through `ListingEvents`; the frontend stays responsive (Tab
+  works, ESC cancels).
 - **Cancellation via `AtomicBool` checked per-entry**: network folders iterate slowly (seconds per entry); a per-entry
   check keeps ESC responsive (cancel within ~100 ms).
 - **Three-stage progress (opening → progress → read-complete → complete)**: `listing-opening` (about to start slow
@@ -515,10 +516,13 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   trailing suffix that reserves room for the Finder tag-dot cluster).
 - **Revision on `CachedListing`, not `WatchedDirectory`**: it describes the committed pane view on every volume,
   including SMB and MTP, which have no FSEvents `WatchedDirectory`. See § "Diff event coalescing".
-- **`ListingEventSink` trait decouples streaming from Tauri** (same pattern as `OperationEventSink`):
-  `read_directory_with_progress` emits events, but `tauri::AppHandle` can't be created in tests.
-  `CollectorListingEventSink` captures events for assertions. `Arc<dyn ListingEventSink>` (not `&dyn`) because the sink
-  is cloned into `tokio::spawn` for progress callbacks.
+- **The engine reports facts through the `ListingEvents` seam** (`host/events.rs`): `opening`, `progress`,
+  `finished(ListingEnd)`, `diff`, … The app's `listing_host::events::TauriListingEvents` owns every wire payload and
+  the policy on them (error classification, the restricted-empty-root hint, analytics, the MCP ring, the TCC set), so
+  the engine names no Tauri type. A read reports its own complete or cancel; a refused one is reported by its task
+  (`streaming::report_failure`) after the cancel token is gone. Tests record facts with `host::testing::RecordingEvents`;
+  the app policy's matrix (`streaming_reaction_test.rs`) collects wire events with `WireCollector`.
+  `Arc<dyn ListingEvents>` (not `&dyn`) because it's cloned into the progress callback.
 - **Watcher starts AFTER listing-complete**: watcher diffs rely on cached entries; starting before the cache is
   populated would miss initial state.
 - **Incremental watcher path with fallback to full re-read**: most FS changes touch a few files. The incremental path

@@ -9,8 +9,8 @@ pub(crate) mod diff;
 pub(crate) mod diff_emitter;
 pub(crate) mod foreign_path;
 pub(crate) mod fuzzy_jump;
-pub(crate) mod listing_end;
-pub(crate) mod listing_host;
+pub(crate) mod host;
+pub(crate) mod listing_id;
 pub(crate) mod name_filter;
 pub use name_filter::NameFilterResult;
 pub(crate) mod operations;
@@ -25,7 +25,6 @@ pub(crate) mod visible_rows;
 // Re-export types so they're available both externally and locally in this module
 // (call sites import them from `crate::file_system::listing` directly).
 pub use brief_columns::{BriefColumnWidths, BriefColumnsIpcError, compute_brief_column_text_widths};
-pub use diff::DirectoryDiff;
 pub use fuzzy_jump::fuzzy_find_first_match_in_listing;
 pub use operations::{
     ListingLookupError, ListingStats, ResortResult, RowBeside, find_file_index, find_file_indices, get_file_at,
@@ -117,6 +116,8 @@ mod staging_temps_test;
 mod stall_test;
 #[cfg(test)]
 mod stats_test;
+#[cfg(test)]
+mod streaming_events_test;
 #[cfg(test)]
 mod streaming_reaction_test;
 #[cfg(test)]

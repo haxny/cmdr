@@ -281,7 +281,6 @@ async fn exists_on_volume(volume_id: Option<String>, path: String, spelling: Spe
 #[specta::specta]
 #[allow(clippy::too_many_arguments, reason = "Tauri commands require top-level arguments")]
 pub async fn list_directory_start_streaming(
-    app: tauri::AppHandle,
     volume_id: String,
     path: String,
     include_hidden: bool,
@@ -306,7 +305,6 @@ pub async fn list_directory_start_streaming(
     let path_buf = PathBuf::from(&expanded_path);
     let dir_sort_mode = directory_sort_mode.unwrap_or_default();
     ops_list_directory_start_streaming(
-        app,
         &volume_id,
         &path_buf,
         include_hidden,

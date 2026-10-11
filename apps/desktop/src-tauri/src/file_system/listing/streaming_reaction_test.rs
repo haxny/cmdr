@@ -4,10 +4,11 @@
 //! TCC-restricted set's record and clear, and the stale-mount check).
 //!
 //! Each cell drives exactly what `list_directory_start_streaming`'s spawned task
-//! does, minus the `AppHandle`: `read_directory_with_progress`, then
-//! `finish_streaming_listing` with a recording [`ListingEndEffects`]. Issue #301
-//! moves this policy behind the `ListingEvents` seam, and these cells are the
-//! proof that the move kept every reaction.
+//! does, reporting to the app's real `TauriListingEvents` policy minus the
+//! `AppHandle`: `read_directory_with_progress`, then `report_failure`, with the
+//! wire events collected and a recording [`ListingEndEffects`]. These cells are
+//! the proof that moving the policy behind the `ListingEvents` seam (issue #301)
+//! kept every reaction.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -19,13 +20,14 @@ use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 use super::caching_test_support::{SpelledVolume, TestListingGuard};
-use super::listing_end::{ListingEndEffects, error_analytics_category, finish_streaming_listing};
+use super::host::{ListingEnd, ListingEvents};
+use super::listing_id::ListingId;
 use super::seam_test_support::cancel_at_decorate;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use super::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use super::stalled_on::StalledOn;
+use super::streaming::{StreamingListingState, read_directory_with_progress, report_failure};
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::listing_host::events::{ListingEndEffects, TauriListingEvents, WireCollector, error_analytics_category};
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -33,7 +35,7 @@ use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::friendly_error::{ListingError, ListingErrorReason, Provider};
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 
-/// One bookkeeping call, as `finish_streaming_listing` made it.
+/// One bookkeeping call, as the app's reaction made it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Effect {
     /// The MCP ring got an entry, with this typed reason.
@@ -54,7 +56,7 @@ impl RecordingEffects {
     }
 }
 
-impl ListingEndEffects for RecordingEffects {
+impl ListingEndEffects for Arc<RecordingEffects> {
     fn record_recent_error(
         &self,
         _listing_id: &str,
@@ -98,12 +100,19 @@ struct Ended {
     listing: TestListingGuard,
 }
 
+/// The app's reaction policy over a collected wire and recorded bookkeeping.
+fn app_reaction() -> (Arc<WireCollector>, Arc<RecordingEffects>, Arc<dyn ListingEvents>) {
+    let wire = Arc::new(WireCollector::default());
+    let effects = Arc::new(RecordingEffects::default());
+    let events: Arc<dyn ListingEvents> = Arc::new(TauriListingEvents::with(Arc::clone(&wire), Arc::clone(&effects)));
+    (wire, effects, events)
+}
+
 /// Runs one streaming listing of `path` on `volume_id` through the spawned
-/// task's two steps, with `prepare` given the read's state before it starts.
+/// task's two steps, given the read's state.
 async fn run_listing(volume_id: &str, path: &Path, state: Arc<StreamingListingState>) -> Ended {
     let listing = TestListingGuard::adopt(unique_test_id("reaction"));
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let (sink, effects, events) = app_reaction();
     let result = read_directory_with_progress(
         &events,
         listing.id(),
@@ -116,8 +125,7 @@ async fn run_listing(volume_id: &str, path: &Path, state: Arc<StreamingListingSt
         DirectorySortMode::LikeFiles,
     )
     .await;
-    let effects = RecordingEffects::default();
-    finish_streaming_listing(events.as_ref(), &effects, listing.id(), volume_id, path, result);
+    report_failure(events.as_ref(), listing.id(), volume_id, path, result);
     let errors: Vec<Option<ListingError>> = sink
         .classified
         .lock_ignore_poison()
@@ -313,35 +321,34 @@ async fn a_cancel_during_the_read_ends_the_listing_without_waiting_for_it() {
 }
 
 /// Cancels the listing the moment the read reports complete: after the read,
-/// before the after-read check. Delegates every event to the collector.
+/// before the after-read check. Delegates every report to the app's reaction.
 struct CancelOnReadComplete {
-    inner: Arc<CollectorListingEventSink>,
+    inner: Arc<dyn ListingEvents>,
     cancel: CancellationToken,
 }
 
-impl ListingEventSink for CancelOnReadComplete {
-    fn emit_opening(&self, listing_id: &str) {
-        self.inner.emit_opening(listing_id);
+impl ListingEvents for CancelOnReadComplete {
+    fn opening(&self, id: &ListingId) {
+        self.inner.opening(id);
     }
-    fn emit_stalled(&self, listing_id: &str, stalled_on: super::stalled_on::StalledOn) {
-        self.inner.emit_stalled(listing_id, stalled_on);
+    fn stalled(&self, id: &ListingId, on: StalledOn) {
+        self.inner.stalled(id, on);
     }
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize) {
-        self.inner.emit_progress(listing_id, loaded_count);
+    fn progress(&self, id: &ListingId, loaded: usize) {
+        self.inner.progress(id, loaded);
     }
-    fn emit_read_complete(&self, listing_id: &str, total_count: usize) {
-        self.inner.emit_read_complete(listing_id, total_count);
+    fn read_complete(&self, id: &ListingId, total: usize) {
+        self.inner.read_complete(id, total);
         self.cancel.cancel();
     }
-    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>) {
-        self.inner
-            .emit_complete(listing_id, total_count, volume_root, stored_path);
+    fn finished(&self, id: &ListingId, end: ListingEnd) {
+        self.inner.finished(id, end);
     }
-    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
-        self.inner.emit_error(listing_id, message, error);
+    fn diff(&self, id: &ListingId, batches: Vec<super::diff::DirectoryDiffBatch>) {
+        self.inner.diff(id, batches);
     }
-    fn emit_cancelled(&self, listing_id: &str) {
-        self.inner.emit_cancelled(listing_id);
+    fn respelled(&self, id: &ListingId, path: &Path) {
+        self.inner.respelled(id, path);
     }
 }
 
@@ -353,9 +360,9 @@ async fn a_cancel_after_the_read_ends_the_listing_before_it_is_cached() {
     );
     let state = Arc::new(StreamingListingState::new());
     let listing = TestListingGuard::adopt(unique_test_id("reaction-after"));
-    let collector = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::new(CancelOnReadComplete {
-        inner: Arc::clone(&collector),
+    let (collector, effects, reaction) = app_reaction();
+    let events: Arc<dyn ListingEvents> = Arc::new(CancelOnReadComplete {
+        inner: reaction,
         cancel: state.cancel.clone(),
     });
 
@@ -371,15 +378,7 @@ async fn a_cancel_after_the_read_ends_the_listing_before_it_is_cached() {
         DirectorySortMode::LikeFiles,
     )
     .await;
-    let effects = RecordingEffects::default();
-    finish_streaming_listing(
-        events.as_ref(),
-        &effects,
-        listing.id(),
-        &volume.0,
-        Path::new("/"),
-        result,
-    );
+    report_failure(events.as_ref(), listing.id(), &volume.0, Path::new("/"), result);
 
     assert_eq!(collector.sequence(), ["opening", "read_complete", "cancelled"]);
     assert_eq!(effects.calls(), [Effect::ClearRestricted(PathBuf::from("/"))]);
@@ -535,10 +534,10 @@ async fn a_generic_error_names_the_cloud_provider_behind_the_path() {
 // The restricted-empty root
 // ============================================================================
 
-/// iCloud Drive without Full Disk Access lists as an empty root. The read
-/// itself turns that into a `listing-error` and records it in the MCP ring, then
-/// returns `Ok`, so the task ALSO clears the path from the restricted set, the
-/// same as a success.
+/// iCloud Drive without Full Disk Access lists as an empty root. The read lands
+/// it as complete, and the app's reaction turns that into a `listing-error`,
+/// records it in the MCP ring, and ALSO clears the path from the restricted set,
+/// the same as a success.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_empty_icloud_root_reads_as_restricted_yet_clears_the_path() {
     // The literal id `listing_error_for_restricted_empty_root` matches. No other
@@ -567,15 +566,14 @@ async fn an_empty_icloud_root_reads_as_restricted_yet_clears_the_path() {
         "{:?}",
         ended.errors
     );
-    assert_eq!(ended.effects, [Effect::ClearRestricted(PathBuf::from("/"))]);
-    assert_eq!(ended.analytics, [Some("needs_action".to_string())]);
-    let recorded = crate::mcp::listing_errors::snapshot()
-        .into_iter()
-        .filter(|e| e.listing_id == ended.listing.id())
-        .count();
     assert_eq!(
-        recorded, 1,
-        "the read records the restricted root in the MCP ring itself"
+        ended.effects,
+        [
+            Effect::RecentError(reason_of(&ended)),
+            Effect::ClearRestricted(PathBuf::from("/")),
+        ],
+        "the restricted root goes into the MCP ring once, before the path clears"
     );
+    assert_eq!(ended.analytics, [Some("needs_action".to_string())]);
     assert!(ended.listing.is_cached(), "the empty listing still lands");
 }

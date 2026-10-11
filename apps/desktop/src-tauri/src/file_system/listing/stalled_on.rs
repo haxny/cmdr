@@ -43,7 +43,8 @@ pub(crate) async fn stalled_on(volume: &Arc<dyn Volume>, path: &Path) -> Stalled
         return lexical;
     }
     let path = path.to_path_buf();
-    let resolved = tokio::task::spawn_blocking(move || stalled_on_mount_of(&resolve_symlinks(&path)));
+    let resolved = crate::file_system::listing::host::runtime()
+        .spawn_blocking(move || stalled_on_mount_of(&resolve_symlinks(&path)));
     match tokio::time::timeout(RESOLVE_TIMEOUT, resolved).await {
         Ok(Ok(answer)) => answer,
         // Timed out (the probe sits on a hung mount) or the task panicked.

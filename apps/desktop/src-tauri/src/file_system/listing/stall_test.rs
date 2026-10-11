@@ -16,12 +16,12 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use crate::file_system::listing::caching_test_support::TestListingGuard;
+use crate::file_system::listing::host::ListingEvents;
+use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::stall::{HungReads, StallPolicy, StallWatch};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::listing::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;
@@ -176,7 +176,7 @@ struct Rig {
     volume_id: String,
     volume: Arc<SilentServerVolume>,
     server: watch::Sender<bool>,
-    sink: Arc<CollectorListingEventSink>,
+    sink: Arc<RecordingEvents>,
     watch: StallWatch,
 }
 
@@ -194,7 +194,7 @@ impl Rig {
             volume_id,
             volume,
             server,
-            sink: Arc::new(CollectorListingEventSink::new()),
+            sink: Arc::new(RecordingEvents::new()),
             watch: StallWatch {
                 policy,
                 reads: Arc::new(HungReads::new()),
@@ -211,7 +211,7 @@ impl Rig {
         tokio::task::JoinHandle<Result<(), VolumeError>>,
     ) {
         let state = Arc::new(StreamingListingState::with_stall_watch(self.watch.clone()));
-        let events: Arc<dyn ListingEventSink> = Arc::clone(&self.sink) as Arc<dyn ListingEventSink>;
+        let events: Arc<dyn ListingEvents> = Arc::clone(&self.sink) as Arc<dyn ListingEvents>;
         let task = {
             let state = Arc::clone(&state);
             let volume_id = self.volume_id.clone();
@@ -284,7 +284,7 @@ async fn a_read_that_never_answers_reports_the_listing_stalled_within_the_deadli
     rig.wait_for_stall(listing.id()).await;
 
     assert!(rig.sink.complete.lock_ignore_poison().is_empty());
-    assert!(rig.sink.errors.lock_ignore_poison().is_empty());
+    assert!(rig.sink.failed.lock_ignore_poison().is_empty());
     // The event names what the folder lives on: this volume is a plain filesystem
     // backend reading `/`, which is a local disk on every machine the tests run on.
     assert_eq!(
@@ -317,7 +317,7 @@ async fn a_stalled_listing_recovers_on_its_own_when_the_server_comes_back() {
     assert!(result.is_ok(), "got {result:?}");
     assert_eq!(rig.completed(listing.id()), Some(2));
     assert!(
-        rig.sink.errors.lock_ignore_poison().is_empty(),
+        rig.sink.failed.lock_ignore_poison().is_empty(),
         "a stuck read's refusal is stale: it must not reach the pane"
     );
 }
@@ -493,8 +493,8 @@ async fn a_read_that_keeps_making_progress_never_reports_a_stall() {
         }) as Arc<dyn Volume>,
     );
     let listing = TestListingGuard::adopt(unique_test_id("stall-steady"));
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = Arc::new(StreamingListingState::with_stall_watch(StallWatch {
         policy: TEST_POLICY,
         reads: Arc::new(HungReads::new()),

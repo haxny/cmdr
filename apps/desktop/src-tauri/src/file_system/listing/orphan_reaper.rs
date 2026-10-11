@@ -119,10 +119,10 @@ fn reap_orphaned_listings_scoped(now_ms: u64, window_ms: u64, only: Option<&[&st
 /// Spawns the periodic backstop reaper task. Call once during app setup.
 ///
 /// Wakes every `REAPER_SWEEP_INTERVAL` and calls `reap_orphaned_listings`. Runs on
-/// Tauri's async runtime so it survives for the process lifetime; the task ends only
+/// the host's runtime so it survives for the process lifetime; the task ends only
 /// when the runtime shuts down at app exit.
 pub(crate) fn start_orphan_listing_reaper() {
-    tauri::async_runtime::spawn(async {
+    crate::file_system::listing::host::runtime().spawn(async {
         loop {
             tokio::time::sleep(REAPER_SWEEP_INTERVAL).await;
             let reaped = reap_orphaned_listings();

@@ -280,11 +280,11 @@ pub fn persist_restricted_window_setting(
 /// virtual `.git/...` listing keep their cached children until the next
 /// navigation. We refresh every cached listing under any subscribed repo's
 /// `.git/` so the change is visible immediately.
-/// `async` is load-bearing here: the body fans out to `notify_directory_changed`
-/// which calls `tokio::spawn` to emit cache-refresh events. Sync Tauri commands
-/// run on the IPC main thread, which has no Tokio reactor: `spawn` panicked
-/// there with "there is no reactor running" (see crash report 2026-05-05).
-/// Marking the command `async` puts it on a Tokio worker, where `spawn` works.
+/// `async` keeps the fan-out off the IPC main thread, where a sync Tauri command
+/// runs. The refreshes it starts spawn onto the listing engine's injected runtime
+/// (`file_system::listing::host::runtime`), which resolves from any thread; a bare
+/// `tokio::spawn` from a sync command once panicked with "there is no reactor
+/// running" (crash report 2026-05-05).
 #[tauri::command]
 #[specta::specta]
 pub async fn set_show_virtual_git_portal(enabled: bool) {

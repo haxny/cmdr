@@ -17,10 +17,10 @@ use crate::adb::test_support::{
     a_fake_phone, a_listed_phone, dial, dials_seen, phone, registry_and_provider_agree, retire_phone,
 };
 use crate::file_system::listing::caching_test_support::TestListingGuard;
+use crate::file_system::listing::host::ListingEvents;
+use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::streaming::{
-    CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
-};
+use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 
@@ -322,8 +322,8 @@ async fn a_pane_on_an_adb_path_lists_the_phone_through_the_listing_pipeline() {
         .expect("the fake phone dials");
 
     let listing = TestListingGuard::adopt(unique_test_id("adb-pane-listing"));
-    let sink = Arc::new(CollectorListingEventSink::new());
-    let events: Arc<dyn ListingEventSink> = Arc::clone(&sink) as Arc<dyn ListingEventSink>;
+    let sink = Arc::new(RecordingEvents::new());
+    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
     let state = Arc::new(StreamingListingState::new());
     let pane_path = format!("adb://{SERIAL}/sdcard");
     let outcome = read_directory_with_progress(
@@ -339,7 +339,7 @@ async fn a_pane_on_an_adb_path_lists_the_phone_through_the_listing_pipeline() {
     )
     .await;
     assert!(outcome.is_ok(), "the listing pipeline reads the phone; got {outcome:?}");
-    assert!(sink.errors.lock().unwrap().is_empty(), "no listing error was emitted");
+    assert!(sink.failed.lock().unwrap().is_empty(), "no listing error was emitted");
 
     let mut paths: Vec<String> = listing.entries().into_iter().map(|e| e.path).collect();
     paths.sort_unstable();
@@ -407,7 +407,7 @@ async fn listing_a_listed_phone_nobody_dialed_says_it_is_not_connected() {
     list_undialed_phone(SERIAL);
 
     let listing = TestListingGuard::adopt(unique_test_id("adb-undialed-listing"));
-    let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
+    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
     let state = Arc::new(StreamingListingState::new());
     let pane_path = format!("adb://{SERIAL}/sdcard");
     let outcome = read_directory_with_progress(
