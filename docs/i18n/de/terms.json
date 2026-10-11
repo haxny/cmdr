@@ -531,17 +531,23 @@
     "sources": "macOS Finder (Choose Application … → Programm auswählen …)"
   },
   "clean-up": {
-    "accept": ["räumt", "entfernt", "aufräum"],
+    "accept": ["aufräum", "aufgeräumt"],
+    "proseAccept": ["wegräumen", "räumt", "entfernt"],
     "avoid": [
       {
         "form": "löschen",
         "why": "the user-facing delete verb; reads as data loss where the line reassures"
+      },
+      {
+        "form": "Optimieren",
+        "why": "Finder's compress step AR5 (Cleaning up) says Optimieren, which reads as optimizing the archive; this step deletes unfinished files"
       }
     ],
-    "chosen": "wegräumen",
-    "confidence": "high",
-    "forms": "Cmdr clearing its own leftovers → räumt … weg; clears away what it leaves half-written → entfernt, was dabei halb geschrieben zurückbleibt",
-    "sources": "catalog (fileOperations.cancelRollback.stagedLeftover.*, main.quit.body)"
+    "chosen": "aufräumen",
+    "confidence": "tentative",
+    "forms": "progress label: (wird aufgeräumt); prose: Cmdr clearing its own leftovers → räumt … weg; clears away what it leaves half-written → entfernt, was dabei halb geschrieben zurückbleibt",
+    "sources": "MS (Clean Up → Aufräumen); macOS Finder N169.3 (Clean Up → Aufräumen); Finder AR5 (Cleaning up → Optimieren) rejected as another sense; catalog",
+    "note": "Tentative only because Finder's own Cleaning up step words it differently."
   },
   "clear": {
     "accept": ["lösch", "gelöscht"],

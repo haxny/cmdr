@@ -471,18 +471,18 @@
     "sources": "macOS picker prompt; Finder Choose Application… (N137)"
   },
   "clean-up": {
-    "accept": ["ruimt", "opgeruimd"],
+    "proseAccept": ["opruimen", "ruimt", "opgeruimd"],
     "avoid": [
       {
         "form": "verwijdert",
         "why": "a second delete verb beside queue rows that say Bezig met verwijderen reads as more deleting"
       }
     ],
-    "chosen": "opruimen",
-    "confidence": "tentative",
+    "chosen": "opschonen",
+    "confidence": "high",
     "decision": "Het stoppoortje: afsluiten terwijl er nog werk loopt",
-    "forms": "separable: ruimt … op",
-    "sources": "plain Dutch; no pile string names this act"
+    "forms": "progress label: (opschonen); prose: separable ruimt … op",
+    "sources": "macOS Finder AR5 (Cleaning up → Opschonen); MS (Clean Up → Opschonen); prose opruimen is plain Dutch"
   },
   "clear": {
     "accept": ["wis"],

@@ -430,9 +430,18 @@
   },
   "clean-up": {
     "chosen": "limpar",
-    "accept": ["limpeza", "apag", "remov"],
+    "accept": ["limpando", "limpeza"],
+    "proseAccept": ["apag", "remov"],
+    "forms": "progress label: (limpando); prose: o Cmdr remove o que ficou gravado pela metade",
+    "avoid": [
+      {
+        "form": "Organizando",
+        "why": "Finder's compress step AR5 (Cleaning up) says Organizando, the arranging sense; this step deletes unfinished files"
+      }
+    ],
     "confidence": "tentative",
-    "sources": "shipped pt catalog"
+    "sources": "MS pt-BR (Clean Up → Limpar); Finder AR5 (Cleaning up → Organizando) rejected as another sense; shipped pt catalog",
+    "note": "Tentative only because Finder's own Cleaning up step words it differently."
   },
   "clear": {
     "chosen": "Limpar",

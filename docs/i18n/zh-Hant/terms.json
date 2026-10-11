@@ -545,6 +545,24 @@
     "forms": "choose one thing → 選擇 (選擇 App⋯, 選擇 adb 指令); casual pick → 選一個 / 挑一個; pick a different X → 換一個 X / 換個 X; picking items out of a list is select → 選取",
     "sources": "AP-TW (選擇啟動磁碟; Choose Application… → 選擇應用程式⋯)"
   },
+  "clean-up": {
+    "chosen": "清理",
+    "proseAccept": ["清掉"],
+    "forms": "progress label: （正在清理）; the quit gate: 清理掉; Cmdr's own work files: 清掉",
+    "avoid": [
+      {
+        "form": "清除",
+        "why": "macOS zh_TW's Erase (清除磁碟, 永久清除垃圾桶) and our Clear; Finder's compress step AR5 says 正在清除, which here would read as erasing"
+      },
+      {
+        "form": "整理",
+        "why": "the arranging sense of Finder's icon Clean Up command"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "MS TWN (Clean Up → 清理); Finder AR5 (Cleaning up → 正在清除) rejected; zh ruling",
+    "note": "Tentative only because Finder's own Cleaning up step words it differently."
+  },
   "clear": {
     "chosen": "清除",
     "confidence": "high",

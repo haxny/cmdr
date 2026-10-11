@@ -481,7 +481,7 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Bezig met annuleren… (opruimen)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Bezig met annuleren… (opschonen)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"
   },

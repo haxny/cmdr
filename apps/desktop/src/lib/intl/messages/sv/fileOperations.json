@@ -481,7 +481,7 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (städar upp)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (rensar upp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"
   },

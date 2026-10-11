@@ -532,9 +532,9 @@
   "clean-up": {
     "distinct": ["delete"],
     "en": "clean up",
-    "match": ["clean up", "cleans up", "clears away", "clears it", "clear away"],
+    "match": ["clean up", "cleans up", "cleaning up", "clears away", "clears it", "clear away"],
     "notMatch": ["clears it up", "esc clears it", "usually clears it"],
-    "note": "Deliberately not the delete verb: it sits next to queue rows that literally say deleting.",
+    "note": "Deliberately not the delete verb: it sits next to queue rows that literally say deleting. A ruling's chosen form is what a label uses (the progress step \"Canceling… (cleaning up)\"), following Finder's own compress-progress step \"Cleaning up\" where it means the same; prose verbs for the act sit in proseAccept.",
     "sense": "Cmdr tidying away its own half-written or leftover files so nothing looks complete that isn't."
   },
   "clear": {

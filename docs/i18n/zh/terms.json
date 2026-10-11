@@ -480,17 +480,22 @@
     "sources": "macOS"
   },
   "clean-up": {
-    "accept": ["清掉"],
+    "proseAccept": ["清掉"],
     "avoid": [
       {
         "form": "清除",
         "why": "reserved for clearing an index or a search"
+      },
+      {
+        "form": "整理",
+        "why": "Finder's compress step AR5 says 正在整理, the arranging sense of its icon Clean Up command (also 整理); this step deletes unfinished files"
       }
     ],
     "chosen": "清理",
-    "confidence": "high",
-    "forms": "the quit gate: 清理掉; Cmdr's own work files: 清掉",
-    "sources": "descriptive"
+    "confidence": "tentative",
+    "forms": "progress label: （正在清理）; the quit gate: 清理掉; Cmdr's own work files: 清掉",
+    "sources": "MS (Clean Up → 清理); Finder AR5 (Cleaning up → 正在整理) rejected as another sense",
+    "note": "Tentative only because Finder's own Cleaning up step words it differently."
   },
   "clear": {
     "chosen": "清除",

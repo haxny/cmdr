@@ -480,16 +480,22 @@
     "sources": "macOS"
   },
   "clean-up": {
-    "accept": ["rensar bort", "rensas bort"],
+    "accept": ["rensar upp"],
+    "proseAccept": ["rensa bort", "rensar bort", "rensas bort"],
     "avoid": [
       {
         "form": "radera",
         "why": "the settled destructive delete the user asked for; clean-up is Cmdr's own leftovers"
+      },
+      {
+        "form": "städar upp",
+        "why": "household cleaning; Finder's own Cleaning up step (AR5) says Rensar upp"
       }
     ],
-    "chosen": "rensa bort",
+    "chosen": "rensa upp",
     "confidence": "high",
-    "sources": "catalog (errorReporter.dialog.description)"
+    "forms": "progress label: (rensar upp); prose: Cmdr rensar bort det som blivit delvis skrivet",
+    "sources": "macOS Finder AR5 (Cleaning up → Rensar upp); MS (Clean Up → rensa); catalog (errorReporter.dialog.description)"
   },
   "clear": {
     "accept": ["rensar", "rensades", "töm"],

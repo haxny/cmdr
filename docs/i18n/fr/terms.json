@@ -518,17 +518,18 @@
     "sources": "macOS Finder N137 (Choose Application… → Choisir une application…)"
   },
   "clean-up": {
-    "accept": ["s’en chargera", "retirer", "supprime"],
+    "accept": ["nettoyage"],
+    "proseAccept": ["s’en chargera", "retirer", "supprime"],
     "avoid": [
       {
         "form": "effacer",
         "why": "the erase/wipe sense"
       }
     ],
-    "chosen": "supprimer",
+    "chosen": "nettoyer",
     "confidence": "high",
-    "forms": "clears away what it leaves half-written → supprime tout fichier à moitié écrit; clears it on a later transfer → s’en chargera lors d’un transfert ultérieur",
-    "sources": "catalog (main.quit.body, fileOperations.cancelRollback.stagedLeftover.*)"
+    "forms": "progress label: (nettoyage en cours); prose: clears away what it leaves half-written → supprime tout fichier à moitié écrit; clears it on a later transfer → s’en chargera lors d’un transfert ultérieur",
+    "sources": "macOS Finder AR5 (Cleaning up → Nettoyage); MS (Clean Up → Nettoyer); catalog (main.quit.body, fileOperations.cancelRollback.stagedLeftover.*)"
   },
   "clear": {
     "accept": ["efface", "effacé", "effacez"],

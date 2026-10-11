@@ -432,16 +432,23 @@
     "sources": "macOS Finder (Choose Application… → Seleccionar aplicación…)"
   },
   "clean-up": {
-    "chosen": "borrar",
-    "accept": ["borr", "limpi"],
+    "chosen": "limpiar",
+    "accept": ["limpi"],
+    "proseAccept": ["borr"],
+    "forms": "progress label: (limpiando); prose: Cmdr borra lo que quede a medio escribir",
     "avoid": [
       {
         "form": "eliminar",
         "why": "names the user-facing delete operation; English softens to clears away for the same reason"
+      },
+      {
+        "form": "Ordenando",
+        "why": "Finder's compress step AR5 (Cleaning up) says Ordenando, the arranging sense; this step deletes unfinished files"
       }
     ],
-    "confidence": "high",
-    "sources": "catalog (clear → borrar)",
+    "confidence": "tentative",
+    "sources": "MS (Clean Up → Limpiar); Finder AR5 (Cleaning up → Ordenando) rejected as another sense; catalog (clear → borrar)",
+    "note": "Tentative only because Finder's own Cleaning up step words it differently.",
     "decision": "La salida con operaciones en curso"
   },
   "clear": {

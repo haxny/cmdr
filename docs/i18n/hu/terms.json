@@ -589,17 +589,22 @@
     "sources": "macOS (Choose Application… → Alkalmazás kiválasztása…); catalog"
   },
   "clean-up": {
-    "chosen": "eltávolít",
-    "accept": ["eltávolít", "eltakarít", "takarít"],
-    "forms": "clears away what it leaves half-written → eltávolít minden félig megírt fájlt",
+    "chosen": "rendrakás",
+    "proseAccept": ["eltávolít", "eltakarít"],
+    "forms": "progress label: (rendrakás); prose: clears away what it leaves half-written → eltávolít minden félig megírt fájlt",
     "avoid": [
       {
         "form": "töröl",
         "why": "reassurance copy must not flash \"Cmdr deletes a file\""
+      },
+      {
+        "form": "takarítás",
+        "why": "as the step label: Finder's own Cleaning up step (AR5) says Rendrakás"
       }
     ],
     "confidence": "high",
-    "sources": "ms (remove → eltávolítás); catalog"
+    "sources": "macOS Finder AR5 (Cleaning up → Rendrakás); MS (remove → eltávolítás; Clean Up → Tisztítás); catalog",
+    "note": "Finder also says Rendrakás for its icon Clean Up command (N169.3); tidying up still fits a step that removes unfinished files."
   },
   "clear": {
     "chosen": "törlés",

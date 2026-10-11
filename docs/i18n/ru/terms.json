@@ -809,8 +809,9 @@
   },
   "clean-up": {
     "chosen": "очистка",
-    "accept": ["очист", "убер", "убра"],
-    "forms": "process noun Очистка; in a sentence Cmdr уберет or очистит недописанные файлы",
+    "accept": ["очист"],
+    "proseAccept": ["убер", "убра"],
+    "forms": "process noun Очистка, the progress label (очистка); in a sentence Cmdr уберет or очистит недописанные файлы",
     "avoid": [
       {
         "form": "удалить",

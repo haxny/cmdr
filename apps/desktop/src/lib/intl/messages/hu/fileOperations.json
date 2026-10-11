@@ -481,7 +481,7 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Megszakítás… (takarítás)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Megszakítás… (rendrakás)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "afeb3a3"
   },

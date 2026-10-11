@@ -418,7 +418,8 @@
     "sources": "macOS Finder N137 (Choose Application… → Chọn ứng dụng…)"
   },
   "clean-up": {
-    "accept": ["dọn"],
+    "proseAccept": ["dọn"],
+    "forms": "progress label: (đang dọn dẹp)",
     "avoid": [
       {
         "form": "xóa",
@@ -432,7 +433,7 @@
     "chosen": "dọn dẹp",
     "confidence": "high",
     "decision": "Hộp thoại thoát khi thao tác đang chạy",
-    "sources": "MS terminology (dọn dẹp nhanh, dọn dẹp phân phối)"
+    "sources": "macOS Finder AR5 (Cleaning up → Dọn dẹp); MS terminology (dọn dẹp nhanh, dọn dẹp phân phối)"
   },
   "clear": {
     "chosen": "xóa",
