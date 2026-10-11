@@ -46,6 +46,10 @@ Read this before adding, wiping, or reorganizing a spec.
   [#284](https://github.com/vdavid/cmdr/issues/284)–[#287](https://github.com/vdavid/cmdr/issues/287).
 - `dropbox-sync-status-linux.md`: **Cloud badges on Linux, which today are simply absent.** Holds the Dropbox socket
   protocol research and what a Linux arm needs. Issue: [#288](https://github.com/vdavid/cmdr/issues/288).
+- `transfer-tree-progress.md`: **A multi-folder copy shows one bar, so nobody can tell which folder is untouched or
+  which `index.html` is in flight.** One live, shared tree of the selection with per-folder and per-file progress, in
+  the progress dialog and the queue, plus one processing order for every driver. Its issue comment draft:
+  `transfer-tree-progress-issue-comment.md`. Issue: [#382](https://github.com/vdavid/cmdr/issues/382).
 
 ## Wiping a shipped spec
 
