@@ -41,7 +41,7 @@ impl Ledger {
         let (release, held) = std::sync::mpsc::channel::<()>();
         let (parked, is_parked) = std::sync::mpsc::channel();
         let queued = self.store().log.as_ref().is_some_and(|log| {
-            log.barrier(false, move || {
+            log.barrier(move || {
                 let _ = parked.send(());
                 // Returns once the test drops `release`.
                 let _ = held.recv();

@@ -75,7 +75,7 @@
 //!   so the store only updates its in-memory set and queues the line; a writer
 //!   thread does the `write(2)` (`in_flight_log_writer.rs`, which has the why
 //!   and the crash window it costs). ❗ Only a TEMP's record is fire-and-forget:
-//!   [`track`] waits until any other kind is written and synced, since an aside
+//!   [`track`] waits until any other kind is written, since an aside
 //!   is recorded before the rename that puts the user's original there.
 //! - **❌ No `fsync`.** An fsync here would cost milliseconds per file and turn
 //!   a copy into a flush-per-file crawl. An unsynced write is already in the
@@ -324,7 +324,7 @@ fn record_for(temp: &Path, home: Option<TempHome<'_>>) -> Option<Record> {
 /// does. ❌ Nothing else may: that ledger's sweep deletes what it finds, and
 /// every other kind can be the user's only copy.
 ///
-/// ❗ **Anything but a temp is on disk, synced, before this returns**, so a
+/// ❗ **Anything but a temp is written before this returns**, so a
 /// caller that records an aside and THEN renames the user's original onto it
 /// can't crash in between with nothing knowing what the aside is. A temp only
 /// queues: it holds incoming bytes, so a lost record costs a leftover, never
@@ -335,7 +335,7 @@ pub(super) fn track(state: &WriteOperationState, kind: ItemKind, absolute: &Path
     let tracked = record(state, home_for(state, absolute), kind, absolute);
     if !tracked.is_temp() {
         let (done, reached) = std::sync::mpsc::sync_channel(1);
-        if Ledger::of(state).durable_barrier(move || {
+        if Ledger::of(state).written_barrier(move || {
             let _ = done.send(());
         }) {
             // An Err means the writer is gone, and there is nothing left to wait for.
@@ -350,7 +350,7 @@ pub(super) fn track(state: &WriteOperationState, kind: ItemKind, absolute: &Path
 ///
 /// For the cross-volume engine, whose paths are already in the destination
 /// volume's own namespace ([`RecordHome::volume_space`]). Same promise: anything
-/// but a temp is on disk, synced, before this resolves.
+/// but a temp is written before this resolves.
 pub(super) async fn track_in(
     state: &WriteOperationState,
     home: RecordHome,
@@ -360,7 +360,7 @@ pub(super) async fn track_in(
     let tracked = record(state, home, kind, path);
     if !tracked.is_temp() {
         let (done, reached) = tokio::sync::oneshot::channel();
-        if Ledger::of(state).durable_barrier(move || {
+        if Ledger::of(state).written_barrier(move || {
             let _ = done.send(());
         }) {
             // An Err means the writer is gone, and there is nothing left to wait for.
@@ -583,17 +583,17 @@ impl Ledger {
     /// Drops a record the sweep is done with, on disk too.
     /// Waits, at most [`FLUSH_WAIT`], for everything queued so far to reach the
     /// log file. The wait happens with the store released.
-    /// Runs `then` once every record queued so far is written and synced to
-    /// disk. `false` when there's no log to wait for (none opened yet, or its
+    /// Runs `then` once every record queued so far is written (no `fsync`: a
+    /// process crash can't take what's in the page cache). `false` when there's no log to wait for (none opened yet, or its
     /// writer is gone), and `then` never runs.
-    fn durable_barrier(&self, then: impl FnOnce() + Send + 'static) -> bool {
-        self.store().log.as_ref().is_some_and(|log| log.barrier(true, then))
+    fn written_barrier(&self, then: impl FnOnce() + Send + 'static) -> bool {
+        self.store().log.as_ref().is_some_and(|log| log.barrier(then))
     }
 
     fn flush_log(&self) {
         let (done, reached) = std::sync::mpsc::sync_channel(1);
         let queued = self.store().log.as_ref().is_some_and(|log| {
-            log.barrier(false, move || {
+            log.barrier(move || {
                 // A waiter that gave up has nothing left to tell.
                 let _ = done.send(());
             })

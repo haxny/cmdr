@@ -21,8 +21,10 @@
 //! **Every other kind waits** (`in_flight_temps::track` / `track_in`): an
 //! aside or a staging folder can hold the user's only copy, and its caller
 //! records it BEFORE the rename that puts the original there. So `track` queues
-//! a durable barrier and returns only once the record is written AND synced
-//! (`sync_data`), which is stronger than the unsynced inline write it replaced.
+//! a barrier and returns only once the record is written: in the page cache,
+//! which a process crash or a kill can't take. That's exactly the inline
+//! write it replaced, and deliberately no `fsync`: one per aside would make a
+//! 10,000-file overwrite pay 10,000 of them.
 //! The directory scan never touches an aside (it matches `.cmdr-tmp-` only), so
 //! a lost aside record would leave the original stranded under a scratch name;
 //! the wait is what rules that out. Pinned by
@@ -42,12 +44,8 @@ enum Op {
     Append(Vec<u8>),
     /// Truncate the log and write these lines instead: compaction.
     Rewrite(Vec<u8>),
-    /// Run `then` once everything queued before it has reached the kernel, and,
-    /// when `durable`, the disk (`fsync`).
-    Barrier {
-        durable: bool,
-        then: Box<dyn FnOnce() + Send>,
-    },
+    /// Run `then` once everything queued before it has reached the kernel.
+    Barrier(Box<dyn FnOnce() + Send>),
 }
 
 /// The open log, owned by its writer thread.
@@ -86,20 +84,15 @@ impl LogWriter {
     }
 
     /// Queues a marker: the writer runs `then` once every line queued before it
-    /// is written, and synced to disk first when `durable`. `false` when the
+    /// is written. `false` when the
     /// writer is gone, and `then` never runs.
     ///
     /// A callback rather than a channel so a sync caller and an async one can
     /// each wait their own way, with the ledger's mutex released.
-    pub(super) fn barrier(&self, durable: bool, then: impl FnOnce() + Send + 'static) -> bool {
-        self.queue.as_ref().is_some_and(|queue| {
-            queue
-                .send(Op::Barrier {
-                    durable,
-                    then: Box::new(then),
-                })
-                .is_ok()
-        })
+    pub(super) fn barrier(&self, then: impl FnOnce() + Send + 'static) -> bool {
+        self.queue
+            .as_ref()
+            .is_some_and(|queue| queue.send(Op::Barrier(Box::new(then))).is_ok())
     }
 
     fn send(&self, op: Op) {
@@ -137,12 +130,7 @@ fn write_all_queued(mut log: File, ops: &mpsc::Receiver<Op>) {
                     log::debug!(target: "copy", "couldn't compact the in-flight temp ledger: {e}");
                 }
             }
-            Op::Barrier { durable, then } => {
-                if durable && let Err(e) = log.sync_data() {
-                    log::warn!(target: "copy", "couldn't sync the in-flight temp ledger to disk: {e}");
-                }
-                then();
-            }
+            Op::Barrier(then) => then(),
         }
     }
 }

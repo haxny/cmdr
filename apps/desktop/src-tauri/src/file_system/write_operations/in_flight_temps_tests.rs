@@ -797,7 +797,7 @@ fn every_registration_path_announces_the_volume() {
 /// name-based directory scan reaps, never data. An ASIDE holds the user's
 /// ORIGINAL file under a scratch name, and its caller records it before the
 /// rename that puts the original there. So `track` for anything but a temp
-/// returns only once the record is in the log, synced to disk: a crash right
+/// returns only once the record is written to the log: a crash right
 /// after the rename still leaves the next launch a record to restore it from.
 #[test]
 fn an_aside_is_on_disk_before_track_returns_while_a_temp_only_queues() {
