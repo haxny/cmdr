@@ -214,7 +214,6 @@ walkdir = "2"
 rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
 # For chunked copy metadata preservation (network filesystems)
 xattr = "1"
-filetime = "0.2"
 sysinfo = { version = "0.39.0", default-features = false, features = ["system"] }
 time = { version = "0.3", features = ["parsing", "macros", "formatting"] }
 # Playwright E2E testing plugin: socket bridge for direct webview injection (optional, feature-gated, dev-only).
@@ -322,6 +321,10 @@ tar = "0.4"
 # touches it. `urlencoding` (macOS+Linux table) can't do the job: it escapes `/` too, and
 # the scheme wants a literal path. Already in the lockfile via `cmdr-webdav`.
 percent-encoding = "2"
+# The updater touches the installed bundle's mtime with it (`updater/installer.rs`), and
+# `mod updater` is macOS-only, so it sits here for the reason `tar` gives. Tests on
+# every platform age fixture files with it through `[dev-dependencies]`.
+filetime = "0.2"
 core-foundation = "0.10.1"
 core-services = "1.0.0"
 icns = "0.4.0"
@@ -436,6 +439,7 @@ objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std",
 
 
 [dev-dependencies]
+filetime = "0.2"
 # Tauri's no-window mock runtime for real HTTP-boundary tests of the MCP router.
 # This is the same package as the production dependency; the feature only publishes
 # `tauri::test` helpers to dev targets and adds no package to the graph.
