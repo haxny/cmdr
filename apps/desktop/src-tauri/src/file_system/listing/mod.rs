@@ -88,12 +88,16 @@ mod diff_test;
 mod find_file_index_test;
 #[cfg(test)]
 mod hidden_files_test;
+#[cfg(test)]
+mod lifecycle_order_test;
 #[cfg(all(test, feature = "virtual-mtp"))]
 mod mtp_listing_path_test;
 #[cfg(test)]
 mod name_filter_test;
 #[cfg(test)]
 mod operations_test;
+#[cfg(test)]
+mod overlay_read_paths_test;
 #[cfg(test)]
 mod overlay_refresh_test;
 #[cfg(test)]
@@ -102,6 +106,8 @@ mod pane_diff_test;
 mod path_index_test;
 #[cfg(test)]
 mod row_beside_test;
+#[cfg(test)]
+mod seam_test_support;
 // A pane close drops a listing, and must not reach the volume's own watcher.
 // Docker-gated, over a real `cmdr-smb` session, because the SMB watcher's
 // lifetime is what the regression was about.
@@ -119,6 +125,8 @@ mod staging_temps_test;
 mod stall_test;
 #[cfg(test)]
 mod stats_test;
+#[cfg(test)]
+mod streaming_reaction_test;
 #[cfg(test)]
 mod streaming_test;
 #[cfg(test)]

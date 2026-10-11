@@ -550,8 +550,8 @@ pub async fn handle_directory_change(listing_id: &str) {
 
     // Enrich with index data so diff entries have recursive_size etc. Skipped for
     // a routed volume, which has no drive index (an archive's inner paths and a
-    // git snapshot's paths aren't real FS paths) — the same gate the three reads
-    // that CREATE a listing use. Without it a ⌘R could put a Size on a row the
+    // git snapshot's paths aren't real FS paths) — the same gate every other read
+    // that builds or replaces a listing uses. Without it a ⌘R could put a Size on a row the
     // first read left alone, from an index row that happens to share its path.
     if !is_routed {
         index().enrich(&volume_id, &mut new_entries);

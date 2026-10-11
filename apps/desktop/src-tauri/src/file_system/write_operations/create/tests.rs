@@ -530,3 +530,32 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
         "a pane on another volume showing the same path stays untouched"
     );
 }
+
+/// A create whose path the listing already holds (the watcher stat'd it first)
+/// leaves that row alone: the insert's duplicate guard drops the synthetic row,
+/// stale size and all, and nothing reaches the pane.
+#[test]
+fn synthetic_entry_diff_leaves_a_row_the_listing_already_holds() {
+    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::diff_emitter::{hold_for_test, pending_changes_for_test};
+    use crate::file_system::listing::reading::get_single_entry;
+
+    let tmp = create_test_dir("synthetic_diff_duplicate");
+    let new_path = tmp.path().join("made.txt");
+    fs::write(&new_path, b"fresh contents").expect("write the new file on disk");
+    let mut stale = get_single_entry(&new_path).expect("stat the new file");
+    stale.size = Some(1);
+    let listing = TestListing::new()
+        .path(tmp.path())
+        .entries(vec![stale])
+        .insert("synthetic-diff-duplicate");
+    hold_for_test(listing.id());
+
+    emit_synthetic_entry_diff(None, &new_path, tmp.path());
+
+    assert_eq!(listing.entries()[0].size, Some(1), "the stale row stays as it was");
+    assert!(
+        pending_changes_for_test(listing.id()).is_empty(),
+        "nothing reaches the pane"
+    );
+}

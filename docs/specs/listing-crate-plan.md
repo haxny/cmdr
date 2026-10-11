@@ -539,6 +539,22 @@ a second collector. Timing pins use `wait_until_async` and held flush windows, n
 **DONE.** New pins green; red-first verified per pin; lanes: `desktop-rust-tests`, `desktop-rust-clippy`,
 `desktop-rust-test-sleep`, `desktop-rust-fixed-temp-dir`, `desktop-rust-no-hand-rolled-fixture`, `file-length`.
 
+Executor notes:
+
+- The extraction is `listing/listing_end.rs`: `finish_streaming_listing(events, effects, …)` plus a small
+  `ListingEndEffects` trait (MCP ring, `restricted_paths` record/clear, `note_root_failure`) that `AppListingEndEffects`
+  answers, so the matrix records every effect without a global hook; `error_analytics_category` is the pinned half of
+  `emit_error`'s analytics (no test observer exists for `capture`). M2a moves all of it into `TauriListingEvents`.
+  `streaming.rs` would have crossed `file-length`'s 800 with it inside. The restricted-empty root records into the MCP
+  ring from inside `read_directory_with_progress`, so its cell reads the real ring by listing id.
+- `flush_all_watchers` is `playwright-e2e`-only and never compiles in the test lane, so the pin is on what it awaits:
+  `handle_directory_change` returns with its re-read landed (`watcher_incremental_test.rs`).
+- The `Replaced` arm sits behind the `has_app` gate in the test binary, so its zero-overlay-rows cell drives the
+  per-listing half (`publish_replacement(…, 0)`), as `caching_replacement_test.rs` does. M2b can lift it to the arm.
+- "A detached arm after `list_directory_end` is dropped" was already pinned by
+  `watcher_test::a_detached_arm_that_lost_the_race_leaves_no_watch_behind`; not duplicated.
+- The test-binary arming pins are macOS-only, like every other FSEvents cell in `watcher_test.rs`.
+
 ### M1: Vocabulary moves down; the local reader moves out
 
 **Scope.**

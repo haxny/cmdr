@@ -31,9 +31,12 @@ that cost, and the two rules that keep it cheap: `../DETAILS.md` § "Arming a li
 ## The overlay step
 
 Between the index enrich and the sort, `read_directory_with_progress` calls `crate::listing_overlays::decorate`, which
-folds in rows a PANE sees that the volume doesn't hold. `listing/operations.rs` (the sync sibling) and
-`caching::notify_full_refresh_locked` (the watcher-driven re-read) do the same, in the same place, so a refresh can't
-quietly strip them.
+folds in rows a PANE sees that the volume doesn't hold. Every other read that builds or replaces a listing does the
+same, in the same place, so a refresh can't quietly strip them: `listing/operations.rs` (the test-only sync start),
+`caching::notify_full_refresh_locked` (a backend's `FullRefresh`), `foreign_path::respell_listing` (a backend swap's
+re-read), and `file_system/watcher.rs`'s `handle_directory_change` (the watcher's full re-read, also ⌘R). Five paths in
+all, each pinned by `overlay_read_paths_test.rs`. A device backend's `Replaced` hand-over is the one replacement that
+runs no overlay and records zero contributed rows.
 
 Today's one contributor is the git portal, which puts the six virtual category rows into a repo's `.git/` listing.
 Placement matters three ways:

@@ -414,4 +414,6 @@ async fn wait_for_mdns_ready() {
 }
 
 #[cfg(test)]
+mod watcher_incremental_test;
+#[cfg(test)]
 mod watcher_test;

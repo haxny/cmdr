@@ -228,3 +228,104 @@ fn test_case_insensitive_sort() {
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
     assert_eq!(names, vec!["alpha.txt", "BETA.txt", "Zebra.txt"]);
 }
+
+// ============================================================================
+// Golden order, per locale
+// ============================================================================
+
+/// One corpus that touches every rule a name sort has: NFC and NFD spellings
+/// of one name, numerics, a `_` prefix, case pairs, and letters a locale seats
+/// differently (`å`, `ö` sit after `z` in Swedish, beside `a` / `o` in English).
+fn golden_corpus() -> Vec<FileEntry> {
+    [
+        "file10.txt",
+        "file2.txt",
+        "file1.txt",
+        "_build",
+        "Apple",
+        "apple",
+        "Zebra",
+        "zebra",
+        "\u{c5}ngstr\u{f6}m",
+        "A\u{30a}ngstro\u{308}m",
+        "\u{f6}l",
+        "ol",
+        "oz",
+        "10.txt",
+        "2.txt",
+        "\u{c9}mile",
+        "emile",
+        "zoo",
+    ]
+    .into_iter()
+    .map(|name| make_entry(name, false, None, None))
+    .collect()
+}
+
+fn golden_order(locale: &str) -> Vec<String> {
+    let _locale = PinnedLocale::to(locale);
+    let mut entries = golden_corpus();
+    sort_entries(
+        &mut entries,
+        SortColumn::Name,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+    );
+    entries.into_iter().map(|e| e.name).collect()
+}
+
+/// Pinned so moving the collator from the process-wide language to an injected
+/// locale (issue #301) provably orders every name the same way.
+#[test]
+fn the_golden_corpus_orders_the_same_in_english() {
+    assert_eq!(
+        golden_order("en"),
+        [
+            "_build",
+            "2.txt",
+            "10.txt",
+            "A\u{30a}ngstro\u{308}m",
+            "\u{c5}ngstr\u{f6}m",
+            "apple",
+            "Apple",
+            "emile",
+            "\u{c9}mile",
+            "file1.txt",
+            "file2.txt",
+            "file10.txt",
+            "ol",
+            "\u{f6}l",
+            "oz",
+            "zebra",
+            "Zebra",
+            "zoo",
+        ]
+    );
+}
+
+#[test]
+fn the_golden_corpus_orders_the_same_in_swedish() {
+    assert_eq!(
+        golden_order("sv"),
+        [
+            "_build",
+            "2.txt",
+            "10.txt",
+            "apple",
+            "Apple",
+            "emile",
+            "\u{c9}mile",
+            "file1.txt",
+            "file2.txt",
+            "file10.txt",
+            "ol",
+            "oz",
+            "zebra",
+            "Zebra",
+            "zoo",
+            "A\u{30a}ngstro\u{308}m",
+            "\u{c5}ngstr\u{f6}m",
+            "\u{f6}l",
+        ]
+    );
+}
