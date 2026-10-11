@@ -7,7 +7,6 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 
 - `queue-window.ts` opens the window (perms in `src-tauri/capabilities/queue.json`), `operations-store.svelte.ts` is the
   single reactive source it renders from, `QueueRow.svelte` a row, shell `routes/queue/+page.svelte`.
-- `queue-handoff-toast.ts` + `QueueHandoffToastContent.svelte`: the toast every route into the background shows.
 - Pure helpers: `failure-reason.ts` (a retained failure's title/explanation/suggestion), `queue-backlog.ts`
   (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label).
 
@@ -47,7 +46,7 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   `pnpm dev` after a perm change. Being its own webview, the page inits its own i18n / theme / transparency / text size
   (`initWindowSettings()`, `lib/settings/CLAUDE.md`).
 - **One opener, one store per webview**: `openQueueWindow`, plus the main window's own
-  (`main-window-operations.svelte.ts`). ❌ Backgrounding a job never opens the window; it shows
-  `queue-handoff-toast.ts`'s toast: DETAILS § "Backgrounding never opens the window".
+  (`main-window-operations.svelte.ts`). ❌ Backgrounding never opens it: `queue-handoff-toast.ts` instead (DETAILS §
+  "Backgrounding never opens the window").
 
 Depth (the store's API, retained failures, vibrancy, decisions): `DETAILS.md`. Read it before non-trivial work here.
