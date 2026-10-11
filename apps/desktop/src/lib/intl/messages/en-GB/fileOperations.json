@@ -62,5 +62,21 @@
   "fileOperations.transferProgress.titleActive": "{gerund, select, copy {Copying} move {Moving} compress {Compressing} delete {Deleting} other {Moving to the Bin}}…",
   "@fileOperations.transferProgress.titleActive": {
     "sourceHash": "0c636e5"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} of the {totalText} items this copy was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} move {{goneText} of the {totalText} items this move was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} delete {{goneText} of the {totalText} items this delete was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} trash {{goneText} of the {totalText} items this move to the Bin was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} other {{goneText} of the {totalText} items this operation was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Copy the rest} move {Move the rest} delete {Delete the rest} trash {Move the rest to the Bin} other {Do the rest}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {A queued copy has a question for you. You’ll see it as soon as the open dialog closes.} move {A queued move has a question for you. You’ll see it as soon as the open dialog closes.} delete {A queued delete has a question for you. You’ll see it as soon as the open dialog closes.} trash {A queued move to the Bin has a question for you. You’ll see it as soon as the open dialog closes.} other {A queued operation has a question for you. You’ll see it as soon as the open dialog closes.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nothing left to copy: {total, plural, one {the item} other {all {totalText} items}} this copy was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} move {Nothing left to move: {total, plural, one {the item} other {all {totalText} items}} this move was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} delete {Nothing left to delete: {total, plural, one {the item} other {all {totalText} items}} this delete was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} trash {Nothing left to move to the Bin: {total, plural, one {the item} other {all {totalText} items}} this move to the Bin was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} other {Nothing left to do: {total, plural, one {the item} other {all {totalText} items}} this operation was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
   }
 }

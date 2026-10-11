@@ -688,6 +688,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Некоторых объектов уже нет",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {Пока копирование ожидало своей очереди, {goneText} из {totalText} объектов {gone, plural, one {был перемещен или удален} few {были перемещены или удалены} many {были перемещены или удалены} other {были перемещены или удалены}}.} move {Пока перемещение ожидало своей очереди, {goneText} из {totalText} объектов {gone, plural, one {был перемещен или удален} few {были перемещены или удалены} many {были перемещены или удалены} other {были перемещены или удалены}}.} delete {Пока удаление ожидало своей очереди, {goneText} из {totalText} объектов {gone, plural, one {был перемещен или удален} few {были перемещены или удалены} many {были перемещены или удалены} other {были перемещены или удалены}}.} trash {Пока перемещение в Корзину ожидало своей очереди, {goneText} из {totalText} объектов {gone, plural, one {был перемещен или удален} few {были перемещены или удалены} many {были перемещены или удалены} other {были перемещены или удалены}}.} other {Пока операция ожидала своей очереди, {goneText} из {totalText} объектов {gone, plural, one {был перемещен или удален} few {были перемещены или удалены} many {были перемещены или удалены} other {были перемещены или удалены}}.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {и еще {countText} объект} few {и еще {countText} объекта} many {и еще {countText} объектов} other {и еще {countText} объекта}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Скопировать остальные} move {Переместить остальные} delete {Удалить остальные} trash {Переместить остальные в Корзину} other {Продолжить с остальными}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {У ожидающего копирования есть вопрос к вам. Вы увидите его, как только закроется открытое диалоговое окно.} move {У ожидающего перемещения есть вопрос к вам. Вы увидите его, как только закроется открытое диалоговое окно.} delete {У ожидающего удаления есть вопрос к вам. Вы увидите его, как только закроется открытое диалоговое окно.} trash {У ожидающего перемещения в Корзину есть вопрос к вам. Вы увидите его, как только закроется открытое диалоговое окно.} other {У ожидающей операции есть вопрос к вам. Вы увидите его, как только закроется открытое диалоговое окно.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Копировать больше нечего: пока копирование ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} move {Перемещать больше нечего: пока перемещение ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} delete {Удалять больше нечего: пока удаление ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} trash {Перемещать в Корзину больше нечего: пока перемещение в Корзину ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} other {Выполнять больше нечего: пока операция ожидала своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Байты",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

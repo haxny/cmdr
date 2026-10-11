@@ -688,6 +688,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Một số mục không còn nữa",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{gone, plural, other {Trong lúc chờ đến lượt, {goneText} trên {totalText} mục cần sao chép đã bị chuyển đi hoặc xóa.}}} move {{gone, plural, other {Trong lúc chờ đến lượt, {goneText} trên {totalText} mục cần di chuyển đã bị chuyển đi hoặc xóa.}}} delete {{gone, plural, other {Trong lúc chờ đến lượt, {goneText} trên {totalText} mục cần xóa đã bị chuyển đi hoặc xóa.}}} trash {{gone, plural, other {Trong lúc chờ đến lượt, {goneText} trên {totalText} mục cần chuyển vào thùng rác đã bị chuyển đi hoặc xóa.}}} other {{gone, plural, other {Trong lúc chờ đến lượt, {goneText} trên {totalText} mục của thao tác này đã bị chuyển đi hoặc xóa.}}}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, other {và thêm {countText} mục nữa}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Sao chép các mục còn lại} move {Di chuyển các mục còn lại} delete {Xóa các mục còn lại} trash {Chuyển các mục còn lại vào thùng rác} other {Tiếp tục với các mục còn lại}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Một lần sao chép đang chờ có câu hỏi cho bạn. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.} move {Một lần di chuyển đang chờ có câu hỏi cho bạn. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.} delete {Một lần xóa đang chờ có câu hỏi cho bạn. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.} trash {Một lần chuyển vào thùng rác đang chờ có câu hỏi cho bạn. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.} other {Một thao tác đang chờ có câu hỏi cho bạn. Bạn sẽ thấy câu hỏi ngay khi hộp thoại đang mở đóng lại.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Không còn gì để sao chép: {total, plural, other {{totalText} mục cần sao chép}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} move {Không còn gì để di chuyển: {total, plural, other {{totalText} mục cần di chuyển}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} delete {Không còn gì để xóa: {total, plural, other {{totalText} mục cần xóa}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} trash {Không còn gì để chuyển vào thùng rác: {total, plural, other {{totalText} mục cần chuyển vào thùng rác}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} other {Không còn gì để làm: {total, plural, other {{totalText} mục của thao tác này}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Byte",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

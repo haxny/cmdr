@@ -690,6 +690,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Einige Objekte sind nicht mehr da",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} von {totalText} Objekten, die kopiert werden sollten, {gone, plural, one {wurde} other {wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} move {{goneText} von {totalText} Objekten, die bewegt werden sollten, {gone, plural, one {wurde} other {wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} delete {{goneText} von {totalText} Objekten, die gelöscht werden sollten, {gone, plural, one {wurde} other {wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} trash {{goneText} von {totalText} Objekten, die in den Papierkorb bewegt werden sollten, {gone, plural, one {wurde} other {wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} other {{goneText} von {totalText} Objekten dieses Vorgangs {gone, plural, one {wurde} other {wurden}} bewegt oder gelöscht, während er gewartet hat.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "und {countText} {count, plural, one {weiteres Objekt} other {weitere Objekte}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Rest kopieren} move {Rest bewegen} delete {Rest löschen} trash {Rest in den Papierkorb bewegen} other {Rest erledigen}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Ein wartender Vorgang, der Objekte kopieren soll, hat eine Frage an dich. Du siehst sie, sobald der offene Dialog geschlossen ist.} move {Ein wartender Vorgang, der Objekte bewegen soll, hat eine Frage an dich. Du siehst sie, sobald der offene Dialog geschlossen ist.} delete {Ein wartender Vorgang, der Objekte löschen soll, hat eine Frage an dich. Du siehst sie, sobald der offene Dialog geschlossen ist.} trash {Ein wartender Vorgang, der Objekte in den Papierkorb bewegen soll, hat eine Frage an dich. Du siehst sie, sobald der offene Dialog geschlossen ist.} other {Ein wartender Vorgang hat eine Frage an dich. Du siehst sie, sobald der offene Dialog geschlossen ist.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nichts mehr zu kopieren: {total, plural, one {Das Objekt, das kopiert werden sollte, wurde} other {Alle {totalText} Objekte, die kopiert werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} move {Nichts mehr zu bewegen: {total, plural, one {Das Objekt, das bewegt werden sollte, wurde} other {Alle {totalText} Objekte, die bewegt werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} delete {Nichts mehr zu löschen: {total, plural, one {Das Objekt, das gelöscht werden sollte, wurde} other {Alle {totalText} Objekte, die gelöscht werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} trash {Nichts mehr in den Papierkorb zu bewegen: {total, plural, one {Das Objekt, das in den Papierkorb bewegt werden sollte, wurde} other {Alle {totalText} Objekte, die in den Papierkorb bewegt werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} other {Nichts mehr zu tun: {total, plural, one {Das Objekt dieses Vorgangs wurde} other {Alle {totalText} Objekte dieses Vorgangs wurden}} bewegt oder gelöscht, während er gewartet hat.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",

@@ -689,6 +689,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Néhány elem már nincs meg",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {A másolásra váró {totalText} elemből {goneText} {gone, plural, one {máshová került vagy törlődött} other {máshová került vagy törlődött}}, amíg a művelet a sorára várt.} move {A áthelyezésre váró {totalText} elemből {goneText} {gone, plural, one {máshová került vagy törlődött} other {máshová került vagy törlődött}}, amíg a művelet a sorára várt.} delete {A törlésre váró {totalText} elemből {goneText} {gone, plural, one {máshová került vagy törlődött} other {máshová került vagy törlődött}}, amíg a művelet a sorára várt.} trash {A Kukába helyezésre váró {totalText} elemből {goneText} {gone, plural, one {máshová került vagy törlődött} other {máshová került vagy törlődött}}, amíg a művelet a sorára várt.} other {A művelethez tartozó {totalText} elemből {goneText} {gone, plural, one {máshová került vagy törlődött} other {máshová került vagy törlődött}}, amíg a művelet a sorára várt.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {és {countText} további elem} other {és {countText} további elem}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {A többi másolása} move {A többi áthelyezése} delete {A többi törlése} trash {A többi áthelyezése a Kukába} other {Folytatás a többivel}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Egy várakozó másolásnak kérdése van hozzád. Látni fogod, amint bezárul a nyitott párbeszédablak.} move {Egy várakozó áthelyezésnek kérdése van hozzád. Látni fogod, amint bezárul a nyitott párbeszédablak.} delete {Egy várakozó törlésnek kérdése van hozzád. Látni fogod, amint bezárul a nyitott párbeszédablak.} trash {Egy várakozó Kukába helyezésnek kérdése van hozzád. Látni fogod, amint bezárul a nyitott párbeszédablak.} other {Egy várakozó műveletnek kérdése van hozzád. Látni fogod, amint bezárul a nyitott párbeszédablak.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nincs mit másolni: {total, plural, one {a másolásra váró elem} other {a másolásra váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} move {Nincs mit áthelyezni: {total, plural, one {a áthelyezésre váró elem} other {a áthelyezésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} delete {Nincs mit törölni: {total, plural, one {a törlésre váró elem} other {a törlésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} trash {Nincs mit a Kukába helyezni: {total, plural, one {a Kukába helyezésre váró elem} other {a Kukába helyezésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} other {Nincs több teendő: {total, plural, one {a művelethez tartozó elem} other {a művelethez tartozó összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Bájtok",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

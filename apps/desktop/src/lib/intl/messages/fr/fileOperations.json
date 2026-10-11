@@ -690,6 +690,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Certains éléments ne sont plus là",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} des {totalText} éléments que cette copie devait traiter {gone, plural, one {a été déplacé ou supprimé} many {ont été déplacés ou supprimés} other {ont été déplacés ou supprimés}} pendant qu’elle attendait son tour.} move {{goneText} des {totalText} éléments que ce déplacement devait traiter {gone, plural, one {a été déplacé ou supprimé} many {ont été déplacés ou supprimés} other {ont été déplacés ou supprimés}} pendant qu’il attendait son tour.} delete {{goneText} des {totalText} éléments que cette suppression devait traiter {gone, plural, one {a été déplacé ou supprimé} many {ont été déplacés ou supprimés} other {ont été déplacés ou supprimés}} pendant qu’elle attendait son tour.} trash {{goneText} des {totalText} éléments que ce placement dans la corbeille devait traiter {gone, plural, one {a été déplacé ou supprimé} many {ont été déplacés ou supprimés} other {ont été déplacés ou supprimés}} pendant qu’il attendait son tour.} other {{goneText} des {totalText} éléments que cette opération devait traiter {gone, plural, one {a été déplacé ou supprimé} many {ont été déplacés ou supprimés} other {ont été déplacés ou supprimés}} pendant qu’elle attendait son tour.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {et {countText} élément de plus} many {et {countText} éléments de plus} other {et {countText} éléments de plus}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Copier le reste} move {Déplacer le reste} delete {Supprimer le reste} trash {Placer le reste dans la corbeille} other {Continuer avec le reste}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Une copie en attente a une question pour vous. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.} move {Un déplacement en attente a une question pour vous. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.} delete {Une suppression en attente a une question pour vous. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.} trash {Un placement dans la corbeille en attente a une question pour vous. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.} other {Une opération en attente a une question pour vous. Vous la verrez dès que la boîte de dialogue ouverte sera fermée.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Plus rien à copier : {total, plural, one {l’élément que cette copie devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette copie devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette copie devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.} move {Plus rien à déplacer : {total, plural, one {l’élément que ce déplacement devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que ce déplacement devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que ce déplacement devait traiter ont tous été déplacés ou supprimés}} pendant qu’il attendait son tour.} delete {Plus rien à supprimer : {total, plural, one {l’élément que cette suppression devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette suppression devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette suppression devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.} trash {Plus rien à placer dans la corbeille : {total, plural, one {l’élément que ce placement dans la corbeille devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que ce placement dans la corbeille devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que ce placement dans la corbeille devait traiter ont tous été déplacés ou supprimés}} pendant qu’il attendait son tour.} other {Plus rien à faire : {total, plural, one {l’élément que cette opération devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette opération devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette opération devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Octets",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

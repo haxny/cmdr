@@ -687,6 +687,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "有些项目不见了",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{gone, plural, other {排队等待期间，要拷贝的 {totalText} 个项目中有 {goneText} 个被移到别处或删除了。}}} move {{gone, plural, other {排队等待期间，要移动的 {totalText} 个项目中有 {goneText} 个被移到别处或删除了。}}} delete {{gone, plural, other {排队等待期间，要删除的 {totalText} 个项目中有 {goneText} 个被移到别处或删除了。}}} trash {{gone, plural, other {排队等待期间，要移到废纸篓的 {totalText} 个项目中有 {goneText} 个被移到别处或删除了。}}} other {{gone, plural, other {排队等待期间，这项操作要处理的 {totalText} 个项目中有 {goneText} 个被移到别处或删除了。}}}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, other {另有 {countText} 个项目}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {拷贝其余项目} move {移动其余项目} delete {删除其余项目} trash {将其余项目移到废纸篓} other {继续处理其余项目}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {排队中的一项拷贝操作有个问题要问你。当前打开的对话框一关闭，你就会看到。} move {排队中的一项移动操作有个问题要问你。当前打开的对话框一关闭，你就会看到。} delete {排队中的一项删除操作有个问题要问你。当前打开的对话框一关闭，你就会看到。} trash {排队中的一项移到废纸篓操作有个问题要问你。当前打开的对话框一关闭，你就会看到。} other {排队中的一项操作有个问题要问你。当前打开的对话框一关闭，你就会看到。}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {没有可拷贝的了：要拷贝的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} move {没有可移动的了：要移动的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} delete {没有可删除的了：要删除的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} trash {没有可移到废纸篓的了：要移到废纸篓的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} other {没有剩下要做的了：这项操作要处理的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "字节",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

@@ -689,6 +689,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Sommige onderdelen zijn er niet meer",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} van de {totalText} onderdelen die gekopieerd zouden worden, {gone, plural, one {is} other {zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} move {{goneText} van de {totalText} onderdelen die verplaatst zouden worden, {gone, plural, one {is} other {zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} delete {{goneText} van de {totalText} onderdelen die verwijderd zouden worden, {gone, plural, one {is} other {zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} trash {{goneText} van de {totalText} onderdelen die naar de prullenmand verplaatst zouden worden, {gone, plural, one {is} other {zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} other {{goneText} van de {totalText} onderdelen van deze bewerking {gone, plural, one {is} other {zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {en nog {countText} onderdeel} other {en nog {countText} onderdelen}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Kopieer de rest} move {Verplaats de rest} delete {Verwijder de rest} trash {Verplaats de rest naar de prullenmand} other {Ga door met de rest}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Een bewerking die wacht om te kopiëren, heeft een vraag voor je. Je ziet de vraag zodra het geopende venster sluit.} move {Een bewerking die wacht om te verplaatsen, heeft een vraag voor je. Je ziet de vraag zodra het geopende venster sluit.} delete {Een bewerking die wacht om te verwijderen, heeft een vraag voor je. Je ziet de vraag zodra het geopende venster sluit.} trash {Een bewerking die wacht om naar de prullenmand te verplaatsen, heeft een vraag voor je. Je ziet de vraag zodra het geopende venster sluit.} other {Een wachtende bewerking heeft een vraag voor je. Je ziet de vraag zodra het geopende venster sluit.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Niets meer te kopiëren: {total, plural, one {het onderdeel dat gekopieerd zou worden, is} other {alle {totalText} onderdelen die gekopieerd zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} move {Niets meer te verplaatsen: {total, plural, one {het onderdeel dat verplaatst zou worden, is} other {alle {totalText} onderdelen die verplaatst zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} delete {Niets meer te verwijderen: {total, plural, one {het onderdeel dat verwijderd zou worden, is} other {alle {totalText} onderdelen die verwijderd zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} trash {Niets meer naar de prullenmand te verplaatsen: {total, plural, one {het onderdeel dat naar de prullenmand verplaatst zou worden, is} other {alle {totalText} onderdelen die naar de prullenmand verplaatst zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} other {Niets meer te doen: {total, plural, one {het onderdeel van deze bewerking is} other {alle {totalText} onderdelen van deze bewerking zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",

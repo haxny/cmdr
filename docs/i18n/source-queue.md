@@ -278,3 +278,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   PARENT (`es`) value, not `en`; the brief's restamp step says neither. A new es key that trips
   `i18n-es-overlay.test.ts` (here `añadir`, `no se ha podido`) needs a hand-stamped fork. Teach `--restamp` overlays, or
   say so in the brief. (es)
+- `fileOperations.sourcesGone.moreItems` vs `operationLog.dialog.moreItems`: the same list tail, but "and 17 more" drops
+  the noun the other keeps. Pick one; every locale reused the "more items" form, which reads right either way.
+- `fileOperations.sourcesGone.*`: "this delete" / "A queued delete" use delete as a noun, and "since you queued it" has
+  no `queued` concept. Locales rendered it as "while it waited its turn", matching the queue's Waiting status.

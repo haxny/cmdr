@@ -689,6 +689,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Vissa objekt finns inte kvar",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} av de {totalText} objekt som skulle kopieras {gone, plural, one {har flyttats eller raderats} other {har flyttats eller raderats}} medan åtgärden väntade på sin tur.} move {{goneText} av de {totalText} objekt som skulle flyttas {gone, plural, one {har flyttats eller raderats} other {har flyttats eller raderats}} medan åtgärden väntade på sin tur.} delete {{goneText} av de {totalText} objekt som skulle raderas {gone, plural, one {har flyttats eller raderats} other {har flyttats eller raderats}} medan åtgärden väntade på sin tur.} trash {{goneText} av de {totalText} objekt som skulle flyttas till papperskorgen {gone, plural, one {har flyttats eller raderats} other {har flyttats eller raderats}} medan åtgärden väntade på sin tur.} other {{goneText} av de {totalText} objekt som åtgärden skulle hantera {gone, plural, one {har flyttats eller raderats} other {har flyttats eller raderats}} medan den väntade på sin tur.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {och ytterligare {countText} objekt} other {och ytterligare {countText} objekt}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Kopiera resten} move {Flytta resten} delete {Radera resten} trash {Flytta resten till papperskorgen} other {Fortsätt med resten}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {En väntande kopiering har en fråga till dig. Du ser den så fort den öppna dialogen stängs.} move {En väntande flytt har en fråga till dig. Du ser den så fort den öppna dialogen stängs.} delete {En väntande radering har en fråga till dig. Du ser den så fort den öppna dialogen stängs.} trash {En väntande flytt till papperskorgen har en fråga till dig. Du ser den så fort den öppna dialogen stängs.} other {En väntande åtgärd har en fråga till dig. Du ser den så fort den öppna dialogen stängs.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Inget kvar att kopiera: {total, plural, one {objektet som skulle kopieras} other {alla {totalText} objekt som skulle kopieras}} har flyttats eller raderats medan åtgärden väntade på sin tur.} move {Inget kvar att flytta: {total, plural, one {objektet som skulle flyttas} other {alla {totalText} objekt som skulle flyttas}} har flyttats eller raderats medan åtgärden väntade på sin tur.} delete {Inget kvar att radera: {total, plural, one {objektet som skulle raderas} other {alla {totalText} objekt som skulle raderas}} har flyttats eller raderats medan åtgärden väntade på sin tur.} trash {Inget kvar att flytta till papperskorgen: {total, plural, one {objektet som skulle flyttas till papperskorgen} other {alla {totalText} objekt som skulle flyttas till papperskorgen}} har flyttats eller raderats medan åtgärden väntade på sin tur.} other {Inget kvar att göra: {total, plural, one {objektet som åtgärden skulle hantera} other {alla {totalText} objekt som åtgärden skulle hantera}} har flyttats eller raderats medan den väntade på sin tur.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Byte",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003"

@@ -689,6 +689,30 @@
   "@fileOperations.operationConflict.pausedNote": {
     "sourceHash": "1f6444b"
   },
+  "fileOperations.sourcesGone.title": "Alguns itens sumiram",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} dos {totalText} itens que seriam copiados {gone, plural, one {foi movido ou apagado} many {foram movidos ou apagados} other {foram movidos ou apagados}} enquanto a operação aguardava sua vez.} move {{goneText} dos {totalText} itens que seriam movidos {gone, plural, one {foi movido ou apagado} many {foram movidos ou apagados} other {foram movidos ou apagados}} enquanto a operação aguardava sua vez.} delete {{goneText} dos {totalText} itens que seriam apagados {gone, plural, one {foi movido ou apagado} many {foram movidos ou apagados} other {foram movidos ou apagados}} enquanto a operação aguardava sua vez.} trash {{goneText} dos {totalText} itens que seriam movidos para o Lixo {gone, plural, one {foi movido ou apagado} many {foram movidos ou apagados} other {foram movidos ou apagados}} enquanto a operação aguardava sua vez.} other {{goneText} dos {totalText} itens desta operação {gone, plural, one {foi movido ou apagado} many {foram movidos ou apagados} other {foram movidos ou apagados}} enquanto a operação aguardava sua vez.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {e mais {countText} item} many {e mais {countText} itens} other {e mais {countText} itens}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Copiar o resto} move {Mover o resto} delete {Apagar o resto} trash {Mover o resto para o Lixo} other {Continuar com o resto}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Uma cópia em espera tem uma pergunta para você. Você vai vê-la assim que a caixa de diálogo aberta fechar.} move {Uma movimentação em espera tem uma pergunta para você. Você vai vê-la assim que a caixa de diálogo aberta fechar.} delete {Um apagamento em espera tem uma pergunta para você. Você vai vê-la assim que a caixa de diálogo aberta fechar.} trash {Uma movimentação para o Lixo em espera tem uma pergunta para você. Você vai vê-la assim que a caixa de diálogo aberta fechar.} other {Uma operação em espera tem uma pergunta para você. Você vai vê-la assim que a caixa de diálogo aberta fechar.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nada mais a copiar: {total, plural, one {o item que seria copiado foi movido ou apagado} many {todos os {totalText} itens que seriam copiados foram movidos ou apagados} other {todos os {totalText} itens que seriam copiados foram movidos ou apagados}} enquanto a operação aguardava sua vez.} move {Nada mais a mover: {total, plural, one {o item que seria movido foi movido ou apagado} many {todos os {totalText} itens que seriam movidos foram movidos ou apagados} other {todos os {totalText} itens que seriam movidos foram movidos ou apagados}} enquanto a operação aguardava sua vez.} delete {Nada mais a apagar: {total, plural, one {o item que seria apagado foi movido ou apagado} many {todos os {totalText} itens que seriam apagados foram movidos ou apagados} other {todos os {totalText} itens que seriam apagados foram movidos ou apagados}} enquanto a operação aguardava sua vez.} trash {Nada mais a mover para o Lixo: {total, plural, one {o item que seria movido para o Lixo foi movido ou apagado} many {todos os {totalText} itens que seriam movidos para o Lixo foram movidos ou apagados} other {todos os {totalText} itens que seriam movidos para o Lixo foram movidos ou apagados}} enquanto a operação aguardava sua vez.} other {Nada mais a fazer: {total, plural, one {o item desta operação foi movido ou apagado} many {todos os {totalText} itens desta operação foram movidos ou apagados} other {todos os {totalText} itens desta operação foram movidos ou apagados}} enquanto a operação aguardava sua vez.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "sourceHash": "4d80003",

@@ -373,11 +373,18 @@ describe('the rulings the catalogs are supposed to encode', () => {
   })
 
   it('leaves no American "trash" in any overlay COPY', () => {
-    // `trash` survives in exactly two values, and only as an ICU `select` SELECTOR
-    // bound to the operation-kind discriminator Rust sends across IPC. A selector
-    // name is an identifier, so it must match base `en` byte for byte; translating
-    // it would make the branch unreachable and the message fall to `other`.
-    const icuSelectorOnly = new Set(['queue.row.label', 'queue.failureToast.title'])
+    // `trash` survives only as an ICU `select` SELECTOR bound to the
+    // operation-kind discriminator Rust sends across IPC. A selector name is an
+    // identifier, so it must match base `en` byte for byte; translating it would
+    // make the branch unreachable and the message fall to `other`.
+    const icuSelectorOnly = new Set([
+      'queue.row.label',
+      'queue.failureToast.title',
+      'fileOperations.sourcesGone.message',
+      'fileOperations.sourcesGone.continue',
+      'fileOperations.sourcesGone.heldToast',
+      'fileOperations.sourcesGone.nothingLeftToast',
+    ])
     for (const [tag, cat] of [
       ['en-GB', gb],
       ['en-AU', au],
