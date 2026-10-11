@@ -49,12 +49,15 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   `add_entry_options_applies_and_clamps_the_compression_level` (unit) and the `compress_tests.rs` level cases (level 9
   beats level 1; default None equals explicit 6; out-of-range clamps instead of failing).
 - **Metadata preservation (the archive FILE, not the entries).** A rewrite yields a fresh inode, so the original
-  `.zip`'s mode, timestamps, and xattrs are carried onto the temp before the swap: macOS `copyfile` with
-  `COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR`. `COPYFILE_STAT` carries mode and all timestamps INCLUDING the
-  creation/birth date (`st_birthtime` lives in the inode, not an xattr); `COPYFILE_XATTR` carries Finder tags,
-  quarantine, and `com.apple.FinderInfo` VERBATIM — a faithful copy that keeps the custom-icon flag, so the `tags.rs`
-  FinderInfo gotcha doesn't apply here. mode+mtime+xattr elsewhere. Best-effort: metadata loss never fails a data-safe
-  edit.
+  `.zip`'s metadata goes through the shared helper (`crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and
+  when it goes on"): xattrs, mode, and birth + mtime in one call on the temp's fd before its `sync_all`, then the ACL
+  and user flags on the archive after the swap. xattrs include Finder tags, quarantine, and `com.apple.FinderInfo`
+  VERBATIM (a faithful copy that keeps the custom-icon flag, so the `tags.rs` FinderInfo gotcha doesn't apply).
+  Best-effort: metadata loss never fails a data-safe edit. `copyfile(COPYFILE_STAT)` never set birth on a non-clone
+  copy, so this is what keeps it (`mutator_test.rs::archive_file_metadata`).
+- **A Locked or `deny delete` archive can't be edited.** The swap replaces the original, which means removing it, and
+  `uchg` refuses that (`EPERM`) as does the ACL (`EACCES`). Both guard the very file the edit would remove, so the edit
+  refuses and the original stays byte-identical. The temp never wears the ACL, so its cleanup can remove it.
 - **External replacement of the `.zip` between planning and the final rename is last-writer-wins.** The changeset is
   planned against the archive as parsed at plan time; if an outside process rewrites the same `.zip` before the
   mutator's atomic rename, that outside write is simply overwritten by our temp (and vice-versa — a rename that lands

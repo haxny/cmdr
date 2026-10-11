@@ -7,11 +7,11 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: M0 (characterization), M1 (the Locked landing), and M2 (extract quarantine) done (2026-10-11); review rounds
-1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a
-seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the
-notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one
-focused milestone agent run).
+**Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), and M3 (local files) done
+(2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB),
+and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue:
+none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions
+(one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -24,7 +24,9 @@ focused milestone agent run).
    ONE `setattrlist` / `File::set_times`, after every xattr. A resource-fork write bumps mtime, and on APFS/HFS+ an
    mtime earlier than the birth time drags birth down to it (verified, notes § "The quirks"). ACLs and flags may follow
    the dates, because neither bumps mtime (verified). **xattrs go strictly before mode**: a path-based xattr write on a
-   `0444` file is `EACCES` (verified).
+   `0444` file is `EACCES` (verified). **On a network mount, the data flush goes before the dates too**: on `smbfs`,
+   writes still buffered reach the server at the handle's real close (the landing rename), and the server stamps that
+   close as the mtime (verified in M3 against the Docker Samba share).
 3. ❌ **Nothing that blocks a rename or a later step goes on an item that will still be renamed.** That's the staged
    `.cmdr-tmp-*` temp, AND every item of a cross-FS move's staging tree until Phase 3 has renamed it into place.
    - Rename-blockers (all verified): `uchg`/`schg`/`uappnd` on the item; an ACL with `deny delete` on the item or
@@ -238,8 +240,8 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 - **Editing a zip in place** keeps the ARCHIVE file's own metadata with `copyfile(STAT|ACL|XATTR)`
   (`crates/cmdr-archive/src/mutation/DETAILS.md:52-56`). Its claim that `COPYFILE_STAT` carries birth time is wrong for
   a non-clone copy (verified: it doesn't), so a zip edit resets the archive's birth to its mtime. It also copies a
-  `deny delete` ACL or `uchg` onto the rewritten temp before its rename: the same rule-3 hazard (a Locked zip can't be
-  edited anyway, but an ACL'd one can). Fixed in M3 with the shared helper.
+  `deny delete` ACL or `uchg` onto the rewritten temp before its rename: the same rule-3 hazard. Fixed in M3 with the
+  shared helper. (M3 found an ACL'd zip can't be edited either: replacing it removes it, which `deny delete` refuses.)
 
 ## Gap matrix (today → target)
 
@@ -247,16 +249,17 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 "FAIL" = the copy itself fails over metadata (a rule-3 bug).
 
 - **Local, same APFS volume (clone)**: files keep everything (Locked and `deny delete` files land since M1). Symlink
-  dates LOST. Folders: birth, mode, xattrs, ACL, flags LOST.
-- **Local, other APFS / HFS+ volume (chunked)**: `deny delete` files land with their ACL (M1); file birth LOST (shows
-  mtime), flags LOST, xattrs/mode/mtime/atime keep (mode only if the time-set succeeded, rule 1). Folders as above.
-  Symlink dates LOST.
-- **Local, exFAT / FAT**: file birth LOST (shows now), `hidden`/Locked LOST (FAT attributes can hold them), xattrs keep
-  as `._` sidecars, resource forks n/a (the FSKit drivers refuse them, notes § "Results"), ACLs/mode n/a. A temp's
-  sidecar, birth, and mtime survive the landing rename on exFAT (verified in review round 1).
-- **Local, macOS SMB mount (chunked through smbfs)**: as other-volume; birth should be settable through smbfs (to verify
-  in M3's QA, against the Docker share mounted with `mount_smbfs`), xattrs depend on the server's `vfs_fruit` (the
-  fixture has none, so the QNAP-shaped answer stays unverified until M7's fixture).
+  dates keep (M3). Folders: birth, mode, xattrs, ACL, flags LOST.
+- **Local, other APFS / HFS+ volume (chunked)**: files keep everything (M3: birth, flags, xattrs, mode, mtime, atime;
+  ACL since M1). Folders as above. Symlink dates keep (M3).
+- **Local, exFAT / FAT**: since M3 file birth and `hidden`/Locked should keep (the chunked arm sets them; the notes file
+  verified birth settable and the flags mapped to FAT attributes), pending David's hand check (rule 8); xattrs keep as
+  `._` sidecars, resource forks n/a (the FSKit drivers refuse them, notes § "Results"), ACLs/mode n/a. A temp's sidecar,
+  birth, and mtime survive the landing rename on exFAT (verified in review round 1).
+- **Local, macOS SMB mount (chunked through smbfs)**: birth, mtime, Hidden, Locked, tags, comments, quarantine, and
+  `user.*` keep (verified in M3 against the Docker guest share mounted with `mount_smbfs`, macOS 27.0, 2026-10-11; the
+  xattrs as `._` sidecars, since the fixture has no `vfs_fruit`); a resource fork is LOST; mode n/a (`noowners`). The
+  QNAP-shaped `vfs_fruit` answer stays unverified until M7's fixture.
 - **Same-FS move**: keeps everything; a Locked item FAILS (`rename` `EPERM`, out of scope). **Cross-FS local move**: the
   chunked row, made permanent; a Locked source stays behind (Phase 4 can't delete it).
 - **Local → SMB (direct)**: mtime keep; birth LOST (`CreationTime` = now; the fix needs no smb2 change, M5a);
@@ -341,13 +344,13 @@ The pieces:
   `cargo deny`-clean), and leaves the app's once its last use there goes (`cargo-machete`). Its callers: the clone arm,
   the chunked arm, the native folder pass, the cross-FS move's deferred pass, the local volume's `write_from_stream` and
   `apply_metadata`, and the zip editor. One implementation of the rule-2 and rule-3 ordering.
-- **Two halves, both total**: `apply_staged(target, &CarriedMetadata) -> MetadataReport` (xattrs, a file's mode, then
-  one dates call; everything rule 3 allows on a temp) and `apply_landed(path, &LandedMetadata) -> MetadataReport` (a
-  folder's final mode, then ACL, then flags: `uchg` blocks a later `chmod` too). A folder's `apply_staged` carries no
-  mode; its mode is in `apply_landed`, after its children land (M4). On a file the copy holds open, the staged half
-  works on the fd (`fsetxattr`, `fchmod`, `File::set_times`): no path lookups, and an fd write on a `0444` file isn't
-  refused the way a path write is. Paths only where there's no fd (the clone's temp, a folder, a symlink with
-  `NOFOLLOW`).
+- **Two halves, both total**: `apply_staged(StagedItem, &CarriedMetadata, StagedTimes) -> MetadataReport` (xattrs, a
+  file's mode, then one dates call; everything rule 3 allows on a temp; `StagedTimes` carries mtime and atime beside
+  `CarriedMetadata`'s birth) and `apply_landed(path, &LandedMetadata) -> MetadataReport` (a folder's final mode, then
+  ACL, then flags: `uchg` blocks a later `chmod` too). A folder's `apply_staged` carries no mode; its mode is in
+  `apply_landed`, after its children land (M4). On a file the copy holds open, the staged half works on the fd
+  (`fsetxattr`, `fchmod`, `File::set_times`): no path lookups, and an fd write on a `0444` file isn't refused the way a
+  path write is. Paths only where there's no fd (the clone's temp, a folder, a symlink with `NOFOLLOW`).
 - **`MetadataReport`** (M1, in the helper): per class, `Kept`, `Refused`, `NotApplicable`, or `Absent` (the source had
   nothing). Every apply function returns one and has no `Result`, which is what makes rule 1 a type fact. M5b sums it
   into the loss counts; it never moves crates.
@@ -621,8 +624,9 @@ decided; then the ask itself, creation and modification dates on files AND folde
 - **Intentions**:
   - Chunked: create the temp `0600` (rule 5); data; then, on the open fd, xattrs, `fchmod`, then ONE `File::set_times`
     with `set_created` (std's `FileTimesExt`, Apple-only; std 1.97.1 issues it as one `fsetattrlist`,
-    `sys/fs/unix.rs:1792`) + modified + accessed, before `sync_data`. Each step independent (rule 1). After landing
-    (M1's hook): ACL, then user flags (new: `hidden`, `uchg`, `uappnd`, `nodump`), each only when the source has one.
+    `sys/fs/unix.rs:1792`) + modified + accessed, after `sync_data` (as built, see below). Each step independent (rule
+    1). After landing (M1's hook): ACL, then user flags (new: `hidden`, `uchg`, `uappnd`, `nodump`), each only when the
+    source has one.
   - Symlinks: the link's own birth/mtime via `setattrlist(FSOPT_NOFOLLOW)` (verified), its xattrs with `XATTR_NOFOLLOW`.
     macOS only: on Linux a link's dates stay "now" (setting them needs `utimensat(AT_SYMLINK_NOFOLLOW)`, and `cmdr-fs`
     has no `libc` on Linux), reported as n/a.
@@ -649,6 +653,31 @@ decided; then the ask itself, creation and modification dates on files AND folde
   - David, by hand: an exFAT USB stick (rule 8 bars an image), birth and tags, against the notes file. The agent's
     report asks for it.
 - **DONE**: no class lost on local files except ownership; docs corrected.
+
+- **Done** (2026-10-11). Where the code differs from the plan above:
+  - The flush goes BEFORE the dates, not after: on `smbfs` a time-set before the flush read back the landing rename's
+    time as the mtime (the server stamps the real close). Rule 2 now says so, and M5a's local destination must follow.
+  - `F_FULLFSYNC` answers `ENOTSUP` on `smbfs` against the Docker Samba share, which failed EVERY chunked copy onto it
+    before M3 (a pre-existing bug, not metadata). The chunked arm falls back to `fsync(2)` on `ENOTSUP`.
+    `durability::flush_created_destinations` still calls `sync_data` bare, but no macOS arm reaches it with an SMB mount
+    (the chunked arm counts as already durable).
+  - `apply_staged` takes a `StagedItem` (`File` fd, `Path` for a folder, `Link`) and
+    `StagedTimes { modified, accessed }` beside `CarriedMetadata`. A pair refused over its birth is retried once without
+    it, so a destination that refuses birth never costs the mtime.
+  - `MetadataReport` gained `xattrs`, `mode`, `created`, `modified`; each half reports what it puts on, the rest
+    `Absent`.
+  - `com.apple.provenance`: the kernel silently ignores a write of it (verified with `xattr -w`), so skipping it matches
+    what `copyfile` ends up with and saves a get and a set.
+  - All user flags go on after the landing (`LandedMetadata::with_flags`), Hidden included, as the plan said: one set,
+    one call, and a cross-FS move defers it with the ACL.
+  - The zip editor: an ACL'd zip can't be edited (replacing it removes it, `EACCES`), contrary to § "Fresh read". The
+    edit now refuses cleanly and leaves no temp behind (the old temp wore the ACL and outlived its cleanup).
+  - New syscalls on the chunked arm for a plain file: none. It drops two path `stat`s (one `fstat` answers size, dates,
+    mode, flags), `listxattr`/`utimes`/`chmod` become `flistxattr`/`fsetattrlist`/`fchmod`, and provenance costs no
+    get/set. Conditional: one `fgetxattr`+`fsetxattr` per xattr worth keeping; after landing, `lstat`+`lchflags` only
+    when the source has user flags (the ACL as in M1); a second `fsetattrlist` only when the first was refused. The
+    clone arm is unchanged. A copied symlink adds one `lstat`, one `listxattr`, and one `setattrlist`.
+  - No new user-facing strings.
 
 ### M4: Local folders keep everything. Size: M (1 session)
 
@@ -693,9 +722,10 @@ decided; then the ask itself, creation and modification dates on files AND folde
     (`cmdr-git/src/read_blob.rs`), ADB, and SMB streams. Every other `impl VolumeReadStream` (grep lists ~35, most in
     tests) takes the default; decide each one.
   - The local volume as a destination (`local_posix/streams.rs:156`, `write_from_stream_impl`): asks the stream for the
-    classes it stores, applies them through `apply_staged` on the open handle after the last byte, replacing today's
-    `File::set_modified` (`:249-263`), still before `sync_data`. As a source (`:93-113`): reports `created`, mode, and
-    flags from the `metadata` its open already took, and xattrs lazily from the fd.
+    classes it stores, applies them through `apply_staged` on the open handle after the last byte AND its flush (rule 2:
+    a local destination can be an `smbfs` mount), replacing today's `File::set_modified` (`:249-263`). As a source
+    (`:93-113`): reports `created`, mode, and flags from the `metadata` its open already took, and xattrs lazily from
+    the fd.
   - The engine: `apply_source_mode` and its two call sites (`strategy.rs:557`, `sequential_extract.rs:186`) go; M2's
     quarantine moves into the decorator stream and `FolderMetadata` (§ "Design sketch"); `folder_dates.rs` becomes
     `FolderMetadata`, whose set comes from the listing entry the walk already holds (`FileEntry::created_at`, whole

@@ -22,9 +22,10 @@
 //! - Network → chunked copy
 //!
 //! We evaluated `copyfile` on non-APFS filesystems (HFS+, exFAT, FAT32, NTFS-3G) and found no
-//! practical benefit: no clonefile support, and the metadata advantages (birthtime, file flags)
-//! either don't apply (exFAT/FAT32 don't store them) or aren't worth the cancellation tradeoff
-//! (NTFS-3G is FUSE-based and has the same buffering issues as network mounts). See CLAUDE.md.
+//! practical benefit: no clonefile support, and no metadata edge either, since `copyfile` without
+//! a clone doesn't set birth time and the chunked arm carries birth and flags itself
+//! (`cmdr_fs::metadata`). NTFS-3G is FUSE-based and has the same buffering issues as network
+//! mounts. See `DETAILS.md` § "Copy strategy selection".
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 use std::fs;
@@ -222,8 +223,8 @@ pub(super) fn copy_file_with_strategy(
 ///
 /// Every arm keeps rename-blocking metadata off the temp: the clone arm's
 /// landing clears what the clone carried over (`overwrite::stage_and_land_file`
-/// step 3), and the chunked arm reads its source's ACL here and hands it to the
-/// landing instead of writing it onto the temp.
+/// step 3), and the chunked and Linux arms hand their source's ACL (and flags)
+/// to the landing instead of writing them onto the temp.
 pub(super) fn copy_file_using(
     strategy: LocalCopyStrategy,
     state: &Arc<WriteOperationState>,

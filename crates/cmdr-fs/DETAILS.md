@@ -120,9 +120,26 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
 `src/metadata/`. Evidence for every rule here: `docs/notes/transfer-metadata-experiments-2026-10-11.md` (verified on
 macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
 
-- **Total by type.** `apply_landed` returns a `MetadataReport` (per class: `Kept`, `Refused`, `NotApplicable`, `Absent`)
-  and has no `Result`, so a refused metadata write can't fail a copy. Each class is its own step; ❌ never chain them
-  with `?`, or one refusal silently skips the next.
+- **Total by type.** `apply_staged` and `apply_landed` return a `MetadataReport` (per class: `Kept`, `Refused`,
+  `NotApplicable`, `Absent`) and have no `Result`, so a refused metadata write can't fail a copy. Each class is its own
+  step; ❌ never chain them with `?`, or one refusal silently skips the next. Each half reports the classes it puts on;
+  the rest read `Absent`. `ENOTSUP`/`Unsupported` reads `NotApplicable`.
+- **The staged half: xattrs, mode, then the dates in ONE call.**
+  `apply_staged(StagedItem, &CarriedMetadata, StagedTimes)` goes on the temp before the landing rename, since none of it
+  blocks a rename. xattrs first: a path xattr write on a `0444` item is `EACCES`. Dates last and together (std's
+  `FileTimes` with `set_created`, which std issues as one `fsetattrlist`; `setattrlist` by path for a folder,
+  `FSOPT_NOFOLLOW` for a link): a resource-fork write bumps mtime, and APFS/HFS+ drag birth down to an earlier mtime. A
+  pair refused over its birth is retried once without it, so a destination that can't take birth never costs the mtime.
+  `StagedItem::File` works on the fd (no path lookup, and an fd write on a `0444` file isn't refused); `Path` is for a
+  folder, `Link` for a symlink's own.
+- **The caller flushes BEFORE the staged half on a network mount.** On `smbfs`, writes still buffered when the dates go
+  on reach the server at the handle's real close, and the server stamps that as the mtime (verified against the Docker
+  Samba share, macOS 27.0, 2026-10-11). The chunked arm's own comment has the detail.
+- **`CarriedMetadata` holds no mtime or atime**: a stream's `modified_at` is the one source of mtime, and the dates
+  travel beside it in `StagedTimes`. `of_local_file` reads a source off the handle and `fstat` the copy already holds
+  (one `flistxattr` for a file without xattrs), `of_local_link` a link's own. It skips `com.apple.provenance` (the
+  kernel ignores a write of it: verified on macOS 27.0 with `xattr -w`, 2026-10-11) and on Linux carries `user.*` only.
+  Its `flags` go on after landing, through `LandedMetadata::with_flags`.
 - **Rename-blockers go on the LANDED item.** `uchg`/`uappnd` on an item refuses `rename(2)` with `EPERM`, a
   `deny delete` ACL with `EACCES`. So `LandedMetadata` (the ACL, then the user flags) is applied after the landing
   rename, ACL first because `uchg` also refuses a later ACL write. `apply_landed` ADDS flags to what the item already
@@ -140,8 +157,8 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   three mode entries every file has (`chmod` carries those).
 - **`lchflags` is declared here**, not taken from `libc`: the locked `libc` doesn't declare it yet. Drop the declaration
   once it does.
-- **Test seam**: `helper_calls_on_this_thread()` (`testing` feature) counts calls into the syscall-making entry points,
-  so a test proves a plain file never reaches them.
+- **Test seam**: `helper_calls_on_this_thread()` (`testing` feature) counts calls into the syscall-making entry points
+  (`apply_staged`, `apply_landed`, `clear_blockers`), so a test proves a plain file never reaches them.
 
 ## Scratch names fit in 143 bytes
 
