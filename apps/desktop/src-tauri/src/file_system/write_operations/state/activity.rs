@@ -11,7 +11,7 @@ use super::{TransferActivity, TransferWaitReason, WriteOperationState, WriteProg
 
 impl WriteOperationState {
     /// What this operation is waiting on right now: the ONE classifier, for the
-    /// progress event and the [`OperationStatus`](super::types::OperationStatus)
+    /// progress event and the [`OperationStatus`](super::super::types::OperationStatus)
     /// snapshot alike.
     ///
     /// Both readers come through here so a poller and a subscriber can't
@@ -67,7 +67,7 @@ impl WriteOperationState {
     /// back.
     ///
     /// All three are the ones the human-wait clock tracks
-    /// ([`super::human_wait`]), read in the same order
+    /// ([`human_wait`](super::super::human_wait)), read in the same order
     /// `transfer_probe::wait_reason` reads them, so an operation with an
     /// in-flight table and one without classify the same wait the same way.
     fn decision_wait(&self) -> Option<TransferWaitReason> {

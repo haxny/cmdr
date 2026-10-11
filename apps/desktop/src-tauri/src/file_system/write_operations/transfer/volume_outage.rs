@@ -8,7 +8,7 @@
 //!
 //! Now a transfer that meets a transport failure on a volume whose session reads
 //! [`ConnectionState::Disconnected`] waits for it instead: it reconnects the
-//! volume itself, on a growing cadence, for up to [`OutagePolicy::budget`] (five
+//! volume itself, on a growing cadence, for up to [`OutagePolicy::budget`](super::super::outage_slot::OutagePolicy::budget) (five
 //! minutes), and then runs the work again. If the volume isn't back by then, the
 //! transfer fails exactly as it did before.
 //!

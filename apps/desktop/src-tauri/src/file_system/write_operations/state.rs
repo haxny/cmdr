@@ -119,7 +119,7 @@ pub struct WriteOperationState {
     pub(crate) outage: Arc<OutageSlot>,
     /// How patient this operation's outage waits are. Always the default in the
     /// app; a test shrinks it through
-    /// [`with_outage_policy`](Self::with_outage_policy).
+    /// `with_outage_policy` (test builds only).
     pub(crate) outage_policy: OutagePolicy,
     /// When this operation was created. An operation queued before a volume's
     /// outage gave up doesn't start a fresh five-minute wait for the same
