@@ -64,6 +64,19 @@ pub trait VolumeReadStream: Send {
         CarriedMetadata::default()
     }
 
+    /// [`metadata`](Self::metadata) with every xattr's VALUE left empty: enough
+    /// to tell which classes the source has something in, for a copy onto a
+    /// destination that can't keep them (the loss note). A local source answers
+    /// with one name-only `flistxattr`, never reading a resource fork it would
+    /// only throw away.
+    ///
+    /// Default: [`metadata`](Self::metadata) itself, which is right for every
+    /// source whose xattrs cost nothing more to read. ❗ A wrapper stream
+    /// forwards its inner stream's answer.
+    fn metadata_outline(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.metadata(wanted)
+    }
+
     /// The operation's Cancel and pause, for a destination that reads AHEAD of
     /// the wire. A pause parks the stream's own `next_chunk`, which stops a
     /// destination that sends each piece as it reads it. One that buffers first

@@ -170,6 +170,12 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   (`MetadataReport::none_applicable`; `holds_none` tells a caller to stop asking). The contract, per backend:
   `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
   metadata".
+- **`MetadataCaps` is each backend's claim** (`Volume::metadata_caps`, a predicate like the rest): what a file written
+  there keeps, what its streams report, what `apply_metadata` keeps. `file_classes_at_risk_from` is the pair question
+  the loss note asks, and `CarriedMetadata::worth_keeping` narrows it to what a person would miss (a birth before the
+  last edit, a mode a fresh file wouldn't get, any flag, any xattr but the quarantine).
+  `VolumeReadStream::metadata_outline` answers it cheaply (a local file's xattrs by name only). The note itself is the
+  app's, in the contract section the previous bullet names.
 - **A routed mode is folded, never copied** (`routed_mode`): a volume's mode is metadata out of an archive header, a
   repo object, or a device's `stat`, not authority enough to widen anything or set setuid. It folds against the umask
   default (`default_file_mode`, `default_folder_mode`), which a one-time throwaway folder probes: `umask(2)` can't be
@@ -621,8 +627,9 @@ everywhere, which is the point.
   date. Run by local, SMB, SFTP, and the in-memory double; every other backend keeps the `NotApplicable` default.
 - `assert_write_from_stream_keeps_metadata`, `assert_apply_metadata_keeps`, and
   `assert_read_stream_reports_the_listed_metadata` — the classes a listing can show (creation date, mode), each backend
-  passing the classes it claims (`src/volume/conformance/metadata.rs`): local and the in-memory double every class, SMB
-  the creation date. The flags and xattrs have no listing field, so a backend that stores them pins them itself.
+  held to its own `metadata_caps()` (`src/volume/conformance/metadata.rs`): run by local, SMB, SFTP, and the in-memory
+  double (also configured to a backend's caps). The flags and xattrs have no listing field, so a backend that stores
+  them pins them itself.
 - `assert_write_from_stream_keeps_the_source_date` and `assert_read_stream_reports_the_listed_date` — the two halves of
   "a copy keeps the source's date" (`src/volume/conformance/modification_date.rs`). Every copy suite checksums bytes,
   and a destination stamping its own date passes all of them. Run by local, S3, ADB, MTP (on the virtual device), SMB,

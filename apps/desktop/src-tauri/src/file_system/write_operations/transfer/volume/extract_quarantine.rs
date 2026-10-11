@@ -99,6 +99,18 @@ struct QuarantinedStream {
     quarantine: Xattr,
 }
 
+impl QuarantinedStream {
+    /// `carried` with the archive's quarantine in place of any the source had,
+    /// when the caller asked for xattrs.
+    fn with_quarantine(&self, mut carried: CarriedMetadata, wanted: MetadataClasses) -> CarriedMetadata {
+        if wanted.contains(MetadataClasses::XATTRS) {
+            carried.xattrs.retain(|xattr| xattr.name != self.quarantine.name);
+            carried.xattrs.push(self.quarantine.clone());
+        }
+        carried
+    }
+}
+
 impl VolumeReadStream for QuarantinedStream {
     fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
         self.inner.next_chunk()
@@ -117,12 +129,11 @@ impl VolumeReadStream for QuarantinedStream {
     }
 
     fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
-        let mut carried = self.inner.metadata(wanted);
-        if wanted.contains(MetadataClasses::XATTRS) {
-            carried.xattrs.retain(|xattr| xattr.name != self.quarantine.name);
-            carried.xattrs.push(self.quarantine.clone());
-        }
-        carried
+        self.with_quarantine(self.inner.metadata(wanted), wanted)
+    }
+
+    fn metadata_outline(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.with_quarantine(self.inner.metadata_outline(wanted), wanted)
     }
 
     fn stop_signal(&self) -> ScanStop {

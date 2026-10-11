@@ -292,16 +292,48 @@ async fn apply_metadata_honors_the_shared_folder_date_contract() {
 }
 
 /// The reference keeps every class a listing shows, as a destination, on a file
-/// and on a folder, and reports them as a source.
+/// and on a folder, and reports them as a source, as its caps claim.
 #[tokio::test]
 async fn the_double_honors_the_shared_metadata_contract() {
-    use crate::metadata::MetadataClasses;
     let volume = InMemoryVolume::new("Test");
-    let every_class = MetadataClasses::ALL;
 
-    conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("/born.txt"), every_class).await;
-    conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new("/born.txt"), every_class).await;
-    conformance::assert_apply_metadata_keeps(&volume, Path::new("/born"), every_class).await;
+    conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("/born.txt")).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new("/born.txt")).await;
+    conformance::assert_apply_metadata_keeps(&volume, Path::new("/born")).await;
+}
+
+/// The double stands in for a backend's caps exactly: configured to keep and
+/// report only a creation date (an SMB share's), it still passes, so the
+/// loss-note matrix can trust it to drop what such a backend drops.
+#[tokio::test]
+async fn a_double_configured_to_a_backends_caps_honors_them() {
+    use crate::metadata::{MetadataCaps, MetadataClasses};
+    let volume = InMemoryVolume::new("Test").with_metadata_caps(MetadataCaps {
+        stores: MetadataClasses::CREATED,
+        reports: MetadataClasses::CREATED,
+        folder_stores: MetadataClasses::CREATED,
+        folder_dates: true,
+    });
+
+    conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("/born.txt")).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new("/born.txt")).await;
+    conformance::assert_apply_metadata_keeps(&volume, Path::new("/born")).await;
+    let carried = volume.carried_metadata(Path::new("/born.txt")).expect("landed");
+    // The conformance source's mode is `0600`; a double that kept it would list it.
+    assert_ne!(carried.mode, Some(0o600), "a class outside `stores` never lands");
+}
+
+/// The point of deriving the assertions from the caps: a backend claiming a
+/// class it drops fails them.
+#[tokio::test]
+#[should_panic(expected = "must keep the source's creation date")]
+async fn a_backend_claiming_a_class_it_drops_fails_the_contract() {
+    use crate::metadata::MetadataCaps;
+    // Honors nothing, the way an S3 bucket doesn't.
+    let honors_nothing = InMemoryVolume::new("Liar").with_metadata_caps(MetadataCaps::NONE);
+    let liar = ClaimsCreationDates(honors_nothing);
+
+    conformance::assert_write_from_stream_keeps_metadata(&liar, Path::new("/born.txt")).await;
 }
 
 /// The flags and xattrs have no listing field, so the reference pins them here:
@@ -722,4 +754,59 @@ async fn test_concurrent_create_delete() {
 
     // Permanent file should still exist
     assert!(volume.exists(Path::new("/permanent.txt")).await);
+}
+
+/// A volume that keeps what `InMemoryVolume` keeps under its caps, and claims a
+/// creation date on top: the shape of a backend whose caps drifted from its
+/// code.
+struct ClaimsCreationDates(InMemoryVolume);
+
+impl Volume for ClaimsCreationDates {
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+    fn root(&self) -> &Path {
+        self.0.root()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.0.list_directory(path, on_progress)
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.0.get_metadata(path)
+    }
+    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
+        self.0.exists(path)
+    }
+    fn is_directory<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
+        self.0.is_directory(path)
+    }
+    fn write_from_stream<'a>(
+        &'a self,
+        dest: &'a Path,
+        mode: WriteMode,
+        length: StreamLength,
+        stream: Box<dyn VolumeReadStream>,
+        on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+        self.0.write_from_stream(dest, mode, length, stream, on_progress)
+    }
+    fn metadata_caps(&self) -> crate::metadata::MetadataCaps {
+        crate::metadata::MetadataCaps {
+            stores: crate::metadata::MetadataClasses::CREATED,
+            ..self.0.metadata_caps()
+        }
+    }
 }

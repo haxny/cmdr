@@ -99,6 +99,14 @@ impl VolumeReadStream for LocalPosixReadStream {
             None => CarriedMetadata::of_local_stat(&self.stat).restricted_to(wanted.without(MetadataClasses::XATTRS)),
         }
     }
+
+    /// The same classes, the xattrs by name only.
+    fn metadata_outline(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        match &self.file {
+            Some(file) => CarriedMetadata::outline_of_local_file(file, &self.stat, wanted),
+            None => self.metadata(wanted),
+        }
+    }
 }
 
 impl LocalPosixVolume {

@@ -6,7 +6,7 @@ use super::{InMemoryEntry, InMemoryVolume};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
-use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport};
+use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use crate::volume::{
     BackendKind, ConnectionState, CopyScanResult, IndexWalk, LaneKey, RenameWork, ScanConflict, SourceItemInfo,
     SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteAccess, WriteMode,
@@ -241,9 +241,10 @@ impl Volume for InMemoryVolume {
         })
     }
 
-    /// Stores every class it's handed, like the reference it is: a listing
-    /// shows the dates and the mode, [`InMemoryVolume::carried_metadata`] the
-    /// rest. A path that isn't there refuses every class.
+    /// Stores every class it's handed that its caps keep (`folder_stores`, and a
+    /// folder's date only with `folder_dates`), like the reference it is: a listing shows the dates and the mode,
+    /// [`InMemoryVolume::carried_metadata`] the rest. A class outside its caps
+    /// is `NotApplicable`; a path that isn't there refuses every class.
     fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
@@ -256,12 +257,31 @@ impl Volume for InMemoryVolume {
             let Some(entry) = entries.get_mut(&normalized) else {
                 return MetadataReport::uniform(carried, modified, ClassOutcome::Refused);
             };
+            // What a path-based apply keeps is what a folder takes; a FILE also
+            // always keeps the date it's handed, as every backend does.
+            let caps = self.metadata_caps;
+            let keeps_date = caps.folder_dates || !entry.metadata.is_directory;
+            let kept = carried.clone().restricted_to(caps.folder_stores);
+            let kept_modified = modified.filter(|_| keeps_date);
             // Whole seconds, like the listing it shows up in.
-            if let Some(secs) = modified.and_then(|date| date.duration_since(std::time::UNIX_EPOCH).ok()) {
+            if let Some(secs) = kept_modified.and_then(|date| date.duration_since(std::time::UNIX_EPOCH).ok()) {
                 entry.metadata.modified_at = Some(secs.as_secs());
             }
-            Self::store_carried(entry, carried.clone());
-            MetadataReport::uniform(carried, modified, ClassOutcome::Kept)
+            Self::store_carried(entry, kept.clone());
+            let mut report = MetadataReport::none_applicable(carried, modified);
+            let held = MetadataReport::uniform(&kept, kept_modified, ClassOutcome::Kept);
+            for (outcome, held) in [
+                (&mut report.xattrs, held.xattrs),
+                (&mut report.mode, held.mode),
+                (&mut report.created, held.created),
+                (&mut report.modified, held.modified),
+                (&mut report.flags, held.flags),
+            ] {
+                if held == ClassOutcome::Kept {
+                    *outcome = held;
+                }
+            }
+            report
         })
     }
 
@@ -431,6 +451,10 @@ impl Volume for InMemoryVolume {
         true
     }
 
+    fn metadata_caps(&self) -> MetadataCaps {
+        self.metadata_caps
+    }
+
     fn scan_for_copy<'a>(
         &'a self,
         path: &'a Path,
@@ -544,7 +568,7 @@ impl Volume for InMemoryVolume {
                 data,
                 offset: 0,
                 modified_at,
-                metadata: Self::carried_of(entry),
+                metadata: Self::carried_of(entry).restricted_to(self.metadata_caps.reports),
                 chunk_delay: self.read_chunk_delay,
             }) as Box<dyn VolumeReadStream>)
         })
@@ -595,9 +619,9 @@ impl Volume for InMemoryVolume {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
         Box::pin(async move {
-            // Everything but the flags, which a real destination puts on only
-            // after the landing rename (`Volume::apply_metadata`).
-            let carried = stream.metadata(MetadataClasses::ALL.without(MetadataClasses::FLAGS));
+            // What it keeps, which never holds the flags: a real destination
+            // puts those on only after the landing rename (`Volume::apply_metadata`).
+            let carried = stream.metadata(self.metadata_caps.stores.without(MetadataClasses::FLAGS));
             let mut data = Vec::new();
             let mut bytes_written = 0u64;
 

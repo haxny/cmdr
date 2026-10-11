@@ -65,6 +65,17 @@ fn prompt_for(rung: AuthRungUsed) -> SignInShape {
     }
 }
 
+impl SftpVolume {
+    /// A folder's modification date (`SETSTAT`), and nothing else yet: SFTP v3
+    /// has no creation date, and the mode waits for M9 of
+    /// `docs/specs/transfer-metadata-preservation.md` (the attrs carry it both
+    /// ways, but a read reports file-type bits only, `mapping.rs`).
+    pub const METADATA_CAPS: cmdr_fs::metadata::MetadataCaps = cmdr_fs::metadata::MetadataCaps {
+        folder_dates: true,
+        ..cmdr_fs::metadata::MetadataCaps::NONE
+    };
+}
+
 impl Volume for SftpVolume {
     fn name(&self) -> &str {
         &self.name
@@ -149,6 +160,10 @@ impl Volume for SftpVolume {
     /// answer reaches the frontend as `VolumeCapabilities.can_export` and greys
     /// out copy-from in the pane. Every method involved works either way, so
     /// nothing but `assert_export_matches_the_bytes_offered` notices.
+    fn metadata_caps(&self) -> cmdr_fs::metadata::MetadataCaps {
+        Self::METADATA_CAPS
+    }
+
     fn supports_export(&self) -> bool {
         true
     }

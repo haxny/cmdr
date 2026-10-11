@@ -509,7 +509,7 @@ mod quarantine {
             create_directory_all, delete, rename, get_space_info, supports_streaming, supports_export,
             operations_are_local, max_concurrent_ops, scan_for_copy, open_read_stream, supports_unknown_length_writes,
             write_is_single_shot, create_directory_errors_on_existing_dir, local_path, supports_local_fs_access,
-            lane_key, apply_metadata,
+            lane_key, apply_metadata, metadata_caps,
         );
 
         fn as_any(&self) -> &dyn std::any::Any {

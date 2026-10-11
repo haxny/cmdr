@@ -410,9 +410,10 @@ async fn the_capability_answers_match_a_routed_read_only_volume() {
     assert_eq!(volume.lane_key(), parent.lane_key());
     assert!(volume.capabilities().can_export);
     assert!(!volume.capabilities().backend_can_write);
-    // The copy engine skips its top-level mode probe on a backend that answers
-    // `false` here, so a script copied out of a snapshot would land 0o644.
-    assert!(volume.reports_posix_mode());
+    // Reports the mode and keeps nothing. The compress planner trusts a listed
+    // mode only from a backend that reports one, and the app's loss-note matrix
+    // runs this shape as `MODE_REPORTER`.
+    assert_eq!(volume.metadata_caps(), cmdr_fs::metadata::MetadataCaps::MODE_REPORTER);
 
     cleanup(&dir);
 }

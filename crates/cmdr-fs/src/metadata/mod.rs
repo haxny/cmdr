@@ -35,6 +35,7 @@
 //! rule: `DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on".
 
 mod blockers;
+mod caps;
 mod carried;
 mod classes;
 mod flags;
@@ -47,6 +48,7 @@ pub use blockers::{
     OpenedFolder, ParentOpening, RemovalRefusal, Unblock, clear_blockers, open_parent_folder,
     remove_dir_clearing_blockers, remove_file_clearing_blockers, remove_tree_clearing_blockers,
 };
+pub use caps::MetadataCaps;
 pub use carried::{CarriedMetadata, Xattr};
 pub use classes::MetadataClasses;
 pub use flags::UserFlags;

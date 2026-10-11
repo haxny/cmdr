@@ -183,7 +183,9 @@ async fn plan_sources_with_context(
                 .modified_at
                 .map(|seconds| UNIX_EPOCH + Duration::from_secs(seconds));
             let unix_mode = source
-                .reports_posix_mode()
+                .metadata_caps()
+                .reports
+                .contains(cmdr_fs::metadata::MetadataClasses::MODE)
                 .then_some(meta.permissions)
                 .filter(|mode| *mode != 0);
             if meta.is_directory {

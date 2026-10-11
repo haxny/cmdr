@@ -2,9 +2,10 @@
 //! each class it says it stores, and a source reports each class it says it
 //! reports, matching what it lists.
 //!
-//! Each backend passes the classes it claims, explicitly, so a backend can't
-//! claim a class it doesn't honor. The classes a listing can show (creation
-//! date, mode) are asserted here; the flags and the xattrs have no listing field,
+//! Each assertion holds a backend to its own [`Volume::metadata_caps`], so a
+//! backend can't claim a class it doesn't honor, and the copy engine's loss
+//! note (which trusts the caps) can't stay silent about one it drops. The
+//! classes a listing can show (creation date, mode) are asserted here; the flags and the xattrs have no listing field,
 //! so a backend that stores them pins them in its own suite. The contract:
 //! `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
 //! § "Copies keep the source's metadata".
@@ -31,15 +32,18 @@ const SOURCE_MODE: u32 = 0o600;
 /// reason as [`SOURCE_MODE`].
 const FOLDER_MODE: u32 = 0o700;
 
-/// A copy onto `volume` keeps each class in `kept` that a listing can show.
+/// A copy onto `volume` keeps each class its caps say it stores
+/// ([`MetadataCaps::stores`](crate::metadata::MetadataCaps::stores)) that a
+/// listing can show.
 ///
 /// Streams a few bytes into `dest` through [`Volume::write_from_stream`] from a
 /// source born at [`BIRTH_SECS`], last modified at [`SOURCE_DATE_SECS`], with
-/// mode `0600`, then insists the destination lists the creation date (when
-/// `kept` holds [`MetadataClasses::CREATED`]) and the mode (when it holds
+/// mode `0600`, then insists the destination lists the creation date (when it
+/// claims [`MetadataClasses::CREATED`]) and the mode (when it claims
 /// [`MetadataClasses::MODE`]), and still the modification date. `dest` must not
 /// exist yet.
-pub async fn assert_write_from_stream_keeps_metadata(volume: &dyn Volume, dest: &Path, kept: MetadataClasses) {
+pub async fn assert_write_from_stream_keeps_metadata(volume: &dyn Volume, dest: &Path) {
+    let kept = volume.metadata_caps().stores;
     assert!(
         !volume.exists(dest).await,
         "fixture precondition: {} must not exist yet",
@@ -93,15 +97,18 @@ pub async fn assert_write_from_stream_keeps_metadata(volume: &dyn Volume, dest: 
     }
 }
 
-/// A folder [`Volume::apply_metadata`] was handed a creation date (and, when
-/// `kept` holds [`MetadataClasses::MODE`], a mode) lists them, though writing its
-/// contents happened first.
+/// A folder [`Volume::apply_metadata`] was handed a creation date and a mode
+/// lists each one its caps say a folder keeps
+/// ([`MetadataCaps::folder_stores`](crate::metadata::MetadataCaps::folder_stores),
+/// and the modification date with `folder_dates`), though writing its contents
+/// happened first.
 ///
 /// Creates `dir`, writes a file into it, then applies [`BIRTH_SECS`], mode
-/// `0700`, and [`SOURCE_DATE_SECS`] in one call, and insists every class in
-/// `kept` reports `Kept` and lists back, the modification date included. `dir`
-/// must not exist yet.
-pub async fn assert_apply_metadata_keeps(volume: &dyn Volume, dir: &Path, kept: MetadataClasses) {
+/// `0700`, and [`SOURCE_DATE_SECS`] in one call, and insists every claimed
+/// class reports `Kept` and lists back. `dir` must not exist yet.
+pub async fn assert_apply_metadata_keeps(volume: &dyn Volume, dir: &Path) {
+    let caps = volume.metadata_caps();
+    let kept = caps.folder_stores;
     assert!(
         !volume.exists(dir).await,
         "fixture precondition: {} must not exist yet",
@@ -132,12 +139,14 @@ pub async fn assert_apply_metadata_keeps(volume: &dyn Volume, dir: &Path, kept: 
     let report = volume
         .apply_metadata(dir, &carried, Some(UNIX_EPOCH + Duration::from_secs(SOURCE_DATE_SECS)))
         .await;
-    assert_eq!(report.modified, ClassOutcome::Kept, "the folder's date; got {report:?}");
     let listed = volume
         .get_metadata(dir)
         .await
         .unwrap_or_else(|e| panic!("{} must be stattable, got {e:?}", dir.display()));
-    assert_eq!(listed.modified_at, Some(SOURCE_DATE_SECS), "the folder's date");
+    if caps.folder_dates {
+        assert_eq!(report.modified, ClassOutcome::Kept, "the folder's date; got {report:?}");
+        assert_eq!(listed.modified_at, Some(SOURCE_DATE_SECS), "the folder's date");
+    }
     if kept.contains(MetadataClasses::CREATED) {
         assert_eq!(
             report.created,
@@ -162,18 +171,16 @@ pub async fn assert_apply_metadata_keeps(volume: &dyn Volume, dir: &Path, kept: 
     }
 }
 
-/// The read stream of `path` reports, for each class in `reported` a listing
-/// can show, what `volume` lists for it: the creation date (to the second) and
-/// the mode.
+/// The read stream of `path` reports, for each class `volume`'s caps say it
+/// reports ([`MetadataCaps::reports`](crate::metadata::MetadataCaps::reports))
+/// that a listing can show, what `volume` lists for it: the creation date (to
+/// the second) and the mode.
 ///
 /// **Why this one is worth a shared assertion.** A destination can only keep
 /// what the source stream reports. A source that lists a creation date a moment
 /// ago but reports none on its stream makes every copy off it born at the copy.
-pub async fn assert_read_stream_reports_the_listed_metadata(
-    volume: &dyn Volume,
-    path: &Path,
-    reported: MetadataClasses,
-) {
+pub async fn assert_read_stream_reports_the_listed_metadata(volume: &dyn Volume, path: &Path) {
+    let reported = volume.metadata_caps().reports;
     let listed = volume
         .get_metadata(path)
         .await

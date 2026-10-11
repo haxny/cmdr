@@ -136,6 +136,11 @@ macro_rules! forward_volume_methods {
             self.$inner.apply_metadata(path, carried, modified)
         }
     };
+    (@one $inner:ident, metadata_caps) => {
+        fn metadata_caps(&self) -> ::cmdr_fs::metadata::MetadataCaps {
+            self.$inner.metadata_caps()
+        }
+    };
     (@one $inner:ident, delete) => {
         fn delete<'a>(&'a self, path: &'a ::std::path::Path) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.delete(path)

@@ -500,11 +500,10 @@ impl Volume for ArchiveVolume {
         true
     }
 
-    /// Zip external attributes, the tar header, 7z's unix extension — whichever
-    /// the archive recorded. An entry that recorded none still answers `0`; this
-    /// says only that the backend can carry one.
-    fn reports_posix_mode(&self) -> bool {
-        true
+    /// Reports the mode (zip external attributes, the tar header, 7z's unix
+    /// extension). Keeps nothing: a copy INTO an archive goes through the mutator.
+    fn metadata_caps(&self) -> cmdr_fs::metadata::MetadataCaps {
+        cmdr_fs::metadata::MetadataCaps::MODE_REPORTER
     }
 
     fn supports_streaming(&self) -> bool {

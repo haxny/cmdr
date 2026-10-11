@@ -268,6 +268,22 @@ async fn apply_metadata_dates_a_folder() {
     clean_scratch(&volume, &dir).await;
 }
 
+/// Holds the server to `SftpVolume::METADATA_CAPS`: today a folder's date and
+/// nothing else, so the day a class lands here the caps have to say so (or a
+/// copy onto SFTP keeps reporting it lost).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn sftp_honors_the_shared_metadata_contract() {
+    let (volume, dir) = stock_server_with_scratch("metadata-contract").await;
+    let born = format!("{dir}/born.txt");
+
+    conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new(&born)).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new(&born)).await;
+    conformance::assert_apply_metadata_keeps(&volume, Path::new(&format!("{dir}/born"))).await;
+
+    clean_scratch(&volume, &dir).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
 async fn not_found_carries_the_path() {

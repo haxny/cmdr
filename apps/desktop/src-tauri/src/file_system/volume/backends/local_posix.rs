@@ -17,7 +17,7 @@ use crate::file_system::listing::{FileEntry, ListingTally, get_single_entry, lis
 use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, WriteMode};
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
-use cmdr_fs::metadata::{CarriedMetadata, MetadataReport};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport};
 use cmdr_fs::volume::MountClass;
 use std::future::Future;
 use std::io;
@@ -236,6 +236,33 @@ impl LocalPosixVolume {
     fn resolve_internal(&self, path: &Path) -> PathBuf {
         cmdr_fs::volume::root_anchored(&self.root, path)
     }
+}
+
+impl LocalPosixVolume {
+    /// What local disk keeps of a copy routed through the volume engine, and
+    /// what its streams report off the open's `stat` and fd. The user flags
+    /// travel only local-to-local (the native engine) until the volume engine
+    /// puts them on after the landing (M6 of
+    /// `docs/specs/transfer-metadata-preservation.md`), so a FILE doesn't claim
+    /// them; a folder's `apply_metadata` does put them on. Linux can't set a
+    /// creation date (`statx` reads it) and has no user flags.
+    #[cfg(target_os = "macos")]
+    pub const METADATA_CAPS: MetadataCaps = MetadataCaps {
+        stores: MetadataClasses::ALL.without(MetadataClasses::FLAGS),
+        reports: MetadataClasses::ALL,
+        folder_stores: MetadataClasses::ALL,
+        folder_dates: true,
+    };
+    /// See the macOS twin.
+    #[cfg(not(target_os = "macos"))]
+    pub const METADATA_CAPS: MetadataCaps = MetadataCaps {
+        stores: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
+        reports: MetadataClasses::CREATED
+            .union(MetadataClasses::MODE)
+            .union(MetadataClasses::XATTRS),
+        folder_stores: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
+        folder_dates: true,
+    };
 }
 
 impl Volume for LocalPosixVolume {
@@ -575,9 +602,9 @@ impl Volume for LocalPosixVolume {
         true
     }
 
-    /// `st_mode`, straight off the stat the listing already does.
-    fn reports_posix_mode(&self) -> bool {
-        true
+    /// [`Self::METADATA_CAPS`].
+    fn metadata_caps(&self) -> MetadataCaps {
+        Self::METADATA_CAPS
     }
 
     fn scan_for_copy<'a>(

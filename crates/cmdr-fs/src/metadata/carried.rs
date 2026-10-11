@@ -18,6 +18,10 @@ use super::{MetadataClasses, UserFlags};
 /// nothing: a copy never carries it.
 const PROVENANCE_XATTR: &str = "com.apple.provenance";
 
+/// Gatekeeper's mark on a download. A copy carries it like any xattr, but a
+/// destination that can't hold it loses nothing a person would miss.
+const QUARANTINE_XATTR: &str = "com.apple.quarantine";
+
 /// One extended attribute: its name and its whole value.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Xattr {
@@ -72,6 +76,22 @@ impl CarriedMetadata {
         .restricted_to(wanted)
     }
 
+    /// [`Self::of_local_file_wanting`] with each xattr's value left empty: one
+    /// name-only `flistxattr`, never a `fgetxattr`, so asking which classes a
+    /// file has costs nothing like reading them (a resource fork can be large).
+    pub fn outline_of_local_file(file: &File, meta: &Metadata, wanted: MetadataClasses) -> Self {
+        let xattrs = if wanted.contains(MetadataClasses::XATTRS) {
+            local_xattr_names(file)
+        } else {
+            Vec::new()
+        };
+        Self {
+            xattrs,
+            ..Self::of_local_stat(meta)
+        }
+        .restricted_to(wanted)
+    }
+
     /// This set with every class outside `wanted` dropped.
     #[must_use]
     pub fn restricted_to(mut self, wanted: MetadataClasses) -> Self {
@@ -94,6 +114,33 @@ impl CarriedMetadata {
     /// that can't report a class.
     pub fn is_empty(&self) -> bool {
         self.created.is_none() && self.mode.is_none() && self.flags.is_empty() && self.xattrs.is_empty()
+    }
+
+    /// Which classes of this set hold something a person would miss if a copy
+    /// dropped it, for an item last modified at `modified` on a volume where a
+    /// fresh file gets `default_mode`: a creation date before the last edit (an
+    /// equal one is what a dropped date looks like anyway), a mode a fresh file
+    /// wouldn't get, any user flag, and any xattr but the quarantine. What the
+    /// loss note counts (`docs/specs/transfer-metadata-preservation.md` §
+    /// "Telling the user"); a class this set doesn't carry is never in it.
+    pub fn worth_keeping(&self, modified: Option<SystemTime>, default_mode: u32) -> MetadataClasses {
+        let whole_secs = |date: SystemTime| date.duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        let mut worth = MetadataClasses::NONE;
+        if let Some(created) = self.created
+            && modified.is_none_or(|modified| whole_secs(created) < whole_secs(modified))
+        {
+            worth = worth | MetadataClasses::CREATED;
+        }
+        if self.mode.is_some_and(|mode| mode & 0o7777 != default_mode & 0o7777) {
+            worth = worth | MetadataClasses::MODE;
+        }
+        if !self.flags.is_empty() {
+            worth = worth | MetadataClasses::FLAGS;
+        }
+        if self.xattrs.iter().any(|xattr| xattr.name != QUARANTINE_XATTR) {
+            worth = worth | MetadataClasses::XATTRS;
+        }
+        worth
     }
 
     /// The part of this set that goes on only AFTER the landing rename,
@@ -156,6 +203,25 @@ fn local_xattrs(file: &File) -> Vec<Xattr> {
                     log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
                     None
                 }
+            })
+            .collect(),
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't list a source's xattrs: {e}");
+            Vec::new()
+        }
+    }
+}
+
+/// The names of the xattrs worth carrying off the open `file`, each with an
+/// empty value.
+fn local_xattr_names(file: &File) -> Vec<Xattr> {
+    use xattr::FileExt as _;
+    match file.list_xattr() {
+        Ok(names) => names
+            .filter(carries)
+            .map(|name| Xattr {
+                name,
+                value: Vec::new(),
             })
             .collect(),
         Err(e) => {

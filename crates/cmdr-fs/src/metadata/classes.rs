@@ -34,6 +34,16 @@ impl MetadataClasses {
         self.0 & other.0 == other.0
     }
 
+    /// Every class in this set or in `other`; the `const` form of `|`.
+    pub const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    /// The classes in both this set and `other`.
+    pub const fn intersection(self, other: Self) -> Self {
+        Self(self.0 & other.0)
+    }
+
     /// This set without the classes in `other`.
     pub const fn without(self, other: Self) -> Self {
         Self(self.0 & !other.0)

@@ -950,26 +950,26 @@ pub trait Volume: Send + Sync {
         Box::pin(async { Err(VolumeError::NotSupported) })
     }
 
-    /// Whether a [`FileEntry::permissions`](crate::entry::FileEntry::permissions)
-    /// from this backend is a REAL POSIX mode somebody recorded, rather than the
-    /// `0` that means "this backend has no permission concept".
+    /// Which metadata classes this backend keeps on what a copy writes, and
+    /// which its read streams report: [`MetadataCaps`](crate::metadata::MetadataCaps).
     ///
-    /// A claim about the BACKEND, so it is answered without touching a path.
-    /// `true` for `LocalPosixVolume` (`st_mode`), the git portal (the tree
-    /// entry's kind), the archive backend (zip external attributes, the tar
-    /// header, 7z's unix extension), and ADB (the device's own `stat`). `false`
-    /// for SMB, SFTP, WebDAV, and MTP, none of which carry one.
+    /// A claim about the BACKEND, answered without touching a path. The copy
+    /// engine reads it to know which classes a copy is about to leave behind
+    /// (it asks the source only about those, and only when there are any), and
+    /// the archive compress planner reads `reports` to know whether a listing's
+    /// [`FileEntry::permissions`](crate::entry::FileEntry::permissions) is a real
+    /// mode somebody recorded rather than the `0` of a backend with no
+    /// permission concept.
     ///
-    /// A planner that walks listings asks it before trusting a mode (the
-    /// archive compress planner). A copy doesn't: each of these backends' read
-    /// streams reports its file's mode through [`VolumeReadStream::metadata`].
-    ///
-    /// Default `false`: a backend that has modes says so, and one that doesn't
-    /// can't be asked for them. ❗ Answering `true` without real bits is worse
-    /// than answering nothing: a non-zero mode is a fact somebody puts on the
-    /// user's file.
-    fn reports_posix_mode(&self) -> bool {
-        false
+    /// Default [`MetadataCaps::NONE`](crate::metadata::MetadataCaps::NONE): a
+    /// backend that keeps or reports a class says so. ❗ Claiming a class it
+    /// doesn't honor fails `conformance::metadata`; reporting a mode without real
+    /// bits is worse than reporting nothing, since a non-zero mode is a fact
+    /// somebody puts on the user's file. Where each backend stands:
+    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// § "Copies keep the source's metadata".
+    fn metadata_caps(&self) -> crate::metadata::MetadataCaps {
+        crate::metadata::MetadataCaps::NONE
     }
 
     /// Whether this volume accepts mutations at all: creating files and

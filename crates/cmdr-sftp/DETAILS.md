@@ -860,7 +860,8 @@ that would catch it.
 lets a walker (the fresh-ZIP planner) skip a FIFO, socket, or device without opening it: a read of a FIFO blocks the
 single-threaded `sftp-server`, and with it every operation sharing this volume's channel. The permission bits stay unset
 on purpose, because a copy onto local disk carries a reported mode's low nine bits (`VolumeReadStream::metadata`, folded
-by `cmdr_fs::metadata::routed_mode`) and this backend doesn't report modes yet (`reports_posix_mode` stays `false`).
+by `cmdr_fs::metadata::routed_mode`) and this backend doesn't report modes yet (`SftpVolume::METADATA_CAPS` claims no
+`MODE`).
 
 ❗ **A bare server-absolute path is REFUSED**, not accepted as a courtesy: with the prefix in place the app never spells
 one, so leniency buys only that hole. The three root aliases stay (`/`, `.`, the empty path).

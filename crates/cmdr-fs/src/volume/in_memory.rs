@@ -14,7 +14,7 @@ use super::{BackendKind, ConnectionState, IndexWalk, SpaceInfo, VolumeError};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
-use crate::metadata::CarriedMetadata;
+use crate::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -147,6 +147,12 @@ pub struct InMemoryVolume {
     /// so a double only names a transport when the code under test asks about
     /// one.
     backend_kind: BackendKind,
+    /// What [`Volume::metadata_caps`] reports, and what the double honors: its
+    /// streams report only `reports`, a write keeps only `stores`, and
+    /// `apply_metadata` keeps only `folder_stores` on a folder. Default
+    /// [`Self::REFERENCE_CAPS`]; set via [`Self::with_metadata_caps`] to stand in
+    /// for a backend in the loss-note matrix.
+    metadata_caps: MetadataCaps,
     /// [`Volume::index_walk`] answers set by
     /// [`with_index_walk`](Self::with_index_walk), by directory path. Any other
     /// directory keeps the trait's default.
@@ -184,6 +190,7 @@ impl InMemoryVolume {
             stat_failing: RwLock::new(HashSet::new()),
             connection_state: None,
             backend_kind: BackendKind::Local,
+            metadata_caps: Self::REFERENCE_CAPS,
             index_walk_overrides: Vec::new(),
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
@@ -202,6 +209,24 @@ impl InMemoryVolume {
     /// a share, a server, or a phone at a gate that dispatches on the transport.
     pub fn with_backend_kind(mut self, kind: BackendKind) -> Self {
         self.backend_kind = kind;
+        self
+    }
+
+    /// Every class reported and kept, files and folders, except the user flags
+    /// on a FILE: the volume engine puts those on after the landing only from
+    /// M6 of `docs/specs/transfer-metadata-preservation.md`, and the double
+    /// claims nothing a copy onto it doesn't keep.
+    pub const REFERENCE_CAPS: MetadataCaps = MetadataCaps {
+        stores: MetadataClasses::ALL.without(MetadataClasses::FLAGS),
+        ..MetadataCaps::ALL
+    };
+
+    /// Makes this double keep and report only what `caps` says, so it stands in
+    /// for a real backend's metadata: a class outside `caps.reports` never
+    /// leaves its streams, and one outside `caps.stores` (`folder_stores` on a
+    /// folder) never lands on it.
+    pub fn with_metadata_caps(mut self, caps: MetadataCaps) -> Self {
+        self.metadata_caps = caps;
         self
     }
 

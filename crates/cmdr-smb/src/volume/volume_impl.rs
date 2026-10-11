@@ -13,7 +13,7 @@ use super::state::ConnectionState;
 use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
@@ -26,6 +26,19 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+
+impl SmbVolume {
+    /// The creation date both ways, on files and folders, riding the frames a
+    /// date already costs (`DETAILS.md` § "Dates on copies"). Hidden and Locked
+    /// wait for smb2 to send attributes, the xattrs for named streams
+    /// (vdavid/smb2#9), and a share has no POSIX mode.
+    pub const METADATA_CAPS: MetadataCaps = MetadataCaps {
+        stores: MetadataClasses::CREATED,
+        reports: MetadataClasses::CREATED,
+        folder_stores: MetadataClasses::CREATED,
+        folder_dates: true,
+    };
+}
 
 impl Volume for SmbVolume {
     fn name(&self) -> &str {
@@ -354,6 +367,10 @@ impl Volume for SmbVolume {
 
     /// Bytes stream out over smb2 (`open_read_stream`), so a share can be the
     /// source of a cross-volume copy.
+    fn metadata_caps(&self) -> MetadataCaps {
+        Self::METADATA_CAPS
+    }
+
     fn supports_export(&self) -> bool {
         true
     }
