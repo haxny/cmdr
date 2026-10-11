@@ -495,6 +495,7 @@ describe('FavoritesMenu a11y', () => {
         getAnchor: () => anchor,
         getChipCluster: () => anchor,
         onShowVolumes: () => {},
+        onSwitchPane: () => {},
         onOpenChange: () => {},
       },
     }) as unknown as { open: (trigger: 'command') => void }

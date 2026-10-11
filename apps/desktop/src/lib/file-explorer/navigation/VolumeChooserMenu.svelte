@@ -33,6 +33,7 @@
     import { createMenu } from '$lib/ui/menu-controller.svelte'
     import type { MenuActivationSource, MenuIcon, MenuItem, MenuRowContext, MenuSection } from '$lib/ui/menu-types'
     import type { PaneId } from '$lib/commands/types'
+    import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
     import { deviceVolumeLabel } from '$lib/adb/adb-volume-label'
     import { deviceRowState } from '$lib/adb/device-readiness'
     import {
@@ -284,16 +285,25 @@
     let focusBeforeOpen: HTMLElement | null = null
 
     /**
-     * ⌃D right here swaps to the favorites menu. Central dispatch is suppressed while a
-     * header menu is open, so nothing else would answer it, and the favorites row's chip
-     * teaches the key — it has to work where it's advertised. `eventMatchesCommand` means a
-     * rebind follows.
+     * The keys that hand the header to another menu. Central dispatch is suppressed while a
+     * header menu is open, so nothing else would answer them; `eventMatchesCommand` means a
+     * rebind follows. Tab and the OTHER pane's chooser key (⌥F2 over the left pane) hand
+     * off to that pane's switcher; this pane's OWN chooser key closes (the key that opened
+     * it toggles); ⌃D swaps to favorites, which the favorites row's chip teaches.
      */
     function handleKey(event: KeyboardEvent): boolean {
         if (eventMatchesCommand(event, 'pane.switch')) {
             // Unlike every other consumer key, Tab must suppress the browser's focus walk:
             // the dual-pane owner closes this menu and opens the other pane's in one handoff.
             event.preventDefault()
+            onSwitchPane()
+            return true
+        }
+        if (eventMatchesCommand(event, chooserCommandFor(paneId))) {
+            menu.close()
+            return true
+        }
+        if (eventMatchesCommand(event, otherChooserCommandFor(paneId))) {
             onSwitchPane()
             return true
         }

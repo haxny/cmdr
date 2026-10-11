@@ -657,6 +657,54 @@ describe('VolumeBreadcrumb', () => {
       expect(onSwitchPane).toHaveBeenCalledOnce()
     })
 
+    // ⌥F1 / ⌥F2 never reach central dispatch while a header menu is open, so the menu
+    // answers them itself: the other pane's key hands off like Tab, its own key toggles.
+    // Claimed but never `preventDefault`ed (they're menu-bar accelerators), so these assert the
+    // outcome, not `press`'s return.
+    it("the OTHER pane's chooser key hands off to that pane's switcher, like Tab", async () => {
+      const onSwitchPane = vi.fn()
+      const component = mount(VolumeBreadcrumb, {
+        target: getTarget(),
+        props: {
+          paneId: 'left' as const,
+          volumeId: 'root',
+          currentPath: '/',
+          containingVolumeId: 'root',
+          onSwitchPane,
+        },
+      })
+      await waitForUpdates(100)
+      ;(component as unknown as { openVolumeChooser: () => void }).openVolumeChooser()
+      await waitForUpdates()
+
+      press('F2', { altKey: true })
+      expect(onSwitchPane).toHaveBeenCalledOnce()
+    })
+
+    it("the pane's OWN chooser key closes the switcher (the key that opened it toggles)", async () => {
+      const onSwitchPane = vi.fn()
+      const component = mount(VolumeBreadcrumb, {
+        target: getTarget(),
+        props: {
+          paneId: 'right' as const,
+          volumeId: 'root',
+          currentPath: '/',
+          containingVolumeId: 'root',
+          onSwitchPane,
+        },
+      })
+      await waitForUpdates(100)
+      ;(component as unknown as { openVolumeChooser: () => void }).openVolumeChooser()
+      await waitForUpdates()
+      expect(menuSurface()).toBeTruthy()
+
+      press('F2', { altKey: true })
+      await tick()
+
+      expect(menuSurface()).toBeNull()
+      expect(onSwitchPane).not.toHaveBeenCalled()
+    })
+
     it('Home jumps to first item', async () => {
       await mountAndOpen()
 

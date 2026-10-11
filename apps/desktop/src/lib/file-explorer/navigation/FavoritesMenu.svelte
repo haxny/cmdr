@@ -21,6 +21,7 @@
     import { createMenu } from '$lib/ui/menu-controller.svelte'
     import type { MenuRowContext } from '$lib/ui/menu-types'
     import type { PaneId } from '$lib/commands/types'
+    import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
     import type { VolumeChangePayload } from '../pane/types'
     import FavoriteRowLabel from './FavoriteRowLabel.svelte'
     import FavoriteShortcutField from './FavoriteShortcutField.svelte'
@@ -38,13 +39,25 @@
         /** The chip's whole control cluster: pressing a control in it doesn't close the list. */
         getChipCluster: () => HTMLElement | undefined
         onVolumeChange?: (change: VolumeChangePayload) => void
-        /** ⌥F1 / ⌥F2 inside the menu: hand the header back to the volume switcher. */
+        /** This pane's chooser key inside the menu: hand the header back to its volume switcher. */
         onShowVolumes: () => void
+        /** The OTHER pane's chooser key: hand off to that pane's switcher, like Tab in the switcher. */
+        onSwitchPane: () => void
         /** So the chip can keep one header menu open at a time. */
         onOpenChange: (open: boolean) => void
     }
 
-    const { paneId, volumeId, currentPath, getAnchor, getChipCluster, onVolumeChange, onShowVolumes, onOpenChange }: Props = $props()
+    const {
+        paneId,
+        volumeId,
+        currentPath,
+        getAnchor,
+        getChipCluster,
+        onVolumeChange,
+        onShowVolumes,
+        onSwitchPane,
+        onOpenChange,
+    }: Props = $props()
 
     let renameInputRef: HTMLInputElement | undefined = $state()
     let shortcutInputRef: HTMLInputElement | undefined = $state()
@@ -72,19 +85,23 @@
     let focusBeforeOpen: HTMLElement | null = null
 
     /**
-     * The two keys that swap menus. Central dispatch is suppressed while a header menu is
-     * open, so nothing else would answer them; matching through `eventMatchesCommand`
-     * means a rebind follows. ⌃D closes (the key that opened it toggles), and the pane's
-     * OWN chooser key swaps back — ❗ `paneId`'s, not either one, so ⌥F2 pressed over the
-     * left pane's favorites still means the right pane's switcher.
+     * The keys that swap menus. Central dispatch is suppressed while a header menu is open,
+     * so nothing else would answer them; matching through `eventMatchesCommand` means a
+     * rebind follows. ⌃D closes (the key that opened it toggles), the pane's OWN chooser
+     * key swaps back to its switcher, and the OTHER pane's chooser key hands off to that
+     * pane's switcher (⌥F2 over the left pane's favorites means the right pane).
      */
     function handleKey(event: KeyboardEvent): boolean {
         if (eventMatchesCommand(event, 'favorites.open')) {
             menu.close()
             return true
         }
-        if (eventMatchesCommand(event, paneId === 'left' ? 'pane.leftVolumeChooser' : 'pane.rightVolumeChooser')) {
+        if (eventMatchesCommand(event, chooserCommandFor(paneId))) {
             onShowVolumes()
+            return true
+        }
+        if (eventMatchesCommand(event, otherChooserCommandFor(paneId))) {
+            onSwitchPane()
             return true
         }
         return false

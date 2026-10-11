@@ -227,6 +227,7 @@ interface BreadcrumbProps {
   volumeId?: string
   currentPath?: string
   onVolumeChange?: (change: VolumeChangePayload) => void
+  onSwitchPane?: () => void
 }
 
 function mountBreadcrumb(props: BreadcrumbProps = {}): { instance: BreadcrumbInstance; target: HTMLDivElement } {
@@ -416,13 +417,15 @@ describe('swapping between the two menus', () => {
     expect(document.querySelectorAll('[data-menu]')).toHaveLength(1)
   })
 
-  it("❗ the OTHER pane's chooser key does not, so ⌥F2 over the left pane still means the right pane", async () => {
-    await openFavorites({ paneId: 'left' })
+  it("the OTHER pane's chooser key hands off to that pane's switcher, like Tab does from the switcher", async () => {
+    const onSwitchPane = vi.fn()
+    await openFavorites({ paneId: 'left', onSwitchPane })
     press(RIGHT_CHOOSER.key as string, RIGHT_CHOOSER)
     await tick()
     flushSync()
-    // Unclaimed by this menu, and swallowed rather than acted on: the favorites menu
-    // stays up, and the right pane's switcher is that pane's business.
+    // ❗ Not this pane's switcher: ⌥F2 over the left pane's favorites means the right pane.
+    // The dual-pane owner closes this menu and opens the other pane's switcher.
+    expect(onSwitchPane).toHaveBeenCalledOnce()
     expect(openMenuName()).toBe(FAVORITES)
   })
 })

@@ -329,6 +329,7 @@
         getAnchor={() => chipEl}
         getChipCluster={() => clusterEl}
         onShowVolumes={() => { chooser?.open() }}
+        onSwitchPane={() => onSwitchPane?.()}
         onOpenChange={(open: boolean) => { handleMenuOpenChange('favorites', open) }}
     />
 </div>

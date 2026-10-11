@@ -308,8 +308,9 @@ built on the house `Menu` primitive (`$lib/ui/DETAILS.md` § Menu).
 keyboard contract (arrows, Home/End, Enter, Escape, ⌥↑/⌥↓ reorder, the submenu), keyboard-vs-pointer mode, the drag,
 scroll-into-view, and focus. `VolumeChooserMenu` hands it DATA (`MenuSection`s built from `volume-grouping.ts`) plus
 four snippets, and gets `onSelect` / `onReorder` back. Its `onKey` claims only commands that leave this menu: ⌃D hands
-the chip to Favorites, and Tab hands the open switcher to the other pane. ❌ Don't reimplement row navigation, a
-highlight index, or `getBoundingClientRect` here; those belong to the primitive.
+the chip to Favorites, Tab and the other pane's chooser key hand the open switcher to the other pane, and this pane's
+own chooser key closes it. ❌ Don't reimplement row navigation, a highlight index, or `getBoundingClientRect` here;
+those belong to the primitive.
 
 - **`label`** is the row's text, swapped for the inline rename `<input>` on the favorite being renamed.
 - **`trailing`** is the filesystem tag, the restricted glyph, and the `.row-trailing` badge cluster (read-only, the
@@ -325,6 +326,10 @@ highlight index, or `getBoundingClientRect` here; those belong to the primitive.
 - **Tab** prevents the browser's focus walk, closes this switcher, activates the other pane, and opens that pane's
   switcher synchronously. Each repeat keydown therefore has one open switcher to hand back, including while Tab is held;
   arrows remain the primitive's row navigation.
+- **⌥F1 / ⌥F2** inside an open header menu: the OTHER pane's chooser key does what Tab does (`onSwitchPane`, from the
+  switcher or from favorites), so a Total Commander user changes their mind without Esc. This pane's own key closes the
+  switcher (the key that opened it toggles) or, from favorites, swaps back to the switcher. Own vs other comes from
+  `header-menu-keys.ts`.
 - **The two of them share one `createDriveBadges`** (`drive-badges.svelte.ts`): one index-status manager, one
   image-index map, one action runner for both placements, so the event subscriptions and fetches happen once.
 
@@ -715,8 +720,9 @@ one-at-a-time rule spans the window and not just the chip.
 **The swap keys work inside a menu.** Central dispatch is suppressed while a header menu is open, so nothing else would
 answer them; each menu's `onKey` matches with `eventMatchesCommand`, so a rebind follows. ⌃D inside the switcher goes to
 favorites (the favorites section's row teaches that key with its chip, so it has to work right where it's advertised),
-⌃D inside favorites closes it, and the pane's OWN chooser key swaps back — ❗ `paneId`'s, not either one, so ⌥F2 pressed
-over the left pane's favorites still means the right pane's switcher. Both report `trigger: 'command'`.
+⌃D inside favorites closes it, the pane's OWN chooser key swaps back, and the OTHER pane's chooser key hands off to that
+pane's switcher like Tab — ❗ `paneId` decides which is which, so ⌥F2 pressed over the left pane's favorites means the
+right pane's switcher. Both report `trigger: 'command'`.
 
 ### The switcher's favorites section
 
