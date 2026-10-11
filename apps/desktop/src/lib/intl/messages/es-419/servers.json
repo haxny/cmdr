@@ -162,5 +162,9 @@
   "servers.sheet.smbAddressMoveHelp": "¿Se mudó el servidor? Escribe su nueva dirección. Sus recursos compartidos y su contraseña guardada pasan a la nueva dirección, y los favoritos y las pestañas abiertas de cada recurso compartido lo siguen la primera vez que se abra allí.",
   "@servers.sheet.smbAddressMoveHelp": {
     "sourceHash": "26f974b"
+  },
+  "servers.refusal.shareEjectRefused": "Cmdr no pudo expulsar el recurso compartido {name}, así que no se guardó nada. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "82da163"
   }
 }

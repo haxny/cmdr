@@ -1036,7 +1036,7 @@
     "sources": "macOS Finder (Édition); catalog"
   },
   "eject": {
-    "accept": ["éjectez", "éjection", "éjecté"],
+    "accept": ["éjectez", "éjection", "éjecté", "éjecte"],
     "chosen": "Éjecter",
     "confidence": "high",
     "decision": "Éjection et déconnexion refusées : les neuf clés `errors.eject.*`",

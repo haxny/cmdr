@@ -311,6 +311,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr не удалось извлечь общую папку {name}, поэтому ничего не сохранено. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Добавить сервер",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -338,6 +342,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr не удалось проверить сервер. Кнопка «Все равно добавить» сохранит введенные данные без проверки.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Извлечь и сохранить",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr извлекает все общие папки, которые еще подключены по старому адресу, а затем сохраняет новый адрес.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Извлечение…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "Сервер {name} сохранен в списке «Серверы».",
   "@servers.sheet.addedToast": {

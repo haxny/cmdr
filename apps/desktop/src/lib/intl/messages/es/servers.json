@@ -311,6 +311,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr no ha podido expulsar el recurso compartido {name}, así que no se ha guardado nada. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Añadir servidor",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -338,6 +342,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr no ha podido comprobar este servidor, así que “Añadir de todos modos” lo guarda tal como lo has escrito.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Expulsar y guardar",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr expulsa todos los recursos compartidos que siguen montados desde la dirección anterior y luego guarda la nueva.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Expulsando…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} se ha guardado en tu lista Servidores.",
   "@servers.sheet.addedToast": {

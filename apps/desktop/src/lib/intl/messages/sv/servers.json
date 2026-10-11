@@ -312,6 +312,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr kunde inte mata ut den delade mappen {name}, så ingenting sparades. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Lägg till server",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -339,6 +343,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr kunde inte kontrollera den här servern, så Lägg till ändå sparar den som du skrev den.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Mata ut och spara",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr matar ut alla delade mappar som fortfarande är monterade från den gamla adressen och sparar sedan den nya.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Matar ut…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "Servern {name} är sparad i listan Servrar.",
   "@servers.sheet.addedToast": {

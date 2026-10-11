@@ -311,6 +311,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr 没能推出共享 {name}，所以什么都没保存。{reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "添加服务器",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -338,6 +342,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr 没能检查这台服务器，所以“仍然添加”会按你输入的原样保存它。",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "推出并保存",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr 会先推出所有仍通过旧地址装载的共享，然后保存新地址。",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "正在推出…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} 已保存到你的“服务器”列表里。",
   "@servers.sheet.addedToast": {

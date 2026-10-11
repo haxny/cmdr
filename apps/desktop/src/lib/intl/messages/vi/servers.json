@@ -311,6 +311,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr không thể tháo mục chia sẻ {name}, nên chưa lưu gì. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Thêm máy chủ",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -338,6 +342,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr không kiểm tra được máy chủ này, nên nút “Vẫn thêm” sẽ lưu máy chủ đúng như bạn đã nhập.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Tháo và lưu",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr tháo mọi mục chia sẻ vẫn đang được gắn kết từ địa chỉ cũ, rồi lưu địa chỉ mới.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Đang tháo…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} đã được lưu trong danh sách Máy chủ.",
   "@servers.sheet.addedToast": {

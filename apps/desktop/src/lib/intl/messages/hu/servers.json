@@ -311,6 +311,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "A Cmdr nem tudta kiadni ezt a megosztást: „{name}”, ezért nem mentett semmit. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Szerver hozzáadása",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -338,6 +342,18 @@
   "servers.sheet.addAnywayHelp": "A Cmdr nem tudta ellenőrizni ezt a szervert, ezért a Hozzáadás mindenképp gomb úgy menti el, ahogy beírtad.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Kiadás és mentés",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "A Cmdr kiad minden megosztást, amely még a régi címről van csatolva, aztán elmenti az új címet.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Kiadás…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} el van mentve a Szerverek listádban.",
   "@servers.sheet.addedToast": {

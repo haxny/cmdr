@@ -312,6 +312,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr n’a pas pu éjecter le partage {name} et n’a donc rien enregistré. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Ajouter un serveur",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -339,6 +343,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr n’a pas pu vérifier ce serveur, donc « Ajouter quand même » l’enregistre tel que vous l’avez saisi.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Éjecter et enregistrer",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr éjecte chaque partage encore monté depuis l’ancienne adresse, puis enregistre la nouvelle.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Éjection…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "Cmdr a enregistré {name} dans votre liste Serveurs.",
   "@servers.sheet.addedToast": {

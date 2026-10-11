@@ -312,6 +312,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "O Cmdr não conseguiu ejetar o compartilhamento {name}, então nada foi salvo. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Adicionar servidor",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -339,6 +343,18 @@
   "servers.sheet.addAnywayHelp": "O Cmdr não conseguiu verificar este servidor, então “Adicionar mesmo assim” salva o servidor do jeito que você digitou.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Ejetar e salvar",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "O Cmdr ejeta todos os compartilhamentos ainda montados pelo endereço antigo e depois salva o novo endereço.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Ejetando…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "O Cmdr salvou {name} na sua lista Servidores.",
   "@servers.sheet.addedToast": {

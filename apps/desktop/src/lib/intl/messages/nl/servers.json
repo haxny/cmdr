@@ -314,6 +314,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr kon de gedeelde map {name} niet uitwerpen, dus er is niets bewaard. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Voeg server toe",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -341,6 +345,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr kon deze server niet controleren, dus ‘Voeg toch toe’ bewaart hem zoals je hem hebt getypt.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Werp uit en bewaar",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr werpt elke gedeelde map uit die nog via het oude adres is aangekoppeld, en bewaart daarna het nieuwe adres.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Uitwerpen…",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} is opgeslagen in je lijst Servers.",
   "@servers.sheet.addedToast": {

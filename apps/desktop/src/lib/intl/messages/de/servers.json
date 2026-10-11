@@ -313,6 +313,10 @@
   "@servers.refusal.shareMounted": {
     "sourceHash": "74b3fbb"
   },
+  "servers.refusal.shareEjectRefused": "Cmdr konnte die Freigabe {name} nicht auswerfen und hat deshalb nichts gesichert. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "sourceHash": "1c73fa7"
+  },
   "servers.sheet.addTitle": "Server hinzufügen",
   "@servers.sheet.addTitle": {
     "sourceHash": "1099b2a"
@@ -340,6 +344,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr konnte diesen Server nicht prüfen, deshalb speichert „Trotzdem hinzufügen“ ihn so, wie du ihn eingegeben hast.",
   "@servers.sheet.addAnywayHelp": {
     "sourceHash": "3704aa5"
+  },
+  "servers.sheet.ejectAndSave": "Auswerfen und sichern",
+  "@servers.sheet.ejectAndSave": {
+    "sourceHash": "357f2dd"
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr wirft jede Freigabe aus, die noch über die alte Adresse eingebunden ist, und sichert dann die neue.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "sourceHash": "a1d1206"
+  },
+  "servers.sheet.ejecting": "Wird ausgeworfen …",
+  "@servers.sheet.ejecting": {
+    "sourceHash": "4c37167"
   },
   "servers.sheet.addedToast": "{name} ist in deiner Liste „Server“ gespeichert.",
   "@servers.sheet.addedToast": {
