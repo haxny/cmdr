@@ -64,10 +64,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   for Clone pane, because `nhân bản` is Duplicate and `sao chép` is Copy. Only TC has it (no Double Commander vi);
   confirm a Vietnamese reader takes it as "show the same folder in the other pane".
 - **Multi-rename wording** (`multiRename.*`): `mặt nạ tên` for the name mask (TC 6602 `Mặt nạ đổi tên`, MS mask →
-  `mặt nạ`) may read technical to a non-TC user; `ký hiệu` for the `[N]`/`[C]` placeholders follows the catalog's
-  `Ký hiệu định dạng`; `tùy chọn đặt trước` for a saved rename preset (the tentative preset ruling) runs long on
-  `Lưu`/`Xóa`/`Tên tùy chọn đặt trước`, and `thiết lập đã lưu` is the alternative; `Viết Hoa Đầu Mỗi Từ` is title-cased
-  on purpose to show the result (EN `Every Word Capitalized`); `Bỏ dấu` for Remove diacritics.
+  `mặt nạ`) may read technical to a non-TC user; `phần giữ chỗ` for the `[N]`/`[C]` placeholders (Apple says
+  `trình giữ chỗ`); `giá trị đặt trước` for a saved rename preset (macOS's form) runs long on
+  `Lưu`/`Tên giá trị đặt trước`, and `thiết lập đã lưu` is the alternative; `Viết Hoa Đầu Mỗi Từ` is title-cased on
+  purpose to show the result (EN `Every Word Capitalized`); `Bỏ dấu` for Remove diacritics.
 - **Counter popover** (`multiRename.counterEditor.*`): `Bước nhảy` for Step (over the earlier bare `Bước`, which the
   catalog uses for onboarding steps); `Số bắt đầu` as a noun label for Start; the preview
   `Đếm 1, 3, 5…, hiển thị thành 001, 003, 005` (confirm `hiển thị thành` reads natural over `hiện ra là`). The reference

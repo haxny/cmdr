@@ -108,8 +108,8 @@ over a pile-ideal form that would fork a term mid-catalog.
 
 - The user's machine in prose → `máy Mac`, never a bare `Mac` as a noun phrase. A macOS sidebar → `thanh bên`; Cmdr's
   own side panel → `khung bên` (`side-panel`).
-- placeholder (template token) → `phần giữ chỗ` over MS `chỗ dành sẵn` (reads "reserved space"); preset →
-  `tùy chọn đặt trước`, since a bare `đặt trước` reads "reserved".
+- placeholder (`[N]` too) → `phần giữ chỗ` over MS `chỗ dành sẵn` or `ký hiệu` ("symbol"). preset → `giá trị đặt trước`
+  (macOS); bare `đặt trước` reads "reserved".
 - Azure deployment / resource → `bản triển khai` / `tài nguyên`: Microsoft's own product, so MS outranks macOS.
 - `View > Zoom > 100%` in `commands.handler.zoomResetHintMenu` stays English: a literal menu path, per its `@key`.
 - "at any time" → `bất cứ lúc nào` over macOS `bất kỳ lúc nào`: both correct, the catalog ships the first everywhere.

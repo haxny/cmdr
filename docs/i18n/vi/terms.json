@@ -2045,10 +2045,16 @@
     "sources": "MS (cổng)"
   },
   "preset": {
-    "chosen": "đặt trước",
-    "confidence": "tentative",
-    "forms": "tùy chọn đặt trước (bare đặt trước can read \"reserved\"); back to presets → Quay lại tùy chọn đặt trước; Multi-rename: Save … as a preset → Lưu … làm tùy chọn đặt trước (macOS: làm Giá trị đặt trước)",
-    "sources": "MS terminology (khung thời gian đặt trước); macOS 27.0.1 live print dialog Save Current Settings as Preset…"
+    "chosen": "giá trị đặt trước",
+    "confidence": "high",
+    "forms": "Presets (title) → Giá trị đặt trước; Save … as a preset → Lưu … làm giá trị đặt trước (macOS print dialog frame); never a bare đặt trước, which can read \"reserved\"",
+    "avoid": [
+      {
+        "form": "tùy chọn đặt trước",
+        "why": "no macOS or MS string uses it; 0 of 96 live-macOS preset strings, against 40 for giá trị đặt trước"
+      }
+    ],
+    "sources": "macOS 27.0.1 live loctable sweep, 2026-10-11 (print dialog Presets / No Presets / Save Current Settings as Preset… → Giá trị đặt trước / Không có giá trị đặt trước / … làm Giá trị đặt trước; AVFoundation, PassKit, Siri voices the same); MS terminology (khung thời gian đặt trước)"
   },
   "preview": {
     "chosen": "xem trước",
@@ -3145,21 +3151,22 @@
     "chosen": "tải",
     "accept": ["nạp"],
     "confidence": "high",
-    "forms": "Load a preset → Tải tùy chọn đặt trước; Load more → Tải thêm; Loading… → Đang tải…; too big to load from history → nạp (errors.git.blobTooLarge.title)",
+    "forms": "Load a preset → Tải giá trị đặt trước; Load more → Tải thêm; Loading… → Đang tải…; too big to load from history → nạp (errors.git.blobTooLarge.title)",
     "sources": "macOS AppKit Revisions (Load version → Tải phiên bản); MS terminology (load → tải); catalog (operationLog.dialog.loadMore, askCmdr.sessions.loadMore, viewer.loading)"
   },
   "placeholder": {
-    "chosen": "ký hiệu",
-    "accept": ["phần giữ chỗ"],
+    "chosen": "phần giữ chỗ",
+    "accept": ["ký hiệu"],
     "confidence": "high",
-    "forms": "a token in a format string or a rename mask ([N], [C], YYYY) → ký hiệu (Chèn ký hiệu, Cmdr không biết ký hiệu [{placeholder}], Ký hiệu định dạng); a stand-in inside a URL the user must swap out → phần giữ chỗ (onboarding.cloudSetup.hint.azureEndpoint)",
+    "forms": "a Multi-rename token ([N], [C]) or a stand-in in a URL → phần giữ chỗ (Chèn phần giữ chỗ, Cmdr không biết phần giữ chỗ [{placeholder}], onboarding.cloudSetup.hint.azureEndpoint); a date-format letter (YYYY, MM) → ký hiệu (Ký hiệu định dạng)",
+    "note": "A bare ký hiệu on the rename sheet reads as \"symbol\" (macOS Emoji & Symbols → Biểu tượng & Ký hiệu), so `Chèn ký hiệu` looked like \"Insert symbol\"; it stays only for date-format letters, which really are format symbols.",
     "avoid": [
       {
         "form": "chỗ dành sẵn",
         "why": "MS's form for the example text in an empty input field; reads as a reserved slot, not a token the user types"
       }
     ],
-    "sources": "catalog (settings.appearance.formatPlaceholdersTitle Ký hiệu định dạng, settings.appearance.customDateTimeFormat.description các ký hiệu như YYYY); MS terminology (placeholder → chỗ dành sẵn, the input-field sense); Total Commander vi names no placeholder noun (6603 [N] Tên, 6605 [C] Bộ đếm)"
+    "sources": "macOS 27.0.1 live loctables, 2026-10-11 (giữ chỗ root everywhere: Numbers argument placeholder → trình giữ chỗ đối số, Shortcuts x-success URL placeholders → các trình giữ chỗ, Photos placeholder text → văn bản giữ chỗ); catalog (settings.appearance.formatPlaceholdersTitle Ký hiệu định dạng); MS terminology (chỗ dành sẵn, the input-field sense); Total Commander vi names no placeholder noun (6603 [N] Tên, 6605 [C] Bộ đếm)"
   },
   "problem": {
     "chosen": "vấn đề",

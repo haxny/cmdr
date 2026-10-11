@@ -404,11 +404,11 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
-  "commands.multiRenameOpenPresets.label": "Mở menu tùy chọn đặt trước",
+  "commands.multiRenameOpenPresets.label": "Mở menu giá trị đặt trước",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"
   },
-  "commands.multiRenameSavePreset.label": "Lưu cài đặt hiện tại làm tùy chọn đặt trước",
+  "commands.multiRenameSavePreset.label": "Lưu cài đặt hiện tại làm giá trị đặt trước",
   "@commands.multiRenameSavePreset.label": {
     "sourceHash": "f8101a3"
   },

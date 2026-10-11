@@ -2060,7 +2060,7 @@
   "@settings.control.customPrefix": {
     "sourceHash": "58c3782"
   },
-  "settings.control.backToPresetsAriaLabel": "Quay lại tùy chọn đặt trước",
+  "settings.control.backToPresetsAriaLabel": "Quay lại giá trị đặt trước",
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
