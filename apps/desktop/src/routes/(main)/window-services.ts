@@ -33,6 +33,7 @@ import { startLeftoverNoticeBridge } from '$lib/file-operations/leftover-notice-
 import { startOpenWithRefusedBridge } from '$lib/file-explorer/open-with-refused-bridge'
 import { initQuickLookListeners } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
 import { startOperationConflictHost, stopOperationConflictHost } from '$lib/file-operations/operation-conflict.svelte'
+import { startSourcesGoneHost, stopSourcesGoneHost } from '$lib/file-operations/sources-gone.svelte'
 import {
   initOperationSessions,
   destroyOperationSessions,
@@ -204,6 +205,10 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   // the store too: it pauses and resumes off the rows, and reads them to name which operation
   // is asking.
   await startOperationConflictHost()
+  // The question a queued operation asks when some of its sources left while it waited. After the
+  // store, like the conflict host: it names the operation from the rows and drops a question whose
+  // operation left them.
+  await startSourcesGoneHost()
   await setupWindowFocusListener(listenerCtx)
   // Native Quick Look (macOS) event wiring: `quick-look-closed` flips `isOpen` on the state
   // singleton; `quick-look-key` routes panel keystrokes back into the focused pane, and the
@@ -260,6 +265,7 @@ export function stopWindowServices(): void {
   destroyMediaEnrichState()
   stopOperationFailureWatch()
   stopOperationConflictHost()
+  stopSourcesGoneHost()
   destroyMainWindowOperations()
   destroyOperationSessions()
   destroySnapshotPurge()

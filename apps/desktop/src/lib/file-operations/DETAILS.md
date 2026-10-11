@@ -44,6 +44,8 @@ Umbrella-level files:
   waits for `write-settled`".
 - `operation-conflict.svelte.ts` + `OperationConflictDialog.svelte`: the main window's conflict prompt for an operation
   no progress dialog is showing; its two rules are pure, in `operation-conflict-rules.ts` (§ below).
+- `sources-gone.svelte.ts` + `SourcesGonePrompt.svelte` + `SourcesGoneDialog.svelte`: the question a queued operation
+  asks when some of its sources left while it waited (§ "Sources that left while an operation queued").
 - `RollbackConfirmDialog.svelte` + `reversal-wording.ts`: the question every Rollback goes through, the typed variant
   that decides what it says, and the same variant's catalog keys for the running bar (§ below).
 - `mutation-error.ts` + `mutation-error-messages.ts`: the rename / New Folder / New File refusal path (§ below).
@@ -338,6 +340,36 @@ that's free to narrow later.
   foreground dialog closed would be a softer version of the wedge this fixes.
 - **`rollbackUnavailable` comes from the snapshot's `supportsRollback`**, which is more than the progress dialog knows:
   a CROSS-volume move can't roll back either, and that dialog still derives the same-volume case itself.
+
+## Sources that left while an operation queued
+
+`sources-gone.svelte.ts` is the main window's host for `write-sources-gone`: an operation that waited in the queue
+found, when its turn came, that some of its top-level sources were moved or deleted meanwhile (ERR-962JD). The backend's
+half (who checks, how, and what the operation does with the answer):
+`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Sources that left while an operation queued".
+
+- **Some gone (`awaiting_answer`)**: the host queues the question and shows `SourcesGoneDialog` (mounted by
+  `SourcesGonePrompt.svelte` beside the conflict prompt): the honest count ("4 of the 22 items this move was waiting on
+  were moved or deleted since you queued it"), up to five names plus "and N more", and the operation's own verb on the
+  main button ("Move the rest", "Copy the rest", ...). The main button calls `continueWithoutGoneSources`; Cancel is the
+  ordinary `cancelOperation`, which also drops the backend's parked question. Any outcome takes the question down (a
+  `not_asking` / `unknown_operation` means the operation moved on without us); only a call that never landed leaves it
+  up.
+- **All gone (`nothing_left`)**: an info toast saying there was nothing left to do and why. The operation already
+  completed; ❌ no error tone, nothing is retained as a failure.
+- **It waits for the window to be free**, the late-dialog rule a background job's password prompt follows
+  (`$lib/file-explorer/pane/when-dialogs-clear.svelte.ts`): a queued job is a background job by nature, and a prompt
+  stacked over the dialog the person is typing in steals their keys. Busy means any OTHER soft dialog is open
+  (`isAnySoftDialogOpenBesides('sources-gone')`), so the next question replaces the answered one without a toast. While
+  held, a quiet toast says a question is waiting.
+- **Unlike the conflict host it pauses nothing.** Only the asking operation is parked (holding its own lanes), and the
+  rest of the queue has no reason to wait for this answer.
+- **An operation that ends some other way** (Cancel in the queue window, a teardown) has its question dropped by
+  `reconcileSourcesGonePrompts`, once its row has been SEEN live, the conflict host's rule.
+- **No `onclose`, so no × and no Escape**: both ways out decide something about the operation. "Do the rest" takes
+  focus: it writes nothing the person hadn't already asked for.
+
+Pinned by `sources-gone.svelte.test.ts` and `SourcesGoneDialog.svelte.test.ts`.
 
 ## Letter keys on decision prompts
 

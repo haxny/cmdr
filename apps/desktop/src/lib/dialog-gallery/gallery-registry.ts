@@ -182,6 +182,19 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     ],
   },
   {
+    dialogId: 'sources-gone',
+    label: 'Sources gone while queued',
+    hostWindow: 'main',
+    status: 'ready',
+    note: 'Asked by a queued operation whose files were moved or deleted while it waited its turn. Both answers just close the preview: in the app, the main button carries the operation on with what is left and Cancel ends it. There’s no Escape: both ways out are answers.',
+    states: [
+      { id: 'move-some', label: 'Move, a few gone' },
+      { id: 'move-many', label: 'Move, more gone than it names' },
+      { id: 'copy-one', label: 'Copy, one gone' },
+      { id: 'trash', label: 'Move to trash' },
+    ],
+  },
+  {
     dialogId: 'transfer-error',
     label: 'Transfer error',
     hostWindow: 'main',

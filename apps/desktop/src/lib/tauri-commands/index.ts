@@ -343,8 +343,17 @@ export {
   moveQueuedOperation,
   onOperationsChanged,
   onQueueSelectAll,
+  onWriteSourcesGone,
+  continueWithoutGoneSources,
 } from './operations'
-export type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome } from './operations'
+export type {
+  OperationSnapshot,
+  OperationsChanged,
+  QueueMoveDirection,
+  QueueMoveOutcome,
+  SourcesGoneAnswerOutcome,
+  WriteSourcesGoneEvent,
+} from './operations'
 
 // The quit gate: the backend holding an exit while operations run, and the
 // dialog's two answers.

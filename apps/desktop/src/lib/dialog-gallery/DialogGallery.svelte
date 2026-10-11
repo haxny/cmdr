@@ -67,6 +67,8 @@
     import ViewerCopyDialogs from '../../routes/viewer/ViewerCopyDialogs.svelte'
     import RollbackConfirmDialog from '../file-operations/RollbackConfirmDialog.svelte'
     import type { RollbackConfirmFixture } from './fixtures/rollback'
+    import SourcesGoneDialog from '../file-operations/SourcesGoneDialog.svelte'
+    import type { SourcesGoneFixture } from './fixtures/sources-gone'
     import { getAppLogger } from '$lib/logging/logger'
     import { untrack } from 'svelte'
     import { closeGalleryDialog, getOpenGalleryDialog, type GalleryDiskFixture } from './gallery-state.svelte'
@@ -93,6 +95,7 @@
         | { kind: 'alert'; props: AlertFixture }
         | { kind: 'about' }
         | { kind: 'rollback-confirmation'; props: RollbackConfirmFixture }
+        | { kind: 'sources-gone'; props: SourcesGoneFixture }
         | { kind: 'acknowledgements' }
         | { kind: 'commercial-reminder' }
         | { kind: 'expiration'; props: ExpirationFixture }
@@ -235,6 +238,11 @@
         'go-to-path': (id, disk) =>
             withDiskFixture(fixtureRecords['go-to-path'][id], disk, (props) => ({ kind: 'go-to-path', props })),
 
+        'sources-gone': (id) =>
+            withFixture(fixtureRecords['sources-gone'][id], (f) => ({
+                kind: 'sources-gone',
+                props: f,
+            })),
         'rollback-confirmation': (id) =>
             withFixture(fixtureRecords['rollback-confirmation'][id], (f) => ({
                 kind: 'rollback-confirmation',
@@ -365,5 +373,12 @@
         <ForgetMemoryDialog {...plan.props} onConfirm={closeGalleryDialog} onCancel={closeGalleryDialog} />
     {:else if plan?.kind === 'rollback-confirmation'}
         <RollbackConfirmDialog {...plan.props} onConfirm={closeGalleryDialog} onCancel={closeGalleryDialog} />
+    {:else if plan?.kind === 'sources-gone'}
+        <SourcesGoneDialog
+            {...plan.props}
+            answering={false}
+            onContinue={closeGalleryDialog}
+            onCancel={closeGalleryDialog}
+        />
     {/if}
 {/key}

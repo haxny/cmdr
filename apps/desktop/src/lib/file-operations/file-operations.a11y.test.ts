@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick, flushSync, type ComponentProps } from 'svelte'
 import type { OperationSnapshot, WriteConflictEvent } from '$lib/tauri-commands'
 import type { ConflictPrompt } from './operation-conflict.svelte'
+import type { SourcesGonePrompt as SourcesGonePromptState } from './sources-gone.svelte'
 import { expectNoA11yViolations } from '$lib/test-a11y'
 import { seconds } from '$lib/units'
 
@@ -32,6 +33,15 @@ vi.mock('./operation-conflict.svelte', () => ({
   isCancellingConflictPrompt: () => false,
   resolveConflictPrompt: vi.fn(() => Promise.resolve()),
   cancelConflictPrompt: vi.fn(() => Promise.resolve()),
+}))
+
+let sourcesGonePrompt: SourcesGonePromptState | null = null
+
+vi.mock('./sources-gone.svelte', () => ({
+  getSourcesGonePrompt: () => sourcesGonePrompt,
+  isAnsweringSourcesGone: () => false,
+  continueSourcesGonePrompt: vi.fn(() => Promise.resolve()),
+  cancelSourcesGonePrompt: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('$lib/tauri-commands', async (importOriginal) => ({
@@ -55,6 +65,8 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
 
 import OperationConflictDialog from './OperationConflictDialog.svelte'
 import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
+import SourcesGoneDialog from './SourcesGoneDialog.svelte'
+import SourcesGonePrompt from './SourcesGonePrompt.svelte'
 import TransferProgressReadout from './TransferProgressReadout.svelte'
 import NewEntryNameField from './NewEntryNameField.svelte'
 import S3CostLine from './S3CostLine.svelte'
@@ -178,6 +190,83 @@ describe('RollbackConfirmDialog a11y', () => {
     const dialog = target.querySelector('[role="dialog"]')
     expect(dialog?.getAttribute('aria-describedby')).toBe('rollback-confirmation-body')
     expect(target.querySelector('#rollback-confirmation-body')?.textContent).toContain('won’t come back')
+  })
+})
+
+/**
+ * Tier 3 a11y test for `SourcesGonePrompt.svelte` and the `SourcesGoneDialog`
+ * it mounts: a queued operation's question about sources that left while it
+ * waited. The count sentence is what the dialog is about, so it has to describe
+ * the dialog.
+ */
+describe('SourcesGonePrompt a11y', () => {
+  async function mountDialog(): Promise<HTMLElement> {
+    sourcesGonePrompt = {
+      operationId: 'op-1',
+      event: {
+        operationId: 'op-1',
+        operationType: 'move',
+        totalCount: 22,
+        goneCount: 6,
+        goneSample: ['/Music/CD1/01.mp3', '/Music/CD1/02.mp3'],
+        next: 'awaiting_answer',
+      },
+      snapshot: null,
+    }
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(SourcesGonePrompt, { target })
+    await tick()
+    return target
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('has no a11y violations', async () => {
+    const target = await mountDialog()
+    await expectNoA11yViolations(target)
+  })
+
+  it('has no a11y violations with the asking operation named and more gone than it lists', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(SourcesGoneDialog, {
+      target,
+      props: {
+        event: {
+          operationId: 'op-1',
+          operationType: 'copy',
+          totalCount: 5_678,
+          goneCount: 1_234,
+          goneSample: ['/Music/CD1/01.mp3'],
+          next: 'awaiting_answer',
+        },
+        snapshot: {
+          operationId: 'op-1',
+          operationType: 'copy',
+          status: 'running',
+          source: 'CD1',
+          destination: 'Backup',
+          supportsRollback: true,
+          reverses: null,
+          error: null,
+        },
+        answering: true,
+        onContinue: () => {},
+        onCancel: () => {},
+      },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('describes itself with the count sentence', async () => {
+    const target = await mountDialog()
+    const dialog = target.querySelector('[role="dialog"]')
+    expect(dialog?.getAttribute('aria-describedby')).toBe('sources-gone-message')
+    expect(target.querySelector('#sources-gone-message')?.textContent).toContain('6 of the 22 items')
   })
 })
 

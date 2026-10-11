@@ -39,6 +39,16 @@ export function isAnySoftDialogOpen(): boolean {
   return openDialogs.size > 0
 }
 
+/** Whether any soft dialog OTHER than `id` is on screen in this window. Reactive.
+ *  For a dialog that waits for the window to be free, where its own previous
+ *  question still being up is no reason to hold the next one. */
+export function isAnySoftDialogOpenBesides(id: SoftDialogId): boolean {
+  for (const open of openDialogs) {
+    if (open !== id) return true
+  }
+  return false
+}
+
 /**
  * Whether one named soft dialog is on screen in this window. Reactive.
  *

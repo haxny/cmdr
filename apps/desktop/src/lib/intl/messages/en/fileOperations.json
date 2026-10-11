@@ -1224,6 +1224,57 @@
     "description": "Quiet line under the buttons of the standalone conflict prompt, explaining why the rest of the operation queue has stopped moving. It only shows when there IS something else on hold, so it never claims a pause that isn't happening. \"Paused\" is the same word the operation queue's rows use for the same state."
   },
 
+  "fileOperations.sourcesGone.title": "Some items are gone",
+  "@fileOperations.sourcesGone.title": {
+    "description": "Title of a prompt that appears when an operation the user had queued behind another one finally gets its turn, and some of the files or folders it was going to copy, move, or delete are no longer where they were: the user (or another app) moved or deleted them while the operation waited. Nothing went wrong; the prompt asks whether to go ahead with the items that are still there."
+  },
+
+  "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} of the {totalText} items this copy was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} move {{goneText} of the {totalText} items this move was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} delete {{goneText} of the {totalText} items this delete was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} trash {{goneText} of the {totalText} items this move to trash was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} other {{goneText} of the {totalText} items this operation was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.}}",
+  "@fileOperations.sourcesGone.message": {
+    "description": "Body of the fileOperations.sourcesGone.title prompt. Says how many of the files and folders the queued operation was started with are no longer there, out of how many in total. \"Queued\" means the user started it while another operation was running, so it waited its turn; keep the same idea as the operation queue window. Each operation kind is a whole sentence so every language can phrase it naturally. \"Items\" covers both files and folders. A list of the missing names follows below it.",
+    "placeholders": {
+      "type": "the kind of operation that was waiting: copy, move, delete (permanent), trash (move to trash), or something else",
+      "goneText": "how many items are gone, ready to drop into the sentence (for example 4)",
+      "totalText": "how many items the operation was started with, ready to drop into the sentence (for example 22); always at least 2 here",
+      "gone": "the same number as goneText, used only to pick singular or plural"
+    }
+  },
+
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {and {countText} more} other {and {countText} more}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "description": "Last line of the short list of missing item names in the fileOperations.sourcesGone.title prompt, when more items are gone than the list shows. Lowercase on purpose: it continues the list above it.",
+    "placeholders": {
+      "countText": "how many more items are gone beyond the listed names, ready to drop into the sentence (for example 17)",
+      "count": "the same number, used only to pick singular or plural"
+    }
+  },
+
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Copy the rest} move {Move the rest} delete {Delete the rest} trash {Move the rest to trash} other {Do the rest}}",
+  "@fileOperations.sourcesGone.continue": {
+    "description": "Main button of the fileOperations.sourcesGone.title prompt. Goes ahead with the operation using only the files and folders that are still there; the missing ones are skipped. Its neighbour is a plain Cancel, which ends the operation without doing anything. Short button label; a verb phrase.",
+    "placeholders": {
+      "type": "the kind of operation that was waiting: copy, move, delete (permanent), trash (move to trash), or something else"
+    }
+  },
+
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {A queued copy has a question for you. You’ll see it as soon as the open dialog closes.} move {A queued move has a question for you. You’ll see it as soon as the open dialog closes.} delete {A queued delete has a question for you. You’ll see it as soon as the open dialog closes.} trash {A queued move to trash has a question for you. You’ll see it as soon as the open dialog closes.} other {A queued operation has a question for you. You’ll see it as soon as the open dialog closes.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "description": "Quiet toast shown when a queued operation needs to ask the fileOperations.sourcesGone.title question, but the user is in another dialog right now. The question waits and appears by itself the moment that dialog closes, so the user doesn't need to do anything; the toast only says why it isn't up yet. Each operation kind is a whole sentence.",
+    "placeholders": {
+      "type": "the kind of operation that was waiting: copy, move, delete (permanent), trash (move to trash), or something else"
+    }
+  },
+
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nothing left to copy: {total, plural, one {the item} other {all {totalText} items}} this copy was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} move {Nothing left to move: {total, plural, one {the item} other {all {totalText} items}} this move was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} delete {Nothing left to delete: {total, plural, one {the item} other {all {totalText} items}} this delete was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} trash {Nothing left to move to trash: {total, plural, one {the item} other {all {totalText} items}} this move to trash was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.} other {Nothing left to do: {total, plural, one {the item} other {all {totalText} items}} this operation was waiting on {total, plural, one {was} other {were}} moved or deleted since you queued it.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "description": "Informational toast when an operation the user had queued gets its turn and finds that every file and folder it was started with is gone: moved or deleted while it waited. The operation simply ends with nothing to do. Nothing went wrong, so it must not read as a failure. \"Queued\" means it waited its turn behind another operation. Each operation kind is a whole sentence.",
+    "placeholders": {
+      "type": "the kind of operation that was waiting: copy, move, delete (permanent), trash (move to trash), or something else",
+      "totalText": "how many items the operation was started with, ready to drop into the sentence (for example 22)",
+      "total": "the same number, used only to pick singular or plural"
+    }
+  },
+
   "fileOperations.transferProgress.progressBytes": "Bytes",
   "@fileOperations.transferProgress.progressBytes": {
     "description": "Label for the bytes-progress bar in the transfer progress dialog (how many bytes are done out of the total), sitting directly above the file-count bar labeled \"Files\". \"Bytes\" is the unit of data, and pairs with that label; keep it short, it sits in a narrow column.",

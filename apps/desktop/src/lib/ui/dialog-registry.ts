@@ -84,6 +84,12 @@ export const SOFT_DIALOG_REGISTRY = [
     whileOpen: BLOCKS_OPERATIONS,
   },
   {
+    id: 'sources-gone',
+    description:
+      'Asks whether a queued operation should carry on when some of its files were moved or deleted while it waited',
+    whileOpen: BLOCKS_OPERATIONS,
+  },
+  {
     id: 'archive-password',
     description: 'Prompts for an encrypted archive password before extracting',
     whileOpen: BLOCKS_OPERATIONS,

@@ -1190,6 +1190,8 @@ change, but it holds the slot until the id lands and can flash a frame.
   held), then show, one per free moment. The person may be typing in a new setup dialog by then: a stacked prompt would
   steal their keys, and its close would refocus the pane under the dialog still up. A held password prompt says so in a
   quiet toast, so the wait is never silent.
+- **Sources that left while it queued**: asked on the main window by `../sources-gone.svelte.ts`, under the same
+  wait-for-a-free-window rule (`../DETAILS.md` § "Sources that left while an operation queued").
 - **A refused start** (the backend says no before anything runs): the error dialog, with no failure to claim. Its Retry
   (and "Copy anyway") starts in the background again, because `startInBackground` rides on the retry props.
 - **Archive password**: the backend doesn't retain `archive_needs_password` as a failure, so with no dialog nobody would

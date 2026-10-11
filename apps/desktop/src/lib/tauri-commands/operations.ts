@@ -6,9 +6,23 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '$lib/ipc/bindings'
-import type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome } from '$lib/ipc/bindings'
+import type {
+  OperationSnapshot,
+  OperationsChanged,
+  QueueMoveDirection,
+  QueueMoveOutcome,
+  SourcesGoneAnswerOutcome,
+  WriteSourcesGoneEvent,
+} from '$lib/ipc/bindings'
 
-export type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome }
+export type {
+  OperationSnapshot,
+  OperationsChanged,
+  QueueMoveDirection,
+  QueueMoveOutcome,
+  SourcesGoneAnswerOutcome,
+  WriteSourcesGoneEvent,
+}
 
 /** Snapshot of every operation the manager currently tracks (queued, running,
  *  paused, and recently-terminal until it's pruned). */
@@ -21,6 +35,21 @@ export async function listOperations(): Promise<OperationSnapshot[]> {
  *  partials. */
 export async function cancelOperation(operationId: string): Promise<void> {
   await commands.cancelOperation(operationId)
+}
+
+/** A queued operation found some of its sources gone when its turn came. With
+ *  `next: 'awaiting_answer'` it waits for `continueWithoutGoneSources` or a
+ *  cancel; with `'nothing_left'` it already completed and this only says why. */
+export async function onWriteSourcesGone(callback: (event: WriteSourcesGoneEvent) => void): Promise<UnlistenFn> {
+  return events.writeSourcesGone.listen((event) => {
+    callback(event.payload)
+  })
+}
+
+/** Carries a queued operation on with the sources that are still there. The
+ *  outcome says whether this answer is the one that reached it. */
+export async function continueWithoutGoneSources(operationId: string): Promise<SourcesGoneAnswerOutcome> {
+  return commands.continueWithoutGoneSources(operationId)
 }
 
 /** Cancel several operations at once (the "Cancel selected" action). Same

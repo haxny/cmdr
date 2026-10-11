@@ -44,6 +44,7 @@
     import type { FileEntry } from '$lib/file-explorer/types'
     import StatusCorner from '$lib/status-corner/StatusCorner.svelte'
     import OperationConflictDialog from '$lib/file-operations/OperationConflictDialog.svelte'
+    import SourcesGonePrompt from '$lib/file-operations/SourcesGonePrompt.svelte'
     import StaleDriveDialog from '$lib/indexing/StaleDriveDialog.svelte'
     import { initPathLimits } from '$lib/utils/filename-validation'
     import { initShortcutDispatch, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
@@ -906,6 +907,7 @@
             <StatusCorner onOpenOnboarding={() => void openOnboardingFromMenuOrPalette(startupGatesCtx, 'menu')} />
             <StaleDriveDialog />
             <OperationConflictDialog />
+            <SourcesGonePrompt />
         {/if}
 
         {#if showApp}
