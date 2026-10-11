@@ -783,7 +783,7 @@ decided; then the ask itself, creation and modification dates on files AND folde
     Only the archive volume answers, from its in-memory index plus one member read for a folder that has a sidecar.
     `FolderMetadata` merges it with the listing's set.
   - Hiding: the archive index drops `__MACOSX/` and pairs each sidecar with its item, so listing, the copy scan's counts
-    and bytes, and the walk never see it (open question 2).
+    and bytes, and the walk never see it (§ "Decided").
 - **Pairing, by format** (traced in round 3):
   - **zip is random-access** (`ArchiveFormat::is_sequential` is false; `strategy_sequential_tests.rs:290`): it extracts
     through `stream_pipe_file` and the archive volume's `open_read_stream`, so the stream looks its sidecar up in the
@@ -887,12 +887,11 @@ same thing many times; instead, three layers:
   copy, then deletes it. An item that fails verification is left alone and reported as a typed skip (M1, rule 9).
 - **A Locked item that fails to move within one drive** (`rename` `EPERM`) stays out of scope: M0 pins it, and M10 files
   it as a follow-up issue.
+- **Browsing a zip hides `__MACOSX`** (M8): once its sidecars ride their files as metadata, the archive index drops the
+  folder from listings too, matching extract, `ditto -x`, and Archive Utility.
 
 ## Open questions for David
 
 1. **Finder as the reference**: could you check once, by hand, whether Finder keeps "Date Created" and Locked when
    copying a file and a folder to a USB stick? Our own tests can't drive Finder without a TCC prompt. It only sets
    expectations; the plan keeps birth either way.
-2. **`__MACOSX` in a zip's listing (M8)**: once its sidecars ride their files as metadata, should browsing a zip in Cmdr
-   still show the `__MACOSX` folder? The plan hides it (extract hides it either way, like `ditto -x`), which matches
-   what Archive Utility shows. Say so if you'd rather see it while browsing.
