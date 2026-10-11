@@ -135,9 +135,9 @@ pub struct OperationSnapshot {
     pub status: LifecycleStatus,
     pub source: Option<String>,
     pub destination: Option<String>,
-    /// See [`OperationDescriptor::supports_rollback`].
+    /// See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
     pub supports_rollback: bool,
-    /// See [`OperationDescriptor::reverses`]. Static for the op's whole life,
+    /// See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
     /// which is why it rides the thin snapshot rather than the 200 ms progress
     /// tick.
     pub reverses: Option<OpKind>,
