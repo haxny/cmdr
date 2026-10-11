@@ -218,6 +218,19 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   rewritten; only `finish` writes the central directory and returns the writer (verified against installed zip 8.6 and
   zlib-rs 0.6.5 source, 2026-09-29).
 
+  **Finder tags ride `__MACOSX` sidecars, only when worth keeping.** A LOCAL source file's xattrs are read off the fd
+  the producer already holds, a local folder entry's off its folder (`FreshZipSource::Local` on a directory entry is
+  that folder, read for nothing else), through `cmdr_archive::mutator::local_{file,folder}_sidecar`, the same pair the
+  mutator uses (`crates/cmdr-archive/src/mutation/DETAILS.md` § "Entries' xattrs"). A source carrying only provenance,
+  quarantine, or an all-zero FinderInfo writes none, so an ordinary zip stays clean. A remote source reports no xattrs.
+  The reader hides `__MACOSX`, so the stage's read-back never sees a sidecar, and a SELECTED item named `__MACOSX` is
+  skipped and counted by the planner (copy INTO a zip skips one landing at the root `__MACOSX` too): it could never be
+  seen again. ❗ `ditto -x -k` can't stream a FOLDER entry this producer writes: `zip` 8.6's stream mode flags a data
+  descriptor on a directory and never writes one, so ditto loses its place ("Couldn't read pkzip signature"). `unzip`
+  and Cmdr read the central directory and are fine; `zip` 9.0.1 sets no descriptor flag on a directory (verified in
+  the 9.0.1 source, `write.rs` `start_entry`, 2026-10-12). Pinned for files by
+  `fresh_zip_tests.rs::a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads`.
+
   **Validation precedes publication.** After producer close and destination close/sync, producer bytes, writer bytes,
   and staged stat size must agree. `ArchiveVolume` then parses the staged ZIP, which must read back as exactly the
   planned tree (`ExpectedIndex`): each planned name run through the reader's own `sanitize_entry_name`, plus the

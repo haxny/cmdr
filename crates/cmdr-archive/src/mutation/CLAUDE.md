@@ -21,6 +21,8 @@ wraps it with the real event sink, pause gate, and cancel intent.
 - **A new entry's options go through `with_entry_mtime`** (local DOS time + the exact UTC second in the `UT` extra
   field), the host's fresh-ZIP producer included. ❌ Never bare `SimpleFileOptions::default()`: it dates the entry
   1980-01-01.
+- **An item's `__MACOSX` sidecar moves with it**: a delete or rename takes it, and an add replaces any at its name (two
+  entries at one name fail the edit). Compress writes one only for xattrs worth keeping. DETAILS § "Entries' xattrs".
 
 Depth, rationale, and the data-safety test list: `DETAILS.md`. Read it before any non-trivial work here: editing,
 planning, reorganizing, or advising.

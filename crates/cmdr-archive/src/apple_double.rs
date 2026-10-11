@@ -28,7 +28,7 @@
     reason = "the compress side, `build` and `worth_keeping`, is wired by the next commit"
 )]
 
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 
 use cmdr_fs::metadata::Xattr;
 
@@ -279,6 +279,42 @@ fn encode(finder_info: &[u8; FINDER_INFO_LEN], attrs: &[(&[u8], &[u8])], resourc
     out
 }
 
+/// The sidecar to write for a source whose xattr names are `names`, reading
+/// each value through `get`, or `None` when nothing it carries is
+/// [`worth_keeping`]. Names come first: a source carrying only provenance and
+/// quarantine (every downloaded file) costs no value read at all. A written
+/// sidecar carries every admissible xattr, quarantine included; values past
+/// [`MAX_SIDECAR_BYTES`] in total are left out and logged.
+pub(crate) fn sidecar_for(names: Vec<OsString>, mut get: impl FnMut(&OsStr) -> Option<Vec<u8>>) -> Option<Vec<u8>> {
+    let candidates: Vec<OsString> = names
+        .into_iter()
+        .filter(|name| name.to_str().is_some_and(admissible_xattr_name))
+        .collect();
+    if !candidates.iter().any(|name| name != QUARANTINE_XATTR) {
+        return None;
+    }
+    let mut xattrs = Vec::with_capacity(candidates.len());
+    let mut total: u64 = 0;
+    let mut worth = false;
+    for name in candidates {
+        let Some(value) = get(&name) else {
+            continue;
+        };
+        if total + value.len() as u64 > MAX_SIDECAR_BYTES {
+            log::warn!(
+                target: "archive",
+                "Left the {}-byte xattr {name:?} out of a sidecar: past the {MAX_SIDECAR_BYTES}-byte cap",
+                value.len()
+            );
+            continue;
+        }
+        total += value.len() as u64;
+        worth |= worth_keeping(&name.to_string_lossy(), &value);
+        xattrs.push(Xattr { name, value });
+    }
+    worth.then(|| build(&xattrs))
+}
+
 /// Whether the xattr `name` with `value` is a reason to write a sidecar at all
 /// (David's call: an ordinary zip stays free of `__MACOSX` for Windows users).
 /// Provenance and quarantine aren't, and neither is a Finder Info that's all
@@ -299,6 +335,16 @@ pub(crate) fn sidecar_entry_name(inner: &str) -> String {
         Some((parent, leaf)) => format!("{MACOSX_FOLDER}/{parent}/._{leaf}"),
         None => format!("{MACOSX_FOLDER}/._{inner}"),
     }
+}
+
+/// Whether `inner` is the archive-root `__MACOSX` folder or anything in it:
+/// where sidecars live, so never an item of its own.
+pub(crate) fn is_in_macosx_folder(inner: &str) -> bool {
+    let inner = inner.trim_matches('/');
+    inner == MACOSX_FOLDER
+        || inner
+            .strip_prefix(MACOSX_FOLDER)
+            .is_some_and(|rest| rest.starts_with('/'))
 }
 
 /// What a sanitized archive path is to the `__MACOSX` convention.

@@ -25,6 +25,8 @@ const CHANNEL_CHUNKS: usize = 4;
 const CHUNK_BYTES: usize = 128 * 1024;
 
 pub(super) enum FreshZipSource {
+    /// A local file to stream, or for a directory entry the local folder it's
+    /// made from, read only for the AppleDouble sidecar its xattrs ride in.
     Local(PathBuf),
     Bytes(Vec<u8>),
     Remote(RemoteZipSource),
@@ -437,23 +439,31 @@ fn produce(
         let modified = entry.modified.unwrap_or_else(std::time::SystemTime::now);
         let options = cmdr_archive::mutator::with_entry_mtime(options, modified);
         if entry.is_directory {
-            zip.add_directory(entry.name.trim_end_matches('/'), options)
+            zip.add_directory(entry.name.trim_end_matches('/'), options.clone())
                 .map_err(map_zip)?;
+            // A folder made from a local one carries its xattrs in a sidecar.
+            if let FreshZipSource::Local(path) = &entry.source
+                && let Some(sidecar) = cmdr_archive::mutator::local_folder_sidecar(path)
+            {
+                write_sidecar(&mut zip, &entry.name, &sidecar, options)?;
+            }
             entries_done += 1;
             report_progress(progress, entries_done, source_bytes_done)?;
             continue;
         }
-        zip.start_file(entry.name.clone(), options).map_err(map_zip)?;
+        zip.start_file(entry.name.clone(), options.clone()).map_err(map_zip)?;
         // One byte past the plan is enough to know the source grew (a live log):
         // stop there instead of reading on to an EOF that may never come.
         let read_limit = entry.size.saturating_add(1);
+        // A local source's sidecar, read off the fd the copy already holds.
+        let mut sidecar = None;
         let actual = match &mut entry.source {
             FreshZipSource::Local(path) => {
                 let mut file = std::fs::File::open(path).map_err(|error| FreshZipError::Source {
                     entry: entry.name.clone(),
                     message: error.to_string(),
                 })?;
-                copy_reader(
+                let actual = copy_reader(
                     &mut (&mut file).take(read_limit),
                     &mut zip,
                     &entry.name,
@@ -461,7 +471,9 @@ fn produce(
                     &mut source_bytes_done,
                     entries_done,
                     progress,
-                )?
+                )?;
+                sidecar = cmdr_archive::mutator::local_file_sidecar(&file);
+                actual
             }
             FreshZipSource::Bytes(bytes) => copy_reader(
                 &mut bytes.as_slice().take(read_limit),
@@ -506,6 +518,9 @@ fn produce(
                 actual,
             });
         }
+        if let Some(sidecar) = sidecar {
+            write_sidecar(&mut zip, &entry.name, &sidecar, options)?;
+        }
         entries_done += 1;
         report_progress(progress, entries_done, source_bytes_done)?;
     }
@@ -513,6 +528,20 @@ fn produce(
     output.flush_pending().map_err(map_io)?;
     output.send(OutputMessage::End).map_err(map_io)?;
     Ok(output.written)
+}
+
+/// Writes `sidecar` as the `__MACOSX` entry of the entry named `name`, with
+/// that entry's options (its date and mode), the way `ditto -c -k` does. It's
+/// metadata: no progress of its own, and the source byte count never sees it.
+fn write_sidecar<W: Write + std::io::Seek>(
+    zip: &mut ZipWriter<W>,
+    name: &str,
+    sidecar: &[u8],
+    options: zip::write::FullFileOptions<'static>,
+) -> Result<(), FreshZipError> {
+    zip.start_file(cmdr_archive::mutator::sidecar_entry_name(name), options)
+        .map_err(map_zip)?;
+    zip.write_all(sidecar).map_err(map_io)
 }
 
 fn copy_reader(

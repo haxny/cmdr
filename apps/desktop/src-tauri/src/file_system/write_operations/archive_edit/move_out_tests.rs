@@ -643,3 +643,54 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
     );
     assert_eq!(read_entry(&archive, "keep.txt").as_deref(), Some(b"keep".as_slice()));
 }
+
+/// Moving tagged items out of a Finder-made zip lands them with their tags, and
+/// the archive's `{ delete }` rewrite takes their `__MACOSX` sidecars too, so the
+/// zip keeps no orphan: only what stayed, and its own sidecar.
+#[cfg(target_os = "macos")]
+#[tokio::test]
+async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
+    use crate::file_system::volume::backends::LocalPosixVolume;
+    use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive = tmp.path().join("tagged.zip");
+    std::fs::write(&archive, cmdr_archive::test_fixtures::APPLE_DOUBLE_DITTO_ZIP).expect("write the zip");
+    let dest_dir = tmp.path().join("out");
+    std::fs::create_dir_all(&dest_dir).expect("mkdir dest");
+    let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("dest", dest_dir.clone()));
+
+    let events = Arc::new(CollectorEventSink::new());
+    route_archive_move_out(
+        Arc::clone(&events) as Arc<dyn OperationEventSink>,
+        "root".to_string(),
+        archive_source_volume(&archive),
+        vec![archive.join("tagged.txt"), archive.join("tagged-dir")],
+        "dest".to_string(),
+        dest_volume,
+        dest_dir.clone(),
+        move_out_config(),
+    )
+    .await
+    .expect("start move-out");
+    wait_until_async(Duration::from_secs(5), "the write-complete event", || {
+        !events.complete.lock_ignore_poison().is_empty()
+    })
+    .await;
+
+    for moved in ["tagged.txt", "tagged-dir"] {
+        assert!(
+            xattr::get(dest_dir.join(moved), TAGS_XATTR).expect("read").is_some(),
+            "tags on {moved}"
+        );
+    }
+    let file = std::fs::File::open(&archive).expect("open the zip");
+    let mut names: Vec<String> = zip::ZipArchive::new(file)
+        .expect("the zip parses")
+        .file_names()
+        .map(str::to_string)
+        .collect();
+    names.sort();
+    assert_eq!(names, vec!["__MACOSX/", "__MACOSX/._plain.txt", "plain.txt"]);
+}

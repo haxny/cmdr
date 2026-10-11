@@ -765,3 +765,57 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
         assert_eq!(original.exists(), skipped);
     }
 }
+
+// ---- AppleDouble sidecars (macOS) -------------------------------------------
+
+/// A copy INTO a zip carries a tagged file's and a tagged folder's xattrs as
+/// `__MACOSX` sidecars, the shape Finder's Compress writes, and adds none for a
+/// plain file. A source named `__MACOSX` can't land as an item (the folder is
+/// where sidecars live, hidden from every listing), so it's skipped and counted.
+#[cfg(target_os = "macos")]
+#[tokio::test]
+async fn copy_into_carries_tags_as_sidecars_and_skips_a_macosx_source() {
+    use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive = tmp.path().join("a.zip");
+    write_simple_zip(&archive, "keep.txt", b"k");
+    let src_root = tmp.path().join("src");
+    std::fs::create_dir_all(src_root.join("tagged-dir")).expect("mkdir");
+    std::fs::write(src_root.join("tagged-dir/tagged.txt"), b"t").expect("write");
+    std::fs::write(src_root.join("tagged-dir/plain.txt"), b"p").expect("write");
+    for tagged in ["tagged-dir", "tagged-dir/tagged.txt"] {
+        xattr::set(src_root.join(tagged), TAGS_XATTR, b"bplist00 tags").expect("tag");
+    }
+    std::fs::create_dir_all(src_root.join("__MACOSX")).expect("mkdir");
+    std::fs::write(src_root.join("__MACOSX/._x"), b"x").expect("write");
+
+    let events = run_policy_copy_into(&archive, &src_root, "tagged-dir", ConflictResolution::Skip, false).await;
+    wait_until_async(Duration::from_secs(5), "the write-complete event", || {
+        !events.complete.lock_ignore_poison().is_empty()
+    })
+    .await;
+    assert!(
+        read_entry(&archive, "__MACOSX/._tagged-dir").is_some(),
+        "the folder's sidecar"
+    );
+    assert!(
+        read_entry(&archive, "__MACOSX/tagged-dir/._tagged.txt").is_some(),
+        "the file's sidecar"
+    );
+    assert!(
+        read_entry(&archive, "__MACOSX/tagged-dir/._plain.txt").is_none(),
+        "a plain file has none"
+    );
+
+    let events = run_policy_copy_into(&archive, &src_root, "__MACOSX", ConflictResolution::Skip, false).await;
+    wait_until_async(Duration::from_secs(5), "the write-complete event", || {
+        !events.complete.lock_ignore_poison().is_empty()
+    })
+    .await;
+    assert!(
+        read_entry(&archive, "__MACOSX/._x").is_none(),
+        "nothing lands in the sidecar folder"
+    );
+    assert_eq!(events.complete.lock_ignore_poison()[0].files_skipped, 1);
+}

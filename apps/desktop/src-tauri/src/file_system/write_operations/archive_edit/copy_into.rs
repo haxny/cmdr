@@ -5,7 +5,7 @@
 //! managed-op driver that plans and applies inside the op — against the real
 //! archive for a LOCAL parent, or the pulled-local working copy for a REMOTE one.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -388,6 +388,8 @@ fn build_copy_into_changeset_inner(
 
     let mut adds: Vec<AddEntry> = Vec::new();
     let mut mkdirs: Vec<String> = Vec::new();
+    // The local folder each mkdir comes from, whose xattrs ride its sidecar.
+    let mut mkdir_sources: HashMap<String, PathBuf> = HashMap::new();
     let mut deletes: Vec<String> = Vec::new();
     // Inner paths this changeset already claims (dedup + Rename uniqueness).
     let mut planned: HashSet<String> = HashSet::new();
@@ -398,6 +400,13 @@ fn build_copy_into_changeset_inner(
             continue;
         };
         let base_inner = join_inner_str(dest_inner, destination_name.unwrap_or(name));
+        // The root `__MACOSX` is where the zip's sidecars live, hidden from every
+        // listing: an item landing there could never be seen again, and an
+        // extract would read it as metadata. Skipped and counted, like a symlink.
+        if mutator::is_in_sidecar_folder(&base_inner) {
+            skipped_count += 1;
+            continue;
+        }
         let meta = std::fs::symlink_metadata(src).map_err(|e| {
             EditError::Op(WriteOperationError::ReadError {
                 path: src.display().to_string(),
@@ -416,6 +425,7 @@ fn build_copy_into_changeset_inner(
                 let file_type = entry.file_type();
                 if file_type.is_dir() {
                     if !index.exists(&inner) && planned.insert(inner.clone()) {
+                        mkdir_sources.insert(inner.clone(), entry.path().to_path_buf());
                         mkdirs.push(inner);
                     }
                 } else if file_type.is_file() {
@@ -464,6 +474,7 @@ fn build_copy_into_changeset_inner(
         changeset: Changeset {
             adds,
             mkdirs,
+            mkdir_sources,
             deletes,
             renames: Vec::new(),
             // The per-edit level is set on this changeset later, in

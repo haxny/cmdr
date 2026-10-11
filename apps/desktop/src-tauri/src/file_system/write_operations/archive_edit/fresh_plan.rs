@@ -154,6 +154,13 @@ async fn plan_sources_with_context(
                 }
             }
         }
+        // The root `__MACOSX` is where a zip's sidecars live, hidden from every
+        // listing, so an item named that would read back as nothing (and fail
+        // the stage's validation). Skipped and counted, like a symlink.
+        if cmdr_archive::mutator::is_in_sidecar_folder(&top_name) {
+            skipped += 1;
+            continue;
+        }
         top_names.insert(top_name.clone(), top.clone());
         // A selected link is skipped like a nested one. Asked with `entry_kind`
         // (an `lstat`), ❌ never read off `get_metadata`: SFTP's `stat` follows
@@ -191,7 +198,18 @@ async fn plan_sources_with_context(
             if meta.is_directory {
                 entries.push(FreshZipEntry {
                     name: format!("{}/", inner.trim_end_matches('/')),
-                    source: FreshZipSource::Bytes(Vec::new()),
+                    // A local folder is its entry's source only for its xattrs,
+                    // which the producer writes as a sidecar; no bytes.
+                    source: local_root.as_ref().map_or_else(
+                        || FreshZipSource::Bytes(Vec::new()),
+                        |root| {
+                            FreshZipSource::Local(if path.is_absolute() {
+                                path.clone()
+                            } else {
+                                root.join(&path)
+                            })
+                        },
+                    ),
                     size: 0,
                     is_directory: true,
                     modified,
@@ -672,5 +690,37 @@ mod tests {
             .unwrap_or_else(|_| panic!("skip plan"));
         assert_eq!(skipped.entries.len(), 1);
         assert_eq!(skipped.skipped, 1);
+    }
+
+    /// A zip's root `__MACOSX` holds its sidecars and is hidden from every
+    /// listing, so a selected folder of that name is skipped and counted
+    /// instead of landing where it could never be seen (and failing the stage's
+    /// read-back). A local folder entry carries its path, for its sidecar.
+    #[tokio::test]
+    async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_source() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        std::fs::create_dir_all(temp.path().join("__MACOSX")).expect("mkdir");
+        std::fs::write(temp.path().join("__MACOSX/._a"), b"x").expect("write");
+        std::fs::create_dir_all(temp.path().join("docs")).expect("mkdir");
+        let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("source", temp.path().to_path_buf()));
+        let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+
+        let plan = plan_sources_with_context(
+            &source,
+            &[PathBuf::from("__MACOSX"), PathBuf::from("docs")],
+            ConflictResolution::Stop,
+            &state,
+            None,
+            None,
+        )
+        .await
+        .unwrap_or_else(|_| panic!("plan"));
+
+        assert_eq!(
+            plan.entries.iter().map(|entry| entry.name.as_str()).collect::<Vec<_>>(),
+            vec!["docs/"]
+        );
+        assert_eq!(plan.skipped, 1);
+        assert!(matches!(&plan.entries[0].source, FreshZipSource::Local(path) if path.ends_with("docs")));
     }
 }

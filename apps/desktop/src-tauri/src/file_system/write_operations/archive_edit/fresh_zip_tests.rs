@@ -419,3 +419,99 @@ async fn destination_refusal_drops_its_stream_before_joining_the_producer() {
         Err(FreshZipError::Cancelled | FreshZipError::OutputClosed)
     ));
 }
+
+/// Compress writes a `__MACOSX` sidecar for a local file or folder carrying
+/// xattrs worth keeping (a Finder tag here), and none for a plain one, so an
+/// ordinary zip stays clean for Windows users. Cmdr's own reader hands the
+/// tags back, and so does `ditto -x -k`, Finder's own extract.
+#[cfg(target_os = "macos")]
+#[tokio::test]
+async fn a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads() {
+    use cmdr_archive::{ArchiveByteSource, ArchiveFormat, ArchiveIndex, BytesSource};
+    use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
+    use std::sync::Arc;
+    const TAGS: &[u8] = b"bplist00 tags";
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let folder = tmp.path().join("tagged-dir");
+    std::fs::create_dir(&folder).expect("mkdir");
+    let tagged = folder.join("tagged.txt");
+    let plain = folder.join("plain.txt");
+    std::fs::write(&tagged, b"t").expect("write");
+    std::fs::write(&plain, b"p").expect("write");
+    xattr::set(&folder, TAGS_XATTR, TAGS).expect("tag the folder");
+    xattr::set(&tagged, TAGS_XATTR, TAGS).expect("tag the file");
+
+    let local = |name: &str, path: &std::path::Path, is_directory: bool, size: u64| FreshZipEntry {
+        name: name.into(),
+        source: FreshZipSource::Local(path.to_path_buf()),
+        size,
+        is_directory,
+        modified: None,
+        unix_mode: None,
+    };
+    let produce = |entries| async move {
+        collect(spawn_fresh_zip(entries, None).expect("spawn producer"))
+            .await
+            .expect("produce")
+    };
+
+    let bytes = produce(vec![
+        local("tagged-dir/", &folder, true, 0),
+        local("tagged-dir/tagged.txt", &tagged, false, 1),
+        local("tagged-dir/plain.txt", &plain, false, 1),
+    ])
+    .await;
+    let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes.clone())).expect("valid zip");
+    let mut sidecars: Vec<&str> = archive
+        .file_names()
+        .filter(|name| name.starts_with("__MACOSX/"))
+        .collect();
+    sidecars.sort_unstable();
+    assert_eq!(
+        sidecars,
+        vec!["__MACOSX/._tagged-dir", "__MACOSX/tagged-dir/._tagged.txt"]
+    );
+    let source: Arc<dyn ArchiveByteSource> = Arc::new(BytesSource::new(bytes));
+    let index = ArchiveIndex::parse(Arc::clone(&source), ArchiveFormat::Zip, None).expect("parse");
+    for (inner, expected) in [
+        ("tagged-dir", 1),
+        ("tagged-dir/tagged.txt", 1),
+        ("tagged-dir/plain.txt", 0),
+    ] {
+        assert_eq!(
+            index.item_xattrs(inner, Arc::clone(&source), None).await.len(),
+            expected,
+            "{inner}"
+        );
+    }
+
+    // ❗ ditto can't stream a folder entry from `zip` 8.6's stream mode: the crate
+    // flags a data descriptor there that it never writes, and ditto loses its
+    // place. So the ditto read-back is of files alone.
+    let bytes = produce(vec![
+        local("tagged.txt", &tagged, false, 1),
+        local("plain.txt", &plain, false, 1),
+    ])
+    .await;
+    let zip_path = tmp.path().join("out.zip");
+    std::fs::write(&zip_path, bytes).expect("write the zip");
+    let out = tmp.path().join("ditto-out");
+    let ditto = std::process::Command::new("/usr/bin/ditto")
+        .args(["-x", "-k"])
+        .arg(&zip_path)
+        .arg(&out)
+        .output()
+        .expect("run ditto");
+    assert!(
+        ditto.status.success(),
+        "ditto: {}",
+        String::from_utf8_lossy(&ditto.stderr)
+    );
+    assert_eq!(
+        xattr::get(out.join("tagged.txt"), TAGS_XATTR).expect("read").as_deref(),
+        Some(TAGS)
+    );
+    assert_eq!(xattr::get(out.join("plain.txt"), TAGS_XATTR).expect("read"), None);
+    assert!(!out.join("__MACOSX").exists());
+}

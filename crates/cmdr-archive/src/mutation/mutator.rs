@@ -22,6 +22,7 @@
 //! refused instead: `zip`'s raw copy drops the traditional-PKWARE encryption flag,
 //! which would silently corrupt the entry (see `MutationError::EncryptedEntryRetained`).
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
@@ -35,6 +36,8 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 /// sibling placement keeps the final rename atomic on one filesystem.
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 use cmdr_fs::staging::{StagingTemp, temp_sibling_prefix};
+
+use crate::apple_double;
 
 /// Chunk size for streaming an added file's bytes into the compressor: bounds
 /// peak in-flight memory regardless of the file's size (principle 5 — never
@@ -71,6 +74,11 @@ pub struct Changeset {
     pub adds: Vec<AddEntry>,
     /// Explicit directory entries to create (`add_directory`).
     pub mkdirs: Vec<String>,
+    /// The local folder a `mkdirs` entry is made from, by its inner path, when
+    /// there is one (a copy INTO the archive): its xattrs ride an AppleDouble
+    /// sidecar (see [`local_folder_sidecar`]). A mkdir with no entry here has
+    /// no source to carry.
+    pub mkdir_sources: HashMap<String, PathBuf>,
     /// Inner paths to drop. A directory target drops its whole subtree.
     pub deletes: Vec<String>,
     /// `(from, to)` inner-path renames. A directory target rewrites every descendant's prefix.
@@ -202,6 +210,11 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     let src_file = File::open(archive_path).map_err(MutationError::OpenOriginal)?;
     let mut src = ZipArchive::new(src_file).map_err(MutationError::Zip)?;
 
+    // Every delete and rename takes the item's AppleDouble sidecar along, and
+    // every add drops a stale one at its name (§ `with_sidecar_deletes`).
+    let deletes = with_sidecar_deletes(changeset);
+    let renames = with_sidecar_renames(&changeset.renames);
+
     // Plan the retained set: for each original entry, compute its post-edit name
     // (dropped by a delete, prefix-rewritten by a rename, or unchanged). One raw
     // lookup per entry reads the name + compressed size together.
@@ -217,7 +230,9 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
         let compressed_size = file.compressed_size();
         let encrypted = file.encrypted();
         drop(file);
-        match plan_new_name(&original_name, &changeset.deletes, &changeset.renames) {
+        // A sidecar is metadata, never an item the user counts.
+        let is_item = !apple_double::is_in_macosx_folder(&original_name);
+        match plan_new_name(&original_name, &deletes, &renames) {
             Some(new_name) => {
                 // Refuse before creating any temp: a retained encrypted entry can't
                 // be copied verbatim (the flag is lost), so touching this archive at
@@ -225,7 +240,7 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
                 if encrypted {
                     return Err(MutationError::EncryptedEntryRetained { name: original_name });
                 }
-                if new_name != original_name {
+                if new_name != original_name && is_item {
                     renamed_count += 1;
                 }
                 retained.push(RetainedEntry {
@@ -235,7 +250,8 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
                 });
                 retained_bytes += compressed_size;
             }
-            None => deleted_count += 1,
+            None if is_item => deleted_count += 1,
+            None => {}
         }
     }
 
@@ -281,7 +297,8 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
         hooks.on_progress(progress);
     }
 
-    // Explicit directory entries.
+    // Explicit directory entries, each made from a local folder followed by
+    // that folder's sidecar when it carries xattrs worth keeping.
     for dir in &changeset.mkdirs {
         checkpoint(hooks)?;
         writer
@@ -290,6 +307,13 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
                 with_entry_mtime(SimpleFileOptions::default(), std::time::SystemTime::now()),
             )
             .map_err(MutationError::Zip)?;
+        if let Some(sidecar) = changeset
+            .mkdir_sources
+            .get(dir)
+            .and_then(|source| local_folder_sidecar(source))
+        {
+            write_sidecar(&mut writer, dir, &sidecar, std::time::SystemTime::now())?;
+        }
         progress.entries_done += 1;
         hooks.on_progress(progress);
     }
@@ -303,7 +327,10 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
                 add_entry_options(add, changeset.compression_level),
             )
             .map_err(MutationError::Zip)?;
-        stream_added_entry(&mut writer, add, hooks, &mut progress)?;
+        if let Some(sidecar) = stream_added_entry(&mut writer, add, hooks, &mut progress)? {
+            let modified = add_source_mtime(add).unwrap_or_else(std::time::SystemTime::now);
+            write_sidecar(&mut writer, &add.inner_path, &sidecar, modified)?;
+        }
         progress.entries_done += 1;
         hooks.on_progress(progress);
     }
@@ -363,13 +390,15 @@ fn checkpoint(hooks: &dyn MutationHooks) -> Result<(), MutationError> {
 
 /// Streams one added entry's bytes into the (already-opened) writer entry,
 /// chunk-by-chunk, gating cancel/pause between chunks and reporting byte
-/// progress. Never holds the whole file in memory.
+/// progress. Never holds the whole file in memory. Answers the local source's
+/// AppleDouble sidecar, read off the fd it already holds, when it carries
+/// xattrs worth keeping.
 fn stream_added_entry(
     writer: &mut ZipWriter<File>,
     add: &AddEntry,
     hooks: &dyn MutationHooks,
     progress: &mut MutationProgress,
-) -> Result<(), MutationError> {
+) -> Result<Option<Vec<u8>>, MutationError> {
     match &add.source {
         AddSource::Bytes(bytes) => {
             for chunk in bytes.chunks(ADD_CHUNK_BYTES) {
@@ -398,9 +427,115 @@ fn stream_added_entry(
                 progress.bytes_done += read as u64;
                 hooks.on_progress(*progress);
             }
+            return Ok(local_file_sidecar(&file));
         }
     }
-    Ok(())
+    Ok(None)
+}
+
+/// Writes `sidecar` as the `__MACOSX` entry of the item at `inner`, dated like
+/// the item (ditto does the same).
+fn write_sidecar(
+    writer: &mut ZipWriter<File>,
+    inner: &str,
+    sidecar: &[u8],
+    modified: std::time::SystemTime,
+) -> Result<(), MutationError> {
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+    writer
+        .start_file(sidecar_entry_name(inner), with_entry_mtime(options, modified))
+        .map_err(MutationError::Zip)?;
+    writer.write_all(sidecar).map_err(MutationError::Io)
+}
+
+/// The `__MACOSX` entry that carries the AppleDouble sidecar of the archive
+/// item at `inner` (`a/b` → `__MACOSX/a/._b`), the shape Finder's Compress
+/// writes and every macOS extractor reads.
+pub fn sidecar_entry_name(inner: &str) -> String {
+    apple_double::sidecar_entry_name(inner)
+}
+
+/// Whether `inner` is the archive-root `__MACOSX` folder or inside it: where a
+/// zip's sidecars live, hidden from listings, so a planner never puts an item
+/// there (it could never be seen again, and an extract would read it as one).
+pub fn is_in_sidecar_folder(inner: &str) -> bool {
+    apple_double::is_in_macosx_folder(inner)
+}
+
+/// The AppleDouble sidecar for the open local file `file`, or `None` when it
+/// carries no xattr worth keeping (David's call: an ordinary zip stays free of
+/// `__MACOSX` for Windows users). Provenance and quarantine alone aren't, and
+/// neither is an all-zero FinderInfo; they cost one name-only `flistxattr`.
+/// macOS only: `__MACOSX` is a Mac convention, and Linux's `user.*` xattrs
+/// would mean nothing to a Mac reading it.
+pub fn local_file_sidecar(file: &File) -> Option<Vec<u8>> {
+    #[cfg(target_os = "macos")]
+    {
+        use xattr::FileExt as _;
+        let names = file.list_xattr().ok()?.collect();
+        apple_double::sidecar_for(names, |name| file.get_xattr(name).ok().flatten())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = file;
+        None
+    }
+}
+
+/// [`local_file_sidecar`] for the local folder at `path`, read without following
+/// a link.
+pub fn local_folder_sidecar(path: &Path) -> Option<Vec<u8>> {
+    #[cfg(target_os = "macos")]
+    {
+        let names = xattr::list(path).ok()?.collect();
+        apple_double::sidecar_for(names, |name| xattr::get(path, name).ok().flatten())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        None
+    }
+}
+
+/// The deletes `changeset` asks for, each with its item's sidecars: the item's
+/// own (`__MACOSX/<parent>/._<name>`) and, for a folder, every one inside it
+/// (`__MACOSX/<item>/…`). Plus the sidecar name of every add and sourced mkdir:
+/// what's there is stale (the new item writes its own, or carries nothing), and
+/// leaving it would put two entries at one name, which the writer refuses.
+fn with_sidecar_deletes(changeset: &Changeset) -> Vec<String> {
+    let mut deletes = Vec::with_capacity(changeset.deletes.len() * 3 + changeset.adds.len());
+    for delete in &changeset.deletes {
+        let item = delete.trim_matches('/');
+        deletes.push(item.to_string());
+        if !item.is_empty() && !apple_double::is_in_macosx_folder(item) {
+            deletes.push(format!("{}/{item}", apple_double::MACOSX_FOLDER));
+            deletes.push(sidecar_entry_name(item));
+        }
+    }
+    let written = changeset
+        .adds
+        .iter()
+        .map(|add| add.inner_path.as_str())
+        .chain(changeset.mkdir_sources.keys().map(String::as_str));
+    deletes.extend(written.map(sidecar_entry_name));
+    deletes
+}
+
+/// The renames `changeset` asks for, each followed by its item's sidecars
+/// moving with it, the same two shapes [`with_sidecar_deletes`] drops.
+fn with_sidecar_renames(renames: &[(String, String)]) -> Vec<(String, String)> {
+    let mut out = Vec::with_capacity(renames.len() * 3);
+    for (from, to) in renames {
+        out.push((from.clone(), to.clone()));
+        let (from, to) = (from.trim_matches('/'), to.trim_matches('/'));
+        if from.is_empty() || apple_double::is_in_macosx_folder(from) {
+            continue;
+        }
+        let folder = apple_double::MACOSX_FOLDER;
+        out.push((format!("{folder}/{from}"), format!("{folder}/{to}")));
+        out.push((sidecar_entry_name(from), sidecar_entry_name(to)));
+    }
+    out
 }
 
 /// The write options for an added entry: Deflated compression at `compression_level`
@@ -416,11 +551,19 @@ fn add_entry_options(add: &AddEntry, compression_level: Option<i64>) -> FullFile
     let options = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
         .compression_level(compression_level.map(|level| level.clamp(1, 9)));
-    let source_mtime = match &add.source {
+    with_entry_mtime(
+        options,
+        add_source_mtime(add).unwrap_or_else(std::time::SystemTime::now),
+    )
+}
+
+/// A `LocalPath` add's source mtime; `None` for in-memory bytes (or a source
+/// that won't stat), which the caller dates now.
+fn add_source_mtime(add: &AddEntry) -> Option<std::time::SystemTime> {
+    match &add.source {
         AddSource::LocalPath(path) => std::fs::metadata(path).and_then(|meta| meta.modified()).ok(),
         AddSource::Bytes(_) => None,
-    };
-    with_entry_mtime(options, source_mtime.unwrap_or_else(std::time::SystemTime::now))
+    }
 }
 
 /// Info-ZIP's extended-timestamp extra field ("UT"): a flags byte, then the
@@ -614,3 +757,7 @@ impl Drop for TempGuard {
 #[cfg(test)]
 #[path = "mutator_test.rs"]
 mod mutator_test;
+
+#[cfg(all(test, target_os = "macos"))]
+#[path = "mutator_apple_double_test.rs"]
+mod mutator_apple_double_test;
