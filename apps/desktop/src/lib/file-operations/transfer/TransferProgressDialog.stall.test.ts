@@ -236,7 +236,7 @@ describe('TransferProgressDialog stall notice', () => {
     expect(openErrorReportFor).toHaveBeenCalledWith({
       kind: 'slow',
       operation: 'copy',
-      since: expect.any(Number),
+      since: expect.any(Number) as number,
       waitingOn: 'destination',
     })
     const { since } = openErrorReportFor.mock.calls[0][0] as { since: number }

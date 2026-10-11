@@ -132,7 +132,7 @@ describe('NewFolderDialog on a slow volume', () => {
     expect(openErrorReportFor).toHaveBeenCalledWith({
       kind: 'slow',
       operation: 'create_folder',
-      since: expect.any(Number),
+      since: expect.any(Number) as number,
       waitingOn: null,
     })
     // Measured from OK, so the note's duration covers the whole wait.
@@ -158,7 +158,7 @@ describe('NewFolderDialog on a slow volume', () => {
       kind: 'createRefused',
       entry: 'folder',
       refusal: 'parentNotWritable',
-      reason: expect.any(String),
+      reason: expect.any(String) as string,
     })
   })
 

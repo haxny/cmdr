@@ -251,7 +251,7 @@ function resolveOptions(options: ToastOptions | undefined): ResolvedToastOptions
 
 export function addToast<C extends ToastContent>(content: C, toastOptions?: ToastOptionsFor<C>): string {
   // Both shapes are a `ToastOptions` at runtime; the split only constrains callers.
-  const options = toastOptions as ToastOptions | undefined
+  const options = toastOptions
   const resolved = resolveOptions(options)
   const { id, level, dismissal, timeoutMs, toastGroup, maxInGroup } = resolved
 
@@ -294,7 +294,7 @@ export function addToastForPane<C extends ToastContent>(
   content: C,
   options?: ToastOptionsFor<C>,
 ): string {
-  return addToast<ToastContent>(content, { ...(options as ToastOptions | undefined), originPane: pane })
+  return addToast<ToastContent>(content, { ...options, originPane: pane })
 }
 
 export function dismissToast(id: string): void {

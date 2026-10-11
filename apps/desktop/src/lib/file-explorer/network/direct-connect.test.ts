@@ -125,7 +125,7 @@ describe('connectDirectly', () => {
     await expect(connectDirectly(archive)).resolves.toBe('stillOnOsMount')
     expect(errorToasts()).toHaveLength(1)
     // Its report names the typed reason, so triage doesn't read it out of the sentence.
-    const raised = addToast.mock.calls.find((call) => (call[1] as { level?: string } | undefined)?.level === 'error')
+    const raised = addToast.mock.calls.find((call) => call[1]?.level === 'error')
     expect(raised?.[1]).toMatchObject({
       report: { kind: 'connectionFailed', reason: 'unreachable', text: raised?.[0] },
     })

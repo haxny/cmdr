@@ -107,7 +107,7 @@ describe('announceFailures', () => {
       from: 'queueFailure',
       operation: 'copy',
       error: 'source_not_found',
-      title: expect.any(String),
+      title: expect.any(String) as string,
     })
   })
 

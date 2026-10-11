@@ -86,5 +86,9 @@
   "errorReporter.offer.send": "Enviar reporte de error…",
   "@errorReporter.offer.send": {
     "sourceHash": "1fb27bf"
+  },
+  "errorReporter.offer.slow": "¿Está tardando mucho? Envía un reporte",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
   }
 }

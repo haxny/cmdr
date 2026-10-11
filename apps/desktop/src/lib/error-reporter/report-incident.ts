@@ -67,8 +67,7 @@ export type ReportIncident =
 // `SlowOperation` is the breadcrumb's own copy of `WriteOperationType`; this fails to
 // compile the moment the two vocabularies drift apart.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
-const slowOperationMirrorsWriteOperationType: Same<SlowOperation, WriteOperationType> = true
-void slowOperationMirrorsWriteOperationType
+const _slowOperationMirrorsWriteOperationType: Same<SlowOperation, WriteOperationType> = true
 
 /** Which surface the report came from, for the dialog-opened breadcrumb. */
 export function reportEntryFor(incident: ReportIncident): ErrorReportEntry {
