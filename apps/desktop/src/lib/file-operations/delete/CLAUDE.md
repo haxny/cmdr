@@ -5,9 +5,9 @@ Backend counterpart: `apps/desktop/src-tauri/src/file_system/write_operations/de
 
 ## Files
 
-- **DeleteDialog.svelte**: the confirmation: file list (max 10 + overflow), scan stats, symlink notice, no-trash
-  warning, and a `footerLeading` "Move to trash" switch, hidden wherever permanent is forced. Role follows the mode:
-  `dialog` for trash, `alertdialog` for permanent.
+- **DeleteDialog.svelte**: the confirmation (file list, scan stats, banners, a `footerLeading` trash switch hidden
+  wherever permanent is forced), confirm, and Shift-hold. Role: `dialog` (trash) or `alertdialog` (permanent).
+- **delete-scan-state.svelte.ts** (+ test): scan preview and online-only answer.
 - **delete-dialog-utils.ts** (+ test): pure title, path-abbreviation, and symlink-notice helpers.
 - **TrashCompleteToastContent.svelte** + **trash-undo.ts** (journal rollback, worded) + **go-to-trash.ts** (toast
   button + `file.goToTrash`).
@@ -53,7 +53,7 @@ Backend counterpart: `apps/desktop/src-tauri/src/file_system/write_operations/de
 
 ## Backend touchpoints
 
-`delete/trash.rs`, `delete/walker.rs`, `delete/cloud_trash.rs` (the routing). `WriteOperationType::Trash` is its own
+`delete/trash.rs`, `delete/walker.rs`, `delete/cloud_trash.rs` (routing). `WriteOperationType::Trash` is its own
 event-payload variant; the MCP `delete` tool opens this dialog (`delete-confirmation`).
 
 Depth: `DETAILS.md`.

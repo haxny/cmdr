@@ -57,6 +57,12 @@ scanning directory, and a throughput readout from `ScanThroughput` (`../scan-thr
 cancelled on confirm. For permanent delete, the scan must complete first (the progress dialog shows the scanning phase
 if needed).
 
+**Where it lives.** `delete-scan-state.svelte.ts` (`createDeleteScanState`) owns the walk: the four listeners, the
+tallies and throughput, `scanStarted`, and the online-only answer (`onlineOnlyFoundByWalk`, `onlineOnlyAnswer`,
+`ONLINE_ONLY_ANSWER_TIMEOUT_MS`, and the agent hold below). It takes its inputs as getters, the
+`transfer-scan-state.svelte.ts` shape. `DeleteDialog` keeps `handleConfirm`, Shift-hold, and the `confirmed` flag, so
+only the dialog decides whether teardown frees the preview (`scan.freePreview()`).
+
 **Why confirm awaits `startScanPreview`.** Three reasons, all the same shape as `TransferDialog`'s own `scanStarted`
 await. A null `previewId` gives the operation nothing to claim, so it re-walks the tree concurrently with the walk the
 preview's `startScan` already began; that orphan has no owner and nothing to cancel it, because teardown's cleanup is

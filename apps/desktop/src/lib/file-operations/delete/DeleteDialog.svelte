@@ -1,16 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte'
-    import {
-        startScanPreview,
-        cancelScanPreview,
-        onScanPreviewProgress,
-        onScanPreviewComplete,
-        onScanPreviewError,
-        onScanPreviewCancelled,
-        type UnlistenFn,
-    } from '$lib/tauri-commands'
     import type { SortColumn, SortOrder } from '$lib/file-explorer/types'
-    import { getSetting } from '$lib/settings'
     import ModalDialog from '$lib/ui/ModalDialog.svelte'
     import Button from '$lib/ui/Button.svelte'
     import Switch from '$lib/ui/Switch.svelte'
@@ -23,22 +13,19 @@
         type DeleteSourceItem,
     } from './delete-dialog-utils'
     import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import { formatFilesPerSecond } from '$lib/units'
     import Size from '$lib/ui/Size.svelte'
     import Icon from '$lib/ui/Icon.svelte'
     import Spinner from '$lib/ui/Spinner.svelte'
     import { tooltip } from '$lib/tooltip/tooltip'
     import { getAppLogger } from '$lib/logging/logger'
-    import { ScanThroughput } from '../scan-throughput'
     import S3CostLine from '../S3CostLine.svelte'
     import { costRequestFor } from '../s3-cost-line'
-    import { holdOperationStartReply } from '../transfer/transfer-dispatch'
     import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import { withTimeout } from '$lib/utils/timing'
     import Trans from '$lib/intl/Trans.svelte'
     import { t, tString } from '$lib/intl/messages.svelte'
     import type { ConfirmOptions, ConfirmOrigin, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
     import StartInBackgroundButton from '../StartInBackgroundButton.svelte'
+    import { createDeleteScanState } from './delete-scan-state.svelte'
     import { isStartInBackgroundKey, swallowHeldKeyRepeat } from '../start-in-background-key'
 
     const log = getAppLogger('deleteDialog')
@@ -111,19 +98,21 @@
         onCancel,
     }: Props = $props()
 
-    /** The scan walk met an online-only file inside a selected folder. Flips the
-     *  dialog live: the banner appears, the trash switch goes, and the confirm
-     *  button becomes the permanent delete, all before anything is pressed.
-     *
-     *  ❗ Always `'mixed'`, never `'all'`. The walk reports one boolean for the
-     *  whole folder, so a hit says "something in here is online-only" and says
-     *  nothing about the rest — and the folder holding one evicted file beside a
-     *  hundred ordinary ones is the ordinary case. The mixed wording is true
-     *  either way; the other one would tell someone every file they picked is
-     *  online-only on the strength of a single hit. */
-    let onlineOnlyFoundByWalk = $state<CloudOnlineOnlyExtent | null>(null)
+    /** Set first thing in `onDestroy`. A plain `let`, read by the scan start, which can outlive the dialog. */
+    let destroyed = false
+
+    // The walk behind the tallies, and the online-only answer a cloud folder's
+    // walk gives. Freeing the preview stays here: only the dialog knows `confirmed`.
+    const scan = createDeleteScanState({
+        getSourcePaths: () => sourcePaths,
+        getSortColumn: () => sortColumn,
+        getSortOrder: () => sortOrder,
+        getSourceVolumeId: () => sourceVolumeId,
+        getDestroyed: () => destroyed,
+    })
+
     /** How much of the selection is online-only, however we learned it. */
-    const onlineOnlyExtent = $derived(cloudOnlineOnly ?? onlineOnlyFoundByWalk)
+    const onlineOnlyExtent = $derived(cloudOnlineOnly ?? scan.onlineOnlyFoundByWalk)
     /** Online-only content is in play, however we learned it. */
     const routedForOnlineOnly = $derived(onlineOnlyExtent !== null)
     /** The trash is only on the table while nothing evicted is in the selection. */
@@ -164,16 +153,6 @@
     // `aria-describedby` at the banner's condition, not at `isPermanent`.
     const hasWarningBanner = $derived(isArchive || routedForOnlineOnly || !supportsTrash)
 
-    // Scan preview state
-    let previewId = $state<string | null>(null)
-    /** Resolves once `startScanPreview` has answered and `previewId` is set.
-     *  Confirm awaits it, for the same reason `TransferDialog` awaits
-     *  `scan.scanStarted`: dispatching with a null `previewId` leaves the
-     *  operation nothing to claim, so it re-walks the tree CONCURRENTLY with
-     *  the preview `startScan` already began, and that orphaned walk has no
-     *  owner and nothing to cancel it (teardown's cleanup is gated on
-     *  `!confirmed`, and confirming sets that before the id ever arrives). */
-    let scanStarted: Promise<void> = Promise.resolve()
     // True once the user confirms. On confirm the delete/trash op (or the
     // progress dialog) takes over the same scan and consumes the cached result,
     // so teardown must NOT free it then.
@@ -186,152 +165,16 @@
      *  line this renders, the dialog just sits there and nothing says the press
      *  didn't take. Cleared by the next press. */
     let handedBackForOnlineOnly = $state(false)
-    /** Resolves once the walk has said whether anything in the selection is
-     *  online-only: on the first progress tick reporting one (a hit is the whole
-     *  answer, so a huge folder needn't finish counting), on the completion that
-     *  reports none, or on any terminal scan event. Awaited ONLY when
-     *  `cloudFolderMayHoldOnlineOnly`; everywhere else confirm stays instant. */
-    let settleOnlineOnlyAnswer: () => void = () => {}
-    const onlineOnlyAnswer = new Promise<void>((resolve) => {
-        settleOnlineOnlyAnswer = resolve
-    })
-    /** ❗ The safe default when no answer ever lands is the TRASH, which is
-     *  today's behavior. The scan watchdog already bounds the walk by inactivity,
-     *  so this only covers a scan whose events never reach us at all; it's
-     *  generous because a real walk of a big tree legitimately takes a while, and
-     *  giving up early would run exactly the download we're trying to avoid. */
-    const ONLINE_ONLY_ANSWER_TIMEOUT_MS = 90_000
-    let filesFound = $state(0)
-    let dirsFound = $state(0)
-    let bytesFound = $state(0)
-    let isScanning = $state(false)
-    let scanComplete = $state(false)
-    let currentDir = $state<string | null>(null)
-    const throughput = new ScanThroughput()
-    let filesPerSec = $state<number | null>(null)
-    let bytesPerSec = $state<number | null>(null)
-
-    /** The walk's speed, through the one files-per-second policy the transfer
-     *  bars use, so a slow scan reads "0.4 files/s" instead of the "0 files/s" a
-     *  bare `Math.round` produced. `null` once it rounds to nothing, which is
-     *  also what hides the line. */
-    const scanRate = $derived(filesPerSec === null ? null : formatFilesPerSecond(filesPerSec))
     // Priced as a permanent delete only: a trash is unpriced, so it gets no line.
     const costRequest = $derived(
         costRequestFor({
             operation: isPermanent ? 'delete' : 'trash',
-            scanComplete,
-            previewId,
+            scanComplete: scan.scanComplete,
+            previewId: scan.previewId,
             sourceVolumeId,
             destinationVolumeId: null,
         }),
     )
-    let unlisteners: UnlistenFn[] = []
-    /** Set first thing in `onDestroy`. A plain `let`, read by `startScan`, which can outlive the dialog. */
-    let destroyed = false
-
-    /** Accepts the event if it belongs to our scan, filtering stale events from previous scans. */
-    function isOurScanEvent(eventPreviewId: string): boolean {
-        if (!previewId) previewId = eventPreviewId
-        return eventPreviewId === previewId
-    }
-
-    /** Keeps a scan listener for `cleanup`, or hands it straight back when the dialog closed while it registered. */
-    function keepListener(unlisten: UnlistenFn): void {
-        if (destroyed) unlisten()
-        else unlisteners.push(unlisten)
-    }
-
-    /**
-     * Starts the scan preview to count files/dirs/bytes.
-     *
-     * It can outlive the dialog: a quick Escape or an MCP close unmounts it while the listeners
-     * are still registering. So it reads its props BEFORE the first await, because both parents
-     * (`DialogManager`, `DialogGallery`) null their props object on close and a prop read after
-     * that throws. Past each await, a closed dialog keeps nothing: late listeners go straight
-     * back, no scan starts, and a preview whose id lands after teardown is freed here, since
-     * teardown had no id to free.
-     */
-    async function startScan() {
-        const request = { sourcePaths, sortColumn, sortOrder, sourceVolumeId }
-        // Subscribe to events BEFORE starting scan (avoid missing fast completions)
-        keepListener(
-            await onScanPreviewProgress((event) => {
-                if (!isOurScanEvent(event.previewId)) return
-                filesFound = event.filesFound
-                dirsFound = event.dirsFound
-                bytesFound = event.bytesFound
-                currentDir = event.currentDir ?? null
-                if (event.onlineOnlyFound) {
-                    onlineOnlyFoundByWalk = 'mixed'
-                    settleOnlineOnlyAnswer()
-                }
-                const r = throughput.push({
-                    timestampMs: Date.now(),
-                    files: event.filesFound,
-                    bytes: event.bytesFound,
-                })
-                filesPerSec = r.filesPerSecond
-                bytesPerSec = r.bytesPerSecond
-            }),
-        )
-        keepListener(
-            await onScanPreviewComplete((event) => {
-                if (!isOurScanEvent(event.previewId)) return
-                filesFound = event.filesTotal
-                dirsFound = event.dirsTotal
-                bytesFound = event.bytesTotal
-                if (event.onlineOnlyFound) onlineOnlyFoundByWalk = 'mixed'
-                isScanning = false
-                scanComplete = true
-                // A finished walk is the definitive answer either way.
-                settleOnlineOnlyAnswer()
-            }),
-        )
-        keepListener(
-            await onScanPreviewError((event) => {
-                if (!isOurScanEvent(event.previewId)) return
-                isScanning = false
-                // Keep showing whatever stats we have. A walk that stopped can't
-                // answer, so confirm falls back to the trash.
-                settleOnlineOnlyAnswer()
-            }),
-        )
-        keepListener(
-            await onScanPreviewCancelled((event) => {
-                if (!isOurScanEvent(event.previewId)) return
-                isScanning = false
-                settleOnlineOnlyAnswer()
-            }),
-        )
-
-        if (destroyed) return
-
-        // Start the scan
-        isScanning = true
-        const progressIntervalMs = getSetting('fileOperations.progressUpdateInterval')
-        const result = await startScanPreview(
-            request.sourcePaths,
-            request.sortColumn,
-            request.sortOrder,
-            progressIntervalMs,
-            request.sourceVolumeId,
-        )
-        if ('refusal' in result) {
-            // No volume answers for the source (an unplugged phone): nothing was
-            // walked and no preview exists. Same as a walk that stopped; the
-            // delete itself is refused typed if it's confirmed.
-            isScanning = false
-            settleOnlineOnlyAnswer()
-            return
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- may have changed during await
-        if (destroyed) {
-            void cancelScanPreview(result.previewId)
-            return
-        }
-        previewId = result.previewId
-    }
 
     /** Any key event re-reads the modifier state, so a keyup we never saw (window switch,
      *  a native menu eating it) self-heals on the next keystroke instead of leaving the
@@ -364,16 +207,13 @@
     }
 
     function cleanup() {
-        for (const unlisten of unlisteners) {
-            unlisten()
-        }
-        unlisteners = []
+        scan.cleanup()
         unwatchShift()
     }
 
     onMount(async () => {
         if (shiftUpgradesToPermanent) watchShift()
-        scanStarted = startScan()
+        scan.start()
 
         // Auto-confirm if MCP requested it (after a tick so the dialog is fully initialized)
         if (autoConfirm) {
@@ -386,25 +226,19 @@
         destroyed = true
         unregisterConfirmer?.()
         // Nothing may await an answer that can no longer arrive.
-        settleOnlineOnlyAnswer()
+        scan.settleOnlineOnlyAnswer()
         // Free the scan preview unless the user confirmed (the op then consumes
-        // the cached result). Regardless of `isScanning`: `cancelScanPreview`
-        // also evicts the cached `CachedScanResult`, so a dismiss AFTER the scan
-        // completed doesn't leak the cache until quit.
-        if (previewId && !confirmed) {
-            void cancelScanPreview(previewId)
-        }
+        // the cached result). Regardless of `isScanning`: freeing also evicts the
+        // cached `CachedScanResult`, so a dismiss AFTER the scan completed
+        // doesn't leak the cache until quit.
+        if (!confirmed) scan.freePreview()
         cleanup()
     })
 
-    /** Waits for the walk to say whether anything is online-only. An agent waiting
-     *  on this press for its operation id (a `dialog confirm`'s `mcpRequestId`, or
-     *  the auto-confirm's own) would time out on its short start budget meanwhile,
-     *  so it's told to hold for as long as this may wait. */
-    async function awaitOnlineOnlyAnswer(mcpRequestId: string | undefined): Promise<void> {
-        const waitingAgent = mcpRequestId ?? autoConfirmRequestId
-        if (waitingAgent !== undefined) holdOperationStartReply(waitingAgent, ONLINE_ONLY_ANSWER_TIMEOUT_MS)
-        await withTimeout(onlineOnlyAnswer, ONLINE_ONLY_ANSWER_TIMEOUT_MS, undefined)
+    /** The agent waiting on this press for its operation id: a `dialog confirm`'s
+     *  own `mcpRequestId`, or the auto-confirm's. */
+    function agentWaitingOnPress(mcpRequestId: string | undefined): string | undefined {
+        return mcpRequestId ?? autoConfirmRequestId
     }
 
     /** Resolves `true` once the press reached `onConfirm` / `onConfirmInBackground`,
@@ -422,16 +256,16 @@
             inBackground: startInBackground,
         })
         // The scan-preview IPC only mints an id and spawns the walk, so it
-        // answers promptly even on a wedged share. See `scanStarted`.
-        await scanStarted
+        // answers promptly even on a wedged share. See `scan.scanStarted`.
+        await scan.scanStarted
 
         if (cloudFolderMayHoldOnlineOnly && !routedForOnlineOnly) {
             // A selected folder in a cloud drive: the walk decides whether this is
             // a trash or a delete, and pressing before it answers must not settle
             // it by luck. Everywhere else this block never runs.
-            await awaitOnlineOnlyAnswer(mcpRequestId)
+            await scan.awaitOnlineOnlyAnswer(agentWaitingOnPress(mcpRequestId))
             if (destroyed) return false
-            if (onlineOnlyFoundByWalk !== null && !autoConfirm) {
+            if (scan.onlineOnlyFoundByWalk !== null && !autoConfirm) {
                 // The answer just turned this button from "Move to trash" into a
                 // permanent delete, and the banner beside it changed too. Hand the
                 // dialog back rather than run the one operation nothing can undo
@@ -452,12 +286,12 @@
                 return false
             }
             confirmed = true
-            onConfirmInBackground(previewId, origin)
+            onConfirmInBackground(scan.previewId, origin)
             return true
         }
 
         confirmed = true
-        onConfirm(previewId, isPermanent, origin)
+        onConfirm(scan.previewId, isPermanent, origin)
         return true
     }
 
@@ -475,9 +309,7 @@
     function handleCancel() {
         // Free the scan preview (cancels an in-flight scan and evicts any cached
         // result). Regardless of `isScanning`.
-        if (previewId) {
-            void cancelScanPreview(previewId)
-        }
+        scan.freePreview()
         cleanup()
         onCancel()
     }
@@ -620,21 +452,21 @@
 
         <!-- Scan stats (live counting). `data-scan-state` is the race-free
              "counting done" marker for E2E; there's no visual completion badge. -->
-        <div class="scan-stats" data-scan-state={scanComplete ? 'done' : 'counting'}>
+        <div class="scan-stats" data-scan-state={scan.scanComplete ? 'done' : 'counting'}>
             <div class="scan-stat">
-                <span class="scan-value"><Size bytes={bytesFound} /></span>
+                <span class="scan-value"><Size bytes={scan.bytesFound} /></span>
             </div>
             <span class="scan-divider">/</span>
             <div class="scan-stat">
-                <span class="scan-value">{formatNumber(filesFound)}</span>
-                <span class="scan-label">{t('fileOperations.delete.scanFile', { count: filesFound })}</span>
+                <span class="scan-value">{formatNumber(scan.filesFound)}</span>
+                <span class="scan-label">{t('fileOperations.delete.scanFile', { count: scan.filesFound })}</span>
             </div>
             <span class="scan-divider">/</span>
             <div class="scan-stat">
-                <span class="scan-value">{formatNumber(dirsFound)}</span>
-                <span class="scan-label">{t('fileOperations.delete.scanDir', { count: dirsFound })}</span>
+                <span class="scan-value">{formatNumber(scan.dirsFound)}</span>
+                <span class="scan-label">{t('fileOperations.delete.scanDir', { count: scan.dirsFound })}</span>
             </div>
-            {#if isScanning}
+            {#if scan.isScanning}
                 <span
                     class="scan-status"
                     role="img"
@@ -648,15 +480,15 @@
         <S3CostLine request={costRequest} />
 
         <!-- Throughput -->
-        {#if isScanning && scanRate !== null}
+        {#if scan.isScanning && scan.scanRate !== null}
             <div class="scan-throughput">
                 <span class="scan-throughput-value"
                     >{tString('fileOperations.shared.fileRate', {
-                        count: scanRate.value,
-                        rateText: scanRate.text,
+                        count: scan.scanRate.value,
+                        rateText: scan.scanRate.text,
                     })}</span
                 >
-                {#if bytesPerSec !== null && bytesPerSec > 0}
+                {#if scan.bytesPerSec !== null && scan.bytesPerSec > 0}
                     <span class="scan-throughput-sep" aria-hidden="true">·</span>
                     <span class="scan-throughput-value"
                         ><Trans key="fileOperations.shared.byteRate" snippets={{ size }} /></span
@@ -666,8 +498,8 @@
         {/if}
 
         <!-- Current directory being scanned -->
-        {#if isScanning && currentDir}
-            <div class="scan-current-dir" use:useShortenMiddle={{ text: currentDir, preferBreakAt: '/' }}></div>
+        {#if scan.isScanning && scan.currentDir}
+            <div class="scan-current-dir" use:useShortenMiddle={{ text: scan.currentDir, preferBreakAt: '/' }}></div>
         {/if}
 
         <!-- The press that didn't take. Sits last in the body so it's the line
@@ -705,7 +537,7 @@
     {/snippet}
 </ModalDialog>
 
-{#snippet size(children: import('svelte').Snippet)}<Size bytes={bytesPerSec ?? 0} />{@render children()}{/snippet}
+{#snippet size(children: import('svelte').Snippet)}<Size bytes={scan.bytesPerSec ?? 0} />{@render children()}{/snippet}
 {#snippet strong(children: import('svelte').Snippet)}<strong>{@render children()}</strong>{/snippet}
 
 <style>
