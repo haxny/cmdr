@@ -12,7 +12,7 @@ Frontend counterpart: `apps/desktop/src/lib/file-explorer/git/CLAUDE.md`.
   `GitPortal::category_rows` and does nothing else.
 - `wiring.rs`: the parked portal, the toggle both seams consult, `volume_holds_real_repos`, the `git-state-changed`
   payload and the sink that emits it, and the listing re-reads a repo change or a toggle drives.
-- `arming.rs`: the `ListingLifecycle` observer that keeps a repo's `.git/*` watcher armed while a pane is showing one
+- `arming.rs`: the `ListingObserver` that keeps a repo's `.git/*` watcher armed while a pane is showing one
   of its virtual listings.
 - The route itself is `file_system/volume/manager/git_routing.rs`, with the registry that owns it. The IPC commands are
   `commands/file_system/git.rs`.

@@ -54,8 +54,8 @@ the crate boundary is what makes that a compile error rather than a habit.
    registers itself; a wiring module (`network/smb_upgrade.rs`, `network/sftp_volume_wiring.rs`,
    `network/webdav_volume_wiring.rs`, `adb/`, `mtp/volume_wiring.rs`) mints the volume, hands it the app's `VolumeHost`
    (`src-tauri/src/volume_host.rs`), and inserts it. Device backends also register a `DeviceVolumeProvider`
-   (`device_volumes.rs`) so the volume list and eject can fold over them. Beside that registry sits a second one with
-   the same shape, `listing_overlays.rs`: a `ListingOverlay` contributes extra rows to ONE directory's listing, folded
+   (`device_volumes.rs`) so the volume list and eject can fold over them. Beside it sits the listing engine's overlay
+   seam, `listing/host/overlays.rs`: a `ListingOverlay` (handed over by `listing_host::install`) contributes extra rows to ONE directory's listing, folded
    in by the listing pipeline (`listing/streaming.rs`, `listing/operations.rs`, and every watcher-driven `FullRefresh`)
    after the volume's entries arrive and before the cache insert. A contributed row shadows a real one of the same
    name. Today's one contributor is the git portal, which puts the six virtual category rows into a repo's `.git/`

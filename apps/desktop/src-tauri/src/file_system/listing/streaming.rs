@@ -12,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
-use crate::file_system::listing::host::{self, ListingEnd, ListingEvents};
+use crate::file_system::listing::host::{self, ListingEnd, ListingEvents, OpenedListing};
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
@@ -389,8 +389,8 @@ pub(crate) async fn read_directory_with_progress(
     // Fold in the rows a PANE sees that the volume doesn't hold: today the git
     // portal's six category rows on a repo's `.git/` listing. AFTER enrich (a
     // contributed row has no drive-index entry) and BEFORE the sort, so the rows
-    // land where the pane's sort puts them. `crate::listing_overlays`.
-    let overlay_rows = crate::listing_overlays::decorate(&volume, path, &mut entries).await;
+    // land where the pane's sort puts them. `host/overlays.rs`.
+    let overlay_rows = host::overlays::decorate(&volume, path, &mut entries).await;
 
     // Sort entries
     benchmark::log_event("sort START");
@@ -417,6 +417,7 @@ pub(crate) async fn read_directory_with_progress(
         dir_sort_mode,
     )
     .with_overlay_rows(overlay_rows);
+    let cached_path = listing.path.as_path().to_path_buf();
     // The row count comes off the listing's own map, so the number the frontend
     // sizes its scroller with is produced by the same filter every later fetch
     // goes through — including the scratch-file half a plain dotfile count misses.
@@ -446,8 +447,14 @@ pub(crate) async fn read_directory_with_progress(
     }
     // And whatever else a subsystem keeps alive while a pane shows this
     // directory: today the git portal's per-repo watcher, which a virtual path
-    // can't arm through the line above. `crate::listing_lifecycle`.
-    crate::listing_lifecycle::listing_opened(listing_id, volume.as_ref(), path);
+    // can't arm through the line above. `host/observers.rs`.
+    host::observers::listing_opened(&OpenedListing {
+        id: &id,
+        volume_id,
+        volume: volume.as_ref(),
+        path,
+        stored_path: &cached_path,
+    });
     let watcher_start_ms = watcher_start_t.elapsed().as_millis();
 
     // Volume root for the event (the FE uses it to decide "at volume root"). For

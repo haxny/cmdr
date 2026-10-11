@@ -141,7 +141,7 @@ pub(crate) struct CachedListing {
     /// `AtomicU64` (not `Mutex<Instant>`) so the read accessors, which already hold a
     /// shared `LISTING_CACHE.read()` lock, can stamp it lock-free.
     pub last_accessed_ms: AtomicU64,
-    /// How many of `entries` a [`ListingOverlay`](crate::listing_overlays::ListingOverlay)
+    /// How many of `entries` a [`ListingOverlay`](crate::file_system::listing::host::ListingOverlay)
     /// contributed: rows the PANE shows that no volume holds.
     ///
     /// Nonzero makes this listing a pane view rather than a picture of a
@@ -152,7 +152,7 @@ pub(crate) struct CachedListing {
     overlay_rows: usize,
 }
 
-/// What a cache update knows about the [`ListingOverlay`](crate::listing_overlays::ListingOverlay)
+/// What a cache update knows about the [`ListingOverlay`](crate::file_system::listing::host::ListingOverlay)
 /// rows inside the entries it is about to write.
 ///
 /// The two travel together because they must be written under ONE lock

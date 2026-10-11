@@ -183,7 +183,7 @@ pub(super) async fn respell_listing(volume_id: String, listing_id: String, path:
     if !is_routed {
         crate::index_host::index().enrich(&volume_id, &mut entries);
     }
-    let overlay_rows = crate::listing_overlays::decorate(&volume, &stored, &mut entries).await;
+    let overlay_rows = super::host::overlays::decorate(&volume, &stored, &mut entries).await;
     if stored == path {
         super::caching::publish_replacement(&listing_id, entries, overlay_rows);
         return;

@@ -17,8 +17,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
+use crate::file_system::listing::host::{ListingObserver, OpenedListing};
+use crate::file_system::listing::listing_id::ListingId;
 use crate::ignore_poison::IgnorePoison;
-use crate::listing_lifecycle::{ListingLifecycle, register_listing_lifecycle};
 
 use super::wiring;
 use crate::file_system::volume::Volume;
@@ -34,26 +35,31 @@ static ARMED: LazyLock<Mutex<HashMap<String, PathBuf>>> = LazyLock::new(|| Mutex
 /// virtual `.git` listings.
 pub struct GitPortalListings;
 
-/// Wires the observer into the listing pipeline. Idempotent, so a test can call
-/// it beside the app's startup call.
-pub fn register() {
-    register_listing_lifecycle(Arc::new(GitPortalListings));
+/// The observer, for the listing host to install.
+pub fn observer() -> Arc<dyn ListingObserver> {
+    Arc::new(GitPortalListings)
 }
 
-impl ListingLifecycle for GitPortalListings {
+/// Adds the observer to the test binary's shared listing slot. Idempotent.
+#[cfg(test)]
+pub fn register() {
+    crate::file_system::listing::host::testing::register_observer(observer());
+}
+
+impl ListingObserver for GitPortalListings {
     fn id(&self) -> &'static str {
         "git-portal"
     }
 
-    fn listing_opened(&self, listing_id: &str, volume: &dyn Volume, path: &Path) {
-        let Some(worktree_root) = repo_a_listing_watches(volume, path) else {
+    fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        let Some(worktree_root) = repo_a_listing_watches(opened.volume, opened.path) else {
             return;
         };
-        arm_detached(listing_id.to_string(), worktree_root);
+        arm_detached(opened.id.to_string(), worktree_root);
     }
 
-    fn listing_closed(&self, listing_id: &str) {
-        disarm(listing_id);
+    fn listing_closed(&self, id: &ListingId) {
+        disarm(id.as_str());
     }
 }
 

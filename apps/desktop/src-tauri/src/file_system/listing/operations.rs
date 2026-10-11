@@ -93,8 +93,8 @@ pub async fn list_directory_start_with_volume(
 
     // Fold in the rows a PANE sees that the volume doesn't hold (the git
     // portal's six category rows on a repo's `.git/`), between enrich and the
-    // sort for the same reasons as the streaming path. `crate::listing_overlays`.
-    let overlay_rows = crate::listing_overlays::decorate(&volume, path, &mut all_entries).await;
+    // sort for the same reasons as the streaming path. `host/overlays.rs`.
+    let overlay_rows = super::host::overlays::decorate(&volume, path, &mut all_entries).await;
 
     // Sort the entries
     sort_entries(&mut all_entries, sort_by, sort_order, dir_sort_mode);
@@ -113,6 +113,7 @@ pub async fn list_directory_start_with_volume(
     )
     .with_overlay_rows(overlay_rows);
     let total_count = listing.rows(include_hidden).len();
+    let cached_path = listing.path.as_path().to_path_buf();
     if let Ok(mut cache) = LISTING_CACHE.write() {
         cache.insert(listing_id.clone(), listing);
     }
@@ -124,8 +125,14 @@ pub async fn list_directory_start_with_volume(
     }
     // And whatever else a subsystem keeps alive while a pane shows this
     // directory: today the git portal's per-repo watcher, which a virtual path
-    // can't arm through the line above. `crate::listing_lifecycle`.
-    crate::listing_lifecycle::listing_opened(&listing_id, volume.as_ref(), path);
+    // can't arm through the line above. `host/observers.rs`.
+    super::host::observers::listing_opened(&super::host::OpenedListing {
+        id: &super::listing_id::ListingId::new(listing_id.as_str()),
+        volume_id,
+        volume: volume.as_ref(),
+        path,
+        stored_path: &cached_path,
+    });
 
     benchmark::log_event("list_directory_start RETURNING");
     Ok(ListingStartResult {
@@ -149,7 +156,7 @@ pub fn list_directory_end(listing_id: &str) {
     // AFTER the cache removal, ❗ never before: an observer's own detached arm
     // reconciles against listing-cache membership, so releasing while the entry
     // is still there lets a racing arm re-take what this just gave back.
-    crate::listing_lifecycle::listing_closed(listing_id);
+    super::host::observers::listing_closed(&super::listing_id::ListingId::new(listing_id));
 }
 
 /// Commits visibility and remaps the cursor and selection under one lock.

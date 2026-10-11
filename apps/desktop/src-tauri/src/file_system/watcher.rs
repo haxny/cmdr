@@ -567,7 +567,9 @@ pub async fn handle_directory_change(listing_id: &str) {
     // volume was unregistered took the `std::fs` fallback and has nothing to
     // decorate through, so it keeps the count it had.
     let overlay_rows = match &volume {
-        Some(vol) => OverlayRows::Recounted(crate::listing_overlays::decorate(vol, &path, &mut new_entries).await),
+        Some(vol) => OverlayRows::Recounted(
+            crate::file_system::listing::host::overlays::decorate(vol, &path, &mut new_entries).await,
+        ),
         None => OverlayRows::Unchanged,
     };
 

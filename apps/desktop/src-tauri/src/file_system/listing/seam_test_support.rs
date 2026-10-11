@@ -3,7 +3,7 @@
 //! cache insert, and a lifecycle observer that records what the cache held when
 //! it was told.
 //!
-//! The overlay and observer registries are process-wide and keep the first
+//! The slot's overlay and observer lists are process-wide and keep the first
 //! registration per id forever, so each hook registers ONCE and answers only
 //! for what a test opted into: a volume NAME (overlays) or a listing id
 //! (observer). Every other test's listings pass straight through.
@@ -15,8 +15,9 @@ use std::sync::{Arc, LazyLock, Mutex, Once};
 use tokio_util::sync::CancellationToken;
 
 use super::cached_listing::LISTING_CACHE;
-use crate::listing_lifecycle::{ListingLifecycle, register_listing_lifecycle};
-use crate::listing_overlays::{ListingOverlay, register_listing_overlay};
+use super::host::testing::{register_observer, register_overlay};
+use super::host::{ListingObserver, ListingOverlay, OpenedListing};
+use super::listing_id::ListingId;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use cmdr_fs::volume::Volume;
@@ -61,7 +62,7 @@ impl ListingOverlay for SeamPinsOverlay {
 /// Registers the overlay hook, once per process.
 pub(crate) fn ensure_seam_overlay() {
     static ONCE: Once = Once::new();
-    ONCE.call_once(|| register_listing_overlay(Arc::new(SeamPinsOverlay)));
+    ONCE.call_once(|| register_overlay(Arc::new(SeamPinsOverlay)));
 }
 
 /// Cancels `token` the moment a read of the volume named `volume_name` reaches
@@ -103,24 +104,24 @@ impl RecordingObserver {
     }
 }
 
-impl ListingLifecycle for RecordingObserver {
+impl ListingObserver for RecordingObserver {
     fn id(&self) -> &'static str {
         "seam-pins-recorder"
     }
 
-    fn listing_opened(&self, listing_id: &str, _volume: &dyn Volume, _path: &Path) {
-        Self::hear(listing_id, |cached| Heard::Opened { cached });
+    fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        Self::hear(opened.id.as_str(), |cached| Heard::Opened { cached });
     }
 
-    fn listing_closed(&self, listing_id: &str) {
-        Self::hear(listing_id, |cached| Heard::Closed { cached });
+    fn listing_closed(&self, id: &ListingId) {
+        Self::hear(id.as_str(), |cached| Heard::Closed { cached });
     }
 }
 
 /// Makes the recording observer listen for `listing_id`.
 pub(crate) fn record_lifecycle_of(listing_id: &str) {
     static ONCE: Once = Once::new();
-    ONCE.call_once(|| register_listing_lifecycle(Arc::new(RecordingObserver)));
+    ONCE.call_once(|| register_observer(Arc::new(RecordingObserver)));
     WATCHED.lock_ignore_poison().insert(listing_id.to_string());
 }
 

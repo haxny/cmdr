@@ -5,7 +5,7 @@
 //! walker that tries to stat, copy, or remove one meets a path that isn't
 //! there. These cells pin that NO walker reaches the six virtual category
 //! folders, which is what the route plus the listing overlay buy: the rows
-//! reach a pane through `crate::listing_overlays` and every other reader lists
+//! reach a pane through `file_system/listing/host/overlays.rs` and every other reader lists
 //! through `Volume`, which doesn't hold them.
 
 #![cfg(test)]
@@ -67,7 +67,7 @@ async fn an_overlay_decorated_listing_of_dot_git_shows_the_six_rows() {
     let dot_git = dir.join(".git");
 
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6, "one row per category");
 
     let names: Vec<String> = entries.into_iter().map(|e| e.name).collect();
@@ -92,7 +92,7 @@ async fn the_toggle_off_contributes_nothing_to_a_dot_git_listing() {
 
     super::wiring::set_virtual_portal_enabled(false);
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
     super::wiring::set_virtual_portal_enabled(true);
 
     assert_eq!(added, 0);
@@ -245,7 +245,7 @@ async fn the_listing_oracle_declines_an_overlay_decorated_dot_git_listing() {
 
     let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir));
     let mut cached = volume.list_directory(&dot_git, None).await.unwrap();
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut cached).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut cached).await;
     assert_eq!(added, 6, "the pane's listing holds the six virtual rows");
 
     let _guard = TestListing::new()

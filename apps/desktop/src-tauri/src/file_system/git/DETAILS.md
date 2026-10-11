@@ -17,11 +17,11 @@ join it in the listing pipeline, through the overlay (§ "Two seams, no hooks").
 Three files, and each is one of the app's answers:
 
 - **`overlay.rs`** — the `ListingOverlay` contributor that puts the six category rows into a repo's `.git/` listing, for
-  a PANE and nothing else (`src/listing_overlays.rs`). It asks the crate for the rows and does nothing else.
+  a PANE and nothing else (`file_system/listing/host/overlays.rs`). It asks the crate for the rows and does nothing else.
 - **`wiring.rs`** — the parked `GitPortal` (`install_git_portal` at startup, `portal()` with a detached-sink fallback so
   a test binary that never runs `setup()` still browses), the toggle both seams consult, `volume_holds_real_repos`, the
   `GitStateChangedPayload` event and the sink that emits it, and the listing re-reads a repo change or a toggle drives.
-- **`arming.rs`** — the `ListingLifecycle` observer (`crate::listing_lifecycle`) that keeps a repo's `.git/*` watcher
+- **`arming.rs`** — the `ListingObserver` (`file_system/listing/host/observers.rs`) that keeps a repo's `.git/*` watcher
   armed while a pane is showing one of its virtual listings. § "Who arms the repo watcher".
 - **`mod.rs`** — the module declarations and the `cmdr_git` re-exports the IPC commands import.
 
@@ -51,7 +51,7 @@ to move on something `RepoInfo` doesn't carry is exactly what that window protec
 
 ## Who arms the repo watcher
 
-**The OPEN LISTINGS do, ❌ not the frontend's subscription.** `arming.rs` registers a `ListingLifecycle` observer; the
+**The OPEN LISTINGS do, ❌ not the frontend's subscription.** `arming.rs` builds a `ListingObserver` that `listing_host::install` hands the engine; the
 listing pipeline calls it when a listing enters the cache and when it leaves, and the observer takes and gives back one
 subscriber on `wiring::portal()`. Two listing shapes arm: a path inside one of the six virtual trees, and the repo's own
 `.git/` (its category rows carry live counts). The refcount is the watcher registry's own, so a working-tree pane and a
@@ -116,7 +116,7 @@ guard there once refused the REAL `.git/config` alongside the virtual folders, w
 2. **The overlay.** `git::overlay::GitPortalOverlay` contributes the six category rows to a repo's `.git/` listing, run
    by `listing/streaming.rs::read_directory_with_progress` (and `listing/operations.rs`, and again on every
    watcher-driven `FullRefresh`) after the volume's entries arrive and before the cache insert. Pane-only by
-   construction: `src/listing_overlays.rs`.
+   construction: `file_system/listing/host/overlays.rs`.
 
 Both consult ONE app-side switch, `git::wiring::is_virtual_portal_enabled()`, so the toggle is "no route" plus "no
 contribution". Both also ask `wiring::volume_holds_real_repos`, which is `local_path().is_some()`: `gix` can't open a

@@ -5,7 +5,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::*;
+use super::overlays::{ListingOverlay, decorate};
+use super::testing::register_overlay;
 use crate::file_system::volume::{LocalPosixVolume, Volume};
 use cmdr_fs::entry::FileEntry;
 
@@ -53,7 +54,7 @@ fn a_volume() -> Arc<dyn Volume> {
 #[tokio::test]
 async fn a_contributor_adds_its_rows_to_the_listing() {
     let at = PathBuf::from("/overlay/adds");
-    register_listing_overlay(Arc::new(FixedRows {
+    register_overlay(Arc::new(FixedRows {
         id: "test-adds",
         at: at.clone(),
         names: vec!["branches", "tags"],
@@ -73,7 +74,7 @@ async fn a_contributor_adds_its_rows_to_the_listing() {
 #[tokio::test]
 async fn a_contributed_row_shadows_a_real_one_of_the_same_name() {
     let at = PathBuf::from("/overlay/shadows");
-    register_listing_overlay(Arc::new(FixedRows {
+    register_overlay(Arc::new(FixedRows {
         id: "test-shadows",
         at: at.clone(),
         names: vec!["branches"],
@@ -107,7 +108,7 @@ async fn a_directory_no_contributor_claims_is_left_alone() {
 async fn a_contributor_registered_twice_only_counts_once() {
     let at = PathBuf::from("/overlay/twice");
     for _ in 0..2 {
-        register_listing_overlay(Arc::new(FixedRows {
+        register_overlay(Arc::new(FixedRows {
             id: "test-twice",
             at: at.clone(),
             names: vec!["branches"],

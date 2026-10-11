@@ -30,7 +30,7 @@ that cost, and the two rules that keep it cheap: `../DETAILS.md` § "Arming a li
 
 ## The overlay step
 
-Between the index enrich and the sort, `read_directory_with_progress` calls `crate::listing_overlays::decorate`, which
+Between the index enrich and the sort, `read_directory_with_progress` calls `host::overlays::decorate`, which
 folds in rows a PANE sees that the volume doesn't hold. Every other read that builds or replaces a listing does the
 same, in the same place, so a refresh can't quietly strip them: `listing/operations.rs` (the test-only sync start),
 `caching::notify_full_refresh_locked` (a backend's `FullRefresh`), `foreign_path::respell_listing` (a backend swap's
@@ -48,7 +48,7 @@ Placement matters three ways:
 `CachedListing` records how many rows came from an overlay, and `try_get_authoritative_listing` declines any listing
 carrying some. A decorated listing is a PANE view, never a picture of a directory a delete walker or a copy scan may
 reuse. ❌ Never let one answer that oracle: the rows have no inode behind them, and a walker that meets one stops
-mid-operation. The seam and the reasoning: `src/listing_overlays.rs`, `volume/DETAILS.md` § "Architecture".
+mid-operation. The seam and the reasoning: `host/overlays.rs`, `volume/DETAILS.md` § "Architecture".
 
 ## Local listing progress
 
@@ -90,7 +90,7 @@ the six-hour backstop that reclaims a leaked one is `orphan_reaper.rs`.
    delete dialog, drag, clipboard).
 6. `list_directory_end()` stops the watcher and removes from the cache (primary, fast eviction).
 
-Both ends also tell `crate::listing_lifecycle`, the seam for subsystems that keep something alive while a pane is
+Both ends also tell the observers (`host/observers.rs`), the seam for subsystems that keep something alive while a pane is
 showing a directory (today: the git portal's per-repo watcher, which a virtual path can't arm through the FSEvents
 watcher). ❗ The close call comes AFTER the cache removal: an observer's own detached arm reconciles against
 listing-cache membership, so releasing while the entry is still there lets a racing arm re-take what was just released.

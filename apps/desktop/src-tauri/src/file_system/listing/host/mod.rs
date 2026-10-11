@@ -9,9 +9,10 @@
 //! - `events`: what happened to a listing ([`events::ListingEvents`]).
 //! - `volumes`: which volume serves a path ([`volumes::ListingVolumes`]).
 //! - `index`: what the drive index knows ([`index::ListingIndex`]).
-//! - `overlays`: rows a pane sees that no volume holds ([`overlays::ListingOverlay`]).
+//! - `overlays`: rows a pane sees that no volume holds ([`overlays::ListingOverlay`]),
+//!   a list in registration order.
 //! - `observers`: what keeps something alive while a pane shows a directory
-//!   ([`observers::ListingObserver`]).
+//!   ([`observers::ListingObserver`]), a list in registration order.
 //! - `leases`: the user is waiting on this volume ([`leases::ForegroundLeases`]).
 //! - `locale`: which language names collate in ([`locale::ReadingLocale`]).
 //! - `mounts`: what a filesystem path is mounted on ([`mounts::MountTable`]).
@@ -37,19 +38,29 @@ pub mod mounts;
 pub mod observers;
 pub mod overlays;
 #[cfg(test)]
+mod overlays_test;
+#[cfg(test)]
 pub(crate) mod testing;
 pub mod volumes;
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use tokio::runtime::Handle;
 
 pub use events::{ListingEnd, ListingEvents, NoEvents};
+pub use observers::{ListingObserver, OpenedListing};
+pub use overlays::ListingOverlay;
 
 /// The seams one application installs, as one value.
 pub struct ListingSeams {
     events: Arc<dyn ListingEvents>,
     runtime: Handle,
+    /// Behind a lock only so a test can add one to the shared slot; the host
+    /// hands its own over before install.
+    overlays: RwLock<Vec<Arc<dyn ListingOverlay>>>,
+    /// Same as `overlays`.
+    observers: RwLock<Vec<Arc<dyn ListingObserver>>>,
 }
 
 impl ListingSeams {
@@ -59,7 +70,45 @@ impl ListingSeams {
         Self {
             events,
             runtime: cmdr_fs::volume::host::VolumeHost::detached().runtime(),
+            overlays: RwLock::new(Vec::new()),
+            observers: RwLock::new(Vec::new()),
         }
+    }
+
+    /// Folds `overlay`'s rows into the listings it applies to, after every
+    /// overlay added before it.
+    pub fn overlay(self, overlay: Arc<dyn ListingOverlay>) -> Self {
+        self.add_overlay(overlay);
+        self
+    }
+
+    /// Tells `observer` about every listing open and close, after every
+    /// observer added before it.
+    pub fn observer(self, observer: Arc<dyn ListingObserver>) -> Self {
+        self.add_observer(observer);
+        self
+    }
+
+    /// The first overlay per id wins; a duplicate is logged and dropped, so a
+    /// double registration can't contribute the same rows twice.
+    fn add_overlay(&self, overlay: Arc<dyn ListingOverlay>) {
+        let mut overlays = self.overlays.write_ignore_poison();
+        if overlays.iter().any(|o| o.id() == overlay.id()) {
+            log::warn!(target: "listing", "listing overlay {} registered twice; keeping the first", overlay.id());
+            return;
+        }
+        log::debug!(target: "listing", "registered listing overlay {}", overlay.id());
+        overlays.push(overlay);
+    }
+
+    /// The first observer per id wins, so a double registration can't arm twice.
+    fn add_observer(&self, observer: Arc<dyn ListingObserver>) {
+        let mut observers = self.observers.write_ignore_poison();
+        if observers.iter().any(|o| o.id() == observer.id()) {
+            return;
+        }
+        log::debug!(target: "listing", "registered listing observer {}", observer.id());
+        observers.push(observer);
     }
 
     /// Spawns the engine's background work onto `handle`, so the host keeps ONE
@@ -110,7 +159,7 @@ fn seams() -> &'static ListingSeams {
     }
     #[cfg(test)]
     {
-        INSTALLED.get_or_init(ListingSeams::detached)
+        INSTALLED.get_or_init(testing::fallback_seams)
     }
     #[cfg(not(test))]
     {
@@ -126,6 +175,18 @@ pub(crate) fn events() -> Arc<dyn ListingEvents> {
 /// The runtime the engine spawns onto: the host's own, or the shared fallback.
 pub(crate) fn runtime() -> &'static Handle {
     &seams().runtime
+}
+
+/// A snapshot of the overlays, in registration order, so none runs under the
+/// slot's lock.
+pub(crate) fn overlays() -> Vec<Arc<dyn ListingOverlay>> {
+    seams().overlays.read_ignore_poison().clone()
+}
+
+/// A snapshot of the observers, in registration order, so none runs under the
+/// slot's lock.
+pub(crate) fn observers() -> Vec<Arc<dyn ListingObserver>> {
+    seams().observers.read_ignore_poison().clone()
 }
 
 #[cfg(not(test))]

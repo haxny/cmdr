@@ -22,9 +22,9 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 - **Quick-filter changes share that revision** and drop superseded pending batches under the cache write lock,
   never after unlocking. Guard selection remapping before changing the filter. `DETAILS.md` § "The quick filter and in-flight diffs".
 - **Refreshes of ONE directory stay serialized** (`notify_full_refresh`), or an older read lands last.
-- **`listing_overlays::decorate` folds in rows no volume holds**, between enrich and the sort, in all FIVE read paths
+- **`host::overlays::decorate` folds in rows no volume holds**, between enrich and the sort, in all FIVE read paths
   (`DETAILS.md` § "The overlay step"); miss one and a refresh strips them.
-- **A close notifies `crate::listing_lifecycle` AFTER the cache removal**, ❌ never before: an observer's detached arm
+- **A close notifies the observers (`host/observers.rs`) AFTER the cache removal**, ❌ never before: an observer's detached arm
   reconciles against cache membership.
 - **The orphan reaper keys on `last_accessed_ms`**, bumped by reads, cache patches, and the panes'
   `keep_listings_alive` heartbeat (idle panes make no reads). ❌ Never from `refresh_listing_index_sizes`.

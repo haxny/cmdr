@@ -1,14 +1,33 @@
-//! Recording fakes for the seams, for tests that drive the engine.
+//! Recording fakes for the seams, for tests that drive the engine, and the
+//! test binary's stand-in for the app's install.
 
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::events::{ListingEnd, ListingEvents};
+use super::{ListingObserver, ListingOverlay, ListingSeams};
 use crate::file_system::listing::diff::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::stalled_on::StalledOn;
+
+/// What the slot holds in a test binary, where nothing installs: detached
+/// seams.
+pub(crate) fn fallback_seams() -> ListingSeams {
+    ListingSeams::detached()
+}
+
+/// Adds `overlay` to the shared slot. Test registration stays global until each
+/// test builds its own engine; the first registration per id wins.
+pub(crate) fn register_overlay(overlay: Arc<dyn ListingOverlay>) {
+    super::seams().add_overlay(overlay);
+}
+
+/// Adds `observer` to the shared slot, after every observer already there.
+pub(crate) fn register_observer(observer: Arc<dyn ListingObserver>) {
+    super::seams().add_observer(observer);
+}
 
 /// Records every report, per kind and in one combined order.
 // DEFAULT-OK: a recorder that has heard nothing yet holds empty lists.

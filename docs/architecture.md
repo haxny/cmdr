@@ -207,16 +207,15 @@ All under `apps/desktop/src-tauri/src/`.
 - `unregistered_volumes.rs`: why a volume id has no registered volume, asked by every listing, transfer, delete,
   preview, and new-folder site that finds nothing: a listed device or saved server nobody connected, or a volume that's
   gone. Each caller words the answer in its own error vocabulary. Contract in the module doc
-- `listing_overlays.rs`: the listing-overlay seam, same registration shape. A `ListingOverlay` contributes rows a PANE
-  sees that no volume holds, folded in by the listing pipeline; today's one contributor is the git portal's `.git/`
-  category rows (`file_system/git/overlay.rs`). Why it must never move into a `Volume`: `file_system/volume/DETAILS.md`
-  § "Architecture"
-- `listing_lifecycle.rs`: the listing-lifecycle seam, same registration shape. A `ListingLifecycle` observer hears which
-  directories a PANE has open; one observer keeps a repo's `.git/*` watcher armed while a pane shows one of its virtual
-  listings (`apps/desktop/src-tauri/src/file_system/git/arming.rs`). Why arming is the backend's:
-  `apps/desktop/src-tauri/src/file_system/git/DETAILS.md` § "Who arms the repo watcher"
+- `listing_host/`: this app as the listing engine's host (`file_system/listing/host/` declares the seams). `install`
+  hands over the events adapter, the runtime, the overlays (the git portal's `.git/` category rows,
+  `file_system/git/overlay.rs`), and the observers in order. A `ListingOverlay` contributes rows a PANE sees that no
+  volume holds; why it must never move into a `Volume`: `file_system/volume/DETAILS.md` § "Architecture". A
+  `ListingObserver` hears which directories a PANE has open; one keeps a repo's `.git/*` watcher armed while a pane
+  shows one of its virtual listings (`apps/desktop/src-tauri/src/file_system/git/arming.rs`), and why arming is the
+  backend's is `apps/desktop/src-tauri/src/file_system/git/DETAILS.md` § "Who arms the repo watcher"
 - `listing_index_sizes/`: delivers the drive index's folder-size updates only to the open listings they touch
-  (`listing-index-sizes-changed`), a second `ListingLifecycle` observer. See
+  (`listing-index-sizes-changed`), through a `ListingObserver` of its own. See
   `apps/desktop/src-tauri/src/listing_index_sizes/CLAUDE.md`
 - `mcp/`: MCP server (tools, YAML resources, agent-centric API)
 - `ai/`: llama-server lifecycle, model download, inference client

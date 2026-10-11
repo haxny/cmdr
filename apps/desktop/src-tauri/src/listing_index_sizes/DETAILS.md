@@ -21,8 +21,8 @@
 A whole-volume batch (`Touched::Whole`) skips the per-row comparison: it runs the full `refresh_listing_index_sizes`
 re-enrich and sends `full: true`, and the pane re-reads its window's sizes the old way. It happens once per scan.
 
-The open-listing set is kept by a `ListingLifecycle` observer (`crate::listing_lifecycle`), registered from setup via
-`start`. It reads the listing's volume id and path off the `CachedListing` record, which the open path inserts before it
+The open-listing set is kept by a `ListingObserver` (`file_system/listing/host/observers.rs`), which
+`listing_host::install` hands the engine; `start` only starts the worker. It reads the listing's volume id and path off the `CachedListing` record, which the open path inserts before it
 notifies.
 
 ## The batch shapes

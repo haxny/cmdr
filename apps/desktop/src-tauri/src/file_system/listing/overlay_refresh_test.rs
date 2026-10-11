@@ -7,7 +7,7 @@
 //! first read did. Without that, one `git commit` under an open `.git/` pane
 //! would silently empty the portal out of it.
 //!
-//! What the overlays themselves decide: `src/listing_overlays/tests.rs` and
+//! What the overlays themselves decide: `file_system/listing/host/overlays_test.rs` and
 //! `file_system/git/overlay_tests.rs`.
 
 use std::path::PathBuf;
@@ -52,7 +52,7 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
 
     // A pane's listing as the first read left it: real entries plus the six.
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6);
     let listing = TestListing::new()
         .volume(&volume_id)
@@ -125,7 +125,7 @@ async fn a_diff_patch_leaves_the_contributed_row_count_alone() {
 
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Repo", &dir));
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6);
 
     let listing = TestListing::new()
@@ -177,7 +177,7 @@ async fn a_listing_refresh_of_dot_git_keeps_the_portal_rows() {
     get_volume_manager().register(&volume_id, Arc::clone(&volume));
 
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::listing_overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6);
     let listing = TestListing::new()
         .volume(&volume_id)

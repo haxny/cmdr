@@ -678,7 +678,7 @@ pub(super) async fn notify_full_refresh(
 /// `overlay_rows` is how many of `entries` a listing overlay contributed, which
 /// the listing has to keep recorded: a `.git/` listing that regained its six
 /// virtual rows in this refresh must not read as authoritative to a walker
-/// afterwards (`crate::listing_overlays`).
+/// afterwards (`host/overlays.rs`).
 pub(super) fn publish_replacement(listing_id: &str, entries: Vec<FileEntry>, overlay_rows: usize) {
     crate::file_system::listing::operations::update_listing_entries(
         listing_id,
@@ -729,7 +729,7 @@ async fn notify_full_refresh_locked(
     // them. Without this a watcher-driven refresh of a repo's `.git/` would
     // replace the listing with the real entries alone and the six portal rows
     // would vanish from an open pane.
-    let overlay_rows = crate::listing_overlays::decorate(&vol, &parent_path, &mut new_entries).await;
+    let overlay_rows = super::host::overlays::decorate(&vol, &parent_path, &mut new_entries).await;
 
     for (listing_id, ..) in &listings {
         publish_replacement(listing_id, new_entries.clone(), overlay_rows);
@@ -858,7 +858,7 @@ pub fn try_get_authoritative_listing(volume_id: &str, path: &Path) -> Option<Vec
         // A listing carrying overlay rows is what a PANE sees, not what the
         // directory holds: handing it to a delete walker or a copy scan would
         // send one at a path with no inode behind it. See
-        // `crate::listing_overlays`.
+        // `host/overlays.rs`.
         if listing.has_overlay_rows() {
             return None;
         }

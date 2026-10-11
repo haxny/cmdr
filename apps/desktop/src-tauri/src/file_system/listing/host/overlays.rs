@@ -1,16 +1,38 @@
-//! Rows a pane sees that no volume holds.
+//! Rows a PANE shows that no volume holds.
 //!
-//! Why this is a listing seam and ❌ never a `Volume` impl: `crate::listing_overlays`.
+//! A [`ListingOverlay`] contributes extra [`FileEntry`]s to one directory's
+//! listing, folded in by the listing pipeline after the volume's own entries
+//! arrive. Cmdr's one contributor is the virtual `.git` portal, which puts the
+//! six category rows (`branches/`, `tags/`, …) into a repo's `.git/` listing
+//! while every real entry beside them stays the local volume's, editable and
+//! deletable as always.
+//!
+//! ❌ **Never move this into a `Volume` impl or into the volume manager.** The
+//! whole point is that a contributed row reaches a pane and NOTHING else: a copy
+//! scan, a delete walker, and the drive indexer all list through `Volume`, and
+//! the moment one of them can see a row with no inode behind it, a repo delete
+//! stops half-way through with `.git/` still on disk. That was a real bug, and
+//! this seam is the shape that makes it unrepresentable.
+//!
+//! The same rule is why a listing that carries contributed rows is never
+//! authoritative for a walker: `CachedListing::has_overlay_rows` says so and the
+//! fresh-listing oracle declines it (`listing/caching.rs`).
+//!
+//! The host hands its contributors over at install, in order
+//! ([`ListingSeams::overlay`](super::ListingSeams::overlay)), and the pipeline
+//! folds over whatever the slot holds.
 
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
 
 /// A source of extra rows for one kind of directory.
 pub trait ListingOverlay: Send + Sync + 'static {
-    /// The contributor's stable name (`"git-portal"`), the key the registry
-    /// dedupes on.
+    /// The contributor's stable name (`"git-portal"`), the key the slot dedupes
+    /// on.
     fn id(&self) -> &'static str;
 
     /// Whether this overlay has anything to say about `path` on `volume`.
@@ -24,4 +46,58 @@ pub trait ListingOverlay: Send + Sync + 'static {
     /// The rows to fold in. Runs on the blocking pool, so it may open a
     /// repository or hit the disk.
     fn extra_entries(&self, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
+}
+
+/// Folds every applicable contributor's rows into `entries`, and reports how
+/// many rows they added.
+///
+/// **A contributed row SHADOWS a real one of the same name.** A repo created by
+/// an older git carries a real (deprecated) `.git/branches/` directory, and the
+/// portal's `branches` row is the one the user came for; showing two rows called
+/// `branches` would be worse than either.
+///
+/// Sorting happens after this returns, so a contributor hands rows over in any
+/// order.
+pub(crate) async fn decorate(volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
+    let applicable: Vec<Arc<dyn ListingOverlay>> = super::overlays()
+        .into_iter()
+        .filter(|overlay| overlay.applies_to(volume.as_ref(), path))
+        .collect();
+    if applicable.is_empty() {
+        return 0;
+    }
+
+    let contributed = gather(applicable, Arc::clone(volume), path.to_path_buf()).await;
+    if contributed.is_empty() {
+        return 0;
+    }
+
+    let names: HashSet<&str> = contributed.iter().map(|entry| entry.name.as_str()).collect();
+    entries.retain(|entry| !names.contains(entry.name.as_str()));
+    let added = contributed.len();
+    entries.extend(contributed);
+    added
+}
+
+/// Runs the applicable contributors on the host runtime's blocking pool: one of
+/// them opens a repository and counts refs, which is not work for an async
+/// worker.
+///
+/// A contributor that panics costs its rows and nothing else. The volume's own
+/// entries are already in hand by the time this runs, and a pane showing a
+/// repo's real `.git/` contents beats a pane showing a listing error because
+/// `gix` tripped over a damaged object.
+async fn gather(overlays: Vec<Arc<dyn ListingOverlay>>, volume: Arc<dyn Volume>, path: PathBuf) -> Vec<FileEntry> {
+    super::runtime()
+        .spawn_blocking(move || {
+            overlays
+                .iter()
+                .flat_map(|overlay| overlay.extra_entries(volume.as_ref(), &path))
+                .collect()
+        })
+        .await
+        .unwrap_or_else(|e| {
+            log::warn!(target: "listing", "a listing overlay panicked, listing without its rows: {e}");
+            Vec::new()
+        })
 }

@@ -90,8 +90,6 @@ pub(crate) mod linux_distro;
 mod linux_icons;
 mod listing_host;
 mod listing_index_sizes;
-mod listing_lifecycle;
-mod listing_overlays;
 mod location;
 #[cfg(target_os = "macos")]
 mod macos_icons;
@@ -631,15 +629,8 @@ pub fn run() {
             // The one portal every `.git` browse, IPC command, and watcher
             // subscription shares, reporting repo changes into this window.
             file_system::git::wiring::install_git_portal(app.handle());
-            // The portal's `.git/` landing rows. Everything below `.git/` is a
-            // routed volume instead; this seam is what keeps the six rows out of
-            // every walker (`listing_overlays.rs`).
-            file_system::git::overlay::register();
-            // And the observer that keeps a repo's `.git/*` watcher armed for as
-            // long as a pane is showing one of its virtual listings, so a lone
-            // `branches/` pane stays live (`listing_lifecycle.rs`).
-            file_system::git::arming::register();
-            // Index size updates reach only the listings they touch (`listing_index_sizes`).
+            // Index size updates reach only the listings they touch (`listing_index_sizes`);
+            // its open-listing observer is installed with the listing host.
             listing_index_sizes::start(app.handle().clone());
             file_system::staging::set_show_safe_save_files(saved_settings.show_safe_save_files.unwrap_or(true));
             file_system::staging::set_show_staging_temps(saved_settings.show_staging_temp_files.unwrap_or(false));

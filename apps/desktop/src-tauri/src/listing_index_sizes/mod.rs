@@ -2,7 +2,7 @@
 //!
 //! The drive index reports batches of directories whose recursive sizes changed
 //! (`IndexEvent::DirsUpdated`, about once a second on a busy disk). This module keeps the set of open
-//! listings (a [`ListingLifecycle`] observer), works out which rows of which listings a batch touches
+//! listings (a [`ListingObserver`]), works out which rows of which listings a batch touches
 //! ([`touched()`]), reads those rows' fresh stats from the index, and sends
 //! `listing-index-sizes-changed` carrying only the rows whose shown values moved
 //! ([`refresh`](mod@refresh)). It also writes them into the listing cache, so status-bar totals
@@ -32,7 +32,6 @@ mod schedule;
 mod touched;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use std::time::Duration;
 
@@ -45,10 +44,10 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 
 use crate::file_system::listing::cached_listing::LISTING_CACHE;
-use crate::file_system::volume::Volume;
+use crate::file_system::listing::host::{ListingObserver, OpenedListing};
+use crate::file_system::listing::listing_id::ListingId;
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
-use crate::listing_lifecycle::{ListingLifecycle, register_listing_lifecycle};
 use cmdr_fs::entry::FileEntry;
 
 use refresh::RowSizes;
@@ -102,12 +101,13 @@ static BATCHES: OnceLock<mpsc::UnboundedSender<Vec<String>>> = OnceLock::new();
 /// Keeps [`OPEN`] in step with the listing cache.
 struct IndexSizeListings;
 
-impl ListingLifecycle for IndexSizeListings {
+impl ListingObserver for IndexSizeListings {
     fn id(&self) -> &'static str {
         "index-sizes"
     }
 
-    fn listing_opened(&self, listing_id: &str, _volume: &dyn Volume, _path: &Path) {
+    fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        let listing_id = opened.id.as_str();
         // The cache already holds the listing (the open path inserts before it notifies), and its
         // record carries both the volume id and the volume's one spelling of the folder.
         let Some(listing) = LISTING_CACHE
@@ -123,16 +123,21 @@ impl ListingLifecycle for IndexSizeListings {
         OPEN.lock_ignore_poison().insert(listing_id.to_string(), listing);
     }
 
-    fn listing_closed(&self, listing_id: &str) {
+    fn listing_closed(&self, id: &ListingId) {
+        let listing_id = id.as_str();
         OPEN.lock_ignore_poison().remove(listing_id);
         // A folder-size count for a listing nobody shows any more is wasted I/O.
         count::cancel(listing_id);
     }
 }
 
-/// Registers the open-listing observer and starts the worker. Call once from setup.
+/// The open-listing observer, for the listing host to install.
+pub(crate) fn observer() -> Arc<dyn ListingObserver> {
+    Arc::new(IndexSizeListings)
+}
+
+/// Starts the worker. Call once from setup.
 pub(crate) fn start(app: AppHandle) {
-    register_listing_lifecycle(Arc::new(IndexSizeListings));
     let (tx, rx) = mpsc::unbounded_channel();
     if BATCHES.set(tx).is_err() {
         return;

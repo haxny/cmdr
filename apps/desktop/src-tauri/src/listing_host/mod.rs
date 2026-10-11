@@ -8,6 +8,9 @@
 //! - events: [`events::TauriListingEvents`], the only place the engine's facts
 //!   become wire events and the bookkeeping around them
 //! - runtime: the app's own tokio handle, so there's one thread pool
+//! - overlays: the git portal's `.git/` rows (`file_system::git::overlay`)
+//! - observers, in this order: git arming (`file_system::git::arming`), then
+//!   index sizes (`listing_index_sizes`)
 //!
 //! The other direction lives here too: [`backends::AppListings`] answers a
 //! storage backend's `cmdr_fs` `ListingHost` questions from the engine.
@@ -21,7 +24,8 @@ use tauri::AppHandle;
 
 use crate::file_system::listing::host::{self, InstallError, ListingSeams};
 
-/// Wire the listing engine to this app: its events and its runtime.
+/// Wire the listing engine to this app: its events, its runtime, its overlays,
+/// and its observers.
 ///
 /// Call first thing in `setup()`, before anything can open a listing. An
 /// adapter resolves the subsystem it answers from per call, never here: this
@@ -32,7 +36,16 @@ pub fn install(app: &AppHandle) {
         // The app's own runtime, so a listing's background work shares one
         // thread pool with everything else, and a watcher's OS thread (no
         // reactor) can still start a refresh.
-        .runtime(tauri::async_runtime::handle().inner().clone());
+        .runtime(tauri::async_runtime::handle().inner().clone())
+        // The portal's `.git/` landing rows. Everything below `.git/` is a
+        // routed volume instead; this seam is what keeps the six rows out of
+        // every walker.
+        .overlay(crate::file_system::git::overlay::overlay())
+        // Keeps a repo's `.git/*` watcher armed for as long as a pane shows one
+        // of its virtual listings, so a lone `branches/` pane stays live.
+        .observer(crate::file_system::git::arming::observer())
+        // Routes the index's folder-size updates to the listings they touch.
+        .observer(crate::listing_index_sizes::observer());
     match host::install(seams) {
         Ok(()) => {}
         Err(InstallError::AlreadyInstalled) => {

@@ -7,7 +7,7 @@ when its size, counts, or hourglass actually move.
 
 ## Module map
 
-- `mod.rs`: the open-listing set (a `ListingLifecycle` observer), the worker (cooldown, hidden hold), the event.
+- `mod.rs`: the open-listing set (a `ListingObserver`), the worker (cooldown, hidden hold), the event.
 - `touched.rs`: the pure rule for what one batch touched in one listing (nothing, some rows, or all of them).
 - `refresh.rs`: `RowSizes`, the pure "does this reading change what the row shows" comparison.
 - `schedule.rs`: one listing's timing: batches wait out the 2 s cooldown, hourglass rechecks run on the dot.

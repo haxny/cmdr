@@ -1,7 +1,7 @@
 //! What the git contributor claims, and what the watcher's refresh reaches.
 //!
 //! The seam's own rules (registration, the shadowing merge) live in
-//! `src/listing_overlays/tests.rs`; the walker-exposure consequences in
+//! `file_system/listing/host/overlays_test.rs`; the walker-exposure consequences in
 //! `walker_exposure_tests.rs`.
 
 #![cfg(test)]
@@ -11,8 +11,9 @@ use std::sync::Arc;
 
 use super::overlay::GitPortalOverlay;
 use crate::file_system::listing::caching_test_support::{TestListing, WatchCoverageVolume};
+use crate::file_system::listing::host::ListingOverlay;
+use crate::file_system::listing::host::overlays::decorate;
 use crate::file_system::volume::{LocalPosixVolume, Volume, WatchCoverage};
-use crate::listing_overlays::{ListingOverlay, decorate};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 
 fn repo(name: &str) -> PathBuf {

@@ -10,8 +10,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::file_system::listing::host::ListingOverlay;
 use crate::file_system::volume::Volume;
-use crate::listing_overlays::ListingOverlay;
 use cmdr_fs::entry::FileEntry;
 
 use super::wiring;
@@ -19,10 +19,15 @@ use super::wiring;
 /// Contributes the six virtual category rows to a repo's `.git/` listing.
 pub struct GitPortalOverlay;
 
-/// Wires the portal's `.git/` rows into the listing pipeline. Idempotent, so a
-/// test can call it beside the app's startup call.
+/// The portal's `.git/` rows, for the listing host to install.
+pub fn overlay() -> Arc<dyn ListingOverlay> {
+    Arc::new(GitPortalOverlay)
+}
+
+/// Adds the overlay to the test binary's shared listing slot. Idempotent.
+#[cfg(test)]
 pub fn register() {
-    crate::listing_overlays::register_listing_overlay(Arc::new(GitPortalOverlay));
+    crate::file_system::listing::host::testing::register_overlay(overlay());
 }
 
 impl ListingOverlay for GitPortalOverlay {
