@@ -13,17 +13,26 @@ vi.mock('$lib/ipc/bindings', () => ({
     sendErrorReport: vi.fn(),
     amendErrorReport: vi.fn(),
     saveErrorReportToDisk: vi.fn(),
+    sendCrashLogReport: vi.fn(),
+  },
+  events: {
+    openErrorReport: { emit: vi.fn(() => Promise.resolve()), listen: vi.fn(() => Promise.resolve(() => {})) },
+    errorReportAutoSent: { listen: vi.fn(() => Promise.resolve(() => {})) },
   },
 }))
 
 import { invoke } from '@tauri-apps/api/core'
-import { commands } from '$lib/ipc/bindings'
+import { commands, events } from '$lib/ipc/bindings'
 import {
   amendErrorReport,
   getAutoSentReportPreview,
+  onErrorReportAutoSent,
+  onErrorReportRequested,
+  requestErrorReportInMainWindow,
   prepareErrorReportPreview,
   sendErrorReport,
   saveErrorReportToDisk,
+  sendCrashLogReport,
 } from './error-reporter'
 
 describe('error-reporter wrappers', () => {
@@ -114,5 +123,48 @@ describe('error-reporter wrappers', () => {
       await saveErrorReportToDisk('a note', undefined, 'ERR-AB23X')
       expect(commands.saveErrorReportToDisk).toHaveBeenCalledWith('a note', null, 'ERR-AB23X')
     })
+  })
+})
+
+describe('error-reporter events', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('asks the main window to open the report with the request as sent', async () => {
+    await requestErrorReportInMainWindow({ from: 'queueFailure', initialNote: 'Not enough space' })
+    expect(events.openErrorReport.emit).toHaveBeenCalledWith({ from: 'queueFailure', initialNote: 'Not enough space' })
+  })
+
+  it('hands the main window the request’s payload, not the event envelope', async () => {
+    const handler = vi.fn()
+    await onErrorReportRequested(handler)
+    const listener = vi.mocked(events.openErrorReport.listen).mock.calls[0][0]
+    listener({ event: 'open-error-report', id: 1, payload: { from: 'updateFailure', initialNote: 'x' } })
+    expect(handler).toHaveBeenCalledWith({ from: 'updateFailure', initialNote: 'x' })
+  })
+
+  it('hands the auto-sent listener the report id payload', async () => {
+    const handler = vi.fn()
+    await onErrorReportAutoSent(handler)
+    const listener = vi.mocked(events.errorReportAutoSent.listen).mock.calls[0][0]
+    listener({ event: 'error-report-auto-sent', id: 1, payload: { id: 'ERR-AUTO9' } })
+    expect(handler).toHaveBeenCalledWith({ id: 'ERR-AUTO9' })
+  })
+})
+
+describe('sendCrashLogReport', () => {
+  it('returns the id of a crash-log report that landed, scoped to the crash', async () => {
+    vi.mocked(commands.sendCrashLogReport).mockResolvedValueOnce({ status: 'ok', data: { id: 'ERR-CRSH1' } })
+    await expect(sendCrashLogReport('C-12AB', '2026-10-11T20:00:00Z')).resolves.toEqual({ id: 'ERR-CRSH1' })
+    expect(commands.sendCrashLogReport).toHaveBeenCalledWith('C-12AB', '2026-10-11T20:00:00Z')
+  })
+
+  it('throws the typed reason when the send doesn’t land', async () => {
+    vi.mocked(commands.sendCrashLogReport).mockResolvedValueOnce({
+      status: 'error',
+      error: { type: 'bundleUnavailable', detail: 'no logs' },
+    })
+    await expect(sendCrashLogReport('C-12AB', '2026-10-11T20:00:00Z')).rejects.toBeInstanceOf(Error)
   })
 })
