@@ -335,12 +335,16 @@ async fn a_cancel_reaches_a_scan_parked_on_the_pause_gate() {
 /// An operation event sink that pauses the operation the first time it reports
 /// scanning progress, and counts how far the scan got.
 ///
+/// It pauses the operation the EVENT names, never an id handed over after
+/// `copy_files_start` returns: the scan starts on its own thread before that
+/// return, so a first tick that beats the handoff would spend the one-shot on a
+/// missing id and let the scan run to the end (seen on the Linux lane).
+///
 /// The distinction it exists to draw: a paused operation that finishes its scan
 /// and then parks at the driver's between-files gate looks identical from the
 /// outside to one whose scan parked. The scanning-phase counts are what tell
 /// them apart.
 struct PauseOnFirstScanTick {
-    operation_id: std::sync::Mutex<Option<String>>,
     fired: AtomicBool,
     scanned: std::sync::Mutex<Vec<usize>>,
     complete: AtomicBool,
@@ -349,7 +353,6 @@ struct PauseOnFirstScanTick {
 impl PauseOnFirstScanTick {
     fn new() -> Self {
         Self {
-            operation_id: std::sync::Mutex::new(None),
             fired: AtomicBool::new(false),
             scanned: std::sync::Mutex::new(Vec::new()),
             complete: AtomicBool::new(false),
@@ -367,12 +370,8 @@ impl OperationEventSink for PauseOnFirstScanTick {
             return;
         }
         self.scanned.lock_ignore_poison().push(event.files_done);
-        if self.fired.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        let id = self.operation_id.lock_ignore_poison().clone();
-        if let Some(id) = id {
-            assert_eq!(pause_operation(&id), PauseOutcome::Applied);
+        if !self.fired.swap(true, Ordering::SeqCst) {
+            assert_eq!(pause_operation(&event.operation_id), PauseOutcome::Applied);
         }
     }
     fn emit_complete(&self, _event: super::types::WriteCompleteEvent) {
@@ -422,7 +421,6 @@ async fn an_operations_own_scan_parks_too() {
     .await
     .expect("copy starts");
     let op_id = start.operation_id.clone();
-    *sink.operation_id.lock_ignore_poison() = Some(op_id.clone());
 
     // The walk stops climbing: two reads of the same count with a beat between
     // them, which a walk over 400 files would blow past in microseconds.
