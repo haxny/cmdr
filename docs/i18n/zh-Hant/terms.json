@@ -884,7 +884,7 @@
     "accept": ["跟隨系統"],
     "chosen": "預設",
     "confidence": "confirmed",
-    "forms": "system default (an option) → 跟隨系統; a visible preset → 預設組合",
+    "forms": "system default (an option) → 跟隨系統; a visible preset → 預設組",
     "sources": "AP-TW = AP-HK (27/27)"
   },
   "delete": {
@@ -3947,20 +3947,24 @@
     "sources": "MS terminology (diacritic, diacritical mark → 變音符號); macOS zh-TW has no attestation"
   },
   "preset": {
-    "chosen": "預設組合",
+    "chosen": "預設組",
     "confidence": "high",
-    "forms": "Preset (menu label) → 預設組合; Load a preset → 載入預設組合; Preset name → 預設組合名稱; Save/Delete preset → 儲存/刪除預設組合; Multi-rename's built-in presets are named by what they do (沒有變更, 移除變音符號)",
+    "forms": "Presets (title) → 預設組; Load a preset → 載入預設組; Preset name → 預設組名稱; Save the current settings as a preset → 將目前設定儲存為預設組 (macOS print dialog frame); Multi-rename's built-in presets are named by what they do (沒有變更, 移除變音符號)",
     "avoid": [
       {
         "form": "預設",
-        "why": "bare 預設 is this catalog's default (style.md § Notes: if a visible preset appears, write 預設組合)"
+        "why": "bare 預設 is this catalog's default (style.md § Notes: a visible preset is 預設組)"
+      },
+      {
+        "form": "預設組合",
+        "why": "no macOS string uses it (0 of 96 live preset strings, against 73 for 預設組)"
       },
       {
         "form": "預先配置",
         "why": "DC zh-TW's Presets; 配置 is Simplified-flavoured (Traditional says 設定)"
       }
     ],
-    "sources": "style.md § Notes and decisions (預設組合 reserved for preset); MS terminology preset → 預設 (rejected, collides with default); DC zh-TW Presets → 預先配置 (rejected); TC zh-TW calls them 設定 (1510 載入/儲存 設定)"
+    "sources": "macOS 27.0.1 live loctable sweep, zh_TW and zh_HK alike, 2026-10-11 (print dialog 預設組 / 沒有預設組 / 儲存目前設定為預設組⋯ / 編輯預設組列表⋯; AVFoundation, hearing aids, Siri voices, iWork style presets the same); MS terminology preset → 預設 (rejected, collides with default); DC zh-TW Presets → 預先配置 (rejected); TC zh-TW calls them 設定 (1510 載入/儲存 設定)"
   },
   "problem": {
     "chosen": "問題",
