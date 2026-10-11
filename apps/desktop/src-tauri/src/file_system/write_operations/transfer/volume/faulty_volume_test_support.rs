@@ -377,6 +377,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         scan_for_copy_batch,
         scan_for_conflicts,
         apply_metadata,
+        metadata_caps,
         supports_unknown_length_writes, write_is_single_shot, publishes_writes_whole,
     );
 

@@ -384,6 +384,7 @@ impl Volume for StopAfterFirstWrite {
         write_is_single_shot,
         create_directory_errors_on_existing_dir,
         apply_metadata,
+        metadata_caps,
     );
 
     fn as_any(&self) -> &dyn std::any::Any {
