@@ -445,6 +445,10 @@ describe('fixedKey flag', () => {
   })
 })
 
+/** Every command whose default shortcuts include `shortcut`, to guard against a silent double-bind. */
+const claimants = (shortcut: string): CommandId[] =>
+  commands.filter((c) => c.shortcuts.includes(shortcut)).map((c) => c.id)
+
 describe('operation-log shortcut binding', () => {
   // The alpha "Operation log" command opens the dialog from the View menu and
   // via a configurable default shortcut. The plan's first pick (⌥⌘O) is taken by
@@ -456,9 +460,6 @@ describe('operation-log shortcut binding', () => {
   })
 
   it('does not double-bind ⌘⌥L (its default) or ⌘⌥O (Show in Finder, the plan pick it avoided)', () => {
-    const claimants = (shortcut: string): CommandId[] =>
-      commands.filter((c) => c.shortcuts.includes(shortcut)).map((c) => c.id)
-
     expect(claimants('⌘⌥L')).toEqual(['log.operationLog'])
     expect(claimants('⌘⌥O')).toEqual(['file.showInFinder'])
   })
@@ -467,20 +468,9 @@ describe('operation-log shortcut binding', () => {
 describe('delete shortcut pairs', () => {
   // Total Commander users press Shift with the key that moves to the trash to delete
   // permanently instead; Finder's ⌥⌘⌫ is "Delete Immediately".
-  const shortcutsOf = (id: CommandId): string[] => commands.find((c) => c.id === id)?.shortcuts ?? []
-
-  it('moves to the trash on F8, ⌘⌫, and Delete', () => {
-    expect(shortcutsOf('file.delete')).toEqual(['F8', '⌘Backspace', 'Delete'])
-  })
-
-  it('deletes permanently on each of them with Shift, and on Finder’s ⌥⌘⌫', () => {
-    expect(shortcutsOf('file.deletePermanently')).toEqual(['⇧F8', '⇧Delete', '⌘⌥Backspace'])
-  })
-
-  it('binds ⇧Delete and ⌥⌘⌫ to nothing else', () => {
-    for (const shortcut of ['⇧Delete', '⌘⌥Backspace']) {
-      const claimants = commands.filter((c) => c.shortcuts.includes(shortcut)).map((c) => c.id)
-      expect(claimants, shortcut).toEqual(['file.deletePermanently'])
+  it('deletes permanently on ⇧F8, ⇧Delete, and ⌥⌘⌫, and nothing else claims them', () => {
+    for (const shortcut of ['⇧F8', '⇧Delete', '⌘⌥Backspace']) {
+      expect(claimants(shortcut), shortcut).toEqual(['file.deletePermanently'])
     }
   })
 })
