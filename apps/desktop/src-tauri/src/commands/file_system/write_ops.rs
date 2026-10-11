@@ -20,7 +20,8 @@ use crate::file_system::{
     dismiss_failed_operation as ops_dismiss_failed_operation, list_operations as ops_list_operations,
     move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
     pause_all as ops_pause_all, pause_operation as ops_pause_operation, resume_all as ops_resume_all,
-    resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation, trash_files_start as ops_trash_files_start,
+    resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
+    trash_files_start as ops_trash_files_start,
 };
 use std::path::PathBuf;
 use std::sync::Arc;

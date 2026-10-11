@@ -228,6 +228,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'destination',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()

@@ -688,6 +688,7 @@ describe('QueueRow reporting', () => {
         waitingOn: 'destination',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       },
     }
     render({ row: buildRow('running', 'copy', progress) })
@@ -700,5 +701,31 @@ describe('QueueRow reporting', () => {
     })
     const { since } = openErrorReportFor.mock.calls[0][0] as { since: number }
     expect(Math.round((Date.now() - since) / 1000)).toBe(40)
+  })
+
+  // #398 × #399: a transfer waiting for its volume to come back says so by name,
+  // which is the explanation a slow report would ask for, so it offers none.
+  it('offers no slow report while the transfer waits for its volume to come back', () => {
+    const progress: WriteProgressEvent = {
+      operationId: 'op-1',
+      operationType: 'copy',
+      phase: 'copying',
+      currentFile: 'report.pdf',
+      filesDone: 1,
+      filesTotal: 10,
+      bytesDone: 25,
+      bytesTotal: 100,
+      activity: {
+        inFlight: 1,
+        stillForSeconds: 120,
+        waitingOn: 'reconnecting',
+        openingSource: false,
+        sourceInboundBytesPerSecond: null,
+        reconnectingVolume: 'Naspolya',
+      },
+    }
+    render({ row: buildRow('running', 'copy', progress) })
+    expect(target.textContent).toContain('Waiting for Naspolya to come back…')
+    expect(reportControl('Taking long? Send a report')).toBeNull()
   })
 })

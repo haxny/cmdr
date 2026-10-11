@@ -486,8 +486,13 @@ async fn merge_level<'a>(
                         created.record_dir(dest_path.to_path_buf());
                         // Made here, so it is the extract's to quarantine, now rather than
                         // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                        super::extract_quarantine::quarantine_created_folder(state, source_volume, dest_volume, dest_path)
-                            .await;
+                        super::extract_quarantine::quarantine_created_folder(
+                            state,
+                            source_volume,
+                            dest_volume,
+                            dest_path,
+                        )
+                        .await;
                         made_here = true;
                         false
                     }
