@@ -702,6 +702,25 @@ close-ordering pin, updated with the reason).
 `rg -n 'listing_overlays|listing_lifecycle' apps/desktop/src-tauri/src` finds nothing; lanes as M2a plus
 `desktop-svelte-e2e-playwright` (watch arming moved, and E2E is where a pane that stops updating shows).
 
+Executor notes:
+
+- The slot's overlay and observer lists sit behind an `RwLock` only so tests can still add to the one shared slot
+  (`host::testing::register_overlay` / `register_observer`; `git::overlay::register` and `git::arming::register` survive
+  as `#[cfg(test)]` helpers over them). The test fallback is app-side, `listing_host::test_seams()` (detached plus the
+  watch observer), reached from `host/testing.rs`; M3a's `listings()` fallback replaces it.
+- `IndexSizeListings` still reads volume id and spelling back from the cache on open, using `opened.id`: the read is
+  also its liveness check (a close racing the open leaves nothing in `OPEN`), so switching to `OpenedListing`'s facts is
+  a behavior change. M3a must keep a liveness check when that reach goes (it'd hit the wrong engine in a test).
+- `decorate`'s blocking gather now spawns on `host::runtime()` (it was ambient `tokio::task::spawn_blocking`).
+- Behavior change 2's red cell needed a probe, since an observer after the watcher sees the same thing either way:
+  `stop_watching` calls `seam_test_support::note_disarm` (`cfg(test)`), recording whether the cache still held the
+  listing at the disarm. `Heard::Closed` also gained `watching`.
+- `desktop-rust-module-cycles`: `cmdr::file_system` is gone (entry dropped), but the remaining
+  `name_filter → operations` tangle now reports one level down as `cmdr::file_system::listing` [4] (`cached_listing`,
+  `name_filter`, `operations`, `visible_rows`), un-allowlisted (warn). M2c/M3a should cut `name_filter → operations`
+  (`ListingLookupError`, `check_expected`).
+- The DONE `tauri` grep matches only prose in `listing/DETAILS.md`; with `--type rust` it finds nothing.
+
 ### M2c: The rest of the app reaches go through the seams
 
 **Scope.** `ListingVolumes` (every `get_volume_manager()` in `listing/`, mount adoption plus `why_unregistered` as one
