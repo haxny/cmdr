@@ -316,12 +316,19 @@
         return () => { clearTimeout(timer); }
     })
 
-    // File-conflict policy options for `RadioGroup`. The label pluralizes on the
-    // live conflict count ("Skip" vs "Skip all"), so the items rebuild reactively.
+    // File-conflict policy options for `RadioGroup`. With known clashes the label
+    // pluralizes on their count ("Skip" vs "Skip all"). With merges alone nobody knows
+    // how many files inside clash (the check is top-level only), so the labels claim no
+    // count: "Skip all" of zero read as skipping the folders.
     const conflictPolicyItems = $derived<RadioItem[]>(
         conflictPolicies.map((policy) => ({
             value: policy.value,
-            label: tString(policy.labelKey, { count: totalConflictCount }),
+            label:
+                totalConflictCount > 0
+                    ? tString(policy.labelKey, { count: totalConflictCount })
+                    : policy.value === 'stop'
+                      ? tString('fileOperations.transferDialog.policyAskEach')
+                      : tString(policy.labelKey, { count: 1 }),
         })),
     )
 
@@ -965,9 +972,10 @@
                 <span>{tString('fileOperations.transferDialog.conflictsUnknown')}</span>
             </p>
         {:else if totalConflictCount > 0 || mergeFolderCount > 0}
-            <!-- A warning-toned card, not a full-bleed band: it's one more block in the
-             dialog's column, so it obeys the same inset as the fields above it. -->
-            <SectionCard tone="warning">
+            <!-- A card, not a full-bleed band: it's one more block in the dialog's column,
+             so it obeys the same inset as the fields above it. Warning-toned only when a
+             known clash can overwrite something; merges alone are a neutral heads-up. -->
+            <SectionCard tone={totalConflictCount > 0 ? 'warning' : 'neutral'}>
                 {#if showNamedFolderHint && namedTarget}
                     <p class="named-folder-hint">
                         {tString('fileOperations.transferDialog.namedFolderHint', {
@@ -995,6 +1003,12 @@
                             countText: String(totalConflictCount),
                             count: totalConflictCount,
                         })}
+                    </p>
+                {:else}
+                    <!-- Merges alone: say the radios are about files INSIDE the merged
+                     folders, or "Skip" reads as skipping the folders. -->
+                    <p class="merge-question">
+                        {t('fileOperations.transferDialog.mergeQuestion', { count: mergeFolderCount })}
                     </p>
                 {/if}
                 <!-- The file policy radios show whenever there's a file conflict OR
@@ -1242,7 +1256,8 @@
     /* The question the card asks. Plain text color: the card's warning tint already
        carries the "pay attention" signal, and coloring the sentence too made it read
        as an error rather than a choice to make. */
-    .conflicts-summary {
+    .conflicts-summary,
+    .merge-question {
         margin: 0 0 var(--spacing-md);
         font-size: var(--font-size-md);
         color: var(--color-text-primary);

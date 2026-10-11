@@ -356,6 +356,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, other {tệp đã tồn tại. Bạn muốn làm gì với chúng?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -379,6 +383,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, =1 {Hỏi sau} other {Hỏi cho từng cái}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Một số xung đột lẫn lộn một tệp và một thư mục trùng tên. Việc ghi đè sẽ thay thế các mục khác loại, bao gồm toàn bộ nội dung của một thư mục.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

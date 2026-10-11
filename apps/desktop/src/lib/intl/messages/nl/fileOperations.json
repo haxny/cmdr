@@ -357,6 +357,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {bestand bestaat al. Wat wil je ermee doen?} other {bestanden bestaan al. Wat wil je ermee doen?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -380,6 +384,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Vraag later} other {Vraag voor elk}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Bij sommige conflicten botsen een bestand en een map met dezelfde naam. Overschrijven vervangt onderdelen van een ander type, inclusief de volledige inhoud van een map.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

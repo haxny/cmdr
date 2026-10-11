@@ -355,6 +355,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} 个{count, plural, other {文件已存在。你想怎么处理？}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -378,6 +382,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, other {逐个询问}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "有些冲突涉及同名的文件和文件夹。覆盖会替换掉类型不同的项目，包括整个文件夹的内容。",
   "@fileOperations.transferDialog.typeMismatchWarning": {

@@ -356,6 +356,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {archivo ya existe. ¿Qué quieres hacer con él?} many {archivos ya existen. ¿Qué quieres hacer con ellos?} other {archivos ya existen. ¿Qué quieres hacer con ellos?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -379,6 +383,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Preguntar más tarde} many {Preguntar en cada caso} other {Preguntar en cada caso}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Algunos conflictos mezclan un archivo y una carpeta con el mismo nombre. Sobrescribir reemplazará elementos de distinto tipo, incluido todo el contenido de una carpeta.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

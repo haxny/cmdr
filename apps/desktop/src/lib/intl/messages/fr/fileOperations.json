@@ -358,6 +358,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {fichier existe déjà. Que voulez-vous en faire ?} many {fichiers existent déjà. Que voulez-vous en faire ?} other {fichiers existent déjà. Que voulez-vous en faire ?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -381,6 +385,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Demander plus tard} many {Demander pour chacun} other {Demander pour chacun}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Certains conflits associent un fichier et un dossier portant le même nom. L’écrasement remplacera des éléments d’un type différent, y compris tout le contenu d’un dossier.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

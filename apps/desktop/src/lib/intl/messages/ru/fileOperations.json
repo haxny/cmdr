@@ -356,6 +356,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {файл уже существует. Что с ним сделать?} few {файла уже существуют. Что с ними сделать?} many {файлов уже существуют. Что с ними сделать?} other {файла уже существуют. Что с ними сделать?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -379,6 +383,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, =1 {Спросить позже} one {Спрашивать каждый раз} few {Спрашивать каждый раз} many {Спрашивать каждый раз} other {Спрашивать каждый раз}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "В некоторых конфликтах файл и папка имеют одинаковое имя. Замена затронет объекты другого типа, включая все содержимое папки.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

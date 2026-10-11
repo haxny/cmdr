@@ -357,6 +357,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {arquivo já existe. O que você quer fazer com ele?} many {arquivos já existem. O que você quer fazer com eles?} other {arquivos já existem. O que você quer fazer com eles?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -380,6 +384,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Perguntar depois} many {Perguntar para cada} other {Perguntar para cada}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Alguns conflitos misturam um arquivo e uma pasta com o mesmo nome. Substituir vai trocar itens de tipos diferentes, incluindo todo o conteúdo de uma pasta.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

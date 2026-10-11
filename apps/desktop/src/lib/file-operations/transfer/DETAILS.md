@@ -199,13 +199,17 @@ already supplied a name. Backend landing and safety:
      backend-resolved `sourceIsDirectory` / `destIsDirectory` flags (the BE resolves real per-item types + sizes from
      the source volume with one `get_metadata` per top-level path, 16 at a time and never a subtree walk, when the check
      passes `sourceVolumeId` + `sourcePaths`):
-     - **dir + dir** → a silent merge, NOT a conflict. Surfaced as an informational line ("N folders will merge with
-       existing folders"); never counted in `totalConflictCount`; never forwarded as a bulk-skip name (a merging folder
-       must not be skipped wholesale).
+     - **dir + dir** → a silent merge, NOT a conflict. Surfaced as an informational line ("N folders already exist
+       there, so their contents will merge."); never counted in `totalConflictCount`; never forwarded as a bulk-skip
+       name (a merging folder must not be skipped wholesale).
      - **file + file / cross-type (file↔folder)** → a real conflict. Counts toward `totalConflictCount` and feeds the
        `preKnownConflicts` bulk-skip list.
      - The file-policy radios show when there's a real conflict OR a folder merge — a merge can surface file clashes
        mid-operation the upfront (top-level-only) check can't see, and the radios pre-answer them.
+     - **Merges alone get a neutral card and count-free labels.** The card is warning-toned only when
+       `totalConflictCount > 0`. Without a known clash, a `mergeQuestion` line ("If a file inside them already exists:")
+       ties the radios to the files INSIDE the merged folders, and the labels drop "all" ("Skip", "Ask for each"): with
+       a count of zero, "Skip all" read as skipping the folders themselves.
      - **Top-level is where the check stops, deliberately.** Making it recursive means walking the whole destination
        tree before every copy, and the single listing it does today already runs for minutes on a big remote directory.
        Deep clashes are meant to surface mid-operation and get answered there, by the progress dialog or by the main

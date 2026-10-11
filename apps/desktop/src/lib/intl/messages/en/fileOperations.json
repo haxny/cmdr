@@ -575,9 +575,9 @@
     "screenshot": "conflict-dialog.png"
   },
 
-  "fileOperations.transferDialog.mergeInfoSingle": "1 folder will merge with an existing folder",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 folder already exists there, so its contents will merge.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "description": "Informational line in the transfer dialog when exactly one same-named folder exists at the destination and will be merged (not replaced). Neutral, not a warning.",
+    "description": "Informational line in the transfer dialog when exactly one of the folders being copied or moved already exists at the destination. Its contents merge into the existing folder; the folder itself is never replaced. 'there' is the destination folder. Neutral, not a warning.",
     "screenshot": "transfer-confirmation-copy-single.png"
   },
 
@@ -590,14 +590,22 @@
     }
   },
 
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {folder} other {folders}} will merge with existing folders",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {folder already exists there, so its contents} other {folders already exist there, so their contents}} will merge.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "description": "Informational line in the transfer dialog when several same-named folders exist at the destination and will be merged. Neutral, not a warning.",
+    "description": "Informational line in the transfer dialog when several of the folders being copied or moved already exist at the destination. Their contents merge into the existing folders; the folders themselves are never replaced. 'there' is the destination folder. Neutral, not a warning.",
     "placeholders": {
       "count": "the same number of folders (drives the singular/plural form; always 2 or more)",
       "countText": "how many folders will merge, formatted for display (e.g. 1,234)"
     },
     "screenshot": "transfer-confirmation-copy.png"
+  },
+
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "description": "Lead-in above the file-conflict options in the transfer dialog, shown when some folders being copied or moved already exist at the destination but no individual file is known to clash yet. 'it' or 'them' is the existing folder or folders from the line above. The options below it (Skip, Overwrite, and so on) answer this question, so it makes clear they're about FILES inside those folders, never the folders themselves. Ends with a colon because the options complete the sentence.",
+    "placeholders": {
+      "count": "how many folders already exist at the destination (drives 'it' vs 'them')"
+    }
   },
 
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {file already exists. What do you want to do with it?} other {files already exist. What do you want to do with them?}}",
@@ -621,7 +629,7 @@
 
   "fileOperations.transferDialog.policyOverwrite": "{count, plural, one {Overwrite} other {Overwrite all}}",
   "@fileOperations.transferDialog.policyOverwrite": {
-    "description": "Radio option: replace clashing files with the ones being transferred. 'Overwrite' for one clash, 'Overwrite all' for several. Short control label.",
+    "description": "Radio option: replace clashing files with the ones being transferred. 'Overwrite' for one clash, 'Overwrite all' for several. The single form also shows when folders will merge and nobody knows yet how many files inside them clash. Short control label.",
     "placeholders": {
       "count": "number of clashing files (selects the single vs. 'all' wording)"
     },
@@ -630,7 +638,7 @@
 
   "fileOperations.transferDialog.policyOverwriteSmaller": "{count, plural, one {Overwrite if smaller} other {Overwrite all smaller}}",
   "@fileOperations.transferDialog.policyOverwriteSmaller": {
-    "description": "Radio option: replace a clashing file only when the existing one is smaller. 'Overwrite if smaller' for one clash, 'Overwrite all smaller' for several. Control label.",
+    "description": "Radio option: replace a clashing file only when the existing one is smaller. 'Overwrite if smaller' for one clash, 'Overwrite all smaller' for several. The single form also shows when folders will merge and nobody knows yet how many files inside them clash. Control label.",
     "placeholders": {
       "count": "number of clashing files (selects the single vs. 'all' wording)"
     },
@@ -639,7 +647,7 @@
 
   "fileOperations.transferDialog.policyOverwriteOlder": "{count, plural, one {Overwrite if older} other {Overwrite all older}}",
   "@fileOperations.transferDialog.policyOverwriteOlder": {
-    "description": "Radio option: replace a clashing file only when the existing one is older. 'Overwrite if older' for one clash, 'Overwrite all older' for several. Control label.",
+    "description": "Radio option: replace a clashing file only when the existing one is older. 'Overwrite if older' for one clash, 'Overwrite all older' for several. The single form also shows when folders will merge and nobody knows yet how many files inside them clash. Control label.",
     "placeholders": {
       "count": "number of clashing files (selects the single vs. 'all' wording)"
     },
@@ -653,6 +661,11 @@
       "count": "number of clashing files (selects the single vs. 'each' wording)"
     },
     "screenshot": "conflict-dialog.png"
+  },
+
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "description": "Radio option: decide per clashing file during the transfer instead of choosing now. Shown when folders will merge but nobody knows yet how many files inside them clash, maybe none, maybe many. Short control label."
   },
 
   "fileOperations.transferDialog.typeMismatchWarning": "Some clashes mix a file and a folder by the same name. Overwriting will replace items of a different type, including the entire contents of a folder.",

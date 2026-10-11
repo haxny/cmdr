@@ -357,6 +357,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {fil finns redan. Vad vill du göra med den?} other {filer finns redan. Vad vill du göra med dem?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -380,6 +384,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Fråga senare} other {Fråga för varje}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Vissa konflikter blandar en fil och en mapp med samma namn. Att skriva över ersätter objekt av en annan typ, inklusive hela innehållet i en mapp.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

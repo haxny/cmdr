@@ -130,9 +130,11 @@ describe('transfer dialog chrome (en)', () => {
   })
 
   it('resolves merge info and the conflict summary with agreement', () => {
-    expect(tString('fileOperations.transferDialog.mergeInfoSingle')).toBe('1 folder will merge with an existing folder')
+    expect(tString('fileOperations.transferDialog.mergeInfoSingle')).toBe(
+      '1 folder already exists there, so its contents will merge.',
+    )
     expect(t('fileOperations.transferDialog.mergeInfoMany', { countText: '1,234', count: 1234 })).toBe(
-      '1,234 folders will merge with existing folders',
+      '1,234 folders already exist there, so their contents will merge.',
     )
     expect(t('fileOperations.transferDialog.conflictsSummary', { countText: '1', count: 1 })).toBe(
       '1 file already exists. What do you want to do with it?',
@@ -153,6 +155,9 @@ describe('transfer dialog chrome (en)', () => {
     expect(t('fileOperations.transferDialog.policyOverwriteOlder', { count: 2 })).toBe('Overwrite all older')
     expect(t('fileOperations.transferDialog.policyStop', { count: 1 })).toBe('Ask later')
     expect(t('fileOperations.transferDialog.policyStop', { count: 2 })).toBe('Ask for each')
+    expect(tString('fileOperations.transferDialog.policyAskEach')).toBe('Ask for each')
+    expect(t('fileOperations.transferDialog.mergeQuestion', { count: 1 })).toBe('If a file inside it already exists:')
+    expect(t('fileOperations.transferDialog.mergeQuestion', { count: 3 })).toBe('If a file inside them already exists:')
   })
 
   it('resolves the cross-type overwrite warning and the path-error sentences', () => {

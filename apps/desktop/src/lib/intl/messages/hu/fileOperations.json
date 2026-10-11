@@ -357,6 +357,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {fájl már létezik. Mit szeretnél tenni vele?} other {fájl már létezik. Mit szeretnél tenni velük?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -380,6 +384,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Kérdezz később} other {Kérdezz mindegyiknél}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Néhány ütközésben egy fájl és egy azonos nevű mappa keveredik. A felülírás eltérő típusú elemeket cserél le, beleértve egy mappa teljes tartalmát is.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

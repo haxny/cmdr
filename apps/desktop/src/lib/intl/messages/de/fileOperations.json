@@ -357,6 +357,10 @@
   "@fileOperations.transferDialog.mergeInfoMany": {
     "sourceHash": "73c4dfd"
   },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {Datei existiert bereits. Was möchtest du damit machen?} other {Dateien existieren bereits. Was möchtest du damit machen?}}",
   "@fileOperations.transferDialog.conflictsSummary": {
     "sourceHash": "f93d158"
@@ -380,6 +384,10 @@
   "fileOperations.transferDialog.policyStop": "{count, plural, one {Später fragen} other {Bei jeder fragen}}",
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
   },
   "fileOperations.transferDialog.typeMismatchWarning": "Bei manchen Konflikten treffen eine Datei und ein Ordner mit demselben Namen aufeinander. Überschreiben ersetzt Objekte eines anderen Typs, einschließlich des gesamten Inhalts eines Ordners.",
   "@fileOperations.transferDialog.typeMismatchWarning": {

@@ -121,10 +121,32 @@ describe('TransferDialog folder-merge classification', () => {
     const target = mountDialog()
     await flushMicrotasks()
 
-    expect(target.textContent).toContain('1 folder will merge with an existing folder')
+    expect(target.textContent).toContain('1 folder already exists there, so its contents will merge.')
     expect(target.textContent).not.toContain('file already exists')
-    // Radios still show: a merge can surface file clashes mid-op.
+    // Radios still show: a merge can surface file clashes mid-op. They ask about the
+    // files INSIDE it, since a bare "Skip all" reads as skipping the folders.
     expect(radioGroup(target), 'radios show for a merge').not.toBeNull()
+    expect(target.querySelector('.merge-question')?.textContent.trim()).toBe('If a file inside it already exists:')
+  })
+
+  it('keeps a merge-only card neutral, with labels that claim no clash count', async () => {
+    scanVolumeForConflictsMock.mockResolvedValue([
+      makeConflict({ sourcePath: 'photos', sourceIsDirectory: true, destIsDirectory: true }),
+      makeConflict({ sourcePath: 'music', sourceIsDirectory: true, destIsDirectory: true }),
+    ])
+
+    const target = mountDialog()
+    await flushMicrotasks()
+
+    // Nothing known gets overwritten, so no warning tint.
+    expect(conflictCardTone(target)).toBe('neutral')
+    expect(target.querySelector('.merge-question')?.textContent.trim()).toBe('If a file inside them already exists:')
+    // How many files clash inside is unknown, so "Skip all" would claim a count we don't have.
+    const labels = radioGroup(target)?.textContent ?? ''
+    expect(labels).toContain('Skip')
+    expect(labels).not.toContain('Skip all')
+    expect(labels).not.toContain('Overwrite all')
+    expect(labels).toContain('Ask for each')
   })
 
   it('pluralizes the merge info line for multiple dir-dir collisions', async () => {
@@ -136,7 +158,7 @@ describe('TransferDialog folder-merge classification', () => {
     const target = mountDialog()
     await flushMicrotasks()
 
-    expect(target.textContent).toContain('2 folders will merge with existing folders')
+    expect(target.textContent).toContain('2 folders already exist there, so their contents will merge.')
   })
 
   it('counts only real conflicts toward the file-exists summary, excluding merges', async () => {
@@ -155,9 +177,16 @@ describe('TransferDialog folder-merge classification', () => {
     expect(summary?.textContent.replace(/\s+/g, ' ').trim()).toBe(
       '1 file already exists. What do you want to do with it?',
     )
-    expect(target.textContent).toContain('1 folder will merge with an existing folder')
+    expect(target.textContent).toContain('1 folder already exists there, so its contents will merge.')
+    // A known file clash keeps the warning tint and asks its own question.
+    expect(conflictCardTone(target)).toBe('warning')
+    expect(target.querySelector('.merge-question')).toBeNull()
   })
 })
+
+function conflictCardTone(target: HTMLElement): string | null | undefined {
+  return target.querySelector('.conflict-policy')?.closest('.section-card')?.getAttribute('data-tone')
+}
 
 /* ------------------------------------------------------------------------- */
 /* Bulk-skip names exclude dir-dir merges                                    */
