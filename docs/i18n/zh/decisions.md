@@ -67,12 +67,13 @@ Finder stays Latin (`Finder 搜索窗口`): § 原生菜单.
 
 ## Operation queue catalog (`queue.*`)
 
-- `操作队列` over `传输队列`: the window also lists deletes, trashes, renames, and creations, and `传输` means a
-  copy-or-move in flight. Same head noun as `操作日志`, so the two View-menu items pair.
+- `操作队列` over `传输队列`: the window lists deletes, renames, and creations too, and `传输` is a copy or move in
+  flight. Same head noun as `操作日志`, so the View-menu items pair.
 - Classifier `项` (`这项操作`, `{count} 项操作`); generic items keep `个项目`.
-- `后台` over `背景` (the visual backdrop). Resume `继续` over `恢复` (restore, as macOS uses it for versions).
+- `后台` over `背景` (the visual backdrop). Resume `继续` over `恢复` (macOS: restoring a version).
 - Status set: `等待中`, `进行中`, `已暂停`, `已完成`, `已取消`, `无法完成`; `Queued` is `等待中`, never `已排队` (it's a
   status, not the queue noun).
+- Reorder (`queue.reorder.*`): `上移` / `下移`, `调整位置`; never `移动` (reads as `移动操作`).
 
 ## Double-click the pane background (`settings.behavior.doubleClickPaneNavigatesToParent.*`, `fileExplorer.doubleClickHint.*`)
 

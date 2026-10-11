@@ -60,6 +60,10 @@
   "@shortcuts.scope.commandPalette": {
     "sourceHash": "0347f79"
   },
+  "shortcuts.scope.queueWindow": "Åtgärdskö",
+  "@shortcuts.scope.queueWindow": {
+    "sourceHash": "fa91417"
+  },
   "shortcuts.scope.aboutWindow": "Om-fönster",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

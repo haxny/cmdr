@@ -96,6 +96,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Nach vorn gerückt.} other {Nach hinten gerückt.}} Jetzt Platz {position} von {waiting} in der Warteschlange.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Schon an erster Stelle in der Warteschlange.} other {Schon an letzter Stelle in der Warteschlange.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Nur wartende Vorgänge können ihren Platz wechseln.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Alle anhalten",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

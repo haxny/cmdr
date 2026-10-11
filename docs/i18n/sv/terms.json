@@ -49,6 +49,7 @@
     "confidence": "high",
     "decision": "Amending a sent error report",
     "exceptions": {
+      "commands.queueToggleSelected.label": "Adding to or removing from the selection is the select pair markera / avmarkera (catalog: Markera allt / Avmarkera allt); lägg till … eller ta bort den would leave den pointing at markeringen as much as at åtgärden.",
       "search.walkHandoff.superseded": "Stopped adding to the results is the idiom slutade fylla på resultaten; lägga till would read as adding a result by hand."
     },
     "forms": "button Lägg till i … (Lägg till i favoriter, Lägg till i rapporten); progress Lägger till…; past Lade till",
@@ -1855,7 +1856,7 @@
     "sources": "catalog"
   },
   "not-finished": {
-    "accept": ["kunde inte slutföra", "blev inte klar", "hann inte klart", "slutfördes inte"],
+    "accept": ["kunde inte slutföra", "blev inte klar", "hann inte klart", "slutfördes inte", "inte gick att slutföra"],
     "chosen": "gick inte att slutföra",
     "confidence": "high",
     "decision": "Progress chip and failure notice",
@@ -2318,6 +2319,9 @@
     "accept": ["tar bort", "tog bort", "borttag", "tas bort", "tagits bort", "togs bort"],
     "chosen": "ta bort",
     "confidence": "high",
+    "exceptions": {
+      "commands.queueToggleSelected.label": "Taking a row out of the selection is avmarkera, the pair of markera (catalog: Avmarkera allt)."
+    },
     "forms": "out of a list or collection; never deleting files from disk (that is radera)",
     "sources": "macOS Finder (Ta bort), GNOME"
   },

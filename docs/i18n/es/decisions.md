@@ -642,3 +642,7 @@ in labels. `Solo verás este aviso una vez.`: names the notice, no gendered adje
 ## Ayudas de Renombrado múltiple (`multiRename.*Help.*`)
 
 - `On`/`Off` → `Activado`/`Desactivado`; caret → `cursor de texto` (bare `cursor` is the pane's).
+
+## Reordenar la cola (`commands.queueMoveEarlier/Later.label`, `queue.reorder.*`)
+
+`Adelantar` / `Retrasar en la cola` over `Subir` / `Bajar`: it's about starting sooner; "in line" is `la cola`.

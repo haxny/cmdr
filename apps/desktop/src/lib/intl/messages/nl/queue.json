@@ -96,6 +96,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Naar voren geschoven.} other {Naar achteren geschoven.}} Nu plaats {position} van {waiting} in de wachtrij.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Staat al vooraan in de wachtrij.} other {Staat al achteraan in de wachtrij.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Alleen wachtende bewerkingen kun je verschuiven.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Pauzeer alles",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

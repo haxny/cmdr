@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Flyttade upp.} other {Flyttade ner.}} Nu på plats {position} av {waiting} i kön.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Redan först i kön.} other {Redan sist i kön.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Bara väntande åtgärder kan flyttas.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Pausa alla",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

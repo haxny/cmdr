@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Đã đưa lên.} other {Đã đưa xuống.}} Bây giờ đứng thứ {position} trong số {waiting} thao tác đang chờ.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Đã ở đầu hàng đợi.} other {Đã ở cuối hàng đợi.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Chỉ có thể đổi thứ tự các thao tác đang chờ.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Tạm dừng tất cả",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

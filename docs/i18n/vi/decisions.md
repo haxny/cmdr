@@ -638,3 +638,8 @@ source is Apple's own Connect to Server dialog (`NetAuthAgent.app`).
   step → `bước nhảy`, as in the counter popover.
 - caret → `con trỏ văn bản` (`settings.viewer.showTextCursor`); On/Off rows → `Bật` / `Tắt`, as the catalog's off
   options.
+
+## Sắp xếp hàng đợi thao tác (`commands.queueMove*`, `queue.reorder.*`)
+
+- Reorder → `Đưa … lên trên / xuống dưới trong hàng đợi` over `di chuyển` (the Move operation); "in line" → `hàng đợi`,
+  never `dòng`.

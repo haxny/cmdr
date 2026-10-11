@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Перемещено выше.} other {Перемещено ниже.}} Место в очереди: {position} из {waiting}.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Уже первая в очереди.} other {Уже последняя в очереди.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Перемещать можно только ожидающие операции.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Приостановить все",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

@@ -116,7 +116,10 @@
     "accept": ["добав", "дополн"],
     "forms": "Add server → Добавить сервер; Add anyway → Все равно добавить; progress Добавление…; Added → Добавлено; adding to a sent report → Дополнить отчет",
     "confidence": "high",
-    "sources": "macOS Finder LocalizableMerged RN21 (Add → Добавить), AppKit NSAddTemplate; MS (add → добавить); DC, Nautilus (Добавить)"
+    "sources": "macOS Finder LocalizableMerged RN21 (Add → Добавить), AppKit NSAddTemplate; MS (add → добавить); DC, Nautilus (Добавить)",
+    "exceptions": {
+      "commands.queueToggleSelected.label": "Adding to a queue row selection is ticking it: «Выбрать операцию или снять выбор»."
+    }
   },
   "advanced": {
     "chosen": "Дополнения",
@@ -3867,7 +3870,10 @@
     "confidence": "high",
     "sources": "macOS Finder LocalizableMerged N169.2 Remove from Sidebar → «Удалить из бокового меню»; AppKit Ruler Remove From Favorites → «Удалить из Избранного»; AppKit Accessibility Remove from toolbar → «Убрать из панели инструментов»; macOS live Remove → «Удалить», «Убрать»",
     "note": "Russian macOS uses «Удалить» for removing from a list too; Cmdr keeps it from reading as deleting files by always naming the list after «из».",
-    "decision": "Remove from a list"
+    "decision": "Remove from a list",
+    "exceptions": {
+      "commands.queueToggleSelected.label": "Taking a queue row out of the selection is unticking it: «снять выбор», as «снять выделение» for files."
+    }
   },
   "rename": {
     "chosen": "Переименовать",
@@ -4304,7 +4310,11 @@
       "commands.navUp.label": "Moves the cursor, marks nothing; say «Предыдущий файл».",
       "queue.row.selectAria": "Checkbox picking operation rows to cancel together: choosing items in a list, not marking files in a pane, so «выбрать» stays.",
       "queue.toolbar.cancelSelected": "Cancels the operation rows ticked by checkbox; list-item choosing, so «выбранные».",
-      "queue.toolbar.selectedCount": "Count of ticked operation rows; list-item choosing, so «Выбрано: #»."
+      "queue.toolbar.selectedCount": "Count of ticked operation rows; list-item choosing, so «Выбрано: #».",
+      "commands.queueExtendUp.label": "Shift-arrow extends the ticked queue rows that «Отменить выбранные» acts on; list-item choosing, so «Расширить выбор вверх»",
+      "commands.queueExtendDown.label": "Shift-arrow extends the ticked queue rows; list-item choosing, so «Расширить выбор вниз»",
+      "commands.queueToggleSelected.label": "Space ticks or unticks a queue row; list-item choosing, so «Выбрать операцию или снять выбор», mirroring «Выделить или снять выделение»",
+      "commands.queueSelectAll.label": "Ticks every cancelable queue row; list-item choosing, so «Выбрать все операции»"
     },
     "decision": "Selection: выделение"
   },

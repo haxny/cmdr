@@ -404,6 +404,66 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
+  "commands.queueCursorUp.label": "Előző művelet",
+  "@commands.queueCursorUp.label": {
+    "sourceHash": "122b454"
+  },
+  "commands.queueCursorDown.label": "Következő művelet",
+  "@commands.queueCursorDown.label": {
+    "sourceHash": "d1cfd93"
+  },
+  "commands.queueCursorFirst.label": "Első művelet",
+  "@commands.queueCursorFirst.label": {
+    "sourceHash": "73ee5d6"
+  },
+  "commands.queueCursorLast.label": "Utolsó művelet",
+  "@commands.queueCursorLast.label": {
+    "sourceHash": "1d9403f"
+  },
+  "commands.queueExtendUp.label": "Kijelölés bővítése felfelé",
+  "@commands.queueExtendUp.label": {
+    "sourceHash": "973e25b"
+  },
+  "commands.queueExtendDown.label": "Kijelölés bővítése lefelé",
+  "@commands.queueExtendDown.label": {
+    "sourceHash": "0a20670"
+  },
+  "commands.queueToggleSelected.label": "A művelet hozzáadása a kijelöléshez vagy eltávolítása belőle",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "0e245e6"
+  },
+  "commands.queueSelectAll.label": "Összes művelet kijelölése",
+  "@commands.queueSelectAll.label": {
+    "sourceHash": "0661f6b"
+  },
+  "commands.queueShowInMainWindow.label": "A művelet megjelenítése a főablakban",
+  "@commands.queueShowInMainWindow.label": {
+    "sourceHash": "9e15137"
+  },
+  "commands.queueCancelOrDismiss.label": "A művelet megszakítása, vagy elvetése, ha nem sikerült befejezni",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "eed155a"
+  },
+  "commands.queueMoveEarlier.label": "A várakozó művelet előrébb helyezése a sorban",
+  "@commands.queueMoveEarlier.label": {
+    "sourceHash": "d95d881"
+  },
+  "commands.queueMoveLater.label": "A várakozó művelet hátrébb helyezése a sorban",
+  "@commands.queueMoveLater.label": {
+    "sourceHash": "b5a8d86"
+  },
+  "commands.queueNextControl.label": "Következő gomb a soron belül",
+  "@commands.queueNextControl.label": {
+    "sourceHash": "2915ed9"
+  },
+  "commands.queuePreviousControl.label": "Előző gomb a soron belül",
+  "@commands.queuePreviousControl.label": {
+    "sourceHash": "9c0113d"
+  },
+  "commands.queueClose.label": "A műveleti sor bezárása",
+  "@commands.queueClose.label": {
+    "sourceHash": "d7b8c22"
+  },
   "commands.multiRenameOpenPresets.label": "Előbeállítások menü megnyitása",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

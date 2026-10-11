@@ -22,10 +22,9 @@ Product-owner call: marking files is Total Commander's `выделение` / `�
 agree). Picking an option, volume, or server stays `выбрать`; cursor moves name the file (`commands.navDown.label`
 `Следующий файл`).
 
-## Ticking queue rows: выбрать (`queue.row.selectAria`, `queue.toolbar.cancelSelected`, `queue.toolbar.selectedCount`)
+## Ticking queue rows: выбрать (`queue.row.selectAria`, `queue.toolbar.*Selected*`, `commands.queue{Extend,ToggleSelected,SelectAll}*`)
 
-Checkbox rows in the operation queue are choosing list items, not marking files in a pane: `Выбрать эту операцию`,
-`Выбрано: #`.
+Checking operation queue rows is choosing list items, not marking files: `Выбрать эту операцию`, `Выбрано: #`.
 
 ## Remembered selections (`selection.recent.*`, `settings.selection.recentSelections.maxCount.label`/`.description`)
 

@@ -96,3 +96,11 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   row fits the Keyboard shortcuts list; `„…“ ein-/ausschalten` without `Option` is the shorter fallback.
 - `multiRename.counterEditor.counts` (`Zählt 1, 3, 5 …`): the counter as an implied subject; a reviewer may prefer
   `Ergibt 1, 3, 5 …`.
+
+- `commands.queueNextControl.label` / `.queuePreviousControl.label` (`Nächste Taste in der Zeile`): `Taste` follows the
+  button ruling, but in the Keyboard shortcuts list it can read as a keyboard key. A reviewer may prefer
+  `Nächstes Bedienelement in der Zeile` here.
+- `commands.queueMoveEarlier.label` / `.queueMoveLater.label`, `queue.reorder.*` (`nach vorn rücken`,
+  `Nach vorn gerückt.`, `Jetzt Platz 2 von 5 in der Warteschlange.`): `rücken` for reordering keeps `bewegen` (the F6
+  Move command) and Microsoft's `verschieben` out; `vorziehen` / `zurückstellen` is the alternative. The long labels (55
+  vs 37 chars) need a fit check in the Keyboard shortcuts list.

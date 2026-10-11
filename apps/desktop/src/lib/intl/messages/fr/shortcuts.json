@@ -59,6 +59,10 @@
   "@shortcuts.scope.commandPalette": {
     "sourceHash": "0347f79"
   },
+  "shortcuts.scope.queueWindow": "File d’attente des opérations",
+  "@shortcuts.scope.queueWindow": {
+    "sourceHash": "fa91417"
+  },
   "shortcuts.scope.aboutWindow": "Fenêtre À propos",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

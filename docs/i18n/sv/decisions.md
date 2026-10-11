@@ -158,10 +158,10 @@ catalog.
 
 ## Operation queue (`queue.*`, `commands.queueShow.*`, `fileOperations.transferProgress.queue*`)
 
-- English widened "Transfer queue" to the category word, so Swedish does too: `Åtgärdskö`, paired with `Åtgärdslogg`.
-  `överföring` stays right one level down (a copy or move in flight). ❌ Never `överföringskö` / `Överföringar`.
-- The window title and the command label are indefinite `Åtgärdskö`; prose, including prepositional button labels
-  (`Visa i åtgärdskön`), is definite. Don't flatten the two.
+- `Åtgärdskö` (paired with `Åtgärdslogg`) over `överföringskö`: the queue holds every operation; `överföring` is only a
+  copy or move in flight. Title and command label indefinite; prose definite (`Visa i åtgärdskön`).
+- Queue order (`commands.queueMove*`, `queue.reorder.*`): "in line" is `i kön` over `rad`; reorder `Flytta upp` / `ner`
+  (⌥↑ / ⌥↓); place `plats {position}`.
 
 ## Progress chip and failure notice (`queue.row.dismiss*`, `queue.toolbar.dismissAll`, `queue.failureToast.*`, `queue.chip.*`)
 

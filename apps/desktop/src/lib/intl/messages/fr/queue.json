@@ -96,6 +96,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Opération avancée.} other {Opération reculée.}} Position {position} sur {waiting} dans la file.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Déjà en tête de file.} other {Déjà en fin de file.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Seules les opérations en attente peuvent changer de place.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Tout mettre en pause",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

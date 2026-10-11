@@ -253,7 +253,28 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `servers.refusal.shareMounted`: "{name} is still mounted" makes gendered locales agree with an insert; most named the
   type first ("The share {name}…"). Consider "The share {name} is still mounted…" in English too. (es, fr, pt, ru, sv)
 - `fileExplorer.clipboard.copiedPaths` vs `.copied`: two toasts of one family, but "Copied 5 paths." ends with a period
-  and "Copied 5 items" doesn't. Pick one; every locale mirrors whichever English does. remove (`schg`), but the `locked`
-  concept is Finder's Get Info checkbox (`uchg`). Say which, so locales know whether the Finder word fits. Also "can't
-  undo" here means unlock, not Undo: say "Cmdr can't unlock it". (all locales used the unlock verb; `undo` got a
-  `notMatch`)
+  and "Copied 5 items" doesn't. Pick one; every locale mirrors whichever English does.
+- `line` / `move` concepts: fired on the queue reorder keys (`commands.queueMoveEarlier/Later.label`,
+  `queue.reorder.*`), where "in line" is the queue order and "move" a reorder. Added `notMatch` forms ("in line", "moved
+  up/down", "move the waiting operation", "operations can move"); a `queue-position` concept would rule "in line" across
+  locales. (fr, nl: `in de wachtrij`, `vooraan` / `achteraan`; es: `en la cola`, `Adelantar` / `Retrasar`; ru:
+  `в очереди`, `выше` / `ниже`, `Место в очереди: {position} из {waiting}`; sv: `i kön`, `Flytta upp` / `Flytta ner`,
+  `Nu på plats {position} av {waiting} i kön`; vi: `trong hàng đợi`, `Đưa … lên trên` / `xuống dưới`,
+  `đứng thứ {position} trong số {waiting} thao tác đang chờ`; zh: `在队列中上移` / `下移` (Nautilus `上移` / `下移`),
+  `现在排第 {position} 位，共 {waiting} 项在等待`, `已经排在最前面了`, and `调整位置` for the bare reorder verb because
+  `移动操作` already means a move operation; zh-Hant: `把等待中的操作往前移` / `往後移` (front of the line = sooner,
+  so 前/後 over 上/下), `已往前移。現在排第 {position} 位，共 {waiting} 項在等待。`, `已經排在最前面。`, and `調整順序`
+  for the bare reorder verb, same reason as zh)
+- No `previous` concept (`commands.queueCursorUp.label`, `.queuePreviousControl.label`): fr already ships `précédent` 8
+  times (tabs, palette, pages); add a ruled concept so locales converge. (fr; nl ships `vorig` / `vorige` across tabs
+  and the file list; es ships `anterior` in `Pestaña anterior`, `Resultado anterior`; ru ships `Предыдущая вкладка`,
+  `Предыдущий результат`, `Предыдущий файл`; sv ships `föregående` in `Föregående flik`, `Föregående resultat`,
+  `Markera föregående fil`; vi ships `trước` in `Tab trước`, `Kết quả trước`, `trước đó` in `Chọn tệp trước đó`; zh
+  ships `上一个` / `下一个` in `上一个标签页`, `上一个结果`, `选中上一个文件` (macOS AppKit `上一个版本`, Dolphin
+  `上一个`), with the classifier swapped to `项` for operations: `上一项操作`; zh-Hant ships `上一個` / `下一個` in
+  `上一個分頁`, `上一個結果`, `選取上一個檔案`, `上一個相符項目` (macOS zh-TW 8 files and zh-HK 9 with `上一個`,
+  `前一個` 0), so `上一項操作` and `同一列的上一個按鈕`)
+- Tooling: `sync-locale-keys.ts es-419 --restamp` skips overlays, and an overlay's `sourceHash` is the hash of the
+  PARENT (`es`) value, not `en`; the brief's restamp step says neither. A new es key that trips
+  `i18n-es-overlay.test.ts` (here `añadir`, `no se ha podido`) needs a hand-stamped fork. Teach `--restamp` overlays, or
+  say so in the brief. (es)

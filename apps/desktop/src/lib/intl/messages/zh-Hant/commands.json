@@ -404,6 +404,66 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
+  "commands.queueCursorUp.label": "上一項操作",
+  "@commands.queueCursorUp.label": {
+    "sourceHash": "122b454"
+  },
+  "commands.queueCursorDown.label": "下一項操作",
+  "@commands.queueCursorDown.label": {
+    "sourceHash": "d1cfd93"
+  },
+  "commands.queueCursorFirst.label": "第一項操作",
+  "@commands.queueCursorFirst.label": {
+    "sourceHash": "73ee5d6"
+  },
+  "commands.queueCursorLast.label": "最後一項操作",
+  "@commands.queueCursorLast.label": {
+    "sourceHash": "1d9403f"
+  },
+  "commands.queueExtendUp.label": "向上延伸選取範圍",
+  "@commands.queueExtendUp.label": {
+    "sourceHash": "973e25b"
+  },
+  "commands.queueExtendDown.label": "向下延伸選取範圍",
+  "@commands.queueExtendDown.label": {
+    "sourceHash": "0a20670"
+  },
+  "commands.queueToggleSelected.label": "把這項操作加入或移出選取範圍",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "0e245e6"
+  },
+  "commands.queueSelectAll.label": "選取所有操作",
+  "@commands.queueSelectAll.label": {
+    "sourceHash": "0661f6b"
+  },
+  "commands.queueShowInMainWindow.label": "在主視窗中顯示這項操作",
+  "@commands.queueShowInMainWindow.label": {
+    "sourceHash": "9e15137"
+  },
+  "commands.queueCancelOrDismiss.label": "取消這項操作，或關閉無法完成的操作",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "eed155a"
+  },
+  "commands.queueMoveEarlier.label": "把等待中的操作往前移",
+  "@commands.queueMoveEarlier.label": {
+    "sourceHash": "d95d881"
+  },
+  "commands.queueMoveLater.label": "把等待中的操作往後移",
+  "@commands.queueMoveLater.label": {
+    "sourceHash": "b5a8d86"
+  },
+  "commands.queueNextControl.label": "同一列的下一個按鈕",
+  "@commands.queueNextControl.label": {
+    "sourceHash": "2915ed9"
+  },
+  "commands.queuePreviousControl.label": "同一列的上一個按鈕",
+  "@commands.queuePreviousControl.label": {
+    "sourceHash": "9c0113d"
+  },
+  "commands.queueClose.label": "關閉操作佇列",
+  "@commands.queueClose.label": {
+    "sourceHash": "d7b8c22"
+  },
   "commands.multiRenameOpenPresets.label": "開啟預設組選單",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

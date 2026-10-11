@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Movida para cima.} other {Movida para baixo.}} Agora na posição {position} de {waiting} na fila.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Já é a primeira da fila.} other {Já é a última da fila.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Só operações aguardando podem mudar de lugar.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Pausar tudo",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

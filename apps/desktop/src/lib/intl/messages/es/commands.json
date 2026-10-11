@@ -404,6 +404,66 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
+  "commands.queueCursorUp.label": "Operación anterior",
+  "@commands.queueCursorUp.label": {
+    "sourceHash": "122b454"
+  },
+  "commands.queueCursorDown.label": "Operación siguiente",
+  "@commands.queueCursorDown.label": {
+    "sourceHash": "d1cfd93"
+  },
+  "commands.queueCursorFirst.label": "Primera operación",
+  "@commands.queueCursorFirst.label": {
+    "sourceHash": "73ee5d6"
+  },
+  "commands.queueCursorLast.label": "Última operación",
+  "@commands.queueCursorLast.label": {
+    "sourceHash": "1d9403f"
+  },
+  "commands.queueExtendUp.label": "Ampliar la selección hacia arriba",
+  "@commands.queueExtendUp.label": {
+    "sourceHash": "973e25b"
+  },
+  "commands.queueExtendDown.label": "Ampliar la selección hacia abajo",
+  "@commands.queueExtendDown.label": {
+    "sourceHash": "0a20670"
+  },
+  "commands.queueToggleSelected.label": "Añadir la operación a la selección o quitarla",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "0e245e6"
+  },
+  "commands.queueSelectAll.label": "Seleccionar todas las operaciones",
+  "@commands.queueSelectAll.label": {
+    "sourceHash": "0661f6b"
+  },
+  "commands.queueShowInMainWindow.label": "Mostrar la operación en la ventana principal",
+  "@commands.queueShowInMainWindow.label": {
+    "sourceHash": "9e15137"
+  },
+  "commands.queueCancelOrDismiss.label": "Cancelar la operación o descartar la que no se ha podido completar",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "eed155a"
+  },
+  "commands.queueMoveEarlier.label": "Adelantar en la cola la operación en espera",
+  "@commands.queueMoveEarlier.label": {
+    "sourceHash": "d95d881"
+  },
+  "commands.queueMoveLater.label": "Retrasar en la cola la operación en espera",
+  "@commands.queueMoveLater.label": {
+    "sourceHash": "b5a8d86"
+  },
+  "commands.queueNextControl.label": "Botón siguiente de la fila",
+  "@commands.queueNextControl.label": {
+    "sourceHash": "2915ed9"
+  },
+  "commands.queuePreviousControl.label": "Botón anterior de la fila",
+  "@commands.queuePreviousControl.label": {
+    "sourceHash": "9c0113d"
+  },
+  "commands.queueClose.label": "Cerrar la cola de operaciones",
+  "@commands.queueClose.label": {
+    "sourceHash": "d7b8c22"
+  },
   "commands.multiRenameOpenPresets.label": "Abrir el menú de preajustes",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

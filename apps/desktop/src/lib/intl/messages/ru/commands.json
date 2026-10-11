@@ -404,6 +404,66 @@
   "@commands.fileMultiRename.description": {
     "sourceHash": "d294fb1"
   },
+  "commands.queueCursorUp.label": "Предыдущая операция",
+  "@commands.queueCursorUp.label": {
+    "sourceHash": "122b454"
+  },
+  "commands.queueCursorDown.label": "Следующая операция",
+  "@commands.queueCursorDown.label": {
+    "sourceHash": "d1cfd93"
+  },
+  "commands.queueCursorFirst.label": "Первая операция",
+  "@commands.queueCursorFirst.label": {
+    "sourceHash": "73ee5d6"
+  },
+  "commands.queueCursorLast.label": "Последняя операция",
+  "@commands.queueCursorLast.label": {
+    "sourceHash": "1d9403f"
+  },
+  "commands.queueExtendUp.label": "Расширить выбор вверх",
+  "@commands.queueExtendUp.label": {
+    "sourceHash": "973e25b"
+  },
+  "commands.queueExtendDown.label": "Расширить выбор вниз",
+  "@commands.queueExtendDown.label": {
+    "sourceHash": "0a20670"
+  },
+  "commands.queueToggleSelected.label": "Выбрать операцию или снять выбор",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "0e245e6"
+  },
+  "commands.queueSelectAll.label": "Выбрать все операции",
+  "@commands.queueSelectAll.label": {
+    "sourceHash": "0661f6b"
+  },
+  "commands.queueShowInMainWindow.label": "Показать операцию в главном окне",
+  "@commands.queueShowInMainWindow.label": {
+    "sourceHash": "9e15137"
+  },
+  "commands.queueCancelOrDismiss.label": "Отменить операцию или скрыть ту, что не удалось завершить",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "eed155a"
+  },
+  "commands.queueMoveEarlier.label": "Переместить ожидающую операцию выше в очереди",
+  "@commands.queueMoveEarlier.label": {
+    "sourceHash": "d95d881"
+  },
+  "commands.queueMoveLater.label": "Переместить ожидающую операцию ниже в очереди",
+  "@commands.queueMoveLater.label": {
+    "sourceHash": "b5a8d86"
+  },
+  "commands.queueNextControl.label": "Следующая кнопка в строке",
+  "@commands.queueNextControl.label": {
+    "sourceHash": "2915ed9"
+  },
+  "commands.queuePreviousControl.label": "Предыдущая кнопка в строке",
+  "@commands.queuePreviousControl.label": {
+    "sourceHash": "9c0113d"
+  },
+  "commands.queueClose.label": "Закрыть очередь операций",
+  "@commands.queueClose.label": {
+    "sourceHash": "d7b8c22"
+  },
   "commands.multiRenameOpenPresets.label": "Открыть меню наборов настроек",
   "@commands.multiRenameOpenPresets.label": {
     "sourceHash": "ca9ede6"

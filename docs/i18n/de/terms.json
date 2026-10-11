@@ -1827,6 +1827,11 @@
     "forms": "signup → Anmeldung; signup server → Anmeldeserver",
     "sources": "standard German"
   },
+  "main-window": {
+    "chosen": "Hauptfenster",
+    "confidence": "high",
+    "sources": "catalog (shortcuts.scope.mainWindow, queue.row.foregroundAria, search.action.showAll.label; 6 uses); Double/Total Commander de (Hauptfenster)"
+  },
   "memory": {
     "accept": ["RAM", "Notiz"],
     "chosen": "Speicher",

@@ -120,11 +120,10 @@ line.
 
 ## Operation queue: de hernoeming van Overdrachtswachtrij (`queue.*`, `commands.queueShow.*`)
 
-- `Bewerkingenwachtrij` (with `-en-`) over `Bewerkingswachtrij` because it pairs with `Bewerkingenlogboek` in the same
-  View menu block; `overdracht` keeps the narrow copy-or-move sense.
-- `commands.queueShow.label` is exactly the window name, like `commands.logOperationLog.label`.
-- Queue-row aria says `deze bewerking` (a row can be a delete); `transferProgress.pauseAria` keeps `deze overdracht`
-  because its English says "transfer".
+- `Bewerkingenwachtrij` over `Bewerkingswachtrij`: it pairs with `Bewerkingenlogboek`; `commands.queueShow.label` is
+  exactly the window name. Row aria says `deze bewerking` (a row can be a delete); `pauseAria` keeps `deze overdracht`.
+- Reordering (`commands.queueMove*`, `queue.reorder.*`): `schuif … naar voren` / `naar achteren` in `de wachtrij`, edges
+  `vooraan` / `achteraan`, over `Verplaats` (F6) and `regel` (text line).
 
 ## De voortgangschip en het niet-voltooid-bericht (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)
 

@@ -59,6 +59,10 @@
   "@shortcuts.scope.commandPalette": {
     "sourceHash": "0347f79"
   },
+  "shortcuts.scope.queueWindow": "操作佇列",
+  "@shortcuts.scope.queueWindow": {
+    "sourceHash": "fa91417"
+  },
   "shortcuts.scope.aboutWindow": "關於視窗",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

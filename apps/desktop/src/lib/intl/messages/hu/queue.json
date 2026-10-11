@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {Előrébb helyezve.} other {Hátrébb helyezve.}} Most {position}. a sorban, összesen {waiting} várakozik.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Már az első a sorban.} other {Már az utolsó a sorban.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Csak a várakozó műveletek mozgathatók.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "Mindet szünetelteti",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"

@@ -78,3 +78,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   `插入点` (macOS's word, kept apart from Cmdr's pane `光标`; not verified, the reference pile wasn't on the translating
   machine), hover is `用指针指向`, last changed follows Finder's `修改日期` / `修改时间`, example lines open with
   `对于…：`, and the grandparent folder is `再上一层文件夹`. Confirm `插入点` is recognizable and `对于` isn't stiff.
+- **Operation queue keyboard rows** (`commands.queueExtendUp/Down.label`, `commands.queueToggleSelected.label`): extend
+  the selection is `向上扩大选择范围` / `向下扩大选择范围` (no pile source: macOS, Microsoft, and the Linux catalogs
+  have no "extend selection"); toggle is `把操作加入所选，或从所选中移除`. Confirm both read naturally as shortcut rows.

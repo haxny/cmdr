@@ -178,5 +178,13 @@
   "commands.multiRenameSavePreset.label": "Guardar la configuración actual como preconfiguración",
   "@commands.multiRenameSavePreset.label": {
     "sourceHash": "cf5e463"
+  },
+  "commands.queueToggleSelected.label": "Agregar la operación a la selección o quitarla",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "8f35598"
+  },
+  "commands.queueCancelOrDismiss.label": "Cancelar la operación o descartar la que no se pudo completar",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "5312456"
   }
 }

@@ -1769,7 +1769,7 @@
     "distinct": ["character", "row"],
     "en": "line",
     "match": ["line", "lines"],
-    "notMatch": ["one-time line", "line break*"],
+    "notMatch": ["one-time line", "line break*", "in line"],
     "sense": "A line of text in the viewer, or a line in a config file."
   },
   "linux-distribution": {
@@ -1965,7 +1965,11 @@
       "moves the cursor",
       "moving the cursor",
       "did the server move",
-      "move this server"
+      "move this server",
+      "move the waiting operation",
+      "moved up",
+      "moved down",
+      "operations can move"
     ],
     "sense": "Relocating files to another folder (F6)."
   },

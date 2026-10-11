@@ -60,6 +60,10 @@
   "@shortcuts.scope.commandPalette": {
     "sourceHash": "0347f79"
   },
+  "shortcuts.scope.queueWindow": "Vorgangswarteschlange",
+  "@shortcuts.scope.queueWindow": {
+    "sourceHash": "fa91417"
+  },
   "shortcuts.scope.aboutWindow": "Über-Fenster",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

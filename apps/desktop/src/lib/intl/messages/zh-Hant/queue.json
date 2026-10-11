@@ -95,6 +95,18 @@
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
+  "queue.reorder.moved": "{direction, select, earlier {已往前移。} other {已往後移。}}現在排第 {position} 位，共 {waiting} 項在等待。",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {已經排在最前面。} other {已經排在最後面。}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "只有等待中的操作可以調整順序。",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
   "queue.toolbar.pauseAll": "全部暫停",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"
