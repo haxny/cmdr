@@ -8,11 +8,11 @@ metadata**. `ditto` parity is the floor, not the ceiling, and our own measuremen
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
 **Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
-folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11); review rounds 1
-(correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a
-seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the
-notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one
-focused milestone agent run).
+folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11), M8 (archives) done
+(2026-10-12); review rounds 1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB),
+and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue:
+none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions
+(one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -278,9 +278,10 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 - **Local ↔ MTP**: mtime keep; birth to verify (`DateCreated` is a field Android likely ignores), folder dates n/a.
 - **Local ↔ ADB**: mtime keep; mode sends a fixed `0660` (low value: `/sdcard` ignores modes); birth and folder dates
   n/a.
-- **Archive → local** (copy or move out): mtime and mode keep; xattrs from `__MACOSX` LOST; quarantine keep (M2); tar
-  pax xattrs LOST; folder dates keep.
-- **Local → zip** (fresh or into an existing one): mtime and mode keep; xattrs LOST; birth n/a in zip.
+- **Archive → local** (copy or move out): mtime and mode keep; xattrs from a zip's `__MACOSX` and a tar's `._name` and
+  pax records keep, on files and folders (M8); quarantine keep (M2); folder dates keep. 7z carries no sidecars.
+- **Local → zip** (fresh or into an existing one): mtime and mode keep; xattrs keep as `__MACOSX` sidecars when worth
+  keeping (M8, macOS); birth n/a in zip.
 
 ## Best practice (what the tools keep)
 
@@ -956,6 +957,36 @@ decided; then the ask itself, creation and modification dates on files AND folde
   compress cell with a tagged source (has `__MACOSX`) and one with plain sources (has none).
 - **DONE**: extracting a Finder-made zip yields files with their tags and no `__MACOSX`; compressing a tagged file and
   extracting it with `ditto -x -k` keeps the tags.
+- **Done** (2026-10-12). Where the code differs from the plan above:
+  - **The codec lives in `cmdr-archive`** (`src/apple_double.rs`, the `copyfile(3)` layout, pinned byte for byte against
+    a ditto sidecar), ❌ not beside `cmdr_fs::apple_double`: that's the FAT pairing rule over the kernel's own sidecars
+    and never parses bytes. The index's half is `read/sidecars.rs`.
+  - **A tar's sidecars are read during the PARSE**, not buffered by the sequential producer: the parse already decodes
+    every byte once, so it reads each possible `._name` (and every `SCHILY.xattr.*` pax record) as it passes and the
+    index holds them (32 MiB per index). The one-pass extract hands each member its xattrs with no mid-decode read, and
+    "a sidecar after its file" can't happen. bsdtar writes `._name` BEFORE `name` (verified with the checked-in
+    fixture). A zip's sidecar is read on demand, at stream OPEN (one entry read per item that has one, even for a
+    destination that won't keep xattrs: `VolumeReadStream::metadata` is sync, so it can't read lazily). 16 MiB cap per
+    sidecar, claimed and inflated.
+  - **Which `._` pairs**: a zip pairs only the ROOT `__MACOSX` (a `._x` sibling in a zip is a plain file); a tar pairs a
+    `._x` only when `x` exists (else it's a plain file, the only copy of what it holds); 7z pairs nothing.
+  - **The mutator owns sidecar bookkeeping**, not just `move_out.rs`: every delete and rename takes the item's sidecars
+    along (F8 and F2 inside a zip too), every add drops a stale one at its name (a duplicate name fails the `zip`
+    writer), and sidecars never count toward `entries_changed`.
+  - **`FolderMetadata::note_filled` takes the source folder's path**, and a dateless folder (a zip's implicit one) is no
+    longer skipped: it may carry xattrs. The pass asks `folder_metadata` only for the classes the destination's
+    `folder_stores` holds.
+  - **A sidecar's quarantine never wins** over the archive's: the file decorator replaces it, and folders go through
+    `extract_quarantine::keep_archive_quarantine`.
+  - **A written sidecar carries quarantine too** (only the trigger excludes it). Compress writes none on Linux.
+  - **A selected item named `__MACOSX`** (fresh compress) or one landing at a zip's root `__MACOSX` (copy INTO a zip) is
+    skipped and counted: the reader hides that folder.
+  - **The archive's caps report `MODE | XATTRS`**, so the loss note names tags an extract can't keep.
+  - **Found, not fixed**: `ditto -x -k` can't stream any FOLDER entry fresh compress writes, sidecar or not (`zip` 8.6's
+    stream mode flags a data descriptor on a directory and never writes one; 9.0.1 doesn't flag it). The DONE check's
+    ditto half runs on files; the mutator's seekable writer is unaffected (its cell checks a folder with ditto).
+  - **Not counted**: a folder's xattrs left behind (M5b counts folder dates only).
+  - No new user-facing strings.
 
 ### M9: The rest: SFTP, S3, WebDAV, MTP, ADB. Size: M–L (1–2 sessions, spikes first)
 
