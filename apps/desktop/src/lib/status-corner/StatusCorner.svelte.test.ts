@@ -98,6 +98,7 @@ function runningCopy(): OperationRow {
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress: null,
   }

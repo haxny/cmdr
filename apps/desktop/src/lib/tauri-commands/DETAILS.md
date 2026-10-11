@@ -64,8 +64,9 @@ commands, and notable non-obvious placements.
   invoking, since the event can overtake the reply. Backend: `write_operations/DETAILS.md` § "A slow instant mutation
   says it is still running".
 - **`operations.ts`**: the operation manager (queue window): `listOperations`, `cancelOperation(s)`, `pauseOperation` /
-  `resumeOperation`, `pauseAll` / `resumeAll`, `dismissFailedOperation` / `dismissAllFailedOperations`, and the
-  `onOperationsChanged` membership/status event.
+  `resumeOperation`, `pauseAll` / `resumeAll`, `dismissFailedOperation` / `dismissAllFailedOperations`,
+  `retryFailedOperation` (a failed row's Retry, rejecting with the typed `WriteOperationError` on a refused start), and
+  the `onOperationsChanged` membership/status event.
 - **`operation-log.ts`**: the operation journal's read API (`getRecentOperationLogEntries`, `getOperationLogDetail`)
   plus its two write entries. `rollbackOperation` reverses ONE operation and resolves as soon as the inverse is queued,
   throwing a typed `RollbackRefusalFailure` on a refusal; `undoOperations` reverses SEVERAL and resolves only with the

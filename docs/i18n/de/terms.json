@@ -2624,6 +2624,7 @@
     "chosen": "erneut versuchen",
     "confidence": "high",
     "forms": "button Erneut versuchen; Try again in a moment → Versuche es gleich noch einmal.; Retrying (the narrow space bar) → Erneuter Versuch …",
+    "note": "Queue-row aria: `queue.row.retryAria` Diesen Vorgang erneut versuchen contains the label Erneut versuchen.",
     "sources": "macOS (Try Again → Erneut versuchen)"
   },
   "review": {

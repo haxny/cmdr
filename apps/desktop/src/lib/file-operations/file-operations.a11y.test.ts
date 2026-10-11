@@ -102,6 +102,7 @@ describe('OperationConflictDialog a11y', () => {
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     }
     const event: WriteConflictEvent = {
       operationId: 'op-1',

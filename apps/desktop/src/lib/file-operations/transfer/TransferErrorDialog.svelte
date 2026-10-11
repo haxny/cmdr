@@ -2,7 +2,7 @@
     import { onMount } from 'svelte'
     import type { WriteOperationError, TransferOperationType, FriendlyError } from '$lib/file-explorer/types'
     import type { ProgressAtStop } from '$lib/tauri-commands'
-    import { getUserFriendlyMessage, getTechnicalDetails, getErrorDisplayMeta } from './transfer-error-messages'
+    import { getUserFriendlyMessage, getTechnicalDetails, getErrorDisplayMeta, offersRetry } from './transfer-error-messages'
     import FallbackErrorContent from './FallbackErrorContent.svelte'
     import ModalDialog from '$lib/ui/ModalDialog.svelte'
     import Button from '$lib/ui/Button.svelte'
@@ -39,8 +39,8 @@
     const displayMeta = $derived(getErrorDisplayMeta(error))
     const category = $derived<FriendlyError['category']>(displayMeta.category)
 
-    /** Retry button visibility: transient kinds always offer retry, others gated on explicit retryHint. */
-    const showRetry = $derived(onRetry !== undefined && (category === 'transient' || displayMeta.retryHint))
+    /** Retry button visibility: the rule a failed queue row shares (`offersRetry`). */
+    const showRetry = $derived(onRetry !== undefined && offersRetry(error))
 
     /** "Copy anyway": a space shortfall is the person's call (`SpaceShortfall` in the backend). */
     const showCopyAnyway = $derived(

@@ -87,6 +87,7 @@ function snapshot(operationId: string, status: OperationSnapshot['status'] = 'ru
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
   }
 }
 
@@ -334,6 +335,7 @@ describe('a row parked on a clash', () => {
           waitingOn: 'conflict',
           openingSource: false,
           sourceInboundBytesPerSecond: null,
+          reconnectingVolume: null,
         },
       }),
     )
@@ -354,6 +356,7 @@ describe('a row parked on a clash', () => {
           waitingOn: 'conflict',
           openingSource: false,
           sourceInboundBytesPerSecond: null,
+          reconnectingVolume: null,
         },
       }),
     )

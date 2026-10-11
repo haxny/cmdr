@@ -97,6 +97,7 @@ function snapshot(id: string, status: OperationSnapshot['status'] = 'running'): 
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
   }
 }
 

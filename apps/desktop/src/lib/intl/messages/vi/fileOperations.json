@@ -504,6 +504,10 @@
   "@fileOperations.transferProgress.sourceReceiving": {
     "sourceHash": "0552601"
   },
+  "fileOperations.transferProgress.waitingForVolume": "Đang chờ {volume} kết nối lại…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
   "fileOperations.transferProgress.stallNotice": "Không có tiến triển trong {duration}",
   "@fileOperations.transferProgress.stallNotice": {
     "sourceHash": "4b3c8e6"

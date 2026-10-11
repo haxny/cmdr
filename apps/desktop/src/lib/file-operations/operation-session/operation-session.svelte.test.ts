@@ -56,6 +56,7 @@ function snapshot(
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
     ...over,
   }
 }
@@ -404,6 +405,7 @@ describe('derived read state', () => {
           waitingOn: 'conflict',
           openingSource: false,
           sourceInboundBytesPerSecond: null,
+          reconnectingVolume: null,
         },
       }),
     })
@@ -430,6 +432,7 @@ describe('derived read state', () => {
           waitingOn: 'destination',
           openingSource: false,
           sourceInboundBytesPerSecond: null,
+          reconnectingVolume: null,
         },
       }),
     })
@@ -525,6 +528,7 @@ describe('derived read state', () => {
           waitingOn: 'conflict',
           openingSource: false,
           sourceInboundBytesPerSecond: null,
+          reconnectingVolume: null,
         },
       }),
     })

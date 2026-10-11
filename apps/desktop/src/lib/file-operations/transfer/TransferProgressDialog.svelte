@@ -484,6 +484,7 @@
                     scanCurrentDir={scan.currentDir}
                     {currentFile}
                     paused={isPaused}
+                    {waitLine}
                 />
             </div>
         {:else if isIndeterminate && archivePhaseText !== null}

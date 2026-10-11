@@ -506,6 +506,10 @@
   "@fileOperations.transferProgress.sourceReceiving": {
     "sourceHash": "0552601"
   },
+  "fileOperations.transferProgress.waitingForVolume": "En attente du retour de {volume}…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
   "fileOperations.transferProgress.stallNotice": "Aucune progression depuis {duration}",
   "@fileOperations.transferProgress.stallNotice": {
     "sourceHash": "4b3c8e6"

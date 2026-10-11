@@ -246,10 +246,17 @@ reopen.
   screen and "Cancel selected" enabled over an operation the backend no-ops. Pinned by
   `apps/desktop/src/routes/queue/queue-selection.svelte.test.ts`.
 - **The row.** No pause, cancel, rollback, or select checkbox — there's nothing live left to act on. A `triangle-alert`
-  glyph and "Couldn't finish" in `--color-error-text`, "Send error report…" and Dismiss, and the reason on line 2 where
+  glyph and "Couldn't finish" in `--color-error-text`, Retry (below), "Send error report…", and Dismiss, and the reason on line 2 where
   the readout would be. The report (`failureIncidentFor`) opens in the MAIN window, which hosts the dialog
   (`$lib/error-reporter/DETAILS.md` § Report offers); a stalled row's readout line gets the slow-report link the same
   way.
+- **Retry starts it again, from this window.** Shown when the snapshot says the backend kept a way to start the
+  operation again (`canRetry`: every cross-volume copy and move) AND the failure is one the error dialog would offer
+  Retry for too (`offersRetry` in `../transfer/transfer-error-messages.ts`, the one rule both share). The click calls
+  `retry_failed_operation(id)`: the backend starts a NEW operation through the routing the original took, resetting what
+  the foreground's `retryPropsFrom` resets, and dismisses this row, so the new one takes its place (in the background:
+  this window is no birth context). It sits in the row's ← / → walk like every row button (`tabindex={-1}`, § Keyboard). A refused start (the volume is still gone) leaves the row and logs. Why the recipe
+  lives in the backend: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Retained failures".
 - **Why red here and amber in the corner chip.** Severity follows the THING, not the surface. This row names the
   operation and prints its reason, so it carries the full weight, same as the failure toast. The chip names nothing (a
   count and a glyph), so it stays `--color-warning-text`: a pointer, not a verdict.
@@ -260,11 +267,11 @@ reopen.
 - **Untruncated, on purpose.** The queue promises completeness, so the explanation AND the suggestion both render in
   full, wrapping mid-token (an interpolated path can be arbitrarily long). The main window's toast is the surface that
   abbreviates; it points here for the rest.
-- **Dismissal is explicit, always.** Per-row Dismiss → `dismiss_failed_operation`; the toolbar's "Dismiss all" (shown
-  only when `failureCount > 1`) → `dismiss_all_failed_operations`; and closing `TransferErrorDialog` for a foreground
-  failure, which the user has by definition just read (`apps/desktop/src/lib/status-corner/DETAILS.md` § "Why the
-  foreground handover needs two slots"). Nothing else drops a failed row — the whole feature exists for the user who was
-  away from the keyboard.
+- **Dismissal is explicit, always.** Per-row Dismiss → `dismiss_failed_operation`; a Retry that started; the toolbar's
+  "Dismiss all" (shown only when `failureCount > 1`) → `dismiss_all_failed_operations`; and closing
+  `TransferErrorDialog` for a foreground failure, which the user has by definition just read
+  (`apps/desktop/src/lib/status-corner/DETAILS.md` § "Why the foreground handover needs two slots"). Nothing else drops
+  a failed row — the whole feature exists for the user who was away from the keyboard.
 - **The main window's half of this** (the persistent failure toast and the corner chip's failure state) lives in
   `apps/desktop/src/lib/status-corner/CLAUDE.md`. Both render `failure-reason.ts`, so the three surfaces can't describe
   one failure three ways.

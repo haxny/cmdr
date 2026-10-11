@@ -129,6 +129,7 @@ function snapshot(status: OperationSnapshot['status'], extra: OperationSnapshot[
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     ...extra,
   ]
@@ -306,6 +307,7 @@ function otherOp(
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
   }
 }
 
@@ -473,6 +475,7 @@ describe('TransferProgressDialog auto-queue surfacing', () => {
           supportsRollback: true,
           reverses: null,
           error: null,
+          canRetry: false,
         },
       ]),
     )

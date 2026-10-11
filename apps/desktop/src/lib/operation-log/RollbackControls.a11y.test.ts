@@ -59,6 +59,7 @@ function reversal(status: OperationSnapshot['status']): OperationSnapshot {
     supportsRollback: false,
     reverses: 'copy',
     error: null,
+    canRetry: false,
   }
 }
 

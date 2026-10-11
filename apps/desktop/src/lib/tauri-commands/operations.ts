@@ -6,11 +6,13 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '$lib/ipc/bindings'
+import { throwIpcError } from './ipc-types'
 import type {
   OperationSnapshot,
   OperationsChanged,
   QueueMoveDirection,
   QueueMoveOutcome,
+  RetryOutcome,
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,
 } from '$lib/ipc/bindings'
@@ -20,6 +22,7 @@ export type {
   OperationsChanged,
   QueueMoveDirection,
   QueueMoveOutcome,
+  RetryOutcome,
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,
 }
@@ -103,6 +106,16 @@ export async function moveQueuedOperation(
  *  a failed row waits until someone reads it, however long that takes. */
 export async function dismissFailedOperation(operationId: string): Promise<void> {
   await commands.dismissFailedOperation(operationId)
+}
+
+/** Start a retained failure again as a new operation (the queue row's Retry).
+ *  The backend kept how it started (`routing/retry.rs`), so this works from any
+ *  window. A started retry replaces the failed row; a refused one (the volume is
+ *  gone) rejects with the typed `WriteOperationError` and leaves the row. */
+export async function retryFailedOperation(operationId: string): Promise<RetryOutcome> {
+  const res = await commands.retryFailedOperation(operationId)
+  if (res.status === 'error') throwIpcError(res.error)
+  return res.data
 }
 
 /** Edit > Select all (⌘A) while the queue window is focused. The menu

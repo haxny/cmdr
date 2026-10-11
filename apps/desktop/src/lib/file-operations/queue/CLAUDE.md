@@ -30,8 +30,8 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 - **A running, PAUSED, or queued row can be `phase: 'scanning'`**: compact `ScanPhaseBody`, ❌ no dual bar (totals 0) or
   Rollback; Pause/Resume DO show. DETAILS § "A scanning row".
 - **A failed row STAYS until someone dismisses it**: the page hides only `done` / `cancelled` (`isHiddenSettledStatus`,
-  ❌ not `isTerminalStatus`); Dismiss / "Dismiss all" (or closing the error dialog that owns one) are the only ways out.
-  ❌ No timer, no window close.
+  ❌ not `isTerminalStatus`); Dismiss / "Dismiss all", a Retry that started (`canRetry` + `offersRetry`), or closing the
+  error dialog that owns one are the only ways out. ❌ No timer, no window close.
 - **A failure's reason comes from the error pipeline, ❌ never new prose** (`failure-reason.ts`). Its `message` is
   MARKUP through `{@html}`; the pipeline's title is dropped in the row.
 - **Show hands a row's operation back to the main window's progress dialog**, over `foreground-operation` carrying the

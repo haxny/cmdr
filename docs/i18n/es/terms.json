@@ -2341,6 +2341,7 @@
     "accept": ["reintent", "intentarlo", "inténtalo", "intentas", "intento"],
     "forms": "BUTTON Reintentar; prose inténtalo de nuevo / vuelve a intentarlo; inline question ¿Lo intentas de nuevo?",
     "confidence": "high",
+    "note": "Queue-row aria: `queue.row.retryAria` Reintentar esta operación contains the label Reintentar.",
     "sources": "macOS AppKit (Retry → Reintentar), Finder (Inténtalo de nuevo más tarde)",
     "exceptions": {
       "feedback.dialog.invalid": "Retrying a note is resending it: ¿La acortas y la vuelves a enviar?"

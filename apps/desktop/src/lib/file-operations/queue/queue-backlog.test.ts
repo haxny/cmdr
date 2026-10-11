@@ -28,6 +28,7 @@ function row(
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress: null,
   }

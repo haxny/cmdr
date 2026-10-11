@@ -19,6 +19,7 @@ function snapshot(error: WriteOperationError | null, over: Partial<OperationSnap
     supportsRollback: false,
     reverses: null,
     error,
+    canRetry: false,
     ...over,
   }
 }

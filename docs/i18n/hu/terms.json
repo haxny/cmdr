@@ -2990,6 +2990,7 @@
       }
     ],
     "confidence": "high",
+    "note": "A Retry button (`fileOperations.errorDialog.retry`, `queue.row.retry`, `fileExplorer.unreachable.retry`, `viewer.error.retry`) is Újra; Try again stays Próbáld újra. Queue-row aria: `queue.row.retryAria` Ennek a műveletnek az újrapróbálása contains Újra (in újrapróbálása).",
     "sources": "catalog (feedback.dialog.softFailure); style.md te register"
   },
   "review": {

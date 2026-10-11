@@ -25,6 +25,7 @@ function row(
       supportsRollback,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress,
   }

@@ -25,6 +25,7 @@ function row(id: string, status: OperationSnapshot['status'], type: OperationSna
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress: null,
   } satisfies OperationRow

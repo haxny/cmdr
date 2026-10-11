@@ -504,6 +504,10 @@
   "@fileOperations.transferProgress.sourceReceiving": {
     "sourceHash": "0552601"
   },
+  "fileOperations.transferProgress.waitingForVolume": "Ожидаем, пока {volume} снова появится в сети…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
   "fileOperations.transferProgress.stallNotice": "Нет прогресса уже {duration}",
   "@fileOperations.transferProgress.stallNotice": {
     "sourceHash": "4b3c8e6"

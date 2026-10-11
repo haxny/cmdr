@@ -505,6 +505,10 @@
   "@fileOperations.transferProgress.sourceReceiving": {
     "sourceHash": "0552601"
   },
+  "fileOperations.transferProgress.waitingForVolume": "Cmdr wartet, bis {volume} wieder erreichbar ist …",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
   "fileOperations.transferProgress.stallNotice": "Kein Fortschritt seit {duration}",
   "@fileOperations.transferProgress.stallNotice": {
     "sourceHash": "4b3c8e6"

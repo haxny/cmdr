@@ -2296,7 +2296,7 @@
     "forms": "button Tentar novamente; running text tente de novo (about a hundred values); Try again in a moment → Tente novamente em instantes",
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (NE106, PE110 Tentar Novamente)",
-    "note": "Don't sweep de novo into novamente in running text."
+    "note": "Don't sweep de novo into novamente in running text. Queue-row aria: `queue.row.retryAria` Tentar novamente esta operação contains the label Tentar novamente."
   },
   "review": {
     "chosen": "Revisar",

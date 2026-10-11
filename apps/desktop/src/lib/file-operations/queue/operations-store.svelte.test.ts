@@ -27,6 +27,7 @@ function snapshot(
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
     ...over,
   }
 }

@@ -503,6 +503,10 @@
   "@fileOperations.transferProgress.sourceReceiving": {
     "sourceHash": "0552601"
   },
+  "fileOperations.transferProgress.waitingForVolume": "正在等待 {volume} 恢复连接…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
   "fileOperations.transferProgress.stallNotice": "已有 {duration} 没有进度",
   "@fileOperations.transferProgress.stallNotice": {
     "sourceHash": "4b3c8e6"

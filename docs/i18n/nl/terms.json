@@ -2485,6 +2485,7 @@
     "chosen": "Probeer opnieuw",
     "confidence": "high",
     "forms": "button Probeer opnieuw; in prose Probeer het opnieuw / Probeer het zo meteen opnieuw; after another opnieuw in the same sentence → nog eens",
+    "note": "Queue-row aria: `queue.row.retryAria` Probeer opnieuw met deze bewerking keeps Probeer opnieuw contiguous; the natural Probeer deze bewerking opnieuw splits the label and fails containment.",
     "sources": "macOS Finder (Probeer het opnieuw)"
   },
   "review": {

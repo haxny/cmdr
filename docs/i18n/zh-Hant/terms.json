@@ -2914,6 +2914,7 @@
     "chosen": "再試一次",
     "confidence": "high",
     "forms": "prose → 再試一次; a short button may keep 重試 (servers.paneState.retryNow 立刻重試)",
+    "note": "Queue-row aria: `queue.row.retryAria` 再試一次這項操作 contains the label 再試一次 (`fileOperations.errorDialog.retry`).",
     "sources": "AP-TW (HK 再試, MS 重試)"
   },
   "rollback": {

@@ -2568,7 +2568,7 @@
     "chosen": "重试",
     "confidence": "confirmed",
     "forms": "button 重试; prose 请稍后再试 / 再试一次 / 要再试一次吗？",
-    "note": "A permission refusal's suggestion never says try again; say what the user can do.",
+    "note": "A permission refusal's suggestion never says try again; say what the user can do. Queue-row aria: `queue.row.retryAria` 重试这项操作 contains the label 重试.",
     "sources": "Nautilus; macOS Finder (Try Again → 重试)"
   },
   "review": {

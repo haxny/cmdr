@@ -87,6 +87,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.retry": "Försök igen",
+  "@queue.row.retry": {
+    "sourceHash": "942087c"
+  },
+  "queue.row.retryAria": "Försök igen med den här åtgärden",
+  "@queue.row.retryAria": {
+    "sourceHash": "7694afb"
+  },
   "queue.row.selectAria": "Markera den här åtgärden",
   "@queue.row.selectAria": {
     "sourceHash": "6618ecc"

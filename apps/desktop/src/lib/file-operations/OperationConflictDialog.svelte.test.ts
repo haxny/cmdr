@@ -49,6 +49,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
     ...over,
   }
 }

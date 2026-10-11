@@ -27,6 +27,7 @@ function operation(operationId: string, operationType: OperationSnapshot['operat
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
   }
 }
 

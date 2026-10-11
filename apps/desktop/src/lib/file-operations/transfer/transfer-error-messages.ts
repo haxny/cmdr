@@ -270,6 +270,17 @@ export function getErrorDisplayMeta(error: WriteOperationError): ErrorDisplayMet
 }
 
 /**
+ * Whether a failure is worth a Retry: a `transient` kind always, any other only
+ * with its explicit `retryHint`. The ONE rule, shared by the error dialog's
+ * Retry and a failed queue row's, so the two never disagree about the same
+ * failure.
+ */
+export function offersRetry(error: WriteOperationError): boolean {
+  const meta = getErrorDisplayMeta(error)
+  return meta.category === 'transient' || meta.retryHint
+}
+
+/**
  * Builds the message for the too-large-for-filesystem error. Only FAT32 produces
  * it (the one common format with a hard 4 GiB per-file cap), so the prose names
  * FAT32 directly; the offending files are listed separately by

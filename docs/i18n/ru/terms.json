@@ -4014,6 +4014,7 @@
     "accept": ["повтор", "еще раз", "ещё раз", "снова"],
     "forms": "the button → «Повторить»; in prose → повторите попытку; Try again? → Повторить попытку?",
     "confidence": "high",
+    "note": "Queue-row aria: `queue.row.retryAria` Повторить эту операцию contains the label Повторить.",
     "sources": "macOS Finder LocalizableMerged NE106 and PE110 Try Again → «Повторить»; macOS live Retry → «Повторить», «Повторить попытку»",
     "proseAccept": ["попроб"]
   },

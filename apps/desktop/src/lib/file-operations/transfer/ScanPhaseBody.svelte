@@ -7,6 +7,7 @@
     import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
     import Trans from '$lib/intl/Trans.svelte'
     import { t, tString } from '$lib/intl/messages.svelte'
+    import type { TransferWaitLine } from './transfer-stall'
 
     interface Props {
         /** `comfortable` is the progress dialog's centred block; `compact` is
@@ -28,6 +29,11 @@
          *  moving, so it goes away; the tallies stay, because they're what it
          *  found before it stopped. */
         paused?: boolean
+        /** The same wait line the progress readout shows (`waitLineFor`). Only
+         *  a volume that went away has anything to say during a scan: an
+         *  operation can wait for one before its first step (a Retry while the
+         *  NAS is still down), and that wait happens while it still counts. */
+        waitLine?: TransferWaitLine | null
     }
 
     const {
@@ -41,6 +47,7 @@
         scanCurrentDir,
         currentFile,
         paused = false,
+        waitLine = null,
     }: Props = $props()
 
     const isCompact = $derived(density === 'compact')
@@ -50,6 +57,10 @@
      *  bare `Math.round` produced. `null` once it rounds to nothing, which is
      *  also what hides the whole line. */
     const scanRate = $derived(scanFilesPerSec === null ? null : formatFilesPerSecond(scanFilesPerSec))
+
+    /** The volume the operation waits on to come back, when it does. The
+     *  spinner goes with it, like a pause's: nothing is being counted. */
+    const reconnectingTo = $derived(waitLine?.kind === 'reconnecting' ? waitLine.volumeName : null)
 </script>
 
 <!-- Source path -->
@@ -75,7 +86,7 @@
         <span class="scan-value">{formatNumber(scanDirsFound)}</span>
         <span class="scan-label">{t('fileOperations.scanPhase.scanDir', { count: scanDirsFound })}</span>
     </div>
-    {#if !paused}
+    {#if !paused && reconnectingTo === null}
         <span
             class="scan-status"
             role="img"
@@ -86,6 +97,12 @@
         </span>
     {/if}
 </div>
+
+{#if reconnectingTo !== null}
+    <div class="scan-waiting" role="status">
+        {tString('fileOperations.transferProgress.waitingForVolume', { volume: reconnectingTo })}
+    </div>
+{/if}
 
 <!-- Throughput -->
 {#if scanRate !== null}
@@ -155,6 +172,14 @@
     .scan-status {
         display: inline-flex;
         align-items: center;
+    }
+
+    /* Says what the count is waiting on; the readout's stalled line uses the
+       same, slightly stronger, tone. */
+    .scan-waiting {
+        text-align: center;
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
     }
 
     .scan-throughput {

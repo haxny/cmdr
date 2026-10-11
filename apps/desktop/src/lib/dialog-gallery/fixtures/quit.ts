@@ -31,6 +31,7 @@ function operation(
     supportsRollback: operationType === 'copy' || operationType === 'move',
     reverses: null,
     error: null,
+    canRetry: false,
   }
 }
 

@@ -108,6 +108,7 @@ function reversalSnapshot(operationId: string, status: OperationSnapshot['status
     supportsRollback: false,
     reverses: 'copy',
     error: null,
+    canRetry: false,
   }
 }
 

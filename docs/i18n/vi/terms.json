@@ -2360,6 +2360,7 @@
     "chosen": "thử lại",
     "confidence": "high",
     "forms": "Try again? → Thử lại?; Retry connection → Thử kết nối lại",
+    "note": "Queue-row aria: `queue.row.retryAria` Thử lại thao tác này contains the label Thử lại.",
     "sources": "GNOME (Thử lại), macOS Finder"
   },
   "review": {

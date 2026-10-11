@@ -82,6 +82,7 @@ function liveRow(): { snapshot: OperationSnapshot } {
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
   }
 }

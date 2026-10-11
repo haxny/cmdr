@@ -72,6 +72,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     supportsRollback: true,
     reverses: null,
     error: null,
+    canRetry: false,
     ...over,
   }
 }
@@ -84,6 +85,7 @@ function failedSnapshot(operationId = 'op-1'): OperationSnapshot {
     supportsRollback: false,
     reverses: null,
     error: { type: 'source_not_found', path: '/Users/me/Documents/report.pdf' },
+    canRetry: false,
   })
 }
 

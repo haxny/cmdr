@@ -966,6 +966,14 @@ export const commands = {
    *  failure never expires on its own.
    */
   dismissFailedOperation: (operationId: string) => __TAURI_INVOKE<void>('dismiss_failed_operation', { operationId }),
+  /**
+   *  Starts a retained failure again as a new operation (the queue row's Retry).
+   *  The failed row is dropped once the new operation starts; a refused start
+   *  comes back as the typed error and leaves the row. `NothingToRetry` for an id
+   *  with no failure, no way to start again, or a Retry already starting.
+   */
+  retryFailedOperation: (operationId: string) =>
+    typedError<RetryOutcome, WriteOperationError>(__TAURI_INVOKE('retry_failed_operation', { operationId })),
   // Drops every retained failure. Backs the queue window's "Dismiss all".
   dismissAllFailedOperations: () => __TAURI_INVOKE<void>('dismiss_all_failed_operations'),
   /**
@@ -12113,6 +12121,13 @@ export type OperationSnapshot = {
    *  failures".
    */
   error: WriteOperationError | null
+  /**
+   *  The queue row may offer Retry: a retained failure that kept a way to
+   *  start again (`routing/retry.rs`), with no Retry for it already starting.
+   *  `false` on every live row. Whether the ERROR is worth retrying is the
+   *  frontend's call (`offersRetry`), the same one the error dialog makes.
+   */
+  canRetry: boolean
 }
 
 /**
@@ -13310,6 +13325,20 @@ export type RestrictedWindowSettings = {
    */
   appearanceLanguage: string | null
 }
+
+// What the queue window's Retry on a failed row did (`retry_failed_operation`).
+export type RetryOutcome =
+  /**
+   *  The transfer started again under this new id, and the failed row is
+   *  gone.
+   */
+  | { kind: 'started'; operationId: string }
+  /**
+   *  Nothing to retry: no retained failure has this id, it carries no way to
+   *  start again (an operation kind without Retry), or a Retry for it is
+   *  already starting.
+   */
+  | { kind: 'nothing_to_retry' }
 
 /**
  *  Typed `reveal-delivered` Tauri event: a reveal from another app just moved a pane.
@@ -16095,6 +16124,14 @@ export type TransferActivity = {
    *  until their response completes, so ❌ never add them to a byte bar.
    */
   sourceInboundBytesPerSecond: number | null
+  /**
+   *  The display name of the volume the operation is waiting on to come
+   *  back, while [`waiting_on`](Self::waiting_on) is
+   *  [`Reconnecting`](TransferWaitReason::Reconnecting), and `None` otherwise.
+   *  Carried here rather than looked up by the view: the queue window knows
+   *  an operation's paths, not its volumes.
+   */
+  reconnectingVolume: string | null
 }
 
 /**
@@ -16150,6 +16187,13 @@ export type TransferWaitReason =
    *  2026-07-31 wedge took.
    */
   | 'unknown'
+  /**
+   *  A volume the transfer runs on went away (a share dropped off the
+   *  network) and the operation is waiting for it to come back, reconnecting
+   *  on its own, for a bounded time (`transfer/volume_outage.rs`).
+   *  [`TransferActivity::reconnecting_volume`] names which one.
+   */
+  | 'reconnecting'
 
 // Human-readable values so the frontend can populate filter UI.
 export type TranslateDisplay = {

@@ -2452,6 +2452,7 @@
     "chosen": "försök igen",
     "confidence": "high",
     "forms": "button Försök igen; X again to retry → <handling> igen för att försöka på nytt; prova is try as in test something",
+    "note": "Queue-row aria: `queue.row.retryAria` Försök igen med den här åtgärden contains the label Försök igen.",
     "sources": "macOS, MS"
   },
   "review": {

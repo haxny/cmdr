@@ -134,6 +134,7 @@ describe('OperationChip a11y', () => {
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     }
   }
 
@@ -216,6 +217,7 @@ describe('OperationFailedToastContent a11y', () => {
     supportsRollback: false,
     reverses: null,
     error: { type: 'insufficient_space', required: 1073741824, available: 1024, volumeName: 'Backup' },
+    canRetry: false,
   }
 
   it('has no a11y violations', async () => {

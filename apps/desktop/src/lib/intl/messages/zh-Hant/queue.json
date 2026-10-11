@@ -87,6 +87,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.retry": "再試一次",
+  "@queue.row.retry": {
+    "sourceHash": "942087c"
+  },
+  "queue.row.retryAria": "再試一次這項操作",
+  "@queue.row.retryAria": {
+    "sourceHash": "7694afb"
+  },
   "queue.row.selectAria": "選取這項操作",
   "@queue.row.selectAria": {
     "sourceHash": "6618ecc"

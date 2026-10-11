@@ -72,6 +72,7 @@ vi.mock('$lib/tauri-commands', () => ({
         supportsRollback: true,
         reverses: null,
         error: null,
+        canRetry: false,
       },
     ]),
   ),
@@ -175,6 +176,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'destination',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()
@@ -198,6 +200,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'destination',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()
@@ -255,6 +258,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'moving',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()
@@ -275,6 +279,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'source',
         openingSource: true,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()
@@ -295,6 +300,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'source',
         openingSource: true,
         sourceInboundBytesPerSecond: 19_000,
+        reconnectingVolume: null,
       }),
     )
     await tick()
@@ -315,6 +321,7 @@ describe('TransferProgressDialog stall notice', () => {
         waitingOn: 'source',
         openingSource: false,
         sourceInboundBytesPerSecond: null,
+        reconnectingVolume: null,
       }),
     )
     await tick()

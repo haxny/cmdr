@@ -23,7 +23,8 @@
     } from '../reversal-wording'
     import { opKindForWireType } from '../op-kind'
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
-    import { requestForegroundOperation } from '$lib/tauri-commands'
+    import { requestForegroundOperation, retryFailedOperation } from '$lib/tauri-commands'
+    import { offersRetry } from '../transfer/transfer-error-messages'
     import { getAppLogger } from '$lib/logging/logger'
 
     const log = getAppLogger('queue')
@@ -90,6 +91,23 @@
      *  record now: nothing to pause, cancel, roll back, or select in bulk, and
      *  the only control left is Dismiss. */
     const isFailed = $derived(status === 'failed')
+
+    /** Retry, beside Dismiss: the backend kept how this operation started
+     *  (`canRetry`), and the failure is one the error dialog would offer Retry
+     *  for too (`offersRetry`, the rule both share). It starts a NEW operation,
+     *  whose row replaces this one. */
+    const canRetry = $derived(isFailed && snapshot.canRetry && snapshot.error !== null && offersRetry(snapshot.error))
+
+    /** A refused retry (the volume is still gone) leaves this row as it was, so
+     *  the log is the only place it shows. */
+    async function retry(): Promise<void> {
+        const operationId = snapshot.operationId
+        try {
+            await retryFailedOperation(operationId)
+        } catch (error) {
+            log.warn('Retrying op={operationId} was refused: {error}', { operationId, error: String(error) })
+        }
+    }
 
     /** Why it stopped, in the error dialog's own words. Null on every live row.
      *  `reason.message` is markup from the pipeline (escaped names, size tiers),
@@ -465,6 +483,20 @@
                 </span>
             </Button>
         {/if}
+        {#if canRetry}
+            <Button
+                variant="secondary"
+                size="mini"
+                onclick={() => void retry()}
+                aria-label={tString('queue.row.retryAria')}
+                tabindex={-1}
+            >
+                <span class="btn-inner">
+                    <Icon name="rotate-cw" size={13} />
+                    {tString('queue.row.retry')}
+                </span>
+            </Button>
+        {/if}
         {#if failureIncident}
             <ReportOffer incident={failureIncident} size="mini" />
         {/if}
@@ -548,6 +580,7 @@
                 scanCurrentDir={progress.currentDir ?? null}
                 currentFile={progress.currentFile}
                 paused={isPaused}
+                {waitLine}
             />
         </div>
     {/if}

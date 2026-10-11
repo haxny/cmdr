@@ -46,8 +46,8 @@
         /** The backend's stall verdict; it displaces the countdown while set. */
         stall?: StallNotice | null
         /** A wait worth describing while bytes are on their way but none has
-         *  landed (`waitLineFor`): it displaces the countdown too, and a stall
-         *  outranks it. */
+         *  landed, or while a volume that went away comes back (`waitLineFor`):
+         *  it displaces the countdown too, and a stall outranks it. */
         waitLine?: TransferWaitLine | null
         /** The count row's noun: trash moves items, everything else files. */
         countKind?: 'files' | 'items'
@@ -120,6 +120,9 @@
                 duration: formatDuration(seconds(stall.stillForSeconds)),
             })
         }
+        if (waitLine?.kind === 'reconnecting') {
+            return tString('fileOperations.transferProgress.waitingForVolume', { volume: waitLine.volumeName })
+        }
         if (waitLine?.kind === 'opening') {
             return tString('fileOperations.transferProgress.openingSource', {
                 duration: formatDuration(seconds(waitLine.forSeconds)),
@@ -166,7 +169,7 @@
     <!-- Rendered even while empty (see `.time:empty` below): the line holds its
          height so the readout doesn't grow a row, and shove everything under it
          down, the moment the estimator warms up. -->
-    <span class="time" class:stalled={stall !== null}
+    <span class="time" class:stalled={stall !== null || waitLine?.kind === 'reconnecting'}
         >{#if receivingRate !== null}<Trans
                 key="fileOperations.transferProgress.sourceReceiving"
                 snippets={{ size: receivingRateSize }}
@@ -245,7 +248,8 @@
         content: '\a0';
     }
 
-    /* A stalled readout is the one thing on the row worth noticing. */
+    /* A stalled readout is the one thing on the row worth noticing, and so is
+       one waiting for its volume to come back. */
     .time.stalled {
         color: var(--color-text-secondary);
     }

@@ -4,7 +4,7 @@ import QueueRow from './QueueRow.svelte'
 import { operationTypeIcon } from './operation-icon'
 import type { OperationRow } from './operations-store.svelte'
 import type { OperationSnapshot, WriteOperationError, WriteProgressEvent } from '$lib/ipc/bindings'
-import { requestForegroundOperation } from '$lib/tauri-commands'
+import { requestForegroundOperation, retryFailedOperation } from '$lib/tauri-commands'
 
 // The component reads reactive settings (file-size format) deep in `<Size>`. The
 // real path needs the settings store; stub the format getter to keep the unit
@@ -17,6 +17,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
 // for its own operation and nothing else.
 vi.mock('$lib/tauri-commands', () => ({
   requestForegroundOperation: vi.fn(() => Promise.resolve()),
+  retryFailedOperation: vi.fn(() => Promise.resolve({ kind: 'started', operationId: 'op-2' })),
 }))
 
 // The report opens in the main window; the row's job is to say what to report.
@@ -45,6 +46,7 @@ function buildRow(
       supportsRollback,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress,
   }
@@ -75,9 +77,18 @@ function buildReversalRow(
 
 /** A retained failure as the backend hands it over: settled, unrollbackable,
  *  carrying the typed error that stopped it. */
-function buildFailedRow(error: WriteOperationError, opType: OperationSnapshot['operationType'] = 'copy'): OperationRow {
+function buildFailedRow(
+  error: WriteOperationError,
+  opType: OperationSnapshot['operationType'] = 'copy',
+  canRetry = false,
+): OperationRow {
   const failed = buildRow('failed', opType)
-  return { ...failed, snapshot: { ...failed.snapshot, error } }
+  return { ...failed, snapshot: { ...failed.snapshot, error, canRetry } }
+}
+
+/** The Retry button on a failed row. */
+function retryButton(): HTMLButtonElement | null {
+  return target.querySelector<HTMLButtonElement>('[aria-label="Retry this operation"]')
 }
 
 let target: HTMLElement
@@ -401,6 +412,38 @@ describe('QueueRow', () => {
     render({ row: buildFailedRow({ type: 'source_not_found', path: '/gone.txt' }), onDismiss })
     target.querySelector<HTMLButtonElement>('[aria-label="Dismiss this operation"]')?.click()
     expect(onDismiss).toHaveBeenCalledOnce()
+  })
+
+  // #398: a background copy to a NAS that dropped off gets the same Retry the
+  // foreground error dialog offers.
+  it('offers Retry on a failure the backend can start again and that is worth retrying', () => {
+    render({ row: buildFailedRow({ type: 'connection_interrupted', path: '/Volumes/naspi/a.raw' }, 'copy', true) })
+    expect(retryButton()).not.toBeNull()
+    expect(target.querySelector('[aria-label="Dismiss this operation"]')).not.toBeNull()
+  })
+
+  it('clicking Retry starts this operation again', () => {
+    render({ row: buildFailedRow({ type: 'connection_interrupted', path: '/Volumes/naspi/a.raw' }, 'copy', true) })
+    retryButton()?.click()
+    expect(retryFailedOperation).toHaveBeenCalledWith('op-1')
+  })
+
+  it('offers no Retry when the backend kept no way to start again', () => {
+    render({ row: buildFailedRow({ type: 'connection_interrupted', path: '/a' }, 'delete', false) })
+    expect(retryButton()).toBeNull()
+  })
+
+  it('offers no Retry for a failure that trying again won’t fix', () => {
+    // The same rule as the error dialog's (`offersRetry`): read-only needs a
+    // different destination, not a second try.
+    render({
+      row: buildFailedRow(
+        { type: 'read_only_device', path: '/Volumes/Stick', deviceName: 'Stick', side: 'destination' },
+        'copy',
+        true,
+      ),
+    })
+    expect(retryButton()).toBeNull()
   })
 
   it('exposes the lifecycle status as a data attribute for E2E', () => {

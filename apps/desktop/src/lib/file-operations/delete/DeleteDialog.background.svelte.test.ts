@@ -162,6 +162,7 @@ function liveRow(id: string): { snapshot: OperationSnapshot } {
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
   }
 }

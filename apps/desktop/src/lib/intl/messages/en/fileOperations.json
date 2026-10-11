@@ -893,6 +893,16 @@
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
+  "fileOperations.transferProgress.waitingForVolume": "Waiting for {volume} to come back…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "description": "Shown while a copy or move is on hold because a network drive or server it uses dropped off the network (a router restart, a NAS waking up, Wi-Fi switching). Cmdr reconnects to it on its own and carries on where it stopped as soon as it's back; if it isn't back within a few minutes, the copy stops and says why. The person can cancel at any time. Replaces the time-left text under the progress bars, and also appears under the running counts while the operation is still counting files. Appears on both surfaces that show a running transfer: the copy/move progress dialog and the rows of the operation queue window. Keep it short. \"Come back\" means the drive is reachable again, not that someone returns it. The ellipsis says the wait is ongoing.",
+    "placeholders": {
+      "volume": "the name of the network drive or server, as the volume list shows it (for example Naspolya)"
+    },
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
   "fileOperations.transferProgress.stallNotice": "No progress for {duration}",
   "@fileOperations.transferProgress.stallNotice": {
     "description": "Replaces the time-left text when a transfer has stopped moving, so we stop showing a countdown we no longer believe. Appears on both surfaces that show a running transfer: the copy/move/delete progress dialog and the rows of the operation queue window. {duration} is a formatted length of time such as '45s' or '2m 30s'.",

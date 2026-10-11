@@ -91,6 +91,7 @@ vi.mock('$lib/tauri-commands', () => ({
         supportsRollback: registry.supportsRollback,
         reverses: null,
         error: null,
+        canRetry: false,
       },
     ]),
   ),

@@ -19,6 +19,7 @@ function activity(over: Partial<TransferActivity> = {}): TransferActivity {
     waitingOn: 'moving',
     openingSource: false,
     sourceInboundBytesPerSecond: null,
+    reconnectingVolume: null,
     ...over,
   }
 }
@@ -144,5 +145,38 @@ describe('waitLineFor', () => {
   it('says nothing for a transfer that is simply moving, or reports no activity', () => {
     expect(waitLineFor(activity())).toBeNull()
     expect(waitLineFor(null)).toBeNull()
+  })
+
+  // #398: a NAS that dropped off the network. The backend waits for it and says
+  // which one, from the first second, on both surfaces.
+  it('names the volume a transfer is waiting on to come back', () => {
+    expect(waitLineFor(activity({ waitingOn: 'reconnecting', reconnectingVolume: 'Naspolya' }))).toEqual({
+      kind: 'reconnecting',
+      volumeName: 'Naspolya',
+    })
+  })
+
+  it('puts the volume coming back ahead of an opening or a trickle under it', () => {
+    // Nothing arrives from a volume that's gone, whatever a stale reading says.
+    expect(
+      waitLineFor(
+        activity({
+          waitingOn: 'reconnecting',
+          reconnectingVolume: 'Naspolya',
+          openingSource: true,
+          sourceInboundBytesPerSecond: 5,
+        }),
+      ),
+    ).toEqual({ kind: 'reconnecting', volumeName: 'Naspolya' })
+  })
+})
+
+describe('stallNoticeFor while a volume comes back', () => {
+  it('never calls waiting for a volume a stall', () => {
+    // It says what it's waiting on, by name; "no progress for 2m" on top would
+    // be true and useless.
+    expect(
+      stallNoticeFor(activity({ stillForSeconds: 120, waitingOn: 'reconnecting', reconnectingVolume: 'Naspolya' })),
+    ).toBeNull()
   })
 })

@@ -10,8 +10,8 @@ and gotchas live in `CLAUDE.md`.
 (`waitLineFor`). Everything else comes from the backend's `TransferActivity`, derived from the live in-flight probe (see
 `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "The stall signal").
 
-**The wait line, before the first byte and while a response arrives.** Two backend readings drive it, and the readout's
-time line shows at most one, below a stall and above an ETA:
+**The wait line, before the first byte, while a response arrives, and while a volume comes back.** Three backend
+readings drive it, and the readout's time line shows at most one, below a stall and above an ETA:
 
 - `sourceInboundBytesPerSecond` set: "Receiving from the source at 19 kB/s". The backend sends it only while the byte
   counter stands still, so it's the rate of a response that hasn't finished arriving (one SMB compound read, or one 8 MB
@@ -20,6 +20,14 @@ time line shows at most one, below a stall and above an ETA:
 - `openingSource` set and under 10 s still: "Waiting for the source to start sending (4s)". Before the first byte there
   is no countdown to protect, so there's nothing to wait out; the backend heartbeats from the first still second for
   exactly this. Past 10 s with nothing arriving, the stall notice takes over and names the source.
+
+- `waitingOn: 'reconnecting'`: "Waiting for Naspolya to come back…", named by `reconnectingVolume`. A share dropped off
+  the network and the backend is reconnecting it for a bounded time
+  (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Waiting out a volume that went
+  away"). It outranks the other two (nothing arrives from a volume that's gone), shows from the first second, holds back
+  the stall notice (the wait is named), and wears the stalled tone, since it's the news on the row. It's also the one
+  line `ScanPhaseBody` renders: a Retry while the NAS is still down waits before its first step, while it's still
+  counting.
 
 Both stay silent for `paused` and `conflict`. ERR-CNK7M is the case: a 377 kB file sat 20 s on a silent 0% bar. Pinned
 by `transfer-stall.test.ts` (`waitLineFor`), `TransferProgressReadout.svelte.test.ts`, and

@@ -2531,6 +2531,7 @@
     "confidence": "high",
     "decision": "Mots qui ont divergé sans qu'aucun check puisse le voir",
     "forms": "button Réessayer; the running state → Nouvelle tentative; attempt counter → Tentative nº {count}; Retry connection → Réessayer la connexion; Try again in a moment → Réessayez dans un instant",
+    "note": "Queue-row aria: `queue.row.retryAria` Réessayer cette opération contains the label Réessayer.",
     "sources": "macOS Finder (Réessayer, réessayez)"
   },
   "review": {

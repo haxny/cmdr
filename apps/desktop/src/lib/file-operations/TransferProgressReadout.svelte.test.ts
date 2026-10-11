@@ -143,6 +143,14 @@ describe('TransferProgressReadout', () => {
     expect(texts('.time')).toEqual(['Receiving from the source at 19 kB/s'])
   })
 
+  // #398: the share dropped off the network, and the copy waits for it rather
+  // than failing. The line names it, and reads as the row's news.
+  it('says which volume the transfer is waiting on to come back', () => {
+    render({ ...halfway, waitLine: { kind: 'reconnecting', volumeName: 'Naspolya' } })
+    expect(texts('.time')).toEqual(['Waiting for Naspolya to come back…'])
+    expect(target.querySelector('.time')?.classList.contains('stalled')).toBe(true)
+  })
+
   it('a stall still outranks a wait line', () => {
     render({
       ...halfway,

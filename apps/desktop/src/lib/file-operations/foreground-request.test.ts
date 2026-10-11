@@ -20,6 +20,7 @@ function row(operationId: string, operationType: OperationSnapshot['operationTyp
       supportsRollback: true,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress: null,
   }

@@ -64,9 +64,13 @@ export function stallNoticeFor(activity: TransferActivity | null | undefined): S
   // reason has to be classified rather than silently falling through to a
   // stall notice.
   switch (activity.waitingOn) {
+    // `reconnecting`: a volume that went away is a wait the backend knows the
+    // reason for, and the wait line names it (`waitLineFor`); a "no progress"
+    // warning on top would be true and useless.
     case 'moving':
     case 'paused':
     case 'conflict':
+    case 'reconnecting':
       return null
     case 'destination':
     case 'source':
@@ -88,8 +92,14 @@ export function stallNoticeFor(activity: TransferActivity | null | undefined): S
 /**
  * What the time line says, in place of an ETA, while bytes are genuinely on
  * their way but none has landed: the first file still being opened, or a
- * response still arriving.
+ * response still arriving. Or while nothing CAN land: a volume the transfer
+ * runs on went away, and the backend is waiting for it to come back.
  *
+ * - `reconnecting`: the share or server named `volumeName` dropped, and the
+ *   backend is reconnecting it on its own for a bounded time
+ *   (`src-tauri/…/transfer/volume_outage.rs`). Shown straight away and for as
+ *   long as it lasts; it outranks the other two, since nothing arrives from a
+ *   volume that's gone.
  * - `receiving`: the source's connection is receiving at `bytesPerSecond`
  *   while the byte counter stands still. Connection-wide and unverified, so it
  *   never reaches a bar; the backend only sends it while the counter is still.
@@ -98,7 +108,10 @@ export function stallNoticeFor(activity: TransferActivity | null | undefined): S
  *   there's no countdown to protect. Past `STALL_NOTICE_SECONDS` with nothing
  *   arriving either, the stall notice takes over and names the source.
  */
-export type TransferWaitLine = { kind: 'receiving'; bytesPerSecond: number } | { kind: 'opening'; forSeconds: number }
+export type TransferWaitLine =
+  | { kind: 'reconnecting'; volumeName: string }
+  | { kind: 'receiving'; bytesPerSecond: number }
+  | { kind: 'opening'; forSeconds: number }
 
 /** Decide whether the time line has a wait to describe, and which. */
 export function waitLineFor(activity: TransferActivity | null | undefined): TransferWaitLine | null {
@@ -106,6 +119,11 @@ export function waitLineFor(activity: TransferActivity | null | undefined): Tran
   // A pause and a prompt say so in the dialog's title; anything still arriving
   // under them isn't the news.
   if (activity.waitingOn === 'paused' || activity.waitingOn === 'conflict') return null
+  if (activity.waitingOn === 'reconnecting') {
+    // The backend names the volume with the reason, always; an unnamed one
+    // would be a backend bug, and the bare reason still beats a countdown.
+    return { kind: 'reconnecting', volumeName: activity.reconnectingVolume ?? '' }
+  }
   if (isReceiving(activity)) {
     return { kind: 'receiving', bytesPerSecond: activity.sourceInboundBytesPerSecond ?? 0 }
   }

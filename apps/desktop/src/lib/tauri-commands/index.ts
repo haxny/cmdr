@@ -341,6 +341,7 @@ export {
   dismissFailedOperation,
   dismissAllFailedOperations,
   moveQueuedOperation,
+  retryFailedOperation,
   onOperationsChanged,
   onQueueSelectAll,
   onWriteSourcesGone,
@@ -351,6 +352,7 @@ export type {
   OperationsChanged,
   QueueMoveDirection,
   QueueMoveOutcome,
+  RetryOutcome,
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,
 } from './operations'
