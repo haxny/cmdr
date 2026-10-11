@@ -968,11 +968,13 @@ export {
   updateSavedServer,
   savedServerId,
   updateSavedSmbHost,
+  ejectAndUpdateSavedSmbHost,
   updateSavedS3Account,
   forgetSavedSmbHost,
   forgetSavedSmbHostPassword,
 } from './servers'
 export type {
+  EjectAndSaveOutcome,
   SavedPlace,
   SavedPlaceRefusal,
   SavedServer,

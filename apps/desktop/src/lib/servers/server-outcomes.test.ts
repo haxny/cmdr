@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SavedServerOutcome } from '$lib/ipc/bindings'
 import type { ConnectRefusalKind } from './connect-refusals'
-import { needsAHuman, readConnectOutcome, readSavedServerOutcome } from './server-outcomes'
+import { needsAHuman, readConnectOutcome, readEjectAndSaveOutcome, readSavedServerOutcome } from './server-outcomes'
 
 describe('readSavedServerOutcome', () => {
   it('reads a save that landed as saved', () => {
@@ -47,6 +47,30 @@ describe('readSavedServerOutcome', () => {
       refusal: 'share_mounted',
       share: 'Photos',
     })
+  })
+})
+
+describe('readEjectAndSaveOutcome', () => {
+  it('reads a settled run as the save it answered', () => {
+    expect(readEjectAndSaveOutcome({ outcome: 'settled', answer: { outcome: 'saved' } })).toEqual({ kind: 'saved' })
+    expect(readEjectAndSaveOutcome({ outcome: 'settled', answer: { outcome: 'operation_running' } })).toEqual({
+      kind: 'refused',
+      refusal: 'operation_running',
+    })
+  })
+
+  it('names the share whose eject was refused, carrying why', () => {
+    const error = { type: 'timedOut' } as const
+    expect(readEjectAndSaveOutcome({ outcome: 'eject_refused', name: 'Photos', error })).toEqual({
+      kind: 'refused',
+      refusal: 'share_eject_refused',
+      share: 'Photos',
+      ejectError: error,
+    })
+  })
+
+  it('reads a run the sheet called off as cancelled', () => {
+    expect(readEjectAndSaveOutcome({ outcome: 'cancelled' })).toEqual({ kind: 'cancelled' })
   })
 })
 

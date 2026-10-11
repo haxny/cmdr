@@ -27,6 +27,7 @@
     import Button from '$lib/ui/Button.svelte'
     import Checkbox from '$lib/ui/Checkbox.svelte'
     import InfoTip from '$lib/ui/InfoTip.svelte'
+    import Spinner from '$lib/ui/Spinner.svelte'
     import TextInput from '$lib/ui/TextInput.svelte'
     import ToggleGroup, { type ToggleGroupOption } from '$lib/ui/ToggleGroup.svelte'
     import { tString } from '$lib/intl/messages.svelte'
@@ -95,6 +96,13 @@
          * checking nothing, which the line beside it says.
          */
         onAddAnyway?: () => void
+        /**
+         * Offered on an SMB edit's `share_mounted` refusal: ejects every share still
+         * mounted from the old address, then saves (`SignInSheet.svelte`).
+         */
+        onEjectAndSave?: () => void
+        /** "Eject and save" is running: its button shows the progress. */
+        ejecting?: boolean
         /** The sentence under the secret field. */
         secretRefusal?: string
         /** Edit mode, over a stored secret: what an empty secret field keeps. */
@@ -149,6 +157,8 @@
         addressWarning,
         onTryNextcloudAddress,
         onAddAnyway,
+        onEjectAndSave,
+        ejecting = false,
         secretRefusal,
         secretPlaceholder,
         rootRefusal,
@@ -276,6 +286,29 @@
                     {tString('servers.sheet.addAnyway')}
                 </Button>
                 <p id="server-add-anyway-help" class="field-help">{tString('servers.sheet.addAnywayHelp')}</p>
+            </div>
+        {/if}
+        {#if onEjectAndSave}
+            <!-- ❗ Blocked, ❌ not disabled, while it runs: focus stays on the button, and the live
+                 region reads its "Ejecting…" out. A dead share can take half a minute. -->
+            <div class="remedy-row" aria-live="polite">
+                <Button
+                    size="mini"
+                    onclick={onEjectAndSave}
+                    disabled={disabled && !ejecting}
+                    ariaDisabled={ejecting}
+                    aria-describedby="server-eject-and-save-help"
+                >
+                    {#if ejecting}
+                        <span class="remedy-progress">
+                            <Spinner size="sm" />
+                            {tString('servers.sheet.ejecting')}
+                        </span>
+                    {:else}
+                        {tString('servers.sheet.ejectAndSave')}
+                    {/if}
+                </Button>
+                <p id="server-eject-and-save-help" class="field-help">{tString('servers.sheet.ejectAndSaveHelp')}</p>
             </div>
         {/if}
     {:else if addressWarning}
@@ -543,6 +576,12 @@
 
     .remedy-row {
         margin-top: var(--spacing-sm);
+    }
+
+    .remedy-progress {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
     }
 
     .stored-secret-warning {

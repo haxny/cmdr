@@ -404,6 +404,14 @@
       "name": "the share's name, like \"Photos\" or \"public\""
     }
   },
+  "servers.refusal.shareEjectRefused": "Cmdr couldn’t eject {name}, so nothing was saved. {reason}",
+  "@servers.refusal.shareEjectRefused": {
+    "description": "Under the Address field of the edit server sheet, after the user pressed Eject and save (servers.sheet.ejectAndSave) on a saved SMB server whose shares (shared folders) were still mounted from its OLD address: one share couldn't be ejected, usually because an app still has files open there, so the new address wasn't saved. Shares ejected before it stay ejected. {reason} is a whole sentence from the eject messages (errors.eject.*), like “Preview still has files open there. Close them, then try again.”; put it where a second sentence reads naturally in your language.",
+    "placeholders": {
+      "name": "the share's name, like \"Photos\" or \"public\"",
+      "reason": "one or two full sentences from errors.eject.*, saying why the eject didn't happen and what to do"
+    }
+  },
   "servers.sheet.addTitle": "Add server",
   "@servers.sheet.addTitle": {
     "description": "Title of the sheet where the user types a new server. VERB phrase, imperative.",
@@ -442,6 +450,18 @@
   "servers.sheet.addAnywayHelp": "Cmdr couldn’t check this server, so Add anyway saves it as you typed it.",
   "@servers.sheet.addAnywayHelp": {
     "description": "One line beside the Add anyway button: nothing about the server was checked, so a typo would be saved too. \"Add anyway\" must match servers.sheet.addAnyway word for word."
+  },
+  "servers.sheet.ejectAndSave": "Eject and save",
+  "@servers.sheet.ejectAndSave": {
+    "description": "Small button under the address in the edit server sheet, shown only when the user changed a saved SMB server's address and one of its shares (shared folders) is still mounted from the OLD address (servers.refusal.shareMounted). Pressing it ejects those shares, then saves the new address. VERB phrase; “Eject” is the same verb as the sidebar's and Finder's Eject."
+  },
+  "servers.sheet.ejectAndSaveHelp": "Cmdr ejects every share still mounted from the old address, then saves the new one.",
+  "@servers.sheet.ejectAndSaveHelp": {
+    "description": "One line beside the Eject and save button (servers.sheet.ejectAndSave), saying what it does: every share (shared folder) of this SMB server that is still mounted from its old address gets ejected first, then the new address is saved. Typical case: the NAS got a new IP address, so the old mounts are dead anyway."
+  },
+  "servers.sheet.ejecting": "Ejecting…",
+  "@servers.sheet.ejecting": {
+    "description": "Replaces the Eject and save button's label (servers.sheet.ejectAndSave) while Cmdr ejects the shares still mounted from the old address. A share whose server stopped answering can take up to half a minute. The ellipsis is the single character … (U+2026)."
   },
   "servers.sheet.addedToast": "{name} is saved in your Servers list.",
   "@servers.sheet.addedToast": {

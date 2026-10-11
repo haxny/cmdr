@@ -15,6 +15,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   updateSavedServer: vi.fn(() => Promise.resolve({ outcome: 'saved' })),
   updateSavedSmbHost: vi.fn(() => Promise.resolve({ outcome: 'saved' })),
+  ejectAndUpdateSavedSmbHost: vi.fn(() => Promise.resolve({ outcome: 'settled', answer: { outcome: 'saved' } })),
+  cancelServerConnect: vi.fn(() => Promise.resolve(true)),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(() => Promise.resolve(null)) }))
@@ -84,6 +86,8 @@ describe('SignInSheet: editing an SMB host', () => {
     const commands = await import('$lib/tauri-commands')
     vi.mocked(commands.updateSavedSmbHost).mockClear()
     vi.mocked(commands.updateSavedServer).mockClear()
+    vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockClear()
+    vi.mocked(commands.cancelServerConnect).mockClear()
   })
 
   it('opens on the name a person typed, with the address open to a move', async () => {
@@ -147,6 +151,99 @@ describe('SignInSheet: editing an SMB host', () => {
       'Photos is still mounted from the old address. Eject it, then save again.',
     )
     expect(done).toEqual([])
+  })
+
+  /** Opens the sheet, types a new address, and presses Save onto the `share_mounted` refusal. */
+  async function refusedOverAMountedShare() {
+    const commands = await import('$lib/tauri-commands')
+    vi.mocked(commands.updateSavedSmbHost).mockResolvedValueOnce({ outcome: 'share_mounted', name: 'Photos' })
+    const sheet = await renderSheet({ mode: 'edit', server: SMB_HOST })
+    typeInto(field('server-address'), '192.168.0.200')
+    await tick()
+    buttonSaying('Save').click()
+    await flush()
+    return sheet
+  }
+
+  /**
+   * ❗ The NAS got a new IP, so the old mount is dead and ejecting it by hand hangs. The
+   * refusal offers the way past it, and the person's click is what ejects.
+   */
+  it('offers Eject and save on a share still mounted from the old address, which ejects and saves', async () => {
+    const commands = await import('$lib/tauri-commands')
+    const { done } = await refusedOverAMountedShare()
+    expect(commands.ejectAndUpdateSavedSmbHost).not.toHaveBeenCalled()
+    expect(document.body.querySelector('#server-eject-and-save-help')?.textContent.trim()).toBe(
+      'Cmdr ejects every share still mounted from the old address, then saves the new one.',
+    )
+
+    buttonSaying('Eject and save').click()
+    await flush()
+
+    expect(commands.ejectAndUpdateSavedSmbHost).toHaveBeenCalledWith(
+      'manual-192-168-0-153-445',
+      "Sven's NAS",
+      null,
+      'smb://192.168.0.200',
+      expect.any(String),
+    )
+    expect(done).toEqual([{ kind: 'saved' }])
+  })
+
+  /** ❗ A refused eject is a live mount someone is using: it says who, saves nothing, and offers the button again. */
+  it('says who is holding a share whose eject was refused, and saves nothing', async () => {
+    const commands = await import('$lib/tauri-commands')
+    vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockResolvedValueOnce({
+      outcome: 'eject_refused',
+      name: 'Photos',
+      error: {
+        type: 'unmountRefused',
+        holders: { type: 'complete', named: [{ pid: 4242, name: 'Preview', bundleId: null, kind: 'app' }] },
+        detail: 'diskutil unmount: dissented by PID 4242',
+      },
+    })
+    const { done } = await refusedOverAMountedShare()
+
+    buttonSaying('Eject and save').click()
+    await flush()
+
+    expect(document.body.querySelector('#server-address-refusal')?.textContent.trim()).toBe(
+      'Cmdr couldn’t eject Photos, so nothing was saved. Preview still has files open there. Close them, then try again.',
+    )
+    expect(buttonSaying('Eject and save')).toBeTruthy()
+    expect(done).toEqual([])
+  })
+
+  /** Cancel while it runs calls the run off, so a closed sheet never saves the edit. */
+  it('calls a running Eject and save off when the sheet is canceled', async () => {
+    const commands = await import('$lib/tauri-commands')
+    vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockReturnValueOnce(new Promise(() => {}))
+    const { done } = await refusedOverAMountedShare()
+
+    buttonSaying('Eject and save').click()
+    await flush()
+    expect(buttonSaying('Ejecting…').getAttribute('aria-disabled')).toBe('true')
+    const attemptId = vi.mocked(commands.ejectAndUpdateSavedSmbHost).mock.calls[0][4]
+
+    buttonSaying('Cancel').click()
+    await flush()
+
+    expect(commands.cancelServerConnect).toHaveBeenCalledWith(attemptId)
+    expect(done).toEqual([{ kind: 'cancelled' }])
+  })
+
+  it('offers no Eject and save on a refusal that no eject fixes', async () => {
+    const commands = await import('$lib/tauri-commands')
+    vi.mocked(commands.updateSavedSmbHost).mockResolvedValueOnce({ outcome: 'address_taken', name: 'Office NAS' })
+    await renderSheet({ mode: 'edit', server: SMB_HOST })
+    typeInto(field('server-address'), '192.168.0.200')
+    await tick()
+    buttonSaying('Save').click()
+    await flush()
+
+    expect([...document.body.querySelectorAll('button')].some((b) => b.textContent.includes('Eject and save'))).toBe(
+      false,
+    )
   })
 
   it('opens an unnamed host with an empty name and the address as its placeholder', async () => {

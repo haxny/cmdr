@@ -51,7 +51,8 @@
         type ServerForm,
         hostWithPort,
     } from './server-form'
-    import { readSavedServerOutcome, type SaveOutcome } from './server-outcomes'
+    import { readEjectAndSaveOutcome, readSavedServerOutcome, type SaveOutcome } from './server-outcomes'
+    import { ejectTechnicalDetail, renderEjectError } from '$lib/file-explorer/navigation/eject-error-messages'
     import { s3FieldProblem, s3HostOf, s3ProviderFrom, s3RequiredFieldOf } from './s3-form'
     import { saveTargetSecret, savedEditForm, unattendedReconnectWarning } from './saved-server-io'
     import type {
@@ -63,9 +64,12 @@
     } from './sign-in-contract'
     import {
         approveSftpHostKey,
+        cancelServerConnect,
+        ejectAndUpdateSavedSmbHost,
         forgetServerSecret,
         hasServerSecret,
         listSavedServers,
+        newServerAttemptId,
         savedServerId,
         updateSavedS3Account,
         updateSavedServer,
@@ -100,8 +104,12 @@
     let refusalRegion = $state<string | null>(null)
     /** `address_taken`: what the saved server already at the typed address is called. */
     let refusalTakenBy = $state<string | null>(null)
-    /** `share_mounted`: the SMB host's share still mounted from its old address. */
+    /** `share_mounted` / `share_eject_refused`: the SMB host's share still mounted from its old address. */
     let refusalShare = $state<string | null>(null)
+    /** `share_eject_refused`: why that share's eject didn't go through, in the eject copy's words. */
+    let refusalEjectReason = $state<string | null>(null)
+    /** The running "Eject and save"'s attempt id, which the sheet's Cancel calls off; `null` when none runs. */
+    let ejectAttempt = $state<string | null>(null)
     /**
      * Edit mode: the id the place has since a save that landed, which differs from the one the
      * sheet opened on once the save moved its address. Plain, not `$state`: nothing renders it.
@@ -288,8 +296,17 @@
             region: refusalRegion,
             takenBy: refusalTakenBy,
             share: refusalShare,
+            ejectReason: refusalEjectReason,
         }
     })
+
+    /**
+     * SMB edit mode: "Eject and save" is the way past a share still mounted from the old address,
+     * offered on that refusal and again after an eject that didn't go through.
+     */
+    const offersEjectAndSave = $derived(
+        editedServer?.protocol === 'smb' && (refusal === 'share_mounted' || refusal === 'share_eject_refused'),
+    )
 
     /**
      * The sentence under the address when it looks like another protocol than
@@ -449,6 +466,16 @@
 
     function close(result: SignInSheetResult) {
         onDone(result)
+    }
+
+    /**
+     * The sheet's Cancel, its close button, and Escape. ❗ A running "Eject and save" is called off
+     * on the way out: it stops before the next eject and before the save, so a closed sheet never
+     * saves an edit. A share already ejected stays ejected; an unmount can't be taken back.
+     */
+    function cancel() {
+        if (ejectAttempt) void cancelServerConnect(ejectAttempt)
+        close({ kind: 'cancelled' })
     }
 
     /**
@@ -759,12 +786,59 @@
             log.warn('Saving the edited SMB host broke down: {error}', { error: String(e) })
         }
         busy = false
+        await settleSmbSave(answer)
+    }
+
+    /**
+     * "Eject and save", the button on the `share_mounted` refusal: the backend takes down every share
+     * of the host still mounted from the old address (a normal unmount, and a force one only when that
+     * didn't answer, which is what a dead share does), then saves. ❗ The person asked for it, so Cmdr
+     * still never ejects on its own. A share something still has files open on is never forced: that
+     * eject comes back refused, worded by the eject copy, and nothing is saved.
+     */
+    async function ejectAndSave() {
+        if (!editedServer || ejectAttempt) return
+        const attemptId = newServerAttemptId()
+        ejectAttempt = attemptId
+        busy = true
+        let answer: SaveOutcome | { kind: 'cancelled' } = { kind: 'refused', refusal: 'save_unconfirmed' }
+        try {
+            const address = smbAddressFrom(form.address)
+            answer = readEjectAndSaveOutcome(
+                await ejectAndUpdateSavedSmbHost(
+                    editedServer.id,
+                    form.displayName.trim(),
+                    typedAccount(form.username),
+                    address,
+                    attemptId,
+                ),
+            )
+        } catch (e) {
+            log.warn('Ejecting and saving the edited SMB host broke down: {error}', { error: String(e) })
+        }
+        ejectAttempt = null
+        busy = false
+        // The sheet already closed on the Cancel that called it off.
+        if (answer.kind === 'cancelled') return
+        await settleSmbSave(answer)
+    }
+
+    /** An SMB host save's answer: close on a save, else the refusal under the field it's about. */
+    async function settleSmbSave(answer: SaveOutcome) {
         if (answer.kind === 'saved') {
             close({ kind: 'saved' })
             return
         }
         refusalTakenBy = answer.takenBy ?? null
         refusalShare = answer.share ?? null
+        refusalEjectReason = answer.ejectError ? renderEjectError(answer.ejectError) : null
+        if (answer.ejectError) {
+            log.warn("Eject and save: {share} wasn't ejected: {reason} ({detail})", {
+                share: answer.share ?? '',
+                reason: answer.ejectError.type,
+                detail: ejectTechnicalDetail(answer.ejectError) ?? '',
+            })
+        }
         await refuse(answer.refusal)
     }
 
@@ -812,9 +886,7 @@
 <ModalDialog
     titleId="server-sign-in-title"
     dialogId="server-sign-in"
-    onclose={() => {
-        close({ kind: 'cancelled' })
-    }}
+    onclose={cancel}
     onkeydown={handleKeydown}
     containerStyle="width: 460px"
     growDownward
@@ -873,6 +945,8 @@
                 addressRefusalHint={refusalWhere === 'address' ? refusalHintText : undefined}
                 {addressWarning}
                 onAddAnyway={offersAddAnyway ? () => void submit('save_unchecked') : undefined}
+                onEjectAndSave={offersEjectAndSave ? () => void ejectAndSave() : undefined}
+                ejecting={ejectAttempt !== null}
                 onTryNextcloudAddress={offersNextcloudRemedy
                     ? () => {
                           form.address = nextcloudAddress(form.address, form.username)
@@ -922,9 +996,7 @@
     {#snippet footer()}
         <Button
             variant="secondary"
-            onclick={() => {
-                close({ kind: 'cancelled' })
-            }}
+            onclick={cancel}
         >
             {tString('servers.sheet.cancel')}
         </Button>
@@ -938,7 +1010,8 @@
         {/if}
         {#if step === 'form'}
             <Button variant="primary" onclick={() => void submit()} disabled={!canSubmit}>
-                {#if busy}
+                <!-- "Eject and save" shows its own progress on its own button. -->
+                {#if busy && !ejectAttempt}
                     <span class="submit-content">
                         <Spinner size="sm" />
                         {tString('servers.sheet.connecting')}

@@ -11,8 +11,8 @@
  * fingerprint to show, and a refusal sentence has nowhere to put one.
  */
 
-import type { SavedServerOutcome } from '$lib/ipc/bindings'
-import type { ServerConnectOutcome } from '$lib/tauri-commands'
+import type { EjectError, SavedServerOutcome } from '$lib/ipc/bindings'
+import type { EjectAndSaveOutcome, ServerConnectOutcome } from '$lib/tauri-commands'
 import type { ConnectRefusalKind } from './connect-refusals'
 import type { SignInAttemptOutcome } from './sign-in-contract'
 
@@ -71,11 +71,12 @@ export function readConnectOutcome(outcome: ServerConnectOutcome): ServerDialOut
 /**
  * How saving an edit ended: written, or refused with nothing written. `takenBy` names the saved server that
  * already holds the address an edit tried to move to (`address_taken`); `share` names an SMB host's share still
- * mounted from its old address (`share_mounted`).
+ * mounted from its old address (`share_mounted`), or the one whose eject "Eject and save" couldn't do
+ * (`share_eject_refused`, with `ejectError` saying why).
  */
 export type SaveOutcome =
   | { kind: 'saved' }
-  | { kind: 'refused'; refusal: ConnectRefusalKind; takenBy?: string; share?: string }
+  | { kind: 'refused'; refusal: ConnectRefusalKind; takenBy?: string; share?: string; ejectError?: EjectError }
 
 /**
  * One save's answer, in the app's own vocabulary.
@@ -105,6 +106,23 @@ export function readSavedServerOutcome(outcome: SavedServerOutcome): SaveOutcome
       return { kind: 'refused', refusal: 'operation_running' }
     case 'share_mounted':
       return { kind: 'refused', refusal: 'share_mounted', share: outcome.name }
+  }
+}
+
+/**
+ * How "Eject and save" ended: a save's answer, or `cancelled` when the sheet called it off.
+ *
+ * ❗ A refused eject is a refusal like any save's, so the sheet puts it where it puts the others. Shares ejected
+ * before it stay ejected; nothing was saved.
+ */
+export function readEjectAndSaveOutcome(outcome: EjectAndSaveOutcome): SaveOutcome | { kind: 'cancelled' } {
+  switch (outcome.outcome) {
+    case 'settled':
+      return readSavedServerOutcome(outcome.answer)
+    case 'eject_refused':
+      return { kind: 'refused', refusal: 'share_eject_refused', share: outcome.name, ejectError: outcome.error }
+    case 'cancelled':
+      return { kind: 'cancelled' }
   }
 }
 

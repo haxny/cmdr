@@ -12,6 +12,7 @@
 
 import { commands } from '$lib/ipc/bindings'
 import type {
+  EjectAndSaveOutcome,
   S3ProviderChoice,
   SavedPlace,
   SavedPlaceRefusal,
@@ -26,6 +27,7 @@ import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
 import { throwKeychainError } from '$lib/servers/keychain-failure'
 
 export type {
+  EjectAndSaveOutcome,
   SavedPlace,
   SavedPlaceRefusal,
   SavedServer,
@@ -238,6 +240,23 @@ export async function updateSavedSmbHost(
   address: string | null,
 ): Promise<SavedServerOutcome> {
   return await commands.updateSavedSmbHost(id, name, username, address)
+}
+
+/**
+ * {@link updateSavedSmbHost} for "Eject and save", the button on its `share_mounted`
+ * refusal: a move first takes down every saved share still mounted from the old
+ * address, then saves. `attemptId` is the sheet's own ({@link newServerAttemptId}),
+ * so {@link cancelServerConnect} calls the run off before the next eject and before
+ * the save.
+ */
+export async function ejectAndUpdateSavedSmbHost(
+  id: string,
+  name: string,
+  username: string | null,
+  address: string | null,
+  attemptId: string,
+): Promise<EjectAndSaveOutcome> {
+  return await commands.ejectAndUpdateSavedSmbHost(id, name, username, address, attemptId)
 }
 
 /**

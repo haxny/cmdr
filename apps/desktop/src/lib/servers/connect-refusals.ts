@@ -116,6 +116,12 @@ export type ConnectRefusalKind =
    * names it). Cmdr doesn't eject an OS mount behind the person's back, so they eject it and save again.
    */
   | 'share_mounted'
+  /**
+   * Edit mode, SMB, after "Eject and save": a share's eject didn't go through (`RefusalSubject.share` names it,
+   * `RefusalSubject.ejectReason` says why in the eject copy's words), so nothing was saved. A refused eject is a live
+   * mount someone is using, which Cmdr never forces.
+   */
+  | 'share_eject_refused'
 
 const REFUSAL_KEYS: Record<ConnectRefusalKind, MessageKey> = {
   authentication_rejected: 'servers.refusal.authenticationRejected',
@@ -149,6 +155,7 @@ const REFUSAL_KEYS: Record<ConnectRefusalKind, MessageKey> = {
   account_changed: 'servers.refusal.accountChanged',
   operation_running: 'servers.refusal.operationRunning',
   share_mounted: 'servers.refusal.shareMounted',
+  share_eject_refused: 'servers.refusal.shareEjectRefused',
 }
 
 /**
@@ -177,8 +184,10 @@ export interface RefusalSubject {
   region?: string | null
   /** `address_taken` only: what the saved server already at that address is called. */
   takenBy?: string | null
-  /** `share_mounted` only: the share still mounted from the old address. */
+  /** `share_mounted` and `share_eject_refused`: the share still mounted from the old address. */
   share?: string | null
+  /** `share_eject_refused` only: why its eject didn't go through, already worded (`renderEjectError`). */
+  ejectReason?: string | null
 }
 
 /** The one sentence a refusal says. */
@@ -191,6 +200,12 @@ export function wordConnectRefusal(kind: ConnectRefusalKind, subject: RefusalSub
   }
   if (kind === 'share_mounted') {
     return tString('servers.refusal.shareMounted', { name: subject.share ?? subject.host })
+  }
+  if (kind === 'share_eject_refused') {
+    return tString('servers.refusal.shareEjectRefused', {
+      name: subject.share ?? subject.host,
+      reason: subject.ejectReason ?? '',
+    })
   }
   const key = (subject.protocol === 's3' ? S3_REFUSAL_KEYS[kind] : undefined) ?? REFUSAL_KEYS[kind]
   return tString(key, { host: subject.host, username: subject.username })
@@ -305,6 +320,8 @@ const REFUSAL_FIELDS: Record<ConnectRefusalKind, RefusalField> = {
   operation_running: 'form',
   // Under the address it's about: the move to it waits on the eject.
   share_mounted: 'address',
+  // Beside the button that asked for the eject, under the address the move was to.
+  share_eject_refused: 'address',
 }
 
 /** Where `kind`'s sentence goes. */
