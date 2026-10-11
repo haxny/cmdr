@@ -79,6 +79,35 @@ pub fn with_unix_mode(name: impl Into<String>, content: impl Into<Vec<u8>>, mode
     }
 }
 
+/// A Finder-made zip whose sidecars carry Finder tags: the two archives below are
+/// the only fixtures checked in as files, because only macOS's own tools write
+/// the AppleDouble layout we must read. Both hold `tagged.txt` (tag "Red"),
+/// `plain.txt` (no tag), and `tagged-dir/` (tag "Red") holding `inner.txt`, every
+/// date 2020-06-15 12:00 local. Made on macOS 27.0 with
+/// `ditto -c -k --sequesterRsrc . apple-double-ditto.zip`, which writes each
+/// sidecar as `__MACOSX/<parent>/._<name>` AFTER its item, provenance included.
+pub const APPLE_DOUBLE_DITTO_ZIP: &[u8] = include_bytes!("../test-fixtures/apple-double-ditto.zip");
+
+/// The same tree as [`APPLE_DOUBLE_DITTO_ZIP`], through
+/// `/usr/bin/tar --uid 0 --gid 0 --uname cmdr --gname cmdr -czf apple-double-bsdtar.tar.gz
+/// tagged.txt plain.txt tagged-dir`. bsdtar writes each sidecar as a `._<name>`
+/// sibling right BEFORE its item, and the same xattrs again as `SCHILY.xattr.*`
+/// pax records on the item itself.
+pub const APPLE_DOUBLE_BSDTAR_TAR_GZ: &[u8] = include_bytes!("../test-fixtures/apple-double-bsdtar.tar.gz");
+
+/// The AppleDouble sidecar bytes `copyfile(3)` would write for `xattrs`, so a
+/// host test can put any xattr, a hostile one included, into a `__MACOSX` entry.
+pub fn apple_double_sidecar(xattrs: &[(&str, &[u8])]) -> Vec<u8> {
+    let xattrs: Vec<cmdr_fs::metadata::Xattr> = xattrs
+        .iter()
+        .map(|(name, value)| cmdr_fs::metadata::Xattr {
+            name: (*name).into(),
+            value: value.to_vec(),
+        })
+        .collect();
+    crate::apple_double::build(&xattrs)
+}
+
 /// Builds a zip archive from the given entries and returns the raw bytes. A
 /// `name` ending in `/` is written as a directory entry.
 pub fn build_zip(entries: &[FixtureFile]) -> Vec<u8> {

@@ -216,7 +216,7 @@ pub(super) async fn extract_sequential_subtree(
     // Every member landed, so the folders the planning pass created take their
     // source dates now; a failed or stopped pass returned above and dates none.
     let folders = std::mem::take(&mut *plan.folder_metadata.lock_ignore_poison());
-    folders.stamp(dest_volume, state).await;
+    folders.stamp(source_volume, dest_volume, state).await;
 
     Ok(total_bytes)
 }

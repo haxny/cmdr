@@ -18,9 +18,12 @@
 //!   for ONE pass (the O(n²) trap — see [`super::index`]).
 
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::io::Read;
 use std::ops::ControlFlow;
 use std::sync::Arc;
+
+use cmdr_fs::metadata::Xattr;
 
 use super::error::ArchiveError;
 use super::extract::{SubtreeMember, SubtreeTx};
@@ -29,6 +32,7 @@ use super::index::{MAX_TREE_NODES, RawEntry};
 use super::name::{SanitizedName, sanitize_entry_name};
 use super::reader::{ArchiveEntryReader, ChunkTx, pump_chunks, pump_read};
 use super::source::{ArchiveByteSource, SourceRangeReader, SourceReader};
+use crate::apple_double;
 
 /// One tar member's read handle: where its data lives.
 pub(super) struct TarMember {
@@ -101,7 +105,8 @@ pub(super) fn parse(
     let mut out: Vec<(RawEntry, TarMember)> = Vec::new();
 
     for entry in archive.entries()? {
-        let entry = entry?;
+        let mut entry = entry?;
+        let xattrs = pax_xattrs(&mut entry);
         let header = entry.header();
         let entry_type = header.entry_type();
 
@@ -124,6 +129,17 @@ pub(super) fn parse(
         let is_dir = !is_symlink && (entry_type.is_dir() || name.ends_with('/'));
         let size = if is_dir { 0 } else { header.size()? };
         let modified = header.mtime().ok().and_then(|m| i64::try_from(m).ok());
+        // Every tar header carries a mode field; a header too damaged to parse
+        // one answers `None` rather than a plausible default. Only the low nine
+        // bits travel — setuid/setgid/sticky out of an untrusted archive are
+        // never worth carrying.
+        let mode = header.mode().ok().map(|m| m & 0o777).filter(|m| *m != 0);
+        let data_offset = entry.raw_file_position();
+        // A forward scan can't come back for a `._name`'s bytes, so a possible
+        // sidecar is read as it passes; the index decides whether it pairs.
+        let sidecar_bytes = (!is_dir && !is_symlink && apple_double::sibling_sidecar_target(&name).is_some())
+            .then(|| read_sidecar(&mut entry, size))
+            .flatten();
 
         out.push((
             RawEntry {
@@ -136,15 +152,11 @@ pub(super) fn parse(
                 modified,
                 // Tar has no per-entry encryption.
                 encrypted: false,
-                // Every tar header carries a mode field; a header too damaged to
-                // parse one answers `None` rather than a plausible default. Only
-                // the low nine bits travel — setuid/setgid/sticky out of an
-                // untrusted archive are never worth carrying.
-                mode: header.mode().ok().map(|m| m & 0o777).filter(|m| *m != 0),
+                mode,
+                xattrs,
+                sidecar_bytes,
             },
-            TarMember {
-                data_offset: entry.raw_file_position(),
-            },
+            TarMember { data_offset },
         ));
 
         // Bound the index the same way the tree builder bounds nodes: a tar with
@@ -158,6 +170,42 @@ pub(super) fn parse(
     }
 
     Ok(out)
+}
+
+/// The prefix bsdtar writes each raw xattr under in a pax record (it also writes
+/// `LIBARCHIVE.xattr.*`, the same value base64-encoded, which this skips).
+const PAX_XATTR_PREFIX: &str = "SCHILY.xattr.";
+
+/// The xattrs `entry`'s pax records carry, filtered to names a file may take,
+/// each value capped like a sidecar. A record that won't parse adds nothing.
+fn pax_xattrs<R: Read>(entry: &mut tar::Entry<'_, R>) -> Vec<Xattr> {
+    let Ok(Some(records)) = entry.pax_extensions() else {
+        return Vec::new();
+    };
+    records
+        .filter_map(Result::ok)
+        .filter_map(|record| {
+            let name = record.key().ok()?.strip_prefix(PAX_XATTR_PREFIX)?;
+            let value = record.value_bytes();
+            (apple_double::admissible_xattr_name(name) && value.len() as u64 <= apple_double::MAX_SIDECAR_BYTES).then(
+                || Xattr {
+                    name: OsString::from(name),
+                    value: value.to_vec(),
+                },
+            )
+        })
+        .collect()
+}
+
+/// A possible sidecar's bytes, or `None` past the cap or on a read failure (the
+/// scan then moves on; the entry stays an ordinary file if it doesn't pair).
+fn read_sidecar(entry: &mut impl Read, size: u64) -> Option<Vec<u8>> {
+    if size > apple_double::MAX_SIDECAR_BYTES {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(usize::try_from(size).ok()?);
+    entry.take(size).read_to_end(&mut bytes).ok()?;
+    Some(bytes)
 }
 
 /// Prefix-decodes a compressed tar to the member named `target` and streams its

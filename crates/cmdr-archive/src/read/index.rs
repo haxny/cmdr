@@ -18,11 +18,15 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use cmdr_fs::metadata::Xattr;
+
 use super::error::ArchiveError;
 use super::format::ArchiveFormat;
 use super::name::{QuarantineReason, SanitizedName, sanitize_entry_name};
 use super::reader::ArchiveEntryReader;
+use super::sidecars::{self, EntryRole, HeldXattrs, LazySidecar, SidecarLayout};
 use super::source::ArchiveByteSource;
+use crate::apple_double;
 
 /// Maximum number of nodes (files plus synthesized directories) in one archive's
 /// tree. The backstop against the many-entries axis of memory amplification: the
@@ -37,6 +41,14 @@ use super::source::ArchiveByteSource;
 /// is separately bounded by the zip name field (`u16`, 64 KB), so worst-case
 /// tree memory is bounded too.
 pub(super) const MAX_TREE_NODES: usize = 2_000_000;
+
+/// The most xattr bytes (names plus values) one index holds from its parse: a
+/// tar's `SCHILY.xattr.*` pax records and its `._name` sidecars, which a forward
+/// scan can only read as it passes them. The backstop against a tar that pins
+/// memory in the cached index with metadata; past it the rest is dropped and
+/// logged, and those items land without their xattrs. Real archives hold
+/// kilobytes (a Finder tag is ~50 bytes).
+pub(super) const MAX_HELD_XATTR_BYTES: usize = 32 * 1024 * 1024;
 
 /// One node in the synthetic tree: a file, a directory (explicit or implied),
 /// or a symlink. Archive-native — the volume layer maps this onto `FileEntry`.
@@ -125,6 +137,14 @@ pub(super) struct RawEntry {
     /// attributes, the tar header, the 7z unix extension) and every one of them
     /// answers `None` rather than a plausible default.
     pub mode: Option<u32>,
+    /// The xattrs the archive recorded on the entry itself (a tar's
+    /// `SCHILY.xattr.*` pax records), already filtered to names a file may take.
+    pub xattrs: Vec<Xattr>,
+    /// A tar `._name` entry's bytes, read during the one forward scan because
+    /// the scan can't come back for them: if it pairs with a sibling, they're
+    /// that sibling's AppleDouble sidecar. `None` for every other entry, and
+    /// for one past [`apple_double::MAX_SIDECAR_BYTES`].
+    pub sidecar_bytes: Option<Vec<u8>>,
 }
 
 /// The per-format read handles, keyed by sanitized inner path. Each variant
@@ -145,7 +165,7 @@ impl EntryStore {
     /// entry (ZipCrypto or WinZip AES) or a content-encrypted 7z entry; it's
     /// ignored for a plaintext entry and for tar (never encrypted). Maps a missing
     /// handle to `NotFound`.
-    fn open_read(
+    pub(super) fn open_read(
         &self,
         inner: &str,
         size: u64,
@@ -172,8 +192,11 @@ pub(super) struct BuiltIndex<H> {
     children: HashMap<String, Vec<String>>,
     quarantined: Vec<(String, QuarantineReason)>,
     has_encrypted: bool,
-    /// Read handles for the entries that ended up as real file nodes.
+    /// Read handles for the entries that ended up as real file nodes, plus each
+    /// lazy sidecar's (keyed by the sidecar's own path, which no node has).
     files: HashMap<String, H>,
+    held_xattrs: HashMap<String, Vec<Xattr>>,
+    lazy_sidecars: HashMap<String, LazySidecar>,
 }
 
 impl<H> BuiltIndex<H> {
@@ -185,6 +208,8 @@ impl<H> BuiltIndex<H> {
             children: self.children,
             quarantined: self.quarantined,
             has_encrypted: self.has_encrypted,
+            held_xattrs: self.held_xattrs,
+            lazy_sidecars: self.lazy_sidecars,
             store: wrap(self.files),
         }
     }
@@ -204,7 +229,14 @@ pub struct ArchiveIndex {
     /// and tests (a hostile `../evil` never reaches the tree, but we record it).
     quarantined: Vec<(String, QuarantineReason)>,
     has_encrypted: bool,
-    /// The per-format read handles for readable (non-directory) entries.
+    /// The xattrs the parse already read for an item, by its inner path: a tar's
+    /// pax records and paired `._name` sidecars.
+    held_xattrs: HashMap<String, Vec<Xattr>>,
+    /// A zip item's `__MACOSX` sidecar, by the item's inner path, read when the
+    /// item is copied ([`Self::item_xattrs`]).
+    lazy_sidecars: HashMap<String, LazySidecar>,
+    /// The per-format read handles for readable (non-directory) entries, and
+    /// for each lazy sidecar.
     store: EntryStore,
 }
 
@@ -214,6 +246,8 @@ impl std::fmt::Debug for ArchiveIndex {
             .field("nodes", &self.nodes.len())
             .field("quarantined", &self.quarantined.len())
             .field("has_encrypted", &self.has_encrypted)
+            .field("held_xattrs", &self.held_xattrs.len())
+            .field("lazy_sidecars", &self.lazy_sidecars.len())
             .finish()
     }
 }
@@ -238,16 +272,16 @@ impl ArchiveIndex {
             // path. The two part company only at the write guard.
             ArchiveFormat::Zip | ArchiveFormat::Ooxml => {
                 let entries = super::zip::parse(source.as_ref())?;
-                Ok(build_index(entries)?.into_index(EntryStore::Zip))
+                Ok(build_index(entries, SidecarLayout::MacosxFolder)?.into_index(EntryStore::Zip))
             }
             ArchiveFormat::Tar(codec) => {
                 let entries = super::tar::parse(source, codec)?;
-                Ok(build_index(entries)?
+                Ok(build_index(entries, SidecarLayout::Siblings)?
                     .into_index(|members| EntryStore::Tar(super::tar::TarStore::new(codec, members))))
             }
             ArchiveFormat::SevenZ => {
                 let (entries, meta) = super::sevenz::parse(source, password)?;
-                Ok(build_index(entries)?
+                Ok(build_index(entries, SidecarLayout::None)?
                     .into_index(|members| EntryStore::SevenZ(super::sevenz::SevenZStore::new(meta, members))))
             }
         }
@@ -313,11 +347,51 @@ impl ArchiveIndex {
         password: Option<&str>,
     ) -> Result<ArchiveEntryReader, ArchiveError> {
         let key = normalize_lookup(inner_path);
-        if self.nodes.get(key).is_some_and(|n| n.is_dir) {
+        let node = self
+            .nodes
+            .get(key)
+            .ok_or_else(|| ArchiveError::NotFound(key.to_string()))?;
+        if node.is_dir {
             return Err(ArchiveError::IsADirectory(key.to_string()));
         }
-        let size = self.nodes.get(key).and_then(|n| n.size).unwrap_or(0);
-        self.store.open_read(key, size, source, password)
+        // ❗ Only a node opens: a sidecar's handle sits in the store too, keyed
+        // by its hidden path, and must stay as unreachable as it is unlisted.
+        self.store.open_read(key, node.size.unwrap_or(0), source, password)
+    }
+
+    /// Whether the item at `inner_path` carries xattrs from a sidecar or a pax
+    /// record, so a caller can skip opening a byte source for one that doesn't.
+    pub fn has_carried_xattrs(&self, inner_path: &str) -> bool {
+        let key = normalize_lookup(inner_path);
+        self.held_xattrs.contains_key(key) || self.lazy_sidecars.contains_key(key)
+    }
+
+    /// The xattrs the archive carries for the item at `inner_path` (a file or a
+    /// folder): what the parse held for it, plus its zip sidecar, read now
+    /// through `source`. Total: a sidecar that's missing, too big, encrypted
+    /// without `password`, or malformed adds nothing and is logged, ❌ never an
+    /// error, because the item's bytes are the copy.
+    ///
+    /// One read of the sidecar entry, buffered whole: it's metadata, and capped
+    /// at [`apple_double::MAX_SIDECAR_BYTES`] whatever size the archive claims.
+    pub async fn item_xattrs(
+        &self,
+        inner_path: &str,
+        source: Arc<dyn ArchiveByteSource>,
+        password: Option<&str>,
+    ) -> Vec<Xattr> {
+        let key = normalize_lookup(inner_path);
+        let mut xattrs = self.held_xattrs.get(key).cloned().unwrap_or_default();
+        if let Some(sidecar) = self.lazy_sidecars.get(key)
+            && let Some(bytes) = sidecar.read(&self.store, source, password).await
+        {
+            for xattr in apple_double::parse(&bytes) {
+                if !xattrs.iter().any(|held| held.name == xattr.name) {
+                    xattrs.push(xattr);
+                }
+            }
+        }
+        xattrs
     }
 
     /// The uncompressed size of the file at `inner_path`, or `None` for a missing
@@ -351,6 +425,9 @@ impl ArchiveIndex {
             size: self.file_size(path).unwrap_or(0),
             modified: node.modified,
             mode: node.mode,
+            // A sequential format reads its sidecars during the parse, so a
+            // member's xattrs are already in hand; nothing to read mid-decode.
+            xattrs: self.held_xattrs.get(path).cloned().unwrap_or_default(),
         };
 
         // A file root extracts just itself; a directory root walks its subtree.
@@ -394,18 +471,64 @@ fn normalize_lookup(inner_path: &str) -> &str {
 /// handle (pruned to the entries that end up as real file nodes) and records
 /// quarantined names. Generic over the handle type `H`, so every format shares
 /// the Zip Slip defense, the synthetic-tree logic, and the DoS caps.
-pub(super) fn build_index<H>(entries: Vec<(RawEntry, H)>) -> Result<BuiltIndex<H>, ArchiveError> {
-    let mut seeds: Vec<NodeSeed> = Vec::with_capacity(entries.len());
-    let mut files: HashMap<String, H> = HashMap::new();
+///
+/// Sidecars (`layout`) pair AFTER the sanitizer, so a pairing only ever names an
+/// accepted path, and never become nodes: listing, the copy scan, and the walk
+/// never see one (`crate::apple_double`).
+pub(super) fn build_index<H>(
+    entries: Vec<(RawEntry, H)>,
+    layout: SidecarLayout,
+) -> Result<BuiltIndex<H>, ArchiveError> {
     let mut quarantined: Vec<(String, QuarantineReason)> = Vec::new();
     let mut has_encrypted = false;
 
+    // Pass 1: sanitize every name once and say what it is.
+    let mut accepted: Vec<(String, EntryRole, RawEntry, H)> = Vec::with_capacity(entries.len());
     for (raw, handle) in entries {
         has_encrypted |= raw.encrypted;
-
         match sanitize_entry_name(&raw.name) {
             SanitizedName::Quarantined(reason) => quarantined.push((raw.name, reason)),
             SanitizedName::Accepted(path) => {
+                let role = sidecars::entry_role(&path, &raw, layout);
+                accepted.push((path, role, raw, handle));
+            }
+        }
+    }
+
+    // A `._name` pairs only when `name` is there; otherwise it's the only copy
+    // of what it holds.
+    let present = sidecars::present_siblings(accepted.iter().map(|(path, role, _, _)| (path.as_str(), role)));
+
+    // Pass 2, in archive order: the tree's collisions are first-writer-wins.
+    let mut seeds: Vec<NodeSeed> = Vec::with_capacity(accepted.len());
+    let mut files: HashMap<String, H> = HashMap::new();
+    let mut sidecar_handles: HashMap<String, H> = HashMap::new();
+    let mut lazy_sidecars: HashMap<String, LazySidecar> = HashMap::new();
+    let mut held = HeldXattrs::default();
+    for (path, role, raw, handle) in accepted {
+        match role {
+            EntryRole::MacosxSidecar(target) => {
+                // Later duplicate wins, like a file's.
+                lazy_sidecars.insert(
+                    target,
+                    LazySidecar {
+                        key: path.clone(),
+                        size: raw.size,
+                    },
+                );
+                sidecar_handles.insert(path, handle);
+            }
+            EntryRole::MacosxOther => {}
+            EntryRole::SiblingCandidate(target) if present.contains(&target) => match raw.sidecar_bytes {
+                Some(bytes) => held.add(&target, apple_double::parse(&bytes)),
+                None => log::warn!(
+                    target: "archive",
+                    "Skipped the {}-byte sidecar {path}: past the cap, so its item lands without its xattrs",
+                    raw.size
+                ),
+            },
+            EntryRole::Item | EntryRole::SiblingCandidate(_) => {
+                held.add(&path, raw.xattrs);
                 seeds.push(NodeSeed {
                     path: path.clone(),
                     is_dir: raw.is_dir,
@@ -423,18 +546,36 @@ pub(super) fn build_index<H>(entries: Vec<(RawEntry, H)>) -> Result<BuiltIndex<H
             }
         }
     }
+    if held.dropped > 0 {
+        log::warn!(
+            target: "archive",
+            "Dropped {} xattrs past the {MAX_HELD_XATTR_BYTES}-byte cap; their items land without them",
+            held.dropped
+        );
+    }
 
     let (nodes, children) = build_tree(seeds, MAX_TREE_NODES)?;
     // A file the tree dropped (shadowed by a directory, or blocked by a file
     // ancestor) must not stay readable via `open_read`: keep a handle only for
     // paths that ended up as real file nodes.
     files.retain(|path, _| nodes.get(path).is_some_and(|node| !node.is_dir));
+    // A sidecar matters only beside an item the tree holds.
+    lazy_sidecars.retain(|target, _| nodes.contains_key(target));
+    for sidecar in lazy_sidecars.values() {
+        if let Some(handle) = sidecar_handles.remove(&sidecar.key) {
+            files.insert(sidecar.key.clone(), handle);
+        }
+    }
+    let mut held_xattrs = held.by_path;
+    held_xattrs.retain(|path, xattrs| !xattrs.is_empty() && nodes.contains_key(path));
     Ok(BuiltIndex {
         nodes,
         children,
         quarantined,
         has_encrypted,
         files,
+        held_xattrs,
+        lazy_sidecars,
     })
 }
 
@@ -609,150 +750,5 @@ fn parent_path(path: &str) -> &str {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn file_seed(path: &str, size: u64) -> NodeSeed {
-        NodeSeed {
-            path: path.to_string(),
-            is_dir: false,
-            is_symlink: false,
-            size: Some(size),
-            compressed_size: Some(size),
-            modified: Some(1_700_000_000),
-            encrypted: false,
-            mode: None,
-        }
-    }
-
-    fn dir_seed(path: &str) -> NodeSeed {
-        NodeSeed {
-            path: path.to_string(),
-            is_dir: true,
-            is_symlink: false,
-            size: None,
-            compressed_size: None,
-            modified: Some(1_700_000_500),
-            encrypted: false,
-            mode: None,
-        }
-    }
-
-    fn child_names(children: &HashMap<String, Vec<String>>, dir: &str) -> Vec<String> {
-        children
-            .get(dir)
-            .map(|v| v.iter().map(|p| leaf_name(p).to_string()).collect())
-            .unwrap_or_default()
-    }
-
-    /// Builds the tree with an effectively-unlimited node cap (the node cap is
-    /// tested separately by passing a small one).
-    fn build(seeds: Vec<NodeSeed>) -> BuiltTree {
-        build_tree(seeds, usize::MAX).expect("uncapped build should not exceed the node cap")
-    }
-
-    #[test]
-    fn synthesizes_implied_directories_from_file_prefixes() {
-        // No explicit dir entries: `a/b/c.txt` must imply `a/` and `a/b/`.
-        let (nodes, children) = build(vec![file_seed("a/b/c.txt", 10)]);
-
-        assert!(nodes.get("a").is_some_and(|n| n.is_dir), "a/ should be synthesized");
-        assert!(nodes.get("a/b").is_some_and(|n| n.is_dir), "a/b/ should be synthesized");
-        assert!(nodes.get("a/b/c.txt").is_some_and(|n| !n.is_dir));
-
-        // Synthetic dirs carry no timestamp.
-        assert_eq!(nodes["a"].modified, None);
-        assert_eq!(nodes["a/b"].modified, None);
-
-        assert_eq!(child_names(&children, ""), vec!["a"]);
-        assert_eq!(child_names(&children, "a"), vec!["b"]);
-        assert_eq!(child_names(&children, "a/b"), vec!["c.txt"]);
-    }
-
-    #[test]
-    fn explicit_dir_entry_upgrades_the_implied_one() {
-        // File first (implies `docs/`), then the explicit `docs/` entry: the
-        // explicit timestamp must win, and `docs/` must not be duplicated.
-        let (nodes, children) = build(vec![file_seed("docs/readme.md", 20), dir_seed("docs")]);
-
-        assert!(nodes["docs"].is_dir);
-        assert_eq!(nodes["docs"].modified, Some(1_700_000_500));
-        // One entry for `docs` under root, not two.
-        assert_eq!(child_names(&children, ""), vec!["docs"]);
-    }
-
-    #[test]
-    fn explicit_dir_before_its_child_is_not_duplicated() {
-        // Order-independence: explicit dir first, then a file inside it.
-        let (nodes, children) = build(vec![dir_seed("pics"), file_seed("pics/a.png", 5)]);
-        assert!(nodes["pics"].is_dir);
-        assert_eq!(child_names(&children, ""), vec!["pics"]);
-        assert_eq!(child_names(&children, "pics"), vec!["a.png"]);
-    }
-
-    #[test]
-    fn mixed_tree_lists_dirs_before_files_alphabetically() {
-        let (_nodes, children) = build(vec![
-            file_seed("zeta.txt", 1),
-            file_seed("alpha.txt", 1),
-            dir_seed("mid"),
-            file_seed("mid/inner.txt", 1),
-        ]);
-        // Directories first (mid), then files alpha (alpha.txt, zeta.txt).
-        assert_eq!(child_names(&children, ""), vec!["mid", "alpha.txt", "zeta.txt"]);
-    }
-
-    #[test]
-    fn deeply_nested_single_file_creates_the_whole_chain() {
-        let (nodes, _children) = build(vec![file_seed("x/y/z/w/deep.bin", 3)]);
-        for dir in ["x", "x/y", "x/y/z", "x/y/z/w"] {
-            assert!(nodes.get(dir).is_some_and(|n| n.is_dir), "{dir} should exist");
-        }
-        assert_eq!(nodes["x/y/z/w/deep.bin"].size, Some(3));
-    }
-
-    #[test]
-    fn root_node_always_exists_and_is_a_directory() {
-        let (nodes, _children) = build(vec![]);
-        assert!(nodes[""].is_dir);
-        assert_eq!(nodes[""].path, "");
-    }
-
-    #[test]
-    fn leaf_and_parent_helpers() {
-        assert_eq!(leaf_name("a/b/c.txt"), "c.txt");
-        assert_eq!(leaf_name("top"), "top");
-        assert_eq!(parent_path("a/b/c.txt"), "a/b");
-        assert_eq!(parent_path("top"), "");
-    }
-
-    #[test]
-    fn tree_building_fails_when_node_count_exceeds_the_cap() {
-        // Six single-node files plus the root is 7 nodes; a cap of 5 must fail.
-        let seeds: Vec<NodeSeed> = (0..6).map(|i| file_seed(&format!("f{i}.txt"), 1)).collect();
-        let err = build_tree(seeds.clone(), 5).unwrap_err();
-        assert!(matches!(err, ArchiveError::TooLarge(_)), "got {err:?}");
-        // The same seeds fit comfortably under a generous cap.
-        assert!(build_tree(seeds, 1_000).is_ok());
-    }
-
-    #[test]
-    fn file_shadowing_a_directory_path_is_first_writer_wins_both_orders() {
-        // File `foo` first, then `foo/bar`: `foo` stays a file; `foo/bar` can't
-        // live under a file, so it's dropped (not left as an unreachable orphan).
-        let (nodes, children) = build(vec![file_seed("foo", 1), file_seed("foo/bar", 2)]);
-        assert!(!nodes["foo"].is_dir, "first writer (the file) keeps the path");
-        assert!(
-            !nodes.contains_key("foo/bar"),
-            "the shadowed child is dropped, not orphaned"
-        );
-        assert_eq!(child_names(&children, ""), vec!["foo"]);
-
-        // Reverse order: `foo/bar` first implies dir `foo`; the later file `foo`
-        // yields to the directory (which has children).
-        let (nodes, children) = build(vec![file_seed("foo/bar", 2), file_seed("foo", 1)]);
-        assert!(nodes["foo"].is_dir, "first writer (the implied dir) keeps the path");
-        assert!(nodes.contains_key("foo/bar"));
-        assert_eq!(child_names(&children, "foo"), vec!["bar"]);
-    }
-}
+#[path = "index_test.rs"]
+mod tests;

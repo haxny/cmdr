@@ -94,6 +94,36 @@ nothing recorded one for it.
 maps it onto `FileEntry`. Inner paths are `/`-separated, no leading/trailing slash; the archive root is `""`. Lookups
 (`get`/`list`/`is_directory`/`open_read`) trim surrounding slashes so `/dir/` and `dir` resolve the same node.
 
+## AppleDouble sidecars: paired, hidden, and carried as xattrs
+
+macOS archivers store each item's xattrs (Finder tags, comments, FinderInfo, a resource fork, quarantine) as an
+AppleDouble sidecar, and both macOS extractors restore them and never show the sidecar. So does this index. The codec
+(byte layout, hostile-input rules, the compress side's "worth keeping" test) is `crate::apple_double`; this section is
+how the index uses it.
+
+- **Where they are, per format** (`SidecarLayout`, verified with the checked-in fixtures in `test_fixtures`, made by
+  `ditto -c -k --sequesterRsrc` and `/usr/bin/tar -czf` on macOS 27.0, 2026-10-12):
+  - **zip** (`MacosxFolder`): `__MACOSX/<parent>/._<name>`, written AFTER the item. Only the ROOT `__MACOSX` counts.
+    Everything under it is hidden; a `._name` there pairs with `<parent>/<name>` and is read on demand
+    (`ArchiveIndex::item_xattrs`), one entry read per item that HAS one. A `._name` sibling outside `__MACOSX` is an
+    ordinary file in a zip.
+  - **tar** (`Siblings`): `._<name>` right BEFORE `<name>`, plus the same xattrs again as `SCHILY.xattr.*` pax records
+    on the item. A forward scan can't come back, so the parse reads every possible sidecar's bytes as it passes
+    (`RawEntry::sidecar_bytes`) and the pax xattrs off each entry, and the index HOLDS both (`held_xattrs`). That's what
+    lets the one-pass sequential extract hand each member its xattrs (`SubtreeMember::xattrs`) without reading anything
+    mid-decode. A `._name` whose `name` isn't in the archive (as an entry or an implied folder) is an ordinary file:
+    nothing reads it as xattrs, so it's the only copy of what it holds.
+  - **7z** (`None`): no convention, so nothing pairs.
+- **Pairing runs after the sanitizer**, on accepted paths only, so a sidecar can only ever name a path the tree could
+  hold. `._`, `._.`, and `._..` name nothing and never pair. A sidecar never becomes a node, so listing, the copy scan's
+  counts, and the walk never see one, and `open_read` refuses its path (the handle sits in the store under the sidecar's
+  own key, reachable only through `item_xattrs`).
+- **Total, by construction.** A sidecar that's missing, malformed, encrypted with no password, or past the cap adds
+  nothing and is logged; the item's bytes are the copy. Duplicate names: the parse-held value wins over a lazily read
+  one, and within the held set the later record wins.
+- **Folders too**: `item_xattrs` answers for a folder's path the same way, which is what
+  `ArchiveVolume::folder_metadata` serves (`../../DETAILS.md` § "The `ArchiveVolume` layer").
+
 ## Resource caps (memory-amplification defense)
 
 The synthetic tree materializes one node (with a path string) per ancestor prefix of every entry, so a small central
@@ -111,8 +141,14 @@ decoder:
   too. Tested via `build_tree`'s injectable cap (`tree_building_fails_when_node_count_exceeds_the_cap`) rather than a
   multi-million-node fixture.
 
-A third cap sits in a decoder, not the tree: **an xz block's LZMA2 dictionary** (`format::XZ_MEMORY_LIMIT_KIB`, 256 MiB
-plus 1 MiB). The block header names the dictionary and `lzma-rust2` allocates and zeroes it up front, so 40 hostile
+Two more bound AppleDouble metadata (§ "AppleDouble sidecars"): **one sidecar** (`apple_double::MAX_SIDECAR_BYTES`, 16
+MiB, room for a resource fork) is checked against the claimed size AND the decoder's actual output, since a zip entry
+can claim anything and inflate to more; and **the xattrs one index holds** from a tar's parse
+(`index::MAX_HELD_XATTR_BYTES`, 32 MiB), since a cached index lives as long as its volume. Past either, the xattrs are
+dropped and logged, never an error.
+
+A further cap sits in a decoder, not the tree: **an xz block's LZMA2 dictionary** (`format::XZ_MEMORY_LIMIT_KIB`, 256
+MiB plus 1 MiB). The block header names the dictionary and `lzma-rust2` allocates and zeroes it up front, so 40 hostile
 bytes asked for 4 GiB of real memory. `XzReader::new_mem_limit` refuses before allocating with
 `io::ErrorKind::OutOfMemory`, which `From<io::Error>` types as `TooLarge`. The constant's doc carries why 256 MiB (4×
 the largest preset). 7z has no equivalent knob: `sevenz-rust2` hardcodes an unlimited decoder memory limit (verified on

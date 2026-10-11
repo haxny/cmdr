@@ -26,6 +26,8 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::task::spawn_blocking;
 
+use cmdr_fs::metadata::Xattr;
+
 use super::error::ArchiveError;
 use super::index::EntryStore;
 use super::source::ArchiveByteSource;
@@ -49,6 +51,9 @@ pub struct SubtreeMember {
     /// The permission bits the archive recorded, so an extracted executable
     /// stays one. `None` when the format recorded none.
     pub mode: Option<u32>,
+    /// The xattrs the archive carries for the member (its pax records and its
+    /// paired `._name` sidecar), which the parse already read.
+    pub xattrs: Vec<Xattr>,
 }
 
 /// The frames the producer sends over the single channel: a member header, then

@@ -47,6 +47,7 @@ use super::{
 };
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{
     CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, SequentialExtract, SpaceInfo, Volume, VolumeError,
@@ -355,22 +356,26 @@ impl ArchiveVolume {
         let inner = self.inner_path(path);
         Box::pin(async move {
             let (index, source) = self.load().await?;
+            let password = self.password_snapshot();
+            let password = password.as_deref().map(String::as_str);
+            // The entry's xattrs ride its stream (`VolumeReadStream::metadata`),
+            // so a zip sidecar is read here, before the first byte: one more
+            // entry read, and only for an entry that HAS a sidecar.
+            let xattrs = index.item_xattrs(&inner, Arc::clone(&source), password).await;
             // `open_read` only looks the entry up and spawns the decompress
             // producer (which itself uses `spawn_blocking`), so it's cheap here.
             // With no password an encrypted entry fails fast here (`Encrypted` →
             // `NeedsPassword`); a WRONG password surfaces later, during streaming
             // (the decrypt/verify runs inside the producer), as the same typed
             // signal — the frontend retries after `set_archive_password`.
-            let password = self.password_snapshot();
-            let reader = index
-                .open_read(&inner, source, password.as_deref().map(String::as_str))
-                .map_err(to_volume_error)?;
+            let reader = index.open_read(&inner, source, password).map_err(to_volume_error)?;
             Ok(Box::new(ArchiveVolumeReadStream {
                 reader,
                 skip_remaining: offset,
                 delivered: 0,
                 modified_at: streams::recorded_date(index.get(&inner).and_then(|node| node.modified)),
                 mode: index.get(&inner).and_then(|node| node.mode),
+                xattrs,
             }) as Box<dyn VolumeReadStream>)
         })
     }
@@ -621,6 +626,40 @@ impl Volume for ArchiveVolume {
         })
     }
 
+    /// A folder's xattrs, from its `__MACOSX` sidecar (read now, one entry read)
+    /// or its tar pax records (held since the parse). A folder with neither
+    /// costs no byte source and no read.
+    fn folder_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        wanted: MetadataClasses,
+    ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
+        let inner = self.inner_path(path);
+        Box::pin(async move {
+            if !wanted.contains(MetadataClasses::XATTRS) {
+                return CarriedMetadata::default();
+            }
+            let carries = self.index().await.is_ok_and(|index| index.has_carried_xattrs(&inner));
+            if !carries {
+                return CarriedMetadata::default();
+            }
+            let (index, source) = match self.load().await {
+                Ok(loaded) => loaded,
+                Err(e) => {
+                    log::debug!(target: "archive", "Couldn't read the folder {inner}'s xattrs: {e}");
+                    return CarriedMetadata::default();
+                }
+            };
+            let password = self.password_snapshot();
+            CarriedMetadata {
+                xattrs: index
+                    .item_xattrs(&inner, source, password.as_deref().map(String::as_str))
+                    .await,
+                ..CarriedMetadata::default()
+            }
+        })
+    }
+
     // ---- Capability flags: set explicitly, don't inherit defaults -----------
 
     /// `None`: an archive isn't a local FS path. Inner entries aren't reachable
@@ -796,3 +835,7 @@ fn to_volume_error(err: ArchiveError) -> VolumeError {
 #[cfg(test)]
 #[path = "volume_test.rs"]
 mod volume_test;
+
+#[cfg(test)]
+#[path = "volume_apple_double_test.rs"]
+mod volume_apple_double_test;

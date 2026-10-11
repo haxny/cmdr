@@ -111,6 +111,9 @@ fn parse_in<Tz: chrono::TimeZone>(
                 modified: Some(modified),
                 encrypted,
                 mode: recorded_permission_bits(&entry),
+                // A zip's xattrs live in `__MACOSX` sidecars, read on demand.
+                xattrs: Vec::new(),
+                sidecar_bytes: None,
             };
             (raw, ZipHandle { entry, ordinal })
         })

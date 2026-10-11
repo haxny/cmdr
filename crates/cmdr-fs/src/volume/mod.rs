@@ -12,7 +12,7 @@
 //! what a test reaches for.
 
 use crate::entry::FileEntry;
-use crate::metadata::{CarriedMetadata, MetadataReport};
+use crate::metadata::{CarriedMetadata, MetadataClasses, MetadataReport};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -527,6 +527,24 @@ pub trait Volume: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
         let _ = path;
         Box::pin(async move { MetadataReport::none_applicable(carried, modified) })
+    }
+
+    /// What the FOLDER at `path` carries beyond its listing entry, restricted
+    /// to `wanted`: the one read a copy spends on a source folder, since a
+    /// folder has no stream to ask ([`VolumeReadStream::metadata`] is a file's).
+    /// The copy calls it once per folder it created, when it stamps that
+    /// folder's metadata, and merges the answer with the listing's dates.
+    ///
+    /// Default: empty, with no I/O, which is every backend whose listing entry
+    /// already says all it knows. The archive answers from its index: a
+    /// Finder-made zip's `__MACOSX` sidecar or a tar's pax records.
+    fn folder_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        wanted: MetadataClasses,
+    ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
+        let _ = (path, wanted);
+        Box::pin(async { CarriedMetadata::default() })
     }
 
     /// Deletes a single file or **empty** directory.

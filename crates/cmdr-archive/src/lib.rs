@@ -62,6 +62,7 @@ pub mod read;
 pub mod volume;
 pub mod watch;
 
+mod apple_double;
 mod mutation;
 
 /// Fixture builders for archive tests: clean zips, hostile byte-patched variants,

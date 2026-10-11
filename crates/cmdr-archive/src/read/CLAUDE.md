@@ -20,6 +20,7 @@ the `Volume` trait, capability flags, and any write path.
 - `source.rs`: the `ArchiveByteSource` seam + `LocalFileSource` / `BytesSource` / `TailCachedSource`.
 - `reader.rs`: `ArchiveEntryReader` — chunked, off-executor decompression. `extract.rs`: `SubtreeExtractReader` — the
   one-pass subtree extractor for sequential formats (compressed tar, 7z), decode-once bulk extract.
+- `sidecars.rs`: which entries are AppleDouble sidecars per format, and the xattrs a parse holds or a copy reads.
 - `name.rs`: `sanitize_entry_name` — the Zip Slip defense. `cache.rs`: `ArchiveIndexCache`. `error.rs`: `ArchiveError`.
 
 ## Must-knows
@@ -34,23 +35,21 @@ the `Volume` trait, capability flags, and any write path.
   `Vec` to the read path.
 - **Compressed tar and 7z are SEQUENTIAL-access**; plain `.tar` and zip are random. `ArchiveFormat::is_sequential`
   declares the class (the volume layer surfaces it via `Volume::extraction_is_sequential`).
-- **Encryption: browsing usually works; extraction decrypts with a per-archive password.** Zip (ZipCrypto AND WinZip
-  AES) routes through the `zip` crate's `by_index_decrypt` by CENTRAL-DIRECTORY ORDINAL (rc-zip parses but can't
-  decrypt; the ordinals align — pinned). 7z threads the password through `sevenz.rs`'s `parse` + every re-open. No
-  password ⇒ `Encrypted`; wrong ⇒ `WrongPassword`. Wrong-password detection differs: AES zip has a 2-byte verifier
-  (caught at open); ZipCrypto may surface late as an end-of-stream CRC (io-kind, not message); 7z AES has NO verifier,
-  so a wrong password first fails an integrity check mid-decode — `sevenz.rs` recovers the wrapped typed error and,
-  since a password WAS supplied, types it `WrongPassword` (never string-matched). **A HEADER-encrypted 7z (`-mhe=on`)
-  needs the password to even BROWSE** (encrypted metadata), so `parse` — not just extraction — returns
-  `Encrypted`/`WrongPassword`; the volume layer surfaces it as `NeedsPassword` on the LISTING path (browse-time prompt).
+- **Encryption: browsing usually works; extraction decrypts with a per-archive password.** Zip (ZipCrypto and WinZip
+  AES) decrypts through the `zip` crate's `by_index_decrypt` by CENTRAL-DIRECTORY ORDINAL (rc-zip can't decrypt; the
+  ordinals align, pinned). No password ⇒ `Encrypted`; wrong ⇒ `WrongPassword`, typed, never string-matched. A
+  HEADER-encrypted 7z needs the password to even BROWSE. Detection per cipher: DETAILS § "Decryption (zip)", and
+  `../../DETAILS.md` § "Password-protected archives".
 - **`ArchiveNode::mode` is what the archive RECORDED, `None` when it recorded nothing** (zip external attributes, the
   tar header, 7z's `0x8000` unix extension). ❌ Never a plausible `0o644`: the copy engine puts it on what an extract
   writes. Low nine bits only — setuid/setgid/sticky are dropped at the parser.
 - **The index cache key is `(path, size, mtime)`** (external edits auto-invalidate); `index_for_local` is blocking, call
   it from `spawn_blocking`.
-- **Three DoS caps**: per-entry depth (`name::MAX_COMPONENT_DEPTH`, over-deep entries quarantine), total node count
-  (`index::MAX_TREE_NODES`), and an xz block's dictionary (`format::XZ_MEMORY_LIMIT_KIB`); the last two fail as
-  `TooLarge`. ❌ Don't remove any. DETAILS § "Resource caps".
+- **DoS caps**: per-entry depth (`name::MAX_COMPONENT_DEPTH`, over-deep entries quarantine), total node count
+  (`index::MAX_TREE_NODES`), and an xz block's dictionary (`format::XZ_MEMORY_LIMIT_KIB`) fail as `TooLarge`; one
+  sidecar's and one index's held xattr bytes drop metadata. ❌ Don't remove any. DETAILS § "Resource caps".
+- **AppleDouble sidecars (`__MACOSX/._x`, a tar's `._x`) pair AFTER the sanitizer and never become nodes**: their xattrs
+  ride the item (`item_xattrs`). DETAILS § "AppleDouble sidecars".
 
 Depth, rationale, and the full test list: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
 reorganizing, or advising.

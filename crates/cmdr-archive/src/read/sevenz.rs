@@ -116,6 +116,8 @@ pub(super) fn parse(
                 modified: unix_seconds(entry),
                 encrypted,
                 mode: recorded_permission_bits(entry),
+                xattrs: Vec::new(),
+                sidecar_bytes: None,
             },
             (),
         ));

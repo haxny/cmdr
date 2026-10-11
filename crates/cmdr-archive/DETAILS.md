@@ -93,6 +93,11 @@ access, so a non-zero offset means "decompress from the start and discard the le
 cheap. `total_size()` reports the FULL uncompressed size (per the trait); `bytes_read()` counts only the delivered
 segment. Nothing calls the at-offset path with a non-zero offset today, so the common path discards nothing.
 
+**AppleDouble xattrs ride the item.** A stream's `metadata` carries the entry's xattrs from its sidecar or pax records
+(`src/read/DETAILS.md` § "AppleDouble sidecars"): a zip sidecar is read at open, before the first byte (one more entry
+read, only for an entry that has one), and a tar's were read by the parse. `folder_metadata` answers a folder the same
+way, and costs no byte source for a folder with nothing to carry. The sidecars themselves never list, count, or open.
+
 **`scan_for_copy`.** Counts and byte totals come straight from the central directory — no decompression during the scan.
 A single file is one entry at its uncompressed size; a directory walks the subtree via the index's per-dir child lists
 (the top-level dir isn't counted, matching `LocalPosixVolume`). `dedup_bytes == total_bytes`: a zip has no hardlinks.

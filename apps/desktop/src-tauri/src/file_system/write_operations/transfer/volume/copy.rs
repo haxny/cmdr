@@ -1246,6 +1246,10 @@ mod crashsafe_tests;
 #[cfg(test)]
 #[path = "cross_type_aside_tests.rs"]
 mod cross_type_aside_tests;
+/// Extract keeps what AppleDouble sidecars carry (macOS: the xattrs are read back).
+#[cfg(all(test, target_os = "macos"))]
+#[path = "copy_extract_apple_double_tests.rs"]
+mod extract_apple_double_tests;
 #[cfg(test)]
 #[path = "copy_extract_out_tests.rs"]
 mod extract_out_tests;

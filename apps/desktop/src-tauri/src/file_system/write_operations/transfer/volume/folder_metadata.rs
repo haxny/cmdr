@@ -1,25 +1,29 @@
 //! Giving the folders a cross-volume copy created their source folders' dates,
-//! modification AND creation, once everything inside them has landed.
+//! modification AND creation, and whatever else the source folder carries
+//! (`Volume::folder_metadata`: an archive folder's AppleDouble xattrs), once
+//! everything inside them has landed.
 //!
 //! Writing a child bumps its folder's date on every real store, so a folder can
 //! only keep its source's date if it's set AFTER its last child: the merge walk
 //! notes each folder it created as it leaves it (post-order), and the copy
 //! stamps the whole list once the subtree's leaves have drained. A subtree that
 //! failed or was cancelled is never stamped: a folder holding part of its
-//! contents must not claim the date of the whole. The set comes from the
+//! contents must not claim the date of the whole. The dates come from the
 //! listing entry the walk already holds (the scan's stat for a top-level
-//! folder), so it costs no round trip. `DETAILS.md` § "Copies keep the source's
-//! metadata".
+//! folder), so they cost no round trip; the rest is one `folder_metadata` ask
+//! per folder, which every backend but the archive answers empty with no I/O.
+//! `DETAILS.md` § "Copies keep the source's metadata".
 //!
 //! A folder that arrives without a date its source had (the destination can't
 //! hold it, or refused it) is counted for the loss note
 //! (`write_operations/metadata_losses.rs`).
 //!
 //! ❌ Not the extract quarantine: a folder gets that the moment the walk creates
-//! it (`extract_quarantine.rs`), since this pass skips a folder with no source
-//! date and every folder of a cancelled subtree.
+//! it (`extract_quarantine.rs`), since this pass skips every folder of a
+//! cancelled subtree. A quarantine a SIDECAR carries is replaced by the
+//! archive's here, so this pass never undoes that one.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 
@@ -46,52 +50,59 @@ impl SourceFolderDates {
             created_at: entry.created_at,
         }
     }
+}
 
-    fn is_empty(self) -> bool {
-        self.modified_at.is_none() && self.created_at.is_none()
-    }
+/// One folder the walk created: where it landed, the source folder it came
+/// from, and that folder's dates.
+struct FilledFolder {
+    dest: PathBuf,
+    source: PathBuf,
+    dates: SourceFolderDates,
 }
 
 /// The folders one top-level source's walk created, each with its source
-/// folder's dates, in the order they're stamped.
+/// folder, in the order they're stamped.
 // DEFAULT-OK: an empty list is a walk that hasn't created a folder yet.
 #[derive(Default)]
 pub(super) struct FolderMetadata {
     /// In the order the walk LEFT them, which puts every folder after the
     /// folders inside it, and the top-level one last.
-    folders: Vec<(PathBuf, SourceFolderDates)>,
+    folders: Vec<FilledFolder>,
 }
 
 impl FolderMetadata {
-    /// A folder the walk created at `dest` and has just finished filling. A
-    /// source that carried no date at all (an S3 prefix) leaves it the
-    /// store's own.
-    pub(super) fn note_filled(&mut self, dest: PathBuf, source: SourceFolderDates) {
-        if !source.is_empty() {
-            self.folders.push((dest, source));
-        }
+    /// A folder the walk created at `dest` from the source folder `source` and
+    /// has just finished filling.
+    pub(super) fn note_filled(&mut self, dest: PathBuf, source: PathBuf, dates: SourceFolderDates) {
+        self.folders.push(FilledFolder { dest, source, dates });
     }
 
-    /// Puts every noted folder's dates on `dest_volume`, deepest first, and
-    /// counts each date a folder arrives without.
+    /// Puts every noted folder's metadata on `dest_volume`, deepest first: its
+    /// dates, and what `source_volume` says the source folder carries. Counts
+    /// each date a folder arrives without.
     ///
     /// Call it only once the subtree landed in full. Best effort: a refusal is
     /// a `log::warn!` and the copy stands; a destination that can hold none of
     /// it (`MetadataReport::holds_none`) gets asked no more, though every
     /// folder still counts what it lost.
-    pub(super) async fn stamp(self, dest_volume: &Arc<dyn Volume>, state: &WriteOperationState) {
+    pub(super) async fn stamp(
+        self,
+        source_volume: &Arc<dyn Volume>,
+        dest_volume: &Arc<dyn Volume>,
+        state: &WriteOperationState,
+    ) {
         let mut asking = true;
-        for (dest, source) in self.folders {
+        for folder in self.folders {
             if is_cancelled(&state.intent) {
                 return;
             }
             let outcome = if asking {
-                stamp_one(dest_volume, &dest, source).await
+                stamp_one(source_volume, dest_volume, &folder, state).await
             } else {
                 Stamped::NotAsked
             };
             asking = !matches!(outcome, Stamped::HeldNone);
-            note_losses(dest_volume, source, outcome, state);
+            note_losses(dest_volume, folder.dates, outcome, state);
         }
     }
 }
@@ -133,16 +144,37 @@ fn note_losses(
     state.metadata_losses.note_folder(lost_created, lost_modified);
 }
 
-/// Stamps one folder.
-async fn stamp_one(dest_volume: &Arc<dyn Volume>, dest: &Path, source: SourceFolderDates) -> Stamped {
+/// Stamps one folder: its dates, plus what its source folder carries that the
+/// destination keeps on a folder (asked only then, so an archive folder's
+/// sidecar is never read for a destination that would drop it).
+async fn stamp_one(
+    source_volume: &Arc<dyn Volume>,
+    dest_volume: &Arc<dyn Volume>,
+    folder: &FilledFolder,
+    state: &WriteOperationState,
+) -> Stamped {
     let at = |secs: u64| UNIX_EPOCH + Duration::from_secs(secs);
-    let carried = CarriedMetadata {
-        created: source.created_at.map(at),
-        ..CarriedMetadata::default()
+    // xattrs are the only class a folder's source reports beyond its listing
+    // entry (an archive's sidecar); the dates come from that entry.
+    let wanted = dest_volume.metadata_caps().folder_stores.intersection(MetadataClasses::XATTRS);
+    let mut carried = if wanted.is_empty() {
+        CarriedMetadata::default()
+    } else {
+        source_volume.folder_metadata(&folder.source, wanted).await
     };
-    let report = dest_volume
-        .apply_metadata(dest, &carried, source.modified_at.map(at))
-        .await;
+    super::extract_quarantine::keep_archive_quarantine(state, source_volume, &mut carried.xattrs);
+    carried.created = folder.dates.created_at.map(at);
+    let modified = folder.dates.modified_at.map(at);
+    if carried.is_empty() && modified.is_none() {
+        // A source that carried nothing at all (an S3 prefix) leaves the
+        // folder the store's own, and costs the destination nothing.
+        return Stamped::Answered {
+            created: ClassOutcome::Absent,
+            modified: ClassOutcome::Absent,
+        };
+    }
+    let dest = folder.dest.as_path();
+    let report = dest_volume.apply_metadata(dest, &carried, modified).await;
     if report.holds_none() {
         return Stamped::HeldNone;
     }

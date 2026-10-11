@@ -92,6 +92,26 @@ pub(super) async fn quarantine_created_folder(
     }
 }
 
+/// Puts the archive's quarantine in place of any quarantine `xattrs` carry, when
+/// `source_volume` is a quarantined archive on a local parent: a folder's set
+/// from its AppleDouble sidecar is the archive AUTHOR's word, and a forged value
+/// could claim the user already approved what's inside. A set with no
+/// quarantine is left alone (the folder got the archive's at creation).
+pub(super) fn keep_archive_quarantine(
+    state: &WriteOperationState,
+    source_volume: &Arc<dyn Volume>,
+    xattrs: &mut [Xattr],
+) {
+    if !xattrs.iter().any(|xattr| xattr.name == QUARANTINE_XATTR) {
+        return;
+    }
+    if let Some(value) = archive_quarantine(state, source_volume) {
+        for xattr in xattrs.iter_mut().filter(|xattr| xattr.name == QUARANTINE_XATTR) {
+            xattr.value.clone_from(&value);
+        }
+    }
+}
+
 /// A source stream whose xattrs gain the archive's quarantine. Forwards
 /// everything else, `modified_at` and `stop_signal` included.
 struct QuarantinedStream {

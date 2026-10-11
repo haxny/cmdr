@@ -43,11 +43,14 @@ mod index;
 mod name;
 mod reader;
 mod sevenz;
+mod sidecars;
 mod source;
 mod tar;
 mod zip;
 mod zip_times;
 
+#[cfg(test)]
+mod apple_double_index_test;
 #[cfg(test)]
 mod archive_test;
 #[cfg(test)]

@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::to_volume_error;
 use crate::{ArchiveByteSource, ArchiveEntryReader, SubtreeExtractReader};
-use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, Xattr};
 use cmdr_fs::volume::{ExtractedFile, SequentialExtract, Volume, VolumeError, VolumeReadStream};
 
 /// Wraps an [`ArchiveEntryReader`] as a [`VolumeReadStream`], mapping the core's
@@ -33,14 +33,21 @@ pub(super) struct ArchiveVolumeReadStream {
     pub(super) modified_at: Option<SystemTime>,
     /// The entry's mode as the archive's index recorded it.
     pub(super) mode: Option<u32>,
+    /// The entry's xattrs, from its sidecar or its pax records, read at open.
+    pub(super) xattrs: Vec<Xattr>,
 }
 
 /// What an archive member carries beyond its bytes and its date: the mode the
-/// archive recorded, and nothing else (no creation date, no flags; xattrs ride
-/// `__MACOSX` sidecars, which aren't read yet).
-fn member_metadata(mode: Option<u32>, wanted: MetadataClasses) -> CarriedMetadata {
+/// archive recorded and the xattrs its sidecar or pax records hold. No creation
+/// date (zip and tar record none) and no flags.
+fn member_metadata(mode: Option<u32>, xattrs: &[Xattr], wanted: MetadataClasses) -> CarriedMetadata {
     CarriedMetadata {
         mode,
+        xattrs: if wanted.contains(MetadataClasses::XATTRS) {
+            xattrs.to_vec()
+        } else {
+            Vec::new()
+        },
         ..CarriedMetadata::default()
     }
     .restricted_to(wanted)
@@ -93,7 +100,7 @@ impl VolumeReadStream for ArchiveVolumeReadStream {
     }
 
     fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
-        member_metadata(self.mode, wanted)
+        member_metadata(self.mode, &self.xattrs, wanted)
     }
 }
 
@@ -119,6 +126,8 @@ pub(super) struct ArchiveSequentialExtract {
     current_modified_at: Option<SystemTime>,
     /// And its mode.
     current_mode: Option<u32>,
+    /// And its xattrs, which the parse already read.
+    current_xattrs: Vec<Xattr>,
 }
 
 impl ArchiveSequentialExtract {
@@ -129,6 +138,7 @@ impl ArchiveSequentialExtract {
             current_size: 0,
             current_modified_at: None,
             current_mode: None,
+            current_xattrs: Vec::new(),
         }
     }
 }
@@ -142,6 +152,7 @@ impl SequentialExtract for ArchiveSequentialExtract {
                     self.current_size = member.size;
                     self.current_modified_at = recorded_date(member.modified);
                     self.current_mode = member.mode;
+                    self.current_xattrs = member.xattrs;
                     Ok(Some(ExtractedFile {
                         source_path: self.archive_path.join(&member.inner_path),
                         size: member.size,
@@ -159,6 +170,7 @@ impl SequentialExtract for ArchiveSequentialExtract {
             delivered: 0,
             modified_at: self.current_modified_at,
             mode: self.current_mode,
+            xattrs: self.current_xattrs.clone(),
         })
     }
 }
@@ -172,6 +184,7 @@ struct MemberStream {
     delivered: u64,
     modified_at: Option<SystemTime>,
     mode: Option<u32>,
+    xattrs: Vec<Xattr>,
 }
 
 impl VolumeReadStream for MemberStream {
@@ -202,7 +215,7 @@ impl VolumeReadStream for MemberStream {
     }
 
     fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
-        member_metadata(self.mode, wanted)
+        member_metadata(self.mode, &self.xattrs, wanted)
     }
 }
 

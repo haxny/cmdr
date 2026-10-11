@@ -825,16 +825,20 @@ routed volumes, alone and inside a folder), `backend_suites/adb_transfer_test.rs
   it on the staged temp with any other xattr, before the mode (the host helper's order; a path xattr write on a `0444`
   file is `EACCES`). A destination that stores no xattrs never asks for it.
 - **Folders: the moment `merge.rs`'s level creates one** (the `Ok(())` arms beside `created.record_dir`), through
-  `Volume::apply_metadata` with an xattrs-only set, so a folder the walk merged into keeps its own metadata, and a zip's
-  implicit folders, a cancelled walk's folders, and the one-pass extractor's plan-mode folders (made before any byte)
-  are all covered. ❌ Not in `folder_metadata.rs`, which skips exactly those.
+  `Volume::apply_metadata` with an xattrs-only set, so a folder the walk merged into keeps its own metadata, and a
+  cancelled walk's folders and the one-pass extractor's plan-mode folders (made before any byte) are covered too. ❌ Not
+  in `folder_metadata.rs`, which skips every folder of a cancelled or failed subtree.
+- **A sidecar's quarantine never wins.** An AppleDouble sidecar is the archive AUTHOR's word, and a forged value could
+  claim the user already approved the app. A file's decorator replaces any quarantine the stream carries; a folder's
+  set from `Volume::folder_metadata` goes through `keep_archive_quarantine` before `folder_metadata.rs` applies it.
 - **The user's destination folder isn't the extract's**: `copy.rs`'s Phase 0.5 `create_directory_all` makes the folder
   the user extracts INTO, not something out of the archive, so it gets nothing.
 - A move out of a zip (`archive_edit/move_out.rs`) extracts through this same engine, so it's covered with no hook of
   its own.
 
 Pinned by the `quarantine` cells in `copy_extract_out_tests.rs` (zip with an implicit folder, a merged-into folder, an
-unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out).
+unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out), and the forged sidecar quarantine by
+`copy_extract_apple_double_tests.rs`.
 
 ## Copies keep the source's metadata
 
@@ -900,6 +904,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   trip of their own. A source whose scan carried none (an S3 prefix, MTP's single-path scan, a top-level dispatch with
   no hint) leaves them the destination's. The one-pass sequential extract hands the list to its `ExtractPlan` and
   stamps after the data pass.
+- **What a source folder carries beyond its listing entry** comes from `Volume::folder_metadata`, asked once per
+  created folder at stamp time (a folder has no stream to ask). It defaults to empty with no I/O; the archive answers
+  with the folder's AppleDouble xattrs (`crates/cmdr-archive/src/read/DETAILS.md` § "AppleDouble sidecars"). A folder
+  whose source carried nothing at all costs the destination no call.
 - **Decision/Why the scan carries the root's dates, ❌ not a `get_metadata` at stamp time**: that stat was one more
   request per top-level folder, which `s3_engine_integration_test.rs::the_engine_sends_what_the_estimate_counts`
   caught as a HEAD and a LIST over the cost estimate, and a whole parent listing on MTP.
@@ -940,8 +948,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   sent for the date (zero new frames): on the streaming writer's own handle before it closes, or by path right after a
   one-frame compound write. Folders by path, both times in one compound. The landing rename keeps `CreationTime`
   (`crates/cmdr-smb/DETAILS.md` § "Dates on copies").
-- **Archive (source only)**: reports each entry's date and mode from the parsed index, on random-access reads and the
-  one-pass sequential extract alike (whole seconds; zip's DOS time keeps even seconds). No creation date in a zip.
+- **Archive (source only)**: reports each entry's date and mode from the parsed index, and its xattrs from its
+  AppleDouble sidecar (a Finder-made zip's `__MACOSX`, a macOS tar's `._name`) or pax records, on random-access reads
+  and the one-pass sequential extract alike (whole seconds; zip's DOS time keeps even seconds); a folder's xattrs
+  through `folder_metadata`. No creation date in a zip.
 - **Git portal (source only)**: the tree entry's mode; no date (a blob sits in many commits).
 - **SFTP**: reports the mtime from the `fstat` its open already sends; writes it with a path `SETSTAT` on the staging
   temp after the awaited close, before the final rename. Whole seconds, atime set alongside. No creation date in SFTP
@@ -966,7 +976,8 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   WebDAV copy-off only) and creation-date scenarios (`a_copy_onto_the_server_keeps_the_creation_dates`,
   `a_copy_off_the_server_keeps_the_creation_dates`, `a_copy_within_the_server_keeps_the_creation_dates`: a one-frame
   file, a streamed file, and a folder each, on the SMB cells); `in_memory_dates_test.rs`; `copy_metadata_tests.rs`
-  (onto local disk: file and folder birth, the folded mode); and S3's
+  (onto local disk: file and folder birth, the folded mode); `copy_extract_apple_double_tests.rs` (a Finder-made zip
+  and a macOS tar: tags on files and folders, no `__MACOSX`); and S3's
   `s3_transfer_integration_test.rs::copying_onto_a_bucket_lands_every_byte_and_the_mtime`.
 - **Folder dates**: `conformance::assert_apply_metadata_dates_a_folder` per backend (local, in-memory, SFTP, SMB);
   `copied_folders_onto_the_server_keep_their_dates` and `copied_folders_off_the_server_keep_their_dates` through the

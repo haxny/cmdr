@@ -141,6 +141,15 @@ macro_rules! forward_volume_methods {
             self.$inner.metadata_caps()
         }
     };
+    (@one $inner:ident, folder_metadata) => {
+        fn folder_metadata<'a>(
+            &'a self,
+            path: &'a ::std::path::Path,
+            wanted: ::cmdr_fs::metadata::MetadataClasses,
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = ::cmdr_fs::metadata::CarriedMetadata> + Send + 'a>> {
+            self.$inner.folder_metadata(path, wanted)
+        }
+    };
     (@one $inner:ident, delete) => {
         fn delete<'a>(&'a self, path: &'a ::std::path::Path) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.delete(path)
@@ -378,6 +387,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         scan_for_conflicts,
         apply_metadata,
         metadata_caps,
+        folder_metadata,
         supports_unknown_length_writes, write_is_single_shot, publishes_writes_whole,
     );
 
