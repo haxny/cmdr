@@ -8,10 +8,10 @@ metadata**. `ditto` parity is the floor, not the ceiling, and our own measuremen
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
 **Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
-folders), and M5a (creation dates across volumes, SMB first) done (2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost,
-executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1
-agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh
-read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
+folders), and M5a (creation dates across volumes, SMB first) done (2026-10-11); review rounds 1 (correctness and data
+safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the
+code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the
+file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
 
 ## Loud rules
 

@@ -146,6 +146,7 @@ pub(super) fn walk_sources_with_per_path<E>(
         // One `lstat` per selected item, local and cheap: the walk above kept
         // no handle on the top-level entry it read.
         let top_meta = fs::symlink_metadata(source).ok();
+        let (top_level_modified_at, top_level_created_at) = CopyScanResult::local_top_level_dates(top_meta.as_ref());
 
         per_path.push((
             source.clone(),
@@ -163,16 +164,8 @@ pub(super) fn walk_sources_with_per_path<E>(
                 // what the copy reserves and fills against.
                 dedup_bytes: *dedup_bytes - dedup_bytes_before,
                 top_level_is_directory,
-                top_level_modified_at: top_meta
-                    .as_ref()
-                    .and_then(|meta| meta.modified().ok())
-                    .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|since| since.as_secs()),
-                top_level_created_at: top_meta
-                    .as_ref()
-                    .and_then(|meta| meta.created().ok())
-                    .and_then(|created| created.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|since| since.as_secs()),
+                top_level_modified_at,
+                top_level_created_at,
             },
         ));
     }

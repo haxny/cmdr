@@ -9,14 +9,12 @@
 //! `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
 //! § "Copies keep the source's metadata".
 
-use std::future::Future;
 use std::path::Path;
-use std::pin::Pin;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
-use super::modification_date::SOURCE_DATE_SECS;
+use super::modification_date::{DatedSource, SOURCE_DATE_SECS};
 use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
-use crate::volume::{StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode};
+use crate::volume::{StreamLength, Volume, WriteMode};
 
 /// The creation date the assertions hand a destination, in Unix seconds:
 /// 2015-03-01 00:00:00 UTC. Years before [`SOURCE_DATE_SECS`], the way a real
@@ -54,7 +52,7 @@ pub async fn assert_write_from_stream_keeps_metadata(volume: &dyn Volume, dest: 
             dest,
             WriteMode::CreateNew,
             StreamLength::Known(length),
-            Box::new(CarryingSource::new(content)),
+            Box::new(born_source(content)),
             &|_| std::ops::ControlFlow::Continue(()),
         )
         .await;
@@ -120,7 +118,7 @@ pub async fn assert_apply_metadata_keeps(volume: &dyn Volume, dir: &Path, kept: 
             &dir.join("inside.txt"),
             WriteMode::CreateNew,
             StreamLength::Known(length),
-            Box::new(CarryingSource::new(content)),
+            Box::new(born_source(content)),
             &|_| std::ops::ControlFlow::Continue(()),
         )
         .await
@@ -216,52 +214,12 @@ pub async fn assert_read_stream_reports_the_listed_metadata(
     }
 }
 
-/// A source stream over bytes in hand that reports [`SOURCE_DATE_SECS`] as its
-/// file's modification date, and [`BIRTH_SECS`] and mode `0600` as the rest.
-struct CarryingSource {
-    bytes: Option<Vec<u8>>,
-    total: u64,
-    read: u64,
-}
-
-impl CarryingSource {
-    fn new(bytes: Vec<u8>) -> Self {
-        let total = bytes.len() as u64;
-        Self {
-            bytes: Some(bytes),
-            total,
-            read: 0,
-        }
-    }
-}
-
-impl VolumeReadStream for CarryingSource {
-    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
-        Box::pin(async move {
-            let bytes = self.bytes.take()?;
-            self.read += bytes.len() as u64;
-            Some(Ok(bytes))
-        })
-    }
-
-    fn total_size(&self) -> StreamLength {
-        StreamLength::Known(self.total)
-    }
-
-    fn bytes_read(&self) -> u64 {
-        self.read
-    }
-
-    fn modified_at(&self) -> Option<SystemTime> {
-        Some(UNIX_EPOCH + Duration::from_secs(SOURCE_DATE_SECS))
-    }
-
-    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
-        CarriedMetadata {
-            created: Some(UNIX_EPOCH + Duration::from_secs(BIRTH_SECS)),
-            mode: Some(SOURCE_MODE),
-            ..CarriedMetadata::default()
-        }
-        .restricted_to(wanted)
-    }
+/// A source born at [`BIRTH_SECS`] with mode `0600`, dated like every
+/// conformance source.
+fn born_source(bytes: Vec<u8>) -> DatedSource {
+    DatedSource::new(bytes).carrying(CarriedMetadata {
+        created: Some(UNIX_EPOCH + Duration::from_secs(BIRTH_SECS)),
+        mode: Some(SOURCE_MODE),
+        ..CarriedMetadata::default()
+    })
 }

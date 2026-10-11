@@ -370,6 +370,24 @@ pub struct CopyScanResult {
     pub top_level_created_at: Option<u64>,
 }
 
+impl CopyScanResult {
+    /// A local top-level path's `(modified, created)` dates in the whole Unix
+    /// seconds [`Self::top_level_modified_at`] and [`Self::top_level_created_at`]
+    /// carry, off the `lstat` a local scan already took. `None` for a date the
+    /// stat lacks (or no stat at all).
+    pub fn local_top_level_dates(meta: Option<&std::fs::Metadata>) -> (Option<u64>, Option<u64>) {
+        let secs = |date: std::io::Result<std::time::SystemTime>| {
+            date.ok()
+                .and_then(|date| date.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|since| since.as_secs())
+        };
+        match meta {
+            Some(meta) => (secs(meta.modified()), secs(meta.created())),
+            None => (None, None),
+        }
+    }
+}
+
 /// Result of a batch scan over multiple source paths.
 ///
 /// Returned by `Volume::scan_for_copy_batch`. Bundles the aggregate stats that

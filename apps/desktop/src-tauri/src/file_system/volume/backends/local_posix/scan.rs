@@ -96,22 +96,16 @@ impl LocalPosixVolume {
                     }
                 }
 
+                let (top_level_modified_at, top_level_created_at) =
+                    CopyScanResult::local_top_level_dates(top_meta.as_ref());
                 Ok(CopyScanResult {
                     file_count,
                     dir_count,
                     total_bytes,
                     dedup_bytes,
                     top_level_is_directory,
-                    top_level_modified_at: top_meta
-                        .as_ref()
-                        .and_then(|meta| meta.modified().ok())
-                        .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
-                        .map(|since| since.as_secs()),
-                    top_level_created_at: top_meta
-                        .as_ref()
-                        .and_then(|meta| meta.created().ok())
-                        .and_then(|created| created.duration_since(std::time::UNIX_EPOCH).ok())
-                        .map(|since| since.as_secs()),
+                    top_level_modified_at,
+                    top_level_created_at,
                 })
             })
             .await

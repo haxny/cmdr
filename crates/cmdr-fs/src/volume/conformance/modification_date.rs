@@ -12,7 +12,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::metadata::{CarriedMetadata, ClassOutcome};
+use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 use crate::volume::{StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// The date [`assert_write_from_stream_keeps_the_source_date`] hands its
@@ -214,21 +214,30 @@ pub async fn assert_apply_metadata_dates_a_folder(volume: &dyn Volume, dir: &Pat
 }
 
 /// A source stream over bytes in hand that reports [`SOURCE_DATE_SECS`] as its
-/// file's date, the way a real backend's stream reports what its open learned.
-struct DatedSource {
+/// file's date, the way a real backend's stream reports what its open learned,
+/// and whatever else [`Self::carrying`] hands it (nothing by default).
+pub(super) struct DatedSource {
     bytes: Option<Vec<u8>>,
     total: u64,
     read: u64,
+    carried: CarriedMetadata,
 }
 
 impl DatedSource {
-    fn new(bytes: Vec<u8>) -> Self {
+    pub(super) fn new(bytes: Vec<u8>) -> Self {
         let total = bytes.len() as u64;
         Self {
             bytes: Some(bytes),
             total,
             read: 0,
+            carried: CarriedMetadata::default(),
         }
+    }
+
+    /// The same source, reporting `carried` from `metadata`.
+    pub(super) fn carrying(mut self, carried: CarriedMetadata) -> Self {
+        self.carried = carried;
+        self
     }
 }
 
@@ -251,5 +260,9 @@ impl VolumeReadStream for DatedSource {
 
     fn modified_at(&self) -> Option<SystemTime> {
         Some(UNIX_EPOCH + Duration::new(SOURCE_DATE_SECS, SOURCE_DATE_NANOS))
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.carried.clone().restricted_to(wanted)
     }
 }

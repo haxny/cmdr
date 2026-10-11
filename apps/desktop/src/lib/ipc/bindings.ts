@@ -12032,10 +12032,10 @@ export type OperationSnapshot = {
   status: LifecycleStatus
   source: string | null
   destination: string | null
-  // See [`OperationDescriptor::supports_rollback`].
+  // See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
   supportsRollback: boolean
   /**
-   *  See [`OperationDescriptor::reverses`]. Static for the op's whole life,
+   *  See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
    *  which is why it rides the thin snapshot rather than the 200 ms progress
    *  tick.
    */
