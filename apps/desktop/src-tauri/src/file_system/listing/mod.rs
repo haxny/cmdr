@@ -98,7 +98,7 @@ mod path_index_test;
 #[cfg(test)]
 mod row_beside_test;
 #[cfg(test)]
-mod seam_test_support;
+pub(crate) mod seam_test_support;
 // A pane close drops a listing, and must not reach the volume's own watcher.
 // Docker-gated, over a real `cmdr-smb` session, because the SMB watcher's
 // lifetime is what the regression was about.

@@ -18,9 +18,6 @@ pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE, OverlayRows};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::visible_rows::VisibleRows;
-#[cfg(test)]
-use crate::file_system::watcher::start_watching_detached;
-use crate::file_system::watcher::stop_watching;
 use crate::index_host::index;
 #[cfg(test)]
 use cmdr_fs::benchmark;
@@ -118,14 +115,9 @@ pub async fn list_directory_start_with_volume(
         cache.insert(listing_id.clone(), listing);
     }
 
-    // Start watching the directory (only if volume supports it)
-    // TODO: Update watcher to be volume-aware
-    if volume.can_watch_listings() {
-        start_watching_detached(&listing_id, path);
-    }
-    // And whatever else a subsystem keeps alive while a pane shows this
-    // directory: today the git portal's per-repo watcher, which a virtual path
-    // can't arm through the line above. `host/observers.rs`.
+    // Whatever a subsystem keeps alive while a pane shows this directory: in
+    // Cmdr the change watch first, then the git portal's per-repo watcher.
+    // `host/observers.rs`.
     super::host::observers::listing_opened(&super::host::OpenedListing {
         id: &super::listing_id::ListingId::new(listing_id.as_str()),
         volume_id,
@@ -141,11 +133,9 @@ pub async fn list_directory_start_with_volume(
     })
 }
 
-/// Ends a directory listing and cleans up the cache.
+/// Ends a directory listing: the cache entry and its pending diffs, then
+/// every observer (the change watch among them).
 pub fn list_directory_end(listing_id: &str) {
-    // Stop the file watcher
-    stop_watching(listing_id);
-
     // Remove and discard publication under the mutation lock (cache then queue).
     {
         let mut cache = LISTING_CACHE.write_ignore_poison();
@@ -155,7 +145,9 @@ pub fn list_directory_end(listing_id: &str) {
 
     // AFTER the cache removal, ❗ never before: an observer's own detached arm
     // reconciles against listing-cache membership, so releasing while the entry
-    // is still there lets a racing arm re-take what this just gave back.
+    // is still there lets a racing arm re-take what this just gave back. The
+    // change watch disarms here too, so an event landing in the gap finds no
+    // listing to patch.
     super::host::observers::listing_closed(&super::listing_id::ListingId::new(listing_id));
 }
 

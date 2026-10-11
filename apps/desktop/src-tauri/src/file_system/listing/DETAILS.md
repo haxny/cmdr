@@ -88,12 +88,16 @@ the six-hour backstop that reclaims a leaked one is `orphan_reaper.rs`.
 4. Frontend calls `find_file_indices()` to batch-resolve file names to indices (selection adjustment during operations).
 5. Frontend calls `get_paths_at_indices()` / `get_files_at_indices()` for batch selection lookups (transfer dialogs,
    delete dialog, drag, clipboard).
-6. `list_directory_end()` stops the watcher and removes from the cache (primary, fast eviction).
+6. `list_directory_end()` removes from the cache (primary, fast eviction), then tells the observers.
 
-Both ends also tell the observers (`host/observers.rs`), the seam for subsystems that keep something alive while a pane is
-showing a directory (today: the git portal's per-repo watcher, which a virtual path can't arm through the FSEvents
-watcher). ❗ The close call comes AFTER the cache removal: an observer's own detached arm reconciles against
-listing-cache membership, so releasing while the entry is still there lets a racing arm re-take what was just released.
+Both ends tell the observers (`host/observers.rs`), the seam for subsystems that keep something alive while a pane is
+showing a directory. Cmdr installs three, in order (`listing_host/mod.rs`): the FSEvents change watch
+(`file_system/watcher.rs`, armed only when `Volume::can_watch_listings`), the git portal's per-repo watcher (which a
+virtual path can't arm through FSEvents), and `listing_index_sizes`. ❗ The close call comes AFTER the cache removal: an
+observer's own detached arm reconciles against listing-cache membership, so releasing while the entry is still there
+lets a racing arm re-take what was just released. The change watch disarms in that same call, so an FSEvents event
+landing between the removal and the disarm finds no listing to patch. The test binary's slot holds the change watch too
+(`listing_host::test_seams`), so a listing in a test arms a watch as it does in the app.
 
 ### Backstop reaper
 

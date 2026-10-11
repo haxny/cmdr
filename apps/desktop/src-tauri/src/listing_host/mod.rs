@@ -9,8 +9,9 @@
 //!   become wire events and the bookkeeping around them
 //! - runtime: the app's own tokio handle, so there's one thread pool
 //! - overlays: the git portal's `.git/` rows (`file_system::git::overlay`)
-//! - observers, in this order: git arming (`file_system::git::arming`), then
-//!   index sizes (`listing_index_sizes`)
+//! - observers, in this order: the change watch (`file_system::watcher`), git
+//!   arming (`file_system::git::arming`), then index sizes
+//!   (`listing_index_sizes`)
 //!
 //! The other direction lives here too: [`backends::AppListings`] answers a
 //! storage backend's `cmdr_fs` `ListingHost` questions from the engine.
@@ -41,6 +42,9 @@ pub fn install(app: &AppHandle) {
         // routed volume instead; this seam is what keeps the six rows out of
         // every walker.
         .overlay(crate::file_system::git::overlay::overlay())
+        // FIRST: arms a listing's change watch on open and disarms it on close,
+        // after the cache removal like every observer.
+        .observer(crate::file_system::watcher::observer())
         // Keeps a repo's `.git/*` watcher armed for as long as a pane shows one
         // of its virtual listings, so a lone `branches/` pane stays live.
         .observer(crate::file_system::git::arming::observer())
@@ -57,4 +61,12 @@ pub fn install(app: &AppHandle) {
             crate::log_error!(target: "listing", "the listing host was read before install(); early events were dropped");
         }
     }
+}
+
+/// What the test binary's shared slot holds, since nothing there calls
+/// [`install`]: detached events and runtime, and the change watch, so a
+/// listing on a watchable volume arms a watch in tests as it does in the app.
+#[cfg(test)]
+pub(crate) fn test_seams() -> ListingSeams {
+    ListingSeams::detached().observer(crate::file_system::watcher::observer())
 }

@@ -5,6 +5,8 @@
 //!   cache removal: an observer's detached arm reconciles against cache
 //!   membership, so a close it heard early would let a racing arm re-take what
 //!   the close just gave back.
+//! - The FSEvents watch is the FIRST observer, so it disarms after the cache
+//!   removal too, and an observer after it hears a close with the watch gone.
 //! - A listing on a watchable volume arms its FSEvents watch in the TEST binary
 //!   too, with no registration at all. Tests lean on that
 //!   (`local_posix_test::test_listing_watch_coverage_flips_with_watcher_lifecycle`,
@@ -20,6 +22,8 @@ use std::sync::Arc;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_end;
 use super::seam_test_support::{Heard, heard, record_lifecycle_of};
+#[cfg(target_os = "macos")]
+use super::seam_test_support::{disarms_of, record_disarms_of};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use super::streaming::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::listing::host::ListingEvents;
@@ -67,7 +71,13 @@ fn an_observer_hears_a_close_after_the_listing_left_the_cache() {
 
     list_directory_end(listing.id());
 
-    assert_eq!(heard(listing.id()), [Heard::Closed { cached: false }]);
+    assert_eq!(
+        heard(listing.id()),
+        [Heard::Closed {
+            cached: false,
+            watching: false
+        }]
+    );
 }
 
 /// Whether a watch is registered for `listing_id`.
@@ -139,6 +149,43 @@ async fn a_synchronously_started_listing_arms_its_watch_in_the_test_binary() {
         is_watching(listing.id())
     })
     .await;
+    drop(listing);
+    get_volume_manager().unregister(&volume_id);
+}
+
+/// The watch is an observer: it disarms after the cache removal, like every
+/// observer, and one registered after it hears the close with the watch gone.
+/// Safe because a detached arm reconciles against cache membership, and an
+/// FSEvents event landing in the gap finds no listing to patch.
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_watch_disarms_after_the_listing_left_the_cache() {
+    use crate::test_support::wait_until_async;
+
+    let (scratch, volume_id) = local_volume("disarm-order");
+    let listing = TestListingGuard::adopt(unique_test_id("disarm-order"));
+    stream(listing.id(), &volume_id, &scratch).await;
+    wait_until_async(ARMS_WITHIN, "the streamed listing to arm its watch", || {
+        is_watching(listing.id())
+    })
+    .await;
+    record_lifecycle_of(listing.id());
+    record_disarms_of(listing.id());
+
+    list_directory_end(listing.id());
+
+    assert_eq!(
+        disarms_of(listing.id()),
+        [false],
+        "the disarm saw the listing gone from the cache"
+    );
+    assert_eq!(
+        heard(listing.id()),
+        [Heard::Closed {
+            cached: false,
+            watching: false
+        }]
+    );
     drop(listing);
     get_volume_manager().unregister(&volume_id);
 }

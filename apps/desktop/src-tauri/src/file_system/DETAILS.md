@@ -493,7 +493,9 @@ apply the rule to every watcher OS thread (git, SMB, MTP, archive), not just not
 
 ## Arming a listing watch is detached
 
-`start_watching_detached` hands the arm to the blocking pool; the listing pipeline never waits for it. Arming is slow,
+The listing engine reaches the watcher as its first `ListingObserver` (`watcher::observer()`, installed by
+`listing_host::install`): an open arms through `start_watching_detached`, and a close runs `stop_watching` after the
+cache removal. `start_watching_detached` hands the arm to the blocking pool; the listing pipeline never waits for it. Arming is slow,
 and slow by an amount that has nothing to do with the directory being listed:
 
 - `FSEventStreamCreate` + `FSEventStreamStart` are a handshake with `fseventsd`, and `notify` blocks until the stream's

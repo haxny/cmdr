@@ -12,10 +12,10 @@ use crate::file_system::listing::diff::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::stalled_on::StalledOn;
 
-/// What the slot holds in a test binary, where nothing installs: detached
-/// seams.
+/// What the slot holds in a test binary, where nothing installs: the app's
+/// test stand-in (`crate::listing_host::test_seams`).
 pub(crate) fn fallback_seams() -> ListingSeams {
-    ListingSeams::detached()
+    crate::listing_host::test_seams()
 }
 
 /// Adds `overlay` to the shared slot. Test registration stays global until each

@@ -16,7 +16,6 @@ use crate::file_system::listing::host::{self, ListingEnd, ListingEvents, OpenedL
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
-use crate::file_system::watcher::start_watching_detached;
 use cmdr_fs::benchmark;
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -437,17 +436,10 @@ pub(crate) async fn read_directory_with_progress(
         respell_if_read_by_a_replaced_backend(volume_id, listing_id, path, &volume);
     }
 
-    // Arm a change watch when the volume can carry one. A routed volume answers
-    // `false` (a git snapshot's and an archive's paths aren't on disk, so
-    // `notify` has nothing to arm on), which is what keeps every virtual path
-    // out of here by type.
+    // Whatever a subsystem keeps alive while a pane shows this directory: in
+    // Cmdr the change watch first, then the git portal's per-repo watcher.
+    // `host/observers.rs`.
     let watcher_start_t = std::time::Instant::now();
-    if volume.can_watch_listings() {
-        start_watching_detached(listing_id, path);
-    }
-    // And whatever else a subsystem keeps alive while a pane shows this
-    // directory: today the git portal's per-repo watcher, which a virtual path
-    // can't arm through the line above. `host/observers.rs`.
     host::observers::listing_opened(&OpenedListing {
         id: &id,
         volume_id,

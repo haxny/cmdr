@@ -18,11 +18,13 @@ use notify_debouncer_full::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, RwLock};
+use std::sync::{Arc, LazyLock, RwLock};
 use std::time::Duration;
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
+use crate::file_system::listing::host::{ListingObserver, OpenedListing};
+use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::{
     OverlayRows, get_listing_entries, get_listing_volume_id_and_path, has_entry, insert_entry_sorted,
     remove_entries_by_paths, update_entry_sorted, update_listing_entries,
@@ -262,8 +264,39 @@ pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
     }
 }
 
+/// The change watch, as the listing engine's first observer: a listing on a
+/// volume that can carry a watch arms one on open (detached), and every close
+/// disarms, after the cache removal like every observer.
+struct WatchedListings;
+
+/// The watch observer, for the listing host to install ahead of every other.
+pub(crate) fn observer() -> Arc<dyn ListingObserver> {
+    Arc::new(WatchedListings)
+}
+
+impl ListingObserver for WatchedListings {
+    fn id(&self) -> &'static str {
+        "fs-watcher"
+    }
+
+    /// A routed volume answers `false` to `can_watch_listings` (a git
+    /// snapshot's and an archive's paths aren't on disk, so `notify` has
+    /// nothing to arm on), which keeps every virtual path out by type.
+    fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        if opened.volume.can_watch_listings() {
+            start_watching_detached(opened.id.as_str(), opened.path);
+        }
+    }
+
+    fn listing_closed(&self, id: &ListingId) {
+        stop_watching(id.as_str());
+    }
+}
+
 /// Stop watching a directory for a given listing.
 pub fn stop_watching(listing_id: &str) {
+    #[cfg(test)]
+    crate::file_system::listing::seam_test_support::note_disarm(listing_id);
     let removed = WATCHER_MANAGER.write_ignore_poison().watches.remove(listing_id);
 
     // Drop OUTSIDE the lock. Dropping a `WatchedDirectory` tears an FSEvents run loop
