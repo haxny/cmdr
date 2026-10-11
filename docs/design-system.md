@@ -909,6 +909,10 @@ line-height: 1;
 
 Keep them visually quiet; they're reference, not action. Monospace so key combinations (`Cmd+Shift+N`) align neatly.
 
+A key that presses a BUTTON sits inside it, after the label, as a `KeyHint` (`apps/desktop/src/lib/ui/KeyHint.svelte`):
+a small literal `ShortcutChip`, hidden from screen readers, with the key on the button's `aria-keyshortcuts` instead.
+The Background / Queue buttons' F2 and the "file already exists" prompt's letters both use it.
+
 ### Loading states (app)
 
 For operations under ~1 second, no indicator needed. For longer operations, follow the progressive disclosure from the

@@ -1137,9 +1137,10 @@ Total Commander's "F2 Queue": in the copy / move / compress dialog (`TransferDia
 (`../delete/DeleteDialog.svelte`), F2 or the Background / Queue button beside Confirm starts the operation with NO
 progress dialog (#381). So F5, F2, F5, F2 queues two copies without a modal in between.
 
-**The key is on the button.** Both Background / Queue buttons (here and the progress dialog's) carry a literal
-`ShortcutChip key="F2"`, the Search dialog's `⏎` pattern, so a mouse user learns the key. The chip is `aria-hidden` and
-the button says `aria-keyshortcuts="F2"` (the house menu's pattern), keeping the accessible name equal to the word.
+**The key is on the button.** Both Background / Queue buttons (here and the progress dialog's) carry a
+`KeyHint key="F2"` (`$lib/ui/KeyHint.svelte`, the same chip the decision prompts use for their letters), so a mouse user
+learns the key. The chip is `aria-hidden` and the button says `aria-keyshortcuts="F2"` (the house menu's pattern),
+keeping the accessible name equal to the word.
 
 **F2 is Enter plus one flag.** The dialog runs its own confirm (`confirmFromUser` → `handleConfirm`), so it meets the
 same guards (a destination that refuses writes, a source that can't be read), waits for `scan.scanStarted` the same way,

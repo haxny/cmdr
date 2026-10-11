@@ -9,7 +9,7 @@
     import Icon from '$lib/ui/Icon.svelte'
     import TextArea from '$lib/ui/TextArea.svelte'
     import { tString } from '$lib/intl/messages.svelte'
-    import DecisionKeyHint from '../DecisionKeyHint.svelte'
+    import KeyHint from '$lib/ui/KeyHint.svelte'
     import { answerDecisionKey, DECISION_KEYS_ARM_MS, ERROR_KEYS, type DecisionChoice } from '../decision-keys'
 
     interface Props {
@@ -145,16 +145,16 @@
     {#snippet footer()}
         {#if onRetry && showRetry}
             <Button variant="secondary" onclick={onRetry} aria-keyshortcuts={ERROR_KEYS.retry}
-                >{tString('fileOperations.errorDialog.retry')}<DecisionKeyHint key={ERROR_KEYS.retry} /></Button
+                >{tString('fileOperations.errorDialog.retry')}<KeyHint key={ERROR_KEYS.retry} /></Button
             >
         {/if}
         {#if onCopyAnyway && showCopyAnyway}
             <Button variant="secondary" onclick={onCopyAnyway} aria-keyshortcuts={ERROR_KEYS.copyAnyway}
-                >{tString('fileOperations.errorDialog.copyAnyway')}<DecisionKeyHint key={ERROR_KEYS.copyAnyway} /></Button
+                >{tString('fileOperations.errorDialog.copyAnyway')}<KeyHint key={ERROR_KEYS.copyAnyway} /></Button
             >
         {/if}
         <Button variant="primary" onclick={onClose} aria-keyshortcuts="{ERROR_KEYS.close} Enter"
-            >{tString('fileOperations.errorDialog.close')}<DecisionKeyHint key={ERROR_KEYS.close} /></Button
+            >{tString('fileOperations.errorDialog.close')}<KeyHint key={ERROR_KEYS.close} /></Button
         >
     {/snippet}
 </ModalDialog>

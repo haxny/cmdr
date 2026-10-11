@@ -13,7 +13,7 @@
     import { formatDate } from '$lib/file-explorer/selection/selection-info-utils'
     import type { WriteConflictEvent } from '$lib/tauri-commands'
     import type { ConflictResolution } from '$lib/file-explorer/types'
-    import DecisionKeyHint from '../DecisionKeyHint.svelte'
+    import KeyHint from '$lib/ui/KeyHint.svelte'
     import { answerDecisionKey, CONFLICT_KEYS, DECISION_KEYS_ARM_MS, type DecisionChoice } from '../decision-keys'
 
     interface Props {
@@ -281,7 +281,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts="{CONFLICT_KEYS.skip} Enter"
             >
-                {tString('fileOperations.transferProgress.conflictSkip')}<DecisionKeyHint key={CONFLICT_KEYS.skip} />
+                {tString('fileOperations.transferProgress.conflictSkip')}<KeyHint key={CONFLICT_KEYS.skip} />
             </Button>
             <Button
                 variant="secondary"
@@ -289,7 +289,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.skipAll}
             >
-                {tString('fileOperations.transferProgress.conflictSkipAll')}<DecisionKeyHint key={CONFLICT_KEYS.skipAll} />
+                {tString('fileOperations.transferProgress.conflictSkipAll')}<KeyHint key={CONFLICT_KEYS.skipAll} />
             </Button>
         </div>
         <div class="conflict-buttons-row">
@@ -299,7 +299,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.rename}
             >
-                {tString('fileOperations.transferProgress.conflictRename')}<DecisionKeyHint key={CONFLICT_KEYS.rename} />
+                {tString('fileOperations.transferProgress.conflictRename')}<KeyHint key={CONFLICT_KEYS.rename} />
             </Button>
             <Button
                 variant="secondary"
@@ -307,7 +307,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.renameAll}
             >
-                {tString('fileOperations.transferProgress.conflictRenameAll')}<DecisionKeyHint
+                {tString('fileOperations.transferProgress.conflictRenameAll')}<KeyHint
                     key={CONFLICT_KEYS.renameAll}
                 />
             </Button>
@@ -319,7 +319,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.overwrite}
             >
-                {overwriteLabel}<DecisionKeyHint key={CONFLICT_KEYS.overwrite} />
+                {overwriteLabel}<KeyHint key={CONFLICT_KEYS.overwrite} />
             </Button>
             <Button
                 variant="secondary"
@@ -327,7 +327,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.overwriteAll}
             >
-                {overwriteAllLabel}<DecisionKeyHint key={CONFLICT_KEYS.overwriteAll} />
+                {overwriteAllLabel}<KeyHint key={CONFLICT_KEYS.overwriteAll} />
             </Button>
         </div>
         <div class="conflict-buttons-row">
@@ -338,7 +338,7 @@
                     disabled={isResolvingConflict || destSizeUnknown}
                     aria-keyshortcuts={CONFLICT_KEYS.overwriteAllSmaller}
                 >
-                    {tString('fileOperations.transferProgress.conflictOverwriteAllSmaller')}<DecisionKeyHint
+                    {tString('fileOperations.transferProgress.conflictOverwriteAllSmaller')}<KeyHint
                         key={CONFLICT_KEYS.overwriteAllSmaller}
                     />
                 </Button>
@@ -349,7 +349,7 @@
                 disabled={isResolvingConflict}
                 aria-keyshortcuts={CONFLICT_KEYS.overwriteAllOlder}
             >
-                {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}<DecisionKeyHint
+                {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}<KeyHint
                     key={CONFLICT_KEYS.overwriteAllOlder}
                 />
             </Button>
@@ -367,7 +367,7 @@
                 disabled={exitLocked}
                 aria-keyshortcuts={CONFLICT_KEYS.cancel}
             >
-                {tString('fileOperations.transferProgress.conflictCancel')}<DecisionKeyHint key={CONFLICT_KEYS.cancel} />
+                {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
             </button>
             <!-- Blocked, not `disabled`: the reason is worth reading, and a
                  disabled button leaves the tab order with its tooltip. No click
@@ -382,7 +382,7 @@
                 disabled={exitLocked}
                 aria-keyshortcuts={CONFLICT_KEYS.rollback}
             >
-                {tString('fileOperations.transferProgress.conflictRollback')}<DecisionKeyHint
+                {tString('fileOperations.transferProgress.conflictRollback')}<KeyHint
                     key={CONFLICT_KEYS.rollback}
                 />
             </button>
@@ -393,7 +393,7 @@
                 disabled={exitLocked}
                 aria-keyshortcuts={CONFLICT_KEYS.cancel}
             >
-                {tString('fileOperations.transferProgress.conflictCancel')}<DecisionKeyHint key={CONFLICT_KEYS.cancel} />
+                {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
             </button>
         {/if}
     </div>

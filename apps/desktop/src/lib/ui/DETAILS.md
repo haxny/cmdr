@@ -60,6 +60,7 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`DateLabel.svelte`**: Canonical inline modified-date renderer: format + per-component age-tier coloring
 - **`ShortcutChip.svelte`**: Canonical keyboard-shortcut renderer: live `commandId` mode (clickable) or literal `key`
   mode
+- **`KeyHint.svelte`**: The key that presses a button, as an `aria-hidden` small chip after its label. See § KeyHint
 - **`StatusBadge.svelte`**: Uppercase stability pill (ALPHA / BETA) for early-stage features; fed by
   `feature-status.json`
 - **`toast/`**: Centralized toast notification system: store, container, item
@@ -1630,6 +1631,21 @@ network browser's refresh hint is NOT one of them any more: it names `pane.refre
 
 The litmus test for a future Class B site: migrate when the chip reads same-or-better than the current treatment; keep
 the current treatment (and note it here) when the boxed pill genuinely reads worse in a dense or label-fused context.
+
+## KeyHint
+
+`KeyHint.svelte` (`key`): the key that presses a button, rendered after the button's label as a literal `sm`
+`ShortcutChip` with its own leading space. It's the one way to put a key inside a control: the Background / Queue
+buttons' F2 (`../file-operations/StartInBackgroundButton.svelte`, the progress dialog's Queue) and the decision prompts'
+letters (`../file-operations/decision-keys.ts`).
+
+- **The chip is `aria-hidden`, so the button carries `aria-keyshortcuts`.** Read into the name, the key garbles it
+  ("Skip S"); the attribute is where a screen reader learns it, the house menu's pattern. Put the same key there (a
+  button that Enter also presses names both, `"S Enter"`).
+- **Place it as the button's last child, outside any flex wrapper** around an icon and a label: it owns its spacing, and
+  a `gap` around it would double it.
+- **Tests read a label without it** through `../file-operations/test-button-label.ts`, and the E2E `clickButtonByText`
+  drops `aria-hidden` text the same way.
 
 ## StatusBadge
 

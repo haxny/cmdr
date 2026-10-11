@@ -1,6 +1,6 @@
 /**
  * Test helper: a button's label as a person reads it, without the letter-key
- * chip a decision prompt puts inside it (`DecisionKeyHint.svelte`, which is
+ * chip a decision prompt puts inside it (`$lib/ui/KeyHint.svelte`, which is
  * `aria-hidden`). `textContent` alone would read "SkipS".
  */
 export function buttonLabel(button: Element): string {

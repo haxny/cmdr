@@ -57,9 +57,9 @@ Umbrella-level files:
   so the two dialogs' pre-fills (`getInitialFolderName` / `getInitialFileName`) can't drift.
 - `S3CostLine.svelte` + `s3-cost-line.ts`: the list-price cost estimate under the Copy, Move, and Delete dialogs' scan
   tallies (§ below).
-- `decision-keys.ts` + `DecisionKeyHint.svelte`: the fixed letter keys that answer the clash prompt and the transfer
-  error dialog, and the chip that shows each one in its button (§ "Letter keys on decision prompts").
-  `test-button-label.ts` is the tests' way to read such a button's label without its chip.
+- `decision-keys.ts`: the fixed letter keys that answer the clash prompt and the transfer error dialog (each button
+  shows its letter in a `$lib/ui/KeyHint.svelte` chip) (§ "Letter keys on decision prompts"). `test-button-label.ts` is
+  the tests' way to read such a button's label without its chip.
 
 ## S3 cost line
 
@@ -383,10 +383,10 @@ button unmounts and focus falls to `<body>`, where no dialog hears a key (the fo
 outside it, and nothing fires one). On each clash, if focus is on `<body>`, the body focuses its own section
 (`tabindex="-1"`). Focus anywhere else (a stacked dialog, a field) is left alone.
 
-**The chip.** Each button shows its letter in a literal-mode `ShortcutChip` (`DecisionKeyHint.svelte`), wrapped
-`aria-hidden`, with `aria-keyshortcuts` on the button carrying it to a screen reader instead (Skip and Close also name
-`Enter`). The chip is inside the button's text, so a test reads a label through `buttonLabel` and the E2E
-`clickButtonByText` drops `aria-hidden` text the same way.
+**The chip.** Each button shows its letter in a `KeyHint` (`$lib/ui/KeyHint.svelte`, the same chip as the F2 on
+Background), which is `aria-hidden`, with `aria-keyshortcuts` on the button carrying it to a screen reader instead (Skip
+and Close also name `Enter`). The chip is inside the button's text, so a test reads a label through `buttonLabel` and
+the E2E `clickButtonByText` drops `aria-hidden` text the same way.
 
 ## Rollback asks first
 

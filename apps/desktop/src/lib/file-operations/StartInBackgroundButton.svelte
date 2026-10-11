@@ -8,7 +8,7 @@
      * `transfer/DETAILS.md` § "Starting in the background".
      */
     import Button from '$lib/ui/Button.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
+    import KeyHint from '$lib/ui/KeyHint.svelte'
     import { tString } from '$lib/intl/messages.svelte'
     import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
     import { hasOtherQueuedWork } from '$lib/file-operations/queue/queue-backlog'
@@ -34,18 +34,7 @@
         ? tString('fileOperations.backgroundStart.queueAria')
         : tString('fileOperations.backgroundStart.backgroundAria')}
 >
-    <span class="btn-inner">
-        {queueHasOtherWork
-            ? tString('fileOperations.backgroundStart.queue')
-            : tString('fileOperations.backgroundStart.background')}
-        <span aria-hidden="true"><ShortcutChip key="F2" size="sm" /></span>
-    </span>
+    {queueHasOtherWork
+        ? tString('fileOperations.backgroundStart.queue')
+        : tString('fileOperations.backgroundStart.background')}<KeyHint key="F2" />
 </Button>
-
-<style>
-    .btn-inner {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-</style>

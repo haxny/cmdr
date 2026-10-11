@@ -9,9 +9,9 @@ Reusable components; only silent-breakage rules live here. Ark UI backs the comp
 - The house menu: `Menu.svelte` + `createMenu` (`menu-controller.svelte.ts`), over `menu-navigation.ts` /
   `menu-reorder.ts`. ❗ A `.svelte.ts` may never case-collide with a component. DETAILS § Menu.
 - The primitives (`Icon`, `Spinner`, `Button`, `ColumnList`, form controls, `Select`, `Combobox`, text fields,
-  `ShortcutChip`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row wrecks
-  keyboard navigation), `toast/`) are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠ `RadioGroup`;
-  Tooltip is the sibling `../tooltip/tooltip.ts`.
+  `ShortcutChip`, `KeyHint`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row
+  wrecks keyboard navigation), `toast/`) are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠
+  `RadioGroup`; Tooltip is the sibling `../tooltip/tooltip.ts`.
 
 ## Must-knows
 

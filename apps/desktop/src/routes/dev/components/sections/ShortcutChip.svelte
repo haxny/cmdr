@@ -1,6 +1,8 @@
 <script lang="ts">
     import SectionCard from '$lib/ui/SectionCard.svelte'
     import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
+    import Button from '$lib/ui/Button.svelte'
+    import KeyHint from '$lib/ui/KeyHint.svelte'
 </script>
 
 <SectionCard id="components-shortcut-chip" label="Shortcut chip">
@@ -38,6 +40,15 @@
                 <ShortcutChip key="⌘3" size="sm" />
             </div>
             <span class="row-note">Tighter padding + radius for dense rows (the command palette)</span>
+        </div>
+
+        <div class="row">
+            <span class="row-label">Key hint inside a button (KeyHint)</span>
+            <div class="chips">
+                <Button aria-keyshortcuts="F2">Background<KeyHint key="F2" /></Button>
+                <Button variant="primary" aria-keyshortcuts="S Enter">Skip<KeyHint key="S" /></Button>
+            </div>
+            <span class="row-note">The key that presses the button; hidden from screen readers, which get aria-keyshortcuts</span>
         </div>
 
         <div class="row">
