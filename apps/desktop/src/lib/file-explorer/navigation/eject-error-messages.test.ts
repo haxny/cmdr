@@ -30,7 +30,7 @@ afterAll(() => {
 
 /**
  * A refusal nothing could scan: the shape that says "nobody could be named", never "nobody is
- * holding it". It words the same unnamed sentence a complete scan with no names does.
+ * holding it". It words the unnamed fallback sentence.
  */
 const NOBODY_NAMED: HolderScan = { type: 'incomplete', named: [] }
 
@@ -220,8 +220,14 @@ describe('a refused unmount names who held the drive', () => {
     expect(renderEjectError(refusedBy(mixed))).toBe(renderEjectError(refusedBy([holder('app', 'Preview')])))
   })
 
-  it('falls back to the unnamed sentence when the scan named nobody', () => {
-    expect(renderEjectError(refusedBy([]))).toBe(
+  it('words a complete scan that named nobody as macOS, since only a root-owned holder hides from it', () => {
+    // ERR-ZPABB: `diskutil` named a root daemon (PID 3440, PPID launchd) holding a freshly
+    // mounted DMG, and the same-uid scan saw nobody. Waiting is the advice that fits.
+    expect(renderEjectError(refusedBy([]))).toBe(renderEjectError(refusedBy([holder('system', 'syspolicyd')])))
+  })
+
+  it('falls back to the unnamed sentence when a scan that could not finish named nobody', () => {
+    expect(renderEjectError({ type: 'unmountRefused', holders: NOBODY_NAMED, detail: 'x' })).toBe(
       'Something still has files open there. Close any open files and apps, then try again.',
     )
   })
@@ -272,7 +278,6 @@ describe('a refused unmount names who held the drive', () => {
     // ❗ The one thing this copy may not say. `incomplete` with no names means
     // Cmdr couldn't tell, which is not the same as nobody holding the drive.
     const rendered = renderEjectError({ type: 'unmountRefused', holders: NOBODY_NAMED, detail: 'x' })
-    expect(rendered).toBe(renderEjectError(refusedBy([])))
     expect(rendered.toLowerCase()).not.toContain('nothing is using')
     expect(rendered.toLowerCase()).not.toContain('no app')
   })

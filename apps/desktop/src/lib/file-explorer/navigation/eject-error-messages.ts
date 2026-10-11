@@ -93,16 +93,18 @@ function wordUnclassified(names: readonly string[]): string {
  * Precedence, most actionable first: a named app or tool (something the person
  * can go and close), then a disk image (which has to be ejected first), then
  * Cmdr itself (a bug), then macOS (nothing to do but wait), then the bare
- * process names of `Unclassified` holders, then the unnamed fallback.
+ * process names of `Unclassified` holders, then the empty arms.
  *
  * ❗ An `Unclassified` holder is a real answer meaning "named, but nothing said
  * what kind" (the scan's time budget ran out, or a code signature wouldn't read),
  * so it is worded as a process and ❌ never as an app or a tool.
  *
- * ❗ The two `HolderScan` arms word the SAME. `Incomplete` means the scan
- * couldn't cover every mount, so its names are worth saying but its emptiness
- * says nothing; only a `Complete` scan with no names would license "nothing is
- * using this drive", and no copy says that today.
+ * ❗ The two `HolderScan` arms word the same while they carry names, and differ
+ * only when empty. `Incomplete` means the scan couldn't cover every mount, so its
+ * emptiness says nothing and takes the unnamed fallback. A `Complete` scan with no
+ * names means no SAME-UID process held the drive, so the holder is one the walk
+ * can't see (a root daemon) and the sentence is macOS's "wait". Neither ever says
+ * "nothing is using this drive".
  */
 export function wordUnmountRefusal(holders: HolderScan): string {
   const named = holders.named
@@ -116,6 +118,9 @@ export function wordUnmountRefusal(holders: HolderScan): string {
   if (named.some((h) => h.kind === 'system')) return raw('errors.eject.unmountRefusedBySystem')
   const unclassified = namesOf(named, (kind) => kind === 'unclassified')
   if (unclassified.length > 0) return wordUnclassified(unclassified)
+  // The walk sees same-uid processes only, so a complete scan that named nobody
+  // was refused by a holder it can't see: almost always a root daemon (ERR-ZPABB).
+  if (holders.type === 'complete') return raw('errors.eject.unmountRefusedBySystem')
   return raw('errors.eject.unmountRefused')
 }
 

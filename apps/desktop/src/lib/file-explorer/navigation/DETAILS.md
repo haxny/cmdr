@@ -556,7 +556,13 @@ runs most-actionable first over `holders.named`:
 5. **`Unclassified` holders** → their bare process names, deduped and capped like the apps (three, then
    `errors.eject.otherProcesses`): `errors.eject.unmountRefusedByProcess` (`{process}`) for one,
    `errors.eject.unmountRefusedByProcesses` (`{countText}`, `{processes}`) for more, where the count is distinct names.
-6. Otherwise the unnamed `errors.eject.unmountRefused` line.
+6. **A `complete` scan that named nobody** → `errors.eject.unmountRefusedBySystem`, the same "wait" as rule 4. The walk
+   sees same-uid processes only, so a refusal it can't name came from a holder it can't see, almost always a root
+   daemon: ERR-ZPABB was `diskutil` naming a launchd child (likely `syspolicyd` scanning a freshly mounted DMG) while
+   the scan found nobody. The other ways to land here (a holder that let go before the scan ran, a memory-map-only
+   holder) are served by "wait, then try again" too. Naming the daemon itself is the deferred DiskArbitration teardown
+   (GitHub [#249](https://github.com/vdavid/cmdr/issues/249)).
+7. Otherwise (an `incomplete` scan that named nobody) the unnamed `errors.eject.unmountRefused` line.
 
 ❗ **`Unclassified` is worded as a PROCESS, ❌ never an app or a tool.** It means "named, but nothing said what kind"
 (the budget ran out, or a signature wouldn't read), so the name is an executable's; calling it an app would be a guess
@@ -570,9 +576,10 @@ detachable kind, shares and phones included) and `disconnectFailedToast` ("Could
 view, whose holder scan runs on the share's mount path), and the prefix already says both. "This drive" or "eject again"
 would read wrong after a share's disconnect.
 
-❗ **The two `HolderScan` arms word the SAME**, and neither ever says the drive is free. `Incomplete` means the scan
-couldn't cover every mount, so its names are worth saying while its emptiness says nothing; only `complete` with an
-empty `named` would license "nothing is using this drive", and no copy says that today.
+❗ **The two `HolderScan` arms word the same while they carry names, and neither ever says the drive is free.**
+`Incomplete` means the scan couldn't cover every mount, so its names are worth saying while its emptiness says nothing
+(rule 7). An empty `complete` scan isn't "nothing is using this drive" either: the OS refused, so someone holds it, and
+rule 6 words that someone as macOS.
 
 `wordEjectRefusal` adds one `warn` line whenever a `Cmdr` holder is in `named` AT ALL, ❌ not only when it wins the
 precedence: an app beside it rightly gets the sentence, but Cmdr holding a drive it's trying to let go of is a bug worth
