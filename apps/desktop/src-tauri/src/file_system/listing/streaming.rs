@@ -10,7 +10,6 @@ use std::sync::{Arc, LazyLock, RwLock};
 use tauri_specta::Event;
 use tokio_util::sync::CancellationToken;
 
-use crate::benchmark;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
 use crate::file_system::listing::listing_end::{
@@ -20,6 +19,7 @@ use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOr
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use crate::file_system::listing::stalled_on::StalledOn;
 use crate::file_system::watcher::start_watching_detached;
+use cmdr_fs::benchmark;
 #[cfg(test)]
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::friendly_error::{ListingError, listing_error_for_restricted_empty_root};

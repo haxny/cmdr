@@ -15,8 +15,8 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-use crate::benchmark;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::volume::ListingProgress;
 

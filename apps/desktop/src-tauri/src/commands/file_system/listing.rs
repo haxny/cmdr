@@ -755,7 +755,7 @@ pub async fn refresh_listing_index_sizes(listing_id: String) -> Result<(), Strin
     reason = "Benchmark output intentionally bypasses log framework"
 )]
 pub fn benchmark_log(message: String) {
-    if crate::benchmark::is_enabled() {
+    if cmdr_fs::benchmark::is_enabled() {
         eprintln!("{}", message);
     }
 }

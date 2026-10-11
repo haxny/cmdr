@@ -32,7 +32,6 @@ pub mod agent;
 mod ai;
 mod analytics;
 mod app_lifecycle;
-pub mod benchmark;
 // Core Foundation property lists as `plist::Value`, shared by every CFPreferences reader.
 /// Test-only: invariants over the `capabilities/` manifests, which no other
 /// code references (Tauri reads them at build time).
@@ -313,7 +312,7 @@ pub fn run() {
             config::log_app_data_dir(app.handle());
 
             // Initialize benchmarking (enabled by RUSTY_COMMANDER_BENCHMARK=1)
-            benchmark::init_benchmarking();
+            cmdr_fs::benchmark::init_benchmarking();
 
             // Initialize the file watcher manager with app handle for events
             file_system::init_watcher_manager(app.handle().clone());

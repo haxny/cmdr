@@ -99,7 +99,7 @@ pub(super) struct RenameMergeCtx<'a> {
 /// May this entry be MERGED into, rather than renamed as one opaque thing?
 ///
 /// Only a real directory may. The listing reports a symlink whose target is a
-/// directory as `is_directory: true` (`listing/reading.rs`:
+/// directory as `is_directory: true` (`local_posix/reading.rs`:
 /// `metadata.is_dir() || target_is_dir`), and a merge that believes it lists the
 /// TARGET and renames the target's children out of a folder the user never
 /// selected — or, on the destination side, lands their files through the link,

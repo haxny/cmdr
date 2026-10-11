@@ -50,7 +50,7 @@ the next section.
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs
   on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive
-  detection), `firmlinks.rs` (`normalize_path`; the index and the app's watchers have to agree on it),
+  detection), `benchmark.rs` (the env-gated `[TIMELINE]` stderr events, `docs/guides/benchmarking-file-loading.md`), `firmlinks.rs` (`normalize_path`; the index and the app's watchers have to agree on it),
   `file_provider.rs` (the cloud-domain marker), `filesystem_kind.rs`, `path_locations.rs` (how many PLACES a set of
   directories amounts to), `path_hash.rs` (the fixed 64-bit folder-path hash two resident maps key on instead of the
   path: search's importance weights and the media coverage score cache), `git_meta` (what a git portal row's Size cell
@@ -114,6 +114,8 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
   settings stay app-side (below).
 - **`metadata`.** The ordering rules for a copy's metadata have one home, and the archive mutator (a crate) has to reach
   them as well as the app's copy engines, so they can't live under `transfer/`.
+- **`benchmark`.** Pure `std` diagnostics behind an env var, called by the listing engine, the local reader, and the
+  app's IPC commands alike, so the one timeline can't live on either side of the listing-crate boundary.
 - **`wait_until` / `wait_until_async`.** Behind the `testing` feature. The rest of the app's `test_support.rs` can't
   follow: `COUNTING_ALLOCATOR` is a `#[global_allocator]`, and a second one in any binary linking this crate is a hard
   compile error.
@@ -282,9 +284,9 @@ and ~7,600 lines here, and each is worth defending against a tidy-up pass.
 ### 1. `Volume::notify_mutation` has a no-op default
 
 A default that patched the local listing cache would open with `use crate::file_system::listing::caching::…` and
-`use crate::file_system::listing::reading::…` inside the function body, and those two edges alone drag the app's listing
-cache and listing I/O into the graph. So the default is a documented no-op, and the local-FS behavior lives app-side in
-`file_system::listing::mutation::patch_listing_after_local_mutation`.
+`use crate::file_system::volume::backends::…` (the local reader) inside the function body, and those two edges alone
+drag the app's listing cache and local I/O into the graph. So the default is a documented no-op, and the local-FS
+behavior lives app-side in `file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`.
 
 Why this over the alternatives:
 
@@ -409,7 +411,7 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
   `mtp-rs` / `gix` / mount-detection dependencies. Only their shared trait moved.
 - **`VolumeManager`** — the process-wide registry. The index reaches it through an injected provider, not by importing
   it.
-- **`file_system::listing::mutation::patch_listing_after_local_mutation`** — see cut 1.
+- **`file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`** — see cut 1.
 - **`detect_filesystem_for_path`** — see cut 3. The kind → network mapping over it stayed app-side too
   (`file_system::index_provider::path_is_on_network_mount`), which is why `WatchCoverage::ThisMachineOnly` is a variant
   this crate can NAME but never decide: the vocabulary is portable, the mount probe isn't. A backend here answers

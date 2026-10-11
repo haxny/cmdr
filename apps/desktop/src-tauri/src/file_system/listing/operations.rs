@@ -14,8 +14,6 @@ use uuid::Uuid;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-#[cfg(test)]
-use crate::benchmark;
 pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE, OverlayRows};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
@@ -24,6 +22,8 @@ use crate::file_system::listing::visible_rows::VisibleRows;
 use crate::file_system::watcher::start_watching_detached;
 use crate::file_system::watcher::stop_watching;
 use crate::index_host::index;
+#[cfg(test)]
+use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
 
 // ============================================================================

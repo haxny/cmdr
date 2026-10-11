@@ -1,7 +1,9 @@
 //! Performance timeline for "file loading" benchmarks.
 //!
-//! Enable with RUSTY_COMMANDER_BENCHMARK=1 environment variable.
-//! All events are logged to stderr with microsecond timestamps.
+//! Enable with the `RUSTY_COMMANDER_BENCHMARK=1` environment variable. All events
+//! are logged to stderr with microsecond timestamps. Pure std diagnostics, here
+//! so the listing engine, the local reader, and the app's IPC commands share one
+//! timeline. How to read it: `docs/guides/benchmarking-file-loading.md`.
 
 // Benchmarks intentionally use eprintln! for raw stderr output (not log framework)
 #![allow(
@@ -80,13 +82,15 @@ pub fn log_event_value(event: &str, value: impl std::fmt::Display) {
     eprintln!("[TIMELINE] {:>10}μs | RUST | {} = {}", ts, event, value);
 }
 
-/// Helper for timing a block of code
+/// Helper for timing a block of code: logs `START` on creation and `END` with the
+/// elapsed microseconds on drop.
 pub struct TimedBlock {
     name: String,
     start: u64,
 }
 
 impl TimedBlock {
+    /// Starts timing the block named `name`.
     pub fn new(name: &str) -> Self {
         let start = now_micros();
         if is_enabled() {

@@ -36,7 +36,7 @@ Test directories big enough to measure: `docs/guides/generating-test-files.md`.
 
 ## The two enable flags
 
-- `RUSTY_COMMANDER_BENCHMARK=1` turns on the Rust side (read in `benchmark.rs::init_benchmarking`, called from
+- `RUSTY_COMMANDER_BENCHMARK=1` turns on the Rust side (read in `cmdr_fs::benchmark::init_benchmarking`, called from
   `lib.rs`'s setup hook). It also gates the `benchmark_log` command the frontend sends through.
 - `VITE_BENCHMARK=1` turns on the frontend side (read through `import.meta.env`, so it's baked in at dev-server start).
 
@@ -92,7 +92,7 @@ extended metadata appears separately as `get_extended_metadata_batch START/END, 
 
 ## Code locations
 
-- `apps/desktop/src-tauri/src/benchmark.rs`: the Rust emitter (`log_event`, `log_event_value`, `reset_epoch`).
+- `crates/cmdr-fs/src/benchmark.rs`: the Rust emitter (`log_event`, `log_event_value`, `reset_epoch`).
 - `apps/desktop/src/lib/benchmark.ts`: the frontend emitter, forwarding through `benchmarkLog`.
 - `apps/desktop/src-tauri/src/file_system/listing/streaming.rs` and
   `file_system/volume/backends/local_posix/reading.rs`: the instrumented backend paths.
