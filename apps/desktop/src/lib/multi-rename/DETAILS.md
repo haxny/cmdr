@@ -2,8 +2,8 @@
 
 - **Keyboard-first**: the name mask has focus on open; Tab walks the fields; Enter in a text field starts (TC's Start!),
   a button or menu keeps its own Enter; ⌘⏎ (`multiRename.rename`, the chip on the Rename button) starts from anywhere, a
-  checkbox or the preview included; Esc closes. The placeholder buttons (house `Chip`s, `variant="insert"`, mono) insert
-  at the name mask's caret.
+  checkbox or the preview included; Esc closes. The placeholder buttons (house `Chip`s, `variant="insert"`,
+  `size="field"`, mono) insert at the name mask's caret.
 - **Placeholder tooltips**: each button's tooltip (`PlaceholderTip`, adopted as the house tooltip's `contentEl`, so it
   shows on hover AND keyboard focus and is the button's `aria-describedby`) gives the meaning, an example on the sample
   file, a few other forms from `mask.rs` with their examples, and for a range the part it takes in bold with what the
@@ -112,8 +112,8 @@
   first two share one grid (`.field-grid`: two shared field columns and one `auto` chip column), so their edges line up:
   the name mask (grows) and the extension mask (140 px) span the field columns, so Extension ends where Replace with
   does, with the placeholder chips right of them; then Search for, Replace with, and the search option chips. The chip
-  groups share the last column, right edges level, each centred on its row's text box (the insert chips are shorter, so
-  `.placeholders` takes the field's height). Then Letter case, Greek to Latin, Remove diacritics, and Normalize Unicode
+  groups share the last column, right edges level; both are house `Chip`s at `size="field"`, as tall as the text boxes,
+  with the same padding. Then Letter case, Greek to Latin, Remove diacritics, and Normalize Unicode
   (`WHOLE_NAME_TOGGLES`), each with its dim key chip. Each `Checkbox` sits in a wrapper span, since it renders more than
   one element.
 - **Minimum width** (`MIN_WIDTH_PX`, 880 px, under the app window's 950 px floor): the grid and the footer's four

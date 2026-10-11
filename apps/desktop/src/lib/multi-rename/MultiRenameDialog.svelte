@@ -369,6 +369,7 @@
                     {#each PLACEHOLDER_HELP as help (help.placeholder)}
                         <Chip
                             variant="insert"
+                            size="field"
                             mono
                             label={help.placeholder}
                             tooltipContent={{ contentEl: tipContent[help.placeholder] }}
@@ -609,10 +610,7 @@
         color: var(--color-text-secondary);
     }
 
-    /* As tall as the text box beside it (`app-field.css`'s height, as `Chip`'s `field` size
-       computes it), so the shorter insert chips sit level with the box's middle. */
     .placeholders {
-        height: calc(var(--font-size-input) * var(--font-line-height-tight) + 2 * var(--spacing-input) + 2px);
         gap: var(--spacing-xs);
     }
 
