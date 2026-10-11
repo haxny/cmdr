@@ -876,10 +876,10 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
 - **Cancel close is two-condition: `write-cancelled` + `write-settled`.** When the user clicks Cancel (without
   rollback), `TransferProgressDialog` does NOT close immediately. It keeps the "Canceling…" label up until both events
   have arrived for this `operationId`, then applies the existing `MIN_DISPLAY_MS` floor and closes via
-  `onCancelled(filesProcessed)`. After 200 ms of waiting, the label gains a clarifying tail: "Canceling… (finishing USB
-  transfers)". The BE-side contract — settle fires after a fully-torn-down spawn task, even on panic — lives in the BE
-  doc § "Settle contract". Race protection comes free from reading state rather than events: the view closes when the
-  session reports BOTH an outcome of `cancelled` and `settleEventReceived`, whichever order they land in. Complete /
+  `onCancelled(filesProcessed)`. After 200 ms of waiting, the label gains a clarifying tail: "Canceling… (cleaning up)",
+  whatever the volume. The BE-side contract — settle fires after a fully-torn-down spawn task, even on panic — lives in
+  the BE doc § "Settle contract". Race protection comes free from reading state rather than events: the view closes when
+  the session reports BOTH an outcome of `cancelled` and `settleEventReceived`, whichever order they land in. Complete /
   error paths are unchanged: they still close on the existing `MIN_DISPLAY_MS` gate without waiting for settle. The wait
   is never the only exit: `progress.dismiss()` backs a Close button that leaves at once, and the last-resort
   `CANCEL_SETTLE_FALLBACK_MS` (20 s) sits above the backend's 15 s `CANCEL_DRAIN_DEADLINE`, so the automatic path can't

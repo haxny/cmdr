@@ -55,7 +55,7 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Cancelling… (finishing USB transfers)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Cancelling… (cleaning up)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
     "sourceHash": "80d6761"
   },

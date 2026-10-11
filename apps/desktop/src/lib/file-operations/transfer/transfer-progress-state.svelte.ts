@@ -17,7 +17,7 @@
  *
  * **The view** is everything after that, and it owns only what belongs to a
  * piece of UI rather than to the operation: the anti-flicker floor, the
- * dismissal, the "(finishing USB transfers)" label, the last-resort close
+ * dismissal, the "(cleaning up)" label, the last-resort close
  * timer, the Queue handoff, and the four outcome callbacks that tell the pane
  * what to do next. What the operation IS — phase, counts, rates, smoothed ETA,
  * clash, outcome — and what can be DONE to it — pause, resume, cancel, roll
@@ -144,7 +144,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
    *  about a dialog that had been up for 50 ms. */
   const MIN_DISPLAY_MS = 400
   /** After this many ms of waiting for the backend to settle, the
-   *  "Cancelling…" label gets a clarifying tail ("(finishing USB transfers)").
+   *  "Cancelling…" label gets a clarifying tail ("(cleaning up)").
    *  Picked at 200 ms so a fast settle (the common case once cancel
    *  propagation lands on the backend) clears before the label ever changes. */
   const SLOW_SETTLE_LABEL_MS = 200
@@ -206,7 +206,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
   let closed = false
 
   /** Flips true once the settle wait has exceeded `SLOW_SETTLE_LABEL_MS`.
-   *  Drives the "(finishing USB transfers)" tail on the dialog label. */
+   *  Drives the "(cleaning up)" tail on the dialog label. */
   let settleSlow = $state(false)
   let slowSettleTimer: ReturnType<typeof setTimeout> | null = null
   /** Last-resort fallback that closes the dialog if the operation never

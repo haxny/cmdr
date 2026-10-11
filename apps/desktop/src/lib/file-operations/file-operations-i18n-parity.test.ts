@@ -189,7 +189,7 @@ describe('transfer progress dialog chrome (en)', () => {
     expect(tString('fileOperations.transferProgress.scanTitleTrash')).toBe('Counting items to trash…')
     expect(tString('fileOperations.transferProgress.titleRollingBack')).toBe('Rolling back…')
     expect(tString('fileOperations.transferProgress.titleCancelling')).toBe('Canceling…')
-    expect(tString('fileOperations.transferProgress.titleCancellingSlow')).toBe('Canceling… (finishing USB transfers)')
+    expect(tString('fileOperations.transferProgress.titleCancellingSlow')).toBe('Canceling… (cleaning up)')
     expect(tString('fileOperations.transferProgress.titleConflict')).toBe('File already exists')
     expect(tString('fileOperations.transferProgress.titleFlushing')).toBe('Writing the last piece…')
   })

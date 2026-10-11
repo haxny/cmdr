@@ -849,9 +849,9 @@
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
-  "fileOperations.transferProgress.titleCancellingSlow": "Canceling… (finishing USB transfers)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Canceling… (cleaning up)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "description": "Progress-dialog title shown when cancellation takes a moment because an in-flight USB transfer must finish first. Keep the trailing ellipsis on the first part. 'USB' is the connection type.",
+    "description": "Progress-dialog title shown when a cancel takes longer than a moment, because the files still being copied or moved have to stop and remove their unfinished parts first. Applies to every kind of drive (local, network, phone). Keep the trailing ellipsis on the first part; the parenthetical says what Cmdr is doing while the user waits.",
     "screenshot": "transfer-dialog.png",
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
