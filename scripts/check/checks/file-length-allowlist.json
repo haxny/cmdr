@@ -12,6 +12,10 @@
       "lines": 800,
       "reason": "TODO: two seams sit beside the request path and only share imports with it. Move the policy-guarded HTTP client (`policy_guarded_http_client`, `policy_guarded_redirects`, `follow_allowed_hop`, `remote_destination`, `remote_endpoint`, `parse_endpoint`) into `client_policy.rs`, and the provider-error mapping (`AiError` with its `Display`, `ai_error_for_status`, `provider_error_detail`, `map_genai_error`) into `client_errors.rs`, about 140 lines out together. What stays is `AiBackend`, the three `chat_completion*` entry points, the model-specific option tweaks, and the response logging, which is what callers mean by the AI client."
     },
+    "apps/desktop/src-tauri/src/commands/file_system/write_ops.rs": {
+      "lines": 811,
+      "reason": "TODO: the operation-manager commands (the \"Operation manager (queue + lifecycle)\" section: `list_operations`, `get_transfer_tree_view`, cancel / pause / resume, move, dismiss, and `retry_failed_operation`) are their own concern and mirror the frontend's `tauri-commands/operations.ts`; move them into `commands/file_system/operations.rs` and repoint their `ipc.rs` registrations. What stays is the write starters, scan previews, conflicts, and the instant mutations."
+    },
     "apps/desktop/src-tauri/src/crash_reporter/mod.rs": {
       "lines": 812,
       "reason": "TODO: the panic path is its own concern and already has `panic_courier.rs` and `panic_courier_tests.rs` as neighbors. Move `install_panic_hook`, `contained_panic_warning`, `PanicDisposition`, `handle_panic`, `write_first_crash_report`, `build_panic_report`, and the message/backtrace helpers (`extract_panic_message`, `sanitize_panic_message`, `sanitize_thread_name`, `cap_chars`, `cap_panic_message`, `parse_backtrace_frames`, `current_image_base_hex`) into `panic_hook.rs`, about 260 lines. `mod.rs` keeps the `CrashReport` shape, `init`, the pending-report read/write, and the active-settings snapshot."
@@ -57,7 +61,7 @@
       "reason": "This is one `#[ignore]`d measurement harness with a single entry point, `concurrency_bench_sweep_window_against_wall_clock`, and the file-length check gives it the 800-line source budget only because its name ends in `_bench.rs` rather than `_tests.rs`. About 90 lines are the runbook module doc (how to run it against Docker or the NAS, the nine environment knobs, and why the numbers are shaped the way they are), and about 100 more are the `Volume` trait boilerplate for `FixedConcurrencySource`, the wrapper that sweeps the window by reporting a fixed `max_concurrent_ops`. The rest is fixtures nothing else uses (`Corpus`, `build_corpus`, `Shape`, `DestMode`, `bench_content`, `timed_copy`, `connect_target`, `serial_precheck_floor`, `median`), so splitting would scatter them for no reader's benefit."
     },
     "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/merge.rs": {
-      "lines": 805,
+      "lines": 887,
       "reason": "One merge level's create-list-decide-dispatch loop, kept together because every child decision reads the level's creation fact (fresh vs merged) and the destination index built beside it; the remaining helpers (`backend_create_directory_detects_collisions`, the resolver call) are already out in `landing.rs` and `merge_ctx.rs`."
     },
     "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/move_cross.rs": {
