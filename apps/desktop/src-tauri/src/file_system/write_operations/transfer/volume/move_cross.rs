@@ -71,6 +71,18 @@ pub(crate) async fn move_volumes_with_progress(
         config.destination_name.as_deref(),
     )
     .map_err(WriteFailure::synthetic)?;
+    // A volume this move needs is already gone (a Retry while the NAS is still
+    // down): wait for it before the first step fails on it
+    // (`preflight::wait_for_gone_volumes`).
+    super::preflight::wait_for_gone_volumes(
+        &*events,
+        operation_id,
+        WriteOperationType::Move,
+        state,
+        &[&source_volume, &dest_volume],
+    )
+    .await?;
+
     // Phase 0: Ensure the destination directory exists, creating it and any
     // missing ancestors on the dest volume (local, SMB, MTP, in-memory), so a
     // cross-volume move into a not-yet-existing folder just works on every
@@ -236,7 +248,7 @@ pub(crate) async fn move_volumes_with_progress(
         &pre_skip_paths,
         &driver_config,
         super::landing::top_level_precheck(
-            &dest_volume, Some(Arc::clone(&op_probe)), super::landing::NewName::Respell,
+            state, &dest_volume, Some(Arc::clone(&op_probe)), super::landing::NewName::Respell,
             config.destination_name.as_deref(),
         ),
         {

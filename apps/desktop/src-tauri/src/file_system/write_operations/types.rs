@@ -277,6 +277,11 @@ pub enum TransferWaitReason {
     /// Nothing is moving and no task explains why. This is the shape the
     /// 2026-07-31 wedge took.
     Unknown,
+    /// A volume the transfer runs on went away (a share dropped off the
+    /// network) and the operation is waiting for it to come back, reconnecting
+    /// on its own, for a bounded time (`transfer/volume_outage.rs`).
+    /// [`TransferActivity::reconnecting_volume`] names which one.
+    Reconnecting,
 }
 
 /// The live shape of a running transfer, on every progress event AND on
@@ -288,7 +293,7 @@ pub enum TransferWaitReason {
 /// still answers for the wait on a DECISION, off its own pause gate and conflict
 /// slot (`WriteOperationState::activity`), with no count to report and no
 /// stillness that isn't the answerer's.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferActivity {
     /// Files open in the concurrency window right now. These have bytes on the
@@ -316,6 +321,12 @@ pub struct TransferActivity {
     /// same share adds to it. And it's never progress: those bytes are unverified
     /// until their response completes, so ❌ never add them to a byte bar.
     pub source_inbound_bytes_per_second: Option<u64>,
+    /// The display name of the volume the operation is waiting on to come
+    /// back, while [`waiting_on`](Self::waiting_on) is
+    /// [`Reconnecting`](TransferWaitReason::Reconnecting), and `None` otherwise.
+    /// Carried here rather than looked up by the view: the queue window knows
+    /// an operation's paths, not its volumes.
+    pub reconnecting_volume: Option<String>,
 }
 
 // ============================================================================

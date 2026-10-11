@@ -41,6 +41,7 @@ mod manager;
 mod mutation_error;
 mod mutation_reply;
 mod operation_intent;
+mod outage_slot;
 mod overwrite;
 #[cfg(target_os = "macos")]
 mod paste_clipboard;

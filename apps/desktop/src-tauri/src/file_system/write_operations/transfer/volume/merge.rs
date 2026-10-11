@@ -36,6 +36,7 @@ use super::super::super::types::WriteOperationError;
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::SourceProgress;
 use super::super::transfer_probe::{CURRENT_TASK_PROBE, TaskPhase, TaskProbeHandle, TaskRole, set_task_phase};
+use super::super::volume_outage::through_outages;
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
 use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::landing::{DestFolder, NewName, where_it_lands};
@@ -469,78 +470,87 @@ async fn merge_level<'a>(
     // target the WRONG dir. So on MTP (and any backend whose `create_directory`
     // can't be trusted to error on collision) we pre-check existence with the
     // one listing the merge level pays anyway, and skip the create when present.
-    let dest_prepare = async {
-        // THIS walk's `create_directory` made the level (proof it was empty),
-        // ❌ never the `NotSupported` "treat as fresh" case below.
-        let mut made_here = false;
-        let level_pre_existed = if backend_create_directory_detects_collisions(dest_volume) {
-            match dest_volume.create_directory(dest_path).await {
-                Ok(()) => {
-                    created.record_dir(dest_path.to_path_buf());
-                    // Made here, so it is the extract's to quarantine, now rather than
-                    // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                    super::extract_quarantine::quarantine_created_folder(state, source_volume, dest_volume, dest_path)
-                        .await;
-                    made_here = true;
-                    false
-                }
-                Err(VolumeError::AlreadyExists(_)) => true,
-                Err(VolumeError::NotSupported) => {
-                    // Backend can't create directories at all; assume
-                    // `write_from_stream` materializes parents on demand (LocalPosix
-                    // does via `create_dir_all` semantics). Treat as fresh.
-                    false
-                }
-                Err(e) => return Err(e),
-            }
-        } else {
-            // Untrusted-collision backend (MTP): pre-check existence.
-            if dest_volume.exists(dest_path).await {
-                true
-            } else {
+    // The level's prepare is a listing and an idempotent create, so a share
+    // that drops under it is waited for and the prepare runs again: a create
+    // that landed before the drop answers `AlreadyExists` the second time, which
+    // reads as "there" (`../volume_outage.rs`, ❗ only for calls that are safe to
+    // run twice).
+    let level = through_outages(state, &[source_volume, dest_volume], move || async move {
+        let dest_prepare = async {
+            // THIS walk's `create_directory` made the level (proof it was empty),
+            // ❌ never the `NotSupported` "treat as fresh" case below.
+            let mut made_here = false;
+            let level_pre_existed = if backend_create_directory_detects_collisions(dest_volume) {
                 match dest_volume.create_directory(dest_path).await {
                     Ok(()) => {
                         created.record_dir(dest_path.to_path_buf());
                         // Made here, so it is the extract's to quarantine, now rather than
                         // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                        super::extract_quarantine::quarantine_created_folder(
-                            state,
-                            source_volume,
-                            dest_volume,
-                            dest_path,
-                        )
-                        .await;
+                        super::extract_quarantine::quarantine_created_folder(state, source_volume, dest_volume, dest_path)
+                            .await;
                         made_here = true;
                         false
                     }
-                    // A race created it between the check and the create; merge.
                     Err(VolumeError::AlreadyExists(_)) => true,
-                    Err(VolumeError::NotSupported) => false,
+                    Err(VolumeError::NotSupported) => {
+                        // Backend can't create directories at all; assume
+                        // `write_from_stream` materializes parents on demand (LocalPosix
+                        // does via `create_dir_all` semantics). Treat as fresh.
+                        false
+                    }
                     Err(e) => return Err(e),
                 }
-            }
+            } else {
+                // Untrusted-collision backend (MTP): pre-check existence.
+                if dest_volume.exists(dest_path).await {
+                    true
+                } else {
+                    match dest_volume.create_directory(dest_path).await {
+                        Ok(()) => {
+                            created.record_dir(dest_path.to_path_buf());
+                            // Made here, so it is the extract's to quarantine, now rather than
+                            // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
+                            super::extract_quarantine::quarantine_created_folder(
+                                state,
+                                source_volume,
+                                dest_volume,
+                                dest_path,
+                            )
+                            .await;
+                            made_here = true;
+                            false
+                        }
+                        // A race created it between the check and the create; merge.
+                        Err(VolumeError::AlreadyExists(_)) => true,
+                        Err(VolumeError::NotSupported) => false,
+                        Err(e) => return Err(e),
+                    }
+                }
+            };
+
+            // A level we created ourselves holds nothing, so there is no index to
+            // build and no name to look up: `None` is the answer for every child.
+            let dest_index = if level_pre_existed {
+                Some(DestNameIndex::build(dest_volume.list_directory(dest_path, None).await?))
+            } else {
+                None
+            };
+            Ok((dest_index, made_here))
         };
 
-        // A level we created ourselves holds nothing, so there is no index to
-        // build and no name to look up: `None` is the answer for every child.
-        let dest_index = if level_pre_existed {
-            Some(DestNameIndex::build(dest_volume.list_directory(dest_path, None).await?))
+        let (dest_index, entries) = if legs_may_overlap {
+            tokio::join!(dest_prepare, source_volume.list_directory(source_path, None))
         } else {
-            None
+            (
+                dest_prepare.await,
+                source_volume.list_directory(source_path, None).await,
+            )
         };
-        Ok((dest_index, made_here))
-    };
-
-    let (dest_index, entries) = if legs_may_overlap {
-        tokio::join!(dest_prepare, source_volume.list_directory(source_path, None))
-    } else {
-        (
-            dest_prepare.await,
-            source_volume.list_directory(source_path, None).await,
-        )
-    };
-    let (dest_index, level_made_here) = dest_index.at(source_path)?;
-    let entries = entries.at(source_path)?;
+        Ok((dest_index?, entries?))
+    })
+    .await
+    .at(source_path)?;
+    let ((dest_index, level_made_here), entries) = level;
     // A move sweeps exactly the folders this walk listed; anything else it
     // finds in the source afterwards arrived later and stays.
     created.record_walked_source_dir(source_path);

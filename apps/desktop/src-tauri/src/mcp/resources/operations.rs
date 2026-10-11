@@ -190,6 +190,12 @@ fn activity_lines(activity: Option<&TransferActivity>) -> String {
     if let Some(rate) = activity.source_inbound_bytes_per_second {
         yaml.push_str(&format!("    sourceInboundBytesPerSecond: {rate}\n"));
     }
+    // Which volume `waitingOn: reconnecting` is waiting for. The name the user
+    // gave it (a NAS, a server), the same one the volume list shows, so it's
+    // quoted rather than redacted like a path.
+    if let Some(volume) = &activity.reconnecting_volume {
+        yaml.push_str(&format!("    reconnectingVolume: {volume:?}\n"));
+    }
     yaml
 }
 

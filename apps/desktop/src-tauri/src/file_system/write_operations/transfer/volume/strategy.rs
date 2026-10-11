@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use super::super::super::state::WriteOperationState;
 use super::super::checkpoint_stream::CheckpointStream;
-use super::super::staged_write::StagedWrite;
+use super::super::staged_write::{StagedWrite, clear_unlanded_temp};
 // Re-exported so the sibling test modules (and any future caller reached through
 // this module's API) name the staging choice without a second import path.
 use super::super::recovered_name::FinalizeFailure;
@@ -27,6 +27,7 @@ use super::super::transfer_driver::{LeafProgressLedger, SourceProgress};
 use super::super::transfer_probe::{
     TaskPhase, arm_current_task_stall_abort, note_task_retry, set_task_bytes, set_task_phase,
 };
+use super::super::volume_outage::{self, OutageEnd, wait_after_failure};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::preflight::SourceFileFacts;
@@ -368,6 +369,11 @@ pub(super) async fn stream_pipe_file(
     // survives an attempt, so no byte is written twice and no ledger records a
     // file twice.
     let mut attempt: u32 = 1;
+    // How many outages THIS file has waited out: a volume that went away
+    // entirely (`volume_outage.rs`), as opposed to a blip the attempts above
+    // ride. Each one that ends with the volume back gives the file a fresh set
+    // of attempts; the cap is what keeps a flapping link from holding it forever.
+    let mut outages: u32 = 0;
     loop {
         // Opening the source is a device round-trip on MTP / SMB and can hang on
         // its own; it needs to be distinguishable from streaming in a dump. It
@@ -381,10 +387,24 @@ pub(super) async fn stream_pipe_file(
         // that hangs before the first byte is half of the wedge shape. With
         // nothing staged, the abort has nothing to do but return.
         set_task_phase(TaskPhase::OpeningSource);
-        let stream = tokio::select! {
+        let opened = tokio::select! {
             biased;
             () = state.backend_abort.cancelled() => return Err(hard_abort_error(source_path).into()),
-            opened = source_volume.open_read_stream_with_hint(source_path, source_facts.size) => opened?,
+            opened = source_volume.open_read_stream_with_hint(source_path, source_facts.size) => opened,
+        };
+        let stream = match opened {
+            Ok(stream) => stream,
+            // A source share that's gone (a download from a NAS that dropped):
+            // wait for it and open the file again. Nothing is staged yet, so
+            // there's nothing to clear first.
+            Err(e) => match wait_after_failure(state, &e, &[source_volume, dest_volume], &mut outages).await {
+                OutageEnd::Back => {
+                    attempt = 1;
+                    continue;
+                }
+                OutageEnd::Cancelled => return Err(volume_outage::cancelled().into()),
+                OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(e.into()),
+            },
         };
         let size = stream.total_size().known().ok_or(VolumeError::NotSupported)?;
         let length = crate::file_system::volume::StreamLength::Known(size);
@@ -490,6 +510,30 @@ pub(super) async fn stream_pipe_file(
                 return Err(hard_abort_error(dest_path).into());
             }
         };
+        // A volume that went away entirely (the share dropped off the network
+        // and its session reads `Disconnected`): wait for it to come back
+        // rather than burn the attempts below in a second, then run the file
+        // again from its first byte with a fresh set of attempts. The failed
+        // attempt's partial is cleared AFTER the wait, when the delete can reach
+        // the share. A wait that gives up, or a failure that isn't an outage,
+        // falls through to the arms below exactly as before; a cancel during
+        // the wait reaches the cancel arm (`is_cancelled` is set by then).
+        let write_result = match write_result {
+            Err(e) => match wait_after_failure(state, &e, &[source_volume, dest_volume], &mut outages).await {
+                OutageEnd::Back => {
+                    staged.abandon_attempt(dest_volume).await;
+                    log::info!(
+                        target: "copy",
+                        "stream_pipe_file: running {} again now that its volume is back",
+                        dest_path.display(),
+                    );
+                    attempt = 1;
+                    continue;
+                }
+                OutageEnd::Cancelled | OutageEnd::GaveUp | OutageEnd::NotWaitable => Err(e),
+            },
+            ok => ok,
+        };
         let bytes = match write_result {
             Ok(bytes) => {
                 if attempt > 1 {
@@ -556,6 +600,7 @@ pub(super) async fn stream_pipe_file(
         // Past the last byte: give the file its final name. What the source
         // carries beyond its bytes is already on it: the destination asked the
         // stream and put it on the staged write (`Volume::write_from_stream`).
+        let landing_from = staged.target().to_path_buf();
         match staged.commit(dest_volume).await {
             Ok(()) => {
                 // Landed, so a ` (N)` placeholder at the name is filled, not ours
@@ -579,6 +624,29 @@ pub(super) async fn stream_pipe_file(
                 staging = WriteStaging::AlreadyStaged;
                 writing_at_the_final_name = true;
                 continue;
+            }
+            // The landing failed with NOTHING cleared because the destination
+            // went away under it (the share dropped between the last byte and
+            // the rename): the destination still holds what it held, and the
+            // temp is a spare copy its discard couldn't reach. Wait for the
+            // share, take the temp away, and run the file again. ❌ Never with
+            // `new_data_at` set: then the temp was the only copy, and `land`
+            // has already moved it somewhere safe.
+            Err(failure) if failure.new_data_at.is_none() => {
+                match wait_after_failure(state, &failure.error, &[source_volume, dest_volume], &mut outages).await {
+                    OutageEnd::Back => {
+                        clear_unlanded_temp(state, dest_volume, &landing_from).await;
+                        log::info!(
+                            target: "copy",
+                            "stream_pipe_file: landing {} again now that its volume is back",
+                            dest_path.display(),
+                        );
+                        attempt = 1;
+                        continue;
+                    }
+                    OutageEnd::Cancelled => return Err(volume_outage::cancelled().into()),
+                    OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(failure),
+                }
             }
             // The write SUCCEEDED and the landing didn't: the temp holds the only
             // complete copy of the new bytes, and `commit` already dropped it from

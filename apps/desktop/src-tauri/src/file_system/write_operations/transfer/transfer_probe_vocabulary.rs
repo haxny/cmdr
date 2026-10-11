@@ -53,6 +53,10 @@ pub enum TaskPhase {
     /// of a copy stuck here has to say so, not read `streaming 0/0`
     /// (ERR-PTRGY).
     CopyingOnServer = 10,
+    /// A volume this task needs went away, and the task is waiting for it to
+    /// come back before it runs its file again (`volume_outage.rs`). A
+    /// deliberate, bounded, cancelable park: never aborted as a stall.
+    WaitingForVolume = 11,
 }
 
 impl TaskPhase {
@@ -69,6 +73,7 @@ impl TaskPhase {
             Self::WaitingToRetry => "waiting-to-retry",
             Self::Walking => "walking",
             Self::CopyingOnServer => "copying-on-server",
+            Self::WaitingForVolume => "waiting-for-volume",
         }
     }
 
@@ -91,6 +96,7 @@ impl TaskPhase {
             // The destination was handed the whole file and is copying it on
             // its own server: it's the one being waited on.
             Self::CopyingOnServer => Some(TransferWaitReason::Destination),
+            Self::WaitingForVolume => Some(TransferWaitReason::Reconnecting),
             Self::Spawned
             | Self::Streaming
             | Self::ParkedPause
@@ -136,6 +142,7 @@ impl TaskPhase {
             8 => Self::WaitingToRetry,
             9 => Self::Walking,
             10 => Self::CopyingOnServer,
+            11 => Self::WaitingForVolume,
             _ => Self::Spawned,
         }
     }

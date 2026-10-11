@@ -78,6 +78,7 @@ fn waiting(
         waiting_on,
         opening_source: false,
         source_inbound_bytes_per_second: None,
+        reconnecting_volume: None,
     });
     op
 }

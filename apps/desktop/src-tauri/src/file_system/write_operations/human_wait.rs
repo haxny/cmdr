@@ -1,4 +1,5 @@
-//! How long an operation has spent waiting on a PERSON rather than on itself.
+//! How long an operation has spent waiting on a PERSON (or on a volume that left)
+//! rather than on itself.
 //!
 //! A transfer parked on a conflict prompt, or paused by the user, moves no
 //! bytes — and that is not slowness, it is somebody thinking. The rate
@@ -8,8 +9,11 @@
 //! answer divides one file's worth of bytes by five minutes and the dialog
 //! reports "0.4 files/s, 409h 39m left" over a transfer that is running fine.
 //!
-//! ❌ Only a wait on a PERSON belongs here. A slow SMB read, a busy device, a
-//! retry backoff are all the operation being slow, and the ETA has to say so.
+//! ❌ Only a wait that is NOT the transfer's speed belongs here: a person
+//! deciding, or a volume that's gone altogether while the transfer waits for it
+//! to come back (`transfer/volume_outage.rs`, which the UI names as a wait of its
+//! own). A slow SMB read, a busy device, a retry backoff are all the operation
+//! being slow, and the ETA has to say so.
 //!
 //! ## Why a clock rather than two predicates
 //!
@@ -36,6 +40,11 @@ pub enum HumanWaitSource {
     Pause,
     /// A conflict prompt is on screen, unanswered.
     Conflict,
+    /// A volume went away mid-transfer and the operation is waiting for it to
+    /// come back (`super::outage_slot`). Nothing moves, and nothing CAN move:
+    /// charging those minutes to the throughput would read as a transfer that
+    /// crawls for the first seconds after the share returns.
+    VolumeOutage,
 }
 
 impl HumanWaitSource {
@@ -43,6 +52,7 @@ impl HumanWaitSource {
         match self {
             Self::Pause => 0,
             Self::Conflict => 1,
+            Self::VolumeOutage => 2,
         }
     }
 }
@@ -50,7 +60,7 @@ impl HumanWaitSource {
 #[derive(Debug)]
 struct ClockState {
     /// Which sources are waiting right now, indexed by [`HumanWaitSource::index`].
-    waiting: [bool; 2],
+    waiting: [bool; 3],
     /// When the current union interval opened, or `None` while nobody waits.
     since: Option<Instant>,
     /// Every closed interval, added up.
@@ -67,7 +77,7 @@ impl HumanWaitClock {
     pub fn new() -> Self {
         Self {
             inner: Mutex::new(ClockState {
-                waiting: [false; 2],
+                waiting: [false; 3],
                 since: None,
                 total: Duration::ZERO,
             }),

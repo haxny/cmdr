@@ -13,6 +13,7 @@ use tokio_util::sync::CancellationToken;
 use super::eta::{EtaEstimator, EtaSample, ReversalBar};
 use super::event_sinks::OperationEventSink;
 use super::human_wait::HumanWaitClock;
+use super::outage_slot::{OutagePolicy, OutageSlot};
 use super::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
     WriteConflictEvent, WriteOperationType, WriteProgressEvent, WriteSettledEvent,
@@ -110,6 +111,21 @@ pub struct WriteOperationState {
     /// can charge those seconds to the person rather than to the transfer. See
     /// [`HumanWaitClock`].
     pub human_wait: Arc<HumanWaitClock>,
+    /// The volume this operation is waiting on to come back, if any: a share
+    /// that dropped mid-transfer (`transfer/volume_outage.rs`). Read by the one
+    /// activity classifier, so every window and an agent polling `cmdr://state`
+    /// say "waiting for the NAS" rather than "stalled". Drives
+    /// [`human_wait`](Self::human_wait) from its own edges, like a pause does.
+    pub(crate) outage: Arc<OutageSlot>,
+    /// How patient this operation's outage waits are. Always the default in the
+    /// app; a test shrinks it through
+    /// [`with_outage_policy`](Self::with_outage_policy).
+    pub(crate) outage_policy: OutagePolicy,
+    /// When this operation was created. An operation queued before a volume's
+    /// outage gave up doesn't start a fresh five-minute wait for the same
+    /// outage when it's admitted (`transfer/volume_outage.rs` § the lane's
+    /// outage record); one created after (a Retry) does.
+    pub(crate) born: Instant,
     /// Cooperative cancel flag for in-flight backend I/O. Flipped whenever the
     /// op transitions out of `Running` (via `cancel_write_operation`,
     /// `cancel_all_write_operations`, or `cancel_all_write_operations_with_rollback`).
@@ -260,6 +276,9 @@ impl WriteOperationState {
             backend_cancel: CancellationToken::new(),
             backend_abort: CancellationToken::new(),
             pause_gate: PauseGate::new(Arc::clone(&human_wait)),
+            outage: Arc::new(OutageSlot::new(Arc::clone(&human_wait))),
+            outage_policy: OutagePolicy::default(),
+            born: Instant::now(),
             human_wait,
             journal_volumes: None,
             sides: None,
@@ -380,6 +399,14 @@ impl WriteOperationState {
     /// both of them.
     pub(crate) fn with_sides(mut self, sides: Option<super::transfer_sides::TransferSides>) -> Self {
         self.sides = sides;
+        self
+    }
+
+    /// Shrinks how long this operation waits for a volume to come back, so a
+    /// test can drive a whole outage (give-up included) in milliseconds.
+    #[cfg(test)]
+    pub(crate) fn with_outage_policy(mut self, policy: OutagePolicy) -> Self {
+        self.outage_policy = policy;
         self
     }
 
@@ -514,13 +541,26 @@ impl WriteOperationState {
             waiting_on,
             opening_source: false,
             source_inbound_bytes_per_second: None,
+            reconnecting_volume: self.reconnecting_volume(waiting_on),
         })
     }
 
+    /// The volume named on an activity whose wait is [`TransferWaitReason::Reconnecting`],
+    /// and `None` on every other: the name rides with the reason, never apart
+    /// from it, so a view can't show "waiting for X" over a pause.
+    pub(super) fn reconnecting_volume(&self, waiting_on: TransferWaitReason) -> Option<String> {
+        if waiting_on == TransferWaitReason::Reconnecting {
+            self.outage.waiting_for()
+        } else {
+            None
+        }
+    }
+
     /// The wait an operation can name without an in-flight table: the two parks
-    /// that hold for somebody's decision.
+    /// that hold for somebody's decision, and a volume it's waiting on to come
+    /// back.
     ///
-    /// Both sources are the ones the human-wait clock tracks
+    /// All three are the ones the human-wait clock tracks
     /// ([`super::human_wait`]), read in the same order
     /// `transfer_probe::wait_reason` reads them, so an operation with an
     /// in-flight table and one without classify the same wait the same way.
@@ -530,6 +570,9 @@ impl WriteOperationState {
         }
         if self.conflict_slot.is_awaiting() {
             return Some(TransferWaitReason::Conflict);
+        }
+        if self.outage.waiting_for().is_some() {
+            return Some(TransferWaitReason::Reconnecting);
         }
         None
     }

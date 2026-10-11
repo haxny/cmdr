@@ -19,6 +19,7 @@ use std::time::Instant;
 
 use super::super::super::state::update_operation_status;
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::volume_outage::through_outages;
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
 use super::copy_concurrent::ConcurrentCopy;
 use super::copy_concurrent_task::CopyTask;
@@ -313,13 +314,12 @@ impl ConcurrentCopy<'_> {
                 ),
             );
         }
-        where_it_lands(
-            &self.dest_volume,
-            dest_dir,
-            ChildName::new(name)?,
-            folder,
-            NewName::Respell,
-        )
+        let name = ChildName::new(name)?;
+        // A share that drops under the probe is waited for, and the probe asks
+        // again: it only reads (`../volume_outage.rs`).
+        through_outages(self.state, &[&self.dest_volume], || {
+            where_it_lands(&self.dest_volume, dest_dir, name, folder, NewName::Respell)
+        })
         .await
     }
 

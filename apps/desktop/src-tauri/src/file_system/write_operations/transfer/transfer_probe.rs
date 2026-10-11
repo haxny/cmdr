@@ -431,6 +431,21 @@ impl OperationProbe {
     /// without waiting on wall-clock seconds. `still_for` is how long BOTH
     /// progress counters have been unchanged.
     fn watchdog_step(&self, watchdog: &mut WatchdogState, now: Duration) {
+        // A transfer waiting for a volume to come back isn't stalled either: it
+        // knows exactly what it's waiting on, and says so. It still heartbeats,
+        // which is how the UI learns the wait started at all (a waiting
+        // operation emits nothing of its own), but it accrues no stall time, no
+        // stall dump, and no abort budget (`volume_outage.rs`). A pause or a
+        // prompt during the wait outranks it, below.
+        if self.state.outage.waiting_for().is_some() && !self.awaiting_human() && !self.state.pause_gate.is_paused() {
+            watchdog.still_since = now;
+            self.still_for_seconds.store(0, Ordering::Relaxed);
+            self.restart_task_stillness(now);
+            watchdog.inbound.clear();
+            self.publish_inbound_rate(None);
+            self.emit_heartbeat();
+            return;
+        }
         // A transfer waiting on a person is not stalled, and must not accrue
         // stall time or heartbeat at the UI while the conflict dialog is open.
         // Same for a pause: it moves no bytes on purpose. Both restart the
@@ -656,13 +671,19 @@ impl OperationProbe {
         let waiting_on = self.wait_reason(still_for_seconds);
         // A pause and a prompt are deliberate, and they say so themselves: an
         // opening or a trickle under them isn't the operation's news.
-        let deliberate = matches!(waiting_on, TransferWaitReason::Paused | TransferWaitReason::Conflict);
+        // A volume that's gone is the same: what the transfer is waiting on is
+        // known, and an opening or a receive rate under it is noise.
+        let deliberate = matches!(
+            waiting_on,
+            TransferWaitReason::Paused | TransferWaitReason::Conflict | TransferWaitReason::Reconnecting
+        );
         TransferActivity {
             in_flight,
             still_for_seconds: u32::try_from(still_for_seconds).unwrap_or(u32::MAX),
             waiting_on,
             opening_source: !deliberate && self.opening_first_source(),
             source_inbound_bytes_per_second: if deliberate { None } else { self.inbound_rate() },
+            reconnecting_volume: self.state.reconnecting_volume(waiting_on),
         }
     }
 
@@ -694,11 +715,13 @@ impl OperationProbe {
         if !moved || activity.still_for_seconds == 0 {
             return activity;
         }
+        let waiting_on = self.wait_reason(0);
         TransferActivity {
             still_for_seconds: 0,
-            waiting_on: self.wait_reason(0),
+            waiting_on,
             opening_source: false,
             source_inbound_bytes_per_second: None,
+            reconnecting_volume: self.state.reconnecting_volume(waiting_on),
             ..activity
         }
     }
@@ -726,6 +749,11 @@ impl OperationProbe {
         // authoritative signal, and it covers deep-merge prompts too.
         if self.awaiting_human() {
             return TransferWaitReason::Conflict;
+        }
+        // A volume that went away explains every still task at once, and the
+        // operation can't move until it's back, whatever any one task says.
+        if self.state.outage.waiting_for().is_some() {
+            return TransferWaitReason::Reconnecting;
         }
         let tasks = self.tasks.lock_ignore_poison();
         let reasons: Vec<TransferWaitReason> = tasks
@@ -837,6 +865,14 @@ tokio::task_local! {
 /// need to know whether they are being driven by the volume copy driver.
 pub(super) fn set_task_phase(phase: TaskPhase) {
     let _ = CURRENT_TASK_PROBE.try_with(|probe| probe.set_phase(phase));
+}
+
+/// The current copy task's phase, if there is one: what a park that sets its
+/// own phase restores when it ends (`volume_outage.rs`).
+pub(super) fn current_task_phase() -> Option<TaskPhase> {
+    CURRENT_TASK_PROBE
+        .try_with(|probe| TaskPhase::from_u8(probe.phase.load(Ordering::Relaxed)))
+        .ok()
 }
 
 /// Report per-chunk byte progress for the current copy task, if there is one.

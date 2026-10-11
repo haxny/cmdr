@@ -20,10 +20,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::super::super::look_alike::{LookAlike, look_alike_in};
+use super::super::super::state::WriteOperationState;
 use super::super::super::types::WriteOperationError;
 use super::super::dest_name_index::{DestLookup, DestNameIndex};
 use super::super::transfer_driver::{FetchFut, NameAtDest};
 use super::super::transfer_probe::{DriverPhase, OperationProbe};
+use super::super::volume_outage::through_outages;
 use super::transfer_error::{PathRole, map_volume_error};
 use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{ChildName, Volume, VolumeError};
@@ -78,14 +80,17 @@ pub(super) enum NewName {
 /// wedged share returns to nobody, so a dump has to be able to name it as the
 /// step in progress rather than leave the driver reading `starting`.
 pub(super) fn top_level_precheck(
+    state: &Arc<WriteOperationState>,
     dest_volume: &Arc<dyn Volume>,
     probe: Option<Arc<OperationProbe>>,
     new_name: NewName,
     destination_name: Option<&str>,
 ) -> impl for<'a> FnMut(&'a Path) -> FetchFut<'a> + use<> {
+    let state = Arc::clone(state);
     let dest_volume = Arc::clone(dest_volume);
     let destination_name = destination_name.map(str::to_owned);
     move |dest: &Path| -> FetchFut<'_> {
+        let state = Arc::clone(&state);
         let dest_volume = Arc::clone(&dest_volume);
         let probe = probe.clone();
         let dest = destination_name
@@ -95,7 +100,7 @@ pub(super) fn top_level_precheck(
             if let Some(probe) = probe {
                 probe.set_driver_phase(DriverPhase::PreparingNext, &dest.display().to_string());
             }
-            name_at_destination(&dest_volume, &dest, new_name).await
+            name_at_destination(&state, &dest_volume, &dest, new_name).await
         })
     }
 }
@@ -113,14 +118,30 @@ pub(super) fn top_level_precheck(
 ///
 /// ❌ No retry here. Per-file retry belongs to `retry.rs`, inside
 /// `stream_pipe_file`, and a second layer above it would multiply the wait a
-/// user sits through on a dead link (`transfer/CLAUDE.md`).
+/// user sits through on a dead link (`transfer/CLAUDE.md`). A share that's GONE
+/// is the one exception, and it isn't a retry: the probe waits for the share to
+/// come back, on the deadline every waiter on it shares, and asks again
+/// (`../volume_outage.rs`).
 async fn name_at_destination(
+    state: &Arc<WriteOperationState>,
     dest_volume: &Arc<dyn Volume>,
     dest: &Path,
     new_name: NewName,
 ) -> Result<NameAtDest, WriteOperationError> {
     let refused = |e| map_volume_error(&dest.display().to_string(), PathRole::Destination, e);
-    let landing = match (dest.parent(), dest.file_name()) {
+    let landing = through_outages(state, &[dest_volume], || probe_one_name(dest_volume, dest, new_name)).await;
+    match landing.map_err(refused)? {
+        Landing::Free(path) => Ok(NameAtDest::Free(path)),
+        Landing::Taken { path, entry } => Ok(NameAtDest::Taken {
+            path,
+            size: entry.size.unwrap_or(0),
+        }),
+    }
+}
+
+/// One look at what the destination holds at `dest`, for [`name_at_destination`].
+async fn probe_one_name(dest_volume: &Arc<dyn Volume>, dest: &Path, new_name: NewName) -> Result<Landing, VolumeError> {
+    match (dest.parent(), dest.file_name()) {
         (Some(dir), Some(name)) => match ChildName::new(name) {
             Ok(name) => where_it_lands(dest_volume, dir, name, DestFolder::Unlisted, new_name).await,
             Err(not_a_name) => Err(not_a_name.into()),
@@ -135,13 +156,6 @@ async fn name_at_destination(
             Err(VolumeError::NotFound(_)) => Ok(Landing::Free(dest.to_path_buf())),
             Err(e) => Err(e),
         },
-    };
-    match landing.map_err(refused)? {
-        Landing::Free(path) => Ok(NameAtDest::Free(path)),
-        Landing::Taken { path, entry } => Ok(NameAtDest::Taken {
-            path,
-            size: entry.size.unwrap_or(0),
-        }),
     }
 }
 

@@ -37,6 +37,7 @@ use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
 };
+use super::super::volume_outage::{OutageAnnounce, OutageEnd, wait_while_out};
 use super::folder_metadata::SourceFolderDates;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use crate::file_system::volume::{
@@ -516,6 +517,38 @@ pub(super) async fn source_merges_as_a_directory(
             .await
             .map(|kind| kind == EntryKind::Directory)
             .map_err(|e| map_volume_error(&source.display().to_string(), PathRole::Source, e)),
+    }
+}
+
+/// The start gate: a volume this transfer needs is gone already, so the
+/// transfer waits for it to come back before its first step, which would
+/// otherwise fail on it at once.
+///
+/// Who meets it: a Retry while the NAS is still down (a click that would
+/// otherwise fail in a second, with nothing dialing the share), and a job
+/// admitted while another waits out the same outage was cancelled. A job queued
+/// behind one that already GAVE UP on this outage looks once and carries on
+/// (`../volume_outage.rs` § the lane's outage record), so the queue fails
+/// promptly behind a NAS that's really gone.
+///
+/// Only a cancel stops the transfer here. Whatever else the wait ends in, the
+/// transfer carries on, and a volume still gone fails its first step exactly as
+/// it did before the gate existed.
+pub(super) async fn wait_for_gone_volumes(
+    events: &dyn OperationEventSink,
+    operation_id: &str,
+    operation_type: WriteOperationType,
+    state: &Arc<WriteOperationState>,
+    volumes: &[&Arc<dyn Volume>],
+) -> Result<(), WriteFailure> {
+    let announce = OutageAnnounce {
+        sink: events,
+        operation_id,
+        operation_type,
+    };
+    match wait_while_out(state, volumes, Some(&announce)).await {
+        OutageEnd::Cancelled => Err(cancelled_failure(events, operation_id, operation_type)),
+        OutageEnd::Back | OutageEnd::GaveUp | OutageEnd::NotWaitable => Ok(()),
     }
 }
 

@@ -27,7 +27,9 @@
 //! five-minute answer divides one file's bytes by five minutes: the rate
 //! collapses and the ETA jumps to hours, on a copy that is running fine.
 //! Device waits are deliberately NOT excluded: a slow share IS the transfer
-//! being slow, and the ETA has to say so.
+//! being slow, and the ETA has to say so. A share that's GONE is the one device
+//! wait that is: the transfer is waiting for it to come back, says so, and its
+//! minutes aren't throughput (`super::outage_slot`).
 //!
 //! ## Phase transitions and rollback
 //!

@@ -210,7 +210,7 @@ impl crate::file_system::OperationEventSink for PauseOnFirstCopyFrame {
 fn peak_in_flight(progress: &[WriteProgressEvent]) -> u32 {
     progress
         .iter()
-        .filter_map(|event| event.activity.map(|activity| activity.in_flight))
+        .filter_map(|event| event.activity.as_ref().map(|activity| activity.in_flight))
         .max()
         .unwrap_or(0)
 }

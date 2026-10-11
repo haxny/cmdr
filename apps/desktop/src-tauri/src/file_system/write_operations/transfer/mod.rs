@@ -29,6 +29,7 @@ pub(super) mod transfer_probe;
 /// Cross-volume copy + move. A facade: `volume/mod.rs` re-exports what outside
 /// code calls, and every module under it is private to that directory.
 pub(super) mod volume;
+pub(super) mod volume_outage;
 
 // Fresh archive creation is a generated cross-volume write and uses the same
 // tracked sibling staging as ordinary files rather than growing a parallel temp
@@ -59,6 +60,8 @@ pub(crate) mod liveness_test_support;
 mod metadata_matrix_tests;
 #[cfg(test)]
 mod move_integration_test;
+#[cfg(test)]
+pub(crate) mod outage_volume_test_support;
 #[cfg(test)]
 mod self_collision_tests;
 // The real-detach pins (macOS, `#[ignore]`d, run by `pnpm check disk-images`). ❗ The

@@ -492,7 +492,7 @@ async fn timed_copy(corpus: &Corpus, dest: &Arc<dyn Volume>, dir: &str, window: 
     let progress = events.progress.lock_ignore_poison().clone();
     let peak_in_flight = progress
         .iter()
-        .filter_map(|event| event.activity.map(|activity| activity.in_flight))
+        .filter_map(|event| event.activity.as_ref().map(|activity| activity.in_flight))
         .max()
         .unwrap_or(0);
 

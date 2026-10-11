@@ -53,8 +53,9 @@ fn enrich_progress_keeps_an_activity_the_caller_already_decided() {
         waiting_on: TransferWaitReason::Unknown,
         opening_source: false,
         source_inbound_bytes_per_second: None,
+        reconnecting_volume: None,
     };
-    event.activity = Some(wedged);
+    event.activity = Some(wedged.clone());
 
     op.state().enrich_progress(&mut event);
 

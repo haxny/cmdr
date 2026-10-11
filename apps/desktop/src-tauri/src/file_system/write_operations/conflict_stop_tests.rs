@@ -229,7 +229,7 @@ fn a_local_clash_announces_the_wait_and_its_end() {
     assert_eq!(progress.len(), 3, "the copy's own tick, then one per edge of the wait");
     assert_eq!(progress[0].activity, None, "nothing was waiting on anybody yet");
 
-    let parked = progress[1].activity.expect("the park has to reach the windows");
+    let parked = progress[1].activity.clone().expect("the park has to reach the windows");
     assert_eq!(parked.waiting_on, TransferWaitReason::Conflict);
     assert_eq!(
         (progress[1].files_done, progress[1].bytes_done),

@@ -175,6 +175,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
         pre_skip_paths,
         &driver_config,
         super::landing::top_level_precheck(
+            state,
             &dest_volume,
             op_probe.clone(),
             super::landing::NewName::Respell,

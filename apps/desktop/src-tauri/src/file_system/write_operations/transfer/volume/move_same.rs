@@ -307,6 +307,12 @@ pub(crate) async fn move_within_same_volume_with_progress(
     // dest.starts_with(source)` for a directory source, mirroring
     // `copy_volumes_with_progress`'s guard. Path-prefix only — no
     // `canonicalize`, since these aren't local paths (MTP/SMB/InMemory).
+    // The share is already gone (a Retry while the NAS is still down): wait for
+    // it before the first step fails on it (`preflight::wait_for_gone_volumes`).
+    super::preflight::wait_for_gone_volumes(&*events, operation_id, WriteOperationType::Move, state, &[&volume])
+        .await
+        .map_err(|failure| failure.error)?;
+
     for source in source_paths {
         if (dest_path == source.as_path() || dest_path.starts_with(source))
             && matches!(volume.is_directory(source).await, Ok(true))
@@ -474,6 +480,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
         &driver_config,
         // A same-volume move keeps the entry it moves, name and all.
         super::landing::top_level_precheck(
+            state,
             &volume,
             None,
             super::landing::NewName::Keep,

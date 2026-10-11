@@ -561,6 +561,18 @@ pub(crate) async fn copy_volumes_with_progress(
         source_paths.len()
     );
 
+    // Phase -1: a volume this copy needs is already gone (a Retry while the NAS
+    // is still down): wait for it before the first step fails on it
+    // (`preflight::wait_for_gone_volumes`).
+    super::preflight::wait_for_gone_volumes(
+        &*events,
+        operation_id,
+        WriteOperationType::Copy,
+        state,
+        &[&source_volume, &dest_volume],
+    )
+    .await?;
+
     // The operation-log journal target (real source + dest volume ids), set by the
     // `copy_between_volumes` deferred. `None` for the both-local shortcut (journals
     // via `copy_files_start`) and in tests that don't install a journal — the
@@ -1265,6 +1277,9 @@ mod landing_race_tests;
 #[cfg(test)]
 #[path = "merge_placeholder_tests.rs"]
 mod merge_placeholder_tests;
+#[cfg(test)]
+#[path = "copy_outage_tests.rs"]
+mod outage_tests;
 #[cfg(test)]
 #[path = "copy_precheck_tests.rs"]
 mod precheck_tests;

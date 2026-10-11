@@ -293,7 +293,10 @@ fn a_wedged_transfer_keeps_telling_the_ui_it_is_wedged() {
 
     let emitted = sink.progress.lock_ignore_poison();
     let last = emitted.last().expect("the watchdog must speak for a wedged transfer");
-    let activity = last.activity.expect("a re-emitted event carries fresh activity");
+    let activity = last
+        .activity
+        .clone()
+        .expect("a re-emitted event carries fresh activity");
     assert_eq!(activity.waiting_on, TransferWaitReason::Destination);
     assert!(activity.still_for_seconds >= 1, "{activity:?}");
     assert_eq!(activity.in_flight, 1);

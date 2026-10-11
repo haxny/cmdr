@@ -388,7 +388,7 @@ async fn cross_volume_move_tells_the_dialog_what_it_is_doing() {
             .iter()
             .any(|p| p.activity.as_ref().is_some_and(|a| a.in_flight >= 1)),
         "every Copying event must carry activity, and one of them must show the source in flight; got {:?}",
-        copying.iter().map(|e| e.activity).collect::<Vec<_>>(),
+        copying.iter().map(|e| e.activity.clone()).collect::<Vec<_>>(),
     );
     // The classifier ran and reached a verdict, rather than the dialog being
     // handed a populated-looking struct it can't read. A move that is streaming
@@ -399,7 +399,7 @@ async fn cross_volume_move_tells_the_dialog_what_it_is_doing() {
             .filter_map(|p| p.activity.as_ref())
             .all(|a| a.waiting_on == TransferWaitReason::Moving),
         "a streaming move is moving, not waiting on anything; got {:?}",
-        copying.iter().map(|e| e.activity).collect::<Vec<_>>(),
+        copying.iter().map(|e| e.activity.clone()).collect::<Vec<_>>(),
     );
 }
 

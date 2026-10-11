@@ -52,7 +52,7 @@ fn last_heartbeat(sink: &CollectorEventSink) -> TransferActivity {
     sink.progress
         .lock_ignore_poison()
         .last()
-        .and_then(|e| e.activity)
+        .and_then(|e| e.activity.clone())
         .expect("the watchdog must have spoken for the operation")
 }
 
