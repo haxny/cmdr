@@ -2,7 +2,7 @@
  * Component tests for `UpdatesSection.svelte`.
  *
  * Verifies the "Check for updates" button + status text behave correctly across update phases,
- * and that the error case renders a "Send error report" link wired to `openErrorReportDialog`.
+ * and that the error case renders a "Send error report" link wired to `openErrorReportFor`.
  */
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
@@ -11,14 +11,14 @@ import type { BetaSignupResult } from '$lib/tauri-commands'
 import type { ManagedPolicyView } from '$lib/ipc/bindings'
 import { expectNoA11yViolations } from '$lib/test-a11y'
 
-const { openErrorReportDialogMock, checkForUpdatesMock, betaSignupMock } = vi.hoisted(() => ({
-  openErrorReportDialogMock: vi.fn(),
+const { openErrorReportForMock, checkForUpdatesMock, betaSignupMock } = vi.hoisted(() => ({
+  openErrorReportForMock: vi.fn(),
   checkForUpdatesMock: vi.fn(() => Promise.resolve()),
   betaSignupMock: vi.fn((): Promise<BetaSignupResult> => Promise.resolve({ kind: 'subscribed' })),
 }))
 
 vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
-  openErrorReportDialog: openErrorReportDialogMock,
+  openErrorReportFor: openErrorReportForMock,
 }))
 
 // Spread the real barrel and override only `betaSignup`, so other `$lib/tauri-commands` exports the
@@ -110,7 +110,7 @@ function getEmailInput(target: HTMLElement): HTMLInputElement {
 describe('UpdatesSection', () => {
   beforeEach(() => {
     _resetUpdaterStateForTest()
-    openErrorReportDialogMock.mockClear()
+    openErrorReportForMock.mockClear()
     checkForUpdatesMock.mockClear()
     betaSignupMock.mockClear()
     betaSignupMock.mockResolvedValue({ kind: 'subscribed' })
@@ -164,10 +164,12 @@ describe('UpdatesSection', () => {
     const shown = target.querySelector('.failure-message')?.textContent.trim() ?? ''
     expect(shown).toContain('Cmdr couldn’t download the update.')
     expect(target.textContent).not.toContain('Error:')
-    const link = Array.from(target.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Send error report')
+    const link = Array.from(target.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === 'Send error report…',
+    )
     expect(link).toBeTruthy()
     link?.click()
-    expect(openErrorReportDialogMock).toHaveBeenCalledWith(shown)
+    expect(openErrorReportForMock).toHaveBeenCalledWith({ kind: 'message', from: 'updateFailure', text: shown })
   })
 
   function getEmailInput(target: HTMLElement): HTMLInputElement {

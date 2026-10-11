@@ -30,6 +30,7 @@ import {
   isForegroundClaimPending,
 } from '$lib/file-operations/foreground-operation.svelte'
 import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
+import { failureIncidentFor } from '$lib/file-operations/queue/failure-reason'
 import { addToast, dismissToast, getToasts } from '$lib/ui/toast'
 import OperationFailedToastContent from './OperationFailedToastContent.svelte'
 import OperationFailuresToastContent from './OperationFailuresToastContent.svelte'
@@ -77,7 +78,7 @@ function currentFailureToasts(): { id: string }[] {
   return getToasts().filter((toast) => toast.toastGroup === FAILURE_TOAST_GROUP)
 }
 
-function raiseToast(row: OperationRow): void {
+function raiseToast(row: OperationRow, failureCount: number): void {
   // The failure is the job's last word, so it replaces the job's handoff toast.
   dismissQueueHandoffToast(row.snapshot.operationId)
   const live = currentFailureToasts()
@@ -92,6 +93,7 @@ function raiseToast(row: OperationRow): void {
       toastGroup: FAILURE_TOAST_GROUP,
       maxInGroup: MAX_IN_GROUP,
       props: { snapshot: row.snapshot },
+      report: failureIncidentFor(row.snapshot, 'queueFailure') ?? false,
     })
     return
   }
@@ -105,6 +107,8 @@ function raiseToast(row: OperationRow): void {
     dismissal: 'persistent',
     toastGroup: FAILURE_TOAST_GROUP,
     maxInGroup: MAX_IN_GROUP,
+    // The body re-reads the count live, as its title does (`OperationFailuresToastContent`).
+    report: { kind: 'operationsFailed', count: failureCount },
   })
 }
 
@@ -141,7 +145,7 @@ export function announceFailures(rows: OperationRow[]): void {
     // still appears in the queue: that window is the operation-status surface,
     // and honesty beats tidiness.
     if (id === getForegroundOperationId() || id === getForegroundFailureId()) continue
-    raiseToast(row)
+    raiseToast(row, failures.length)
   }
 }
 

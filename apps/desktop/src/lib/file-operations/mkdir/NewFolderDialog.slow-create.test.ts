@@ -21,6 +21,10 @@ vi.mock('$lib/tauri-commands', () => ({
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
 }))
 
+const openErrorReportFor = vi.hoisted(() => vi.fn())
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+
 /** Mounts the dialog with a name already typed in, so OK is enabled on first render. */
 function mountDialog(onCreated: (name: string) => void): HTMLElement {
   const target = document.createElement('div')
@@ -111,5 +115,71 @@ describe('NewFolderDialog on a slow volume', () => {
     expect(target.textContent).toContain('summer')
     const buttons = [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
     expect(buttons).toContain('Cancel')
+  })
+
+  it('offers a report of the slowness while it is still creating', async () => {
+    slowCreate()
+    const target = mountDialog(vi.fn())
+    await settle()
+    const before = Date.now()
+
+    pressEnter(target)
+    await settle()
+    const link = [...target.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Taking long? Send a report',
+    )
+    link?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'slow',
+      operation: 'create_folder',
+      since: expect.any(Number),
+      waitingOn: null,
+    })
+    // Measured from OK, so the note's duration covers the whole wait.
+    const { since } = openErrorReportFor.mock.calls[0][0] as { since: number }
+    expect(since).toBeGreaterThanOrEqual(before)
+    expect(since).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('offers a report of a refusal under the name, as the typed refusal', async () => {
+    openErrorReportFor.mockClear()
+    const create = slowCreate()
+    const target = mountDialog(vi.fn())
+    await settle()
+
+    pressEnter(target)
+    await settle()
+    create.refuse(new MutationFailure({ type: 'parentNotWritable', path: '/Volumes/naspi/photos' }))
+    await settle()
+
+    const send = [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Send error report…')
+    send?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'createRefused',
+      entry: 'folder',
+      refusal: 'parentNotWritable',
+      reason: expect.any(String),
+    })
+  })
+
+  it('drops the refusal’s report offer once the name changes', async () => {
+    const create = slowCreate()
+    const target = mountDialog(vi.fn())
+    await settle()
+
+    pressEnter(target)
+    await settle()
+    create.refuse(new MutationFailure({ type: 'parentNotWritable', path: '/Volumes/naspi/photos' }))
+    await settle()
+
+    const input = target.querySelector('input')
+    if (!input) throw new Error('name field missing')
+    input.value = 'autumn'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    // Past the name check's debounce, which is what replaces the message.
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await settle()
+    const send = [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Send error report…')
+    expect(send).toBeUndefined()
   })
 })

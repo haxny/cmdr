@@ -49,8 +49,8 @@
         kind: 'folder',
         create: (name, wait) => createDirectory(currentPath, name, volumeId, initiator, wait),
         onCreated,
-        onRefused: (message) => {
-            check.errorMessage = message
+        onRefused: (refusal) => {
+            check.showRefusal(refusal)
         },
     })
 
@@ -164,7 +164,7 @@
         />
 
         {#if submission.phase === 'stillCreating'}
-            <StillCreatingNotice name={submission.submittedName} />
+            <StillCreatingNotice name={submission.submittedName} kind="folder" since={submission.submittedAt} />
         {/if}
 
         {#if aiAvailable !== false}

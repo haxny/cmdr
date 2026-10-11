@@ -2399,10 +2399,6 @@
   "@settings.updates.checkForUpdates": {
     "sourceHash": "f26f327"
   },
-  "settings.updates.sendErrorReport": "Gửi báo cáo trục trặc",
-  "@settings.updates.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "settings.updates.emailConfirmHint": "Kiểm tra hộp thư đến để xác nhận email của bạn. Cảm ơn bạn đã chung tay!",
   "@settings.updates.emailConfirmHint": {
     "sourceHash": "b96010e"

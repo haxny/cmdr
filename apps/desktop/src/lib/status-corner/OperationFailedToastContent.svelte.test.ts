@@ -18,7 +18,15 @@ vi.mock('$lib/ui/toast', () => ({
   },
 }))
 
+const openErrorReportFor = vi.fn()
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
+  openErrorReportFor: (incident: unknown): void => {
+    openErrorReportFor(incident)
+  },
+}))
+
 import OperationFailedToastContent from './OperationFailedToastContent.svelte'
+import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
 function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
   return {
@@ -36,10 +44,10 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
 
 let target: HTMLElement
 
-function render(over: Partial<OperationSnapshot> = {}): void {
+function render(over: Partial<OperationSnapshot> = {}, report?: ReportIncident): void {
   target = document.createElement('div')
   document.body.appendChild(target)
-  mount(OperationFailedToastContent, { target, props: { toastId: 'toast-1', snapshot: snapshot(over) } })
+  mount(OperationFailedToastContent, { target, props: { toastId: 'toast-1', snapshot: snapshot(over), report } })
   flushSync()
 }
 
@@ -47,6 +55,7 @@ beforeEach(() => {
   document.body.innerHTML = ''
   openQueueWindow.mockClear()
   dismissToast.mockClear()
+  openErrorReportFor.mockClear()
 })
 
 describe('OperationFailedToastContent', () => {
@@ -72,6 +81,22 @@ describe('OperationFailedToastContent', () => {
     action?.click()
     flushSync()
     expect(openQueueWindow).toHaveBeenCalledTimes(1)
+    expect(dismissToast).toHaveBeenCalledWith('toast-1')
+  })
+
+  it('offers the report the toast frame handed it, and gets out of the way', () => {
+    const incident: ReportIncident = {
+      kind: 'operationFailed',
+      from: 'queueFailure',
+      operation: 'copy',
+      error: 'read_only_device',
+      title: 'Backup is read-only',
+    }
+    render({}, incident)
+    const action = [...target.querySelectorAll('button')].find((b) => b.textContent.includes('Send error report…'))
+    action?.click()
+    flushSync()
+    expect(openErrorReportFor).toHaveBeenCalledWith(incident)
     expect(dismissToast).toHaveBeenCalledWith('toast-1')
   })
 })

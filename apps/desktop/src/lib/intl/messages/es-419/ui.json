@@ -3,10 +3,6 @@
   "@ui.alertDialog.defaultButton": {
     "sourceHash": "640d676"
   },
-  "ui.toast.sendErrorReport": "Enviar reporte de error…",
-  "@ui.toast.sendErrorReport": {
-    "sourceHash": "1fb27bf"
-  },
   "ui.loadingIcon.finalizing": "{count, plural, one {Se cargó {countText} archivo} many {Se cargaron {countText} archivos} other {Se cargaron {countText} archivos}}. Ordenando tus archivos, preparando la vista…",
   "@ui.loadingIcon.finalizing": {
     "sourceHash": "e11f66e"

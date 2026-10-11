@@ -191,5 +191,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Посмотреть отчет или добавить примечание",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Отправить отчет об ошибке…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

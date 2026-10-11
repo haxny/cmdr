@@ -13,7 +13,7 @@
         formatUpdateStatus,
         updateFailureOffersReport,
     } from '$lib/updates/update-status-text'
-    import { openErrorReportDialog } from '$lib/error-reporter/error-report-flow.svelte'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
     import { createBetaEmailSignup } from './beta-email-signup.svelte'
     import { tString } from '$lib/intl/messages.svelte'
     import { getManagedPolicyView } from '$lib/managed-policy/managed-policy.svelte'
@@ -54,11 +54,6 @@
     function handleCheckForUpdates() {
         void checkForUpdates('settings')
     }
-
-    function handleSendErrorReport() {
-        // The note is the sentence the row showed; the raw detail is already in the log the report bundles.
-        openErrorReportDialog(failureText ?? '')
-    }
 </script>
 
 <SettingsSection title={tString('settings.section.updatesAndPrivacy')}>
@@ -86,9 +81,13 @@
                         {#if failureText !== null}
                             <span class="failure-message">{failureText}</span>
                             {#if offersReport}
-                                <button class="link-button" onclick={handleSendErrorReport}
-                                    >{tString('settings.updates.sendErrorReport')}</button
-                                >
+                                <!-- The note is the sentence the row showed; the raw detail is already in the
+                                     log the report bundles. This window doesn't host the dialog, so the
+                                     main window opens it (`error-report-flow.svelte.ts`). -->
+                                <ReportOffer
+                                    incident={{ kind: 'message', from: 'updateFailure', text: failureText }}
+                                    look="link"
+                                />
                             {/if}
                         {:else if statusText}
                             <span class="status-text">{statusText}</span>
@@ -206,21 +205,6 @@
 
     .failure-message {
         color: var(--color-text-primary);
-    }
-
-    .link-button {
-        background: none;
-        border: none;
-        padding: 0;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-tertiary);
-        cursor: default;
-        text-align: left;
-        align-self: flex-start;
-    }
-
-    .link-button:hover {
-        color: var(--color-text-secondary);
     }
 
     .signup-feedback {

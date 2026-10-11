@@ -11,7 +11,12 @@ import { mount, tick, unmount } from 'svelte'
 import ToastItem from './ToastItem.svelte'
 import ToastContainer from './ToastContainer.svelte'
 import ToastIdFixture from './toast-id-fixture.svelte'
+import ToastReportFixture from './toast-report-fixture.svelte'
+import { tString } from '$lib/intl/messages.svelte'
 import { HOVER_LEAVE_GRACE_MS, addToast, clearAllToasts, getToasts } from './toast-store.svelte'
+
+const reportFlow = vi.hoisted(() => ({ openErrorReportFor: vi.fn() }))
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => reportFlow)
 
 function mountItem(props: Record<string, unknown>): HTMLElement {
   const target = document.createElement('div')
@@ -526,5 +531,64 @@ describe('ToastItem age label', () => {
     await tick()
 
     expect(target.querySelector('.toast-age')?.getAttribute('aria-hidden')).toBe('true')
+  })
+})
+
+describe('“Send error report…” on a toast', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    clearAllToasts()
+    reportFlow.openErrorReportFor.mockClear()
+  })
+
+  function reportButton(target: HTMLElement): HTMLButtonElement | undefined {
+    return Array.from(target.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === tString('errorReporter.offer.send'),
+    )
+  }
+
+  it('offers it on an error string toast, its text as the note, and closes the toast', async () => {
+    const target = await mountContainer()
+    addToast('Couldn’t open “a.txt”.', { level: 'error' })
+    await tick()
+
+    reportButton(target)?.click()
+    await tick()
+    expect(reportFlow.openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'message',
+      from: 'errorToast',
+      text: 'Couldn’t open “a.txt”.',
+    })
+    expect(getToasts()).toHaveLength(0)
+  })
+
+  it('words the note from a typed incident when the toast carries one', async () => {
+    const target = await mountContainer()
+    const incident = { kind: 'connectionFailed', reason: 'tooSlow', text: 'Too slow.' } as const
+    addToast('Too slow.', { level: 'error', report: incident })
+    await tick()
+
+    reportButton(target)?.click()
+    expect(reportFlow.openErrorReportFor).toHaveBeenCalledWith(incident)
+  })
+
+  it('stays off a toast that opts out, and off a non-error string toast', async () => {
+    const target = await mountContainer()
+    addToast('Couldn’t send the report.', { level: 'error', report: false })
+    addToast('Copied.', { level: 'info' })
+    await tick()
+
+    expect(reportButton(target)).toBeUndefined()
+  })
+
+  // The gap this closes: a component error toast used to offer no report at all,
+  // because the frame only added the button to string content.
+  it('hands a component toast its incident as the `report` prop', async () => {
+    const target = await mountContainer()
+    const incident = { kind: 'operationsFailed', count: 4 } as const
+    addToast(ToastReportFixture, { level: 'error', report: incident })
+    await tick()
+
+    expect(target.querySelector('[data-test="toast-report"]')?.textContent).toBe('operationsFailed')
   })
 })

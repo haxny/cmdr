@@ -13,6 +13,7 @@
     import { systemStrings } from '$lib/system-strings.svelte'
     import { tString } from '$lib/intl/messages.svelte'
     import { getAppLogger } from '$lib/logging/logger'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
 
     const log = getAppLogger('errorPane')
 
@@ -117,6 +118,13 @@
     // buttons, `emptyRootICloud`'s included.
     const showRetryButton = $derived(friendly.retryHint)
 
+    /** What "Send error report…" reports: the typed reason, and the title this screen shows. */
+    const reportIncident = $derived({
+        kind: 'listingFailed' as const,
+        reason: friendly.listingReason ?? null,
+        title: friendly.title,
+    })
+
     const retryInfo = $derived.by(() => {
         if (retryTimestamps.length === 0) return null
         const first = retryTimestamps[0]
@@ -184,6 +192,8 @@
                 {tString('fileExplorer.errorPane.goHome')}
                 <ShortcutChip commandId="nav.goHome" clickable={false} size="sm" />
             </Button>
+
+            <ReportOffer incident={reportIncident} />
         </div>
 
         <details class="technical-details" bind:open={detailsOpen}>

@@ -142,6 +142,9 @@ describe('TransferErrorDialog keys', () => {
         button.getAttribute('aria-keyshortcuts'),
       ]),
     ).toEqual([
+      // Reporting is a side trip, not an answer to the stop: no letter, so a stray
+      // keystroke can never open the report dialog over the decision.
+      ['Send error report…', undefined, null],
       ['Copy anyway', 'A', 'A'],
       ['Close', 'C', 'C Enter'],
     ])

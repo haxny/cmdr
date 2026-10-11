@@ -2906,10 +2906,6 @@
     "description": "Button that manually triggers an update check. In Settings > Updates & privacy.",
     "screenshot": "settings-updates.png"
   },
-  "settings.updates.sendErrorReport": "Send error report",
-  "@settings.updates.sendErrorReport": {
-    "description": "Button that sends an error report after an update check fails. In Settings > Updates & privacy."
-  },
   "settings.updates.emailConfirmHint": "Check your inbox to confirm your email. Thanks for helping out!",
   "@settings.updates.emailConfirmHint": {
     "description": "Friendly confirmation shown after the user submits their beta email, asking them to confirm via the inbox link. Warm, appreciative voice."

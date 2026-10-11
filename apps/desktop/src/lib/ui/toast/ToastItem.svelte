@@ -4,9 +4,9 @@
     import { HOVER_LEAVE_GRACE_MS } from './toast-store.svelte'
     import { formatToastAge, msUntilToastAgeChanges } from './toast-age'
     import ToastLevelIcon from './ToastLevelIcon.svelte'
-    import { openErrorReportDialog } from '$lib/error-reporter/error-report-flow.svelte'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '$lib/error-reporter/report-incident'
     import { tooltip } from '$lib/tooltip/tooltip'
-    import Button from '$lib/ui/Button.svelte'
     import Icon from '$lib/ui/Icon.svelte'
     import { tString } from '$lib/intl/messages.svelte'
 
@@ -29,11 +29,11 @@
         /** Optional per-toast max-width override in px (default 360). */
         widthPx?: number
         /**
-         * Suppress the inline "Send error report…" action this toast would otherwise get.
-         * Set on toasts that are themselves about error reporting (the send-failure toast),
-         * so a failed send doesn't offer to re-run the same flow.
+         * What this toast's "Send error report…" opens (`Toast.report`, resolved by the store),
+         * or null for none. The frame renders the offer under string content; a component
+         * gets it as its `report` prop and places `ReportOffer` in its own action row.
          */
-        suppressErrorReportAction?: boolean
+        report?: ReportIncident | null
         /** Called when the auto-dismiss timer fires for transient toasts. */
         onTimeout: (id: string) => void
         /** Called when the user clicks the X button or the inline action. */
@@ -50,7 +50,7 @@
         closeTooltip,
         contentProps,
         widthPx,
-        suppressErrorReportAction = false,
+        report = null,
         onTimeout,
         onUserDismiss,
     }: Props = $props()
@@ -135,23 +135,6 @@
             clearTimeout(ageTimer)
         }
     })
-
-    // Error-level toasts that carry a plain-text message get an inline "Send error
-    // report…" action. Component-content toasts manage their own actions, so we don't
-    // add a second button on top of them. A toast that opts out via
-    // `suppressErrorReportAction` (the send-failure toast itself) never shows it, so a
-    // failed send doesn't offer to re-run the flow that just failed.
-    const showSendErrorReport = $derived(
-        !suppressErrorReportAction && level === 'error' && typeof content === 'string',
-    )
-
-    function handleSendErrorReport() {
-        // Pre-fill the user note with the toast text so the user has something to
-        // start from. They can edit before sending.
-        const initialNote = typeof content === 'string' ? content : ''
-        openErrorReportDialog(initialNote)
-        onUserDismiss(id)
-    }
 
     function clearTimer() {
         if (timer !== undefined) {
@@ -266,11 +249,15 @@
                      float out of a block sibling's width, so a short message got a box as narrow as
                      its text and broke mid-word around the corner ("Copie / d 1 / file."). -->
                 <span class="toast-message">{content}</span>
-                {#if showSendErrorReport}
+                {#if report}
                     <div class="toast-actions">
-                        <Button size="mini" variant="secondary" onclick={handleSendErrorReport}>
-                            {tString('ui.toast.sendErrorReport')}
-                        </Button>
+                        <ReportOffer
+                            incident={report}
+                            size="mini"
+                            onOpen={() => {
+                                onUserDismiss(id)
+                            }}
+                        />
                     </div>
                 {/if}
             {:else}
@@ -278,7 +265,7 @@
                 <!-- `toastId` goes to EVERY component toast, props or not: a body that
                      closes itself calls `dismissToast(toastId)`, and without the id that's
                      a silent no-op that leaves the toast up. -->
-                <ContentComponent {...contentProps} toastId={id} />
+                <ContentComponent {...contentProps} toastId={id} {...report ? { report } : {}} />
             {/if}
         </div>
     </div>

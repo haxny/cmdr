@@ -41,12 +41,83 @@ const COMMAND_IDS: &[&str] = include!(concat!(env!("OUT_DIR"), "/command_ids.rs"
     deny_unknown_fields
 )]
 pub enum BreadcrumbEvent {
-    Command { command_id: String },
-    ErrorReportDialogOpened { has_initial_note: bool },
+    Command {
+        command_id: String,
+    },
+    /// The compose dialog opened. `from` says which surface offered it, so a triager
+    /// knows whether the person reported a copy that stopped, a folder that wouldn't
+    /// list, or something slow, without reading the note.
+    ErrorReportDialogOpened {
+        has_initial_note: bool,
+        from: ErrorReportEntry,
+    },
     ErrorReportAmendDialogOpened,
+    /// A slowness notice was on screen: the new-folder / new-file dialog's "still
+    /// creating", or a transfer's stall notice. Recorded when the notice appears AND when
+    /// the person reports from it, so a bundle shows the slowness even when the report
+    /// comes later through the Help menu.
+    OperationSlow {
+        operation: SlowOperation,
+        /// Whole seconds the operation had made no visible progress for.
+        still_for_secs: u32,
+        /// Which side a stalled transfer waits on; `None` for a create, which has one side.
+        waiting_on: Option<SlowWaitingOn>,
+    },
     ErrorReportDialogClosed,
     FeedbackDialogOpened,
     FeedbackDialogClosed,
+}
+
+/// The surface a compose-mode error report was opened from. One variant per KIND of
+/// surface, not per component: the toast frame, the transfer error dialog, a failed queue
+/// row, and so on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ErrorReportEntry {
+    /// Help > Send error report…, or the same command from the palette.
+    HelpMenu,
+    /// An error toast whose text is the whole story.
+    ErrorToast,
+    /// An update that didn't download or install (Settings or the update-check toast).
+    UpdateFailure,
+    /// The copy / move / delete error dialog.
+    TransferError,
+    /// A backgrounded operation that stopped: its toast, or its row in the queue window.
+    QueueFailure,
+    /// The pane's "couldn't list this folder" screen.
+    ListingFailure,
+    /// A new folder or file the volume refused while its dialog was open.
+    CreateRefusal,
+    /// A direct SMB connection that didn't come about.
+    ConnectionFailure,
+    /// A "taking long?" link on a slowness notice.
+    SlowOperation,
+}
+
+/// Which operation a slowness breadcrumb is about. Mirrors the frontend's
+/// `WriteOperationType` wire values; kept here rather than imported so the privacy
+/// boundary owns its own closed vocabulary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SlowOperation {
+    Copy,
+    Move,
+    Delete,
+    Trash,
+    Rename,
+    CreateFolder,
+    CreateFile,
+    ArchiveEdit,
+    Compress,
+}
+
+/// Which side a stalled transfer is waiting on, from the backend's own classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum SlowWaitingOn {
+    Destination,
+    Source,
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -118,7 +189,15 @@ mod tests {
         record(BreadcrumbEvent::Command {
             command_id: "pane.switch".to_string(),
         });
-        record(BreadcrumbEvent::ErrorReportDialogOpened { has_initial_note: true });
+        record(BreadcrumbEvent::ErrorReportDialogOpened {
+            has_initial_note: true,
+            from: ErrorReportEntry::QueueFailure,
+        });
+        record(BreadcrumbEvent::OperationSlow {
+            operation: SlowOperation::CreateFolder,
+            still_for_secs: 4,
+            waiting_on: None,
+        });
 
         let snap = snapshot();
         let serialized = serde_json::to_value(&snap).expect("typed breadcrumbs serialize");
@@ -129,7 +208,16 @@ mod tests {
         );
         assert_eq!(
             serialized[1]["event"],
-            serde_json::json!({ "type": "errorReportDialogOpened", "hasInitialNote": true })
+            serde_json::json!({ "type": "errorReportDialogOpened", "hasInitialNote": true, "from": "queueFailure" })
+        );
+        assert_eq!(
+            serialized[2]["event"],
+            serde_json::json!({
+                "type": "operationSlow",
+                "operation": "create_folder",
+                "stillForSecs": 4,
+                "waitingOn": null
+            })
         );
         assert!(serialized[0]["at"].as_str().is_some());
         assert!(serialized[1]["at"].as_str().is_some());
@@ -146,7 +234,20 @@ mod tests {
             serde_json::json!({
                 "type": "errorReportDialogOpened",
                 "hasInitialNote": true,
+                "from": "helpMenu",
                 "PRIVATE_KEY_SENTINEL": "PRIVATE_VALUE_SENTINEL"
+            }),
+            serde_json::json!({
+                "type": "operationSlow",
+                "operation": "copy",
+                "stillForSecs": 12,
+                "waitingOn": "destination",
+                "path": "PRIVATE_VALUE_SENTINEL"
+            }),
+            serde_json::json!({
+                "type": "errorReportDialogOpened",
+                "hasInitialNote": false,
+                "from": "PRIVATE_VALUE_SENTINEL"
             }),
             serde_json::json!({
                 "kind": "command",

@@ -1,4 +1,11 @@
-import type { CompressedSizeEstimate, DeviceReadiness, FavoriteTarget, GitEntryMeta, TagRef } from '$lib/ipc/bindings'
+import type {
+  CompressedSizeEstimate,
+  DeviceReadiness,
+  FavoriteTarget,
+  GitEntryMeta,
+  ListingErrorReason,
+  TagRef,
+} from '$lib/ipc/bindings'
 
 export type { DeviceReadiness } from '$lib/ipc/bindings'
 
@@ -166,6 +173,9 @@ export interface FriendlyError {
   rawDetail: string
   retryHint: boolean
   actionKind?: ErrorActionKind | null
+  /** The typed listing reason this was rendered from, which "Send error report…" names.
+   *  Unset on one that came from anywhere else (a debug injection). */
+  listingReason?: ListingErrorReason['reason']
 }
 
 /**

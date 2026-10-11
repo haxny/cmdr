@@ -12,16 +12,25 @@
     import { tString } from '$lib/intl/messages.svelte'
     import { formatInteger } from '$lib/intl/number-format'
     import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
+    import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
     interface Props {
         /** Dedup id of this toast; lets the component get out of its own way. */
         toastId: string
+        /** The toast's report offer, from the frame. */
+        report?: ReportIncident
     }
 
-    const { toastId }: Props = $props()
+    const { toastId, report }: Props = $props()
 
     const count = $derived(getMainWindowOperationRows().filter((row) => row.snapshot.status === 'failed').length)
     const title = $derived(tString('queue.failureToast.summary', { count, countText: formatInteger(count) }))
 </script>
 
-<OperationFailureToastBody {toastId} {title} />
+<!-- The raise's count froze at the fourth failure (props don't follow a dedup), so the
+     report takes the live one, the same count the title shows. -->
+<OperationFailureToastBody
+    {toastId}
+    {title}
+    report={report?.kind === 'operationsFailed' ? { kind: 'operationsFailed', count } : report}
+/>

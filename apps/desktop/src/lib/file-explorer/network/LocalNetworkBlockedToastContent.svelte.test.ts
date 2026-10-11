@@ -16,7 +16,7 @@ import LocalNetworkBlockedToastContent from './LocalNetworkBlockedToastContent.s
 function render() {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  mount(LocalNetworkBlockedToastContent, { target, props: { server: 'Mars' } })
+  mount(LocalNetworkBlockedToastContent, { target, props: { server: 'Mars', toastId: 'local-network-blocked' } })
   flushSync()
   const button = target.querySelector('button')
   if (!button) throw new Error('the toast has no button to press')

@@ -23,13 +23,13 @@ describe('recordBreadcrumb', () => {
 
   it('forwards retained command identity and boolean facts', () => {
     recordBreadcrumb({ type: 'command', commandId: 'pane.switch' })
-    recordBreadcrumb({ type: 'errorReportDialogOpened', hasInitialNote: true })
+    recordBreadcrumb({ type: 'errorReportDialogOpened', hasInitialNote: true, from: 'helpMenu' })
 
     expect(mockedInvoke).toHaveBeenNthCalledWith(1, 'record_breadcrumb', {
       event: { type: 'command', commandId: 'pane.switch' },
     })
     expect(mockedInvoke).toHaveBeenNthCalledWith(2, 'record_breadcrumb', {
-      event: { type: 'errorReportDialogOpened', hasInitialNote: true },
+      event: { type: 'errorReportDialogOpened', hasInitialNote: true, from: 'helpMenu' },
     })
   })
 

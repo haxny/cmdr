@@ -2,9 +2,10 @@
     /**
      * The shared body of the two failure notices (`OperationFailedToastContent`,
      * `OperationFailuresToastContent`): a title, whatever the notice adds under it, and the
-     * one action, "Show in operation queue". That action also dismisses the toast: the queue
-     * window then owns this conversation in full, and leaving the toast up behind it would be
-     * two voices saying the same thing. The severity glyph is the toast frame's own `error`
+     * actions: "Send error report…" (the incident the toast frame handed down) and "Show in
+     * operation queue". Both dismiss the toast: the report dialog or the queue window then
+     * owns this conversation in full, and leaving the toast up behind it would be two voices
+     * saying the same thing. The severity glyph is the toast frame's own `error`
      * level icon, so the title carries none.
      */
     import type { Snippet } from 'svelte'
@@ -12,16 +13,20 @@
     import { dismissToast } from '$lib/ui/toast'
     import { tString } from '$lib/intl/messages.svelte'
     import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
     interface Props {
         /** Dedup id of this toast; lets the notice get out of its own way. */
         toastId: string
         title: string
+        /** What "Send error report…" reports; the frame hands it to the notice as `report`. */
+        report?: ReportIncident
         /** What the notice adds under the title (one failure's reason); the summary adds nothing. */
         children?: Snippet
     }
 
-    const { toastId, title, children }: Props = $props()
+    const { toastId, title, report, children }: Props = $props()
 
     function showInQueue(): void {
         void openQueueWindow()
@@ -33,6 +38,15 @@
     <span class="title">{title}</span>
     {@render children?.()}
     <div class="actions">
+        {#if report}
+            <ReportOffer
+                incident={report}
+                size="mini"
+                onOpen={() => {
+                    dismissToast(toastId)
+                }}
+            />
+        {/if}
         <Button size="mini" variant="secondary" onclick={showInQueue}>{tString('queue.failureToast.action')}</Button>
     </div>
 </div>
@@ -50,6 +64,7 @@
     .actions {
         display: flex;
         justify-content: flex-end;
+        gap: var(--spacing-sm);
         margin-top: var(--spacing-sm);
     }
 </style>

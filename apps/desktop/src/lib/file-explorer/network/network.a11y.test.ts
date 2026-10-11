@@ -340,7 +340,7 @@ describe('LocalNetworkBlockedToastContent a11y', () => {
   it('default state has no a11y violations', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
-    mount(LocalNetworkBlockedToastContent, { target, props: { server: 'Naspolya' } })
+    mount(LocalNetworkBlockedToastContent, { target, props: { server: 'Naspolya', toastId: 'local-network-blocked' } })
     await tick()
     await expectNoA11yViolations(target)
   })

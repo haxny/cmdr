@@ -8,13 +8,14 @@
  * instead of Send.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import { tString } from '$lib/intl/messages.svelte'
 import { expectNoA11yViolations } from '$lib/test-a11y'
 import ErrorReportDialog from './ErrorReportDialog.svelte'
 import {
   closeErrorReportDialog,
+  hostErrorReportDialog,
   openErrorReportDialog,
   openErrorReportDialogForAutoSentReport,
 } from './error-report-flow.svelte'
@@ -27,6 +28,8 @@ const { api, addToast, logger } = vi.hoisted(() => ({
     amendErrorReport: vi.fn(),
     getAutoSentReportPreview: vi.fn(),
     saveErrorReportToDisk: vi.fn(),
+    onErrorReportRequested: vi.fn(() => Promise.resolve(() => {})),
+    requestErrorReportInMainWindow: vi.fn(() => Promise.resolve()),
   },
   addToast: vi.fn(),
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -51,6 +54,11 @@ vi.mock('$lib/settings', () => ({
 }))
 
 vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+
+// This suite renders the dialog itself, so it plays the main window that hosts it.
+beforeAll(() => {
+  hostErrorReportDialog()
+})
 
 // Only `reportsDisabled` matters to the dialog; a test flips it before mounting.
 const managedPolicy = vi.hoisted(() => ({ reportsDisabled: false }))
@@ -114,7 +122,7 @@ describe('ErrorReportDialog failures', () => {
   })
 
   it('words a send the server couldn’t be reached for, without the raw detail', async () => {
-    openErrorReportDialog()
+    openErrorReportDialog({ from: 'helpMenu' })
     api.sendErrorReport.mockRejectedValueOnce(
       new ErrorReportSendFailure({
         type: 'server',
@@ -160,7 +168,7 @@ describe('ErrorReportDialog failures', () => {
   })
 
   it('offers Try again for a preview that didn’t build, and keeps Send off until one does', async () => {
-    openErrorReportDialog()
+    openErrorReportDialog({ from: 'helpMenu' })
     api.prepareErrorReportPreview.mockRejectedValueOnce(new Error('build bundle: Permission denied (os error 13)'))
     const target = await mountDialog()
 
@@ -201,7 +209,7 @@ describe('ErrorReportDialog when the organization turned reports off', () => {
   })
 
   it('says so, offers no Send, and keeps Save to disk with the note the person typed', async () => {
-    openErrorReportDialog('It froze')
+    openErrorReportDialog({ from: 'errorToast', initialNote: 'It froze' })
     const target = await mountDialog()
 
     expect(target.textContent).toContain(MANAGED_LINE)
@@ -217,7 +225,7 @@ describe('ErrorReportDialog when the organization turned reports off', () => {
   })
 
   it('doesn’t send on ⌘Enter', async () => {
-    openErrorReportDialog('It froze')
+    openErrorReportDialog({ from: 'errorToast', initialNote: 'It froze' })
     const target = await mountDialog()
 
     const textarea = target.querySelector('textarea')

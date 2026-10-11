@@ -30,7 +30,6 @@ describe('ui area parity (en)', () => {
     expect(tString('ui.popover.defaultAriaLabel')).toBe('Options')
     expect(tString('ui.select.placeholder')).toBe('Select…')
     expect(tString('ui.combobox.emptyText')).toBe('No matches. Keep typing to use your own value.')
-    expect(tString('ui.toast.sendErrorReport')).toBe('Send error report…')
     expect(tString('ui.toast.dismissAria')).toBe('Dismiss notification')
     expect(tString('ui.copyBox.copy')).toBe('Copy')
     expect(tString('ui.copyBox.copied')).toBe('Copied!')

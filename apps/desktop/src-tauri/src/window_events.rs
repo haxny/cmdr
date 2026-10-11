@@ -205,6 +205,18 @@ pub struct ForegroundOperation {
     pub operation_id: String,
 }
 
+/// `open-error-report`: a window that doesn't host the error-report dialog (the queue
+/// window's failed or stalled row, the settings window's update-failure link) asks the main
+/// window to open it, pre-filled. Emitted by the frontend and listened for by the main
+/// window; Rust never emits it. The note is the user-visible pre-fill the person can still
+/// edit before anything is sent, and `from` feeds the dialog-opened breadcrumb.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenErrorReport {
+    pub initial_note: String,
+    pub from: crate::error_reporter::breadcrumbs::ErrorReportEntry,
+}
+
 /// `reveal-path`: show a folder in the main window's focused pane. Two emitters:
 /// the settings window's "Open memory folder" button, which knows only that it
 /// wants the folder shown (the path comes from Rust's `ask_cmdr_memory_folder`,

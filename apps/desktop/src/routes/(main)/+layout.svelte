@@ -48,7 +48,7 @@
     import CrashReportDialog from '$lib/crash-reporter/CrashReportDialog.svelte'
     import { checkForPendingCrashReport } from '$lib/crash-reporter/pending-crash-report'
     import ErrorReportDialog from '$lib/error-reporter/ErrorReportDialog.svelte'
-    import { errorReportFlow } from '$lib/error-reporter/error-report-flow.svelte'
+    import { errorReportFlow, hostErrorReportDialog } from '$lib/error-reporter/error-report-flow.svelte'
     import FeedbackDialog from '$lib/feedback/FeedbackDialog.svelte'
     import { feedbackFlow } from '$lib/feedback/feedback-flow.svelte'
     import SignInSheet from '$lib/servers/SignInSheet.svelte'
@@ -157,8 +157,14 @@
     let mtpConnectedUnlistenPromise: Promise<() => void> | undefined
     let updateCleanup: (() => void) | undefined
     let aiCleanup: (() => void) | undefined
+    let unhostErrorReportDialog: (() => void) | undefined
 
     onMount(() => {
+        // This window renders the error-report dialog (below), so compose opens land here,
+        // and so do the ones the queue and Settings windows ask for. Synchronous and early:
+        // a report offered during startup must not be routed to a host that isn't there yet.
+        unhostErrorReportDialog = hostErrorReportDialog()
+
         // Sync AI state to toast. Must be called synchronously (not after an await)
         // because it uses $effect, which requires Svelte's reactive context.
         initAiToastSync()
@@ -330,6 +336,7 @@
         cleanupMcpMainBridge()
         cleanupRestrictedSettingsBridge()
         cleanupAutoSendToastListener()
+        unhostErrorReportDialog?.()
         cleanupQuitPrompt()
     })
 </script>
@@ -337,9 +344,6 @@
 <ToastContainer />
 {#if showCrashReportDialog && pendingCrashReport}
     <CrashReportDialog report={pendingCrashReport} onClose={closeCrashReportDialog} />
-{/if}
-{#if errorReportFlow.open}
-    <ErrorReportDialog />
 {/if}
 {#if feedbackFlow.open}
     <FeedbackDialog />
@@ -374,6 +378,12 @@
         {@render children?.()}
     {/if}
 </div>
+<!-- After the page, so it stacks over the page's own dialogs (they share `--z-modal` and
+     stack by DOM order): "Send error report…" is offered FROM the transfer error dialog,
+     the new-folder dialog, and the progress dialog, and has to open on top of them. -->
+{#if errorReportFlow.open}
+    <ErrorReportDialog />
+{/if}
 <!-- Last in the markup AND `topmost` (`--z-modal-top`): the quit prompt has to
      be answerable over anything already open, a modal conflict dialog included.
      The z-index is what actually guarantees it; the position here just keeps the

@@ -15,10 +15,6 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
-  "updates.checkToast.sendErrorReport": "Fehlerbericht senden",
-  "@updates.checkToast.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "updates.toast.ready": "Eine neue Version von Cmdr ist bereit.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

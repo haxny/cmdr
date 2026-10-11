@@ -2400,10 +2400,6 @@
   "@settings.updates.checkForUpdates": {
     "sourceHash": "f26f327"
   },
-  "settings.updates.sendErrorReport": "傳送錯誤報告",
-  "@settings.updates.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "settings.updates.emailConfirmHint": "去收件匣確認一下你的電子郵件地址。謝謝你幫忙！",
   "@settings.updates.emailConfirmHint": {
     "sourceHash": "b96010e"

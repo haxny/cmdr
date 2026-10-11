@@ -15,6 +15,7 @@
  */
 
 import type { OperationSnapshot } from '$lib/tauri-commands'
+import type { OperationFailedIncident } from '$lib/error-reporter/report-incident'
 import type { TransferOperationType } from '$lib/file-explorer/types'
 import { getUserFriendlyMessage, type FriendlyErrorMessage } from '../transfer/transfer-error-messages'
 
@@ -51,4 +52,23 @@ const REASON_OPERATION_TYPE: Record<OperationSnapshot['operationType'], Transfer
 export function failureReasonFor(snapshot: OperationSnapshot): FriendlyErrorMessage | null {
   if (snapshot.error === null) return null
   return getUserFriendlyMessage(snapshot.error, REASON_OPERATION_TYPE[snapshot.operationType])
+}
+
+/**
+ * What "Send error report…" on a retained failure reports: the operation, the typed
+ * error kind, and the pipeline's title for it. `null` for a row that carries no error.
+ */
+export function failureIncidentFor(
+  snapshot: OperationSnapshot,
+  from: OperationFailedIncident['from'],
+): OperationFailedIncident | null {
+  const reason = failureReasonFor(snapshot)
+  if (snapshot.error === null || reason === null) return null
+  return {
+    kind: 'operationFailed',
+    from,
+    operation: snapshot.operationType,
+    error: snapshot.error.type,
+    title: reason.title,
+  }
 }

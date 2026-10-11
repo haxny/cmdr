@@ -192,5 +192,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Bekijk het rapport of voeg notities toe",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Verstuur foutrapport…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

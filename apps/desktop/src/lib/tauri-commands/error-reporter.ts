@@ -7,6 +7,7 @@ import {
   events,
   type BreadcrumbEvent,
   type ErrorReportAutoSent,
+  type OpenErrorReport,
   type SystemSnapshot,
 } from '$lib/ipc/bindings'
 import { throwErrorReportSendError } from '$lib/error-reporter/error-report-send-error'
@@ -151,6 +152,22 @@ export async function saveErrorReportToDisk(userNote?: string, email?: string, i
  */
 export function onErrorReportAutoSent(handler: (payload: ErrorReportAutoSent) => void): Promise<UnlistenFn> {
   return events.errorReportAutoSent.listen((event) => {
+    handler(event.payload)
+  })
+}
+
+/**
+ * Ask the main window to open the compose dialog, pre-filled. Emitted by a window that
+ * doesn't host the dialog (the queue window, Settings); `$lib/error-reporter/error-report-flow`
+ * decides when.
+ */
+export function requestErrorReportInMainWindow(request: OpenErrorReport): Promise<void> {
+  return events.openErrorReport.emit(request)
+}
+
+/** The main window's half of {@link requestErrorReportInMainWindow}. */
+export function onErrorReportRequested(handler: (request: OpenErrorReport) => void): Promise<UnlistenFn> {
+  return events.openErrorReport.listen((event) => {
     handler(event.payload)
   })
 }

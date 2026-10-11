@@ -11,7 +11,7 @@ import { mount, tick } from 'svelte'
 import { expectNoA11yViolations } from '$lib/test-a11y'
 
 vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
-  openErrorReportDialog: vi.fn(),
+  openErrorReportFor: vi.fn(),
 }))
 vi.mock('$lib/ui/toast', () => ({
   addToast: vi.fn(),

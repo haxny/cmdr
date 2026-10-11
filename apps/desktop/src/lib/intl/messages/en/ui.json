@@ -68,10 +68,6 @@
     "description": "Tooltip on hovering a clickable keyboard-shortcut pill, hinting that clicking it opens shortcut customization."
   },
 
-  "ui.toast.sendErrorReport": "Send error report…",
-  "@ui.toast.sendErrorReport": {
-    "description": "Button on an error toast that opens the error-report flow. Ends with an ellipsis to signal a follow-up dialog opens."
-  },
   "ui.toast.dismissAria": "Dismiss notification",
   "@ui.toast.dismissAria": {
     "description": "aria-label for the × button that closes (dismisses) a toast notification.",

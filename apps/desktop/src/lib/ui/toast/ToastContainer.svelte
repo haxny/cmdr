@@ -24,7 +24,7 @@
                 closeTooltip={toast.closeTooltip}
                 contentProps={toast.props}
                 widthPx={toast.widthPx}
-                suppressErrorReportAction={toast.suppressErrorReportAction}
+                report={toast.report}
                 onTimeout={dismissToast}
                 onUserDismiss={handleUserDismiss}
             />

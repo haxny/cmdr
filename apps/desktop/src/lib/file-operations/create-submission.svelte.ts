@@ -23,10 +23,17 @@ import { tString } from '$lib/intl/messages.svelte'
 import { getAppLogger } from '$lib/logging/logger'
 import { asMutationError } from './mutation-error'
 import { renderMutationError } from './mutation-error-messages'
+import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
 const log = getAppLogger('fileOperations')
 
 export type CreatePhase = 'editing' | 'creating' | 'stillCreating'
+
+/** A create the volume turned down: the sentence to show, and what reporting it sends. */
+export interface CreateRefusal {
+  message: string
+  incident: ReportIncident
+}
 
 export interface CreateSubmissionDeps {
   kind: 'folder' | 'file'
@@ -34,14 +41,16 @@ export interface CreateSubmissionDeps {
   create: (name: string, wait: MutationWaitOptions) => Promise<void>
   /** It landed while the dialog is still up. */
   onCreated: (name: string) => void
-  /** It was refused while the dialog is still up: the message under the name. */
-  onRefused: (message: string) => void
+  /** It was refused while the dialog is still up: the message (and its report offer) under the name. */
+  onRefused: (refusal: CreateRefusal) => void
 }
 
 export class CreateSubmission {
   phase = $state<CreatePhase>('editing')
   /** The name being created, as submitted (the field may have changed since). */
   submittedName = $state('')
+  /** When OK was pressed, in `Date.now()` time: a slowness report measures from here. */
+  submittedAt = $state(0)
   #closed = false
   readonly #deps: CreateSubmissionDeps
 
@@ -58,6 +67,7 @@ export class CreateSubmission {
   async submit(name: string): Promise<void> {
     if (this.busy) return
     this.submittedName = name
+    this.submittedAt = Date.now()
     this.phase = 'creating'
     try {
       await this.#deps.create(name, {
@@ -81,15 +91,17 @@ export class CreateSubmission {
     const { kind } = this.#deps
     const failure = asMutationError(e)
     if (!failure) log.warn('A create call threw an untyped value: {error}', { error: String(e) })
-    const reason = renderMutationError(failure ?? { type: 'unexpected', detail: '' }, kind, name)
+    const typed = failure ?? { type: 'unexpected', detail: '' }
+    const reason = renderMutationError(typed, kind, name)
+    const incident: ReportIncident = { kind: 'createRefused', entry: kind, refusal: typed.type, reason }
     if (this.#closed) {
       // Persistent: the person left the dialog, so this may be the only word
       // they get that the entry isn't there.
       const key = kind === 'folder' ? 'fileOperations.mkdir.notCreatedToast' : 'fileOperations.mkfile.notCreatedToast'
-      addToast(tString(key, { name, reason }), { level: 'error', dismissal: 'persistent' })
+      addToast(tString(key, { name, reason }), { level: 'error', dismissal: 'persistent', report: incident })
       return
     }
     this.phase = 'editing'
-    this.#deps.onRefused(reason)
+    this.#deps.onRefused({ message: reason, incident })
   }
 }

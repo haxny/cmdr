@@ -17,6 +17,8 @@
  */
 
 import type { TransferActivity, TransferWaitReason } from '$lib/tauri-commands'
+import type { WriteOperationType } from '$lib/ipc/bindings'
+import type { SlowIncident } from '$lib/error-reporter/report-incident'
 
 /**
  * How long the byte counter must be still before the dialog stops showing a
@@ -115,4 +117,17 @@ export function waitLineFor(activity: TransferActivity | null | undefined): Tran
 
 function isReceiving(activity: TransferActivity): boolean {
   return (activity.sourceInboundBytesPerSecond ?? 0) > 0
+}
+
+/**
+ * What "Taking long? Send a report" under a stall notice reports: the operation, when it
+ * stopped moving (the backend's own stillness, so the note's duration matches the
+ * notice's), and the side it waits on.
+ */
+export function stallIncidentFor(
+  stall: StallNotice,
+  operation: WriteOperationType,
+  now: number = Date.now(),
+): SlowIncident {
+  return { kind: 'slow', operation, since: now - stall.stillForSeconds * 1000, waitingOn: stall.reason }
 }

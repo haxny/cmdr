@@ -7,11 +7,12 @@
     import { tooltip } from '$lib/tooltip/tooltip'
     import { isInstantOperation, type OperationRow } from './operations-store.svelte'
     import { operationTypeIcon } from './operation-icon'
-    import { failureReasonFor } from './failure-reason'
+    import { failureIncidentFor, failureReasonFor } from './failure-reason'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import ScanPhaseBody from '../transfer/ScanPhaseBody.svelte'
-    import { stallNoticeFor, waitLineFor } from '../transfer/transfer-stall'
+    import { stallIncidentFor, stallNoticeFor, waitLineFor } from '../transfer/transfer-stall'
     import { bindOperationSession } from '../operation-session/bind-operation-session.svelte'
     import {
         inFlightRollbackTooltipKey,
@@ -94,6 +95,8 @@
      *  `reason.message` is markup from the pipeline (escaped names, size tiers),
      *  so it goes through `{@html}` exactly as the dialog's body does. */
     const reason = $derived(failureReasonFor(snapshot))
+    /** What this failure's "Send error report…" reports (the main window opens it). */
+    const failureIncident = $derived(failureIncidentFor(snapshot, 'queueFailure'))
 
     /** This operation IS the reversal of a finished one, and `reverses` names
      *  what that one DID, so the row can say what this one will do to the files
@@ -462,6 +465,9 @@
                 </span>
             </Button>
         {/if}
+        {#if failureIncident}
+            <ReportOffer incident={failureIncident} size="mini" />
+        {/if}
         {#if isFailed}
             <Button
                 variant="secondary"
@@ -563,6 +569,9 @@
                 {waitLine}
                 countKind={progressCountKind(opKindForWireType(snapshot.operationType), progress.phase)}
             />
+            {#if stall}
+                <ReportOffer incident={stallIncidentFor(stall, snapshot.operationType)} />
+            {/if}
         </div>
     {/if}
 </div>

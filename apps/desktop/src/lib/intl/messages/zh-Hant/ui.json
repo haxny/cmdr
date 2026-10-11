@@ -51,10 +51,6 @@
   "@ui.shortcutChip.customizeTooltip": {
     "sourceHash": "9a7817d"
   },
-  "ui.toast.sendErrorReport": "傳送錯誤報告⋯",
-  "@ui.toast.sendErrorReport": {
-    "sourceHash": "063c94e"
-  },
   "ui.toast.dismissAria": "關閉通知",
   "@ui.toast.dismissAria": {
     "sourceHash": "b7bb3f3"

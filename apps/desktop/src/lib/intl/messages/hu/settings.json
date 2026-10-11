@@ -2401,10 +2401,6 @@
   "@settings.updates.checkForUpdates": {
     "sourceHash": "f26f327"
   },
-  "settings.updates.sendErrorReport": "Hibajelentés küldése",
-  "@settings.updates.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "settings.updates.emailConfirmHint": "Nézd meg a postaládádat, és erősítsd meg az e-mail-címedet. Köszönjük a segítséget!",
   "@settings.updates.emailConfirmHint": {
     "sourceHash": "b96010e"

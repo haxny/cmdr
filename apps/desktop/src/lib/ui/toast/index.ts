@@ -7,4 +7,4 @@ export {
   clearAllToasts,
   getToasts,
 } from './toast-store.svelte'
-export type { ToastLevel, ToastOriginPane } from './toast-store.svelte'
+export type { NonErrorToastLevel, ToastLevel, ToastOriginPane } from './toast-store.svelte'

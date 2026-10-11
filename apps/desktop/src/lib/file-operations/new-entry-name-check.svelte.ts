@@ -12,6 +12,8 @@
 import { findFileIndex, getFileAt, onDirectoryDiff, type UnlistenFn } from '$lib/tauri-commands'
 import { validateDisallowedChars, validateNameLength, validatePathLength } from '$lib/utils/filename-validation'
 import { tString } from '$lib/intl/messages.svelte'
+import type { ReportIncident } from '$lib/error-reporter/report-incident'
+import type { CreateRefusal } from './create-submission.svelte'
 
 /** Where the entry would land, and how to read the name being typed. */
 export interface NewEntryNameCheckOptions {
@@ -30,6 +32,12 @@ export class NewEntryNameCheck {
   errorMessage = $state('')
   /** True while the clash lookup is in flight; the dialog holds OK until it lands. */
   isChecking = $state(false)
+  /**
+   * What "Send error report…" under the message reports, while the message is the
+   * volume's refusal of a create. Any re-validation replaces the message, and this
+   * goes with it, so the offer never sits under a message it isn't about.
+   */
+  refusal = $state<ReportIncident | null>(null)
 
   readonly #options: NewEntryNameCheckOptions
   #timer: ReturnType<typeof setTimeout> | undefined
@@ -41,10 +49,17 @@ export class NewEntryNameCheck {
     this.#options = options
   }
 
+  /** The create itself came back refused: say why under the name, and offer the report. */
+  showRefusal(refusal: CreateRefusal): void {
+    this.errorMessage = refusal.message
+    this.refusal = refusal.incident
+  }
+
   async validate(name: string): Promise<void> {
     // ❗ Only the latest answer counts: a validate on open and one from a directory
     // diff overlap, and the older landing last flashed "already exists" for a free name.
     const asked = ++this.#asked
+    this.refusal = null
     // A sync answer below supersedes any lookup still in flight, so it ends the wait too.
     this.isChecking = false
     const trimmed = name.trim()

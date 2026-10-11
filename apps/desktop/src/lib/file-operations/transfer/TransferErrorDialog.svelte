@@ -9,6 +9,8 @@
     import Icon from '$lib/ui/Icon.svelte'
     import TextArea from '$lib/ui/TextArea.svelte'
     import { tString } from '$lib/intl/messages.svelte'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '$lib/error-reporter/report-incident'
     import KeyHint from '$lib/ui/KeyHint.svelte'
     import { answerDecisionKey, DECISION_KEYS_ARM_MS, ERROR_KEYS, type DecisionChoice } from '../decision-keys'
 
@@ -55,6 +57,16 @@
     )
 
     const technicalDetails = $derived(getTechnicalDetails(error))
+
+    /** What "Send error report…" reports: the operation, the typed error kind, and the title
+     *  this dialog shows. The report dialog opens on top; this one stays for Retry. */
+    const reportIncident = $derived<ReportIncident>({
+        kind: 'operationFailed',
+        from: 'transferError',
+        operation: operationType,
+        error: error.type,
+        title: titleText,
+    })
 
     /** Retry and Copy anyway are offered only with their handler, so `run` never meets a missing one. */
     const keyChoices = $derived<DecisionChoice[]>([
@@ -143,6 +155,7 @@
     </div>
 
     {#snippet footer()}
+        <ReportOffer incident={reportIncident} />
         {#if onRetry && showRetry}
             <Button variant="secondary" onclick={onRetry} aria-keyshortcuts={ERROR_KEYS.retry}
                 >{tString('fileOperations.errorDialog.retry')}<KeyHint key={ERROR_KEYS.retry} /></Button

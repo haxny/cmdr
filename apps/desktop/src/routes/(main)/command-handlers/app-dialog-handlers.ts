@@ -62,7 +62,7 @@ export const appDialogHandlers = {
   },
 
   'help.sendErrorReport': () => {
-    openErrorReportDialog()
+    openErrorReportDialog({ from: 'helpMenu' })
   },
 
   'feedback.send': () => {

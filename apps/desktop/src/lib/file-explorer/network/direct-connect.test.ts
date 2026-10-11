@@ -124,6 +124,11 @@ describe('connectDirectly', () => {
 
     await expect(connectDirectly(archive)).resolves.toBe('stillOnOsMount')
     expect(errorToasts()).toHaveLength(1)
+    // Its report names the typed reason, so triage doesn't read it out of the sentence.
+    const raised = addToast.mock.calls.find((call) => (call[1] as { level?: string } | undefined)?.level === 'error')
+    expect(raised?.[1]).toMatchObject({
+      report: { kind: 'connectionFailed', reason: 'unreachable', text: raised?.[0] },
+    })
   })
 
   it('offers the Local Network settings when this Mac blocked the connection', async () => {
@@ -134,7 +139,11 @@ describe('connectDirectly', () => {
     await expect(connectDirectly(archive)).resolves.toBe('stillOnOsMount')
     const blocked = addToast.mock.calls.filter((call) => call[0] === LocalNetworkBlockedToastContent)
     expect(blocked).toHaveLength(1)
-    expect(blocked[0][1]).toMatchObject({ level: 'error', props: { server: 'Mars' } })
+    expect(blocked[0][1]).toMatchObject({
+      level: 'error',
+      props: { server: 'Mars' },
+      report: { kind: 'connectionFailed', reason: 'blockedByThisMac' },
+    })
   })
 
   it('says the share is gone, and reports it so the notice retires, when it vanished before the press', async () => {

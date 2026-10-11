@@ -5082,6 +5082,7 @@ export const events = {
   networkHostFound: makeEvent<NetworkHostFound>('network-host-found'),
   networkHostLost: makeEvent<NetworkHostLost>('network-host-lost'),
   networkHostResolved: makeEvent<NetworkHostResolved>('network-host-resolved'),
+  openErrorReport: makeEvent<OpenErrorReport>('open-error-report'),
   openFavorite: makeEvent<OpenFavorite>('open-favorite'),
   openFileViewer: makeEvent<OpenFileViewer>('open-file-viewer'),
   openSettings: makeEvent<OpenSettings>('open-settings'),
@@ -5943,8 +5944,27 @@ export type BetaSignupResult =
  */
 export type BreadcrumbEvent =
   | { type: 'command'; commandId: string }
-  | { type: 'errorReportDialogOpened'; hasInitialNote: boolean }
+  /**
+   *  The compose dialog opened. `from` says which surface offered it, so a triager
+   *  knows whether the person reported a copy that stopped, a folder that wouldn't
+   *  list, or something slow, without reading the note.
+   */
+  | { type: 'errorReportDialogOpened'; hasInitialNote: boolean; from: ErrorReportEntry }
   | { type: 'errorReportAmendDialogOpened' }
+  /**
+   *  A slowness notice was on screen: the new-folder / new-file dialog's "still
+   *  creating", or a transfer's stall notice. Recorded when the notice appears AND when
+   *  the person reports from it, so a bundle shows the slowness even when the report
+   *  comes later through the Help menu.
+   */
+  | {
+      type: 'operationSlow'
+      operation: SlowOperation
+      // Whole seconds the operation had made no visible progress for.
+      stillForSecs: number
+      // Which side a stalled transfer waits on; `None` for a create, which has one side.
+      waitingOn: SlowWaitingOn | null
+    }
   | { type: 'errorReportDialogClosed' }
   | { type: 'feedbackDialogOpened' }
   | { type: 'feedbackDialogClosed' }
@@ -7810,6 +7830,31 @@ export type ErrorCategory =
 export type ErrorReportAutoSent = {
   id: string
 }
+
+/**
+ *  The surface a compose-mode error report was opened from. One variant per KIND of
+ *  surface, not per component: the toast frame, the transfer error dialog, a failed queue
+ *  row, and so on.
+ */
+export type ErrorReportEntry =
+  // Help > Send error report…, or the same command from the palette.
+  | 'helpMenu'
+  // An error toast whose text is the whole story.
+  | 'errorToast'
+  // An update that didn't download or install (Settings or the update-check toast).
+  | 'updateFailure'
+  // The copy / move / delete error dialog.
+  | 'transferError'
+  // A backgrounded operation that stopped: its toast, or its row in the queue window.
+  | 'queueFailure'
+  // The pane's "couldn't list this folder" screen.
+  | 'listingFailure'
+  // A new folder or file the volume refused while its dialog was open.
+  | 'createRefusal'
+  // A direct SMB connection that didn't come about.
+  | 'connectionFailure'
+  // A "taking long?" link on a slowness notice.
+  | 'slowOperation'
 
 /**
  *  Why a Flow A send or an amend didn't land, for the dialog to word from the catalog.
@@ -11833,6 +11878,18 @@ export type OpStatus =
   | 'failed'
 
 /**
+ *  `open-error-report`: a window that doesn't host the error-report dialog (the queue
+ *  window's failed or stalled row, the settings window's update-failure link) asks the main
+ *  window to open it, pre-filled. Emitted by the frontend and listened for by the main
+ *  window; Rust never emits it. The note is the user-visible pre-fill the person can still
+ *  edit before anything is sent, and `from` feeds the dialog-opened breadcrumb.
+ */
+export type OpenErrorReport = {
+  initialNote: string
+  from: ErrorReportEntry
+}
+
+/**
  *  `open-favorite`: open a favorite in the main window's focused pane, exactly as
  *  picking it in the favorites menu does. Emitted by the Dock tile menu's bookmark
  *  rows (`dock/menu/`).
@@ -15280,6 +15337,25 @@ export type SkipReason =
    *  A user flag or an ACL the copy carried over is cleared, never reported here.
    */
   | 'locked'
+
+/**
+ *  Which operation a slowness breadcrumb is about. Mirrors the frontend's
+ *  `WriteOperationType` wire values; kept here rather than imported so the privacy
+ *  boundary owns its own closed vocabulary.
+ */
+export type SlowOperation =
+  | 'copy'
+  | 'move'
+  | 'delete'
+  | 'trash'
+  | 'rename'
+  | 'create_folder'
+  | 'create_file'
+  | 'archive_edit'
+  | 'compress'
+
+// Which side a stalled transfer is waiting on, from the backend's own classification.
+export type SlowWaitingOn = 'destination' | 'source' | 'unknown'
 
 // Credentials for SMB authentication.
 export type SmbCredentials = {

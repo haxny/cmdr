@@ -319,10 +319,6 @@
   "@settings.network.manageAnytimePrefix": {
     "sourceHash": "fe4da5e"
   },
-  "settings.updates.sendErrorReport": "Enviar reporte de error",
-  "@settings.updates.sendErrorReport": {
-    "sourceHash": "4494574"
-  },
   "settings.updates.emailSignupError": "Vaya, no pudimos darte de alta ahora mismo. ¿Lo intentas de nuevo?",
   "@settings.updates.emailSignupError": {
     "sourceHash": "bc7778c"

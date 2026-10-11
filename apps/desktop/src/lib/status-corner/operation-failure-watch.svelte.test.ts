@@ -98,6 +98,27 @@ describe('announceFailures', () => {
     expect(toasts[0].timeoutMs).toBe(0)
   })
 
+  // A component toast used to offer no report at all; the failure now carries its typed
+  // incident, so "Send error report…" names the operation and what stopped it.
+  it('makes the failure reportable, as the operation and the typed error kind', () => {
+    announceFailures([failedRow('a')])
+    expect(failureToasts()[0].report).toEqual({
+      kind: 'operationFailed',
+      from: 'queueFailure',
+      operation: 'copy',
+      error: 'source_not_found',
+      title: expect.any(String),
+    })
+  })
+
+  it('makes the collapsed summary reportable too', () => {
+    announceFailures(['a', 'b', 'c', 'd'].map(failedRow))
+    expect(failureToasts().find((t) => t.id === FAILURE_SUMMARY_TOAST_ID)?.report).toEqual({
+      kind: 'operationsFailed',
+      count: 4,
+    })
+  })
+
   it('does not toast the same failure twice when the snapshot is re-emitted', () => {
     announceFailures([failedRow('a')])
     announceFailures([failedRow('a')])

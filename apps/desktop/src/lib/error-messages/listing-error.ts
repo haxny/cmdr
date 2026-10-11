@@ -47,6 +47,7 @@ export function renderListingError(error: ListingError): FriendlyError {
     rawDetail: error.rawDetail,
     retryHint: error.retryHint,
     actionKind: error.actionKind,
+    listingReason: error.reason.reason,
   }
 }
 

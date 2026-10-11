@@ -2396,10 +2396,6 @@
   "@settings.updates.checkForUpdates": {
     "sourceHash": "f26f327"
   },
-  "settings.updates.sendErrorReport": "Отправить отчет об ошибке",
-  "@settings.updates.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "settings.updates.emailConfirmHint": "Проверьте почту, чтобы подтвердить адрес. Спасибо за помощь!",
   "@settings.updates.emailConfirmHint": {
     "sourceHash": "b96010e"

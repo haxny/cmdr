@@ -245,11 +245,13 @@ async function upgradeWithCredentials(
  */
 function announceNoUpgrade(result: NoUpgrade, shareName: string): DirectConnectOutcome {
   if (result.status === 'networkError') {
+    const text = directConnectionUnavailableMessage(result.reason, result.displayName)
+    const report = { kind: 'connectionFailed', reason: result.reason, text } as const
     if (result.reason === 'blockedByThisMac') {
       // The fix is a switch in System Settings, so this answer carries the button to it.
-      addToast(LocalNetworkBlockedToastContent, { level: 'error', props: { server: result.displayName } })
+      addToast(LocalNetworkBlockedToastContent, { level: 'error', props: { server: result.displayName }, report })
     } else {
-      addToast(directConnectionUnavailableMessage(result.reason, result.displayName), { level: 'error' })
+      addToast(text, { level: 'error', report })
     }
     return 'stillOnOsMount'
   }

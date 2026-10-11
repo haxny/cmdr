@@ -82,5 +82,9 @@
   "errorReporter.dialog.managedOff": "Tu organización desactivó el envío de reportes. Aun así, puedes guardar el reporte en el disco y compartirlo tú.",
   "@errorReporter.dialog.managedOff": {
     "sourceHash": "25ef604"
+  },
+  "errorReporter.offer.send": "Enviar reporte de error…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "1fb27bf"
   }
 }

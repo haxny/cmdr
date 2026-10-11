@@ -191,5 +191,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Voir le rapport ou y ajouter des notes",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Envoyer un rapport d’incident…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

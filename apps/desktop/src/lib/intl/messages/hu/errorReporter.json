@@ -191,5 +191,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Megtekintés vagy megjegyzés hozzáadása",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Hibajelentés küldése…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

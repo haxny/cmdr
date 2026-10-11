@@ -18,7 +18,7 @@ import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
 import { tString } from '$lib/intl/messages.svelte'
 import { addToast } from '$lib/ui/toast'
 import type { MessageKey } from '$lib/intl/keys.gen'
-import type { ToastLevel } from '$lib/ui/toast'
+import type { NonErrorToastLevel } from '$lib/ui/toast'
 import type {
   CancelRollback,
   RecoveredOriginal,
@@ -43,7 +43,7 @@ export interface CancelRollbackReadout {
   /** Cmdr's own half-written working files that stayed at the destination.
    *  `null` whenever the sweep cleared them, which is the ordinary ending. */
   staged: string | null
-  level: ToastLevel
+  level: NonErrorToastLevel
 }
 
 /**
@@ -117,7 +117,7 @@ function reasonLine(group: SkipBreakdown): string | null {
  * "look at this" and may be worth retrying once the drive is back. `locked` is
  * turned down too: a lock only an administrator can lift.
  */
-function levelFor(skips: SkipBreakdown[]): ToastLevel {
+function levelFor(skips: SkipBreakdown[]): NonErrorToastLevel {
   return skips.some((group) => group.reason === 'failed' || group.reason === 'locked') ? 'warn' : 'info'
 }
 

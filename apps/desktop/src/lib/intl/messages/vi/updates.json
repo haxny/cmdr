@@ -15,10 +15,6 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
-  "updates.checkToast.sendErrorReport": "Gửi báo cáo trục trặc",
-  "@updates.checkToast.sendErrorReport": {
-    "sourceHash": "c327e68"
-  },
   "updates.toast.ready": "Đã có phiên bản mới của Cmdr.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

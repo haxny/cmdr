@@ -52,10 +52,6 @@
   "@ui.shortcutChip.customizeTooltip": {
     "sourceHash": "9a7817d"
   },
-  "ui.toast.sendErrorReport": "Gửi báo cáo trục trặc…",
-  "@ui.toast.sendErrorReport": {
-    "sourceHash": "063c94e"
-  },
   "ui.toast.dismissAria": "Bỏ qua thông báo",
   "@ui.toast.dismissAria": {
     "sourceHash": "b7bb3f3"

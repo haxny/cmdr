@@ -22,6 +22,9 @@ vi.mock('$lib/tauri-commands', () => ({
   openSystemSettingsUrl: vi.fn(() => Promise.resolve()),
 }))
 
+const openErrorReportFor = vi.hoisted(() => vi.fn())
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+
 function mountDialog(props: {
   error: WriteOperationError
   onRetry?: () => void
@@ -157,5 +160,22 @@ describe('TransferErrorDialog: typed-error rendering', () => {
     expect(textarea?.value).toContain('Path: /some/path')
     expect(textarea?.value).toContain('Error: boom')
     expect(textarea?.value).toContain('Error type: io_error')
+  })
+})
+
+describe('TransferErrorDialog: Send error report…', () => {
+  it('offers a report naming the operation, the typed error kind, and the title it shows', async () => {
+    const target = mountDialog({ error: { type: 'source_not_found', path: '/p' }, operationType: 'copy' })
+    await tick()
+    const send = [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Send error report…')
+    expect(send).toBeDefined()
+    send?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'operationFailed',
+      from: 'transferError',
+      operation: 'copy',
+      error: 'source_not_found',
+      title: 'Couldn’t find the file',
+    })
   })
 })

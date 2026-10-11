@@ -191,5 +191,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Xem hoặc thêm ghi chú vào báo cáo",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Gửi báo cáo trục trặc…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

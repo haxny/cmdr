@@ -15,10 +15,6 @@
   "@updates.failure.install": {
     "sourceHash": "2d9f8fb"
   },
-  "updates.checkToast.sendErrorReport": "Enviar reporte de error",
-  "@updates.checkToast.sendErrorReport": {
-    "sourceHash": "4494574"
-  },
   "updates.moveToApplicationsDialog.readOnlyVolume": "Hay una versión nueva lista, pero Cmdr se está ejecutando desde un lugar de solo lectura, normalmente una imagen de disco que sigue montada. Las actualizaciones no tienen dónde instalarse.",
   "@updates.moveToApplicationsDialog.readOnlyVolume": {
     "sourceHash": "7fa8cf5"

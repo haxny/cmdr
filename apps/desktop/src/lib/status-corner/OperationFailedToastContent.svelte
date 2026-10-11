@@ -12,6 +12,7 @@
     import { tString } from '$lib/intl/messages.svelte'
     import { failureReasonFor } from '$lib/file-operations/queue/failure-reason'
     import type { OperationSnapshot } from '$lib/tauri-commands'
+    import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
     interface Props {
         /** Dedup id of this toast; lets the component get out of its own way. */
@@ -19,9 +20,11 @@
         /** The retained failure, snapshotted at toast time. It can't change: a
          *  failure is settled, and only a dismissal ends it. */
         snapshot: OperationSnapshot
+        /** The toast's report offer, from the frame (`operation-failure-watch` raises it). */
+        report?: ReportIncident
     }
 
-    const { toastId, snapshot }: Props = $props()
+    const { toastId, snapshot, report }: Props = $props()
 
     const title = $derived(tString('queue.failureToast.title', { type: snapshot.operationType }))
     /** `reason.message` is markup from the error pipeline (escaped names and
@@ -29,7 +32,7 @@
     const reason = $derived(failureReasonFor(snapshot))
 </script>
 
-<OperationFailureToastBody {toastId} {title}>
+<OperationFailureToastBody {toastId} {title} {report}>
     {#if reason}
         <!-- eslint-disable-next-line svelte/no-at-html-tags -- markup from the typed error via `failureReasonFor`: escaped names/paths plus size tiers, no user input. Same boundary as `FallbackErrorContent`. -->
         <p class="reason">{@html reason.message}</p>

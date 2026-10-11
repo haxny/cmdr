@@ -192,5 +192,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "Visa rapporten eller lägg till en notering",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Skicka felrapport…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

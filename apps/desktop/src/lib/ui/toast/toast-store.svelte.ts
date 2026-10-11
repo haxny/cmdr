@@ -1,6 +1,9 @@
 import type { Component } from 'svelte'
+import type { ReportIncident } from '$lib/error-reporter/report-incident'
 
 export type ToastLevel = 'default' | 'info' | 'success' | 'warn' | 'error'
+/** Every level a component toast can take without deciding on a report offer. */
+export type NonErrorToastLevel = Exclude<ToastLevel, 'error'>
 export type ToastDismissal = 'transient' | 'persistent'
 /** Which pane's feedback a toast describes. Undefined = app-global. */
 export type ToastOriginPane = 'left' | 'right'
@@ -88,13 +91,29 @@ export interface ToastOptions {
    */
   originPane?: ToastOriginPane
   /**
-   * Suppress the inline "Send error report…" action that error-level string toasts
-   * get by default. Set this on a toast that is ITSELF about error reporting (for
-   * example the "Couldn't send error report" failure toast), so it doesn't offer to
-   * re-run the very flow that just failed. See `ToastItem.svelte`.
+   * Whether this toast offers "Send error report…", and about what. An error-level
+   * STRING toast offers it by default, its text as the note; pass an incident to word
+   * the note from typed facts instead (`$lib/error-reporter/report-incident.ts`). Any
+   * level may offer one (a slowness notice, say). `false` opts out: a toast that is
+   * ITSELF about error reporting (the "Couldn't send error report" toast) mustn't offer
+   * to re-run the flow that just didn't work. A component toast at error level must
+   * decide explicitly ({@link ComponentToastOptions}), because the frame can't word a
+   * note for content it can't read. `ui/DETAILS.md` § Toast system.
    */
-  suppressErrorReportAction?: boolean
+  report?: ReportIncident | false
 }
+
+/**
+ * Options for a component toast. At `error` level, `report` is required: the frame
+ * hands the incident to the component as its `report` prop, and the component places
+ * `ReportOffer` in its own action row. Leaving it out used to mean a component error
+ * toast silently offered no report at all.
+ */
+export type ComponentToastOptions = Omit<ToastOptions, 'level' | 'report'> &
+  ({ level?: NonErrorToastLevel; report?: ReportIncident | false } | { level: 'error'; report: ReportIncident | false })
+
+/** A string toast takes {@link ToastOptions}; a component toast {@link ComponentToastOptions}. */
+export type ToastOptionsFor<C extends ToastContent> = C extends string ? ToastOptions : ComponentToastOptions
 
 export interface Toast {
   id: string
@@ -112,7 +131,8 @@ export interface Toast {
   props?: Record<string, any>
   widthPx?: number
   originPane?: ToastOriginPane
-  suppressErrorReportAction?: boolean
+  /** The resolved offer: the incident "Send error report…" opens, or null for none. */
+  report: ReportIncident | null
 }
 
 const maxVisibleToasts = 5
@@ -154,7 +174,20 @@ function replaceExisting(
   toasts[index].closeTooltip = options?.closeTooltip
   toasts[index].onDismiss = options?.onDismiss
   toasts[index].props = options?.props
+  toasts[index].report = resolveReport(content, resolved.level, options?.report)
   toasts[index].postedAt = Date.now()
+}
+
+/** What the toast's "Send error report…" opens: see {@link ToastOptions.report}. */
+function resolveReport(
+  content: ToastContent,
+  level: ToastLevel,
+  report: ReportIncident | false | undefined,
+): ReportIncident | null {
+  if (report === false) return null
+  if (report !== undefined) return report
+  if (level === 'error' && typeof content === 'string') return { kind: 'message', from: 'errorToast', text: content }
+  return null
 }
 
 /**
@@ -216,7 +249,9 @@ function resolveOptions(options: ToastOptions | undefined): ResolvedToastOptions
   }
 }
 
-export function addToast(content: ToastContent, options?: ToastOptions): string {
+export function addToast<C extends ToastContent>(content: C, toastOptions?: ToastOptionsFor<C>): string {
+  // Both shapes are a `ToastOptions` at runtime; the split only constrains callers.
+  const options = toastOptions as ToastOptions | undefined
   const resolved = resolveOptions(options)
   const { id, level, dismissal, timeoutMs, toastGroup, maxInGroup } = resolved
 
@@ -243,7 +278,7 @@ export function addToast(content: ToastContent, options?: ToastOptions): string 
     props: options?.props,
     widthPx: options?.widthPx,
     originPane: options?.originPane,
-    suppressErrorReportAction: options?.suppressErrorReportAction,
+    report: resolveReport(content, level, options?.report),
   })
   return id
 }
@@ -254,8 +289,12 @@ export function addToast(content: ToastContent, options?: ToastOptions): string 
  * forget its tag and survive that pane's own navigation. FilePane closes over its
  * `paneId` to expose it to the controllers it owns.
  */
-export function addToastForPane(pane: ToastOriginPane, content: ToastContent, options?: ToastOptions): string {
-  return addToast(content, { ...options, originPane: pane })
+export function addToastForPane<C extends ToastContent>(
+  pane: ToastOriginPane,
+  content: C,
+  options?: ToastOptionsFor<C>,
+): string {
+  return addToast<ToastContent>(content, { ...(options as ToastOptions | undefined), originPane: pane })
 }
 
 export function dismissToast(id: string): void {

@@ -306,7 +306,7 @@ describe('StillCreatingNotice a11y', () => {
   it('the slow-create notice has no a11y violations', async () => {
     const host = document.createElement('div')
     document.body.appendChild(host)
-    mount(StillCreatingNotice, { target: host, props: { name: 'photos' } })
+    mount(StillCreatingNotice, { target: host, props: { name: 'photos', kind: 'folder', since: Date.now() } })
     await tick()
     expect(host.querySelector('[role="status"]')).not.toBeNull()
     await expectNoA11yViolations(host)

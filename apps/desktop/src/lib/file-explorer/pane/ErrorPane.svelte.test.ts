@@ -23,6 +23,9 @@ vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
   isMacOS: vi.fn(() => true),
 }))
 
+const openErrorReportFor = vi.hoisted(() => vi.fn())
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+
 const base = {
   title: 'Something went wrong',
   explanation: 'The folder did not open.',
@@ -77,5 +80,22 @@ describe('ErrorPane action row', () => {
     const with_ = mountPane({ friendly, canGoBack: true })
     await tick()
     expect(with_.textContent).toContain('Go back')
+  })
+})
+
+describe('ErrorPane Send error report…', () => {
+  it('offers a report naming the typed listing reason and the title it shows', async () => {
+    const target = mountPane({
+      friendly: { ...base, category: 'transient', retryHint: true, listingReason: 'networkDown' },
+    })
+    await tick()
+    Array.from(target.querySelectorAll('button'))
+      .find((b) => b.textContent.trim() === 'Send error report…')
+      ?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'listingFailed',
+      reason: 'networkDown',
+      title: 'Something went wrong',
+    })
   })
 })

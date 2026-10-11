@@ -30,7 +30,8 @@
     import { tString } from '$lib/intl/messages.svelte'
     import { formatInteger } from '$lib/intl/number-format'
     import type { MessageKey } from '$lib/intl/keys.gen'
-    import { stallNoticeFor, waitLineFor } from './transfer-stall'
+    import { stallIncidentFor, stallNoticeFor, waitLineFor } from './transfer-stall'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
     import { rollbackConfirmVariant, reversalTitleKey } from '../reversal-wording'
     import TransferRollbackControls from './TransferRollbackControls.svelte'
@@ -553,7 +554,10 @@
                                     })}
                                 </p>
                             {/if}
-                            <p class="stall-detail">{tString('fileOperations.transferProgress.stallLogHint')}</p>
+                            <p class="stall-detail">
+                                {tString('fileOperations.transferProgress.stallLogHint')}
+                                <ReportOffer incident={stallIncidentFor(stall, operationType)} />
+                            </p>
                         </div>
                     </div>
                 </SectionCard>

@@ -1,18 +1,11 @@
 <script lang="ts">
     import { updateState } from './update-state.svelte'
     import { describeUpdateFailure, formatUpdateStatus, updateFailureOffersReport } from './update-status-text'
-    import Button from '$lib/ui/Button.svelte'
-    import { openErrorReportDialog } from '$lib/error-reporter/error-report-flow.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
 
     const statusText = $derived(formatUpdateStatus(updateState))
     const failureText = $derived(updateState.failure === null ? null : describeUpdateFailure(updateState.failure))
     const offersReport = $derived(updateState.failure !== null && updateFailureOffersReport(updateState.failure))
-
-    function handleSendErrorReport() {
-        // The note is the sentence the toast showed; the raw detail is already in the log the report bundles.
-        openErrorReportDialog(failureText ?? '')
-    }
 </script>
 
 <div class="content">
@@ -20,9 +13,8 @@
         <span class="message">{failureText}</span>
         {#if offersReport}
             <div class="actions">
-                <Button size="mini" variant="secondary" onclick={handleSendErrorReport}
-                    >{tString('updates.checkToast.sendErrorReport')}</Button
-                >
+                <!-- The note is the sentence the toast showed; the raw detail is already in the log the report bundles. -->
+                <ReportOffer incident={{ kind: 'message', from: 'updateFailure', text: failureText }} size="mini" />
             </div>
         {/if}
     {:else}

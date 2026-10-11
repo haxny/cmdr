@@ -191,5 +191,9 @@
   "errorReporter.autoSentToast.viewOrAddNotes": "查看報告或加上備註",
   "@errorReporter.autoSentToast.viewOrAddNotes": {
     "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "傳送錯誤報告⋯",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
   }
 }

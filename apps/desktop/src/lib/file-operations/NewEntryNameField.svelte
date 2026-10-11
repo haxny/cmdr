@@ -5,6 +5,7 @@
     import { tString } from '$lib/intl/messages.svelte'
     import type { NamedKind } from './mutation-error-messages'
     import type { NewEntryNameCheck } from './new-entry-name-check.svelte'
+    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
     import { deriveTabLabel } from '$lib/file-explorer/tabs/tab-label'
     import { getVolumes } from '$lib/stores/volume-store.svelte'
 
@@ -109,11 +110,18 @@
     {#if check.errorMessage}
         <p id={copy.errorId} class="error-message" role="alert">{check.errorMessage}</p>
     {/if}
+    {#if check.refusal}
+        <div class="refusal-report"><ReportOffer incident={check.refusal} size="mini" /></div>
+    {/if}
 </div>
 
 {#snippet dir(children: import('svelte').Snippet)}<span class="dir-name">{@render children()}</span>{/snippet}
 
 <style>
+    .refusal-report {
+        margin-top: var(--spacing-xs);
+    }
+
     .subtitle {
         margin: 0 0 var(--spacing-lg);
         font-size: var(--font-size-md);

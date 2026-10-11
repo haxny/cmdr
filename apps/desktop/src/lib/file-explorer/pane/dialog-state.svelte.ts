@@ -28,7 +28,7 @@ import {
   getForegroundOperationId,
   setForegroundFailureId,
 } from '$lib/file-operations/foreground-operation.svelte'
-import { addToast, type ToastLevel } from '$lib/ui/toast'
+import { addToast, type NonErrorToastLevel } from '$lib/ui/toast'
 import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import { tString } from '$lib/intl/messages.svelte'
 import {
@@ -196,7 +196,7 @@ export function createDialogState(deps: DialogStateDeps) {
     op: TransferOperationType,
     settledOperationId: string | null,
     message: string,
-    level: ToastLevel,
+    level: NonErrorToastLevel,
     refusedMessage: string | null,
     sourceFolderPath: string | undefined,
   ): void {
@@ -272,7 +272,7 @@ export function createDialogState(deps: DialogStateDeps) {
     // user's intent landed at the target.
     const refusedMessage = composeTrashRefusedToast(refused)
     const allSkipped = filesSkipped > 0 && filesSkipped === filesProcessed
-    const completeLevel: ToastLevel = refusedMessage !== null ? 'warn' : allSkipped ? 'info' : 'success'
+    const completeLevel: NonErrorToastLevel = refusedMessage !== null ? 'warn' : allSkipped ? 'info' : 'success'
     raiseCompletionToasts(op, settledOperationId, toastMessage, completeLevel, refusedMessage, props?.sourceFolderPath)
   }
 

@@ -92,6 +92,10 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 
+const openErrorReportFor = vi.hoisted(() => vi.fn())
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+
 async function flushPromises(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     await new Promise<void>((resolve) => {
@@ -207,6 +211,36 @@ describe('TransferProgressDialog stall notice', () => {
     // The notice belongs at the foot of the body, not wedged into the readout.
     expect(currentFile.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(notice.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    void unmount(component)
+  })
+
+  it('offers a report of the stall, as slow, with how long and which side it waits on', async () => {
+    const { component, target } = await mountDialog()
+    if (!progressCb) throw new Error('subscriber never registered')
+
+    progressCb(
+      copyingEvent({
+        inFlight: 1,
+        stillForSeconds: 23,
+        waitingOn: 'destination',
+        openingSource: false,
+        sourceInboundBytesPerSecond: null,
+      }),
+    )
+    await tick()
+
+    const link = [...target.querySelectorAll<HTMLButtonElement>('.stall-notice button')].find(
+      (b) => b.textContent.trim() === 'Taking long? Send a report',
+    )
+    link?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'slow',
+      operation: 'copy',
+      since: expect.any(Number),
+      waitingOn: 'destination',
+    })
+    const { since } = openErrorReportFor.mock.calls[0][0] as { since: number }
+    expect(Math.round((Date.now() - since) / 1000)).toBe(23)
     void unmount(component)
   })
 

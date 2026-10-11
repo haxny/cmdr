@@ -8,12 +8,12 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 
-const { openErrorReportDialogMock } = vi.hoisted(() => ({
-  openErrorReportDialogMock: vi.fn(),
+const { openErrorReportForMock } = vi.hoisted(() => ({
+  openErrorReportForMock: vi.fn(),
 }))
 
 vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
-  openErrorReportDialog: openErrorReportDialogMock,
+  openErrorReportFor: openErrorReportForMock,
 }))
 
 vi.mock('$lib/ui/toast', () => ({
@@ -44,7 +44,7 @@ function render() {
 describe('UpdateCheckToastContent', () => {
   beforeEach(() => {
     _resetUpdaterStateForTest()
-    openErrorReportDialogMock.mockClear()
+    openErrorReportForMock.mockClear()
   })
 
   afterEach(() => {
@@ -97,7 +97,9 @@ describe('UpdateCheckToastContent', () => {
     expect(target.textContent).toContain('Check your internet connection')
     expect(target.textContent).not.toContain('Error:')
     expect(target.textContent).not.toContain('error sending request')
-    const link = Array.from(target.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Send error report')
+    const link = Array.from(target.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === 'Send error report…',
+    )
     expect(link).toBeUndefined()
   })
 
@@ -108,10 +110,12 @@ describe('UpdateCheckToastContent', () => {
     await tick()
     const shown = target.querySelector('.message')?.textContent.trim() ?? ''
     expect(shown).toContain('Cmdr couldn’t install the update.')
-    const link = Array.from(target.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Send error report')
+    const link = Array.from(target.querySelectorAll('button')).find(
+      (b) => b.textContent.trim() === 'Send error report…',
+    )
     expect(link).toBeTruthy()
     link?.click()
-    expect(openErrorReportDialogMock).toHaveBeenCalledWith(shown)
+    expect(openErrorReportForMock).toHaveBeenCalledWith({ kind: 'message', from: 'updateFailure', text: shown })
   })
 
   it('says the organization manages updates when it turned them off, with no report link', async () => {

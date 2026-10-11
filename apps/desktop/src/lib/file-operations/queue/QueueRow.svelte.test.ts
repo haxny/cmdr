@@ -19,6 +19,11 @@ vi.mock('$lib/tauri-commands', () => ({
   requestForegroundOperation: vi.fn(() => Promise.resolve()),
 }))
 
+// The report opens in the main window; the row's job is to say what to report.
+const openErrorReportFor = vi.hoisted(() => vi.fn())
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+
 const logWarn = vi.hoisted(() => vi.fn())
 vi.mock('$lib/logging/logger', () => ({
   getAppLogger: () => ({ error: vi.fn(), debug: vi.fn(), warn: logWarn, info: vi.fn() }),
@@ -594,5 +599,63 @@ describe('QueueRow: Show (back to the main window)', () => {
     render({ row: buildRow('running', 'rename') })
 
     expect(showButton()).toBeNull()
+  })
+})
+
+describe('QueueRow reporting', () => {
+  function reportControl(label: string): HTMLButtonElement | null {
+    return [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === label) ?? null
+  }
+
+  beforeEach(() => {
+    openErrorReportFor.mockClear()
+  })
+
+  it('offers a failed row’s report as the operation and its typed error kind', () => {
+    render({ row: buildFailedRow({ type: 'source_not_found', path: '/Users/me/Documents/report.pdf' }, 'move') })
+    reportControl('Send error report…')?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'operationFailed',
+      from: 'queueFailure',
+      operation: 'move',
+      error: 'source_not_found',
+      title: expect.any(String),
+    })
+  })
+
+  it('offers no report on a live row', () => {
+    render({ row: buildRow('running') })
+    expect(reportControl('Send error report…')).toBeNull()
+    expect(reportControl('Taking long? Send a report')).toBeNull()
+  })
+
+  it('offers a stalled transfer’s report as slow, with the side it waits on', () => {
+    const progress: WriteProgressEvent = {
+      operationId: 'op-1',
+      operationType: 'copy',
+      phase: 'copying',
+      currentFile: 'report.pdf',
+      filesDone: 1,
+      filesTotal: 10,
+      bytesDone: 25,
+      bytesTotal: 100,
+      activity: {
+        inFlight: 1,
+        stillForSeconds: 40,
+        waitingOn: 'destination',
+        openingSource: false,
+        sourceInboundBytesPerSecond: null,
+      },
+    }
+    render({ row: buildRow('running', 'copy', progress) })
+    reportControl('Taking long? Send a report')?.click()
+    expect(openErrorReportFor).toHaveBeenCalledWith({
+      kind: 'slow',
+      operation: 'copy',
+      since: expect.any(Number),
+      waitingOn: 'destination',
+    })
+    const { since } = openErrorReportFor.mock.calls[0][0] as { since: number }
+    expect(Math.round((Date.now() - since) / 1000)).toBe(40)
   })
 })

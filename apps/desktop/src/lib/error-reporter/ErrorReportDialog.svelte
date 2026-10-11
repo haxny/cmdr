@@ -191,14 +191,14 @@
             // auto-send a report through this same endpoint, the one that just didn't take it.
             log.warn('Sending error report returned an error: {error}', { error: String(e) })
             const reason = errorReportSendReason(errorReportSendFailureOf(e))
-            // Suppress the inline "Send error report…" action: this toast is the failure
-            // of that very flow, so offering to re-run it would be a confusing loop.
+            // No "Send error report…" on this toast: it's the failure of that very flow, so
+            // offering to re-run it would be a confusing loop.
             const message = isAmend
                 ? tString('errorReporter.amend.addFailedToast', { reason })
                 : tString('errorReporter.dialog.sendFailedToast', { reason })
             addToast(message, {
                 level: 'error',
-                suppressErrorReportAction: true,
+                report: false,
             })
         } finally {
             sending = false

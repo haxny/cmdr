@@ -39,8 +39,8 @@
         kind: 'file',
         create: (name, wait) => createFile(currentPath, name, volumeId, initiator, wait),
         onCreated,
-        onRefused: (message) => {
-            check.errorMessage = message
+        onRefused: (refusal) => {
+            check.showRefusal(refusal)
         },
     })
 
@@ -78,7 +78,7 @@
         <NewEntryNameField kind="file" {currentPath} {volumeId} {check} bind:value={fileName} onSubmit={() => void handleConfirm()} />
 
         {#if submission.phase === 'stillCreating'}
-            <StillCreatingNotice name={submission.submittedName} />
+            <StillCreatingNotice name={submission.submittedName} kind="file" since={submission.submittedAt} />
         {/if}
     </div>
 
