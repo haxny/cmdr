@@ -500,11 +500,11 @@ describe('TransferProgressDialog Rollback — conflict-section footer', () => {
     expect(cancel?.disabled).toBe(false)
   })
 
-  it('keeps a live Rollback (no Cancel) for a cross-volume move conflict the registry can reverse', async () => {
+  it('keeps a live Rollback, with a plain Cancel beside it, for a cross-volume move conflict the registry can reverse', async () => {
     const target = await mountDialog({ operationType: 'move', sourceVolumeId: 'smb-share-1', destVolumeId: 'root' })
     await fireConflict()
     expectRollbackLive(target)
-    expect(buttonByText(target, 'Cancel')).toBeNull()
+    expect(buttonByText(target, 'Cancel')).not.toBeNull()
   })
 
   it('keeps a live Rollback for a same-volume COPY conflict', async () => {

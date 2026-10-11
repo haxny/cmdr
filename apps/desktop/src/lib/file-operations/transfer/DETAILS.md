@@ -263,8 +263,9 @@ already supplied a name. Backend landing and safety:
      conflict-section footer and the main footer) render the button `aria-disabled` with a tooltip that says why, and
      the press is guarded so a blocked click asks nothing. `aria-disabled` rather than `disabled`, in both spots and for
      both reasons: a disabled button leaves the tab order and takes its explanation with it. Plain Cancel stays
-     reachable throughout; in the conflict footer, where Rollback would otherwise be the only button, a plain Cancel
-     renders alongside it. Two reasons reach the state, and the dialog folds them into one `rollbackBlockedTooltip`:
+     reachable throughout: the conflict footer always shows one (stop, keep what is written, key C) beside Rollback,
+     live or blocked, so a clash never forces a choice between answering it and undoing the whole operation. Two reasons
+     reach the state, and the dialog folds them into one `rollbackBlockedTooltip`:
      - **The strategy can't reverse at all**: the operation's `supportsRollback` is off, plus the props-only
        `isSameVolumeMove` for the frames before the first snapshot lands (a move where source and destination are the
        SAME non-default volume — one smb2 share, one MTP device — which the backend runs as a server-side

@@ -141,7 +141,7 @@
             run: overwriteAllSmaller,
         },
         { key: CONFLICT_KEYS.overwriteAllOlder, enabled: !isResolvingConflict, run: overwriteAllOlder },
-        { key: CONFLICT_KEYS.cancel, enabled: !offersRollback && !exitLocked, run: cancel },
+        { key: CONFLICT_KEYS.cancel, enabled: !exitLocked, run: cancel },
         { key: CONFLICT_KEYS.rollback, enabled: offersRollback && !exitLocked, run: rollBack },
     ])
 
@@ -356,19 +356,20 @@
         </div>
     </div>
 
-    <!-- Cancel at bottom. An operation the backend can't reverse shows
-         Rollback DISABLED (with a tooltip) and a plain Cancel alongside it,
-         so the user can always back out. -->
+    <!-- The ways out, at the bottom. A plain Cancel (stop, keep what's
+         written) is always there, so the user can always back out. A copy or
+         move adds Rollback beside it; one the backend can't reverse shows
+         Rollback DISABLED, with a tooltip saying why. -->
     <div class="conflict-cancel">
+        <button
+            class="danger-text"
+            onclick={cancel}
+            disabled={exitLocked}
+            aria-keyshortcuts={CONFLICT_KEYS.cancel}
+        >
+            {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
+        </button>
         {#if rollbackUnavailable}
-            <button
-                class="danger-text"
-                onclick={cancel}
-                disabled={exitLocked}
-                aria-keyshortcuts={CONFLICT_KEYS.cancel}
-            >
-                {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
-            </button>
             <!-- Blocked, not `disabled`: the reason is worth reading, and a
                  disabled button leaves the tab order with its tooltip. No click
                  handler, so pressing it does nothing. -->
@@ -385,15 +386,6 @@
                 {tString('fileOperations.transferProgress.conflictRollback')}<KeyHint
                     key={CONFLICT_KEYS.rollback}
                 />
-            </button>
-        {:else}
-            <button
-                class="danger-text"
-                onclick={cancel}
-                disabled={exitLocked}
-                aria-keyshortcuts={CONFLICT_KEYS.cancel}
-            >
-                {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
             </button>
         {/if}
     </div>

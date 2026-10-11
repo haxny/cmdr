@@ -203,15 +203,29 @@ describe('Enter and Escape', () => {
 })
 
 describe('the way out', () => {
-  it('B asks to roll back a copy (the host asks first), and C does nothing where no Cancel shows', () => {
+  it('B asks to roll back a copy (the host asks first)', () => {
     const target = render()
     arm()
-    press(letter(CONFLICT_KEYS.cancel))
-    expect(onCancel).not.toHaveBeenCalled()
     press(letter(CONFLICT_KEYS.rollback))
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onCancel).toHaveBeenCalledWith(true)
-    expect(target.querySelector('.conflict-cancel button')?.getAttribute('aria-keyshortcuts')).toBe('B')
+    const keys = [...target.querySelectorAll('.conflict-cancel button')].map((b) => b.getAttribute('aria-keyshortcuts'))
+    expect(keys).toContain('B')
+  })
+
+  it('C stops a copy that could roll back and keeps what it wrote, from a Cancel beside Rollback', () => {
+    // Rollback isn't the only way out: someone who wants to stop and keep the
+    // files already copied gets a plain Cancel too (cmdr-reports #48).
+    const target = render()
+    arm()
+    const cancelButton = [...target.querySelectorAll('.conflict-cancel button')].find(
+      (b) => b.getAttribute('aria-keyshortcuts') === CONFLICT_KEYS.cancel,
+    )
+    expect(cancelButton && buttonLabel(cancelButton)).toBe('Cancel')
+    expect(cancelButton?.querySelector('kbd')?.textContent).toBe('C')
+    press(letter(CONFLICT_KEYS.cancel))
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onCancel).toHaveBeenCalledWith(false)
   })
 
   it('C cancels when the operation cannot roll back, and the blocked Rollback has no key', () => {
