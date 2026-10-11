@@ -699,12 +699,9 @@ pub async fn update_saved_smb_host(
 /// ([`cancel_server_connect`]) can call the run off before the next eject and before
 /// the save.
 ///
-/// ❗ The person asked for this, so Cmdr still never unmounts on its own initiative.
-/// Every refusal that touches no mount answers BEFORE any eject, a refused eject (a
-/// live mount someone is using) saves nothing, and a force unmount only follows a
-/// normal one that didn't answer (`server_move_smb.rs`, `eject/escalate.rs`).
-///
-/// ❗ Emits `volumes-changed` on a save, like [`update_saved_smb_host`].
+/// ❗ The person asked for this, so Cmdr still never unmounts on its own initiative;
+/// the order and the force rule: `server_move_smb.rs`, `eject/escalate.rs`. Emits
+/// `volumes-changed` on a save, like [`update_saved_smb_host`].
 #[tauri::command]
 #[specta::specta]
 pub async fn eject_and_update_saved_smb_host(
