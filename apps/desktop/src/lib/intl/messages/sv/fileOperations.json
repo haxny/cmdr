@@ -481,9 +481,9 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (slutför USB-överföringar)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Avbryter… (städar upp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.close": "Stäng",
   "@fileOperations.transferProgress.close": {

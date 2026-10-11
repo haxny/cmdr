@@ -481,9 +481,9 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Wird abgebrochen … (USB-Übertragungen werden abgeschlossen)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Wird abgebrochen … (wird aufgeräumt)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.close": "Schließen",
   "@fileOperations.transferProgress.close": {

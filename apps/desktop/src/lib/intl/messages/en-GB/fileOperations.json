@@ -57,7 +57,7 @@
   },
   "fileOperations.transferProgress.titleCancellingSlow": "Cancelling… (cleaning up)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.titleActive": "{gerund, select, copy {Copying} move {Moving} compress {Compressing} delete {Deleting} other {Moving to the Bin}}…",
   "@fileOperations.transferProgress.titleActive": {

@@ -480,9 +480,9 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Отмена… (завершение передачи по USB)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Отмена… (очистка)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.close": "Закрыть",
   "@fileOperations.transferProgress.close": {

@@ -480,9 +480,9 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "Đang hủy… (đang hoàn tất các lần truyền qua USB)",
+  "fileOperations.transferProgress.titleCancellingSlow": "Đang hủy… (đang dọn dẹp)",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.close": "Đóng",
   "@fileOperations.transferProgress.close": {

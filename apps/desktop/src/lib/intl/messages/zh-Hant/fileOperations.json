@@ -479,9 +479,9 @@
   "@fileOperations.transferProgress.titleCancelling": {
     "sourceHash": "7d0901a"
   },
-  "fileOperations.transferProgress.titleCancellingSlow": "正在取消⋯（正在完成 USB 傳輸）",
+  "fileOperations.transferProgress.titleCancellingSlow": "正在取消⋯（正在清理）",
   "@fileOperations.transferProgress.titleCancellingSlow": {
-    "sourceHash": "80d6761"
+    "sourceHash": "afeb3a3"
   },
   "fileOperations.transferProgress.close": "關閉",
   "@fileOperations.transferProgress.close": {
