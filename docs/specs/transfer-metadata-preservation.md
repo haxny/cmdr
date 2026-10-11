@@ -372,9 +372,11 @@ The pieces:
   `MemberStream`), git (the tree entry), and ADB (the `stat` its open already sends,
   `crates/cmdr-adb/src/volume/streams.rs:61`, through `ChannelReadStream`). ❌ Missing one of the four turns today's
   probe into a lost mode.
-- **Extract quarantine stays engine-held.** M2 reads the archive's `com.apple.quarantine` once per operation; from M5a a
-  small engine decorator stream (beside `checkpoint_stream.rs`) merges it into `metadata()`'s xattrs, and
-  `FolderMetadata` adds it to each created folder's set. `cmdr-archive` never reads its parent's xattrs.
+- **Extract quarantine stays engine-held.** M2 reads the archive's `com.apple.quarantine` once per operation, finding
+  the archive file through `Volume::local_backing_file` (M2, default `None`, answered only by `ArchiveVolume` on a local
+  parent), and caches it on `WriteOperationState::extract_quarantine`; from M5a a small engine decorator stream (beside
+  `checkpoint_stream.rs`) merges it into `metadata()`'s xattrs, and `FolderMetadata` adds it to each created folder's
+  set. `cmdr-archive` never reads its parent's xattrs.
 - **One trait method for "apply by path"**: `Volume::set_modified` (one production caller, `folder_dates.rs:60`) becomes
   `Volume::apply_metadata(path, &CarriedMetadata, modified: Option<SystemTime>) -> MetadataReport`, default
   `NotApplicable` for every class. It serves BOTH a folder's full set after its subtree lands AND a file's
