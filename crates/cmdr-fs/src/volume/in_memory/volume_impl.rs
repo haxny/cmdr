@@ -562,6 +562,7 @@ impl Volume for InMemoryVolume {
                 dedup_bytes: 0,
                 top_level_is_directory: false,
                 top_level_modified_at: None,
+                top_level_created_at: None,
             };
             let mut per_path = Vec::with_capacity(paths.len());
             for path in paths {

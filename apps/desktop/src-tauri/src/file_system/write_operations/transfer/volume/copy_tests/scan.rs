@@ -105,6 +105,7 @@ async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaq
         dedup_bytes: bytes,
         top_level_is_directory: is_directory,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
     let sources = vec![PathBuf::from("/src/photos"), PathBuf::from("/src/notes.txt")];
     let preview_id = format!("tree-opaque-{}", std::process::id());

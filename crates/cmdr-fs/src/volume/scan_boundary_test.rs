@@ -135,6 +135,7 @@ async fn a_recording_boundary_hands_every_entry_to_its_recorder() {
         dedup_bytes: 30,
         top_level_is_directory: true,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
     boundary
         .subtree(Path::new("/other"), &opaque)
@@ -167,6 +168,7 @@ async fn counted_totals_add_up_without_reaching_the_recorder() {
         dedup_bytes: 9,
         top_level_is_directory: true,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
 
     boundary.counted(&walked).await.expect("nothing is stopping this walk");

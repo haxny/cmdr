@@ -144,6 +144,7 @@ fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
             dedup_bytes: 50,
             top_level_is_directory: true,
             top_level_modified_at: None,
+            top_level_created_at: None,
         },
     );
     let mut model = recorder.finish(&english());

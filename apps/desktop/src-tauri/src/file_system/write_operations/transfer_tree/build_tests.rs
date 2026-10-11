@@ -125,6 +125,7 @@ fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
         dedup_bytes: 1_200,
         top_level_is_directory: true,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
     let file = CopyScanResult {
         file_count: 1,
@@ -133,6 +134,7 @@ fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
         dedup_bytes: 9,
         top_level_is_directory: false,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
     recorder.subtree(Path::new("/src/opaque"), &folder);
     recorder.subtree(Path::new("/src/single"), &file);
