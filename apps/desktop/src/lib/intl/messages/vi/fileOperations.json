@@ -344,19 +344,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 thư mục sẽ hòa trộn với một thư mục hiện có",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 thư mục đã tồn tại ở đó, nên nội dung bên trong sẽ được hòa trộn.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "“{target}” là một thư mục hiện có, nên “{name}” sẽ mang tên của thư mục này. Để đặt “{name}” vào trong thư mục, hãy kết thúc đường dẫn bằng “/”.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, other {thư mục}} sẽ hòa trộn với các thư mục hiện có",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, other {thư mục đã tồn tại ở đó}}, nên nội dung bên trong sẽ được hòa trộn.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, other {Nếu một tệp bên trong đã tồn tại:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -384,7 +384,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Hỏi cho từng cái",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

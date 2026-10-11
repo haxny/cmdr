@@ -345,19 +345,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 Ordner wird mit einem bestehenden Ordner zusammengeführt",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 Ordner existiert dort bereits, also wird sein Inhalt zusammengeführt.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "„{target}“ ist ein bestehender Ordner, also bekäme „{name}“ den Namen dieses Ordners. Um „{name}“ in den Ordner zu legen, lass den Pfad auf „/“ enden.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {Ordner wird mit einem bestehenden Ordner zusammengeführt} other {Ordner werden mit bestehenden Ordnern zusammengeführt}}",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {Ordner existiert dort bereits, also wird sein Inhalt} other {Ordner existieren dort bereits, also wird ihr Inhalt}} zusammengeführt.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {Wenn eine Datei in diesem Ordner bereits existiert:} other {Wenn eine Datei in diesen Ordnern bereits existiert:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -385,7 +385,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Bei jeder fragen",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

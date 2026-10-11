@@ -343,19 +343,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "有 1 個資料夾會和現有的資料夾合併",
+  "fileOperations.transferDialog.mergeInfoSingle": "有 1 個資料夾已經存在，所以裡面的內容會合併。",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "「{target}」是現有的資料夾，所以「{name}」會改用這個資料夾的名稱。若要把「{name}」放進這個資料夾，請在路徑結尾加上「/」。",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "有 {countText} 個{count, plural, other {資料夾}}會和現有的資料夾合併",
+  "fileOperations.transferDialog.mergeInfoMany": "有 {countText} 個{count, plural, other {資料夾}}已經存在，所以裡面的內容會合併。",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, other {如果裡面的某個檔案已經存在：}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -383,7 +383,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "逐一詢問",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

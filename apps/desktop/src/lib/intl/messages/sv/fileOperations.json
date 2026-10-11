@@ -345,19 +345,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 mapp slås samman med en befintlig mapp",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 mapp finns redan där, så innehållet slås samman.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "”{target}” är en befintlig mapp, så ”{name}” skulle få mappens namn. Vill du lägga ”{name}” i mappen avslutar du sökvägen med ”/”.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {mapp slås samman med en befintlig mapp} other {mappar slås samman med befintliga mappar}}",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {mapp finns redan där} other {mappar finns redan där}}, så innehållet slås samman.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {Om en fil redan finns i mappen:} other {Om en fil redan finns i mapparna:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -385,7 +385,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Fråga för varje",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

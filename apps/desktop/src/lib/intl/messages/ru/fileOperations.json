@@ -344,19 +344,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 папка будет объединена с существующей папкой",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 папка там уже существует, поэтому ее содержимое будет объединено.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "«{target}» — существующая папка, поэтому «{name}» получит имя этой папки. Чтобы поместить «{name}» внутрь папки, добавьте «/» в конец пути.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {папка будет объединена с существующей папкой} few {папки будут объединены с существующими папками} many {папок будут объединены с существующими папками} other {папки будут объединены с существующими папками}}",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {папка там уже существует, поэтому их содержимое} few {папки там уже существуют, поэтому их содержимое} many {папок там уже существуют, поэтому их содержимое} other {папки там уже существуют, поэтому их содержимое}} будет объединено.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, =1 {Если файл в этой папке уже существует:} one {Если файл в этих папках уже существует:} few {Если файл в этих папках уже существует:} many {Если файл в этих папках уже существует:} other {Если файл в этих папках уже существует:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -384,7 +384,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Спрашивать каждый раз",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

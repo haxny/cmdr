@@ -134,6 +134,13 @@
     "forms": "Make Alias → 製作替身",
     "sources": "AP-TW = AP-HK"
   },
+  "already-exists": {
+    "accept": ["已經存在", "已經有", "已經在"],
+    "chosen": "已存在",
+    "confidence": "high",
+    "forms": "Apple's terse form 此處已存在一個名為「^0」的項目; the catalog's spoken prose and conflict title say 已經存在 (檔案已經存在, 有 {countText} 個資料夾已經存在) or 已經有 / 已經在…了",
+    "sources": "AP-TW = AP-HK Finder PE1/PE68.1/PE100; DC zh-TW 資料夾 %s 已存在; catalog fileOperations.transferProgress.titleConflict"
+  },
   "allow": {
     "avoid": [
       {

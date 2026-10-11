@@ -344,19 +344,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 carpeta se fusionará con una carpeta existente",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 carpeta ya existe ahí, así que su contenido se fusionará.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "“{target}” es una carpeta existente, así que “{name}” tomaría el nombre de esa carpeta. Para poner “{name}” dentro de la carpeta, termina la ruta con “/”.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {carpeta se fusionará con carpetas existentes} many {carpetas se fusionarán con carpetas existentes} other {carpetas se fusionarán con carpetas existentes}}",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {carpeta ya existe ahí} many {carpetas ya existen ahí} other {carpetas ya existen ahí}}, así que su contenido se fusionará.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {Si ya existe un archivo dentro de esa carpeta:} many {Si ya existe un archivo dentro de esas carpetas:} other {Si ya existe un archivo dentro de esas carpetas:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -384,7 +384,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Preguntar en cada caso",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

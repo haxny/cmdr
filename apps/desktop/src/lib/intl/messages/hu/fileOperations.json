@@ -345,19 +345,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 mappa egyesül egy meglévő mappával",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 mappa már létezik ott, így a tartalma egyesül.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "„{target}” egy meglévő mappa, így „{name}” a mappa nevét kapná. Ha a mappába szeretnéd tenni, az útvonal végére írj egy „/” jelet.",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {mappa} other {mappa}} egyesül meglévő mappákkal",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {mappa már létezik ott, így a tartalma} other {mappa már létezik ott, így a tartalmuk}} egyesül.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {Ha egy fájl már létezik benne:} other {Ha egy fájl már létezik bennük:}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -385,7 +385,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Kérdezz mindegyiknél",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

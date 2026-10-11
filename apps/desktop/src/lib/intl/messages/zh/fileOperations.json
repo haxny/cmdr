@@ -343,19 +343,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 个文件夹将与现有文件夹合并",
+  "fileOperations.transferDialog.mergeInfoSingle": "有 1 个文件夹已存在，所以里面的内容会合并。",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "“{target}”是现有文件夹，所以“{name}”会改用这个文件夹的名称。要把“{name}”放进这个文件夹，请在路径末尾加上“/”。",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, other {个文件夹}}将与现有文件夹合并",
+  "fileOperations.transferDialog.mergeInfoMany": "有 {countText} 个{count, plural, other {文件夹}}已存在，所以里面的内容会合并。",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, other {如果里面的某个文件已存在：}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -383,7 +383,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "逐个询问",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },

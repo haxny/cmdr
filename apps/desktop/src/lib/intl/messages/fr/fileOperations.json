@@ -346,19 +346,19 @@
   "@fileOperations.transferDialog.checkingConflicts": {
     "sourceHash": "11be123"
   },
-  "fileOperations.transferDialog.mergeInfoSingle": "1 dossier sera fusionné avec un dossier existant",
+  "fileOperations.transferDialog.mergeInfoSingle": "1 dossier existe déjà à cet emplacement, son contenu sera donc fusionné.",
   "@fileOperations.transferDialog.mergeInfoSingle": {
-    "sourceHash": "c8cff01"
+    "sourceHash": "8331da7"
   },
   "fileOperations.transferDialog.namedFolderHint": "« {target} » est un dossier existant, donc « {name} » prendrait le nom de ce dossier. Pour placer « {name} » dans ce dossier, terminez le chemin par « / ».",
   "@fileOperations.transferDialog.namedFolderHint": {
     "sourceHash": "41dc88c"
   },
-  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {dossier sera fusionné avec un dossier existant} many {dossiers seront fusionnés avec des dossiers existants} other {dossiers seront fusionnés avec des dossiers existants}}",
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {dossier existe déjà à cet emplacement, son contenu sera donc fusionné} many {dossiers existent déjà à cet emplacement, leur contenu sera donc fusionné} other {dossiers existent déjà à cet emplacement, leur contenu sera donc fusionné}}.",
   "@fileOperations.transferDialog.mergeInfoMany": {
-    "sourceHash": "73c4dfd"
+    "sourceHash": "e3c130c"
   },
-  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {If a file inside it already exists:} other {If a file inside them already exists:}}",
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, one {Si un fichier existe déjà dans ce dossier :} many {Si un fichier existe déjà dans ces dossiers :} other {Si un fichier existe déjà dans ces dossiers :}}",
   "@fileOperations.transferDialog.mergeQuestion": {
     "sourceHash": "98b10eb"
   },
@@ -386,7 +386,7 @@
   "@fileOperations.transferDialog.policyStop": {
     "sourceHash": "61a6295"
   },
-  "fileOperations.transferDialog.policyAskEach": "Ask for each",
+  "fileOperations.transferDialog.policyAskEach": "Demander pour chacun",
   "@fileOperations.transferDialog.policyAskEach": {
     "sourceHash": "4302843"
   },
