@@ -31,6 +31,7 @@ mod macos {
             MetadataReport {
                 acl: ClassOutcome::Kept,
                 flags: ClassOutcome::Kept,
+                ..MetadataReport::ABSENT
             }
         );
         assert!(has_acl(&landed));
@@ -143,5 +144,164 @@ mod macos {
         remove_file_clearing_blockers(&plain).expect("removed");
 
         assert_eq!(helper_calls_on_this_thread(), before);
+    }
+
+    // ── apply_staged ────────────────────────────────────────────────────────
+
+    use crate::testing::metadata_fixture::{
+        ACCESSED_SECS, BIRTH_SECS, MODIFIED_SECS, PROVENANCE_XATTR, birth_secs, mode, modified_secs, xattrs,
+    };
+    use std::time::{Duration, SystemTime};
+
+    fn at(secs: i64) -> SystemTime {
+        SystemTime::UNIX_EPOCH + Duration::from_secs(secs.unsigned_abs())
+    }
+
+    fn rich_carried() -> CarriedMetadata {
+        CarriedMetadata {
+            created: Some(at(BIRTH_SECS)),
+            mode: Some(0o444),
+            flags: UserFlags::LOCKED,
+            xattrs: vec![Xattr {
+                name: "user.app".into(),
+                value: b"app value".to_vec(),
+            }],
+        }
+    }
+
+    fn fixture_times() -> StagedTimes {
+        StagedTimes {
+            modified: Some(at(MODIFIED_SECS)),
+            accessed: Some(at(ACCESSED_SECS)),
+        }
+    }
+
+    /// On the open fd, a `0444` mode doesn't refuse the dates after it, and the
+    /// flags stay for the landed half.
+    #[test]
+    fn apply_staged_on_a_file_puts_on_xattrs_mode_and_both_dates() {
+        let fixture = MetadataFixture::new("metadata_staged_file");
+        let path = fixture.join("temp");
+        let file = std::fs::File::create(&path).expect("create");
+
+        let report = apply_staged(StagedItem::File(&file), &rich_carried(), fixture_times());
+
+        assert_eq!(
+            report,
+            MetadataReport {
+                xattrs: ClassOutcome::Kept,
+                mode: ClassOutcome::Kept,
+                created: ClassOutcome::Kept,
+                modified: ClassOutcome::Kept,
+                ..MetadataReport::ABSENT
+            }
+        );
+        assert_eq!(birth_secs(&path), BIRTH_SECS);
+        assert_eq!(modified_secs(&path), MODIFIED_SECS);
+        assert_eq!(mode(&path), 0o444);
+        assert_eq!(xattrs(&path), vec![("user.app".to_string(), b"app value".to_vec())]);
+        assert_eq!(flags(&path) & LOCKED_FLAG, 0, "flags wait for the landing");
+    }
+
+    /// Rule 1: a refused time-set (an ACL denying `writeattr`) never undoes or
+    /// skips the mode.
+    #[test]
+    fn a_refused_time_set_still_applies_the_mode() {
+        let fixture = MetadataFixture::new("metadata_staged_refused_dates");
+        let path = fixture.join("temp");
+        let file = std::fs::File::create(&path).expect("create");
+        crate::testing::metadata_fixture::add_acl_entry(&path, "everyone deny writeattr");
+        let carried = CarriedMetadata {
+            mode: Some(0o640),
+            created: Some(at(BIRTH_SECS)),
+            ..CarriedMetadata::default()
+        };
+
+        let report = apply_staged(StagedItem::File(&file), &carried, fixture_times());
+
+        assert_eq!(report.created, ClassOutcome::Refused);
+        assert_eq!(report.modified, ClassOutcome::Refused);
+        assert_eq!(report.mode, ClassOutcome::Kept);
+        assert_eq!(mode(&path), 0o640);
+    }
+
+    /// By path, xattrs go on before the mode: a path xattr write on a `0444`
+    /// item would be refused (`EACCES`).
+    #[test]
+    fn apply_staged_by_path_writes_xattrs_before_a_read_only_mode() {
+        let fixture = MetadataFixture::new("metadata_staged_path");
+        let path = fixture.join("folder");
+        std::fs::create_dir(&path).expect("mkdir");
+        let carried = CarriedMetadata {
+            mode: Some(0o555),
+            ..rich_carried()
+        };
+
+        let report = apply_staged(StagedItem::Path(&path), &carried, fixture_times());
+
+        assert_eq!(report.xattrs, ClassOutcome::Kept);
+        assert_eq!(report.mode, ClassOutcome::Kept);
+        assert_eq!(report.created, ClassOutcome::Kept);
+        assert_eq!(birth_secs(&path), BIRTH_SECS);
+        assert_eq!(modified_secs(&path), MODIFIED_SECS);
+        assert_eq!(mode(&path), 0o555);
+        assert_eq!(xattrs(&path).len(), 1);
+    }
+
+    /// A link's own dates and xattrs; the target keeps its own.
+    #[test]
+    fn apply_staged_on_a_link_never_reaches_its_target() {
+        let fixture = MetadataFixture::new("metadata_staged_link");
+        let target = fixture.join("target.txt");
+        std::fs::write(&target, b"x").expect("write");
+        let target_birth = birth_secs(&target);
+        let link = fixture.join("link");
+        std::os::unix::fs::symlink(&target, &link).expect("symlink");
+
+        let report = apply_staged(StagedItem::Link(&link), &rich_carried(), fixture_times());
+
+        assert_eq!(report.mode, ClassOutcome::NotApplicable);
+        assert_eq!(birth_secs(&link), BIRTH_SECS);
+        assert_eq!(modified_secs(&link), MODIFIED_SECS);
+        assert_eq!(birth_secs(&target), target_birth);
+        assert_eq!(xattrs(&target), Vec::new());
+    }
+
+    /// The source side: one read of the handle the copy holds, provenance left
+    /// behind.
+    #[test]
+    fn a_local_file_carries_every_class_but_provenance() {
+        let fixture = MetadataFixture::new("metadata_carried_file");
+        let path = fixture.rich_file("f.txt");
+        let file = std::fs::File::open(&path).expect("open");
+        let meta = file.metadata().expect("fstat");
+
+        let carried = CarriedMetadata::of_local_file(&file, &meta);
+
+        assert_eq!(carried.created, Some(at(BIRTH_SECS)));
+        assert_eq!(carried.mode, Some(0o750));
+        assert_eq!(carried.flags, UserFlags::HIDDEN);
+        let names: Vec<String> = carried
+            .xattrs
+            .iter()
+            .map(|x| x.name.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names.len(), 5, "{names:?}");
+        assert!(!names.iter().any(|n| n == PROVENANCE_XATTR));
+    }
+
+    #[test]
+    fn apply_staged_with_nothing_carried_makes_no_call_and_reports_absent() {
+        let fixture = MetadataFixture::new("metadata_staged_empty");
+        let path = fixture.join("temp");
+        let file = std::fs::File::create(&path).expect("create");
+
+        let report = apply_staged(
+            StagedItem::File(&file),
+            &CarriedMetadata::default(),
+            StagedTimes::default(),
+        );
+
+        assert_eq!(report, MetadataReport::ABSENT);
     }
 }

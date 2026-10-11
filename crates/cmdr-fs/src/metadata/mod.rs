@@ -2,6 +2,12 @@
 //! filesystem allows: the one host helper every copy path calls, so the ordering
 //! rules live in exactly one place.
 //!
+//! **Two halves.** [`apply_staged`] puts [`CarriedMetadata`] on the staged item
+//! before its landing rename: xattrs, then the mode, then birth, mtime, and atime
+//! in ONE call (a resource-fork write bumps mtime, and APFS drags birth down to
+//! an earlier mtime). [`apply_landed`] puts [`LandedMetadata`] on the landed item
+//! after it: the ACL, then the flags.
+//!
 //! **Total, by type.** Every apply function returns a [`MetadataReport`] and has
 //! no error path, so a refused metadata write can never fail a copy: the bytes
 //! are the copy. Each class is its own independent step; a refused ACL never
@@ -28,7 +34,9 @@
 //! rule: `DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on".
 
 mod blockers;
+mod carried;
 mod flags;
+mod staged;
 
 use std::path::Path;
 
@@ -36,7 +44,9 @@ pub use blockers::{
     RemovalRefusal, Unblock, clear_blockers, remove_dir_clearing_blockers, remove_file_clearing_blockers,
     remove_tree_clearing_blockers,
 };
+pub use carried::{CarriedMetadata, Xattr};
 pub use flags::UserFlags;
+pub use staged::{StagedItem, StagedTimes, apply_staged};
 
 /// What happened to one metadata class on one item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,9 +63,19 @@ pub enum ClassOutcome {
 }
 
 /// Per class, what one apply call did. Returned by every apply function in
-/// place of a `Result`.
+/// place of a `Result`. Each half reports the classes it puts on; the rest read
+/// [`ClassOutcome::Absent`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetadataReport {
+    /// The extended attributes (Finder tags, comments, FinderInfo, resource
+    /// forks, apps' own), as one class: `Refused` if any one was.
+    pub xattrs: ClassOutcome,
+    /// The permission bits.
+    pub mode: ClassOutcome,
+    /// The creation (birth) date.
+    pub created: ClassOutcome,
+    /// The modification date.
+    pub modified: ClassOutcome,
     /// The ACL.
     pub acl: ClassOutcome,
     /// The user flags (Hidden, Locked, append-only, no-dump).
@@ -63,9 +83,27 @@ pub struct MetadataReport {
 }
 
 impl MetadataReport {
+    /// Every class `Absent`: the report of a call that had nothing to put on.
+    pub const ABSENT: Self = Self {
+        xattrs: ClassOutcome::Absent,
+        mode: ClassOutcome::Absent,
+        created: ClassOutcome::Absent,
+        modified: ClassOutcome::Absent,
+        acl: ClassOutcome::Absent,
+        flags: ClassOutcome::Absent,
+    };
+
     /// Whether any class was refused.
     pub fn any_refused(&self) -> bool {
-        self.acl == ClassOutcome::Refused || self.flags == ClassOutcome::Refused
+        [
+            self.xattrs,
+            self.mode,
+            self.created,
+            self.modified,
+            self.acl,
+            self.flags,
+        ]
+        .contains(&ClassOutcome::Refused)
     }
 }
 
@@ -96,6 +134,13 @@ impl LandedMetadata {
             acl: read_acl(source),
             flags: UserFlags::NONE,
         }
+    }
+
+    /// This set plus `flags` (a source's user flags, which go on after the
+    /// landing with the ACL).
+    pub fn with_flags(mut self, flags: UserFlags) -> Self {
+        self.flags = self.flags | flags;
+        self
     }
 
     /// Whether there's nothing to apply, the common case. A caller that holds
@@ -138,7 +183,11 @@ pub fn apply_landed(path: &Path, set: &LandedMetadata) -> MetadataReport {
     } else {
         flags::add_flags(path, set.flags)
     };
-    MetadataReport { acl, flags }
+    MetadataReport {
+        acl,
+        flags,
+        ..MetadataReport::ABSENT
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -187,7 +236,8 @@ fn write_acl(path: &Path, acl: &Acl) -> ClassOutcome {
 }
 
 /// Test seam: how many times this thread has called into the helper's
-/// syscall-making entry points ([`apply_landed`], [`clear_blockers`]), so a test
+/// syscall-making entry points ([`apply_staged`], [`apply_landed`],
+/// [`clear_blockers`]), so a test
 /// can prove a plain file never reaches them.
 #[cfg(any(test, feature = "testing"))]
 pub fn helper_calls_on_this_thread() -> u32 {
