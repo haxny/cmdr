@@ -156,7 +156,10 @@ async fn stamp_one(
     let at = |secs: u64| UNIX_EPOCH + Duration::from_secs(secs);
     // xattrs are the only class a folder's source reports beyond its listing
     // entry (an archive's sidecar); the dates come from that entry.
-    let wanted = dest_volume.metadata_caps().folder_stores.intersection(MetadataClasses::XATTRS);
+    let wanted = dest_volume
+        .metadata_caps()
+        .folder_stores
+        .intersection(MetadataClasses::XATTRS);
     let mut carried = if wanted.is_empty() {
         CarriedMetadata::default()
     } else {
