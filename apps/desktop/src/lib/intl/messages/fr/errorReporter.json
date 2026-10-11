@@ -195,5 +195,17 @@
   "errorReporter.offer.send": "Envoyer un rapport d’incident…",
   "@errorReporter.offer.send": {
     "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Ça prend du temps ? Envoyez un rapport",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation} : ça prend du temps, aucune progression depuis {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "33409c8"
+  },
+  "errorReporter.prefill.reference": "Référence : {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
   }
 }

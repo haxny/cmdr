@@ -196,5 +196,17 @@
   "errorReporter.offer.send": "Skicka felrapport…",
   "@errorReporter.offer.send": {
     "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Tar det lång tid? Skicka en rapport",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation}: det tar lång tid, inget har hänt på {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "33409c8"
+  },
+  "errorReporter.prefill.reference": "Referens: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
   }
 }

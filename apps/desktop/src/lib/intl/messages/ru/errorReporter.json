@@ -195,5 +195,17 @@
   "errorReporter.offer.send": "Отправить отчет об ошибке…",
   "@errorReporter.offer.send": {
     "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Затянулось? Отправьте отчет",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation} идет долго: нет продвижения в течение {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "33409c8"
+  },
+  "errorReporter.prefill.reference": "Код: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
   }
 }

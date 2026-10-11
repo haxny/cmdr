@@ -195,5 +195,17 @@
   "errorReporter.offer.send": "Gửi báo cáo trục trặc…",
   "@errorReporter.offer.send": {
     "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Mất nhiều thời gian? Gửi báo cáo",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation}: mất nhiều thời gian, không có tiến triển trong {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "33409c8"
+  },
+  "errorReporter.prefill.reference": "Tham chiếu: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
   }
 }

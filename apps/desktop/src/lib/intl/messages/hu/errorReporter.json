@@ -195,5 +195,17 @@
   "errorReporter.offer.send": "Hibajelentés küldése…",
   "@errorReporter.offer.send": {
     "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Sokáig tart? Küldj jelentést",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation} sokáig tart: {duration} óta nincs előrehaladás.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "33409c8"
+  },
+  "errorReporter.prefill.reference": "Hivatkozás: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
   }
 }
