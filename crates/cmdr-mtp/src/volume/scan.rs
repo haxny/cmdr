@@ -53,7 +53,7 @@ impl MtpVolume {
         Box::pin(async move {
             let mtp_path = self.to_mtp_path(path);
             self.manager
-                .scan_for_copy_with_boundary(&self.device_id, self.storage_id, &mtp_path, boundary)
+                .scan_for_copy_with_boundary(&self.device_id, self.storage_id, &mtp_path, path, boundary)
                 .await
                 .map_err(map_mtp_error)
         })
@@ -210,7 +210,7 @@ impl MtpVolume {
                             per_path_results.insert((*child_path).clone(), scan);
                         } else {
                             let size = entry.size.unwrap_or(0);
-                            boundary.file(size).await?;
+                            boundary.file(child_path, size).await?;
                             aggregate.file_count += 1;
                             aggregate.total_bytes += size;
                             aggregate.dedup_bytes += size;

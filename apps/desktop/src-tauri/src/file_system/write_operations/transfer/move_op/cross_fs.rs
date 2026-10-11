@@ -68,7 +68,7 @@ pub(super) fn move_with_staging(
         config.destination_name.as_deref(),
     )?;
     // Phase 1: Scan (or reuse cached preview results)
-    let scan_result = if let Some(preview_id) = &config.preview_id {
+    let mut scan_result = if let Some(preview_id) = &config.preview_id {
         // Volume scans cache aggregate stats with an empty `files` list; the
         // per-file move loop needs the file list, so treat an empty-files
         // cache hit the same as a miss and fall through to a fresh local scan.
@@ -108,6 +108,8 @@ pub(super) fn move_with_staging(
             config.sort_order,
         )?
     };
+
+    state.transfer_tree.install(scan_result.take_transfer_tree(sources));
 
     // Pre-flight filesystem-limit check: a cross-FS move stages a full copy, so
     // the destination's per-file cap (FAT32's 4 GiB) applies. Block before

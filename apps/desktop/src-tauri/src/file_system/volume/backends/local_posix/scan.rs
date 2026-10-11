@@ -13,10 +13,12 @@ use super::LocalPosixVolume;
 use crate::file_system::volume::Volume;
 use cmdr_fs::apple_double::SidecarRule;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::ScanRecorder;
 use std::ffi::OsStr;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::sync::Arc;
 use tokio::task::spawn_blocking;
 use walkdir::WalkDir;
 
@@ -33,15 +35,26 @@ impl LocalPosixVolume {
     /// ❗ Per entry, ❌ not per directory. On a mounted network share (`smbfs`,
     /// NFS) a single `readdir` can take seconds and a subtree minutes, and `stop`
     /// costs two atomic loads when nobody has pressed anything.
+    ///
+    /// `recorder` gets every entry the walk counts, named under `path` as the
+    /// caller spelled it. Handed in directly because the walk can't await the
+    /// boundary from in here (see `ScanBoundary::counted`).
     pub(super) fn scan_subtree<'a>(
         &'a self,
         path: &'a Path,
         stop: cmdr_fs::volume::ScanStop,
+        recorder: Option<Arc<dyn ScanRecorder>>,
     ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
         let abs_path = self.resolve(path);
         let sidecars = SidecarRule::with_probe(self.sidecar_probe);
+        let as_called = path.to_path_buf();
         Box::pin(async move {
             spawn_blocking(move || {
+                // The entry as the caller spells it, for the recorder.
+                let as_called_path = |entry_path: &Path| match entry_path.strip_prefix(&abs_path) {
+                    Ok(relative) if !relative.as_os_str().is_empty() => as_called.join(relative),
+                    _ => as_called.clone(),
+                };
                 use std::os::unix::fs::MetadataExt;
 
                 let mut file_count = 0;
@@ -73,7 +86,12 @@ impl LocalPosixVolume {
                     let ft = entry.file_type();
                     if ft.is_file() {
                         file_count += 1;
-                        if let Ok(meta) = entry.metadata() {
+                        let meta = entry.metadata();
+                        if let Some(recorder) = &recorder {
+                            let len = meta.as_ref().map(|meta| meta.len()).unwrap_or(0);
+                            recorder.file(&as_called_path(entry.path()), len);
+                        }
+                        if let Ok(meta) = meta {
                             let len = meta.len();
                             total_bytes += len;
                             // `nlink == 1` is the overwhelmingly common case
@@ -84,6 +102,9 @@ impl LocalPosixVolume {
                             }
                         }
                     } else if ft.is_dir() {
+                        if let Some(recorder) = &recorder {
+                            recorder.dir(&as_called_path(entry.path()));
+                        }
                         // Don't count the root itself if it's the starting point
                         if entry.depth() > 0 {
                             dir_count += 1;
@@ -169,10 +190,10 @@ impl LocalPosixVolume {
             let mut per_path = Vec::with_capacity(paths.len());
             for path in paths {
                 boundary.check().await?;
-                let scan = self.scan_subtree(path, boundary.stop()).await?;
-                boundary
-                    .subtree(scan.file_count, scan.dir_count, scan.total_bytes)
+                let scan = self
+                    .scan_subtree(path, boundary.stop(), boundary.recorder().cloned())
                     .await?;
+                boundary.counted(&scan).await?;
                 per_path.push((path.clone(), scan));
             }
             Ok(cmdr_fs::volume::fold_batch(per_path))

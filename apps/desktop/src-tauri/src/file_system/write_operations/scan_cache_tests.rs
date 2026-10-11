@@ -167,6 +167,7 @@ fn from_local_walk_derives_its_file_count_from_the_files_it_walked() {
         modified: 0,
         created: 0,
         is_symlink: false,
+        tree_node: None,
     };
     let cached = CachedScanResult::from_local_walk(
         paths(&["/src"]),
@@ -197,6 +198,7 @@ fn from_local_walk_refuses_to_build_a_walk_that_found_files_but_no_sources() {
         modified: 0,
         created: 0,
         is_symlink: false,
+        tree_node: None,
     };
     let _ = CachedScanResult::from_local_walk(paths(&["/src"]), vec![file], Vec::new(), 10, 10, Vec::new(), None);
 }
@@ -279,6 +281,7 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
         modified: 0,
         created: 0,
         is_symlink: false,
+        tree_node: None,
     };
     let cached = CachedScanResult::from_local_walk(
         paths(&["/src"]),

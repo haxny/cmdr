@@ -377,6 +377,41 @@ async fn scan_for_copy_sizes_a_single_file() {
     assert!(!scan.top_level_is_directory);
 }
 
+/// A batch scan out of an archive hands its recorder every entry, under the
+/// paths the caller passed, so a transfer's tree over it isn't opaque.
+#[tokio::test]
+async fn a_batch_scan_records_every_entry_under_the_callers_paths() {
+    use cmdr_fs::testing::scan_recording::{Recorded, ScanRecording};
+    use cmdr_fs::volume::{ScanBoundary, ScanRecorder};
+
+    let archive = TestArchive::from_entries(&[
+        stored("top/a.txt", "aa"),
+        deflated("top/sub/b.txt", "bbbb"),
+        stored("elsewhere.txt", "ignored"),
+        stored("loose.txt", "xyz"),
+    ]);
+    let volume = archive.volume();
+    let recording = Arc::new(ScanRecording::default());
+    let boundary = ScanBoundary::silent().recording_to(Arc::clone(&recording) as Arc<dyn ScanRecorder>);
+
+    let batch = volume
+        .scan_for_copy_batch_with_boundary(&[PathBuf::from("top"), PathBuf::from("loose.txt")], &boundary)
+        .await
+        .unwrap();
+
+    assert_eq!(batch.aggregate.file_count, 3, "the totals don't change");
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("top".into()),
+            Recorded::Dir("top/sub".into()),
+            Recorded::File("loose.txt".into(), 3),
+            Recorded::File("top/a.txt".into(), 2),
+            Recorded::File("top/sub/b.txt".into(), 4),
+        ]
+    );
+}
+
 #[tokio::test]
 async fn scan_for_copy_on_a_missing_path_is_not_found() {
     let archive = TestArchive::from_entries(&[stored("a.txt", "x")]);

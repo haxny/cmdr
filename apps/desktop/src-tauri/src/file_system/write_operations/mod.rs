@@ -66,6 +66,7 @@ mod status_cache;
 mod target_names;
 mod transfer;
 mod transfer_sides;
+mod transfer_tree;
 mod types;
 mod unblocked_removal;
 mod unique_name;
@@ -193,7 +194,7 @@ pub(crate) use state::{register_external_volume_op, release_external_volume_op};
 pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
     MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
-    ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewRefusal,
+    ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
     ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SortColumn, SortOrder, SourceItemOutcome,
     SourcesGoneAnswerOutcome, SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason,
     WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
@@ -813,6 +814,9 @@ mod scan_preview_listing_progress_tests;
 mod scan_preview_oracle_tests;
 #[cfg(test)]
 mod scan_preview_tests;
+// A transfer's preview builds the operation's live tree, and only a transfer's.
+#[cfg(test)]
+mod scan_preview_tree_tests;
 #[cfg(test)]
 mod scan_watchdog_tests;
 #[cfg(test)]

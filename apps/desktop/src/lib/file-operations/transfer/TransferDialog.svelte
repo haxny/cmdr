@@ -271,7 +271,7 @@
         getIsSameVolumeMove: () => isSameVolumeMove,
         getConfirmed: () => confirmed,
         getDestroyed: () => destroyed,
-        getSampleForEstimate: () => activeOperationType === 'compress',
+        getScanPurpose: () => (activeOperationType === 'compress' ? 'compress' : 'transfer'),
     })
 
     // Cheap top-level conflict check (one dest listing). Runs in parallel with the

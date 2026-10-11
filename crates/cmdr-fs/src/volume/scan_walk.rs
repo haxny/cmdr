@@ -24,11 +24,12 @@
 //! one seam call per entry would sweep every cached listing on the volume
 //! thousands of times.
 //!
-//! ❗ **Every entry passes the [`ScanBoundary`].** `boundary.dir()` runs BEFORE
-//! the listing round trip and `boundary.file()` on every leaf, so a walk over a
+//! ❗ **Every entry passes the [`ScanBoundary`].** `boundary.dir(path)` runs BEFORE
+//! the listing round trip and `boundary.file(path, size)` on every leaf, so a walk over a
 //! sleeping share stops within one round trip of a Cancel and stands still on a
 //! Pause. A backend that takes its own walk owes the same two calls; nothing else
-//! makes Cancel work for it.
+//! makes Cancel work for it, and nothing else puts its entries in a transfer's
+//! tree.
 
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -92,7 +93,7 @@ fn scan_tree_keeping<'a>(
         if !top.is_directory {
             let size = top.size.unwrap_or(0);
             keep(files, &top);
-            boundary.file(size).await?;
+            boundary.file(path, size).await?;
             return Ok(CopyScanResult {
                 file_count: 1,
                 dir_count: 0,
@@ -271,7 +272,7 @@ fn walk_directory<'a>(
 ) -> Walking<'a, ()> {
     Box::pin(async move {
         into.dir_count += 1;
-        boundary.dir().await?;
+        boundary.dir(dir).await?;
         for entry in source.scan_list(dir).await? {
             let child = dir.join(&entry.name);
             // ❗ A symlinked directory is ONE entry, never a subtree. Following
@@ -288,7 +289,7 @@ fn walk_directory<'a>(
                 into.file_count += 1;
                 into.total_bytes += size;
                 into.dedup_bytes += size;
-                boundary.file(size).await?;
+                boundary.file(&child, size).await?;
             }
         }
         Ok(())

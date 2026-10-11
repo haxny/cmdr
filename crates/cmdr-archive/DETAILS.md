@@ -55,7 +55,9 @@ specific to retrofitting an existing backend:
 
 `src/volume.rs` is the one file in this backend that touches the `Volume` trait, with its stream adapters in the private
 child `src/volume_streams.rs` (`ArchiveVolumeReadStream`, the sequential extract's `MemberStream`, and
-`VolumeByteSource`, none of which touches `ArchiveVolume`'s fields). Every read stream reports its entry's date from the
+`VolumeByteSource`, none of which touches `ArchiveVolume`'s fields), and its copy scan in `src/volume_scan.rs`: sizes
+from the central directory, plus every entry handed to a transfer tree's recorder from the same index, so a copy out of
+an archive draws a full tree rather than one opaque row per source. Every read stream reports its entry's date from the
 parsed index, so an extract keeps it (contract:
 `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
 metadata"). It maps the archive-native core (`ArchiveIndex` / `ArchiveNode` / `ArchiveEntryReader` / `ArchiveError`)

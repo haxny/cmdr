@@ -47,7 +47,8 @@ dependency; nothing from it is needed for v1.
   `copy_concurrent*.rs`) or the cross-volume move (`move_cross.rs`), so an SMB/MTP copy never deselects gradually.
 - **Volume scans keep only per-TOP-LEVEL totals** (`BatchScanResult::per_path`). Nested folder totals exist nowhere.
   Every production scan already calls `ScanBoundary::file(size)` per leaf and `dir()` per listing (`scan_walk.rs` for
-  ADB/SFTP/WebDAV/git/S3, plus SMB's and MTP's own walks), but without a path.
+  ADB/SFTP/WebDAV/git/S3, plus SMB's and MTP's own walks), but without a path. (M1 made them path-aware; see "Built in
+  M1" below.)
 - **Per-leaf byte accounting already exists** for every volume path: `transfer_driver/progress.rs`'s `LeafProgress` (one
   RAII handle per file, high-water bytes, `complete` / `Drop` / `skip_leaf`), minted at exactly three sites:
   `volume/strategy.rs` (top-level file), `volume/merge.rs::copy_leaf`, `volume/sequential_extract.rs`.
@@ -79,6 +80,36 @@ extractor lives. **Why**: any other choice makes the tree lie or makes the displ
 also finishes folders one by one, which is what the panes' gradual deselection and the user's "did folders 1–3 land"
 both want. **Consequence David should know**: the pane's sort column stops affecting copy order (today it only did on
 local copies, and only as a flat filename sort). `sort_column` / `sort_order` leave the transfer configs.
+
+## Built in M1 (2026-10-11), and where it differs from the plan below
+
+Code and docs: `write_operations/transfer_tree/` (`CLAUDE.md` + `DETAILS.md`), `crates/cmdr-fs/DETAILS.md` § "The
+recorder". Differences, each the more elegant fix once the code was in front of us:
+
+- **`ScanBoundary` has four entry calls, not two**: `dir(path)`, `file(path, size)`, `subtree(path, &CopyScanResult)`
+  (counts AND records an opaque folder: the trait's per-path default), and `counted(&scan)` + `recorder()` for a walk
+  that records its entries itself (the local backend's blocking `WalkDir`, and the in-memory and archive batches, which
+  record from their index). `ScanRecorder` is `file` / `dir` / `subtree`, `Arc`-held so it crosses `spawn_blocking`.
+  `InMemoryVolume` and `cmdr-archive` gained batch overrides (archive's in `volume_scan.rs`) so their trees aren't
+  opaque; their counts and report rhythm are the default's. The local backend records regular files and folders only,
+  exactly what it counts.
+- **The preview request names its dialog**: `start_scan_preview`'s `sample_for_estimate: Option<bool>` became
+  `purpose: ScanPreviewPurpose` (`Transfer` builds the tree, `Compress` samples, `Delete` keeps totals). M2 removes the
+  sort params from the same call.
+- **The tree on the state is a `TransferTreeSlot`** (`OnceLock<Arc<TransferTree>>` with `install` / `get`), so
+  `state.rs` stays a field, not tree logic.
+- **`FileInfo::tree_node` is `Option<NodeId>`** (`None` outside a transfer); `from_local_scan` returns
+  `Vec<Option<NodeId>>` aligned with the files.
+- **`TransferTreeView` has no `ready` or `axis` yet**: both belong to the M3 command (`ready` is "the slot is empty",
+  `axis` comes from `eta.rs`). `flatten` is otherwise as specified, `MAX_LIMIT` 200 and `MAX_TOGGLES` 2,000.
+- **Same-FS and same-volume moves install no tree**: they don't scan. M3 decides their rows (likely
+  `from_per_path`-style top-level rows, or the preview's tree when a transfer preview ran).
+- **Compress builds its tree from the plan and drops the entry-to-node list** (`fresh_compress.rs`); M3 keeps it for
+  `produce`'s per-entry reports.
+- **The budget cells sort bytewise** (`TreeOrder::bytewise`, test builds only): a million ICU collation keys in an
+  unoptimized build blew nextest's 8 s cap, and the byte budget doesn't depend on the comparator.
+- **Measured**: 47.0 B/node at 1,000,002 nodes with 23-byte names (debug build, `budget_tests.rs`); a 200-row window
+  over a million flat rows answers well inside the 50 ms debug-build bound.
 
 ## Backend data model
 

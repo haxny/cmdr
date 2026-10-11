@@ -184,6 +184,7 @@ export function createDeleteScanState(deps: DeleteScanStateDeps) {
       request.sourcePaths,
       request.sortColumn,
       request.sortOrder,
+      'delete',
       progressIntervalMs,
       request.sourceVolumeId,
     )

@@ -15,11 +15,13 @@ use super::super::scan_cache::{ScanOutcome, settle_preview};
 use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, ScanPreviewState};
 use super::super::transfer::volume::{PathRole, map_volume_error};
+use super::super::transfer_tree::{TreeOrder, TreeRecorder};
 use super::super::types::{
-    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, WriteOperationError,
+    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, ScanPreviewPurpose,
+    WriteOperationError,
 };
 use super::settle_failed_preview;
-use crate::file_system::volume::{BatchScanResult, CopyScanResult, Volume};
+use crate::file_system::volume::{BatchScanResult, CopyScanResult, ScanRecorder, Volume};
 use crate::ignore_poison::IgnorePoison;
 
 /// The path a volume scan's failure names when the backend's error carries none
@@ -47,6 +49,10 @@ fn scan_context_path(sources: &[PathBuf]) -> String {
 ///
 /// Emits the same `scan-preview-progress` / `scan-preview-complete` events as
 /// the pre-oracle code, so the FE dialog behavior is unchanged.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "One worker's inputs: what to walk, where, what it's for, where to publish, and what bounds it"
+)]
 pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     events: Arc<dyn ScanPreviewEventSink>,
     preview_id: String,
@@ -54,6 +60,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     volume: Arc<dyn Volume>,
     source_volume_id: String,
     state: Arc<ScanPreviewState>,
+    purpose: ScanPreviewPurpose,
     watchdog: Arc<ScanWatchdog>,
 ) {
     // E2E only; see the local walk's matching delay.
@@ -126,6 +133,9 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     let state_for_cancel = Arc::clone(&state);
     let is_cancelled = move || state_for_cancel.cancelled.load(Ordering::Relaxed);
 
+    // A transfer's walk also records every entry for the operation's live tree.
+    let recorder = (purpose == ScanPreviewPurpose::Transfer).then(|| Arc::new(TreeRecorder::new(&sources)));
+
     let result: Result<BatchScanResult, WriteOperationError> = async {
         if state.cancelled.load(Ordering::Relaxed) {
             return Err(WriteOperationError::Cancelled {
@@ -140,6 +150,9 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
             &is_cancelled,
             Some(&pause),
             &on_progress,
+            recorder
+                .as_ref()
+                .map(|recorder| Arc::clone(recorder) as Arc<dyn ScanRecorder>),
         )
         .await
         // The backend's typed error, kept typed: a `NotFound` names its own
@@ -187,12 +200,14 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
             // Cache results: volume scans don't produce per-file FileInfo, but
             // the cache stores aggregate stats AND per-path scan results so
             // copy_between_volumes can reuse both without re-statting.
+            let tree = recorder.map(|recorder| recorder.finish(&TreeOrder::active()));
             settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,
                 Some(
                     CachedScanResult::from_volume_batch(sources, total_files, total_bytes, dedup_bytes, batch.per_path)
-                        .keeping_files(batch.files),
+                        .keeping_files(batch.files)
+                        .with_tree(tree),
                 ),
             );
 
@@ -217,6 +232,10 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
 /// is keeping watcher-fresh; falls through to the volume's own batch scan for
 /// cold-cache parents. Builds a single merged `BatchScanResult` keyed back to
 /// the caller's original `sources` slice (order matches input).
+///
+/// `recorder` hears every entry either branch walks, for a transfer's live
+/// tree. A cached top-level child the listing doesn't know reaches it as a
+/// subtree with totals only, since that branch never walks it.
 pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_scan(
     volume: &dyn Volume,
     volume_id: &str,
@@ -224,6 +243,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
     is_cancelled: &(dyn Fn() -> bool + Sync),
     pause: Option<&Arc<ScanPause>>,
     on_progress: &(dyn Fn(crate::file_system::volume::ListingProgress) + Sync),
+    recorder: Option<Arc<dyn ScanRecorder>>,
 ) -> Result<BatchScanResult, crate::file_system::volume::VolumeError> {
     use crate::file_system::volume::ListingProgress;
     use cmdr_fs::entry::FileEntry;
@@ -315,6 +335,9 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
                     // (entry deleted out-of-band) or a name encoding mismatch.
                     // Either way, fall through to a real stat for safety.
                     let scan = volume.scan_for_copy(source).await?;
+                    if let Some(recorder) = &recorder {
+                        recorder.subtree(source, &scan);
+                    }
                     aggregate.file_count += scan.file_count;
                     aggregate.dir_count += scan.dir_count;
                     aggregate.total_bytes += scan.total_bytes;
@@ -355,6 +378,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
                         is_cancelled,
                         pause.map(Arc::as_ref),
                         Some(&shifted),
+                        recorder.as_deref(),
                         &mut seen_inodes,
                     )
                     .await?;
@@ -379,6 +403,9 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
                     );
                 } else {
                     let size = entry.size.unwrap_or(0);
+                    if let Some(recorder) = &recorder {
+                        recorder.file(source, size);
+                    }
                     // Top-level cached file: dedupe by inode for the source
                     // footprint. Single top-level files rarely collide, but a
                     // hardlink also selected inside a sibling dir would.
@@ -444,6 +471,9 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
                 group_boundary = group_boundary.stopping_at(crate::file_system::volume::ScanStop::new(
                     Arc::clone(pause) as Arc<dyn crate::file_system::volume::ScanStopSignal>,
                 ));
+            }
+            if let Some(recorder) = &recorder {
+                group_boundary = group_boundary.recording_to(Arc::clone(recorder));
             }
             let group_result = volume
                 .scan_for_copy_batch_with_boundary(paths_in_group, &group_boundary)

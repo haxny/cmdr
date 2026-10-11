@@ -237,6 +237,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         scan_result.file_count,
         scan_result.total_bytes
     );
+    state.transfer_tree.install(scan_result.take_transfer_tree(sources));
 
     // Pre-flight free-space check, before anything is written.
     log::debug!(

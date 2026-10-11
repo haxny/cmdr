@@ -251,6 +251,10 @@ pub struct WriteOperationState {
     /// `transfer/volume/extract_quarantine.rs`.
     #[cfg(target_os = "macos")]
     pub(crate) extract_quarantine: std::sync::OnceLock<(PathBuf, Option<Vec<u8>>)>,
+    /// A copy's, move's, or compress's live tree of its selection, set once its
+    /// scan is done and gone with the state at settle. Empty while scanning, and
+    /// for a delete or trash, which never get one.
+    pub(super) transfer_tree: super::transfer_tree::TransferTreeSlot,
     /// "This operation is still going." Dropped by [`end_liveness`](Self::end_liveness)
     /// when it settles.
     ///
@@ -300,6 +304,7 @@ impl WriteOperationState {
             flags_after_landing: std::sync::Mutex::new(HashMap::new()),
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
+            transfer_tree: super::transfer_tree::TransferTreeSlot::default(),
         }
     }
 

@@ -96,7 +96,7 @@ describe('createTransferScanState', () => {
         getIsSameVolumeMove: () => move.sameVolume,
         getConfirmed: () => false,
         getDestroyed: () => destroyed,
-        getSampleForEstimate: () => false,
+        getScanPurpose: () => 'transfer',
       })
     })
     // The toggle effect's first run is the one it skips; get it out of the way.
@@ -138,7 +138,14 @@ describe('createTransferScanState', () => {
       registrations.resolve(undefined)
       scan.start()
       await vi.waitFor(() => {
-        expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'name', 'ascending', 500, 'root', false)
+        expect(commands.startScanPreview).toHaveBeenCalledWith(
+          ['/src/a.txt'],
+          'name',
+          'ascending',
+          'transfer',
+          500,
+          'root',
+        )
       })
 
       close()

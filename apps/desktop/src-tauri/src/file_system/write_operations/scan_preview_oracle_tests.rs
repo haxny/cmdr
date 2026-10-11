@@ -216,7 +216,7 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     ];
     let is_cancelled = || false;
     let on_progress = |_: crate::file_system::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress)
+    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
         .await
         .expect("oracle-aware batch scan should succeed");
 
@@ -262,7 +262,7 @@ async fn scan_preview_falls_through_when_watcher_dead() {
     let sources = vec![PathBuf::from("/cold/a.jpg")];
     let is_cancelled = || false;
     let on_progress = |_: crate::file_system::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress)
+    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
         .await
         .expect("scan should succeed via fallthrough");
 
@@ -303,7 +303,7 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
     let sources = vec![PathBuf::from("/a/sub")];
     let is_cancelled = || false;
     let on_progress = |_: crate::file_system::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress)
+    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
         .await
         .expect("scan should succeed");
 
@@ -319,6 +319,52 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
     // `Volume::scan_for_copy_batch`'s default impl.)
     assert_eq!(result.aggregate.dir_count, 0);
     assert_eq!(result.aggregate.total_bytes, 300);
+
+    get_volume_manager().unregister(&vid);
+}
+
+/// A transfer's live tree hears every entry the oracle walk serves from cached
+/// listings, top-level files and walked subfolders alike, with no volume I/O.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn scan_preview_records_what_the_oracle_serves() {
+    use cmdr_fs::testing::scan_recording::{Recorded, ScanRecording};
+
+    let vid = unique("oracle_records");
+    let vol = Arc::new(CountingWatchedVolume::new("records-vol", true));
+    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let _parent = insert_listing(
+        "listing",
+        &vid,
+        "/a",
+        vec![make_dir_entry("sub", "/a"), make_file_entry("top.txt", "/a", 7)],
+    );
+    let _sub = insert_listing("listing", &vid, "/a/sub", vec![make_file_entry("x.txt", "/a/sub", 100)]);
+    let recording = Arc::new(ScanRecording::default());
+
+    let sources = vec![PathBuf::from("/a/sub"), PathBuf::from("/a/top.txt")];
+    let is_cancelled = || false;
+    let on_progress = |_: crate::file_system::volume::ListingProgress| {};
+    run_oracle_aware_batch_scan(
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        Some(Arc::clone(&recording) as Arc<dyn crate::file_system::volume::ScanRecorder>),
+    )
+    .await
+    .expect("scan should succeed");
+
+    assert_eq!(vol.list_dir_count(), 0);
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("/a/sub".into()),
+            Recorded::File("/a/sub/x.txt".into(), 100),
+            Recorded::File("/a/top.txt".into(), 7),
+        ]
+    );
 
     get_volume_manager().unregister(&vid);
 }
@@ -343,7 +389,7 @@ async fn scan_preview_preserves_symlink_semantics() {
     let sources = vec![PathBuf::from("/a/link-to-elsewhere")];
     let is_cancelled = || false;
     let on_progress = |_: crate::file_system::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress)
+    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
         .await
         .expect("symlink scan should succeed");
 
@@ -390,7 +436,7 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
     let sources = vec![PathBuf::from("/a/sub")];
     let is_cancelled = || false;
     let on_progress = |_: crate::file_system::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress)
+    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
         .await
         .expect("mid-walk close scan should succeed");
 

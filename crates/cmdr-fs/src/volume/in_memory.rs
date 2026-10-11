@@ -625,6 +625,35 @@ impl InMemoryVolume {
         }
     }
 
+    /// Hands `recorder` the entry at `path` and every one below it, each named
+    /// under `path` as the caller spelled it. Counted the way `scan_for_copy`
+    /// counts: a directory flag makes a folder, anything else a file.
+    fn record_subtree(&self, path: &Path, recorder: &dyn super::ScanRecorder) {
+        let normalized = self.normalize(path);
+        let entries = self.entries.read_ignore_poison();
+        match entries.get(&normalized) {
+            Some(entry) if !entry.metadata.is_directory => {
+                recorder.file(path, entry.metadata.size.unwrap_or(0));
+                return;
+            }
+            _ => recorder.dir(path),
+        }
+        for (entry_path, entry) in entries.iter() {
+            let Ok(relative) = entry_path.strip_prefix(&normalized) else {
+                continue;
+            };
+            if relative.as_os_str().is_empty() {
+                continue;
+            }
+            let as_called = path.join(relative);
+            if entry.metadata.is_directory {
+                recorder.dir(&as_called);
+            } else {
+                recorder.file(&as_called, entry.metadata.size.unwrap_or(0));
+            }
+        }
+    }
+
     /// Gets the parent path of a given path.
     fn parent_of(path: &Path) -> PathBuf {
         path.parent()

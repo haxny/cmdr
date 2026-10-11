@@ -787,3 +787,43 @@ fn a_paused_copy_stops_landing_scanned_dirs_until_it_resumes() {
         );
     }
 }
+
+/// A local copy's scan becomes the operation's live tree of the selection, every
+/// file under the folder it sits in, so the progress views can show which
+/// folder is in flight.
+#[test]
+fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
+    use crate::file_system::write_operations::transfer_tree::test_support::outline;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(src.join("photos/2024")).unwrap();
+    fs::create_dir_all(&dst).unwrap();
+    fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
+    fs::write(src.join("photos/2024/b.jpg"), b"bbbbb").unwrap();
+    fs::write(src.join("notes.txt"), b"nn").unwrap();
+    let state = make_state(0);
+
+    copy_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        "op-local-copy-tree",
+        &state,
+        &[src.join("photos"), src.join("notes.txt")],
+        &dst,
+        &WriteOperationConfig::default(),
+    )
+    .expect("the copy succeeds");
+
+    let tree = state.transfer_tree.get().expect("the scan installed a tree");
+    assert_eq!(
+        tree.read(outline),
+        vec![
+            "photos/ 2 files 8 B",
+            "  2024/ 1 files 5 B",
+            "    b.jpg 5 B",
+            "  a.jpg 3 B",
+            "notes.txt 2 B",
+        ]
+    );
+}

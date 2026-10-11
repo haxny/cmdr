@@ -20,7 +20,7 @@ use super::scan_source_tracker::sort_files;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState, update_operation_status};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use crate::file_system::volume::{CopyScanResult, Volume, VolumeError};
+use crate::file_system::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
 use cmdr_listing::{SortColumn, SortOrder};
 
 /// Totals returned by `scan_subtree_with_oracle`.
@@ -59,6 +59,13 @@ pub(super) struct SubtreeTotals {
 /// `pause` parks the walk at those same boundaries when the owning operation is
 /// paused (`super::scan_bridge::ScanPause`), so pause is exactly as responsive
 /// as cancel here.
+///
+/// `recorder` gets `path` and every entry below it, for a transfer's live tree
+/// (`super::transfer_tree`), named the way the listing names them.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one recursion's inputs: where to walk, what stops it, and who hears about it"
+)]
 pub(super) async fn scan_subtree_with_oracle(
     volume: &dyn Volume,
     volume_id: &str,
@@ -66,9 +73,14 @@ pub(super) async fn scan_subtree_with_oracle(
     is_cancelled: &(dyn Fn() -> bool + Sync),
     pause: Option<&super::scan_bridge::ScanPause>,
     on_progress: Option<&(dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+    recorder: Option<&dyn ScanRecorder>,
     seen_inodes: &mut HashSet<u64>,
 ) -> Result<SubtreeTotals, VolumeError> {
     use crate::file_system::volume::ListingProgress;
+
+    if let Some(recorder) = recorder {
+        recorder.dir(path);
+    }
 
     if is_cancelled() {
         return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
@@ -122,6 +134,7 @@ pub(super) async fn scan_subtree_with_oracle(
                         is_cancelled,
                         pause,
                         Some(&shifted),
+                        recorder,
                         seen_inodes,
                     ))
                     .await?
@@ -134,6 +147,7 @@ pub(super) async fn scan_subtree_with_oracle(
                         is_cancelled,
                         pause,
                         None,
+                        recorder,
                         seen_inodes,
                     ))
                     .await?
@@ -167,6 +181,9 @@ pub(super) async fn scan_subtree_with_oracle(
             }
         } else {
             let size = entry.size.unwrap_or(0);
+            if let Some(recorder) = recorder {
+                recorder.file(&child_path, size);
+            }
             // Hardlink dedup for the source-footprint number. `FileEntry.inode`
             // is `Some` only for `LocalPosixVolume` files with `nlink > 1`;
             // non-local backends leave it `None` so every file counts as
@@ -402,6 +419,7 @@ fn scan_sources_internal(
         total_bytes,
         dedup_bytes,
         per_path: Vec::new(),
+        tree: None,
     })
 }
 

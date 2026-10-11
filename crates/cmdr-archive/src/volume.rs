@@ -50,11 +50,13 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::{
-    CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, SequentialExtract, SpaceInfo, Volume, VolumeError,
-    VolumeReadStream, WatchCoverage,
+    BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, ScanBoundary, SequentialExtract,
+    SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
 use streams::{ArchiveSequentialExtract, ArchiveVolumeReadStream, VolumeByteSource};
 
+#[path = "volume_scan.rs"]
+mod scan;
 #[path = "volume_streams.rs"]
 mod streams;
 
@@ -537,60 +539,17 @@ impl Volume for ArchiveVolume {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
-        let inner = self.inner_path(path);
-        let archive_path = self.archive_path.clone();
-        Box::pin(async move {
-            let index = self.index().await?;
-            let node = index
-                .get(&inner)
-                .ok_or_else(|| VolumeError::NotFound(archive_path.join(&inner).display().to_string()))?;
+        Box::pin(self.scan_subtree(path))
+    }
 
-            // A single file: one entry, its uncompressed size.
-            if !node.is_dir {
-                let size = node.size.unwrap_or(0);
-                return Ok(CopyScanResult {
-                    file_count: 1,
-                    dir_count: 0,
-                    total_bytes: size,
-                    // No hardlinks in a zip: the two footprints are equal.
-                    dedup_bytes: size,
-                    top_level_is_directory: false,
-                    top_level_modified_at: node.modified.and_then(|secs| u64::try_from(secs).ok()),
-                    top_level_created_at: None,
-                });
-            }
-            let top_level_modified_at = node.modified.and_then(|secs| u64::try_from(secs).ok());
-
-            // A directory: walk the subtree via the index's per-dir child lists.
-            // Counts and byte totals come from the central directory — no
-            // decompression during the scan. The top-level dir isn't counted
-            // (matches `LocalPosixVolume`).
-            let mut file_count = 0;
-            let mut dir_count = 0;
-            let mut total_bytes = 0u64;
-            let mut pending = vec![inner];
-            while let Some(dir) = pending.pop() {
-                let Some(children) = index.list(&dir) else { continue };
-                for child in children {
-                    if child.is_dir {
-                        dir_count += 1;
-                        pending.push(child.path);
-                    } else {
-                        file_count += 1;
-                        total_bytes += child.size.unwrap_or(0);
-                    }
-                }
-            }
-            Ok(CopyScanResult {
-                file_count,
-                dir_count,
-                total_bytes,
-                dedup_bytes: total_bytes,
-                top_level_is_directory: true,
-                top_level_modified_at,
-                top_level_created_at: None,
-            })
-        })
+    /// Overridden so a transfer's tree gets every entry, not one opaque row per
+    /// source (`volume_scan.rs`).
+    fn scan_for_copy_batch_with_boundary<'a>(
+        &'a self,
+        paths: &'a [PathBuf],
+        boundary: &'a ScanBoundary<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
+        Box::pin(self.scan_batch(paths, boundary))
     }
 
     fn open_read_stream<'a>(

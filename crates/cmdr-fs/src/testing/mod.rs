@@ -18,7 +18,10 @@
 //! On macOS, `metadata_fixture` builds files and folders carrying every metadata
 //! class (birth, flags, ACL, xattrs, mode) for the copy-keeps-metadata cells.
 //!
-//! [`tcp_proxy`] is the fourth:a proxy a network backend's test puts between
+//! [`scan_recording`] keeps what a copy scan reported to its recorder, for the
+//! cells that pin a backend's walk entry by entry.
+//!
+//! [`tcp_proxy`] is the fourth: a proxy a network backend's test puts between
 //! its client and a shared Docker fixture, so it can cut the connection (closed
 //! or silent) without touching a container other runs are using.
 
@@ -26,6 +29,7 @@
 pub mod disk_images;
 #[cfg(target_os = "macos")]
 pub mod metadata_fixture;
+pub mod scan_recording;
 pub mod tcp_proxy;
 
 use std::future::Future;

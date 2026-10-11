@@ -87,7 +87,11 @@ The full top-level inventory is here:
 - Scan and preview: `scan.rs`, `scan_preview.rs` (the lifecycle API, with its two workers in `scan_preview/local.rs`
   and `scan_preview/volume.rs`), `scan_cache.rs`, `scan_bridge.rs` (the scan-progress seam the drivers
   feed, and `ScanPause`, the park that lets a walk honor its owner's Pause), `scan_watchdog.rs` (the inactivity bound on
-  a preview), `compress_estimate.rs`. Conflicts and overwrite:
+  a preview), `compress_estimate.rs`. A preview walks for a `ScanPreviewPurpose`: a `Transfer` walk also builds the
+  operation's live tree and `CachedScanResult` carries it to the operation the way it carries `per_path`, a `Compress`
+  walk samples the size estimate, and a `Delete` walk keeps totals only. `transfer_tree/` is that tree (its own
+  `CLAUDE.md`), installed on `WriteOperationState::transfer_tree` once a copy's, move's, or compress's scan is done.
+  Conflicts and overwrite:
   `conflict.rs` (policy), `conflict_preflight.rs` (the transfer dialog's BEFORE-the-write check, § "The pre-flight
   conflict check"), `unique_name.rs` (the ` (N)` namer), `conflict_slot.rs` (the one-answer-wins slot behind
   `resolve_write_conflict`), `overwrite.rs` (tests in `overwrite_tests.rs`), `look_alike.rs` (a name a byte-exact

@@ -37,6 +37,7 @@ import {
   onScanPreviewCancelled,
   type UnlistenFn,
   type CompressedSizeEstimate,
+  type ScanPreviewPurpose,
   type ScanPreviewRefusal,
 } from '#lib/tauri-commands/index.js'
 import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
@@ -63,11 +64,11 @@ export interface TransferScanStateDeps {
   /** Whether the dialog is being destroyed (so the toggle effect doesn't restart a scan on teardown). */
   getDestroyed: () => boolean
   /**
-   * Whether to sample a compressed-size estimate during the scan (Compress mode
-   * only). Read at scan start; the estimate rides the scan-complete event and is
-   * absent for remote sources (never sampled) and non-compress operations.
+   * Which dialog the scan serves, read at scan start. A transfer's walk builds the
+   * operation's live tree; a compress's samples a compressed-size estimate, which
+   * rides the scan-complete event and is absent for remote sources (never sampled).
    */
-  getSampleForEstimate: () => boolean
+  getScanPurpose: () => ScanPreviewPurpose
 }
 
 export function createTransferScanState(deps: TransferScanStateDeps) {
@@ -152,7 +153,7 @@ export function createTransferScanState(deps: TransferScanStateDeps) {
     const sortColumn = deps.getSortColumn()
     const sortOrder = deps.getSortOrder()
     const sourceVolumeId = deps.getSourceVolumeId()
-    const sampleForEstimate = deps.getSampleForEstimate()
+    const purpose = deps.getScanPurpose()
     // Subscribe to events BEFORE starting scan (avoid missing fast completions)
     keepListener(
       await onScanPreviewProgress((event) => {
@@ -202,9 +203,9 @@ export function createTransferScanState(deps: TransferScanStateDeps) {
       sourcePaths,
       sortColumn,
       sortOrder,
+      purpose,
       progressIntervalMs,
       sourceVolumeId,
-      sampleForEstimate,
     )
     if ('refusal' in result) {
       // Nothing started, so there's nothing to free and no event to wait for.

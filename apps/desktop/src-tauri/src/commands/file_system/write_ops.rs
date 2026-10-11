@@ -4,8 +4,9 @@ use crate::file_system::write_operations::RetryOutcome;
 use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
-    MutationSettled, ScanPreviewRefusal, ScanPreviewStartResult, SourcesGoneAnswerOutcome, broadcast_settled,
-    cancel_scan_preview as ops_cancel_scan_preview, continue_without_gone_sources as ops_continue_without_gone_sources,
+    MutationSettled, ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, SourcesGoneAnswerOutcome,
+    broadcast_settled, cancel_scan_preview as ops_cancel_scan_preview,
+    continue_without_gone_sources as ops_continue_without_gone_sources,
     create_directory_managed as ops_create_directory_managed, create_file_managed as ops_create_file_managed,
     get_scan_preview_totals as ops_get_scan_preview_totals, reply_within,
     resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,
@@ -378,9 +379,9 @@ pub async fn start_scan_preview(
     sort_column: SortColumn,
     sort_order: SortOrder,
     progress_interval_ms: Option<u64>,
-    // Compress-mode scans set this so the local walk samples a compressed-size
-    // estimate. Ignored for remote sources (never sampled). `None` == false.
-    sample_for_estimate: Option<bool>,
+    // Which dialog this walk serves: a transfer's also builds its live tree,
+    // a compress's samples a compressed-size estimate (local sources only).
+    purpose: ScanPreviewPurpose,
 ) -> Result<ScanPreviewStartResult, ScanPreviewRefusal> {
     let volume_id = source_volume_id.unwrap_or_else(|| "root".to_string());
     let is_local = volume_id == "root";
@@ -403,7 +404,7 @@ pub async fn start_scan_preview(
         sort_column,
         sort_order,
         progress_interval,
-        sample_for_estimate.unwrap_or(false),
+        purpose,
     ))
 }
 

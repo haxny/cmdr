@@ -135,6 +135,46 @@ async fn test_scan_for_copy_batch_mixed_files_and_dirs() {
     assert!(subdir.1.top_level_is_directory);
 }
 
+/// The double hands a recorder its whole selection, entry by entry, so a
+/// transfer's tree over it is as complete as over any walking backend.
+#[tokio::test]
+async fn a_batch_scan_records_every_entry_under_the_callers_paths() {
+    use crate::testing::scan_recording::{Recorded, ScanRecording};
+    use std::sync::Arc;
+
+    let volume = InMemoryVolume::new("Test");
+    volume.create_directory(Path::new("/stuff")).await.unwrap();
+    volume
+        .create_file(Path::new("/stuff/readme.txt"), b"hello")
+        .await
+        .unwrap();
+    volume.create_directory(Path::new("/stuff/subdir")).await.unwrap();
+    volume.create_directory(Path::new("/stuff/subdir/empty")).await.unwrap();
+    volume
+        .create_file(Path::new("/stuff/subdir/deep.txt"), &[0; 50])
+        .await
+        .unwrap();
+    let recording = Arc::new(ScanRecording::default());
+    let boundary = ScanBoundary::silent().recording_to(Arc::clone(&recording) as Arc<dyn ScanRecorder>);
+
+    let paths = vec![PathBuf::from("/stuff/readme.txt"), PathBuf::from("/stuff/subdir")];
+    let result = volume
+        .scan_for_copy_batch_with_boundary(&paths, &boundary)
+        .await
+        .unwrap();
+
+    assert_eq!(result.aggregate.file_count, 2, "the totals don't change");
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("/stuff/subdir".into()),
+            Recorded::Dir("/stuff/subdir/empty".into()),
+            Recorded::File("/stuff/readme.txt".into(), 5),
+            Recorded::File("/stuff/subdir/deep.txt".into(), 50),
+        ]
+    );
+}
+
 #[tokio::test]
 async fn test_scan_for_copy_batch_empty_input() {
     let volume = InMemoryVolume::new("Test");

@@ -1,7 +1,7 @@
 // Copy/move/delete operations + event handlers
 
 import { type Event, listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '#lib/ipc/bindings.js'
+import { commands, events, type ScanPreviewPurpose } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type {
   ConflictResolution,
@@ -85,17 +85,17 @@ export type {
 /** Starts scanning source files immediately, emitting progress events for the Copy dialog.
  * When sourceVolumeId is provided and is not "root", the backend uses the Volume trait
  * (enabling MTP and other non-local volumes).
+ * `purpose` names the dialog: a transfer's walk also builds the operation's live tree, and a
+ * compress's local walk samples a compressed-size estimate.
  * A non-local id no volume answers for (an unplugged phone) comes back as a typed `refusal`
  * instead: nothing was walked and no preview exists. */
 export async function startScanPreview(
   sources: string[],
   sortColumn: SortColumn,
   sortOrder: SortOrder,
+  purpose: ScanPreviewPurpose,
   progressIntervalMs?: number,
   sourceVolumeId?: string,
-  // Compress-mode scans pass `true` so the local walk samples a compressed-size
-  // estimate. Ignored for remote sources (never sampled).
-  sampleForEstimate?: boolean,
 ): Promise<ScanPreviewStart> {
   const res = await commands.startScanPreview(
     sources,
@@ -103,7 +103,7 @@ export async function startScanPreview(
     sortColumn,
     sortOrder,
     progressIntervalMs ?? null,
-    sampleForEstimate ?? null,
+    purpose,
   )
   return res.status === 'ok' ? res.data : { refusal: res.error }
 }

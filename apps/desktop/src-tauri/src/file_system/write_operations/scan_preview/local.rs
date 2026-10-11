@@ -15,8 +15,10 @@ use super::super::scan_source_tracker::sort_files;
 use super::super::scan_walker::{OnlineOnlyWatch, WalkContext, walk_sources_with_per_path};
 use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, FileInfo, ScanPreviewState};
+use super::super::transfer_tree::{TreeOrder, from_local_scan};
 use super::super::types::{
-    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, WriteOperationError,
+    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, ScanPreviewPurpose,
+    WriteOperationError,
 };
 use super::settle_failed_preview;
 use crate::file_system::volume::CopyScanResult;
@@ -24,7 +26,11 @@ use cmdr_listing::{SortColumn, SortOrder};
 
 /// Internal function that runs the scan preview in a background thread.
 ///
-/// When `sample_for_estimate` is set (compress-mode scans), a budget-capped worker
+/// A [`ScanPreviewPurpose::Transfer`] walk also builds the transfer's live tree
+/// from what it found, after the walk and off it, so the operation consuming
+/// the preview starts with it (and every `FileInfo` knows its node).
+///
+/// A [`ScanPreviewPurpose::Compress`] walk samples: a budget-capped worker
 /// thread computes a compressed-size estimate off the walk thread: the walk
 /// pushes `(path, size)` per regular file into a channel, the worker samples a
 /// head window under a byte budget (see `compress_estimate`), and the estimate
@@ -42,10 +48,12 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     sort_column: SortColumn,
     sort_order: SortOrder,
     state: Arc<ScanPreviewState>,
-    sample_for_estimate: bool,
+    purpose: ScanPreviewPurpose,
     watchdog: Arc<ScanWatchdog>,
 ) {
     use super::super::compress_estimate::CompressEstimator;
+
+    let sample_for_estimate = purpose == ScanPreviewPurpose::Compress;
 
     // E2E only: a deterministic scanning window for the specs that have to act
     // while a transfer is still counting. Unset in production.
@@ -233,6 +241,18 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             events.emit_cancelled(ScanPreviewCancelledEvent { preview_id });
         }
         Ok(()) => {
+            let tree = (purpose == ScanPreviewPurpose::Transfer).then(|| {
+                let (tree, nodes) = from_local_scan(
+                    &sources,
+                    &dirs,
+                    files.iter().map(|file| (file.path.as_path(), file.size)),
+                    &TreeOrder::active(),
+                );
+                for (file, node) in files.iter_mut().zip(nodes) {
+                    file.tree_node = node;
+                }
+                tree
+            });
             // Sort files
             sort_files(&mut files, sort_column, sort_order);
 
@@ -248,15 +268,18 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,
-                Some(CachedScanResult::from_local_walk(
-                    sources,
-                    files,
-                    dirs,
-                    total_bytes,
-                    dedup_bytes,
-                    per_path,
-                    estimate.clone(),
-                )),
+                Some(
+                    CachedScanResult::from_local_walk(
+                        sources,
+                        files,
+                        dirs,
+                        total_bytes,
+                        dedup_bytes,
+                        per_path,
+                        estimate.clone(),
+                    )
+                    .with_tree(tree),
+                ),
             );
 
             // Emit completion

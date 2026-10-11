@@ -33,6 +33,7 @@ use std::time::Instant;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::take_cached_scan_result;
 use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
+use super::super::super::transfer_tree::{TreeOrder, TreeRecorder, from_per_path};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
@@ -41,7 +42,7 @@ use super::super::volume_outage::{OutageAnnounce, OutageEnd, wait_while_out};
 use super::folder_metadata::SourceFolderDates;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use crate::file_system::volume::{
-    EntryKind, ListingProgress, ScanBoundary, ScanStop, ScanStopSignal, Volume, VolumeError,
+    EntryKind, ListingProgress, ScanBoundary, ScanRecorder, ScanStop, ScanStopSignal, Volume, VolumeError,
 };
 use crate::ignore_poison::IgnorePoison;
 
@@ -219,7 +220,7 @@ pub(super) async fn scan_volume_sources(
     // Cached preview from the TransferDialog: same scan results, no second
     // walk over the device. Unless it counted a selected link as the link: see
     // `counted_a_selected_link_as_a_link`.
-    if let Some(cached) = config
+    if let Some(mut cached) = config
         .preview_id
         .as_deref()
         .and_then(|preview_id| take_cached_scan_result(preview_id, source_paths))
@@ -241,6 +242,14 @@ pub(super) async fn scan_volume_sources(
             cached.total_bytes,
             cached.per_path.len(),
         );
+        // A transfer's preview built the tree; anything else said only what
+        // each source is, which makes a tree of opaque folders the drivers
+        // fill in as they list.
+        let tree = cached
+            .tree
+            .take()
+            .unwrap_or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active()));
+        state.transfer_tree.install(tree);
         let mut source_hints = HashMap::with_capacity(cached.per_path.len());
         for (path, scan) in cached.per_path {
             let size = if scan.top_level_is_directory {
@@ -320,7 +329,11 @@ pub(super) async fn scan_volume_sources(
     // as it matters. `ScanStop` is `Arc`-held so a backend walking inside
     // `spawn_blocking` (the local one) can carry it across the closure.
     let stop = ScanStop::new(Arc::clone(state) as Arc<dyn ScanStopSignal>);
-    let boundary = ScanBoundary::new(Some(&scan_progress)).stopping_at(stop);
+    // Every entry the scan counts also lands in the transfer's tree.
+    let recorder = Arc::new(TreeRecorder::new(source_paths));
+    let boundary = ScanBoundary::new(Some(&scan_progress))
+        .stopping_at(stop)
+        .recording_to(Arc::clone(&recorder) as Arc<dyn ScanRecorder>);
     let batch = volume
         .scan_for_copy_batch_with_boundary(source_paths, &boundary)
         .await
@@ -353,6 +366,8 @@ pub(super) async fn scan_volume_sources(
             0,
         ),
     );
+
+    state.transfer_tree.install(recorder.finish(&TreeOrder::active()));
 
     let mut source_hints = HashMap::with_capacity(batch.per_path.len());
     for (source_path, scan) in &batch.per_path {

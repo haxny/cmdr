@@ -197,7 +197,7 @@ describe('DeleteDialog closed before its scan preview is under way', () => {
     registrations.resolve(undefined)
     const close = await open()
     await settle()
-    expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'name', 'ascending', 500, 'root')
+    expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'name', 'ascending', 'delete', 500, 'root')
 
     close()
     preview.resolve({ previewId: 'preview-late' })

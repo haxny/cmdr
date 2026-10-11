@@ -677,7 +677,7 @@ impl Volume for LocalPosixVolume {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
-        self.scan_subtree(path, cmdr_fs::volume::ScanStop::none())
+        self.scan_subtree(path, cmdr_fs::volume::ScanStop::none(), None)
     }
 
     /// ❗ Overridden so `scan_subtree` gets the stop. The trait default loops

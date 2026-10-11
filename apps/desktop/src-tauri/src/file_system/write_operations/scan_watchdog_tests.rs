@@ -65,6 +65,7 @@ async fn a_volume_that_never_answers_still_settles_its_preview() {
         Arc::new(WedgedVolume::new("Wedged")) as Arc<dyn Volume>,
         String::from("wedged"),
         state,
+        crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
         watchdog,
     ));
 
@@ -245,7 +246,7 @@ async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_wal
             SortColumn::Name,
             SortOrder::Ascending,
             state,
-            false,
+            crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
             walk_watchdog,
         );
     })

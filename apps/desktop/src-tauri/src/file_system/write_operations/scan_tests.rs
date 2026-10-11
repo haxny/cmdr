@@ -22,6 +22,7 @@ fn make_file_info(path: &str, source_root: &str) -> FileInfo {
         modified: 0,
         created: 0,
         is_symlink: false,
+        tree_node: None,
     }
 }
 

@@ -188,7 +188,7 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
             SortColumn::Name,
             SortOrder::Ascending,
             state,
-            false,
+            crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
             watchdog,
         );
     });

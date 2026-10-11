@@ -36,6 +36,7 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::Notify;
 
+use super::transfer_tree::{NodeId, TreeModel, TreeOrder, from_local_scan};
 use super::types::WriteOperationError;
 use crate::file_system::volume::{CopyScanResult, ScannedFile};
 use crate::ignore_poison::RwLockIgnorePoison;
@@ -134,12 +135,21 @@ pub(super) struct CachedScanResult {
     /// Every file's size and date from a volume scan whose backend keeps them
     /// (S3, `BatchScanResult::files`), for a cost estimate. `None` otherwise.
     scanned_files: Option<Vec<ScannedFile>>,
+    /// The transfer's live tree, built by a `ScanPreviewPurpose::Transfer`
+    /// walk and handed to the operation that consumes this preview, the way
+    /// `per_path` is. `None` for a delete's or a compress's preview.
+    tree: Option<TreeModel>,
 }
 
 impl CachedScanResult {
     /// Carries a volume scan's kept files along, for `cached_cost_facts`.
     pub(super) fn keeping_files(self, scanned_files: Option<Vec<ScannedFile>>) -> Self {
         Self { scanned_files, ..self }
+    }
+
+    /// Carries the transfer tree a transfer's preview built.
+    pub(super) fn with_tree(self, tree: Option<TreeModel>) -> Self {
+        Self { tree, ..self }
     }
 
     /// The LOCAL `std::fs` walk's shape (`run_scan_preview`): a per-file
@@ -175,6 +185,7 @@ impl CachedScanResult {
             per_path,
             estimated_compressed_bytes,
             scanned_files: None,
+            tree: None,
         }
     }
 
@@ -199,6 +210,7 @@ impl CachedScanResult {
             per_path,
             estimated_compressed_bytes: None,
             scanned_files: None,
+            tree: None,
         }
     }
 }
@@ -449,6 +461,7 @@ pub(super) fn take_cached_scan_result(preview_id: &str, requested_sources: &[Pat
         total_bytes: cached.total_bytes,
         dedup_bytes: cached.dedup_bytes,
         per_path: cached.per_path,
+        tree: cached.tree,
     })
 }
 
@@ -565,6 +578,7 @@ pub(crate) fn seed_incoherent_scan_result_for_test(
         per_path: Vec::new(),
         estimated_compressed_bytes: None,
         scanned_files: None,
+        tree: None,
     };
     if let Ok(mut previews) = PREVIEWS.write() {
         previews.insert(
@@ -646,6 +660,10 @@ pub(super) struct FileInfo {
     pub modified: u64, // Unix timestamp in seconds
     pub created: u64,  // Unix timestamp in seconds
     pub is_symlink: bool,
+    /// This file's row in the transfer's live tree, set when the tree is built
+    /// from the walk (`ScanResult::take_transfer_tree`), so the driver reports
+    /// against it without looking a path up. `None` outside a transfer.
+    pub tree_node: Option<NodeId>,
 }
 
 impl FileInfo {
@@ -674,6 +692,7 @@ impl FileInfo {
                 .map(|d| d.as_secs())
                 .unwrap_or(0),
             is_symlink: metadata.is_symlink(),
+            tree_node: None,
         }
     }
 
@@ -734,6 +753,29 @@ pub(super) struct ScanResult {
     /// copy pipeline can seed `source_hints` without re-statting. Empty for
     /// local-FS scans.
     pub per_path: Vec<(PathBuf, CopyScanResult)>,
+    /// The transfer tree a transfer's preview built, `None` when this result
+    /// came from anywhere else.
+    pub tree: Option<TreeModel>,
+}
+
+impl ScanResult {
+    /// The transfer's live tree for what this local walk found: the preview's,
+    /// or built here from `files` and `dirs`, every file learning its node.
+    pub(super) fn take_transfer_tree(&mut self, sources: &[PathBuf]) -> TreeModel {
+        if let Some(tree) = self.tree.take() {
+            return tree;
+        }
+        let (tree, nodes) = from_local_scan(
+            sources,
+            &self.dirs,
+            self.files.iter().map(|file| (file.path.as_path(), file.size)),
+            &TreeOrder::active(),
+        );
+        for (file, node) in self.files.iter_mut().zip(nodes) {
+            file.tree_node = node;
+        }
+        tree
+    }
 }
 
 #[cfg(test)]
@@ -804,6 +846,7 @@ mod tests {
             modified: 0,
             created: 0,
             is_symlink: false,
+            tree_node: None,
         }
     }
 

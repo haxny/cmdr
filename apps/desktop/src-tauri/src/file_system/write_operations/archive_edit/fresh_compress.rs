@@ -15,6 +15,7 @@ use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, Operati
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::transfer::StagedWrite;
+use super::super::transfer_tree::{TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
@@ -294,6 +295,16 @@ async fn run(
     )
     .await?;
     check_entry_names(&plan).map_err(EditError::Op)?;
+    // The plan's entries are the compress's rows: entry names are already
+    // relative to the selection's parent. Each entry's node pairs with the
+    // index `produce` reports (milestone 3 of the transfer-tree spec).
+    let (tree, _entry_nodes) = from_archive_plan(
+        plan.entries
+            .iter()
+            .map(|entry| (entry.name.as_str(), entry.is_directory, entry.size)),
+        &TreeOrder::active(),
+    );
+    state.transfer_tree.install(tree);
     let planned_dirs = plan.entries.iter().filter(|entry| entry.is_directory).count();
     hooks.emit_scan_progress(
         PlanProgress {

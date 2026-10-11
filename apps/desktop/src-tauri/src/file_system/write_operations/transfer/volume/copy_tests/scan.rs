@@ -39,6 +39,110 @@ fn test_format_skipped_suffix_plural() {
     );
 }
 
+/// A volume copy's own scan records every entry into the operation's live tree.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
+    use crate::file_system::write_operations::transfer_tree::test_support::outline;
+
+    let (source, dest) = make_volumes();
+    source.create_directory(Path::new("/src/photos/2024")).await.unwrap();
+    source
+        .create_file(Path::new("/src/photos/a.jpg"), b"aaa")
+        .await
+        .unwrap();
+    source
+        .create_file(Path::new("/src/photos/2024/b.jpg"), b"bbbbb")
+        .await
+        .unwrap();
+    source.create_file(Path::new("/src/notes.txt"), b"nn").await.unwrap();
+    let state = make_state();
+
+    copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "op-volume-copy-tree",
+        &state,
+        Arc::clone(&source),
+        &[PathBuf::from("/src/photos"), PathBuf::from("/src/notes.txt")],
+        Arc::clone(&dest),
+        Path::new("/"),
+        &VolumeCopyConfig::default(),
+    )
+    .await
+    .expect("the copy succeeds");
+
+    let tree = state.transfer_tree.get().expect("the scan installed a tree");
+    assert_eq!(
+        tree.read(outline),
+        vec![
+            "photos/ 2 files 8 B",
+            "  2024/ 1 files 5 B",
+            "    b.jpg 5 B",
+            "  a.jpg 3 B",
+            "notes.txt 2 B",
+        ]
+    );
+}
+
+/// A cached preview that built no tree still tells the operation what each
+/// source is: files, and folders whose contents the drivers list as they go.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaque_rows() {
+    use crate::file_system::volume::CopyScanResult;
+    use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
+    use crate::file_system::write_operations::transfer_tree::test_support::outline;
+
+    let (source, dest) = make_volumes();
+    source.create_directory(Path::new("/src/photos")).await.unwrap();
+    source
+        .create_file(Path::new("/src/photos/a.jpg"), b"aaa")
+        .await
+        .unwrap();
+    source.create_file(Path::new("/src/notes.txt"), b"nn").await.unwrap();
+    let scan = |files: usize, bytes: u64, is_directory: bool| CopyScanResult {
+        file_count: files,
+        dir_count: 0,
+        total_bytes: bytes,
+        dedup_bytes: bytes,
+        top_level_is_directory: is_directory,
+        top_level_modified_at: None,
+    };
+    let sources = vec![PathBuf::from("/src/photos"), PathBuf::from("/src/notes.txt")];
+    let preview_id = format!("tree-opaque-{}", std::process::id());
+    insert_scan_result(
+        preview_id.clone(),
+        CachedScanResult::from_volume_batch(
+            sources.clone(),
+            2,
+            5,
+            5,
+            vec![
+                (sources[0].clone(), scan(1, 3, true)),
+                (sources[1].clone(), scan(1, 2, false)),
+            ],
+        ),
+    );
+    let state = make_state();
+
+    copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "op-volume-copy-opaque-tree",
+        &state,
+        Arc::clone(&source),
+        &sources,
+        Arc::clone(&dest),
+        Path::new("/"),
+        &VolumeCopyConfig {
+            preview_id: Some(preview_id),
+            ..VolumeCopyConfig::default()
+        },
+    )
+    .await
+    .expect("the copy succeeds");
+
+    let tree = state.transfer_tree.get().expect("the cached preview installed a tree");
+    assert_eq!(tree.read(outline), vec!["photos/? 1 files 3 B", "notes.txt 2 B"]);
+}
+
 // ========================================
 // LocalPosixVolume integration tests
 // ========================================

@@ -139,7 +139,7 @@ async fn a_local_walk_that_finds_its_source_gone_names_it() {
             SortColumn::Name,
             SortOrder::Ascending,
             fresh_state(),
-            false,
+            crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
             watchdog,
         );
     })
@@ -171,6 +171,7 @@ async fn a_volume_walk_that_finds_its_source_gone_names_it() {
         }) as Arc<dyn Volume>,
         String::from("scanfail-vanished"),
         fresh_state(),
+        crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
         watchdog,
     )
     .await;
@@ -205,6 +206,7 @@ async fn a_walk_that_stops_answering_names_what_it_was_walking() {
         Arc::new(WedgedVolume::new("Wedged")) as Arc<dyn Volume>,
         String::from("wedged"),
         state,
+        crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
         watchdog,
     ));
 

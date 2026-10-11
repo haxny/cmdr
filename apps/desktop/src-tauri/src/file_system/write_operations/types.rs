@@ -481,6 +481,23 @@ fn default_max_conflicts_to_show() -> usize {
 // Scan preview results
 // ============================================================================
 
+/// Which dialog a scan preview walks for, which decides what the walk keeps
+/// beyond its totals.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ScanPreviewPurpose {
+    /// A copy or a move: the walk also builds the transfer's live tree
+    /// (`transfer_tree/`), so the operation that consumes the preview has it
+    /// from its first moment.
+    Transfer,
+    /// A compress: the local walk samples a compressed-size estimate. The tree
+    /// comes from the compress plan instead.
+    Compress,
+    /// A delete or a trash: totals only. ❌ Never a tree, which only transfers
+    /// show.
+    Delete,
+}
+
 /// Result of starting a scan preview.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]

@@ -370,6 +370,9 @@ export type { StreamingListingStartResult } from '../file-explorer/types'
 /** Which side of a named row `getFileBeside` reads. */
 export type { RowBeside } from '#lib/ipc/bindings.js'
 
+/** Which dialog a scan preview walks for (`startScanPreview`). */
+export type { ScanPreviewPurpose } from '#lib/ipc/bindings.js'
+
 // Write + scan-preview event payload types, from typed events via `write-operations.ts`.
 export type {
   TransferActivity,

@@ -1196,10 +1196,11 @@ pub trait Volume: Send + Sync {
     /// (what the copy engine uses to seed its per-source hints, so it doesn't
     /// have to re-probe each source's type and size with a separate stat).
     ///
-    /// **What an implementation owes the boundary.** Call `boundary.file(size)`
-    /// for every leaf and `boundary.dir()` before every directory listing, and
-    /// propagate what they return with `?`. That single habit buys three things
-    /// at once: the dialog's counters climb instead of showing a frozen
+    /// **What an implementation owes the boundary.** Call `boundary.file(path, size)`
+    /// for every leaf and `boundary.dir(path)` before every directory listing, and
+    /// propagate what they return with `?`. That single habit buys four things
+    /// at once: a transfer's live tree gets every entry (paths in the CALLER's
+    /// form, `ScanRecorder`), the dialog's counters climb instead of showing a frozen
     /// `0 files` for a slow enumeration (the MTP listing of `/DCIM/Camera` with
     /// 1k+ entries is ~17 s of USB round trips), the scan watchdog can tell a
     /// slow share from a dead one, and Cancel and Pause reach a walk that would
@@ -1247,9 +1248,7 @@ pub trait Volume: Send + Sync {
                 aggregate.dir_count += scan.dir_count;
                 aggregate.total_bytes += scan.total_bytes;
                 aggregate.dedup_bytes += scan.dedup_bytes;
-                boundary
-                    .subtree(scan.file_count, scan.dir_count, scan.total_bytes)
-                    .await?;
+                boundary.subtree(path, &scan).await?;
                 per_path.push((path.clone(), scan));
             }
             Ok(BatchScanResult {
@@ -2023,6 +2022,7 @@ mod retirement;
 mod root_echo;
 mod routed;
 mod scan_boundary;
+mod scan_recorder;
 pub mod scan_stop;
 pub mod scan_walk;
 pub mod secret_store;
@@ -2073,6 +2073,7 @@ pub use retirement::{Retirement, Retires, SelfHandle};
 pub use root_echo::{RootEcho, root_echo};
 pub use routed::{ResolvedVolume, RoutedKind};
 pub use scan_boundary::{ScanBoundary, stopped as scan_stopped};
+pub use scan_recorder::ScanRecorder;
 pub use scan_stop::{ScanStop, ScanStopSignal};
 pub use scan_walk::{ScanSource, Walking, conflicts_against, fold_batch, scan_conflicts, scan_one, scan_trees};
 pub use types::*;

@@ -1,5 +1,7 @@
 //! Bulk and recursive MTP operations (scan, recursive download/upload).
 
+use std::path::Path;
+
 use log::debug;
 
 use super::errors::MtpConnectionError;
@@ -57,17 +59,23 @@ impl MtpConnectionManager {
             device_id,
             storage_id,
             path,
+            Path::new(path),
             &ScanBoundary::silent().stopping_at(stop.clone()),
         )
         .await
     }
 
     /// The existing recursive walk, reporting selected entries to the batch's boundary.
+    ///
+    /// `caller_path` is `path` as the batch's caller spelled it: every entry
+    /// reaches the boundary under it (`ScanRecorder`'s path contract), since the
+    /// device path is this backend's own.
     pub(crate) async fn scan_for_copy_with_boundary(
         &self,
         device_id: &str,
         storage_id: u32,
         path: &str,
+        caller_path: &Path,
         boundary: &ScanBoundary<'_>,
     ) -> Result<CopyScanResult, MtpConnectionError> {
         debug!(
@@ -81,9 +89,9 @@ impl MtpConnectionManager {
         match self.list_directory(device_id, storage_id, path).await {
             Ok(entries) if !entries.is_empty() => {
                 // Directory with contents: recurse using entries directly
-                boundary.dir().await.map_err(|_| scan_cancelled(device_id))?;
+                boundary.dir(caller_path).await.map_err(|_| scan_cancelled(device_id))?;
                 let mut result = self
-                    .scan_entries_recursive(device_id, storage_id, entries, boundary)
+                    .scan_entries_recursive(device_id, storage_id, entries, caller_path, boundary)
                     .await?;
                 result.dir_count += 1;
                 result.top_level_is_directory = true;
@@ -95,13 +103,13 @@ impl MtpConnectionManager {
                 boundary.check().await.map_err(|_| scan_cancelled(device_id))?;
                 if let Some(result) = self.try_scan_as_file(device_id, storage_id, path).await {
                     boundary
-                        .file(result.total_bytes)
+                        .file(caller_path, result.total_bytes)
                         .await
                         .map_err(|_| scan_cancelled(device_id))?;
                     return Ok(result);
                 }
                 // Empty directory
-                boundary.dir().await.map_err(|_| scan_cancelled(device_id))?;
+                boundary.dir(caller_path).await.map_err(|_| scan_cancelled(device_id))?;
                 Ok(CopyScanResult {
                     file_count: 0,
                     dir_count: 1,
@@ -124,7 +132,7 @@ impl MtpConnectionManager {
                 );
                 if let Some(result) = self.try_scan_as_file(device_id, storage_id, path).await {
                     boundary
-                        .file(result.total_bytes)
+                        .file(caller_path, result.total_bytes)
                         .await
                         .map_err(|_| scan_cancelled(device_id))?;
                     return Ok(result);
@@ -148,6 +156,7 @@ impl MtpConnectionManager {
         device_id: &str,
         storage_id: u32,
         entries: Vec<FileEntry>,
+        caller_dir: &Path,
         boundary: &ScanBoundary<'_>,
     ) -> Result<CopyScanResult, MtpConnectionError> {
         let mut file_count = 0usize;
@@ -158,22 +167,27 @@ impl MtpConnectionManager {
             // Per entry, and so BEFORE the subdirectory listing below: that
             // listing is the round trip, and asking after it is a Cancel the
             // person waits out.
+            let caller_child = caller_dir.join(&entry.name);
             if entry.is_directory {
-                boundary.dir().await.map_err(|_| scan_cancelled(device_id))?;
+                boundary
+                    .dir(&caller_child)
+                    .await
+                    .map_err(|_| scan_cancelled(device_id))?;
                 dir_count += 1;
                 // One list_directory call per subdirectory
                 let children = self.list_directory(device_id, storage_id, &entry.path).await?;
                 boundary.check().await.map_err(|_| scan_cancelled(device_id))?;
                 if !children.is_empty() {
                     let child_result =
-                        Box::pin(self.scan_entries_recursive(device_id, storage_id, children, boundary)).await?;
+                        Box::pin(self.scan_entries_recursive(device_id, storage_id, children, &caller_child, boundary))
+                            .await?;
                     file_count += child_result.file_count;
                     dir_count += child_result.dir_count;
                     total_bytes += child_result.total_bytes;
                 }
             } else {
                 boundary
-                    .file(entry.size.unwrap_or(0))
+                    .file(&caller_child, entry.size.unwrap_or(0))
                     .await
                     .map_err(|_| scan_cancelled(device_id))?;
                 file_count += 1;

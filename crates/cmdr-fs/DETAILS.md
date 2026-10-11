@@ -28,8 +28,9 @@ the next section.
   `server_side.rs` (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side
   work"); `routed.rs` (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the
   listing engine reads it without the app); `retirement.rs` (how background work learns it stopped being the live
-  volume); `channel_stream.rs` (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` (the
-  one seam a copy scan touches per entry: counts, Cancel, and Pause); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and
+  volume); `channel_stream.rs` (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` +
+  `scan_recorder.rs` (the one seam a copy scan touches per entry: counts, Cancel, Pause, and the transfer tree's
+  recorder); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and
   `secret_store.rs` (the bodies a stat-and-listing backend gets for free); `liveness.rs` (the HTTP backends' silence
   watch, which tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow")
   and `tls.rs` (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether an app
@@ -480,12 +481,12 @@ boundary lives here and every backend counts through it.
 transfer dialog sits on "0 files" for the length of the walk, and `write_operations/scan_watchdog.rs` — which bounds a
 preview by INACTIVITY — can't tell a slow tree from a server that stopped answering.
 
-**Reporting and stopping are one call, deliberately.** `boundary.file(size).await?` and `boundary.dir().await?` count
-the entry AND answer the user's Cancel and Pause, so a backend author reaches the stop by writing `?` on a call they
-were already making. The alternative — a separate stop parameter beside the callback — is a thing a backend can be
-handed and quietly not use, and the only symptom of that is a Cancel button doing nothing on one backend while the
-numbers stay perfectly correct. ❗ Ask BEFORE a round trip, never after: a boundary on the far side of a listing is a
-boundary the user waits out, which over a sleeping NAS is seconds per directory.
+**Reporting and stopping are one call, deliberately.** `boundary.file(path, size).await?` and
+`boundary.dir(path).await?` count the entry AND answer the user's Cancel and Pause, so a backend author reaches the stop
+by writing `?` on a call they were already making. The alternative — a separate stop parameter beside the callback — is
+a thing a backend can be handed and quietly not use, and the only symptom of that is a Cancel button doing nothing on
+one backend while the numbers stay perfectly correct. ❗ Ask BEFORE a round trip, never after: a boundary on the far
+side of a listing is a boundary the user waits out, which over a sleeping NAS is seconds per directory.
 
 **What the owner implements** is `ScanStopSignal` (`scan_stop.rs`), not anything in this crate: `crates/` carry no
 `tauri` and can't name a write operation. The handle is `ScanStop`, `Arc`-held so a backend walking inside
@@ -504,6 +505,25 @@ at 30% and a free-space check passing when it shouldn't.
 everything on `scan_walk`) asks per entry; one whose per-path scan is a bounded walk over an already-loaded index
 (in-memory, archive) asks per source path, which is the smallest unit of waiting it has. `volume::conformance`'s
 `assert_batch_scan_stops_when_told` and `assert_batch_scan_asks_inside_the_walk` pin which is which.
+
+### The recorder: the selection's shape, entry by entry
+
+A transfer shows its selection as a live tree (`write_operations/transfer_tree/`), and the copy scan is the only walk
+that ever sees every entry of a remote selection. So **every entry carries its path**, and a caller that wants the shape
+hangs a `ScanRecorder` on the boundary (`recording_to`); `dir` / `file` hand it each entry they count. Same reasoning as
+the stop: the call a backend already makes per entry is the one it can't forget, and nobody pays when nobody listens.
+
+- **Paths are in the CALLER's form**: the path the batch was handed for a source, joined with each child's name. A
+  backend walking in its own path space carries the caller's path down beside its own (SMB's share-relative
+  `scan_recursive`, MTP's device-path `scan_entries_recursive`). A path the caller can't place under a source is
+  dropped, so a backend that reports its own form shows up as a tree with holes, ❌ never a wrong tree.
+- **`subtree(path, &scan)`** counts AND records a subtree whose children nobody walked (the trait's per-path default):
+  the caller gets an opaque folder with known totals, and the transfer discovers its children live.
+- **`counted(&scan)` + `recorder()`** are for a walk that can't await the boundary per entry: the local backend's
+  blocking `WalkDir` (the recorder is `Arc`-held for that closure), and the in-memory and archive batches, which record
+  from their index under a lock. They record each entry themselves and fold the totals in without a second, opaque
+  record. ❌ Never `subtree` after recording the entries: the recorder would see the folder twice.
+- `testing::scan_recording::ScanRecording` keeps what a scan reported, for the per-backend cells that pin it.
 
 ## Server-side work: `copy_on_server`, `copy_within`, and a rename that copies
 

@@ -53,7 +53,7 @@ use super::scan_cache::{
 };
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::ScanPreviewState;
-use super::types::{ScanPreviewErrorEvent, ScanPreviewStartResult, WriteOperationError};
+use super::types::{ScanPreviewErrorEvent, ScanPreviewPurpose, ScanPreviewStartResult, WriteOperationError};
 use crate::file_system::volume::Volume;
 use cmdr_listing::{SortColumn, SortOrder};
 
@@ -75,9 +75,10 @@ pub(super) use volume::run_volume_scan_preview;
 /// fresh-listing oracle (`Listings::authoritative_listing`) to short-circuit re-reading
 /// directories that an open pane is already keeping in sync. Pass `"root"` for
 /// local-FS scans.
-/// `sample_for_estimate` turns on the compressed-size sampler for the LOCAL
-/// walk only (compress-mode scans). It's ignored for volume/remote scans, which
-/// never sample (the estimate is suppressed there). See `compress_estimate`.
+/// `purpose` says which dialog the walk serves. A transfer's walk also builds
+/// the operation's live tree (`super::transfer_tree`), carried to the
+/// operation in the cached result. A compress's LOCAL walk samples a
+/// compressed-size estimate (`compress_estimate`); a volume walk never samples.
 #[allow(
     clippy::too_many_arguments,
     reason = "IPC pass-through mirroring the command's parameter list"
@@ -90,7 +91,7 @@ pub fn start_scan_preview(
     sort_column: SortColumn,
     sort_order: SortOrder,
     progress_interval_ms: u64,
-    sample_for_estimate: bool,
+    purpose: ScanPreviewPurpose,
 ) -> ScanPreviewStartResult {
     let preview_id = Uuid::new_v4().to_string();
     let preview_id_clone = preview_id.clone();
@@ -127,6 +128,7 @@ pub fn start_scan_preview(
                 volume,
                 source_volume_id,
                 state,
+                purpose,
                 watchdog,
             )
             .await;
@@ -140,7 +142,7 @@ pub fn start_scan_preview(
                 sort_column,
                 sort_order,
                 state,
-                sample_for_estimate,
+                purpose,
                 watchdog,
             );
         });

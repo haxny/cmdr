@@ -100,3 +100,55 @@ async fn selected_subtrees_report_cumulative_recursive_progress() {
     );
     device.teardown(manager).await;
 }
+
+/// A batch scan hands its recorder every selected entry under the paths the
+/// caller passed, never the device's own path form, and none of the siblings
+/// the parent listing turned up.
+#[tokio::test]
+async fn a_batch_scan_records_the_selection_under_the_callers_paths() {
+    use cmdr_fs::testing::scan_recording::{Recorded, ScanRecording};
+    use cmdr_fs::volume::ScanRecorder;
+    use std::sync::Arc;
+
+    let _guard = device_lock().await;
+    let fixture = setup_virtual_mtp_device();
+    let root = fixture.root().join("internal/Recorded");
+    std::fs::create_dir_all(root.join("Selected/Nested/Empty")).unwrap();
+    for (path, size) in [
+        ("unrelated.bin", 5),
+        ("Selected/a.bin", 7),
+        ("Selected/Nested/b.bin", 13),
+        ("loose.bin", 31),
+    ] {
+        std::fs::write(root.join(path), vec![0; size]).unwrap();
+    }
+    let manager = test_connection_manager();
+    let device = connect_fixture(manager, fixture).await;
+    let volume = volume_for(manager, &device, None).await;
+    let recording = Arc::new(ScanRecording::default());
+    let boundary = ScanBoundary::silent().recording_to(Arc::clone(&recording) as Arc<dyn ScanRecorder>);
+
+    volume
+        .scan_for_copy_batch_with_boundary(
+            &[
+                PathBuf::from("/Recorded/Selected"),
+                PathBuf::from("/Recorded/loose.bin"),
+            ],
+            &boundary,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("/Recorded/Selected".into()),
+            Recorded::Dir("/Recorded/Selected/Nested".into()),
+            Recorded::Dir("/Recorded/Selected/Nested/Empty".into()),
+            Recorded::File("/Recorded/Selected/Nested/b.bin".into(), 13),
+            Recorded::File("/Recorded/Selected/a.bin".into(), 7),
+            Recorded::File("/Recorded/loose.bin".into(), 31),
+        ]
+    );
+    device.teardown(manager).await;
+}

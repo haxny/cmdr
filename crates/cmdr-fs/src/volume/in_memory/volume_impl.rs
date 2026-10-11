@@ -545,6 +545,46 @@ impl Volume for InMemoryVolume {
         })
     }
 
+    /// The trait's per-path default, plus every entry handed to the boundary's
+    /// recorder, so a transfer over the double draws as complete a tree as one
+    /// over a walking backend. The counts and their one-report-per-path rhythm
+    /// are the default's, unchanged.
+    fn scan_for_copy_batch_with_boundary<'a>(
+        &'a self,
+        paths: &'a [PathBuf],
+        boundary: &'a crate::volume::ScanBoundary<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<crate::volume::BatchScanResult, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut aggregate = CopyScanResult {
+                file_count: 0,
+                dir_count: 0,
+                total_bytes: 0,
+                dedup_bytes: 0,
+                top_level_is_directory: false,
+                top_level_modified_at: None,
+            };
+            let mut per_path = Vec::with_capacity(paths.len());
+            for path in paths {
+                boundary.check().await?;
+                let scan = self.scan_for_copy(path).await?;
+                if let Some(recorder) = boundary.recorder() {
+                    self.record_subtree(path, recorder.as_ref());
+                }
+                boundary.counted(&scan).await?;
+                aggregate.file_count += scan.file_count;
+                aggregate.dir_count += scan.dir_count;
+                aggregate.total_bytes += scan.total_bytes;
+                aggregate.dedup_bytes += scan.dedup_bytes;
+                per_path.push((path.clone(), scan));
+            }
+            Ok(crate::volume::BatchScanResult {
+                aggregate,
+                per_path,
+                files: None,
+            })
+        })
+    }
+
     fn supports_streaming(&self) -> bool {
         true
     }

@@ -245,9 +245,11 @@ hooks close that, both funneling through the ONE reconnect path (`do_attempt_rec
 ## Scanning: where the copy scan asks whether to carry on
 
 `scan_recursive` threads a `cmdr_fs::volume::ScanBoundary` and asks it at three places: once before the top-level stat,
-`dir()` before every directory listing, and `file()` on every leaf. That is what a person's Cancel and Pause reach, and
-before it existed the whole batch scan was one uninterruptible call — a wrong-share scan over a NAS whose disks had spun
-down ran to completion whatever the user pressed.
+`dir()` before every directory listing, and `file()` on every leaf. It walks in share-relative paths but hands the
+boundary each entry under the CALLER's path (`caller_path`, carried down beside `smb_path`), which is what the transfer
+tree's recorder places entries by (`crates/cmdr-fs/DETAILS.md` § "The recorder"). That is what a person's Cancel and
+Pause reach, and before it existed the whole batch scan was one uninterruptible call — a wrong-share scan over a NAS
+whose disks had spun down ran to completion whatever the user pressed.
 
 ❗ **`dir()` goes BEFORE the listing, never after.** A listing is the round trip, seconds of it on a cold share, so a
 boundary on its far side is a Cancel the user waits out.

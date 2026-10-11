@@ -104,7 +104,7 @@ describe('TransferDialog source-volume forwarding', () => {
 
     expect(startScanPreviewMock).toHaveBeenCalledTimes(1)
     // args: (sourcePaths, sortColumn, sortOrder, progressIntervalMs, sourceVolumeId)
-    expect(startScanPreviewMock.mock.calls[0][4]).toBe('mtp-dev:65538')
+    expect(startScanPreviewMock.mock.calls[0][5]).toBe('mtp-dev:65538')
   })
 })
 

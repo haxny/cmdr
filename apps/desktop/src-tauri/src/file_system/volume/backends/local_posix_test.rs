@@ -428,6 +428,45 @@ async fn test_scan_for_copy_directory() {
     assert_eq!(result.dedup_bytes, 10);
 }
 
+/// The blocking walk records every entry it counts, named under the paths the
+/// caller passed (volume-relative here), never the resolved absolute ones.
+#[tokio::test]
+async fn a_batch_scan_records_every_entry_under_the_callers_paths() {
+    use cmdr_fs::testing::scan_recording::{Recorded, ScanRecording};
+    use cmdr_fs::volume::{ScanBoundary, ScanRecorder};
+    use std::fs;
+    use std::sync::Arc;
+
+    let test_dir = TestDir::new("scan_records");
+    fs::create_dir_all(test_dir.join("mydir/nested")).unwrap();
+    fs::write(test_dir.join("mydir/a.txt"), "123").unwrap();
+    fs::write(test_dir.join("mydir/nested/b.txt"), "A").unwrap();
+    fs::write(test_dir.join("loose.txt"), "xy").unwrap();
+    let volume = LocalPosixVolume::local_folder("Test", test_dir.to_str().unwrap());
+    let recording = Arc::new(ScanRecording::default());
+    let boundary = ScanBoundary::silent().recording_to(Arc::clone(&recording) as Arc<dyn ScanRecorder>);
+
+    let batch = volume
+        .scan_for_copy_batch_with_boundary(
+            &[std::path::PathBuf::from("mydir"), std::path::PathBuf::from("loose.txt")],
+            &boundary,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(batch.aggregate.file_count, 3, "the totals don't change");
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("mydir".into()),
+            Recorded::Dir("mydir/nested".into()),
+            Recorded::File("loose.txt".into(), 2),
+            Recorded::File("mydir/a.txt".into(), 3),
+            Recorded::File("mydir/nested/b.txt".into(), 1),
+        ]
+    );
+}
+
 /// The shared stop assertions, over the backend that serves every OS-mounted
 /// network share.
 ///

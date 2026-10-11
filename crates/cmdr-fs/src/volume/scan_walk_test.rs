@@ -133,6 +133,42 @@ async fn a_backend_that_keeps_files_gets_every_files_size_and_date() {
     assert_eq!(files, vec![dated(5), dated(7), dated(10)]);
 }
 
+/// The walk hands its recorder every entry in the caller's path form: the
+/// selected paths as given, each child joined below its parent. A symlinked
+/// directory is one entry, never a subtree, exactly as the counts treat it.
+#[tokio::test]
+async fn the_walk_records_every_entry_under_the_callers_paths() {
+    use crate::testing::scan_recording::{Recorded, ScanRecording};
+
+    let tree = FakeTree::new()
+        .with_dir("/top", &[("a.txt", false, 10), ("sub", true, 0)])
+        .with_dir("/top/sub", &[("b.txt", false, 5)])
+        .with_symlinked_dir("/top", "link")
+        .with_dir("/other", &[("c.txt", false, 7)]);
+    let recording = Arc::new(ScanRecording::default());
+    let boundary = ScanBoundary::silent().recording_to(Arc::clone(&recording) as Arc<dyn crate::volume::ScanRecorder>);
+
+    scan_trees(
+        &tree,
+        &[PathBuf::from("/top"), PathBuf::from("/other/c.txt")],
+        &boundary,
+    )
+    .await
+    .expect("the batch");
+
+    assert_eq!(
+        recording.sorted(),
+        vec![
+            Recorded::Dir("/top".into()),
+            Recorded::Dir("/top/sub".into()),
+            Recorded::File("/other/c.txt".into(), 7),
+            Recorded::File("/top/a.txt".into(), 10),
+            Recorded::File("/top/link".into(), 0),
+            Recorded::File("/top/sub/b.txt".into(), 5),
+        ]
+    );
+}
+
 #[tokio::test]
 async fn a_backend_that_does_not_keep_files_gets_none() {
     let tree = FakeTree::new().with_dir("/top", &[("a.txt", false, 10)]);

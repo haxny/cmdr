@@ -20,10 +20,17 @@
 //! counts are cumulative FOR THE CALL, which is what
 //! [`Volume::scan_for_copy_batch_with_boundary`](super::Volume::scan_for_copy_batch_with_boundary)
 //! promises its callers.
+//!
+//! **Every entry carries its path**, so a caller that wants the selection's
+//! shape hangs a [`ScanRecorder`] on the boundary (`recording_to`) and gets each
+//! entry the walk counts. Same reasoning as the stop: the call a backend already
+//! makes per entry is the only one it can't forget.
 
+use std::path::Path;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-use super::{ListingProgress, ScanStop, VolumeError};
+use super::{CopyScanResult, ListingProgress, ScanRecorder, ScanStop, VolumeError};
 
 /// Counts a scan as it walks and holds the cooperative stop it honors.
 ///
@@ -32,6 +39,9 @@ use super::{ListingProgress, ScanStop, VolumeError};
 pub struct ScanBoundary<'a> {
     on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     stop: ScanStop,
+    /// `Arc`-held for the same reason the stop is: a walk inside
+    /// `spawn_blocking` (the local backend's) carries it across the closure.
+    recorder: Option<Arc<dyn ScanRecorder>>,
     files: AtomicUsize,
     dirs: AtomicUsize,
     bytes: AtomicU64,
@@ -44,6 +54,7 @@ impl<'a> ScanBoundary<'a> {
         Self {
             on_progress,
             stop: ScanStop::none(),
+            recorder: None,
             files: AtomicUsize::new(0),
             dirs: AtomicUsize::new(0),
             bytes: AtomicU64::new(0),
@@ -63,37 +74,66 @@ impl<'a> ScanBoundary<'a> {
         self
     }
 
+    /// The scan hands every entry it counts to `recorder` as well.
+    pub fn recording_to(mut self, recorder: Arc<dyn ScanRecorder>) -> Self {
+        self.recorder = Some(recorder);
+        self
+    }
+
     /// One more directory, about to be listed.
     ///
     /// ❗ Ask it BEFORE the listing round trip, which is the expensive part: over
     /// a sleeping NAS one listing is seconds, and a boundary on the far side of
     /// it is a boundary the user waits out.
-    pub async fn dir(&self) -> Result<(), VolumeError> {
+    pub async fn dir(&self, path: &Path) -> Result<(), VolumeError> {
+        if let Some(recorder) = &self.recorder {
+            recorder.dir(path);
+        }
         self.dirs.fetch_add(1, Ordering::Relaxed);
         self.report();
         self.check().await
     }
 
     /// One more file counted, at `size` bytes.
-    pub async fn file(&self, size: u64) -> Result<(), VolumeError> {
+    pub async fn file(&self, path: &Path, size: u64) -> Result<(), VolumeError> {
+        if let Some(recorder) = &self.recorder {
+            recorder.file(path, size);
+        }
         self.files.fetch_add(1, Ordering::Relaxed);
         self.bytes.fetch_add(size, Ordering::Relaxed);
         self.report();
         self.check().await
     }
 
-    /// A whole subtree whose entries were counted somewhere else — a backend's
-    /// own recursion, or a watcher-fresh cached listing — folded into the
-    /// running totals in one step.
+    /// A whole subtree at `path` whose entries were counted somewhere else (a
+    /// backend's own per-path scan), folded into the running totals in one step
+    /// and recorded as a subtree whose children nobody walked.
     ///
     /// It asks the same boundary the per-entry calls do, so a backend that takes
     /// a shortcut past the walk still can't skip past the user's Cancel.
-    pub async fn subtree(&self, files: usize, dirs: usize, bytes: u64) -> Result<(), VolumeError> {
-        self.files.fetch_add(files, Ordering::Relaxed);
-        self.dirs.fetch_add(dirs, Ordering::Relaxed);
-        self.bytes.fetch_add(bytes, Ordering::Relaxed);
+    pub async fn subtree(&self, path: &Path, scan: &CopyScanResult) -> Result<(), VolumeError> {
+        if let Some(recorder) = &self.recorder {
+            recorder.subtree(path, scan);
+        }
+        self.counted(scan).await
+    }
+
+    /// Totals from a walk that already handed its entries to
+    /// [`recorder`](Self::recorder) itself: the local backend's blocking walk,
+    /// which can't await this boundary per entry. Folds them in without
+    /// recording anything, so the recorder doesn't see the subtree twice.
+    pub async fn counted(&self, scan: &CopyScanResult) -> Result<(), VolumeError> {
+        self.files.fetch_add(scan.file_count, Ordering::Relaxed);
+        self.dirs.fetch_add(scan.dir_count, Ordering::Relaxed);
+        self.bytes.fetch_add(scan.total_bytes, Ordering::Relaxed);
         self.report();
         self.check().await
+    }
+
+    /// The recorder this scan reports entries to, if anyone asked, for a walk
+    /// that records on its own (see [`counted`](Self::counted)).
+    pub fn recorder(&self) -> Option<&Arc<dyn ScanRecorder>> {
+        self.recorder.as_ref()
     }
 
     /// The stop boundary with nothing to count: for a backend asking between

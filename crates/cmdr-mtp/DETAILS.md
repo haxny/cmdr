@@ -86,9 +86,10 @@ watcher-fresh and cold ones.
 
 **Scan progress counts selected sources only.** Parent listings resolve names, not progress: their unselected siblings
 never enter the totals. Selected files report through `ScanBoundary::file`; selected directories reuse the connection
-walk with the same boundary, reporting each descendant incrementally. Counts are cumulative across sources and include
-each selected directory itself, empty or non-empty. The boundary checks cancellation between entries and listings;
-in-flight USB calls always finish before cancellation returns.
+walk with the same boundary, reporting each descendant incrementally, named under the caller's path rather than the
+device path (`caller_path` in `bulk_ops.rs`, for the transfer tree's recorder). Counts are cumulative across sources and
+include each selected directory itself, empty or non-empty. The boundary checks cancellation between entries and
+listings; in-flight USB calls always finish before cancellation returns.
 
 **❗ `get_metadata` is expensive, always.** It lists the entire parent directory and searches by name, because MTP has
 no stat. `notify_mutation` pays it after each self-mutation (create, delete, rename), which is fine because those are

@@ -31,6 +31,7 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
             modified: 0,
             created: 0,
             is_symlink: false,
+            tree_node: None,
         })
         .collect();
     insert_scan_result(

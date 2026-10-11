@@ -129,7 +129,7 @@ impl Volume for BoundaryWalkingVolume {
                         TripAction::Pause => self.state.pause_gate.pause(),
                     }
                 }
-                boundary.file(1).await?;
+                boundary.file(&paths[0].join("leaf"), 1).await?;
             }
             let per_path = paths
                 .iter()

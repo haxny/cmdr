@@ -834,7 +834,7 @@ export const commands = {
     sortColumn: SortColumn,
     sortOrder: SortOrder,
     progressIntervalMs: number | null,
-    sampleForEstimate: boolean | null,
+    purpose: ScanPreviewPurpose,
   ) =>
     typedError<ScanPreviewStartResult, ScanPreviewRefusal>(
       __TAURI_INVOKE('start_scan_preview', {
@@ -843,7 +843,7 @@ export const commands = {
         sortColumn,
         sortOrder,
         progressIntervalMs,
-        sampleForEstimate,
+        purpose,
       }),
     ),
   cancelScanPreview: (previewId: string) => __TAURI_INVOKE<void>('cancel_scan_preview', { previewId }),
@@ -14092,6 +14092,28 @@ export type ScanPreviewProgressEvent = {
    */
   onlineOnlyFound?: boolean
 }
+
+/**
+ *  Which dialog a scan preview walks for, which decides what the walk keeps
+ *  beyond its totals.
+ */
+export type ScanPreviewPurpose =
+  /**
+   *  A copy or a move: the walk also builds the transfer's live tree
+   *  (`transfer_tree/`), so the operation that consumes the preview has it
+   *  from its first moment.
+   */
+  | 'transfer'
+  /**
+   *  A compress: the local walk samples a compressed-size estimate. The tree
+   *  comes from the compress plan instead.
+   */
+  | 'compress'
+  /**
+   *  A delete or a trash: totals only. ❌ Never a tree, which only transfers
+   *  show.
+   */
+  | 'delete'
 
 // Why a scan preview wouldn't start. Nothing is walked and no preview exists.
 export type ScanPreviewRefusal =

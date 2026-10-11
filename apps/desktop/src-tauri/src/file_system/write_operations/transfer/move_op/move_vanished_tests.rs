@@ -139,6 +139,7 @@ fn sweep_of_one_missing_source(src: &Path) -> (Vec<PathBuf>, SourceSweep) {
         total_bytes: 0,
         dedup_bytes: 0,
         per_path: Vec::new(),
+        tree: None,
     };
     let landed = LandedOriginal {
         path: src.join("a.txt"),
