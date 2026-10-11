@@ -672,9 +672,10 @@
 
     /* One reserved line under the search row: a long message ends in an ellipsis (the whole of it
        on hover) rather than growing the line. */
+    /* No gap: only one of the three ever has content, and a gap beside the empty live regions
+       would push the label off the field labels' left edge. */
     .message-line {
         display: flex;
-        gap: var(--spacing-sm);
         min-width: 0;
     }
 
