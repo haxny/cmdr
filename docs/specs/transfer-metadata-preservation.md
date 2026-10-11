@@ -45,9 +45,11 @@ read". Sizes are rough agent-sessions (one session ≈ one focused milestone age
    routed volumes; setuid, setgid, and sticky travel only local-to-local; `SF_*` system flags and ownership never travel
    (non-root can't, and we don't want to when elevated either, unless a later spec decides so). A temp is created
    owner-only (`0600`) and set to its final mode at the end, so a `0600` source is never readable by others while its
-   bytes stream, and a refused `chmod` leaves it narrower, never wider. (Today the chunked temp is created `0644`.) ❗
-   The `landed_mode` fold reads the temp's CREATED mode as its umask proxy (`landed_mode.rs:46-60`), so on the volume
-   path a `0600` temp would fold every file down to `0600`. Wherever the fold runs, pass it the umask-derived default
+   bytes stream, and a refused `chmod` leaves it narrower, never wider. A FOLDER is born with its source's permission
+   bits plus owner `rwx`, under the umask (M4): never wider than the source while it fills, always fillable, and a copy
+   that stops before the final pass leaves a `0755` source's folder at `0755`, not stuck owner-only. ❗ The
+   `landed_mode` fold reads the temp's CREATED mode as its umask proxy (`landed_mode.rs:46-60`), so on the volume path a
+   `0600` temp would fold every file down to `0600`. Wherever the fold runs, pass it the umask-derived default
    explicitly (`0o666 & !umask`, read once per process), never the temp's mode.
 6. ❌ **No new per-file round trips on remote sources, and no new syscalls for an ordinary file.** Metadata rides what
    the open or the listing already returned (the `modified_at` discipline). A class that would cost a request per file
