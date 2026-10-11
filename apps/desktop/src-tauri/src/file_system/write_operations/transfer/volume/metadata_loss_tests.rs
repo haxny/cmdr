@@ -39,9 +39,10 @@ fn sources() -> Vec<(&'static str, MetadataCaps)> {
         ("SMB", cmdr_smb::volume::SmbVolume::METADATA_CAPS),
         ("SFTP", cmdr_sftp::SftpVolume::METADATA_CAPS),
         ("ADB", cmdr_adb::AdbVolume::METADATA_CAPS),
-        // The archive and git portal volumes answer this shape inline (pinned
-        // in their own crates' volume tests).
-        ("archive / git", MetadataCaps::MODE_REPORTER),
+        ("archive", archive_caps()),
+        // The git portal answers this shape inline (pinned in its own crate's
+        // volume tests).
+        ("git", MetadataCaps::MODE_REPORTER),
         ("MTP / WebDAV / S3", MetadataCaps::NONE),
     ]
 }
@@ -55,6 +56,19 @@ fn destinations() -> Vec<(&'static str, MetadataCaps)> {
         ("ADB", cmdr_adb::AdbVolume::METADATA_CAPS),
         ("MTP / WebDAV / S3", MetadataCaps::NONE),
     ]
+}
+
+/// What a live `ArchiveVolume` claims: it answers its caps inline, with no
+/// public const (`cmdr-archive` sits at its public-surface ceiling).
+fn archive_caps() -> MetadataCaps {
+    let parent: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Parent"));
+    cmdr_archive::ArchiveVolume::new(
+        parent,
+        "/a.zip".into(),
+        cmdr_archive::ArchiveFormat::Zip,
+        cmdr_fs::volume::host::VolumeHost::detached(),
+    )
+    .metadata_caps()
 }
 
 fn at(secs: u64) -> std::time::SystemTime {

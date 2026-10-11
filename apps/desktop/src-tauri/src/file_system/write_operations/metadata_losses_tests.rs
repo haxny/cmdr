@@ -41,7 +41,10 @@ fn volume_with(caps: MetadataCaps) -> InMemoryVolume {
 /// keep everything the source reports, so the probe costs nothing.
 #[test]
 fn a_pair_that_loses_nothing_never_asks_the_source() {
-    let archive = volume_with(MetadataCaps::MODE_REPORTER);
+    let archive = volume_with(MetadataCaps {
+        reports: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
+        ..MetadataCaps::NONE
+    });
     let local = volume_with(crate::file_system::volume::LocalPosixVolume::METADATA_CAPS);
     let share = volume_with(cmdr_smb::volume::SmbVolume::METADATA_CAPS);
 

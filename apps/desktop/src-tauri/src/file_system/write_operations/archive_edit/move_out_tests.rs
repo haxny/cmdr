@@ -686,7 +686,7 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
         );
     }
     let file = std::fs::File::open(&archive).expect("open the zip");
-    let mut names: Vec<String> = zip::ZipArchive::new(file)
+    let mut names: Vec<String> = ZipArchive::new(file)
         .expect("the zip parses")
         .file_names()
         .map(str::to_string)

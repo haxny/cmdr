@@ -506,9 +506,13 @@ impl Volume for ArchiveVolume {
     }
 
     /// Reports the mode (zip external attributes, the tar header, 7z's unix
-    /// extension). Keeps nothing: a copy INTO an archive goes through the mutator.
+    /// extension) and the xattrs an AppleDouble sidecar or a pax record carries.
+    /// Keeps nothing: a copy INTO an archive goes through the mutator.
     fn metadata_caps(&self) -> cmdr_fs::metadata::MetadataCaps {
-        cmdr_fs::metadata::MetadataCaps::MODE_REPORTER
+        cmdr_fs::metadata::MetadataCaps {
+            reports: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
+            ..cmdr_fs::metadata::MetadataCaps::NONE
+        }
     }
 
     fn supports_streaming(&self) -> bool {

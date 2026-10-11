@@ -693,10 +693,16 @@ fn capability_flags_are_read_only_and_virtual() {
     assert_eq!(volume.root(), archive.path);
     assert!(volume.supports_export());
     assert!(volume.supports_streaming());
-    // Reports the mode and keeps nothing. The compress planner trusts a listed
-    // mode only from a backend that reports one, and the app's loss-note matrix
-    // runs this shape as `MODE_REPORTER`.
-    assert_eq!(volume.metadata_caps(), cmdr_fs::metadata::MetadataCaps::MODE_REPORTER);
+    // Reports the mode and the sidecars' xattrs, and keeps nothing. The compress
+    // planner trusts a listed mode only from a backend that reports one, and the
+    // app's loss-note matrix asks a live `ArchiveVolume` for this shape.
+    assert_eq!(
+        volume.metadata_caps(),
+        cmdr_fs::metadata::MetadataCaps {
+            reports: cmdr_fs::metadata::MetadataClasses::MODE.union(cmdr_fs::metadata::MetadataClasses::XATTRS),
+            ..cmdr_fs::metadata::MetadataCaps::NONE
+        }
+    );
     assert_eq!(volume.max_concurrent_ops(), 1);
     assert_eq!(volume.local_path(), None);
     assert!(!volume.supports_local_fs_access());
