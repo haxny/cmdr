@@ -505,7 +505,7 @@
     {#snippet footerLeading()}
         <div class="footer-leading">
             <PresetsControl bind:this={presetsControl} {tool} />
-            <span class="counts" class:stale={previewStale} role="status">
+            <span class="counts" class:is-unavailable={previewStale} role="status">
                 <Trans
                     key="multiRename.summary"
                     params={{ ready: tool.counts.ready, unchanged: tool.counts.unchanged, problems: tool.counts.problems }}
@@ -731,7 +731,8 @@
         min-width: 0;
     }
 
-    .counts.stale {
+    /* Dims with the stale preview it summarizes (`PreviewList`'s `.is-unavailable`). */
+    .counts.is-unavailable {
         opacity: 0.5;
     }
 

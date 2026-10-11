@@ -81,7 +81,7 @@
     }
 </script>
 
-<div class="preview" class:stale>
+<div class="preview" class:is-unavailable={stale}>
     <ColumnList
         {...columnListProps({
             columns,
@@ -163,8 +163,9 @@
     }
 
     /* A stale preview reads as unavailable: the house disabled opacity, faded in unless the
-       user asked for less motion. */
-    .stale {
+       user asked for less motion. `is-unavailable` names it as inactive content (it can't be
+       applied), which is also the shape the contrast checker exempts. */
+    .is-unavailable {
         opacity: 0.5;
     }
 

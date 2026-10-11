@@ -158,23 +158,23 @@ describe('MultiRenameDialog', () => {
       error: { type: 'spec', error: { type: 'nameMask', error: { type: 'unclosed', at: 0 } } },
     })
     const root = await mountSheet()
-    expect(root.querySelector('.preview.stale')).toBeNull()
-    expect(root.querySelector('.counts.stale')).toBeNull()
+    expect(root.querySelector('.preview.is-unavailable')).toBeNull()
+    expect(root.querySelector('.counts.is-unavailable')).toBeNull()
 
     const mask = inputs(root)[0]
     mask.value = '[N'
     mask.dispatchEvent(new Event('input', { bubbles: true }))
     await new Promise((resolve) => setTimeout(resolve, 150))
     await settle()
-    expect(root.querySelector('.preview.stale')).not.toBeNull()
-    expect(root.querySelector('.counts.stale')).not.toBeNull()
+    expect(root.querySelector('.preview.is-unavailable')).not.toBeNull()
+    expect(root.querySelector('.counts.is-unavailable')).not.toBeNull()
 
     mask.value = '[N]'
     mask.dispatchEvent(new Event('input', { bubbles: true }))
     await new Promise((resolve) => setTimeout(resolve, 150))
     await settle()
-    expect(root.querySelector('.preview.stale')).toBeNull()
-    expect(root.querySelector('.counts.stale')).toBeNull()
+    expect(root.querySelector('.preview.is-unavailable')).toBeNull()
+    expect(root.querySelector('.counts.is-unavailable')).toBeNull()
   })
 
   it('an error takes the label’s place in the same slot, through the live region that was already there', async () => {
