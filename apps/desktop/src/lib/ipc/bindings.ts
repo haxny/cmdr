@@ -4596,6 +4596,28 @@ export const commands = {
   updateSavedSmbHost: (id: string, name: string, username: string | null, address: string | null) =>
     __TAURI_INVOKE<SavedServerOutcome>('update_saved_smb_host', { id, name, username, address }),
   /**
+   *  [`update_saved_smb_host`] for "Eject and save", the button on its `share_mounted`
+   *  refusal: a move first takes down every saved share still mounted from the old
+   *  address, then saves. `attempt_id` is the sheet's own, so its Cancel
+   *  ([`cancel_server_connect`]) can call the run off before the next eject and before
+   *  the save.
+   *
+   *  ❗ The person asked for this, so Cmdr still never unmounts on its own initiative.
+   *  Every refusal that touches no mount answers BEFORE any eject, a refused eject (a
+   *  live mount someone is using) saves nothing, and a force unmount only follows a
+   *  normal one that didn't answer (`server_move_smb.rs`, `eject/escalate.rs`).
+   *
+   *  ❗ Emits `volumes-changed` on a save, like [`update_saved_smb_host`].
+   */
+  ejectAndUpdateSavedSmbHost: (
+    id: string,
+    name: string,
+    username: string | null,
+    address: string | null,
+    attemptId: string,
+  ) =>
+    __TAURI_INVOKE<EjectAndSaveOutcome>('eject_and_update_saved_smb_host', { id, name, username, address, attemptId }),
+  /**
    *  Names the saved S3 account the listing calls `id`, and moves it to `endpoint`
    *  when that names a new one. An empty name unnames it, so the UI calls it
    *  `key id@host` again. An account nothing is saved under answers `unreachable`.
@@ -7480,6 +7502,30 @@ export type EditorOpenReport = {
    */
   otherEditorsInstalled: boolean | null
 }
+
+// What "Eject and save" answered.
+export type EjectAndSaveOutcome =
+  /**
+   *  The move ran, every old-address mount gone first, or it refused before any
+   *  eject (`answer` says which).
+   */
+  | { outcome: 'settled'; answer: SavedServerOutcome }
+  /**
+   *  A share's eject didn't go through, so nothing was saved. Shares ejected before
+   *  it stay ejected.
+   */
+  | {
+      outcome: 'eject_refused'
+      // The share whose eject didn't go through.
+      name: string
+      // Why, worded by the frontend's eject copy.
+      error: EjectError
+    }
+  /**
+   *  The sheet was closed mid-way. Shares already ejected stay ejected; nothing was
+   *  saved.
+   */
+  | { outcome: 'cancelled' }
 
 /**
  *  Why an eject or an SMB disconnect didn't happen, as a value rather than a

@@ -114,12 +114,21 @@ pub fn smb_mounts_from(targets: &[SmbServer]) -> Vec<String> {
 /// The share of every SMB mount from one of `targets`, off the same mount-table snapshot
 /// as [`smb_mounts_from`].
 pub fn smb_shares_mounted_from(targets: &[SmbServer]) -> Vec<String> {
+    smb_share_mounts_from(targets)
+        .into_iter()
+        .map(|(_, share)| share)
+        .collect()
+}
+
+/// Every SMB mount from one of `targets` as `(mount point, share)`, off the same
+/// mount-table snapshot as [`smb_mounts_from`].
+pub fn smb_share_mounts_from(targets: &[SmbServer]) -> Vec<(String, String)> {
     let hosts = super::fresh_discovered_hosts();
     smb_mounts()
         .unwrap_or_default()
         .into_iter()
         .filter(|(_, info)| mount_is_from(info, targets, &hosts))
-        .map(|(_, info)| info.share)
+        .map(|(mount_point, info)| (mount_point, info.share))
         .collect()
 }
 

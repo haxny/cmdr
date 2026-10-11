@@ -23,13 +23,18 @@
 //!
 //! Why each holder does what it does: `docs/notes/server-address-move.md` § "SMB".
 
+use serde::{Deserialize, Serialize};
+use tokio_util::sync::CancellationToken;
+
 use crate::favorites::store::FavoriteVolume;
 use crate::file_system::volume::ConnectionState;
+use crate::file_system::volume::eject::{self, EjectError, TakenDown};
+use crate::network::connect_wiring::{self, AttemptTable};
 use crate::network::keychain::{self, KeychainError};
 use crate::network::known_shares::{self, CompletedMove, KnownNetworkShare};
 use crate::network::saved_server_fields::SavedServerOutcome;
 use crate::network::server_identity::{self, SmbServer, credential_key, smb_server};
-use crate::network::{connect_wiring, smb_saved_shares};
+use crate::network::smb_saved_shares;
 use crate::volume_broadcast::{self, MovedPlace, ServerPlaceMoved};
 
 use super::{SECRET_STORE_BUDGET, SecretCopy, copy_secret_with, leave_behind, operations_need_any};
@@ -55,16 +60,26 @@ pub async fn move_host(
     others: &[(SmbServer, String)],
     relocate: impl FnOnce() -> Result<(), String>,
 ) -> SavedServerOutcome {
-    let hosts = crate::network::fresh_discovered_hosts();
-    if let Some((_, name)) = others.iter().find(|(server, _)| server.is(&to, &hosts)) {
-        return SavedServerOutcome::AddressTaken { name: name.clone() };
-    }
+    move_host_past(host, to, others, relocate, &[]).await
+}
+
+/// [`move_host`], past the places in `ejected`: shares whose old-address mount "Eject
+/// and save" just took down. ❗ The registry may still hold one for a moment (the unmount
+/// notification lands after the tool answers), and that must not refuse the move the
+/// eject was for. The kernel's table has no such lag, so it's still asked.
+async fn move_host_past(
+    host: SmbHost,
+    to: SmbServer,
+    others: &[(SmbServer, String)],
+    relocate: impl FnOnce() -> Result<(), String>,
+    ejected: &[String],
+) -> SavedServerOutcome {
     let shares: Vec<&KnownNetworkShare> = host.rows.iter().filter(|row| row.is_share()).collect();
     let places: Vec<String> = shares.iter().map(|row| known_shares::place_id(row)).collect();
-    if operations_need_any(&places.iter().map(String::as_str).collect::<Vec<_>>()) {
-        return SavedServerOutcome::OperationRunning;
+    if let Some(refusal) = refusal_before_mounts(&to, others, &places) {
+        return refusal;
     }
-    if let Some(name) = mounted_share(&host.server, &shares, &places) {
+    if let Some(name) = mounted_share(&host.server, &shares, &places, ejected) {
         return SavedServerOutcome::ShareMounted { name };
     }
 
@@ -98,12 +113,38 @@ pub async fn move_host(
     SavedServerOutcome::Saved
 }
 
+/// The refusals that touch no mount: the address another saved host holds, and an
+/// operation on one of the host's shares. ❗ "Eject and save" asks these BEFORE any
+/// eject: ejecting and then failing to save is the worst outcome it could have.
+fn refusal_before_mounts(
+    to: &SmbServer,
+    others: &[(SmbServer, String)],
+    places: &[String],
+) -> Option<SavedServerOutcome> {
+    let hosts = crate::network::fresh_discovered_hosts();
+    if let Some((_, name)) = others.iter().find(|(server, _)| server.is(to, &hosts)) {
+        return Some(SavedServerOutcome::AddressTaken { name: name.clone() });
+    }
+    if operations_need_any(&places.iter().map(String::as_str).collect::<Vec<_>>()) {
+        return Some(SavedServerOutcome::OperationRunning);
+    }
+    None
+}
+
 /// A saved share of `server` that's still mounted from it: registered under its place
-/// id (Cmdr's own mount, an adopted OS mount, a GVFS one), or in the kernel's mount
-/// table from the server.
-fn mounted_share(server: &SmbServer, shares: &[&KnownNetworkShare], places: &[String]) -> Option<String> {
+/// id (Cmdr's own mount, an adopted OS mount, a GVFS one) and not in `ejected`, or in
+/// the kernel's mount table from the server.
+fn mounted_share(
+    server: &SmbServer,
+    shares: &[&KnownNetworkShare],
+    places: &[String],
+    ejected: &[String],
+) -> Option<String> {
     let manager = crate::file_system::volume::manager::get_volume_manager();
-    if let Some(at) = places.iter().position(|place| manager.get(place).is_some()) {
+    if let Some(at) = places
+        .iter()
+        .position(|place| !ejected.contains(place) && manager.get(place).is_some())
+    {
         return Some(shares[at].share_name.clone());
     }
     let mounted = server_identity::smb_shares_mounted_from(std::slice::from_ref(server));
@@ -150,6 +191,165 @@ fn announce_redial(places: &[String]) {
 /// What the volume list calls a share: its mount row's spelling, `{share} on {server}`.
 fn share_label(share: &str, server: &str) -> String {
     format!("{share} on {server}")
+}
+
+// ============================================================================
+// Eject and save
+// ============================================================================
+
+/// What "Eject and save" answered.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case", tag = "outcome")]
+pub enum EjectAndSaveOutcome {
+    /// The move ran, every old-address mount gone first, or it refused before any
+    /// eject (`answer` says which).
+    Settled { answer: SavedServerOutcome },
+    /// A share's eject didn't go through, so nothing was saved. Shares ejected before
+    /// it stay ejected.
+    EjectRefused {
+        /// The share whose eject didn't go through.
+        name: String,
+        /// Why, worded by the frontend's eject copy.
+        error: EjectError,
+    },
+    /// The sheet was closed mid-way. Shares already ejected stay ejected; nothing was
+    /// saved.
+    Cancelled,
+}
+
+/// A mount of one of the host's saved shares from its OLD address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OldMount {
+    /// Registered under the share's place id, so it goes through the eject pipeline.
+    Volume { share: String, volume_id: String },
+    /// In the kernel's mount table only (Finder or another app mounted it).
+    Path { share: String, mount_path: String },
+}
+
+impl OldMount {
+    fn share(&self) -> &str {
+        match self {
+            Self::Volume { share, .. } | Self::Path { share, .. } => share,
+        }
+    }
+}
+
+/// The "Eject and save" runs a sheet can still call off, by the sheet's attempt id.
+static EJECT_AND_SAVE_ATTEMPTS: AttemptTable = AttemptTable::new("an SMB eject and save");
+
+/// Files `attempt_id` as an "Eject and save" the sheet can call off, handing back the
+/// token it runs under and the guard that takes the entry out again.
+pub fn register_eject_and_save(attempt_id: &str) -> (CancellationToken, connect_wiring::AttemptGuard) {
+    EJECT_AND_SAVE_ATTEMPTS.register(attempt_id)
+}
+
+/// Calls off the "Eject and save" running under `attempt_id`. ❗ It stops before the
+/// next eject and before the save; an unmount already under way can't be taken back.
+pub fn cancel_eject_and_save(attempt_id: &str) -> bool {
+    EJECT_AND_SAVE_ATTEMPTS.cancel(attempt_id)
+}
+
+/// "Eject and save": [`move_host`], after taking down every saved share of the host
+/// still mounted from its old address. The person asked for it on the `ShareMounted`
+/// refusal, so ❗ Cmdr still never unmounts on its own initiative.
+///
+/// ❗ The order is the point: the refusals that touch no mount first (an eject followed
+/// by a refused save is the worst outcome), then each mount, a normal unmount first and
+/// a force only when that one didn't answer (`eject::take_down_smb_volume`), then the
+/// move, which re-asks every refusal. A refused eject stops it, saving nothing.
+pub async fn eject_and_move(
+    host: SmbHost,
+    to: SmbServer,
+    others: &[(SmbServer, String)],
+    relocate: impl FnOnce() -> Result<(), String>,
+    cancel: &CancellationToken,
+) -> EjectAndSaveOutcome {
+    eject_and_move_with(host, to, others, relocate, cancel, take_down).await
+}
+
+/// [`eject_and_move`] with the takedown a parameter, so a test drives the ordering
+/// without a mount.
+pub(crate) async fn eject_and_move_with<T, Fut>(
+    host: SmbHost,
+    to: SmbServer,
+    others: &[(SmbServer, String)],
+    relocate: impl FnOnce() -> Result<(), String>,
+    cancel: &CancellationToken,
+    mut take_down: T,
+) -> EjectAndSaveOutcome
+where
+    T: FnMut(OldMount) -> Fut,
+    Fut: Future<Output = Result<TakenDown, EjectError>>,
+{
+    let shares: Vec<&KnownNetworkShare> = host.rows.iter().filter(|row| row.is_share()).collect();
+    let places: Vec<String> = shares.iter().map(|row| known_shares::place_id(row)).collect();
+    if let Some(answer) = refusal_before_mounts(&to, others, &places) {
+        return EjectAndSaveOutcome::Settled { answer };
+    }
+    let mut ejected = Vec::new();
+    for mount in old_mounts(&host.server, &shares, &places) {
+        if cancel.is_cancelled() {
+            return EjectAndSaveOutcome::Cancelled;
+        }
+        match take_down(mount.clone()).await {
+            Ok(how) => {
+                log::info!(target: "volume", "{} came down from its server's old address ({how:?})", mount.share());
+                if let OldMount::Volume { volume_id, .. } = mount {
+                    ejected.push(volume_id);
+                }
+            }
+            Err(error) => {
+                return EjectAndSaveOutcome::EjectRefused {
+                    name: mount.share().to_string(),
+                    error,
+                };
+            }
+        }
+    }
+    if cancel.is_cancelled() {
+        return EjectAndSaveOutcome::Cancelled;
+    }
+    let answer = move_host_past(host, to, others, relocate, &ejected).await;
+    EjectAndSaveOutcome::Settled { answer }
+}
+
+/// Every mount of one of the host's saved shares from its old address: the registered
+/// ones first (through the eject pipeline, so the registry and the index stay right),
+/// then each kernel mount none of them is rooted at.
+fn old_mounts(server: &SmbServer, shares: &[&KnownNetworkShare], places: &[String]) -> Vec<OldMount> {
+    let manager = crate::file_system::volume::manager::get_volume_manager();
+    let mut mounts = Vec::new();
+    let mut roots = Vec::new();
+    for (row, place) in shares.iter().zip(places) {
+        if let Some(volume) = manager.get(place) {
+            roots.push(volume.root().to_string_lossy().to_string());
+            mounts.push(OldMount::Volume {
+                share: row.share_name.clone(),
+                volume_id: place.clone(),
+            });
+        }
+    }
+    for (mount_path, share) in server_identity::smb_share_mounts_from(std::slice::from_ref(server)) {
+        let Some(row) = shares.iter().find(|row| same_share_name(&share, &row.share_name)) else {
+            continue;
+        };
+        if !roots.contains(&mount_path) {
+            mounts.push(OldMount::Path {
+                share: row.share_name.clone(),
+                mount_path,
+            });
+        }
+    }
+    mounts
+}
+
+/// Takes one old-address mount down, a normal unmount first and a force only on no
+/// answer (`file_system/volume/eject/escalate.rs`).
+async fn take_down(mount: OldMount) -> Result<TakenDown, EjectError> {
+    match mount {
+        OldMount::Volume { volume_id, .. } => eject::take_down_smb_volume(&volume_id).await,
+        OldMount::Path { mount_path, .. } => eject::take_down_smb_mount(&mount_path).await,
+    }
 }
 
 /// Completes a share's pending move at its first mount at the new address: favorites

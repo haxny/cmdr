@@ -33,6 +33,10 @@ pub(super) enum UnmountVerb {
     Eject,
     /// `diskutil unmount`: an SMB share, which has no hardware to power down.
     Unmount,
+    /// `diskutil unmount force` (Linux: `umount -f`): an SMB share whose server stopped
+    /// answering, so a normal unmount hangs. ❗ Only after a normal unmount that didn't
+    /// answer, ❌ never after one that was refused (`escalate`).
+    ForceUnmount,
 }
 
 impl std::fmt::Display for UnmountVerb {
@@ -42,9 +46,13 @@ impl std::fmt::Display for UnmountVerb {
         let command = match self {
             Self::Eject => "diskutil eject",
             Self::Unmount => "diskutil unmount",
+            Self::ForceUnmount => "diskutil unmount force",
         };
         #[cfg(target_os = "linux")]
-        let command = "umount";
+        let command = match self {
+            Self::Eject | Self::Unmount => "umount",
+            Self::ForceUnmount => "umount -f",
+        };
         f.write_str(command)
     }
 }
@@ -174,20 +182,26 @@ async fn keeping_abandoned(
 fn run_blocking(verb: UnmountVerb, mount_path: &str) -> ToolOutcome {
     #[cfg(target_os = "macos")]
     let output = {
-        let diskutil_verb = match verb {
-            UnmountVerb::Eject => "eject",
-            UnmountVerb::Unmount => "unmount",
+        let args: &[&str] = match verb {
+            UnmountVerb::Eject => &["eject"],
+            UnmountVerb::Unmount => &["unmount"],
+            UnmountVerb::ForceUnmount => &["unmount", "force"],
         };
         std::process::Command::new("diskutil")
-            .args([diskutil_verb, mount_path])
+            .args(args)
+            .arg(mount_path)
             .output()
     };
     // Linux: `umount` covers the SMB and removable cases; the physical-drive
-    // power-down `diskutil eject` does is rare on Linux dev machines.
+    // power-down `diskutil eject` does is rare on Linux dev machines. `-f` is the
+    // kernel's force for an unreachable network mount (CIFS).
     #[cfg(target_os = "linux")]
     let output = {
-        let _ = verb;
-        std::process::Command::new("umount").arg(mount_path).output()
+        let mut command = std::process::Command::new("umount");
+        if verb == UnmountVerb::ForceUnmount {
+            command.arg("-f");
+        }
+        command.arg(mount_path).output()
     };
     match output {
         Err(e) => ToolOutcome::CouldNotStart { detail: e.to_string() },

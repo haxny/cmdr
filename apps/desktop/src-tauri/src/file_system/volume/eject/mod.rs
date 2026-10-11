@@ -38,6 +38,7 @@ mod deadlines;
 mod disk_flight;
 #[cfg(target_os = "macos")]
 mod disk_target;
+mod escalate;
 pub mod holders;
 mod in_flight;
 mod unmount_tool;
@@ -56,6 +57,7 @@ use unmount_tool::UnmountVerb;
 // knowing which file inside the module holds it.
 pub use answers::*;
 pub(crate) use deadlines::INDEX_STOP_DEADLINE;
+pub use escalate::{TakenDown, take_down_smb_mount, take_down_smb_volume};
 pub(crate) use in_flight::is_ejecting;
 pub use in_flight::{VolumesEjectingChanged, ejecting_volume_ids, init_ejecting_volume_emitter};
 pub(in crate::file_system::volume) use unmount_tool::is_still_mounted;

@@ -109,6 +109,53 @@ pub(super) async fn edit_host(
     address: Option<&str>,
     app: &tauri::AppHandle,
 ) -> SavedServerOutcome {
+    match plan_edit(id, &edit, address, app) {
+        EditPlan::Answered(outcome) => outcome,
+        EditPlan::Move { host, to, others } => {
+            let relocate = || manual_servers::relocate_manual_server(id, &to, &edit, app).map(|_| ());
+            crate::server_move::smb::move_host(host, to.clone(), &others, relocate).await
+        }
+    }
+}
+
+/// [`edit_host`] for "Eject and save": a move takes down every saved share still
+/// mounted from the old address first (`server_move::smb::eject_and_move`). An edit
+/// that moves nothing has no mount in its way, so it saves as [`edit_host`] does.
+pub(super) async fn eject_and_edit_host(
+    id: &str,
+    edit: manual_servers::HostEdit,
+    address: Option<&str>,
+    cancel: &tokio_util::sync::CancellationToken,
+    app: &tauri::AppHandle,
+) -> crate::server_move::smb::EjectAndSaveOutcome {
+    use crate::server_move::smb::{EjectAndSaveOutcome, eject_and_move};
+
+    match plan_edit(id, &edit, address, app) {
+        EditPlan::Answered(answer) => EjectAndSaveOutcome::Settled { answer },
+        EditPlan::Move { host, to, others } => {
+            let relocate = || manual_servers::relocate_manual_server(id, &to, &edit, app).map(|_| ());
+            eject_and_move(host, to.clone(), &others, relocate, cancel).await
+        }
+    }
+}
+
+/// What an edit of the SMB host `id` comes to before anything moves.
+enum EditPlan {
+    /// Settled already: refused, or saved in place (no new address).
+    Answered(SavedServerOutcome),
+    /// A move of `host` to `to`. `others` is every other saved host with what the UI
+    /// calls it, for `AddressTaken`.
+    Move {
+        host: crate::server_move::smb::SmbHost,
+        to: crate::network::server_identity::SmbServer,
+        others: Vec<(crate::network::server_identity::SmbServer, String)>,
+    },
+}
+
+/// Reads the edit against the listing: a host that went away and an address that
+/// doesn't parse are refusals, the same address saves the name and account in place,
+/// and anything else is a move.
+fn plan_edit(id: &str, edit: &manual_servers::HostEdit, address: Option<&str>, app: &tauri::AppHandle) -> EditPlan {
     use crate::network::server_identity::SmbServer;
 
     let manual = manual_servers::all(app);
@@ -118,20 +165,22 @@ pub(super) async fn edit_host(
         &crate::network::fresh_discovered_hosts(),
     );
     let Some(at) = groups.iter().position(|group| group.server.id == id) else {
-        return SavedServerOutcome::Unreachable;
+        return EditPlan::Answered(SavedServerOutcome::Unreachable);
     };
     let to = match address.map(manual_servers::parse_server_address) {
         None => None,
         Some(Ok(parsed)) => Some(SmbServer::new(&parsed.host, parsed.port)),
-        Some(Err(_)) => return SavedServerOutcome::Unreachable,
+        Some(Err(_)) => return EditPlan::Answered(SavedServerOutcome::Unreachable),
     };
     let group = &groups[at];
     let Some(to) = to.filter(|to| !(to.host().eq_ignore_ascii_case(&group.host) && to.port() == group.port)) else {
-        return if manual_servers::name_manual_server(id, &group.host, group.port, &edit, app) {
-            SavedServerOutcome::Saved
-        } else {
-            SavedServerOutcome::Unreachable
-        };
+        return EditPlan::Answered(
+            if manual_servers::name_manual_server(id, &group.host, group.port, edit, app) {
+                SavedServerOutcome::Saved
+            } else {
+                SavedServerOutcome::Unreachable
+            },
+        );
     };
     let others: Vec<(SmbServer, String)> = groups
         .iter()
@@ -147,8 +196,7 @@ pub(super) async fn edit_host(
         server: SmbServer::new(&group.host, group.port),
         rows: group.rows.clone(),
     };
-    let relocate = || manual_servers::relocate_manual_server(id, &to, &edit, app).map(|_| ());
-    crate::server_move::smb::move_host(host, to.clone(), &others, relocate).await
+    EditPlan::Move { host, to, others }
 }
 
 /// The saved SMB host the listing calls `id`, read from the stores as they are now.

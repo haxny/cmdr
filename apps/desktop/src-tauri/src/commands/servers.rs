@@ -333,7 +333,9 @@ pub fn cancel_server_connect(attempt_id: String) -> bool {
     let webdav = webdav_volume_wiring::cancel_connect(&attempt_id);
     let s3 = s3_volume_wiring::cancel_connect(&attempt_id);
     let smb = smb_saved_shares::cancel_connect(&attempt_id);
-    sftp || webdav || s3 || smb
+    // The sheet's "Eject and save" runs under the same kind of id, and its Cancel is this one.
+    let eject_and_save = crate::server_move::smb::cancel_eject_and_save(&attempt_id);
+    sftp || webdav || s3 || smb || eject_and_save
 }
 
 /// Drops a place's session and takes it out of the registry, answering whether
@@ -686,6 +688,44 @@ pub async fn update_saved_smb_host(
     let edit = manual_servers::HostEdit { name, username };
     let outcome = smb_hosts::edit_host(&id, edit, address.as_deref(), &app).await;
     if outcome == SavedServerOutcome::Saved {
+        crate::volume_broadcast::emit_volumes_changed();
+    }
+    outcome
+}
+
+/// [`update_saved_smb_host`] for "Eject and save", the button on its `share_mounted`
+/// refusal: a move first takes down every saved share still mounted from the old
+/// address, then saves. `attempt_id` is the sheet's own, so its Cancel
+/// ([`cancel_server_connect`]) can call the run off before the next eject and before
+/// the save.
+///
+/// ❗ The person asked for this, so Cmdr still never unmounts on its own initiative.
+/// Every refusal that touches no mount answers BEFORE any eject, a refused eject (a
+/// live mount someone is using) saves nothing, and a force unmount only follows a
+/// normal one that didn't answer (`server_move_smb.rs`, `eject/escalate.rs`).
+///
+/// ❗ Emits `volumes-changed` on a save, like [`update_saved_smb_host`].
+#[tauri::command]
+#[specta::specta]
+pub async fn eject_and_update_saved_smb_host(
+    id: String,
+    name: String,
+    username: Option<String>,
+    address: Option<String>,
+    attempt_id: String,
+    app: tauri::AppHandle,
+) -> crate::server_move::smb::EjectAndSaveOutcome {
+    use crate::server_move::smb::{EjectAndSaveOutcome, register_eject_and_save};
+
+    let (cancel, _attempt) = register_eject_and_save(&attempt_id);
+    let edit = manual_servers::HostEdit { name, username };
+    let outcome = smb_hosts::eject_and_edit_host(&id, edit, address.as_deref(), &cancel, &app).await;
+    if matches!(
+        outcome,
+        EjectAndSaveOutcome::Settled {
+            answer: SavedServerOutcome::Saved
+        }
+    ) {
         crate::volume_broadcast::emit_volumes_changed();
     }
     outcome

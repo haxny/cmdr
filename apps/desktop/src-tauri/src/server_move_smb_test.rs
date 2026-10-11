@@ -253,3 +253,203 @@ async fn a_move_between_two_spellings_of_one_key_keeps_the_password() {
         "the password stays"
     );
 }
+
+// ============================================================================
+// Eject and save
+// ============================================================================
+
+/// A host with two saved shares mounted from `address`, both registered as volumes.
+fn host_with_two_mounted_shares(address: &str, ids: [&str; 2]) -> SmbHost {
+    assert!(known_shares::remember_share(mounted_row(address, 445, "first", ids[0])).is_none());
+    let host = saved_host(mounted_row(address, 445, "second", ids[1]));
+    let manager = crate::file_system::volume::manager::get_volume_manager();
+    for id in ids {
+        manager.register(id, Arc::new(cmdr_fs::volume::InMemoryVolume::new(id)));
+    }
+    host
+}
+
+fn unregister(ids: &[&str]) {
+    let manager = crate::file_system::volume::manager::get_volume_manager();
+    for id in ids {
+        manager.unregister(id);
+    }
+}
+
+fn refused() -> EjectError {
+    EjectError::UnmountRefused {
+        holders: eject::holders::HolderScan::Incomplete { named: Vec::new() },
+        detail: "diskutil unmount: dissented by PID 4242 (Preview)".to_string(),
+    }
+}
+
+/// Runs "Eject and save" with a takedown that answers `answer` for every mount,
+/// answering the outcome and the mounts it was asked to take down.
+async fn eject_and_move_answering(
+    host: SmbHost,
+    to: SmbServer,
+    others: &[(SmbServer, String)],
+    cancel: &CancellationToken,
+    answer: impl Fn() -> Result<TakenDown, EjectError>,
+) -> (EjectAndSaveOutcome, Vec<OldMount>) {
+    let asked = std::sync::Mutex::new(Vec::new());
+    let outcome = eject_and_move_with(host, to, others, no_manual_entry, cancel, |mount| {
+        asked.lock().expect("test lock").push(mount);
+        let answer = answer();
+        async move { answer }
+    })
+    .await;
+    (outcome, asked.into_inner().expect("test lock"))
+}
+
+/// ❗ **Every refusal that touches no mount answers BEFORE any eject**: ejecting and then
+/// failing to save is the worst outcome there is.
+#[tokio::test]
+async fn eject_and_save_refuses_a_taken_address_before_touching_a_mount() {
+    let ids = ["smb-198-18-0-70-first", "smb-198-18-0-70-second"];
+    let host = host_with_two_mounted_shares("198.18.0.70", ids);
+    let others = [(SmbServer::new("198.18.0.71", 445), "Office NAS".to_string())];
+
+    let (outcome, asked) = eject_and_move_answering(
+        host,
+        SmbServer::new("198.18.0.71", 445),
+        &others,
+        &CancellationToken::new(),
+        || Ok(TakenDown::Unmounted),
+    )
+    .await;
+    unregister(&ids);
+
+    assert!(
+        asked.is_empty(),
+        "nothing is ejected for a move that can't land: {asked:?}"
+    );
+    assert!(
+        matches!(outcome, EjectAndSaveOutcome::Settled { answer: SavedServerOutcome::AddressTaken { ref name } } if name == "Office NAS"),
+        "got {outcome:?}"
+    );
+}
+
+#[tokio::test]
+async fn eject_and_save_refuses_a_running_operation_before_touching_a_mount() {
+    let ids = ["smb-198-18-0-72-first", "smb-198-18-0-72-second"];
+    let host = host_with_two_mounted_shares("198.18.0.72", ids);
+    let _copy = QueuedOperationFixture::park_naming("smb-eject-and-save-running", vec![ids[0].to_string()], Vec::new());
+
+    let (outcome, asked) = eject_and_move_answering(
+        host,
+        SmbServer::new("198.18.0.73", 445),
+        &[],
+        &CancellationToken::new(),
+        || Ok(TakenDown::Unmounted),
+    )
+    .await;
+    unregister(&ids);
+
+    assert!(asked.is_empty(), "got {asked:?}");
+    assert!(
+        matches!(
+            outcome,
+            EjectAndSaveOutcome::Settled {
+                answer: SavedServerOutcome::OperationRunning
+            }
+        ),
+        "got {outcome:?}"
+    );
+}
+
+/// ❗ **Every mounted share goes, not just the first**, and then the move lands. The
+/// registry still holding them pins the unmount notification's lag: an eject that
+/// answered `Ok` doesn't refuse the move it was for.
+#[tokio::test]
+async fn eject_and_save_takes_down_every_old_address_mount_then_moves() {
+    let _secrets = crate::test_support::isolate_secrets();
+    let ids = ["smb-198-18-0-74-first", "smb-198-18-0-74-second"];
+    let host = host_with_two_mounted_shares("198.18.0.74", ids);
+
+    let (outcome, asked) = eject_and_move_answering(
+        host,
+        SmbServer::new("198.18.0.75", 445),
+        &[],
+        &CancellationToken::new(),
+        || Ok(TakenDown::Forced),
+    )
+    .await;
+    unregister(&ids);
+
+    assert_eq!(
+        asked,
+        vec![
+            OldMount::Volume {
+                share: "first".to_string(),
+                volume_id: ids[0].to_string()
+            },
+            OldMount::Volume {
+                share: "second".to_string(),
+                volume_id: ids[1].to_string()
+            },
+        ]
+    );
+    assert!(
+        matches!(
+            outcome,
+            EjectAndSaveOutcome::Settled {
+                answer: SavedServerOutcome::Saved
+            }
+        ),
+        "got {outcome:?}"
+    );
+    let row = known_shares::share_by_volume_id(ids[1]).expect("still saved");
+    assert_eq!(row.address.as_deref(), Some("198.18.0.75"), "moved");
+}
+
+/// ❗ **A refused eject stops everything and saves nothing**, naming the share and
+/// carrying the refusal, so the sheet can say who's holding it.
+#[tokio::test]
+async fn eject_and_save_answers_a_refused_eject_and_saves_nothing() {
+    let ids = ["smb-198-18-0-76-first", "smb-198-18-0-76-second"];
+    let host = host_with_two_mounted_shares("198.18.0.76", ids);
+
+    let (outcome, asked) = eject_and_move_answering(
+        host,
+        SmbServer::new("198.18.0.77", 445),
+        &[],
+        &CancellationToken::new(),
+        || Err(refused()),
+    )
+    .await;
+    unregister(&ids);
+
+    assert_eq!(
+        asked.len(),
+        1,
+        "the second share isn't tried after a refusal: {asked:?}"
+    );
+    assert!(
+        matches!(outcome, EjectAndSaveOutcome::EjectRefused { ref name, error: EjectError::UnmountRefused { .. } } if name == "first"),
+        "got {outcome:?}"
+    );
+    let row = known_shares::share_by_volume_id(ids[0]).expect("still saved");
+    assert_eq!(row.address.as_deref(), Some("198.18.0.76"), "untouched");
+}
+
+/// A Cancel that lands while a share is ejecting stops before the next one and saves
+/// nothing: what already went stays gone, which is all an unmount can do.
+#[tokio::test]
+async fn eject_and_save_called_off_mid_way_saves_nothing() {
+    let ids = ["smb-198-18-0-78-first", "smb-198-18-0-78-second"];
+    let host = host_with_two_mounted_shares("198.18.0.78", ids);
+    let cancel = CancellationToken::new();
+
+    let (outcome, asked) = eject_and_move_answering(host, SmbServer::new("198.18.0.79", 445), &[], &cancel, || {
+        cancel.cancel();
+        Ok(TakenDown::Unmounted)
+    })
+    .await;
+    unregister(&ids);
+
+    assert_eq!(asked.len(), 1, "got {asked:?}");
+    assert!(matches!(outcome, EjectAndSaveOutcome::Cancelled), "got {outcome:?}");
+    let row = known_shares::share_by_volume_id(ids[0]).expect("still saved");
+    assert_eq!(row.address.as_deref(), Some("198.18.0.78"), "untouched");
+}
