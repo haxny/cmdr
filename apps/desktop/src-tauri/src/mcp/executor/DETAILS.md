@@ -35,8 +35,9 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   ai-client-only, because Ask Cmdr is already an LLM holding the user's prose and nesting a second model call to write
   a query it can write itself buys two providers and a translation it can't see (`../../agent/tools/DETAILS.md` § The
   tool catalog). The result shape and every rule about it live in `search/result.rs` (§ The search result, below).
-- **`queue.rs`**: the `queue` tool (pause / resume / cancel one id, pause_all / resume_all). Thin adapter over the
-  manager: no FE action, so no ack.
+- **`queue.rs`**: the `queue` tool (pause / resume / cancel one id, pause_all / resume_all, and `continue_without_gone`,
+  the answer to a `pendingSourcesGone` question). Thin adapter over the manager: no FE action, so no ack. Only a
+  `Continued` outcome earns an `OK`.
 - **`conflicts.rs`**: `resolve_conflict` — answers ONE Stop-mode clash a running operation is parked on. Same adapter
   shape as `queue.rs`, over `write_operations::resolve_write_conflict`, and the whole point of it is reporting the
   ARBITRATION honestly: `Resolved` / `AlreadyResolved` answer `OK` (the clash is settled either way), `StaleAnswer` /

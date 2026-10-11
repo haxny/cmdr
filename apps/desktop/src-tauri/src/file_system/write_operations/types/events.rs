@@ -240,6 +240,42 @@ pub struct ProgressAtStop {
     pub sources_left: Option<u32>,
 }
 
+/// A queued operation found, when its turn came, that some of the top-level
+/// sources it was started with are gone: moved or deleted while it waited.
+///
+/// The counts are top-level items, never a walk: one existence probe per source
+/// is all the check costs. `next` says whether the operation is now parked on
+/// the person (`continue_without_gone_sources` carries it on, a cancel ends it)
+/// or has already finished because nothing was left. `queued_sources.rs`, and
+/// `DETAILS.md` § "Sources that left while an operation queued".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "write-sources-gone")]
+pub struct WriteSourcesGoneEvent {
+    pub operation_id: String,
+    pub operation_type: WriteOperationType,
+    /// How many top-level sources the operation was started with.
+    pub total_count: usize,
+    /// How many of them are gone now.
+    pub gone_count: usize,
+    /// The first few gone sources' paths, in the caller's order, so a prompt can
+    /// name them. Capped: `gone_count` is the honest total.
+    pub gone_sample: Vec<String>,
+    pub next: SourcesGoneNext,
+}
+
+/// What a queued operation does about sources that left while it waited.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SourcesGoneNext {
+    /// Some sources are still there. The operation waits for the person: carry
+    /// on with the rest, or cancel.
+    AwaitingAnswer,
+    /// Every source is gone. The operation has completed with nothing to do;
+    /// this event only says why.
+    NothingLeft,
+}
+
 /// How one top-level source item ENDED.
 ///
 /// `Done` is not "every byte moved": a directory merge that skipped three of a

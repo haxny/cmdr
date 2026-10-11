@@ -44,6 +44,7 @@ mod operation_intent;
 mod overwrite;
 #[cfg(target_os = "macos")]
 mod paste_clipboard;
+mod queued_sources;
 mod rename;
 mod reversal;
 pub(crate) mod rollback;
@@ -134,12 +135,15 @@ pub use state::abort_all_write_operations;
 // `LifecycleStatus` they carry is vocabulary and lives in `types`.
 // `init_operation_event_emitter` wires the emitter at startup; the command
 // helpers back the new `list_operations` / `cancel_operation(s)` IPC.
+// A queued operation whose sources left while it waited asks before carrying on.
 pub use manager::{
     OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
     QueueMoveOutcome, cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation,
     init_operation_event_emitter, list_operations, move_queued_operation, operations_need_volume, pause_all,
     pause_operation, resume_all, resume_operation,
 };
+pub use queued_sources::continue_without_gone_sources;
+pub(crate) use queued_sources::pending_sources_gone;
 // Managed instant mutations (rename / mkdir / mkfile) + rename validation. The
 // thin IPC commands (`commands/rename.rs`, `commands/file_system/write_ops.rs`)
 // call these; `RenameValidityResult` rides into `bindings.ts` via the
@@ -187,10 +191,11 @@ pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
     MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals,
-    ScanProgressEvent, SortColumn, SortOrder, SourceItemOutcome, SpaceShortfall, TransferActivity, TransferWaitReason,
-    WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
-    WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
-    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    ScanProgressEvent, SortColumn, SortOrder, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext,
+    SpaceShortfall, TransferActivity, TransferWaitReason, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
+    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase,
+    WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteSourcesGoneEvent,
 };
 
 // Re-export for tests (these are pub(crate) in validation.rs and state.rs)

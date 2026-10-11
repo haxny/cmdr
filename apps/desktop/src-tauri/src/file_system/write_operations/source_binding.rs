@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::event_sinks::OperationEventSink;
+use super::queued_sources::{kept_after_queue_local, kept_after_queue_on};
 use super::types::{SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent};
 use crate::file_system::volume::Volume;
 
@@ -304,13 +305,16 @@ impl ExpectedSources {
     }
 }
 
-/// The sources a local operation may still touch, or `None` when the binding left
-/// it nothing to do — in which case the terminal event has already gone out and
-/// the caller returns `Ok(())` without touching the filesystem.
+/// The sources a local operation may still touch, or `None` when it has nothing
+/// left to do or was cancelled — in which case the terminal event has already
+/// gone out and the caller returns `Ok(())` without touching the filesystem.
 ///
-/// An operation with no binding gets its sources back untouched, which is the
-/// whole reason this can sit at the top of every verb: it is a no-op for every
-/// user-started operation.
+/// An operation with no binding is held to nothing but the queue check
+/// (`queued_sources.rs`): one that waited behind another operation asks the
+/// person about any source that left meanwhile, and every other one gets its
+/// sources back untouched. That is the whole reason this can sit at the top of
+/// every verb. The queue check may BLOCK on that answer, so the local forms run
+/// only on the operation's blocking task.
 pub(crate) fn retain_bound_sources(
     events: &dyn OperationEventSink,
     operation_id: &str,
@@ -319,7 +323,8 @@ pub(crate) fn retain_bound_sources(
     sources: Vec<PathBuf>,
 ) -> Option<Vec<PathBuf>> {
     let Some(expected) = expected else {
-        return Some(sources);
+        let kept = kept_after_queue_local(events, operation_id, operation_type, &sources)?;
+        return Some(select(&sources, &kept));
     };
     let kept = expected.kept_positions_local(events, operation_id, &sources);
     finish_or_keep(events, operation_id, operation_type, sources, kept)
@@ -339,7 +344,8 @@ pub(crate) async fn retain_bound_sources_on(
     sources: Vec<PathBuf>,
 ) -> Option<Vec<PathBuf>> {
     let Some(expected) = expected else {
-        return Some(sources);
+        let kept = kept_after_queue_on(volume, events, operation_id, operation_type, &sources).await?;
+        return Some(select(&sources, &kept));
     };
     let kept = expected.kept_positions_on(volume, events, operation_id, &sources).await;
     finish_or_keep(events, operation_id, operation_type, sources, kept)
@@ -358,16 +364,21 @@ pub(crate) fn retain_bound_sources_with_sizes(
     item_sizes: Option<Vec<u64>>,
 ) -> Option<(Vec<PathBuf>, Option<Vec<u64>>)> {
     let Some(expected) = expected else {
-        return Some((sources, item_sizes));
+        let kept = kept_after_queue_local(events, operation_id, operation_type, &sources)?;
+        return Some((select(&sources, &kept), item_sizes.map(|sizes| select(&sizes, &kept))));
     };
     let kept = expected.kept_positions_local(events, operation_id, &sources);
-    let item_sizes = item_sizes.map(|sizes| {
-        kept.iter()
-            .filter_map(|position| sizes.get(*position).copied())
-            .collect()
-    });
+    let item_sizes = item_sizes.map(|sizes| select(&sizes, &kept));
     let sources = finish_or_keep(events, operation_id, operation_type, sources, kept)?;
     Some((sources, item_sizes))
+}
+
+/// The items at `positions`, in that order.
+fn select<T: Clone>(items: &[T], positions: &[usize]) -> Vec<T> {
+    positions
+        .iter()
+        .filter_map(|position| items.get(*position).cloned())
+        .collect()
 }
 
 fn finish_or_keep(
@@ -381,17 +392,13 @@ fn finish_or_keep(
         announce_empty_batch(events, operation_id, operation_type, sources.len());
         return None;
     }
-    Some(
-        kept.into_iter()
-            .filter_map(|position| sources.get(position).cloned())
-            .collect(),
-    )
+    Some(select(&sources, &kept))
 }
 
 /// Whether a local source is positively absent, as opposed to merely unreadable.
 /// A permission error leaves `source_removed: false`, because "we couldn't look"
 /// is not evidence the file is gone and the flag drives snapshot purging.
-fn local_source_is_gone(source: &Path) -> bool {
+pub(super) fn local_source_is_gone(source: &Path) -> bool {
     matches!(
         std::fs::symlink_metadata(source),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound
@@ -412,7 +419,8 @@ fn announce_skip(events: &dyn OperationEventSink, operation_id: &str, source: &P
     });
 }
 
-/// The terminal event for an operation whose binding left it nothing to do.
+/// The terminal event for an operation whose binding left it nothing to do, or
+/// whose every source left while it queued (`queued_sources.rs`).
 ///
 /// ❌ Not a `write-error`. Every source was already announced as a `Skipped`
 /// item, so the caller has its per-source answers; a failure dialog on top of them
@@ -427,7 +435,7 @@ pub(crate) fn announce_empty_batch(
 ) {
     log::info!(
         target: "source_binding",
-        "operation {operation_id} has nothing left to do: all {skipped} source(s) changed since they were approved"
+        "operation {operation_id} has nothing left to do: all {skipped} source(s) were skipped"
     );
     events.emit_complete(WriteCompleteEvent {
         operation_id: operation_id.to_string(),

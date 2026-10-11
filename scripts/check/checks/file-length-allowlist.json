@@ -44,6 +44,10 @@
       "lines": 827,
       "reason": "TODO: the module wall (`PREVIEWS` and `CachedScanResult`'s fields private to this file) is what keeps every read of a preview going through one door, so the readers can't move out as plain siblings. Split it into a `scan_cache/` directory instead: keep the map, the claims, settle, and TTL in `scan_cache/mod.rs`, and move the per-file carriers (`FileInfo`, `ScanResult`) and the read-only views over a settled entry (`cached_scan_totals`, `cached_cost_facts`) into children, which see the parent's private items. That brings the core back near 650 lines."
     },
+    "apps/desktop/src-tauri/src/file_system/write_operations/state.rs": {
+      "lines": 811,
+      "reason": "TODO: the per-operation state and the process-wide registry share the file. Move `WriteOperationRegistry` with `WRITE_OPERATION_STATE`, `forget_operation`, `cancel_all`, and `abort_all` (about 120 lines) into `state/registry.rs`, beside `state/controls.rs` which already reaches operations through it. What stays is `WriteOperationState` itself: its fields, constructor, and the progress-enrichment and park helpers every engine calls."
+    },
     "apps/desktop/src-tauri/src/file_system/write_operations/transfer/transfer_driver_async_tests.rs": {
       "lines": 1289,
       "reason": "TODO: the pause-gate band is a separate suite wearing the same filename. Its tail (`async_driver_parks_while_paused_then_resumes_to_completion` and `async_driver_cancel_while_paused_unblocks_and_cancels`, plus the 15-line comment explaining their per-file `Semaphore` harness) cover the pause gate rather than the driver's transfer loop, run on a four-worker runtime where every other test runs on two, and account for about 230 lines. Move them to `transfer_driver_async_pause_tests.rs`, which follows the split this directory already uses (`transfer_driver_sync_tests.rs`, `transfer_driver_concurrent_tests.rs`, `transfer_driver_pre_skip_tests.rs`), and lift the three closure-shape aliases (`FetchFut`, `ResolveFut`, `TransferFut`) into `transfer_driver_test_support.rs` so both files share them. That leaves about 990 lines covering data safety, conflict resolution, progress accounting, dest derivation, ordering, and the `Send` guard, with the module doc's coverage map trimmed to match."
@@ -75,6 +79,10 @@
     "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/strategy_test_support.rs": {
       "lines": 1245,
       "reason": "TODO: split it, because it is 13 unrelated `Volume` / `VolumeReadStream` doubles serving nine suites and the seams show in who reads what. `RecursiveDeleteVolume` and `UndeletableSource` (lines 371-502, ~130 lines) have no `strategy_*` consumer at all; their readers are `cleanup_tests.rs`, `conflict_tests.rs`, and `move_failure_tests.rs`, so they belong in a `cleanup_test_support.rs`. The auto-yield cluster `ReleasingStream` + `ReleasingSource` + `AutoYieldTuningGuard` + `YieldingSource` + `NeverPendingYieldSource` (lines 765-1129, ~365 lines) is read only by `strategy_yield_tests.rs`, `strategy_dest_yield_tests.rs`, and `copy_wedge_test_support.rs`, and should join the existing `strategy_dest_yield_test_support.rs` or get its own `strategy_yield_test_support.rs`. `FlakyDest` (~125 lines) pairs with `strategy_retry_tests.rs`. That leaves the abort and stale-handle doubles (`SlowChunkedStream`, `SlowSource`, `FailOnceStaleDest`, `WedgedThenWorkingDest`, `WedgedOpenSource`, `TierOneWitnessDest`) at ~500 lines here. The header comment still claims four suites, so the file has outgrown its own description, and note that a `_test_support.rs` name gets the 800-line budget, not the 1,200-line test one."
+    },
+    "apps/desktop/src-tauri/src/file_system/write_operations/types/events.rs": {
+      "lines": 834,
+      "reason": "Every payload the backend broadcasts about a write operation, plus the enums only those payloads carry, by the rule in its own header: one place to read the whole wire vocabulary the frontend listens to. Splitting by event would scatter that vocabulary without making any one payload easier to find."
     },
     "apps/desktop/src-tauri/src/file_viewer/rows_test.rs": {
       "lines": 1212,

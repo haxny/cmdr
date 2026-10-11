@@ -896,6 +896,14 @@ export const commands = {
       applyToAll,
     }),
   /**
+   *  Carries a queued operation on without the sources that left while it waited
+   *  (the person's "Move the rest"). It asked through `write-sources-gone`;
+   *  cancelling instead is the ordinary `cancel_operation`. The outcome says
+   *  whether this answer is the one that reached it.
+   */
+  continueWithoutGoneSources: (operationId: string) =>
+    __TAURI_INVOKE<SourcesGoneAnswerOutcome>('continue_without_gone_sources', { operationId }),
+  /**
    *  Returns the thin operation registry snapshot (membership + lifecycle
    *  status) for the queue window. Live per-row progress comes from the separate
    *  `write-progress` stream; this snapshot stays thin.
@@ -5140,6 +5148,7 @@ export const events = {
   writeProgress: makeEvent<WriteProgressEvent>('write-progress'),
   writeSettled: makeEvent<WriteSettledEvent>('write-settled'),
   writeSourceItemDone: makeEvent<WriteSourceItemDoneEvent>('write-source-item-done'),
+  writeSourcesGone: makeEvent<WriteSourcesGoneEvent>('write-sources-gone'),
 }
 
 /* Types */
@@ -15469,6 +15478,37 @@ export type SourceItemInput = {
 export type SourceItemOutcome = 'done' | 'skipped' | 'failed'
 
 /**
+ *  What the backend did with "carry on without the sources that left".
+ *  Produced by `queued_sources::continue_without_gone_sources`.
+ */
+export type SourcesGoneAnswerOutcome =
+  /**
+   *  The operation was waiting on this question and carries on with the
+   *  sources that are still there.
+   */
+  | 'continued'
+  /**
+   *  The operation is live but isn't asking: somebody answered first, or a
+   *  cancel took the question away.
+   */
+  | 'not_asking'
+  // Nothing is registered under this operation id.
+  | 'unknown_operation'
+
+// What a queued operation does about sources that left while it waited.
+export type SourcesGoneNext =
+  /**
+   *  Some sources are still there. The operation waits for the person: carry
+   *  on with the rest, or cancel.
+   */
+  | 'awaiting_answer'
+  /**
+   *  Every source is gone. The operation has completed with nothing to do;
+   *  this event only says why.
+   */
+  | 'nothing_left'
+
+/**
  *  What a volume can say about its room.
  *
  *  Two shapes, because two situations are genuinely different. A disk, a share,
@@ -18327,6 +18367,31 @@ export type WriteSourceItemDoneEvent = {
   sourceRemoved: boolean
   // How the item ended. See [`SourceItemOutcome`].
   outcome: SourceItemOutcome
+}
+
+/**
+ *  A queued operation found, when its turn came, that some of the top-level
+ *  sources it was started with are gone: moved or deleted while it waited.
+ *
+ *  The counts are top-level items, never a walk: one existence probe per source
+ *  is all the check costs. `next` says whether the operation is now parked on
+ *  the person (`continue_without_gone_sources` carries it on, a cancel ends it)
+ *  or has already finished because nothing was left. `queued_sources.rs`, and
+ *  `DETAILS.md` § "Sources that left while an operation queued".
+ */
+export type WriteSourcesGoneEvent = {
+  operationId: string
+  operationType: WriteOperationType
+  // How many top-level sources the operation was started with.
+  totalCount: number
+  // How many of them are gone now.
+  goneCount: number
+  /**
+   *  The first few gone sources' paths, in the caller's order, so a prompt can
+   *  name them. Capped: `gone_count` is the honest total.
+   */
+  goneSample: string[]
+  next: SourcesGoneNext
 }
 
 /* Tauri Specta runtime */

@@ -8,12 +8,12 @@ pub fn queue_schema() -> Value {
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["pause", "resume", "cancel", "pause_all", "resume_all"],
-                "description": "pause | resume | cancel | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored."
+                "enum": ["pause", "resume", "cancel", "continue_without_gone", "pause_all", "resume_all"],
+                "description": "pause | resume | cancel | continue_without_gone | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer)."
             },
             "operationId": {
                 "type": "string",
-                "description": "Operation to act on (required for pause / resume / cancel unless operationIds is given). See cmdr://state operations."
+                "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone unless operationIds is given). See cmdr://state operations."
             },
             "operationIds": {
                 "type": "array",

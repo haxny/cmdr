@@ -162,6 +162,10 @@ apart without subscribing to anything:
   `conflictId` to answer with (next section).
 - `unknown`: nothing is moving and nothing explains it. This is the wedge shape, and the one worth escalating on.
 
+A row carrying a `pendingSourcesGone` block is a queued operation that found some of its sources gone (moved or deleted)
+when its turn came, and waits for an answer: `queue` with `continue_without_gone` carries on with the rest, `cancel`
+ends it.
+
 A row with no `waitingOn` at all means the backend can't classify itself (a local copy keeps no in-flight table). Read
 that as "can't tell", never as "it's fine".
 

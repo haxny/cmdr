@@ -85,7 +85,7 @@ The full top-level inventory is here:
   `mutation_error.rs` (the typed refusal an instant mutation returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space pre-flight"), `analytics.rs`, `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The
   scratch dir archive edits stage local bytes in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`, `rename/` +
   `rename.rs`, `paste_clipboard.rs`, `routing.rs` (the one routing every cross-volume transfer takes:
-  `start_volume_{copy,move,compress}`, plus `start_rename_by_move`). `source_binding.rs` is the optional set of sources an op may touch. Fixtures:
+  `start_volume_{copy,move,compress}`, plus `start_rename_by_move`). `source_binding.rs` is the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when admitted. Fixtures:
   `test_support.rs`. Every backend's cells through this pipeline live in `backend_suites/`: the backend-blind
   `network_*_test_support.rs` scenarios the WebDAV, SFTP, SMB, and ADB suites drive, the chunk-gated sources in
   `network_gated_source_test_support.rs` (§ "The network transfer suites"), the per-backend fixture dials
@@ -1127,6 +1127,21 @@ agreeing about which clashes are real (canonical: `transfer/DETAILS.md` § "Self
 - **`journal_snapshot()` lives on the fingerprint** because the journal's mtime column is Unix SECONDS while a local fingerprint holds nanoseconds. Journal the nanoseconds and every undo reports drift and refuses (silently disabling undo); journal nothing and identity rests on size alone, so a same-size replacement gets renamed back in place of the original. A directory answers `(None, None)`: it has no bytes of its own to be held to.
 
 **Nothing in the engine asks who started an operation**, and a test holds it there. `expected_sources` is an `Option` a caller may supply; an unbound operation gets its sources back untouched, which is every user-started copy, move, delete, and trash. `approved_op_parity_tests.rs` pins the consequence: the same transfer run bound and unbound agrees on the destination tree, the completion counters, and every per-source event — a missing destination folder is created either way, an Overwrite overwrites either way, a Skip skips in the same place either way. `only_a_source_that_changed_is_treated_differently` states the one permitted difference positively, so the parity cases can't be read as "the binding does nothing".
+
+## Sources that left while an operation queued
+
+`queued_sources.rs`. An operation that auto-queued behind a long one on the same lane can wait many minutes, and the person keeps working meanwhile. ERR-962JD: a queued move of 22 mp3s whose files the person had moved by hand was admitted four minutes later and stopped on the first one with a bare `SourceNotFound`, nothing having said the queued job still had plans for those files.
+
+- **Only an operation that WAITED checks.** `spawn_managed` marks the state (`note_waited_in_queue`) when its own admission pass leaves the record `Queued`. One admitted at once runs against sources its dialog looked at a moment ago, and keeps the engine's own typed refusal (`a_move_admitted_at_once_is_not_checked`).
+- **It rides the binding's seam.** `retain_bound_sources*` already sits at the top of every starter, after admission, so an UNBOUND operation runs the queue check there (`kept_after_queue_local` / `kept_after_queue_on`); a bound one already drops a changed or vanished source on its own terms. Archive-edit routes (copy into a zip, extract, compress) don't pass through it, so they keep the plain refusal.
+- **One probe per top-level source, ❌ never a walk**, through the source `Volume` on a volume route. Only a POSITIVE absence counts (`symlink_metadata` NotFound locally, `VolumeError::NotFound` on a volume, ❌ never `Volume::exists`, which says `false` for an unreachable source too): a dead connection must never read as "all your files were moved". A source that can't be looked at stays for the engine to report.
+- **Some gone: it asks.** `write-sources-gone` (`AwaitingAnswer`, with the honest `gone_count` / `total_count` and the first few paths), and the operation parks on `state.sources_gone`, holding its lanes like a conflict prompt. `continue_without_gone_sources` carries it on: each gone source is reported `Skipped` with `source_removed: true`, and the narrowed source list misses the stale scan cache, so the rest is re-scanned honestly. Cancel is the ordinary cancel path, which abandons the slot; the operation emits `write-cancelled` with nothing processed. The local starters block their `spawn_blocking` thread on the answer, the volume ones `.await` it.
+- **All gone: it says so and completes.** Each source `Skipped`, `write-sources-gone` (`NothingLeft`) so the person learns why, and the empty batch's `write-complete`. ❌ Not a `write-error`: nothing went wrong, so nothing is retained as a failure.
+- **No human-wait clock edge.** The question comes before the write phase's first progress sample, so no rate window can straddle it.
+- **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingSourcesGone`, and the `queue` tool's `continue_without_gone` answers it (`cancel` is the other answer).
+- `OperationEventSink::emit_sources_gone` has a default no-op so the many single-purpose test sinks needn't spell it out; ❗ a sink that WRAPS another (the suggestion bridge's `ProposalReportingSink`) must forward it, or nobody is asked and the operation waits until cancelled.
+
+Pinned by `queued_sources_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` § "Sources that left while an operation queued".
 
 ## Per-source outcomes
 

@@ -316,7 +316,7 @@ impl OperationManager {
     ) {
         let operation_id = descriptor.operation_id.clone();
 
-        WRITE_OPERATION_STATE.insert(operation_id.clone(), state);
+        WRITE_OPERATION_STATE.insert(operation_id.clone(), Arc::clone(&state));
 
         // Claim the confirming dialog's preview before the record exists, so a
         // second op naming the same id is refused rather than racing for one
@@ -351,6 +351,12 @@ impl OperationManager {
         }
 
         self.run_admission_pass();
+        // Its own pass couldn't admit it, so it waits behind another
+        // operation's lanes, possibly for a long time. It checks its sources
+        // when its turn comes (`queued_sources.rs`).
+        if self.lifecycle_status(&operation_id) == Some(LifecycleStatus::Queued) {
+            state.note_waited_in_queue();
+        }
         self.emit_changed();
 
         // AFTER `emit_changed`, on purpose: the frontend store drops progress

@@ -16,7 +16,7 @@ use super::types::{
     ConflictInfo, DryRunResult, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
     WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteOperationType, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use cmdr_index::ExpectedTotals;
 
@@ -131,6 +131,11 @@ pub trait OperationEventSink: Send + Sync {
     /// only the operation knows an answer actually reached it.
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent);
     fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent);
+    /// A queued operation found some of its sources gone when its turn came
+    /// (`queued_sources.rs`). Default no-op so the many single-purpose test
+    /// sinks needn't spell it out; ❗ a sink that WRAPS another must forward it,
+    /// or the person is never asked and the operation waits forever.
+    fn emit_sources_gone(&self, _event: WriteSourcesGoneEvent) {}
     /// Per-iteration progress during dry-run scanning (separate from `write-progress`).
     fn emit_scan_progress(&self, event: ScanProgressEvent);
     /// One `ConflictInfo` per conflicting file during dry-run scanning.
@@ -232,6 +237,9 @@ impl OperationEventSink for TauriEventSink {
         let _ = event.emit(&self.app);
     }
     fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
+        let _ = event.emit(&self.app);
+    }
+    fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
         let _ = event.emit(&self.app);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
@@ -347,6 +355,7 @@ pub(crate) struct CollectorEventSink {
     pub dry_run: std::sync::Mutex<Vec<DryRunResult>>,
     pub settled: std::sync::Mutex<Vec<WriteSettledEvent>>,
     pub source_items_done: std::sync::Mutex<Vec<WriteSourceItemDoneEvent>>,
+    pub sources_gone: std::sync::Mutex<Vec<WriteSourcesGoneEvent>>,
 }
 
 #[cfg(test)]
@@ -364,6 +373,7 @@ impl CollectorEventSink {
             dry_run: std::sync::Mutex::new(Vec::new()),
             settled: std::sync::Mutex::new(Vec::new()),
             source_items_done: std::sync::Mutex::new(Vec::new()),
+            sources_gone: std::sync::Mutex::new(Vec::new()),
         }
     }
 }
@@ -390,6 +400,9 @@ impl OperationEventSink for CollectorEventSink {
     }
     fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
         self.source_items_done.lock_ignore_poison().push(event);
+    }
+    fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
+        self.sources_gone.lock_ignore_poison().push(event);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
         self.scan_progress.lock_ignore_poison().push(event);

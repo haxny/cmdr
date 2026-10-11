@@ -14,7 +14,7 @@
 use serde_json::{Value, json};
 
 use super::{ToolError, ToolResult};
-use crate::file_system::write_operations::LifecycleStatus;
+use crate::file_system::write_operations::{LifecycleStatus, SourcesGoneAnswerOutcome, continue_without_gone_sources};
 use crate::file_system::{
     OperationSnapshot, PauseAllOutcome, PauseOutcome, cancel_operation, cancel_operations, cancel_write_operation,
     list_operations, pause_all, pause_operation, resume_all, resume_operation,
@@ -41,8 +41,13 @@ pub async fn execute_queue(params: &Value) -> ToolResult {
             resume_reply(&id, resume_operation(&id))
         }
         "cancel" => execute_cancel(params),
+        "continue_without_gone" => {
+            let id = require_operation_id(params)?;
+            require_operation_exists(&id)?;
+            continue_reply(&id, continue_without_gone_sources(&id))
+        }
         other => Err(ToolError::invalid_params(format!(
-            "action must be 'pause', 'resume', 'cancel', 'pause_all', or 'resume_all' (got '{other}')"
+            "action must be 'pause', 'resume', 'cancel', 'continue_without_gone', 'pause_all', or 'resume_all' (got '{other}')"
         ))),
     }
 }
@@ -175,6 +180,22 @@ fn resume_reply(operation_id: &str, outcome: PauseOutcome) -> ToolResult {
     }
 }
 
+/// The agent-facing answer to "carry on without the sources that left". Only the
+/// answer that reached the operation earns an `OK`.
+fn continue_reply(operation_id: &str, outcome: SourcesGoneAnswerOutcome) -> ToolResult {
+    match outcome {
+        SourcesGoneAnswerOutcome::Continued => Ok(json!(format!(
+            "OK: Operation {operation_id} is carrying on with the sources that are still there."
+        ))),
+        SourcesGoneAnswerOutcome::NotAsking => Err(ToolError::invalid_params(format!(
+            "Operation {operation_id} isn't asking about sources that left, so there's nothing to carry on: someone answered first, or it never asked. See pendingSourcesGone in cmdr://state operations."
+        ))),
+        SourcesGoneAnswerOutcome::UnknownOperation => Err(ToolError::invalid_params(format!(
+            "Unknown operationId '{operation_id}': it settled before the answer arrived. See cmdr://state operations."
+        ))),
+    }
+}
+
 /// Cancel one or several operations. `rollback: true` (single-op only) routes to
 /// the rollback-capable cancel that deletes already-copied files; everything else
 /// keeps partials.
@@ -297,6 +318,19 @@ mod tests {
         fn drop(&mut self) {
             dismiss_failed_operation(&self.0);
         }
+    }
+
+    /// Carrying on is an answer to a question, so asking an operation that isn't
+    /// asking one is refused, ❌ never an `OK` an agent would act on.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn continuing_an_operation_that_is_not_asking_is_refused() {
+        let fixture = QueuedOperationFixture::park("mcp-queue-continue");
+        let result = execute_queue(&json!({
+            "action": "continue_without_gone",
+            "operationId": fixture.queued_id(),
+        }))
+        .await;
+        assert!(result.is_err(), "nothing was asked, so nothing carried on: {result:?}");
     }
 
     #[test]

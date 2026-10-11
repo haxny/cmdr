@@ -22,7 +22,7 @@ use crate::agent::types::OpStatus;
 use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, SourceItemOutcome, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use crate::ignore_poison::IgnorePoison;
 
@@ -156,6 +156,9 @@ impl OperationEventSink for ProposalReportingSink {
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
         self.inner.emit_conflict_resolved(event);
+    }
+    fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
+        self.inner.emit_sources_gone(event);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
         self.inner.emit_scan_progress(event);

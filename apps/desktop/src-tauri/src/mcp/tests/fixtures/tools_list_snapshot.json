@@ -850,22 +850,23 @@
       "name": "indexing"
     },
     {
-      "description": "Control the operation queue: pause / resume / cancel one operationId, or pause_all / resume_all. cancel also takes operationIds (array) for several; rollback: true deletes already-copied files (single op). See cmdr://state operations for ids.",
+      "description": "Control the operation queue: pause / resume / cancel one operationId, or pause_all / resume_all. cancel also takes operationIds (array) for several; rollback: true deletes already-copied files (single op). continue_without_gone answers a pendingSourcesGone question. See cmdr://state operations for ids.",
       "inputSchema": {
         "properties": {
           "action": {
-            "description": "pause | resume | cancel | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored.",
+            "description": "pause | resume | cancel | continue_without_gone | pause_all | resume_all. pause acts on a running operation; a queued one isn't touching a device yet, so pausing it is refused rather than silently ignored. continue_without_gone answers an operation's pendingSourcesGone question by carrying on with the sources still there (cancel is the other answer).",
             "enum": [
               "pause",
               "resume",
               "cancel",
+              "continue_without_gone",
               "pause_all",
               "resume_all"
             ],
             "type": "string"
           },
           "operationId": {
-            "description": "Operation to act on (required for pause / resume / cancel unless operationIds is given). See cmdr://state operations.",
+            "description": "Operation to act on (required for pause / resume / cancel / continue_without_gone unless operationIds is given). See cmdr://state operations.",
             "type": "string"
           },
           "operationIds": {

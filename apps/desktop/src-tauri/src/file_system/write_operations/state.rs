@@ -70,6 +70,15 @@ pub struct WriteOperationState {
     /// held across `.await` points (the latch re-check reads volume state), which a
     /// std mutex can't span.
     pub conflict_dispatch_lock: tokio::sync::Mutex<()>,
+    /// The question a queued operation asks when sources left while it waited:
+    /// armed by `queued_sources.rs`, answered by `continue_without_gone_sources`,
+    /// and abandoned by a cancel exactly like [`conflict_slot`](Self::conflict_slot).
+    pub(super) sources_gone: super::queued_sources::SourcesGoneSlot,
+    /// Set by the manager when this operation's registration couldn't admit it,
+    /// so it sat `Queued` behind another operation's lanes. Only an operation
+    /// that waited checks its sources on admission: one admitted at once runs
+    /// against sources its dialog looked at a moment ago.
+    waited_in_queue: AtomicBool,
     /// Per-operation ETA + throughput estimator. Fed by `enrich_progress_event`
     /// at every `write-progress` emit site, so every emitter (local copy/delete,
     /// volume copy/move, MTP, SMB) reports rates and ETA uniformly.
@@ -242,6 +251,8 @@ impl WriteOperationState {
             progress_interval,
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
             conflict_dispatch_lock: tokio::sync::Mutex::new(()),
+            sources_gone: super::queued_sources::SourcesGoneSlot::default(),
+            waited_in_queue: AtomicBool::new(false),
             estimator: std::sync::Mutex::new(EtaEstimator::new()),
             skipped_files: AtomicUsize::new(0),
             skipped_bytes: AtomicU64::new(0),
@@ -261,6 +272,16 @@ impl WriteOperationState {
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
         }
+    }
+
+    /// Records that this operation had to wait in the queue. The manager's call.
+    pub(super) fn note_waited_in_queue(&self) {
+        self.waited_in_queue.store(true, Ordering::Relaxed);
+    }
+
+    /// Whether this operation sat `Queued` before it was admitted.
+    pub(super) fn waited_in_queue(&self) -> bool {
+        self.waited_in_queue.load(Ordering::Relaxed)
     }
 
     /// Declare that the reversal starting now DRAINS the progress bar. Call it
@@ -727,6 +748,7 @@ impl WriteOperationRegistry {
                 state.backend_cancel.cancel();
                 // Drop the conflict resolution sender to unblock any waiting receiver
                 state.conflict_slot.abandon();
+                state.sources_gone.abandon();
                 // Wake a paused, parked op so teardown's cancel is observed.
                 state.pause_gate.wake();
             }

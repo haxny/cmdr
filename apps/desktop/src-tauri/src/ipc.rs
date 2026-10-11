@@ -67,7 +67,7 @@ use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, MoveLeftoversKeptEvent, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
     WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
-    WriteSourceItemDoneEvent,
+    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use crate::file_system::write_operations::{MutationSettled, OperationsChanged, VolumesBusyChanged};
 use crate::file_viewer::ViewerPullProgress;
@@ -177,6 +177,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::cancel_scan_preview,
                     crate::commands::file_system::check_scan_preview_status,
                     crate::commands::file_system::resolve_write_conflict,
+                    crate::commands::file_system::continue_without_gone_sources,
                     crate::commands::file_system::list_operations,
                     crate::commands::file_system::cancel_operation,
                     crate::commands::file_system::cancel_operations,
@@ -1022,6 +1023,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             WriteConflictEvent,
             WriteConflictResolvedEvent,
             WriteSourceItemDoneEvent,
+            WriteSourcesGoneEvent,
             ScanProgressEvent,
             ConflictInfo, // scan-conflict
             DryRunResult, // dry-run-complete

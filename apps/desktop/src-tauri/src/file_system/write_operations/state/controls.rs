@@ -63,6 +63,8 @@ pub fn cancel_write_operation(operation_id: &str, rollback: bool) {
     state.backend_cancel.cancel();
     // Drop the conflict resolution sender to unblock any waiting receiver
     state.conflict_slot.abandon();
+    // ...and the sources-gone question, which a queued operation can be parked on.
+    state.sources_gone.abandon();
     // Cancellation wins over pause: wake a paused, parked op so it observes
     // the non-Running intent and bails. Leaves the paused flag set (the op
     // is going away regardless).

@@ -3,10 +3,11 @@
 use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
-    MutationSettled, ScanPreviewRefusal, ScanPreviewStartResult, broadcast_settled,
-    cancel_scan_preview as ops_cancel_scan_preview, create_directory_managed as ops_create_directory_managed,
-    create_file_managed as ops_create_file_managed, get_scan_preview_totals as ops_get_scan_preview_totals,
-    reply_within, resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,
+    MutationSettled, ScanPreviewRefusal, ScanPreviewStartResult, SourcesGoneAnswerOutcome, broadcast_settled,
+    cancel_scan_preview as ops_cancel_scan_preview, continue_without_gone_sources as ops_continue_without_gone_sources,
+    create_directory_managed as ops_create_directory_managed, create_file_managed as ops_create_file_managed,
+    get_scan_preview_totals as ops_get_scan_preview_totals, reply_within,
+    resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,
     trash_routing_for_selection as ops_trash_routing_for_selection,
 };
 use crate::file_system::{
@@ -440,6 +441,16 @@ pub fn resolve_write_conflict(
     apply_to_all: bool,
 ) -> ConflictResolutionOutcome {
     ops_resolve_write_conflict(&operation_id, conflict_id, resolution, apply_to_all)
+}
+
+/// Carries a queued operation on without the sources that left while it waited
+/// (the person's "Move the rest"). It asked through `write-sources-gone`;
+/// cancelling instead is the ordinary `cancel_operation`. The outcome says
+/// whether this answer is the one that reached it.
+#[tauri::command]
+#[specta::specta]
+pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerOutcome {
+    ops_continue_without_gone_sources(&operation_id)
 }
 
 // ============================================================================

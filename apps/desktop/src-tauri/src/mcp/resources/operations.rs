@@ -24,12 +24,14 @@
 //! / running / paused / failed, `waitingOn` separates the ways a RUNNING row can
 //! be stopped (destination, source, an unanswered clash, or the wedge shape that
 //! explains itself with nothing), and `pendingConflict` carries the `conflictId`
-//! an answer needs. No `write-progress` subscription required: the wait rides
+//! an answer needs. `pendingSourcesGone` is the other question a running row can
+//! be parked on: a queued operation whose sources left while it waited. No
+//! `write-progress` subscription required: the wait rides
 //! `OperationStatus` and is classified at read time.
 
 use crate::file_system::write_operations::{
-    LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, WriteConflictEvent, get_operation_status,
-    list_operations, pending_write_conflict,
+    LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, WriteConflictEvent, WriteSourcesGoneEvent,
+    get_operation_status, list_operations, pending_sources_gone, pending_write_conflict,
 };
 use crate::search::query::format_size;
 
@@ -40,6 +42,8 @@ pub(crate) struct OperationRow {
     pub snapshot: OperationSnapshot,
     pub progress: Option<OperationStatus>,
     pub pending_conflict: Option<WriteConflictEvent>,
+    /// The sources-gone question a queued operation is parked on, if any.
+    pub pending_sources_gone: Option<WriteSourcesGoneEvent>,
 }
 
 /// Snapshot every registered operation (queued / running / paused), joining the
@@ -51,10 +55,12 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
         .map(|snapshot| {
             let progress = get_operation_status(&snapshot.operation_id);
             let pending_conflict = pending_write_conflict(&snapshot.operation_id);
+            let pending_sources_gone = pending_sources_gone(&snapshot.operation_id);
             OperationRow {
                 snapshot,
                 progress,
                 pending_conflict,
+                pending_sources_gone,
             }
         })
         .collect()
@@ -137,6 +143,9 @@ pub(crate) fn build_operations_yaml(rows: &[OperationRow], now_ms: u64) -> Strin
         if let Some(conflict) = &row.pending_conflict {
             yaml.push_str(&pending_conflict_yaml(conflict));
         }
+        if let Some(question) = &row.pending_sources_gone {
+            yaml.push_str(&pending_sources_gone_yaml(question));
+        }
     }
     yaml
 }
@@ -218,6 +227,22 @@ fn pending_conflict_yaml(conflict: &WriteConflictEvent) -> String {
     yaml.push_str(
         "      answerWith: resolve_conflict (operationId + conflictId + resolution skip|overwrite|rename|overwrite_smaller|overwrite_older, optional applyToAll)\n",
     );
+    yaml
+}
+
+/// The `pendingSourcesGone:` block: a queued operation found some of its sources
+/// gone when its turn came and waits for someone to say whether to carry on with
+/// the rest. The paths render verbatim for the same reason `pendingConflict`'s
+/// do: the decision is about THOSE files.
+fn pending_sources_gone_yaml(question: &WriteSourcesGoneEvent) -> String {
+    let mut yaml = String::from("    pendingSourcesGone:\n");
+    yaml.push_str(&format!("      goneCount: {}\n", question.gone_count));
+    yaml.push_str(&format!("      totalCount: {}\n", question.total_count));
+    yaml.push_str("      gone:\n");
+    for path in &question.gone_sample {
+        yaml.push_str(&format!("        - {path:?}\n"));
+    }
+    yaml.push_str("      answerWith: queue (action continue_without_gone to carry on with the rest, or cancel)\n");
     yaml
 }
 
