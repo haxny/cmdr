@@ -30,7 +30,7 @@
 //! that could EVER be hidden that way in a short side list. `CachedListing`
 //! reconciles those decisions with a revisioned projection at read and mutation
 //! boundaries; the map merges only its committed decisions, never live ownership.
-//! `staging::could_be_hidden_from_listings`
+//! `cmdr_fs::staging::could_be_hidden_from_listings`
 //! is what makes that sound: `is_hidden_from_listings` is gated on it, so a name
 //! it rejects is settled forever. In a real directory that side list is empty and
 //! a row lookup is one array index.
@@ -57,10 +57,10 @@ impl ScratchProjection {
         Self(
             entries
                 .iter()
-                .filter(|e| staging::could_be_hidden_from_listings(&e.name))
+                .filter(|e| cmdr_fs::staging::could_be_hidden_from_listings(&e.name))
                 .map(|e| {
                     let hidden = previous.0.get(&e.path).filter(|(name, _)| name == &e.name).map_or_else(
-                        || staging::hidden_with_settings(&e.name, staging, safe_save),
+                        || cmdr_fs::staging::hidden_with_settings(&e.name, staging, safe_save),
                         |(_, hidden)| *hidden,
                     );
                     (e.path.clone(), (e.name.clone(), hidden))
@@ -78,7 +78,10 @@ impl ScratchProjection {
                 .map(|(path, (name, _))| {
                     (
                         path.clone(),
-                        (name.clone(), staging::hidden_with_settings(name, staging, safe_save)),
+                        (
+                            name.clone(),
+                            cmdr_fs::staging::hidden_with_settings(name, staging, safe_save),
+                        ),
                     )
                 })
                 .collect(),
@@ -90,11 +93,11 @@ impl ScratchProjection {
         let safe_save = staging::show_safe_save_files();
         self.0
             .values()
-            .any(|(name, hidden)| *hidden != staging::hidden_with_settings(name, staging, safe_save))
+            .any(|(name, hidden)| *hidden != cmdr_fs::staging::hidden_with_settings(name, staging, safe_save))
     }
 
     pub(crate) fn admit(&mut self, entry: &FileEntry) {
-        if !staging::could_be_hidden_from_listings(&entry.name) {
+        if !cmdr_fs::staging::could_be_hidden_from_listings(&entry.name) {
             self.0.remove(&entry.path);
         } else if !self.0.get(&entry.path).is_some_and(|(name, _)| name == &entry.name) {
             self.0.insert(
@@ -205,7 +208,7 @@ impl VisibleMap {
             if !shown_by_setting(entry, include_hidden, name_filter) {
                 continue;
             }
-            if staging::could_be_hidden_from_listings(&entry.name) {
+            if cmdr_fs::staging::could_be_hidden_from_listings(&entry.name) {
                 candidates.push(Candidate {
                     entry_index: index as u32,
                     rows_before: settled.len() as u32,
@@ -332,7 +335,7 @@ impl<'a> VisibleRows<'a> {
     /// The row showing `entries[entry_index]`, or `None` when the pane leaves it out.
     pub(crate) fn row_of_entry(&self, entry_index: usize) -> Option<usize> {
         let entry = self.entries.get(entry_index)?;
-        let shown = if staging::could_be_hidden_from_listings(&entry.name) {
+        let shown = if cmdr_fs::staging::could_be_hidden_from_listings(&entry.name) {
             self.live
                 .binary_search_by_key(&entry_index, |candidate| candidate.entry_index as usize)
                 .is_ok()

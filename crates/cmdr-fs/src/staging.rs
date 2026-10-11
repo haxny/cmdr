@@ -251,6 +251,47 @@ fn owner_is_live(owner: &StagingOwner) -> bool {
     owner.as_ref().is_none_or(|token| token.strong_count() > 0)
 }
 
+/// The marker macOS safe-save writes into its scratch name.
+///
+/// `NSDocument`'s atomic save makes `file.txt.sb-1e64c894-vFWIzN` next to the
+/// original, writes the new version there, swaps it in, and deletes it. TextEdit,
+/// Preview, and anything else built on AppKit's document machinery do this on
+/// every save.
+const SAFE_SAVE_MARKER: &str = ".sb-";
+
+/// Whether `name` is another app's macOS safe-save scratch.
+///
+/// Name-only, and type-agnostic: safe-save creates a temp DIRECTORY as well as
+/// the file inside it, and both are equally uninteresting.
+pub fn is_safe_save_name(name: &str) -> bool {
+    name.contains(SAFE_SAVE_MARKER)
+}
+
+/// Whether `name` is scratch by NAME: one of Cmdr's, or another app's safe-save.
+///
+/// Pure and stable: it reads no setting and no ownership registry, so its answer
+/// for a given name never changes. That's the point: [`hidden_with_settings`] is
+/// gated on it, so a name this rejects is visible now and stays visible until the
+/// listing itself changes, which is what lets the listing layer cache a row map
+/// once and re-ask about only these few names per read. ❗ Keep the gate: without
+/// it the implication is only true by inspection of three other functions, and a
+/// row map built on it would start handing panes the wrong file.
+pub fn could_be_hidden_from_listings(name: &str) -> bool {
+    is_cmdr_scratch_name(name) || is_safe_save_name(name)
+}
+
+/// Whether a listing leaves `name` out of the pane, given the two visibility
+/// settings captured by one projection pass.
+///
+/// Cmdr's own scratch hides by OWNERSHIP (only while an operation has it in
+/// flight, so a leftover shows); another app's safe-save hides by NAME, since no
+/// ownership signal exists for it. Why the two rules differ, and where the
+/// settings live: the app's `file_system/staging.rs`.
+pub fn hidden_with_settings(name: &str, show_staging: bool, show_safe_save: bool) -> bool {
+    could_be_hidden_from_listings(name)
+        && ((!show_staging && is_staging_temp_in_flight(name)) || (!show_safe_save && is_safe_save_name(name)))
+}
+
 #[cfg(test)]
 #[path = "staging/names_test.rs"]
 mod names_test;

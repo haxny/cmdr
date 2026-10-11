@@ -5,8 +5,11 @@
 //! (`write_operations/transfer/staged_write.rs`). The mint itself, the naming
 //! convention, and the in-flight registry are `cmdr_fs::staging`'s, so a backend
 //! crate can stage a write without reaching into the app; everything re-exported
-//! below keeps its `crate::file_system::staging::…` path. What's left here is the
-//! part that belongs to the product: whether the user sees them.
+//! below keeps its `crate::file_system::staging::…` path. So are the pure name
+//! rules over them (`could_be_hidden_from_listings`, `hidden_with_settings`), so
+//! the listing engine asks them without the app. What's left here is the part
+//! that belongs to the product: the two settings that decide whether the user
+//! sees them.
 //!
 //! The cost of staging is that a copy makes files appear under names like
 //! `photo.jpg.cmdr-tmp-3f2a…` for as long as it takes to write them, and a
@@ -37,7 +40,8 @@
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-pub use cmdr_fs::staging::{StagingTemp, is_staging_temp_in_flight};
+pub use cmdr_fs::staging::StagingTemp;
+use cmdr_fs::staging::hidden_with_settings;
 
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
@@ -55,22 +59,6 @@ pub fn set_show_staging_temps(show: bool) {
 /// Whether Cmdr's scratch files are being shown.
 pub fn show_staging_temps() -> bool {
     SHOW_STAGING_TEMPS.load(Ordering::Relaxed)
-}
-
-/// The marker macOS safe-save writes into its scratch name.
-///
-/// `NSDocument`'s atomic save makes `file.txt.sb-1e64c894-vFWIzN` next to the
-/// original, writes the new version there, swaps it in, and deletes it. TextEdit,
-/// Preview, and anything else built on AppKit's document machinery do this on
-/// every save.
-const SAFE_SAVE_MARKER: &str = ".sb-";
-
-/// Whether `name` is another app's macOS safe-save scratch.
-///
-/// Name-only, and type-agnostic: safe-save creates a temp DIRECTORY as well as
-/// the file inside it, and both are equally uninteresting.
-fn is_safe_save_name(name: &str) -> bool {
-    name.contains(SAFE_SAVE_MARKER)
 }
 
 /// Whether the user asked to see other apps' safe-save scratch
@@ -99,28 +87,11 @@ pub fn show_safe_save_files() -> bool {
 /// listing shows the temp, the watcher skips the removal that would clear it,
 /// and it stays in the pane pointing at nothing. The `.sb-` filter lived there
 /// until 2026-08-01 and had precisely that bug.
+///
+/// Gated on the pure `cmdr_fs::staging::could_be_hidden_from_listings`, which is
+/// what keeps a cached row map valid.
 pub fn is_hidden_from_listings(name: &str) -> bool {
     hidden_with_settings(name, show_staging_temps(), show_safe_save_files())
-}
-
-/// Evaluate ownership using the switches captured by one projection pass.
-pub(crate) fn hidden_with_settings(name: &str, show_staging: bool, show_safe_save: bool) -> bool {
-    could_be_hidden_from_listings(name)
-        && ((!show_staging && is_staging_temp_in_flight(name)) || (!show_safe_save && is_safe_save_name(name)))
-}
-
-/// Whether `name` is scratch by NAME: one of Cmdr's, or another app's safe-save.
-///
-/// Pure and stable, unlike [`is_hidden_from_listings`] — it reads no setting and
-/// no ownership registry, so its answer for a given name never changes. That's
-/// the point: the gate above means a name this rejects is visible now and stays
-/// visible until the listing itself changes, which is what lets the listing layer
-/// cache a row map once and re-ask about only these few names per read
-/// (`listing/visible_rows.rs`). ❗ Keep the gate: without it the implication is
-/// only true by inspection of three other functions, and a row map built on it
-/// would start handing panes the wrong file.
-pub fn could_be_hidden_from_listings(name: &str) -> bool {
-    cmdr_fs::staging::is_cmdr_scratch_name(name) || is_safe_save_name(name)
 }
 
 /// Serializes tests whose expectations depend on either visibility setting, and
@@ -195,6 +166,7 @@ impl Drop for ShowTempsGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cmdr_fs::staging::is_staging_temp_in_flight;
     use std::path::Path;
     use std::sync::Arc;
 
