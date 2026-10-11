@@ -75,6 +75,25 @@ pub async fn make_docker_volume_with_host(host: VolumeHost) -> SmbVolume {
     .unwrap_or_else(|e| panic!("Failed to connect to Docker SMB container at 127.0.0.1:{port}. Is it running? ({e:?})"))
 }
 
+/// Connects to the fixture container's `public` share through `port` on
+/// loopback instead of the container's own: a proxy a test stands in front of
+/// the share, to cut the connection and bring it back (the app's outage suite).
+///
+/// The volume id names `port`, so it never collides with a direct connection's.
+pub async fn make_docker_volume_through(port: u16, host: VolumeHost) -> SmbVolume {
+    let params = SmbConnectionParams::new("127.0.0.1", "public", port, None, None);
+    let volume_id = cmdr_fs::volume::smb_volume_id("127.0.0.1", port, "public");
+    connect_smb_volume(
+        "public",
+        MountAnchor::at_share_root(TEST_MOUNT_ROOT),
+        &volume_id,
+        params,
+        host,
+    )
+    .await
+    .unwrap_or_else(|e| panic!("Failed to connect to the SMB share through 127.0.0.1:{port}. Is the proxy up? ({e:?})"))
+}
+
 /// Connects to the fixture container's `public` share as a mount ANCHORED at
 /// `share_root` inside it, addressed at `mount_root`.
 ///

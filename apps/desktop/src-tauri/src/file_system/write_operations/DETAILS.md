@@ -1500,6 +1500,11 @@ other modules reach `smb_test_support` from there: `listing/smb_pane_close_watch
   silenced server because what is under test is the harness at expiry, and a pause reaches that state deterministically
   without holding the shared Docker stack hostage. `.config/nextest.toml` grants the big test a 75 s cap so its own 45 s
   deadline stays authoritative; a cap kill would leave no diagnostic.
+- **A dropped network, end to end** (`smb_outage_test.rs`): a folder copy through `outage_proxy_test_support.rs`'s
+  `OutageProxy` (a TCP proxy of the test's own between the share and the fixture) pauses part-way, the proxy cuts every
+  connection and refuses new ones, the copy resumes into the outage and must WAIT (named, not failed), then the proxy
+  restores and every file must land byte-exact with no `.cmdr-tmp-*` left. ❌ Never stage an outage by stopping a
+  fixture container: the stacks are leased machine-wide, so that fails every other worktree's running suite.
 - **The stress test's hung-run diagnostic gates on the log TARGET** (`MutexCaptureLogger::enabled` in
   `smb_stress_test.rs`): `cmdr_smb::*` for the `client-mutex:` records and `smb2::*` for `recv:`. Without that gate the
   whole process-wide trace stream flows through `log()` and gets `format!`-ed per record, which pushed

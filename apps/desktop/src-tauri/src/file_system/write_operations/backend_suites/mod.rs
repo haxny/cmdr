@@ -79,6 +79,12 @@ mod smb_archive_integration_test;
 mod smb_full_concurrency_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod smb_look_alike_test;
+// A copy that loses the network mid-transfer waits for it (`#398`), through a
+// proxy of the test's own so the shared stack is never touched.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod outage_proxy_test_support;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod smb_outage_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod smb_soak_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
