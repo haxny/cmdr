@@ -46,6 +46,9 @@ Read this before adding, wiping, or reorganizing a spec.
   [#284](https://github.com/vdavid/cmdr/issues/284)–[#287](https://github.com/vdavid/cmdr/issues/287).
 - `dropbox-sync-status-linux.md`: **Cloud badges on Linux, which today are simply absent.** Holds the Dropbox socket
   protocol research and what a Linux arm needs. Issue: [#288](https://github.com/vdavid/cmdr/issues/288).
+- `transfer-metadata-preservation.md`: **Copies and moves drop creation dates, folder tags and permissions, Locked and
+  Hidden, and everything but mtime on most backends.** Keep every class a destination can store, and say once per
+  operation what it couldn't. Issue: none yet.
 
 ## Wiping a shipped spec
 
