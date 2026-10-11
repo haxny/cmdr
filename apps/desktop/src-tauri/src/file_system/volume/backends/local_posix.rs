@@ -185,6 +185,10 @@ pub struct LocalPosixVolume {
     /// The mount this volume sits on, which decides whether a drive index can
     /// serve it (`capabilities`).
     mount: MountClass,
+    /// Whether the kernel keeps AppleDouble sidecars on the volume holding a
+    /// path. The real probe outside tests, which inject one to play a FAT
+    /// volume on APFS. See [`Volume::list_directory_as_source`].
+    sidecar_probe: fn(&Path) -> bool,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -213,9 +217,18 @@ impl LocalPosixVolume {
             name: name.into(),
             root: root.into(),
             mount,
+            sidecar_probe: cmdr_fs::apple_double::volume_keeps_sidecars,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
+    }
+
+    /// This volume with an injected sidecar probe, so a test on APFS can read
+    /// it as a FAT volume.
+    #[cfg(test)]
+    pub fn with_sidecar_probe(mut self, probe: fn(&Path) -> bool) -> Self {
+        self.sidecar_probe = probe;
+        self
     }
 
     /// Resolves a caller's path to an absolute one under this volume's root.
@@ -352,6 +365,13 @@ impl Volume for LocalPosixVolume {
                 }
             }
         })
+    }
+
+    fn list_directory_as_source<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.list_directory_as_source_impl(path)
     }
 
     #[cfg(feature = "playwright-e2e")]

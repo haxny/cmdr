@@ -119,7 +119,9 @@ async fn sweep_level(
     skipped: &HashSet<PathBuf>,
     left: &mut FolderLeftovers,
 ) -> Result<bool, PathedVolumeError> {
-    let entries = match volume.list_directory(dir, None).await {
+    // As the copy walk listed it: a sidecar it left behind travels with its
+    // owner, which the kernel removes with the owner.
+    let entries = match volume.list_directory_as_source(dir).await {
         Ok(entries) => entries,
         // Gone already: whoever removed it, nothing of it is left to protect.
         Err(VolumeError::NotFound(_)) => return Ok(false),
@@ -237,7 +239,7 @@ pub(in crate::file_system::write_operations) async fn stamp_source(
     let mut ledger = SourceLedger::default();
     let mut pending = vec![source.to_path_buf()];
     while let Some(dir) = pending.pop() {
-        for entry in volume.list_directory(&dir, None).await.at(&dir)? {
+        for entry in volume.list_directory_as_source(&dir).await.at(&dir)? {
             let path = PathBuf::from(&entry.path);
             match kind_of(volume, &entry, &path).await? {
                 EntryKind::Directory => pending.push(path),

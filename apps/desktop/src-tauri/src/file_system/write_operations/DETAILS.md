@@ -79,7 +79,9 @@ The full top-level inventory is here:
   only when its sibling exists (an orphan is nobody's xattrs, so it copies). Because the filter sits in the walk, counts,
   bytes, the preview, and the copy agree. `scan_dry_run.rs` applies the same rule, and the cross-FS move's sweep doesn't
   count a kept item's sidecar as an arrival. Deleting the owner removes its sidecar in the kernel, so the sweep never
-  touches one. The rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
+  touches one. The volume engine does the same for a local source through `Volume::list_directory_as_source`
+  (`transfer/volume/DETAILS.md` § "A source is listed as a source", which also notes the same-FS merge-move edge). The
+  rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
 - Scan and preview: `scan.rs`, `scan_preview.rs` (the lifecycle API, with its two workers in `scan_preview/local.rs`
   and `scan_preview/volume.rs`), `scan_cache.rs`, `scan_bridge.rs` (the scan-progress seam the drivers
   feed, and `ScanPause`, the park that lets a walk honor its owner's Pause), `scan_watchdog.rs` (the inactivity bound on

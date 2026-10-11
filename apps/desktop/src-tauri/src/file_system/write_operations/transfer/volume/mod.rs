@@ -142,6 +142,9 @@ mod folder_metadata_tests;
 /// A copy onto local disk keeps creation dates and a routed source's mode.
 #[cfg(test)]
 mod copy_metadata_tests;
+/// A copy out of a local FAT folder leaves its AppleDouble sidecars behind.
+#[cfg(test)]
+mod copy_sidecar_tests;
 
 /// Every backend pair keeps or reports each class: the loss note's matrix.
 #[cfg(test)]

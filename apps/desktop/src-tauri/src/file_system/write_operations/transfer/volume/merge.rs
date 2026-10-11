@@ -544,11 +544,11 @@ async fn merge_level<'a>(
         };
 
         let (dest_index, entries) = if legs_may_overlap {
-            tokio::join!(dest_prepare, source_volume.list_directory(source_path, None))
+            tokio::join!(dest_prepare, source_volume.list_directory_as_source(source_path))
         } else {
             (
                 dest_prepare.await,
-                source_volume.list_directory(source_path, None).await,
+                source_volume.list_directory_as_source(source_path).await,
             )
         };
         Ok((dest_index?, entries?))

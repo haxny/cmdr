@@ -174,6 +174,23 @@ pub trait Volume: Send + Sync {
         self.list_directory(path, on_progress)
     }
 
+    /// Lists `path` the way a transfer reads it as its SOURCE: the plain listing
+    /// minus entries the filesystem keeps FOR a sibling, which travel as that
+    /// sibling's metadata rather than as items of their own. Today that's the
+    /// AppleDouble `._name` sidecars a local FAT or exFAT volume holds on macOS
+    /// (`crate::apple_double`).
+    ///
+    /// Every walk that copies, stamps, or sweeps a source lists through this, so
+    /// they agree on what the source holds. The pane's listing doesn't: it shows
+    /// what's on disk. Default: the plain listing, since no other backend keeps
+    /// such entries.
+    fn list_directory_as_source<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.list_directory(path, None)
+    }
+
     /// List a directory for the BACKGROUND index scan.
     ///
     /// Same result as `list_directory_with_cancel` with no progress callback, but

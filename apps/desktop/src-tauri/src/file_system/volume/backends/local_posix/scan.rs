@@ -10,6 +10,10 @@
 
 use super::super::{CopyScanResult, ScanConflict, SourceItemInfo, VolumeError};
 use super::LocalPosixVolume;
+use crate::file_system::listing::FileEntry;
+use crate::file_system::volume::Volume;
+use cmdr_fs::apple_double::SidecarRule;
+use std::ffi::OsStr;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -35,6 +39,7 @@ impl LocalPosixVolume {
         stop: cmdr_fs::volume::ScanStop,
     ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
         let abs_path = self.resolve(path);
+        let sidecars = SidecarRule::with_probe(self.sidecar_probe);
         Box::pin(async move {
             spawn_blocking(move || {
                 use std::os::unix::fs::MetadataExt;
@@ -50,7 +55,14 @@ impl LocalPosixVolume {
                 let mut dedup_bytes = 0u64;
                 let mut seen_inodes: std::collections::HashSet<u64> = std::collections::HashSet::new();
 
-                for entry in WalkDir::new(&abs_path).min_depth(0) {
+                // The same walk a transfer makes, so the count leaves out what
+                // `list_directory_as_source` leaves out. The top level is the
+                // person's selection, never filtered.
+                let walk = WalkDir::new(&abs_path)
+                    .min_depth(0)
+                    .into_iter()
+                    .filter_entry(|entry| entry.depth() == 0 || !is_walked_sidecar(&sidecars, entry));
+                for entry in walk {
                     if stop.should_stop_blocking() {
                         return Err(cmdr_fs::volume::scan_stopped());
                     }
@@ -110,6 +122,39 @@ impl LocalPosixVolume {
             })
             .await
             .expect("spawn_blocking scan_for_copy closure doesn't panic and the task is uncancelable")
+        })
+    }
+
+    /// [`Volume::list_directory_as_source`]'s body: the listing, minus the
+    /// AppleDouble sidecars a FAT or exFAT volume keeps beside each item
+    /// (`cmdr_fs::apple_double`). A level with no `._` name never leaves the
+    /// async task, so an ordinary folder pays nothing.
+    pub(super) fn list_directory_as_source_impl<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        let abs_dir = self.resolve(path);
+        let sidecars = SidecarRule::with_probe(self.sidecar_probe);
+        Box::pin(async move {
+            let entries = self.list_directory(path, None).await?;
+            if !entries.iter().any(|entry| entry.name.starts_with("._")) {
+                return Ok(entries);
+            }
+            // The probe and the sibling checks are syscalls, and on a mounted
+            // share one can stall, so they run where the listing itself did.
+            Ok(spawn_blocking(move || {
+                use std::os::unix::fs::MetadataExt;
+                // An unreadable folder can't vouch for its device: keep everything.
+                let Ok(dir_meta) = std::fs::symlink_metadata(&abs_dir) else {
+                    return entries;
+                };
+                entries
+                    .into_iter()
+                    .filter(|entry| !sidecars.is_sidecar(&abs_dir, dir_meta.dev(), OsStr::new(&entry.name)))
+                    .collect()
+            })
+            .await
+            .expect("spawn_blocking sidecar filter doesn't panic and the task is uncancelable"))
         })
     }
 
@@ -176,4 +221,18 @@ impl LocalPosixVolume {
             .expect("spawn_blocking scan_for_conflicts closure doesn't panic and the task is uncancelable")
         })
     }
+}
+
+/// Whether the scan walk leaves `entry` out as an AppleDouble sidecar. Only a
+/// `._` name pays for the `lstat`; a sidecar is a plain file, so its device is
+/// its folder's.
+fn is_walked_sidecar(sidecars: &SidecarRule, entry: &walkdir::DirEntry) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    if !entry.file_name().as_encoded_bytes().starts_with(b"._") {
+        return false;
+    }
+    let (Some(dir), Ok(meta)) = (entry.path().parent(), entry.metadata()) else {
+        return false;
+    };
+    sidecars.is_sidecar(dir, meta.dev(), entry.file_name())
 }
