@@ -14,9 +14,10 @@ use super::VolumeManager;
 use super::routing::{ResolvedVolume, RoutedKind};
 use crate::ignore_poison::IgnorePoison;
 use cmdr_archive::{
-    ARCHIVE_MAGIC_PREFIX_LEN, ArchiveFormat, ArchiveVolume, archive_boundary_candidate, bytes_match_archive_magic,
-    confirm_archive_boundary, format_for_path,
+    ARCHIVE_MAGIC_PREFIX_LEN, ArchiveFormat, ArchiveVolume, bytes_match_archive_magic, confirm_archive_boundary,
+    format_for_path,
 };
+use cmdr_fs::archive_format::archive_boundary_candidate;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

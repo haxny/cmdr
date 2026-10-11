@@ -403,9 +403,9 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
     // `std::fs` confirm would wrongly fail. A `to` with no archive component means a
     // rename OUT of the archive (a move), which is refused here.
     let (from_archive, from_inner) =
-        cmdr_archive::archive_boundary_candidate(from).ok_or(MutationError::ArchiveNotEditable)?;
+        cmdr_fs::archive_format::archive_boundary_candidate(from).ok_or(MutationError::ArchiveNotEditable)?;
     let (to_archive, to_inner) =
-        cmdr_archive::archive_boundary_candidate(to).ok_or(MutationError::RenameOutOfArchive)?;
+        cmdr_fs::archive_format::archive_boundary_candidate(to).ok_or(MutationError::RenameOutOfArchive)?;
     if from_archive != to_archive {
         return Err(MutationError::RenameAcrossArchives);
     }

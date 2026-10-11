@@ -77,8 +77,8 @@ pub(crate) async fn route_archive_move_out(
         path: String::new(),
         message: "no entries to move".to_string(),
     })?;
-    let (archive_path, _) =
-        cmdr_archive::archive_boundary_candidate(first).ok_or_else(|| read_only_error(first, ReadOnlySide::Source))?;
+    let (archive_path, _) = cmdr_fs::archive_format::archive_boundary_candidate(first)
+        .ok_or_else(|| read_only_error(first, ReadOnlySide::Source))?;
     // Moving OUT of a read-only archive would need to DELETE the source entries;
     // tar/7z can't be edited, so refuse (copy-out still works via the read path).
     ensure_zip_writable(&archive_path, ReadOnlySide::Source)?;
@@ -87,7 +87,7 @@ pub(crate) async fn route_archive_move_out(
     // sources that extract in full.
     let mut inner_by_source: Vec<(PathBuf, String)> = Vec::with_capacity(source_paths.len());
     for source in &source_paths {
-        let (source_archive, inner) = cmdr_archive::archive_boundary_candidate(source)
+        let (source_archive, inner) = cmdr_fs::archive_format::archive_boundary_candidate(source)
             .ok_or_else(|| read_only_error(source, ReadOnlySide::Source))?;
         if source_archive != archive_path {
             return Err(WriteOperationError::IoError {

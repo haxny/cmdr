@@ -126,7 +126,7 @@ pub(crate) async fn route_archive_copy_into_with_provenance(
     // from the async, parent-aware `resolve`), so a pure string split is enough
     // here — and it works for a REMOTE dest zip, where the `std::fs` confirm would
     // wrongly return `None`.
-    let (archive_path, dest_inner) = cmdr_archive::archive_boundary_candidate(&dest_full_path)
+    let (archive_path, dest_inner) = cmdr_fs::archive_format::archive_boundary_candidate(&dest_full_path)
         .ok_or_else(|| read_only_error(&dest_full_path, ReadOnlySide::Destination))?;
     ensure_zip_writable(&archive_path, ReadOnlySide::Destination)?;
     let dest_inner = normalize_inner_path(&dest_inner);

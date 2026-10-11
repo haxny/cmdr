@@ -24,7 +24,8 @@ use crate::file_viewer::ViewerError;
 use crate::file_viewer::materialize::MaterializedFile;
 use crate::search::format_size;
 use cmdr_archive::ArchiveNode;
-use cmdr_archive::{ArchiveVolume, archive_boundary_candidate, format_for_path};
+use cmdr_archive::{ArchiveVolume, format_for_path};
+use cmdr_fs::archive_format::archive_boundary_candidate;
 
 /// Immediate children one archive row lists. Past it the row says `truncated` and the
 /// model asks about a subfolder; paging an archive's children is a follow-up.

@@ -63,13 +63,13 @@ pub(crate) async fn route_archive_delete(
         path: String::new(),
         message: "no entries to delete".to_string(),
     })?;
-    let (archive_path, _) = cmdr_archive::archive_boundary_candidate(first)
+    let (archive_path, _) = cmdr_fs::archive_format::archive_boundary_candidate(first)
         .ok_or_else(|| read_only_error(first, ReadOnlySide::Destination))?;
     ensure_zip_writable(&archive_path, ReadOnlySide::Destination)?;
 
     let mut deletes = Vec::with_capacity(sources.len());
     for source in sources {
-        let (source_archive, inner) = cmdr_archive::archive_boundary_candidate(source)
+        let (source_archive, inner) = cmdr_fs::archive_format::archive_boundary_candidate(source)
             .ok_or_else(|| read_only_error(source, ReadOnlySide::Destination))?;
         if source_archive != archive_path {
             return Err(WriteOperationError::IoError {

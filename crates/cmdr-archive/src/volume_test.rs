@@ -774,7 +774,7 @@ async fn entry_paths_keep_a_url_rooted_archive_path_spelled_exactly() {
     // Built the way the host builds it, from the boundary split of a pane path,
     // so this covers the whole seam rather than just the join at the end.
     let pane_path = Path::new("sftp://ada@nas.local:22/srv/data/archive.zip");
-    let (archive_path, inner) = crate::archive_boundary_candidate(pane_path).expect("boundary");
+    let (archive_path, inner) = cmdr_fs::archive_format::archive_boundary_candidate(pane_path).expect("boundary");
     assert!(inner.as_os_str().is_empty(), "the pane sits at the archive root");
 
     let parent = Arc::new(InMemoryVolume::new("remote"));

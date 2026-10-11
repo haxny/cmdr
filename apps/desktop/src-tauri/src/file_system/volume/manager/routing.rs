@@ -71,8 +71,8 @@ pub struct ResolvedVolume {
 /// before any volume has been resolved. Keeping them apart is what lets this one
 /// stay lexical.
 pub fn path_routes_over_its_parent(path: &Path) -> bool {
-    let inside_an_archive =
-        cmdr_archive::archive_boundary_candidate(path).is_some_and(|(_zip, inner)| !inner.as_os_str().is_empty());
+    let inside_an_archive = cmdr_fs::archive_format::archive_boundary_candidate(path)
+        .is_some_and(|(_zip, inner)| !inner.as_os_str().is_empty());
     inside_an_archive || crate::file_system::git::wiring::portal_serves(path)
 }
 

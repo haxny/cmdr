@@ -284,7 +284,7 @@ The tool re-derives nothing the viewer already ships. Per behavior, the symbol i
   that setting steers the Enter KEY, while this is the tool's own read. Egress is unchanged — entry names, as for any
   archive. If an Office reader ever lands, revisit this branch first.
 - **Archives** (`archive.rs`): the pane's own routing, before any `std::fs`. A path with an archive-named component
-  (`cmdr_archive::archive_boundary_candidate`, a pure string check) goes through `VolumeManager::resolve(volume_id,
+  (`cmdr_fs::archive_format::archive_boundary_candidate`, a pure string check) goes through `VolumeManager::resolve(volume_id,
   path)` (`block_on` from the blocking thread, as `materialize` does): the shared boundary detector confirms the
   format by name and magic bytes and hands back the on-demand `ArchiveVolume`, or a passthrough for a mislabeled
   `.zip`, which then reads as text or binary. The row is then built from the archive's cached index

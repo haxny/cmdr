@@ -887,7 +887,7 @@ pub fn try_get_authoritative_listing(volume_id: &str, path: &Path) -> Option<Vec
     // archive boundary.
     if resolved.routed != Some(RoutedKind::Archive)
         && !volume.supports_local_fs_access()
-        && cmdr_archive::archive_boundary_candidate(path).is_some()
+        && cmdr_fs::archive_format::archive_boundary_candidate(path).is_some()
     {
         return None;
     }

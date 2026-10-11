@@ -10,7 +10,7 @@
 //! Two tiers, by cost:
 //!
 //! - [`archive_boundary_candidate`] / [`has_supported_archive_extension`] are
-//!   pure string checks (no I/O). Extension-only is deliberate: it's what
+//!   pure string checks (no I/O), both in `cmdr_fs::archive_format`. Extension-only is deliberate: it's what
 //!   `FileEntry.is_archive` uses at listing time, where a magic-byte sniff per
 //!   entry would be a round-trip-per-file on a remote backend (principles 3/5).
 //! - [`confirm_archive_boundary`] adds the I/O the string check can't do: it
@@ -29,10 +29,13 @@ use super::read::{ArchiveFormat, TarCodec, format_for_name, format_for_path};
 /// (zip/gzip/bzip2/xz/zstd/7z magics all live at offset 0).
 pub const ARCHIVE_MAGIC_PREFIX_LEN: usize = 512;
 
-// The extension predicate lives in `cmdr_fs::archive_format` alongside
-// `format_for_name`, the suffix table it delegates to, because `FileEntry::new`
-// sets `is_archive` from it. Re-exported so this module stays the one import site
-// for boundary detection.
+// The extension predicate and the extension-only split live in
+// `cmdr_fs::archive_format` alongside `format_for_name`, the suffix table both
+// delegate to: `FileEntry::new` sets `is_archive` from the predicate, and the
+// listing engine asks the split without depending on this crate. The predicate is
+// re-exported so this module stays its import site; the split is named at
+// `cmdr_fs::archive_format` everywhere.
+use cmdr_fs::archive_format::archive_boundary_candidate;
 pub use cmdr_fs::archive_format::has_supported_archive_extension;
 
 /// Whether `header` (a file's first bytes, ideally [`ARCHIVE_MAGIC_PREFIX_LEN`]
@@ -54,61 +57,6 @@ pub fn bytes_match_archive_magic(format: ArchiveFormat, header: &[u8]) -> bool {
         ArchiveFormat::Tar(TarCodec::Xz) => header.starts_with(&[0xfd, b'7', b'z', b'X', b'Z', 0x00]),
         ArchiveFormat::Tar(TarCodec::Zstd) => header.starts_with(&[0x28, 0xb5, 0x2f, 0xfd]),
         ArchiveFormat::SevenZ => header.starts_with(&[0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]),
-    }
-}
-
-/// The extension-only boundary candidate (no I/O). If a path component (scanning
-/// from the root) carries a supported archive extension, split there: return
-/// `(archive_path, inner_path)` where `archive_path` is the path up to and
-/// including the FIRST such component and `inner_path` is the remainder (empty
-/// when the archive component is the last one).
-///
-/// Leftmost match wins, so a nested `a.zip/b.zip/…` routes into `a.zip` and
-/// treats `b.zip` as a plain inner entry — nested archives are out of scope
-/// (an inner archive is a file, not a recursively-browsable volume).
-///
-/// This only looks at the path string; it does NOT confirm the component is a
-/// real archive file. Use [`confirm_archive_boundary`] at navigation time.
-///
-/// ❗ **The archive path is SLICED out of the input, never rebuilt from its
-/// components**, so it comes back spelled exactly as the caller wrote it. A
-/// remote volume addresses its files as `<scheme>://<authority>/…`, which is a
-/// RELATIVE path in `Path`'s terms (`sftp:` is just a component), so pushing the
-/// components into a fresh `PathBuf` collapses the `//` into `sftp:/…`. Every
-/// inner entry's path joins under this one, so that one lost slash reaches the
-/// frontend, where it stops being a path parent arithmetic can run on: Backspace
-/// inside a remote archive went dead and `..` landed on the volume root
-/// (ERR-J2U6A). `Path`'s `Eq` is a component compare and reads the two spellings
-/// as equal, so ❌ a `PathBuf` assertion can't defend this; compare strings.
-pub fn archive_boundary_candidate(path: &Path) -> Option<(PathBuf, PathBuf)> {
-    // Byte-wise, because a path component is only required to be UTF-8 where the
-    // extension check reads it: `to_str()` on the whole path would decline a
-    // valid archive under a non-UTF-8 ancestor directory.
-    use std::os::unix::ffi::OsStrExt;
-
-    let bytes = path.as_os_str().as_bytes();
-    let mut start = 0;
-    loop {
-        let end = bytes[start..]
-            .iter()
-            .position(|byte| *byte == b'/')
-            .map_or(bytes.len(), |offset| start + offset);
-        if std::str::from_utf8(&bytes[start..end])
-            .ok()
-            .is_some_and(has_supported_archive_extension)
-        {
-            // Everything past the separator is the inner path, empty when the
-            // archive component is the last one.
-            let inner_start = bytes.len().min(end + 1);
-            return Some((
-                PathBuf::from(OsStr::from_bytes(&bytes[..end])),
-                PathBuf::from(OsStr::from_bytes(&bytes[inner_start..])),
-            ));
-        }
-        if end == bytes.len() {
-            return None;
-        }
-        start = end + 1;
     }
 }
 
@@ -219,60 +167,6 @@ pub fn bytes_start_with_zip_signature(bytes: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn candidate_splits_at_the_archive_component() {
-        let (zip, inner) = archive_boundary_candidate(Path::new("/a/foo.zip/inner/b.txt")).expect("boundary");
-        assert_eq!(zip, PathBuf::from("/a/foo.zip"));
-        assert_eq!(inner, PathBuf::from("inner/b.txt"));
-    }
-
-    #[test]
-    fn candidate_matches_a_trailing_archive_with_empty_inner() {
-        let (zip, inner) = archive_boundary_candidate(Path::new("/a/foo.zip")).expect("boundary");
-        assert_eq!(zip, PathBuf::from("/a/foo.zip"));
-        assert_eq!(inner, PathBuf::from(""));
-    }
-
-    #[test]
-    fn candidate_keeps_a_remote_volume_prefix_spelled_with_two_slashes() {
-        // A remote volume spells its paths `<scheme>://<authority>/…`, which is
-        // RELATIVE in `Path`'s terms, so a components rebuild collapses the `//`
-        // into `sftp:/…`. That spelling is no longer a path the frontend can do
-        // parent arithmetic on, which is how Backspace inside a remote archive
-        // went dead and `..` landed on the volume root (ERR-J2U6A).
-        //
-        // Asserted on the STRING, never on `PathBuf` equality: `Path`'s `Eq` is a
-        // component compare, so `sftp:/a` and `sftp://a` compare equal and a
-        // `assert_eq!(zip, PathBuf::from(…))` passes on the collapsed spelling.
-        let (zip, inner) =
-            archive_boundary_candidate(Path::new("sftp://ada@nas.local:22/srv/data/foo.zip/inner/b.txt"))
-                .expect("boundary");
-        assert_eq!(zip.to_str().expect("utf-8"), "sftp://ada@nas.local:22/srv/data/foo.zip");
-        assert_eq!(inner, PathBuf::from("inner/b.txt"));
-    }
-
-    #[test]
-    fn candidate_is_none_without_an_archive_component() {
-        assert!(archive_boundary_candidate(Path::new("/a/b/c.txt")).is_none());
-        assert!(archive_boundary_candidate(Path::new("/a/b/c")).is_none());
-    }
-
-    #[test]
-    fn candidate_is_case_insensitive_mid_path() {
-        let (zip, inner) = archive_boundary_candidate(Path::new("/a/FOO.ZIP/x")).expect("boundary");
-        assert_eq!(zip, PathBuf::from("/a/FOO.ZIP"));
-        assert_eq!(inner, PathBuf::from("x"));
-    }
-
-    #[test]
-    fn candidate_leftmost_wins_so_nested_archives_are_not_recursed() {
-        // The inner `b.zip` is a plain entry inside `a.zip`, not a second
-        // boundary: the leftmost archive component wins.
-        let (zip, inner) = archive_boundary_candidate(Path::new("/a.zip/b.zip/x")).expect("boundary");
-        assert_eq!(zip, PathBuf::from("/a.zip"));
-        assert_eq!(inner, PathBuf::from("b.zip/x"));
-    }
 
     #[test]
     fn confirm_accepts_a_real_zip_file() {
@@ -413,14 +307,5 @@ mod tests {
         let fake = dir.path().join("notreally.tar.gz");
         std::fs::write(&fake, b"plain text, definitely not gzip").expect("write file");
         assert!(confirm_archive_boundary(&fake.join("inner")).is_none());
-    }
-
-    #[test]
-    fn candidate_splits_a_double_extension_at_the_whole_component() {
-        // `.tar.gz` is one path component, so the split includes the full name —
-        // never `foo.tar` with `.gz` as inner.
-        let (zip, inner) = archive_boundary_candidate(Path::new("/a/foo.tar.gz/inner/b.txt")).expect("boundary");
-        assert_eq!(zip, PathBuf::from("/a/foo.tar.gz"));
-        assert_eq!(inner, PathBuf::from("inner/b.txt"));
     }
 }

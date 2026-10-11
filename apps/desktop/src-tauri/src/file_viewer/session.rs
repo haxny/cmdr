@@ -429,7 +429,7 @@ fn open_session_inner(
     // happened, which is exactly what the failure cases skip. It stays ARCHIVE-only
     // rather than "routed": `from_archive` is a shipped analytics dimension about
     // previewing inside a zip, and a portal open is honestly `false` for it.
-    let from_archive = cmdr_archive::archive_boundary_candidate(Path::new(&expand_tilde(path)))
+    let from_archive = cmdr_fs::archive_format::archive_boundary_candidate(Path::new(&expand_tilde(path)))
         .is_some_and(|(_, inner)| !inner.as_os_str().is_empty());
     let result = open_session_core(path, volume_id, force_text, open, reuse);
     super::analytics::emit_viewer_opened(&result, from_archive, force_text);

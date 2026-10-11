@@ -287,7 +287,7 @@ var surfaceGuardedCrates = []struct {
 		// promise rather than this crate's, so everything counted here exists for one
 		// of exactly three callers, and a new item should name which:
 		//
-		//   - the boundary detector the host routes with (`boundary`, 9 of the root
+		//   - the boundary detector the host routes with (`boundary`, 8 of the root
 		//     promises),
 		//   - the reading core the host's archive-edit driver and file viewer parse
 		//     and stream through (`read`, 23 of them),
@@ -299,7 +299,7 @@ var surfaceGuardedCrates = []struct {
 		// counts apart.
 		Name: "cmdr-archive",
 		Ceilings: surfaceCeilings{
-			RootPromises:   35,
+			RootPromises:   34,
 			PublicModules:  4,
 			SubsystemItems: 35,
 		},

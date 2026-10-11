@@ -467,7 +467,7 @@ pub(super) fn check_row_evidence(
 /// would refuse a bulk rename of every Office document in a folder, which is one
 /// of the things people most want bulk rename FOR.
 pub(super) fn is_archive_inner_path(source_path: &str) -> bool {
-    cmdr_archive::archive_boundary_candidate(Path::new(source_path))
+    cmdr_fs::archive_format::archive_boundary_candidate(Path::new(source_path))
         .is_some_and(|(_archive, inner)| !inner.as_os_str().is_empty())
 }
 

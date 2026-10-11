@@ -226,8 +226,8 @@ async fn route_archive_create(
     // Confirmation happened at the routing site (parent-aware
     // `path_crosses_archive_boundary`), so a pure string split suffices — and it
     // works for a REMOTE zip, where the `std::fs` confirm would wrongly fail.
-    let (archive_path, inner_parent) =
-        cmdr_archive::archive_boundary_candidate(Path::new(parent_path)).ok_or(MutationError::ArchiveNotEditable)?;
+    let (archive_path, inner_parent) = cmdr_fs::archive_format::archive_boundary_candidate(Path::new(parent_path))
+        .ok_or(MutationError::ArchiveNotEditable)?;
     // Only zip archives are writable; tar and 7z are browse + extract only.
     archive_edit::ensure_zip_writable(&archive_path, crate::file_system::ReadOnlySide::Destination)
         .map_err(|_| MutationError::ArchiveReadOnly)?;

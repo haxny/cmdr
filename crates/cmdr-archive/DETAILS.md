@@ -258,12 +258,12 @@ Both are machine-readable.
 An `ArchiveVolume` is never constructed here directly in production — it's minted on demand by
 `VolumeManager::resolve(volume_id, path)` when a path crosses a `.zip` boundary. The detector is `src/boundary.rs`:
 
-- **Two tiers.** `archive_boundary_candidate` is a pure string split (extension-only, leftmost `.zip` component wins so
-  a nested `a.zip/b.zip` treats the inner as a plain file — nested archives are out of scope).
-  `confirm_archive_boundary` adds the I/O: the component must be a real FILE (a directory named `foo.zip` loses to
-  normal navigation) whose first bytes are a zip signature (a mislabeled file isn't routed). Extension-only feeds
-  `FileEntry.is_archive` at listing time (no per-entry byte read — that's a round-trip-per-file on a remote backend);
-  confirm runs once at navigation time.
+- **Two tiers.** `archive_boundary_candidate` (in `cmdr_fs::archive_format`, so the listing engine asks it without
+  depending on this crate) is a pure string split (extension-only, leftmost `.zip` component wins so a nested
+  `a.zip/b.zip` treats the inner as a plain file — nested archives are out of scope). `confirm_archive_boundary` adds
+  the I/O: the component must be a real FILE (a directory named `foo.zip` loses to normal navigation) whose first bytes
+  are a zip signature (a mislabeled file isn't routed). Extension-only feeds `FileEntry.is_archive` at listing time (no
+  per-entry byte read — that's a round-trip-per-file on a remote backend); confirm runs once at navigation time.
 - **Confirm is parent-aware, so `resolve` is `async`.** `confirm_archive_boundary` is `std::fs`-only, so it can confirm
   only a LOCAL parent. For a REMOTE parent (direct SMB / MTP), the `.zip` isn't reachable through the local filesystem,
   so `VolumeManager::resolve` confirms through the parent volume's OWN I/O
