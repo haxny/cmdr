@@ -264,6 +264,7 @@ pub(super) async fn a_copy_off_the_server_keeps_the_date_it_lists(remote: Arc<dy
 }
 
 /// What `path` lists as its creation date.
+#[cfg(target_os = "macos")]
 async fn listed_creation_date(volume: &dyn Volume, path: &Path, what: &str) -> u64 {
     volume
         .get_metadata(path)
