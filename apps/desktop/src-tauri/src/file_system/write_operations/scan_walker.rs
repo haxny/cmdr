@@ -9,10 +9,13 @@
 //! one into a conflict preview.
 
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+
+use cmdr_fs::apple_double::SidecarRule;
 
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
@@ -84,6 +87,13 @@ pub(super) struct WalkContext<'a, E> {
     /// Tallies online-only files as the walk meets them. `None` for every scan
     /// whose sources don't reach into a cloud drive. See [`OnlineOnlyWatch`].
     pub(super) online_only: Option<&'a OnlineOnlyWatch<'a>>,
+    /// Leaves out the AppleDouble sidecars (`._name`) a FAT, exFAT, or
+    /// stream-less SMB volume keeps beside each item: the kernel serves one as
+    /// its sibling's xattrs, which the copy already carries, so walking it too
+    /// would land a stray hidden file. Asked of every LISTED entry and never of
+    /// a selected source, so a `._` file the person picked still goes. Tests
+    /// inject the volume probe to play a FAT volume on APFS.
+    pub(super) sidecars: &'a SidecarRule,
 }
 
 /// Walks every top-level source in turn, accumulating the shared tallies AND
@@ -219,6 +229,10 @@ pub(super) fn walk_dir_recursive<E>(
     (ctx.park_while_paused)();
 
     let metadata = fs::symlink_metadata(path).map_err(|e| (ctx.on_io_error)(path, e))?;
+    let device = {
+        use std::os::unix::fs::MetadataExt;
+        metadata.dev()
+    };
 
     if metadata.is_symlink() {
         // Symlinks contribute their own (tiny) target-string length, never
@@ -272,6 +286,7 @@ pub(super) fn walk_dir_recursive<E>(
         {
             walk_cached_entries(
                 path,
+                device,
                 source_root,
                 cached_entries,
                 files,
@@ -287,6 +302,9 @@ pub(super) fn walk_dir_recursive<E>(
         } else {
             let entries = fs::read_dir(path).map_err(|e| (ctx.on_io_error)(path, e))?;
             for entry in entries.flatten() {
+                if is_left_out(ctx, path, device, &entry.file_name()) {
+                    continue;
+                }
                 walk_dir_recursive(
                     &entry.path(),
                     source_root,
@@ -333,6 +351,7 @@ pub(super) fn walk_dir_recursive<E>(
 )]
 fn walk_cached_entries<E>(
     parent_path: &Path,
+    parent_device: u64,
     source_root: &Path,
     cached: Vec<FileEntry>,
     files: &mut Vec<FileInfo>,
@@ -350,6 +369,9 @@ fn walk_cached_entries<E>(
             return Err((ctx.on_cancelled)());
         }
         (ctx.park_while_paused)();
+        if is_left_out(ctx, parent_path, parent_device, OsStr::new(&entry.name)) {
+            continue;
+        }
         let child_path = PathBuf::from(&entry.path);
         if entry.is_directory && !entry.is_symlink {
             // Recurse: the oracle re-applies inside `walk_dir_recursive`, so a
@@ -423,6 +445,17 @@ fn walk_cached_entries<E>(
 
     Ok(())
 }
+
+/// Whether the walk leaves out `name`, listed in `dir`: an AppleDouble sidecar
+/// the kernel already serves as its sibling's xattrs. See [`WalkContext::sidecars`].
+fn is_left_out<E>(ctx: &WalkContext<'_, E>, dir: &Path, dir_device: u64, name: &OsStr) -> bool {
+    let sidecar = ctx.sidecars.is_sidecar(dir, dir_device, name);
+    if sidecar {
+        log::trace!("scan: leaving out AppleDouble sidecar {}", dir.join(name).display());
+    }
+    sidecar
+}
+
 /// Returns `true` if this file's bytes should count toward the running scan
 /// total. On Unix, dedupes hardlinks via inode: a file with `nlink > 1` only
 /// contributes bytes the first time its inode is seen; subsequent occurrences

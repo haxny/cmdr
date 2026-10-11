@@ -71,6 +71,15 @@ The full top-level inventory is here:
   trashing a selected folder would pull evicted files back down from the provider, and publishes
   `online_only_found` on the scan events. Armed nowhere else, so every ordinary walk is unchanged; the rule and its
   rationale live in `delete/DETAILS.md` § "A trash of online-only cloud content becomes a delete".
+
+  Every walk also leaves out AppleDouble sidecars (`WalkContext::sidecars`, a `cmdr_fs::apple_double::SidecarRule`): on
+  a volume with no native xattrs (FAT, exFAT, an SMB share without streams) the kernel keeps `name`'s xattrs in
+  `._name` and serves them through `getxattr`, so the metadata copy already carries them, and walking `._name` too
+  landed it on APFS as a stray 4,096-byte hidden file. Only a LISTED entry is filtered, never a selected source, and
+  only when its sibling exists (an orphan is nobody's xattrs, so it copies). Because the filter sits in the walk, counts,
+  bytes, the preview, and the copy agree. `scan_dry_run.rs` applies the same rule, and the cross-FS move's sweep doesn't
+  count a kept item's sidecar as an arrival. Deleting the owner removes its sidecar in the kernel, so the sweep never
+  touches one. The rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
 - Scan and preview: `scan.rs`, `scan_preview.rs` (the lifecycle API, with its two workers in `scan_preview/local.rs`
   and `scan_preview/volume.rs`), `scan_cache.rs`, `scan_bridge.rs` (the scan-progress seam the drivers
   feed, and `ScanPause`, the park that lets a walk honor its owner's Pause), `scan_watchdog.rs` (the inactivity bound on

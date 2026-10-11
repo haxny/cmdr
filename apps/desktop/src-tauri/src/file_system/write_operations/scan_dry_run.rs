@@ -81,6 +81,9 @@ fn dry_run_scan_internal(
     let mut conflicts = Vec::new();
     let mut last_progress_time = Instant::now();
     let mut visited = HashSet::new();
+    // The same sidecar rule the operation's own walk applies, so the preview
+    // counts what the copy will write (`scan_walker.rs`, `WalkContext::sidecars`).
+    let sidecars = cmdr_fs::apple_double::SidecarRule::new();
 
     for source in sources {
         // A source that would land on ITSELF is a request to duplicate it, and
@@ -107,6 +110,7 @@ fn dry_run_scan_internal(
             &progress_interval,
             &mut last_progress_time,
             &mut visited,
+            &sidecars,
             lands_on_itself,
         )?;
     }
@@ -147,6 +151,7 @@ fn dry_run_scan_recursive(
     progress_interval: &Duration,
     last_progress_time: &mut Instant,
     visited: &mut HashSet<PathBuf>,
+    sidecars: &cmdr_fs::apple_double::SidecarRule,
     // `true` when this subtree's top-level source lands on itself, so the whole
     // of it is a duplicate under a fresh name and none of it can clash. Decided
     // once by the caller and carried down, never re-asked per leaf.
@@ -203,8 +208,15 @@ fn dry_run_scan_recursive(
 
         // Scan contents
         let entries = fs::read_dir(path).with_path(path)?;
+        let device = {
+            use std::os::unix::fs::MetadataExt;
+            metadata.dev()
+        };
 
         for entry in entries.flatten() {
+            if sidecars.is_sidecar(path, device, &entry.file_name()) {
+                continue;
+            }
             dry_run_scan_recursive(
                 &entry.path(),
                 source_root,
@@ -219,6 +231,7 @@ fn dry_run_scan_recursive(
                 progress_interval,
                 last_progress_time,
                 visited,
+                sidecars,
                 lands_on_itself,
             )?;
         }

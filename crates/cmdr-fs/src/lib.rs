@@ -18,6 +18,7 @@
 #![warn(unused_crate_dependencies)]
 #![deny(missing_docs)]
 
+pub mod apple_double;
 pub mod archive_format;
 pub mod durable;
 pub mod entry;

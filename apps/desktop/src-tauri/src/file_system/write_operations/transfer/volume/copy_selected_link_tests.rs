@@ -29,6 +29,7 @@ use std::sync::Arc;
 /// Walks `sources` with the local preview's walker and publishes the result
 /// under `preview_id`, exactly as a settled copy-dialog preview would be.
 fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
+    let sidecars = cmdr_fs::apple_double::SidecarRule::new();
     let ctx: WalkContext<'_, String> = WalkContext {
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
@@ -39,6 +40,7 @@ fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
         on_progress: &|_, _, _, _, _| {},
         on_file: None,
         online_only: None,
+        sidecars: &sidecars,
     };
     let (mut files, mut dirs) = (Vec::new(), Vec::new());
     let (mut total_bytes, mut dedup_bytes) = (0u64, 0u64);

@@ -289,7 +289,9 @@ fn scan_sources_internal(
     // The operation owns this walk, so it knows its own gate: no claim to
     // resolve and no watchdog (that bounds a PREVIEW, not an operation's scan).
     let pause = super::scan_bridge::ScanPause::for_operation(Arc::clone(state));
+    let sidecars = cmdr_fs::apple_double::SidecarRule::new();
     let ctx = WalkContext {
+        sidecars: &sidecars,
         progress_interval,
         is_cancelled: &|| super::state::is_cancelled(&state.intent),
         park_while_paused: &|| pause.park_while_paused(),
@@ -406,3 +408,7 @@ fn scan_sources_internal(
 #[cfg(test)]
 #[path = "scan_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "scan_sidecar_tests.rs"]
+mod sidecar_tests;

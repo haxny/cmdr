@@ -20,6 +20,8 @@
 
 use std::collections::HashSet;
 use std::fs;
+
+use cmdr_fs::apple_double::SidecarRule;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
@@ -348,7 +350,7 @@ pub(super) fn delete_sources_after_move(
                 originals_removed += 1;
             }
             if !source_removed {
-                let appeared = count_unscanned_entries(source, &sweep.scanned_paths);
+                let appeared = count_unscanned_entries(source, &sweep.scanned_paths, &SidecarRule::new());
                 leftovers.note(source, is_real_directory(source), appeared, changed);
             }
             events.emit_source_item_done(WriteSourceItemDoneEvent {
@@ -463,18 +465,26 @@ fn remove_swept_dir(dir: &Path, drive: &SourceDrive<'_>) -> Result<(), WriteOper
 /// Counts what the scan never saw under `dir`: what arrived while the move ran.
 /// A whole unknown subtree counts once, since that's the item a person would
 /// recognize in the pane. Anything the scan DID see isn't news — a Skip the user
-/// asked for is not a surprise — so it isn't counted.
-fn count_unscanned_entries(dir: &Path, scanned_paths: &HashSet<PathBuf>) -> u32 {
-    let Ok(entries) = fs::read_dir(dir) else {
+/// asked for is not a surprise — so it isn't counted. Nor is the AppleDouble
+/// sidecar of an item that stayed: the scan left it out on purpose, and it's
+/// that item's xattrs (`cmdr_fs::apple_double`).
+fn count_unscanned_entries(dir: &Path, scanned_paths: &HashSet<PathBuf>, sidecars: &SidecarRule) -> u32 {
+    let (Ok(dir_meta), Ok(entries)) = (fs::symlink_metadata(dir), fs::read_dir(dir)) else {
         return 0;
+    };
+    let device = {
+        use std::os::unix::fs::MetadataExt;
+        dir_meta.dev()
     };
     let mut count = 0;
     for entry in entries.flatten() {
         let path = entry.path();
         if !scanned_paths.contains(&path) {
-            count += 1;
+            if !sidecars.is_sidecar(dir, device, &entry.file_name()) {
+                count += 1;
+            }
         } else if fs::symlink_metadata(&path).is_ok_and(|m| m.is_dir()) {
-            count += count_unscanned_entries(&path, scanned_paths);
+            count += count_unscanned_entries(&path, scanned_paths, sidecars);
         }
     }
     count

@@ -39,8 +39,13 @@ fn plain_walk_context<'a>() -> WalkContext<'a, String> {
         on_progress: &|_, _, _, _, _| {},
         on_file: None,
         online_only: None,
+        sidecars: &NO_SIDECARS,
     }
 }
+
+/// A volume with native xattrs, where no `._` file is anyone's sidecar.
+pub(super) static NO_SIDECARS: std::sync::LazyLock<cmdr_fs::apple_double::SidecarRule> =
+    std::sync::LazyLock::new(|| cmdr_fs::apple_double::SidecarRule::with_probe(|_| false));
 
 fn walk_for_test(sources: &[PathBuf]) -> Vec<(PathBuf, CopyScanResult)> {
     let mut files = Vec::new();
@@ -204,6 +209,7 @@ fn run_walker_with_sources(sources: &[PathBuf]) -> WalkOutcome {
         },
         on_file: None,
         online_only: None,
+        sidecars: &NO_SIDECARS,
     };
     for source in sources {
         let source_root = source.parent().unwrap_or(source);

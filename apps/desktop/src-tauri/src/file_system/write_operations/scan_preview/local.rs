@@ -135,7 +135,9 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             probe: &online_only_probe,
             seen: &online_only_seen,
         };
+        let sidecars = cmdr_fs::apple_double::SidecarRule::new();
         let ctx = WalkContext {
+            sidecars: &sidecars,
             progress_interval: state.progress_interval,
             is_cancelled: &|| state.cancelled.load(Ordering::Relaxed),
             park_while_paused: &|| pause.park_while_paused(),
