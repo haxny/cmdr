@@ -692,6 +692,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 appeared_during_move: None,
                 top_level_skipped: Some(top_level_skipped),
                 refused: None,
+                metadata_left_behind: None,
             });
             Ok(())
         }

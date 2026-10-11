@@ -100,6 +100,7 @@ const ONE_FILE: TransferCompletePayload = {
   appearedDuringMove: null,
   topLevelSkipped: null,
   refused: null,
+  metadataLeftBehind: null,
 }
 
 /** One file went, one the OS turned down and left in the pane. */

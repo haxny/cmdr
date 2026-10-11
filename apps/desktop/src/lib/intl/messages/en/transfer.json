@@ -161,5 +161,50 @@
     },
     "screenshot": "toast-transfer-complete.png",
     "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataLeftBehind": "This server can’t store {classes}, so those stayed behind.",
+  "@transfer.metadataLeftBehind": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. Extra sentence appended to the copy-complete or move-complete toast when the destination (a server, a phone, a cloud bucket) has no place for some of the information the original files carried beyond their contents, such as creation dates or Finder tags. Every file arrived; only that information stayed behind, and the originals still have it after a copy. Keep it calm and matter-of-fact: nothing went wrong.",
+    "placeholders": {
+      "classes": "the kinds of information that stayed behind, already joined into a list with the language’s own “or”, e.g. creation dates or Finder tags"
+    },
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataClass.creationDates": "creation dates",
+  "@transfer.metadataClass.creationDates": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. One kind of file information a copy couldn’t carry to its destination, as it appears inside the list in transfer.metadataLeftBehind (“This server can’t store {classes}, so those stayed behind.”), so write it as a lowercase plural noun phrase that reads mid-sentence. This one: the date a file or folder was first created (Finder’s “Date Created”).",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataClass.permissions": "permissions",
+  "@transfer.metadataClass.permissions": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. One kind of file information a copy couldn’t carry to its destination, as it appears inside the list in transfer.metadataLeftBehind (“This server can’t store {classes}, so those stayed behind.”), so write it as a lowercase plural noun phrase that reads mid-sentence. This one: who may read, change, or run a file (for example, a script marked as runnable).",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataClass.lockedAndHidden": "Locked and Hidden flags",
+  "@transfer.metadataClass.lockedAndHidden": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. One kind of file information a copy couldn’t carry to its destination, as it appears inside the list in transfer.metadataLeftBehind (“This server can’t store {classes}, so those stayed behind.”), so write it as a lowercase plural noun phrase that reads mid-sentence. This one: Finder’s Locked checkbox and the Hidden flag that keeps a file out of Finder windows. “Locked” and “Hidden” are Finder’s own terms: use the words macOS Finder uses in your language.",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataClass.extendedAttributes": "Finder tags",
+  "@transfer.metadataClass.extendedAttributes": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. One kind of file information a copy couldn’t carry to its destination, as it appears inside the list in transfer.metadataLeftBehind (“This server can’t store {classes}, so those stayed behind.”), so write it as a lowercase plural noun phrase that reads mid-sentence. This one: Finder’s colored tags, and with them comments, custom icons, and similar extra information apps attach to a file. “Finder” is the macOS app’s name: don’t translate it.",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+
+  "transfer.metadataClass.folderDates": "folder dates",
+  "@transfer.metadataClass.folderDates": {
+    "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. One kind of file information a copy couldn’t carry to its destination, as it appears inside the list in transfer.metadataLeftBehind (“This server can’t store {classes}, so those stayed behind.”), so write it as a lowercase plural noun phrase that reads mid-sentence. This one: the date a folder was last changed.",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
   }
 }

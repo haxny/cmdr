@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { composeTransferCompleteToast, composeTrashRefusedToast } from './transfer-complete-toast'
 import { _setLocaleForTests } from '$lib/intl/locale'
+import type { LostMetadata } from '$lib/ipc/bindings'
 
 // The composer resolves its wording through `t()` (catalog + ICU), which reads
 // the active locale. Pin en-US so these golden assertions are the parity net:
@@ -488,6 +489,56 @@ describe('composeTransferCompleteToast', () => {
         }),
       ).toBe('Moved 1 folder.')
     })
+  })
+})
+
+describe('the note about metadata the destination couldn’t keep', () => {
+  // The wording is David's placeholder (`transfer.metadataLeftBehind`), pinned
+  // here so a rewrite updates these with it. What's fixed is the shape: one
+  // calm sentence after the outcome, naming the classes, never the counts.
+  const copiedTo = (classes: LostMetadata[] | null) =>
+    composeTransferCompleteToast({
+      operationType: 'copy',
+      filesProcessed: 214,
+      filesSkipped: 0,
+      fileCount: 214,
+      folderCount: 0,
+      metadataLeftBehind: classes === null ? null : { classes },
+    })
+
+  it('names the one class that stayed behind after the outcome', () => {
+    expect(copiedTo([{ class: 'extendedAttributes', itemCount: 3 }])).toBe(
+      'Copied 214 files. This server can’t store Finder tags, so those stayed behind.',
+    )
+  })
+
+  it('lists several classes the way the UI language says "or"', () => {
+    expect(
+      copiedTo([
+        { class: 'creationDates', itemCount: 214 },
+        { class: 'extendedAttributes', itemCount: 3 },
+      ]),
+    ).toBe('Copied 214 files. This server can’t store creation dates or Finder tags, so those stayed behind.')
+  })
+
+  it('says nothing more when nothing stayed behind', () => {
+    expect(copiedTo(null)).toBe('Copied 214 files.')
+  })
+
+  it('follows what a move left in the source', () => {
+    expect(
+      composeTransferCompleteToast({
+        operationType: 'move',
+        filesProcessed: 4,
+        filesSkipped: 0,
+        fileCount: 0,
+        folderCount: 1,
+        appearedDuringMove: { itemCount: 1, changedCount: 0, folderName: 'Work', folderCount: 1 },
+        metadataLeftBehind: { classes: [{ class: 'folderDates', itemCount: 1 }] },
+      }),
+    ).toBe(
+      'Moved 1 folder. 1 item appeared in Work during the move and stays there. This server can’t store folder dates, so those stayed behind.',
+    )
   })
 })
 

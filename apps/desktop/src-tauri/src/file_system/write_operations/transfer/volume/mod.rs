@@ -143,6 +143,10 @@ mod folder_metadata_tests;
 #[cfg(test)]
 mod copy_metadata_tests;
 
+/// Every backend pair keeps or reports each class: the loss note's matrix.
+#[cfg(test)]
+mod metadata_loss_tests;
+
 /// A selected local link copied to another volume lands as what it points at.
 #[cfg(test)]
 mod copy_selected_link_tests;

@@ -27,8 +27,16 @@
  */
 
 import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
+import { formatDisjunctionList } from '$lib/intl/list-format'
+import type { MessageKey } from '$lib/intl/keys.gen'
 import { tString } from '$lib/intl/messages.svelte'
-import type { AppearedDuringMove, TopLevelSkipped, TrashRefusedItems } from '$lib/ipc/bindings'
+import type {
+  AppearedDuringMove,
+  LostMetadataClass,
+  MetadataLeftBehind,
+  TopLevelSkipped,
+  TrashRefusedItems,
+} from '$lib/ipc/bindings'
 import type { TransferOperationType } from '$lib/file-explorer/types'
 import { trashRefusedCountSentence } from './transfer-error-messages'
 
@@ -53,11 +61,36 @@ export interface TransferCompleteToastInput {
    *  their copy started. Absent on the ordinary move, and on every copy. Adds a sentence per kind;
    *  the move still reads as a success. */
   appearedDuringMove?: AppearedDuringMove | null
+  /** What the destination couldn't store of the sources' metadata (creation dates on a server,
+   *  Finder tags on a phone). Absent when nothing worth keeping stayed behind, which is the
+   *  ordinary case. Adds one calm sentence naming the classes; the copy still reads as a success. */
+  metadataLeftBehind?: MetadataLeftBehind | null
 }
 
 /** Composes the copy/move/trash/delete completion toast from catalog keys. */
 export function composeTransferCompleteToast(input: TransferCompleteToastInput): string {
-  return withLeftBehind(composeOutcome(input), input.appearedDuringMove)
+  const toast = withLeftBehind(composeOutcome(input), input.appearedDuringMove)
+  return withMetadataLeftBehind(toast, input.metadataLeftBehind)
+}
+
+/** The catalog name of each metadata class, as it reads inside the note's list. */
+const METADATA_CLASS_KEYS: Record<LostMetadataClass, MessageKey> = {
+  creationDates: 'transfer.metadataClass.creationDates',
+  permissions: 'transfer.metadataClass.permissions',
+  lockedAndHidden: 'transfer.metadataClass.lockedAndHidden',
+  extendedAttributes: 'transfer.metadataClass.extendedAttributes',
+  folderDates: 'transfer.metadataClass.folderDates',
+}
+
+/**
+ * Appends the note about what the destination couldn't store, when it couldn't store something
+ * a source item had (`docs/specs/transfer-metadata-preservation.md` § "Telling the user"). Names
+ * the classes in the backend's order and never the counts: the log carries those.
+ */
+function withMetadataLeftBehind(toast: string, left: MetadataLeftBehind | null | undefined): string {
+  if (!left || left.classes.length === 0) return toast
+  const classes = formatDisjunctionList(left.classes.map((lost) => tString(METADATA_CLASS_KEYS[lost.class])))
+  return `${toast} ${tString('transfer.metadataLeftBehind', { classes })}`
 }
 
 /**

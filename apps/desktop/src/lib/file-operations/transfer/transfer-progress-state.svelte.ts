@@ -393,6 +393,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
             appearedDuringMove: event.appearedDuringMove ?? null,
             topLevelSkipped: event.topLevelSkipped ?? null,
             refused: event.refused ?? null,
+            metadataLeftBehind: event.metadataLeftBehind ?? null,
           })
         })
         return

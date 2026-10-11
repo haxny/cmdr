@@ -237,6 +237,9 @@ pub struct WriteOperationState {
     last_progress: std::sync::Mutex<Option<WriteProgressEvent>>,
     /// The names it handed out but hasn't written yet: [`super::unique_name::ClaimedNames`].
     pub(crate) claimed_names: super::unique_name::ClaimedNames,
+    /// What this operation couldn't carry of its sources' metadata, per class,
+    /// for the note on its completion: [`super::metadata_losses`].
+    pub(crate) metadata_losses: super::metadata_losses::MetadataLosses,
     /// The `com.apple.quarantine` of the local archive this operation extracts
     /// from, keyed by that archive's path and read once per operation. Every file
     /// and folder the extract creates carries it:
@@ -288,6 +291,7 @@ impl WriteOperationState {
             last_progress: std::sync::Mutex::new(None),
             liveness: std::sync::Mutex::new(Some(Arc::new(()))),
             claimed_names: super::unique_name::ClaimedNames::default(),
+            metadata_losses: super::metadata_losses::MetadataLosses::default(),
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
         }

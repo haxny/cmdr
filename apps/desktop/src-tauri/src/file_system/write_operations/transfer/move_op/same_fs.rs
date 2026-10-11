@@ -347,6 +347,7 @@ pub(super) fn move_with_rename(
         appeared_during_move: None,
         top_level_skipped: Some(top_level_skipped),
         refused: None,
+        metadata_left_behind: None,
     });
 
     Ok(())

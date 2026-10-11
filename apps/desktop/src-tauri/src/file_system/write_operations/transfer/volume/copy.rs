@@ -1109,6 +1109,7 @@ pub(crate) async fn copy_volumes_with_progress(
             appeared_during_move: None,
             top_level_skipped: None,
             refused: None,
+            metadata_left_behind: state.metadata_losses.left_behind(operation_id),
         });
 
         return Ok(());

@@ -130,6 +130,7 @@ pub(super) fn emit_archive_terminal(
             appeared_during_move,
             top_level_skipped: None,
             refused: None,
+            metadata_left_behind: None,
         }),
         Err(EditError::Cancelled) => events.emit_cancelled(WriteCancelledEvent {
             operation_id: op_id.to_string(),

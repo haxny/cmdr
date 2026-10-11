@@ -37,6 +37,8 @@ The full top-level inventory is here:
   `status_cache.rs` (the status cache, the busy-volumes set it derives, the external drag-out seam, and
   `get_operation_status`), `operation_intent.rs` (`OperationIntent`, `PauseGate`), `human_wait.rs` (how long a person, or
   a volume that left, has kept the operation waiting),
+  `metadata_losses.rs` (per-class counts of the metadata a destination couldn't keep, for the completion's note:
+  `transfer/volume/DETAILS.md` § "Copies keep the source's metadata"),
   `archive_edit/` (the zip-edit driver).
 - The in-flight ledgers and what reverses them: `ledger.rs` (`CopyTransaction` and `WrittenFile`, the vocabulary of what
   an operation currently has at the destination, plus the `Drop` panic net) and `reversal.rs` (the policy over it: the
@@ -685,7 +687,7 @@ See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher archi
 
 - **`write-progress`**: Every ~200 ms during copy/move/delete/trash
 - **`write-conflict`**: Stop mode hit a conflicting destination file
-- **`write-complete`**: Operation finished successfully
+- **`write-complete`**: Operation finished successfully. A cross-volume copy or move also carries `metadata_left_behind` when the destination couldn't keep something a source item had (`metadata_losses.rs`).
 - **`write-cancelled`**: Operation cancelled. Carries `rollback: CancelRollback` — the three-state outcome (`notRolledBack` / `rolledBack` / `partiallyRolledBack`), how many items the reversal undid, and what it left behind grouped by `SkipReason`.
 - **`write-error`**: Operation could not complete. Carries only `error: WriteOperationError` (typed, word-free); no rendered prose crosses IPC. The FE renders the title/explanation/suggestion + category from this typed error via `transfer-error-messages.ts` in `TransferErrorDialog` and applies category-based colors.
 - **`write-settled`**: Emitted once per op after the spawned background task fully returns. See [Settle contract](#settle-contract).

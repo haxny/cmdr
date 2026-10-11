@@ -139,6 +139,7 @@ describe('createTransferProgressState: progress + complete', () => {
       appearedDuringMove: null,
       topLevelSkipped: null,
       refused: null,
+      metadataLeftBehind: null,
     })
   })
 
@@ -794,6 +795,7 @@ describe('createTransferProgressState: disposal', () => {
       appearedDuringMove: null,
       topLevelSkipped: null,
       refused: null,
+      metadataLeftBehind: null,
     })
   })
 

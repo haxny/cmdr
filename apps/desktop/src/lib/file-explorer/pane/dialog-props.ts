@@ -9,7 +9,14 @@
  */
 
 import type { Initiator, ProgressAtStop } from '$lib/tauri-commands'
-import type { AppearedDuringMove, TopLevelSkipped, TrashRefusedItems, OpKind, SpaceShortfall } from '$lib/ipc/bindings'
+import type {
+  AppearedDuringMove,
+  MetadataLeftBehind,
+  TopLevelSkipped,
+  TrashRefusedItems,
+  OpKind,
+  SpaceShortfall,
+} from '$lib/ipc/bindings'
 import type { SoftDialogId } from '$lib/ui/dialog-registry'
 import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '$lib/file-operations/delete/delete-dialog-utils'
 import type { TransferOperationType, SortColumn, SortOrder, ConflictResolution, WriteOperationError } from '../types'
@@ -107,6 +114,9 @@ export interface TransferCompletePayload {
    *  a trash the OS took in full, which is the ordinary case. A refusal here is NOT a skip: the
    *  items are still in the pane, so the completion can't read as a clean success. */
   refused: TrashRefusedItems | null
+  /** What the destination couldn't store of the sources' metadata. `null` when nothing worth
+   *  keeping stayed behind, which is the ordinary case. */
+  metadataLeftBehind: MetadataLeftBehind | null
 }
 
 /**

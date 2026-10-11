@@ -1,7 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { _setLocaleForTests } from './locale'
-import { _clearListFormatCacheForTests, formatConjunctionList } from './list-format'
+import { _clearListFormatCacheForTests, formatConjunctionList, formatDisjunctionList } from './list-format'
+
+describe('formatDisjunctionList', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  it('reads as one name, two joined by "or", and an Oxford-comma list from three', () => {
+    _setLocaleForTests('en-US')
+    expect(formatDisjunctionList([])).toBe('')
+    expect(formatDisjunctionList(['dates'])).toBe('dates')
+    expect(formatDisjunctionList(['dates', 'tags'])).toBe('dates or tags')
+    expect(formatDisjunctionList(['dates', 'tags', 'flags'])).toBe('dates, tags, or flags')
+  })
+
+  it('joins in the UI language', () => {
+    _setLocaleForTests('de-DE')
+    expect(formatDisjunctionList(['Daten', 'Tags'])).toBe('Daten oder Tags')
+  })
+})
 
 describe('formatConjunctionList', () => {
   afterEach(() => {

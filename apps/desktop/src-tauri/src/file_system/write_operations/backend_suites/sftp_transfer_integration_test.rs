@@ -208,3 +208,64 @@ async fn sftp_integration_folders_copied_off_a_server_keep_their_dates() {
     let (remote, dir) = fixture("app-dated-folders-off").await;
     copied_folders_off_the_server_keep_their_dates(remote, dir).await;
 }
+
+/// The loss note against a real server: a tagged local file copied onto SFTP
+/// (which has nowhere to put an xattr) reports its tags on the completion, and
+/// an untagged one reports nothing. Both land every byte.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_nothing() {
+    use super::super::types::{LostMetadata, LostMetadataClass, MetadataLeftBehind};
+    use crate::ignore_poison::IgnorePoison as _;
+
+    let (remote, dir) = fixture("app-metadata-loss").await;
+    let local_dir = TestDir::new("sftp_metadata_loss");
+    for name in ["tagged.txt", "plain.txt"] {
+        let file = std::fs::File::create(local_dir.join(name)).expect("seed the local file");
+        std::io::Write::write_all(&mut &file, name.as_bytes()).expect("write it");
+        // An mtime before its birth drags APFS's birth down to it (and Linux's
+        // birth is after it), so neither has a creation date worth reporting:
+        // the tags are the only difference between the two.
+        file.set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1_611_909_015))
+            .expect("date it");
+    }
+    xattr::set(local_dir.join("tagged.txt"), "user.cmdr.tag", b"red").expect("tag it");
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*local_dir));
+
+    let left_behind = |copy: &super::network_transfer_test_support::RunningCopy| {
+        copy.events.complete.lock_ignore_poison()[0]
+            .metadata_left_behind
+            .clone()
+    };
+    let tagged = run_copy(
+        "metadata-loss-tagged",
+        Arc::clone(&local),
+        vec![PathBuf::from("tagged.txt")],
+        Arc::clone(&remote),
+        dir.clone(),
+    )
+    .await;
+    let plain = run_copy(
+        "metadata-loss-plain",
+        local,
+        vec![PathBuf::from("plain.txt")],
+        Arc::clone(&remote),
+        dir.clone(),
+    )
+    .await;
+
+    assert_eq!(
+        left_behind(&tagged),
+        Some(MetadataLeftBehind {
+            classes: vec![LostMetadata {
+                class: LostMetadataClass::ExtendedAttributes,
+                item_count: 1
+            }]
+        }),
+        "the tags stayed behind, and the note says so"
+    );
+    assert_eq!(left_behind(&plain), None, "a plain file loses nothing worth a note");
+    assert_eq!(read_all(remote.as_ref(), &dir.join("tagged.txt")).await, b"tagged.txt");
+
+    clean_deep(remote.as_ref(), &dir).await;
+}

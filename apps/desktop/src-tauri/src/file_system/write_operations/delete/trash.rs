@@ -535,6 +535,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
         appeared_during_move: None,
         top_level_skipped: None,
         refused,
+        metadata_left_behind: None,
     });
 
     // Log partial failures

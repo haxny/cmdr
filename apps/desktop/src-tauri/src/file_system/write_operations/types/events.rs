@@ -129,6 +129,55 @@ pub struct WriteCompleteEvent {
     /// about it. See [`TrashRefusedItems`].
     #[serde(default)]
     pub refused: Option<TrashRefusedItems>,
+    /// What the destination couldn't store of the sources' metadata (creation
+    /// dates on a server without them, Finder tags on a phone), counted only
+    /// where a source item had something worth keeping. `None`, the ordinary
+    /// case, means nothing a person would miss stayed behind, and the FE says
+    /// nothing. See [`MetadataLeftBehind`].
+    #[serde(default)]
+    pub metadata_left_behind: Option<MetadataLeftBehind>,
+}
+
+/// The metadata a copy or move couldn't carry to its destination, per class,
+/// for the one calm note on its completion
+/// (`docs/specs/transfer-metadata-preservation.md` § "Telling the user").
+///
+/// Not a failure and ❌ never folded into the skip counts: every byte landed.
+/// Typed, never a sentence: the FE words it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MetadataLeftBehind {
+    /// One entry per class that lost anything, in [`LostMetadataClass`]'s
+    /// order. Never empty: an operation that lost nothing reports `None`.
+    pub classes: Vec<LostMetadata>,
+}
+
+/// How many items lost one class of metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LostMetadata {
+    pub class: LostMetadataClass,
+    /// Files and folders that had a value in this class and arrived without it.
+    pub item_count: u32,
+}
+
+/// A class of metadata as a person sees it, which is coarser than the
+/// engine's (`cmdr_fs::metadata::MetadataClasses`): only the ones a person can
+/// notice are ever reported. atime, ACLs, and the quarantine never are.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LostMetadataClass {
+    /// A creation date earlier than the item's last edit, on a file or a folder.
+    CreationDates,
+    /// A file's permission bits, when they differ from what a fresh file gets.
+    Permissions,
+    /// Finder's Locked and Hidden, and the rarer user flags.
+    LockedAndHidden,
+    /// Finder tags and comments, custom icons, resource forks, and apps' own
+    /// extended attributes.
+    ExtendedAttributes,
+    /// A folder's modification date.
+    FolderDates,
 }
 
 /// The top-level items a batch trash could not take, when the rest of the batch

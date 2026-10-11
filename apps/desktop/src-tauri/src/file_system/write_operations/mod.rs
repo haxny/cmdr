@@ -38,6 +38,7 @@ mod look_alike;
 #[cfg(test)]
 mod look_alike_instant_tests;
 mod manager;
+mod metadata_losses;
 mod mutation_error;
 mod mutation_reply;
 mod operation_intent;

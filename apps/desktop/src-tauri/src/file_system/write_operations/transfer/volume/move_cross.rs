@@ -733,6 +733,7 @@ pub(crate) async fn move_volumes_with_progress(
                 appeared_during_move: left_in_source.lock_ignore_poison().appeared_during_move(),
                 top_level_skipped: None,
                 refused: None,
+                metadata_left_behind: state.metadata_losses.left_behind(operation_id),
             });
             Ok(())
         }

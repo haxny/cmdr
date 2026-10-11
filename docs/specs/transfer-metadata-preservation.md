@@ -8,10 +8,11 @@ metadata**. `ditto` parity is the floor, not the ceiling, and our own measuremen
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
 **Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
-folders), and M5a (creation dates across volumes, SMB first) done (2026-10-11); review rounds 1 (correctness and data
-safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the
-code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the
-file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
+folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11); review rounds 1
+(correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a
+seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the
+notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one
+focused milestone agent run).
 
 ## Loud rules
 
@@ -847,6 +848,40 @@ decided; then the ask itself, creation and modification dates on files AND folde
   note's rendering; an engine cell where a local → SFTP copy of a tagged file reports the tag loss, and a copy of an
   untagged file reports nothing.
 - **DONE**: a local → SFTP copy of a tagged file shows the note; a local → local copy never does.
+- **Done** (2026-10-11). Where the code differs from the plan above:
+  - **`MetadataCaps` has four fields**: `stores` (a file, through `write_from_stream`), `reports` (the streams),
+    `folder_stores` (what `apply_metadata` keeps by path), and `folder_dates`. `reports_posix_mode` is gone: the
+    compress planner asks `metadata_caps().reports` for `MODE`. Real backends publish a `METADATA_CAPS` const (local,
+    SMB, SFTP, ADB); MTP, WebDAV, and S3 keep the `NONE` default. The archive and git portal answer
+    `MetadataCaps::MODE_REPORTER` inline (reports a mode, keeps nothing; ADB's const is the same), ❌ no public const of
+    their own: `cmdr-archive` sits at its `index-crate-isolation` ceiling. Each crate's volume test pins the shape.
+  - **No backend's `stores` holds the user flags**, local and `InMemoryVolume` included: the engine doesn't snapshot
+    them yet (M5a's deviation), so a cross-volume copy of a Locked file reports Locked and Hidden as left behind. M6
+    adds `FLAGS` to the caps of each destination it wires. `InMemoryVolume::REFERENCE_CAPS` says so;
+    `with_metadata_caps` makes the double honor any backend's caps (streams report only `reports`, a write keeps only
+    `stores`, `apply_metadata` only `folder_stores`).
+  - **One more stream method, `VolumeReadStream::metadata_outline`**: `metadata` with xattr values left empty, default
+    `metadata` itself, overridden by the local stream (one name-only `flistxattr`). The free "had a value" question
+    needs it: `metadata(XATTRS)` reads every value, resource forks included. Wrappers forward it.
+  - **What's counted**: files at their landing, by caps (source reports, destination can't store), narrowed by
+    `CarriedMetadata::worth_keeping`; folders' creation and modification dates by `folder_stores` / `folder_dates` or a
+    refused `apply_metadata`. A folder's creation date counts whenever its listing carried one (the listing IS the free
+    knowledge; no `reports` gate). ❌ Not counted: a refusal inside a destination's `write_from_stream` (the report
+    doesn't leave the trait call, so it stays a `log::warn!`); invariant 1's "counted" holds for folders and for every
+    caps-level loss, and a file-level refusal needs `write_from_stream` to return its report (a trait change, left for
+    when a destination refuses often enough to matter).
+  - **The queue row has no line**: the queue window hides finished rows (`isHiddenSettledStatus`), so a completed
+    operation has no row to carry it. The toast is the one surface, and since toasts are one string, the note is a
+    sentence appended after the outcome (and after a move's "appeared during the move"), not a separate line. Names the
+    classes, joined by a new `formatDisjunctionList`; the counts go to the `info!` line.
+  - **The placeholder keys**: `transfer.metadataLeftBehind` and
+    `transfer.metadataClass.{creationDates, permissions, lockedAndHidden, extendedAttributes, folderDates}`, each `@key`
+    description marked as David's placeholder.
+  - **Cells**: `metadata_loss_tests.rs` (the caps-derived matrix: every source's caps against every writable
+    destination's, a plain file reporting nothing anywhere, a real local file onto SFTP's caps),
+    `metadata_losses_tests.rs` (a lossless pair never asks the stream), `cmdr-fs` `caps_tests.rs` and the conformance
+    swap (`in_memory_test.rs` proves a drifted claim fails; SFTP joins the per-volume layer), and
+    `sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_nothing` against the real server.
 
 ### M6: SMB keeps Hidden and Locked. Size: S in smb2 + S–M in Cmdr (1 session)
 

@@ -130,6 +130,13 @@ prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion
   source sweep left them alone (backend: `write_operations/transfer/DETAILS.md` § "deletes a LEDGER"). The move still
   reads as a success, and the toast stays `success`, not a warning: nothing went wrong, some files simply arrived too
   late to travel. Absent on every other ending, so the historic wordings render byte-identical.
+- **A copy or move whose destination couldn't keep some metadata appends one calm sentence**, LAST, naming the classes
+  ("This server can't store creation dates or Finder tags, so those stayed behind."), off
+  `WriteCompleteEvent.metadataLeftBehind`: typed classes and counts, never prose. Names only, joined with the UI
+  language's "or" (`formatDisjunctionList`); the counts go to the backend's log line. The toast stays `success`: every
+  byte landed. ❗ The wording is David's placeholder (the `@key` descriptions say so). There's no queue-row line: the
+  queue window hides finished rows (`queue/CLAUDE.md`), so the toast is the one surface. Backend contract:
+  `write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 
 ## Single-item destinations
 

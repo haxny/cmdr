@@ -101,6 +101,7 @@ export function createBackgroundOperations(deps: BackgroundOperationsDeps) {
             appearedDuringMove: event.appearedDuringMove ?? null,
             topLevelSkipped: event.topLevelSkipped ?? null,
             refused: event.refused ?? null,
+            metadataLeftBehind: event.metadataLeftBehind ?? null,
           },
           operationId,
         )

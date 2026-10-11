@@ -701,6 +701,7 @@ pub(super) fn move_with_staging(
         // itself on `write-source-item-done`; this summary is written once.
         top_level_skipped: Some(staging_skipped),
         refused: None,
+        metadata_left_behind: None,
     });
 
     Ok(())

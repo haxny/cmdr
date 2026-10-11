@@ -10416,6 +10416,33 @@ export type LockedValue = boolean | string
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'warning' | 'error'
 
+// How many items lost one class of metadata.
+export type LostMetadata = {
+  class: LostMetadataClass
+  // Files and folders that had a value in this class and arrived without it.
+  itemCount: number
+}
+
+/**
+ *  A class of metadata as a person sees it, which is coarser than the
+ *  engine's (`cmdr_fs::metadata::MetadataClasses`): only the ones a person can
+ *  notice are ever reported. atime, ACLs, and the quarantine never are.
+ */
+export type LostMetadataClass =
+  // A creation date earlier than the item's last edit, on a file or a folder.
+  | 'creationDates'
+  // A file's permission bits, when they differ from what a fresh file gets.
+  | 'permissions'
+  // Finder's Locked and Hidden, and the rarer user flags.
+  | 'lockedAndHidden'
+  /**
+   *  Finder tags and comments, custom icons, resource forks, and apps' own
+   *  extended attributes.
+   */
+  | 'extendedAttributes'
+  // A folder's modification date.
+  | 'folderDates'
+
 /**
  *  Typed `low-disk-space` Tauri event. The struct keeps its `Payload` suffix
  *  (used internally), so the wire name is pinned with `event_name` rather than
@@ -10877,6 +10904,22 @@ export type MessageView = {
   promptTokens: number | null
   completionTokens: number | null
   createdAt: number
+}
+
+/**
+ *  The metadata a copy or move couldn't carry to its destination, per class,
+ *  for the one calm note on its completion
+ *  (`docs/specs/transfer-metadata-preservation.md` § "Telling the user").
+ *
+ *  Not a failure and ❌ never folded into the skip counts: every byte landed.
+ *  Typed, never a sentence: the FE words it.
+ */
+export type MetadataLeftBehind = {
+  /**
+   *  One entry per class that lost anything, in [`LostMetadataClass`]'s
+   *  order. Never empty: an operation that lost nothing reports `None`.
+   */
+  classes: LostMetadata[]
 }
 
 export type MetricsSnapshotDto = {
@@ -17743,6 +17786,14 @@ export type WriteCompleteEvent = {
    *  about it. See [`TrashRefusedItems`].
    */
   refused?: TrashRefusedItems | null
+  /**
+   *  What the destination couldn't store of the sources' metadata (creation
+   *  dates on a server without them, Finder tags on a phone), counted only
+   *  where a source item had something worth keeping. `None`, the ordinary
+   *  case, means nothing a person would miss stayed behind, and the FE says
+   *  nothing. See [`MetadataLeftBehind`].
+   */
+  metadataLeftBehind?: MetadataLeftBehind | null
 }
 
 // Conflict event payload (emitted when Stop mode encounters a conflict).

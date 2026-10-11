@@ -1,10 +1,12 @@
 /**
- * Locale-aware "A, B, and C" joining, memoized.
+ * Locale-aware "A, B, and C" (and "A, B, or C") joining, memoized.
  *
  * The one place a list of names becomes a phrase inside a sentence, so no
- * feature module hand-joins with `', '` and a hardcoded English "and". Today's
- * caller is the eject refusal that names the apps still holding a drive
- * (`$lib/file-explorer/navigation/eject-error-messages.ts`).
+ * feature module hand-joins with `', '` and a hardcoded English "and". The
+ * callers: the eject refusal that names the apps still holding a drive
+ * (`$lib/file-explorer/navigation/eject-error-messages.ts`), and the transfer
+ * toast naming the metadata a destination couldn't keep
+ * (`$lib/file-operations/transfer/transfer-complete-toast.ts`).
  *
  * The locale is {@link getUiLocale}, not the OS formatting one: this is a
  * conjunction inside catalog copy, so it has to speak the language the sentence
@@ -17,25 +19,28 @@
 
 import { getUiLocale } from './locale'
 
-interface ConjunctionJoiner {
+interface ListJoiner {
   formatter: Intl.ListFormat
   /** Whether the joins need Han–Latin spacing on top of CLDR's pattern. */
   spacesHan: boolean
 }
 
-/** Cache of one conjunction joiner per UI locale. */
-const listFormatterCache = new Map<string, ConjunctionJoiner>()
+type ListType = 'conjunction' | 'disjunction'
 
-/** A memoized conjunction `Intl.ListFormat` for the active UI locale. */
-function getConjunctionJoiner(): ConjunctionJoiner {
+/** Cache of one joiner per UI locale and list type. */
+const listFormatterCache = new Map<string, ListJoiner>()
+
+/** A memoized `Intl.ListFormat` of `type` for the active UI locale. */
+function getJoiner(type: ListType): ListJoiner {
   const locale = getUiLocale()
-  let joiner = listFormatterCache.get(locale)
+  const cacheKey = `${type}:${locale}`
+  let joiner = listFormatterCache.get(cacheKey)
   if (joiner === undefined) {
     joiner = {
-      formatter: new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }),
+      formatter: new Intl.ListFormat(locale, { style: 'long', type }),
       spacesHan: spacesHanAgainstLatin(locale),
     }
-    listFormatterCache.set(locale, joiner)
+    listFormatterCache.set(cacheKey, joiner)
   }
   return joiner
 }
@@ -46,8 +51,21 @@ function getConjunctionJoiner(): ConjunctionJoiner {
  * the caller's cue that it has no list sentence to say.
  */
 export function formatConjunctionList(items: readonly string[]): string {
+  return formatList(items, 'conjunction')
+}
+
+/**
+ * Join alternatives the way the UI language says "or": `dates or tags`,
+ * `dates, tags, or flags`. Empty for an empty list, like
+ * {@link formatConjunctionList}.
+ */
+export function formatDisjunctionList(items: readonly string[]): string {
+  return formatList(items, 'disjunction')
+}
+
+function formatList(items: readonly string[], type: ListType): string {
   if (items.length === 0) return ''
-  const { formatter, spacesHan } = getConjunctionJoiner()
+  const { formatter, spacesHan } = getJoiner(type)
   if (!spacesHan) return formatter.format(items)
   return formatter
     .formatToParts(items)

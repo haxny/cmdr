@@ -11,6 +11,10 @@
 //! folder), so it costs no round trip. `DETAILS.md` § "Copies keep the source's
 //! metadata".
 //!
+//! A folder that arrives without a date its source had (the destination can't
+//! hold it, or refused it) is counted for the loss note
+//! (`write_operations/metadata_losses.rs`).
+//!
 //! ❌ Not the extract quarantine: a folder gets that the moment the walk creates
 //! it (`extract_quarantine.rs`), since this pass skips a folder with no source
 //! date and every folder of a cancelled subtree.
@@ -19,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, UNIX_EPOCH};
 
-use cmdr_fs::metadata::CarriedMetadata;
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::state::{WriteOperationState, is_cancelled};
 use crate::file_system::volume::Volume;
@@ -68,31 +72,69 @@ impl FolderMetadata {
         }
     }
 
-    /// Puts every noted folder's dates on `dest_volume`, deepest first.
+    /// Puts every noted folder's dates on `dest_volume`, deepest first, and
+    /// counts each date a folder arrives without.
     ///
     /// Call it only once the subtree landed in full. Best effort: a refusal is
     /// a `log::warn!` and the copy stands; a destination that can hold none of
-    /// it (`MetadataReport::holds_none`) ends the pass at its first answer.
+    /// it (`MetadataReport::holds_none`) gets asked no more, though every
+    /// folder still counts what it lost.
     pub(super) async fn stamp(self, dest_volume: &Arc<dyn Volume>, state: &WriteOperationState) {
+        let mut asking = true;
         for (dest, source) in self.folders {
-            if !stamp_one(dest_volume, &dest, source, state).await {
+            if is_cancelled(&state.intent) {
                 return;
             }
+            let outcome = if asking {
+                stamp_one(dest_volume, &dest, source).await
+            } else {
+                Stamped::NotAsked
+            };
+            asking = !matches!(outcome, Stamped::HeldNone);
+            note_losses(dest_volume, source, outcome, state);
         }
     }
 }
 
-/// Stamps one folder. `false` means stop: the operation was cancelled, or the
-/// destination can't hold a folder's dates at all.
-async fn stamp_one(
+/// What stamping one folder did.
+enum Stamped {
+    /// The destination answered, class by class.
+    Answered {
+        created: ClassOutcome,
+        modified: ClassOutcome,
+    },
+    /// The destination can hold none of a folder's dates; ask it no more.
+    HeldNone,
+    /// An earlier folder's [`Stamped::HeldNone`] ended the asking.
+    NotAsked,
+}
+
+/// Counts what `source` had worth keeping that its folder arrived without:
+/// what the destination's caps say it can't hold, or what it refused.
+fn note_losses(
     dest_volume: &Arc<dyn Volume>,
-    dest: &Path,
     source: SourceFolderDates,
+    outcome: Stamped,
     state: &WriteOperationState,
-) -> bool {
-    if is_cancelled(&state.intent) {
-        return false;
-    }
+) {
+    let caps = dest_volume.metadata_caps();
+    let (created, modified) = match outcome {
+        Stamped::Answered { created, modified } => (created, modified),
+        Stamped::HeldNone | Stamped::NotAsked => (ClassOutcome::NotApplicable, ClassOutcome::NotApplicable),
+    };
+    let created_worth_keeping = match (source.created_at, source.modified_at) {
+        (Some(created), Some(modified)) => created < modified,
+        (Some(_), None) => true,
+        (None, _) => false,
+    };
+    let lost_created = created_worth_keeping
+        && (!caps.folder_stores.contains(MetadataClasses::CREATED) || created == ClassOutcome::Refused);
+    let lost_modified = source.modified_at.is_some() && (!caps.folder_dates || modified == ClassOutcome::Refused);
+    state.metadata_losses.note_folder(lost_created, lost_modified);
+}
+
+/// Stamps one folder.
+async fn stamp_one(dest_volume: &Arc<dyn Volume>, dest: &Path, source: SourceFolderDates) -> Stamped {
     let at = |secs: u64| UNIX_EPOCH + Duration::from_secs(secs);
     let carried = CarriedMetadata {
         created: source.created_at.map(at),
@@ -102,7 +144,7 @@ async fn stamp_one(
         .apply_metadata(dest, &carried, source.modified_at.map(at))
         .await;
     if report.holds_none() {
-        return false;
+        return Stamped::HeldNone;
     }
     if report.any_refused() {
         log::warn!(
@@ -111,5 +153,8 @@ async fn stamp_one(
             dest.display()
         );
     }
-    true
+    Stamped::Answered {
+        created: report.created,
+        modified: report.modified,
+    }
 }

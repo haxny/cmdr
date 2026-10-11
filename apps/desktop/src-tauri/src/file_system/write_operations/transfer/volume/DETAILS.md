@@ -788,8 +788,8 @@ would land `0600`.
 fails a copy: a destination that ignores `chmod` (FAT, exFAT, some network mounts) is one debug line.
 
 **No round trip.** The mode rides the stream the copy opened anyway, so a TOP-LEVEL file costs nothing extra. (The
-engine used to `get_metadata` the source per top-level file, gated on `Volume::reports_posix_mode`; that probe is gone.)
-`reports_posix_mode` still answers for the archive compress planner, and folds into M5b's `MetadataCaps`.
+engine used to `get_metadata` the source per top-level file; that probe is gone.) `MetadataCaps::reports` holding `MODE`
+still tells the archive compress planner whether a listed mode is real.
 
 **Folders keep their default mode on a cross-volume copy.** Decision/Why: a routed folder's mode is rarely meaningful
 (git trees are all `0o755`, `/sdcard` modes are `0771`), and a folder without owner write would refuse every reversal
@@ -834,7 +834,7 @@ unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out
 
 **The rule: the source REPORTS what its file carries on the read stream, the destination WRITES the classes it can
 store.** This is the canonical home of the contract; the trait docs, the conformance assertions, and the backend docs
-point here. The plan behind it, and the classes still to come (flags over SMB, xattrs, the loss note): 
+point here. The plan behind it, and the classes still to come (flags over SMB, xattrs): 
 `docs/specs/transfer-metadata-preservation.md`. Local → local copies keep everything on their own path
 (`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below.
 
@@ -855,6 +855,32 @@ point here. The plan behind it, and the classes still to come (flags over SMB, x
   the copy stands.
 - **`None` leaves the destination's own value**, ❌ never an invented one. atime is never carried across volumes (where
   a protocol forces it alongside, SFTP's `ATTR_ACMODTIME`, it gets the mtime).
+- **Each backend states what it keeps and reports in `Volume::metadata_caps`** (`cmdr_fs::metadata::MetadataCaps`:
+  `stores` for a file, `reports` for its streams, `folder_stores` and `folder_dates` for `apply_metadata`). A
+  backend's conformance run is held to it (below), and the loss note trusts it. No backend's `stores` holds the user
+  flags until the engine snapshots them (M6).
+
+**What couldn't be kept is reported, once per operation.** The completion event's `metadata_left_behind`
+(`MetadataLeftBehind`: a count per person-facing class) feeds one calm sentence on the copy or move toast, plus one
+`info!` line with the counts. The spec's § "Telling the user" holds the why; the mechanics:
+
+- **Counted, never listed**: `../../metadata_losses.rs`, a fixed array of counters on
+  `WriteOperationState`. A file counts at its landing (`staged.commit`, in `stream_pipe_file` and
+  `sequential_extract.rs`), a folder in `folder_metadata.rs`'s stamp pass, so only what landed counts.
+- **Only what a person would miss**: the classes the source REPORTS and the destination can't STORE
+  (`MetadataCaps::file_classes_at_risk_from`), narrowed to the ones the item had something in
+  (`CarriedMetadata::worth_keeping`: a birth before the last edit, a mode a fresh file wouldn't get, any flag, any xattr
+  but the quarantine). A class the source can't report is unknown, ❌ never counted. A folder counts its creation date
+  (when its listing had one) and its modification date by the destination's `folder_stores` / `folder_dates`, and a
+  date the destination refused.
+- **Free to know, and asked only where it can be lost** (invariant 10): `metadata_losses::file_losses` asks the stream
+  nothing for a pair whose caps lose nothing, and otherwise reads `VolumeReadStream::metadata_outline`, which for a
+  local file lists xattr NAMES only. Asked before `write_from_stream` consumes the stream; wrappers forward it.
+- **Not counted**: a refusal inside a destination's `write_from_stream` (its `MetadataReport` doesn't leave the trait
+  call; it's a `log::warn!` there), the native engine (local to local keeps everything local disk can hold), and a
+  server-side copy (the store keeps its own metadata).
+- ❗ **The wording is David's placeholder** (`transfer.metadataLeftBehind`, `transfer.metadataClass.*`), marked so in
+  the `@key` descriptions.
 
 **Folders keep their source's dates too, set AFTER their contents land.** Writing a child bumps its folder's date on
 every real store, so a folder dated when it's created lists "now" by the end of the copy.
@@ -897,7 +923,7 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   helper. Birth is macOS-only: Linux can't set one (`NotApplicable`).
 - **S3**: reports and writes the date as `x-amz-meta-mtime` (`crates/cmdr-s3/DETAILS.md`). No creation date yet (M9).
 - **`InMemoryVolume`**: the reference. Stores and reports every class (`carried_metadata`, `set_carried_metadata`),
-  keeps whole seconds, and moves a folder's date to now when an entry lands in or leaves it, which is what lets an
+  or only what `with_metadata_caps` says, so it stands in for any backend's caps; keeps whole seconds, and moves a folder's date to now when an entry lands in or leaves it, which is what lets an
   engine test tell a folder dated after its contents from one dated before.
 - **ADB**: reports the open's `STAT`/`STA2` date and mode; writes the date as the push's `DONE` mtime (a u32: whole
   seconds, clamped at 2106), falling back to now only for a dateless source (`crates/cmdr-adb/DETAILS.md`).
@@ -923,7 +949,13 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 - **Per backend**, in its own crate: `cmdr_fs::volume::conformance`'s `assert_write_from_stream_keeps_the_source_date`
   and `assert_read_stream_reports_the_listed_date` (mtime, both halves), and `assert_write_from_stream_keeps_metadata`,
   `assert_apply_metadata_keeps`, and `assert_read_stream_reports_the_listed_metadata` (the classes a listing shows,
-  passed explicitly per backend: local and `InMemoryVolume` every class, SMB the creation date).
+  each backend held to its own `metadata_caps()`: local, `InMemoryVolume`, SMB, and SFTP;
+  `in_memory_test.rs::a_backend_claiming_a_class_it_drops_fails_the_contract` proves a drifted claim fails).
+- **The loss note**: `metadata_loss_tests.rs`, the caps-derived matrix (every real backend's caps as a source against
+  every writable one's, through the engine on configured `InMemoryVolume` doubles: each class kept, reported, or never
+  had; expectations computed from the caps), a plain file reporting nothing anywhere, and a real local source onto
+  SFTP's caps; `backend_suites/sftp_transfer_integration_test.rs::sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_nothing`
+  against the real server; `metadata_losses_tests.rs` (a lossless pair never asks the stream).
 - **Through the engine**: `backend_suites/network_dates_test_support.rs`'s mtime scenarios (ADB, MTP, SMB, SFTP;
   WebDAV copy-off only) and creation-date scenarios (`a_copy_onto_the_server_keeps_the_creation_dates`,
   `a_copy_off_the_server_keeps_the_creation_dates`, `a_copy_within_the_server_keeps_the_creation_dates`: a one-frame

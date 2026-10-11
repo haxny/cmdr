@@ -12,6 +12,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::super::super::metadata_losses;
 use super::super::super::state::WriteOperationState;
 use super::super::checkpoint_stream::CheckpointStream;
 use super::super::staged_write::{StagedWrite, clear_unlanded_temp};
@@ -412,6 +413,10 @@ pub(super) async fn stream_pipe_file(
         // the source reports, so the destination puts it on before the landing
         // like any other xattr (`extract_quarantine.rs`).
         let stream = super::extract_quarantine::quarantine_stream(state, source_volume, stream);
+        // What the destination can't keep of what this file had worth keeping,
+        // asked before the write consumes the stream and counted once it
+        // lands: nothing at all for a pair that keeps everything.
+        let lost = metadata_losses::file_losses(&**source_volume, &**dest_volume, &*stream);
         // ONE probe, two consumers: the staging decision below and the
         // destination-side foreground yield's floor exemption (handed to the
         // `CheckpointStream`). See `resolve_staging`.
@@ -606,6 +611,7 @@ pub(super) async fn stream_pipe_file(
                 // Landed, so a ` (N)` placeholder at the name is filled, not ours
                 // to take back (`naming.rs::take_back_unfilled_reservations`).
                 state.claimed_names.release_placeholder(dest_path);
+                state.metadata_losses.note_file(lost);
                 return Ok(bytes);
             }
             Err(FinalizeFailure {

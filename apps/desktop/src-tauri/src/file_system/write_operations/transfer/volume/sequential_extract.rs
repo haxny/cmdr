@@ -161,6 +161,7 @@ pub(super) async fn extract_sequential_subtree(
         // The member reports its own mode off the archive's index; an extract
         // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
         let stream = super::extract_quarantine::quarantine_stream(state, source_volume, extractor.current_stream());
+        let lost = super::super::super::metadata_losses::file_losses(&**source_volume, &**dest_volume, &*stream);
         // One decode pass means one member at a time, but this member still
         // takes a leaf handle of its own: it is what carries its bytes on the
         // bar while it writes, and what takes them back off if the write fails.
@@ -186,6 +187,7 @@ pub(super) async fn extract_sequential_subtree(
         // stays on the op's ledger for the post-loop to take back
         // (`naming.rs::take_back_unfilled_reservations`).
         state.claimed_names.release_placeholder(&planned.dest_path);
+        state.metadata_losses.note_file(lost);
 
         // Safe-replace finalize for a file→file Overwrite (same as the per-entry
         // path): the temp holds the complete new bytes; swap it over the original.
