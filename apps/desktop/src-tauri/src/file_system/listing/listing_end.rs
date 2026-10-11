@@ -8,12 +8,27 @@
 
 use std::path::Path;
 
-use crate::file_system::listing::streaming::ListingEventSink;
+use crate::file_system::listing::stalled_on::StalledOn;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::friendly_error::{
     ListingError, archive_needs_password_listing_error, archive_unreadable_listing_error, enrich_with_provider,
     listing_error_from_volume_error,
 };
+
+/// Abstraction over listing event emission. Declared here rather than beside its
+/// implementations in `streaming.rs`, so the reaction below names it without
+/// `listing_end` and `streaming` depending on each other.
+/// Production: `TauriListingEventSink` wraps `AppHandle`.
+/// Tests: `CollectorListingEventSink` stores events for assertion.
+pub(crate) trait ListingEventSink: Send + Sync {
+    fn emit_opening(&self, listing_id: &str);
+    fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn);
+    fn emit_progress(&self, listing_id: &str, loaded_count: usize);
+    fn emit_read_complete(&self, listing_id: &str, total_count: usize);
+    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>);
+    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>);
+    fn emit_cancelled(&self, listing_id: &str);
+}
 
 /// The analytics category a `listing-error` reports: the classification's
 /// category enum as its wire string, and nothing else (no path, message, or

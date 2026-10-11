@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
+pub(crate) use crate::file_system::listing::listing_end::ListingEventSink;
 use crate::file_system::listing::listing_end::{
     AppListingEndEffects, error_analytics_category, finish_streaming_listing,
 };
@@ -154,23 +155,6 @@ impl StreamingListingState {
 /// Cache for streaming state (separate from completed listings cache)
 pub(crate) static STREAMING_STATE: LazyLock<RwLock<HashMap<String, Arc<StreamingListingState>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
-
-// ============================================================================
-// Event sink trait (decouples streaming from Tauri)
-// ============================================================================
-
-/// Abstraction over listing event emission.
-/// Production: `TauriListingEventSink` wraps `AppHandle`.
-/// Tests: `CollectorListingEventSink` stores events for assertion.
-pub(crate) trait ListingEventSink: Send + Sync {
-    fn emit_opening(&self, listing_id: &str);
-    fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn);
-    fn emit_progress(&self, listing_id: &str, loaded_count: usize);
-    fn emit_read_complete(&self, listing_id: &str, total_count: usize);
-    fn emit_complete(&self, listing_id: &str, total_count: usize, volume_root: String, stored_path: Option<String>);
-    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>);
-    fn emit_cancelled(&self, listing_id: &str);
-}
 
 /// Tauri-backed listing event sink: calls `app.emit()` for each event.
 pub(crate) struct TauriListingEventSink {
