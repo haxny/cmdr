@@ -369,7 +369,7 @@ describe('TransferProgressDialog Pause/Resume', () => {
 })
 
 describe('TransferProgressDialog Queue button', () => {
-  it('backgrounds the op: opens the queue window, shows a toast, fires onQueue, and does NOT cancel', async () => {
+  it('backgrounds the op: shows a toast, fires onQueue, opens no window, and does NOT cancel', async () => {
     const { component, target, onQueue } = await mountDialog()
 
     const queueBtn = queryButton(target, BACKGROUND_ARIA)
@@ -377,7 +377,7 @@ describe('TransferProgressDialog Queue button', () => {
     queueBtn?.click()
     await tick()
 
-    expect(openQueueWindowMock, 'opens the queue window').toHaveBeenCalledOnce()
+    expect(openQueueWindowMock, 'leaves the queue window shut: the corner chip carries the op').not.toHaveBeenCalled()
     expect(addToastMock, 'shows a quiet background toast').toHaveBeenCalledOnce()
     expect(onQueue, 'asks the parent to unmount the modal').toHaveBeenCalledOnce()
 
@@ -399,7 +399,7 @@ describe('TransferProgressDialog Queue button', () => {
 
     queryButton(target, BACKGROUND_ARIA)?.click()
     await tick()
-    expect(openQueueWindowMock, 'Queue backgrounded the op').toHaveBeenCalledOnce()
+    expect(addToastMock, 'Queue backgrounded the op').toHaveBeenCalledOnce()
     cancelWriteOperationMock.mockClear()
 
     // Fire the modal's onclose path the same way a real close does.
@@ -426,7 +426,7 @@ describe('TransferProgressDialog dialog-scoped F2', () => {
     await tick()
 
     expect(onQueue, 'F2 backgrounds the op').toHaveBeenCalledOnce()
-    expect(openQueueWindowMock).toHaveBeenCalledOnce()
+    expect(openQueueWindowMock).not.toHaveBeenCalled()
 
     dropView(component)
   })
@@ -449,7 +449,7 @@ describe('TransferProgressDialog dialog-scoped F2', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2' }))
       expect(globalRename, 'F2 reaches file.rename once the dialog is closed').toHaveBeenCalledOnce()
       // And the dialog's Queue path stayed silent (nothing backgrounded).
-      expect(openQueueWindowMock).not.toHaveBeenCalled()
+      expect(addToastMock).not.toHaveBeenCalled()
     } finally {
       window.removeEventListener('keydown', onGlobalKeydown)
     }
@@ -457,7 +457,7 @@ describe('TransferProgressDialog dialog-scoped F2', () => {
 })
 
 describe('TransferProgressDialog auto-queue surfacing', () => {
-  it('an op admitted as Queued backgrounds itself: opens the window, toasts, fires onQueue, no second modal', async () => {
+  it('an op admitted as Queued backgrounds itself: toasts, fires onQueue, no window, no second modal', async () => {
     // Seed `list_operations` so the op reports `queued` right after it starts
     // (admitted behind a busy lane), with one running op ahead of it. The seed
     // is the fan-out's, taken once at init, so the window reopens on it.
@@ -505,8 +505,8 @@ describe('TransferProgressDialog auto-queue surfacing', () => {
     )
     await flushPromises()
 
-    expect(onQueue, 'a queued op surfaces the queue window instead of a modal').toHaveBeenCalledOnce()
-    expect(openQueueWindowMock).toHaveBeenCalledOnce()
+    expect(onQueue, 'a queued op backgrounds itself instead of stacking a modal').toHaveBeenCalledOnce()
+    expect(openQueueWindowMock, 'and leaves the queue window shut').not.toHaveBeenCalled()
     expect(addToastMock, 'a quiet queued toast').toHaveBeenCalledOnce()
 
     // Backgrounding must not cancel the queued op.
@@ -559,12 +559,12 @@ describe('TransferProgressDialog backgrounding under the real synchronous teardo
     await tick()
     cancelWriteOperationMock.mockClear()
     cancelOperationMock.mockClear()
-    openQueueWindowMock.mockClear()
+    addToastMock.mockClear()
 
     queryButton(target, BACKGROUND_ARIA)?.click()
     await flushPromises()
 
-    expect(openQueueWindowMock, 'the handoff completes: the queue window opens').toHaveBeenCalledOnce()
+    expect(addToastMock, 'the handoff completes: the toast says where the op went').toHaveBeenCalledOnce()
     expect(
       cancelWriteOperationMock,
       'a backgrounded op must survive the synchronous modal teardown',
@@ -685,7 +685,7 @@ describe('TransferProgressDialog while the operation is still counting', () => {
     await tick()
 
     expect(onQueue).toHaveBeenCalledTimes(1)
-    expect(openQueueWindowMock).toHaveBeenCalledTimes(1)
+    expect(openQueueWindowMock).not.toHaveBeenCalled()
     expect(cancelWriteOperationMock, 'a handoff is not a cancel').not.toHaveBeenCalled()
   })
 

@@ -260,7 +260,8 @@ describe('createTransferProgressState: birth', () => {
 
     expect(cancelOperation).not.toHaveBeenCalled()
     expect(cancelWriteOperation).not.toHaveBeenCalled()
-    expect(openQueueWindow).toHaveBeenCalledTimes(1)
+    expect(addToast, 'handed off: the toast says where it went').toHaveBeenCalledTimes(1)
+    expect(openQueueWindow).not.toHaveBeenCalled()
     expect(config.onQueue).toHaveBeenCalledTimes(1)
   })
 
@@ -601,9 +602,9 @@ describe('createTransferProgressState: pause, queue, and auto-queue', () => {
     listeners.progress(progressEvent())
 
     state.handleQueue()
-    expect(openQueueWindow).toHaveBeenCalledTimes(1)
-    // Backgrounding keeps the person in the main window: the queue shows, unfocused.
-    expect(openQueueWindow).toHaveBeenCalledWith({ focus: false })
+    // Backgrounding keeps the person in the main window: no queue window; the
+    // corner chip carries the op, and the toast's button opens the queue on demand.
+    expect(openQueueWindow).not.toHaveBeenCalled()
     expect(addToast).toHaveBeenCalledTimes(1)
     expect(config.onQueue).toHaveBeenCalledTimes(1)
 
@@ -617,8 +618,8 @@ describe('createTransferProgressState: pause, queue, and auto-queue', () => {
     if (!listeners.opsChanged) throw new Error('operations-changed subscriber never registered')
     listeners.opsChanged({ operations: [snapshot('busy', 'running'), snapshot('op-1', 'queued')] })
     flushSync()
-    expect(openQueueWindow).toHaveBeenCalledTimes(1)
-    expect(openQueueWindow).toHaveBeenCalledWith({ focus: false })
+    expect(openQueueWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledTimes(1)
     expect(config.onQueue).toHaveBeenCalledTimes(1)
 
     state.destroy()
@@ -713,7 +714,8 @@ describe('createTransferProgressState: disposal', () => {
 
     state.detach()
 
-    expect(openQueueWindow).toHaveBeenCalledTimes(1)
+    expect(addToast, 'handed off').toHaveBeenCalledTimes(1)
+    expect(openQueueWindow).not.toHaveBeenCalled()
     expect(config.onQueue).toHaveBeenCalledTimes(1)
     expect(cancelOperation).not.toHaveBeenCalled()
     expect(cancelWriteOperation).not.toHaveBeenCalled()
@@ -758,7 +760,7 @@ describe('createTransferProgressState: disposal', () => {
     state.detach()
     vi.advanceTimersByTime(450)
 
-    expect(openQueueWindow).not.toHaveBeenCalled()
+    expect(config.onQueue, 'a cancelling op is not handed off').not.toHaveBeenCalled()
     expect(config.onCancelled).toHaveBeenCalledWith(2)
   })
 })

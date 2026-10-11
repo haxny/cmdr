@@ -39,6 +39,7 @@ import { createBackgroundOperations, type BackgroundOperationsDeps } from './bac
 import { listeners, settle, snapshot } from '$lib/file-operations/transfer/test-transfer-progress-harness.svelte'
 import { copyBetweenVolumes, listOperations, trashFiles, deleteFiles } from '$lib/tauri-commands'
 import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
+import QueueHandoffToastContent from '$lib/file-operations/queue/QueueHandoffToastContent.svelte'
 import { addToast } from '$lib/ui/toast'
 import { getForegroundOperationId, isForegroundClaimPending } from '$lib/file-operations/foreground-operation.svelte'
 import {
@@ -146,15 +147,17 @@ describe('starting in the background', () => {
     expect(conflictOwner('op-1', foreground)).toBe('here')
   })
 
-  it('shows the queue without taking focus, says where the job went, and drops the source selection', async () => {
+  it('opens no window, says where the job went with a way to the queue, and drops the source selection', async () => {
     const { background, left } = makeBackground()
 
     await background.start(copyProps())
 
-    expect(openQueueWindow).toHaveBeenCalledWith({ focus: false })
-    expect(addToast).toHaveBeenCalledWith('fileOperations.backgroundStart.startedToast', {
+    // The corner chip carries the job; the queue window opens only when asked.
+    expect(openQueueWindow).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(QueueHandoffToastContent, {
       level: 'info',
       toastGroup: 'transfer-queue',
+      props: { message: 'fileOperations.backgroundStart.startedToast' },
     })
     expect(left.spies.clearSelection).toHaveBeenCalledOnce()
   })

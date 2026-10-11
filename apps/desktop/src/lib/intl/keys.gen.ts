@@ -2950,6 +2950,7 @@ export type MessageKey =
   | 'queue.failureToast.action'
   | 'queue.failureToast.summary'
   | 'queue.failureToast.title'
+  | 'queue.handoffToast.action'
   | 'queue.heading'
   | 'queue.list.aria'
   | 'queue.row.awaitingAnswerTooltip'

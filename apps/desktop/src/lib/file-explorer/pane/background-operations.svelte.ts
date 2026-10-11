@@ -29,10 +29,9 @@
  */
 
 import { untrack } from 'svelte'
-import { addToast } from '$lib/ui/toast'
 import { tString } from '$lib/intl/messages.svelte'
 import { getAppLogger } from '$lib/logging/logger'
-import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
+import { showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import { startTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
 import { getOperationSessions } from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
 import type { OperationOutcome } from '$lib/file-operations/operation-session/operation-session.svelte'
@@ -120,9 +119,9 @@ export function createBackgroundOperations(deps: BackgroundOperationsDeps) {
   }
 
   /**
-   * Starts `props` in the background: no modal, no foreground claim. On success
-   * the queue window shows WITHOUT taking focus, a quiet toast says where the
-   * job went, and the source pane's selection is dropped, as a Queue press does.
+   * Starts `props` in the background: no modal, no foreground claim, no queue
+   * window. On success a quiet toast says where the job went (with a button to
+   * the queue), and the source pane's selection is dropped, as a Queue press does.
    */
   async function start(props: TransferProgressPropsData): Promise<void> {
     // A permanent delete is the one operation nothing undoes, so it never starts
@@ -139,8 +138,7 @@ export function createBackgroundOperations(deps: BackgroundOperationsDeps) {
       return
     }
     createTransferPaneEffects(deps, () => props).clearSourcePaneAfterTransfer()
-    addToast(tString('fileOperations.backgroundStart.startedToast'), { level: 'info', toastGroup: 'transfer-queue' })
-    void openQueueWindow({ focus: false })
+    showQueueHandoffToast(tString('fileOperations.backgroundStart.startedToast'))
     watch(props, result.operationId)
   }
 

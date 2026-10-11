@@ -66,38 +66,22 @@ describe('openQueueWindow', () => {
 })
 
 /**
- * Backgrounding a transfer shows the queue window WITHOUT taking focus: the
- * person sent the job away to keep working in the main window, and a window that
- * grabs the keyboard makes them click back. The menu command and the corner chip
- * still open it focused, because there the person asked to look at it.
+ * Every opener is a person asking to look (the menu command, the corner chip,
+ * a toast's "Show in operation queue"), so the window takes focus. Backgrounding
+ * a job never opens it at all.
  */
 describe('openQueueWindow focus', () => {
-  it('focuses a newly created window by default', async () => {
+  it('focuses a newly created window', async () => {
     await openQueueWindow()
 
     expect(webviewWindow).toHaveBeenCalledWith('queue', expect.objectContaining({ focus: true }))
   })
 
-  it('asks an already-open window to focus itself by default', async () => {
+  it('asks an already-open window to focus itself', async () => {
     getByLabel.mockResolvedValue({})
 
     await openQueueWindow()
 
     expect(emitTo).toHaveBeenCalledWith('queue', 'focus-self')
-  })
-
-  it('creates the window unfocused when the caller keeps focus', async () => {
-    await openQueueWindow({ focus: false })
-
-    expect(webviewWindow).toHaveBeenCalledWith('queue', expect.objectContaining({ focus: false }))
-  })
-
-  it('leaves an already-open window where it is when the caller keeps focus', async () => {
-    getByLabel.mockResolvedValue({})
-
-    await openQueueWindow({ focus: false })
-
-    expect(emitTo).not.toHaveBeenCalled()
-    expect(webviewWindow).not.toHaveBeenCalled()
   })
 })

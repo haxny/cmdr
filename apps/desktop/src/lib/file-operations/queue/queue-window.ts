@@ -64,18 +64,6 @@ function windowBackground(reduceTransparency: boolean): [number, number, number,
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? [30, 30, 30, 255] : [255, 255, 255, 255]
 }
 
-export interface OpenQueueWindowOptions {
-  /**
-   * Whether the window takes keyboard focus. `true` (the default) for the
-   * commands that open it so the person can look at it: the menu item, the
-   * corner chip, the failure toast. `false` for a transfer sent to the
-   * background, where the person said "don't make me watch" and keeps working in
-   * the main window: the window still shows (it answers "where did my job go"),
-   * but a fresh one opens unfocused and an open one stays where it is.
-   */
-  focus?: boolean
-}
-
 /**
  * Opens the operation-queue window, or focuses it if already open (singleton,
  * like Settings). Cross-window `setFocus()` doesn't reliably raise a window on
@@ -84,11 +72,11 @@ export interface OpenQueueWindowOptions {
  * Every Tauri call is awaited in try/catch with a `log.warn`: window perms fail
  * SILENTLY, so a missing grant must surface as a log line, not a dead window.
  */
-export async function openQueueWindow({ focus = true }: OpenQueueWindowOptions = {}): Promise<void> {
+export async function openQueueWindow(): Promise<void> {
   // E2E suites re-open windows many times; stealing OS focus each time makes the
   // host machine unusable while tests run. The plugin drives the webview over a
   // socket, so it doesn't need OS focus. Mirrors Settings / Shortcuts.
-  const takesFocus = focus && !isE2eRun()
+  const takesFocus = !isE2eRun()
 
   try {
     const existing = await WebviewWindow.getByLabel('queue')

@@ -1092,12 +1092,12 @@ back/settled, no conflict prompt up).
   lane slot while paused). The session's `pauseInFlight` guards against a double-click racing the IPC, and because the
   guard lives on the shared session, a queue row watching the same operation sees the press too.
 - **Queue (send to background)** is FRONTEND-ONLY state, no backend command. `handleQueue` sets the local `backgrounded`
-  flag, shows the queue window WITHOUT focus (`openQueueWindow({ focus: false })`, so the keyboard stays in the pane the
-  person was working in), shows a quiet `info` toast (group `transfer-queue`), and calls `onQueue(operationId)` so the
-  parent (`dialog-state.svelte.ts` → `handleTransferQueue`) unmounts the modal **without cancelling** the op and hands
-  its birth context to the background watch (§ "Starting in the background", for the archive-password stop). The op runs
-  on, now managed in the queue window. The button reads "Background" with an empty queue and "Queue" otherwise
-  (`../queue/queue-backlog.ts`); the action is the same either way.
+  flag, opens NO window (`../queue/DETAILS.md` § "Backgrounding never opens the window"), shows the handoff toast
+  (`../queue/queue-handoff-toast.ts`, group `transfer-queue`, with a "Show in operation queue" button), and calls
+  `onQueue(operationId)` so the parent (`dialog-state.svelte.ts` → `handleTransferQueue`) unmounts the modal **without
+  cancelling** the op and hands its birth context to the background watch (§ "Starting in the background", for the
+  archive-password stop). The op runs on, now managed in the queue window. The button reads "Background" with an empty
+  queue and "Queue" otherwise (`../queue/queue-backlog.ts`); the action is the same either way.
 - **`backgrounded` is a one-way latch, not a guard against anything.** It records that this view has already handed the
   operation over, so a second Queue press, an auto-queue firing behind a manual one, and a close during the handoff are
   all no-ops. It no longer suppresses a teardown cancel, because there is no teardown cancel: every unmount leaves the
@@ -1111,14 +1111,14 @@ back/settled, no conflict prompt up).
   leak-free property is structural, not bookkeeping. (Pinned by the negative test in
   `TransferProgressDialog.queue.test.ts`.) `preventDefault` stops any default browser action on the key.
 - **Auto-queue surfacing.** When a new op starts on a busy lane, the manager admits it as `queued` rather than spawning
-  it. A DISPATCHING view watches `session.status` for that and auto-backgrounds: it surfaces the queue window with a
-  quiet "N transfers ahead" toast and unmounts, exactly like a manual Queue. ❌ An ADOPTED view (`adoptedOperationId`,
-  the queue window's Show) never does, and the effect returns early for one: a dialog opened precisely to watch this
-  operation hiding itself again is the button appearing to do nothing. The currently-foregrounded op keeps its modal; we
-  never stack a second modal. "N ahead" counts the ops occupying lanes (running or paused) in the main window's
-  operations store — the same live rows the Background/Queue label reads — floored at 1. The dialog needs no seeding
-  logic of its own: a session that hears nothing on attach asks `list_operations()` itself, which is what catches the
-  registration tick that fired before anything in this window was watching.
+  it. A DISPATCHING view watches `session.status` for that and auto-backgrounds: a quiet "N transfers ahead" handoff
+  toast and unmounts, exactly like a manual Queue. ❌ An ADOPTED view (`adoptedOperationId`, the queue window's Show)
+  never does, and the effect returns early for one: a dialog opened precisely to watch this operation hiding itself
+  again is the button appearing to do nothing. The currently-foregrounded op keeps its modal; we never stack a second
+  modal. "N ahead" counts the ops occupying lanes (running or paused) in the main window's operations store — the same
+  live rows the Background/Queue label reads — floored at 1. The dialog needs no seeding logic of its own: a session
+  that hears nothing on attach asks `list_operations()` itself, which is what catches the registration tick that fired
+  before anything in this window was watching.
 
 ## Starting in the background (F2 in a setup dialog)
 
@@ -1154,9 +1154,9 @@ password re-dispatch reopens the progress dialog.
 `transfer-dispatch.ts::startTransferOperation` (the same dispatch, MCP reply, and typed error the progress dialog's
 birth uses) and never touches the progress slot. Nothing mounts, not for a frame (pinned with a `MutationObserver` in
 `dialog-state.transfer-confirm.svelte.test.ts`), and the next F5 opens at once. Then: the source pane's selection drops
-(as a Queue press does), a quiet toast says where the job went, the queue window shows without focus, and the pane gets
-the keyboard back (`onRefocus`). **Decision/Why:** mounting the progress dialog with a "background on bind" prop was the
-smaller change, but it holds the slot until the id lands and can flash a frame.
+(as a Queue press does), the handoff toast says where the job went (no window opens), and the pane gets the keyboard
+back (`onRefocus`). **Decision/Why:** mounting the progress dialog with a "background on bind" prop was the smaller
+change, but it holds the slot until the id lands and can flash a frame.
 
 **What each follow-up a foreground start has becomes** (pinned in `dialog-state.background.svelte.test.ts` and
 `background-operations.svelte.test.ts`):

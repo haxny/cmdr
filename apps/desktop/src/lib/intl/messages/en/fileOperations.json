@@ -1344,9 +1344,9 @@
     "screenshot": "conflict-dialog.png"
   },
 
-  "fileOperations.transferProgress.queuedToast": "{countText} ahead of this one, so it’s waiting its turn. Find it in the operation queue.",
+  "fileOperations.transferProgress.queuedToast": "{countText} ahead of this one, so it’s waiting its turn.",
   "@fileOperations.transferProgress.queuedToast": {
-    "description": "Quiet toast shown when a new copy/move/delete can’t start right away because another operation is busy on the same drive, so it waits in the queue. The operation queue window comes forward at the same time. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle.",
+    "description": "Quiet toast shown when a new copy/move/delete can’t start right away because another operation is busy on the same drive, so it waits in the queue. No window opens; the toast carries a \"Show in operation queue\" button (queue.handoffToast.action) under this sentence.",
     "placeholders": {
       "countText": "preformatted count phrase of operations ahead, for example \"1 operation\" or \"3 operations\""
     },
@@ -1364,9 +1364,9 @@
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
-  "fileOperations.transferProgress.backgroundedToast": "Still running in the background. Find it in the operation queue.",
+  "fileOperations.transferProgress.backgroundedToast": "Still running in the background.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "description": "Quiet toast shown after the user sends a running transfer to the background (via the Queue button or F2). The transfer keeps going; the operation queue window comes forward to manage it. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle.",
+    "description": "Quiet toast shown after the user sends a running transfer to the background (via the Queue button or F2). The transfer keeps going; no window opens, and the toast carries a \"Show in operation queue\" button (queue.handoffToast.action) under this sentence.",
     "screenshot": "transfer-dialog.png",
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
@@ -1396,9 +1396,9 @@
     "description": "Tooltip on the Background / Queue button of the copy, move, compress, and move-to-trash confirmation dialogs. The operation starts right away but out of sight, and the user follows it in the operation queue window. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle. F2 is the keyboard shortcut for the same button while the dialog is open; keep it as is."
   },
 
-  "fileOperations.backgroundStart.startedToast": "Sent to the background. Find it in the operation queue.",
+  "fileOperations.backgroundStart.startedToast": "Sent to the background.",
   "@fileOperations.backgroundStart.startedToast": {
-    "description": "Quiet toast shown after the user starts a copy, move, compress, or move to trash in the background from its confirmation dialog (F2 or the Background / Queue button). No progress window opens; the operation queue window shows up behind the main window, which keeps the keyboard. It may be running already or waiting its turn behind other operations, so the wording must not claim either. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle."
+    "description": "Quiet toast shown after the user starts a copy, move, compress, or move to trash in the background from its confirmation dialog (F2 or the Background / Queue button). No window opens at all; the toast carries a \"Show in operation queue\" button (queue.handoffToast.action) under this sentence. It may be running already or waiting its turn behind other operations, so the wording must not claim either."
   },
 
   "fileOperations.backgroundStart.needsPasswordToast": "“{archiveName}” needs its password. You’ll be asked as soon as the open dialog closes.",

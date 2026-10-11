@@ -267,16 +267,18 @@ reopen.
   `apps/desktop/src/lib/status-corner/CLAUDE.md`. Both render `failure-reason.ts`, so the three surfaces can't describe
   one failure three ways.
 
-The progress-dialog Queue button, the auto-queue surfacing, and a start sent straight to the background (F2 in a setup
-dialog) open the window via `openQueueWindow({ focus: false })` and read this same store. Don't fork a second opener or
-store.
+Every opener goes through `openQueueWindow()` and reads this same store. Don't fork a second opener or store.
 
-## Backgrounding never takes focus
+## Backgrounding never opens the window
 
-The person sent the job away to keep working, so a fresh window opens with Tauri's `focus: false` and an open one gets
-no `focus-self`; it still shows, which answers "where did my job go". The commands that open it to LOOK at it (the menu
-item, the corner chip, the failure toast) keep the default `focus: true`. Pinned in `queue-window.test.ts`; not yet
-confirmed on a real macOS run that a fresh unfocused window leaves the main window key.
+The progress dialog's Background / Queue (and its F2), the auto-queue, and a setup dialog's F2 all leave the window
+shut. They show `queue-handoff-toast.ts`'s toast instead: the sentence saying where the job went plus "Show in operation
+queue" (`QueueHandoffToastContent.svelte`), and the status corner's chip carries the job from there. Every opener is a
+person asking to look (the menu item, the corner chip, either toast's button), so the window always takes focus.
+**Decision/Why:** an unfocused window still lands over the panes (macOS raises a new window even when it isn't key),
+hiding the files the person went back to, and "next to the main window" has no room when it's maximized or in full
+screen. Backgrounding means "don't make me watch"; a window appearing says the opposite (2026-10-11, David's call; it
+also made PR #390's "F2 closes the queue window" moot).
 
 ## The main window's instance
 

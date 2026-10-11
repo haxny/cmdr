@@ -51,7 +51,7 @@
  */
 
 import { cancelOperation, type TransferActivity, type WriteCancelledEvent } from '$lib/tauri-commands'
-import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
+import { showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import {
   beginForegroundClaim,
   clearForegroundOperation,
@@ -59,7 +59,6 @@ import {
   setForegroundOperationId,
 } from '../foreground-operation.svelte'
 import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-import { addToast } from '$lib/ui/toast'
 import type {
   TransferOperationType,
   ConflictResolution,
@@ -489,7 +488,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
 
   // Auto-queue is a decision a DISPATCHING view makes: the manager admitted the
   // operation behind a busy lane, and stacking a second modal over the one
-  // already up would be worse than surfacing the queue. A view opened precisely
+  // already up would be worse than backgrounding it. A view opened precisely
   // to watch this operation makes the opposite call — bouncing it back out of
   // sight is the button appearing to do nothing.
   $effect(() => {
@@ -548,24 +547,21 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     await op.resolveConflict(clash.conflictId, resolution, applyToAll)
   }
 
-  /** Sends this operation to the background: keep it running, open the queue
-   *  window, and unmount this modal. The op is now managed in the queue window.
+  /** Sends this operation to the background: keep it running, say so in a
+   *  toast, and unmount this modal. The corner chip and the queue window carry it.
    *  Fired by the Queue button, the dialog-scoped F2, and the auto-queue path. */
   function handleQueue(): void {
     if (!operationId || backgrounded) return
-    log.info('Backgrounding operation to the queue window: {operationId}', { operationId })
+    log.info('Backgrounding operation: {operationId}', { operationId })
     handOff(operationId)
-    addToast(tString('fileOperations.transferProgress.backgroundedToast'), {
-      level: 'info',
-      toastGroup: 'transfer-queue',
-    })
+    showQueueHandoffToast(tString('fileOperations.transferProgress.backgroundedToast'))
     config.onQueue?.(operationId)
   }
 
   /** Called once the operation first reports itself as `queued`: the manager
    *  admitted it behind a busy lane rather than running it now. Don't stack a
-   *  second modal on top of the foreground op — surface the queue window with a
-   *  quiet toast and unmount, exactly like a manual Queue. */
+   *  second modal on top of the foreground op — a quiet toast and unmount,
+   *  exactly like a manual Queue. */
   function handleAutoQueued(): void {
     if (backgrounded || !operationId) return
     // How many operations this one is waiting behind: the ones occupying lanes
@@ -576,13 +572,10 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
         (row.snapshot.status === 'running' || row.snapshot.status === 'paused'),
     ).length
     const aheadCount = Math.max(1, ahead)
-    log.info('Operation queued behind {ahead} on a busy lane; surfacing the queue window', { ahead: aheadCount })
+    log.info('Operation queued behind {ahead} on a busy lane; backgrounding it', { ahead: aheadCount })
     handOff(operationId)
     const countText = tString('fileOperations.transferProgress.queuedToastCount', { count: aheadCount })
-    addToast(tString('fileOperations.transferProgress.queuedToast', { countText }), {
-      level: 'info',
-      toastGroup: 'transfer-queue',
-    })
+    showQueueHandoffToast(tString('fileOperations.transferProgress.queuedToast', { countText }))
     config.onQueue?.(operationId)
   }
 
@@ -618,19 +611,18 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     else dismiss()
   }
 
-  /** The half the manual Queue and the auto-queue share: mark the handoff and
-   *  show the window that now owns it. The foreground slot is released HERE
-   *  rather than in `destroy()`, because handing over is exactly when the corner
-   *  chip and the failure notice must start speaking about this operation, and
-   *  `onQueue` is optional so the modal may stay mounted.
+  /** The half the manual Queue and the auto-queue share: mark the handoff. The
+   *  foreground slot is released HERE rather than in `destroy()`, because
+   *  handing over is exactly when the corner chip and the failure notice must
+   *  start speaking about this operation, and `onQueue` is optional so the modal
+   *  may stay mounted.
    *
-   *  The window opens WITHOUT focus: sending a job away means "let me keep
-   *  working", and focus going to the queue makes the person click back into
-   *  the pane they were in. */
+   *  ❌ No queue window: sending a job away means "let me keep working", and a
+   *  window landing over the panes says the opposite. The corner chip carries
+   *  the job; the toast's "Show in operation queue" opens the window on demand. */
   function handOff(id: string): void {
     backgrounded = true
     clearForegroundOperation(id)
-    void openQueueWindow({ focus: false })
   }
 
   /* ----------------------------------------------------------------------- */

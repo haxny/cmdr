@@ -209,6 +209,11 @@
     "screenshot": "operation-failure.png"
   },
 
+  "queue.handoffToast.action": "Show in operation queue",
+  "@queue.handoffToast.action": {
+    "description": "Button on the quiet toast shown after the user sends a copy, move, compress, or trash to the background (F2, or the Background / Queue button). Backgrounding opens no window; this button opens the operation queue window, where the job's row is. \"Operation queue\" is the window’s name; keep it identical to the window title and to queue.failureToast.action."
+  },
+
   "queue.failureToast.summary": "{count, plural, one {{countText} operation couldn’t finish} other {{countText} operations couldn’t finish}}",
   "@queue.failureToast.summary": {
     "description": "Headline of the single notice that replaces the individual ones when several operations stop in a row (more than three). It names only how many; the operation queue window lists each one with its own reason, which the button underneath opens. The count updates as more come in and as the user clears them.",
