@@ -74,7 +74,9 @@
 //! - **❌ Never on the caller's thread.** The callers are async runtime workers,
 //!   so the store only updates its in-memory set and queues the line; a writer
 //!   thread does the `write(2)` (`in_flight_log_writer.rs`, which has the why
-//!   and the crash window it costs).
+//!   and the crash window it costs). ❗ Only a TEMP's record is fire-and-forget:
+//!   [`track`] waits until any other kind is written and synced, since an aside
+//!   is recorded before the rename that puts the user's original there.
 //! - **❌ No `fsync`.** An fsync here would cost milliseconds per file and turn
 //!   a copy into a flush-per-file crawl. An unsynced write is already in the
 //!   page cache, so the record survives the process dying — a quit, a panic, a
@@ -321,17 +323,51 @@ fn record_for(temp: &Path, home: Option<TempHome<'_>>) -> Option<Record> {
 /// A TEMP also joins the operation's own in-memory ledger, the way [`register`]
 /// does. ❌ Nothing else may: that ledger's sweep deletes what it finds, and
 /// every other kind can be the user's only copy.
+///
+/// ❗ **Anything but a temp is on disk, synced, before this returns**, so a
+/// caller that records an aside and THEN renames the user's original onto it
+/// can't crash in between with nothing knowing what the aside is. A temp only
+/// queues: it holds incoming bytes, so a lost record costs a leftover, never
+/// data. Blocks on the ledger's writer for that, so call it from blocking code
+/// (every caller is the sync local engine); the async engine has
+/// [`track_in`].
 pub(super) fn track(state: &WriteOperationState, kind: ItemKind, absolute: &Path) -> TrackedRecord {
-    record(state, home_for(state, absolute), kind, absolute)
+    let tracked = record(state, home_for(state, absolute), kind, absolute);
+    if !tracked.is_temp() {
+        let (done, reached) = std::sync::mpsc::sync_channel(1);
+        if Ledger::of(state).durable_barrier(move || {
+            let _ = done.send(());
+        }) {
+            // An Err means the writer is gone, and there is nothing left to wait for.
+            let _ = reached.recv();
+        }
+    }
+    tracked
 }
 
 /// [`track`], with the path space named outright rather than worked out from
-/// the operation's sides.
+/// the operation's sides, and awaited rather than blocked on.
 ///
 /// For the cross-volume engine, whose paths are already in the destination
-/// volume's own namespace ([`RecordHome::volume_space`]).
-pub(super) fn track_in(state: &WriteOperationState, home: RecordHome, kind: ItemKind, path: &Path) -> TrackedRecord {
-    record(state, home, kind, path)
+/// volume's own namespace ([`RecordHome::volume_space`]). Same promise: anything
+/// but a temp is on disk, synced, before this resolves.
+pub(super) async fn track_in(
+    state: &WriteOperationState,
+    home: RecordHome,
+    kind: ItemKind,
+    path: &Path,
+) -> TrackedRecord {
+    let tracked = record(state, home, kind, path);
+    if !tracked.is_temp() {
+        let (done, reached) = tokio::sync::oneshot::channel();
+        if Ledger::of(state).durable_barrier(move || {
+            let _ = done.send(());
+        }) {
+            // An Err means the writer is gone, and there is nothing left to wait for.
+            let _ = reached.await;
+        }
+    }
+    tracked
 }
 
 /// [`track`] and [`track_in`]'s shared body.
@@ -547,11 +583,22 @@ impl Ledger {
     /// Drops a record the sweep is done with, on disk too.
     /// Waits, at most [`FLUSH_WAIT`], for everything queued so far to reach the
     /// log file. The wait happens with the store released.
+    /// Runs `then` once every record queued so far is written and synced to
+    /// disk. `false` when there's no log to wait for (none opened yet, or its
+    /// writer is gone), and `then` never runs.
+    fn durable_barrier(&self, then: impl FnOnce() + Send + 'static) -> bool {
+        self.store().log.as_ref().is_some_and(|log| log.barrier(true, then))
+    }
+
     fn flush_log(&self) {
-        let Some(reached) = self.store().log.as_ref().and_then(LogWriter::barrier) else {
-            return;
-        };
-        if reached.recv_timeout(FLUSH_WAIT).is_err() {
+        let (done, reached) = std::sync::mpsc::sync_channel(1);
+        let queued = self.store().log.as_ref().is_some_and(|log| {
+            log.barrier(false, move || {
+                // A waiter that gave up has nothing left to tell.
+                let _ = done.send(());
+            })
+        });
+        if queued && reached.recv_timeout(FLUSH_WAIT).is_err() {
             log::warn!(
                 target: "copy",
                 "the in-flight temp ledger didn't finish writing within {FLUSH_WAIT:?}; its last records may be missing"
@@ -707,59 +754,9 @@ pub(super) use records::{
 mod sweep;
 pub use sweep::init_app_handle as init_sweep_app_handle;
 
-/// A test's own ledger. Each test builds one, hands it to the states it drives
-/// (`WriteOperationState::with_in_flight_ledger`), and asserts on it alone, so
-/// no other test's records ever land in its log or its sweep.
 #[cfg(test)]
-impl Ledger {
-    /// A ledger for a process that hasn't launched yet: no log, nothing
-    /// recorded. [`launch_in`](Self::launch_in) is that launch.
-    pub(super) fn for_test() -> Self {
-        Self::new()
-    }
-
-    /// A ledger recording into a fresh log in `data_dir`, so a test can read
-    /// back what [`register`] wrote. Drop it to stand in for the process
-    /// dying: the log on disk stays exactly as it was, and a new
-    /// [`for_test`](Self::for_test) ledger launching against `data_dir` is the
-    /// next run.
-    pub(super) fn recording_in(data_dir: &Path) -> Self {
-        let ledger = Self::new();
-        let log = File::options()
-            .create(true)
-            .append(true)
-            .open(data_dir.join(STORE_FILENAME))
-            .expect("open a test in-flight temp ledger");
-        log.set_len(0).expect("start the test ledger empty");
-        ledger.store().log = Some(LogWriter::spawn(log).expect("start the test ledger's writer"));
-        ledger
-    }
-
-    /// The process dies: whatever it queued has reached the log, as a
-    /// `write(2)` that returned has before a kill, and nothing more is written.
-    /// A state still holding a clone can't write into the log after this, so
-    /// the next run replays exactly what this one left.
-    pub(super) fn die(self) {
-        self.flush_log();
-        self.store().log = None;
-    }
-
-    /// [`init_and_sweep`] against this ledger: a launch that replays
-    /// `data_dir`'s log.
-    pub(super) fn launch_in(&self, data_dir: &Path) -> SweepHandle {
-        self.init_and_sweep(data_dir)
-    }
-
-    /// The set this ledger currently believes is on disk.
-    pub(super) fn live_paths(&self) -> Vec<std::path::PathBuf> {
-        self.store()
-            .recorded
-            .iter()
-            .map(Record::path)
-            .map(Path::to_path_buf)
-            .collect()
-    }
-}
+#[path = "in_flight_temps_test_support.rs"]
+mod test_support;
 
 #[cfg(test)]
 #[path = "in_flight_temps_tests.rs"]

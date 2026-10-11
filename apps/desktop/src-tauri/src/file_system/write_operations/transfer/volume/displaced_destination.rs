@@ -85,16 +85,21 @@ pub(in crate::file_system::write_operations) async fn displace_destination(
     is_directory: bool,
 ) -> Result<Option<DisplacedDestination>, WriteOperationError> {
     let aside = StagingTemp::mint_aside(original, uuid::Uuid::new_v4(), state.liveness_token());
-    let record = state.dest_volume_id().map(|volume_id| {
-        in_flight_temps::track_in(
-            state,
-            RecordHome::volume_space(volume_id),
-            ItemKind::VolumeAside {
-                destination: original.to_path_buf(),
-            },
-            aside.path(),
-        )
-    });
+    // On disk before the rename below puts the original here (`track_in`).
+    let record = match state.dest_volume_id() {
+        Some(volume_id) => Some(
+            in_flight_temps::track_in(
+                state,
+                RecordHome::volume_space(volume_id),
+                ItemKind::VolumeAside {
+                    destination: original.to_path_buf(),
+                },
+                aside.path(),
+            )
+            .await,
+        ),
+        None => None,
+    };
     match volume.rename(original, aside.path(), false).await {
         Ok(()) => Ok(Some(DisplacedDestination {
             aside,

@@ -336,4 +336,15 @@ impl TrackedRecord {
     pub(in crate::file_system::write_operations) fn absolute(&self) -> &Path {
         &self.absolute
     }
+    /// Whether it records a temp, the one kind that can't hold the user's only
+    /// copy of anything.
+    pub(super) fn is_temp(&self) -> bool {
+        matches!(
+            &self.record,
+            Record::Tracked(TrackedItem {
+                kind: ItemKind::Temp,
+                ..
+            })
+        )
+    }
 }

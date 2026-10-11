@@ -1591,7 +1591,8 @@ and hands it to the states it drives with `WriteOperationState::with_in_flight_l
 `state` → `in_flight_temps` → `sweep` → `transfer_sides` → `state` module cycle. `Ledger::recording_in(data_dir)` records into a
 fresh log there; `die()` is the crash (it waits for the writer thread, then stops writing, so a state still holding a
 clone can't add to the log the next run replays); a cell that reads the log while its ledger lives calls `flush_log()`
-first, since lines reach the file from the writer thread; `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
+first, since lines reach the file from the writer thread; `hold_writer()` parks that thread, which is how the ordering
+cell proves a temp only queues while an aside waits to be on disk (seams: `in_flight_temps_test_support.rs`); `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
 log; `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
 records and nothing else, and it can assert on all of them whole.
 

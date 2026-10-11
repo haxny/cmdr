@@ -64,7 +64,6 @@ fn a_recorded_orphan_is_swept_at_startup_however_fresh_it_is() {
     // thread (a partial can live on a dead mount), and a deadline racing it
     // would fail on load rather than on a real break.
     let next_run = Ledger::for_test();
-    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -76,6 +75,7 @@ fn a_recorded_orphan_is_swept_at_startup_however_fresh_it_is() {
         !next_run.live_paths().contains(&orphan),
         "and the new session must not start with the swept path in flight"
     );
+    next_run.flush_log();
     assert!(
         !read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::Local(orphan.clone()))),
         "the swept record must be retired on disk too, so the next launch has nothing to redo"
@@ -131,7 +131,6 @@ fn a_record_whose_volume_isnt_reachable_survives_for_the_next_launch() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert_eq!(
@@ -142,6 +141,7 @@ fn a_record_whose_volume_isnt_reachable_survives_for_the_next_launch() {
         },
         "an unreachable volume's record is deferred, never swept or dropped"
     );
+    next_run.flush_log();
     assert!(
         read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::OnVolume(VolumeTemp {
             volume_id: volume_id.to_string(),
@@ -209,11 +209,11 @@ async fn a_delete_the_volume_refuses_leaves_the_record_to_retry() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert_eq!(tally.swept, 0, "nothing was removed: {tally:?}");
     assert_eq!(tally.deferred, 1, "so the record has to be waiting again: {tally:?}");
+    next_run.flush_log();
     assert!(
         read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::OnVolume(VolumeTemp {
             volume_id: volume_id.to_string(),
@@ -283,7 +283,6 @@ fn a_partial_with_no_named_path_space_is_kept_in_memory_but_not_persisted() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
-    ledger.flush_log();
     let temp = PathBuf::from("/photos/holiday.raw.cmdr-tmp-3333");
     register(&state, &temp, None);
 
@@ -295,6 +294,7 @@ fn a_partial_with_no_named_path_space_is_kept_in_memory_but_not_persisted() {
         ledger.live_paths().is_empty(),
         "but nothing may be persisted about a path whose space we can't name"
     );
+    ledger.flush_log();
     assert_eq!(
         std::fs::read_to_string(data_dir.join(STORE_FILENAME)).unwrap(),
         "",
@@ -313,11 +313,11 @@ fn a_landed_temp_is_retired_from_the_log() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
-    ledger.flush_log();
     let temp = dir.join("holiday.raw.cmdr-tmp-1234");
     register(&state, &temp, Some(TempHome::LocalFs));
     deregister(&state, &temp, Some(TempHome::LocalFs));
 
+    ledger.flush_log();
     assert!(
         !read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::Local(temp))),
         "a temp that came and went must replay as nothing in flight"
@@ -342,7 +342,6 @@ fn compaction_shrinks_the_log_without_forgetting_what_is_still_in_flight() {
     register(&state, &long_lived, Some(TempHome::LocalFs));
 
     // Enough churn to cross the compaction threshold several times over.
-    ledger.flush_log();
     let churned: Vec<PathBuf> = (0..400)
         .map(|i| dir.join(format!("small-file-{i:04}.txt.cmdr-tmp-{i:04}")))
         .collect();
@@ -351,10 +350,12 @@ fn compaction_shrinks_the_log_without_forgetting_what_is_still_in_flight() {
         deregister(&state, churn, Some(TempHome::LocalFs));
     }
 
+    ledger.flush_log();
     assert!(
         std::fs::metadata(&log_path).unwrap().len() < COMPACT_ABOVE_BYTES * 2,
         "the log must stay bounded while a long transfer churns through it"
     );
+    ledger.flush_log();
     let replayed = read_recorded(&log_path);
     assert!(
         replayed.contains(&Record::Legacy(RecordedTemp::Local(long_lived))),
@@ -391,7 +392,6 @@ fn compaction_keeps_the_records_waiting_for_a_volume() {
     next_run.launch_in(&data_dir).wait();
 
     // A local copy in the new session churns the log past compaction.
-    next_run.flush_log();
     let state = state(&next_run);
     for i in 0..400 {
         let churn = dir.join(format!("small-file-{i:04}.txt.cmdr-tmp-{i:04}"));
@@ -399,6 +399,7 @@ fn compaction_keeps_the_records_waiting_for_a_volume() {
         deregister(&state, &churn, Some(TempHome::LocalFs));
     }
 
+    next_run.flush_log();
     assert!(
         read_recorded(&log_path).contains(&Record::Legacy(RecordedTemp::OnVolume(VolumeTemp {
             volume_id: volume_id.to_string(),
@@ -522,7 +523,6 @@ fn the_sweep_refuses_a_recorded_path_that_isnt_one_of_our_scratch_files() {
     .unwrap();
     let next_run = Ledger::for_test();
 
-    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -545,6 +545,7 @@ fn the_sweep_refuses_a_recorded_path_that_isnt_one_of_our_scratch_files() {
         },
         "one removed, one refused"
     );
+    next_run.flush_log();
     assert!(
         read_recorded(&data_dir.join(STORE_FILENAME)).is_empty(),
         "and neither is left to be retried forever"
@@ -574,7 +575,6 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -591,6 +591,7 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
         },
         "the refusal is counted"
     );
+    next_run.flush_log();
     assert!(
         read_recorded(&data_dir.join(STORE_FILENAME)).is_empty(),
         "and the refused record is settled, not left to be retried forever"
@@ -607,7 +608,6 @@ fn deregistering_clears_both_ledgers() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
-    ledger.flush_log();
     let temp = dir.join("notes.txt.cmdr-tmp-1234");
     register(&state, &temp, Some(TempHome::LocalFs));
     assert_eq!(state.in_flight_temps.lock_ignore_poison().len(), 1);
@@ -616,6 +616,7 @@ fn deregistering_clears_both_ledgers() {
     deregister(&state, &temp, Some(TempHome::LocalFs));
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
     assert!(ledger.live_paths().is_empty());
+    ledger.flush_log();
     assert!(
         !read_recorded(&data_dir.join(STORE_FILENAME)).contains(&Record::Legacy(RecordedTemp::Local(temp))),
         "the log must replay as nothing in flight"
@@ -786,4 +787,68 @@ fn every_registration_path_announces_the_volume() {
             && heard.contains(&"in-flight-temps-arrival-probe-register".to_string()),
         "both registration paths must announce; heard {heard:?}"
     );
+}
+
+/// ❗ The ordering the ledger keeps now that its lines are written off the
+/// caller's thread.
+///
+/// A TEMP's record may still be queued when `register` returns: a temp holds
+/// only incoming bytes, so losing its record to a crash costs a leftover the
+/// name-based directory scan reaps, never data. An ASIDE holds the user's
+/// ORIGINAL file under a scratch name, and its caller records it before the
+/// rename that puts the original there. So `track` for anything but a temp
+/// returns only once the record is in the log, synced to disk: a crash right
+/// after the rename still leaves the next launch a record to restore it from.
+#[test]
+fn an_aside_is_on_disk_before_track_returns_while_a_temp_only_queues() {
+    let dir = TestDir::new("in_flight_temps_aside_ordering");
+    let data_dir = dir.join("data");
+    std::fs::create_dir_all(&data_dir).unwrap();
+    let log_path = data_dir.join(STORE_FILENAME);
+    let ledger = Ledger::recording_in(&data_dir);
+    let state = state(&ledger);
+    let release = ledger.hold_writer();
+
+    let temp = dir.join("holiday.raw.cmdr-tmp-6161");
+    register(&state, &temp, Some(TempHome::LocalFs));
+    assert_eq!(
+        std::fs::read_to_string(&log_path).unwrap(),
+        "",
+        "a temp's record only queues: register returned with the writer parked"
+    );
+
+    let aside = dir.join("holiday.raw.cmdr-temp-6161");
+    let (tracked, returned) = std::sync::mpsc::channel();
+    let tracker = {
+        let state = Arc::clone(&state);
+        let aside = aside.clone();
+        let destination = dir.join("holiday.raw");
+        std::thread::spawn(move || {
+            let record = track(
+                &state,
+                ItemKind::FileAside {
+                    destination,
+                    expected_size: 12,
+                },
+                &aside,
+            );
+            tracked.send(()).unwrap();
+            record
+        })
+    };
+    assert!(
+        returned.recv_timeout(Duration::from_millis(300)).is_err(),
+        "an aside's track must not return while its record is still queued"
+    );
+
+    drop(release);
+    returned
+        .recv_timeout(Duration::from_secs(5))
+        .expect("track to return once written");
+    let on_disk = read_recorded(&log_path);
+    assert!(
+        on_disk.iter().any(|record| record.path() == aside.as_path()),
+        "the aside's record was on disk when track returned, with no flush: {on_disk:?}"
+    );
+    drop(tracker.join().unwrap());
 }

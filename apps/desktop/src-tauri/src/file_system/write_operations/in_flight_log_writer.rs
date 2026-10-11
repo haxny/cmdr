@@ -11,10 +11,23 @@
 //! queued, which keeps compaction's rewrite consistent with the appends around
 //! it.
 //!
-//! **What it costs.** A record reaches the kernel a moment after `register`
-//! returns, not inside it. A crash in that window loses the record, and the
-//! hour-gated directory scan (`reap_stale_transfer_temps`) is its backstop: the
-//! same one a power loss already relies on (`in_flight_temps.rs` module docs).
+//! **What it costs, and only for a temp.** A TEMP's record reaches the kernel a
+//! moment after `register` returns. A crash in that window loses the record and
+//! leaves a visible `.cmdr-tmp-*` holding nothing but incoming bytes: litter,
+//! never data. The name-based directory scan (`reap_stale_transfer_temps`,
+//! files over an hour old, at the next cross-volume transfer into that folder)
+//! reaps it, or the user deletes it.
+//!
+//! **Every other kind waits** (`in_flight_temps::track` / `track_in`): an
+//! aside or a staging folder can hold the user's only copy, and its caller
+//! records it BEFORE the rename that puts the original there. So `track` queues
+//! a durable barrier and returns only once the record is written AND synced
+//! (`sync_data`), which is stronger than the unsynced inline write it replaced.
+//! The directory scan never touches an aside (it matches `.cmdr-tmp-` only), so
+//! a lost aside record would leave the original stranded under a scratch name;
+//! the wait is what rules that out. Pinned by
+//! `in_flight_temps_tests.rs::an_aside_is_on_disk_before_track_returns_while_a_temp_only_queues`.
+//!
 //! The quit teardown waits for the queue to drain ([`LogWriter::barrier`]), so
 //! an ordinary quit loses nothing.
 
@@ -29,8 +42,12 @@ enum Op {
     Append(Vec<u8>),
     /// Truncate the log and write these lines instead: compaction.
     Rewrite(Vec<u8>),
-    /// Answer once everything queued before it has reached the kernel.
-    Barrier(mpsc::SyncSender<()>),
+    /// Run `then` once everything queued before it has reached the kernel, and,
+    /// when `durable`, the disk (`fsync`).
+    Barrier {
+        durable: bool,
+        then: Box<dyn FnOnce() + Send>,
+    },
 }
 
 /// The open log, owned by its writer thread.
@@ -68,15 +85,21 @@ impl LogWriter {
         self.send(Op::Rewrite(contents));
     }
 
-    /// Queues a marker and hands back what answers once the writer reaches it.
-    /// `None` when the writer is gone.
+    /// Queues a marker: the writer runs `then` once every line queued before it
+    /// is written, and synced to disk first when `durable`. `false` when the
+    /// writer is gone, and `then` never runs.
     ///
-    /// Returned rather than awaited here so the caller can wait with the
-    /// ledger's mutex released.
-    pub(super) fn barrier(&self) -> Option<mpsc::Receiver<()>> {
-        let (done, reached) = mpsc::sync_channel(1);
-        self.queue.as_ref()?.send(Op::Barrier(done)).ok()?;
-        Some(reached)
+    /// A callback rather than a channel so a sync caller and an async one can
+    /// each wait their own way, with the ledger's mutex released.
+    pub(super) fn barrier(&self, durable: bool, then: impl FnOnce() + Send + 'static) -> bool {
+        self.queue.as_ref().is_some_and(|queue| {
+            queue
+                .send(Op::Barrier {
+                    durable,
+                    then: Box::new(then),
+                })
+                .is_ok()
+        })
     }
 
     fn send(&self, op: Op) {
@@ -114,9 +137,11 @@ fn write_all_queued(mut log: File, ops: &mpsc::Receiver<Op>) {
                     log::debug!(target: "copy", "couldn't compact the in-flight temp ledger: {e}");
                 }
             }
-            Op::Barrier(done) => {
-                // A waiter that gave up has nothing left to tell.
-                let _ = done.send(());
+            Op::Barrier { durable, then } => {
+                if durable && let Err(e) = log.sync_data() {
+                    log::warn!(target: "copy", "couldn't sync the in-flight temp ledger to disk: {e}");
+                }
+                then();
             }
         }
     }
