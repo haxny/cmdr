@@ -14,7 +14,7 @@
  * single-entry `getPathToCopyUnderCursor` reads off the cursor row, so archive,
  * S3, SFTP, and phone panes copy the same kind of path for N rows as for one.
  */
-import { getSelectionSnapshot } from '$lib/tauri-commands'
+import { asListingLookupError, getSelectionSnapshot } from '$lib/tauri-commands'
 import { resolveSnapshotPaths, snapshotIdFromPanePath } from '$lib/search/snapshot-store.svelte'
 import { toBackendIndices } from '$lib/file-operations/transfer/transfer-dialog-utils'
 import { capabilitiesFor } from './volume-capabilities'
@@ -31,13 +31,6 @@ export type SelectedPathsRead = { kind: 'noSelection' } | { kind: 'paths'; paths
 
 const NO_SELECTION: SelectedPathsRead = { kind: 'noSelection' }
 const CHANGED: SelectedPathsRead = { kind: 'changed' }
-
-/** True for the listing refusals that mean "your indices are stale", not a bug. */
-function isStaleListingRefusal(error: unknown): boolean {
-  const refusal = error as { type?: string; failure?: { type?: string } } | null
-  const type = refusal?.failure?.type ?? refusal?.type
-  return type === 'changed' || type === 'gone'
-}
 
 /**
  * A search-results pane has no backend listing: its rows ARE the frozen
@@ -78,7 +71,7 @@ export async function readSelectedPathsForCopy(access: PaneAccess): Promise<Sele
     )
     return snapshot.paths.length > 0 ? { kind: 'paths', paths: snapshot.paths } : NO_SELECTION
   } catch (error) {
-    if (isStaleListingRefusal(error)) return CHANGED
+    if (asListingLookupError(error)) return CHANGED
     throw error
   }
 }

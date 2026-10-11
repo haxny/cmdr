@@ -1,4 +1,10 @@
-import { getFileAt, getSelectionSnapshot, getPathsAtIndices, type Initiator } from '$lib/tauri-commands'
+import {
+  asListingLookupError,
+  getFileAt,
+  getSelectionSnapshot,
+  getPathsAtIndices,
+  type Initiator,
+} from '$lib/tauri-commands'
 import { addToast } from '$lib/ui/toast'
 import { tString } from '$lib/intl/messages.svelte'
 import { toBackendIndices, toBackendCursorIndex } from '$lib/file-operations/transfer/transfer-dialog-utils'
@@ -88,9 +94,7 @@ export async function buildTransferPropsFromSelection(
   try {
     snapshot = await getSelectionSnapshot(listingId, context.showHiddenFiles, backendIndices, expectedSequence)
   } catch (error) {
-    const refusal = error as { type?: string; failure?: { type?: string } }
-    const type = refusal.failure?.type ?? refusal.type
-    if (type !== 'changed' && type !== 'gone') throw error
+    if (!asListingLookupError(error)) throw error
     // Refuse rather than reinterpret old selection indices under a newer revision.
     addToast(tString('fileExplorer.compareDirectories.keptChanging'), { level: 'warn' })
     return null

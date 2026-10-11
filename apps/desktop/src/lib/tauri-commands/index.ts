@@ -65,7 +65,7 @@ export type {
   ListingCancelledEvent,
 } from './file-listing'
 // A listing read that found its listing gone, for the pane that shows it to re-list.
-export { onListingGone } from './listing-gone'
+export { onListingGone, ListingLookupFailure, asListingLookupError } from './listing-gone'
 
 export { getDebugLogPath } from './logging'
 

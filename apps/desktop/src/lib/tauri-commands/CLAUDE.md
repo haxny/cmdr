@@ -17,9 +17,9 @@ import { listDirectoryStart } from '$lib/tauri-commands/file-listing' // wrong: 
 `managed-policy.ts`, plus mostly-event modules (several also carry a few commands): `indexing.ts`, `ai.ts`,
 `appearance.ts`, `menu-events.ts`, `directory-watcher.ts`, `native-drag.ts`, `quick-look.ts`, `downloads.ts`,
 `reveal.ts`, `restricted-paths.ts`, `dialog-events.ts`. `ipc-types.ts` holds `TimedOut<T>` and the last-resort
-`throwIpcError`. `listing-gone.ts` is the listing reads' typed `Gone` refusal; `onListingGone` lets the pane showing
-that listing re-list (`file-explorer/pane/listing-liveness.ts`). DETAILS.md has the per-file contents and the "where to
-put a new command" routing map.
+`throwIpcError`. `listing-gone.ts` is the listing reads' typed `gone` / `changed` refusal (`asListingLookupError` reads
+it back); `onListingGone` lets the pane showing that listing re-list (`file-explorer/pane/listing-liveness.ts`).
+DETAILS.md has the per-file contents and the "where to put a new command" routing map.
 
 ## Must-knows (invariants and guardrails)
 

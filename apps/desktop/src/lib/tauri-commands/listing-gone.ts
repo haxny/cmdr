@@ -7,13 +7,21 @@
  * The listener that acts on it is `file-explorer/pane/listing-liveness.ts`.
  */
 import type { ListingLookupError } from '$lib/ipc/bindings'
-import { TypedFailure } from '$lib/ipc/typed-failure'
+import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
 
 /** A typed listing refusal, preserved across the throw for revision-aware callers. */
-class ListingLookupFailure extends TypedFailure<ListingLookupError> {
+export class ListingLookupFailure extends TypedFailure<ListingLookupError> {
   constructor(failure: ListingLookupError) {
     super(failure, `Listing ${failure.listingId}: ${failure.type}`)
   }
+}
+
+/**
+ * The listing refusal behind a caught value, or `null` for any other error. Either
+ * variant (`gone`, `changed`) means the caller's row indices no longer name rows.
+ */
+export function asListingLookupError(error: unknown): ListingLookupError | null {
+  return failureOf(ListingLookupFailure, error)
 }
 
 const listeners = new Set<(listingId: string) => void>()

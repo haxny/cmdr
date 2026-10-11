@@ -9,12 +9,19 @@ import {
   type TransferContext,
 } from './transfer-operations'
 import type { VolumeInfo } from '../types'
+import { ListingLookupFailure } from '$lib/tauri-commands/listing-gone'
 
-vi.mock('$lib/tauri-commands', () => ({
-  getListingStats: vi.fn(),
-  getPathsAtIndices: vi.fn(),
-  getSelectionSnapshot: vi.fn(),
-}))
+vi.mock('$lib/tauri-commands', async () => {
+  const actual = await vi.importActual<typeof import('$lib/tauri-commands/listing-gone')>(
+    '$lib/tauri-commands/listing-gone',
+  )
+  return {
+    getListingStats: vi.fn(),
+    getPathsAtIndices: vi.fn(),
+    getSelectionSnapshot: vi.fn(),
+    asListingLookupError: actual.asListingLookupError,
+  }
+})
 vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
 vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
 
@@ -124,7 +131,9 @@ describe('buildTransferPropsFromSelection', () => {
   it('refuses F5 when the selected revision changed, never resolving the same rows in a newer cache', async () => {
     vi.mocked(getListingStats).mockResolvedValueOnce({ selectedFiles: 1 } as never)
     vi.mocked(getPathsAtIndices).mockResolvedValueOnce(['/source/wrong-neighbor'])
-    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce({ type: 'changed', listingId: 'listing-1' })
+    vi.mocked(getSelectionSnapshot).mockRejectedValueOnce(
+      new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }),
+    )
     const result = await buildTransferPropsFromSelection('copy', 'listing-1', [2], true, true, context, 7)
     expect(result).toBeNull()
     expect(getSelectionSnapshot).toHaveBeenCalledWith('listing-1', false, [1], 7)

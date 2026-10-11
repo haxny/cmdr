@@ -15,7 +15,12 @@ const { getSelectionSnapshotSpy, resolveSnapshotPathsSpy } = vi.hoisted(() => ({
   resolveSnapshotPathsSpy: vi.fn<(snapshotId: string, selected: number[], cursor: number) => string[]>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ getSelectionSnapshot: getSelectionSnapshotSpy }))
+vi.mock('$lib/tauri-commands', async () => {
+  const actual = await vi.importActual<typeof import('$lib/tauri-commands/listing-gone')>(
+    '$lib/tauri-commands/listing-gone',
+  )
+  return { getSelectionSnapshot: getSelectionSnapshotSpy, asListingLookupError: actual.asListingLookupError }
+})
 vi.mock('$lib/search/snapshot-store.svelte', () => ({
   resolveSnapshotPaths: resolveSnapshotPathsSpy,
   snapshotIdFromPanePath: (path: string) =>
@@ -25,6 +30,7 @@ vi.mock('$lib/search/snapshot-store.svelte', () => ({
 vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
 
 import { readSelectedPathsForCopy } from './selected-paths-read'
+import { ListingLookupFailure } from '$lib/tauri-commands/listing-gone'
 
 interface PaneStubConfig {
   selectedIndices?: number[]
@@ -91,13 +97,13 @@ describe('readSelectedPathsForCopy', () => {
   })
 
   it('refuses rather than reinterpret indices when the listing moved on', async () => {
-    getSelectionSnapshotSpy.mockRejectedValue(Object.assign(new Error('x'), { failure: { type: 'changed' } }))
+    getSelectionSnapshotSpy.mockRejectedValue(new ListingLookupFailure({ type: 'changed', listingId: 'listing-1' }))
     const read = await readSelectedPathsForCopy(access(paneStub({ selectedIndices: [0] })))
     expect(read).toEqual({ kind: 'changed' })
   })
 
   it('refuses when the listing is gone', async () => {
-    getSelectionSnapshotSpy.mockRejectedValue(Object.assign(new Error('x'), { failure: { type: 'gone' } }))
+    getSelectionSnapshotSpy.mockRejectedValue(new ListingLookupFailure({ type: 'gone', listingId: 'listing-1' }))
     expect(await readSelectedPathsForCopy(access(paneStub({ selectedIndices: [0] })))).toEqual({ kind: 'changed' })
   })
 
