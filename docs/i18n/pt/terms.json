@@ -1995,11 +1995,16 @@
     "sources": "MS terminology pt-BR"
   },
   "preset": {
-    "chosen": "predefinição",
-    "accept": ["predefinições"],
+    "chosen": "pré-ajuste",
+    "forms": "masculine: (edited) → (editado), Já existe um pré-ajuste chamado …, Seus pré-ajustes; the menu → menu de pré-ajustes; plain hyphen, never Apple's U+2011",
+    "avoid": [
+      {
+        "form": "predefinição",
+        "why": "MS and Double Commander's term (Tier 2/3); macOS pt-BR says pré-ajuste 81 times against five predefini- hits, most of them the adjective predefinido"
+      }
+    ],
     "confidence": "high",
-    "sources": "MS terminology pt-BR (indexing preset → predefinição da indexação); macOS print dialog",
-    "forms": "Multi-rename: (edited) → (editada), agreeing with predefinição; the menu → menu de predefinições"
+    "sources": "live macOS 27.0.1 (26A434) pt_BR loctable sweep of every en string containing preset, 2026-10-11: PrintingUI Save Current Settings as Preset… → Salvar Ajustes Atuais como Pré-Ajuste…, Clock TIMER_ADD_SHEET_PRESETS → Pré-ajustes, Calendar Salvar pré-ajuste…; MS terminology pt-BR and DC gbpresets say predefinição"
   },
   "preview": {
     "chosen": "Pré-visualizar",
@@ -3168,7 +3173,7 @@
   "load": {
     "chosen": "carregar",
     "accept": ["carreg"],
-    "forms": "Load more → Carregar mais; Load a preset → Carregar uma predefinição",
+    "forms": "Load more → Carregar mais; Load a preset → Carregar um pré-ajuste",
     "confidence": "high",
     "sources": "shipped pt catalog (operationLog.dialog.loadMore, askCmdr.sessions.loadMore); DC pt-BR Carregar/Salvar; TC pt-BR 1547 Carregar configuração"
   },

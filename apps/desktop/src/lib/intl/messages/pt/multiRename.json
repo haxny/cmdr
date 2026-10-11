@@ -95,19 +95,19 @@
   "@multiRename.normalizeUnicode": {
     "sourceHash": "6e1c97e"
   },
-  "multiRename.presets.title": "Predefinições",
+  "multiRename.presets.title": "Pré-ajustes",
   "@multiRename.presets.title": {
     "sourceHash": "954f93f"
   },
-  "multiRename.presets.edited": "{preset} (editada)",
+  "multiRename.presets.edited": "{preset} (editado)",
   "@multiRename.presets.edited": {
     "sourceHash": "6247d29"
   },
-  "multiRename.presets.tooltip": "Carregar, salvar e gerenciar predefinições",
+  "multiRename.presets.tooltip": "Carregar, salvar e gerenciar pré-ajustes",
   "@multiRename.presets.tooltip": {
     "sourceHash": "e63a28f"
   },
-  "multiRename.presets.saved": "Suas predefinições",
+  "multiRename.presets.saved": "Seus pré-ajustes",
   "@multiRename.presets.saved": {
     "sourceHash": "e83f142"
   },
@@ -115,7 +115,7 @@
   "@multiRename.presets.reset": {
     "sourceHash": "39bf87f"
   },
-  "multiRename.presets.saveAs": "Salvar como predefinição…",
+  "multiRename.presets.saveAs": "Salvar como pré-ajuste…",
   "@multiRename.presets.saveAs": {
     "sourceHash": "8abf582"
   },
@@ -131,11 +131,11 @@
   "@multiRename.presets.delete": {
     "sourceHash": "e2d0a54"
   },
-  "multiRename.presets.saveTitle": "Salvar predefinição",
+  "multiRename.presets.saveTitle": "Salvar pré-ajuste",
   "@multiRename.presets.saveTitle": {
     "sourceHash": "362a137"
   },
-  "multiRename.presets.renameTitle": "Renomear predefinição",
+  "multiRename.presets.renameTitle": "Renomear pré-ajuste",
   "@multiRename.presets.renameTitle": {
     "sourceHash": "0e7392e"
   },
@@ -147,7 +147,7 @@
   "@multiRename.presets.renameConfirm": {
     "sourceHash": "3064d79"
   },
-  "multiRename.presets.clash": "Já existe uma predefinição chamada “{preset}”. Substituir?",
+  "multiRename.presets.clash": "Já existe um pré-ajuste chamado “{preset}”. Substituir?",
   "@multiRename.presets.clash": {
     "sourceHash": "7b084a2"
   },
@@ -167,7 +167,7 @@
   "@multiRename.preset.normalizeUnicode": {
     "sourceHash": "6e1c97e"
   },
-  "multiRename.presetName": "Nome da predefinição",
+  "multiRename.presetName": "Nome do pré-ajuste",
   "@multiRename.presetName": {
     "sourceHash": "e534a66"
   },

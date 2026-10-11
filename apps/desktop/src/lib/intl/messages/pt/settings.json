@@ -2063,7 +2063,7 @@
   "@settings.control.customPrefix": {
     "sourceHash": "58c3782"
   },
-  "settings.control.backToPresetsAriaLabel": "Voltar às predefinições",
+  "settings.control.backToPresetsAriaLabel": "Voltar aos pré-ajustes",
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
