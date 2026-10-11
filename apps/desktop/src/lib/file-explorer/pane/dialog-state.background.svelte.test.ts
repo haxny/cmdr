@@ -283,6 +283,29 @@ describe('a background job that finishes', () => {
     })
   })
 
+  // A queued trash whose items all left while it waited completes having moved
+  // nothing (ERR-962JD); the sources-gone toast says why, and an Undo toast for
+  // "Moved 0 files to trash" would offer to undo nothing.
+  it('stays quiet for a trash that had nothing left to move', async () => {
+    const { dialogs } = makeState()
+    dialogs.showDeleteConfirmation(deleteDialogProps())
+    dialogs.handleTrashInBackground('preview-9')
+    await settle()
+    vi.mocked(addToast).mockClear()
+
+    listeners.complete?.({
+      operationId: 'op-1',
+      operationType: 'trash',
+      filesProcessed: 0,
+      filesSkipped: 2,
+      bytesProcessed: 0,
+      refused: null,
+    })
+    await settle()
+
+    expect(addToast).not.toHaveBeenCalled()
+  })
+
   it('names what a partly refused background trash left behind, beside the Undo toast', async () => {
     const { dialogs } = makeState()
     dialogs.showDeleteConfirmation(deleteDialogProps())

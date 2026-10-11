@@ -1208,7 +1208,8 @@ change, but it holds the slot until the id lands and can flash a frame.
 - **A trash's completion toast, Undo and "Go to trash" included**: raised when a background trash completes, through the
   same `announceCompletion` the progress dialog uses (`onCompleted` from the background module). Trash is offered here
   because it's the reversible delete, and that toast is how it's reversed. It replaces the job's handoff toast rather
-  than stacking beside it (`../queue/DETAILS.md` § "Backgrounding never opens the window").
+  than stacking beside it (`../queue/DETAILS.md` § "Backgrounding never opens the window"). A trash that moved nothing
+  (every item left while it queued) raises none: there's nothing to undo, and the sources-gone toast says why.
 - **Copy / move / compress success, pane refresh, cancel's selection restore, duplicate rename editor**: deliberately
   absent, matching a job sent to the background from the progress dialog (the file watcher updates the panes).
 - **Cancel and rollback**: from the queue window's row, like any background job. **Quit gate**: backend-owned, it sees

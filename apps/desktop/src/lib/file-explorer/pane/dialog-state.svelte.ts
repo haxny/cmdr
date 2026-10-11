@@ -438,7 +438,9 @@ export function createDialogState(deps: DialogStateDeps) {
       // A trash keeps its Undo toast wherever it ran: it's the safe, reversible
       // delete, and the toast is how it's reversed. Everything else finishing in
       // the background stays quiet, as a job sent off with Queue does.
-      if (props.operationType === 'trash') announceCompletion(props, payload, operationId)
+      // A trash that moved nothing (every item left while it queued) has nothing to undo; the
+      // sources-gone toast already says why (`$lib/file-operations/sources-gone.svelte.ts`).
+      if (props.operationType === 'trash' && payload.filesProcessed > 0) announceCompletion(props, payload, operationId)
     },
   })
 
