@@ -62,6 +62,27 @@ folder path (`create_dir_all`, then only mtime, as `copy/scanned_dirs.rs`), `cop
   `ditto -x -k` and `tar -xf` (bsdtar) restore those xattrs, hide `__MACOSX`, AND copy the archive's
   `com.apple.quarantine` onto every extracted file. A zip carries no birth time (extracted birth reads as mtime).
 
+## Review round 1 re-runs
+
+Same machine and OS, APFS internal SSD unless noted, a fresh C helper (`copyfile`, `setattrlist`, `rename`), run as the
+file's owner.
+
+- **`clonefile` copies `uchg` whatever the copyfile flags say.** `COPYFILE_ALL|CLONE` and `COPYFILE_DATA|XATTR|CLONE`
+  both land `uchg` on the temp, and both renames fail `EPERM`. Only `COPYFILE_ALL|CLONE` carries a `deny delete` ACL
+  (rename `EACCES`); the narrower flags left it off. A `uchg` temp can't be `unlink`ed (`EPERM`).
+- **Clone, clear, land, re-apply works**: clone a 2015-born `uchg` file, `chflags nouchg` the temp, rename,
+  `chflags uchg`: birth 2015-03-01, mtime 2020-06-15, `uchg` all kept.
+- **One `setattrlist(CRTIME|MODTIME)` keeps both, in either relation**: birth 2015 / mtime 2020 and birth 2020 / mtime
+  2015 both read back exactly. With `FSOPT_NOFOLLOW` it sets a symlink's own dates.
+- **Rename blockers beyond the file's own flags**: a `0500` folder can't move to another parent (`EACCES`); a file can't
+  be renamed out of a `uchg` folder (`EPERM`) or out of one with `deny delete_child` (`EACCES`); a `uchg` folder can't
+  be renamed (`EPERM`).
+- **Order constraints**: `uchg` blocks a later ACL write and a later time-set (`EPERM`); an ACL with `deny writeattr`
+  blocks a later time-set and `deny writeextattr` a later xattr write (`EACCES`); `deny writesecurity` doesn't block
+  `chflags`. A path xattr write on a `0444` file is `EACCES`. A `deny delete` ACL blocks the owner's own `rm`.
+- **exFAT (FSKit, 64 MB `hdiutil` image)**: an xattr and a `setattrlist` birth/mtime on a `.cmdr-tmp-x` survive its
+  rename (the `._` sidecar moves with it); writing a child's xattr didn't bump the dated parent folder's mtime.
+
 ## The helper
 
 `metacp.c`, built with `/usr/bin/clang -o metacp metacp.c`. Modes: `chunked` (the Cmdr replay), `chunked-crtime-last`,
