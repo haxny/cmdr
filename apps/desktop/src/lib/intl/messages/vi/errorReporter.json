@@ -202,7 +202,7 @@
   },
   "errorReporter.prefill.slow": "{operation}: mất nhiều thời gian, không có tiến triển trong {duration}.",
   "@errorReporter.prefill.slow": {
-    "sourceHash": "33409c8"
+    "sourceHash": "42c0ee2"
   },
   "errorReporter.prefill.reference": "Tham chiếu: {code}",
   "@errorReporter.prefill.reference": {

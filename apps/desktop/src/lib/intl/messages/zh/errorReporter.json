@@ -202,7 +202,7 @@
   },
   "errorReporter.prefill.slow": "{operation}：花了很久，已有 {duration} 没有进度。",
   "@errorReporter.prefill.slow": {
-    "sourceHash": "33409c8"
+    "sourceHash": "42c0ee2"
   },
   "errorReporter.prefill.reference": "参考：{code}",
   "@errorReporter.prefill.reference": {

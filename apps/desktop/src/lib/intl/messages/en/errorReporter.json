@@ -290,18 +290,18 @@
     "description": "Small link under a notice that says something is slow: the new-folder and new-file dialogs while a slow drive or server is still creating the entry, and a copy or move that has stopped making progress (in its progress dialog and in the operation queue window). Clicking it opens the Send error report dialog, pre-filled with what is slow and for how long. Phrase it as a light question plus an invitation, not an alarm: nothing has gone wrong yet. Avoid the words \"error\" and \"failed\"."
   },
 
-  "errorReporter.prefill.slow": "{operation} is taking long: no progress for {duration}.",
+  "errorReporter.prefill.slow": "{operation}: taking long, no progress for {duration}.",
   "@errorReporter.prefill.slow": {
     "description": "First line of the note pre-filled into the Send error report dialog when the person reports something slow. The person can edit or delete it before sending, and it reaches the team as part of the report. Avoid the words \"error\" and \"failed\".",
     "placeholders": {
-      "operation": "what is slow, as the operation queue names it, for example \"Copying\" or \"Creating folder\". It is a capitalized activity label from elsewhere in the app; build the sentence so it reads naturally with it at the start",
+      "operation": "what is slow, as the operation queue names it, for example \"Copying\" or \"Creating folder\". It is a capitalized activity label from elsewhere in the app (a progress form in many languages), so it stands as a label before the colon rather than as the subject of the sentence",
       "duration": "how long nothing has visibly moved, already formatted, for example \"45s\" or \"2m 30s\""
     }
   },
 
   "errorReporter.prefill.reference": "Reference: {code}",
   "@errorReporter.prefill.reference": {
-    "description": "Last line of the note pre-filled into the Send error report dialog when it opens from a specific problem. It names the problem in a short technical form the team searches for, such as copy/insufficient_space or listing/networkDown. The person can edit or delete it before sending. Translate only the word before the colon.",
+    "description": "Last line of the note pre-filled into the Send error report dialog when it opens from a specific problem. It names the KIND of problem in a short technical code the team searches for, such as copy/insufficient_space or listing/networkDown: a problem code, not a case or ticket ID (the report’s own ID is shown elsewhere in the dialog). The person can edit or delete it before sending. Translate only the word before the colon.",
     "placeholders": {
       "code": "a short technical identifier of the operation and what went wrong, for example copy/insufficient_space. Never translated"
     }

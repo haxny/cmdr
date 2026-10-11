@@ -202,7 +202,7 @@
   },
   "errorReporter.prefill.slow": "{operation} : ça prend du temps, aucune progression depuis {duration}.",
   "@errorReporter.prefill.slow": {
-    "sourceHash": "33409c8"
+    "sourceHash": "42c0ee2"
   },
   "errorReporter.prefill.reference": "Référence : {code}",
   "@errorReporter.prefill.reference": {

@@ -66,13 +66,13 @@ describe('reportNoteFor', () => {
   it('says what is slow, for how long as of now, and which side it waits on', () => {
     const note = reportNoteFor({ kind: 'slow', operation: 'copy', since: NOW - 45_000, waitingOn: 'destination' }, NOW)
     expect(note).toBe(
-      'Copying is taking long: no progress for 45s.\nWaiting for the destination to respond.\nReference: copy/slow/destination',
+      'Copying: taking long, no progress for 45s.\nWaiting for the destination to respond.\nReference: copy/slow/destination',
     )
   })
 
   it('words a slow create without a waiting side', () => {
     const note = reportNoteFor({ kind: 'slow', operation: 'create_folder', since: NOW - 6_000, waitingOn: null }, NOW)
-    expect(note).toBe('Creating folder is taking long: no progress for 6s.\nReference: create_folder/slow')
+    expect(note).toBe('Creating folder: taking long, no progress for 6s.\nReference: create_folder/slow')
   })
 })
 

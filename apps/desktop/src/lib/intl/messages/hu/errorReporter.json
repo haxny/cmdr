@@ -202,7 +202,7 @@
   },
   "errorReporter.prefill.slow": "{operation} sokáig tart: {duration} óta nincs előrehaladás.",
   "@errorReporter.prefill.slow": {
-    "sourceHash": "33409c8"
+    "sourceHash": "42c0ee2"
   },
   "errorReporter.prefill.reference": "Hivatkozás: {code}",
   "@errorReporter.prefill.reference": {
