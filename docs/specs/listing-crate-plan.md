@@ -593,6 +593,18 @@ finds only `cmdr_fs::archive_format::archive_boundary_candidate` uses, and `list
 `desktop-rust-clippy`, `desktop-rust-clippy-linux`, `desktop-rust-rustdoc`, `index-crate-isolation`,
 `desktop-rust-module-cycles` (slow), `file-length`, `desktop-rust-jscpd`, `desktop-bindings-fresh`.
 
+Executor notes:
+
+- The reader landed as `volume/backends/local_posix/{reading,mutation}.rs` (submodules of the backend, the way `scan.rs`
+  / `streams.rs` sit); `backends` re-exports `get_single_entry` and `list_directory_core` for the watcher, `tags.rs`,
+  `create.rs`, and tests. `operations_test.rs` split: reader cells → `local_posix/reading_test.rs`, the cancel and
+  volume-start cells stay.
+- `archive_boundary_candidate` is no longer re-exported by `cmdr-archive` (callers name `cmdr_fs::archive_format`);
+  root-promise ceiling 35 → 34. `ResolvedVolume` / `RoutedKind` likewise left `volume::manager`'s re-exports; app
+  callers use `crate::file_system::volume::…`, `listing/` uses `cmdr_fs::volume::…`.
+- `crate::file_system::{FileEntry, ExtendedMetadata}` re-exports went too (not just `listing::`'s), so one path remains.
+- Fixed a pre-existing M0 Linux-only unused import in `lifecycle_order_test.rs` that failed `desktop-rust-clippy-linux`.
+
 ### M2a: The seams exist; events and the runtime go through them
 
 **Scope.** Create `file_system/listing/host/` with all eight traits in their final shape (§ "Seam design"), their public
