@@ -13,12 +13,16 @@
 //!
 //! ## The limit
 //!
-//! [`MAX_SCRATCH_NAME_BYTES`] counts UTF-8 bytes, the unit of the strictest
-//! filesystems Cmdr writes to (APFS, and ext4 or btrfs behind a NAS's Samba).
-//! SMB to Windows, NTFS, and exFAT count UTF-16 units instead, also 255, and no
+//! [`MAX_SCRATCH_NAME_BYTES`] is 143 UTF-8 bytes, the strictest name limit Cmdr
+//! is likely to meet: eCryptfs, behind a Synology encrypted share among others,
+//! spends the rest of the usual 255 on its own encoding of the name. APFS and
+//! ext4 or btrfs behind a NAS's Samba allow 255 bytes, so 143 fits there too.
+//! SMB to Windows, NTFS, and exFAT count UTF-16 units instead (255), and no
 //! extra check is needed for them: every character costs at least as many UTF-8
-//! bytes as UTF-16 units (1:1, 2:1, 3:1, 4:2), so a name within 255 bytes is
-//! within 255 units.
+//! bytes as UTF-16 units (1:1, 2:1, 3:1, 4:2), so a name within the byte cap is
+//! within the unit cap. The cost of the lower cap is only a shorter original
+//! part in a scratch name, which is there for a person to recognize a leftover
+//! by, and 97 bytes of it still do that.
 //!
 //! ## Recognizing a shortened one
 //!
@@ -35,8 +39,10 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::{STAGING_TEMP_MARKER, UUID_TEXT_LEN};
 
-/// The longest scratch file name Cmdr creates, in UTF-8 bytes.
-pub const MAX_SCRATCH_NAME_BYTES: usize = 255;
+/// The longest scratch file name Cmdr creates, in UTF-8 bytes: eCryptfs's
+/// 143-byte name limit (Synology encrypted shares), the strictest a write meets.
+/// See the module docs for why bytes alone also bound UTF-16 units.
+pub const MAX_SCRATCH_NAME_BYTES: usize = 143;
 
 /// The name of a staged write's temp next to a file called `file_name`, with a
 /// fresh UUID: `photo.jpg.cmdr-tmp-<uuid>`, the original part shortened when the

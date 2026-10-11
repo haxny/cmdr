@@ -109,20 +109,21 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
   follow: `COUNTING_ALLOCATOR` is a `#[global_allocator]`, and a second one in any binary linking this crate is a hard
   compile error.
 
-## Scratch names fit in 255 bytes
+## Scratch names fit in 143 bytes
 
 `src/staging/names.rs`. The suffix adds 46 bytes, so a name already near the limit used to be refused for OUR suffix,
 and the user was told to shorten a valid name (ERR-9JY7Q: a byte-capped epub name on a Synology share,
 `STATUS_OBJECT_NAME_INVALID`; a long Greek name the same way). The original-name part now gives way, cut on a
-grapheme-cluster boundary (`unicode-segmentation`), while the marker and UUID stay whole. Bytes are the only count
-needed: a UTF-16 unit never costs fewer UTF-8 bytes, so the SMB/NTFS/exFAT 255-unit limit follows. Recognition is
-unaffected because nothing parses the original name back out of a temp; the one per-file matcher (an archive edit
-reaping its own builds) asks `temp_sibling_prefix` for the mint's fitted prefix. Consequence: a final name past the
-limit now fails at the LANDING rename instead of the temp's create, so landing errors must keep a refused name typed
-(`NameTooLong` / `InvalidName`), never a generic IO failure. Not covered: Synology documents a 143-byte name cap for
-ENCRYPTED shares (eCryptfs; from its docs, not reproduced here, 2026-10-11), so a name between about 97 and 143 bytes
-still fits finally but not as a temp there; lowering `MAX_SCRATCH_NAME_BYTES` to 143 would cover it at the cost of
-shorter leftover names everywhere.
+grapheme-cluster boundary (`unicode-segmentation`), while the marker and UUID stay whole. Why 143
+(`MAX_SCRATCH_NAME_BYTES`): it is eCryptfs's name limit, which a Synology ENCRYPTED share (among others) imposes because
+the encrypted on-disk name spends the rest of the usual 255 (Synology's documented cap; not reproduced here,
+2026-10-11). Capping at 255 would leave every name between 97 and 143 bytes fitting there as a final name but not as a
+temp. The only cost is a shorter original-name part (97 bytes at most), which is only there for a person to recognize a
+leftover by. Bytes are the only count needed: a UTF-16 unit never costs fewer UTF-8 bytes, so the SMB/NTFS/exFAT
+255-unit limit follows. Recognition is unaffected because nothing parses the original name back out of a temp; the one
+per-file matcher (an archive edit reaping its own builds) asks `temp_sibling_prefix` for the mint's fitted prefix.
+Consequence: a final name past the destination's limit fails at the LANDING rename instead of the temp's create, so
+landing errors must keep a refused name typed (`NameTooLong` / `InvalidName`), never a generic IO failure.
 
 ## `volume::ids`: why an ID is a digest and not a rendering
 

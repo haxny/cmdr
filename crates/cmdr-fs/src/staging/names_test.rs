@@ -9,8 +9,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::*;
 
-/// The strictest name limit among the filesystems Cmdr writes to, in both of
-/// the units they count in.
+/// The usual filesystem name limit (APFS, ext4, and NTFS in UTF-16 units),
+/// which the FINAL names in these tests sit at or past.
 const LIMIT: usize = 255;
 
 fn name_of(temp: &StagingTemp) -> String {
@@ -34,9 +34,13 @@ fn aside_for(final_name: &str) -> String {
 }
 
 fn assert_fits(name: &str) {
-    assert!(name.len() <= LIMIT, "{} UTF-8 bytes: {name}", name.len());
+    assert!(
+        name.len() <= MAX_SCRATCH_NAME_BYTES,
+        "{} UTF-8 bytes: {name}",
+        name.len()
+    );
     let units = name.encode_utf16().count();
-    assert!(units <= LIMIT, "{units} UTF-16 units: {name}");
+    assert!(units <= MAX_SCRATCH_NAME_BYTES, "{units} UTF-16 units: {name}");
 }
 
 /// The part of `scratch` in front of `marker`: what it kept of the original name.
@@ -211,4 +215,27 @@ fn name_of_path(path: &Path) -> String {
         .expect("a temp path has a file name")
         .to_string_lossy()
         .into_owned()
+}
+
+/// The cap is eCryptfs's 143 bytes (a Synology encrypted share), so a name
+/// that fits there gets a temp that fits there too. A name up to 97 bytes keeps
+/// its original part whole; one byte more and it gives way.
+#[test]
+fn a_temp_fits_an_ecryptfs_share_and_a_short_enough_name_stays_whole() {
+    assert_eq!(MAX_SCRATCH_NAME_BYTES, 143);
+    let room = MAX_SCRATCH_NAME_BYTES - STAGING_TEMP_MARKER.len() - 36;
+
+    let whole = format!("{}.txt", "a".repeat(room - 4));
+    let temp = temp_for(&whole);
+    assert_eq!(kept(&temp, STAGING_TEMP_MARKER), whole);
+    assert_eq!(temp.len(), MAX_SCRATCH_NAME_BYTES);
+
+    let one_more = format!("{}.txt", "a".repeat(room - 3));
+    let temp = temp_for(&one_more);
+    assert_eq!(kept(&temp, STAGING_TEMP_MARKER).len(), room);
+    assert_fits(&temp);
+
+    let at_ecryptfs_limit = format!("{}.epub", "a".repeat(MAX_SCRATCH_NAME_BYTES - 5));
+    assert_fits(&temp_for(&at_ecryptfs_limit));
+    assert_fits(&aside_for(&at_ecryptfs_limit));
 }

@@ -234,7 +234,7 @@ fn invalid_range(path: &str) -> VolumeError {
 /// `<dir>/<name>.cmdr-tmp-<uuid>`: the house marker, so a leftover from a
 /// crash is recognized as Cmdr's, a UUID so two uploads of one name never share
 /// a partial, and the name shortened when the whole wouldn't fit the phone's
-/// 255-byte limit (`cmdr_fs::staging::names`).
+/// name limit (`cmdr_fs::staging::names`).
 fn staging_name_for(device: &str) -> String {
     let (parent, name) = match device.rfind('/') {
         Some(at) => (&device[..at.max(1)], &device[at + 1..]),

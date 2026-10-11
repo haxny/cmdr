@@ -165,10 +165,10 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
 - **Streams**: `open_read_stream` is one `RECV` socket per file, chunk by chunk; `read_range` is one bounded device-side
   `dd` window rather than an archive-sized prefix transfer; `write_from_stream` is one `SEND` socket per file into a
   staging sibling (`<dir>/<name>.cmdr-tmp-<uuid>` from `cmdr_fs::staging::temp_sibling_name`: the house marker, so a
-  leftover is filtered from every pane, with the name shortened when the whole wouldn't fit 255 bytes), then `mv -f` via
-  the shell. Both `Known` and `Unknown` lengths stream through the same path and report bytes actually sent with the
-  caller's explicit expected length. Any failure removes the staging name. ❌ Never collect a whole file into a
-  `Vec<u8>`.
+  leftover is filtered from every pane, with the name shortened when the whole wouldn't fit the house 143-byte cap),
+  then `mv -f` via the shell. Both `Known` and `Unknown` lengths stream through the same path and report bytes actually
+  sent with the caller's explicit expected length. Any failure removes the staging name. ❌ Never collect a whole file
+  into a `Vec<u8>`.
 - **Two accepted TOCTOU windows**: `create_file` and a `force = false` rename each `stat` the destination first and
   refuse on a hit. Neither can be atomic on this protocol: `SEND` truncates unconditionally and `mv -n` exits 0 whether
   it moved or not (verified on Android 14 `toybox 0.8.9`, 2026-09-01). The window is one round trip on a device only
