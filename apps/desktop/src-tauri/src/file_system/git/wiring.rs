@@ -185,8 +185,8 @@ pub(crate) fn refresh_virtual_listings(repo_root: &Path) {
 /// children after a `git checkout`. These are absolute host paths under a real
 /// `.git`, which a protocol-only volume's paths can never match.
 ///
-/// Split out from the refresh so the choice can be asserted on without an
-/// `AppHandle` (`notify_directory_changed` is a no-op before one is registered).
+/// Split out from the refresh so the choice can be asserted on without
+/// driving a re-read.
 pub(crate) fn listings_a_repo_change_re_reads(repo_root: &Path) -> Vec<(String, PathBuf)> {
     listings_matching(|listing_path| {
         repo_a_listing_shows(listing_path).is_some_and(|worktree_root| canonical(&worktree_root) == repo_root)

@@ -154,8 +154,6 @@ fn event_targets_watch_root_rejects_children_and_neighbours() {
 ///
 /// This also covers the `notify_full_refresh` / `FullRefresh` code path in caching.rs,
 /// since both use the same mechanism: re-read via Volume, compute diff, update cache.
-/// (`notify_directory_changed(FullRefresh)` requires a `tauri::AppHandle` and returns
-/// early without one, so it can't be tested directly in unit tests.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_refreshes_from_volume() {
     use crate::file_system::listing::caching_test_support::TestListing;

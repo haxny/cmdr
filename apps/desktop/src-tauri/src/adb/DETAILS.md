@@ -188,8 +188,8 @@ that the registry and the provider hold the same volume. A cell asserting on the
   on the phone that still asks about each clashing name, and awkward names (the shared `network_transfer_test_support.rs`
   scenarios); a copy onto the phone lands through the writer's own `<name>.cmdr-tmp-<pid>-<n>` and one `mv`, on top of
   the engine's own staging temp; and a mkdir, a move, and a delete each report the pane patch they owe. The patch cells
-  connect through `cmdr_adb::volume::testing::connect_fake`, whose `RecordingListings` is what they read: the app's
-  listing-cache patch needs a running app (`caching::notify_directory_changed` returns early without an `AppHandle`).
+  connect through `cmdr_adb::volume::testing::connect_fake`, whose `RecordingListings` is what they read: the patch the
+  backend OWES is the contract, whatever the app's listing cache then does with it.
 - `file_system/write_operations/backend_suites/adb_index_test.rs`: the phone's drive index end to end, over a phone dialed the way a
   pane dials it, because only the app's listing host forwards a patch to the index. The walk indexes the fake tree
   (rows, folder sizes, routing); a walk over an Android-shaped tree indexes storage once and never descends `/proc`, a

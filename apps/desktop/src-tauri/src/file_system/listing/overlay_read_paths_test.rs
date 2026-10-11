@@ -6,9 +6,7 @@
 //! them from an open pane.
 //!
 //! A device backend's `Replaced` hand-over is the one replacement that records
-//! zero contributed rows. Its arm in `notify_directory_changed` sits behind the
-//! `has_app` gate, which a test binary never passes, so the cell drives its
-//! per-listing half, as `caching_replacement_test.rs` does.
+//! zero contributed rows, pinned at its arm in `notify_directory_changed`.
 //!
 //! The overlay is `seam_test_support`'s marker, which decorates only a volume
 //! with its name. What the git portal decides is `file_system/git/overlay_tests.rs`.
@@ -16,7 +14,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use super::caching::{notify_full_refresh, publish_replacement};
+use super::caching::{DirectoryChange, notify_directory_changed, notify_full_refresh};
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_start_with_volume;
 use super::seam_test_support::{MARKER_ROW, MARKER_VOLUME_NAME, ensure_seam_overlay};
@@ -168,14 +166,19 @@ async fn the_synchronous_start_folds_in_overlay_rows() {
 /// contributed rows, even on a listing an earlier read decorated.
 #[test]
 fn a_replaced_hand_over_records_zero_overlay_rows() {
+    let volume_id = unique_test_id("overlay-path-replaced-vol");
     let listing = TestListing::new()
-        .volume(&unique_test_id("overlay-path-replaced-vol"))
+        .volume(&volume_id)
         .path("/")
         .entries(vec![entry("a.txt"), entry(MARKER_ROW)])
         .overlay_rows(1)
         .insert("overlay-path-replaced");
 
-    publish_replacement(listing.id(), vec![entry("a.txt"), entry("b.txt")], 0);
+    notify_directory_changed(
+        &volume_id,
+        Path::new("/"),
+        DirectoryChange::Replaced(vec![entry("a.txt"), entry("b.txt")]),
+    );
 
     assert_eq!(listing.entry_names(), ["a.txt", "b.txt"]);
     assert!(

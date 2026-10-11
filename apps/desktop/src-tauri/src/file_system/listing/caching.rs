@@ -423,8 +423,6 @@ pub fn apply_tags_to_listing(listing_id: &str, updates: Vec<(String, Vec<TagRef>
 /// For single-entry changes (add/remove/modify/rename), patches the cache in-place.
 /// For `FullRefresh`, re-reads the directory via the Volume trait and computes a diff.
 pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: DirectoryChange) {
-    use crate::file_system::watcher::WATCHER_MANAGER;
-
     // Index sync FIRST, before any pane-listing work (plan Architecture §3).
     // The SMB watcher runs for the WHOLE volume's lifetime, not just while a pane
     // shows the share, so the index must update even when no listing matches this
@@ -446,15 +444,6 @@ pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: Dir
     // For non-FullRefresh changes, bail early if no listing matches this path.
     // FullRefresh has a volume-wide fallback below (for STATUS_NOTIFY_ENUM_DIR).
     if listings.is_empty() && !matches!(change, DirectoryChange::FullRefresh) {
-        return;
-    }
-
-    // Skip if no AppHandle is registered yet (test or pre-init context): every arm
-    // below ends in `enqueue_diff`, whose coalesced flush has nobody to tell, so
-    // the whole re-read would be wasted work. This says nothing about async
-    // context — see `spawn_full_refresh` for how the runtime is resolved.
-    let has_app = WATCHER_MANAGER.read().ok().and_then(|m| m.app_handle.clone()).is_some();
-    if !has_app {
         return;
     }
 

@@ -1,10 +1,11 @@
 //! Tests for listing cache helpers.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::caching::{
-    apply_tags_to_listing, carry_forward_tags, find_listings_for_path_on_volume, has_entry, insert_entry_sorted,
-    notify_added, notify_removed, remove_entries_by_paths, remove_entry_by_name, update_entry_sorted,
+    DirectoryChange, apply_tags_to_listing, carry_forward_tags, find_listings_for_path_on_volume, has_entry,
+    insert_entry_sorted, notify_added, notify_directory_changed, notify_removed, remove_entries_by_paths,
+    remove_entry_by_name, update_entry_sorted,
 };
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::PaneRows;
@@ -260,6 +261,31 @@ fn notify_added_upserts_when_entry_already_present() {
         Some(4_989_168),
         "second (final) size must overwrite the partial-size observation"
     );
+}
+
+/// A directory change patches the panes with no `AppHandle` anywhere: the
+/// engine reports through its events seam, which drops what nobody hears, so
+/// there's nothing to gate on. In the app no listing exists before setup.
+#[test]
+fn a_directory_change_patches_a_listing_in_a_process_with_no_app_handle() {
+    let volume_id = unique_test_id("notify-no-app-vol");
+    let listing = insert_test_listing_on_volume(
+        "notify-no-app",
+        &volume_id,
+        "/test",
+        SortColumn::Name,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+        vec![make_entry("a.txt", false, Some(1))],
+    );
+
+    notify_directory_changed(
+        &volume_id,
+        Path::new("/test"),
+        DirectoryChange::Added(make_entry("b.txt", false, Some(2))),
+    );
+
+    assert_eq!(listing.entry_names(), ["a.txt", "b.txt"]);
 }
 
 // ============================================================================
