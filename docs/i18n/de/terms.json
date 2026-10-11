@@ -435,8 +435,8 @@
     "accept": ["Groß- und Kleinschreibung", "Großbuchstaben", "Kleinbuchstaben"],
     "chosen": "Groß-/Kleinschreibung",
     "confidence": "high",
-    "forms": "Groß-/Kleinschreibung beachten (macOS shows the negation … ignorieren); aria wraps the label: Beim Abgleich Groß-/Kleinschreibung beachten; tell apart → zwischen Groß- und Kleinschreibung unterscheiden; the letter-case menu of Mehrfach umbenennen → Groß-/Kleinschreibung (Finder BulkRenameWindow)",
-    "sources": "MS terminology (case-sensitive); macOS Finder ( … nicht zwischen Groß- und Kleinschreibung unterscheidet; Groß-/Kleinschreibung beachten)"
+    "forms": "Groß-/Kleinschreibung beachten (macOS shows the negation … ignorieren); aria wraps the label: Beim Abgleich Groß-/Kleinschreibung beachten; tell apart → zwischen Groß- und Kleinschreibung unterscheiden; the letter-case menu of Mehrfach umbenennen → Groß-/Kleinschreibung (TC 6615, the label of TC's case dropdown, whose items are TC 6611)",
+    "sources": "MS terminology (case-sensitive); macOS Finder ( … nicht zwischen Groß- und Kleinschreibung unterscheidet); macOS AppKit NSFindPanel (Groß-/Kleinschreibung ignorieren); Double Commander (tfrmmultirename.cbcasesens.hint Groß-/Kleinschreibung beachten); Total Commander WCMD.LNG 6615 &Groß-/Kleinschreibung, 6611 Unverändert / Alles klein / Alles GROSS / Erster Buchstabe groß / Erster pro Wort groß"
   },
   "certificate": {
     "chosen": "Zertifikat",
@@ -2534,7 +2534,7 @@
     "chosen": "Zähler",
     "confidence": "high",
     "forms": "the counter popover's fields → Startwert, Schrittweite, Stellen; Edit counter → Zähler bearbeiten; Counts 1, 3, 5… → Zählt 1, 3, 5 …",
-    "sources": "catalog (commands.fileMultiRename.description: mit Namensmaske, Zähler …; the earlier counter fields Schrittweite and Stellen); Total Commander de multi-rename (Zähler [C]), from memory (no pile on this machine); macOS Finder's batch-rename labels sit in nibs and weren't mined"
+    "sources": "catalog (commands.fileMultiRename.description: mit Namensmaske, Zähler …; the earlier counter fields Schrittweite and Stellen); Total Commander WCMD.LNG 6605 [C] &Zähler, 6616 Definiere Z&ähler [C], 6617 Starten bei:, 6618 Schrittweite:, 6619 Anz. Stellen:; Double Commander (gbcounter Zähler, Width → Stellen); macOS Finder BulkRenameWindow (Name mit Zähler)"
   },
   "replace": {
     "accept": ["ersetzt", "Ersetzte", "ersetz"],
