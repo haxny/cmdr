@@ -6,7 +6,8 @@
 //! before its landing rename: xattrs, then the mode, then birth, mtime, and atime
 //! in ONE call (a resource-fork write bumps mtime, and APFS drags birth down to
 //! an earlier mtime). [`apply_landed`] puts [`LandedMetadata`] on the landed item
-//! after it: the ACL, then the flags.
+//! after it: a folder's mode (once its children are in), then the ACL, then the
+//! flags.
 //!
 //! **Total, by type.** Every apply function returns a [`MetadataReport`] and has
 //! no error path, so a refused metadata write can never fail a copy: the bytes
@@ -41,8 +42,8 @@ mod staged;
 use std::path::Path;
 
 pub use blockers::{
-    RemovalRefusal, Unblock, clear_blockers, remove_dir_clearing_blockers, remove_file_clearing_blockers,
-    remove_tree_clearing_blockers,
+    OpenedFolder, ParentOpening, RemovalRefusal, Unblock, clear_blockers, open_parent_folder,
+    remove_dir_clearing_blockers, remove_file_clearing_blockers, remove_tree_clearing_blockers,
 };
 pub use carried::{CarriedMetadata, Xattr};
 pub use flags::UserFlags;
@@ -120,6 +121,9 @@ pub struct Acl(Vec<exacl::AclEntry>);
 // an ordinary file; it states nothing about what the disk holds.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LandedMetadata {
+    /// A FOLDER's final mode. A file's goes on its temp ([`apply_staged`]); a
+    /// folder's waits for its children, since `0500` refuses them.
+    mode: Option<u32>,
     acl: Option<Acl>,
     flags: UserFlags,
 }
@@ -131,6 +135,7 @@ impl LandedMetadata {
     /// carries those).
     pub fn of_source_acl(source: &Path) -> Self {
         Self {
+            mode: None,
             acl: read_acl(source),
             flags: UserFlags::NONE,
         }
@@ -143,10 +148,17 @@ impl LandedMetadata {
         self
     }
 
+    /// This set plus a FOLDER's final permission bits (`0o7777`), which go on
+    /// once its children have landed, before the ACL and the flags.
+    pub fn with_mode(mut self, mode: u32) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+
     /// Whether there's nothing to apply, the common case. A caller that holds
     /// an empty set skips [`apply_landed`] entirely.
     pub fn is_empty(&self) -> bool {
-        self.acl.is_none() && self.flags.is_empty()
+        self.mode.is_none() && self.acl.is_none() && self.flags.is_empty()
     }
 
     /// The user flags to add on landing.
@@ -159,9 +171,12 @@ impl LandedMetadata {
         self.acl.is_some()
     }
 
-    /// Folds `other` in: its ACL replaces this one when it has one, and its
-    /// flags join these.
+    /// Folds `other` in: its mode and ACL replace these when it has them, and
+    /// its flags join these.
     pub fn merge(&mut self, other: LandedMetadata) {
+        if other.mode.is_some() {
+            self.mode = other.mode;
+        }
         if other.acl.is_some() {
             self.acl = other.acl;
         }
@@ -169,11 +184,16 @@ impl LandedMetadata {
     }
 }
 
-/// Puts `set` on the landed item at `path`: the ACL, then the flags (added to
-/// what the item already wears), each only when the set has one, each
-/// independent of the other.
+/// Puts `set` on the landed item at `path`: a folder's mode, then the ACL, then
+/// the flags (added to what the item already wears), each only when the set has
+/// one, each independent of the others. Flags go last because `uchg` refuses a
+/// later `chmod` and a later ACL write.
 pub fn apply_landed(path: &Path, set: &LandedMetadata) -> MetadataReport {
     note_helper_call();
+    let mode = match set.mode {
+        None => ClassOutcome::Absent,
+        Some(mode) => write_mode(path, mode),
+    };
     let acl = match &set.acl {
         None => ClassOutcome::Absent,
         Some(acl) => write_acl(path, acl),
@@ -184,9 +204,23 @@ pub fn apply_landed(path: &Path, set: &LandedMetadata) -> MetadataReport {
         flags::add_flags(path, set.flags)
     };
     MetadataReport {
+        mode,
         acl,
         flags,
         ..MetadataReport::ABSENT
+    }
+}
+
+/// `chmod` by path. Only ever a folder, which isn't a link, so following one
+/// can't reach anywhere else.
+fn write_mode(path: &Path, mode: u32) -> ClassOutcome {
+    use std::os::unix::fs::PermissionsExt as _;
+    match std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)) {
+        Ok(()) => ClassOutcome::Kept,
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't set mode {mode:o} on {}: {e}", path.display());
+            ClassOutcome::Refused
+        }
     }
 }
 

@@ -137,21 +137,27 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   Samba share, macOS 27.0, 2026-10-11). The chunked arm's own comment has the detail.
 - **`CarriedMetadata` holds no mtime or atime**: a stream's `modified_at` is the one source of mtime, and the dates
   travel beside it in `StagedTimes`. `of_local_file` reads a source off the handle and `fstat` the copy already holds
-  (one `flistxattr` for a file without xattrs), `of_local_link` a link's own. It skips `com.apple.provenance` (the
-  kernel ignores a write of it: verified on macOS 27.0 with `xattr -w`, 2026-10-11) and on Linux carries `user.*` only.
-  Its `flags` go on after landing, through `LandedMetadata::with_flags`.
+  (one `flistxattr` for a file without xattrs), `of_local_dir` a folder's by path, `of_local_link` a link's own. It
+  skips `com.apple.provenance` (the kernel ignores a write of it: verified on macOS 27.0 with `xattr -w`, 2026-10-11)
+  and on Linux carries `user.*` only. Its `flags` go on after landing, through `LandedMetadata::with_flags`.
 - **Rename-blockers go on the LANDED item.** `uchg`/`uappnd` on an item refuses `rename(2)` with `EPERM`, a
-  `deny delete` ACL with `EACCES`. So `LandedMetadata` (the ACL, then the user flags) is applied after the landing
-  rename, ACL first because `uchg` also refuses a later ACL write. `apply_landed` ADDS flags to what the item already
-  wears (`lchflags`), so a Hidden the clone carried stays.
+  `deny delete` ACL with `EACCES`. So `LandedMetadata` (a folder's mode, the ACL, then the user flags) is applied after
+  the landing rename, flags last because `uchg` also refuses a later `chmod` and ACL write. `apply_landed` ADDS flags to
+  what the item already wears (`lchflags`), so a Hidden the clone carried stays. Its mode is a FOLDER's only
+  (`with_mode`): a file's goes on the temp, while a `0500` folder would refuse its own children and, staged, a move's
+  rename to another parent (`EACCES`).
 - **`clear_blockers` is the probe's second half.** It clears `uchg`/`uappnd` (flags first, for the same ACL reason) and
   strips the ACL, never through a symlink (`lstat`, `lchflags`, `AclOption::SYMLINK_ACL`), and hands back what it
   cleared so a landing can put it back. `SF_*` flags answer `Refused`: only root can clear them.
 - **The `remove_*_clearing_blockers` helpers clear only after a refusal.** One removal, then on `PermissionDenied` one
-  clear and one retry, so an ordinary item costs exactly its removal. `remove_tree_clearing_blockers` walks the tree
-  only after `remove_dir_all` failed, and is for a tree Cmdr owns whole (a cross-FS move's staging folder). Who calls
-  them and why: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "What a reversal does
-  with that identity".
+  clear and one retry, then `open_parent_folder` and one more, so an ordinary item costs exactly its removal. Opening
+  the folder covers a child of a copied folder that wears Locked, `deny delete_child`, or `0500`: it clears and adds
+  owner write and search for the one removal, and `OpenedFolder::close` (or its `Drop`) puts all three back, so a folder
+  the reversal doesn't remove keeps its own. The journal rollback, which removes through a volume, calls
+  `open_parent_folder` itself. `remove_tree_clearing_blockers` walks the tree only after `remove_dir_all` failed, and is
+  for a tree Cmdr owns whole (a cross-FS move's staging folder). Who calls them and why:
+  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "What a reversal does with that
+  identity".
 - **Linux**: a POSIX ACL carries no `deny` entries and blocks no rename; `chattr` flags need `CAP_LINUX_IMMUTABLE`. So
   flags answer `NotApplicable`, nothing ever needs clearing, and a source ACL counts only when it has more than the
   three mode entries every file has (`chmod` carries those).

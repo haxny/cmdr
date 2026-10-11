@@ -19,10 +19,7 @@ mod macos {
         let landed = fixture.join("landed.txt");
         std::fs::write(&landed, b"x").expect("write");
         let mut set = LandedMetadata::of_source_acl(&source);
-        set.merge(LandedMetadata {
-            acl: None,
-            flags: UserFlags::LOCKED,
-        });
+        set.merge(LandedMetadata::default().with_flags(UserFlags::LOCKED));
 
         let report = apply_landed(&landed, &set);
 
@@ -42,10 +39,7 @@ mod macos {
     fn apply_landed_adds_flags_to_what_the_item_wears() {
         let fixture = MetadataFixture::new("metadata_apply_adds");
         let landed = fixture.rich_file("hidden.txt");
-        let set = LandedMetadata {
-            acl: None,
-            flags: UserFlags::LOCKED,
-        };
+        let set = LandedMetadata::default().with_flags(UserFlags::LOCKED);
 
         apply_landed(&landed, &set);
 
@@ -118,6 +112,51 @@ mod macos {
         remove_dir_clearing_blockers(&dir).expect("the `deny delete` folder goes");
 
         assert!(!locked.exists() && !acl.exists() && !dir.exists());
+    }
+
+    /// A child of a Locked, read-only folder with `deny delete_child` refuses its
+    /// unlink over its FOLDER's metadata, not its own: the folder is opened for
+    /// the one removal and closed again, so it keeps all three.
+    #[test]
+    fn the_removal_helpers_open_a_blocking_folder_for_one_removal_and_close_it_again() {
+        let fixture = MetadataFixture::new("metadata_remove_from_blocking_folder");
+        let folder = fixture.locked_read_only_folder("folder");
+        crate::testing::metadata_fixture::set_flags(&folder, 0);
+        crate::testing::metadata_fixture::add_acl_entry(&folder, "everyone deny delete_child");
+        crate::testing::metadata_fixture::set_flags(&folder, LOCKED_FLAG);
+
+        remove_file_clearing_blockers(&folder.join("a.txt")).expect("the child goes");
+
+        assert!(!folder.join("a.txt").exists());
+        assert_eq!(mode(&folder), 0o500, "the folder's mode is back");
+        assert_eq!(flags(&folder) & LOCKED_FLAG, LOCKED_FLAG, "the folder is Locked again");
+        assert!(has_acl(&folder), "the folder wears its ACL again");
+    }
+
+    /// The journal rollback's half of the same thing: it removes through a
+    /// volume, so it opens the folder, removes, and closes it itself.
+    #[test]
+    fn open_parent_folder_hands_back_what_it_changed_and_close_restores_it() {
+        let fixture = MetadataFixture::new("metadata_open_parent");
+        let folder = fixture.locked_read_only_folder("folder");
+        let child = folder.join("a.txt");
+
+        let ParentOpening::Opened(opened) = open_parent_folder(&child) else {
+            panic!("the Locked read-only folder should open");
+        };
+        std::fs::remove_file(&child).expect("nothing refuses the unlink now");
+        opened.close();
+
+        assert_eq!(mode(&folder), 0o500);
+        assert_eq!(flags(&folder) & LOCKED_FLAG, LOCKED_FLAG);
+    }
+
+    #[test]
+    fn open_parent_folder_of_a_plain_folders_child_opens_nothing() {
+        let fixture = MetadataFixture::new("metadata_open_parent_plain");
+        let child = fixture.join("plain.txt");
+        std::fs::write(&child, b"x").expect("write");
+        assert!(matches!(open_parent_folder(&child), ParentOpening::NothingToOpen));
     }
 
     #[test]
@@ -288,6 +327,38 @@ mod macos {
             .collect();
         assert_eq!(names.len(), 5, "{names:?}");
         assert!(!names.iter().any(|n| n == PROVENANCE_XATTR));
+    }
+
+    /// A folder's source side: the stat's classes and its xattrs by path.
+    #[test]
+    fn a_local_folder_carries_its_dates_mode_flags_and_xattrs() {
+        let fixture = MetadataFixture::new("metadata_carried_folder");
+        let folder = fixture.rich_folder("dir");
+        let meta = std::fs::symlink_metadata(&folder).expect("lstat");
+
+        let carried = CarriedMetadata::of_local_dir(&folder, &meta);
+
+        assert_eq!(carried.created, Some(at(BIRTH_SECS)));
+        assert_eq!(carried.mode, Some(0o700));
+        assert_eq!(carried.flags, UserFlags::HIDDEN);
+        assert_eq!(carried.xattrs.len(), 3, "tags, comment, FinderInfo");
+    }
+
+    /// A folder's final mode goes on after its children landed, and before the
+    /// flags: `uchg` refuses a later `chmod`.
+    #[test]
+    fn apply_landed_puts_a_folders_mode_on_before_its_flags() {
+        let fixture = MetadataFixture::new("metadata_landed_folder_mode");
+        let folder = fixture.join("folder");
+        std::fs::create_dir(&folder).expect("mkdir");
+        let set = LandedMetadata::default().with_mode(0o500).with_flags(UserFlags::LOCKED);
+
+        let report = apply_landed(&folder, &set);
+
+        assert_eq!(report.mode, ClassOutcome::Kept);
+        assert_eq!(report.flags, ClassOutcome::Kept);
+        assert_eq!(mode(&folder), 0o500);
+        assert_eq!(flags(&folder) & LOCKED_FLAG, LOCKED_FLAG);
     }
 
     #[test]

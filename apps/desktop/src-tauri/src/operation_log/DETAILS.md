@@ -393,7 +393,8 @@ typed skip reason, and keeps the books. It performs nothing. Each decided act go
 didn't happen comes back as an `ActRefusal`: the volume's raw `VolumeError`, which the planner maps to a skip, or
 `Locked`, which `ReversalRunner` answers for a verified LOCAL item whose removal was refused and whose lock it can't clear
 (`schg`). Before that answer it clears the item's Locked flag and ACL and retries the delete once, since a copy keeps
-both and either makes `unlink` refuse; it does this in the runner, ❌ never in the volume, whose delete is also F8's
+both and either makes `unlink` refuse, then opens the folder holding it (a copied folder's Locked, `deny delete_child`,
+or `0500` refuses it too) for one more retry and puts the folder's metadata back; it does this in the runner, ❌ never in the volume, whose delete is also F8's
 (`file_system/write_operations/transfer/DETAILS.md` § "What a reversal does with that identity").
 
 Why the seam is here: the act a cross-volume restore needs is the staged, retrying, stall-detecting per-file transfer,

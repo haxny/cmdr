@@ -82,22 +82,22 @@ impl CarriedMetadata {
     /// `lstat` the caller took: its creation date and its own xattrs. No mode
     /// (a link's is meaningless) and no flags.
     pub fn of_local_link(path: &Path, meta: &Metadata) -> Self {
-        // `xattr::list` and `xattr::get` don't follow a link (`XATTR_NOFOLLOW`).
-        let xattrs = match xattr::list(path) {
-            Ok(names) => names
-                .filter(carries)
-                .filter_map(|name| match xattr::get(path, &name) {
-                    Ok(Some(value)) => Some(Xattr { name, value }),
-                    _ => None,
-                })
-                .collect(),
-            Err(_) => Vec::new(),
-        };
         Self {
             created: meta.created().ok(),
             mode: None,
             flags: UserFlags::NONE,
-            xattrs,
+            xattrs: xattrs_at(path),
+        }
+    }
+
+    /// What the local folder at `path` carries, given the `lstat` the caller
+    /// took: its creation date, mode, flags, and xattrs (Finder tags, comments,
+    /// the FinderInfo that marks a custom icon). A folder with no xattrs costs
+    /// one `listxattr`.
+    pub fn of_local_dir(path: &Path, meta: &Metadata) -> Self {
+        Self {
+            xattrs: xattrs_at(path),
+            ..Self::of_stat(meta)
         }
     }
 
@@ -109,6 +109,28 @@ impl CarriedMetadata {
             mode: Some(meta.permissions().mode() & 0o7777),
             flags: flags_of(meta),
             xattrs: Vec::new(),
+        }
+    }
+}
+
+/// The xattrs a copy carries off the item at `path` itself. `xattr::list` and
+/// `xattr::get` never follow a link (`XATTR_NOFOLLOW`).
+fn xattrs_at(path: &Path) -> Vec<Xattr> {
+    match xattr::list(path) {
+        Ok(names) => names
+            .filter(carries)
+            .filter_map(|name| match xattr::get(path, &name) {
+                Ok(Some(value)) => Some(Xattr { name, value }),
+                Ok(None) => None,
+                Err(e) => {
+                    log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
+                    None
+                }
+            })
+            .collect(),
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't list the xattrs of {}: {e}", path.display());
+            Vec::new()
         }
     }
 }

@@ -6,6 +6,11 @@
 //! set over). A reversal or a sweep about to remove an item Cmdr made clears it
 //! so the removal can happen at all. Both ask only after a first attempt was
 //! refused, so an ordinary item never reaches here.
+//!
+//! A removal can also be refused over the FOLDER holding the item: Locked, a
+//! `deny delete_child` ACL, or a mode without owner write, all of which a copied
+//! folder carries from its source. [`open_parent_folder`] opens that folder for
+//! the one removal and puts it back after.
 
 use std::io;
 use std::path::Path;
@@ -78,6 +83,88 @@ fn clear_on_macos(path: &Path) -> Unblock {
     }
 }
 
+/// What [`open_parent_folder`] did to the folder holding an item.
+#[derive(Debug)]
+pub enum ParentOpening {
+    /// It opened the folder; [`OpenedFolder::close`] puts back what it changed.
+    Opened(OpenedFolder),
+    /// The folder refuses nothing it could change, so a retry would be refused
+    /// the same way.
+    NothingToOpen,
+    /// It wears a blocker this process can't clear, or the change was refused.
+    Refused,
+}
+
+/// A folder [`open_parent_folder`] opened for one removal. Closing it, or
+/// dropping it, puts back its mode, ACL, and flags.
+#[derive(Debug)]
+pub struct OpenedFolder {
+    path: std::path::PathBuf,
+    restore: Option<LandedMetadata>,
+}
+
+impl OpenedFolder {
+    /// Puts the folder's own mode, ACL, and flags back, in the order
+    /// [`super::apply_landed`] keeps.
+    pub fn close(mut self) -> super::MetadataReport {
+        self.restore_now()
+    }
+
+    fn restore_now(&mut self) -> super::MetadataReport {
+        match self.restore.take() {
+            Some(set) => super::apply_landed(&self.path, &set),
+            None => super::MetadataReport::ABSENT,
+        }
+    }
+}
+
+impl Drop for OpenedFolder {
+    fn drop(&mut self) {
+        self.restore_now();
+    }
+}
+
+/// Opens the folder holding `child` so `child` can leave it: clears its own
+/// `uchg`/`uappnd`, strips its ACL (a `deny delete_child` refuses the unlink),
+/// and adds owner write and search when it lacks them (a `0500` folder refuses
+/// it too). For a folder a copy made and carried a source's metadata onto, which
+/// a reversal now empties. ❗ The folder isn't removed here: what's opened is put
+/// back by [`OpenedFolder::close`].
+pub fn open_parent_folder(child: &Path) -> ParentOpening {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let Some(folder) = child.parent().filter(|p| !p.as_os_str().is_empty()) else {
+        return ParentOpening::NothingToOpen;
+    };
+    let mode = match std::fs::symlink_metadata(folder) {
+        Ok(meta) if meta.is_dir() => meta.permissions().mode() & 0o7777,
+        _ => return ParentOpening::NothingToOpen,
+    };
+    let mut restore = match clear_blockers(folder) {
+        Unblock::Cleared(cleared) => cleared,
+        Unblock::NothingToClear => LandedMetadata::default(),
+        Unblock::Refused => return ParentOpening::Refused,
+    };
+    const OWNER_WRITE_SEARCH: u32 = 0o300;
+    if mode & OWNER_WRITE_SEARCH != OWNER_WRITE_SEARCH {
+        super::note_helper_call();
+        if let Err(e) = std::fs::set_permissions(folder, std::fs::Permissions::from_mode(mode | OWNER_WRITE_SEARCH)) {
+            log::debug!(target: "metadata", "couldn't open {} for a removal: {e}", folder.display());
+            super::apply_landed(folder, &restore);
+            return ParentOpening::Refused;
+        }
+        restore = restore.with_mode(mode);
+    }
+    if restore.is_empty() {
+        ParentOpening::NothingToOpen
+    } else {
+        ParentOpening::Opened(OpenedFolder {
+            path: folder.to_path_buf(),
+            restore: Some(restore),
+        })
+    }
+}
+
 /// Why a `remove_*_clearing_blockers` call left the item in place.
 #[derive(Debug)]
 pub enum RemovalRefusal {
@@ -88,26 +175,45 @@ pub enum RemovalRefusal {
     Io(io::Error),
 }
 
-/// `remove_file`, and when that's refused, [`clear_blockers`] and one retry.
+/// `remove_file`, and when that's refused, [`clear_blockers`] and one retry,
+/// then [`open_parent_folder`] and one more.
 pub fn remove_file_clearing_blockers(path: &Path) -> Result<(), RemovalRefusal> {
     remove_clearing(path, |p| std::fs::remove_file(p))
 }
 
 /// `remove_dir` (empty only), and when that's refused, [`clear_blockers`] and
-/// one retry.
+/// one retry, then [`open_parent_folder`] and one more.
 pub fn remove_dir_clearing_blockers(path: &Path) -> Result<(), RemovalRefusal> {
     remove_clearing(path, |p| std::fs::remove_dir(p))
 }
 
+/// The removal, then on a refusal the item's own blockers, then its folder's
+/// ([`open_parent_folder`], put back right after), each followed by one retry.
 fn remove_clearing(path: &Path, remove: impl Fn(&Path) -> io::Result<()>) -> Result<(), RemovalRefusal> {
-    match remove(path) {
-        Ok(()) => Ok(()),
-        Err(first) if first.kind() == io::ErrorKind::PermissionDenied => match clear_blockers(path) {
-            Unblock::Cleared(_) => remove(path).map_err(RemovalRefusal::Io),
-            Unblock::NothingToClear => Err(RemovalRefusal::Io(first)),
-            Unblock::Refused => Err(RemovalRefusal::Locked),
-        },
+    let refused = |result: io::Result<()>| match result {
+        Ok(()) => Ok(None),
+        Err(e) if e.kind() == io::ErrorKind::PermissionDenied => Ok(Some(e)),
         Err(e) => Err(RemovalRefusal::Io(e)),
+    };
+    let Some(first) = refused(remove(path))? else {
+        return Ok(());
+    };
+    let refusal = match clear_blockers(path) {
+        Unblock::Cleared(_) => match refused(remove(path))? {
+            None => return Ok(()),
+            Some(again) => again,
+        },
+        Unblock::NothingToClear => first,
+        Unblock::Refused => return Err(RemovalRefusal::Locked),
+    };
+    match open_parent_folder(path) {
+        ParentOpening::Opened(folder) => {
+            let removed = remove(path);
+            folder.close();
+            removed.map_err(RemovalRefusal::Io)
+        }
+        ParentOpening::NothingToOpen => Err(RemovalRefusal::Io(refusal)),
+        ParentOpening::Refused => Err(RemovalRefusal::Locked),
     }
 }
 

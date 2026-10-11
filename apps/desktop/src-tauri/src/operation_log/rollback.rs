@@ -907,6 +907,8 @@ pub use runner::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner};
 pub use skips::SkipBreakdown;
 pub(crate) use skips::SkipTally;
 
+#[cfg(all(test, target_os = "macos"))]
+mod blocked_items_tests;
 #[cfg(test)]
 mod control_tests;
 #[cfg(test)]

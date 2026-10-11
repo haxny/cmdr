@@ -5,7 +5,8 @@
 //! § "The fixture", split so each cell can take the one item whose loss or failure
 //! it pins: a tagged, hidden, `0750` file with a resource fork ([`MetadataFixture::rich_file`]),
 //! a Locked one, a `deny delete` one, a tagged `0700` folder with a custom-icon
-//! FinderInfo and the same ACL, and a symlink with its own dates.
+//! FinderInfo and the same ACL, a Locked `0500` folder with children, and a symlink
+//! with its own dates.
 //!
 //! Every item is born 2015-03-01, modified 2020-06-15, and accessed 2021-01-01, so
 //! a copy that sets only mtime shows birth == mtime (APFS and HFS+ drag birth down to
@@ -130,6 +131,22 @@ impl MetadataFixture {
         set_fixture_dates(&path);
         add_deny_delete_acl(&path);
         set_flags(&path, HIDDEN_FLAG);
+        path
+    }
+
+    /// `name/` in the fixture's root, holding `a.txt` and `inner/b.txt`: tags, mode
+    /// `0500` (no owner write, so nothing can be added to or removed from it), the
+    /// three dates, and Locked. A copy can fill it only if both go on after its
+    /// children land.
+    pub fn locked_read_only_folder(&self, name: &str) -> PathBuf {
+        let path = self.dir.join(name);
+        std::fs::create_dir_all(path.join("inner")).expect("fixture: create the read-only folder");
+        std::fs::write(path.join("a.txt"), b"a").expect("fixture: write a.txt");
+        std::fs::write(path.join("inner/b.txt"), b"b").expect("fixture: write inner/b.txt");
+        set_xattr(&path, TAGS_XATTR, TAGS_VALUE);
+        set_mode(&path, 0o500);
+        set_fixture_dates(&path);
+        set_flags(&path, LOCKED_FLAG);
         path
     }
 
@@ -281,7 +298,8 @@ pub fn set_xattr(path: &Path, name: &str, value: &[u8]) {
     xattr::set(path, name, value).unwrap_or_else(|e| panic!("fixture: set {name} on {}: {e}", path.display()));
 }
 
-fn set_mode(path: &Path, mode: u32) {
+/// Sets `path`'s permission bits to exactly `mode` (following a symlink).
+pub fn set_mode(path: &Path, mode: u32) {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
         .unwrap_or_else(|e| panic!("fixture: chmod {mode:o} {}: {e}", path.display()));
 }
@@ -386,6 +404,12 @@ mod tests {
             "tags, comment, FinderInfo: {:?}",
             xattrs(&folder)
         );
+
+        let read_only = fixture.locked_read_only_folder("read-only");
+        assert_eq!(mode(&read_only), 0o500);
+        assert_eq!(flags(&read_only) & LOCKED_FLAG, LOCKED_FLAG);
+        assert_eq!(birth_secs(&read_only), BIRTH_SECS);
+        assert!(read_only.join("inner/b.txt").is_file());
 
         let link = fixture.symlink("link", &rich);
         assert_eq!(birth_secs(&link), BIRTH_SECS);
