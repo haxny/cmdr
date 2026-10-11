@@ -20,8 +20,8 @@ mod macos {
 
     use cmdr_fs::staging::STAGING_TEMP_MARKER;
     use cmdr_fs::testing::metadata_fixture::{
-        ACCESSED_SECS, BIRTH_SECS, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, accessed_secs,
-        add_acl_entry, birth_secs, flags, has_acl, mode, modified_secs, xattrs,
+        ACCESSED_SECS, BIRTH_SECS, Follow, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, accessed_secs,
+        add_acl_entry, birth_secs, flags, has_acl, mode, modified_secs, set_times, xattrs,
     };
 
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
@@ -179,41 +179,91 @@ mod macos {
         assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
     }
 
-    /// Only mtime is set, and APFS drags birth down to it.
+    /// Birth and mtime go on in ONE `fsetattrlist`, so APFS can't drag birth down
+    /// to the earlier mtime.
     #[test]
-    fn a_chunked_copy_loses_the_files_birth_time_today() {
-        // FLIPS IN M3: birth == BIRTH_SECS.
+    fn a_chunked_copy_keeps_the_files_birth_time() {
         let fixture = MetadataFixture::new("matrix_chunked_birth");
         let source = fixture.rich_file("f.txt");
         let dest = dst_dir(&fixture).join("f.txt");
 
         copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
-        assert_eq!(birth_secs(&dest), MODIFIED_SECS, "birth reads the source's mtime");
+        assert_eq!(birth_secs(&dest), BIRTH_SECS);
+        assert_eq!(modified_secs(&dest), MODIFIED_SECS);
+    }
+
+    /// The other relation: a file whose birth is LATER than its mtime (a download
+    /// that kept its server date) keeps both exactly.
+    #[test]
+    fn a_chunked_copy_keeps_a_birth_time_later_than_the_mtime() {
+        let fixture = MetadataFixture::new("matrix_chunked_birth_after");
+        let source = fixture.join("downloaded.txt");
+        std::fs::write(&source, b"born after its mtime").expect("write the source");
+        set_times(&source, MODIFIED_SECS, BIRTH_SECS, ACCESSED_SECS, Follow::Yes);
+        let dest = dst_dir(&fixture).join("downloaded.txt");
+
+        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+
+        assert_eq!(birth_secs(&dest), MODIFIED_SECS);
+        assert_eq!(modified_secs(&dest), BIRTH_SECS);
     }
 
     #[test]
-    fn a_chunked_copy_loses_hidden_today() {
-        // FLIPS IN M3: Hidden kept.
+    fn a_chunked_copy_keeps_hidden() {
         let fixture = MetadataFixture::new("matrix_chunked_hidden");
         let source = fixture.rich_file("f.txt");
         let dest = dst_dir(&fixture).join("f.txt");
 
         copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
-        assert_eq!(flags(&dest) & HIDDEN_FLAG, 0);
+        assert_eq!(flags(&dest) & HIDDEN_FLAG, HIDDEN_FLAG);
     }
 
+    /// `uchg` goes on after the landing rename, which it would refuse (`EPERM`).
     #[test]
-    fn a_locked_file_copied_chunked_lands_unlocked_today() {
-        // FLIPS IN M3: lands Locked (after the rename).
+    fn a_locked_file_copied_chunked_lands_locked() {
         let fixture = MetadataFixture::new("matrix_chunked_locked");
         let source = fixture.locked_file("locked.txt");
-        let dest = dst_dir(&fixture).join("locked.txt");
+        let dst = dst_dir(&fixture);
+        let dest = dst.join("locked.txt");
 
         copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
-        assert_eq!(flags(&dest) & LOCKED_FLAG, 0);
+        assert_eq!(flags(&dest) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
+        assert_eq!(birth_secs(&dest), BIRTH_SECS);
+        assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
+    }
+
+    /// The temp is created owner-only and takes the source's mode only once its
+    /// bytes are in, so a private file is never readable by others mid-copy.
+    #[test]
+    fn a_private_files_temp_is_never_readable_by_others_mid_copy() {
+        use crate::file_system::write_operations::transfer::chunked_copy::chunk_park;
+
+        let fixture = MetadataFixture::new("matrix_chunked_private_temp");
+        let source = fixture.join("private.txt");
+        std::fs::write(&source, vec![7u8; 4096]).expect("write the source");
+        std::fs::set_permissions(&source, std::os::unix::fs::PermissionsExt::from_mode(0o600))
+            .expect("chmod the source");
+        let dst = dst_dir(&fixture);
+        let dest = dst.join("private.txt");
+
+        let park = chunk_park::park_after(0);
+        let copy = std::thread::spawn({
+            let (source, dest) = (source.clone(), dest.clone());
+            move || copy_one(LocalCopyStrategy::Chunked, &source, &dest).map(|_| ())
+        });
+        park.wait_until_parked(Duration::from_secs(10))
+            .expect("the copy parks mid-file");
+        let temps = staging_temps(&dst);
+        let modes: Vec<u32> = temps.iter().map(|t| mode(t)).collect();
+        park.release();
+        copy.join().expect("the copy thread").expect("the copy lands");
+
+        assert_eq!(temps.len(), 1, "one temp while the bytes stream: {temps:?}");
+        assert_eq!(modes[0] & 0o077, 0, "the temp is owner-only: {:o}", modes[0]);
+        assert_eq!(mode(&dest), 0o600);
     }
 
     /// A keep cell: what the chunked arm carries today.
@@ -233,10 +283,10 @@ mod macos {
 
     // ── Symlinks ────────────────────────────────────────────────────────────
 
-    /// A copied link is a fresh `symlink(2)`: its own dates are the copy's.
+    /// A copied link takes the source link's OWN dates (`FSOPT_NOFOLLOW`), and its
+    /// target's stay untouched.
     #[test]
-    fn a_copied_symlink_loses_its_own_dates_today() {
-        // FLIPS IN M3: the link's own birth and mtime kept.
+    fn a_copied_symlink_keeps_its_own_dates() {
         let fixture = MetadataFixture::new("matrix_symlink");
         let target = fixture.rich_file("f.txt");
         let link = fixture.symlink("link", &target);
@@ -246,8 +296,9 @@ mod macos {
 
         let landed = dst.join("link");
         assert!(std::fs::symlink_metadata(&landed).expect("lstat").is_symlink());
-        assert!(birth_secs(&landed) > ACCESSED_SECS, "the link was born at copy time");
-        assert!(modified_secs(&landed) > ACCESSED_SECS, "and modified then too");
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
+        assert_eq!(modified_secs(&landed), MODIFIED_SECS);
+        assert_eq!(birth_secs(&target), BIRTH_SECS, "the target keeps its own");
     }
 
     // ── Folders (the native folder pass, strategy-independent) ──────────────
@@ -528,16 +579,19 @@ mod linux {
         assert_eq!(mode(&dest), 0o750);
     }
 
-    /// `copy_file_range` moves bytes only, and the arm adds mode and dates.
+    /// `copy_file_range` moves bytes only; the arm adds the `user.*` xattrs, the
+    /// mode, and the dates.
     #[test]
-    fn a_kernel_copy_range_copy_loses_user_xattrs_today() {
-        // FLIPS IN M3: `user.*` xattrs kept.
+    fn a_kernel_copy_range_copy_keeps_user_xattrs() {
         let dir = TestDir::new("matrix_linux_kernel_xattrs");
         let (source, dest) = seed(&dir);
 
         copy(LocalCopyStrategy::KernelCopyRange, &source, &dest);
 
-        assert_eq!(xattr::get(&dest, XATTR_NAME).expect("read"), None);
+        assert_eq!(
+            xattr::get(&dest, XATTR_NAME).expect("read").as_deref(),
+            Some(XATTR_VALUE)
+        );
     }
 
     /// A keep cell: the arm sets the source's mode on what it wrote.

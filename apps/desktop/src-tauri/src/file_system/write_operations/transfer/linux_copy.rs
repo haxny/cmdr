@@ -6,10 +6,13 @@
 //! in-kernel data copy, still faster than userspace read/write.
 
 use std::fs;
+use std::os::unix::fs::OpenOptionsExt as _;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
+
+use cmdr_fs::metadata::{CarriedMetadata, StagedItem, StagedTimes, apply_staged};
 
 use super::super::error_classification::classify_copy_io_error;
 use super::super::types::WriteOperationError;
@@ -45,13 +48,19 @@ pub fn copy_single_file_linux(
     })?;
     let total_size = src_metadata.len();
 
-    // Open destination, respecting overwrite flag
-    let dst_file = if overwrite {
-        fs::File::create(destination)
+    // Open destination, respecting overwrite flag. Owner-only until the source's
+    // mode goes on after the bytes, so a private file never sits readable by
+    // others mid-copy.
+    let mut options = fs::OpenOptions::new();
+    options.write(true).mode(0o600);
+    if overwrite {
+        options.create(true).truncate(true);
     } else {
-        fs::OpenOptions::new().write(true).create_new(true).open(destination)
+        options.create_new(true);
     }
-    .map_err(|e| classify_copy_io_error(&e, source, destination))?;
+    let dst_file = options
+        .open(destination)
+        .map_err(|e| classify_copy_io_error(&e, source, destination))?;
 
     // Pre-allocate space to avoid fragmentation.
     if total_size > 0 {
@@ -113,29 +122,23 @@ pub fn copy_single_file_linux(
         }
     }
 
-    // Copy permissions from source
-    let permissions = src_metadata.permissions();
-    if let Err(e) = fs::set_permissions(destination, permissions) {
+    // `copy_file_range` moves data only. The `user.*` xattrs, the mode, and the
+    // dates go on through the fd (`cmdr_fs::metadata::apply_staged`), best
+    // effort. The mtime is load-bearing beyond display: Phase 3 of
+    // `move_with_staging` compares the staged copy's mtime against the dest for
+    // `OverwriteOlder`, so a freshly-stamped staged file would look newer and
+    // wrongly overwrite. Linux can't set a birth time.
+    let carried = CarriedMetadata::of_local_file(&src_file, &src_metadata);
+    let times = StagedTimes {
+        modified: src_metadata.modified().ok(),
+        accessed: src_metadata.accessed().ok(),
+    };
+    let report = apply_staged(StagedItem::File(&dst_file), &carried, times);
+    if report.any_refused() {
         log::warn!(
-            "linux_copy: failed to set permissions on {}: {}",
+            "linux_copy: {} took only some of the metadata of {}: {report:?}",
             destination.display(),
-            e
-        );
-    }
-
-    // Preserve timestamps from source (parity with the macOS chunked path;
-    // `copy_file_range` only moves data, not mtime/atime). Without this a Linux
-    // copy or cross-FS move stamps the destination with "now", which loses the
-    // file's real modification time and breaks the `OverwriteOlder` conditional:
-    // Phase 3 of `move_with_staging` compares the staged copy's mtime against the
-    // dest, so a freshly-stamped staged file looks newer and wrongly overwrites.
-    let mtime = filetime::FileTime::from_last_modification_time(&src_metadata);
-    let atime = filetime::FileTime::from_last_access_time(&src_metadata);
-    if let Err(e) = filetime::set_file_times(destination, atime, mtime) {
-        log::warn!(
-            "linux_copy: failed to set timestamps on {}: {}",
-            destination.display(),
-            e
+            source.display()
         );
     }
 

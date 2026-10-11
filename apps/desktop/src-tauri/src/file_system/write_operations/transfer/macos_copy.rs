@@ -407,8 +407,13 @@ pub fn copy_single_file_native(
     Ok(metadata.len())
 }
 
-/// Copies a symlink without following it.
+/// Copies a symlink without following it: a fresh link to the same target,
+/// wearing the source link's OWN birth, mtime, and xattrs (`FSOPT_NOFOLLOW`,
+/// `XATTR_NOFOLLOW`), never its target's. Those are best effort: a refusal is
+/// logged and the link stands.
 pub fn copy_symlink(source: &Path, destination: &Path) -> Result<(), WriteOperationError> {
+    use cmdr_fs::metadata::{CarriedMetadata, StagedItem, StagedTimes, apply_staged};
+
     let target = std::fs::read_link(source).map_err(|e| WriteOperationError::IoError {
         path: source.display().to_string(),
         message: format!("Failed to read symlink: {}", e),
@@ -418,6 +423,25 @@ pub fn copy_symlink(source: &Path, destination: &Path) -> Result<(), WriteOperat
         path: destination.display().to_string(),
         message: format!("Failed to create symlink: {}", e),
     })?;
+
+    match std::fs::symlink_metadata(source) {
+        Ok(meta) => {
+            let carried = CarriedMetadata::of_local_link(source, &meta);
+            let times = StagedTimes {
+                modified: meta.modified().ok(),
+                accessed: meta.accessed().ok(),
+            };
+            let report = apply_staged(StagedItem::Link(destination), &carried, times);
+            if report.any_refused() {
+                log::warn!(
+                    "copy_symlink: {} took only some of the metadata of {}: {report:?}",
+                    destination.display(),
+                    source.display()
+                );
+            }
+        }
+        Err(e) => log::debug!("copy_symlink: couldn't lstat {}: {e}", source.display()),
+    }
 
     Ok(())
 }

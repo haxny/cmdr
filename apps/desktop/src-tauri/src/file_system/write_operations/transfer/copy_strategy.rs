@@ -256,11 +256,7 @@ pub(super) fn copy_file_using(
         LocalCopyStrategy::Chunked => {
             // Chunked copy `sync_data`s the file itself before returning.
             let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
-                let bytes = chunked_copy_with_metadata(source, target, cancelled, progress_callback)?;
-                Ok(Staged {
-                    bytes,
-                    landed: LandedMetadata::of_source_acl(source),
-                })
+                chunked_copy_with_metadata(source, target, cancelled, progress_callback)
             })?;
             Ok(StrategyCopyOutcome {
                 bytes: landed.bytes,
@@ -272,8 +268,13 @@ pub(super) fn copy_file_using(
         LocalCopyStrategy::KernelCopyRange => {
             // `copy_file_range(2)` doesn't flush (and reflink shares CoW extents,
             // but we can't cheaply tell here), so the caller flushes the dest.
+            // The source's POSIX ACL goes on after the landing, as on every arm.
             let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
-                copy_single_file_linux(source, target, false, cancelled, progress_callback).map(Staged::bytes)
+                let bytes = copy_single_file_linux(source, target, false, cancelled, progress_callback)?;
+                Ok(Staged {
+                    bytes,
+                    landed: LandedMetadata::of_source_acl(source),
+                })
             })?;
             Ok(StrategyCopyOutcome {
                 bytes: landed.bytes,

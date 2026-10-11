@@ -6,12 +6,16 @@
 //! to user cancellation requests.
 
 use std::io::{Read, Write};
+use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
 #[cfg(test)]
 use std::sync::atomic::Ordering;
 
+use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_staged};
+
+use super::super::overwrite::Staged;
 use super::super::types::WriteOperationError;
 
 /// Progress callback for chunked copy operations.
@@ -54,14 +58,15 @@ pub fn is_network_filesystem(path: &Path) -> bool {
 /// abandons the thread instead: `../DETAILS.md` § "A local blocking read or
 /// write cannot be given a timeout".
 ///
-/// After the data copy, the metadata that may sit on a staged temp follows:
-/// - Extended attributes (includes macOS resource forks, Finder info)
-/// - Timestamps (modification time, access time)
-/// - Permissions
+/// `dest` (the staged temp) is created owner-only, so a private file is never
+/// readable by others while its bytes stream. After the data, on the open fd
+/// (`cmdr_fs::metadata::apply_staged`): the xattrs, the source's exact mode,
+/// then birth, mtime, and atime in one call; then the flush, so the metadata is
+/// as durable as the bytes.
 ///
-/// The ACL doesn't: a `deny delete` one refuses the landing rename, so the
-/// caller reads it off the source and puts it on after landing
-/// (`copy_strategy::copy_file_using`).
+/// The ACL and the user flags don't go on the temp: Locked and a `deny delete`
+/// ACL refuse the landing rename, so they come back in [`Staged::landed`] for
+/// the landing to put on (`overwrite::stage_and_land_file`).
 ///
 /// The optional progress callback is called after each chunk with
 /// (bytes_copied_so_far, total_bytes).
@@ -70,28 +75,69 @@ pub fn chunked_copy_with_metadata(
     dest: &Path,
     cancelled: &Arc<AtomicU8>,
     progress_callback: Option<ChunkedCopyProgressFn>,
-) -> Result<u64, WriteOperationError> {
+) -> Result<Staged, WriteOperationError> {
     log::debug!(
         "chunked_copy: starting chunked copy from {} to {}",
         source.display(),
         dest.display()
     );
 
-    // Get source size for progress reporting
-    let source_size = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
+    let read_error = |e: std::io::Error, what: &str| WriteOperationError::ReadError {
+        path: source.display().to_string(),
+        message: format!("Failed to {what}: {e}"),
+    };
+    let mut src_file = std::fs::File::open(source).map_err(|e| read_error(e, "open source file"))?;
+    // One `fstat` answers the size, the dates, the mode, and the flags.
+    let src_meta = src_file.metadata().map_err(|e| read_error(e, "read source metadata"))?;
 
-    // 1. Chunked data copy with cancellation checks
-    let bytes = copy_data_chunked(source, dest, cancelled, source_size, progress_callback)?;
+    let mut dst_file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(dest)
+        .map_err(|e| WriteOperationError::WriteError {
+            path: dest.display().to_string(),
+            message: format!("Failed to create destination file: {}", e),
+        })?;
 
-    // 2. Copy all metadata (best effort - log warnings but don't fail)
-    if let Err(e) = copy_metadata(source, dest) {
+    let bytes = copy_data_chunked(
+        &mut src_file,
+        &mut dst_file,
+        source,
+        dest,
+        cancelled,
+        src_meta.len(),
+        progress_callback,
+    )?;
+
+    // Best effort: a refused class is logged and the copy stands (rule 1).
+    let carried = CarriedMetadata::of_local_file(&src_file, &src_meta);
+    let times = StagedTimes {
+        modified: src_meta.modified().ok(),
+        accessed: src_meta.accessed().ok(),
+    };
+    let report = apply_staged(StagedItem::File(&dst_file), &carried, times);
+    if report.any_refused() {
         log::warn!(
-            "chunked_copy: failed to copy some metadata from {} to {}: {:?}",
-            source.display(),
+            "chunked_copy: {} took only some of the metadata of {}: {report:?}",
             dest.display(),
-            e
+            source.display()
         );
     }
+
+    // Flush the file's data pages durably before signalling success.
+    //
+    // `sync_all` defeating cancellation only applies *during* the chunk loop;
+    // at this point we've left the loop, there's nothing left to cancel, and
+    // the next thing the caller does is emit `write-complete`. Without this,
+    // the user can pull a USB drive after "Copy finished" and lose a file
+    // that lived only in the OS page cache. `sync_data` is the cheaper
+    // `fdatasync` variant — file data + size are durable; mtime can lag.
+    dst_file.sync_data().map_err(|e| WriteOperationError::WriteError {
+        path: dest.display().to_string(),
+        message: format!("Couldn't flush destination to disk: {}", e),
+    })?;
 
     log::debug!(
         "chunked_copy: completed {} bytes from {} to {}",
@@ -100,7 +146,10 @@ pub fn chunked_copy_with_metadata(
         dest.display()
     );
 
-    Ok(bytes)
+    Ok(Staged {
+        bytes,
+        landed: LandedMetadata::of_source_acl(source).with_flags(carried.flags),
+    })
 }
 
 /// Test seam: parks a chunked copy part-way through a file, so a test can pull
@@ -196,22 +245,14 @@ pub(crate) mod chunk_park {
 
 /// Copies file data in chunks, checking cancellation between each chunk.
 fn copy_data_chunked(
+    src_file: &mut std::fs::File,
+    dst_file: &mut std::fs::File,
     source: &Path,
     dest: &Path,
     cancelled: &Arc<AtomicU8>,
     source_size: u64,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<u64, WriteOperationError> {
-    let mut src_file = std::fs::File::open(source).map_err(|e| WriteOperationError::ReadError {
-        path: source.display().to_string(),
-        message: format!("Failed to open source file: {}", e),
-    })?;
-
-    let mut dst_file = std::fs::File::create(dest).map_err(|e| WriteOperationError::WriteError {
-        path: dest.display().to_string(),
-        message: format!("Failed to create destination file: {}", e),
-    })?;
-
     let mut buffer = vec![0u8; CHUNK_SIZE];
     let mut total_bytes = 0u64;
 
@@ -223,7 +264,6 @@ fn copy_data_chunked(
                 total_bytes
             );
             // Clean up partial file in background (may block on network mounts)
-            drop(dst_file);
             super::super::cancellable::remove_file_in_background(dest.to_path_buf());
             return Err(WriteOperationError::Cancelled {
                 message: "Operation cancelled by user".to_string(),
@@ -259,113 +299,7 @@ fn copy_data_chunked(
         }
     }
 
-    // Flush the file's data pages durably before signalling success.
-    //
-    // `sync_all` defeating cancellation only applies *during* the chunk loop;
-    // at this point we've left the loop, there's nothing left to cancel, and
-    // the next thing the caller does is emit `write-complete`. Without this,
-    // the user can pull a USB drive after "Copy finished" and lose a file
-    // that lived only in the OS page cache. `sync_data` is the cheaper
-    // `fdatasync` variant — file data + size are durable; mtime can lag.
-    dst_file.sync_data().map_err(|e| WriteOperationError::WriteError {
-        path: dest.display().to_string(),
-        message: format!("Couldn't flush destination to disk: {}", e),
-    })?;
-
     Ok(total_bytes)
-}
-
-// ============================================================================
-// Metadata copying
-// ============================================================================
-
-/// Copies all metadata from source to destination.
-fn copy_metadata(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
-    // 1. Copy extended attributes (includes resource forks, Finder info)
-    copy_xattrs(source, dest)?;
-
-    // 2. Copy timestamps
-    copy_timestamps(source, dest)?;
-
-    // 3. Copy permissions
-    copy_permissions(source, dest)?;
-
-    Ok(())
-}
-
-/// Copies extended attributes from source to destination.
-fn copy_xattrs(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
-    // List all xattrs on source
-    let xattrs = match xattr::list(source) {
-        Ok(iter) => iter.collect::<Vec<_>>(),
-        Err(e) => {
-            log::debug!("copy_xattrs: failed to list xattrs on {}: {}", source.display(), e);
-            return Ok(()); // Not all filesystems support xattrs
-        }
-    };
-
-    for attr_name in xattrs {
-        // Get the attribute value from source
-        let value = match xattr::get(source, &attr_name) {
-            Ok(Some(v)) => v,
-            Ok(None) => continue, // Attribute disappeared
-            Err(e) => {
-                log::debug!(
-                    "copy_xattrs: failed to get xattr {:?} from {}: {}",
-                    attr_name,
-                    source.display(),
-                    e
-                );
-                continue;
-            }
-        };
-
-        // Set the attribute on destination
-        if let Err(e) = xattr::set(dest, &attr_name, &value) {
-            log::debug!(
-                "copy_xattrs: failed to set xattr {:?} on {}: {}",
-                attr_name,
-                dest.display(),
-                e
-            );
-            // Continue with other xattrs
-        }
-    }
-
-    Ok(())
-}
-
-/// Copies timestamps (mtime, atime) from source to destination.
-fn copy_timestamps(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
-    let metadata = std::fs::metadata(source).map_err(|e| WriteOperationError::IoError {
-        path: source.display().to_string(),
-        message: format!("Failed to read source metadata: {}", e),
-    })?;
-
-    let mtime = filetime::FileTime::from_last_modification_time(&metadata);
-    let atime = filetime::FileTime::from_last_access_time(&metadata);
-
-    filetime::set_file_times(dest, atime, mtime).map_err(|e| WriteOperationError::IoError {
-        path: dest.display().to_string(),
-        message: format!("Failed to set timestamps: {}", e),
-    })?;
-
-    Ok(())
-}
-
-/// Copies permissions from source to destination.
-fn copy_permissions(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
-    let metadata = std::fs::metadata(source).map_err(|e| WriteOperationError::IoError {
-        path: source.display().to_string(),
-        message: format!("Failed to read source metadata: {}", e),
-    })?;
-
-    std::fs::set_permissions(dest, metadata.permissions()).map_err(|e| WriteOperationError::IoError {
-        path: dest.display().to_string(),
-        message: format!("Failed to set permissions: {}", e),
-    })?;
-
-    Ok(())
 }
 
 // ============================================================================
@@ -394,7 +328,7 @@ mod tests {
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 20); // "Hello, chunked copy!" is 20 bytes
+        assert_eq!(result.unwrap().bytes, 20); // "Hello, chunked copy!" is 20 bytes
         assert!(dst.exists());
         assert_eq!(fs::read_to_string(&dst).unwrap(), "Hello, chunked copy!");
     }
@@ -449,7 +383,7 @@ mod tests {
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0);
+        assert_eq!(result.unwrap().bytes, 0);
         assert!(dst.exists());
         assert_eq!(fs::read_to_string(&dst).unwrap(), "");
     }
@@ -457,21 +391,16 @@ mod tests {
     // ------------------------------------------------------------------
     // Metadata-preservation pins (cargo-mutants survivors)
     //
-    // copy_metadata is the orchestrator for xattrs + ACLs + timestamps +
-    // permissions. cargo-mutants showed survivors for each of those sub-
-    // functions and for `copy_metadata` itself: replacing any of them
-    // with `Ok(())` is undetectable from the existing tests because we
-    // never check that those side effects actually happen. The
-    // permissions axis is already covered by
-    // test_chunked_copy_preserves_permissions; below we add timestamps
-    // and xattrs.
+    // Replacing the metadata step with a no-op is undetectable unless a test
+    // checks that its side effects happen. The permissions axis is covered by
+    // test_chunked_copy_preserves_permissions; below, timestamps and xattrs.
+    // The full per-class matrix is `metadata_matrix_tests.rs`.
     // ------------------------------------------------------------------
 
     #[test]
     fn chunked_copy_preserves_mtime() {
-        // Kills: replace copy_timestamps → Ok(()), and replace copy_metadata → Ok(()).
-        // If either is stubbed out, the destination's mtime will be its
-        // creation time (now) rather than the source's stamped mtime.
+        // Kills: dropping the dates from the staged metadata. Without them the
+        // destination's mtime is its creation time (now), not the source's.
         let temp_dir = create_temp_dir("mtime");
         let src = temp_dir.join("source.txt");
         let dst = temp_dir.join("dest.txt");
@@ -490,14 +419,14 @@ mod tests {
         assert_eq!(
             dst_mtime.unix_seconds(),
             target_mtime.unix_seconds(),
-            "chunked copy must preserve source mtime (copy_timestamps was stubbed out?)"
+            "chunked copy must preserve source mtime"
         );
     }
 
     #[cfg(target_os = "macos")]
     #[test]
     fn chunked_copy_preserves_user_xattrs() {
-        // Kills: replace copy_xattrs → Ok(()), and replace copy_metadata → Ok(()).
+        // Kills: dropping the xattrs from the staged metadata.
         // On macOS, user-namespace xattrs roundtrip on APFS tmpdirs.
         let temp_dir = create_temp_dir("xattr");
         let src = temp_dir.join("source.txt");
@@ -520,7 +449,7 @@ mod tests {
         assert_eq!(
             roundtripped.as_deref(),
             Some(val.as_slice()),
-            "chunked copy must preserve user xattrs (copy_xattrs was stubbed out?)"
+            "chunked copy must preserve user xattrs"
         );
     }
 
@@ -545,7 +474,7 @@ mod tests {
         let cancelled = Arc::new(AtomicU8::new(0));
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None).unwrap();
         assert_eq!(
-            result, expected,
+            result.bytes, expected,
             "returned byte count must equal source length over multiple chunks"
         );
         assert_eq!(fs::metadata(&dst).unwrap().len(), expected);
@@ -579,7 +508,7 @@ mod tests {
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, Some(&progress_cb));
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), expected_size);
+        assert_eq!(result.unwrap().bytes, expected_size);
         // Should have been called at least 3 times (for 3 chunks)
         assert!(callback_count.load(Ordering::Relaxed) >= 3);
         // Last callback should report all bytes

@@ -409,20 +409,24 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
     unregister_operation_status(op_id);
 }
 
-/// A copy onto another volume takes the chunked arm, which sets only mtime: HFS+
-/// (like APFS) then drags the copy's birth down to that mtime. The one cell of the
-/// metadata matrix (`metadata_matrix_tests.rs`) that crosses a real volume boundary.
+/// A copy onto another volume takes the chunked arm, which sets birth and mtime in
+/// one call (HFS+, like APFS, would otherwise drag birth down to the earlier
+/// mtime) and puts Locked on after the landing rename it would refuse. The one
+/// cell of the metadata matrix (`metadata_matrix_tests.rs`) that crosses a real
+/// volume boundary.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
-async fn a_copy_onto_another_volume_loses_the_files_birth_time_today() {
-    // FLIPS IN M3: birth == BIRTH_SECS on the HFS+ copy.
-    use cmdr_fs::testing::metadata_fixture::{MODIFIED_SECS, MetadataFixture, birth_secs, modified_secs};
+async fn a_copy_onto_another_volume_keeps_birth_time_and_locked() {
+    use cmdr_fs::testing::metadata_fixture::{
+        BIRTH_SECS, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, birth_secs, flags, modified_secs,
+    };
 
     let session = DiskImageSession::acquire();
     let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
     let volume = image.volumes()[0].clone();
     let fixture = MetadataFixture::new("real-image-birth");
     let source = fixture.rich_file("f.txt");
+    let locked = fixture.locked_file("locked.txt");
 
     let events = Arc::new(CollectorEventSink::new());
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
@@ -430,7 +434,7 @@ async fn a_copy_onto_another_volume_loses_the_files_birth_time_today() {
         &*events,
         "op-real-image-birth",
         &state,
-        std::slice::from_ref(&source),
+        &[source, locked],
         &volume.mount_point,
         &WriteOperationConfig::default(),
     );
@@ -438,10 +442,9 @@ async fn a_copy_onto_another_volume_loses_the_files_birth_time_today() {
 
     let landed = volume.mount_point.join("f.txt");
     assert_eq!(modified_secs(&landed), MODIFIED_SECS, "mtime is kept");
-    assert_eq!(birth_secs(&landed), MODIFIED_SECS, "birth reads the source's mtime");
-    assert_ne!(
-        birth_secs(&source),
-        MODIFIED_SECS,
-        "the source's own birth differs, so the pin bites"
-    );
+    assert_eq!(birth_secs(&landed), BIRTH_SECS, "and birth");
+    let landed_locked = volume.mount_point.join("locked.txt");
+    assert_eq!(flags(&landed_locked) & LOCKED_FLAG, LOCKED_FLAG, "the copy is Locked");
+    assert_eq!(birth_secs(&landed_locked), BIRTH_SECS);
+    // The image detaches with the Locked copy on it, which `hdiutil` doesn't mind.
 }
