@@ -582,11 +582,20 @@
         min-width: 0;
     }
 
+    /* Each chip group spans the whole chip column with equal gaps, so both rows read alike and
+       end at the same right edge. */
     .placeholders,
     .search-options {
-        justify-self: end;
+        justify-self: stretch;
         display: flex;
         align-items: center;
+        justify-content: space-between;
+    }
+
+    /* `SearchOptionChips` renders its own row: it takes the column and spreads the same way. */
+    .search-options > :global(*) {
+        flex: 1;
+        justify-content: space-between;
     }
 
     .field {

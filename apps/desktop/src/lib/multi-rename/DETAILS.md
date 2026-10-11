@@ -113,9 +113,9 @@
   the name mask (grows) and the extension mask (140 px) span the field columns, so Extension ends where Replace with
   does, with the placeholder chips right of them; then Search for, Replace with, and the search option chips. The chip
   groups share the last column, right edges level; both are house `Chip`s at `size="field"`, as tall as the text boxes,
-  with the same padding. Then Letter case, Greek to Latin, Remove diacritics, and Normalize Unicode
-  (`WHOLE_NAME_TOGGLES`), each with its dim key chip. Each `Checkbox` sits in a wrapper span, since it renders more than
-  one element.
+  with the same padding, spread across the column with equal gaps (`space-between`), so both rows read alike. Then
+  Letter case, Greek to Latin, Remove diacritics, and Normalize Unicode (`WHOLE_NAME_TOGGLES`), each with its dim key
+  chip. Each `Checkbox` sits in a wrapper span, since it renders more than one element.
 - **Minimum width** (`MIN_WIDTH_PX`, 880 px, under the app window's 950 px floor): the grid and the footer's four
   buttons still fit; the footer's buttons sit in one non-shrinking `.footer-actions`, so at the floor with Undo rename
   showing, the summary beside Presets wraps (to three short lines) rather than a button's label leaving its chip.
