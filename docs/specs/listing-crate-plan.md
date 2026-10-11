@@ -421,11 +421,13 @@ Each one lands as its own commit with a red test first, and the commit body name
    index storm stalls every pane read and IPC accessor behind it; it also goes through `entries_mut`, which drops the
    path map and the row map on every index event. Instead, in this order:
    - Under a READ lock, clone the non-symlink directories (the only rows enrich writes; see seam 3) and the listing's
-     current read generation (behavior change 3). No dirs → return.
+     PUBLISHED read generation (behavior change 3: the generation of the last re-read that landed, never the last one
+     handed out, or an in-flight re-read that later fails or is superseded would drop these sizes with nothing replacing
+     them). No dirs → return.
    - Enrich the clones with no lock held.
-   - Under the WRITE lock, if the read generation moved, drop the result: the re-read that replaced the rows enriched
-     them itself, at least as recently. Otherwise write the seven fields back by path as `IndexSizes` through the writer
-     `update_index_sizes` uses (`update_index_sizes_by_path`: keeps both maps, doesn't re-sort, doesn't bump
+   - Under the WRITE lock, if the published generation moved, drop the result: the re-read that replaced the rows
+     enriched them itself, at least as recently. Otherwise write the seven fields back by path as `IndexSizes` through
+     the writer `update_index_sizes` uses (`update_index_sizes_by_path`: keeps both maps, doesn't re-sort, doesn't bump
      `last_accessed_ms`).
    - By path is order-independent, so a re-sort in between is harmless. A row added in between was enriched by its own
      insert; a row removed or renamed in between is skipped. A `Modified` patch in between (patches don't bump the
@@ -439,11 +441,29 @@ Each one lands as its own commit with a red test first, and the commit body name
    `patch_listing_after_local_mutation(volume_id, parent, MutationEvent::Created(name))`, the function
    `LocalPosixVolume::notify_mutation` already runs for deletes and renames. What changes: an entry the listing already
    holds (the watcher stat'd it first) is upserted with the create's fresher stat instead of dropped, tags carried
-   forward, exactly `notify_added`'s documented reason; and the composer's index apply (a no-op for `root`) and
-   cloud-badge invalidation now run for a create too. `should_emit_synthetic_diff` stays as the gate. Red test: a
-   listing holding the new path with a stale size gets the on-disk size (today it keeps the stale one); M0's
-   insert-if-absent pin is updated in the same commit with the reason. Lands in M4a, after M2b removed the `has_app`
-   gate (before that, the composer no-ops in the test binary and the red test would pass vacuously).
+   forward, exactly `notify_added`'s documented reason; and the composer's index apply and cloud-badge invalidation now
+   run for a create too. `should_emit_synthetic_diff` stays as the gate.
+   - **`name` is `new_path.file_name()`** (the path `place_new_entry` or the paste retry loop picked, which is what
+     today's stat uses), never the name the user typed, and `parent` is the same `expanded_path` / `dir` passed today,
+     so the row's path stays byte-identical and `has_entry` matches a watcher-added row.
+   - **Why upsert is safe for every caller** (verified 2026-10-11 on `f497bdfd8` by reading `create.rs`,
+     `paste_clipboard.rs`, `caching.rs`): no create overwrites. mkdir and mkfile refuse a taken name (`place_new_entry`
+     → `AlreadyExists`), and paste retries `pasted (N)` on O_EXCL `AlreadyExists`, so the path is always new on disk. A
+     row already at that path is therefore either the watcher's row for this same file (the upsert refreshes it) or a
+     stale row for a file deleted outside Cmdr whose removal hasn't landed (the upsert fixes its kind and size; today
+     keeps the stale row, even a file row for a new folder). A create racing a watcher add can't duplicate:
+     `notify_added`'s `has_entry` check and its insert take separate locks, but `insert_entry_sorted` re-checks the path
+     under the write lock. The one loss is a watcher stat taken and applied in the microseconds between the create's
+     stat and its upsert, which the next event corrects; every `notify_mutation(Created)` has it.
+   - **The index apply is NOT a no-op off `root`.** `apply_directory_change` → `apply_smb_change` skips only `root`, so
+     a create on an indexed `LocalExternal` drive now also upserts that drive's index, alongside its own FSEvents feed.
+     Deletes and renames there already take this path through `notify_mutation`, and the apply resolves to an upsert, so
+     it should be idempotent; the M4a executor pins it with a cell (the same `Added` applied twice to a running test
+     index leaves `dir_stats` unchanged) and, if it isn't, skips the index half for local creates instead of changing
+     the index. Name it in the commit body.
+   - Red test: a listing holding the new path with a stale size gets the on-disk size (today it keeps the stale one);
+     M0's insert-if-absent pin is updated in the same commit with the reason. Lands in M4a, after M2b removed the
+     `has_app` gate (before that, the composer no-ops in the test binary and the red test would pass vacuously).
 
 ## Milestones
 
@@ -735,15 +755,21 @@ the pipeline function; lanes as M3a plus `desktop-rust-module-cycles` (slow).
 
 **Intentions.** One place owns "a full re-read lands", so the generation check has exactly one replace step to guard.
 
-**Landmines.** `refresh` returns only once its read landed or was superseded; `flush_all_watchers` (E2E) and the ⌘R
-command's 2 s `TimedOut` wait both depend on that. `PermissionDenied` stays silent and other read errors stay a warn
-log, as today. The watcher's `coverage_for_listings` stays app-side.
+**Landmines.** `handle_directory_change` stays as the app-side wrapper over `refresh` (it maps `DirectoryGone` to
+`directory-deleted` + `stop_watching` and `NoVolume` to the `std::fs` hand-over), because the ⌘R command
+(`refresh_listing_within`), the three watcher spawns, `flush_all_watchers`, and three tests (`watcher_test.rs`,
+`overlay_refresh_test.rs`) call it; none of them handles a `RefreshOutcome` itself. `refresh` returns only once its read
+landed or was superseded; `flush_all_watchers` (E2E) and the ⌘R command's 2 s `TimedOut` wait both depend on that.
+`PermissionDenied` stays silent and other read errors stay a warn log, as today. The watcher's `coverage_for_listings`
+stays app-side.
 
 **Test plan.** M0's watcher-incremental and `flush_all_watchers` pins pass through the new methods unchanged before
 commit 2. Change 3's two cells and change 5's two cells (§ "Behavior changes, called out"), each red first.
 
 **DONE.** `file_system/watcher.rs` names no `get_listing_entries`, `update_listing_entries`, `insert_entry_sorted`,
-`remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, or `decorate`; lanes: `desktop-rust-tests`,
+`remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, `has_entry`, `enrich(`, or `decorate`
+(`rg -n 'get_listing_entries|update_listing_entries|insert_entry_sorted|remove_entries_by_paths|update_entry_sorted|carry_forward_tags|has_entry|enrich\(|decorate' apps/desktop/src-tauri/src/file_system/watcher.rs`
+finds nothing); change 3's and change 5's four cells each seen red, then green; lanes: `desktop-rust-tests`,
 `desktop-rust-clippy`, `desktop-rust-tests-linux`, `desktop-rust-test-sleep`, `desktop-svelte-e2e-playwright` (the
 watcher's re-read and `flush_file_watcher` are what E2E leans on).
 
@@ -1021,3 +1047,19 @@ Added by this refactor:
 - Lanes: verified every named lane exists in `scripts/check/checks/registry.go`; added `desktop-svelte-e2e-playwright`
   where watcher or create behavior moves (M2b, M3c, M4a) and `desktop-rust-jscpd` to M4a. M5 drops the `caching.rs`
   `file-length` entry, since the target layout is its TODO split.
+
+## Review round 4 (round 3's additions: M3c, `RefreshOutcome`, the `create.rs` fix, behavior change 6)
+
+- Behavior change 6, upsert: verified safe for mkdir, mkfile, and paste-as-file (no create overwrites, so a row at the
+  path is the watcher's or a stale one; `insert_entry_sorted` re-checks under the write lock, so a race can't
+  duplicate). Wrote the argument into the change. Pinned `name` to `new_path.file_name()` so the row's spelling stays
+  today's. Corrected "index apply is a no-op for `root`": it isn't off `root`, since indexed `LocalExternal` drives get
+  the upsert too; M4a pins its idempotence or skips it for creates.
+- Behavior change 5: "the read generation moved" now names the PUBLISHED generation. Comparing against the last one
+  handed out would drop sizes whenever an in-flight re-read later failed or was superseded.
+- M3c: `handle_directory_change` stays as the app wrapper that interprets `RefreshOutcome` (six production and test
+  callers, ⌘R among them). DONE grep is now an exact `rg` that also catches `has_entry` and `enrich(` (the watcher's
+  classification and enrich move into `observe_children`), and the four behavior-change cells are part of DONE.
+- Verified sound: the pre-M0 `create.rs` fix (volume-scoped lookup with the id the function already derives),
+  `RefreshOutcome`'s variants against every exit of today's `handle_directory_change` (including `NoVolume` → the
+  `std::fs` fallback with `OverlayRows::Unchanged`), and M3c as one executor's work that compiles and passes per commit.
