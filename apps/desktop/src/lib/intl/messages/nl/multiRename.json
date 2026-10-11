@@ -304,7 +304,7 @@
   "@multiRename.rename": {
     "sourceHash": "9789ca5"
   },
-  "multiRename.started": "{count, plural, one {Naam van # bestand wordt gewijzigd} other {Namen van # bestanden worden gewijzigd}}. Terugdraaien kan in het Bewerkingenlogboek.",
+  "multiRename.started": "{count, plural, one {Naam van # bestand wordt gewijzigd} other {Namen van # bestanden worden gewijzigd}}. Terugdraaien kan in het bewerkingenlogboek.",
   "@multiRename.started": {
     "sourceHash": "55b4878"
   },
