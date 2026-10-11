@@ -703,3 +703,83 @@ fn a_reversal_whose_bar_fills_measures_remaining_toward_the_total() {
     assert!((7..=9).contains(&eta), "eta = {eta}, expected ~8 s");
     assert!(stats.bytes_per_second >= 90_000_000, "the rate reads forward too");
 }
+
+/// The axes over a many-small-files copy, sampled every 500 ms: the whole
+/// 1,000-byte total moves in the first two seconds, but files trickle at 10/s,
+/// so the file count is what decides the finish.
+fn small_files_axes(until_ms: u64) -> Vec<(u64, ProgressAxis)> {
+    let start = Instant::now();
+    let mut est = EtaEstimator::new();
+    (0..=until_ms / 500)
+        .map(|step| {
+            let ms = step * 500;
+            let bytes = (ms / 2).min(1_000);
+            let files = (ms / 100) as usize;
+            let stats = est.update_at(at(start, ms), WriteOperationPhase::Copying, bytes, 1_000, files, 1_000);
+            (ms, stats.bottleneck)
+        })
+        .collect()
+}
+
+#[test]
+fn the_bottleneck_is_bytes_while_the_estimator_warms_up() {
+    let axes = small_files_axes(500);
+    assert!(axes.iter().all(|(_, axis)| *axis == ProgressAxis::Bytes), "{axes:?}");
+}
+
+#[test]
+fn the_file_count_takes_over_only_after_leading_for_three_seconds_of_work() {
+    let axes = small_files_axes(6_000);
+    let flipped_at = axes
+        .iter()
+        .find(|(_, axis)| *axis == ProgressAxis::Files)
+        .map(|(ms, _)| *ms)
+        .expect("the file count leads by far and must take over");
+    assert!(
+        (3_500..=5_000).contains(&flipped_at),
+        "files led from the first warmed-up sample (~1 s), so the flip lands ~3 s later, not at {flipped_at} ms: {axes:?}"
+    );
+    assert!(
+        axes.iter()
+            .skip_while(|(ms, _)| *ms < flipped_at)
+            .all(|(_, axis)| *axis == ProgressAxis::Files),
+        "and it stays there while files keep leading: {axes:?}"
+    );
+}
+
+#[test]
+fn a_lead_that_ends_before_three_seconds_never_flips_the_axis() {
+    let start = Instant::now();
+    let mut est = EtaEstimator::new();
+    let mut axes = Vec::new();
+    // Bytes and files move in step (10 % of each per second), then files stall
+    // for two seconds while bytes keep going, then catch up again.
+    let mut files = 0usize;
+    for step in 0..=16u64 {
+        let ms = step * 500;
+        let bytes = ms * 100;
+        if !(2_000..4_000).contains(&ms) {
+            files = (ms / 50) as usize;
+        }
+        let stats = est.update_at(
+            at(start, ms),
+            WriteOperationPhase::Copying,
+            bytes,
+            1_000_000,
+            files,
+            200,
+        );
+        axes.push((ms, stats.bottleneck));
+    }
+    assert!(axes.iter().all(|(_, axis)| *axis == ProgressAxis::Bytes), "{axes:?}");
+}
+
+#[test]
+fn an_operation_with_no_bytes_follows_its_file_count_from_the_start() {
+    let start = Instant::now();
+    let mut est = EtaEstimator::new();
+    let first = est.update_at(at(start, 0), WriteOperationPhase::Copying, 0, 0, 0, 10);
+    let second = est.update_at(at(start, 500), WriteOperationPhase::Copying, 0, 0, 2, 10);
+    assert_eq!(first.bottleneck, ProgressAxis::Files);
+    assert_eq!(second.bottleneck, ProgressAxis::Files);
+}

@@ -48,7 +48,7 @@
 
 use std::time::{Duration, Instant};
 
-use super::types::WriteOperationPhase;
+use super::types::{ProgressAxis, WriteOperationPhase};
 
 /// Half-life-ish time constant for the EWMA. 3 s feels live but not jittery;
 /// short enough that walking 20 m from the router visibly drops the speed
@@ -64,6 +64,16 @@ const MIN_SAMPLES_FOR_ETA: u32 = 2;
 /// current phase (wall time minus every human wait). Catches the "200 ms in,
 /// rate is 50 MB/s" → "ETA = 0 s" footgun before the EWMA settles.
 const MIN_ELAPSED_FOR_ETA: Duration = Duration::from_millis(800);
+
+/// How far the other axis's ETA must lead the bottleneck's before it counts as
+/// leading: 10 %, so two axes running neck and neck don't trade places.
+const AXIS_LEAD: f64 = 1.10;
+
+/// How long, in WORKING time, the other axis must keep leading before it takes
+/// over. Every folder bar in the transfer tree fills along the bottleneck, so a
+/// flip redraws them all; a lead that comes and goes inside this window would
+/// make them flicker.
+const AXIS_HOLD: Duration = Duration::from_secs(3);
 
 /// Which way a `RollingBack` phase's counters run. Set by whoever drives the
 /// reversal, ❌ never inferred from the phase (see the module doc).
@@ -87,6 +97,11 @@ pub struct EtaStats {
     /// Seconds remaining. `None` while the estimator is warming up or when both
     /// rates are zero (operation stalled: no point lying about the ETA).
     pub eta_seconds: Option<u32>,
+    /// The axis whose ETA decides `eta_seconds`, held steady: the other one
+    /// takes over only after leading by more than [`AXIS_LEAD`] for
+    /// [`AXIS_HOLD`] of working time. `Bytes` while warming up, `Files` for an
+    /// operation that moves no bytes at all (a rename move).
+    pub bottleneck: ProgressAxis,
 }
 
 impl EtaStats {
@@ -94,6 +109,7 @@ impl EtaStats {
         bytes_per_second: 0,
         files_per_second: 0.0,
         eta_seconds: None,
+        bottleneck: ProgressAxis::Bytes,
     };
 }
 
@@ -142,6 +158,11 @@ struct PhaseState {
     bytes_rate: f64,
     files_rate: f64,
     samples: u32,
+    /// The bottleneck as last reported.
+    axis: ProgressAxis,
+    /// When (in `working_elapsed`) the other axis started leading, while it
+    /// still does.
+    challenger_since: Option<Duration>,
 }
 
 /// Per-operation estimator. Constructed once when the operation starts; updated
@@ -181,6 +202,7 @@ impl EtaEstimator {
         };
 
         if needs_reset {
+            let axis = starting_axis(bytes_total, files_total);
             self.state = Some(PhaseState {
                 phase,
                 counters_drain,
@@ -192,8 +214,13 @@ impl EtaEstimator {
                 bytes_rate: 0.0,
                 files_rate: 0.0,
                 samples: 0,
+                axis,
+                challenger_since: None,
             });
-            return EtaStats::ZERO;
+            return EtaStats {
+                bottleneck: axis,
+                ..EtaStats::ZERO
+            };
         }
 
         let state = self.state.as_mut().expect("just reset or pre-existing");
@@ -274,7 +301,7 @@ impl EtaEstimator {
 }
 
 fn compute_stats(
-    state: &PhaseState,
+    state: &mut PhaseState,
     bytes_done: u64,
     bytes_total: u64,
     files_done: usize,
@@ -298,16 +325,78 @@ fn compute_stats(
         )
     };
 
+    let eta_bytes = axis_eta(remaining_bytes as f64, state.bytes_rate);
+    let eta_files = axis_eta(remaining_files as f64, state.files_rate);
     let eta_seconds = if !warmed_up {
         None
     } else {
-        eta_from_axes(remaining_bytes, state.bytes_rate, remaining_files, state.files_rate)
+        eta_from_axes(eta_bytes, eta_files, remaining_bytes > 0 || remaining_files > 0)
     };
+    settle_axis(state, warmed_up, eta_bytes, eta_files, bytes_total, files_total);
 
     EtaStats {
         bytes_per_second,
         files_per_second,
         eta_seconds,
+        bottleneck: state.axis,
+    }
+}
+
+/// The bottleneck before any rate is known: bytes, unless the operation moves
+/// none (a rename), where the file count is all there is.
+fn starting_axis(bytes_total: u64, files_total: usize) -> ProgressAxis {
+    if bytes_total == 0 && files_total > 0 {
+        ProgressAxis::Files
+    } else {
+        ProgressAxis::Bytes
+    }
+}
+
+/// Moves the bottleneck to the other axis once that one's ETA has led by more
+/// than [`AXIS_LEAD`] for [`AXIS_HOLD`] of working time. An axis with no rate
+/// yet can't lead or be led: nothing says how long it takes.
+fn settle_axis(
+    state: &mut PhaseState,
+    warmed_up: bool,
+    eta_bytes: Option<f64>,
+    eta_files: Option<f64>,
+    bytes_total: u64,
+    files_total: usize,
+) {
+    if !warmed_up || (bytes_total == 0 && files_total > 0) {
+        state.axis = starting_axis(bytes_total, files_total);
+        state.challenger_since = None;
+        return;
+    }
+    let (current, other) = match state.axis {
+        ProgressAxis::Bytes => (eta_bytes, eta_files),
+        ProgressAxis::Files => (eta_files, eta_bytes),
+    };
+    let other_leads = matches!((other, current), (Some(other), Some(current)) if other > current * AXIS_LEAD);
+    if !other_leads {
+        state.challenger_since = None;
+        return;
+    }
+    let since = *state.challenger_since.get_or_insert(state.working_elapsed);
+    if state.working_elapsed.saturating_sub(since) >= AXIS_HOLD {
+        state.axis = match state.axis {
+            ProgressAxis::Bytes => ProgressAxis::Files,
+            ProgressAxis::Files => ProgressAxis::Bytes,
+        };
+        state.challenger_since = None;
+    }
+}
+
+/// One axis's seconds to go: remaining work over its rate, `0` with nothing
+/// left, and `None` on a stalled axis that still has work (we don't know how
+/// long it takes, so the other axis decides).
+fn axis_eta(remaining: f64, rate: f64) -> Option<f64> {
+    if rate > 0.0 {
+        Some(remaining / rate)
+    } else if remaining == 0.0 {
+        Some(0.0)
+    } else {
+        None
     }
 }
 
@@ -318,22 +407,7 @@ fn compute_stats(
 /// `max` is the elegant move: the operation can't finish before both axes
 /// are done. When one axis has zero work left (large files done, only small
 /// ones to go), its ETA is `0` and the other axis dominates naturally.
-fn eta_from_axes(remaining_bytes: u64, bytes_rate: f64, remaining_files: usize, files_rate: f64) -> Option<u32> {
-    let eta_bytes = if bytes_rate > 0.0 {
-        Some(remaining_bytes as f64 / bytes_rate)
-    } else if remaining_bytes == 0 {
-        Some(0.0)
-    } else {
-        None
-    };
-    let eta_files = if files_rate > 0.0 {
-        Some(remaining_files as f64 / files_rate)
-    } else if remaining_files == 0 {
-        Some(0.0)
-    } else {
-        None
-    };
-
+fn eta_from_axes(eta_bytes: Option<f64>, eta_files: Option<f64>, any_work_left: bool) -> Option<u32> {
     let combined = match (eta_bytes, eta_files) {
         (Some(b), Some(f)) => b.max(f),
         (Some(b), None) => b,
@@ -343,7 +417,6 @@ fn eta_from_axes(remaining_bytes: u64, bytes_rate: f64, remaining_files: usize, 
 
     // Clamp to ≥1 s while any axis still has work. The UI showing "0 s
     // remaining" while files are still streaming is the bug we're fixing.
-    let any_work_left = remaining_bytes > 0 || remaining_files > 0;
     let seconds = if any_work_left { combined.max(1.0) } else { 0.0 };
 
     Some(seconds.min(u32::MAX as f64).ceil() as u32)

@@ -70,6 +70,17 @@ pub enum WriteOperationType {
     Compress,
 }
 
+/// Which of an operation's two progress counts decides how long it has left:
+/// its bytes, or its file count. Decided once, in `eta.rs`, with hysteresis,
+/// and carried on `write-progress` and the transfer tree's view alike, so every
+/// surface fills its bars along the same axis.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ProgressAxis {
+    Bytes,
+    Files,
+}
+
 /// Phase of the operation (for progress reporting).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "snake_case")]

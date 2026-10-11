@@ -18,8 +18,8 @@ use tauri_specta::Event;
 use crate::operation_log::rollback::SkipBreakdown;
 
 use super::{
-    ConflictId, RecoveredOriginal, TransferActivity, TrashRefusalKind, WriteOperationError, WriteOperationPhase,
-    WriteOperationType,
+    ConflictId, ProgressAxis, RecoveredOriginal, TransferActivity, TrashRefusalKind, WriteOperationError,
+    WriteOperationPhase, WriteOperationType,
 };
 
 // ============================================================================
@@ -66,6 +66,11 @@ pub struct WriteProgressEvent {
     /// `None` during warm-up or when both rates are zero (operation stalled).
     #[serde(default)]
     pub eta_seconds: Option<u32>,
+    /// The axis that decides the ETA, held steady by hysteresis
+    /// (`eta.rs`). Every folder bar in the transfer tree fills along it. `None`
+    /// before the estimator has seen the event.
+    #[serde(default)]
+    pub bottleneck: Option<ProgressAxis>,
     /// Index-derived expected file count, for rendering a progress bar during
     /// the scanning phase before the foolproof re-scan finishes. `None` when
     /// the index doesn't cover all sources, or outside the scanning phase.

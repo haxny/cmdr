@@ -56,6 +56,7 @@ impl WriteProgressEvent {
             bytes_per_second: None,
             files_per_second: None,
             eta_seconds: None,
+            bottleneck: None,
             expected_files_total: None,
             expected_bytes_total: None,
             activity: None,

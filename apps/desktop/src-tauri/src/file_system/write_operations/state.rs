@@ -510,6 +510,7 @@ impl WriteOperationState {
         event.bytes_per_second = Some(stats.bytes_per_second);
         event.files_per_second = Some(stats.files_per_second);
         event.eta_seconds = stats.eta_seconds;
+        event.bottleneck = Some(stats.bottleneck);
 
         // Stash the finished event: see [`last_progress`](Self::last_progress).
         // WITHOUT its activity, which is the one field a re-send must never

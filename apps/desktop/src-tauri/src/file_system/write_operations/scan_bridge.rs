@@ -383,6 +383,7 @@ pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
         bytes_per_second: None,
         files_per_second: None,
         eta_seconds: None,
+        bottleneck: None,
         expected_files_total: counts.expected_files_total,
         expected_bytes_total: counts.expected_bytes_total,
         activity: None,
