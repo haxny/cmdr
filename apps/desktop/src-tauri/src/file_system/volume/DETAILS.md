@@ -442,8 +442,9 @@ destination goes through, plus `path_exists`.
 
 `eject/` (macOS+Linux) owns volume teardown across every kind, so it lives next to the `VolumeManager` and `Volume`
 trait it dispatches over: `mod.rs` holds the pipeline and `EjectError`, `unmount_tool.rs` the `diskutil` / `umount`
-subprocess, `disk_target.rs` + `disk_flight.rs` (macOS) the per-physical-disk eject below, and `holders/` the scan that
-names a refusal's holders.
+subprocess, `disk_target.rs` + `disk_flight.rs` (macOS) the per-physical-disk eject below, `holders/` the scan that
+names a refusal's holders, and `escalate.rs` the normal-then-force takedown of an SMB mount that may be dead ("Eject and
+save" below).
 ❗ **`disk_target.rs` asks IOKit for the default port with the literal 0, ❌ never `kIOMainPortDefault`.** That global
 arrived in macOS 12, dyld binds a data symbol before `main`, and v0.46.0 shipped it: every macOS 10.15 and 11 user got
 `Symbol not found: _kIOMainPortDefault` and an abort at launch, with IOKit itself present all along. `IOKitLib.h` calls
@@ -625,6 +626,31 @@ on the spinner: the tool phase is at most 60 s (the budget, plus one last run th
 timeout), so an eject is at most 80 s (the 5 s ejectability check, the 15 s index stop, then that 60 s), and an SMB
 disconnect, which runs only the tool phase, at most 60 s. The tests script a tool that answers after a set delay
 through the real `within_tool_timeout`, on a paused clock.
+
+**"Eject and save" forces only a mount that didn't answer** (`eject/escalate.rs`). Its one caller is an SMB host's
+address move (`server_move_smb.rs`, `docs/notes/server-address-move.md` § "SMB: a pending move"): a NAS that got a new
+IP leaves its old-address mounts DEAD, and a normal unmount of a dead SMB mount hangs. Each mount gets a normal unmount
+first, a registered volume through the whole `eject()` pipeline (busy gate, index stop, retries) and an unregistered
+kernel mount by path through `run_teardown`. Then:
+
+- Decision: **only `TimedOut` escalates**, to `UnmountVerb::ForceUnmount` (`diskutil unmount force`; Linux `umount -f`,
+  the kernel's force for an unreachable CIFS mount). Why: no answer is what a dead mount gives, and forcing a dead mount
+  loses nothing.
+- Decision: ❌ **a refusal is never forced.** `UnmountRefused` means something has files open there: the mount is LIVE,
+  and forcing it could lose someone's unsaved work in another app. The refusal goes back as-is, holders and all, so the
+  sheet can say who's holding it. Every other answer stops too: `NotResponding` never reached the unmount, so forcing
+  past it would skip the index stop the wedge guard needs, and `Busy` is a transfer in flight.
+- Decision: **the normal attempt keeps the full `TOOL_TIMEOUT`, ❌ no shorter deadline on this path.** A shorter one
+  would read a slow REFUSAL from a live mount as no answer and force it: `diskarbitrationd`'s dissenter scan took up to
+  27.8 s to refuse (above). The cost is up to 30 s on a dead mount, with the sheet's button showing progress the whole
+  time.
+- A registered volume's force runs as its own eject flight (`in_flight::join_or_start`), so the switcher shows it
+  ejecting, and it skips the index stop: the normal eject only reaches the tool, and so its timeout, after the stop let
+  go. A volume gone from the registry by then answers `AlreadyGone` (the unmount the timeout didn't cancel landed).
+- Linux scope: `umount -f` covers a kernel CIFS mount. A GVFS share isn't a kernel mount, so neither verb reaches it;
+  its eject answers whatever Linux's eject answers for one today.
+- Not verified against a real dead mount (one can't be staged in a test): the escalation rule is unit-pinned in
+  `escalate.rs` with scripted answers, and the move's ordering in `server_move_smb_test.rs`.
 
 **No step can hang an eject forever.** Every blocking step in the pipeline runs under a deadline. A disk image whose
 backing FILE lives on a hung SMB share looks like a local ejectable volume, yet its `statfs`/NSURL lookup and its index

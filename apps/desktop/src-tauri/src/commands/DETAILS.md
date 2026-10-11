@@ -112,6 +112,9 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
     matches store rows by that name, or by the address and port a mount dialed. Matching by the typed name once split a
     named host in two, and the made-up second row then took edits meant for the first. Its `address` carries the port
     off 445. Its saved shares are its places (`docs/specs/saved-smb-shares.md`).
+  - `eject_and_update_saved_smb_host` is `update_saved_smb_host` for the sheet's "Eject and save": the same id and
+    fields plus the sheet's attempt id, which `cancel_server_connect` calls off. Both share `smb_hosts::plan_edit`, so
+    they can't read one edit two ways (`docs/notes/server-address-move.md` § "SMB: a pending move").
   - ❗ **`update_saved_smb_host` and `forget_saved_smb_host` take the listing's id and nothing else**: they rebuild the
     same host groups (`smb_hosts::smb_host_group`) and act on the one with that id, so an edit or a Forget can only
     land on the row it was raised on, and Forget drops exactly the store rows that row showed

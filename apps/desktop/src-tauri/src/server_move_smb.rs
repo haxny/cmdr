@@ -18,8 +18,13 @@
 //! ❗ **A share still mounted from the old address refuses the move** (`ShareMounted`):
 //! that's an OS mount Finder or another app may be using, so Cmdr doesn't take it down
 //! behind the person's back, and a share mounted at the old address can't learn its id
-//! at the new one. Eject first. The rest of the refusals and the crash order are the
-//! other protocols' (`server_move.rs`).
+//! at the new one. The refusal offers **"Eject and save"** ([`eject_and_move`]): the
+//! person asks, and every saved share mounted from the old address comes down before the
+//! move, the refusals that touch no mount asked first. A normal unmount goes first, and a
+//! force one only when that didn't answer (a NAS that got a new IP leaves a DEAD mount,
+//! whose normal unmount hangs); a refused one (files open: a LIVE mount) is never forced
+//! and saves nothing (`file_system/volume/eject/escalate.rs`). The rest of the refusals
+//! and the crash order are the other protocols' (`server_move.rs`).
 //!
 //! Why each holder does what it does: `docs/notes/server-address-move.md` § "SMB".
 

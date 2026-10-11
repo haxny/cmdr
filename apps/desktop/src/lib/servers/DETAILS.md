@@ -231,8 +231,14 @@ edit mode never steers the username or the root, as it does in add mode. An SMB 
 holds (`updateSavedSmbHost(id, name, username, address)`, through `smbAddressFrom`), and the backend moves the host when
 it names another server: its shares and password move at once, and each share's favorites and tabs follow at its first
 mount there (`docs/notes/server-address-move.md` § "SMB: a pending move"). A share still mounted from the old address
-refuses it (`share_mounted`, under the address, naming the share to eject). ❗ This is `ServerFormFields`' own rule and
-says nothing about sign-in mode, where username editability is the SHAPE VARIANT's property (§ "The renderer table").
+refuses it (`share_mounted`, under the address, naming the share to eject), and the refusal offers **"Eject and save"**
+(`offersEjectAndSave`, a mini button with a help line, like Add anyway): `ejectAndUpdateSavedSmbHost` with a fresh
+`newServerAttemptId()` ejects every share still mounted from the old address, then saves. While it runs the button reads
+"Ejecting…" with a spinner, blocked with `ariaDisabled` (❌ not `disabled`, which would drop focus) inside a polite live
+region, and the primary button keeps its own label. The sheet's Cancel, close, and Escape all go through `cancel()`,
+which calls a running run off (`cancelServerConnect(ejectAttempt)`), so a closed sheet never saves the edit. A refused
+eject reads as `share_eject_refused` and offers the button again. ❗ This is `ServerFormFields`' own rule and says
+nothing about sign-in mode, where username editability is the SHAPE VARIANT's property (§ "The renderer table").
 
 **Edit mode opens on the first field it lets a person change** (`focusFirstEditableField`), which for an SFTP, WebDAV,
 or SMB server and an "Other S3-compatible" account is the address. Decision (David, 2026-10-11): keep it there, since
@@ -375,8 +381,11 @@ token is the only sane state, and a revoked token surfaces as `needs_sign_in` be
   Nothing was saved: the move drops the old session, which would cut that work off. Under `form`, since no field fixes
   it; letting the work finish or canceling it does.
 - `share_mounted` (SMB): edit mode, a move while one of the host's saved shares is still mounted from the old address.
-  Under `address`, naming the share (`RefusalSubject.share`): Cmdr doesn't eject an OS mount for a move, so the person
-  ejects it and saves again.
+  Under `address`, naming the share (`RefusalSubject.share`): Cmdr doesn't eject an OS mount on its own, so the person
+  ejects it and saves again, or presses "Eject and save" below it.
+- `share_eject_refused` (SMB): "Eject and save" couldn't eject a share (`EjectAndSaveOutcome::EjectRefused`), so nothing
+  was saved. Under `address`, naming the share, with `RefusalSubject.ejectReason` the eject copy's own sentence
+  (`renderEjectError`, so who's holding it reads the same as an eject toast). Offers "Eject and save" again.
 - `access_denied` (S3): the bucket refused the key, which a bodyless 403 can't split into a wrong secret and a key with
   no rights here (Garage answers a wrong secret this way too), so it asks about both. Under `secret`, and it opens the
   sheet (`needsAHuman`), since a wrong secret is one thing it means.

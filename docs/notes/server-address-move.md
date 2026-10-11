@@ -164,10 +164,31 @@ the new ids up front: re-keying favorites and tabs to a guessed id would be over
   holds the new id.
 - `OperationRunning`: an operation names one of the host's share places.
 - `ShareMounted` (SMB only): a saved share is still mounted from the old address, registered under its place id or in
-  the kernel's mount table from the old server. Decision: ❌ Cmdr doesn't unmount it. It's an OS mount Finder or another
-  app may be using, which Cmdr may not have made, and a share mounted at the old address keeps answering under the old
-  id, so its first mount at the new one could never happen. The sentence names the share; the person ejects it and saves
-  again.
+  the kernel's mount table from the old server. Decision: ❌ Cmdr doesn't unmount it on its own. It's an OS mount Finder
+  or another app may be using, which Cmdr may not have made, and a share mounted at the old address keeps answering
+  under the old id, so its first mount at the new one could never happen. The sentence names the share, and the sheet
+  offers "Eject and save" below it.
+
+**"Eject and save"** (`eject_and_update_saved_smb_host` → `server_move_smb::eject_and_move`). The common reason to edit
+the address is a NAS that got a new IP, which leaves the old mount DEAD: ejecting it by hand hangs or needs a force
+eject. So the refusal carries a button, and the person's click is the consent. The order:
+
+1. The refusals that touch no mount (`AddressTaken`, `OperationRunning`), asked BEFORE any eject: an eject followed by a
+   refused save is the worst outcome this could have.
+2. EVERY mount of a saved share from the old address, not only the one the refusal named: each registered one through
+   the eject pipeline (`eject::take_down_smb_volume`: busy gate, index stop, retries, the volume manager's teardown),
+   then each kernel mount none of them is rooted at by path (`take_down_smb_mount`). Each is a normal unmount first, and
+   a FORCE unmount only when that one didn't answer; the decision and its why:
+   `apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Eject" ("Eject and save" paragraph).
+3. The move, which asks every refusal again. ❗ It skips the registry check for the places this run just ejected: the
+   unmount notification lands after the tool answers, and that lag must not refuse the move the eject was for. The
+   kernel's table has no lag, so it's still asked.
+
+A refused eject (`EjectRefused`, carrying the typed `EjectError`) stops the run and saves nothing; shares ejected before
+it stay ejected, which is all an unmount can do. The sheet's Cancel calls the run off through `cancel_server_connect`
+(its own `AttemptTable`), checked before each eject and before the save, so a closed sheet never saves the edit. Not
+verified against a real dead mount (no way to stage one in tests): the escalation rule and the ordering are unit-pinned
+with a scripted takedown.
 
 **A dial to the old address that lands after Save** is let go, the same guarantee as the other protocols':
 `connect_saved_share` files its place id with the `DialTicket` `connect_saved_place` took before reading the row, and
