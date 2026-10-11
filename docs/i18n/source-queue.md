@@ -282,3 +282,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   the noun the other keeps. Pick one; every locale reused the "more items" form, which reads right either way.
 - `fileOperations.sourcesGone.*`: "this delete" / "A queued delete" use delete as a noun, and "since you queued it" has
   no `queued` concept. Locales rendered it as "while it waited its turn", matching the queue's Waiting status.
+- `transfer.metadataLeftBehind`: says "This server" though the description lists phones and cloud buckets too; "those"
+  points back at the `{classes}` insert. Name the destination generically and use a noun ("that information").
+- `transfer.metadataClass.*` joined by `formatDisjunctionList`: "or" inside a negation reads stiff in fr (wants `ni`),
+  hu, and nl; a conjunction ("and") or a colon-list frame would read naturally everywhere. (fr, hu, nl)

@@ -54,5 +54,29 @@
   "transfer.changedDuringMove": "{countText} {count, plural, one {Objekt} other {Objekte}} {count, plural, one {wurde} other {wurden}} während des Bewegens geändert und {count, plural, one {bleibt} other {bleiben}} in {scope, select, manyFolders {{folderName} und weiteren Quellordnern} other {{folderName}}}.",
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
+  },
+  "transfer.metadataLeftBehind": "Dieser Server kann {classes} nicht speichern, deshalb sind diese Angaben nicht mitgekommen.",
+  "@transfer.metadataLeftBehind": {
+    "sourceHash": "e8c3789"
+  },
+  "transfer.metadataClass.creationDates": "Erstellungsdaten",
+  "@transfer.metadataClass.creationDates": {
+    "sourceHash": "4b3c6e7"
+  },
+  "transfer.metadataClass.permissions": "Zugriffsrechte",
+  "@transfer.metadataClass.permissions": {
+    "sourceHash": "4fe3cdd"
+  },
+  "transfer.metadataClass.lockedAndHidden": "die Markierungen „Geschützt“ und „Verborgen“",
+  "@transfer.metadataClass.lockedAndHidden": {
+    "sourceHash": "18174cd"
+  },
+  "transfer.metadataClass.extendedAttributes": "Finder-Tags",
+  "@transfer.metadataClass.extendedAttributes": {
+    "sourceHash": "fd34d8e"
+  },
+  "transfer.metadataClass.folderDates": "Datumsangaben von Ordnern",
+  "@transfer.metadataClass.folderDates": {
+    "sourceHash": "a5ea852"
   }
 }

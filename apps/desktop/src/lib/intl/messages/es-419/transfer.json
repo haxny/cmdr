@@ -42,5 +42,9 @@
   "transfer.appearedDuringMove": "{count, plural, one {{countText} elemento apareció} many {{countText} elementos aparecieron} other {{countText} elementos aparecieron}} en {scope, select, manyFolders {{folderName} y en otras carpetas de origen} other {{folderName}}} mientras se movían los archivos y {count, plural, one {se queda ahí} many {se quedan ahí} other {se quedan ahí}}.",
   "@transfer.appearedDuringMove": {
     "sourceHash": "62f0a33"
+  },
+  "transfer.metadataLeftBehind": "Este servidor no puede almacenar {classes}, así que esa información se quedó atrás.",
+  "@transfer.metadataLeftBehind": {
+    "sourceHash": "9313d78"
   }
 }

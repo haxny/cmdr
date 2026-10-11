@@ -54,5 +54,29 @@
   "transfer.changedDuringMove": "移動過程中有 {countText} {count, plural, other {個項目}}發生更動，仍留在 {scope, select, manyFolders {{folderName} 等來源資料夾} other {{folderName}}} 中。",
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
+  },
+  "transfer.metadataLeftBehind": "這部伺服器無法儲存 {classes}，所以這些資訊沒有一起帶過去。",
+  "@transfer.metadataLeftBehind": {
+    "sourceHash": "e8c3789"
+  },
+  "transfer.metadataClass.creationDates": "製作日期",
+  "@transfer.metadataClass.creationDates": {
+    "sourceHash": "4b3c6e7"
+  },
+  "transfer.metadataClass.permissions": "權限",
+  "@transfer.metadataClass.permissions": {
+    "sourceHash": "4fe3cdd"
+  },
+  "transfer.metadataClass.lockedAndHidden": "「已鎖定」和「隱藏」標記",
+  "@transfer.metadataClass.lockedAndHidden": {
+    "sourceHash": "18174cd"
+  },
+  "transfer.metadataClass.extendedAttributes": "Finder 標籤",
+  "@transfer.metadataClass.extendedAttributes": {
+    "sourceHash": "fd34d8e"
+  },
+  "transfer.metadataClass.folderDates": "資料夾日期",
+  "@transfer.metadataClass.folderDates": {
+    "sourceHash": "a5ea852"
   }
 }
