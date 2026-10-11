@@ -439,7 +439,7 @@
     "avoid": [
       {
         "form": "eliminar",
-        "why": "names the user-facing delete operation; English softens to clears away for the same reason"
+        "why": "names the user-facing delete operation, so the tidy-up sense (the progress step, the quit gate) never says it. A line naming leftovers the user may delete (stagedLeftover.*) rightly says eliminará"
       },
       {
         "form": "Ordenando",

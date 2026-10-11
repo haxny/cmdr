@@ -431,9 +431,13 @@
   "clean-up": {
     "chosen": "limpar",
     "accept": ["limpando", "limpeza"],
-    "proseAccept": ["apag", "remov"],
+    "proseAccept": ["remov"],
     "forms": "progress label: (limpando); prose: o Cmdr remove o que ficou gravado pela metade",
     "avoid": [
+      {
+        "form": "apagar",
+        "why": "the delete verb; the quit gate lists queue rows that say deleting, and the line reassures"
+      },
       {
         "form": "Organizando",
         "why": "Finder's compress step AR5 (Cleaning up) says Organizando, the arranging sense; this step deletes unfinished files"
@@ -441,7 +445,11 @@
     ],
     "confidence": "tentative",
     "sources": "MS pt-BR (Clean Up → Limpar); Finder AR5 (Cleaning up → Organizando) rejected as another sense; shipped pt catalog",
-    "note": "Tentative only because Finder's own Cleaning up step words it differently."
+    "note": "Tentative only because Finder's own Cleaning up step words it differently.",
+    "exceptions": {
+      "fileOperations.cancelRollback.stagedLeftover.named": "names one leftover the user may delete too, so Cmdr removing it is plain apagar",
+      "fileOperations.cancelRollback.stagedLeftover.counted": "names leftovers the user may delete too, so Cmdr removing them is plain apagar"
+    }
   },
   "clear": {
     "chosen": "Limpar",

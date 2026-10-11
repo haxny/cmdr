@@ -99,7 +99,7 @@
   "@main.quit.title": {
     "sourceHash": "2671a89"
   },
-  "main.quit.body": "Tout ce qui est déjà terminé le reste. Ce qui est encore en cours d’écriture s’arrête là où il en est, et Cmdr supprime tout fichier à moitié écrit.",
+  "main.quit.body": "Tout ce qui est déjà terminé le reste. Ce qui est encore en cours d’écriture s’arrête là où il en est, et Cmdr nettoie ce qui reste à moitié écrit.",
   "@main.quit.body": {
     "sourceHash": "79a69f9"
   },

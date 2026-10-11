@@ -518,17 +518,21 @@
     "sources": "macOS Finder N137 (Choose Application… → Choisir une application…)"
   },
   "clean-up": {
-    "accept": ["nettoyage"],
-    "proseAccept": ["s’en chargera", "retirer", "supprime"],
+    "accept": ["nettoyage", "nettoie"],
+    "proseAccept": ["s’en chargera", "retirer"],
     "avoid": [
       {
         "form": "effacer",
         "why": "the erase/wipe sense"
+      },
+      {
+        "form": "supprime",
+        "why": "the delete verb; the quit gate lists queue rows saying Suppression, and the line reassures. A line naming leftovers the user may delete (stagedLeftover.*) can say supprimer"
       }
     ],
     "chosen": "nettoyer",
     "confidence": "high",
-    "forms": "progress label: (nettoyage en cours); prose: clears away what it leaves half-written → supprime tout fichier à moitié écrit; clears it on a later transfer → s’en chargera lors d’un transfert ultérieur",
+    "forms": "progress label: (nettoyage en cours); prose: clears away what it leaves half-written → nettoie ce qui reste à moitié écrit; clears it on a later transfer → s’en chargera lors d’un transfert ultérieur",
     "sources": "macOS Finder AR5 (Cleaning up → Nettoyage); MS (Clean Up → Nettoyer); catalog (main.quit.body, fileOperations.cancelRollback.stagedLeftover.*)"
   },
   "clear": {
