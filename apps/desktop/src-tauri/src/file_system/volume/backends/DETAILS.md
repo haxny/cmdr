@@ -212,7 +212,7 @@ lists and stats through it, and so do the paths that read a local directory with
 unregistered-volume fallback and its per-entry re-stat, `tags.rs`, and `create.rs`'s synthetic row. It's the local
 backend's reader, not the listing engine's, which is why it sits here and `listing/` only sees the `FileEntry`s it
 returns. `local_posix/mutation.rs` is the other half: `patch_listing_after_local_mutation`, what a successful local
-mutation means for the listing cache (volume `DETAILS.md` § "Mutation notification").
+mutation means for the listing cache (`file_system/volume/DETAILS.md` § "Mutation notification").
 
 **Progress.** The pane's "Loaded N files…" readout needs `on_progress` fed while the stat loop runs (why it matters:
 `listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the work happens.
