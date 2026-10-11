@@ -1510,6 +1510,9 @@ leftover on a USB stick meets whichever happens first, so rules that drifted apa
 whether the drive was plugged in at launch.
 
 - **A temp** (`.cmdr-tmp-*`) holds bytes on their way in. Nothing else has them, so a leftover is garbage and goes.
+  A local one that refuses its `unlink` is cleared (`uchg`, ACL) and retried once (`Surface::remove_temp`): an APFS
+  clone copies the source's Locked flag and ACL onto the temp in the same call, so a crash before the landing clears
+  them leaves one. ❌ Only a temp: an aside is the user's own file, and its flags stay theirs.
 - **An aside** (`.cmdr-temp-*`) holds bytes that were ALREADY the user's, renamed out of the way so a replacement
   could take their name. It goes back to its own name when that name is free; it is removed ONLY when the replacement
   is provably complete, which for `FileAside` means a regular file of exactly the recorded size; in every other case

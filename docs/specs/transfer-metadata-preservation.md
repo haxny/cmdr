@@ -7,11 +7,11 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: M0 (characterization) and M2 (extract quarantine) done, M1 next (2026-10-11); review rounds 1 (correctness
-and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced
-against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file
-above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused
-milestone agent run).
+**Status**: M0 (characterization), M1 (the Locked landing), and M2 (extract quarantine) done (2026-10-11); review rounds
+1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a
+seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the
+notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one
+focused milestone agent run).
 
 ## Loud rules
 
@@ -161,10 +161,9 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
     map, `:323`).
   - ❗ Phase 3's `OverwriteOlder` compares the STAGED copy's mtime with the destination's (`T/linux_copy.rs:128-131`
     explains), so mtime on the staged copy is load-bearing for conflict logic.
-  - A Locked SOURCE can't be deleted by Phase 4 (`EPERM`). M0 found the one-volume rig never gets there: its staged copy
-    takes the clone arm, which carries `uchg` onto the temp, so the staging landing fails first (`EPERM`) and leaves
-    that Locked temp in the staging tree, where no cleanup can remove it. On a real cross-volume move the chunked arm
-    lands it unlocked and Phase 4's delete is what refuses; no cell pins that path yet.
+  - A Locked or `deny delete` SOURCE can't be deleted by Phase 4 (`EPERM` / `EACCES`). Since M1 the staged copy lands
+    unlocked and ACL-free, takes its flag and ACL after Phase 3, and then Phase 4's delete refuses: the move stops with
+    `PermissionDenied`, every original kept and every copy landed (`metadata_matrix_tests.rs`, both move cells).
 
 ### Cross-volume (the volume engine)
 
@@ -247,11 +246,11 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 "keep" = preserved today; "LOST" = the destination can hold it and we drop it; "n/a" = the destination can't hold it;
 "FAIL" = the copy itself fails over metadata (a rule-3 bug).
 
-- **Local, same APFS volume (clone)**: files keep everything, but Locked or `deny delete` files FAIL to land (bug).
-  Symlink dates LOST. Folders: birth, mode, xattrs, ACL, flags LOST.
-- **Local, other APFS / HFS+ volume (chunked)**: `deny delete` files FAIL to land (ACL on the temp); file birth LOST
-  (shows mtime), flags LOST, xattrs/mode/mtime/atime keep (mode only if the time-set succeeded, rule 1). Folders as
-  above. Symlink dates LOST.
+- **Local, same APFS volume (clone)**: files keep everything (Locked and `deny delete` files land since M1). Symlink
+  dates LOST. Folders: birth, mode, xattrs, ACL, flags LOST.
+- **Local, other APFS / HFS+ volume (chunked)**: `deny delete` files land with their ACL (M1); file birth LOST (shows
+  mtime), flags LOST, xattrs/mode/mtime/atime keep (mode only if the time-set succeeded, rule 1). Folders as above.
+  Symlink dates LOST.
 - **Local, exFAT / FAT**: file birth LOST (shows now), `hidden`/Locked LOST (FAT attributes can hold them), xattrs keep
   as `._` sidecars, resource forks n/a (the FSKit drivers refuse them, notes § "Results"), ACLs/mode n/a. A temp's
   sidecar, birth, and mtime survive the landing rename on exFAT (verified in review round 1).
@@ -560,6 +559,21 @@ decided; then the ask itself, creation and modification dates on files AND folde
 - **Lanes**: `pnpm check rust-tests clippy cfg-gate cargo-deny cargo-machete module-cycles`, then
   `pnpm check clippy-linux rust-tests-linux` (the helper builds on Linux).
 - **DONE**: no copy or move fails over metadata; every rule-9 path has a test; the commit names the flipped cells.
+- **Done** (2026-10-11). Where the code differs from the plan above:
+  - Phase 4 refuses a `deny delete` original as well as a Locked one (`EACCES`, verified by the folder move cell), so a
+    cross-FS move of either lands the copy with its metadata and stops with `PermissionDenied`, every original kept.
+    M0's cell comment ("the source is gone") was wrong. Out of scope like the same-drive Locked move: M10's follow-up
+    issue covers both.
+  - Every rule-9 path clears only after its first removal is refused (not only the sweep), so a plain item costs exactly
+    its removal: `cmdr_fs::metadata::remove_{file,dir,tree}_clearing_blockers`.
+  - The sweep clears TEMPS only (`Surface::remove_temp`); an aside is the user's own file.
+  - `RollbackRunner::perform` answers `ActRefusal::{Volume, Locked}` so the planner can type `SkipReason::Locked`. No
+    automated cell reaches `Locked`: a non-root test can't set `schg`.
+  - `LandedMetadata` holds the ACL and `UserFlags` only; M4 adds a folder's final mode.
+  - The staging cleanup is `cancellable::remove_staging_tree_in_background` (was `remove_dir_all_in_background`).
+  - The locked `libc` doesn't declare `lchflags`, so `cmdr-fs` declares it (`metadata/flags.rs`).
+  - Two English strings for the cancel toast's `locked` line (`fileOperations.cancelRollback.reason.locked.*`), David's
+    to review; translations come from the translator agent.
 
 ### M2: Extract keeps Gatekeeper's quarantine. Size: S (1 session)
 
@@ -846,7 +860,8 @@ decided; then the ask itself, creation and modification dates on files AND folde
 
 - An adversarial conformance review against the invariants below, a docs audit reading every commit body, the
   `docs/notes` evidence linked from the right `DETAILS.md`, a follow-up issue (tagged `claude-created`) for the Locked
-  same-drive move M0 pinned, and this spec wiped per `docs/specs/DETAILS.md`.
+  same-drive move M0 pinned and the cross-FS move M1 pinned stopping at Phase 4 over a Locked or `deny delete` original,
+  and this spec wiped per `docs/specs/DETAILS.md`.
 
 ## The conformance matrix
 

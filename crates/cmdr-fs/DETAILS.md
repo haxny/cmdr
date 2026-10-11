@@ -42,6 +42,8 @@ the next section.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and
   its retirement, re-exported from it.
+- `metadata/`: what a copy puts on the item it wrote beyond the bytes, and clearing what makes Cmdr's own items refuse a
+  rename or an unlink. § "`metadata`: what a copy keeps, and when it goes on".
 - `staging.rs`: `StagingTemp`, the ONLY way to name a scratch file. `src/staging/names.rs` is the one name builder
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `archive_format.rs` (sole source of truth for archive detection), `firmlinks.rs` (`normalize_path`; the index
@@ -107,9 +109,39 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
   reaches upward for it or grows a seam for something with no per-backend variation. The mint's only tie to write-op
   state is an `Option<Weak<()>>` liveness token the CALLER hands over, which names no app type. The two visibility
   settings stay app-side (below).
+- **`metadata`.** The ordering rules for a copy's metadata have one home, and the archive mutator (a crate) has to reach
+  them as well as the app's copy engines, so they can't live under `transfer/`.
 - **`wait_until` / `wait_until_async`.** Behind the `testing` feature. The rest of the app's `test_support.rs` can't
   follow: `COUNTING_ALLOCATOR` is a `#[global_allocator]`, and a second one in any binary linking this crate is a hard
   compile error.
+
+## `metadata`: what a copy keeps, and when it goes on
+
+`src/metadata/`. Evidence for every rule here: `docs/notes/transfer-metadata-experiments-2026-10-11.md` (verified on
+macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
+
+- **Total by type.** `apply_landed` returns a `MetadataReport` (per class: `Kept`, `Refused`, `NotApplicable`, `Absent`)
+  and has no `Result`, so a refused metadata write can't fail a copy. Each class is its own step; ❌ never chain them
+  with `?`, or one refusal silently skips the next.
+- **Rename-blockers go on the LANDED item.** `uchg`/`uappnd` on an item refuses `rename(2)` with `EPERM`, a
+  `deny delete` ACL with `EACCES`. So `LandedMetadata` (the ACL, then the user flags) is applied after the landing
+  rename, ACL first because `uchg` also refuses a later ACL write. `apply_landed` ADDS flags to what the item already
+  wears (`lchflags`), so a Hidden the clone carried stays.
+- **`clear_blockers` is the probe's second half.** It clears `uchg`/`uappnd` (flags first, for the same ACL reason) and
+  strips the ACL, never through a symlink (`lstat`, `lchflags`, `AclOption::SYMLINK_ACL`), and hands back what it
+  cleared so a landing can put it back. `SF_*` flags answer `Refused`: only root can clear them.
+- **The `remove_*_clearing_blockers` helpers clear only after a refusal.** One removal, then on `PermissionDenied` one
+  clear and one retry, so an ordinary item costs exactly its removal. `remove_tree_clearing_blockers` walks the tree
+  only after `remove_dir_all` failed, and is for a tree Cmdr owns whole (a cross-FS move's staging folder). Who calls
+  them and why: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "What a reversal does
+  with that identity".
+- **Linux**: a POSIX ACL carries no `deny` entries and blocks no rename; `chattr` flags need `CAP_LINUX_IMMUTABLE`. So
+  flags answer `NotApplicable`, nothing ever needs clearing, and a source ACL counts only when it has more than the
+  three mode entries every file has (`chmod` carries those).
+- **`lchflags` is declared here**, not taken from `libc`: the locked `libc` doesn't declare it yet. Drop the declaration
+  once it does.
+- **Test seam**: `helper_calls_on_this_thread()` (`testing` feature) counts calls into the syscall-making entry points,
+  so a test proves a plain file never reaches them.
 
 ## Scratch names fit in 143 bytes
 

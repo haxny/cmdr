@@ -389,7 +389,12 @@ cancelable managed op is `file_system/write_operations/rollback.rs::dispatch_rol
 
 `rollback.rs` **plans**: it pages the journal, verifies each item, decides the inverse act, maps every failure to a
 typed skip reason, and keeps the books. It performs nothing. Each decided act goes to an injected `RollbackRunner`
-(`rollback/runner.rs`), whose production implementation is `write_operations::rollback::ReversalRunner`.
+(`rollback/runner.rs`), whose production implementation is `write_operations::rollback::ReversalRunner`. An act that
+didn't happen comes back as an `ActRefusal`: the volume's raw `VolumeError`, which the planner maps to a skip, or
+`Locked`, which `ReversalRunner` answers for a verified LOCAL item whose removal was refused and whose lock it can't clear
+(`schg`). Before that answer it clears the item's Locked flag and ACL and retries the delete once, since a copy keeps
+both and either makes `unlink` refuse; it does this in the runner, ❌ never in the volume, whose delete is also F8's
+(`file_system/write_operations/transfer/DETAILS.md` § "What a reversal does with that identity").
 
 Why the seam is here: the act a cross-volume restore needs is the staged, retrying, stall-detecting per-file transfer,
 and that machinery is `pub(in write_operations)` behind the `transfer::volume` facade — unreachable from
