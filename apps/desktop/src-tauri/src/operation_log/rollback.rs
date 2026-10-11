@@ -593,20 +593,28 @@ async fn remove_file_if_unchanged(vm: &VolumeManager, runner: &dyn RollbackRunne
         Err(_) => return ItemResult::Skipped(SkipReason::Failed),
     };
     match verify_snapshot(unit.size, unit.mtime, live.size, live.modified_at) {
-        SnapshotVerdict::Match => match runner
-            .perform(InverseAct::RemoveFile {
-                volume: &volume,
-                path: &path,
-            })
-            .await
-        {
-            Ok(()) => ItemResult::Reversed,
-            Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&[(&*volume, path.as_path())]),
-            Err(ActRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
-            Err(ActRefusal::Volume(_)) => ItemResult::Skipped(SkipReason::Failed),
-        },
+        SnapshotVerdict::Match => {
+            let removed = runner
+                .perform(InverseAct::RemoveFile {
+                    volume: &volume,
+                    path: &path,
+                })
+                .await;
+            removal_verdict(removed, &*volume, &path)
+        }
         SnapshotVerdict::Drift => ItemResult::Skipped(SkipReason::Drift),
         SnapshotVerdict::Unverifiable => ItemResult::Skipped(SkipReason::UnverifiablePrecondition),
+    }
+}
+
+/// The verdict on a removal the planner decided: a file verified unchanged, or a
+/// directory verified empty.
+fn removal_verdict(removed: Result<(), ActRefusal>, volume: &dyn Volume, path: &Path) -> ItemResult {
+    match removed {
+        Ok(()) => ItemResult::Reversed,
+        Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&[(volume, path)]),
+        Err(ActRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
+        Err(ActRefusal::Volume(_)) => ItemResult::Skipped(SkipReason::Failed),
     }
 }
 
@@ -624,18 +632,15 @@ async fn remove_dir_if_empty(vm: &VolumeManager, runner: &dyn RollbackRunner, un
     // since must not be swept away. A `seq DESC` stream removes the dir's own
     // (unchanged) contents first, so a genuinely-restored tree is empty here.
     match volume.list_directory(&path, None).await {
-        Ok(entries) if entries.is_empty() => match runner
-            .perform(InverseAct::RemoveDir {
-                volume: &volume,
-                path: &path,
-            })
-            .await
-        {
-            Ok(()) => ItemResult::Reversed,
-            Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&[(&*volume, path.as_path())]),
-            Err(ActRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
-            Err(ActRefusal::Volume(_)) => ItemResult::Skipped(SkipReason::Failed),
-        },
+        Ok(entries) if entries.is_empty() => {
+            let removed = runner
+                .perform(InverseAct::RemoveDir {
+                    volume: &volume,
+                    path: &path,
+                })
+                .await;
+            removal_verdict(removed, &*volume, &path)
+        }
         Ok(_) => ItemResult::Skipped(SkipReason::DirNotEmpty),
         Err(_) => ItemResult::Skipped(SkipReason::Failed),
     }
