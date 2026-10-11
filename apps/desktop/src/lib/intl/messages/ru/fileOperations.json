@@ -938,11 +938,11 @@
   },
   "fileOperations.cancelRollback.reason.locked.named": "Оставлено на месте: {name}. Объект защищен, и Cmdr не может снять защиту.",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "sourceHash": "1345440"
+    "sourceHash": "5d36672"
   },
   "fileOperations.cancelRollback.reason.locked.counted": "Оставлено на месте: {countText} {count, plural, one {объект} few {объекта} many {объектов} other {объекта}}. Они защищены, и Cmdr не может снять защиту.",
   "@fileOperations.cancelRollback.reason.locked.counted": {
-    "sourceHash": "9070a49"
+    "sourceHash": "4830a5e"
   },
   "fileOperations.cancelRollback.stagedLeftover.named": "Не удалось убрать незавершенную копию в месте назначения: {name}. Ее можно спокойно удалить, а Cmdr уберет ее сам при одной из следующих передач туда.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {

@@ -941,11 +941,11 @@
   },
   "fileOperations.cancelRollback.reason.locked.named": "{name} laissé sur place : il est verrouillé, et Cmdr ne peut pas le déverrouiller.",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "sourceHash": "1345440"
+    "sourceHash": "5d36672"
   },
   "fileOperations.cancelRollback.reason.locked.counted": "{countText} {count, plural, one {élément laissé} many {éléments laissés} other {éléments laissés}} sur place : ils sont verrouillés, et Cmdr ne peut pas les déverrouiller.",
   "@fileOperations.cancelRollback.reason.locked.counted": {
-    "sourceHash": "9070a49"
+    "sourceHash": "4830a5e"
   },
   "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr n’a pas pu supprimer {name}, une copie incomplète restée à destination. Vous pouvez la supprimer sans risque, et Cmdr s’en chargera lors d’un transfert ultérieur vers cet endroit.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {

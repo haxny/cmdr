@@ -940,11 +940,11 @@
   },
   "fileOperations.cancelRollback.reason.locked.named": "{name} ficou onde está: tem um bloqueio que o Cmdr não consegue remover.",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "sourceHash": "1345440"
+    "sourceHash": "5d36672"
   },
   "fileOperations.cancelRollback.reason.locked.counted": "{count, plural, one {{countText} item ficou onde está: tem um bloqueio que o Cmdr não consegue remover} many {{countText} itens ficaram onde estão: têm um bloqueio que o Cmdr não consegue remover} other {{countText} itens ficaram onde estão: têm um bloqueio que o Cmdr não consegue remover}}.",
   "@fileOperations.cancelRollback.reason.locked.counted": {
-    "sourceHash": "9070a49"
+    "sourceHash": "4830a5e"
   },
   "fileOperations.cancelRollback.stagedLeftover.named": "Não foi possível apagar {name}, uma cópia incompleta que ficou no destino. Você pode apagá-la sem problema, e o Cmdr também vai apagá-la numa transferência posterior para lá.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {

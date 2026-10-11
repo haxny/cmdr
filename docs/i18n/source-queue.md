@@ -253,8 +253,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `servers.refusal.shareMounted`: "{name} is still mounted" makes gendered locales agree with an insert; most named the
   type first ("The share {name}…"). Consider "The share {name} is still mounted…" in English too. (es, fr, pt, ru, sv)
 - `fileExplorer.clipboard.copiedPaths` vs `.copied`: two toasts of one family, but "Copied 5 paths." ends with a period
-  and "Copied 5 items" doesn't. Pick one; every locale mirrors whichever English does.
-- `fileOperations.cancelRollback.reason.locked.*`: the description says a system-level lock only an administrator can
-  remove (`schg`), but the `locked` concept is Finder's Get Info checkbox (`uchg`). Say which, so locales know whether
-  the Finder word fits. Also "can't undo" here means unlock, not Undo: say "Cmdr can't unlock it". (all locales used the
-  unlock verb; `undo` got a `notMatch`)
+  and "Copied 5 items" doesn't. Pick one; every locale mirrors whichever English does. remove (`schg`), but the `locked`
+  concept is Finder's Get Info checkbox (`uchg`). Say which, so locales know whether the Finder word fits. Also "can't
+  undo" here means unlock, not Undo: say "Cmdr can't unlock it". (all locales used the unlock verb; `undo` got a
+  `notMatch`)

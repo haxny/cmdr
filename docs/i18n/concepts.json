@@ -3421,7 +3421,7 @@
     "en": "Undo",
     "match": ["undo", "undone", "undoing", "can't be undone"],
     "note": "Three different actions share the English word; many locales need three words.",
-    "notMatch": ["undo the move", "locked in a way cmdr can't undo"],
+    "notMatch": ["undo the move"],
     "sense": "Reversing the last action (text undo, putting trashed files back, reverting an AI rename run)."
   },
   "unexpected": {
@@ -3438,7 +3438,7 @@
     "distinct": ["locked", "password-protected"],
     "en": "unlock",
     "match": ["unlock", "unlocks", "unlocking", "unlocked"],
-    "notMatch": ["unlock it in finder"],
+    "notMatch": ["unlock it in finder", "locked, and cmdr can't unlock"],
     "sense": "Opening a password-protected archive with its password."
   },
   "unplug": {

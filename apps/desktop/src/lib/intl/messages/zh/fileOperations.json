@@ -937,11 +937,11 @@
   },
   "fileOperations.cancelRollback.reason.locked.named": "保留了 {name}：它被锁定了，Cmdr 无法解锁。",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "sourceHash": "1345440"
+    "sourceHash": "5d36672"
   },
   "fileOperations.cancelRollback.reason.locked.counted": "保留了 {countText} {count, plural, other {个项目}}：它们被锁定了，Cmdr 无法解锁。",
   "@fileOperations.cancelRollback.reason.locked.counted": {
-    "sourceHash": "9070a49"
+    "sourceHash": "4830a5e"
   },
   "fileOperations.cancelRollback.stagedLeftover.named": "没能删除 {name}，这是留在目标位置的一个不完整副本。你可以放心删掉它，Cmdr 之后往那里传输时也会清掉它。",
   "@fileOperations.cancelRollback.stagedLeftover.named": {

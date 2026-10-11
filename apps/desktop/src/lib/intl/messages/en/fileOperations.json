@@ -1658,15 +1658,15 @@
     }
   },
 
-  "fileOperations.cancelRollback.reason.locked.named": "Left {name} where it is: it’s locked in a way Cmdr can’t undo.",
+  "fileOperations.cancelRollback.reason.locked.named": "Left {name} where it is: it’s locked, and Cmdr can’t unlock it.",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "description": "One line in the bulleted list of what a cancelled copy or move’s undo left behind. This version is used when the reason applies to exactly ONE item, so the line names it. The item is one Cmdr itself copied, but it carries a system-level lock that only an administrator can remove, so the undo couldn’t delete it. Rare. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
+    "description": "One line in the bulleted list of what a cancelled copy or move’s undo left behind. This version is used when the reason applies to exactly ONE item, so the line names it. The item is one Cmdr itself copied, but it’s locked, and Cmdr’s own undo couldn’t clear the lock (usually a system-level lock only an administrator can remove), so the undo couldn’t delete it. Use your language’s macOS word for Locked (Finder’s Get Info checkbox). Rare. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
     "placeholders": {
       "name": "the item’s own name as it is on disk right now, e.g. invoice-2026.pdf. Uncontrolled text of any length, in any script, so keep the sentence readable whatever lands here, and never translate it."
     }
   },
 
-  "fileOperations.cancelRollback.reason.locked.counted": "Left {countText} {count, plural, one {item} other {items}} where they are: they’re locked in a way Cmdr can’t undo.",
+  "fileOperations.cancelRollback.reason.locked.counted": "Left {countText} {count, plural, one {item} other {items}} where they are: they’re locked, and Cmdr can’t unlock them.",
   "@fileOperations.cancelRollback.reason.locked.counted": {
     "description": "The same line as fileOperations.cancelRollback.reason.locked.named, used when the reason applies to two or more items, so it counts them instead of naming one. Stay conversational and never use the words \"error\" or \"failed\". Sentence case.",
     "placeholders": {

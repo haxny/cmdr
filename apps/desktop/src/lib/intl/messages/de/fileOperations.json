@@ -942,11 +942,11 @@
   },
   "fileOperations.cancelRollback.reason.locked.named": "Habe {name} am neuen Ort gelassen: das Objekt ist geschützt, und Cmdr kann den Schutz nicht aufheben.",
   "@fileOperations.cancelRollback.reason.locked.named": {
-    "sourceHash": "1345440"
+    "sourceHash": "5d36672"
   },
   "fileOperations.cancelRollback.reason.locked.counted": "Habe {countText} {count, plural, one {Objekt} other {Objekte}} am neuen Ort gelassen: sie sind geschützt, und Cmdr kann den Schutz nicht aufheben.",
   "@fileOperations.cancelRollback.reason.locked.counted": {
-    "sourceHash": "9070a49"
+    "sourceHash": "4830a5e"
   },
   "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr konnte {name} nicht entfernen: eine unvollständige Kopie, die am Ziel geblieben ist. Du kannst sie gefahrlos löschen, und Cmdr räumt sie bei einer späteren Übertragung dorthin weg.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
