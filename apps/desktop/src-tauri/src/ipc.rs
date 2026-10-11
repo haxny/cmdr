@@ -93,8 +93,7 @@ use crate::window_events::{
     CloseAbout, CloseAllFileViewers, CloseConfirmation, CloseFileViewer, ExecuteCommand, FocusAbout, FocusConfirmation,
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenErrorReport,
     OpenFavorite, OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueSelectAll, RevealPath,
-    ShowSearchResultInFolder,
-    TabContextAction, ViewerContextMenuAction, ViewerEditAction, ViewerWordWrapToggled,
+    ShowSearchResultInFolder, TabContextAction, ViewerContextMenuAction, ViewerEditAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
 use crate::ai::{
