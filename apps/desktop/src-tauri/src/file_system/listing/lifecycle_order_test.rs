@@ -26,7 +26,7 @@ use super::streaming::{
 };
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
-use cmdr_fs::volume::{InMemoryVolume, Volume};
+use cmdr_fs::volume::InMemoryVolume;
 
 async fn stream(listing_id: &str, volume_id: &str, path: &Path) {
     let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
@@ -83,6 +83,7 @@ fn is_watching(listing_id: &str) -> bool {
 #[cfg(target_os = "macos")]
 fn local_volume(tag: &str) -> (crate::test_support::TestDir, String) {
     use crate::file_system::volume::LocalPosixVolume;
+    use cmdr_fs::volume::Volume;
 
     let scratch = crate::test_support::TestDir::new(tag);
     std::fs::write(scratch.join("a.txt"), b"a").expect("scratch dir is writable");
