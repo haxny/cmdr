@@ -653,6 +653,9 @@ folder wins over an object of the same name (`NameHolds`), except where the list
 `server_copy.rs`. `copy_on_server` copies from this place or a sibling place of the SAME account (the endpoint and key
 id, matched on the concrete `S3Volume` the source downcasts to); another account or another backend is `NotSupported`,
 and so is a cross-bucket copy where the provider copies within one bucket only (Spaces). The engine then streams.
+`may_copy_on_server_from` answers the account half without a request, through the same `same_account_peer`, so the
+engine stages nothing for a source no S3 place of this account can copy from; the bucket half stays per file, since an
+account-root place has no bucket of its own to compare.
 
 - **The source is HEADed once**: its size picks the shape, its ETag pins every part (`x-amz-copy-source-if-match`, so an
   object replaced mid-copy fails the part rather than stitching two versions; R2 enforces it, Hetzner and Spaces ignore
