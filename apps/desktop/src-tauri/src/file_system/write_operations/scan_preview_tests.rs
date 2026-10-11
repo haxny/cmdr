@@ -28,8 +28,6 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
             source_root: PathBuf::from("/"),
             size: 1_763,
             progress_bytes: 1_763,
-            modified: 0,
-            created: 0,
             is_symlink: false,
             tree_node: None,
         })

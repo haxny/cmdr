@@ -7,7 +7,7 @@ use cmdr_fs::volume::{CopyScanResult, ScanRecorder};
 
 use super::super::model::{NodeId, NodeKind};
 use super::super::test_support::{english, node_at, outline};
-use super::{TreeRecorder, from_archive_plan, from_local_scan};
+use super::{TreeRecorder, from_archive_plan, from_local_scan, sort_sources};
 
 fn paths(raw: &[&str]) -> Vec<PathBuf> {
     raw.iter().map(PathBuf::from).collect()
@@ -96,6 +96,23 @@ fn sources_under_different_parents_hang_off_their_common_ancestor_as_relative_la
         vec!["y/z/two/ 1 files 2 B", "  inner.txt 2 B", "x/one.txt 1 B"],
         "no synthesized folder rows: `y` and `z` weren't selected"
     );
+}
+
+/// The order a driver takes its sources in is the order their rows list in:
+/// folders first, then by the label each row shows, which for sources under
+/// different parents is the path below their common ancestor.
+#[test]
+fn sources_sort_into_the_order_their_rows_list_in() {
+    let mut sources = paths(&["/a/x/one.txt", "/a/y/z/two", "/a/b.txt", "/a/x/A"]);
+    let folders = paths(&["/a/y/z/two", "/a/x/A"]);
+
+    sort_sources(
+        &mut sources,
+        |source| folders.iter().any(|folder| folder == source),
+        &english(),
+    );
+
+    assert_eq!(sources, paths(&["/a/x/A", "/a/y/z/two", "/a/b.txt", "/a/x/one.txt"]));
 }
 
 #[test]

@@ -37,7 +37,7 @@ use super::super::super::types::{
 };
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
-use super::preflight::scan_volume_sources;
+use super::preflight::{scan_volume_sources, sources_in_tree_order};
 use crate::file_system::volume::{DirectoryCreation, SpaceInfo, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::types::OpKind;
@@ -689,6 +689,10 @@ pub(crate) async fn copy_volumes_with_progress(
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();
+    // Both drivers take sources in the order given, so this is what makes them
+    // start in tree order.
+    let ordered_sources = sources_in_tree_order(source_paths, &preflight.source_hints);
+    let source_paths = ordered_sources.as_slice();
     let mut source_hints = preflight.source_hints;
 
     // Phase 2: Check destination space, where the destination can report it,
@@ -1312,6 +1316,9 @@ mod staged_write_tests;
 #[cfg(test)]
 #[path = "copy_tests/mod.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "copy_tree_order_tests.rs"]
+mod tree_order_tests;
 #[cfg(test)]
 #[path = "copy_wedge_test_support.rs"]
 mod wedge_test_support;

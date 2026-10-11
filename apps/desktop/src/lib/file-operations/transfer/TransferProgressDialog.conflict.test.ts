@@ -129,8 +129,6 @@ async function mountDialogWithoutConflict(): Promise<HTMLDivElement> {
         sourceFolderPath: '/Users/test',
         destinationPath: '/Users/test/dest',
         direction: 'right',
-        sortColumn: 'name',
-        sortOrder: 'ascending',
         previewId: null,
         sourceVolumeId: 'root',
         destVolumeId: 'root',

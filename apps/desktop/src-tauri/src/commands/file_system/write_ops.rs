@@ -24,7 +24,6 @@ use crate::file_system::{
     resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
     trash_files_start as ops_trash_files_start,
 };
-use cmdr_listing::{SortColumn, SortOrder};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -376,8 +375,6 @@ pub async fn start_scan_preview(
     app: tauri::AppHandle,
     sources: Vec<String>,
     source_volume_id: Option<String>,
-    sort_column: SortColumn,
-    sort_order: SortOrder,
     progress_interval_ms: Option<u64>,
     // Which dialog this walk serves: a transfer's also builds its live tree,
     // a compress's samples a compressed-size estimate (local sources only).
@@ -401,8 +398,6 @@ pub async fn start_scan_preview(
         sources,
         source_volume,
         volume_id,
-        sort_column,
-        sort_order,
         progress_interval,
         purpose,
     ))

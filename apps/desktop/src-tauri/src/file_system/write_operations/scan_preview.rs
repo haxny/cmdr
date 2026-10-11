@@ -55,7 +55,6 @@ use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::ScanPreviewState;
 use super::types::{ScanPreviewErrorEvent, ScanPreviewPurpose, ScanPreviewStartResult, WriteOperationError};
 use crate::file_system::volume::Volume;
-use cmdr_listing::{SortColumn, SortOrder};
 
 mod local;
 mod volume;
@@ -79,17 +78,11 @@ pub(super) use volume::run_volume_scan_preview;
 /// the operation's live tree (`super::transfer_tree`), carried to the
 /// operation in the cached result. A compress's LOCAL walk samples a
 /// compressed-size estimate (`compress_estimate`); a volume walk never samples.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "IPC pass-through mirroring the command's parameter list"
-)]
 pub fn start_scan_preview(
     app: tauri::AppHandle,
     sources: Vec<PathBuf>,
     source_volume: Option<Arc<dyn Volume>>,
     source_volume_id: String,
-    sort_column: SortColumn,
-    sort_order: SortOrder,
     progress_interval_ms: u64,
     purpose: ScanPreviewPurpose,
 ) -> ScanPreviewStartResult {
@@ -135,16 +128,7 @@ pub fn start_scan_preview(
         });
     } else {
         std::thread::spawn(move || {
-            run_scan_preview(
-                events,
-                preview_id_clone,
-                sources,
-                sort_column,
-                sort_order,
-                state,
-                purpose,
-                watchdog,
-            );
+            run_scan_preview(events, preview_id_clone, sources, state, purpose, watchdog);
         });
     }
 

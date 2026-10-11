@@ -19,7 +19,6 @@ use super::scan_watchdog::{ScanTally, ScanTarget, ScanWatchdog};
 use crate::file_system::volume::Volume;
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, WedgedVolume, wait_until_async};
-use cmdr_listing::{SortColumn, SortOrder};
 
 /// How long a test waits for the watchdog to publish. Generous against the
 /// 200 ms limits below: these run on a loaded box.
@@ -243,8 +242,6 @@ async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_wal
             walk_events,
             walk_id,
             sources,
-            SortColumn::Name,
-            SortOrder::Ascending,
             state,
             crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
             walk_watchdog,

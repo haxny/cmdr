@@ -49,26 +49,10 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
                 preview_id,
                 operation_id
             );
-            scan_sources(
-                sources,
-                state,
-                events,
-                operation_id,
-                WriteOperationType::Delete,
-                config.sort_column,
-                config.sort_order,
-            )?
+            scan_sources(sources, state, events, operation_id, WriteOperationType::Delete)?
         }
     } else {
-        scan_sources(
-            sources,
-            state,
-            events,
-            operation_id,
-            WriteOperationType::Delete,
-            config.sort_column,
-            config.sort_order,
-        )?
+        scan_sources(sources, state, events, operation_id, WriteOperationType::Delete)?
     };
 
     // Handle dry-run mode (delete has no conflicts)

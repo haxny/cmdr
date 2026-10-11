@@ -28,7 +28,7 @@ pub(super) mod test_support;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-pub(crate) use build::{TreeRecorder, from_archive_plan, from_local_scan, from_per_path};
+pub(crate) use build::{TreeRecorder, from_archive_plan, from_local_scan, from_per_path, sort_sources};
 pub(crate) use model::{NodeId, TreeModel};
 pub(crate) use order::TreeOrder;
 use view::{TransferTreeView, TransferTreeViewRequest};

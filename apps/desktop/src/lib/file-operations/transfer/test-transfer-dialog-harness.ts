@@ -212,8 +212,6 @@ export function mountDialog(opts: MountOpts = {}): HTMLDivElement {
       fileCount: 1,
       folderCount: 1,
       sourceFolderPath: opts.sourceFolderPath ?? '/Users/test',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: opts.sourceVolumeId ?? 'root',
       destVolumeId: opts.currentVolumeId ?? 'root',
       autoConfirm: opts.autoConfirm ?? false,

@@ -81,8 +81,6 @@ function moveProps(): TransferProgressPropsData {
     sourcePaneSide: 'right',
     destinationPath: '/Users/me/backup',
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: 'preview-1',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
@@ -102,8 +100,6 @@ function archiveCopyProps(): TransferProgressPropsData {
     sourcePaneSide: 'right',
     destinationPath: '/Users/me/out',
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: 'preview-1',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
@@ -218,8 +214,6 @@ describe('adopting an operation into the progress dialog', () => {
       isPermanent: false,
       supportsTrash: true,
       isFromCursor: false,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
     })
 
@@ -254,8 +248,6 @@ describe('an operation born while an adopted one is showing', () => {
       isPermanent: true,
       supportsTrash: true,
       isFromCursor: false,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
     })
 
@@ -275,8 +267,6 @@ describe('an operation born while an adopted one is showing', () => {
       isPermanent: true,
       supportsTrash: true,
       isFromCursor: false,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
     })
 

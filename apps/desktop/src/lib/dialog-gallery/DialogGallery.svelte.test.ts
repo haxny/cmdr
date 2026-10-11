@@ -221,8 +221,6 @@ const diskFixture: GalleryDiskFixture = {
   listingId: 'gallery-listing',
   volumeId: 'root',
   showHiddenFiles: false,
-  sortColumn: 'name',
-  sortOrder: 'ascending',
   entries: ['Photos', 'Projects', 'README.txt', 'Invoice 2026-07.pdf', 'Videos', 'Documents'].map((name, index) => ({
     name,
     path: `/tmp/dialog-gallery-fixtures/${name}`,

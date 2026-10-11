@@ -5,8 +5,6 @@
     import type {
         TransferOperationType,
         WriteOperationError,
-        SortColumn,
-        SortOrder,
         ConflictResolution,
     } from '#lib/file-explorer/types.js'
     import type { OpKind, SpaceShortfall } from '#lib/ipc/bindings.js'
@@ -64,10 +62,6 @@
         /** Transfer direction (not applicable for delete/trash, and unknown for
          *  an adopted operation: the snapshot names paths, not panes). */
         direction?: 'left' | 'right'
-        /** Started only: current sort column on source pane (files will be processed in this order) */
-        sortColumn?: SortColumn
-        /** Started only: current sort order on source pane */
-        sortOrder?: SortOrder
         /** Started only: preview scan ID from TransferDialog (for reusing scan results) */
         previewId?: string | null
         /** Source volume ID (like "root", "mtp-336592896:65537"). Started only:
@@ -114,8 +108,6 @@
         destinationPath,
         destinationName,
         direction,
-        sortColumn = 'name',
-        sortOrder = 'ascending',
         previewId = null,
         sourceVolumeId = DEFAULT_VOLUME_ID,
         destVolumeId,
@@ -197,8 +189,6 @@
         sourcePaths,
         destinationPath,
         destinationName,
-        sortColumn,
-        sortOrder,
         previewId,
         sourceVolumeId,
         destVolumeId,

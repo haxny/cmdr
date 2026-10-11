@@ -48,8 +48,6 @@ type DialogData = Pick<
   | 'isPermanent'
   | 'supportsTrash'
   | 'isFromCursor'
-  | 'sortColumn'
-  | 'sortOrder'
   | 'sourceVolumeId'
 >
 type DialogProps = DialogData & {
@@ -64,8 +62,6 @@ const dialogData: DialogData = {
   isPermanent: false,
   supportsTrash: true,
   isFromCursor: true,
-  sortColumn: 'name',
-  sortOrder: 'ascending',
   sourceVolumeId: 'root',
 }
 
@@ -110,12 +106,6 @@ const propsFromParent: DialogProps = {
   },
   get isFromCursor() {
     return fromParent('isFromCursor')
-  },
-  get sortColumn() {
-    return fromParent('sortColumn')
-  },
-  get sortOrder() {
-    return fromParent('sortOrder')
   },
   get sourceVolumeId() {
     return fromParent('sourceVolumeId')
@@ -197,7 +187,7 @@ describe('DeleteDialog closed before its scan preview is under way', () => {
     registrations.resolve(undefined)
     const close = await open()
     await settle()
-    expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'name', 'ascending', 'delete', 500, 'root')
+    expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'delete', 500, 'root')
 
     close()
     preview.resolve({ previewId: 'preview-late' })

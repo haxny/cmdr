@@ -195,8 +195,6 @@ export function createDragDropController(deps: DragDropControllerDeps) {
       return
     }
 
-    const { sortBy, sortOrder } = access.getPaneSort(targetPane)
-
     if (recordedIdentity) {
       // In-app self-drag: trust the recorded identity wholesale; skip the
       // resolver and the local kind probe (a volume-relative path can't be
@@ -209,8 +207,6 @@ export function createDragDropController(deps: DragDropControllerDeps) {
           targetPane,
           destVolId,
           recordedIdentity.sourceVolumeId,
-          sortBy,
-          sortOrder,
           undefined,
         ),
         duplicateFollowUp: DROP_DUPLICATE_FOLLOW_UP,
@@ -242,8 +238,6 @@ export function createDragDropController(deps: DragDropControllerDeps) {
         targetPane,
         destVolId,
         sourceVolumeId,
-        sortBy,
-        sortOrder,
         isDirectoryFlags,
       ),
       duplicateFollowUp: DROP_DUPLICATE_FOLLOW_UP,

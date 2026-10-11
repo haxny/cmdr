@@ -135,8 +135,6 @@ function mountDialog(operationType: 'copy' | 'compress'): HTMLDivElement {
       fileCount: 1,
       folderCount: 1,
       sourceFolderPath: '/Users/test',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       destVolumeId: 'root',
       autoConfirm: false,

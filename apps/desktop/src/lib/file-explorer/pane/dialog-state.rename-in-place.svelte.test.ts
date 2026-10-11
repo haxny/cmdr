@@ -65,8 +65,6 @@ function moveProps(overrides: Partial<TransferDialogPropsData> = {}): TransferDi
     fileCount: 1,
     folderCount: 0,
     sourceFolderPath: FOLDER,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
     duplicateFollowUp: 'nothing',

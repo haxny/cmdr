@@ -8,7 +8,7 @@ import {
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { toBackendIndices, toBackendCursorIndex } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
-import type { SortColumn, SortOrder, TransferOperationType, VolumeInfo } from '../types'
+import type { TransferOperationType, VolumeInfo } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import type { FilePaneAPI } from './types'
 
@@ -18,8 +18,6 @@ export interface TransferContext {
   destPath: string
   sourceVolumeId: string
   destVolumeId: string
-  sortColumn: SortColumn
-  sortOrder: SortOrder
 }
 
 export interface TransferDialogPropsData {
@@ -31,8 +29,6 @@ export interface TransferDialogPropsData {
   fileCount: number
   folderCount: number
   sourceFolderPath: string
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   sourceVolumeId: string
   destVolumeId: string
   /** When true, dialog auto-confirms without user interaction (MCP auto-confirm). */
@@ -111,8 +107,6 @@ export async function buildTransferPropsFromSelection(
     fileCount: snapshot.fileCount,
     folderCount: snapshot.folderCount,
     sourceFolderPath: context.sourcePath,
-    sortColumn: context.sortColumn,
-    sortOrder: context.sortOrder,
     sourceVolumeId: context.sourceVolumeId,
     destVolumeId: context.destVolumeId,
   }
@@ -142,8 +136,6 @@ export async function buildTransferPropsFromCursor(
     fileCount: file.isDirectory ? 0 : 1,
     folderCount: file.isDirectory ? 1 : 0,
     sourceFolderPath: context.sourcePath,
-    sortColumn: context.sortColumn,
-    sortOrder: context.sortOrder,
     sourceVolumeId: context.sourceVolumeId,
     destVolumeId: context.destVolumeId,
   }
@@ -170,8 +162,6 @@ export function buildTransferPropsFromSnapshot(
   isLeft: boolean,
   destPath: string,
   destVolumeId: string,
-  sortColumn: SortColumn,
-  sortOrder: SortOrder,
   sourceVolumeId: string,
 ): TransferDialogPropsDraft | null {
   if (sourcePaths.length === 0) return null
@@ -198,8 +188,6 @@ export function buildTransferPropsFromSnapshot(
     fileCount,
     folderCount,
     sourceFolderPath: getCommonParentPath(sourcePaths),
-    sortColumn,
-    sortOrder,
     sourceVolumeId,
     destVolumeId,
   }
@@ -258,8 +246,6 @@ export function buildTransferPropsFromDroppedPaths(
   direction: 'left' | 'right',
   destVolumeId: string,
   sourceVolumeId: string,
-  sortColumn: SortColumn,
-  sortOrder: SortOrder,
   isDirectoryFlags?: (boolean | null)[],
 ): TransferDialogPropsDraft {
   const sourceFolderPath = getCommonParentPath(droppedPaths)
@@ -275,8 +261,6 @@ export function buildTransferPropsFromDroppedPaths(
     fileCount: split.fileCount,
     folderCount: split.folderCount,
     sourceFolderPath,
-    sortColumn,
-    sortOrder,
     sourceVolumeId,
     destVolumeId,
   }

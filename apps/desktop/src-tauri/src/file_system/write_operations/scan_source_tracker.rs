@@ -15,7 +15,6 @@ use std::path::PathBuf;
 
 use super::state::FileInfo;
 use super::types::{SourceItemOutcome, TopLevelSkipped};
-use cmdr_listing::{SortColumn, SortOrder};
 /// Builds a map from top-level source path to the number of files it contains in the scan result.
 ///
 /// Each `FileInfo` has a `source_root` (the parent of the top-level source) and a `path` (the full
@@ -139,28 +138,4 @@ impl SourceItemTracker {
         }
         Some(FinishedSource { source_path, outcome })
     }
-}
-
-// ============================================================================
-// Scanning helpers
-// ============================================================================
-
-/// Sorts files according to the specified column and order.
-pub(super) fn sort_files(files: &mut [FileInfo], column: SortColumn, order: SortOrder) {
-    files.sort_by(|a, b| {
-        let cmp = match column {
-            SortColumn::Name => a.name_lower().cmp(&b.name_lower()),
-            SortColumn::Extension => a
-                .extension()
-                .cmp(&b.extension())
-                .then_with(|| a.name_lower().cmp(&b.name_lower())),
-            SortColumn::Size => a.size.cmp(&b.size),
-            SortColumn::Modified => a.modified.cmp(&b.modified),
-            SortColumn::Created => a.created.cmp(&b.created),
-        };
-        match order {
-            SortOrder::Ascending => cmp,
-            SortOrder::Descending => cmp.reverse(),
-        }
-    });
 }

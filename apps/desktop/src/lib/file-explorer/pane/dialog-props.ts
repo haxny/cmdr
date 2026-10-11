@@ -19,7 +19,7 @@ import type {
 } from '#lib/ipc/bindings.js'
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
-import type { TransferOperationType, SortColumn, SortOrder, ConflictResolution, WriteOperationError } from '../types'
+import type { TransferOperationType, ConflictResolution, WriteOperationError } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import type { FilePaneAPI } from './types'
 import type { PaneRevealAPI } from '../navigation/navigate-and-select'
@@ -136,8 +136,6 @@ export interface TransferProgressPropsData {
   destinationName?: string
   /** Not applicable for delete/trash */
   direction?: 'left' | 'right'
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   previewId: string | null
   sourceVolumeId: string
   /** Not applicable for delete/trash */
@@ -292,8 +290,6 @@ export interface DeleteDialogPropsData {
   isPermanent: boolean
   supportsTrash: boolean
   isFromCursor: boolean
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   sourceVolumeId: string
   /**
    * Source is INSIDE a zip. Deleting an archive entry is permanent (there's no

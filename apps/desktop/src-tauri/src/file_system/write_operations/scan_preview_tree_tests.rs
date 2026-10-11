@@ -13,7 +13,6 @@ use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTarget, ScanWatchdog};
 use super::transfer_tree::test_support::outline;
 use super::types::ScanPreviewPurpose;
-use cmdr_listing::{SortColumn, SortOrder};
 use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::test_support::TestDir;
 
@@ -54,8 +53,6 @@ async fn local_preview(tag: &str, sources: &[PathBuf], purpose: ScanPreviewPurpo
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             walk_sources,
-            SortColumn::Name,
-            SortOrder::Ascending,
             fresh_state(),
             purpose,
             watchdog,
@@ -74,15 +71,29 @@ const EXPECTED: [&str; 5] = [
     "notes.txt 2 B",
 ];
 
+/// The files in the order the operation starts them: the tree's.
+const TREE_ORDER: [&str; 3] = ["photos/2024/b.jpg", "photos/a.jpg", "notes.txt"];
+
+fn file_order(result: &ScanResult, dir: &TestDir) -> Vec<String> {
+    let src = dir.join("src");
+    result
+        .files
+        .iter()
+        .map(|file| file.path.strip_prefix(&src).unwrap_or(&file.path).display().to_string())
+        .collect()
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_transfer_preview_of_a_local_selection_carries_its_tree_and_each_files_node() {
     let dir = TestDir::new("preview_tree_local");
     let sources = seed(&dir);
 
     let mut result = local_preview("local", &sources, ScanPreviewPurpose::Transfer).await;
+    assert!(result.tree.is_some(), "a transfer's preview builds the tree");
 
-    let tree = result.tree.take().expect("a transfer's preview builds the tree");
+    let tree = result.order_by_transfer_tree(&sources);
     assert_eq!(outline(&tree), EXPECTED);
+    assert_eq!(file_order(&result, &dir), TREE_ORDER);
     for file in &result.files {
         let node = file.tree_node.expect("every walked file knows its node");
         let name = file.path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
@@ -111,10 +122,11 @@ async fn an_operation_without_a_preview_tree_builds_one_from_the_walk() {
     let sources = seed(&dir);
     let mut result = local_preview("fallback", &sources, ScanPreviewPurpose::Delete).await;
 
-    let tree = result.take_transfer_tree(&sources);
+    let tree = result.order_by_transfer_tree(&sources);
 
     assert_eq!(outline(&tree), EXPECTED);
     assert!(result.files.iter().all(|file| file.tree_node.is_some()));
+    assert_eq!(file_order(&result, &dir), TREE_ORDER);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

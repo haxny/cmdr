@@ -94,8 +94,6 @@ export async function resolveDiskFixture(
     listingId,
     volumeId: tab.volumeId,
     showHiddenFiles,
-    sortColumn: tab.sortBy,
-    sortOrder: tab.sortOrder,
     entries,
   }
 }

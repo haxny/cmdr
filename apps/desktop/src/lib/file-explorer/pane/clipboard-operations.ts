@@ -446,7 +446,6 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
       // route and duplicates them.
       if (pasteWouldMoveNothing(operationType, sourcePaths, destPath)) return
 
-      const { sortBy, sortOrder } = access.getPaneSort(access.getFocusedPane())
       const destVolId = access.getPaneVolumeId(access.getFocusedPane())
       const sourceFolderPath = getCommonParentPath(sourcePaths)
 
@@ -468,8 +467,6 @@ export function createClipboardOperations(access: PaneAccess, dialogs: DialogSta
         sourcePaneSide: access.getFocusedPane() === 'left' ? 'right' : 'left',
         destinationPath: destPath,
         direction: access.getFocusedPane() === 'left' ? 'left' : 'right',
-        sortColumn: sortBy,
-        sortOrder,
         previewId: null,
         sourceVolumeId,
         destVolumeId: destVolId,

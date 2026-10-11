@@ -7,6 +7,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use super::super::OperationEventSink;
 use super::super::state::WriteOperationState;
+use super::super::transfer_tree::TreeOrder;
 use super::super::types::{ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteOperationError};
 use super::edit_error::EditError;
 use super::fresh_zip::{FreshZipEntry, FreshZipSource, RemoteZipFeeder, remote_source_bridge};
@@ -84,6 +85,12 @@ pub(super) async fn plan_sources(
 /// parent listing per file on MTP. Symlinks and special files are skipped from
 /// the same listing facts (`is_skipped_kind`), so there's no local syscall per
 /// entry either. Same shape as `cmdr_fs::volume::scan_walk`.
+///
+/// The plan is the order the zip is written in, so it's in TREE ORDER
+/// (`transfer_tree/order.rs`): the selected items are settled first (each one's
+/// name in the zip, and whether it's packed at all), then walked folders first,
+/// by name, every level sorted the same way. The compress's progress rows then
+/// start top to bottom.
 async fn plan_sources_with_context(
     source: &Arc<dyn Volume>,
     source_paths: &[PathBuf],
@@ -95,89 +102,14 @@ async fn plan_sources_with_context(
     let mut entries: Vec<FreshZipEntry> = Vec::new();
     let mut remote_feeds: Vec<RemoteFeed> = Vec::new();
     let mut source_bytes = 0u64;
-    let mut skipped = 0usize;
-    let mut top_names = HashMap::<String, PathBuf>::new();
-    let mut duplicate_latch = None;
-    // Found-so-far tallies for the scan readout only. A duplicate top name
-    // resolved to Overwrite drops entries from the plan; these don't go back.
+    let (tops, mut skipped) = settle_tops(source, source_paths, conflict, state, conflict_context).await?;
+    // Found-so-far tallies for the scan readout only.
     let (mut files, mut dirs) = (0usize, 0usize);
     let local_root = source.supports_local_fs_access().then(|| source.local_path()).flatten();
+    let order = TreeOrder::active();
 
-    for top in source_paths {
-        if state.stop_or_park_async().await {
-            return Err(EditError::Cancelled);
-        }
-        let Some(mut top_name) = top.file_name().map(|name| name.to_string_lossy().into_owned()) else {
-            skipped += 1;
-            continue;
-        };
-        if let Some(first) = top_names.get(&top_name).cloned() {
-            let resolution = if let Some(latched) = duplicate_latch {
-                latched
-            } else if conflict == ConflictResolution::Stop {
-                let Some(context) = conflict_context else {
-                    return Err(EditError::Op(WriteOperationError::DuplicateSourceNames {
-                        name: top_name,
-                        first: first.display().to_string(),
-                        second: top.display().to_string(),
-                    }));
-                };
-                let response = prompt_duplicate_source(source, top, &first, &top_name, state, context).await?;
-                if response.apply_to_all {
-                    duplicate_latch = Some(response.resolution);
-                }
-                response.resolution
-            } else {
-                conflict
-            };
-            let resolution = reduce_duplicate_conditional(source, top, &first, resolution).await;
-            match resolution {
-                ConflictResolution::Skip
-                | ConflictResolution::OverwriteSmaller
-                | ConflictResolution::OverwriteOlder => {
-                    skipped += 1;
-                    continue;
-                }
-                ConflictResolution::Stop => {
-                    return Err(EditError::Op(WriteOperationError::DuplicateSourceNames {
-                        name: top_name,
-                        first: first.display().to_string(),
-                        second: top.display().to_string(),
-                    }));
-                }
-                ConflictResolution::Rename => top_name = unique_top_name(&top_name, &top_names),
-                ConflictResolution::Overwrite => {
-                    let prefix = format!("{top_name}/");
-                    entries.retain(|entry| entry.name != top_name && !entry.name.starts_with(&prefix));
-                    remote_feeds.retain(|feed| feed.entry_name != top_name && !feed.entry_name.starts_with(&prefix));
-                    source_bytes = entries.iter().map(|entry| entry.size).sum();
-                }
-            }
-        }
-        // The root `__MACOSX` is where a zip's sidecars live, hidden from every
-        // listing, so an item named that would read back as nothing (and fail
-        // the stage's validation). Skipped and counted, like a symlink.
-        if cmdr_archive::mutator::is_in_sidecar_folder(&top_name) {
-            skipped += 1;
-            continue;
-        }
-        top_names.insert(top_name.clone(), top.clone());
-        // A selected link is skipped like a nested one. Asked with `entry_kind`
-        // (an `lstat`), ❌ never read off `get_metadata`: SFTP's `stat` follows
-        // the link and reports its target.
-        let top_kind = source
-            .entry_kind(top)
-            .await
-            .map_err(|error| volume_read_error(top, error))?;
-        if top_kind == EntryKind::Symlink {
-            skipped += 1;
-            continue;
-        }
-        let top_meta = source
-            .get_metadata(top)
-            .await
-            .map_err(|error| volume_read_error(top, error))?;
-        let mut stack = vec![(top.clone(), top_name, top_meta)];
+    for (top, top_name, top_meta) in tops {
+        let mut stack = vec![(top, top_name, top_meta)];
         while let Some((path, inner, meta)) = stack.pop() {
             if state.stop_or_park_async().await {
                 return Err(EditError::Cancelled);
@@ -215,12 +147,16 @@ async fn plan_sources_with_context(
                     modified,
                     unix_mode,
                 });
-                let children = source
+                let mut children = source
                     .list_directory(&path, None)
                     .await
                     .map_err(|error| volume_read_error(&path, error))?;
                 dirs += 1;
                 report(on_progress, files, dirs, source_bytes, &path);
+                order.sort(&mut children, |child| {
+                    (child.is_directory && !child.is_symlink, child.name.as_str())
+                });
+                // Reversed onto the stack, so the first in tree order pops first.
                 for child in children.into_iter().rev() {
                     let child_inner = format!("{inner}/{}", child.name);
                     stack.push((path.join(&child.name), child_inner, child));
@@ -268,6 +204,98 @@ async fn plan_sources_with_context(
         source_bytes,
         skipped,
     })
+}
+
+/// The selected items the plan packs, in tree order, each with its name in the
+/// zip and its own stat; plus how many were left out. A duplicate top name is
+/// settled here, in selection order, by the conflict policy (Stop asks): Skip
+/// leaves the later one out, Rename gives it a free name, and Overwrite drops
+/// the earlier one. A selected link is left out like a nested one.
+async fn settle_tops(
+    source: &Arc<dyn Volume>,
+    source_paths: &[PathBuf],
+    conflict: ConflictResolution,
+    state: &Arc<WriteOperationState>,
+    conflict_context: Option<PlanConflictContext<'_>>,
+) -> Result<(Vec<(PathBuf, String, FileEntry)>, usize), EditError> {
+    let mut tops: Vec<(PathBuf, String, FileEntry)> = Vec::new();
+    let mut skipped = 0usize;
+    let mut top_names = HashMap::<String, PathBuf>::new();
+    let mut duplicate_latch = None;
+    for top in source_paths {
+        if state.stop_or_park_async().await {
+            return Err(EditError::Cancelled);
+        }
+        let Some(mut top_name) = top.file_name().map(|name| name.to_string_lossy().into_owned()) else {
+            skipped += 1;
+            continue;
+        };
+        if let Some(first) = top_names.get(&top_name).cloned() {
+            let resolution = if let Some(latched) = duplicate_latch {
+                latched
+            } else if conflict == ConflictResolution::Stop {
+                let Some(context) = conflict_context else {
+                    return Err(EditError::Op(WriteOperationError::DuplicateSourceNames {
+                        name: top_name,
+                        first: first.display().to_string(),
+                        second: top.display().to_string(),
+                    }));
+                };
+                let response = prompt_duplicate_source(source, top, &first, &top_name, state, context).await?;
+                if response.apply_to_all {
+                    duplicate_latch = Some(response.resolution);
+                }
+                response.resolution
+            } else {
+                conflict
+            };
+            let resolution = reduce_duplicate_conditional(source, top, &first, resolution).await;
+            match resolution {
+                ConflictResolution::Skip
+                | ConflictResolution::OverwriteSmaller
+                | ConflictResolution::OverwriteOlder => {
+                    skipped += 1;
+                    continue;
+                }
+                ConflictResolution::Stop => {
+                    return Err(EditError::Op(WriteOperationError::DuplicateSourceNames {
+                        name: top_name,
+                        first: first.display().to_string(),
+                        second: top.display().to_string(),
+                    }));
+                }
+                ConflictResolution::Rename => top_name = unique_top_name(&top_name, &top_names),
+                // Nothing is walked yet, so the earlier item just leaves.
+                ConflictResolution::Overwrite => tops.retain(|(_, name, _)| *name != top_name),
+            }
+        }
+        // The root `__MACOSX` is where a zip's sidecars live, hidden from every
+        // listing, so an item named that would read back as nothing (and fail
+        // the stage's validation). Skipped and counted, like a symlink.
+        if cmdr_archive::mutator::is_in_sidecar_folder(&top_name) {
+            skipped += 1;
+            continue;
+        }
+        top_names.insert(top_name.clone(), top.clone());
+        // A selected link is skipped like a nested one. Asked with `entry_kind`
+        // (an `lstat`), ❌ never read off `get_metadata`: SFTP's `stat` follows
+        // the link and reports its target.
+        let top_kind = source
+            .entry_kind(top)
+            .await
+            .map_err(|error| volume_read_error(top, error))?;
+        if top_kind == EntryKind::Symlink {
+            skipped += 1;
+            continue;
+        }
+        let top_meta = source
+            .get_metadata(top)
+            .await
+            .map_err(|error| volume_read_error(top, error))?;
+        tops.push((top.clone(), top_name, top_meta));
+    }
+    TreeOrder::active().sort(&mut tops, |(_, name, meta)| (meta.is_directory, name.as_str()));
+    Ok((tops, skipped))
 }
 
 /// A symlink (never followed: its target may be an ancestor, or elsewhere in the
@@ -682,7 +710,8 @@ mod tests {
                 .iter()
                 .map(|entry| entry.name.as_str())
                 .collect::<Vec<_>>(),
-            vec!["report.txt", "report (1).txt"]
+            // In tree order, by the names the zip holds: the space sorts first.
+            vec!["report (1).txt", "report.txt"]
         );
 
         let skipped = plan_sources_with_context(&source, &paths, ConflictResolution::Skip, &state, None, None)
@@ -722,5 +751,73 @@ mod tests {
         );
         assert_eq!(plan.skipped, 1);
         assert!(matches!(&plan.entries[0].source, FreshZipSource::Local(path) if path.ends_with("docs")));
+    }
+
+    /// A source whose listings come back backwards, the way an SMB or MTP
+    /// listing comes back in no particular order.
+    struct ReversedListing {
+        inner: InMemoryVolume,
+    }
+
+    impl Volume for ReversedListing {
+        forward_volume_methods!(inner => name, root, exists, is_directory, get_metadata, get_space_info);
+
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
+        fn list_directory<'a>(
+            &'a self,
+            path: &'a Path,
+            on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+            use futures_util::TryFutureExt;
+            Box::pin(
+                self.inner
+                    .list_directory(path, on_progress)
+                    .map_ok(|entries| entries.into_iter().rev().collect()),
+            )
+        }
+    }
+
+    /// The plan is the order the zip is written in, so it's the order the
+    /// compress's tree rows start in: subfolders first, then files, by name,
+    /// depth first, and the selection the same way whatever order it came in.
+    #[tokio::test]
+    async fn the_plan_lists_the_selection_in_tree_order() {
+        let inner = InMemoryVolume::new("remote");
+        for dir in ["/src", "/src/a", "/src/a/sub", "/src/b"] {
+            inner.create_directory(Path::new(dir)).await.expect("mkdir");
+        }
+        for file in [
+            "/src/a/zzz.txt",
+            "/src/a/sub/mmm.txt",
+            "/src/b/aaa.txt",
+            "/src/Y.txt",
+            "/src/z.txt",
+        ] {
+            inner.create_file(Path::new(file), b"x").await.expect("seed");
+        }
+        let source: Arc<dyn Volume> = Arc::new(ReversedListing { inner });
+        let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+        let selection = ["/src/z.txt", "/src/b", "/src/Y.txt", "/src/a"].map(PathBuf::from);
+
+        let plan = plan_sources_with_context(&source, &selection, ConflictResolution::Stop, &state, None, None)
+            .await
+            .unwrap_or_else(|_| panic!("plan"));
+
+        assert_eq!(
+            plan.entries.iter().map(|entry| entry.name.as_str()).collect::<Vec<_>>(),
+            [
+                "a/",
+                "a/sub/",
+                "a/sub/mmm.txt",
+                "a/zzz.txt",
+                "b/",
+                "b/aaa.txt",
+                "Y.txt",
+                "z.txt"
+            ]
+        );
     }
 }

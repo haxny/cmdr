@@ -177,8 +177,6 @@ export function makeConfig(over: Partial<TransferProgressStateConfig> = {}): Tra
     operationType: 'copy',
     sourcePaths: ['/src/file.txt'],
     destinationPath: '/dst',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: null,
     sourceVolumeId: 'root',
     destVolumeId: 'root',

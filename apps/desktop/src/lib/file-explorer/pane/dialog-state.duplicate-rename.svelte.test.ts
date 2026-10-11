@@ -84,8 +84,6 @@ function pasteDuplicateProps(overrides: Partial<TransferProgressPropsData> = {})
     sourcePaneSide: 'right',
     destinationPath: FOLDER,
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: null,
     sourceVolumeId: 'root',
     destVolumeId: 'root',

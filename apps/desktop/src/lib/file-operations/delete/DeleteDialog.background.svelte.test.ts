@@ -93,8 +93,6 @@ function mountDialog(options: DialogOptions = {}): MountedDialog {
       cloudOnlineOnly: options.cloudOnlineOnly ?? null,
       cloudFolderMayHoldOnlineOnly: options.cloudFolderMayHoldOnlineOnly ?? false,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm: (_previewId: string | null, isPermanent: boolean) => confirms.push(isPermanent),
       onConfirmInBackground: (previewId: string | null) => backgrounds.push(previewId),

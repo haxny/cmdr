@@ -83,8 +83,6 @@ function copyProps(): TransferProgressPropsData {
     sourcePaneSide: 'right',
     destinationPath: '/Users/me/out',
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: 'preview-1',
     sourceVolumeId: 'root',
     destVolumeId: 'root',

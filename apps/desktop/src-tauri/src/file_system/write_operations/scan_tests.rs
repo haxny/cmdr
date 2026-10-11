@@ -19,8 +19,6 @@ fn make_file_info(path: &str, source_root: &str) -> FileInfo {
         source_root: PathBuf::from(source_root),
         size: 100,
         progress_bytes: 100,
-        modified: 0,
-        created: 0,
         is_symlink: false,
         tree_node: None,
     }

@@ -244,7 +244,6 @@
         getPaneRef,
         getPanePath,
         getPaneVolumeId,
-        getPaneSort,
         getPaneHistory,
         getFocusedPane: () => focusedPane,
         otherPane,

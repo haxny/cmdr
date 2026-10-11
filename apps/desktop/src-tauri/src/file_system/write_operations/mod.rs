@@ -195,11 +195,11 @@ pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
     MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
     ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
-    ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SortColumn, SortOrder, SourceItemOutcome,
-    SourcesGoneAnswerOutcome, SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason,
-    WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
-    WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
-    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome,
+    SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason, WriteCancelledEvent, WriteCompleteEvent,
+    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationError,
+    WriteOperationPhase, WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSettledEvent,
+    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 // Re-export for tests (these are pub(crate) in validation.rs and state.rs)

@@ -105,8 +105,6 @@ function transferProps(operationType: TransferDialogPropsData['operationType'] =
     fileCount: 1,
     folderCount: 0,
     sourceFolderPath: SOURCE_FOLDER,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
     duplicateFollowUp: 'nothing',

@@ -58,8 +58,6 @@ function mountDialog() {
       isPermanent: false,
       supportsTrash: true,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm: (previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => {
         confirms.push({ previewId, isPermanent })

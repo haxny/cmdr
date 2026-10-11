@@ -17,9 +17,6 @@ mod events;
 pub use errors::*;
 pub use events::*;
 
-// Re-export sort types from sorting module
-pub use cmdr_listing::{SortColumn, SortOrder};
-
 /// One original the operation kept under a new name because its old name was
 /// occupied by the replacement. Shared by failure and cancellation payloads so
 /// every terminal path can tell the user where their bytes are.
@@ -425,10 +422,6 @@ pub struct WriteOperationConfig {
     /// Returns a DryRunResult with totals and conflicts.
     #[serde(default)]
     pub dry_run: bool,
-    #[serde(default)]
-    pub sort_column: SortColumn,
-    #[serde(default)]
-    pub sort_order: SortOrder,
     /// Preview scan ID to reuse cached scan results (from start_scan_preview)
     #[serde(default)]
     pub preview_id: Option<String>,
@@ -453,8 +446,6 @@ impl Default for WriteOperationConfig {
             progress_interval_ms: default_progress_interval(),
             conflict_resolution: ConflictResolution::Stop,
             dry_run: false,
-            sort_column: SortColumn::default(),
-            sort_order: SortOrder::default(),
             preview_id: None,
             max_conflicts_to_show: default_max_conflicts_to_show(),
             pre_known_conflicts: Vec::new(),

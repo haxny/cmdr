@@ -7,7 +7,7 @@
  * `$effect` that (re)starts or cancels the preview when the user flips to or
  * away from a same-volume move.
  *
- * The factory takes its reactive inputs (source paths, sort info, source volume
+ * The factory takes its reactive inputs (source paths, source volume
  * id, the `isSameVolumeMove` gate, and the dialog's `confirmed` / `destroyed`
  * flags) via getter callbacks, matching the codebase's established factory
  * pattern (`createTypeToJumpState`, `createDragDropController`). State is exposed
@@ -40,16 +40,11 @@ import {
   type ScanPreviewPurpose,
   type ScanPreviewRefusal,
 } from '#lib/tauri-commands/index.js'
-import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
 import { getSetting } from '#lib/settings/index.js'
 
 export interface TransferScanStateDeps {
   /** Source paths to scan (static prop). */
   getSourcePaths: () => string[]
-  /** Current sort column on the source pane (for scan-preview ordering). */
-  getSortColumn: () => SortColumn
-  /** Current sort order on the source pane. */
-  getSortOrder: () => SortOrder
   /** Real source volume id, forwarded so the scan stats the right volume. */
   getSourceVolumeId: () => string
   /**
@@ -150,8 +145,6 @@ export function createTransferScanState(deps: TransferScanStateDeps) {
       else unlisteners.push(unlisten)
     }
     const sourcePaths = deps.getSourcePaths()
-    const sortColumn = deps.getSortColumn()
-    const sortOrder = deps.getSortOrder()
     const sourceVolumeId = deps.getSourceVolumeId()
     const purpose = deps.getScanPurpose()
     // Subscribe to events BEFORE starting scan (avoid missing fast completions)
@@ -199,14 +192,7 @@ export function createTransferScanState(deps: TransferScanStateDeps) {
     scanFailure = null
     sourceRefusal = null
     const progressIntervalMs = getSetting('fileOperations.progressUpdateInterval')
-    const result = await startScanPreview(
-      sourcePaths,
-      sortColumn,
-      sortOrder,
-      purpose,
-      progressIntervalMs,
-      sourceVolumeId,
-    )
+    const result = await startScanPreview(sourcePaths, purpose, progressIntervalMs, sourceVolumeId)
     if ('refusal' in result) {
       // Nothing started, so there's nothing to free and no event to wait for.
       if (!isOvertaken()) {

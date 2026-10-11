@@ -15,7 +15,7 @@
  */
 
 import type { DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
-import type { SortColumn, SortOrder, TransferOperationType } from '#lib/file-explorer/types.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import type { GalleryDiskFixture } from '../gallery-state.svelte'
 
 /** Props of `DeleteDialog.svelte`, minus its callbacks. */
@@ -26,8 +26,6 @@ export interface DeleteFixture {
   isPermanent: boolean
   supportsTrash: boolean
   isFromCursor: boolean
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   sourceVolumeId: string
 }
 
@@ -41,8 +39,6 @@ export interface TransferFixture {
   fileCount: number
   folderCount: number
   sourceFolderPath: string
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   sourceVolumeId: string
   destVolumeId: string
 }
@@ -105,8 +101,6 @@ function deleteFixture(
     supportsTrash: options.supportsTrash ?? true,
     // One item is what a cursor delete looks like; several is a selection.
     isFromCursor: count === 1,
-    sortColumn: disk.sortColumn,
-    sortOrder: disk.sortOrder,
     sourceVolumeId: disk.volumeId,
   }
 }
@@ -123,8 +117,6 @@ function transferFixture(disk: GalleryDiskFixture, operationType: TransferOperat
     fileCount: entries.filter((entry) => !entry.isDirectory).length,
     folderCount: entries.filter((entry) => entry.isDirectory).length,
     sourceFolderPath: disk.root,
-    sortColumn: disk.sortColumn,
-    sortOrder: disk.sortOrder,
     sourceVolumeId: disk.volumeId,
     destVolumeId: disk.volumeId,
   }

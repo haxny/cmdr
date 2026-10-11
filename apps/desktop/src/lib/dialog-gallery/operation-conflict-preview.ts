@@ -54,8 +54,6 @@ export async function openOperationConflictPreview(
       operationType: 'copy',
       sourcePaths: [sourcePath],
       destinationPath: destinationDir,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: null,
       sourceVolumeId: DEFAULT_VOLUME_ID,
       destVolumeId: DEFAULT_VOLUME_ID,

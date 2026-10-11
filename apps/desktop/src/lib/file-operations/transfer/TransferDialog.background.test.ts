@@ -259,8 +259,6 @@ describe('F2 in the transfer dialog', () => {
         fileCount: 1,
         folderCount: 0,
         sourceFolderPath: '/Users/test',
-        sortColumn: 'name',
-        sortOrder: 'ascending',
         sourceVolumeId: 'root',
         destVolumeId: 'root',
         onConfirm: () => {},

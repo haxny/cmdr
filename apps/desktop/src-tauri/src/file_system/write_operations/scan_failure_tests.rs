@@ -25,7 +25,6 @@ use crate::file_system::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanBoundary, Volume, VolumeError,
 };
 use crate::test_support::{WedgedVolume, wait_until_async};
-use cmdr_listing::{SortColumn, SortOrder};
 
 const WAIT: Duration = Duration::from_secs(5);
 
@@ -136,8 +135,6 @@ async fn a_local_walk_that_finds_its_source_gone_names_it() {
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             sources,
-            SortColumn::Name,
-            SortOrder::Ascending,
             fresh_state(),
             crate::file_system::write_operations::ScanPreviewPurpose::Transfer,
             watchdog,

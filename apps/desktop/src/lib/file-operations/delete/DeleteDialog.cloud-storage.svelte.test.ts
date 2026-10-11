@@ -86,8 +86,6 @@ function mountDialog(overrides: Record<string, unknown>): {
       isPermanent: true,
       supportsTrash: false,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm,
       onCancel: () => {},

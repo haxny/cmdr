@@ -6,8 +6,15 @@
 //! `Volume::extraction_is_sequential` is `true` here (a compressed tar or solid
 //! 7z); every other directory source keeps the per-entry
 //! `copy_directory_streaming` walk, so this is zero-regression for random-access
-//! sources. See `write_operations/transfer/DETAILS.md` § "One-pass sequential
-//! extract" for the full mechanism.
+//! sources. See `volume/DETAILS.md` § "One-pass sequential extract" for the
+//! full mechanism.
+//!
+//! ❗ The one place a transfer doesn't start files in tree order: the plan pass
+//! walks the tree sorted like every merge, but the data pass lands members in
+//! the ARCHIVE's order, because the stream decodes once and decides. A progress
+//! row only ever claims its own state, so the tree stays honest; the rows below
+//! the active one just aren't necessarily next. `volume/DETAILS.md` §
+//! "Processing order".
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

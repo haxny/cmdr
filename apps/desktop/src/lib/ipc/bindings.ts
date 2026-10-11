@@ -714,8 +714,6 @@ export const commands = {
        *  Returns a DryRunResult with totals and conflicts.
        */
       dryRun?: boolean
-      sortColumn?: SortColumn
-      sortOrder?: SortOrder
       // Preview scan ID to reuse cached scan results (from start_scan_preview)
       previewId?: string | null
       // Maximum number of conflicts to include in DryRunResult (default: 100)
@@ -751,8 +749,6 @@ export const commands = {
        *  Returns a DryRunResult with totals and conflicts.
        */
       dryRun?: boolean
-      sortColumn?: SortColumn
-      sortOrder?: SortOrder
       // Preview scan ID to reuse cached scan results (from start_scan_preview)
       previewId?: string | null
       // Maximum number of conflicts to include in DryRunResult (default: 100)
@@ -785,8 +781,6 @@ export const commands = {
        *  Returns a DryRunResult with totals and conflicts.
        */
       dryRun?: boolean
-      sortColumn?: SortColumn
-      sortOrder?: SortOrder
       // Preview scan ID to reuse cached scan results (from start_scan_preview)
       previewId?: string | null
       // Maximum number of conflicts to include in DryRunResult (default: 100)
@@ -831,20 +825,11 @@ export const commands = {
   startScanPreview: (
     sources: string[],
     sourceVolumeId: string | null,
-    sortColumn: SortColumn,
-    sortOrder: SortOrder,
     progressIntervalMs: number | null,
     purpose: ScanPreviewPurpose,
   ) =>
     typedError<ScanPreviewStartResult, ScanPreviewRefusal>(
-      __TAURI_INVOKE('start_scan_preview', {
-        sources,
-        sourceVolumeId,
-        sortColumn,
-        sortOrder,
-        progressIntervalMs,
-        purpose,
-      }),
+      __TAURI_INVOKE('start_scan_preview', { sources, sourceVolumeId, progressIntervalMs, purpose }),
     ),
   cancelScanPreview: (previewId: string) => __TAURI_INVOKE<void>('cancel_scan_preview', { previewId }),
   /**
@@ -17994,8 +17979,6 @@ export type WriteOperationConfig = {
    *  Returns a DryRunResult with totals and conflicts.
    */
   dryRun?: boolean
-  sortColumn?: SortColumn
-  sortOrder?: SortOrder
   // Preview scan ID to reuse cached scan results (from start_scan_preview)
   previewId?: string | null
   // Maximum number of conflicts to include in DryRunResult (default: 100)

@@ -35,7 +35,7 @@ use super::super::transfer_driver::{
 use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::DisplacedLedger;
 use super::preflight::SourceFileFacts;
-use super::preflight::{SourceHint, scan_volume_sources};
+use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
 use super::strategy::{Replaces, copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
 use crate::file_system::volume::Volume;
@@ -125,6 +125,10 @@ pub(crate) async fn move_volumes_with_progress(
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();
+    // The driver takes sources in the order given, so this is what makes it
+    // start in tree order.
+    let ordered_sources = sources_in_tree_order(source_paths, &preflight.source_hints);
+    let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(preflight.source_hints);
 
     // The operation-log journal target (real source + dest volume ids), set by the

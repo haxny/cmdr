@@ -11,7 +11,6 @@ use super::super::error_classification::classify_io_error;
 use super::super::event_sinks::ScanPreviewEventSink;
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
 use super::super::scan_cache::{ScanOutcome, settle_preview};
-use super::super::scan_source_tracker::sort_files;
 use super::super::scan_walker::{OnlineOnlyWatch, WalkContext, walk_sources_with_per_path};
 use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, FileInfo, ScanPreviewState};
@@ -22,7 +21,6 @@ use super::super::types::{
 };
 use super::settle_failed_preview;
 use crate::file_system::volume::CopyScanResult;
-use cmdr_listing::{SortColumn, SortOrder};
 
 /// Internal function that runs the scan preview in a background thread.
 ///
@@ -37,16 +35,10 @@ use cmdr_listing::{SortColumn, SortOrder};
 /// rides the complete event. The worker is joined after the walk (usually
 /// already done, since it ran concurrently) and cancels with the scan; a
 /// sampling failure degrades to "no estimate" and never affects the scan.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "One worker's inputs: what to walk, how to sort it, where to publish, and what bounds it"
-)]
 pub(in crate::file_system::write_operations) fn run_scan_preview(
     events: Arc<dyn ScanPreviewEventSink>,
     preview_id: String,
     sources: Vec<PathBuf>,
-    sort_column: SortColumn,
-    sort_order: SortOrder,
     state: Arc<ScanPreviewState>,
     purpose: ScanPreviewPurpose,
     watchdog: Arc<ScanWatchdog>,
@@ -253,9 +245,6 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
                 }
                 tree
             });
-            // Sort files
-            sort_files(&mut files, sort_column, sort_order);
-
             let file_count = files.len();
             let dirs_count = dirs.len();
             // The walk's own totals, not the watchdog's tick counters: a preview

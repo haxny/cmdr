@@ -90,8 +90,6 @@ describe('createTransferScanState', () => {
           if (destroyed) throw new TypeError("null is not an object (evaluating 'transferDialogProps.sourcePaths')")
           return ['/src/a.txt']
         },
-        getSortColumn: () => 'name',
-        getSortOrder: () => 'ascending',
         getSourceVolumeId: () => 'root',
         getIsSameVolumeMove: () => move.sameVolume,
         getConfirmed: () => false,
@@ -138,14 +136,7 @@ describe('createTransferScanState', () => {
       registrations.resolve(undefined)
       scan.start()
       await vi.waitFor(() => {
-        expect(commands.startScanPreview).toHaveBeenCalledWith(
-          ['/src/a.txt'],
-          'name',
-          'ascending',
-          'transfer',
-          500,
-          'root',
-        )
+        expect(commands.startScanPreview).toHaveBeenCalledWith(['/src/a.txt'], 'transfer', 500, 'root')
       })
 
       close()

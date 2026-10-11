@@ -7,8 +7,6 @@ import type {
   ConflictResolution,
   ScanPreviewStartResult,
   ScanPreviewTotals,
-  SortColumn,
-  SortOrder,
   WriteOperationConfig,
   WriteOperationError,
   WriteOperationStartResult,
@@ -91,20 +89,11 @@ export type {
  * instead: nothing was walked and no preview exists. */
 export async function startScanPreview(
   sources: string[],
-  sortColumn: SortColumn,
-  sortOrder: SortOrder,
   purpose: ScanPreviewPurpose,
   progressIntervalMs?: number,
   sourceVolumeId?: string,
 ): Promise<ScanPreviewStart> {
-  const res = await commands.startScanPreview(
-    sources,
-    sourceVolumeId ?? null,
-    sortColumn,
-    sortOrder,
-    progressIntervalMs ?? null,
-    purpose,
-  )
+  const res = await commands.startScanPreview(sources, sourceVolumeId ?? null, progressIntervalMs ?? null, purpose)
   return res.status === 'ok' ? res.data : { refusal: res.error }
 }
 

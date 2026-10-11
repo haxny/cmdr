@@ -63,7 +63,6 @@ export async function duplicateInPlace(access: PaneAccess, dialogs: DialogState)
 
   const hasParent = paneRef.hasParentEntry()
   const selectedIndices = paneRef.getSelectedIndices()
-  const { sortBy, sortOrder } = access.getPaneSort(pane)
   // One folder plays both parts. That is the whole operation, and it's what lets
   // the same builders F5 uses describe it.
   const context: TransferContext = {
@@ -72,8 +71,6 @@ export async function duplicateInPlace(access: PaneAccess, dialogs: DialogState)
     destPath: folderPath,
     sourceVolumeId: volumeId,
     destVolumeId: volumeId,
-    sortColumn: sortBy,
-    sortOrder,
   }
 
   const isLeft = pane === 'left'
@@ -103,8 +100,6 @@ export async function duplicateInPlace(access: PaneAccess, dialogs: DialogState)
     sourcePaneSide: pane,
     destinationPath: folderPath,
     direction: pane,
-    sortColumn: props.sortColumn,
-    sortOrder: props.sortOrder,
     previewId: null,
     sourceVolumeId: volumeId,
     destVolumeId: volumeId,

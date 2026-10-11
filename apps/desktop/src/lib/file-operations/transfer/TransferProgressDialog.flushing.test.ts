@@ -165,8 +165,6 @@ async function mountDialog(operationType: DialogOperationType): Promise<{
       sourcePaths: ['/Users/test/file.txt'],
       sourceFolderPath: '/Users/test',
       destinationPath: '/Users/test/dest',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: null,
       sourceVolumeId: 'root',
       destVolumeId: 'root',

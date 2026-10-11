@@ -144,7 +144,6 @@ function buildAccess(config: AccessConfig = {}): PaneAccess {
     getPaneRef: () => ('paneRef' in config ? config.paneRef : buildPaneRef()),
     getPanePath: () => config.path ?? '/dest/dir',
     getPaneVolumeId: () => config.volumeId ?? 'root',
-    getPaneSort: () => ({ sortBy: 'name', sortOrder: 'ascending' }),
     getPaneHistory: () => ({ stack: [], currentIndex: 0 }),
     getFocusedPane: () => config.focusedPane ?? 'left',
     otherPane: (pane) => (pane === 'left' ? 'right' : 'left'),

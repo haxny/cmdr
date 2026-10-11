@@ -50,8 +50,6 @@ function makeConfig(over: Partial<TransferDispatchConfig> = {}): TransferDispatc
     operationType: 'copy',
     sourcePaths: ['/src/file.txt'],
     destinationPath: '/dst',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: null,
     sourceVolumeId: 'root',
     destVolumeId: 'root',

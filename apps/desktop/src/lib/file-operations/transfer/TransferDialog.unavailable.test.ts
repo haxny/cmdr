@@ -91,8 +91,6 @@ function mountDialog(onConfirm: (payload: TransferConfirmPayload) => void = () =
       fileCount: 0,
       folderCount: 1,
       sourceFolderPath: '/Volumes/nas',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'nas',
       destVolumeId: 'root',
       autoConfirm: false,

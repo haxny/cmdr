@@ -58,7 +58,6 @@ function access(config: { ref?: FilePaneAPI; path?: string; volumes?: VolumeInfo
     getPaneRef: () => config.ref ?? paneRef(),
     getPanePath: () => config.path ?? '/Users/x/dir',
     getPaneVolumeId: () => 'root',
-    getPaneSort: () => ({ sortBy: 'name', sortOrder: 'ascending' }),
     getFocusedPane: () => 'left',
     otherPane: (pane: 'left' | 'right') => (pane === 'left' ? 'right' : 'left'),
     getShowHiddenFiles: () => true,
@@ -82,7 +81,7 @@ function volume(overrides: Partial<VolumeInfo> = {}): VolumeInfo {
 
 /** What the stubbed builders hand back, minus the paths the caller varies. */
 function builtProps(sourcePaths: string[]) {
-  return { sourcePaths, fileCount: sourcePaths.length, folderCount: 0, sortColumn: 'name', sortOrder: 'ascending' }
+  return { sourcePaths, fileCount: sourcePaths.length, folderCount: 0 }
 }
 
 beforeEach(() => {

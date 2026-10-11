@@ -118,8 +118,6 @@ describe('buildTransferPropsFromSelection', () => {
     destPath: '/dest',
     sourceVolumeId: 'vol-src',
     destVolumeId: 'vol-dest',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
   }
 
   beforeEach(() => vi.clearAllMocks())
@@ -168,8 +166,6 @@ describe('buildTransferPropsFromSelection', () => {
       fileCount: 2,
       folderCount: 1,
       sourceFolderPath: '/source',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'vol-src',
       destVolumeId: 'vol-dest',
     })
@@ -233,8 +229,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'vol-dest',
       'vol-src',
-      'name',
-      'ascending',
     )
 
     expect(result).toEqual({
@@ -246,8 +240,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       fileCount: 1,
       folderCount: 0,
       sourceFolderPath: '/Users/alice',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'vol-src',
       destVolumeId: 'vol-dest',
     })
@@ -261,15 +253,11 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'left',
       'vol-1',
       'vol-1',
-      'size',
-      'descending',
     )
 
     expect(result.fileCount).toBe(3)
     expect(result.sourceFolderPath).toBe('/Users/alice')
     expect(result.direction).toBe('left')
-    expect(result.sortColumn).toBe('size')
-    expect(result.sortOrder).toBe('descending')
   })
 
   it('keeps source and dest volume ids independent so a cross-volume drop stats the right volume', () => {
@@ -284,8 +272,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'root',
       'mtp-dev:65538',
-      'name',
-      'ascending',
     )
 
     expect(result.sourceVolumeId).toBe('mtp-dev:65538')
@@ -301,8 +287,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'vol-dest',
       'vol-src',
-      'name',
-      'ascending',
       [true, true, true],
     )
 
@@ -318,8 +302,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'vol-dest',
       'vol-src',
-      'name',
-      'ascending',
       [false, true, true],
     )
 
@@ -337,8 +319,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'vol-dest',
       'vol-src',
-      'name',
-      'ascending',
       [false, true, null],
     )
 
@@ -354,8 +334,6 @@ describe('buildTransferPropsFromDroppedPaths', () => {
       'right',
       'vol-dest',
       'vol-src',
-      'name',
-      'ascending',
       [true],
     )
 
@@ -366,25 +344,13 @@ describe('buildTransferPropsFromDroppedPaths', () => {
 
 describe('buildTransferPropsFromSnapshot (source-side ops)', () => {
   it('returns null when no source paths are supplied', () => {
-    expect(
-      buildTransferPropsFromSnapshot('copy', [], [], true, '/dest', 'vol-dest', 'name', 'ascending', 'root'),
-    ).toBeNull()
+    expect(buildTransferPropsFromSnapshot('copy', [], [], true, '/dest', 'vol-dest', 'root')).toBeNull()
   })
 
   it('returns null when paths and flags lengths disagree', () => {
     // Defensive: would otherwise misreport file/folder counts.
     expect(
-      buildTransferPropsFromSnapshot(
-        'copy',
-        ['/a/x', '/a/y'],
-        [false],
-        true,
-        '/dest',
-        'vol-dest',
-        'name',
-        'ascending',
-        'root',
-      ),
+      buildTransferPropsFromSnapshot('copy', ['/a/x', '/a/y'], [false], true, '/dest', 'vol-dest', 'root'),
     ).toBeNull()
   })
 
@@ -396,8 +362,6 @@ describe('buildTransferPropsFromSnapshot (source-side ops)', () => {
       true,
       '/Users/a/desktop',
       'vol-dest',
-      'name',
-      'ascending',
       'vol-src',
     )
 
@@ -426,8 +390,6 @@ describe('buildTransferPropsFromSnapshot (source-side ops)', () => {
       true, // source is the left pane → files travel right
       '/dest',
       'vol-dest',
-      'name',
-      'ascending',
       'root',
     )
     if (!left) throw new Error('expected non-null left')
@@ -440,8 +402,6 @@ describe('buildTransferPropsFromSnapshot (source-side ops)', () => {
       false, // source is the right pane → files travel left
       '/dest',
       'vol-dest',
-      'name',
-      'ascending',
       'root',
     )
     if (!right) throw new Error('expected non-null right')
@@ -449,17 +409,7 @@ describe('buildTransferPropsFromSnapshot (source-side ops)', () => {
   })
 
   it('passes the operation type through unchanged', () => {
-    const props = buildTransferPropsFromSnapshot(
-      'move',
-      ['/a/x'],
-      [false],
-      true,
-      '/dest',
-      'vol-dest',
-      'name',
-      'ascending',
-      'root',
-    )
+    const props = buildTransferPropsFromSnapshot('move', ['/a/x'], [false], true, '/dest', 'vol-dest', 'root')
     if (!props) throw new Error('expected non-null props')
     expect(props.operationType).toBe('move')
   })

@@ -12,7 +12,7 @@
 //! speak it.
 //!
 //! The walk DISCOVERS serially and COPIES concurrently: one walker descends the
-//! tree in listing order and resolves every conflict on itself, exactly as it
+//! source in tree order and resolves every conflict on itself, exactly as it
 //! always did, while each file's byte copy joins the operation-wide
 //! `merge_ctx.rs::FileWindow` and overlaps its siblings. `DETAILS.md`
 //! § "One window for the whole operation".
@@ -32,6 +32,7 @@ use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
 use super::super::super::state::WriteOperationState;
+use super::super::super::transfer_tree::TreeOrder;
 use super::super::super::types::WriteOperationError;
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::SourceProgress;
@@ -331,7 +332,7 @@ async fn copy_leaf<'a>(
 /// ## The window
 ///
 /// Discovery stays serial and copying goes wide: this function walks the tree and
-/// resolves every conflict on ONE walker, in listing order, then hands each
+/// resolves every conflict on ONE walker, in tree order, then hands each
 /// file's byte copy to the operation-wide [`FileWindow`] on `MergeCtx`. Prompt
 /// order, the apply-to-all latch, and the order directories are created in are
 /// therefore all exactly what they were when the whole walk was serial; only the
@@ -555,7 +556,13 @@ async fn merge_level<'a>(
     })
     .await
     .at(source_path)?;
-    let ((dest_index, level_made_here), entries) = level;
+    let ((dest_index, level_made_here), mut entries) = level;
+    // Tree order, whatever order the backend listed in (SMB and MTP don't
+    // sort): the walker starts files, asks conflicts, and creates folders in
+    // the order the progress tree shows. `DETAILS.md` § "Processing order".
+    TreeOrder::active().sort(&mut entries, |entry| {
+        (merges_as_a_directory(entry), entry.name.as_str())
+    });
     // A move sweeps exactly the folders this walk listed; anything else it
     // finds in the source afterwards arrived later and stays.
     created.record_walked_source_dir(source_path);
@@ -721,7 +728,7 @@ async fn merge_level<'a>(
             continue;
         }
 
-        // Conflict resolution for this child is DONE, on the walker, in listing
+        // Conflict resolution for this child is DONE, on the walker, in tree
         // order — the same rule the top-level concurrent driver follows. Only the
         // bytes go wide.
         let staging = staging_for(&replaces, landing);

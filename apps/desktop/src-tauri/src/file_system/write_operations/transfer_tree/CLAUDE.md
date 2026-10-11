@@ -6,7 +6,7 @@ in flight, what landed, and what's next. The backend owns the model; a view asks
 ## Module map
 
 - `model.rs` (the arena and the per-file-boundary mutations), `build.rs` (`TreeRecorder` for a volume scan,
-  `from_local_scan`, `from_archive_plan`, `from_per_path`), `order.rs` (tree order), `view.rs` (flattening into a
+  `from_local_scan`, `from_archive_plan`, `from_per_path`, `sort_sources`), `order.rs` (tree order), `view.rs` (flattening into a
   window). `mod.rs`: `TransferTree` (the shared lock) and `TransferTreeSlot` (where `WriteOperationState` keeps it).
 
 ## Must-knows
@@ -27,6 +27,8 @@ in flight, what landed, and what's next. The backend owns the model; a view asks
 - **Paths reach the recorder in the caller's form** (`crates/cmdr-fs/DETAILS.md` § "The recorder"); an entry under no
   source is dropped, ❌ never guessed into place.
 - **Built for copy, move, and compress only**, ❌ never delete or trash (`ScanPreviewPurpose`).
+- **Every driver STARTS files in tree order** (`../transfer/DETAILS.md` § "Processing order"), so the rows below the
+  active one are next. A new walk sorts each level with `TreeOrder`, ❌ never in listing or pane-sort order.
 
 Layout, the view algorithm, folder states, and decisions: `DETAILS.md`. Read it before any non-trivial work here:
 editing, planning, reorganizing, or advising.

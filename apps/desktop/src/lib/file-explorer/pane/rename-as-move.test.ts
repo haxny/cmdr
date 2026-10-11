@@ -11,10 +11,8 @@ vi.mock('./operation-start-gate', () => ({ operationStartIsBlocked: blockedSpy }
 import { openRenameAsMove, renameAsMoveDialogProps } from './rename-as-move'
 import type { PaneAccess } from './pane-access'
 
-const SORT = { sortBy: 'name' as const, sortOrder: 'ascending' as const }
-
 describe('renameAsMoveDialogProps', () => {
-  const props = renameAsMoveDialogProps('left', 's3-acct', SORT, {
+  const props = renameAsMoveDialogProps('left', 's3-acct', {
     sourcePath: '/bucket/photos',
     parentPath: '/bucket',
     newName: 'pictures',
@@ -51,14 +49,13 @@ describe('openRenameAsMove', () => {
   const request = { sourcePath: '/bucket/big.iso', parentPath: '/bucket', newName: 'big-2.iso', isDirectory: false }
   const access = {
     getPaneVolumeId: () => 's3-acct',
-    getPaneSort: () => ({ sortBy: 'size', sortOrder: 'descending' }),
   } as unknown as PaneAccess
 
   beforeEach(() => {
     blockedSpy.mockReturnValue(false)
   })
 
-  it('opens the Move dialog with the pane’s volume and sort', () => {
+  it('opens the Move dialog with the pane’s volume', () => {
     const showTransfer = vi.fn()
 
     openRenameAsMove(access, { showTransfer } as never, 'right', request)
@@ -66,8 +63,6 @@ describe('openRenameAsMove', () => {
     expect(showTransfer).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceVolumeId: 's3-acct',
-        sortColumn: 'size',
-        sortOrder: 'descending',
         fileCount: 1,
         folderCount: 0,
         direction: 'left',

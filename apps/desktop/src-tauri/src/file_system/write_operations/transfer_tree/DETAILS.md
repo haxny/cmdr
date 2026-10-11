@@ -8,9 +8,10 @@ Read this before any non-trivial work here. Must-knows: `CLAUDE.md`. The plan th
 Every transfer's scan builds one, and the operation installs it on `WriteOperationState::transfer_tree`
 (`TransferTreeSlot::install`, once) as soon as the scan is done:
 
-- **Local copy and cross-FS move**: `ScanResult::take_transfer_tree` (`../scan_cache.rs`). The preview's tree when a
+- **Local copy and cross-FS move**: `ScanResult::order_by_transfer_tree` (`../scan_cache.rs`). The preview's tree when a
   `ScanPreviewPurpose::Transfer` preview built one (`../scan_preview/local.rs`, after the walk and off it), else built
-  right there from the walk's `files` and `dirs`. Either way each `FileInfo` learns its `tree_node`.
+  right there from the walk's `files` and `dirs`. Either way each `FileInfo` learns its `tree_node`, and `files` is
+  sorted into the tree's order.
 - **Volume copy and cross-volume move**: `scan_volume_sources` (`../transfer/volume/preflight.rs`) hangs a
   `TreeRecorder` on the scan's `ScanBoundary`. A cached preview's tree is taken as is; a cached preview without one
   (a delete's, never consumed here today) degrades to `from_per_path`: each source a file or an opaque folder.
@@ -45,6 +46,11 @@ path map, so it stays small for a million-file scan. A source the scan never rep
 collator's raw-bytes tiebreak so the order is total. `sort` builds one key per item; `compare` is the one-off form.
 `TreeOrder::bytewise` (test builds only) keeps the shape without the collator, for the budget cells, where building a
 million keys in an unoptimized build is the whole test budget.
+
+The drivers start files in this order too (`../transfer/DETAILS.md` § "Processing order"), through three helpers:
+`TreeModel::tree_order_ranks` (each node's place in a depth-first walk, for the local engine to sort its flat file
+list), `sort_sources` (the selection, ranked by the same labels its top-level rows show), and `TreeOrder::sort` itself
+for a walker's level.
 
 ## Mutations and folder state
 

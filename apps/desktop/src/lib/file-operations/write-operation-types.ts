@@ -4,12 +4,11 @@
  * Re-exported from `#lib/file-explorer/types`, which stays the one import seam
  * for consumers.
  *
- * ❗ Imports only from the generated bindings (`SortColumn` / `SortOrder` there
- * are identical to the listing's own), so the barrel's re-export can't form an
- * import cycle back into `file-explorer/`.
+ * ❗ Imports only from the generated bindings, so the barrel's re-export can't
+ * form an import cycle back into `file-explorer/`.
  */
 
-import type { ArchiveNameRefusal, SortColumn, SortOrder, TrashRefusalKind } from '#lib/ipc/bindings.js'
+import type { ArchiveNameRefusal, TrashRefusalKind } from '#lib/ipc/bindings.js'
 
 // ============================================================================
 // Write operation types
@@ -61,10 +60,6 @@ export interface WriteOperationConfig {
   conflictResolution?: ConflictResolution
   /** If true, only scan and detect conflicts without executing the operation */
   dryRun?: boolean
-  /** Column to sort files by during copy (default: name) */
-  sortColumn?: SortColumn
-  /** Sort order for copy operation (default: ascending) */
-  sortOrder?: SortOrder
   /** Preview scan ID to reuse cached scan results (from start_scan_preview) */
   previewId?: string | null
   /** Maximum number of conflicts to include in DryRunResult (default: 100) */

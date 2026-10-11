@@ -152,8 +152,6 @@ async function mountDialog(opts: MountOptions): Promise<HTMLDivElement> {
       sourceFolderPath: '/Users/test',
       destinationPath: '/Users/test/dest',
       direction: 'right',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: null,
       sourceVolumeId: opts.sourceVolumeId,
       destVolumeId: opts.destVolumeId,

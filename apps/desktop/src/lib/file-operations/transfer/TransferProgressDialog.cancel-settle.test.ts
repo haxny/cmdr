@@ -161,8 +161,6 @@ async function mountDialog(): Promise<{
       operationType: 'delete',
       sourcePaths: ['/Users/test/file.txt'],
       sourceFolderPath: '/Users/test',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: null,
       sourceVolumeId: 'mtp-1',
       onComplete,

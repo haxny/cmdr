@@ -170,6 +170,12 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   the conditional policies compare the two source metadata records. Stop uses the registered operation's conflict
   slot, announces the human wait, and applies the answer (including apply-to-all) before any destination write.
 
+  **The plan is in tree order** (`fresh_plan.rs`), because the producer writes entries in plan order and the compress's
+  progress tree lists them in tree order (`../transfer/DETAILS.md` § "Processing order"). `settle_tops` settles the
+  selection first, in selection order (each item's name in the zip, duplicates resolved, links left out), then sorts it
+  folders first, by the name the zip holds; the walk sorts every listed level the same way before pushing it. A renamed
+  duplicate therefore sorts by its new name (`report (1).txt` before `report.txt`).
+
   **One producer, two destination routes.** Local POSIX, SMB, SFTP, and ADB accept unknown-length writes, so the
   producer streams directly to a tracked same-directory stage with `CreateNew`. WebDAV and MTP receive the same
   producer into a private local spool, then a known-length staged upload. This sequencing makes same-device MTP

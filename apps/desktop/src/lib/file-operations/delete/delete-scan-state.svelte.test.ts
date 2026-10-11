@@ -86,8 +86,6 @@ describe('createDeleteScanState', () => {
   function create() {
     return createDeleteScanState({
       getSourcePaths: () => ['/cloud/folder'],
-      getSortColumn: () => 'name',
-      getSortOrder: () => 'ascending',
       getSourceVolumeId: () => 'root',
       getDestroyed: () => destroyed,
     })

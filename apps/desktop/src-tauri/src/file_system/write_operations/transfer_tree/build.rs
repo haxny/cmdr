@@ -197,13 +197,9 @@ impl PathTree {
             if by_path.contains_key(source) {
                 continue;
             }
-            let label = match source.strip_prefix(&root) {
-                Ok(relative) if !relative.as_os_str().is_empty() => relative.to_string_lossy(),
-                _ => source.to_string_lossy(),
-            };
             // A file until the scan says otherwise: a source the scan never
             // reported still shows, as the one row it is.
-            let id = builder.child(BuilderId::ROOT, &label, NodeKind::File, 0);
+            let id = builder.child(BuilderId::ROOT, &source_label(&root, source), NodeKind::File, 0);
             by_path.insert(source.clone(), id);
         }
         Self {
@@ -282,6 +278,36 @@ impl PathTree {
             NodeKind::Opaque => return None,
         }
         Some(id)
+    }
+}
+
+/// A source's top-level row label: its path relative to the selection's root.
+fn source_label<'a>(root: &Path, source: &'a Path) -> std::borrow::Cow<'a, str> {
+    match source.strip_prefix(root) {
+        Ok(relative) if !relative.as_os_str().is_empty() => relative.to_string_lossy(),
+        _ => source.to_string_lossy(),
+    }
+}
+
+/// Puts a selection's sources in tree order, the order its top-level rows list
+/// in: ranked by the same labels, folders first. `is_folder` says what the scan
+/// found each one to be; a source it knows nothing about ranks as the file row
+/// it shows as. Sources with one label keep their given order.
+pub(crate) fn sort_sources(sources: &mut [PathBuf], is_folder: impl Fn(&Path) -> bool, order: &TreeOrder) {
+    let root = common_ancestor(sources);
+    let mut ranked: Vec<(bool, String, PathBuf)> = sources
+        .iter()
+        .map(|source| {
+            (
+                is_folder(source),
+                source_label(&root, source).into_owned(),
+                source.clone(),
+            )
+        })
+        .collect();
+    order.sort(&mut ranked, |(is_folder, label, _)| (*is_folder, label.as_str()));
+    for (slot, (_, _, source)) in sources.iter_mut().zip(ranked) {
+        *slot = source;
     }
 }
 

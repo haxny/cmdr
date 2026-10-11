@@ -22,7 +22,6 @@ import {
   onScanPreviewCancelled,
   type UnlistenFn,
 } from '#lib/tauri-commands/index.js'
-import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
 import { getSetting } from '#lib/settings/index.js'
 import { formatFilesPerSecond } from '#lib/units/index.js'
 import { withTimeout } from '#lib/utils/timing.js'
@@ -39,8 +38,6 @@ const ONLINE_ONLY_ANSWER_TIMEOUT_MS = 90_000
 
 export interface DeleteScanStateDeps {
   getSourcePaths: () => string[]
-  getSortColumn: () => SortColumn
-  getSortOrder: () => SortOrder
   /** Routes the walk through the Volume trait for non-local volumes (MTP, SMB). */
   getSourceVolumeId: () => string
   /** Whether the dialog has unmounted. The start can outlive it. */
@@ -120,8 +117,6 @@ export function createDeleteScanState(deps: DeleteScanStateDeps) {
   async function startScan() {
     const request = {
       sourcePaths: deps.getSourcePaths(),
-      sortColumn: deps.getSortColumn(),
-      sortOrder: deps.getSortOrder(),
       sourceVolumeId: deps.getSourceVolumeId(),
     }
     // Subscribe to events BEFORE starting scan (avoid missing fast completions)
@@ -180,14 +175,7 @@ export function createDeleteScanState(deps: DeleteScanStateDeps) {
     // Start the scan
     isScanning = true
     const progressIntervalMs = getSetting('fileOperations.progressUpdateInterval')
-    const result = await startScanPreview(
-      request.sourcePaths,
-      request.sortColumn,
-      request.sortOrder,
-      'delete',
-      progressIntervalMs,
-      request.sourceVolumeId,
-    )
+    const result = await startScanPreview(request.sourcePaths, 'delete', progressIntervalMs, request.sourceVolumeId)
     if ('refusal' in result) {
       // No volume answers for the source (an unplugged phone): nothing was
       // walked and no preview exists. Same as a walk that stopped; the

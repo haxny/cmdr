@@ -111,6 +111,22 @@ recorder". Differences, each the more elegant fix once the code was in front of 
 - **Measured**: 47.0 B/node at 1,000,002 nodes with 23-byte names (debug build, `budget_tests.rs`); a 200-row window
   over a million flat rows answers well inside the 50 ms debug-build bound.
 
+## Built in M2 (2026-10-11), and where it differs from the plan below
+
+The order and its one exception: `write_operations/transfer/DETAILS.md` § "Processing order" and
+`transfer/volume/DETAILS.md` § "Processing order". Differences:
+
+- **The local engine sorts by the tree itself**: `ScanResult::take_transfer_tree` became `order_by_transfer_tree`, which
+  sorts `files` by each node's depth-first rank (`TreeModel::tree_order_ranks`), so local order can't drift from the
+  tree. Scans and previews return walk order; delete keeps it (no tree there).
+- **Sources sort after the preflight** (`preflight.rs::sources_in_tree_order` over `transfer_tree::sort_sources`), in
+  `copy.rs`, `move_cross.rs`, and also `move_same.rs` (its top-level renames, so M3's per-source rows read in order).
+- **Compress settles its selection before walking** (`fresh_plan.rs::settle_tops`): duplicate names resolve first, then
+  the tops sort by their zip names, so a renamed duplicate sorts by its new name (`report (1).txt` first; that test's
+  expectation changed).
+- **Dead weight went with the sort**: `FileInfo::modified` / `created` and its sort helpers, and
+  `PaneAccess::getPaneSort` (its only readers fed the dialogs). `VolumeCopyConfig` never carried the sort.
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +

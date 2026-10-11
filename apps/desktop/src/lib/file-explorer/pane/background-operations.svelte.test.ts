@@ -60,8 +60,6 @@ function copyProps(over: Partial<TransferProgressPropsData> = {}): TransferProgr
     sourcePaneSide: 'left',
     destinationPath: '/Users/me/backup',
     direction: 'right',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: 'preview-1',
     sourceVolumeId: 'root',
     destVolumeId: 'root',

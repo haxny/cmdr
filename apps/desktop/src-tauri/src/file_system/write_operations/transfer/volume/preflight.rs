@@ -33,7 +33,7 @@ use std::time::Instant;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::take_cached_scan_result;
 use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
-use super::super::super::transfer_tree::{TreeOrder, TreeRecorder, from_per_path};
+use super::super::super::transfer_tree::{TreeOrder, TreeRecorder, from_per_path, sort_sources};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
@@ -75,6 +75,20 @@ pub(super) struct SourceHint {
     pub modified_at: Option<u64>,
     /// Its creation date, from the same stat, for the same folder.
     pub created_at: Option<u64>,
+}
+
+/// `sources` in tree order, the order every volume driver starts them in
+/// (`DETAILS.md` § "Processing order"). A source without a hint ranks as a
+/// file: that's an ORDER only, the row the tree shows for it, ❌ never an
+/// answer to "is it a directory?".
+pub(super) fn sources_in_tree_order(sources: &[PathBuf], hints: &HashMap<PathBuf, SourceHint>) -> Vec<PathBuf> {
+    let mut ordered = sources.to_vec();
+    sort_sources(
+        &mut ordered,
+        |source| hints.get(source).is_some_and(|hint| hint.is_directory),
+        &TreeOrder::active(),
+    );
+    ordered
 }
 
 /// What the caller already knows about ONE source FILE, from the listing or scan

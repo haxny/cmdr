@@ -145,8 +145,6 @@ async function mountDialog(): Promise<{ component: ReturnType<typeof mount>; tar
       sourcePaths: ['/Users/test/file.txt'],
       sourceFolderPath: '/Users/test',
       destinationPath: '/Users/test/dest',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: null,
       sourceVolumeId: 'root',
       destVolumeId: 'root',

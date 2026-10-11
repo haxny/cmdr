@@ -205,15 +205,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 preview_id,
                 operation_id
             );
-            scan_sources(
-                sources,
-                state,
-                events,
-                operation_id,
-                WriteOperationType::Copy,
-                config.sort_column,
-                config.sort_order,
-            )?
+            scan_sources(sources, state, events, operation_id, WriteOperationType::Copy)?
         }
     } else {
         // No preview ID, do normal scan
@@ -221,15 +213,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             "copy_files_with_progress: starting scan phase for operation_id={}",
             operation_id
         );
-        scan_sources(
-            sources,
-            state,
-            events,
-            operation_id,
-            WriteOperationType::Copy,
-            config.sort_column,
-            config.sort_order,
-        )?
+        scan_sources(sources, state, events, operation_id, WriteOperationType::Copy)?
     };
     log::debug!(
         "copy_files_with_progress: scan complete for operation_id={}, files={}, bytes={}",
@@ -237,7 +221,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         scan_result.file_count,
         scan_result.total_bytes
     );
-    state.transfer_tree.install(scan_result.take_transfer_tree(sources));
+    state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
 
     // Pre-flight free-space check, before anything is written.
     log::debug!(

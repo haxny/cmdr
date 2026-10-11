@@ -40,8 +40,6 @@ function moveProps(): TransferProgressPropsData {
     sourcePaneSide: 'right',
     destinationPath: '/Users/me/backup',
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: null,
     sourceVolumeId: 'root',
     duplicateFollowUp: 'nothing',

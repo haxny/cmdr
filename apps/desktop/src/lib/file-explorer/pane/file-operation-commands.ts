@@ -351,15 +351,12 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
   /** Builds a TransferContext from pane state. */
   function buildTransferContext(pane: 'left' | 'right'): TransferContext {
     const other = access.otherPane(pane)
-    const { sortBy, sortOrder } = access.getPaneSort(pane)
     return {
       showHiddenFiles: access.getShowHiddenFiles(),
       sourcePath: access.getPanePath(pane),
       destPath: access.getPanePath(other),
       sourceVolumeId: access.getPaneVolumeId(pane),
       destVolumeId: access.getPaneVolumeId(other),
-      sortColumn: sortBy,
-      sortOrder,
     }
   }
 
@@ -398,7 +395,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     const isDirectoryFlags = entries.map((entry) => entry.isDirectory)
 
     const other = access.otherPane(pane)
-    const { sortBy, sortOrder } = access.getPaneSort(pane)
     return buildTransferPropsFromSnapshot(
       operationType,
       sourcePaths,
@@ -406,8 +402,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       pane === 'left',
       access.getPanePath(other),
       access.getPaneVolumeId(other),
-      sortBy,
-      sortOrder,
       snapshot.volumeId,
     )
   }
@@ -614,7 +608,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     }))
     const sourcePaths = entries.map((entry) => entry.path)
 
-    const { sortBy, sortOrder } = access.getPaneSort(access.getFocusedPane())
     const sourceVolume = resolveSnapshotSourceVolume(snapshot.volumeId, access.getVolumes())
     // A search reaches into cloud-storage folders like anywhere else, and a hit
     // there can be online-only just the same.
@@ -629,8 +622,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       cloudOnlineOnly: cloud.onlineOnly,
       cloudFolderMayHoldOnlineOnly: cloud.folderMayHoldOnlineOnly,
       isFromCursor: !hasSelection,
-      sortColumn: sortBy,
-      sortOrder,
       sourceVolumeId: sourceVolume.volumeId,
       autoConfirm,
       mcpRequestId,
@@ -752,8 +743,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
     const supportsTrash =
       cloud.onlineOnly === null && paneOffersTrash(sourceVolId, sourceFolderPath, access.getVolumes())
 
-    const { sortBy, sortOrder } = access.getPaneSort(access.getFocusedPane())
-
     dialogs.showDeleteConfirmation({
       sourceItems,
       sourcePaths,
@@ -764,8 +753,6 @@ export function createFileOperationCommands(access: PaneAccess, dialogs: DialogS
       cloudOnlineOnly: cloud.onlineOnly,
       cloudFolderMayHoldOnlineOnly: cloud.folderMayHoldOnlineOnly,
       isFromCursor: !hasSelection,
-      sortColumn: sortBy,
-      sortOrder,
       sourceVolumeId: sourceVolId,
       autoConfirm,
       mcpRequestId,

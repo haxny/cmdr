@@ -164,8 +164,6 @@ fn from_local_walk_derives_its_file_count_from_the_files_it_walked() {
         source_root: PathBuf::from("/src"),
         size: 10,
         progress_bytes: 10,
-        modified: 0,
-        created: 0,
         is_symlink: false,
         tree_node: None,
     };
@@ -195,8 +193,6 @@ fn from_local_walk_refuses_to_build_a_walk_that_found_files_but_no_sources() {
         source_root: PathBuf::from("/src"),
         size: 10,
         progress_bytes: 10,
-        modified: 0,
-        created: 0,
         is_symlink: false,
         tree_node: None,
     };
@@ -278,8 +274,6 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
         source_root: PathBuf::from("/src"),
         size,
         progress_bytes: size,
-        modified: 0,
-        created: 0,
         is_symlink: false,
         tree_node: None,
     };

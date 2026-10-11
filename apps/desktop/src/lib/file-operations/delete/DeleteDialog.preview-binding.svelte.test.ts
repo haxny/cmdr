@@ -78,8 +78,6 @@ function mountDialog(onConfirm: (previewId: string | null, isPermanent: boolean)
       isPermanent: true,
       supportsTrash: false,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm,
       onCancel: () => {},

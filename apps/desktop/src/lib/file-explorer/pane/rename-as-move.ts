@@ -20,7 +20,6 @@ type DialogState = ReturnType<typeof createDialogState>
 export function renameAsMoveDialogProps(
   pane: 'left' | 'right',
   volumeId: string,
-  sort: { sortBy: TransferDialogPropsData['sortColumn']; sortOrder: TransferDialogPropsData['sortOrder'] },
   request: RenameAsMoveRequest,
 ): TransferDialogPropsData {
   return {
@@ -36,8 +35,6 @@ export function renameAsMoveDialogProps(
     fileCount: request.isDirectory ? 0 : 1,
     folderCount: request.isDirectory ? 1 : 0,
     sourceFolderPath: request.parentPath,
-    sortColumn: sort.sortBy,
-    sortOrder: sort.sortOrder,
     sourceVolumeId: volumeId,
     destVolumeId: volumeId,
     // A rename lands under a new name by construction, so it's never a duplicate.
@@ -55,5 +52,5 @@ export function openRenameAsMove(
 ): void {
   // The same gate F6 takes: an MCP rename can land while another dialog is up.
   if (operationStartIsBlocked()) return
-  dialogs.showTransfer(renameAsMoveDialogProps(pane, access.getPaneVolumeId(pane), access.getPaneSort(pane), request))
+  dialogs.showTransfer(renameAsMoveDialogProps(pane, access.getPaneVolumeId(pane), request))
 }

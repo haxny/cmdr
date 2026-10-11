@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte'
-    import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
     import Switch from '#lib/ui/Switch.svelte'
@@ -48,10 +47,6 @@
          *  answer; see `onlineOnlyAnswer`. */
         cloudFolderMayHoldOnlineOnly?: boolean
         isFromCursor: boolean
-        /** Current sort column on source pane (for scan preview ordering) */
-        sortColumn: SortColumn
-        /** Current sort order on source pane */
-        sortOrder: SortOrder
         /** Source volume ID. Routes the scan preview through the Volume trait
          *  (`run_volume_scan_preview`) for non-local volumes like MTP, so the
          *  confirmation dialog gets a live climbing tally instead of a silently
@@ -87,8 +82,6 @@
         cloudOnlineOnly = null,
         cloudFolderMayHoldOnlineOnly = false,
         isFromCursor,
-        sortColumn,
-        sortOrder,
         sourceVolumeId,
         autoConfirm = false,
         mcpRequestId: autoConfirmRequestId,
@@ -105,8 +98,6 @@
     // walk gives. Freeing the preview stays here: only the dialog knows `confirmed`.
     const scan = createDeleteScanState({
         getSourcePaths: () => sourcePaths,
-        getSortColumn: () => sortColumn,
-        getSortOrder: () => sortOrder,
         getSourceVolumeId: () => sourceVolumeId,
         getDestroyed: () => destroyed,
     })

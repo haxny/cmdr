@@ -57,8 +57,6 @@ function mountDialog(options: { isPermanent: boolean; supportsTrash?: boolean })
       isPermanent: options.isPermanent,
       supportsTrash: options.supportsTrash ?? true,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm: (_previewId: string | null, isPermanent: boolean) => confirms.push(isPermanent),
       onCancel: () => {},

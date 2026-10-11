@@ -65,8 +65,6 @@ function transferProps(overrides: Partial<TransferDialogPropsData> = {}): Transf
     fileCount: 1,
     folderCount: 0,
     sourceFolderPath: SOURCE_FOLDER,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
     duplicateFollowUp: 'openRenameEditor',
@@ -82,8 +80,6 @@ function deleteProps(overrides: Partial<DeleteDialogPropsData> = {}): DeleteDial
     isPermanent: false,
     supportsTrash: true,
     isFromCursor: true,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
     ...overrides,
   }

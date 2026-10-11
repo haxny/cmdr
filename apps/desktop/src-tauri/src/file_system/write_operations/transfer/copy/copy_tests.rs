@@ -827,3 +827,47 @@ fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
         ]
     );
 }
+
+/// A local copy STARTS its files in tree order, the order the progress tree
+/// shows: each folder's subfolders first, then its files, by name, depth first,
+/// and the top-level sources the same way whatever order they came in. A flat
+/// sort on the file name alone would copy `b/aaa.txt` before `a/zzz.txt`, and
+/// the folders would interleave.
+#[test]
+fn a_local_copy_starts_its_files_in_tree_order() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(src.join("a/sub")).unwrap();
+    fs::create_dir_all(src.join("b")).unwrap();
+    fs::create_dir_all(&dst).unwrap();
+    fs::write(src.join("a/zzz.txt"), b"1").unwrap();
+    fs::write(src.join("a/sub/mmm.txt"), b"2").unwrap();
+    fs::write(src.join("b/aaa.txt"), b"3").unwrap();
+    fs::write(src.join("Y.txt"), b"4").unwrap();
+    fs::write(src.join("z.txt"), b"5").unwrap();
+    let events = CollectorEventSink::new();
+    let state = make_state(0);
+
+    copy_files_with_progress_inner(
+        &events,
+        "op-local-copy-tree-order",
+        &state,
+        &[src.join("z.txt"), src.join("b"), src.join("Y.txt"), src.join("a")],
+        &dst,
+        &WriteOperationConfig::default(),
+    )
+    .expect("the copy succeeds");
+
+    // Each file's milestone names it as it lands, and a local copy lands one
+    // file at a time, so the milestones are the start order.
+    let mut landed: Vec<String> = Vec::new();
+    let mut files_done = 0;
+    for event in events.progress.lock().unwrap().iter() {
+        if event.phase == WriteOperationPhase::Copying && event.files_done > files_done {
+            files_done = event.files_done;
+            landed.push(event.current_file.clone().unwrap_or_default());
+        }
+    }
+    assert_eq!(landed, ["mmm.txt", "zzz.txt", "aaa.txt", "Y.txt", "z.txt"]);
+}

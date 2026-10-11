@@ -26,8 +26,6 @@ import {
 import { emit } from '@tauri-apps/api/event'
 import type {
   ConflictResolution,
-  SortColumn,
-  SortOrder,
   TransferOperationType,
   WriteOperationError,
 } from '#lib/file-explorer/types.js'
@@ -48,10 +46,6 @@ export interface TransferDispatchConfig {
   destinationPath?: string
   /** Explicit leaf name for a single copy or move. */
   destinationName?: string
-  /** Current sort column on the source pane (files processed in this order). */
-  sortColumn: SortColumn
-  /** Current sort order on the source pane. */
-  sortOrder: SortOrder
   /** Preview scan ID from `TransferDialog` (for reusing scan results), or null. */
   previewId: string | null
   /** Source volume ID (like "root", "mtp-336592896:65537"). */
@@ -198,7 +192,7 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
   if (config.operationType === 'delete') {
     return deleteFiles(
       config.sourcePaths,
-      { progressIntervalMs, sortColumn: config.sortColumn, sortOrder: config.sortOrder, previewId: config.previewId },
+      { progressIntervalMs, previewId: config.previewId },
       config.sourceVolumeId,
       config.initiator,
     )
@@ -243,8 +237,6 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
         conflictResolution: config.conflictResolution,
         progressIntervalMs,
         maxConflictsToShow,
-        sortColumn: config.sortColumn,
-        sortOrder: config.sortOrder,
         previewId: config.previewId,
         preKnownConflicts: config.preKnownConflicts ?? [],
         destinationName: config.destinationName,

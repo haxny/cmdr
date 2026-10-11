@@ -87,29 +87,13 @@ pub(super) fn move_with_staging(
                 preview_id,
                 operation_id
             );
-            scan_sources(
-                sources,
-                state,
-                events,
-                operation_id,
-                WriteOperationType::Move,
-                config.sort_column,
-                config.sort_order,
-            )?
+            scan_sources(sources, state, events, operation_id, WriteOperationType::Move)?
         }
     } else {
-        scan_sources(
-            sources,
-            state,
-            events,
-            operation_id,
-            WriteOperationType::Move,
-            config.sort_column,
-            config.sort_order,
-        )?
+        scan_sources(sources, state, events, operation_id, WriteOperationType::Move)?
     };
 
-    state.transfer_tree.install(scan_result.take_transfer_tree(sources));
+    state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
 
     // Pre-flight filesystem-limit check: a cross-FS move stages a full copy, so
     // the destination's per-file cap (FAT32's 4 GiB) applies. Block before

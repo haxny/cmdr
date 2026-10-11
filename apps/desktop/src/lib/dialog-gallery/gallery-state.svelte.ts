@@ -10,7 +10,7 @@
  */
 
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
-import type { FileEntry, SortColumn, SortOrder } from '#lib/file-explorer/types.js'
+import type { FileEntry } from '#lib/file-explorer/types.js'
 
 /**
  * The real directory the disk-backed dialogs work against, plus the live pane
@@ -41,8 +41,6 @@ export interface GalleryDiskFixture {
   /** The volume `root` sits on, as the pane resolved it. */
   volumeId: string
   showHiddenFiles: boolean
-  sortColumn: SortColumn
-  sortOrder: SortOrder
   /** Real top-of-listing entries from `root`, in the pane's sort order. */
   entries: FileEntry[]
 }

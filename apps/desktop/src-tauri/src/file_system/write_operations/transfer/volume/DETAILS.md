@@ -331,7 +331,7 @@ IS a leaf). A top-level DIRECTORY task takes none — it holds no permit while i
 window from deadlocking on itself. ❌ Don't add a second width for the subtree; ❌ don't let a walker hold a permit
 across a recursive descent.
 
-**What did NOT change, deliberately.** Discovery stays serial: ONE walker descends in listing order, creates each
+**What did NOT change, deliberately.** Discovery stays serial: ONE walker descends in tree order, creates each
 directory, and resolves every conflict on itself before that child's bytes join the window — the same rule
 `copy_concurrent_source.rs` follows at the top level ("conflict resolution runs synchronously on the driver BEFORE a
 task is spawned"). So prompt order, the `apply_to_all` latch, `conflict_dispatch_lock`'s role, and the order `created_dirs` is
@@ -521,6 +521,27 @@ A byte-exact destination (an SMB share since paths reach it byte-for-byte, SFTP,
 
 **Volume copy/move must skip `write-error` emit on `Cancelled`.** `copy_volumes_with_progress` / `move_*` inner handlers already emit `write-cancelled` before returning `Err(Cancelled)`, so the outer `copy_between_volumes` / `move_between_volumes` wrapper must match on `WriteOperationError::Cancelled { .. }` and NOT also emit `write-error`, otherwise the frontend logs a user-initiated cancel as an error. This mirrors `../mod.rs`'s `Ok(Err(Cancelled)) ⇒ no-op` branch for the generic `start_write_operation` path; the volume paths don't go through `../mod.rs`, so they carry their own version of the check. Related: cancellation must propagate as `VolumeError::Cancelled(msg)`, not `VolumeError::IoError { message: "Operation cancelled" }`; the `matches!(WriteOperationError::Cancelled)` check at the outer layer relies on the typed variant. `SmbVolume`'s streaming reader and `map_smb_error`'s `ErrorKind::Cancelled` arm both return `VolumeError::Cancelled` to stay consistent.
 
+## Processing order
+
+Every volume driver starts files in tree order (`../DETAILS.md` § "Processing order" has the rule and why). Two places
+make it so:
+
+- **Sources**: `copy.rs` and `move_cross.rs` sort them right after the preflight (`preflight.rs::sources_in_tree_order`,
+  over `transfer_tree::sort_sources`), ranked by each source's hint; both drivers then take them in the order given, so
+  the serial one walks them in turn and the concurrent one spawns them in turn. A source with no hint ranks as a file,
+  the row the tree shows for it: an ORDER only, ❌ never an answer to "is it a directory?". `move_same.rs` sorts its
+  top-level renames the same way.
+- **Each merge level**: `merge.rs` sorts the source listing before it dispatches a child (folders by
+  `merges_as_a_directory`, the same test the merge uses), so a backend that lists unsorted (SMB, MTP) still starts files,
+  asks conflicts, and creates folders in tree order. `FileWindow` admits leaves in that order.
+
+**The exception: a solid archive's member order.** `sequential_extract.rs`'s plan pass walks the tree through the same
+sorted merge, so its conflict prompts and folders follow tree order, but its data pass streams members in the archive's
+own order: decoding is one pass, so the stream decides. Each row still claims only its own state. § "One-pass sequential
+extract".
+
+Pinned by `copy_tree_order_tests.rs` (a reversed-listing source: the merge, both drivers, and a cross-volume move).
+
 ## One-pass sequential extract (compressed tar / solid 7z sources)
 
 A directory source on a SEQUENTIAL archive (a compressed tar or solid 7z) can't be read entry-by-entry without
@@ -540,7 +561,8 @@ sources**.
    in the plan, keyed by the file's full source path, and streams nothing.
 2. **Data** — it opens `source_volume.open_sequential_extract(source_path)` (the archive's one-pass extractor, decode
    ONCE; mechanism in `crates/cmdr-archive/src/read/DETAILS.md` § "One-pass subtree
-   extract") and walks the files in ARCHIVE order. Each file the plan kept is streamed through the destination's
+   extract") and walks the files in ARCHIVE order, the one driver that doesn't start files in tree order (§ "Processing
+   order"). Each file the plan kept is streamed through the destination's
    `write_from_stream` (same safe-overwrite temp+rename, downloads-watcher registration, fsync, and
    `finalize_safe_replace` safe-replace as `stream_pipe_file`), recorded in `created`, and reported through a
    `LeafProgress` of its own. A file the plan SKIPPED (conflict resolution said skip) is drained and dropped.

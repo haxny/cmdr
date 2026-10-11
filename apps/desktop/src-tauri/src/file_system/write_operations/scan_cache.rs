@@ -657,11 +657,9 @@ pub(super) struct FileInfo {
     /// MTP synthesis) fall back to `size` and accept the documented
     /// cross-boundary overshoot (see write_operations CLAUDE.md gotcha).
     pub progress_bytes: u64,
-    pub modified: u64, // Unix timestamp in seconds
-    pub created: u64,  // Unix timestamp in seconds
     pub is_symlink: bool,
     /// This file's row in the transfer's live tree, set when the tree is built
-    /// from the walk (`ScanResult::take_transfer_tree`), so the driver reports
+    /// from the walk (`ScanResult::order_by_transfer_tree`), so the driver reports
     /// against it without looking a path up. `None` outside a transfer.
     pub tree_node: Option<NodeId>,
 }
@@ -672,25 +670,12 @@ impl FileInfo {
     /// `with_progress_bytes` to override when the scan-side inode tracker
     /// has already seen this inode.
     pub fn new(path: PathBuf, source_root: PathBuf, metadata: &std::fs::Metadata) -> Self {
-        use std::time::UNIX_EPOCH;
         let size = metadata.len();
         Self {
             path,
             source_root,
             size,
             progress_bytes: size,
-            modified: metadata
-                .modified()
-                .ok()
-                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                .map(|d| d.as_secs())
-                .unwrap_or(0),
-            created: metadata
-                .created()
-                .ok()
-                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                .map(|d| d.as_secs())
-                .unwrap_or(0),
             is_symlink: metadata.is_symlink(),
             tree_node: None,
         }
@@ -699,27 +684,11 @@ impl FileInfo {
     /// Override `progress_bytes` (typically with `0`) when the scan-side
     /// inode tracker reports this file shares an inode with a previously-seen
     /// `FileInfo`. Keeps `size` (the actual file size) intact for sites that
-    /// need it (sorting, conflict checks).
+    /// need it (conflict checks, file-size limits).
     #[must_use]
     pub fn with_progress_bytes(mut self, progress_bytes: u64) -> Self {
         self.progress_bytes = progress_bytes;
         self
-    }
-
-    /// Get extension for sorting (lowercase, empty string if none).
-    pub fn extension(&self) -> String {
-        self.path
-            .extension()
-            .map(|e| e.to_string_lossy().to_lowercase())
-            .unwrap_or_default()
-    }
-
-    /// Get filename for sorting (lowercase).
-    pub fn name_lower(&self) -> String {
-        self.path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_lowercase())
-            .unwrap_or_default()
     }
 
     /// Compute the destination path for this file given the destination root.
@@ -759,21 +728,30 @@ pub(super) struct ScanResult {
 }
 
 impl ScanResult {
-    /// The transfer's live tree for what this local walk found: the preview's,
-    /// or built here from `files` and `dirs`, every file learning its node.
-    pub(super) fn take_transfer_tree(&mut self, sources: &[PathBuf]) -> TreeModel {
-        if let Some(tree) = self.tree.take() {
-            return tree;
-        }
-        let (tree, nodes) = from_local_scan(
-            sources,
-            &self.dirs,
-            self.files.iter().map(|file| (file.path.as_path(), file.size)),
-            &TreeOrder::active(),
-        );
-        for (file, node) in self.files.iter_mut().zip(nodes) {
-            file.tree_node = node;
-        }
+    /// The transfer's live tree for what this local walk found, with `files`
+    /// put in its order: the order the copy starts them in, so the rows below
+    /// the active one really are next. The tree is the preview's, or built here
+    /// from `files` and `dirs`, every file learning its node.
+    pub(super) fn order_by_transfer_tree(&mut self, sources: &[PathBuf]) -> TreeModel {
+        let tree = match self.tree.take() {
+            Some(tree) => tree,
+            None => {
+                let (tree, nodes) = from_local_scan(
+                    sources,
+                    &self.dirs,
+                    self.files.iter().map(|file| (file.path.as_path(), file.size)),
+                    &TreeOrder::active(),
+                );
+                for (file, node) in self.files.iter_mut().zip(nodes) {
+                    file.tree_node = node;
+                }
+                tree
+            }
+        };
+        let ranks = tree.tree_order_ranks();
+        // Every walked file has a node; one without would go last, not nowhere.
+        self.files
+            .sort_by_key(|file| file.tree_node.map_or(u32::MAX, |node| ranks.of(node)));
         tree
     }
 }
@@ -843,29 +821,9 @@ mod tests {
             source_root: PathBuf::from(source_root),
             size: 0,
             progress_bytes: 0,
-            modified: 0,
-            created: 0,
             is_symlink: false,
             tree_node: None,
         }
-    }
-
-    #[test]
-    fn extension_is_lowercased() {
-        // Kills: replace extension → String::new() / → "xyzzy".
-        assert_eq!(make_file_info("/x/Photo.JPG", "/x").extension(), "jpg");
-        assert_eq!(make_file_info("/x/archive.TAR.GZ", "/x").extension(), "gz");
-    }
-
-    #[test]
-    fn extension_is_empty_for_no_extension() {
-        assert_eq!(make_file_info("/x/README", "/x").extension(), "");
-    }
-
-    #[test]
-    fn name_lower_is_lowercased_filename_only() {
-        // Kills: replace name_lower → String::new() / → "xyzzy".
-        assert_eq!(make_file_info("/x/y/Foo.Bar", "/x").name_lower(), "foo.bar");
     }
 
     #[test]

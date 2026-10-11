@@ -400,6 +400,28 @@ Both drivers emit `write-source-item-done` per top-level source, carrying an out
   partly skipped leaves the source directory on disk, so the flag is read rather than derived from the operation type.
   Pinned by `move_op_tests.rs`'s `a_same_fs_merge_that_skipped_a_child_reports_the_source_still_there`.
 
+## Processing order
+
+**Every driver STARTS files in tree order**, the order the transfer's progress tree lists its rows in
+(`../transfer_tree/order.rs`): each folder's subfolders first, then its files, each group by the panes' name collation,
+depth first, and the top-level sources ranked the same way whatever order the selection came in. Concurrency makes
+files FINISH out of order; each row only claims its own state, so that's honest.
+
+- **Local copy and cross-FS move**: the walk returns files in walk order; `ScanResult::order_by_transfer_tree`
+  (`../scan_cache.rs`) installs the tree and sorts `files` by each one's rank in it (`TreeModel::tree_order_ranks`, one
+  pass, then a `u32` key sort), so the copy loop starts them in exactly the order the tree shows. The preview's cached
+  files are in walk order too; the sort happens when the operation takes them.
+- **Volume drivers**: `volume/DETAILS.md` § "Processing order" (sources sorted after the preflight, each merge level
+  sorted before dispatch, and the one exception: a solid archive's member order).
+- **Compress**: `../archive_edit/fresh_plan.rs` settles the selection, then walks it the same way, every level sorted.
+- **Delete and trash** build no tree and keep walk order: each source depth first, in selection order.
+
+**Decision**: the pane's sort column doesn't steer copy order; `WriteOperationConfig` and `start_scan_preview` carry
+none. **Why**: the tree displays one order, so the rows below the active one are only upcoming when the drivers start
+files in that same order. A tree-ordered copy also finishes folders one by one, which is what the panes' gradual
+deselection wants. The old flat sort by file name alone interleaved folders (`b/aaa.txt` before `a/zzz.txt`), so most
+folders finished near the end.
+
 ## Durability (flush before reporting complete)
 
 Copy and move don't report `write-complete` until the freshly written destinations are durable on disk — "complete" means "you can eject now," not "buffered in the page cache." Two layers:

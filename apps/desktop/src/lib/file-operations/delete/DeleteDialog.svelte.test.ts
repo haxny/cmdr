@@ -72,8 +72,6 @@ function mountDialog(folder: string): HTMLElement {
       isPermanent: true,
       supportsTrash: false,
       isFromCursor: true,
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       sourceVolumeId: 'root',
       onConfirm: () => {},
       onCancel: () => {},

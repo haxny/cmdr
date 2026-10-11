@@ -84,8 +84,6 @@ function props(operationType: TransferProgressPropsData['operationType']): Trans
     sourcePaths: [`${FOLDER}/photo.jpg`],
     sourceFolderPath: FOLDER,
     sourcePaneSide: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: null,
     sourceVolumeId: 'root',
     duplicateFollowUp: 'nothing',

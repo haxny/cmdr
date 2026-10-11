@@ -1,6 +1,6 @@
 import type { FilePaneAPI } from './types'
 import type { NavigationHistory } from '../navigation/navigation-history'
-import type { SortColumn, SortOrder, VolumeInfo } from '../types'
+import type { VolumeInfo } from '../types'
 
 /**
  * Read API over a dual-pane explorer's navigation + UI-chrome state.
@@ -19,7 +19,6 @@ export interface PaneAccess {
   getPaneRef: (pane: 'left' | 'right') => FilePaneAPI | undefined
   getPanePath: (pane: 'left' | 'right') => string
   getPaneVolumeId: (pane: 'left' | 'right') => string
-  getPaneSort: (pane: 'left' | 'right') => { sortBy: SortColumn; sortOrder: SortOrder }
   getPaneHistory: (pane: 'left' | 'right') => NavigationHistory
   getFocusedPane: () => 'left' | 'right'
   otherPane: (pane: 'left' | 'right') => 'left' | 'right'

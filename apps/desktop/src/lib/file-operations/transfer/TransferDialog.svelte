@@ -3,7 +3,7 @@
     import { slide } from 'svelte/transition'
     import { homeDir } from '@tauri-apps/api/path'
     import { getVolumeSpace, DEFAULT_VOLUME_ID, type SpaceInfo } from '#lib/tauri-commands/index.js'
-    import type { SortColumn, SortOrder, ConflictResolution, TransferOperationType } from '#lib/file-explorer/types.js'
+    import type { ConflictResolution, TransferOperationType } from '#lib/file-explorer/types.js'
     import type { ConfirmOptions, TransferConfirmPayload, TransferConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
     import StartInBackgroundButton from '../StartInBackgroundButton.svelte'
     import { isStartInBackgroundKey, swallowHeldKeyRepeat } from '../start-in-background-key'
@@ -65,10 +65,6 @@
         fileCount: number
         folderCount: number
         sourceFolderPath: string
-        /** Current sort column on source pane (for scan preview ordering) */
-        sortColumn: SortColumn
-        /** Current sort order on source pane */
-        sortOrder: SortOrder
         /** Source volume ID (like "root", "mtp-336592896:65537") */
         sourceVolumeId: string
         /** Destination volume ID */
@@ -106,8 +102,6 @@
         fileCount,
         folderCount,
         sourceFolderPath,
-        sortColumn,
-        sortOrder,
         sourceVolumeId,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Part of Props interface, used by parent
         destVolumeId,
@@ -265,8 +259,6 @@
     // lands in the effect-tracking context (L3).
     const scan = createTransferScanState({
         getSourcePaths: () => sourcePaths,
-        getSortColumn: () => sortColumn,
-        getSortOrder: () => sortOrder,
         getSourceVolumeId: () => sourceVolumeId,
         getIsSameVolumeMove: () => isSameVolumeMove,
         getConfirmed: () => confirmed,

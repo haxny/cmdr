@@ -85,8 +85,6 @@ function copyProps(): TransferProgressPropsData {
     sourcePaneSide: 'right',
     destinationPath: '/Volumes/Naspolya/Backup',
     direction: 'left',
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     previewId: 'preview-1',
     sourceVolumeId: 'root',
     destVolumeId: 'naspolya',

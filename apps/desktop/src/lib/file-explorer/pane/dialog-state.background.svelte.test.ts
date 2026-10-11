@@ -106,8 +106,6 @@ function transferDialogProps(): TransferDialogPropsData {
     fileCount: 2,
     folderCount: 0,
     sourceFolderPath: SOURCE_FOLDER,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
     destVolumeId: 'root',
     duplicateFollowUp: 'nothing',
@@ -134,8 +132,6 @@ function deleteDialogProps(): DeleteDialogPropsData {
     isPermanent: false,
     supportsTrash: true,
     isFromCursor: true,
-    sortColumn: 'name',
-    sortOrder: 'ascending',
     sourceVolumeId: 'root',
   }
 }
@@ -546,8 +542,6 @@ describe('an archive password, for a job with no dialog', () => {
       sourcePaths: [`${SOURCE_FOLDER}/a.jpg`],
       sourceFolderPath: SOURCE_FOLDER,
       sourcePaneSide: 'left',
-      sortColumn: 'name',
-      sortOrder: 'ascending',
       previewId: 'preview-1',
       sourceVolumeId: 'root',
       duplicateFollowUp: 'nothing',

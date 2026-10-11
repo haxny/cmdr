@@ -16,12 +16,10 @@ use std::time::{Duration, Instant};
 
 use super::cancellable::run_cancellable_scoped;
 use super::event_sinks::OperationEventSink;
-use super::scan_source_tracker::sort_files;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState, update_operation_status};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use crate::file_system::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
-use cmdr_listing::{SortColumn, SortOrder};
 
 /// Totals returned by `scan_subtree_with_oracle`.
 ///
@@ -220,7 +218,9 @@ pub(super) async fn scan_subtree_with_oracle(
 }
 
 /// Scans source paths recursively, returns file list and totals.
-/// Files are sorted according to the specified column and order.
+/// Files come back in walk order: each source depth first, in the order given.
+/// A transfer reorders them into its tree's order
+/// (`ScanResult::order_by_transfer_tree`); a delete keeps walk order.
 ///
 /// Uses polling-based cancellation to remain responsive even when filesystem
 /// operations block (for example, on stuck network drives).
@@ -230,24 +230,11 @@ pub(super) fn scan_sources(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
-    sort_column: SortColumn,
-    sort_order: SortOrder,
 ) -> Result<ScanResult, WriteOperationError> {
     let progress_interval = state.progress_interval;
 
     run_cancellable_scoped(
-        || {
-            scan_sources_internal(
-                sources,
-                state,
-                events,
-                operation_id,
-                operation_type,
-                sort_column,
-                sort_order,
-                progress_interval,
-            )
-        },
+        || scan_sources_internal(sources, state, events, operation_id, operation_type, progress_interval),
         state,
         "scan",
         operation_id,
@@ -264,18 +251,12 @@ pub(super) fn scan_sources(
 /// `run_scan_preview`'s shape: that costs a per-source counter bracket on the
 /// local copy/move/delete hot path for a field nobody reads. If this result ever
 /// starts crossing the cache, it has to collect `per_path` first.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "Internal helper passes through all required context"
-)]
 fn scan_sources_internal(
     sources: &[PathBuf],
     state: &Arc<WriteOperationState>,
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
-    sort_column: SortColumn,
-    sort_order: SortOrder,
     progress_interval: Duration,
 ) -> Result<ScanResult, WriteOperationError> {
     let mut files = Vec::new();
@@ -383,9 +364,6 @@ fn scan_sources_internal(
             &ctx,
         )?;
     }
-
-    // Sort files according to configuration
-    sort_files(&mut files, sort_column, sort_order);
 
     // Emit final scanning progress. The scan-phase bar reports the dedup'd
     // running total (matches the inode-dedup'd index estimate); the final

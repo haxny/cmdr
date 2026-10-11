@@ -39,6 +39,15 @@ impl NodeId {
     }
 }
 
+/// Each node's place in tree order (`TreeModel::tree_order_ranks`).
+pub(crate) struct TreeOrderRanks(Vec<u32>);
+
+impl TreeOrderRanks {
+    pub(crate) fn of(&self, id: NodeId) -> u32 {
+        self.0[id.index()]
+    }
+}
+
 /// What a node is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -268,6 +277,23 @@ impl TreeModel {
             .position(|extra| *extra == id)
             .expect("a child is either scanned or discovered");
         agg.child_count + at as u32
+    }
+
+    /// Every node's place in a depth-first walk of the tree in tree order: the
+    /// order its rows list in, fully expanded, and the order a driver starts
+    /// files in. One pass, for a caller putting a flat file list in that order.
+    pub(crate) fn tree_order_ranks(&self) -> TreeOrderRanks {
+        let mut ranks = vec![0u32; self.nodes.len()];
+        let mut stack = vec![NodeId::ROOT];
+        let mut next = 0u32;
+        while let Some(id) = stack.pop() {
+            ranks[id.index()] = next;
+            next += 1;
+            for index in (0..self.child_count(id)).rev() {
+                stack.push(self.child_at(id, index));
+            }
+        }
+        TreeOrderRanks(ranks)
     }
 
     /// A folder's aggregate, or `None` for a file.

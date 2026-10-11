@@ -35,7 +35,7 @@ use super::super::transfer_driver::{
 use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::item_identity::is_the_same_volume_path;
-use super::preflight::{SourceHint, source_merges_as_a_directory, top_level_move_hints};
+use super::preflight::{SourceHint, source_merges_as_a_directory, sources_in_tree_order, top_level_move_hints};
 use super::rename_merge::{RenameMergeCtx, rename_merge_directory};
 use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
@@ -417,6 +417,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
     let total_files = source_paths.len() + already_in_place;
     let total_bytes = 0u64;
     let known_directory_paths = top_level.known_directory_paths();
+    let ordered_sources = sources_in_tree_order(source_paths, &top_level.source_hints);
+    let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(top_level.source_hints);
 
     // Operation-log journaling for the same-volume move: the one volume id (as both

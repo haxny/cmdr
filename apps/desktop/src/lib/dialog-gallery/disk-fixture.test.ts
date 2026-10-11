@@ -37,7 +37,7 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
 }))
 
 vi.mock('#lib/file-explorer/tabs/tab-state-manager.svelte.js', () => ({
-  getActiveTab: () => ({ volumeId: 'root', sortBy: 'modified', sortOrder: 'descending' }),
+  getActiveTab: () => ({ volumeId: 'root' }),
 }))
 
 vi.mock('#lib/logging/logger.js', () => ({
@@ -87,8 +87,6 @@ describe('resolveDiskFixture', () => {
       listingId: 'listing-7',
       volumeId: 'root',
       showHiddenFiles: true,
-      sortColumn: 'modified',
-      sortOrder: 'descending',
     })
     expect(disk?.entries).toHaveLength(1)
     // Backend indices, so the synthetic `..` row can never reach a fixture.

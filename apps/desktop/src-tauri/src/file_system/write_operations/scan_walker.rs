@@ -428,8 +428,6 @@ fn walk_cached_entries<E>(
                 source_root: source_root.to_path_buf(),
                 size,
                 progress_bytes,
-                modified: entry.modified_at.unwrap_or(0),
-                created: entry.created_at.unwrap_or(0),
                 is_symlink: entry.is_symlink,
                 tree_node: None,
             });

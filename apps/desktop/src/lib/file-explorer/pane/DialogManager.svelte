@@ -188,8 +188,6 @@
                 fileCount={transferDialogProps.fileCount}
                 folderCount={transferDialogProps.folderCount}
                 sourceFolderPath={transferDialogProps.sourceFolderPath}
-                sortColumn={transferDialogProps.sortColumn}
-                sortOrder={transferDialogProps.sortOrder}
                 sourceVolumeId={transferDialogProps.sourceVolumeId}
                 destVolumeId={transferDialogProps.destVolumeId}
                 autoConfirm={transferDialogProps.autoConfirm}
@@ -235,8 +233,6 @@
             destinationPath={transferProgressProps.destinationPath}
             destinationName={transferProgressProps.destinationName}
             direction={transferProgressProps.direction}
-            sortColumn={transferProgressProps.sortColumn}
-            sortOrder={transferProgressProps.sortOrder}
             previewId={transferProgressProps.previewId}
             sourceVolumeId={transferProgressProps.sourceVolumeId}
             destVolumeId={transferProgressProps.destVolumeId}
@@ -266,8 +262,6 @@
                 cloudOnlineOnly={deleteDialogProps.cloudOnlineOnly}
                 cloudFolderMayHoldOnlineOnly={deleteDialogProps.cloudFolderMayHoldOnlineOnly}
                 isFromCursor={deleteDialogProps.isFromCursor}
-                sortColumn={deleteDialogProps.sortColumn}
-                sortOrder={deleteDialogProps.sortOrder}
                 sourceVolumeId={deleteDialogProps.sourceVolumeId}
                 autoConfirm={deleteDialogProps.autoConfirm}
                 mcpRequestId={deleteDialogProps.mcpRequestId}

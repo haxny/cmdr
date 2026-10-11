@@ -320,9 +320,11 @@ async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_can
 
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let fx = fixture(CHUNK as u64 * 16);
+    // The driver starts sources in tree order, so the prefixes keep the wedges
+    // first, the landing next, and the clash last, whatever names they carry.
     let mut sources = Vec::new();
     for n in 0..7 {
-        let name = format!("/wedge-{n}.bin");
+        let name = format!("/a-wedge-{n}.bin");
         fx.source_inner
             .create_file(Path::new(&name), &vec![0xAB; CHUNK * 16])
             .await
@@ -331,17 +333,17 @@ async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_can
     }
     // Empty ⇒ lands without a permit, freeing the eighth slot for the clash.
     fx.source_inner
-        .create_file(Path::new("/landed.txt"), b"")
+        .create_file(Path::new("/b-landed.txt"), b"")
         .await
         .unwrap();
-    sources.push(PathBuf::from("/landed.txt"));
+    sources.push(PathBuf::from("/b-landed.txt"));
     fx.source_inner
-        .create_file(Path::new("/clash.bin"), &vec![0xAB; CHUNK * 16])
+        .create_file(Path::new("/c-clash.bin"), &vec![0xAB; CHUNK * 16])
         .await
         .unwrap();
-    sources.push(PathBuf::from("/clash.bin"));
+    sources.push(PathBuf::from("/c-clash.bin"));
     fx.dest_inner
-        .create_file(Path::new("/clash.bin"), b"the user's own file")
+        .create_file(Path::new("/c-clash.bin"), b"the user's own file")
         .await
         .unwrap();
     // A few chunks' worth, so some partial holds real bytes rather than only the
@@ -411,11 +413,11 @@ async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_can
     names.sort();
     assert_eq!(
         names,
-        vec!["clash.bin".to_string(), "landed.txt".to_string()],
+        vec!["b-landed.txt".to_string(), "c-clash.bin".to_string()],
         "a cancel keeps what landed and the user's own file, and sweeps every partial"
     );
     assert_eq!(
-        read_dest(&fx.dest_inner, "/clash.bin").await.as_deref(),
+        read_dest(&fx.dest_inner, "/c-clash.bin").await.as_deref(),
         Some(&b"the user's own file"[..]),
         "the refused clash left the destination file alone"
     );
