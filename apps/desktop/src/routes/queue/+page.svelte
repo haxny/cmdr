@@ -24,7 +24,7 @@
     import Icon from '$lib/ui/Icon.svelte'
     import QueueRow from '$lib/file-operations/queue/QueueRow.svelte'
     import { createQueueCursor } from '$lib/file-operations/queue/queue-cursor.svelte'
-    import { queueKeyAction, type QueueKeyAction } from '$lib/file-operations/queue/queue-keys'
+    import { queueKeyAction, type QueueKeyAction, type QueueRowApi } from '$lib/file-operations/queue/queue-keys'
     import {
         createOperationsStore,
         isHiddenSettledStatus,
@@ -91,7 +91,7 @@
     })
 
     /** Each row's keyboard half (`QueueRow`'s exports), by operation id. */
-    const rowApis: Record<string, QueueRow | undefined> = {}
+    const rowApis: Record<string, QueueRowApi | undefined> = {}
 
     let gridEl: HTMLDivElement | undefined = $state()
 
@@ -104,17 +104,17 @@
     let announcement = $state('')
 
     // The cursor follows its operation, or takes the row that slid into its place.
+    // `reconcile` reads the ids, which is what re-runs this on every change.
     $effect(() => {
-        void rowIds
         cursor.reconcile()
     })
 
     // Keep focus on the cursor row while the grid owns it: a row that vanished, or
     // a keyed `{#each}` moving the focused element, leaves focus on <body>.
+    // Reading `rowIds` here is what re-runs it after a reorder, when the cursor id stays put.
     $effect(() => {
-        void rowIds
         const id = cursor.cursorId
-        if (!gridOwnsFocus || id === null || !gridEl) return
+        if (!gridOwnsFocus || id === null || !gridEl || !rowIds.includes(id)) return
         const active = document.activeElement
         if (active === null || active === document.body || !gridEl.contains(active)) rowApis[id]?.focusRow()
     })

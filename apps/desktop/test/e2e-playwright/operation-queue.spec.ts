@@ -58,6 +58,8 @@ const FILES_PER_SOURCE = 24
  *  (they share the local lane, so they still serialize: one Running, one Queued). */
 const SOURCE_A = 'queue-src-a'
 const SOURCE_B = 'queue-src-b'
+/** A third same-lane copy, for the reorder test: two waiting ops behind one running. */
+const SOURCE_C = 'queue-src-c'
 /** Deliberately never created: a copy from here fails validation. */
 const MISSING_SOURCE = 'queue-src-gone'
 
@@ -119,6 +121,23 @@ async function readRows(queuePage: TauriPage): Promise<{ id: string; status: str
     }));
   })()`)
   return JSON.parse(json as string) as { id: string; status: string }[]
+}
+
+/** The operation id under the queue window's row cursor, or `''` with no cursor. */
+async function readCursorRow(queuePage: TauriPage): Promise<string> {
+  const id = await queuePage.evaluate(`(function() {
+    var row = document.querySelector('.queue-row.is-under-cursor');
+    return row ? row.getAttribute('data-operation-id') : '';
+  })()`)
+  return id as string
+}
+
+/** The ids of the waiting rows, top to bottom: the order they'll start in. */
+async function readWaitingOrder(queuePage: TauriPage): Promise<string> {
+  return (await readRows(queuePage))
+    .filter((r) => r.status === 'queued')
+    .map((r) => r.id)
+    .join(',')
 }
 
 /** The reason text of the first failed row, or `''` when there's no failed row. */
@@ -361,6 +380,53 @@ test.describe('Operation queue window', () => {
         { timeout: waitBudget(15000) },
       )
       .toBe('running')
+  })
+
+  // The keyboard model end to end (#397): the keys go through the window's own keydown,
+  // and ⌥↑ through the real `move_queued_operation`, so the backend's order is what
+  // comes back on `operations-changed`. Unit-level detail: `queue-selection.svelte.test.ts`.
+  test('arrow keys move through the rows, ⌥↑ moves a waiting op up the line, and ⌫ cancels the row under the cursor', async ({
+    tauriPage,
+  }) => {
+    const fixtureRoot = getFixtureRoot()
+    const main = tauriPage as TauriPage
+    makeSourceDir(fixtureRoot, SOURCE_C)
+
+    // Three same-lane copies: one runs, two wait in registration order.
+    await startCopy(main, fixtureRoot, SOURCE_A)
+    await startCopy(main, fixtureRoot, SOURCE_B)
+    await startCopy(main, fixtureRoot, SOURCE_C)
+    const queuePage = await openQueueWindow(main)
+    await expect
+      .poll(async () => JSON.stringify((await readRows(queuePage)).map((r) => r.status).sort()), {
+        timeout: waitBudget(15000),
+      })
+      .toBe(JSON.stringify(['queued', 'queued', 'running']))
+    const [firstWaiting, secondWaiting] = (await readWaitingOrder(queuePage)).split(',')
+
+    // End lands the cursor on the bottom row, the second waiting op.
+    await queuePage.keyboard.press('End')
+    await expect.poll(async () => readCursorRow(queuePage), { timeout: waitBudget(5000) }).toBe(secondWaiting)
+
+    // ⌥↑ moves it to the front of the line, and the window says so.
+    await queuePage.keyboard.press('Alt+ArrowUp')
+    await expect
+      .poll(async () => readWaitingOrder(queuePage), { timeout: waitBudget(10000) })
+      .toBe(`${secondWaiting},${firstWaiting}`)
+    await expect
+      .poll(async () => queuePage.evaluate(`document.querySelector('[role="status"]').textContent`), {
+        timeout: waitBudget(5000),
+      })
+      .toBe('Moved up. Now 1 of 2 in line.')
+
+    // The cursor followed its operation; ↓ steps to the other waiting op, and ⌫ cancels it.
+    expect(await readCursorRow(queuePage)).toBe(secondWaiting)
+    await queuePage.keyboard.press('ArrowDown')
+    await expect.poll(async () => readCursorRow(queuePage), { timeout: waitBudget(5000) }).toBe(firstWaiting)
+    await queuePage.keyboard.press('Backspace')
+    await expect
+      .poll(async () => (await readRows(queuePage)).some((r) => r.id === firstWaiting), { timeout: waitBudget(15000) })
+      .toBe(false)
   })
 
   test('Queue button sends the foreground op to the background; a second same-lane op auto-queues with no second modal', async ({

@@ -20,7 +20,7 @@ function setup(ids: string[], settled: string[] = []) {
   return {
     cursor,
     selection,
-    setIds(next: string[]) {
+    setIds: (next: string[]) => {
       current = next
       cursor.reconcile()
     },

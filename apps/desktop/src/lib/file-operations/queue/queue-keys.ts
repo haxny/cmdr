@@ -21,6 +21,18 @@ export type QueueKeyAction =
   | { kind: 'control'; step: -1 | 1 }
   | { kind: 'close' }
 
+/** What a key does to ONE row's operation, exported by `QueueRow.svelte` next to the
+ *  buttons that do the same. The page calls it on the cursor row. */
+export interface QueueRowApi {
+  focusRow: () => void
+  /** Enter: Show, where the row offers it. */
+  show: () => boolean
+  /** ⌫: Cancel, or Dismiss on a failure. */
+  cancelOrDismiss: () => boolean
+  /** ← / →: through the row's buttons and back to the row. */
+  focusControl: (step: -1 | 1) => boolean
+}
+
 /** Each command and what it asks the window to do. Every combo is matched whole, so ⇧↑ is
  *  never ↑ and ⌥⌘A is never ⌘A. */
 const KEY_ACTIONS: readonly (readonly [CommandId, QueueKeyAction])[] = [
