@@ -777,7 +777,7 @@
   "@fileExplorer.clipboard.copiedPaths": {
     "sourceHash": "aed343a"
   },
-  "fileExplorer.clipboard.selectionChanged": "A mappa épp most megváltozott, ezért nem történt másolás. Próbáld újra.",
+  "fileExplorer.clipboard.selectionChanged": "A mappa épp most megváltozott, ezért a Cmdr semmit sem másolt. Próbáld újra.",
   "@fileExplorer.clipboard.selectionChanged": {
     "sourceHash": "6f31115"
   },

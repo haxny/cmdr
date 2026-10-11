@@ -252,3 +252,5 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   the share, and `there` is vague. Say "…follow once that share opens at the new address". (all locales named the share)
 - `servers.refusal.shareMounted`: "{name} is still mounted" makes gendered locales agree with an insert; most named the
   type first ("The share {name}…"). Consider "The share {name} is still mounted…" in English too. (es, fr, pt, ru, sv)
+- `fileExplorer.clipboard.copiedPaths` vs `.copied`: two toasts of one family, but "Copied 5 paths." ends with a period
+  and "Copied 5 items" doesn't. Pick one; every locale mirrors whichever English does.

@@ -775,7 +775,7 @@
   "@fileExplorer.clipboard.copiedPaths": {
     "sourceHash": "aed343a"
   },
-  "fileExplorer.clipboard.selectionChanged": "文件夹刚刚发生了变化，所以什么都没拷贝。请再试一次。",
+  "fileExplorer.clipboard.selectionChanged": "文件夹刚刚发生了变化，所以什么都没拷贝。再试一次吧。",
   "@fileExplorer.clipboard.selectionChanged": {
     "sourceHash": "6f31115"
   },
