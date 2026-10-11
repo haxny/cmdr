@@ -554,7 +554,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     if (!operationId || backgrounded) return
     log.info('Backgrounding operation: {operationId}', { operationId })
     handOff(operationId)
-    showQueueHandoffToast(tString('fileOperations.transferProgress.backgroundedToast'))
+    showQueueHandoffToast(tString('fileOperations.transferProgress.backgroundedToast'), operationId)
     config.onQueue?.(operationId)
   }
 
@@ -575,7 +575,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     log.info('Operation queued behind {ahead} on a busy lane; backgrounding it', { ahead: aheadCount })
     handOff(operationId)
     const countText = tString('fileOperations.transferProgress.queuedToastCount', { count: aheadCount })
-    showQueueHandoffToast(tString('fileOperations.transferProgress.queuedToast', { countText }))
+    showQueueHandoffToast(tString('fileOperations.transferProgress.queuedToast', { countText }), operationId)
     config.onQueue?.(operationId)
   }
 

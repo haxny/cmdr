@@ -29,6 +29,7 @@ import {
   getForegroundOperationId,
   isForegroundClaimPending,
 } from '$lib/file-operations/foreground-operation.svelte'
+import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import { addToast, dismissToast, getToasts } from '$lib/ui/toast'
 import OperationFailedToastContent from './OperationFailedToastContent.svelte'
 import OperationFailuresToastContent from './OperationFailuresToastContent.svelte'
@@ -77,6 +78,8 @@ function currentFailureToasts(): { id: string }[] {
 }
 
 function raiseToast(row: OperationRow): void {
+  // The failure is the job's last word, so it replaces the job's handoff toast.
+  dismissQueueHandoffToast(row.snapshot.operationId)
   const live = currentFailureToasts()
   // The summary counts failures itself, so once it's up there's nothing to add.
   if (live.some((toast) => toast.id === FAILURE_SUMMARY_TOAST_ID)) return

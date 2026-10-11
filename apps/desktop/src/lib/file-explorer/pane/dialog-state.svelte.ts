@@ -29,6 +29,7 @@ import {
   setForegroundFailureId,
 } from '$lib/file-operations/foreground-operation.svelte'
 import { addToast, type ToastLevel } from '$lib/ui/toast'
+import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import { tString } from '$lib/intl/messages.svelte'
 import {
   composeTransferCompleteToast,
@@ -199,6 +200,9 @@ export function createDialogState(deps: DialogStateDeps) {
     refusedMessage: string | null,
     sourceFolderPath: string | undefined,
   ): void {
+    // A job that ran in the background still has "Sent to the background" up,
+    // stale now: this toast takes its place (a no-op for a foreground one).
+    if (settledOperationId) dismissQueueHandoffToast(settledOperationId)
     if (op === 'trash' && settledOperationId) {
       addToast(TrashCompleteToastContent, {
         level,

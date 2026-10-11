@@ -138,7 +138,7 @@ export function createBackgroundOperations(deps: BackgroundOperationsDeps) {
       return
     }
     createTransferPaneEffects(deps, () => props).clearSourcePaneAfterTransfer()
-    showQueueHandoffToast(tString('fileOperations.backgroundStart.startedToast'))
+    showQueueHandoffToast(tString('fileOperations.backgroundStart.startedToast'), result.operationId)
     watch(props, result.operationId)
   }
 

@@ -32,6 +32,7 @@ vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
   getMainWindowOperationRows: () => [] as OperationRow[],
 }))
 
+import { queueHandoffToastId, showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
 import {
   announceFailures,
   FAILURE_SUMMARY_TOAST_ID,
@@ -76,6 +77,17 @@ afterEach(() => {
 })
 
 describe('announceFailures', () => {
+  // The failure is the job's last word, so "Sent to the background" beside it
+  // is stale: a background job that fails fast leaves one toast, not two.
+  it('replaces the failed job’s handoff toast, and leaves other jobs’ alone', () => {
+    showQueueHandoffToast('Sent to the background.', 'a')
+    showQueueHandoffToast('Sent to the background.', 'b')
+
+    announceFailures([failedRow('a'), runningRow('b')])
+
+    expect(getToasts().map((t) => t.id)).toEqual([queueHandoffToastId('b'), 'operation-failure:a'])
+  })
+
   it('raises one persistent, grouped toast for a failure', () => {
     announceFailures([runningRow('live'), failedRow('a')])
     const toasts = failureToasts()

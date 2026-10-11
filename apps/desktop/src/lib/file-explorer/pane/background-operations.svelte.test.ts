@@ -155,6 +155,7 @@ describe('starting in the background', () => {
     // The corner chip carries the job; the queue window opens only when asked.
     expect(openQueueWindow).not.toHaveBeenCalled()
     expect(addToast).toHaveBeenCalledWith(QueueHandoffToastContent, {
+      id: 'queue-handoff:op-1',
       level: 'info',
       toastGroup: 'transfer-queue',
       props: { message: 'fileOperations.backgroundStart.startedToast' },

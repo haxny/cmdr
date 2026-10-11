@@ -36,7 +36,11 @@ vi.mock('$lib/tauri-commands', async () => ({
 vi.mock('$lib/file-operations/queue/queue-window', async () =>
   (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).queueWindowMock(),
 )
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+// The real store behind a spy, so a case can read what's actually on screen.
+vi.mock('$lib/ui/toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('$lib/ui/toast')>()
+  return { ...actual, addToast: vi.fn(actual.addToast) }
+})
 vi.mock('$lib/settings', async () =>
   (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).settingsMock(),
 )
@@ -47,7 +51,8 @@ import { createDialogState } from './dialog-state.svelte'
 import { listeners, settle, snapshot } from '$lib/file-operations/transfer/test-transfer-progress-harness.svelte'
 import { copyBetweenVolumes, deleteFiles, listOperations, trashFiles } from '$lib/tauri-commands'
 import { dispatchTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
-import { addToast } from '$lib/ui/toast'
+import { addToast, clearAllToasts, getToasts } from '$lib/ui/toast'
+import QueueHandoffToastContent from '$lib/file-operations/queue/QueueHandoffToastContent.svelte'
 import { emit } from '@tauri-apps/api/event'
 import { setForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
 import TrashCompleteToastContent from '$lib/file-operations/delete/TrashCompleteToastContent.svelte'
@@ -152,6 +157,7 @@ async function startCopyInBackground() {
 
 beforeEach(async () => {
   vi.clearAllMocks()
+  clearAllToasts()
   listeners.error = null
   listeners.complete = null
   vi.mocked(listOperations).mockResolvedValue([snapshot('op-1', 'running')])
@@ -290,6 +296,30 @@ describe('a background job that finishes', () => {
     expect(addToast).toHaveBeenCalledTimes(2)
     expect(vi.mocked(addToast).mock.calls[0]?.[0]).toBe(TrashCompleteToastContent)
     expect(vi.mocked(addToast).mock.calls[1]?.[1]).toMatchObject({ level: 'warn' })
+  })
+
+  // One keypress, one toast: a plain local trash finishes about as fast as the
+  // handoff toast appears, and "Sent to the background" is stale once it's done.
+  it('replaces the handoff toast with the Undo toast, rather than stacking both', async () => {
+    const { dialogs } = makeState()
+    dialogs.showDeleteConfirmation(deleteDialogProps())
+    dialogs.handleTrashInBackground('preview-9')
+    await settle()
+    expect(getToasts().map((t) => t.content)).toEqual([QueueHandoffToastContent])
+
+    complete('trash', null)
+    await settle()
+
+    expect(getToasts().map((t) => t.content)).toEqual([TrashCompleteToastContent])
+  })
+
+  it('keeps the handoff toast for a copy, which finishes without a toast of its own', async () => {
+    await startCopyInBackground()
+
+    complete('copy', null)
+    await settle()
+
+    expect(getToasts().map((t) => t.content)).toEqual([QueueHandoffToastContent])
   })
 
   it('stays quiet for a copy, as a job sent off with Queue does', async () => {

@@ -40,7 +40,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onWriteSettled,
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
 vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
 vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder }))
 

@@ -280,6 +280,14 @@ hiding the files the person went back to, and "next to the main window" has no r
 screen. Backgrounding means "don't make me watch"; a window appearing says the opposite (2026-10-11, David's call; it
 also made PR #390's "F2 closes the queue window" moot).
 
+**One keypress, one toast.** The handoff toast's id is keyed to its operation (`queueHandoffToastId`), and whatever
+later speaks for the job's ending takes its place: `raiseCompletionToasts` in `dialog-state.svelte.ts` (a trash's Undo
+toast) and the failure toast (`operation-failure-watch.svelte.ts`) both call `dismissQueueHandoffToast` first, and
+`showQueueHandoffToast` skips a job whose main-window row already reads `failed`. A job that ends quietly (copy, move,
+compress: no completion toast in the background) keeps its handoff toast, its only word. **Why:** a plain local trash
+finishes about as fast as the handoff toast appears, so F2 left "Sent to the background" stacked beside the Undo toast,
+stale the moment it showed (2026-10-11).
+
 ## The main window's instance
 
 `main-window-operations.svelte.ts` holds a second instance of the same factory, owned by `routes/(main)/+page.svelte`

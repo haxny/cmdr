@@ -45,7 +45,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onWriteSettled: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('$lib/ui/toast', () => ({ addToast, dismissToast: vi.fn() }))
 vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
 
 const FOLDER = '/Users/me/photos'
