@@ -515,6 +515,9 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     settledWithoutEndingTimer = setTimeout(() => {
       settledWithoutEndingTimer = null
       log.warn('op={operationId} settled with no terminal event; closing the dialog', { operationId })
+      // The same neutral close `dismiss()` and `gone` take: `onCancelled` puts
+      // nothing on screen (the rollback toast comes only from a real
+      // `write-cancelled`), so it claims no outcome we don't know.
       close(() => {
         config.onCancelled(reportedFilesProcessed())
       })
