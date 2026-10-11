@@ -52,22 +52,27 @@ func TestSplitByFixAgeHoldsBackOnlyFixesInsideTheWindow(t *testing.T) {
 	old := govulnAdvisory{ID: "GO-old", Module: "golang.org/x/net", FixedVersion: "v0.44.0"}
 	unfixed := govulnAdvisory{ID: "GO-unfixed", Module: "example.com/m"}
 	unknownDate := govulnAdvisory{ID: "GO-unknown", Module: "example.com/n", FixedVersion: "v2.0.0"}
+	adoptable := govulnAdvisory{ID: "GO-adoptable", Module: "golang.org/x/text", FixedVersion: "v0.30.0"}
 	released := map[string]time.Time{
-		"GO-fresh": now.Add(-40 * time.Hour),
-		"GO-old":   now.Add(-90 * 24 * time.Hour),
+		"GO-fresh":     now.Add(-40 * time.Hour),
+		"GO-adoptable": now.Add(-100 * time.Hour),
+		"GO-old":       now.Add(-90 * 24 * time.Hour),
 	}
 	fixReleased := func(a govulnAdvisory) (time.Time, bool) {
 		at, ok := released[a.ID]
 		return at, ok
 	}
 
-	blocking, waiting := splitByFixAge([]govulnAdvisory{fresh, old, unfixed, unknownDate}, now, fixReleased)
+	blocking, waiting := splitByFixAge([]govulnAdvisory{fresh, adoptable, old, unfixed, unknownDate}, now, fixReleased)
 
-	if len(waiting) != 1 || waiting[0].ID != "GO-fresh" {
-		t.Fatalf("want only GO-fresh held back, got %+v", waiting)
+	if len(waiting) != 2 || waiting[0].ID != "GO-fresh" || waiting[1].ID != "GO-adoptable" {
+		t.Fatalf("want GO-fresh and the adoptable-but-not-yet-due GO-adoptable held back, got %+v", waiting)
 	}
 	if !waiting[0].FixAdoptable.Equal(now.Add(32 * time.Hour)) {
 		t.Errorf("want the fix adoptable three days after release, got %v", waiting[0].FixAdoptable)
+	}
+	if !waiting[0].FixDue.Equal(now.Add(104 * time.Hour)) {
+		t.Errorf("want the fix due six days after release, got %v", waiting[0].FixDue)
 	}
 	var ids []string
 	for _, b := range blocking {
@@ -78,13 +83,17 @@ func TestSplitByFixAgeHoldsBackOnlyFixesInsideTheWindow(t *testing.T) {
 	}
 }
 
-func TestSplitByFixAgeBlocksOnceTheWindowCloses(t *testing.T) {
-	now := time.Date(2026, 10, 11, 22, 31, 9, 0, time.UTC)
+func TestSplitByFixAgeBlocksOnceTheGraceRunsOut(t *testing.T) {
+	now := time.Date(2026, 10, 14, 22, 31, 9, 0, time.UTC)
 	a := govulnAdvisory{ID: "GO-edge", Module: "stdlib", FixedVersion: "v1.27.2"}
-	released := func(govulnAdvisory) (time.Time, bool) { return now.Add(-govulnFixAdoptionWindow), true }
-	blocking, waiting := splitByFixAge([]govulnAdvisory{a}, now, released)
-	if len(blocking) != 1 || len(waiting) != 0 {
-		t.Fatalf("a fix exactly three days old is adoptable, so it blocks: blocking=%v waiting=%v", blocking, waiting)
+	split := func(age time.Duration) (blocking, waiting []govulnAdvisory) {
+		return splitByFixAge([]govulnAdvisory{a}, now, func(govulnAdvisory) (time.Time, bool) { return now.Add(-age), true })
+	}
+	if blocking, waiting := split(govulnFixAdoptionWindow); len(blocking) != 0 || len(waiting) != 1 {
+		t.Errorf("a fix exactly three days old is adoptable but not yet due, so it warns: blocking=%v waiting=%v", blocking, waiting)
+	}
+	if blocking, waiting := split(govulnFixAdoptionWindow + govulnUpgradeGrace); len(blocking) != 1 || len(waiting) != 0 {
+		t.Errorf("a fix exactly six days old is due, so it blocks: blocking=%v waiting=%v", blocking, waiting)
 	}
 }
 
@@ -118,7 +127,7 @@ func TestModuleFixIsDatedByTheProxy(t *testing.T) {
 func TestPendingFixesCollapseToOneLinePerFix(t *testing.T) {
 	adoptable := time.Date(2026, 10, 11, 22, 31, 9, 0, time.UTC)
 	stdlib := func(id string) govulnAdvisory {
-		return govulnAdvisory{ID: id, Module: "stdlib", Version: "v1.27.1", FixedVersion: "v1.27.2", FixAdoptable: adoptable}
+		return govulnAdvisory{ID: id, Module: "stdlib", Version: "v1.27.1", FixedVersion: "v1.27.2", FixAdoptable: adoptable, FixDue: adoptable.Add(govulnUpgradeGrace)}
 	}
 	groups := map[govulnPendingFix]*govulnPendingGroup{}
 	addPendingFix(groups, stdlib("GO-2026-6611"), "scripts/check")
@@ -130,7 +139,7 @@ func TestPendingFixesCollapseToOneLinePerFix(t *testing.T) {
 	if count != 2 {
 		t.Errorf("want two distinct advisories, got %d", count)
 	}
-	want := "stdlib@v1.27.1, fixed in v1.27.2, adoptable 2026-10-11 22:31 UTC: GO-2026-6603, GO-2026-6611 (in apps/desktop/scripts, scripts/check)"
+	want := "stdlib@v1.27.1, fixed in v1.27.2, adoptable 2026-10-11 22:31 UTC, fails 2026-10-14 22:31 UTC: GO-2026-6603, GO-2026-6611 (in apps/desktop/scripts, scripts/check)"
 	if len(lines) != 1 || lines[0] != want {
 		t.Errorf("got %q", lines)
 	}

@@ -16,9 +16,12 @@ import (
 
 // govulnFixAdoptionWindow is how old a fix must be before we adopt it: the same three-day
 // window pnpm's `minimum-release-age` and Renovate's `minimumReleaseAge` hold every other
-// dependency to. Until a fix clears it, an advisory it closes warns instead of failing,
-// because failing would demand an upgrade the policy forbids.
+// dependency to. Failing before then would demand an upgrade the policy forbids.
 const govulnFixAdoptionWindow = 72 * time.Hour
+
+// govulnUpgradeGrace is how long an advisory keeps warning after its fix becomes adoptable,
+// so whoever sees the warning has three days to upgrade before the lane turns red for everyone.
+const govulnUpgradeGrace = 72 * time.Hour
 
 // RunGovulncheck scans every Go module in the repo for known vulnerabilities
 // using golang.org/x/vuln/cmd/govulncheck. Static-analysis-based: only flags
@@ -28,8 +31,8 @@ const govulnFixAdoptionWindow = 72 * time.Hour
 // Most of cmdr's Go modules are dep-free tooling scripts; for those,
 // govulncheck still checks reachable stdlib calls against the Go vuln DB.
 //
-// An advisory whose fix is younger than govulnFixAdoptionWindow is a warning, which the runner
-// never caches, so the lane turns red by itself the first run after the window closes.
+// An advisory whose fix is younger than govulnFixAdoptionWindow + govulnUpgradeGrace is a warning,
+// which the runner never caches, so the lane turns red by itself the first run after that.
 func RunGovulncheck(ctx *CheckContext) (CheckResult, error) {
 	govulnBin, err := EnsureGoTool(ctx.RootDir, "govulncheck", "golang.org/x/vuln/cmd/govulncheck@v1.7.0")
 	if err != nil {
@@ -84,13 +87,13 @@ func RunGovulncheck(ctx *CheckContext) (CheckResult, error) {
 	if len(blockingLines) > 0 {
 		lines := blockingLines
 		if len(waitingLines) > 0 {
-			lines = append(append(lines, "", "Also waiting out the three-day window:"), waitingLines...)
+			lines = append(append(lines, "", "Also not failing yet:"), waitingLines...)
 		}
 		return CheckResult{}, fmt.Errorf("govulncheck found vulnerabilities\n%s", indentOutput(strings.Join(lines, "\n")))
 	}
 
 	if waitingCount > 0 {
-		msg := fmt.Sprintf("%d %s whose fix is under three days old; each fails once its fix is adoptable\n%s",
+		msg := fmt.Sprintf("%d %s whose fix is under six days old; upgrade once it's adoptable, before it fails\n%s",
 			waitingCount, Pluralize(waitingCount, "vulnerability", "vulnerabilities"),
 			indentOutput(strings.Join(waitingLines, "\n")))
 		return CheckResult{Code: ResultWarning, Message: msg, Total: modCount, Issues: waitingCount, Changes: -1}, nil
@@ -111,6 +114,7 @@ type govulnAdvisory struct {
 	Version      string // the version we use
 	FixedVersion string // "" when no fix exists
 	FixAdoptable time.Time
+	FixDue       time.Time
 }
 
 func (a govulnAdvisory) describe() string {
@@ -125,7 +129,7 @@ func (a govulnAdvisory) describe() string {
 // advisories in every module at once, so the warning lists one line per upgrade, not per finding.
 type govulnPendingFix struct {
 	module, version, fixedVersion string
-	adoptable                     time.Time
+	adoptable, due                time.Time
 }
 
 type govulnPendingGroup struct {
@@ -133,7 +137,7 @@ type govulnPendingGroup struct {
 }
 
 func addPendingFix(groups map[govulnPendingFix]*govulnPendingGroup, a govulnAdvisory, modLabel string) {
-	key := govulnPendingFix{a.Module, a.Version, a.FixedVersion, a.FixAdoptable}
+	key := govulnPendingFix{a.Module, a.Version, a.FixedVersion, a.FixAdoptable, a.FixDue}
 	g := groups[key]
 	if g == nil {
 		g = &govulnPendingGroup{ids: map[string]bool{}, modules: map[string]bool{}}
@@ -151,8 +155,9 @@ func formatPendingFixes(groups map[govulnPendingFix]*govulnPendingGroup) ([]stri
 	for key, g := range groups {
 		ids, modules := sortedKeys(g.ids), sortedKeys(g.modules)
 		count += len(ids)
-		lines = append(lines, fmt.Sprintf("%s@%s, fixed in %s, adoptable %s: %s (in %s)",
-			key.module, key.version, key.fixedVersion, key.adoptable.UTC().Format("2006-01-02 15:04 MST"),
+		lines = append(lines, fmt.Sprintf("%s@%s, fixed in %s, adoptable %s, fails %s: %s (in %s)",
+			key.module, key.version, key.fixedVersion,
+			key.adoptable.UTC().Format("2006-01-02 15:04 MST"), key.due.UTC().Format("2006-01-02 15:04 MST"),
 			strings.Join(ids, ", "), strings.Join(modules, ", ")))
 	}
 	sort.Strings(lines)
@@ -228,8 +233,8 @@ func parseGovulnStream(output string) ([]govulnAdvisory, error) {
 }
 
 // splitByFixAge sorts advisories into those to fail on and those whose fix is still inside the
-// adoption window. A missing fix, or one we can't date, fails: waiting is only for a fix that
-// provably exists and is provably too new.
+// adoption window plus the upgrade grace. A missing fix, or one we can't date, fails: waiting is
+// only for a fix that provably exists and is provably not yet due.
 func splitByFixAge(
 	advisories []govulnAdvisory,
 	now time.Time,
@@ -239,7 +244,8 @@ func splitByFixAge(
 		if a.FixedVersion != "" {
 			if released, ok := fixReleased(a); ok {
 				a.FixAdoptable = released.Add(govulnFixAdoptionWindow)
-				if now.Before(a.FixAdoptable) {
+				a.FixDue = a.FixAdoptable.Add(govulnUpgradeGrace)
+				if now.Before(a.FixDue) {
 					waiting = append(waiting, a)
 					continue
 				}
