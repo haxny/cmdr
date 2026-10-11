@@ -21,7 +21,7 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{LandedMetadata, apply_landed};
 
 use super::super::copy::{
-    JournalDestUnder, copy_single_item, create_scanned_dirs_at_destination, date_created_dirs_like_their_sources,
+    JournalDestUnder, apply_created_dirs_metadata, copy_single_item, create_scanned_dirs_at_destination,
 };
 use super::MoveTransaction;
 use super::merge_move_directory;
@@ -313,15 +313,18 @@ pub(super) fn move_with_staging(
         return Err(e);
     }
 
-    // Everything is staged, so the staged folders take their source dates now,
-    // and Phase 3's rename carries each date to the destination.
-    date_created_dirs_like_their_sources(
+    // Everything is staged, so the staged folders take their source's xattrs
+    // and dates now, and Phase 3's rename carries them to the destination.
+    // What would refuse that rename (a mode without owner write, the ACL, the
+    // flags) joins the deferred set, keyed by staged path like the files'.
+    apply_created_dirs_metadata(
         &scan_result.dirs,
         sources,
         &staging_dir,
         state,
         &transaction.created_dirs,
         &dir_remap,
+        Some(&mut deferred_landed),
     );
 
     // Where Phase 3 put a staged item under a name other than the one it staged
@@ -330,6 +333,10 @@ pub(super) fn move_with_staging(
     // reads both to reach the directories entries actually landed in.
     let mut landings: HashMap<PathBuf, PathBuf> = HashMap::new();
     let mut discarded_staged: HashSet<PathBuf> = HashSet::new();
+    // Staged top-level folders a merge folded into the user's folder of the same
+    // name: their children landed, they didn't, so the user's folder keeps its
+    // own metadata.
+    let mut merged_staged: HashSet<PathBuf> = HashSet::new();
 
     // Phase 3: Atomic rename from staging to final destination
     let rename_result: Result<(), WriteOperationError> = (|| {
@@ -361,6 +368,7 @@ pub(super) fn move_with_staging(
                 // the staging prefix back to its original source path so Phase 4
                 // preserves the originals that never landed.
                 let mut staged_skips: HashSet<PathBuf> = HashSet::new();
+                merged_staged.insert(staged_path.clone());
                 merge_move_directory(
                     &staged_path,
                     &final_path,
@@ -512,11 +520,32 @@ pub(super) fn move_with_staging(
         Some(remap(p))
     };
     // Every staged item is in its final place now, so what would have refused
-    // its rename goes on: the ACL, then the flags (`apply_landed`). Before the
-    // flush, which then makes them durable with everything else. Best effort: a
-    // refusal costs the item its ACL or flags, never the move.
-    for (staged, set) in &deferred_landed {
-        let Some(landed) = landed_at(staged) else { continue };
+    // its rename goes on: a folder's mode, the ACL, then the flags
+    // (`apply_landed`). Deepest first, so a folder's own mode can't refuse the
+    // lookups its children's need. Before the flush, which then makes them
+    // durable with everything else. Best effort: a refusal costs the item those
+    // classes, never the move.
+    //
+    // ❗ Only to an item that landed as ITSELF. A staged folder a merge folded
+    // into the user's folder never landed: what `landed_at` maps it to is the
+    // user's folder, which keeps its own metadata.
+    let landed_as_itself = |staged: &Path| -> Option<PathBuf> {
+        for ancestor in staged.ancestors().take_while(|a| *a != staging_dir.as_path()) {
+            if landings.contains_key(ancestor) || discarded_staged.contains(ancestor) {
+                break;
+            }
+            if merged_staged.contains(ancestor) {
+                return None;
+            }
+        }
+        landed_at(staged)
+    };
+    let mut deferred: Vec<(PathBuf, &LandedMetadata)> = deferred_landed
+        .iter()
+        .filter_map(|(staged, set)| landed_as_itself(staged).map(|landed| (landed, set)))
+        .collect();
+    deferred.sort_by_key(|(landed, _)| std::cmp::Reverse(landed.components().count()));
+    for (landed, set) in deferred {
         let report = apply_landed(&landed, set);
         if report.any_refused() {
             log::warn!(

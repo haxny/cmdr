@@ -482,7 +482,7 @@ pub trait Volume: Send + Sync {
     /// [`VolumeReadStream::modified_at`]), so a backend needn't route that here.
     /// Best effort for the caller: an error is logged and the copy stands. The
     /// contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
-    /// § "Copies keep the source's date".
+    /// § "Copies keep the source's metadata".
     ///
     /// **A shared conformance assertion enforces it**: every backend that
     /// implements it runs `conformance::assert_set_modified_dates_a_folder`

@@ -348,7 +348,7 @@ impl SftpVolume {
 /// Best effort: a refusal is logged and the upload stays a success, since the
 /// bytes are what matter. `None` leaves the server's own date. The contract:
 /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
-/// § "Copies keep the source's date".
+/// § "Copies keep the source's metadata".
 pub(super) async fn keep_source_date(
     session: &crate::transport::SshConnection,
     remote: &str,

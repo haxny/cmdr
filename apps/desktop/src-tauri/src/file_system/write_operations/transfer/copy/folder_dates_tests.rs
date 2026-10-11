@@ -1,6 +1,6 @@
 //! A local-to-local copy keeps each copied folder's date, the way the
 //! cross-volume engine does (`../volume/folder_dates.rs`). The contract:
-//! `../volume/DETAILS.md` § "Copies keep the source's date".
+//! `../volume/DETAILS.md` § "Copies keep the source's metadata".
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;

@@ -5,7 +5,7 @@
 //! source stream that reports `None`, or a destination that ignores what the
 //! stream reports. A backend runs both, since every mutable backend is a source
 //! and a destination. The contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
-//! § "Copies keep the source's date".
+//! § "Copies keep the source's metadata".
 
 use std::future::Future;
 use std::path::Path;

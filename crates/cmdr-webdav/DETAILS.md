@@ -251,7 +251,8 @@ What the pane does with each shape: `cmdr-fs`'s `SpaceInfo`, and `apps/desktop/s
 
 Copies off this backend always keep the source's modification date; copies onto it keep it only where the SERVER can
 store one. The cross-backend contract is
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's date".
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
+metadata".
 
 - **Source**: the read stream reports the GET's `Last-Modified`, the same date a PROPFIND lists as `getlastmodified`
   (whole seconds), so it costs no round trip. Both Apache and Nextcloud send it on 200 and 206 alike.

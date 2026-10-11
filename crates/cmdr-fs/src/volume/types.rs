@@ -361,7 +361,7 @@ pub struct CopyScanResult {
     /// The copy pipeline dates a copied top-level FOLDER with it, once the
     /// folder's contents have landed, so that date costs no round trip of its
     /// own. `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
-    /// § "Copies keep the source's date".
+    /// § "Copies keep the source's metadata".
     pub top_level_modified_at: Option<u64>,
 }
 

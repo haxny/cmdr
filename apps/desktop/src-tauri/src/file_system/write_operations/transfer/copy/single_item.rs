@@ -17,6 +17,9 @@ use cmdr_fs::metadata::LandedMetadata;
 
 use super::super::copy_strategy::copy_file_with_strategy;
 use super::dest_chain::leaf_in_the_way;
+use super::folder_metadata::{
+    DirMapping, create_dir_like_its_source, create_dirs_like_their_sources, narrow_like_its_source,
+};
 
 use crate::file_system::write_operations::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use crate::file_system::write_operations::error_classification::IoResultExt;
@@ -301,6 +304,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                     // needs falls to the ordinary create-and-record walk below, so
                     // every directory this copy makes reaches the ledger.
                     let displaced = displace_with_directory(state, &blocking)?;
+                    narrow_like_its_source(&blocking, &incoming_folder_for(source, &dest_path, &blocking));
                     transaction.record_dir(blocking.clone());
                     created_dirs.insert(blocking.clone());
                     transaction.record_displaced(displaced);
@@ -319,7 +323,8 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                     // redirect so every later child of this subtree follows it.
                     let renamed_root = resolved.path;
                     let _ = fs::remove_file(&renamed_root);
-                    fs::create_dir_all(&renamed_root).map_err(|e| WriteOperationError::IoError {
+                    let incoming = incoming_folder_for(source, &dest_path, &blocking);
+                    create_dir_like_its_source(&renamed_root, &incoming).map_err(|e| WriteOperationError::IoError {
                         path: renamed_root.display().to_string(),
                         message: format!("Failed to create renamed directory: {}", e),
                     })?;
@@ -366,15 +371,21 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                 }
             }
 
-            // Create all directories
-            fs::create_dir_all(parent).map_err(|e| WriteOperationError::IoError {
+            // Create them outermost first, each born no wider than the source
+            // folder it copies (`folder_metadata.rs`).
+            dirs_to_create.reverse();
+            let mapping = DirMapping {
+                dest_root,
+                dest_leaf: &dest_path,
+                source_leaf: source,
+            };
+            create_dirs_like_their_sources(&dirs_to_create, &mapping).map_err(|e| WriteOperationError::IoError {
                 path: parent.display().to_string(),
                 message: format!("Failed to create directory: {}", e),
             })?;
 
-            // Record only the directories we actually created (in creation order: deepest last)
-            // dirs_to_create is in reverse order (deepest first), so iterate in reverse
-            for created_dir in dirs_to_create.into_iter().rev() {
+            // Record only the directories we actually created, in creation order.
+            for created_dir in dirs_to_create {
                 transaction.record_dir(created_dir.clone());
                 created_dirs.insert(created_dir);
             }

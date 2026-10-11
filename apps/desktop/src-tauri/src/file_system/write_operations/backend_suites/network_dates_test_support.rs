@@ -6,7 +6,7 @@
 //! conformance cells (`cmdr_fs::volume::conformance`'s two date assertions)
 //! can't: a staging rename, a wrapper stream, or an engine path that drops the
 //! date between the two ends. The contract:
-//! `../transfer/volume/DETAILS.md` § "Copies keep the source's date". Cells stay
+//! `../transfer/volume/DETAILS.md` § "Copies keep the source's metadata". Cells stay
 //! per backend, named for their lane, like `network_transfer_test_support.rs`'s.
 
 use std::path::{Path, PathBuf};

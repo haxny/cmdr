@@ -57,9 +57,9 @@ specific to retrofitting an existing backend:
 child `src/volume_streams.rs` (`ArchiveVolumeReadStream`, the sequential extract's `MemberStream`, and
 `VolumeByteSource`, none of which touches `ArchiveVolume`'s fields). Every read stream reports its entry's date from the
 parsed index, so an extract keeps it (contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's date").
-It maps the archive-native core (`ArchiveIndex` / `ArchiveNode` / `ArchiveEntryReader` / `ArchiveError`) onto
-`FileEntry` / `VolumeReadStream` / `VolumeError`, and holds an `Arc<dyn Volume>` **parent** (the volume physically
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
+metadata"). It maps the archive-native core (`ArchiveIndex` / `ArchiveNode` / `ArchiveEntryReader` / `ArchiveError`)
+onto `FileEntry` / `VolumeReadStream` / `VolumeError`, and holds an `Arc<dyn Volume>` **parent** (the volume physically
 storing the `.zip`), the archive path, the display name, and an `Arc<ArchiveIndexCache>`.
 
 **The parent seam.** Two answers a read-only archive can't give itself come from the parent:

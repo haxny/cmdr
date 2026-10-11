@@ -3,7 +3,7 @@
 //! `InMemoryVolume` moves a folder's date when an entry lands in it, as every
 //! real store does, so a folder dated BEFORE its contents land reads "now" here
 //! and fails these cells: the stamp has to come after the last child (post-order).
-//! The contract: `DETAILS.md` § "Copies keep the source's date".
+//! The contract: `DETAILS.md` § "Copies keep the source's metadata".
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

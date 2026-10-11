@@ -1,12 +1,10 @@
-//! What a local copy or move keeps of a file's and a folder's metadata TODAY, one
-//! cell per (path, class): the characterization the metadata plan converts
-//! (`docs/specs/transfer-metadata-preservation.md` § "M0").
+//! What a local copy or move keeps of a file's and a folder's metadata, one cell
+//! per (path, class) (`docs/specs/transfer-metadata-preservation.md`).
 //!
-//! Each cell pins today's outcome, and a `// FLIPS IN M<n>` comment names the
-//! milestone that turns it into the target behavior. A bug cell asserts the
-//! failure (a Locked file can't land), a loss cell asserts the loss (birth reads
-//! the mtime), and a keep cell guards what already survives. Every flip cell was
-//! first written against the target and seen red for the documented reason.
+//! A keep cell asserts the class lands. A cell still pinning a bug or a loss
+//! asserts today's outcome, and a `// FLIPS` comment says what would turn it.
+//! Every cell that flipped was first written against the target and seen red
+//! for the documented reason.
 //!
 //! The fixture is `cmdr_fs::testing::metadata_fixture` (macOS). Elsewhere: the
 //! extract cell in `volume/copy_extract_out_tests.rs`, the APFS → HFS+ cell in
@@ -20,8 +18,9 @@ mod macos {
 
     use cmdr_fs::staging::STAGING_TEMP_MARKER;
     use cmdr_fs::testing::metadata_fixture::{
-        ACCESSED_SECS, BIRTH_SECS, Follow, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, accessed_secs,
-        add_acl_entry, birth_secs, flags, has_acl, mode, modified_secs, set_times, xattrs,
+        ACCESSED_SECS, BIRTH_SECS, FINDER_INFO_XATTR, Follow, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture,
+        RESOURCE_FORK_XATTR, TAGS_XATTR, accessed_secs, add_acl_entry, birth_secs, flags, has_acl, mode, modified_secs,
+        set_flags, set_mode, set_times, set_xattr, xattrs,
     };
 
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
@@ -313,57 +312,145 @@ mod macos {
         (folder, landed)
     }
 
-    /// A keep cell: the folder pass dates what it created.
+    /// Birth and mtime go on in ONE `setattrlist`, once the folder's children
+    /// are in, so neither a child nor APFS's birth quirk moves them.
     #[test]
-    fn a_copied_folder_keeps_its_mtime() {
-        let fixture = MetadataFixture::new("matrix_folder_mtime");
+    fn a_copied_folder_keeps_its_birth_time_and_mtime() {
+        let fixture = MetadataFixture::new("matrix_folder_dates");
         let (_, landed) = copy_rich_folder(&fixture);
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
         assert_eq!(modified_secs(&landed), MODIFIED_SECS);
     }
 
-    /// The folder pass sets only mtime, and APFS drags birth down to it.
+    /// A `0700` folder stays private (it used to land at the umask default).
     #[test]
-    fn a_copied_folder_loses_its_birth_time_today() {
-        // FLIPS IN M4: birth == BIRTH_SECS.
-        let fixture = MetadataFixture::new("matrix_folder_birth");
-        let (_, landed) = copy_rich_folder(&fixture);
-        assert_eq!(birth_secs(&landed), MODIFIED_SECS, "birth reads the source's mtime");
-    }
-
-    /// A `0700` folder lands at the umask default: a privacy regression.
-    #[test]
-    fn a_copied_folder_loses_its_mode_today() {
-        // FLIPS IN M4: lands 0700.
+    fn a_copied_folder_keeps_its_mode() {
         let fixture = MetadataFixture::new("matrix_folder_mode");
         let (_, landed) = copy_rich_folder(&fixture);
-        let fresh = fixture.join("a fresh folder");
-        std::fs::create_dir(&fresh).expect("create a reference folder");
-        assert_eq!(mode(&landed), mode(&fresh), "the copy wears what `mkdir` gives");
-        assert_ne!(mode(&landed), 0o700);
+        assert_eq!(mode(&landed), 0o700);
     }
 
     #[test]
-    fn a_copied_folder_loses_its_tags_comment_and_finder_info_today() {
-        // FLIPS IN M4: tags, comment, and FinderInfo kept.
+    fn a_copied_folder_keeps_its_tags_comment_and_finder_info() {
         let fixture = MetadataFixture::new("matrix_folder_xattrs");
-        let (_, landed) = copy_rich_folder(&fixture);
-        assert_eq!(xattrs(&landed), Vec::new());
+        let (source, landed) = copy_rich_folder(&fixture);
+        assert_eq!(xattrs(&landed), xattrs(&source));
     }
 
     #[test]
-    fn a_copied_folder_loses_hidden_today() {
-        // FLIPS IN M4: Hidden kept.
+    fn a_copied_folder_keeps_hidden() {
         let fixture = MetadataFixture::new("matrix_folder_hidden");
         let (_, landed) = copy_rich_folder(&fixture);
-        assert_eq!(flags(&landed) & HIDDEN_FLAG, 0);
+        assert_eq!(flags(&landed) & HIDDEN_FLAG, HIDDEN_FLAG);
     }
 
+    /// The ACL goes on last, after the folder's children landed.
     #[test]
-    fn a_copied_folder_loses_its_acl_today() {
-        // FLIPS IN M4: the ACL kept (applied last, deepest first).
+    fn a_copied_folder_keeps_its_acl() {
         let fixture = MetadataFixture::new("matrix_folder_acl");
         let (_, landed) = copy_rich_folder(&fixture);
-        assert!(!has_acl(&landed));
+        assert!(has_acl(&landed));
+    }
+
+    /// A custom folder icon is two things: the FinderInfo bit on the folder and
+    /// an `Icon\r` file inside it whose resource fork holds the image.
+    #[test]
+    fn a_folder_with_a_custom_icon_lands_with_its_finder_info_and_icon_file() {
+        let fixture = MetadataFixture::new("matrix_folder_icon");
+        let source = fixture.rich_folder("dir");
+        let icon = source.join("Icon\r");
+        std::fs::write(&icon, b"").expect("write the icon file");
+        set_xattr(&icon, RESOURCE_FORK_XATTR, b"icns bytes");
+        let dst = dst_dir(&fixture);
+
+        copy_tree(std::slice::from_ref(&source), &dst);
+
+        let landed = dst.join("dir");
+        assert!(
+            xattrs(&landed).iter().any(|(name, _)| name == FINDER_INFO_XATTR),
+            "FinderInfo kept"
+        );
+        assert_eq!(
+            xattrs(&landed.join("Icon\r")),
+            vec![(RESOURCE_FORK_XATTR.to_string(), b"icns bytes".to_vec())],
+            "the icon file keeps its resource fork"
+        );
+    }
+
+    /// Its mode and Locked go on only once its children are in: a `0500` or
+    /// Locked folder refuses new entries.
+    #[test]
+    fn a_locked_read_only_folder_is_copied_full_and_lands_locked() {
+        let fixture = MetadataFixture::new("matrix_folder_locked");
+        let source = fixture.locked_read_only_folder("vault");
+        let dst = dst_dir(&fixture);
+
+        copy_tree(std::slice::from_ref(&source), &dst);
+
+        let landed = dst.join("vault");
+        assert!(landed.join("a.txt").is_file() && landed.join("inner/b.txt").is_file());
+        assert_eq!(mode(&landed), 0o500);
+        assert_eq!(flags(&landed) & LOCKED_FLAG, LOCKED_FLAG);
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
+    }
+
+    /// A merge adds to the user's folder and leaves it its own metadata.
+    #[test]
+    fn a_folder_the_copy_merged_into_keeps_its_own_metadata() {
+        let fixture = MetadataFixture::new("matrix_folder_merge");
+        let source = fixture.rich_folder("dir");
+        let dst = dst_dir(&fixture);
+        let existing = dst.join("dir");
+        std::fs::create_dir(&existing).expect("create the user's folder");
+        let before = (mode(&existing), flags(&existing), birth_secs(&existing));
+
+        copy_tree(std::slice::from_ref(&source), &dst);
+
+        assert!(existing.join("child.txt").is_file());
+        assert_eq!((mode(&existing), flags(&existing), birth_secs(&existing)), before);
+        assert_eq!(xattrs(&existing), Vec::new());
+        assert!(!has_acl(&existing));
+    }
+
+    /// A copy that fails partway dates nothing, and a folder it made is never
+    /// wider than its source: born owner-only for a private source, and as open
+    /// as the umask allows for a shared one.
+    #[test]
+    fn a_failed_copy_leaves_its_folders_undated_and_never_wider_than_their_source() {
+        let fixture = MetadataFixture::new("matrix_folder_failed");
+        let private = fixture.join("private");
+        let shared = fixture.join("shared");
+        for (folder, folder_mode) in [(&private, 0o700), (&shared, 0o755)] {
+            std::fs::create_dir(folder).expect("create the folder");
+            std::fs::write(folder.join("a.txt"), b"a").expect("write a.txt");
+            set_mode(folder, folder_mode);
+            set_times(folder, BIRTH_SECS, MODIFIED_SECS, ACCESSED_SECS, Follow::Yes);
+        }
+        // Unreadable, so the copy fails on it after `private/a.txt` landed.
+        let unreadable = shared.join("z.txt");
+        std::fs::write(&unreadable, b"z").expect("write z.txt");
+        set_mode(&unreadable, 0o000);
+        let dst = dst_dir(&fixture);
+        let umask_default = {
+            let fresh = fixture.join("a fresh folder");
+            std::fs::create_dir(&fresh).expect("create a reference folder");
+            mode(&fresh)
+        };
+
+        let result = copy_files_with_progress_inner(
+            &*Arc::new(CollectorEventSink::new()),
+            "op-metadata-matrix-failed",
+            &state(),
+            &[private, shared],
+            &dst,
+            &WriteOperationConfig::default(),
+        );
+
+        assert!(result.is_err(), "the unreadable file fails the copy");
+        assert!(dst.join("private/a.txt").is_file(), "what landed stays");
+        assert_ne!(modified_secs(&dst.join("private")), MODIFIED_SECS, "undated");
+        assert_eq!(mode(&dst.join("private")), 0o700);
+        assert_eq!(mode(&dst.join("shared")), 0o755 & umask_default);
     }
 
     // ── Moves ───────────────────────────────────────────────────────────────
@@ -495,6 +582,135 @@ mod macos {
         assert_eq!(rename_blocked_items(&dst), Vec::<PathBuf>::new());
     }
 
+    /// `name/` holding `child.txt`: tags, mode `0700`, the fixture's dates, and
+    /// Hidden. Nothing on it refuses Phase 4's removal of the original.
+    fn tagged_private_folder(fixture: &MetadataFixture, name: &str) -> PathBuf {
+        let folder = fixture.join(name);
+        std::fs::create_dir(&folder).expect("create the folder");
+        std::fs::write(folder.join("child.txt"), b"child").expect("write the child");
+        set_xattr(&folder, TAGS_XATTR, b"bplist00 Red");
+        set_mode(&folder, 0o700);
+        set_times(&folder, BIRTH_SECS, MODIFIED_SECS, ACCESSED_SECS, Follow::Yes);
+        set_flags(&folder, HIDDEN_FLAG);
+        folder
+    }
+
+    /// The staged folder takes its xattrs and dates in staging, and its ACL and
+    /// flags once Phase 3 has renamed it into place.
+    #[test]
+    fn a_cross_fs_move_of_a_folder_keeps_its_metadata() {
+        let fixture = MetadataFixture::new("matrix_move_folder_metadata");
+        let folder = tagged_private_folder(&fixture, "album");
+        // Refuses neither Phase 3's rename nor Phase 4's removals.
+        add_acl_entry(&folder, "everyone deny add_file");
+        let dst = dst_dir(&fixture);
+
+        run_cross_fs_move(
+            std::slice::from_ref(&folder),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-folder-metadata",
+        )
+        .expect("the move completes");
+
+        let landed = dst.join("album");
+        assert!(landed.join("child.txt").is_file());
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
+        assert_eq!(modified_secs(&landed), MODIFIED_SECS);
+        assert_eq!(mode(&landed), 0o700);
+        assert_eq!(flags(&landed) & HIDDEN_FLAG, HIDDEN_FLAG);
+        assert!(xattrs(&landed).iter().any(|(name, _)| name == TAGS_XATTR));
+        assert!(has_acl(&landed));
+        assert!(!folder.exists(), "the original is gone");
+    }
+
+    /// A `0500` folder can't be renamed to another parent and a Locked one can't
+    /// be filled, so both go on after Phase 3. Phase 4 then can't empty the
+    /// Locked original, and the move stops there with it kept.
+    #[test]
+    fn a_cross_fs_move_of_a_locked_read_only_folder_lands_it_locked_and_full() {
+        let fixture = MetadataFixture::new("matrix_move_folder_locked");
+        let source = fixture.locked_read_only_folder("vault");
+        let dst = dst_dir(&fixture);
+
+        let result = run_cross_fs_move(
+            std::slice::from_ref(&source),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-folder-locked",
+        );
+
+        let landed = dst.join("vault");
+        assert!(landed.join("a.txt").is_file() && landed.join("inner/b.txt").is_file());
+        assert_eq!(mode(&landed), 0o500);
+        assert_eq!(flags(&landed) & LOCKED_FLAG, LOCKED_FLAG);
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
+        assert!(
+            matches!(result, Err(WriteOperationError::PermissionDenied { .. })),
+            "Phase 4 can't empty a Locked original: {:?}",
+            result.err()
+        );
+        assert!(source.join("a.txt").exists(), "the original stays");
+        let names: Vec<String> = std::fs::read_dir(&dst)
+            .expect("list dst")
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["vault".to_string()], "the staging folder is gone");
+    }
+
+    /// A move merging into the user's folder renames the staged children into
+    /// it and leaves the folder its own metadata.
+    #[test]
+    fn a_cross_fs_move_merging_into_a_folder_leaves_it_its_own_metadata() {
+        let fixture = MetadataFixture::new("matrix_move_folder_merge");
+        let folder = tagged_private_folder(&fixture, "album");
+        let dst = dst_dir(&fixture);
+        let existing = dst.join("album");
+        std::fs::create_dir(&existing).expect("create the user's folder");
+        let before = (mode(&existing), flags(&existing), birth_secs(&existing));
+
+        run_cross_fs_move(
+            std::slice::from_ref(&folder),
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-folder-merge",
+        )
+        .expect("the move completes");
+
+        assert!(existing.join("child.txt").is_file());
+        assert_eq!((mode(&existing), flags(&existing), birth_secs(&existing)), before);
+        assert_eq!(xattrs(&existing), Vec::new());
+    }
+
+    /// Phase 3 skips the folder (a file squats its name), so the staged copy of a
+    /// Locked `0500` folder is discarded, and so is the staging folder: in
+    /// staging the copy wore neither.
+    #[test]
+    fn a_cross_fs_move_whose_phase_3_skips_a_folder_discards_its_staged_copy() {
+        let fixture = MetadataFixture::new("matrix_move_folder_phase3");
+        let source = fixture.locked_read_only_folder("vault");
+        let dst = dst_dir(&fixture);
+        std::fs::write(dst.join("vault"), b"squatter").expect("squat the folder's name");
+
+        let result = run_cross_fs_move(
+            std::slice::from_ref(&source),
+            &dst,
+            ConflictResolution::Skip,
+            "op-matrix-move-folder-phase3",
+        );
+
+        assert!(result.is_ok(), "{:?}", result.err());
+        let names: Vec<String> = std::fs::read_dir(&dst)
+            .expect("list dst")
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["vault".to_string()], "only the squatter stays");
+        assert!(dst.join("vault").is_file());
+        assert!(source.join("inner/b.txt").exists(), "the original stays");
+    }
+
     /// `rename(2)` refuses a Locked item (`EPERM`). Out of scope by David's
     /// decision (spec § "Decided"); M10 files the follow-up.
     #[test]
@@ -603,5 +819,40 @@ mod linux {
         copy(LocalCopyStrategy::KernelCopyRange, &source, &dest);
 
         assert_eq!(mode(&dest), 0o750);
+    }
+
+    /// A folder takes its mode and `user.*` xattrs once its children landed.
+    #[test]
+    fn a_copied_folder_keeps_its_mode_and_user_xattrs() {
+        use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+        use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
+        use crate::file_system::write_operations::types::WriteOperationConfig;
+
+        let dir = TestDir::new("matrix_linux_folder");
+        let folder = dir.join("album");
+        std::fs::create_dir(&folder).expect("create the folder");
+        std::fs::write(folder.join("child.txt"), b"child").expect("write the child");
+        xattr::set(&folder, XATTR_NAME, XATTR_VALUE).expect("this filesystem takes `user.*` xattrs");
+        std::fs::set_permissions(&folder, std::fs::Permissions::from_mode(0o700)).expect("chmod the folder");
+        let dst = dir.join("dst");
+        std::fs::create_dir(&dst).expect("create dst");
+
+        let result = copy_files_with_progress_inner(
+            &*Arc::new(CollectorEventSink::new()),
+            "op-matrix-linux-folder",
+            &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+            &[folder],
+            &dst,
+            &WriteOperationConfig::default(),
+        );
+
+        assert!(result.is_ok(), "{result:?}");
+        let landed = dst.join("album");
+        assert!(landed.join("child.txt").is_file());
+        assert_eq!(mode(&landed), 0o700);
+        assert_eq!(
+            xattr::get(&landed, XATTR_NAME).expect("read").as_deref(),
+            Some(XATTR_VALUE)
+        );
     }
 }

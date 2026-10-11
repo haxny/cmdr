@@ -286,8 +286,8 @@ the same volume instance; the app asks it BEFORE reaching for a stream
 ## Dates on copies
 
 Copies onto and off this backend keep the source's modification date. The cross-backend contract is
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's date";
-this is how SFTP keeps it.
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
+metadata"; this is how SFTP keeps it.
 
 - **Source**: the read stream reports the mtime from the `fstat` it already sends alongside the first chunk
   (`streams.rs`'s `RemoteFile::stat`), so the date costs no round trip.

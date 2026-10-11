@@ -2,13 +2,13 @@
 //! (empty dirs, and branches of only empty dirs).
 
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::dest_chain::leaf_in_the_way;
+use super::folder_metadata::{DirMapping, create_dirs_like_their_sources, dir_dest_path};
 use crate::file_system::write_operations::ledger::CopyTransaction;
-use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::WriteOperationError;
 
 /// Creates destination directories for the scanned source dirs the per-file
@@ -82,74 +82,20 @@ pub(in crate::file_system::write_operations::transfer) fn create_scanned_dirs_at
                 None => break,
             }
         }
-        fs::create_dir_all(&dest).map_err(|e| WriteOperationError::IoError {
+        dirs_to_create.reverse();
+        let mapping = DirMapping {
+            dest_root: destination,
+            dest_leaf: &dest,
+            source_leaf: dir,
+        };
+        create_dirs_like_their_sources(&dirs_to_create, &mapping).map_err(|e| WriteOperationError::IoError {
             path: dest.display().to_string(),
             message: format!("Failed to create directory: {}", e),
         })?;
-        for created in dirs_to_create.into_iter().rev() {
+        for created in dirs_to_create {
             transaction.record_dir(created.clone());
             created_dirs.insert(created);
         }
     }
     Ok(())
-}
-
-/// Dates every destination folder this operation created with its source
-/// folder's date, once everything inside it has landed.
-///
-/// Writing a child bumps its folder's date, so this runs after the per-file loop
-/// AND [`create_scanned_dirs_at_destination`], on the success path only: a
-/// stopped or failed copy dates nothing. `scanned_dirs` is deepest-first, which
-/// is also the order this needs (dating a folder doesn't touch its parent, but
-/// it keeps the rule the same as the cross-volume engine's,
-/// `../volume/folder_dates.rs`). Only folders in `created_dirs` are dated: a
-/// folder the copy merged into is the user's, and keeps the date the filesystem
-/// gives it. Best effort: a date that won't set is a `log::warn!`. The contract:
-/// `../volume/DETAILS.md` § "Copies keep the source's date".
-pub(in crate::file_system::write_operations::transfer) fn date_created_dirs_like_their_sources(
-    scanned_dirs: &[PathBuf],
-    sources: &[PathBuf],
-    destination: &Path,
-    state: &WriteOperationState,
-    created_dirs: &[PathBuf],
-    dir_remap: &HashMap<PathBuf, PathBuf>,
-) {
-    let created: HashSet<&Path> = created_dirs.iter().map(PathBuf::as_path).collect();
-    for dir in scanned_dirs {
-        if is_cancelled(&state.intent) {
-            return;
-        }
-        let Some(dest) = dir_dest_path(dir, sources, destination) else {
-            continue;
-        };
-        let dest = super::apply_dir_remap(&dest, dir_remap);
-        if !created.contains(dest.as_path()) {
-            continue;
-        }
-        let dated = fs::symlink_metadata(dir)
-            .map(|meta| filetime::FileTime::from_last_modification_time(&meta))
-            .and_then(|mtime| filetime::set_file_mtime(&dest, mtime));
-        if let Err(e) = dated {
-            log::warn!(
-                target: "transfer",
-                "copy: {} keeps the copy's date, not {}'s: {e}",
-                dest.display(),
-                dir.display()
-            );
-        }
-    }
-}
-
-/// Maps a scanned source directory to its destination path, mirroring
-/// `FileInfo::dest_path`: the path relative to its top-level source's parent,
-/// joined onto `destination`. `None` when the dir isn't under any source
-/// (can't happen for paths produced by the scan walker over these sources).
-fn dir_dest_path(dir: &Path, sources: &[PathBuf], destination: &Path) -> Option<PathBuf> {
-    sources.iter().find_map(|source| {
-        if !dir.starts_with(source) {
-            return None;
-        }
-        let root = source.parent().unwrap_or(source);
-        dir.strip_prefix(root).ok().map(|relative| destination.join(relative))
-    })
 }

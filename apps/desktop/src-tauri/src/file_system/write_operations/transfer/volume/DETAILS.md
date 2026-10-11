@@ -32,7 +32,7 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
   (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside it in `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
   recurses there, a file child goes to `strategy.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which
   is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_dates.rs` holds what the
-  walk notes about the folders it created, dated once the subtree landed (§ "Copies keep the source's date").
+  walk notes about the folders it created, dated once the subtree landed (§ "Copies keep the source's metadata").
 - **The move is three files, and the dependency runs ONE way.** `r#move` is the DISPATCHER and nothing else: it picks
   same-volume (`move_same`), both-local (`move_files_start`, one level up), or cross-volume (`move_cross`), then owns
   the managed-op lifecycle around whichever it picked. Both engines are leaves under it. ❗ Nothing in an engine may
@@ -831,11 +831,11 @@ inside a folder — the two shapes take different routes through the engine), `m
 Pinned by the `quarantine` cells in `copy_extract_out_tests.rs` (zip with an implicit folder, a merged-into folder, an
 unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out).
 
-## Copies keep the source's date
+## Copies keep the source's metadata
 
 **The rule: the source REPORTS its file's modification date on the read stream, the destination WRITES it.** This is
 the canonical home of the contract; the trait doc, the conformance assertions, and the backend docs point here. Local →
-local copies keep file dates on their own path (`chunked_copy.rs`, copyfile/clonefile); their folder dates are below.
+local copies keep file dates on their own path (`chunked_copy.rs`, copyfile/clonefile); their folders are below.
 
 - **Source half**: `VolumeReadStream::modified_at` is a REQUIRED trait method, so a new backend can't skip it by
   omission. A stream answers the date its open already learned (the stat or listing it did anyway), ❌ never an extra
@@ -866,9 +866,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   request per top-level folder, which `s3_engine_integration_test.rs::the_engine_sends_what_the_estimate_counts`
   caught as a HEAD and a LIST over the cost estimate (an S3 prefix has no date to find, so it was pure cost), and a
   whole parent listing on MTP.
-- **Local → local and the cross-FS local move** (`../copy/scanned_dirs.rs::date_created_dirs_like_their_sources`):
-  after the file loop and the empty-folder pass, every folder in the transaction's `created_dirs` takes its scanned
-  source folder's `lstat` mtime. The move dates its STAGED folders, and Phase 3's rename carries each date along.
+- **Local → local and the cross-FS local move** keep every class a folder has, not only its date
+  (`../copy/folder_metadata.rs`, `../DETAILS.md` § "Folders keep their metadata"): after the file loop and the
+  empty-folder pass, every folder in the transaction's `created_dirs` takes its scanned source folder's xattrs, dates,
+  mode, ACL, and flags. The move puts what can't refuse Phase 3 on its STAGED folders, and Phase 3's rename carries it.
 - **Only folders the copy CREATED.** A merge into a folder the user already had leaves it to the store: it's theirs,
   and the copy only added to it. A folder the merge created inside it is the copy's own and is dated.
 - **Never on a failed or stopped copy**: one failure fails the whole subtree, so nothing in it is dated, not even a

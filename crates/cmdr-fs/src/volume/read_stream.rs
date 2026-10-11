@@ -39,7 +39,7 @@ pub trait VolumeReadStream: Send {
     /// blob, a test double) returns `None`, which leaves the destination's own
     /// date. ❗ A wrapper stream forwards its inner stream's answer. The contract
     /// and where each backend stands: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
-    /// § "Copies keep the source's date".
+    /// § "Copies keep the source's metadata".
     fn modified_at(&self) -> Option<std::time::SystemTime>;
 
     /// The operation's Cancel and pause, for a destination that reads AHEAD of

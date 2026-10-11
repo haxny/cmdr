@@ -7,11 +7,11 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), and M3 (local files) done
-(2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB),
-and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue:
-none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions
-(one session ≈ one focused milestone agent run).
+**Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), and M4 (local
+folders) done (2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost,
+executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1
+agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh
+read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -39,8 +39,8 @@ none yet. Evidence: the notes file above, plus the file:line citations in § "Fr
      (verified), so a crash between the clone and Cmdr clearing them leaves a `uchg` temp. Rule 9 covers it: the
      in-flight sweep clears a temp it has already matched to its record before removing it.
 4. ❌ **Only metadata of things the copy CREATED.** A folder the copy merged into keeps its own metadata (today's rule
-   for dates, `volume/DETAILS.md` § "Copies keep the source's date"). An Overwrite replaces the file, so the landed file
-   wears the SOURCE's metadata, the way Finder's Replace does.
+   for dates, `volume/DETAILS.md` § "Copies keep the source's metadata"). An Overwrite replaces the file, so the landed
+   file wears the SOURCE's metadata, the way Finder's Replace does.
 5. ❌ **Never widen, never escalate, not even mid-copy.** Mode follows the `landed_mode` fold (umask-respecting) for
    routed volumes; setuid, setgid, and sticky travel only local-to-local; `SF_*` system flags and ownership never travel
    (non-root can't, and we don't want to when elevated either, unless a later spec decides so). A temp is created
@@ -169,7 +169,7 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 
 ### Cross-volume (the volume engine)
 
-- **Contract**: `T/volume/DETAILS.md:806-905` § "Copies keep the source's date". The source reports
+- **Contract**: `T/volume/DETAILS.md:806-905` § "Copies keep the source's metadata". The source reports
   `VolumeReadStream::modified_at` (`crates/cmdr-fs/src/volume/read_stream.rs:43`, required); the destination writes it
   inside `write_from_stream`. Explicitly out: birth time and permissions (`:824`).
 - **Mode**: `T/volume/landed_mode.rs:46` folds the source's mode onto a LOCAL destination's temp before the rename,
@@ -249,7 +249,7 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 "FAIL" = the copy itself fails over metadata (a rule-3 bug).
 
 - **Local, same APFS volume (clone)**: files keep everything (Locked and `deny delete` files land since M1). Symlink
-  dates keep (M3). Folders: birth, mode, xattrs, ACL, flags LOST.
+  dates keep (M3). Folders keep everything (M4: birth, mtime, mode, xattrs, ACL, flags), by copy and by cross-FS move.
 - **Local, other APFS / HFS+ volume (chunked)**: files keep everything (M3: birth, flags, xattrs, mode, mtime, atime;
   ACL since M1). Folders as above. Symlink dates keep (M3).
 - **Local, exFAT / FAT**: since M3 file birth and `hidden`/Locked should keep (the chunked arm sets them; the notes file
@@ -706,6 +706,29 @@ decided; then the ask itself, creation and modification dates on files AND folde
   copy AND by cross-FS move; cancel leaves folders undated (today's pin stays).
 - **DONE**: folder rows of the matrix green; `volume/DETAILS.md` § "Copies keep the source's date" retitled and
   rewritten as "Copies keep the source's metadata".
+- **Done** (2026-10-11). Where the code differs from the plan above:
+  - Folders aren't created a flat `0700`: each is born with its source's permission bits plus owner `rwx`, under the
+    umask (`T/copy/folder_metadata.rs::creation_mode`). Still never wider than the source mid-fill, and still fillable,
+    but a copy that stops or fails (no final pass, by the success-only rule) leaves a `0755` source's folder at `0755`,
+    not stuck at `0700`. Costs one source `lstat` per created folder. A self-duplicate's and a folder→file Overwrite's
+    folder come from shared plain-`mkdir` helpers, so they're narrowed right after instead.
+  - A mode that keeps owner `rwx` refuses nothing, so it goes on with the staged half, and on a cross-FS move in
+    staging, where Phase 3's rename carries it. Only a mode without it (`0500`, `0555`, `0600`) waits in
+    `LandedMetadata::with_mode`, so the move's deferred map stays sparse.
+  - The deferred pass now runs deepest first, and skips a staged folder a merge folded into the user's folder
+    (`merged_staged`): `landed_at` maps it onto the user's folder, which rule 4 says keeps its own. M1's file-only map
+    never met that case.
+  - Rule 9 grew a folder half M1 couldn't have needed: a Locked, `deny delete_child`, or `0500` folder Cmdr copied
+    refuses its CHILD's removal. `cmdr_fs::metadata::open_parent_folder` opens the folder for one retry and puts its
+    mode, ACL, and flags back after (`remove_*_clearing_blockers` call it; the journal rollback's
+    `delete_clearing_blockers` calls it itself). In-flight paths never meet it: final folder metadata goes on after the
+    last in-flight reversal could run.
+  - `volume/DETAILS.md`'s section is retitled and its local bullet rewritten; the cross-volume body stays M5a's to
+    rewrite with birth and mode. The anchor's references in code comments under `crates/cmdr-fs/src/volume/` were
+    retitled too.
+  - The spec's "cancel leaves folders undated" cell is a FAILED copy (an unreadable file partway): a same-volume local
+    copy takes the clone arm, which has no park hook to cancel at.
+  - No new user-facing strings.
 
 ### M5a: Creation dates cross volumes (the trait carries metadata; SMB first). Size: M (1–2 sessions)
 

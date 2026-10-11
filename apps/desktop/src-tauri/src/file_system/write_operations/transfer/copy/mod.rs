@@ -32,12 +32,14 @@ use super::super::validation::{is_same_file, validate_file_sizes_for_filesystem}
 use super::transfer_driver::{DriverConfig, PostLoopIntent, TransferOutcome, drive_transfer_serial_sync};
 
 mod dest_chain;
+mod folder_metadata;
 mod rollback;
 mod scanned_dirs;
 mod single_item;
 
+pub(super) use folder_metadata::apply_created_dirs_metadata;
 use rollback::rollback_with_progress;
-pub(super) use scanned_dirs::{create_scanned_dirs_at_destination, date_created_dirs_like_their_sources};
+pub(super) use scanned_dirs::create_scanned_dirs_at_destination;
 pub(super) use single_item::{JournalDestUnder, copy_single_item};
 
 /// Rewrites `dest` by replacing the longest ancestor that appears as a key in
@@ -290,6 +292,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                     path: original_dest.display().to_string(),
                     message: format!("Couldn't create the copy's folder: {e}"),
                 })?;
+            folder_metadata::narrow_like_its_source(&claimed, source);
             transaction.record_dir(claimed.clone());
             created_dirs.insert(claimed.clone());
             claimed
@@ -634,14 +637,16 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             }
 
             // Every file and folder has landed, so the folders this copy created
-            // can take their source dates without a later write bumping them.
-            date_created_dirs_like_their_sources(
+            // can take their source's metadata without a later write bumping
+            // their dates or their mode refusing a child.
+            apply_created_dirs_metadata(
                 &scan_result.dirs,
                 sources,
                 destination,
                 state,
                 &transaction.created_dirs,
                 &dir_remap,
+                None,
             );
 
             // Flush every created file and every directory that gained an entry
