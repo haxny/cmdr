@@ -27,7 +27,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::pluralize::pluralize_grouped;
-use cmdr_fs::staging::STAGING_TEMP_MARKER;
+use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream, WriteMode};
 use log::debug;
 use reqwest::Method;
@@ -42,18 +42,14 @@ use cmdr_fs::volume::liveness::Liveness;
 /// How often the upload reports progress while the body is on its way.
 const PROGRESS_TICK: Duration = Duration::from_millis(200);
 
-/// A staging name nothing else will pick: the destination plus the marker
-/// every backend's leftover sweep recognizes, plus a per-process counter.
+/// A staging name nothing else will pick, beside the destination: its name
+/// plus the marker every backend's leftover sweep recognizes and a UUID,
+/// shortened to fit the server's name limit (`cmdr_fs::staging::names`).
 fn staging_sibling(remote: &str) -> String {
-    static NEXT: AtomicU64 = AtomicU64::new(0);
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    format!(
-        "{remote}{STAGING_TEMP_MARKER}{:x}{nanos:x}{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    )
+    match remote.rsplit_once('/') {
+        Some((dir, name)) => format!("{dir}/{}", temp_sibling_name(name)),
+        None => temp_sibling_name(remote),
+    }
 }
 
 /// What the body stream counts, and ❗ these are two different numbers on

@@ -762,7 +762,7 @@ fn write_range_to_file_propagates_out_of_range_error() {
     session::close_session(&sid).unwrap();
 }
 
-/// The `.cmdr-tmp.<read_id>` file a save writes before its rename, if one is there.
+/// The `.cmdr-tmp-<uuid>` file a save writes before its rename, if one is there.
 fn save_temp_file(dir: &Path) -> Option<PathBuf> {
     fs::read_dir(dir)
         .ok()?

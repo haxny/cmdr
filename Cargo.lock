@@ -1557,6 +1557,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "unicode-normalization",
+ "unicode-segmentation",
  "uuid",
  "uzers",
  "xattr",

@@ -81,6 +81,10 @@ xattr = "1"
 # also supply one, so the type is part of the mint API rather than an internal
 # detail: a safe-overwrite gives its temp and its aside the same UUID.
 uuid = { version = "1.19.0", features = ["v4"] }
+# `staging::names`: a scratch name too long for the destination keeps only the
+# whole grapheme clusters of the original name that fit, so a cut never strands a
+# combining accent or splits an emoji. Already in the graph through the app.
+unicode-segmentation = "1.13.3"
 # `rt` for the runtime seam: `volume::host` hands backends a `tokio::runtime::Handle`
 # the app injects, because a backend's watcher threads have no ambient runtime to
 # inherit and `tokio::spawn` panics there. `rt-multi-thread` builds the fallback that

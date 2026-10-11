@@ -70,12 +70,14 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
 - **Leftover policy — no startup reaper.** A leftover `foo.zip.cmdr-tmp-*` is always an ABANDONED build (the original is
   intact), so it's harmless. `apply` reaps siblings of the target at the START of the next edit of that archive (before
   building its own fresh-uuid temp), which is sufficient; a cancel/error removes its own temp immediately via an RAII
-  guard. This LOCAL reap deletes every matching sibling unconditionally (edits of one archive serialize on the parent
-  lane, so a local leftover is always abandoned). A REMOTE archive edit leaves its leftover on the SHARE (a crash after
-  upload, before swap), not on the local scratch copy this `apply` reaps; that leftover is reaped by an age-gated mirror
-  of this reap on the REMOTE parent at the next edit of the same archive — see `write_operations/archive_edit/remote.rs`
-  (`reap_remote_temps`) and `apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md` § "Remote
-  edit" for why the remote side needs the age gate.
+  guard. It matches by `cmdr_fs::staging::temp_sibling_prefix`, the mint's own prefix, so a temp whose name was
+  shortened to fit is matched too. This LOCAL reap deletes every matching sibling unconditionally (edits of one archive
+  serialize on the parent lane, so a local leftover is always abandoned). A REMOTE archive edit leaves its leftover on
+  the SHARE (a crash after upload, before swap), not on the local scratch copy this `apply` reaps; that leftover is
+  reaped by an age-gated mirror of this reap on the REMOTE parent at the next edit of the same archive — see
+  `write_operations/archive_edit/remote.rs` (`reap_remote_temps`) and
+  `apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md` § "Remote edit" for why the remote
+  side needs the age gate.
 - **Deletes/renames reshape the retained set.** A delete drops a file or a whole subtree (component-wise match, so `foo`
   never catches `foobar`); a rename rewrites a subtree prefix. Both are computed per original entry in one pass
   (`plan_new_name`); deletes win over renames.

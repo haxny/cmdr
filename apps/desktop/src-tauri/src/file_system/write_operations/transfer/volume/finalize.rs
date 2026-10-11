@@ -1,8 +1,10 @@
 //! Landing a fully-written cross-volume temp at its final name.
 //!
-//! Both halves are one act: [`temp_sibling_path`] mints the `.cmdr-tmp-<uuid>`
-//! sibling a staged write goes to, and [`finalize_safe_replace`] swaps it over
-//! whatever is at the destination once the last byte is in. Kept out of
+//! Both halves are one act: `cmdr_fs::staging::temp_sibling_path` names the
+//! `.cmdr-tmp-<uuid>` sibling a conflict-driven safe-replace writes to (in the
+//! same directory, so the landing rename never crosses one, which some backends
+//! refuse), and [`finalize_safe_replace`] swaps it over whatever is at the
+//! destination once the last byte is in. Kept out of
 //! `conflict.rs` because the resolver only DECIDES that a replace should happen;
 //! the five write sites (`copy_serial.rs`, `copy_concurrent_task.rs`,
 //! `merge.rs`, `sequential_extract.rs`, `move_cross.rs`) are what call this,
@@ -12,32 +14,13 @@
 //! caller contract is on `finalize_safe_replace`, and the rescue that keeps them
 //! out of reach of the hourly reap is `../recovered_name.rs`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
 };
 use crate::file_system::volume::{Volume, VolumeError};
-
-/// Builds a temp sibling path next to `dest_path` for a staged write.
-///
-/// Uses the recognizable `.cmdr-tmp-<uuid>` marker (matches the project's temp
-/// convention, so a leftover after a crash is identifiable and cleanup helpers
-/// recognize it). The temp lives in the same parent directory as the original
-/// so the finalize step's `rename` stays within one directory (no cross-dir
-/// rename, which some backends refuse).
-///
-/// Shared with `staged_write.rs`, which stages EVERY cross-volume file write on
-/// one of these, not only the conflict-driven safe-replace.
-pub(super) fn temp_sibling_path(dest_path: &Path) -> PathBuf {
-    let parent = dest_path.parent().unwrap_or(Path::new(""));
-    let filename = dest_path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
-    parent.join(format!("{filename}.cmdr-tmp-{}", uuid::Uuid::new_v4()))
-}
 
 /// Lands a fully-written temp at its final name: deletes whatever is at `orig`
 /// (which survived the entire streaming write) and renames the temp into its

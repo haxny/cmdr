@@ -19,6 +19,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
 
+use super::error_classification::classify_io_error;
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
@@ -178,11 +179,15 @@ where
         }
         discard_temp(state, &temp_record);
         // A destination that appeared underneath a non-replacing write is a
-        // typed outcome the caller acts on, not an opaque IO failure.
+        // typed outcome the caller acts on, not an opaque IO failure. So is a
+        // name the destination can't hold: the temp is shortened to fit
+        // (`cmdr_fs::staging::names`), so a too-long final name surfaces HERE,
+        // and it must still tell the user to pick a shorter one.
         return Err(match e.kind() {
             std::io::ErrorKind::AlreadyExists => WriteOperationError::DestinationExists {
                 path: dest.display().to_string(),
             },
+            std::io::ErrorKind::InvalidFilename => classify_io_error(&e, dest.display().to_string()),
             _ => WriteOperationError::IoError {
                 path: dest.display().to_string(),
                 message: format!("Failed to finalize the copy: {}", e),

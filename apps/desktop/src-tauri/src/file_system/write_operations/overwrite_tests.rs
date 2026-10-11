@@ -30,7 +30,11 @@ fn overwrite_state() -> Arc<WriteOperationState> {
 /// `stage_and_land_file` with the platform's default byte-copier, which is what
 /// the copy strategies hand it for a same-volume local copy.
 fn safe_overwrite_file(source: &Path, dest: &Path) -> Result<u64, WriteOperationError> {
-    stage_and_land_file(&overwrite_state(), dest, true, |target| {
+    copy_through_staging(source, dest, true)
+}
+
+fn copy_through_staging(source: &Path, dest: &Path, replacing: bool) -> Result<u64, WriteOperationError> {
+    stage_and_land_file(&overwrite_state(), dest, replacing, |target| {
         #[cfg(target_os = "macos")]
         {
             super::super::transfer::macos_copy::copy_single_file_native(source, target, false, None)
@@ -65,6 +69,64 @@ fn test_safe_overwrite_basic() {
         assert!(!name.contains(".cmdr-tmp-"), "temp file should be cleaned up: {name}");
         assert!(!name.contains(".cmdr-temp-"), "aside file should be cleaned up: {name}");
     }
+}
+
+/// Every name in `dir` that's one of Cmdr's scratch files.
+fn scratch_left_in(dir: &Path) -> Vec<String> {
+    fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| cmdr_fs::staging::is_staging_temp_name(name))
+        .collect()
+}
+
+/// ERR-9JY7Q's shape on the local path: a name already at the 255-byte limit
+/// APFS and ext4 share. The temp's suffix used to push it over, so the copy
+/// failed with "name too long" on a name the destination holds fine. Both
+/// landings, fresh and over an existing file, and a two-byte script too.
+#[test]
+fn a_name_at_the_filesystem_limit_lands() {
+    let temp_dir = create_temp_dir("name_at_limit");
+    let source = temp_dir.join("source.epub");
+    fs::write(&source, "new-data").unwrap();
+    let dest_dir = temp_dir.join("dest");
+    fs::create_dir(&dest_dir).unwrap();
+
+    for name in [
+        format!("{}.epub", "a".repeat(250)),
+        format!("{}.epub", "αβγδε".repeat(25)),
+    ] {
+        assert_eq!(name.len(), 255);
+        let dest = dest_dir.join(&name);
+
+        copy_through_staging(&source, &dest, false).unwrap_or_else(|e| panic!("fresh landing: {e:?}"));
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "new-data");
+
+        fs::write(&dest, "old-data").unwrap();
+        safe_overwrite_file(&source, &dest).unwrap_or_else(|e| panic!("overwrite: {e:?}"));
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "new-data");
+    }
+    assert_eq!(scratch_left_in(&dest_dir), Vec::<String>::new());
+}
+
+/// A name the destination really can't hold still says so, about the user's
+/// name: the shortened temp takes the bytes, and the landing is what refuses.
+/// `NameTooLong` is what tells the user to pick a shorter name; a generic IO
+/// failure would offer a Retry that meets the same refusal.
+#[test]
+fn a_name_past_the_filesystem_limit_reports_it_as_too_long() {
+    let temp_dir = create_temp_dir("name_past_limit");
+    let source = temp_dir.join("source.txt");
+    fs::write(&source, "new-data").unwrap();
+    let dest = temp_dir.join(format!("{}.txt", "a".repeat(296)));
+
+    let error = copy_through_staging(&source, &dest, false).expect_err("a 300-byte name can't land");
+
+    assert!(
+        matches!(&error, WriteOperationError::NameTooLong { path } if *path == dest.display().to_string()),
+        "got {error:?}"
+    );
+    assert_eq!(scratch_left_in(&temp_dir), Vec::<String>::new());
 }
 
 #[test]

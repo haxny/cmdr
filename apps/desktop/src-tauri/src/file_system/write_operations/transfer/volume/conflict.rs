@@ -35,7 +35,6 @@ use super::super::super::types::{
 };
 use super::super::staged_write::Replaces;
 use super::displaced_destination::{DisplacedDestination, displace_destination};
-use super::finalize::temp_sibling_path;
 use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
 use super::transfer_error::{PathRole, map_volume_error};
@@ -582,7 +581,7 @@ async fn apply_volume_conflict_resolution(
                         displaced: None,
                     }));
                 }
-                let temp = temp_sibling_path(dest_path);
+                let temp = cmdr_fs::staging::temp_sibling_path(dest_path);
                 return Ok(Some(ResolvedConflict {
                     write_path: temp,
                     reserved_placeholder: false,

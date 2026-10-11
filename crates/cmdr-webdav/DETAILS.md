@@ -145,9 +145,9 @@ everything the engine's staging carries: the in-flight ledger and its crash swee
 `LandingName` refusal, the ` (recovered)` rescue, and the discard of an unplaced temp. One owner keeps one source of
 truth.
 
-**`CreateNew` still stages here**: a PUT to `<dest>.cmdr-tmp-<pid><nanos><n>`, then a MOVE onto `dest` with
-`Overwrite: F`, which Apache `mod_dav` and sabre/dav both refuse with 412 over a taken name (`Attempted::TakingAName`
-maps it to `AlreadyExists`; the conformance cell and
+**`CreateNew` still stages here**: a PUT to `<dest>.cmdr-tmp-<uuid>` (`cmdr_fs::staging::temp_sibling_name`, shortened
+to fit the server's name limit), then a MOVE onto `dest` with `Overwrite: F`, which Apache `mod_dav` and sabre/dav both
+refuse with 412 over a taken name (`Attempted::TakingAName` maps it to `AlreadyExists`; the conformance cell and
 `nextcloud_test.rs::the_write_path_lands_a_file_byte_exact_on_sabre_dav` pin each). A conditional PUT
 (`If-None-Match: *`) straight to `dest` would refuse too, but after it failed for any other reason nothing says whether
 what's at the name is our partial or another writer's file, so the cleanup couldn't be both safe and complete. The

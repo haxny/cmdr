@@ -164,10 +164,11 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
 - **`create_directory_errors_on_existing_dir` → false.** `mkdir -p` is the verb, and it is idempotent by design.
 - **Streams**: `open_read_stream` is one `RECV` socket per file, chunk by chunk; `read_range` is one bounded device-side
   `dd` window rather than an archive-sized prefix transfer; `write_from_stream` is one `SEND` socket per file into a
-  staging sibling (`<dir>/<name>.cmdr-tmp-<pid>-<n>`, the house `STAGING_TEMP_MARKER`, so a leftover is filtered from
-  every pane), then `mv -f` via the shell. Both `Known` and `Unknown` lengths stream through the same path and report
-  bytes actually sent with the caller's explicit expected length. Any failure removes the staging name. ❌ Never collect
-  a whole file into a `Vec<u8>`.
+  staging sibling (`<dir>/<name>.cmdr-tmp-<uuid>` from `cmdr_fs::staging::temp_sibling_name`: the house marker, so a
+  leftover is filtered from every pane, with the name shortened when the whole wouldn't fit 255 bytes), then `mv -f` via
+  the shell. Both `Known` and `Unknown` lengths stream through the same path and report bytes actually sent with the
+  caller's explicit expected length. Any failure removes the staging name. ❌ Never collect a whole file into a
+  `Vec<u8>`.
 - **Two accepted TOCTOU windows**: `create_file` and a `force = false` rename each `stat` the destination first and
   refuse on a hit. Neither can be atomic on this protocol: `SEND` truncates unconditionally and `mv -n` exits 0 whether
   it moved or not (verified on Android 14 `toybox 0.8.9`, 2026-09-01). The window is one round trip on a device only
@@ -294,13 +295,13 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   against 31 to 35 MB/s for `adb push`, same cable, same minute). A copy of many small files is another story: 200 files
   of 20 KB took 52 s where `adb push` of the folder took under 10 s for those plus 300 MB. The cost is round trips, not
   bytes: each file is staged TWICE and moved twice. The transfer engine streams into its own `<name>.cmdr-tmp-<uuid>`;
-  `write_from_stream` stages that AGAIN as `<name>.cmdr-tmp-<uuid>.cmdr-tmp-<pid>-<n>`, stats the target, and `mv -f`s
-  it onto the engine's temp (about 135 ms); then the engine's landing rename stats and `mv`s once more (about 125 ms). A
-  device shell round trip is about 60 ms, and every stat opens its own sync socket. (Measured on a Pixel 9 Pro XL over
-  USB, dev build, 2026-09-30.) The inner stage is redundant when the caller is already writing to a staging name, which
-  would save one `mv` and one stat per file. It stays for now because telling "the caller staged this" from the NAME is
-  the inference `cmdr_fs::staging` warns against; the clean fix is for the caller to say so (a write mode, or a
-  capability the engine reads), which touches the `Volume` trait.
+  `write_from_stream` stages that AGAIN as `<name>.cmdr-tmp-<uuid>.cmdr-tmp-<uuid>` (shortened to fit), stats the
+  target, and `mv -f`s it onto the engine's temp (about 135 ms); then the engine's landing rename stats and `mv`s once
+  more (about 125 ms). A device shell round trip is about 60 ms, and every stat opens its own sync socket. (Measured on
+  a Pixel 9 Pro XL over USB, dev build, 2026-09-30.) The inner stage is redundant when the caller is already writing to
+  a staging name, which would save one `mv` and one stat per file. It stays for now because telling "the caller staged
+  this" from the NAME is the inference `cmdr_fs::staging` warns against; the clean fix is for the caller to say so (a
+  write mode, or a capability the engine reads), which touches the `Volume` trait.
 - **Wireless debugging** (`adb pair`) is out of scope: the server owns pairing, and a paired device appears in
   `track-devices` like any other.
 - **Real-device pass pending**: the authorize prompt, an `unauthorized` → `device` transition mid-session, a 2 GB `RECV`

@@ -42,7 +42,8 @@ the next section.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and
   its retirement, re-exported from it.
-- `staging.rs`: `StagingTemp`, the ONLY way to name a scratch file.
+- `staging.rs`: `StagingTemp`, the ONLY way to name a scratch file. `src/staging/names.rs` is the one name builder
+  behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `archive_format.rs` (sole source of truth for archive detection), `firmlinks.rs` (`normalize_path`; the index
   and the app's watchers have to agree on it), `file_provider.rs` (the cloud-domain marker), `filesystem_kind.rs`,
   `path_locations.rs` (how many PLACES a set of directories amounts to), `path_hash.rs` (the fixed 64-bit folder-path
@@ -107,6 +108,21 @@ through a local helper, a fully-qualified call inline in an expression, a `use` 
 - **`wait_until` / `wait_until_async`.** Behind the `testing` feature. The rest of the app's `test_support.rs` can't
   follow: `COUNTING_ALLOCATOR` is a `#[global_allocator]`, and a second one in any binary linking this crate is a hard
   compile error.
+
+## Scratch names fit in 255 bytes
+
+`src/staging/names.rs`. The suffix adds 46 bytes, so a name already near the limit used to be refused for OUR suffix,
+and the user was told to shorten a valid name (ERR-9JY7Q: a byte-capped epub name on a Synology share,
+`STATUS_OBJECT_NAME_INVALID`; a long Greek name the same way). The original-name part now gives way, cut on a
+grapheme-cluster boundary (`unicode-segmentation`), while the marker and UUID stay whole. Bytes are the only count
+needed: a UTF-16 unit never costs fewer UTF-8 bytes, so the SMB/NTFS/exFAT 255-unit limit follows. Recognition is
+unaffected because nothing parses the original name back out of a temp; the one per-file matcher (an archive edit
+reaping its own builds) asks `temp_sibling_prefix` for the mint's fitted prefix. Consequence: a final name past the
+limit now fails at the LANDING rename instead of the temp's create, so landing errors must keep a refused name typed
+(`NameTooLong` / `InvalidName`), never a generic IO failure. Not covered: Synology documents a 143-byte name cap for
+ENCRYPTED shares (eCryptfs; from its docs, not reproduced here, 2026-10-11), so a name between about 97 and 143 bytes
+still fits finally but not as a temp there; lowering `MAX_SCRATCH_NAME_BYTES` to 143 would cover it at the cost of
+shorter leftover names everywhere.
 
 ## `volume::ids`: why an ID is a digest and not a rendering
 

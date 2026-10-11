@@ -148,7 +148,9 @@ async fn a_fresh_zip_streams_directly_onto_a_phone_and_opens_with_valid_contents
 
 /// A file copied onto a phone lands whole, and ❗ the phone's writer never
 /// streams at the name it lands on: `SEND` truncates on open, so it sends to
-/// `<name>.cmdr-tmp-<pid>-<n>` and one `mv` gives the bytes their name.
+/// `<name>.cmdr-tmp-<uuid>` and one `mv` gives the bytes their name. The
+/// engine already writes to a staging name of its own, so the writer's move is
+/// the one landing ON a staging name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_file_copied_onto_a_phone_lands_whole_through_a_staging_name() {
     let phone = dialed_phone("R58M-Copy-Onto", "copy-onto").await;
@@ -175,12 +177,13 @@ async fn a_file_copied_onto_a_phone_lands_whole_through_a_staging_name() {
         "the bytes on the phone must checksum to what local disk holds"
     );
 
-    let own_staging_prefix = format!("{STAGING_TEMP_MARKER}{}-", std::process::id());
     let moves = moves_on_the_device(&phone.fake);
     assert!(
         moves.iter().any(|(from, to)| {
             from.strip_prefix(to.as_str())
-                .is_some_and(|suffix| suffix.starts_with(&own_staging_prefix))
+                .and_then(|suffix| suffix.strip_prefix(STAGING_TEMP_MARKER))
+                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok())
+                && to.contains(STAGING_TEMP_MARKER)
                 && to.starts_with(&phone.device_dir)
         }),
         "the phone's writer lands every upload by renaming its own staging sibling; moves: {moves:?}"

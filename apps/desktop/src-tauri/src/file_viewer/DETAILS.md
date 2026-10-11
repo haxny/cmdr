@@ -458,7 +458,8 @@ that the scan opener finds a line exactly with no index).
 - `viewer_cancel_read(session_id, read_id)` → flips the per-read cancel flag. No-op if the read already finished.
 - `viewer_write_range_to_file(session_id, read_id, anchor, focus, dest_path)` → streams a logical range to `dest_path`,
   decoded to UTF-8 and written atomically (temp+rename). Used by "Save as file…" in the copy dialogs. Same cancellation
-  plumbing as `viewer_read_range`. Temp suffix includes the `read_id` for crash isolation. Peak memory is one
+  plumbing as `viewer_read_range`. The temp comes from `cmdr_fs::staging::StagingTemp::mint`, so the pane hides it while
+  it's written and a name at the filesystem's limit still gets one that fits. Peak memory is one
   `STREAM_CHUNK_BYTES` buffer whatever the selection's size, and a cancel or any error removes the partial temp. No
   total deadline: it runs under a stall watch (`SAVE_STALL_LIMIT`), so a save keeps going as long as it keeps writing.
 - `viewer_search_start(session_id, query, mode)` → starts background search. `mode = { useRegex, caseSensitive }`. An

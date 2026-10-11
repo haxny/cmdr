@@ -38,7 +38,6 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::io::AsyncWriteExt;
-use uuid::Uuid;
 
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, is_cancelled};
@@ -54,11 +53,10 @@ pub(crate) enum RemoteCommitProgress {
 
 pub(crate) type RemoteProgressObserver = Arc<dyn Fn(RemoteCommitProgress) + Send + Sync>;
 
-/// Same-directory temp infix: `foo.zip` uploads as `foo.zip.cmdr-tmp-<uuid>`.
-/// Mirrors the local mutator's convention and the app-wide `.cmdr-` crash-
-/// recoverable-temp prefix. Used to BUILD the upload temp name and to MATCH stale
-/// leftovers for reaping — the two must stay in lockstep.
-use cmdr_fs::staging::STAGING_TEMP_MARKER as TEMP_INFIX;
+/// `foo.zip` uploads as the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`, the
+/// app-wide scratch name (shortened when it wouldn't fit). The same module names
+/// the upload and the prefix that matches stale leftovers, so the two can't drift.
+use cmdr_fs::staging::{temp_sibling_path, temp_sibling_prefix};
 
 /// The minimum age a remote `<archive>.cmdr-tmp-*` leftover must reach before the
 /// next edit of the same archive reaps it. Deliberately generous: unlike the LOCAL
@@ -146,7 +144,9 @@ pub(super) async fn place_local_file(
     state: &WriteOperationState,
     progress: Option<&RemoteProgressObserver>,
 ) -> Result<(), EditError> {
-    let remote_temp = remote_temp_sibling(remote_path);
+    // A fresh uuid each edit, so a leftover from a crashed prior edit (an
+    // abandoned upload; the original is intact) is never mistaken for this one.
+    let remote_temp = temp_sibling_path(remote_path);
     upload_archive(parent, local_file, &remote_temp, state, progress).await?;
     // A user can cancel while the backend closes the completed upload, after
     // its final progress callback but before publication. The temp is ours;
@@ -303,21 +303,6 @@ async fn swap_into_place(parent: &dyn Volume, remote_temp: &Path, archive_path: 
     Ok(())
 }
 
-/// `foo.zip` → `foo.zip.cmdr-tmp-<uuid>` in the same remote directory. A fresh uuid
-/// each edit, so a leftover from a crashed prior edit (an abandoned upload — the
-/// original is intact) is never mistaken for this one.
-fn remote_temp_sibling(archive_path: &Path) -> PathBuf {
-    let name = archive_path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "archive.zip".to_string());
-    let temp_name = format!("{name}{TEMP_INFIX}{}", Uuid::new_v4());
-    match archive_path.parent() {
-        Some(parent) => parent.join(temp_name),
-        None => PathBuf::from(temp_name),
-    }
-}
-
 /// Reaps stale upload temps left on the remote by a crash between a prior upload
 /// and its swap (a `<archive>.cmdr-tmp-*` sibling holding the fully-uploaded new
 /// bytes under a temp name — harmless, but untidy). Runs at the start of the next
@@ -340,7 +325,8 @@ async fn reap_remote_temps(parent: &dyn Volume, archive_path: &Path) {
     let (Some(dir), Some(file_name)) = (archive_path.parent(), archive_path.file_name()) else {
         return;
     };
-    let prefix = format!("{}{TEMP_INFIX}", file_name.to_string_lossy());
+    // The mint's own prefix, so a temp shortened to fit is matched too.
+    let prefix = temp_sibling_prefix(&file_name.to_string_lossy());
 
     let entries = match parent.list_directory(dir, None).await {
         Ok(entries) => entries,

@@ -1084,21 +1084,17 @@ fn write_range_to_file_inner(
     dest_path: &Path,
     progress: &SaveProgress,
 ) -> Result<(), ViewerError> {
-    // Atomic write: write to `<dest>.cmdr-tmp.<read_id>`, then rename. The same-FS
-    // rename gives us atomicity on local volumes (and is best-effort elsewhere).
-    let tmp_path = dest_path.with_extension(format!(
-        "{}cmdr-tmp.{}",
-        dest_path
-            .extension()
-            .map(|e| format!("{}.", e.to_string_lossy()))
-            .unwrap_or_default(),
-        read_id
-    ));
+    // Atomic write: write to a `<dest>.cmdr-tmp-<uuid>` sibling, then rename. The
+    // same-FS rename gives us atomicity on local volumes (and is best-effort
+    // elsewhere). The house mint names it, so a name at the filesystem's limit
+    // still gets a temp that fits, and the pane hides it while it's written.
+    let staged = cmdr_fs::staging::StagingTemp::mint(dest_path, None);
+    let tmp_path = staged.path();
 
     let written = with_registered_read(session_id, read_id, |backend, cancel| {
         // Unbuffered on purpose: each piece the reader hands over is already a chunk, so
         // a `BufWriter` would only copy it a second time.
-        let mut file = std::fs::File::create(&tmp_path)?;
+        let mut file = std::fs::File::create(tmp_path)?;
         let mut sink = |piece: &str| {
             file.write_all(piece.as_bytes())?;
             progress.note_written(piece.len());
@@ -1109,11 +1105,11 @@ fn write_range_to_file_inner(
 
     if let Err(e) = written {
         // Best-effort cleanup; ignore secondary errors.
-        let _ = std::fs::remove_file(&tmp_path);
+        let _ = std::fs::remove_file(tmp_path);
         return Err(e);
     }
-    if let Err(e) = std::fs::rename(&tmp_path, dest_path) {
-        let _ = std::fs::remove_file(&tmp_path);
+    if let Err(e) = std::fs::rename(tmp_path, dest_path) {
+        let _ = std::fs::remove_file(tmp_path);
         return Err(ViewerError::Io { message: e.to_string() });
     }
     Ok(())

@@ -10,7 +10,7 @@
 use std::ops::ControlFlow;
 use std::path::Path;
 
-use cmdr_fs::staging::STAGING_TEMP_MARKER;
+use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
 use log::debug;
 
@@ -131,7 +131,7 @@ impl AdbVolume {
     ///
     /// `SEND` writes the file at the name it is given, byte by byte, so the
     /// name holds a partial for the whole upload. It lands on
-    /// `<name>.cmdr-tmp-<n>` beside the destination and takes the real name by
+    /// `<name>.cmdr-tmp-<uuid>` beside the destination and takes the real name by
     /// one `mv -f`, so nothing half-written ever wears the user's filename; on
     /// any failure the staging name is removed. ❗ Cancellation arrives only
     /// through `on_progress` answering `Break`: there is no token on this path.
@@ -231,24 +231,16 @@ fn invalid_range(path: &str) -> VolumeError {
     }
 }
 
-/// `<dir>/<name>.cmdr-tmp-<pid>-<n>`: the house marker, so a leftover from a
-/// crash is recognized as Cmdr's, and a counter so two uploads of one name
-/// never share a partial.
+/// `<dir>/<name>.cmdr-tmp-<uuid>`: the house marker, so a leftover from a
+/// crash is recognized as Cmdr's, a UUID so two uploads of one name never share
+/// a partial, and the name shortened when the whole wouldn't fit the phone's
+/// 255-byte limit (`cmdr_fs::staging::names`).
 fn staging_name_for(device: &str) -> String {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static NEXT: AtomicU64 = AtomicU64::new(0);
     let (parent, name) = match device.rfind('/') {
         Some(at) => (&device[..at.max(1)], &device[at + 1..]),
         None => ("/", device),
     };
-    join_device_path(
-        parent,
-        &format!(
-            "{name}{STAGING_TEMP_MARKER}{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ),
-    )
+    join_device_path(parent, &temp_sibling_name(name))
 }
 
 /// The producer half of a read stream: `RECV`, then chunks until the file, the

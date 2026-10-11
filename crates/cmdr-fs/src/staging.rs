@@ -63,6 +63,10 @@ use std::sync::{LazyLock, Mutex, Weak};
 
 use crate::ignore_poison::IgnorePoison;
 
+mod names;
+
+pub use names::{MAX_SCRATCH_NAME_BYTES, temp_sibling_name, temp_sibling_path, temp_sibling_prefix};
+
 /// Marks a file holding bytes on their way IN: the staging sibling a write
 /// streams into before the rename that gives it its real name.
 pub const STAGING_TEMP_MARKER: &str = ".cmdr-tmp-";
@@ -106,8 +110,9 @@ pub fn is_staging_dir_name(name: &str) -> bool {
         .is_some_and(|id| id.len() == UUID_TEXT_LEN && uuid::Uuid::parse_str(id).is_ok())
 }
 
-/// The length of a hyphenated UUID, which is what `Uuid::to_string` writes and
-/// the only form [`is_staging_dir_name`] accepts.
+/// The length of a hyphenated UUID, which is what `Uuid::to_string` writes, the
+/// only form [`is_staging_dir_name`] accepts, and the room every scratch file
+/// name keeps for its unique suffix (`staging/names.rs`).
 const UUID_TEXT_LEN: usize = 36;
 
 /// Whether `name` is scratch Cmdr itself left there, of any shape: a staged
@@ -163,7 +168,9 @@ impl StagingTemp {
     /// carrying `final_path`'s name plus [`STAGING_TEMP_MARKER`] and a UUID.
     ///
     /// Keeping the original name in front of the marker is deliberate: it's what
-    /// makes a leftover self-explanatory to whoever finds one.
+    /// makes a leftover self-explanatory to whoever finds one. A name too long to
+    /// carry the suffix gets shortened in front of the marker
+    /// ([`MAX_SCRATCH_NAME_BYTES`], `staging/names.rs`).
     pub fn mint(final_path: &Path, owner: StagingOwner) -> Self {
         Self::mint_with_uuid(final_path, uuid::Uuid::new_v4(), owner)
     }
@@ -185,12 +192,8 @@ impl StagingTemp {
     }
 
     fn sibling(final_path: &Path, marker: &str, uuid: uuid::Uuid, owner: StagingOwner) -> Self {
-        let parent = final_path.parent().unwrap_or(Path::new(""));
-        let file_name = final_path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        Self::adopt(parent.join(format!("{file_name}{marker}{uuid}")), owner)
+        let (parent, file_name) = names::split_final_path(final_path);
+        Self::adopt(parent.join(names::scratch_name(&file_name, marker, uuid)), owner)
     }
 
     /// Takes ownership of a scratch path that already exists, for the callers
@@ -247,6 +250,10 @@ pub fn is_staging_temp_in_flight(name: &str) -> bool {
 fn owner_is_live(owner: &StagingOwner) -> bool {
     owner.as_ref().is_none_or(|token| token.strong_count() > 0)
 }
+
+#[cfg(test)]
+#[path = "staging/names_test.rs"]
+mod names_test;
 
 #[cfg(test)]
 mod tests {

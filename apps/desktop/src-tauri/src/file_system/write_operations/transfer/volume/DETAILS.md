@@ -46,7 +46,8 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
 - **`conflict.rs` DECIDES; two thin siblings act and answer.** The resolver keeps the policy (`resolve_volume_conflict`,
   `apply_volume_conflict_resolution`, the conditional reduction). `landing.rs` answers where a name lands before any
   of that (§ "Look-alike names and new-name spelling"). `finalize.rs` holds the
-  landing (`temp_sibling_path` + `finalize_safe_replace`), which no resolver call reaches: the five write sites
+  landing (`finalize_safe_replace`; the temp's name comes from `cmdr_fs::staging::temp_sibling_path`, like every
+  scratch name), which no resolver call reaches: the five write sites
   (`copy_serial.rs`, `copy_concurrent_task.rs`, `merge.rs`, `sequential_extract.rs`, `move_cross.rs`) call it once
   their stream is done, long after the resolver returned. `item_identity.rs` holds `is_the_same_item` /
   `is_the_same_volume_path`, asked by three callers that resolve no conflict at all (`copy.rs`'s bulk skip,

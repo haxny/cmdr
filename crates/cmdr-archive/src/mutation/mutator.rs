@@ -30,12 +30,10 @@ use uuid::Uuid;
 use zip::write::{FullFileOptions, SimpleFileOptions};
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
-/// Same-directory temp infix: `foo.zip` builds into `foo.zip.cmdr-tmp-<uuid>`.
-/// The `.cmdr-` prefix marks a crash-recoverable temp (the app-wide convention);
-/// the sibling placement keeps the final rename atomic on one filesystem.
-use cmdr_fs::staging::STAGING_TEMP_MARKER as TEMP_INFIX;
-
-use cmdr_fs::staging::StagingTemp;
+/// `foo.zip` builds into the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`
+/// (the app-wide scratch convention, shortened when it wouldn't fit); the
+/// sibling placement keeps the final rename atomic on one filesystem.
+use cmdr_fs::staging::{StagingTemp, temp_sibling_prefix};
 
 /// Chunk size for streaming an added file's bytes into the compressor: bounds
 /// peak in-flight memory regardless of the file's size (principle 5 — never
@@ -533,7 +531,8 @@ fn reap_sibling_temps(archive_path: &Path) {
     let (Some(parent), Some(file_name)) = (archive_path.parent(), archive_path.file_name()) else {
         return;
     };
-    let prefix = format!("{}{}", file_name.to_string_lossy(), TEMP_INFIX);
+    // The mint's own prefix, so a temp shortened to fit is matched too.
+    let prefix = temp_sibling_prefix(&file_name.to_string_lossy());
     let Ok(entries) = std::fs::read_dir(parent) else {
         return;
     };

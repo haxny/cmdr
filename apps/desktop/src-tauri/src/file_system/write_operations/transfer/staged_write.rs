@@ -12,7 +12,7 @@
 //! their data.
 //!
 //! **Who stages.** The conflict layer already mints a temp for a file→file
-//! Overwrite (`volume::finalize::temp_sibling_path`) and lands it itself, so a
+//! Overwrite (`cmdr_fs::staging::temp_sibling_path`) and lands it itself, so a
 //! write onto one of those is [`WriteStaging::AlreadyStaged`] and passes through
 //! untouched — staging it again would only produce a `foo.cmdr-tmp-A.cmdr-tmp-B`.
 //! A write the DESTINATION lands in one indivisible shot is
