@@ -286,3 +286,26 @@ fn a_forced_restore_rename_lands_on_the_item_itself() {
     ));
     assert_eq!(fs::read(&original_source).unwrap(), b"a good dog");
 }
+
+/// A failed cross-FS move hands its staging tree to a background removal. It's
+/// the move's own tree, so an item in it that refuses its unlink (Locked, or a
+/// `deny delete` ACL, on a file or a folder) is cleared and the tree still goes.
+#[cfg(target_os = "macos")]
+#[test]
+fn the_staging_cleanup_removes_locked_and_deny_delete_items() {
+    use crate::file_system::write_operations::cancellable::remove_staging_tree_in_background;
+    use cmdr_fs::testing::metadata_fixture::{MetadataFixture, add_acl_entry};
+
+    let fixture = MetadataFixture::new("staging_cleanup_blocked");
+    let staging = fixture.join(".cmdr-staging-op");
+    fs::create_dir_all(staging.join("album")).unwrap();
+    fixture.locked_file(".cmdr-staging-op/album/locked.txt");
+    fixture.deny_delete_file(".cmdr-staging-op/acl.txt");
+    add_acl_entry(&staging.join("album"), "everyone deny delete");
+
+    remove_staging_tree_in_background(staging.clone());
+
+    crate::test_support::wait_until(std::time::Duration::from_secs(5), "the staging tree's removal", || {
+        !staging.exists()
+    });
+}

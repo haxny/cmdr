@@ -78,6 +78,8 @@ pub struct Acl(Vec<exacl::AclEntry>);
 ///
 /// Small and `Clone`: a cross-filesystem move holds one per item that has any,
 /// keyed by staged path, until its Phase 3 has renamed everything into place.
+// DEFAULT-OK: the empty set is "nothing to apply after landing", the answer for
+// an ordinary file; it states nothing about what the disk holds.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LandedMetadata {
     acl: Option<Acl>,

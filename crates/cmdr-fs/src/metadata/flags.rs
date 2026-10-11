@@ -8,6 +8,8 @@ use super::ClassOutcome;
 
 /// A set of the user-settable flags Finder shows. `SF_*` system flags are never
 /// in it: a non-root process can't set or clear them, and a copy never tries.
+// DEFAULT-OK: the empty set says "no flags to add or clear", which is what a
+// default means wherever one is built: nothing claims the item has none.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct UserFlags(u8);
 

@@ -136,6 +136,8 @@ const SKIP_REASON_KEYS: Record<SkipReason, { named: MessageKey; counted: Message
     named: 'askCmdr.renameUndo.skipReason.failed.named',
     counted: 'askCmdr.renameUndo.skipReason.failed.counted',
   },
+  // Only a REMOVAL meets a lock it can't clear, and a rename's undo renames back.
+  locked: null,
   alreadyGone: null,
 }
 

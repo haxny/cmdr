@@ -15226,6 +15226,12 @@ export type SkipReason =
   | 'alreadyGone'
   // A backend error prevented reversing this item.
   | 'failed'
+  /**
+   *  The item was verified as this operation's own, but it wears a lock this
+   *  process can't clear (`schg`, which only root can), so it can't be removed.
+   *  A user flag or an ACL the copy carried over is cleared, never reported here.
+   */
+  | 'locked'
 
 // Credentials for SMB authentication.
 export type SmbCredentials = {

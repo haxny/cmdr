@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::test_support::*;
-use super::{InverseAct, RollbackProgress, RollbackRunner, execute_rollback, rollback_operation};
+use super::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner, execute_rollback, rollback_operation};
 use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::operation_log::types::{Initiator, OpKind, RollbackState};
@@ -318,15 +318,15 @@ impl RollbackRunner for StopAfterOneDir {
     fn perform<'a>(
         &'a self,
         act: InverseAct<'a>,
-    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<(), ActRefusal>> + Send + 'a>> {
         Box::pin(async move {
             match act {
                 InverseAct::RemoveDir { volume, path } => {
                     self.dirs_removed.fetch_add(1, Ordering::SeqCst);
-                    volume.delete(path).await
+                    Ok(volume.delete(path).await?)
                 }
-                InverseAct::RemoveFile { volume, path } => volume.delete(path).await,
-                InverseAct::Restore { .. } => Err(VolumeError::NotSupported),
+                InverseAct::RemoveFile { volume, path } => Ok(volume.delete(path).await?),
+                InverseAct::Restore { .. } => Err(VolumeError::NotSupported.into()),
             }
         })
     }

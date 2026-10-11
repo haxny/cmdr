@@ -213,3 +213,32 @@ fn the_reported_outcome_follows_what_the_reversal_managed() {
         CancelRollbackOutcome::PartiallyRolledBack
     );
 }
+
+/// A copy that carried Locked or a `deny delete` ACL onto what it landed made
+/// something `unlink` refuses, even for its owner. The reversal clears both on
+/// the item it verified, then removes it, so Cancel and roll back can always
+/// undo the copy.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_locked_or_deny_delete_copy_is_cleared_and_removed() {
+    use cmdr_fs::testing::metadata_fixture::{MetadataFixture, add_deny_delete_acl};
+
+    let fixture = MetadataFixture::new("reversal_blocked");
+    let locked = fixture.locked_file("locked.txt");
+    let acl = fixture.deny_delete_file("acl.txt");
+    let dir = fixture.join("folder");
+    fs::create_dir(&dir).unwrap();
+    add_deny_delete_acl(&dir);
+
+    for file in [&locked, &acl] {
+        let recorded = WrittenFile::local(file.clone());
+        assert!(
+            matches!(remove_local_file(&recorded), ItemResult::Reversed),
+            "{}",
+            file.display()
+        );
+        assert!(!file.exists());
+    }
+    assert!(matches!(remove_local_dir_if_empty(&dir), ItemResult::Reversed));
+    assert!(!dir.exists());
+}

@@ -239,6 +239,10 @@ token_enum! {
         AlreadyGone => "already_gone",
         /// A backend error prevented reversing this item.
         Failed => "failed",
+        /// The item was verified as this operation's own, but it wears a lock this
+        /// process can't clear (`schg`, which only root can), so it can't be removed.
+        /// A user flag or an ACL the copy carried over is cleared, never reported here.
+        Locked => "locked",
     }
 }
 
@@ -309,7 +313,8 @@ mod tests {
                 RestoreTargetOccupied,
                 DirNotEmpty,
                 AlreadyGone,
-                Failed
+                Failed,
+                Locked
             ]
         );
     }

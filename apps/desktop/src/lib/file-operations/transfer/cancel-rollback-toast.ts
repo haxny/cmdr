@@ -93,6 +93,10 @@ const REASON_KEYS: Record<SkipReason, { named: MessageKey; counted: MessageKey }
     named: 'fileOperations.cancelRollback.reason.failed.named',
     counted: 'fileOperations.cancelRollback.reason.failed.counted',
   },
+  locked: {
+    named: 'fileOperations.cancelRollback.reason.locked.named',
+    counted: 'fileOperations.cancelRollback.reason.locked.counted',
+  },
   alreadyGone: null,
 }
 
@@ -110,10 +114,11 @@ function reasonLine(group: SkipBreakdown): string | null {
  *
  * Every other reason is Cmdr protecting something, which is `info`; `failed`
  * means the undo asked and was turned down, which is worth a colour that says
- * "look at this" and may be worth retrying once the drive is back.
+ * "look at this" and may be worth retrying once the drive is back. `locked` is
+ * turned down too: a lock only an administrator can lift.
  */
 function levelFor(skips: SkipBreakdown[]): ToastLevel {
-  return skips.some((group) => group.reason === 'failed') ? 'warn' : 'info'
+  return skips.some((group) => group.reason === 'failed' || group.reason === 'locked') ? 'warn' : 'info'
 }
 
 /**

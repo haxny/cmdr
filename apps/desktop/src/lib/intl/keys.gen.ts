@@ -1766,6 +1766,8 @@ export type MessageKey =
   | 'fileOperations.cancelRollback.reason.failed.named'
   | 'fileOperations.cancelRollback.reason.folderNotEmpty.counted'
   | 'fileOperations.cancelRollback.reason.folderNotEmpty.named'
+  | 'fileOperations.cancelRollback.reason.locked.counted'
+  | 'fileOperations.cancelRollback.reason.locked.named'
   | 'fileOperations.cancelRollback.reason.spotTaken.counted'
   | 'fileOperations.cancelRollback.reason.spotTaken.named'
   | 'fileOperations.cancelRollback.reason.unverifiable.counted'

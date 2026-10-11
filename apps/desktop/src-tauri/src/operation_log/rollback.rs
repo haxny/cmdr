@@ -601,8 +601,9 @@ async fn remove_file_if_unchanged(vm: &VolumeManager, runner: &dyn RollbackRunne
             .await
         {
             Ok(()) => ItemResult::Reversed,
-            Err(VolumeError::NotFound(_)) => missing_item(&[(&*volume, path.as_path())]),
-            Err(_) => ItemResult::Skipped(SkipReason::Failed),
+            Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&[(&*volume, path.as_path())]),
+            Err(ActRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
+            Err(ActRefusal::Volume(_)) => ItemResult::Skipped(SkipReason::Failed),
         },
         SnapshotVerdict::Drift => ItemResult::Skipped(SkipReason::Drift),
         SnapshotVerdict::Unverifiable => ItemResult::Skipped(SkipReason::UnverifiablePrecondition),
@@ -631,8 +632,9 @@ async fn remove_dir_if_empty(vm: &VolumeManager, runner: &dyn RollbackRunner, un
             .await
         {
             Ok(()) => ItemResult::Reversed,
-            Err(VolumeError::NotFound(_)) => missing_item(&[(&*volume, path.as_path())]),
-            Err(_) => ItemResult::Skipped(SkipReason::Failed),
+            Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&[(&*volume, path.as_path())]),
+            Err(ActRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
+            Err(ActRefusal::Volume(_)) => ItemResult::Skipped(SkipReason::Failed),
         },
         Ok(_) => ItemResult::Skipped(SkipReason::DirNotEmpty),
         Err(_) => ItemResult::Skipped(SkipReason::Failed),
@@ -714,8 +716,10 @@ async fn restore_move(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &Ro
         .await
     {
         Ok(()) => ItemResult::Reversed,
-        Err(VolumeError::AlreadyExists(_)) => ItemResult::Skipped(SkipReason::RestoreTargetOccupied),
-        Err(VolumeError::NotFound(_)) => missing_item(&sides),
+        Err(ActRefusal::Volume(VolumeError::AlreadyExists(_))) => {
+            ItemResult::Skipped(SkipReason::RestoreTargetOccupied)
+        }
+        Err(ActRefusal::Volume(VolumeError::NotFound(_))) => missing_item(&sides),
         Err(_) => ItemResult::Skipped(SkipReason::Failed),
     }
 }
@@ -894,7 +898,7 @@ mod skips;
 use bookkeeping::{InverseTotals, RunAcc, finalize_inverse, inverse_planned_item_count};
 pub use order::undo_order;
 use runner::ProgressStand;
-pub use runner::{InverseAct, RollbackProgress, RollbackRunner};
+pub use runner::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner};
 pub use skips::SkipBreakdown;
 pub(crate) use skips::SkipTally;
 

@@ -28,6 +28,7 @@
 
 use std::future::Future;
 use std::ops::ControlFlow;
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -37,11 +38,13 @@ use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::oneshot;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{DEFAULT_VOLUME_ID, VolumeError};
+use cmdr_fs::metadata::{Unblock, clear_blockers};
+
+use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::rollback::{
-    InverseAct, InversePlan, RollbackDispatch, RollbackProgress, RollbackRefusal, RollbackReport, RollbackRunner,
-    SkipBreakdown, execute_rollback, inverse_kind, rollback_operation, undo_order,
+    ActRefusal, InverseAct, InversePlan, RollbackDispatch, RollbackProgress, RollbackRefusal, RollbackReport,
+    RollbackRunner, SkipBreakdown, execute_rollback, inverse_kind, rollback_operation, undo_order,
 };
 use crate::operation_log::store::{open_read_connection, read_operation};
 use crate::operation_log::types::{Initiator, OpKind, RollbackState};
@@ -157,17 +160,14 @@ impl ReversalRunner {
 }
 
 impl RollbackRunner for ReversalRunner {
-    fn perform<'a>(
-        &'a self,
-        act: InverseAct<'a>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+    fn perform<'a>(&'a self, act: InverseAct<'a>) -> Pin<Box<dyn Future<Output = Result<(), ActRefusal>> + Send + 'a>> {
         Box::pin(async move {
             match act {
                 // One node each, and the engine has already established that it may
                 // go: a file verified unchanged, a directory verified empty. Neither
                 // recurses.
                 InverseAct::RemoveFile { volume, path } | InverseAct::RemoveDir { volume, path } => {
-                    volume.delete(path).await
+                    delete_clearing_blockers(volume, path).await
                 }
                 InverseAct::Restore {
                     from,
@@ -200,7 +200,7 @@ impl RollbackRunner for ReversalRunner {
                     if renames_in_one_call {
                         // A same-FS move / rename-back / trash-restore: one rename,
                         // atomic, nothing to stream.
-                        from.rename(from_path, to_path, force).await
+                        Ok(from.rename(from_path, to_path, force).await?)
                     } else {
                         // Cross-volume, or a rename that copies: the staged per-file move, which is what buys
                         // mid-file cancel, byte progress, a `.cmdr-tmp-*` landing,
@@ -214,9 +214,11 @@ impl RollbackRunner for ReversalRunner {
                             self.frame(written, false);
                             ControlFlow::Continue(())
                         };
-                        move_file_across_volumes(from, from_path, to, to_path, &self.state, &on_progress)
-                            .await
-                            .map(|_bytes| ())
+                        Ok(
+                            move_file_across_volumes(from, from_path, to, to_path, &self.state, &on_progress)
+                                .await
+                                .map(|_bytes| ())?,
+                        )
                     }
                 }
             }
@@ -249,6 +251,29 @@ impl RollbackRunner for ReversalRunner {
             stand.last_emit.is_none() || (progress.files_total > 0 && progress.files_done >= progress.files_total)
         };
         self.frame(0, must_send);
+    }
+}
+
+/// `volume.delete`, and when a LOCAL item refuses it, clearing that item's
+/// Locked flag and ACL before one retry. The planner verified the item as this
+/// operation's own right before this act, so what's cleared is what the copy
+/// carried over. ❗ The clearing lives here, never in the volume: the local
+/// volume's delete is also F8's, which must never unlock the user's own files.
+async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Result<(), ActRefusal> {
+    let refused = match volume.delete(path).await {
+        Err(e @ VolumeError::PermissionDenied { .. }) => e,
+        other => return Ok(other?),
+    };
+    let Some(root) = volume.local_path() else {
+        return Err(refused.into());
+    };
+    let local = cmdr_fs::volume::root_anchored(&root, path);
+    // A few syscalls, but on a mounted share each one can block: off the runtime.
+    let unblocked = tokio::task::spawn_blocking(move || clear_blockers(&local)).await;
+    match unblocked {
+        Ok(Unblock::Cleared(_)) => Ok(volume.delete(path).await?),
+        Ok(Unblock::Refused) => Err(ActRefusal::Locked),
+        Ok(Unblock::NothingToClear) | Err(_) => Err(refused.into()),
     }
 }
 

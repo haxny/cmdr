@@ -16,10 +16,18 @@
 //! decides what "this file changed" means for both, and the verdicts are
 //! [`SkipReason`]s, so a user meets one set of answers whether they cancelled a
 //! transfer or pressed Roll back in history.
+//!
+//! **What the copy made, the reversal can remove.** A copy that carried Locked
+//! or a `deny delete` ACL onto what it landed made something `unlink` refuses,
+//! even for its owner. A verified item whose removal is refused is cleared and
+//! retried once (`cmdr_fs::metadata::remove_file_clearing_blockers`); one this
+//! process can't clear (`schg`) is reported as [`SkipReason::Locked`].
 
 use std::fs;
 use std::io;
 use std::path::Path;
+
+use cmdr_fs::metadata::{RemovalRefusal, remove_dir_clearing_blockers, remove_file_clearing_blockers};
 
 use crate::operation_log::rollback::{ItemResult, SkipTally, SnapshotVerdict, verify_snapshot};
 use crate::operation_log::types::SkipReason;
@@ -152,14 +160,25 @@ pub(crate) fn remove_local_file(file: &WrittenFile) -> ItemResult {
     match recheck_local(file) {
         Recheck::AlreadyGone => ItemResult::Skipped(SkipReason::AlreadyGone),
         Recheck::Skip(reason) => ItemResult::Skipped(reason),
-        Recheck::Act => match fs::remove_file(&file.path) {
-            Ok(()) => ItemResult::Reversed,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => ItemResult::Skipped(SkipReason::AlreadyGone),
-            Err(e) => {
-                log::warn!("reversal: couldn't remove {}: {e}", file.path.display());
-                ItemResult::Skipped(SkipReason::Failed)
-            }
-        },
+        Recheck::Act => removal_result(remove_file_clearing_blockers(&file.path), &file.path),
+    }
+}
+
+/// The verdict on one removal a recheck authorized.
+fn removal_result(removed: Result<(), RemovalRefusal>, path: &Path) -> ItemResult {
+    match removed {
+        Ok(()) => ItemResult::Reversed,
+        Err(RemovalRefusal::Io(e)) if e.kind() == io::ErrorKind::NotFound => {
+            ItemResult::Skipped(SkipReason::AlreadyGone)
+        }
+        Err(RemovalRefusal::Locked) => {
+            log::warn!("reversal: {} wears a lock this process can't clear", path.display());
+            ItemResult::Skipped(SkipReason::Locked)
+        }
+        Err(RemovalRefusal::Io(e)) => {
+            log::warn!("reversal: couldn't remove {}: {e}", path.display());
+            ItemResult::Skipped(SkipReason::Failed)
+        }
     }
 }
 
@@ -208,10 +227,13 @@ pub(crate) fn remove_local_dir_if_empty(dir: &Path) -> ItemResult {
     if entries.next().is_some() {
         return ItemResult::Skipped(SkipReason::DirNotEmpty);
     }
-    match fs::remove_dir(dir) {
+    match remove_dir_clearing_blockers(dir) {
         Ok(()) => ItemResult::Reversed,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => ItemResult::Skipped(SkipReason::AlreadyGone),
-        Err(_) => ItemResult::Skipped(SkipReason::Failed),
+        Err(RemovalRefusal::Io(e)) if e.kind() == io::ErrorKind::NotFound => {
+            ItemResult::Skipped(SkipReason::AlreadyGone)
+        }
+        Err(RemovalRefusal::Locked) => ItemResult::Skipped(SkipReason::Locked),
+        Err(RemovalRefusal::Io(_)) => ItemResult::Skipped(SkipReason::Failed),
     }
 }
 

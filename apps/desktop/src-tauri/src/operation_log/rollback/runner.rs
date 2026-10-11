@@ -24,7 +24,8 @@ use crate::file_system::volume::{Volume, VolumeError};
 /// One decided inverse act. The planner has already resolved both volumes,
 /// verified the item against its recorded snapshot, and established that the
 /// target is clear; the executor only acts, and reports the raw
-/// [`VolumeError`] back so the planner keeps owning the typed skip reasons.
+/// [`VolumeError`] back (inside an [`ActRefusal`]) so the planner keeps owning
+/// the typed skip reasons.
 pub enum InverseAct<'a> {
     /// Delete the file the operation created at `path` — verified unchanged
     /// since it was written.
@@ -57,6 +58,22 @@ pub enum InverseAct<'a> {
     },
 }
 
+/// Why a decided act didn't happen.
+#[derive(Debug)]
+pub enum ActRefusal {
+    /// The volume refused it; the planner turns the error into a typed skip.
+    Volume(VolumeError),
+    /// The item is the operation's own, verified, but it wears a lock this
+    /// process can't clear (`schg`), so it can't be removed.
+    Locked,
+}
+
+impl From<VolumeError> for ActRefusal {
+    fn from(e: VolumeError) -> Self {
+        ActRefusal::Volume(e)
+    }
+}
+
 /// Where a reversal stands, reported once per item so the bar moves without a
 /// scanning phase: the totals come off the journal before the first act.
 pub struct RollbackProgress<'a> {
@@ -76,8 +93,7 @@ pub struct RollbackProgress<'a> {
 /// shared across `.await` points: `Sync` rather than `&mut self`.
 pub trait RollbackRunner: Sync {
     /// Perform one decided act.
-    fn perform<'a>(&'a self, act: InverseAct<'a>)
-    -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>>;
+    fn perform<'a>(&'a self, act: InverseAct<'a>) -> Pin<Box<dyn Future<Output = Result<(), ActRefusal>> + Send + 'a>>;
 
     /// Should the reversal stop where it is?
     ///

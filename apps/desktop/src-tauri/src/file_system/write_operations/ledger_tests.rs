@@ -254,3 +254,29 @@ fn copy_transaction_rollback_tolerates_an_already_deleted_file() {
 
     reverse_copy_transaction(&mut tx);
 }
+
+/// The panic net removes what this operation made even when the copy carried
+/// Locked or a `deny delete` ACL onto it.
+#[cfg(target_os = "macos")]
+#[test]
+fn the_panic_net_removes_a_locked_or_deny_delete_copy() {
+    use cmdr_fs::testing::metadata_fixture::{MetadataFixture, add_deny_delete_acl};
+
+    let fixture = MetadataFixture::new("ledger_blocked");
+    let dir = fixture.join("folder");
+    fs::create_dir(&dir).unwrap();
+    let locked = fixture.locked_file("folder/locked.txt");
+    let acl = fixture.deny_delete_file("folder/acl.txt");
+    add_deny_delete_acl(&dir);
+
+    {
+        let mut tx = CopyTransaction::new();
+        tx.record_dir(dir.clone());
+        tx.record_file(WrittenFile::local(locked.clone()));
+        tx.record_file(WrittenFile::local(acl.clone()));
+        // No commit; Drop rolls back.
+    }
+
+    assert!(!locked.exists() && !acl.exists(), "both copies are gone");
+    assert!(!dir.exists(), "and so is the folder they were made in");
+}

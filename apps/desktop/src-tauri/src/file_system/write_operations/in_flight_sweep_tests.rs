@@ -376,3 +376,27 @@ fn a_legacy_record_naming_an_aside_is_not_a_plain_removal() {
     assert!(!is_a_staged_partial(Path::new("/dir/notes.txt.cmdr-temp-4242")));
     assert!(!is_a_staged_partial(Path::new("/dir/taxes.pdf")));
 }
+
+/// A temp the sweep has matched to its record is Cmdr's own, so a Locked one
+/// (an APFS clone copies the source's `uchg` onto it in the same call, and a
+/// crash before the landing clears it leaves it so) or a `deny delete` one is
+/// cleared and removed rather than left forever.
+#[cfg(target_os = "macos")]
+#[tokio::test]
+async fn a_locked_or_deny_delete_temp_is_cleared_and_swept() {
+    use cmdr_fs::testing::metadata_fixture::{LOCKED_FLAG, MetadataFixture, add_deny_delete_acl, set_flags};
+
+    let fixture = MetadataFixture::new("sweep-blocked-temp");
+    let locked = fixture.join(format!("locked.txt.cmdr-tmp-{}", uuid::Uuid::new_v4()));
+    std::fs::write(&locked, b"partial").expect("write the temp");
+    set_flags(&locked, LOCKED_FLAG);
+    let acl = fixture.join(format!("acl.txt.cmdr-tmp-{}", uuid::Uuid::new_v4()));
+    std::fs::write(&acl, b"partial").expect("write the temp");
+    add_deny_delete_acl(&acl);
+
+    for temp in [&locked, &acl] {
+        let outcome = settle_kind(&Surface::Local, &ItemKind::Temp, temp, None, None).await;
+        assert_eq!(outcome, Outcome::Swept, "{}", temp.display());
+        assert!(!temp.exists());
+    }
+}

@@ -41,6 +41,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
+
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{Volume, VolumeError, rename_local_exclusive};
@@ -197,7 +199,7 @@ async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
             if !is_a_staged_partial(path) {
                 return Outcome::LeftAlone;
             }
-            Surface::Local.remove_file(path).await.into_outcome()
+            Surface::Local.remove_temp(path).await.into_outcome()
         }
         RecordedTemp::OnVolume(temp) => {
             if !is_a_staged_partial(&temp.path) {
@@ -211,7 +213,7 @@ async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
                 return Outcome::Deferred;
             };
-            Surface::Volume(volume).remove_file(&resolved.path).await.into_outcome()
+            Surface::Volume(volume).remove_temp(&resolved.path).await.into_outcome()
         }
     }
 }
@@ -352,7 +354,7 @@ async fn settle_kind(
     drive_name: Option<&str>,
 ) -> Outcome {
     match kind {
-        ItemKind::Temp => surface.remove_file(path).await.into_outcome(),
+        ItemKind::Temp => surface.remove_temp(path).await.into_outcome(),
         ItemKind::StagingDir => match surface.remove_empty_dir(path).await {
             Removal::Removed => Outcome::Swept,
             Removal::AlreadyGone => Outcome::AlreadyGone,
@@ -565,6 +567,27 @@ impl Surface {
                     Removal::Refused
                 }
             },
+        }
+    }
+
+    /// Removes a staged partial the record has matched as OURS.
+    ///
+    /// A local one that refuses is cleared and retried once: an APFS clone
+    /// copies the source's `uchg` and ACL onto the temp in the same call, so a
+    /// crash before the landing clears them leaves a temp `unlink` refuses
+    /// (`cmdr_fs::metadata::remove_file_clearing_blockers`). ❌ Only a temp: an
+    /// aside is the user's own file, and its flags are theirs.
+    async fn remove_temp(&self, path: &Path) -> Removal {
+        match self {
+            Self::Local => match remove_file_clearing_blockers(path) {
+                Ok(()) => Removal::Removed,
+                Err(RemovalRefusal::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Removal::AlreadyGone,
+                Err(refusal) => {
+                    log::debug!(target: "copy", "couldn't remove the leftover {}: {refusal:?}", path.display());
+                    Removal::Refused
+                }
+            },
+            Self::Volume(_) => self.remove_file(path).await,
         }
     }
 

@@ -298,15 +298,18 @@ impl CopyTransaction {
     /// the whole operation risks unexpectedly filling the user's drive on a
     /// large Overwrite. Revisit if users complain. See transfer/volume/DETAILS.md
     /// § "Overwrite isn't reversible".
+    ///
+    /// A Locked or `deny delete` item the copy made is cleared before its removal
+    /// is retried (`cmdr_fs::metadata`), so the net can always remove what it made.
     fn remove_everything(&mut self) {
         while let Some(file) = self.pop_file() {
-            let _ = std::fs::remove_file(&file.path);
+            let _ = cmdr_fs::metadata::remove_file_clearing_blockers(&file.path);
         }
         // Deepest first: `created_dirs` is in creation order, so reversing it
         // empties leaves before their parents are tried. `remove_dir` refuses a
         // non-empty one, so a directory holding anything else survives.
         for dir in self.created_dirs.iter().rev() {
-            let _ = std::fs::remove_dir(dir);
+            let _ = cmdr_fs::metadata::remove_dir_clearing_blockers(dir);
         }
         // Last, so a directory standing on a displaced entry's name is gone by
         // the time its original tries to come home.
