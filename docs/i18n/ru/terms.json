@@ -478,6 +478,10 @@
       {
         "form": "Фон (bare noun)",
         "why": "reads as a picture or color (macOS ViewOptionsWindow Background: → Фон:)"
+      },
+      {
+        "form": "в фон (accusative: отправить в фон)",
+        "why": "colloquial; the pile only ever says в фоновом режиме / в фоне (TC 5275, 1634; DC Работать в фоне), so Sent to the background → Операция будет выполнена в фоновом режиме (fileOperations.backgroundStart.startedToast, which must not claim running or waiting)"
       }
     ],
     "confidence": "high",

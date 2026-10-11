@@ -792,7 +792,7 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Отправлено в фон.",
+  "fileOperations.backgroundStart.startedToast": "Операция будет выполнена в фоновом режиме.",
   "@fileOperations.backgroundStart.startedToast": {
     "sourceHash": "6d85cb1"
   },
