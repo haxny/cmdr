@@ -9,7 +9,10 @@ import (
 
 // RunStaticcheck runs staticcheck for static analysis.
 func RunStaticcheck(ctx *CheckContext) (CheckResult, error) {
-	staticcheckBin, err := EnsureGoTool(ctx.RootDir, "staticcheck", "honnef.co/go/tools/cmd/staticcheck@v0.8.1")
+	// A master commit, not a release: v0.8.1 can't read Go 1.27.2's export data (version 5),
+	// and the fix (dominikh/go-tools#1832, f1838cc) isn't tagged yet. Back to a tagged release
+	// once one ships.
+	staticcheckBin, err := EnsureGoTool(ctx.RootDir, "staticcheck", "honnef.co/go/tools/cmd/staticcheck@v0.7.0-0.dev.0.20261009230814-452d5bb86b45")
 	if err != nil {
 		return CheckResult{}, err
 	}
