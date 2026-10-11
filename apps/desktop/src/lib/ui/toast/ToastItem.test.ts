@@ -11,7 +11,6 @@ import { mount, tick, unmount } from 'svelte'
 import ToastItem from './ToastItem.svelte'
 import ToastContainer from './ToastContainer.svelte'
 import ToastIdFixture from './toast-id-fixture.svelte'
-import ToastReportFixture from './toast-report-fixture.svelte'
 import { tString } from '$lib/intl/messages.svelte'
 import { HOVER_LEAVE_GRACE_MS, addToast, clearAllToasts, getToasts } from './toast-store.svelte'
 
@@ -586,7 +585,7 @@ describe('“Send error report…” on a toast', () => {
   it('hands a component toast its incident as the `report` prop', async () => {
     const target = await mountContainer()
     const incident = { kind: 'operationsFailed', count: 4 } as const
-    addToast(ToastReportFixture, { level: 'error', report: incident })
+    addToast(ToastIdFixture, { level: 'error', report: incident })
     await tick()
 
     expect(target.querySelector('[data-test="toast-report"]')?.textContent).toBe('operationsFailed')

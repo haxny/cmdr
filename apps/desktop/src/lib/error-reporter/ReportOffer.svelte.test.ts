@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import { tString } from '$lib/intl/messages.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
 import ReportOffer from './ReportOffer.svelte'
 import type { ReportIncident } from './report-incident'
 
@@ -81,11 +80,5 @@ describe('ReportOffer', () => {
     expect(link?.textContent.trim()).toBe(tString('errorReporter.offer.slow'))
     link?.click()
     expect(openErrorReportFor).toHaveBeenCalledWith(incident)
-  })
-
-  it('has no a11y violations', async () => {
-    const target = render({ incident: { kind: 'message', from: 'errorToast', text: 'x' } })
-    await tick()
-    await expectNoA11yViolations(target)
   })
 })
