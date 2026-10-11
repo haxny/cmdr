@@ -32,7 +32,7 @@ use std::time::Instant;
 
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::take_cached_scan_result;
-use super::super::super::state::{WriteOperationState, is_cancelled};
+use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
@@ -155,6 +155,23 @@ impl VolumePreflight {
     }
 }
 
+/// Whether a cached preview counted one of `source_paths` as the LINK it is.
+///
+/// The local preview walks with the local engines' stance, where a link is a
+/// leaf worth its own few bytes. A cross-volume transfer streams what a link
+/// points at instead (`transfer/DETAILS.md` § "Symlinks are opaque to a move"),
+/// so for a selected link that preview describes a different transfer: its hint
+/// says "file" for a link to a folder, which streamed the folder as a file and
+/// failed, and its totals miss everything behind the link. The source volume's
+/// own scan follows a selected link, so it answers for this transfer instead.
+fn counted_a_selected_link_as_a_link(cached: &ScanResult, source_paths: &[PathBuf]) -> bool {
+    let selected: HashSet<&Path> = source_paths.iter().map(PathBuf::as_path).collect();
+    cached
+        .files
+        .iter()
+        .any(|file| file.is_symlink && selected.contains(file.path.as_path()))
+}
+
 /// Scans the source paths up front, reusing a cached preview when one is
 /// available.
 ///
@@ -202,11 +219,22 @@ pub(super) async fn scan_volume_sources(
     }
 
     // Cached preview from the TransferDialog: same scan results, no second
-    // walk over the device.
+    // walk over the device. Unless it counted a selected link as the link: see
+    // `counted_a_selected_link_as_a_link`.
     if let Some(cached) = config
         .preview_id
         .as_deref()
         .and_then(|preview_id| take_cached_scan_result(preview_id, source_paths))
+        .filter(|cached| {
+            let describes_another_transfer = counted_a_selected_link_as_a_link(cached, source_paths);
+            if describes_another_transfer {
+                log::debug!(
+                    "scan_volume_sources: op={} rescans: its preview counted a selected link as the link, and this transfer copies what it points at",
+                    operation_id,
+                );
+            }
+            !describes_another_transfer
+        })
     {
         log::debug!(
             "scan_volume_sources: reused cached preview for op={}, files={}, bytes={}, per_path={}",

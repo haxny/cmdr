@@ -138,8 +138,10 @@ pub(super) fn walk_sources_with_per_path<E>(
         // `walk_dir_recursive` pushes a directory onto `dirs` before it
         // descends, so the slot at `dirs_before` holds this source itself
         // exactly when the source is a directory. A file leaves it untouched,
-        // and so does a symlink to a directory — which is right: a transfer
-        // never dereferences one, it copies the link.
+        // and so does a symlink to a directory, which is right for the local
+        // engines: they copy the link. A cross-volume transfer streams what the
+        // link points at, so its preflight rescans rather than trust this
+        // (`transfer/volume/preflight.rs::counted_a_selected_link_as_a_link`).
         let top_level_is_directory = dirs.get(dirs_before).is_some_and(|dir| dir == source);
 
         per_path.push((

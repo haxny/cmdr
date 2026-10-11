@@ -142,6 +142,9 @@ mod dest_precheck_failure_tests;
 #[cfg(test)]
 mod folder_dates_tests;
 
+/// A selected local link copied to another volume lands as what it points at.
+#[cfg(test)]
+mod copy_selected_link_tests;
 /// A listed name that isn't one plain path component (`../x`, `/x`) never
 /// lands outside the destination.
 #[cfg(test)]
