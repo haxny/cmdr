@@ -178,7 +178,7 @@
   },
   "multiRename.preview": "Preview",
   "@multiRename.preview": {
-    "description": "Accessible name of the table that previews every file's old and new name."
+    "description": "Heading above the table that previews every file’s old and new name, styled like the field labels (“Name mask”, “Search for”), and the table’s accessible name. An error or a status line takes its place while one shows."
   },
   "multiRename.oldName": "Old name",
   "@multiRename.oldName": {

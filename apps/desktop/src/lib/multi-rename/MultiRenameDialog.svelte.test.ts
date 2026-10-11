@@ -140,11 +140,26 @@ describe('MultiRenameDialog', () => {
     )
   })
 
-  it('keeps the error line in place with no error, so a message coming or going moves nothing', async () => {
+  it('heads the list with “Preview” in the message slot, the alert region there and empty', async () => {
     const root = await mountSheet()
     const line = root.querySelector('[role="alert"]')
     expect(line).not.toBeNull()
     expect(line?.textContent.trim()).toBe('')
+    const label = root.querySelector('.preview-label')
+    expect(label?.textContent.trim()).toBe('Preview')
+    expect(label?.getAttribute('aria-hidden')).toBe('true')
+    expect(root.querySelector('[role="table"]')?.getAttribute('aria-label')).toBe('Preview')
+  })
+
+  it('an error takes the label’s place in the same slot, through the live region that was already there', async () => {
+    ipc.previewMultiRename.mockResolvedValue({
+      ok: false,
+      error: { type: 'spec', error: { type: 'nameMask', error: { type: 'unclosed', at: 0 } } },
+    })
+    const root = await mountSheet()
+    const line = root.querySelector('.message-line')
+    expect(line?.querySelector('[role="alert"]')?.textContent.trim()).toBeTruthy()
+    expect(line?.querySelector('.preview-label')).toBeNull()
   })
 
   it('explains a placeholder in its button’s tooltip, with a made-up file’s example and the part a form takes', async () => {

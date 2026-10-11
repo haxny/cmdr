@@ -138,6 +138,8 @@
     const shownError = $derived(tool.error ?? tool.applyError ?? results.error)
     /** The error line's words: the preview's, Start's, or Results' error, else why Undo rename didn't go. */
     const shownMessage = $derived(shownError ? errorText(shownError) : undoNotice ? tString(undoNotice) : '')
+    /** Results says what it's doing in the list's heading slot, unless an error has it. */
+    const showResultsNotice = $derived(!shownMessage && (results.open || tool.editedCount > 0))
 
     onMount(() => {
         void tool.loadPresets()
@@ -456,8 +458,10 @@
             </div>
         </div>
 
-        <!-- Always there, one line tall, so a message coming or going never moves the preview. An
-             error wins; with none, Results says what it's doing, quietly. -->
+        <!-- The list's heading slot, always one line tall, so nothing coming or going moves the list.
+             An error wins it; then Results' notice; else the "Preview" label. The two live regions
+             stay mounted (empty when quiet), so a message arriving is announced; the label is
+             `aria-hidden`, since the list carries the same name itself. -->
         <div class="message-line">
             <p
                 class="error"
@@ -466,8 +470,8 @@
             >
                 {shownMessage}
             </p>
-            {#if !shownMessage && (results.open || tool.editedCount > 0)}
-                <p class="results-notice" role="status">
+            <p class="results-notice" role="status">
+                {#if showResultsNotice}
                     <span class="results-words">
                         {tool.editedCount > 0
                             ? tString('multiRename.results.edited', { count: tool.editedCount })
@@ -483,7 +487,10 @@
                             {tString('multiRename.results.discard')}
                         </LinkButton>
                     {/if}
-                </p>
+                {/if}
+            </p>
+            {#if !shownMessage && !showResultsNotice}
+                <span class="label preview-label" aria-hidden="true">{tString('multiRename.preview')}</span>
             {/if}
         </div>
 
@@ -682,6 +689,11 @@
         color: var(--color-error-text);
         font-size: var(--font-size-sm);
         line-height: var(--font-line-height-normal);
+    }
+
+    /* The list's heading when nothing else has the slot: a field label, on one line. */
+    .preview-label {
+        white-space: nowrap;
     }
 
     /* A status, not a warning: secondary words, its links inline, the line's one line kept. */

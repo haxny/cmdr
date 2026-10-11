@@ -10,8 +10,11 @@
   field keeps around it quiet. The lead line names what the example ran on: `Beach day.jpg`, its path with the two
   folders above it (`[P]`), the date and time (`[YMD]`, `[hms]`), or "the first three files" (a counter, whose numbers
   come from `counterSamples`, no engine call). § Tooltip examples.
-- **Error line**: always rendered under the search row, one line tall (ellipsis, overflow tooltip), so the preview never
-  shifts.
+- **The list's heading slot** (`.message-line`): one line tall above the preview, so nothing coming or going moves the
+  list. An error wins it (ellipsis, overflow tooltip), then Results' notice, else a "Preview" label styled like the
+  field labels (`multiRename.preview`, the same key that names the table). Both live regions (`role="alert"` for the
+  error, `role="status"` for the notice) stay mounted, empty when quiet, so a message arriving is announced; the label
+  is `aria-hidden` because the table already carries the name (`ColumnList` takes an `ariaLabel`, no `labelledby`).
 - **Preview**: reruns `PREVIEW_DELAY_MS` (120 ms) after the last edit. The answer carries the counts (the footer and the
   Rename button) and the first page of rows. The list is the house `ColumnList` (`lib/ui/DETAILS.md` § ColumnList), the
   same look as Search's results, fed the state's windowed `source`: `count` is the rows listed, `getRow` reads the held
