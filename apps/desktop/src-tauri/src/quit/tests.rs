@@ -128,6 +128,7 @@ fn operation(operation_type: WriteOperationType, status: LifecycleStatus) -> Ope
         supports_rollback: true,
         reverses: None,
         error: None,
+        can_retry: false,
     }
 }
 

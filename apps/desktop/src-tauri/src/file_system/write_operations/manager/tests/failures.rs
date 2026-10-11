@@ -6,6 +6,7 @@
 //! `use super::*`.
 
 use super::*;
+use crate::file_system::write_operations::types::{RetryOutcome, WriteOperationStartResult};
 
 /// A representative real failure.
 fn io_error(path: &str) -> WriteOperationError {
@@ -323,4 +324,143 @@ async fn a_successful_operation_settles_clean_and_retains_nothing() {
         !manager().lane_use_snapshot().contains_key(&lane),
         "and its lane is freed as before"
     );
+}
+
+/// A `StartAgain` double: counts its starts and answers what the test chose.
+struct FakeStart {
+    starts: std::sync::atomic::AtomicUsize,
+    answer: Result<String, WriteOperationError>,
+}
+
+impl FakeStart {
+    fn starting(new_id: &str) -> Arc<Self> {
+        Arc::new(Self {
+            starts: std::sync::atomic::AtomicUsize::new(0),
+            answer: Ok(new_id.to_string()),
+        })
+    }
+
+    fn refusing(error: WriteOperationError) -> Arc<Self> {
+        Arc::new(Self {
+            starts: std::sync::atomic::AtomicUsize::new(0),
+            answer: Err(error),
+        })
+    }
+
+    fn starts(&self) -> usize {
+        self.starts.load(Ordering::SeqCst)
+    }
+}
+
+impl StartAgain for FakeStart {
+    fn start_again(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + '_>> {
+        self.starts.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move {
+            self.answer.clone().map(|operation_id| WriteOperationStartResult {
+                operation_id,
+                operation_type: WriteOperationType::Copy,
+            })
+        })
+    }
+}
+
+/// A failure that kept its recipe offers Retry; one without doesn't.
+#[test]
+fn only_a_failure_with_a_way_to_start_again_offers_retry() {
+    let mgr = private_manager();
+    let with = unique("retry-with");
+    let without = unique("retry-without");
+    mgr.record_failure(&with, WriteOperationType::Copy, &io_error("/a"));
+    mgr.record_failure(&without, WriteOperationType::Copy, &io_error("/b"));
+    // The routing attaches the recipe right after the start returns, which can
+    // be after an op that failed at once already settled.
+    mgr.attach_retry(&with, FakeStart::starting("new"));
+
+    assert!(rows_for(&mgr, &with)[0].can_retry);
+    assert!(!rows_for(&mgr, &without)[0].can_retry);
+}
+
+/// Retry starts the operation again and the failed row gives way to it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_retry_starts_again_and_drops_the_failed_row() {
+    let mgr = leaked_manager();
+    let op = unique("retry-start");
+    let start = FakeStart::starting("op-again");
+    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.attach_retry(&op, Arc::clone(&start) as Arc<dyn StartAgain>);
+
+    let outcome = mgr.retry_failure(&op).await.expect("the start went through");
+
+    assert_eq!(
+        outcome,
+        RetryOutcome::Started {
+            operation_id: "op-again".to_string()
+        }
+    );
+    assert_eq!(start.starts(), 1);
+    assert!(
+        rows_for(mgr, &op).is_empty(),
+        "the new operation's row replaces the failed one"
+    );
+}
+
+/// A refused start (the volume is gone) leaves the row, with its Retry, and
+/// hands the typed refusal back.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_refused_retry_keeps_the_row_and_its_retry() {
+    let mgr = leaked_manager();
+    let op = unique("retry-refused");
+    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.attach_retry(&op, FakeStart::refusing(io_error("/gone")));
+
+    let refused = mgr.retry_failure(&op).await;
+
+    assert!(matches!(refused, Err(WriteOperationError::IoError { .. })));
+    let row = rows_for(mgr, &op);
+    assert_eq!(row.len(), 1, "the failure stays until someone dismisses it");
+    assert!(row[0].can_retry, "and can be retried again");
+}
+
+/// Nothing to retry: an unknown id, and a failure with no recipe.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_retry_with_nothing_behind_it_says_so() {
+    let mgr = leaked_manager();
+    let op = unique("retry-nothing");
+    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+
+    assert!(matches!(mgr.retry_failure(&op).await, Ok(RetryOutcome::NothingToRetry)));
+    assert!(matches!(
+        mgr.retry_failure(&unique("retry-unknown")).await,
+        Ok(RetryOutcome::NothingToRetry)
+    ));
+    assert_eq!(rows_for(mgr, &op).len(), 1, "and changes nothing");
+}
+
+/// The recipe follows the operation from its live record onto its failure.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_live_operations_recipe_carries_onto_its_failure() {
+    let mgr = leaked_manager();
+    let op = unique("retry-live");
+    let lane = unique("lane");
+    let (started_tx, started_rx) = oneshot::channel();
+    let (rel_tx, rel_rx) = oneshot::channel();
+    mgr.spawn_managed(
+        descriptor(&op, vec![&lane]),
+        fresh_state(),
+        gated_deferred_on(mgr, op.clone(), started_tx, rel_rx),
+    );
+    started_rx.await.expect("started");
+    mgr.attach_retry(&op, FakeStart::starting("again"));
+    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    rel_tx.send(()).expect("release");
+    wait_until_async(WAIT, "the failed op to settle", || {
+        rows_for(mgr, &op)
+            .first()
+            .is_some_and(|row| row.status == LifecycleStatus::Failed)
+    })
+    .await;
+
+    assert!(rows_for(mgr, &op)[0].can_retry);
 }

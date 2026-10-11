@@ -80,6 +80,8 @@ impl OutagePolicy {
     }
 }
 
+// DEFAULT-OK: no waiters and a first id of 0 is exactly an operation that has
+// waited for nothing yet; it claims nothing about any volume.
 #[derive(Debug, Default)]
 struct Waiting {
     next_id: u64,

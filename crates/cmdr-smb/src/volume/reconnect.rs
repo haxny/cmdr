@@ -99,7 +99,9 @@ impl SmbVolumeInner {
     ///   them) and retries once before giving up.
     /// - On success: stores the new client + tree, restarts the watcher, emits
     ///   `volume-connection-changed { state: "connected" }`.
-    /// - On failure: state stays `Disconnected`; the FE backoff cycle decides whether to retry.
+    /// - On failure: state stays `Disconnected`; whoever called decides whether to try again (the FE
+    ///   backoff cycle, the watcher-death loop below, or a transfer waiting for this share to come
+    ///   back, `write_operations/transfer/volume_outage.rs` in the app).
     pub(super) async fn do_attempt_reconnect(&self) -> Result<(), VolumeError> {
         // Bail early if `on_unmount` already ran. Doing this before taking the
         // lock means a queued caller doesn't pay the lock-acquisition cost for
@@ -297,8 +299,9 @@ impl SmbVolumeInner {
 /// The bounded, growing backoff between backend reconnect attempts after the live
 /// watcher's session died. A handful of tries over a few minutes, then we give up
 /// quietly — never hammering a truly-down server. The frontend reconnect manager
-/// runs its OWN cadence while a pane is open; this is the no-pane / background /
-/// restart safety net, coalesced with the FE through `do_attempt_reconnect`'s
+/// runs its OWN cadence while a pane is open, and a transfer waiting for this
+/// share runs its own while it waits; this is the no-pane / background /
+/// restart safety net, coalesced with both through `do_attempt_reconnect`'s
 /// single-flight.
 const WATCHER_DEATH_RECONNECT_BACKOFF: [Duration; 6] = [
     Duration::from_secs(2),

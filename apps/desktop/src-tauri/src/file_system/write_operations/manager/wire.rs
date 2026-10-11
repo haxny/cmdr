@@ -146,6 +146,11 @@ pub struct OperationSnapshot {
     /// `transfer-error-messages.ts` owns the wording. DETAILS § "Retained
     /// failures".
     pub error: Option<WriteOperationError>,
+    /// The queue row may offer Retry: a retained failure that kept a way to
+    /// start again (`routing/retry.rs`), with no Retry for it already starting.
+    /// `false` on every live row. Whether the ERROR is worth retrying is the
+    /// frontend's call (`offersRetry`), the same one the error dialog makes.
+    pub can_retry: bool,
 }
 
 /// Typed `operations-changed` Tauri event carrying the thin registry snapshot

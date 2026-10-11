@@ -141,7 +141,7 @@ pub use manager::{
     OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
     QueueMoveOutcome, cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation,
     init_operation_event_emitter, list_operations, move_queued_operation, operations_need_volume, pause_all,
-    pause_operation, resume_all, resume_operation,
+    pause_operation, resume_all, resume_operation, retry_failed_operation,
 };
 pub use queued_sources::continue_without_gone_sources;
 pub(crate) use queued_sources::pending_sources_gone;
@@ -190,7 +190,7 @@ pub(crate) use state::{register_external_volume_op, release_external_volume_op};
 #[allow(unused_imports, reason = "Public API re-exports for consumers of this module")]
 pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
-    MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
+    MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals,
     ScanProgressEvent, SortColumn, SortOrder, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext,
     SpaceShortfall, TransferActivity, TransferWaitReason, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,

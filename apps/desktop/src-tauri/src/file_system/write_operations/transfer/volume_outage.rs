@@ -380,6 +380,8 @@ fn announce_wait(state: &Arc<WriteOperationState>, announce: &OutageAnnounce<'_>
 /// one server, one device), shared by every operation waiting on it.
 static OUTAGES: LazyLock<Outages> = LazyLock::new(Outages::default);
 
+// DEFAULT-OK: an empty map is "no lane is in an outage", which is true until a
+// waiter starts one.
 #[derive(Default)]
 struct Outages {
     records: Mutex<HashMap<LaneKey, Outage>>,

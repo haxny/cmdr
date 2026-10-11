@@ -292,6 +292,7 @@ mod tests {
             supports_rollback: false,
             reverses: None,
             error: None,
+            can_retry: false,
         }
     }
 

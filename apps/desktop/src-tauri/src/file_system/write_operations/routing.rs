@@ -203,7 +203,7 @@ async fn dest_volume_missing(volume_id: &str, dest_path: &str) -> WriteOperation
     clippy::too_many_arguments,
     reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
 )]
-pub(crate) async fn start_volume_copy(
+async fn route_volume_copy(
     events: Arc<dyn OperationEventSink>,
     source_volume_id: String,
     source_paths: Vec<PathBuf>,
@@ -279,7 +279,7 @@ pub(crate) async fn start_volume_copy(
     clippy::too_many_arguments,
     reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
 )]
-pub(crate) async fn start_volume_move(
+async fn route_volume_move(
     events: Arc<dyn OperationEventSink>,
     source_volume_id: String,
     source_paths: Vec<PathBuf>,
@@ -375,6 +375,86 @@ pub(crate) async fn start_volume_move(
         expected_sources,
     )
     .await
+}
+
+/// [`route_volume_copy`], and the started operation keeps a way to start again
+/// should it fail: the queue window's Retry on its row (`retry.rs`).
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the same request `route_volume_copy` takes, passed through whole"
+)]
+pub(crate) async fn start_volume_copy(
+    events: Arc<dyn OperationEventSink>,
+    source_volume_id: String,
+    source_paths: Vec<PathBuf>,
+    dest_volume_id: String,
+    dest_path: String,
+    config: VolumeCopyConfig,
+    initiator: Initiator,
+    expected_sources: Option<ExpectedSources>,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    let recipe = retry::RetryRecipe {
+        start: retry::RetryStart::Copy,
+        events: Arc::clone(&events),
+        source_volume_id: source_volume_id.clone(),
+        source_paths: source_paths.clone(),
+        dest_volume_id: dest_volume_id.clone(),
+        dest_path: dest_path.clone(),
+        config: config.clone(),
+    };
+    let started = route_volume_copy(
+        events,
+        source_volume_id,
+        source_paths,
+        dest_volume_id,
+        dest_path,
+        config,
+        initiator,
+        expected_sources,
+    )
+    .await?;
+    retry::attach(&started.operation_id, recipe);
+    Ok(started)
+}
+
+/// [`route_volume_move`], and the started operation keeps a way to start again
+/// should it fail, like [`start_volume_copy`].
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the same request `route_volume_move` takes, passed through whole"
+)]
+pub(crate) async fn start_volume_move(
+    events: Arc<dyn OperationEventSink>,
+    source_volume_id: String,
+    source_paths: Vec<PathBuf>,
+    dest_volume_id: String,
+    dest_path: String,
+    config: VolumeCopyConfig,
+    initiator: Initiator,
+    expected_sources: Option<ExpectedSources>,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    let recipe = retry::RetryRecipe {
+        start: retry::RetryStart::Move,
+        events: Arc::clone(&events),
+        source_volume_id: source_volume_id.clone(),
+        source_paths: source_paths.clone(),
+        dest_volume_id: dest_volume_id.clone(),
+        dest_path: dest_path.clone(),
+        config: config.clone(),
+    };
+    let started = route_volume_move(
+        events,
+        source_volume_id,
+        source_paths,
+        dest_volume_id,
+        dest_path,
+        config,
+        initiator,
+        expected_sources,
+    )
+    .await?;
+    retry::attach(&started.operation_id, recipe);
+    Ok(started)
 }
 
 /// Starts renames that run as a move on one volume: each source moves into
@@ -476,5 +556,6 @@ pub(crate) async fn start_volume_compress(
     .await
 }
 
+mod retry;
 #[cfg(test)]
 mod tests;

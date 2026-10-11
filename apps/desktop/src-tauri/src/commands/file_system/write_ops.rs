@@ -1,5 +1,6 @@
 //! Tauri commands for write operations (create, copy, move, delete, trash) and scan preview.
 
+use crate::file_system::write_operations::RetryOutcome;
 use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
@@ -19,7 +20,7 @@ use crate::file_system::{
     dismiss_failed_operation as ops_dismiss_failed_operation, list_operations as ops_list_operations,
     move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
     pause_all as ops_pause_all, pause_operation as ops_pause_operation, resume_all as ops_resume_all,
-    resume_operation as ops_resume_operation, trash_files_start as ops_trash_files_start,
+    resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation, trash_files_start as ops_trash_files_start,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -544,6 +545,16 @@ pub fn move_queued_operation(operation_id: String, direction: QueueMoveDirection
 #[specta::specta]
 pub fn dismiss_failed_operation(operation_id: String) {
     ops_dismiss_failed_operation(&operation_id);
+}
+
+/// Starts a retained failure again as a new operation (the queue row's Retry).
+/// The failed row is dropped once the new operation starts; a refused start
+/// comes back as the typed error and leaves the row. `NothingToRetry` for an id
+/// with no failure, no way to start again, or a Retry already starting.
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_failed_operation(operation_id: String) -> Result<RetryOutcome, WriteOperationError> {
+    ops_retry_failed_operation(&operation_id).await
 }
 
 /// Drops every retained failure. Backs the queue window's "Dismiss all".

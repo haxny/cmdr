@@ -799,10 +799,17 @@ pub trait Volume: Send + Sync {
     /// Tries to rebuild this volume's underlying session in place after a
     /// transient connection loss. Idempotent and expected to be single-flight.
     ///
-    /// Default returns `Err(NotSupported)`. Only `SmbVolume` overrides today;
-    /// it's invoked by the FE reconnect manager on each backoff tick and on the
-    /// "Retry now" button. Future network/cloud volumes should override this
-    /// when they have a story for in-place reconnect.
+    /// Default returns `Err(NotSupported)`. Every backend that answers
+    /// [`connection_state`](Self::connection_state) overrides it (SMB, SFTP,
+    /// WebDAV, S3, and ADB). Three callers dial it: the frontend reconnect
+    /// manager (each backoff tick, and "Retry now"), a backend's own background
+    /// loop, and a transfer waiting for its volume to come back
+    /// (`write_operations/transfer/volume_outage.rs`), which is why it must stay
+    /// ONE attempt: the caller owns the patience.
+    ///
+    /// ❗ An auth refusal comes back as `PermissionDenied` (or `NeedsPassword`)
+    /// and stops every caller's retrying: dialing again on stale credentials is
+    /// how an account gets locked.
     fn attempt_reconnect<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         Box::pin(async { Err(VolumeError::NotSupported) })
     }
@@ -812,7 +819,7 @@ pub trait Volume: Send + Sync {
     /// Invoked by the "Sign in" affordance the frontend shows when an in-place reconnect
     /// gave up on an auth failure (a password changed on the server). The implementation
     /// persists the new credentials so the next reconnect is silent, then runs the normal
-    /// reconnect. Default `Err(NotSupported)`; only `SmbVolume` overrides today.
+    /// reconnect. Default `Err(NotSupported)`; SMB, SFTP, WebDAV, and S3 override it.
     fn reconnect_with_credentials<'a>(
         &'a self,
         _username: String,

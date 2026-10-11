@@ -84,6 +84,13 @@ pub use wire::{
     QueueMoveOutcome,
 };
 
+// How a retained failure starts again (the queue window's Retry): the
+// `StartAgain` a routing entry attaches, and the failure row that carries it.
+mod retry;
+use retry::RetainedFailure;
+pub(crate) use retry::StartAgain;
+pub use retry::retry_failed_operation;
+
 /// What the manager needs to know about an op to register, schedule, and
 /// surface it. The deferred start is held separately so the descriptor stays
 /// cheaply cloneable for the `operations-changed` snapshot.
@@ -148,6 +155,10 @@ struct OpRecord {
     /// already learns the same fact from `write-progress`'s `phase`, and two
     /// sources for one truth is how they drift.
     in_scan_wait: bool,
+    /// How to start this operation again if it fails, attached by the routing
+    /// that started it (`retry::attach_retry`). Carried onto the retained
+    /// failure; `None` for an operation kind without Retry.
+    retry: Option<Arc<dyn StartAgain>>,
 }
 
 struct ManagerInner {
@@ -167,7 +178,7 @@ struct ManagerInner {
     /// after the operation settled. Out-of-band on purpose — `free_and_remove`'s
     /// removal-on-terminal discipline is untouched. DETAILS § "Retained
     /// failures".
-    failures: VecDeque<OperationSnapshot>,
+    failures: VecDeque<RetainedFailure>,
 }
 
 impl ManagerInner {
@@ -216,12 +227,13 @@ impl ManagerInner {
                 supports_rollback: rec.descriptor.supports_rollback,
                 reverses: rec.descriptor.reverses,
                 error: None,
+                can_retry: false,
             });
         let settled_failures = self
             .failures
             .iter()
-            .filter(|failure| !self.records.contains_key(&failure.operation_id))
-            .cloned();
+            .filter(|failure| !self.records.contains_key(&failure.snapshot.operation_id))
+            .map(RetainedFailure::row);
         live.chain(settled_failures).collect()
     }
 }
@@ -345,6 +357,7 @@ impl OperationManager {
                     reserved_lanes: Vec::new(),
                     claimed_preview,
                     in_scan_wait,
+                    retry: None,
                 },
             );
             inner.order.push(operation_id.clone());
@@ -511,6 +524,7 @@ impl OperationManager {
                     // to wait on.
                     claimed_preview: None,
                     in_scan_wait: false,
+                    retry: None,
                 },
             );
             inner.order.push(operation_id.clone());
@@ -728,41 +742,48 @@ impl OperationManager {
         // and a logger doing file I/O must never hold up admission.
         let record_gone = {
             let mut inner = self.inner.lock_ignore_poison();
-            if inner.failures.iter().any(|f| f.operation_id == operation_id) {
+            if inner.failures.iter().any(|f| f.snapshot.operation_id == operation_id) {
                 return;
             }
 
             // Prefer the live record's descriptor, so the failed row reads like the
             // running row it replaces. It's gone only if the op settled before its
             // own error event landed, and then the event's own type is all there is.
-            let (operation_type, source, destination, reverses, record_gone) = match inner.records.get(operation_id) {
-                Some(rec) => (
-                    rec.descriptor.operation_type,
-                    rec.descriptor.summary.source.clone(),
-                    rec.descriptor.summary.destination.clone(),
-                    rec.descriptor.reverses,
-                    false,
-                ),
-                None => (operation_type, None, None, None, true),
-            };
+            let (operation_type, source, destination, reverses, retry, record_gone) =
+                match inner.records.get(operation_id) {
+                    Some(rec) => (
+                        rec.descriptor.operation_type,
+                        rec.descriptor.summary.source.clone(),
+                        rec.descriptor.summary.destination.clone(),
+                        rec.descriptor.reverses,
+                        rec.retry.clone(),
+                        false,
+                    ),
+                    None => (operation_type, None, None, None, None, true),
+                };
 
             if inner.failures.len() == FAILURE_CAPACITY {
                 inner.failures.pop_front();
             }
-            inner.failures.push_back(OperationSnapshot {
-                operation_id: operation_id.to_string(),
-                operation_type,
-                status: LifecycleStatus::Failed,
-                source,
-                destination,
-                // A settled failure offers no rollback from this row: the op is over,
-                // and there's no live intent machine left to reverse it.
-                supports_rollback: false,
-                // Kept from the live record: a reversal that stopped early is still
-                // a reversal, and the row that explains it must not rename itself.
-                reverses,
-                error: Some(error.clone()),
-            });
+            inner.failures.push_back(RetainedFailure::new(
+                OperationSnapshot {
+                    operation_id: operation_id.to_string(),
+                    operation_type,
+                    status: LifecycleStatus::Failed,
+                    source,
+                    destination,
+                    // A settled failure offers no rollback from this row: the op is over,
+                    // and there's no live intent machine left to reverse it.
+                    supports_rollback: false,
+                    // Kept from the live record: a reversal that stopped early is still
+                    // a reversal, and the row that explains it must not rename itself.
+                    reverses,
+                    error: Some(error.clone()),
+                    // Filled in by `RetainedFailure::row` from the recipe it holds.
+                    can_retry: false,
+                },
+                retry,
+            ));
             record_gone
         };
         log::info!(target: "op_manager", "retain failure op={operation_id}");
@@ -779,7 +800,7 @@ impl OperationManager {
         let removed = {
             let mut inner = self.inner.lock_ignore_poison();
             let before = inner.failures.len();
-            inner.failures.retain(|f| f.operation_id != operation_id);
+            inner.failures.retain(|f| f.snapshot.operation_id != operation_id);
             inner.failures.len() != before
         };
         if removed {

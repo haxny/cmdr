@@ -81,7 +81,8 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
   `copy_precheck_tests.rs` (is this top-level name taken), `copy_prescan_reuse_tests.rs` (what the scan's findings let
   the copy skip — the size hint instead of a rescan, the pre-known conflicts as one upfront bulk skip — and the
   skip-mode-only and stale-entry guards on both), `copy_crashsafe_tests.rs`, `copy_rollback_tests.rs`,
-  `copy_cancel_tests.rs`, `copy_retry_tests.rs`, `copy_source_hint_tests.rs` (the ABSENT hint specifically, the other
+  `copy_cancel_tests.rs`, `copy_retry_tests.rs`, `copy_outage_tests.rs` (a share that drops and comes back, or
+  doesn't), `copy_source_hint_tests.rs` (the ABSENT hint specifically, the other
   half of the pair),
   `copy_staged_write_tests.rs`, `copy_extract_out_tests.rs`, `copy_window_tests.rs`, and the two
   `copy_concurrent*_tests.rs`. The fixtures `make_state` / `make_volumes` live in `copy_tests/mod.rs` and every
@@ -938,6 +939,23 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 **Why it took a test layer of its own.** Every copy suite checksums both ends, and a destination stamping its own date
 passes all of them. On 2026-10-07 a 562-photo copy from a Pixel (ADB) onto a QNAP (SFTP) landed every file dated to
 the copy, with both gaps at once: ADB's stream reported no date, and SFTP never set one.
+
+## A volume that goes away mid-transfer
+
+The engine waits for a share that dropped off the network rather than failing on it, through `../volume_outage.rs`
+(`../DETAILS.md` § "Waiting out a volume that went away" owns the why and the guarantees). Where this directory asks:
+
+- **`strategy.rs::stream_pipe_file`**: the source open, the write, and a landing rename that failed with nothing
+  cleared. After the wait, the file runs again from its first byte with a fresh set of attempts, its failed attempt's
+  temp cleared once the share can hear the delete.
+- **`merge.rs`'s level prepare** (the create, the destination listing, the source listing) and **every driver's
+  top-level destination probe** (`landing.rs::name_at_destination` for the serial drivers,
+  `copy_concurrent_source.rs::existing_dest_entry` for the window), each through `through_outages`, since each is safe to
+  run twice.
+- **The start gate**, `preflight.rs::wait_for_gone_volumes`, first thing in `copy.rs`, `move_cross.rs`, and
+  `move_same.rs`: a transfer that begins with its volume already gone waits before its first step.
+
+Pinned end to end by `copy_outage_tests.rs`, over `../outage_volume_test_support.rs`'s `OutageVolume`.
 
 ## Pause in the volume walks
 

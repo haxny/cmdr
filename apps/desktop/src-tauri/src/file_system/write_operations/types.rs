@@ -330,6 +330,23 @@ pub struct TransferActivity {
 }
 
 // ============================================================================
+// Retrying a failed operation
+// ============================================================================
+
+/// What the queue window's Retry on a failed row did (`retry_failed_operation`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "snake_case", rename_all_fields = "camelCase")]
+pub enum RetryOutcome {
+    /// The transfer started again under this new id, and the failed row is
+    /// gone.
+    Started { operation_id: String },
+    /// Nothing to retry: no retained failure has this id, it carries no way to
+    /// start again (an operation kind without Retry), or a Retry for it is
+    /// already starting.
+    NothingToRetry,
+}
+
+// ============================================================================
 // Operation status (for query APIs)
 // ============================================================================
 

@@ -150,6 +150,7 @@ mod tests {
             supports_rollback: true,
             reverses: None,
             error: None,
+            can_retry: false,
         }
     }
 

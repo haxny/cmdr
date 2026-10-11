@@ -57,6 +57,10 @@ facts that none of those carry live here:
   `DriverPhase`, `TaskRole`, `TaskRow`) with each one's `label` and its round trip out of the `AtomicU8` it is stored
   in; the live table, the registry, and the watchdog stay in `transfer_probe.rs`. The seam is that nothing in the
   vocabulary takes a lock, holds an `Arc`, or reads the registry. ❌ Don't put a probe field or a counter here.
+- **`volume_outage.rs` is the wait for a volume that went away** (§ "Waiting out a volume that went away"), with
+  `volume_outage_tests.rs` beside it and `outage_volume_test_support.rs`'s `OutageVolume` as the double: a volume whose
+  session a test drops and restores, like the SMB share in `#398`. The operation-side slot it fills lives one level up,
+  in `../outage_slot.rs`, so the activity classifier can read it without reaching into this layer.
 - **`transfer_probe_ends.rs` is what the probe asks the two volumes**, another `#[path]` child: `TransferEnds` (the
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own). `transfer_probe_opening_tests.rs`
@@ -896,9 +900,11 @@ on. Leaving it would make the next attempt depend on how each backend treats a w
 **What is retryable, and why by type.** An exhaustive `VolumeError` match (`retry::is_retryable`), so a new variant
 can't inherit a retry by falling into a wildcard — adding one forces the decision. Retryable: `ConnectionTimeout`
 (where `smb2`'s `SendTimeout`, response `Timeout`, and `CreditStarvation` all land, via `ErrorKind::TimedOut`),
-`DeviceDisconnected` (SMB reconnects on its own, so the next attempt runs on a new session; on MTP the device really is
-gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says retrying
-works), `StaleDestinationHandle`, and an `IoError` carrying one of the errnos `error_classification.rs` already maps to
+`DeviceDisconnected` (a session-owning backend can rebuild its session in place, but ❗ NOT inside 1.25 s: once SMB
+marks a session `Disconnected` every call fails at once, and nothing in this loop reconnects it. Only a sub-second blip,
+where the session never read `Disconnected`, is rescued here; a longer outage is the next section's. On MTP the device
+really is gone and each attempt fails immediately, costing a bounded 1.25 s), `DeviceSessionReset` (its own doc says
+retrying works), `StaleDestinationHandle`, and an `IoError` carrying one of the errnos `error_classification.rs` already maps to
 `ConnectionInterrupted` — the case where a write onto an OS-mounted share reports the blip as an errno rather than a
 typed backend error. ❌ Everything else is a decision or a fact about the data: re-running the write fails the same way
 and only delays the report.
@@ -921,6 +927,74 @@ restart would mean re-decoding the whole archive prefix — the very O(n²) the 
 local-FS engine (`chunked_copy.rs`) is likewise untouched: a local write that fails with a transport errno is either a
 dying disk or a network mount the volume layer should be handling, and neither is improved by retrying inside the sync
 chunk loop.
+
+### Waiting out a volume that went away (`volume_outage.rs`)
+
+**Decision**: when a transport failure (`retry::is_retryable`) meets a volume whose session reads
+`ConnectionState::Disconnected`, the transfer WAITS for the volume instead of spending its attempts in a second: it
+reconnects the volume itself on a growing cadence (at once, then 2, 4, 8, 15, and every 30 s), for up to
+`OUTAGE_WAIT_BUDGET` (5 minutes, `outage_slot.rs`), then runs the work again with a fresh set of attempts. A volume
+that isn't back by then fails the transfer exactly as before (`#398`).
+
+**Why the attempts above can't do it.** Once SMB marks a session `Disconnected`, every call fails at once
+(`cmdr-smb`'s `check_connection`), so all three attempts burn inside 1.25 s. And nothing else reconnects it in time: the
+frontend's reconnect manager runs only while a pane shows the volume, on a 2/4/8/16/30 s cadence, and the backend's
+watcher-death loop starts at 2 s. A router restart or a NAS waking its disks took the whole copy with it, and every
+queued job for the same share then started and failed within a second.
+
+**Why the transfer layer, and why no new `Volume` method.** The capability exists already: every session-owning backend
+(SMB, SFTP, WebDAV, S3, ADB) answers `connection_state` and rebuilds its session in place, single-flight, on
+`attempt_reconnect`. What was missing is PATIENCE that respects an operation: a budget, its Cancel, its Pause, and its
+progress UI, and only this layer has an operation. An `await_reconnect` on the trait would mean five copies of one
+backoff loop, none of which can see a Cancel. So a backend owns ONE attempt, and the transfer owns the waiting. A volume
+with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` and is never waited for.
+
+**The guarantees, each load-bearing:**
+
+- **Bounded.** The volume comes back, the budget runs out, the person cancels, or the backend says time won't fix it
+  (`NeedsSignIn`, or an auth refusal from the reconnect: dialing again risks locking the account). A link that flaps is
+  ridden out at most `MAX_OUTAGES_PER_ITEM` (3) times per item.
+- **Cancelable at once.** Every await races `backend_cancel`, a reconnect attempt included; a cancel during the wait is
+  reported as the cancel it is.
+- **Pausable.** A pause parks the wait on the pause gate and dials nothing; a Resume is a person's action, so the wait
+  gets a fresh budget from there.
+- **One outage per lane**, shared by every waiter on it (`OUTAGES`): the concurrent window's tasks all meet the drop at
+  once, and they share ONE deadline. A job queued BEFORE an outage gave up looks once (the volume may be back, with
+  nothing else dialing it) and then fails promptly, so a queue behind a NAS that's really gone doesn't add five minutes
+  per job. A job created AFTER the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait. A give-up is
+  forgotten one budget later.
+- **Named, not stalled.** The wait sets `state.outage` (`outage_slot.rs`): the activity reads
+  `TransferWaitReason::Reconnecting` plus the volume's name on every progress event, `OperationStatus`, and
+  `cmdr://state`; the probe heartbeats it to the UI every tick, accrues no stall time, dumps nothing, and restarts every
+  task's abort clock (`TaskPhase::WaitingForVolume` is not abortable); and the ETA's working-time clock leaves the
+  outage out (`human_wait.rs`), so the first sample after it doesn't divide one file's bytes by five minutes.
+
+**Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
+again:
+
+- `stream_pipe_file`, three places: the source open (nothing staged yet), the write (the failed attempt's temp is
+  cleared AFTER the wait, when the delete can reach the share), and the landing rename when it failed with nothing
+  cleared (`new_data_at: None`: the temp is a spare copy, so `staged_write::clear_unlanded_temp` takes it away and the
+  file runs again). ❌ Never after a landing that cleared the way: then the temp is the only copy, and `land` already
+  moved it somewhere safe.
+- `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as
+  "there", plus two listings) and around every driver's top-level destination probe (a read). ❗ Only a call that's safe
+  to run twice goes through it.
+- The start gate, `volume/preflight.rs::wait_for_gone_volumes`, at the top of all three volume drivers: a transfer that
+  begins with a volume already gone (a Retry while the NAS is still down) waits before its first step rather than
+  failing on it. It announces the wait itself (no probe is registered yet). Only a cancel stops the transfer there;
+  every other ending carries on, and a volume still gone fails the first step exactly as before.
+
+**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), the post-loop
+folder dates and source sweep, delete and trash, and the local engines. Each would fail on an outage as it always did.
+
+**Residual risk, accepted.** A landing rename the server performed whose reply the drop swallowed: the second run's
+rename finds no temp and fails the file, though the file is whole at its name. Data-safe, rare (the drop has to land
+between the rename and its reply), and the failure is honest about what it saw.
+
+Pinned by `volume_outage_tests.rs` (the state machine: back, give-up, cancel, pause, sign-in, a queued job after a
+give-up, a Retry after one, a shared deadline, `through_outages`'s cap) and `volume/copy_outage_tests.rs` (the real
+copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate).
 
 ### The watchdog ACTS
 
