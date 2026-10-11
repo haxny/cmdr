@@ -19,7 +19,7 @@
 use std::collections::BTreeSet;
 use std::time::Instant;
 
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// Per-column widths plus the code points that had to be estimated.
 ///

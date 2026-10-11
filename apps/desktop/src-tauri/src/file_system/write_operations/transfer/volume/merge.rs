@@ -47,9 +47,9 @@ use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
 use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for, stream_pipe_file};
 use super::transfer_error::{AtPath, PathedVolumeError};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 
 /// What one leaf file's copy reports back to the walker.
 type LeafResult = Result<u64, PathedVolumeError>;

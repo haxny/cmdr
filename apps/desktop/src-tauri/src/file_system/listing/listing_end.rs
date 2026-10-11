@@ -9,8 +9,8 @@
 use std::path::Path;
 
 use crate::file_system::listing::streaming::ListingEventSink;
-use crate::file_system::volume::VolumeError;
-use crate::file_system::volume::friendly_error::{
+use cmdr_fs::volume::VolumeError;
+use cmdr_fs::volume::friendly_error::{
     ListingError, archive_needs_password_listing_error, archive_unreadable_listing_error, enrich_with_provider,
     listing_error_from_volume_error,
 };

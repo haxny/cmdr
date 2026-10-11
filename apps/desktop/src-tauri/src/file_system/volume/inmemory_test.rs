@@ -4,7 +4,7 @@
 //! without touching the real file system.
 
 use super::{InMemoryVolume, Volume};
-use crate::file_system::listing::FileEntry;
+use cmdr_fs::entry::FileEntry;
 use std::path::Path;
 
 /// Creates a sample file entry for testing.

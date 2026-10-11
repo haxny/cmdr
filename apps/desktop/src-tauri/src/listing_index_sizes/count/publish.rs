@@ -7,10 +7,10 @@ use cmdr_index::store::DirStats;
 
 use super::jobs;
 use crate::file_system::listing::cached_listing::LISTING_CACHE;
-use crate::file_system::listing::metadata::FileEntry;
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::listing_index_sizes::refresh::RowSizes;
 use crate::listing_index_sizes::{FolderSizes, ListingIndexSizesChanged};
+use cmdr_fs::entry::FileEntry;
 
 pub(super) type Sink<'a> = &'a (dyn Fn(ListingIndexSizesChanged) + Sync);
 

@@ -207,7 +207,7 @@ impl CreatedPaths {
     /// Notes a source file the copy walk is carrying, stamped from the listing
     /// that found it. The walk reads that listing BEFORE the copy, so a save
     /// during the copy counts as a change too. A no-op on a copy.
-    pub(super) fn record_carried_source(&self, file: &Path, listed: &crate::file_system::listing::FileEntry) {
+    pub(super) fn record_carried_source(&self, file: &Path, listed: &cmdr_fs::entry::FileEntry) {
         if let Some(ledger) = &self.source_ledger {
             ledger
                 .lock_ignore_poison()

@@ -38,11 +38,11 @@
 use std::collections::HashMap;
 use std::sync::{RwLock, RwLockReadGuard};
 
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::staging;
+use cmdr_fs::entry::FileEntry;
 
 /// Exact-path scratch decisions committed with the listing revision. Ordinary
 /// directories have an empty map; checking drift visits only scratch candidates.

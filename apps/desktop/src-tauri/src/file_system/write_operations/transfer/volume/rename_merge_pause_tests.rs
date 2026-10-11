@@ -13,11 +13,11 @@
 
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{LocalPosixVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;

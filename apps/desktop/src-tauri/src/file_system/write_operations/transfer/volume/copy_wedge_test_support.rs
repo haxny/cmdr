@@ -13,12 +13,12 @@
 //! at the end, which would hide every defect these suites are about.
 
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, DirectoryCreation, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, SpaceInfo,
     StreamLength, StreamWriteProgress, VolumeReadStream,
 };
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::pin::Pin as StdPin;
 use std::sync::atomic::AtomicU64;

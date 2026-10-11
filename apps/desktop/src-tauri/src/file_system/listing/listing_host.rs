@@ -18,8 +18,8 @@ use std::pin::Pin;
 use cmdr_fs::volume::host::listings::ListingHost;
 
 use super::caching;
-use super::metadata::FileEntry;
-use crate::file_system::volume::DirectoryChange;
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::DirectoryChange;
 
 /// Answers a backend's listing questions from the app's real listing cache.
 pub struct AppListings;
@@ -54,7 +54,7 @@ mod tests {
     use super::*;
     use crate::file_system::listing::caching_test_support::{TestListing, WatchCoverageVolume, unique_test_id};
     use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::volume::{InMemoryVolume, Volume, WatchCoverage};
+    use cmdr_fs::volume::{InMemoryVolume, Volume, WatchCoverage};
 
     fn entry_at(dir: &str, name: &str) -> FileEntry {
         FileEntry {

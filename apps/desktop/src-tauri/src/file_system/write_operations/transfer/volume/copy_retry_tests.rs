@@ -8,7 +8,6 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{
     DirectoryCreation, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
     StreamWriteProgress, Volume, VolumeReadStream,
@@ -16,6 +15,7 @@ use crate::file_system::volume::{
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::entry::FileEntry;
 use std::pin::Pin as StdPin;
 
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};

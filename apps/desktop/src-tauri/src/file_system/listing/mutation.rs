@@ -11,7 +11,7 @@ use std::path::Path;
 
 use crate::file_system::listing::caching::{DirectoryChange, notify_directory_changed};
 use crate::file_system::listing::reading::get_single_entry;
-use crate::file_system::volume::MutationEvent;
+use cmdr_fs::volume::MutationEvent;
 
 /// Patches the listing cache after a mutation on a LOCAL-FS-backed volume: stats
 /// the affected entry through `std::fs` and turns it into the right

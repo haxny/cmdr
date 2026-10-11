@@ -19,11 +19,11 @@ use crate::file_system::listing::listing_end::{
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::volume::friendly_error::{ListingError, listing_error_for_restricted_empty_root};
-use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::watcher::start_watching_detached;
 #[cfg(test)]
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::friendly_error::{ListingError, listing_error_for_restricted_empty_root};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 // ============================================================================
 // Types and state

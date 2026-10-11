@@ -1,8 +1,8 @@
 //! Tests for `get_file_beside`: reading the row next to a row you know by name.
 
-use super::FileEntry;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::{RowBeside, get_file_beside};
+use cmdr_fs::entry::FileEntry;
 
 fn make_entry(name: &str) -> FileEntry {
     FileEntry::new(name.to_string(), format!("/dir/{}", name), false, false)

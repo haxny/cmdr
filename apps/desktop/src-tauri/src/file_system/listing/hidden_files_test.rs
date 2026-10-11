@@ -3,10 +3,10 @@
 //! These tests verify that the `include_hidden` parameter correctly filters
 //! files starting with "." from directory listings.
 
-use super::FileEntry;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::{find_file_index, find_file_indices, get_file_at, get_file_range, get_total_count};
-use crate::file_system::volume::{InMemoryVolume, Volume};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
 use std::sync::Arc;
 

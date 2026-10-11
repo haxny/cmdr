@@ -16,8 +16,9 @@ use std::sync::Arc;
 use crate::file_system::listing::caching::notify_full_refresh;
 use crate::file_system::listing::caching_test_support::{TestListing, unique_test_id};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use cmdr_fs::volume::Volume;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 
 const CATEGORIES: [&str; 6] = ["branches", "tags", "commits", "stash", "worktrees", "submodules"];
@@ -135,7 +136,7 @@ async fn a_diff_patch_leaves_the_contributed_row_count_alone() {
 
     // What `file_system/watcher.rs` does when FSEvents reports one new file:
     // the decorated set plus a row, written straight back.
-    entries.push(crate::file_system::listing::FileEntry::new(
+    entries.push(cmdr_fs::entry::FileEntry::new(
         "COMMIT_EDITMSG".to_string(),
         dot_git.join("COMMIT_EDITMSG").display().to_string(),
         false,

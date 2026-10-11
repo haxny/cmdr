@@ -226,8 +226,8 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
     pause: Option<&Arc<ScanPause>>,
     on_progress: &(dyn Fn(crate::file_system::volume::ListingProgress) + Sync),
 ) -> Result<BatchScanResult, crate::file_system::volume::VolumeError> {
-    use crate::file_system::listing::FileEntry;
     use crate::file_system::volume::ListingProgress;
+    use cmdr_fs::entry::FileEntry;
     use std::collections::HashMap;
 
     // Group sources by parent dir, preserving the input order of paths within

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use super::*;
 use crate::file_system::listing::caching_test_support::SpelledVolume;
-use crate::file_system::volume::InMemoryVolume;
+use cmdr_fs::volume::InMemoryVolume;
 
 /// `fotók` composed (how the server stores it) and decomposed (how the macOS
 /// kernel mount spelled it for the pane).

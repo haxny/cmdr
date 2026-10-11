@@ -10,8 +10,8 @@ use super::super::state::WriteOperationState;
 use super::super::types::{ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteOperationError};
 use super::edit_error::EditError;
 use super::fresh_zip::{FreshZipEntry, FreshZipSource, RemoteZipFeeder, remote_source_bridge};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{EntryKind, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
 
 pub(super) struct RemoteFeed {
     pub(super) path: PathBuf,

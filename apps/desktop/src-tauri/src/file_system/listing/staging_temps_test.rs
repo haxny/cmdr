@@ -7,9 +7,9 @@
 //! rename event that would have cleared it.
 
 use super::caching_test_support::{TestListing, TestListingGuard};
-use super::metadata::FileEntry;
 use super::operations::{find_file_index, get_file_at, get_file_range, get_total_count};
 use crate::file_system::staging::{ShowTempsGuard, StagingTemp};
+use cmdr_fs::entry::FileEntry;
 use std::path::Path;
 use std::sync::Arc;
 

@@ -1,6 +1,6 @@
 //! File system provider trait for abstraction and testing.
 
-use super::FileEntry;
+use cmdr_fs::entry::FileEntry;
 use std::path::Path;
 
 /// Trait for file system operations, enabling both real and mock implementations.

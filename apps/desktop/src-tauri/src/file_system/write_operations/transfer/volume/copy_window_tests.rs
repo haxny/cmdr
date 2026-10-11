@@ -16,8 +16,8 @@
 //! keep winning.
 
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::ListingProgress;
+use cmdr_fs::entry::FileEntry;
 
 /// The four methods `Volume` has no default for. The window formula reads none
 /// of them, so a test double answers "nothing here" and stays about the one

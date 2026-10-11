@@ -16,9 +16,9 @@ use std::path::{Path, PathBuf};
 
 use cmdr_fs::name_fold::differ_only_in_form;
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
 
 /// What a folder holds under another spelling of one name.
 #[derive(Debug)]

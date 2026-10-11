@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use super::*;
 use crate::file_system::VolumeManager;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::operation_log::store::{
@@ -20,6 +19,7 @@ use crate::operation_log::types::{
     EntryType, ExecutionStatus, Initiator, ItemOutcome, OpKind, RollbackState, RowRole, SearchCoverage,
 };
 use crate::operation_log::writer::{FinalizeOperation, JournalItem, OpenOperation, OperationLogWriter};
+use cmdr_fs::entry::FileEntry;
 
 /// A fixed mtime pinned onto seeded files so the recorded snapshot and the live
 /// entry agree (verify → Match).

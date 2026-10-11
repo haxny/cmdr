@@ -13,9 +13,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
+use cmdr_fs::entry::FileEntry;
 
 /// Wraps an `InMemoryVolume` and counts `list_directory` calls so tests can
 /// assert that the oracle short-circuited or fell through.

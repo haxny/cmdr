@@ -21,7 +21,6 @@
 //! `an_empty_but_preexisting_destination_is_never_assumed_free`.
 
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, DirectoryCreation, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress,
@@ -31,6 +30,7 @@ use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 use std::ops::ControlFlow;
 use unicode_normalization::UnicodeNormalization;
 

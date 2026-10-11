@@ -22,9 +22,9 @@ use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::foreign_path::{Listed, list_as_stored};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
-use crate::file_system::volume::{BackendKind, ListingProgress, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
+use cmdr_fs::volume::{BackendKind, ListingProgress, Volume, VolumeError};
 
 /// When a listing counts as stalled, and how it retries once it has.
 #[derive(Debug, Clone, Copy)]

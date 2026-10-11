@@ -1,6 +1,7 @@
 //! Mock file system provider for testing.
 
-use super::{FileEntry, provider::FileSystemProvider};
+use super::provider::FileSystemProvider;
+use cmdr_fs::entry::FileEntry;
 use std::path::Path;
 
 /// Mock file system provider with configurable data for testing.

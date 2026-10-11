@@ -6,7 +6,7 @@
 //! ONE suite stay in that suite: the symlink in `sorting_test`, the honest-size
 //! directory in `sorting_dir_mode_test`, the locale pin in `collation_test`.
 
-use super::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// Creates a test entry with the given name and properties.
 pub(super) fn make_entry(name: &str, is_dir: bool, size: Option<u64>, modified: Option<u64>) -> FileEntry {

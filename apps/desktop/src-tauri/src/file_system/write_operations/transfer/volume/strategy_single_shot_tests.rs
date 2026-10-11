@@ -17,12 +17,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     InMemoryVolume, ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 
 /// A destination that reports single-shot writes up to `limit` and records every
 /// path it was asked to write to (and every rename), so a test can tell a write

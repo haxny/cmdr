@@ -307,10 +307,10 @@ fn test_process_dir_entry_honors_uf_hidden_with_no_dot_in_the_name() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_list_directory_start_with_volume_caches_entries() {
     use crate::file_system::listing::caching_test_support::TestListingGuard;
-    use crate::file_system::listing::metadata::FileEntry;
     use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-    use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_fs::entry::FileEntry;
+    use cmdr_fs::volume::InMemoryVolume;
     use std::path::PathBuf;
     use std::sync::Arc;
 

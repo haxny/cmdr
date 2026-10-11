@@ -4,8 +4,8 @@
 //! one-level-shallower rule every `*_tests.rs` in this directory follows.
 
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::InMemoryVolume;
+use cmdr_fs::entry::FileEntry;
 use std::sync::Arc;
 
 // ======================================================================

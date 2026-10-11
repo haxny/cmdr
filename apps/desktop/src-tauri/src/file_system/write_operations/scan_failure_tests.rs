@@ -7,6 +7,7 @@
 //! `IoError` with an empty path around it. These drive the real preview workers
 //! into the real scan-wait, so the whole hand-off is what's under test.
 
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -20,7 +21,7 @@ use super::scan_cache::ScanPreviewState;
 use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTarget, ScanWatchdog};
 use super::types::WriteOperationError;
-use crate::file_system::listing::{FileEntry, SortColumn, SortOrder};
+use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanBoundary, Volume, VolumeError,
 };

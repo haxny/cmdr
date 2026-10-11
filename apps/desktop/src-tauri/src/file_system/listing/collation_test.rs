@@ -13,7 +13,8 @@ use super::sorting::DirectorySortMode;
 use super::sorting::entry_comparator;
 use super::sorting::sort_entries;
 use super::sorting_test_support::make_entry;
-use super::{FileEntry, SortColumn, SortOrder};
+use super::{SortColumn, SortOrder};
+use cmdr_fs::entry::FileEntry;
 
 // ============================================================================
 // Unicode collation

@@ -185,7 +185,7 @@ fn test_format_file_compact() {
 
 #[test]
 fn test_tags_marker() {
-    use crate::file_system::listing::metadata::TagRef;
+    use cmdr_fs::entry::TagRef;
     let tag = |name: &str, color: u8| TagRef {
         name: name.to_string(),
         color,
@@ -212,7 +212,7 @@ fn test_tags_marker() {
 
 #[test]
 fn test_format_file_compact_appends_tags_marker() {
-    use crate::file_system::listing::metadata::TagRef;
+    use cmdr_fs::entry::TagRef;
     let file = PaneFileEntry {
         name: "photo.jpg".to_string(),
         path: "/tmp/photo.jpg".to_string(),

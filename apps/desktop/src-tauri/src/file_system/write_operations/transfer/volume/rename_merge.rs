@@ -68,9 +68,9 @@ use super::conflict::{ResolvedConflict, resolve_volume_conflict};
 use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{ChildName, EntryKind, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 
 /// Context threaded through the recursive rename-merge so each level can resolve
 /// its clashing children through the same file-policy machinery the top-level

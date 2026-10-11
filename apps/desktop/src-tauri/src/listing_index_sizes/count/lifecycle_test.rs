@@ -11,7 +11,7 @@ use tokio::sync::Notify;
 
 use super::{cancel, count_resolving, count_with, plan};
 use crate::file_system::listing::caching_test_support::TestListing;
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 #[derive(Default)]
 struct Gate {

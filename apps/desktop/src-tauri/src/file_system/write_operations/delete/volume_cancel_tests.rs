@@ -44,7 +44,7 @@ use tokio_util::sync::CancellationToken;
 struct CancellingVolume {
     inner: InMemoryVolume,
     /// Entries handed back per listing, simulating a real device's response.
-    children: Vec<crate::file_system::listing::FileEntry>,
+    children: Vec<cmdr_fs::entry::FileEntry>,
     /// Number of entries the per-handle loop fetched before bailing on a
     /// cancelled token. Reset per listing call.
     fetched_before_cancel: AtomicUsize,
@@ -59,7 +59,7 @@ struct CancellingVolume {
 }
 
 impl CancellingVolume {
-    fn new(name: &str, children: Vec<crate::file_system::listing::FileEntry>) -> Self {
+    fn new(name: &str, children: Vec<cmdr_fs::entry::FileEntry>) -> Self {
         Self {
             inner: InMemoryVolume::new(name),
             children,
@@ -86,8 +86,7 @@ impl Volume for CancellingVolume {
         &'a self,
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<crate::file_system::listing::FileEntry>, VolumeError>> + Send + 'a>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         // No-cancel path: fall through to inner. Tests don't hit this; the
         // production code calls `list_directory_with_cancel`.
         let _ = on_progress;
@@ -100,8 +99,7 @@ impl Volume for CancellingVolume {
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
         cancel: Option<&'a CancellationToken>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<crate::file_system::listing::FileEntry>, VolumeError>> + Send + 'a>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         let _ = path;
         Box::pin(async move {
             // Simulate the MTP per-handle loop: check cancel before each
@@ -136,7 +134,7 @@ impl Volume for CancellingVolume {
     fn get_metadata<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::listing::FileEntry, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
         // Mirror MTP's "find by name in parent listing" behavior so the
         // delete path's `is_directory` probe resolves. The top-level test
         // directory "/dir" is synthesized as a directory entry on the fly so
@@ -203,14 +201,14 @@ fn unique(suffix: &str) -> String {
     )
 }
 
-fn make_file_entry(name: &str, parent: &str, is_dir: bool) -> crate::file_system::listing::FileEntry {
-    crate::file_system::listing::FileEntry {
+fn make_file_entry(name: &str, parent: &str, is_dir: bool) -> cmdr_fs::entry::FileEntry {
+    cmdr_fs::entry::FileEntry {
         size: if is_dir { None } else { Some(10) },
         permissions: if is_dir { 0o755 } else { 0o644 },
         owner: "test".to_string(),
         group: "staff".to_string(),
         extended_metadata_loaded: true,
-        ..crate::file_system::listing::FileEntry::new(
+        ..cmdr_fs::entry::FileEntry::new(
             name.to_string(),
             format!("{}/{}", parent.trim_end_matches('/'), name),
             is_dir,
@@ -548,8 +546,7 @@ async fn volume_error_emits_write_settled_event() {
             &'a self,
             _path: &'a Path,
             _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
-        ) -> Pin<Box<dyn Future<Output = Result<Vec<crate::file_system::listing::FileEntry>, VolumeError>> + Send + 'a>>
-        {
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
             Box::pin(async move {
                 Err(VolumeError::IoError {
                     message: "simulated".to_string(),
@@ -562,8 +559,7 @@ async fn volume_error_emits_write_settled_event() {
             _path: &'a Path,
             _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
             _cancel: Option<&'a CancellationToken>,
-        ) -> Pin<Box<dyn Future<Output = Result<Vec<crate::file_system::listing::FileEntry>, VolumeError>> + Send + 'a>>
-        {
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
             Box::pin(async move {
                 Err(VolumeError::IoError {
                     message: "simulated".to_string(),
@@ -574,8 +570,7 @@ async fn volume_error_emits_write_settled_event() {
         fn get_metadata<'a>(
             &'a self,
             path: &'a Path,
-        ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::listing::FileEntry, VolumeError>> + Send + 'a>>
-        {
+        ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::entry::FileEntry, VolumeError>> + Send + 'a>> {
             Box::pin(async move {
                 let path_str = path.to_string_lossy();
                 if path_str == "/dir" || path_str == "dir" {

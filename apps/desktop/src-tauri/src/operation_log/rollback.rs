@@ -42,8 +42,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::file_system::VolumeManager;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
 
 use super::store::{
     OperationRow, RollbackUnit, fold_name, open_read_connection, ops_in_rolling_back, read_inverse_op, read_operation,

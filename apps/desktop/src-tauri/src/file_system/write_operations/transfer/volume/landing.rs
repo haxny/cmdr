@@ -27,8 +27,8 @@ use super::super::transfer_driver::{FetchFut, NameAtDest};
 use super::super::transfer_probe::{DriverPhase, OperationProbe};
 use super::super::volume_outage::through_outages;
 use super::transfer_error::{PathRole, map_volume_error};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{ChildName, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
 
 /// Where a name lands.
 pub(super) enum Landing {

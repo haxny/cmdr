@@ -20,11 +20,11 @@ use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, rech
 use super::super::super::state::{StopMeans, WriteOperationState, update_operation_status};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::transfer_error::{AtPath, PathedVolumeError};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{EntryKind, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::rollback::ItemResult;
 use crate::operation_log::types::SkipReason;
+use cmdr_fs::entry::FileEntry;
 
 use cmdr_fs::staging::STAGING_TEMP_MARKER as TEMP_INFIX;
 

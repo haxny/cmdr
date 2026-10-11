@@ -9,10 +9,10 @@ use super::ListingIndexSizesChanged;
 use super::count::{CountFolderSizesError, CountPlan, cancel, count_with, plan};
 use crate::file_system::listing::cached_listing::LISTING_CACHE;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::entry::FileEntry;
 
 const DIR: &str = "/data";
 

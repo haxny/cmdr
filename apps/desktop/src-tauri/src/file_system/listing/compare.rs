@@ -21,9 +21,9 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_fs::name_fold::fold_name;
 
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::listing::operations::ListingLookupError;
 use crate::file_system::listing::visible_rows::VisibleRows;
+use cmdr_fs::entry::FileEntry;
 
 /// How far apart two modification times can be and still count as the same, in
 /// seconds. FAT and many network shares store time in 2 s steps, so a faithful

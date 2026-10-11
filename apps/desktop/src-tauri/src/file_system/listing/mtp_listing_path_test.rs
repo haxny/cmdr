@@ -18,9 +18,9 @@ use std::sync::Arc;
 
 use crate::file_system::listing::caching::{find_listings_for_path_on_volume, try_get_authoritative_listing};
 use crate::file_system::listing::caching_test_support::TestListing;
-use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::mtp::test_support::{self, device_lock};
+use cmdr_fs::volume::Volume;
 
 /// A pane entered with Enter hears about a change the volume reports at the
 /// storage URL.

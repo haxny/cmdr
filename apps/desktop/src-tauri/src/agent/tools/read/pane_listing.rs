@@ -1,5 +1,6 @@
 //! Compact access to the focused pane's existing backend listing cache.
 
+use cmdr_fs::entry::FileEntry;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -7,7 +8,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
-use crate::file_system::listing::{FileEntry, get_cached_listing};
+use crate::file_system::listing::get_cached_listing;
 use crate::mcp::pane_state::PaneState;
 use crate::mcp::{PaneStateStore, ToolError, ToolResult};
 

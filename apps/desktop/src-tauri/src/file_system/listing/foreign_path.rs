@@ -24,8 +24,8 @@ use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::OverlayRows;
-use crate::file_system::listing::metadata::FileEntry;
-use crate::file_system::volume::{ListingProgress, Volume, VolumeError};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
 /// A directory listing, and the path it lists as its volume spells it.
 pub(crate) struct Listed {
@@ -216,7 +216,7 @@ pub(super) async fn respell_listing(volume_id: String, listing_id: String, path:
 /// and tells its pane. A no-op when the pane closed meanwhile.
 fn rekey_listing(listing_id: &str, volume_id: &str, stored: &Path) {
     use crate::file_system::listing::cached_listing::{LISTING_CACHE, ListingPath};
-    use crate::ignore_poison::RwLockIgnorePoison;
+    use cmdr_fs::ignore_poison::RwLockIgnorePoison;
     use tauri_specta::Event;
 
     // Built before taking the cache: it reads the volume registry.

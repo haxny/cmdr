@@ -16,7 +16,6 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use crate::file_system::listing::caching_test_support::{TestListingGuard, unique_test_id};
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::stall::{HungReads, StallPolicy, StallWatch};
 use crate::file_system::listing::stalled_on::StalledOn;
@@ -24,9 +23,10 @@ use crate::file_system::listing::streaming::{
     CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
 };
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{ListingProgress, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::wait_until_async;
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
 /// Short enough to keep the suite fast, long enough that a healthy read never trips it.
 const TEST_POLICY: StallPolicy = StallPolicy {

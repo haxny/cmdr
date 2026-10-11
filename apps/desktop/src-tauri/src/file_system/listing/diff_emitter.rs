@@ -12,7 +12,7 @@ use tauri_specta::Event as _;
 use crate::file_system::listing::diff::DiffChange;
 use crate::file_system::listing::diff::{DirectoryDiff, DirectoryDiffBatch};
 use crate::file_system::watcher::WATCHER_MANAGER;
-use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 
 const FLUSH_WINDOW_MS: u64 = 50;
 

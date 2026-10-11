@@ -3,8 +3,8 @@
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::compare::{CompareDirectoriesMode, compare_directories};
 use super::diff_emitter::flush_now_for_test;
-use super::metadata::FileEntry;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_fs::entry::FileEntry;
 
 fn file(dir: &str, name: &str, size: u64, modified: u64) -> FileEntry {
     FileEntry {

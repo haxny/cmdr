@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use super::brief_columns::{BriefColumnsError, compute_brief_column_text_widths};
 use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
-use super::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// Seeds `font_metrics` with a uniform `width_per_char` for ASCII printable code
 /// points, under a font id unique to this call, so any filename of length N

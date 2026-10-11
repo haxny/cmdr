@@ -14,9 +14,9 @@ use super::caching::{apply_tags_to_listing, notify_added, notify_removed, publis
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::{DiffChange, DiffChangeType};
 use super::diff_emitter::{hold_for_test, pending_changes_for_test};
-use super::metadata::{FileEntry, TagRef};
 use super::operations::{find_file_index, set_listing_include_hidden};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_fs::entry::{FileEntry, TagRef};
 
 const DIR: &str = "/test/pane-diff";
 

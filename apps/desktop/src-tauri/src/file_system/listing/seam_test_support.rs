@@ -15,11 +15,11 @@ use std::sync::{Arc, LazyLock, Mutex, Once};
 use tokio_util::sync::CancellationToken;
 
 use super::cached_listing::LISTING_CACHE;
-use super::metadata::FileEntry;
-use crate::file_system::volume::Volume;
-use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use crate::listing_lifecycle::{ListingLifecycle, register_listing_lifecycle};
 use crate::listing_overlays::{ListingOverlay, register_listing_overlay};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use cmdr_fs::volume::Volume;
 
 /// The name a volume carries to have the marker overlay decorate it.
 pub(crate) const MARKER_VOLUME_NAME: &str = "seam-pins marker volume";

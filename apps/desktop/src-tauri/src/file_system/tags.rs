@@ -9,7 +9,7 @@
 //! the display source of truth is the per-file xattr — Finder keeps colors
 //! consistent across files, so we never consult the system tag registry.
 
-use crate::file_system::listing::metadata::TagRef;
+use cmdr_fs::entry::TagRef;
 #[cfg(target_os = "macos")]
 use std::path::Path;
 

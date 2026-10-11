@@ -18,11 +18,11 @@ use std::sync::Arc;
 use tokio::time::Duration;
 
 use crate::deadline::{Deadline, timeout_detached_within};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{ScanConflict, Volume, VolumeError};
 use crate::unregistered_volumes::{Unregistered, why_unregistered};
+use cmdr_fs::entry::FileEntry;
 
 use super::routing::{resolve_dest_path, resolve_source_volume, transfer_would_land_on_its_source};
 

@@ -1,8 +1,8 @@
 //! Tests for `get_listing_stats()`: total/visible counts, sizes, and selection sums.
 
-use super::FileEntry;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::get_listing_stats;
+use cmdr_fs::entry::FileEntry;
 
 /// Creates a test entry with configurable sizes.
 fn make_entry(name: &str, is_dir: bool, size: Option<u64>, physical_size: Option<u64>) -> FileEntry {

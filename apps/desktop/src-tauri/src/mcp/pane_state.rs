@@ -67,7 +67,7 @@ pub struct PaneFileEntry {
     /// `cmdr://state` as a `[tags:red,blue]` marker only when non-empty, so an
     /// agent sees the same colored dots the UI shows. Empty in the common case.
     #[serde(default)]
-    pub tags: Vec<crate::file_system::listing::metadata::TagRef>,
+    pub tags: Vec<cmdr_fs::entry::TagRef>,
 }
 
 /// State of a single pane.

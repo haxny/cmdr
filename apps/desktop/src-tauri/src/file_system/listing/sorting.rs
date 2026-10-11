@@ -5,7 +5,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::file_system::listing::collation::{NameCollator, NameKey, active_collator};
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 // ============================================================================
 // Sorting configuration

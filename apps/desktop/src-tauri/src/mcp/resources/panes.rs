@@ -141,7 +141,7 @@ pub(crate) fn on_disk_marker(logical: Option<u64>, physical: Option<u64>) -> Opt
 /// (zero cost in the common case). Colored tags render as their color name (the
 /// dot the UI shows); a colorless custom tag renders as its own name. Pure, so
 /// it's unit-testable.
-pub(crate) fn tags_marker(tags: &[crate::file_system::listing::metadata::TagRef]) -> Option<String> {
+pub(crate) fn tags_marker(tags: &[cmdr_fs::entry::TagRef]) -> Option<String> {
     if tags.is_empty() {
         return None;
     }

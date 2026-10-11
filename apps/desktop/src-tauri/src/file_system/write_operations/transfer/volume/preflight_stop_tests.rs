@@ -14,7 +14,6 @@
 
 use super::preflight::scan_volume_sources;
 use super::rename_merge_test_support::make_state;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{BatchScanResult, ScanBoundary, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{WriteOperationState, cancel_write_operation};
@@ -22,6 +21,7 @@ use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteOperationError, WriteOperationType,
 };
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;

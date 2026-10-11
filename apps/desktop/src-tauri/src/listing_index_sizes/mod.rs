@@ -45,11 +45,11 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 
 use crate::file_system::listing::cached_listing::LISTING_CACHE;
-use crate::file_system::listing::metadata::FileEntry;
 use crate::file_system::volume::Volume;
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
 use crate::listing_lifecycle::{ListingLifecycle, register_listing_lifecycle};
+use cmdr_fs::entry::FileEntry;
 
 use refresh::RowSizes;
 use schedule::Schedule;

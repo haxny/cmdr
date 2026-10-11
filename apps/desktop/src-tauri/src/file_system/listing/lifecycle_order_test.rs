@@ -25,7 +25,7 @@ use super::streaming::{
     CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
 };
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, Volume};
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 async fn stream(listing_id: &str, volume_id: &str, path: &Path) {
     let events: Arc<dyn ListingEventSink> = Arc::new(CollectorListingEventSink::new());
@@ -73,7 +73,7 @@ fn an_observer_hears_a_close_after_the_listing_left_the_cache() {
 #[cfg(target_os = "macos")]
 fn is_watching(listing_id: &str) -> bool {
     use crate::file_system::watcher::WATCHER_MANAGER;
-    use crate::ignore_poison::RwLockIgnorePoison;
+    use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
     WATCHER_MANAGER.read_ignore_poison().watches.contains_key(listing_id)
 }

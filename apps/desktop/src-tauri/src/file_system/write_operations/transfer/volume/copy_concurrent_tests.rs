@@ -10,13 +10,13 @@
 use super::super::super::conflict_responder_test_support::await_prompted_clash;
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, VolumeReadStream};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::entry::FileEntry;
 use std::sync::atomic::AtomicU8;
 
 // ── Phase 4.2 concurrency tests ──────────────────────────────────

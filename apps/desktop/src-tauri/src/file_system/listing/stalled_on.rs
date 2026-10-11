@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::file_system::volume::{BackendKind, Volume};
+use cmdr_fs::volume::{BackendKind, Volume};
 
 /// What a stalled listing's folder lives on, as far as the mount proves it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]

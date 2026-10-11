@@ -74,8 +74,8 @@ async fn a_mount_that_answers_its_identity_read_keeps_the_answer() {
 /// Used to verify `register_replacing_predecessor` retires the displaced
 /// volume without breaking the holders still using it.
 mod tracking {
-    use crate::file_system::listing::metadata::FileEntry;
     use crate::file_system::volume::{SpaceInfo, Volume, VolumeError};
+    use cmdr_fs::entry::FileEntry;
     use std::future::Future;
     use std::path::{Path, PathBuf};
     use std::pin::Pin;

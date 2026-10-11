@@ -23,11 +23,11 @@
 //! control WHEN bytes arrive, which is a different axis; they stay where they
 //! are.
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{
     DirectoryCreation, ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::Path;
@@ -76,7 +76,7 @@ macro_rules! forward_volume_methods {
             &'a self,
             path: &'a ::std::path::Path,
             on_progress: Option<&'a (dyn Fn($crate::file_system::volume::ListingProgress) + Sync)>,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<$crate::file_system::listing::FileEntry>, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<::cmdr_fs::entry::FileEntry>, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.list_directory(path, on_progress)
         }
     };
@@ -84,7 +84,7 @@ macro_rules! forward_volume_methods {
         fn get_metadata<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::listing::FileEntry, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::entry::FileEntry, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.get_metadata(path)
         }
     };

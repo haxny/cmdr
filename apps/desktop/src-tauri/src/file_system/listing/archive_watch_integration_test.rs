@@ -17,14 +17,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::file_system::VolumeManager;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
 use crate::file_system::listing::listing_host::AppListings;
-use crate::file_system::volume::InMemoryVolume;
-use crate::file_system::volume::Volume;
-use crate::file_system::volume::WatchCoverage;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::ArchiveVolume;
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::WatchCoverage;
 
 use cmdr_archive::test_fixtures::{FixtureFile, build_zip, stored};
 

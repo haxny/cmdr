@@ -103,7 +103,7 @@ pub(super) struct SourceFileFacts {
 impl SourceFileFacts {
     /// What a walker that already listed the source directory knows: every
     /// field, for free, off the entry in hand.
-    pub(super) fn from_entry(entry: &crate::file_system::listing::FileEntry) -> Self {
+    pub(super) fn from_entry(entry: &cmdr_fs::entry::FileEntry) -> Self {
         Self {
             size: entry.size,
             folder_dates: SourceFolderDates::of_entry(entry),
@@ -476,8 +476,7 @@ pub(super) async fn top_level_move_hints(
                 path: parent.display().to_string(),
                 message: format!("listing move-source parent failed: {e}"),
             })?;
-        let by_name: HashMap<&str, &crate::file_system::listing::FileEntry> =
-            entries.iter().map(|e| (e.name.as_str(), e)).collect();
+        let by_name: HashMap<&str, &cmdr_fs::entry::FileEntry> = entries.iter().map(|e| (e.name.as_str(), e)).collect();
         for path in paths {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
             if let Some(entry) = by_name.get(name) {

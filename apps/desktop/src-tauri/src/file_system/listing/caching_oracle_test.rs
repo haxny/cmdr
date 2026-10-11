@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use super::caching::try_get_authoritative_listing;
 use super::caching_test_support::{TestListing, TestListingGuard, WatchCoverageVolume, unique_test_id};
-use super::metadata::FileEntry;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{Volume, WatchCoverage};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{Volume, WatchCoverage};
 
 fn make_test_entry(name: &str) -> FileEntry {
     FileEntry {

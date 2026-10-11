@@ -27,8 +27,8 @@ use std::sync::{Arc, LazyLock, RwLock};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::Volume;
+use cmdr_fs::entry::FileEntry;
 
 /// A source of extra rows for one kind of directory.
 pub(crate) trait ListingOverlay: Send + Sync + 'static {

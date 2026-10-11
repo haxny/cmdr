@@ -16,7 +16,7 @@ use super::caching_test_support::TestListing;
 use super::operations::{ListingLookupError, get_file_at, keep_listings_alive};
 use super::orphan_reaper::{ORPHAN_IDLE_WINDOW, orphan_ids, reap_orphaned_listings_at_for};
 use crate::file_system::watcher::{WATCHER_MANAGER, start_watching};
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 fn is_watched(id: &str) -> bool {
     WATCHER_MANAGER.read_ignore_poison().watches.contains_key(id)

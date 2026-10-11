@@ -25,9 +25,9 @@ use super::listing::caching_test_support::{TestListing, TestListingGuard, unique
 use super::listing::diff::DiffChangeType;
 use super::listing::diff_emitter::{hold_for_test, pending_changes_for_test};
 use super::listing::list_directory_core;
-use super::listing::metadata::TagRef;
 use super::watcher::{handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};
+use cmdr_fs::entry::TagRef;
 
 fn event(kind: EventKind, path: &Path) -> DebouncedEvent {
     DebouncedEvent::new(

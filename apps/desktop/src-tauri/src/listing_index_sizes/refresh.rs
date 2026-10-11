@@ -9,7 +9,7 @@
 
 use cmdr_index::store::DirStats;
 
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// The index-derived fields of one folder row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

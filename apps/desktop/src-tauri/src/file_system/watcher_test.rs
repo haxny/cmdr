@@ -9,9 +9,9 @@
 // The start_watching/stop_watching functions require a running app context
 // to emit events, so proper testing requires integration tests.
 
-use super::listing::FileEntry;
 use super::volume::Volume;
 use super::watcher::{event_targets_watch_root, rebase_event_path};
+use cmdr_fs::entry::FileEntry;
 use std::path::{Path, PathBuf};
 
 fn make_entry_in(name: &str, dir: &str, size: Option<u64>) -> FileEntry {

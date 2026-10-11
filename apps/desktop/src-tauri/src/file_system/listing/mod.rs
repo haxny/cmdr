@@ -29,11 +29,6 @@ pub(crate) mod visible_rows;
 pub use brief_columns::{BriefColumnWidths, BriefColumnsIpcError, compute_brief_column_text_widths};
 pub use diff::DirectoryDiff;
 pub use fuzzy_jump::fuzzy_find_first_match_in_listing;
-// `FileEntry` and its siblings moved to `cmdr-fs` (the `Volume` trait exchanges
-// them, and that trait is the crate's centrepiece). Aliased, not just
-// re-exported, so `file_system::listing::metadata::…` paths keep resolving.
-pub(crate) use cmdr_fs::entry as metadata;
-pub use metadata::{ExtendedMetadata, FileEntry};
 pub use operations::{
     ListingLookupError, ListingStats, ResortResult, RowBeside, find_file_index, find_file_indices, get_file_at,
     get_file_beside, get_file_range, get_listing_stats, keep_listings_alive, list_directory_end,

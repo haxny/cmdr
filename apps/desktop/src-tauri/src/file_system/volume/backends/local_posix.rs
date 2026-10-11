@@ -13,10 +13,11 @@ mod streams;
 use super::{
     CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
-use crate::file_system::listing::{FileEntry, ListingTally, get_single_entry, list_directory_core_with_tally};
+use crate::file_system::listing::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, WriteMode};
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport};
 use cmdr_fs::volume::MountClass;
 use std::future::Future;

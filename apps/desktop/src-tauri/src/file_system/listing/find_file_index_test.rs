@@ -5,9 +5,9 @@
 //! accented name decomposed while the share stores it composed. The cursor
 //! should still land on that row, and only when exactly one row answers.
 
-use super::FileEntry;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::find_file_index;
+use cmdr_fs::entry::FileEntry;
 
 fn listing(tag: &str, names: &[&str]) -> TestListingGuard {
     let entries = names

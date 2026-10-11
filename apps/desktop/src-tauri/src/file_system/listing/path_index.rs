@@ -13,8 +13,8 @@
 use std::hash::{BuildHasher, RandomState};
 use std::sync::RwLock;
 
-use crate::file_system::listing::metadata::FileEntry;
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 /// Batch size from which building the map beats scanning for each path.
 ///

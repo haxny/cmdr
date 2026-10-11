@@ -28,11 +28,11 @@ use crate::file_system::write_operations::types::ConflictResolution;
 // halves: data survives a failure, and a success replaces the content cleanly
 // with no temp left behind.
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, VolumeReadStream,
 };
+use cmdr_fs::entry::FileEntry;
 use std::pin::Pin as StdPin;
 
 /// A `VolumeReadStream` that yields exactly one chunk, then fails. Models a

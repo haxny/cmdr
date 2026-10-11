@@ -8,7 +8,7 @@ use super::plan::{
     render_examples,
 };
 use super::transform::{CaseChange, SEARCH_BUILDS};
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 const DIR: &str = "/Users/me/Photos/Holiday 2026";
 

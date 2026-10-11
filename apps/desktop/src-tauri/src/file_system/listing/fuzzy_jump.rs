@@ -32,7 +32,7 @@ use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
 };
 
-use crate::file_system::listing::metadata::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// Returns the row number of the highest-scoring fuzzy match for `query` among the
 /// rows a pane is showing, or `None` if no entry matches.
@@ -148,8 +148,8 @@ pub fn fuzzy_find_first_match_in_listing(
 mod tests {
     use super::*;
     use crate::file_system::listing::caching_test_support::TestListing;
-    use crate::file_system::listing::metadata::FileEntry;
     use crate::file_system::staging::{ShowTempsGuard, StagingTemp};
+    use cmdr_fs::entry::FileEntry;
     use std::sync::Arc;
 
     fn entry(name: &str) -> FileEntry {

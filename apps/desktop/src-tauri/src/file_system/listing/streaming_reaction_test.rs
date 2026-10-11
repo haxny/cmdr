@@ -20,17 +20,17 @@ use tokio_util::sync::CancellationToken;
 
 use super::caching_test_support::{SpelledVolume, TestListingGuard, unique_test_id};
 use super::listing_end::{ListingEndEffects, error_analytics_category, finish_streaming_listing};
-use super::metadata::FileEntry;
 use super::seam_test_support::cancel_at_decorate;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use super::streaming::{
     CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
 };
-use crate::file_system::volume::friendly_error::{ListingError, ListingErrorReason, Provider};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::friendly_error::{ListingError, ListingErrorReason, Provider};
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 
 /// One bookkeeping call, as `finish_streaming_listing` made it.
 #[derive(Debug, Clone, PartialEq, Eq)]

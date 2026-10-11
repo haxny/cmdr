@@ -14,11 +14,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use super::FileEntry;
 #[cfg(test)]
 use super::name_filter::NameFilter;
 #[cfg(test)]
 use super::visible_rows::shows;
+use cmdr_fs::entry::FileEntry;
 
 /// What happened to one row of a listing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]

@@ -10,9 +10,9 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::Volume;
 use crate::listing_overlays::ListingOverlay;
+use cmdr_fs::entry::FileEntry;
 
 use super::wiring;
 

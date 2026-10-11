@@ -16,10 +16,10 @@ use super::caching::{
 };
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::PaneRows;
-use super::metadata::{FileEntry, TagRef};
 use super::operations::get_file_at;
 use super::path_index::lookup_probe;
 use super::visible_rows::scan_probe;
+use cmdr_fs::entry::{FileEntry, TagRef};
 
 /// Big enough that a per-path rescan is unmistakable in the count, small enough
 /// that the fixture builds in milliseconds.

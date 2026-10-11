@@ -21,7 +21,7 @@ use std::ffi::OsStr;
 use cmdr_fs::name_fold::fold_name;
 
 use super::super::look_alike::{self, LookAlike};
-use crate::file_system::listing::FileEntry;
+use cmdr_fs::entry::FileEntry;
 
 /// What one destination listing can say about a name a copy is about to write.
 pub(super) enum DestLookup {

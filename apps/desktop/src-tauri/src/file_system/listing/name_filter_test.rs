@@ -7,10 +7,10 @@ use super::caching::notify_added;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::{DiffChangeType, compute_diff};
 use super::diff_emitter::{hold_for_test, pending_changes_for_test, take_batches_for_test};
-use super::metadata::FileEntry;
 use super::name_filter::{NameFilter, set_listing_name_filter};
 use super::operations::{find_file_index, get_file_at, get_total_count, update_listing_entries};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_fs::entry::FileEntry;
 
 const DIR: &str = "/test/name-filter";
 

@@ -1,8 +1,8 @@
 //! Tests for `compute_diff`: what a full re-read reports as added, removed,
 //! modified, and moved.
 
-use super::FileEntry;
 use super::diff::{DiffChangeType, compute_diff};
+use cmdr_fs::entry::FileEntry;
 
 fn make_entry(name: &str, size: Option<u64>) -> FileEntry {
     FileEntry {

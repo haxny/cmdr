@@ -4,10 +4,10 @@ use crate::file_system::get_files_at_indices as ops_get_files_at_indices;
 use crate::file_system::get_paths_at_indices as ops_get_paths_at_indices;
 use crate::file_system::listing::name_filter::set_listing_name_filter_guarded as ops_set_listing_name_filter;
 use crate::file_system::{
-    BriefColumnWidths, BriefColumnsIpcError, DirectorySortMode, FileEntry, ListingLookupError, ListingStats,
-    NameFilterResult, ResortResult, RowBeside, SortColumn, SortOrder, StreamingListingStartResult,
-    cancel_listing as ops_cancel_listing, compute_brief_column_text_widths as ops_compute_brief_column_text_widths,
-    find_file_index as ops_find_file_index, find_file_indices as ops_find_file_indices,
+    BriefColumnWidths, BriefColumnsIpcError, DirectorySortMode, ListingLookupError, ListingStats, NameFilterResult,
+    ResortResult, RowBeside, SortColumn, SortOrder, StreamingListingStartResult, cancel_listing as ops_cancel_listing,
+    compute_brief_column_text_widths as ops_compute_brief_column_text_widths, find_file_index as ops_find_file_index,
+    find_file_indices as ops_find_file_indices,
     fuzzy_find_first_match_in_listing as ops_fuzzy_find_first_match_in_listing, get_file_at as ops_get_file_at,
     get_file_beside as ops_get_file_beside, get_file_range as ops_get_file_range,
     get_listing_stats as ops_get_listing_stats, keep_listings_alive as ops_keep_listings_alive,
@@ -15,6 +15,7 @@ use crate::file_system::{
     refresh_listing_index_sizes as ops_refresh_listing_index_sizes, resort_listing as ops_resort_listing,
     set_listing_include_hidden as ops_set_listing_include_hidden,
 };
+use cmdr_fs::entry::FileEntry;
 use std::path::{Path, PathBuf};
 use tokio::time::Duration;
 
@@ -50,7 +51,7 @@ const TAGS_WRITE_TIMEOUT: Duration = Duration::from_secs(5);
 #[specta::specta]
 pub async fn enrich_tags(listing_id: String, paths: Vec<String>) -> TimedOut<()> {
     blocking_with_timeout_flag(TAGS_TIMEOUT, (), move || {
-        let updates: Vec<(String, Vec<crate::file_system::listing::metadata::TagRef>)> = paths
+        let updates: Vec<(String, Vec<cmdr_fs::entry::TagRef>)> = paths
             .into_iter()
             .map(|p| {
                 let tags = crate::file_system::tags::read_tags(Path::new(&p));

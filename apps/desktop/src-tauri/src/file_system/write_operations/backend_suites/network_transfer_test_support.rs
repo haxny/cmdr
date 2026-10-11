@@ -161,7 +161,7 @@ pub(super) fn clean_deep<'a>(volume: &'a dyn Volume, dir: &'a Path) -> Pin<Box<d
 
 /// Names the entries a finished operation must never have left behind: its own
 /// staging siblings, under either marker.
-fn staging_leftovers(entries: &[crate::file_system::listing::FileEntry]) -> Vec<String> {
+fn staging_leftovers(entries: &[cmdr_fs::entry::FileEntry]) -> Vec<String> {
     entries
         .iter()
         .filter(|e| is_staging_temp_name(&e.name))

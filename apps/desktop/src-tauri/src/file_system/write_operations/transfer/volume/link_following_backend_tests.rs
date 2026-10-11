@@ -19,7 +19,6 @@ use super::copy::copy_volumes_with_progress;
 use super::move_cross::move_volumes_with_progress;
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, read, write_file};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{
     CopyScanResult, InMemoryVolume, ListingProgress, LocalPosixVolume, SpaceInfo, StreamLength, StreamWriteProgress,
     Volume, VolumeError, VolumeReadStream, WriteMode,
@@ -28,6 +27,7 @@ use crate::file_system::write_operations::event_sinks::{CollectorEventSink, Oper
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;

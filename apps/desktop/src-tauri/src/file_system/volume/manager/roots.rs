@@ -374,9 +374,9 @@ pub fn is_stale_mount_errno(_errno: i32) -> bool {
 mod tests {
     use super::super::get_volume_manager;
     use super::*;
-    use crate::file_system::listing::FileEntry;
     use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, VolumeError};
     use crate::ignore_poison::IgnorePoison;
+    use cmdr_fs::entry::FileEntry;
     use std::pin::Pin;
 
     fn registration_over(roots: &[&str]) -> Registration {

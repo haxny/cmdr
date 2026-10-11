@@ -129,7 +129,7 @@ fn apply_tag_action(
     action: &str,
     paths: &[String],
     colors: &[u8],
-) -> Result<Vec<(String, Vec<crate::file_system::listing::metadata::TagRef>)>, ToolError> {
+) -> Result<Vec<(String, Vec<cmdr_fs::entry::TagRef>)>, ToolError> {
     use crate::file_system::tags::{read_tags, set_tags, toggle_color};
     use std::path::Path;
 
@@ -178,11 +178,8 @@ fn apply_tag_action(
 /// colored tags whose color isn't requested, and add the canonical system tag for
 /// a requested color the file lacks. Pure, so it's unit-testable.
 #[cfg(target_os = "macos")]
-fn desired_tags_for_set(
-    current: &[crate::file_system::listing::metadata::TagRef],
-    colors: &[u8],
-) -> Vec<crate::file_system::listing::metadata::TagRef> {
-    use crate::file_system::listing::metadata::TagRef;
+fn desired_tags_for_set(current: &[cmdr_fs::entry::TagRef], colors: &[u8]) -> Vec<cmdr_fs::entry::TagRef> {
+    use cmdr_fs::entry::TagRef;
     let mut out: Vec<TagRef> = current.iter().filter(|t| t.color == 0).cloned().collect();
     for &color in colors {
         if out.iter().any(|t| t.color == color) {
@@ -208,7 +205,7 @@ fn desired_tags_for_set(
 #[cfg(target_os = "macos")]
 fn refresh_listing_tags(
     state: &crate::mcp::pane_state::PaneState,
-    updates: Vec<(String, Vec<crate::file_system::listing::metadata::TagRef>)>,
+    updates: Vec<(String, Vec<cmdr_fs::entry::TagRef>)>,
 ) {
     if updates.is_empty() {
         return;
@@ -239,7 +236,7 @@ fn action_verb(action: &str) -> &'static str {
 #[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
-    use crate::file_system::listing::metadata::TagRef;
+    use cmdr_fs::entry::TagRef;
 
     fn tag(name: &str, color: u8) -> TagRef {
         TagRef {

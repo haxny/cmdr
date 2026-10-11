@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{LocalPosixVolume, Volume};
+use cmdr_fs::entry::FileEntry;
 
 /// An overlay that contributes one row per name it was built with, for
 /// whatever directory it was pointed at.

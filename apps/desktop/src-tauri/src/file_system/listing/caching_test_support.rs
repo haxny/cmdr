@@ -6,14 +6,14 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
 use super::cached_listing::{CachedListing, LISTING_CACHE, epoch_millis_now};
-use super::metadata::FileEntry;
 use super::operations::list_directory_end;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError,
     VolumeReadStream, WatchCoverage,
 };
-use crate::ignore_poison::RwLockIgnorePoison;
 
 /// A `LISTING_CACHE` entry owned by ONE test, torn down on drop.
 ///
@@ -277,7 +277,7 @@ impl Volume for WatchCoverageVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         self.list_calls.fetch_add(1, Ordering::Relaxed);
         self.inner.list_directory(path, on_progress)
@@ -405,7 +405,7 @@ impl Volume for SpelledVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         match &self.listing_refusal {
             Some(error) => {
@@ -497,7 +497,7 @@ impl Volume for ScriptedListVolume {
     fn list_directory<'a>(
         &'a self,
         _path: &'a Path,
-        _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        _on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         let next = self.script.lock().ok().and_then(|mut s| s.pop_front());
         Box::pin(async move {

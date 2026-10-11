@@ -13,11 +13,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::{AcceptedEdit, ConnectedPlace, PlaceEdit, check};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::manager::VolumeManager;
 use crate::file_system::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 use crate::network::saved_server_fields::SavedServerOutcome;
 use crate::volume_broadcast::{self, RootChangeKind, VolumeRootChanged};
+use cmdr_fs::entry::FileEntry;
 
 const PREFIX: &str = "sftp://ada@nas.local:22";
 

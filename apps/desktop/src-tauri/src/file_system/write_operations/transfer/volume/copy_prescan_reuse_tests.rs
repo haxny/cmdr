@@ -25,11 +25,11 @@
 use super::super::super::conflict_responder_test_support::await_prompted_clash;
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{CopyScanResult, InMemoryVolume, ListingProgress, LocalPosixVolume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::test_support::TestDir;
+use cmdr_fs::entry::FileEntry;
 
 /// `resolve_volume_conflict` in `Stop` mode must NOT call `scan_for_copy` on the
 /// source when a size hint is available. On MTP, `scan_for_copy(file_path)` lists

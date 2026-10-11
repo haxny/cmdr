@@ -8,8 +8,8 @@ use super::caching::{
 };
 use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
 use super::diff::PaneRows;
-use super::metadata::{FileEntry, TagRef};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use cmdr_fs::entry::{FileEntry, TagRef};
 
 fn tag(name: &str, color: u8) -> TagRef {
     TagRef {

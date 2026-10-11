@@ -10,11 +10,11 @@
 use super::cleanup::reap_stale_transfer_temps;
 use super::faulty_volume::forward_volume_methods;
 use super::finalize::finalize_safe_replace;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::entry::FileEntry;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;

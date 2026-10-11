@@ -7,8 +7,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use super::{Volume, get_volume_manager};
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::VolumeError;
+use cmdr_fs::entry::FileEntry;
 
 /// A registration in the process-global `VolumeManager`, reverted on drop.
 ///

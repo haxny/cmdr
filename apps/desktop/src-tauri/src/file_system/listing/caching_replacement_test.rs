@@ -9,8 +9,8 @@
 use super::caching::publish_replacement;
 use super::caching_test_support::{TestListing, unique_test_id};
 use super::diff_emitter::pending_count;
-use super::metadata::FileEntry;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use cmdr_fs::entry::FileEntry;
 
 /// Creates a minimal test entry.
 fn make_entry(name: &str, is_dir: bool, size: Option<u64>) -> FileEntry {

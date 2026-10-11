@@ -31,13 +31,13 @@ use super::super::super::recovered_name::FinalizeFailure;
 use super::super::faulty_volume::forward_volume_methods;
 use super::test_support::make_state;
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     InMemoryVolume, ListingProgress, ServerCopyProgress, StreamLength, StreamWriteProgress, Volume, VolumeError,
     VolumeReadStream,
 };
 use crate::file_system::write_operations::state::OperationIntent;
+use cmdr_fs::entry::FileEntry;
 
 /// A volume that can copy inside itself, and counts who asked.
 ///

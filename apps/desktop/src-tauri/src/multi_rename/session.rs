@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::file_system::listing::cached_listing::{LISTING_CACHE, reconciled_cache};
-use crate::file_system::listing::metadata::FileEntry;
 use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use cmdr_fs::entry::FileEntry;
 
 use super::error::MultiRenameError;
 use super::names_file::{self, Written};

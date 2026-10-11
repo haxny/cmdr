@@ -41,10 +41,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(crate) use cmdr_fs::testing::{TestDir, wait_until, wait_until_async};
 
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, Volume, VolumeError,
 };
+use cmdr_fs::entry::FileEntry;
 
 /// Points the secret store at a scratch directory of this test's own, and returns it.
 ///

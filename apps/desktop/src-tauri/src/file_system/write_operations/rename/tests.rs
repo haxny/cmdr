@@ -13,8 +13,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{LaneKey, ListingProgress};
 use crate::file_system::write_operations::busy_volume_ids;
-use crate::file_system::{FileEntry, Volume, VolumeError};
+use crate::file_system::{Volume, VolumeError};
 use crate::test_support::TestDir;
+use cmdr_fs::entry::FileEntry;
 
 fn unique(label: &str) -> String {
     static N: AtomicU64 = AtomicU64::new(0);

@@ -17,12 +17,12 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::make_state;
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, VolumeReadStream,
 };
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Mutex;

@@ -12,12 +12,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, RwLock};
 use std::time::Instant;
 
-use crate::file_system::listing::metadata::{FileEntry, TagRef};
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::path_index::PathIndexCache;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::visible_rows::{ScratchProjection, VisibleRows, VisibleRowsCache};
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::entry::{FileEntry, TagRef};
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 /// Cache for directory listings (on-demand virtual scrolling).
 /// Key: listing_id, Value: cached listing with all entries.
