@@ -895,6 +895,20 @@ export const commands = {
    */
   listOperations: () => __TAURI_INVOKE<OperationSnapshot[]>('list_operations'),
   /**
+   *  One window of an operation's live transfer tree, for the progress dialog and
+   *  the queue. A view calls it on mount and again on each `write-progress` tick
+   *  of its operation, with its own hand toggles and scroll position; the
+   *  backend keeps no per-view state. `ready: false` while the operation scans.
+   *
+   *  `async` so it never answers on the main thread: a window costs microseconds,
+   *  but it takes the tree's lock, which a driver settling a whole subtree at once
+   *  (a folder renamed in one call) holds for as long as that subtree is big.
+   */
+  getTransferTreeView: (operationId: string, request: TransferTreeViewRequest) =>
+    typedError<TransferTreeView, TransferTreeViewError>(
+      __TAURI_INVOKE('get_transfer_tree_view', { operationId, request }),
+    ),
+  /**
    *  Cancels one operation, keeping already-copied files. A Queued op is dropped
    *  without ever spawning; a Running/Paused op routes through the existing
    *  keep-partials cancel path.
@@ -12691,6 +12705,14 @@ export type ProgressAtStop = {
 }
 
 /**
+ *  Which of an operation's two progress counts decides how long it has left:
+ *  its bytes, or its file count. Decided once, in `eta.rs`, with hysteresis,
+ *  and carried on `write-progress` and the transfer tree's view alike, so every
+ *  surface fills its bars along the same axis.
+ */
+export type ProgressAxis = 'bytes' | 'files'
+
+/**
  *  Step `number` of `total` in a multi-step operation. Rides on
  *  [`WriteProgressEvent::step`]; the backend decides it, the frontend only words it.
  */
@@ -16252,6 +16274,81 @@ export type TransferRole =
   // The volume the files were going TO.
   | 'destination'
 
+// One row.
+export type TransferTreeRow = {
+  // The node id; for a compact chain, the deepest folder's.
+  id: number
+  depth: number
+  // The name, or a compact chain's names joined with `/`.
+  label: string
+  kind: TreeRowKind
+  state: TreeRowState
+  expanded: boolean
+  hasChildren: boolean
+  // 1-based, for `aria-posinset`.
+  posInSet: number
+  // For `aria-setsize`.
+  setSize: number
+  // A folder's files; `0/1` or `1/1` for a file.
+  filesDone: number
+  filesTotal: number
+  // In-flight bytes included.
+  bytesDone: number
+  bytesTotal: number
+  // Descendant counts (folders).
+  skipped: number
+  failed: number
+  // Failed files only.
+  failure: WriteOperationError | null
+}
+
+// One window of rows.
+export type TransferTreeView = {
+  /**
+   *  `false` while the operation scans (no tree yet): every other field is
+   *  empty. Also `false` for a tree a bug turned off, which the transfer
+   *  outlives.
+   */
+  ready: boolean
+  // Bumps on every mutation: equal means nothing changed.
+  revision: number
+  // Rows under the effective expansion.
+  totalRows: number
+  // Where `rows` starts.
+  offset: number
+  rows: TransferTreeRow[]
+  // Flat index of the topmost active row (or the folder row hiding it).
+  focusRow: number | null
+  /**
+   *  The axis every folder bar fills along: the operation's bottleneck,
+   *  the same answer its `write-progress` events carry.
+   */
+  axis: ProgressAxis
+}
+
+// Why there's no tree view to answer with.
+export type TransferTreeViewError =
+  /**
+   *  No operation by that id: it never existed, or it has settled and its
+   *  tree went with it.
+   */
+  | { type: 'unknown_operation' }
+  /**
+   *  An operation that never builds a tree: a delete, a trash, a rename, an
+   *  edit inside an existing archive.
+   */
+  | { type: 'not_a_transfer' }
+
+// What a view asks for.
+export type TransferTreeViewRequest = {
+  // Rows the user expanded by hand.
+  expanded: number[]
+  // Rows the user collapsed by hand.
+  collapsed: number[]
+  window: TreeWindow
+  limit: number
+}
+
 /**
  *  What a transfer is waiting on right now, derived from the live in-flight
  *  table in `transfer::transfer_probe`.
@@ -16442,6 +16539,18 @@ export type TrashRoutingAnswer = {
    */
   folderMayHoldOnlineOnly: boolean
 }
+
+export type TreeRowKind = 'file' | 'folder'
+
+// A row's state as the view shows it, for files and folders alike.
+export type TreeRowState = 'waiting' | 'active' | 'done' | 'skipped' | 'failed'
+
+// Where the window sits.
+export type TreeWindow =
+  // Around the work: `lead` rows above the topmost active row.
+  | { kind: 'follow'; lead: number }
+  // From a flat row index the user scrolled to.
+  | { kind: 'at'; offset: number }
 
 // One approved host key.
 export type TrustedHostKey = {
@@ -18440,6 +18549,12 @@ export type WriteProgressEvent = {
    *  `None` during warm-up or when both rates are zero (operation stalled).
    */
   etaSeconds?: number | null
+  /**
+   *  The axis that decides the ETA, held steady by hysteresis
+   *  (`eta.rs`). Every folder bar in the transfer tree fills along it. `None`
+   *  before the estimator has seen the event.
+   */
+  bottleneck?: ProgressAxis | null
   /**
    *  Index-derived expected file count, for rendering a progress bar during
    *  the scanning phase before the foolproof re-scan finishes. `None` when

@@ -12,6 +12,9 @@ use crate::file_system::write_operations::{
     resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,
     trash_routing_for_selection as ops_trash_routing_for_selection,
 };
+use crate::file_system::write_operations::{
+    TransferTreeView, TransferTreeViewError, TransferTreeViewRequest, transfer_tree_view as ops_transfer_tree_view,
+};
 use crate::file_system::{
     OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
     ReadOnlySide, TauriEventSink, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
@@ -463,6 +466,23 @@ pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerO
 #[specta::specta]
 pub fn list_operations() -> Vec<OperationSnapshot> {
     ops_list_operations()
+}
+
+/// One window of an operation's live transfer tree, for the progress dialog and
+/// the queue. A view calls it on mount and again on each `write-progress` tick
+/// of its operation, with its own hand toggles and scroll position; the
+/// backend keeps no per-view state. `ready: false` while the operation scans.
+///
+/// `async` so it never answers on the main thread: a window costs microseconds,
+/// but it takes the tree's lock, which a driver settling a whole subtree at once
+/// (a folder renamed in one call) holds for as long as that subtree is big.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_transfer_tree_view(
+    operation_id: String,
+    request: TransferTreeViewRequest,
+) -> Result<TransferTreeView, TransferTreeViewError> {
+    ops_transfer_tree_view(&operation_id, &request)
 }
 
 /// Cancels one operation, keeping already-copied files. A Queued op is dropped

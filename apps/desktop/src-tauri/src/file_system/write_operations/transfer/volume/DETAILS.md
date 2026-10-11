@@ -542,6 +542,16 @@ extract".
 
 Pinned by `copy_tree_order_tests.rs` (a reversed-listing source: the merge, both drivers, and a cross-volume move).
 
+## What the drivers report while they run
+
+Every leaf's `LeafProgress` is also its transfer-tree row, and the merge walker finds each child's row through one
+`TreeLevel` per listed folder (`merge_level`'s `folder` argument, observation only); a rename move's tree is its items,
+done as each rename lands (`move_same.rs::landed_whole`). Every driver also reports each top-level source's verdict on
+`write-source-item-done`. Who reports what, and why the tree can never reach back into a transfer:
+`../../transfer_tree/DETAILS.md` § "How drivers report" and `../../DETAILS.md` § "Per-source outcomes". Pinned by
+`copy_tree_rows_tests.rs` (several files in flight across folders under the concurrent driver, skip-all, a mid-walk
+skip, a failure naming its file, a cancel leaving rows waiting, and each driver's verdicts).
+
 ## One-pass sequential extract (compressed tar / solid 7z sources)
 
 A directory source on a SEQUENTIAL archive (a compressed tar or solid 7z) can't be read entry-by-entry without

@@ -19,7 +19,7 @@ callbacks. The transfers themselves: `../CLAUDE.md`.
   drops by everything the big one had streamed. Reported = `finished + sum(in-flight)`, under ONE lock.
 - **A leaf's mark is its HIGH-WATER**, because an attempt restarts at byte zero; ❌ never lower it on a restart (the
   prefix gets credited twice). `complete` swaps that share for the leaf's exact size; `Drop` withdraws it if the leaf
-  never landed.
+  never landed. The handle is also the file's transfer-tree row, settled at the same moments (`DETAILS.md`).
 - **The bars are leaf-granular against preflight LEAF totals**, so ❌ never reset the tally per inner file.
 - **Every skip credits the bars AND calls `state.note_skipped`** (`SourceProgress::skip_leaf` does both), ❌ never one
   without the other. The bars must reach

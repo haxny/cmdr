@@ -94,6 +94,7 @@ pub(super) fn move_with_staging(
     };
 
     state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
+    let tree = state.transfer_tree.reporter();
 
     // Pre-flight filesystem-limit check: a cross-FS move stages a full copy, so
     // the destination's per-file cap (FAT32's 4 GiB) applies. Block before
@@ -200,6 +201,9 @@ pub(super) fn move_with_staging(
             let stamp = SourceStamp::read(&file_info.path);
             // Copy to staging directory instead of final destination
             let staged_before = transaction.created_files().len();
+            // The tree tracks this COPY phase; the source sweep after it is a
+            // phase of the header, and the rows stay as the copy left them.
+            let row = tree.leaf(file_info.tree_node);
             let verdict = copy_single_item(
                 &file_info.path,
                 file_info.dest_path(&staging_dir),
@@ -231,6 +235,7 @@ pub(super) fn move_with_staging(
                 &mut skipped_subtrees,
                 &mut already_synced,
                 Some(&mut deferred_landed),
+                &row,
             )?;
 
             // ❗ The LEDGER is the witness here, ❌ never `verdict`. Deleting an
@@ -298,6 +303,7 @@ pub(super) fn move_with_staging(
         events.emit_error(event);
         return Err(e);
     }
+    tree.empty_folders_in_place();
 
     // Everything is staged, so the staged folders take their source's xattrs
     // and dates now, and Phase 3's rename carries them to the destination.

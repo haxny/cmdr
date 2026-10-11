@@ -10,6 +10,7 @@ use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::{WrittenFile, WrittenIdentity};
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 
 fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)))
@@ -514,6 +515,7 @@ fn copy_one_file_knowing(source: &Path, dest_dir: &Path, created_dirs: &mut Hash
         &mut HashSet::new(),
         &mut HashSet::new(),
         None,
+        &TreeLeaf::detached(),
     )
     .expect("the copy should land");
 
@@ -817,7 +819,7 @@ fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
 
     let tree = state.transfer_tree.get().expect("the scan installed a tree");
     assert_eq!(
-        tree.read(outline),
+        tree.read(outline).expect("the tree is on"),
         vec![
             "photos/ 2 files 8 B",
             "  2024/ 1 files 5 B",
@@ -825,6 +827,44 @@ fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
             "  a.jpg 3 B",
             "notes.txt 2 B",
         ]
+    );
+}
+
+/// Every row a local copy reaches ends the way its file did: landed, or skipped
+/// on a clash, and the empty folder once the scanned-dirs pass made it. The
+/// folder holding the skip still landed something, so it reads done.
+#[test]
+fn a_local_copy_settles_every_row_the_way_its_file_ended() {
+    use crate::file_system::write_operations::transfer_tree::test_support::row_states;
+    use crate::file_system::write_operations::types::ConflictResolution;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(src.join("photos/empty")).unwrap();
+    fs::create_dir_all(dst.join("photos")).unwrap();
+    fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
+    fs::write(src.join("photos/b.jpg"), b"bbbbb").unwrap();
+    fs::write(dst.join("photos/a.jpg"), b"theirs").unwrap();
+    let state = make_state(0);
+
+    copy_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        "op-local-copy-rows",
+        &state,
+        &[src.join("photos")],
+        &dst,
+        &WriteOperationConfig {
+            conflict_resolution: ConflictResolution::Skip,
+            ..WriteOperationConfig::default()
+        },
+    )
+    .expect("the copy succeeds");
+
+    let tree = state.transfer_tree.get().expect("the scan installed a tree");
+    assert_eq!(
+        tree.read(row_states).expect("the tree is on"),
+        vec!["photos/ done", "  empty/ done", "  a.jpg skipped", "  b.jpg done"]
     );
 }
 

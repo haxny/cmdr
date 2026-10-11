@@ -11,7 +11,7 @@ use super::super::model::{NodeKind, TreeModel, TreeRowState};
 use super::super::test_support::{english, node_at};
 use super::super::{TransferTree, TreeRecorder};
 use super::{TransferTreeViewRequest, TreeRowKind, TreeWindow, flatten};
-use crate::file_system::write_operations::types::WriteOperationError;
+use crate::file_system::write_operations::types::{ProgressAxis, WriteOperationError};
 
 /// `folders` top-level folders, each holding `files` files, plus `loose` top-level files.
 fn grid(folders: usize, files: usize, loose: usize) -> TreeModel {
@@ -319,14 +319,24 @@ fn the_limit_and_the_toggle_lists_are_capped() {
 #[test]
 fn every_mutation_bumps_the_revision_a_view_reports() {
     let tree = TransferTree::new(grid(1, 2, 0));
-    let before = tree.view(&at(0, 5)).revision;
-    let file = tree.read(|model| node_at(model, &["folder_0", "file_00000"]));
+    let view = |tree: &TransferTree| tree.view(&at(0, 5), ProgressAxis::Files).expect("the tree is on");
+    let before = view(&tree).revision;
+    let file = tree
+        .read(|model| node_at(model, &["folder_0", "file_00000"]))
+        .expect("the tree is on");
 
     tree.mutate(|model| model.complete(file));
 
-    assert!(tree.view(&at(0, 5)).revision > before);
+    let after = view(&tree);
+    assert!(after.revision > before);
+    assert!(after.ready);
+    assert_eq!(
+        after.axis,
+        ProgressAxis::Files,
+        "the view carries the axis it was handed"
+    );
     assert_eq!(
         tree.read(|model| model.leaf_state(file)),
-        super::super::model::LeafState::Done
+        Some(super::super::model::LeafState::Done)
     );
 }

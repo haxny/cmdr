@@ -43,8 +43,11 @@ async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
         Duration::from_millis(0),
     );
     let leaf = ledger
-        .for_source(Some("f".to_string()), Arc::new(Mutex::new(std::time::Instant::now())))
-        .begin_leaf();
+        .for_source(
+            std::path::Path::new("/src/f"),
+            Arc::new(Mutex::new(std::time::Instant::now())),
+        )
+        .begin_leaf(None);
 
     // Paused, not cancelled: the chunk callback must still Continue (pause is a
     // no-op on the concurrent per-file path in v1).

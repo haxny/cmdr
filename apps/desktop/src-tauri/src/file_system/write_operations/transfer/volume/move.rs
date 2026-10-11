@@ -286,7 +286,12 @@ pub async fn move_between_volumes(
                 }
                 Err(failure) => {
                     log::warn!(target: "move", "move operation {} failed: {:?}", op_id, failure.error);
-                    events.emit_error(write_error_event_from(op_id.clone(), WriteOperationType::Move, failure));
+                    events.emit_error(write_error_event_from(
+                        &state,
+                        op_id.clone(),
+                        WriteOperationType::Move,
+                        failure,
+                    ));
                 }
             }
 

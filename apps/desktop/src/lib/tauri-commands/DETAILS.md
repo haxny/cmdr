@@ -66,7 +66,10 @@ commands, and notable non-obvious placements.
 - **`operations.ts`**: the operation manager (queue window): `listOperations`, `cancelOperation(s)`, `pauseOperation` /
   `resumeOperation`, `pauseAll` / `resumeAll`, `dismissFailedOperation` / `dismissAllFailedOperations`,
   `retryFailedOperation` (a failed row's Retry, rejecting with the typed `WriteOperationError` on a refused start), and
-  the `onOperationsChanged` membership/status event.
+  the `onOperationsChanged` membership/status event. Plus `getTransferTreeView`, one window of a running transfer's live
+  tree, which answers its typed refusal (`unknown_operation`, `not_a_transfer`) as a value (`{ refusal }`), ❌ never a
+  throw: an operation settling between two ticks is an ordinary answer for a view. Contract:
+  `src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view command".
 - **`operation-log.ts`**: the operation journal's read API (`getRecentOperationLogEntries`, `getOperationLogDetail`)
   plus its two write entries. `rollbackOperation` reverses ONE operation and resolves as soon as the inverse is queued,
   throwing a typed `RollbackRefusalFailure` on a refusal; `undoOperations` reverses SEVERAL and resolves only with the

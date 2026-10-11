@@ -20,6 +20,7 @@ use super::super::types::{ConflictResolution, WriteOperationError, WriteOperatio
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
 use super::fresh_plan::{FreshPlan, PlanProgress, RemoteFeed, plan_sources, validate_aliases};
+use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
 use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
@@ -296,15 +297,22 @@ async fn run(
     .await?;
     check_entry_names(&plan).map_err(EditError::Op)?;
     // The plan's entries are the compress's rows: entry names are already
-    // relative to the selection's parent. Each entry's node pairs with the
-    // index `produce` reports (milestone 3 of the transfer-tree spec).
-    let (tree, _entry_nodes) = from_archive_plan(
+    // relative to the selection's parent. Each entry's row pairs with the
+    // entry index `produce` reports (`CompressRows`).
+    let (tree, entry_rows) = from_archive_plan(
         plan.entries
             .iter()
             .map(|entry| (entry.name.as_str(), entry.is_directory, entry.size)),
         &TreeOrder::active(),
     );
     state.transfer_tree.install(tree);
+    let rows = CompressRows::new(
+        state.transfer_tree.reporter(),
+        entry_rows
+            .into_iter()
+            .zip(plan.entries.iter().map(|entry| entry.is_directory))
+            .collect(),
+    );
     let planned_dirs = plan.entries.iter().filter(|entry| entry.is_directory).count();
     hooks.emit_scan_progress(
         PlanProgress {
@@ -346,6 +354,7 @@ async fn run(
     );
     let cancellation_for_progress = cancellation.clone();
     let progress: FreshZipProgressObserver = Arc::new(move |tick| {
+        rows.on_tick(tick);
         MutationHooks::on_progress(
             &*hooks_for_progress,
             MutationProgress {

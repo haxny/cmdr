@@ -8,6 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
 };
@@ -194,13 +195,17 @@ impl<T> AtPath<T> for Result<T, VolumeError> {
     }
 }
 
-/// Builds a `WriteErrorEvent` from a `WriteFailure`. The FE renders all copy and
-/// classification from the typed `error`. Shared by `volume::r#move` and `volume::copy`.
+/// Builds a `WriteErrorEvent` from a `WriteFailure`, marking the row it names
+/// in the operation's transfer tree. The FE renders all copy and classification
+/// from the typed `error`. Shared by `volume::r#move`, `volume::move_same`, and
+/// `volume::copy`.
 pub(super) fn write_error_event_from(
+    state: &WriteOperationState,
     operation_id: String,
     operation_type: WriteOperationType,
     failure: WriteFailure,
 ) -> WriteErrorEvent {
+    state.transfer_tree.note_failure(&failure.error);
     WriteErrorEvent::new(operation_id, operation_type, failure.error)
 }
 

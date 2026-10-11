@@ -176,6 +176,12 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   folders first, by the name the zip holds; the walk sorts every listed level the same way before pushing it. A renamed
   duplicate therefore sorts by its new name (`report (1).txt` before `report.txt`).
 
+  **The compress's tree rows come from the producer's ticks** (`fresh_rows.rs::CompressRows`): entries are written
+  one at a time in plan order and every tick says how many are finished, so the entry in flight is always the
+  `entries_done`th and its bytes are the source bytes read since the one before it ended. `produce` stays free of any
+  tree vocabulary. Pinned by `fresh_rows_tests.rs::compress_rows_follow_the_producers_ticks_entry_by_entry`;
+  the tree itself: `../transfer_tree/DETAILS.md` § "How drivers report".
+
   **One producer, two destination routes.** Local POSIX, SMB, SFTP, and ADB accept unknown-length writes, so the
   producer streams directly to a tracked same-directory stage with `CreateNew`. WebDAV and MTP receive the same
   producer into a private local spool, then a known-length staged upload. This sequencing makes same-device MTP

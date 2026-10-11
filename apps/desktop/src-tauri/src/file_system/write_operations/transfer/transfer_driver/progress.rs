@@ -13,7 +13,9 @@
 //!   the name its events are labeled with. Leaves are minted from it.
 //! - [`LeafProgress`] is ONE leaf file's handle, held for that file's whole
 //!   life. It owns the leaf's high-water mark and withdraws it from the ledger
-//!   when the leaf settles, whichever way it settles.
+//!   when the leaf settles, whichever way it settles. It is also the file's
+//!   row in the transfer tree (`transfer_tree::TreeLeaf`): active while it
+//!   lives, done on `complete`, back to waiting on `Drop`.
 //!
 //! ## Why a leaf needs a handle of its own
 //!
@@ -32,12 +34,16 @@
 //! keeps the total from dipping between the two halves of that swap.
 
 use std::ops::ControlFlow;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::path::Path;
+#[cfg(test)]
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
+use crate::file_system::write_operations::transfer_tree::{NodeId, TreeLeaf, TreeReporter};
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
 
@@ -80,6 +86,9 @@ pub(in crate::file_system::write_operations::transfer) struct LeafProgressLedger
     total_files: usize,
     total_bytes: u64,
     progress_interval: Duration,
+    /// The operation's transfer tree, which every leaf's handle is also the
+    /// row of (`TreeLeaf`). Silent when the operation has none.
+    tree: TreeReporter,
 }
 
 impl LeafProgressLedger {
@@ -97,6 +106,8 @@ impl LeafProgressLedger {
         total_bytes: u64,
         progress_interval: Duration,
     ) -> Arc<Self> {
+        // Built after the scan, so the tree it installed is there to report into.
+        let tree = state.transfer_tree.reporter();
         Arc::new(Self {
             events: Some(events),
             state,
@@ -110,6 +121,7 @@ impl LeafProgressLedger {
             total_files,
             total_bytes,
             progress_interval,
+            tree,
         })
     }
 
@@ -132,6 +144,7 @@ impl LeafProgressLedger {
             total_files: 0,
             total_bytes: 0,
             progress_interval: Duration::ZERO,
+            tree: TreeReporter::none(),
         })
     }
 
@@ -140,11 +153,17 @@ impl LeafProgressLedger {
     pub(in crate::file_system::write_operations::transfer) fn silent_source(
         state: Arc<WriteOperationState>,
     ) -> Arc<SourceProgress> {
-        Self::silent(state).for_source(None, Arc::new(Mutex::new(Instant::now())))
+        Arc::new(SourceProgress {
+            ledger: Self::silent(state),
+            file_name: None,
+            node: None,
+            last_emit: Arc::new(Mutex::new(Instant::now())),
+        })
     }
 
-    /// One top-level source's view, carrying the name its events are labeled
-    /// with. Every leaf of that source is minted from the returned handle.
+    /// One top-level source's view, labeled with the source's name and holding
+    /// its row in the transfer tree. Every leaf of that source is minted from
+    /// the returned handle.
     ///
     /// `last_emit` is the throttle clock, and whose it is belongs to the caller:
     /// a driver whose sources overlap shares ONE across them, so the event rate
@@ -153,12 +172,13 @@ impl LeafProgressLedger {
     /// previous source's last-emit instant says nothing about this one.
     pub(in crate::file_system::write_operations::transfer) fn for_source(
         self: &Arc<Self>,
-        file_name: Option<String>,
+        source: &Path,
         last_emit: Arc<Mutex<Instant>>,
     ) -> Arc<SourceProgress> {
         Arc::new(SourceProgress {
             ledger: Arc::clone(self),
-            file_name,
+            file_name: source.file_name().map(|name| name.to_string_lossy().into_owned()),
+            node: self.tree.source(source),
             last_emit,
         })
     }
@@ -212,27 +232,47 @@ pub(in crate::file_system::write_operations::transfer) struct SourceProgress {
     /// The name every event from this source carries. A directory source labels
     /// its events with the FOLDER's name, not each inner file's.
     file_name: Option<String>,
+    /// This source's top-level row in the transfer tree, where a walk of it
+    /// starts looking its children up.
+    node: Option<NodeId>,
     /// This source's throttle clock. Shared with its siblings or private to it,
     /// as [`LeafProgressLedger::for_source`] describes.
     last_emit: Arc<Mutex<Instant>>,
 }
 
 impl SourceProgress {
-    /// Opens accounting for ONE leaf file, held for that file's whole life.
+    /// Opens accounting for ONE leaf file, held for that file's whole life,
+    /// and makes `node` (its row in the transfer tree, if it has one) active.
     ///
     /// ❗ The returned handle must live until the leaf settles: its `Drop` is
     /// what takes a failed or cancelled leaf's bytes back out of the in-flight
-    /// sum. Dropping it early reports the rest of that file's stream as nothing,
-    /// and leaking it reports bytes that never landed.
-    pub(in crate::file_system::write_operations::transfer) fn begin_leaf(self: &Arc<Self>) -> LeafProgress {
+    /// sum, and its row back to waiting. Dropping it early reports the rest of
+    /// that file's stream as nothing, and leaking it reports bytes that never
+    /// landed.
+    pub(in crate::file_system::write_operations::transfer) fn begin_leaf(
+        self: &Arc<Self>,
+        node: Option<NodeId>,
+    ) -> LeafProgress {
         LeafProgress {
             source: Arc::clone(self),
-            high_water: AtomicU64::new(0),
+            row: self.ledger.tree.leaf(node),
             settled: AtomicBool::new(false),
         }
     }
 
-    /// Credits ONE leaf the conflict policy declined.
+    /// This source's top-level row.
+    pub(in crate::file_system::write_operations::transfer) fn node(&self) -> Option<NodeId> {
+        self.node
+    }
+
+    /// The operation's tree, for a walker resolving its children's rows.
+    pub(in crate::file_system::write_operations::transfer) fn tree(&self) -> &TreeReporter {
+        &self.ledger.tree
+    }
+
+    /// Credits ONE leaf the conflict policy declined, and marks its row
+    /// skipped: a file's, or a whole folder's (a folder that met a file and
+    /// was answered Skip).
     ///
     /// A skipped leaf IS done, so both bars have to count it; `note_skipped` is
     /// what keeps its bytes out of the rate, since nothing moved for them.
@@ -241,8 +281,9 @@ impl SourceProgress {
     /// the user already has can decline tens of thousands of children back to
     /// back, and an unthrottled emit apiece is a flood of IPC nobody reads. The
     /// operation's completion event carries the final tally regardless.
-    pub(in crate::file_system::write_operations::transfer) fn skip_leaf(&self, leaf_bytes: u64) {
+    pub(in crate::file_system::write_operations::transfer) fn skip_leaf(&self, leaf_bytes: u64, node: Option<NodeId>) {
         let ledger = &self.ledger;
+        ledger.tree.skip_whole(node);
         let reported = {
             let mut totals = ledger.totals.lock_ignore_poison();
             totals.finished += leaf_bytes;
@@ -266,8 +307,10 @@ impl SourceProgress {
 /// when the bytes landed, or by `Drop` when they didn't.
 pub(in crate::file_system::write_operations::transfer) struct LeafProgress {
     source: Arc<SourceProgress>,
-    /// The furthest this leaf has reported, which is exactly what it has
-    /// contributed to the ledger's in-flight sum.
+    /// The leaf's row in the transfer tree, settled with it. Its byte counter
+    /// is the leaf's HIGH-WATER mark: the furthest this leaf has reported,
+    /// which is exactly what it has contributed to the ledger's in-flight sum,
+    /// and what the tree's view shows for the row.
     ///
     /// A file that hits a transport blip is run again from its first byte
     /// (`retry.rs`), so the raw per-chunk count legitimately drops to 0
@@ -276,7 +319,7 @@ pub(in crate::file_system::write_operations::transfer) struct LeafProgress {
     /// throughput. Holding the high-water mark keeps the number monotonic AND
     /// keeps it honest at the end, because `complete` adds the leaf's exact size
     /// once, whatever the attempt count.
-    high_water: AtomicU64,
+    row: TreeLeaf,
     /// Whether this leaf has already been taken out of the in-flight sum, so
     /// `Drop` after a `complete` doesn't withdraw a second time.
     settled: AtomicBool,
@@ -293,10 +336,11 @@ impl LeafProgress {
         let reported = {
             let mut totals = ledger.totals.lock_ignore_poison();
             // Under the ledger's lock, so the sum and this leaf's share of it
-            // always agree. Only this leaf's own task writes `high_water`.
-            let previous = self.high_water.load(Ordering::Relaxed);
+            // always agree. Only this leaf's own task writes the mark.
+            let high_water = self.row.bytes();
+            let previous = high_water.load(Ordering::Relaxed);
             if file_bytes_done > previous {
-                self.high_water.store(file_bytes_done, Ordering::Relaxed);
+                high_water.store(file_bytes_done, Ordering::Relaxed);
                 totals.in_flight += file_bytes_done - previous;
             }
             totals.reported()
@@ -327,6 +371,7 @@ impl LeafProgress {
             totals.reported()
         };
         let files_done = ledger.files_done.fetch_add(1, Ordering::Relaxed) + 1;
+        self.row.complete();
         *self.source.last_emit.lock_ignore_poison() = Instant::now();
         ledger.emit(self.source.file_name.clone(), files_done, reported);
     }
@@ -341,7 +386,7 @@ impl LeafProgress {
         if self.settled.swap(true, Ordering::Relaxed) {
             return 0;
         }
-        self.high_water.load(Ordering::Relaxed)
+        self.row.bytes().load(Ordering::Relaxed)
     }
 }
 
@@ -350,7 +395,7 @@ impl Drop for LeafProgress {
     /// cancel between chunks — has to take its bytes back out: they aren't on
     /// the destination, and leaving them in the sum reports data that never
     /// landed. The reported total DOES fall here, which is the honest answer
-    /// for a file that failed.
+    /// for a file that failed. Its row goes back to waiting as `row` drops.
     fn drop(&mut self) {
         let share = self.withdraw_share();
         if share > 0 {
@@ -454,7 +499,10 @@ impl ObservedProgress {
             Duration::ZERO,
         );
         Arc::new(Self {
-            source: ledger.for_source(None, Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1)))),
+            source: ledger.for_source(
+                Path::new("/src/item"),
+                Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))),
+            ),
             bytes,
             files,
             emits,
@@ -490,7 +538,10 @@ mod tests {
             Duration::ZERO,
         );
         ledger.reseed_finished(seed);
-        ledger.for_source(None, Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))))
+        ledger.for_source(
+            Path::new("/src/item"),
+            Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))),
+        )
     }
 
     /// A file that is run again after a transport blip restarts at byte zero
@@ -504,7 +555,7 @@ mod tests {
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 1_000);
 
-        let leaf = progress.begin_leaf();
+        let leaf = progress.begin_leaf(None);
         // First attempt gets a third of the way in, then the blip.
         let _ = leaf.on_chunk(2_000);
         let _ = leaf.on_chunk(4_000);
@@ -539,8 +590,8 @@ mod tests {
         let progress = source_progress(&guard, &sink, 0);
 
         // A big leaf climbs while a small one runs alongside it.
-        let big = progress.begin_leaf();
-        let small = progress.begin_leaf();
+        let big = progress.begin_leaf(None);
+        let small = progress.begin_leaf(None);
         let _ = big.on_chunk(200_000);
         let _ = small.on_chunk(1_000);
         // The small one lands first. The big one is still streaming.
@@ -569,9 +620,9 @@ mod tests {
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
-        let first = progress.begin_leaf();
-        let second = progress.begin_leaf();
-        let third = progress.begin_leaf();
+        let first = progress.begin_leaf(None);
+        let second = progress.begin_leaf(None);
+        let third = progress.begin_leaf(None);
         let _ = first.on_chunk(5_000);
         let _ = second.on_chunk(3_000);
         let _ = third.on_chunk(2_000);
@@ -593,12 +644,12 @@ mod tests {
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
-        let landed = progress.begin_leaf();
+        let landed = progress.begin_leaf(None);
         let _ = landed.on_chunk(4_000);
         landed.complete(4_000);
 
         {
-            let doomed = progress.begin_leaf();
+            let doomed = progress.begin_leaf(None);
             let _ = doomed.on_chunk(7_000);
             assert_eq!(
                 totals(&sink).last().copied(),
@@ -607,7 +658,7 @@ mod tests {
             );
         }
 
-        let survivor = progress.begin_leaf();
+        let survivor = progress.begin_leaf(None);
         let _ = survivor.on_chunk(500);
         assert_eq!(
             totals(&sink).last().copied(),
@@ -625,12 +676,12 @@ mod tests {
         let progress = source_progress(&guard, &sink, 0);
 
         {
-            let leaf = progress.begin_leaf();
+            let leaf = progress.begin_leaf(None);
             let _ = leaf.on_chunk(9_000);
             leaf.complete(9_000);
         }
 
-        let next = progress.begin_leaf();
+        let next = progress.begin_leaf(None);
         let _ = next.on_chunk(100);
         assert_eq!(
             totals(&sink).last().copied(),
@@ -647,7 +698,7 @@ mod tests {
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
-        progress.skip_leaf(2_500);
+        progress.skip_leaf(2_500, None);
 
         assert_eq!(
             totals(&sink).last().copied(),

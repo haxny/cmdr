@@ -10,20 +10,36 @@ import { throwIpcError } from './ipc-types'
 import type {
   OperationSnapshot,
   OperationsChanged,
+  ProgressAxis,
   QueueMoveDirection,
   QueueMoveOutcome,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
+  TransferTreeRow,
+  TransferTreeView,
+  TransferTreeViewError,
+  TransferTreeViewRequest,
+  TreeRowKind,
+  TreeRowState,
+  TreeWindow,
   WriteSourcesGoneEvent,
 } from '#lib/ipc/bindings.js'
 
 export type {
   OperationSnapshot,
   OperationsChanged,
+  ProgressAxis,
   QueueMoveDirection,
   QueueMoveOutcome,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
+  TransferTreeRow,
+  TransferTreeView,
+  TransferTreeViewError,
+  TransferTreeViewRequest,
+  TreeRowKind,
+  TreeRowState,
+  TreeWindow,
   WriteSourcesGoneEvent,
 }
 
@@ -31,6 +47,23 @@ export type {
  *  paused, and recently-terminal until it's pruned). */
 export async function listOperations(): Promise<OperationSnapshot[]> {
   return commands.listOperations()
+}
+
+/** A window of an operation's live transfer tree, or the backend's typed reason
+ *  there's none. */
+export type TransferTreeAnswer = TransferTreeView | { refusal: TransferTreeViewError }
+
+/** One window of an operation's live transfer tree: call it on mount and on each
+ *  `write-progress` tick of the operation, with the view's own hand toggles and
+ *  scroll position. `ready: false` while the operation scans. A refusal is an
+ *  ordinary answer, never thrown: an operation that settled between two ticks
+ *  answers `unknown_operation`, and a delete answers `not_a_transfer`. */
+export async function getTransferTreeView(
+  operationId: string,
+  request: TransferTreeViewRequest,
+): Promise<TransferTreeAnswer> {
+  const res = await commands.getTransferTreeView(operationId, request)
+  return res.status === 'ok' ? res.data : { refusal: res.error }
 }
 
 /** Cancel one operation, keeping already-copied files (rollback = false). A

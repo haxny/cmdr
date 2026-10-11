@@ -24,6 +24,7 @@ use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::{
     OperationIntent, WriteOperationState, load_intent, update_operation_status,
 };
+use crate::file_system::write_operations::transfer_tree::{TreeOrder, from_sources};
 use crate::file_system::write_operations::types::{
     CancelRollback, SourceItemOutcome, TopLevelSkipped, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
     WriteOperationError, WriteOperationPhase, WriteOperationType, WriteSourceItemDoneEvent,
@@ -60,6 +61,12 @@ pub(super) fn move_with_rename(
     // aggregates from this cache — a finished move journals `items_done = 0`,
     // which then seeds the inverse operation's `item_count` with a zero.
     let total_items = sources.len() + already_in_place;
+    // The tree is the items themselves, the same unit the status counts: a
+    // rename takes a folder whole and walks nothing (`from_sources`).
+    state
+        .transfer_tree
+        .install(from_sources(sources, is_real_directory, &TreeOrder::active()));
+    let tree = state.transfer_tree.reporter();
     update_operation_status(
         operation_id,
         WriteOperationPhase::Copying,
@@ -186,6 +193,7 @@ pub(super) fn move_with_rename(
                     }
                     None => {
                         // Skip this file
+                        tree.skip_whole(tree.source(source));
                         files_skipped += 1;
                         if is_real_directory(source) {
                             top_level_skipped.folders += 1;
@@ -243,6 +251,7 @@ pub(super) fn move_with_rename(
             }
 
             files_done += 1;
+            tree.complete_whole(tree.source(source));
             update_operation_status(
                 operation_id,
                 WriteOperationPhase::Copying,

@@ -339,13 +339,16 @@ fn a_transfer_publishing_progress_across_file_boundaries_is_never_called_still()
         // No throttle: every chunk has to be observable.
         Duration::ZERO,
     );
-    let source = ledger.for_source(None, Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))));
+    let source = ledger.for_source(
+        std::path::Path::new("/src/item"),
+        Arc::new(Mutex::new(Instant::now() - Duration::from_secs(1))),
+    );
     let leaf_bytes = 2_800_000_u64;
 
     let mut watchdog = WatchdogState::new();
     let mut tick = 0_u64;
     for _leaf in 0..3 {
-        let leaf = source.begin_leaf();
+        let leaf = source.begin_leaf(None);
         for chunk in [leaf_bytes / 2, leaf_bytes] {
             let _ = leaf.on_chunk(chunk);
             tick += 1;

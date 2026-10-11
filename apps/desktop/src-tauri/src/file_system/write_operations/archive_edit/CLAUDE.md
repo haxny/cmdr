@@ -10,7 +10,8 @@ are O(archive) temp+rename rewrites. Up: `../CLAUDE.md`; mutation: `crates/cmdr-
   upload, swap. `edit_error.rs`: shared error leaf. `conflicts.rs`: archive-index resolution.
 - Per-shape routes: `copy_into.rs` (transfer routing, plus the remote-source pull), `move_out.rs`, and
   `compress.rs`. Fresh creation uses `fresh_plan.rs` (sources/identity), `fresh_compress.rs` (managed driver),
-  `fresh_zip.rs` (bounded producer), and `fresh_validate.rs` (pre-publish checks). Create and rename routes live with
+  `fresh_zip.rs` (bounded producer), `fresh_rows.rs` (its transfer-tree rows), and `fresh_validate.rs` (pre-publish
+  checks). Create and rename routes live with
   their instant ops in `../create.rs` and `../rename.rs`.
 
 ## Must-knows

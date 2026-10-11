@@ -41,9 +41,11 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
 use super::super::super::state::{WriteOperationState, is_cancelled, load_intent, update_operation_status};
-use super::super::super::types::{VolumeCopyConfig, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::super::types::{
+    SourceItemOutcome, VolumeCopyConfig, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+};
 use super::super::dest_name_index::DestNameIndex;
-use super::super::transfer_driver::LeafProgressLedger;
+use super::super::transfer_driver::{LeafProgressLedger, emit_source_outcome};
 use super::super::transfer_probe::OperationProbe;
 use super::copy::drain_deadline as drain_deadline_for;
 use super::copy_concurrent_task::{CopyTaskFailure, CopyTaskSuccess, run_copy_task};
@@ -51,7 +53,7 @@ use super::displaced_destination::DisplacedLedger;
 use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
 use super::transfer_error::{PathedVolumeError, WriteFailure};
-use crate::file_system::volume::Volume;
+use crate::file_system::volume::{Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 
 /// Everything the concurrent driver needs from its caller.
@@ -378,6 +380,14 @@ impl<'a> ConcurrentDriver<'a> {
         } = success;
         self.settle(&done_source);
         let ctx = &self.ctx;
+        // A folder whose every file was declined landed nothing: a skip, the
+        // way the local engine reports one. A copy leaves its source in place.
+        let verdict = if source_is_dir && task_skipped_count > 0 && created_files.is_empty() {
+            SourceItemOutcome::Skipped
+        } else {
+            SourceItemOutcome::Done
+        };
+        emit_source_outcome(&*ctx.events, ctx.operation_id, &done_source, verdict, false);
 
         // Fold this source's deep-merge skips into the op-wide tally, and — when
         // the source landed with ZERO skips — record it as fully extracted so
@@ -476,6 +486,16 @@ impl<'a> ConcurrentDriver<'a> {
         } = failure;
         self.settle(&done_source);
         let ctx = &self.ctx;
+        // A cancel decided nothing about the source, so it gets no verdict.
+        if !matches!(e, VolumeError::Cancelled(_)) {
+            emit_source_outcome(
+                &*ctx.events,
+                ctx.operation_id,
+                &done_source,
+                SourceItemOutcome::Failed,
+                false,
+            );
+        }
 
         // Remove from in-flight partials; this one's own partial cleanup (if
         // any) the post-loop logic will do.

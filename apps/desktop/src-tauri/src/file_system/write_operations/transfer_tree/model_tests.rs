@@ -8,7 +8,7 @@ use cmdr_fs::volume::{CopyScanResult, ScanRecorder};
 
 use super::super::TreeRecorder;
 use super::super::test_support::{english, node_at, outline};
-use super::{LeafState, NodeKind, TreeModel, TreeRowState};
+use super::{LeafState, NodeId, NodeKind, TreeModel, TreeRowState};
 use crate::file_system::write_operations::types::WriteOperationError;
 
 /// `top/{a.bin 10 B, b.bin 20 B, sub/c.bin 30 B}`.
@@ -177,4 +177,140 @@ fn an_empty_folder_waits_until_the_driver_creates_it() {
     model.folder_created(empty);
 
     assert_eq!(model.folder_state(empty, false), TreeRowState::Done);
+}
+
+#[test]
+fn a_path_finds_its_row_through_its_source_and_a_stranger_finds_none() {
+    let model = small();
+
+    assert_eq!(
+        model.source_node(Path::new("/src/top")),
+        Some(node_at(&model, &["top"]))
+    );
+    assert_eq!(
+        model.node_at_path(Path::new("/src/top/sub/c.bin")),
+        Some(node_at(&model, &["top", "sub", "c.bin"]))
+    );
+    assert_eq!(
+        model.node_at_path(Path::new("/src/top")),
+        Some(node_at(&model, &["top"]))
+    );
+    assert_eq!(model.node_at_path(Path::new("/src/top/sub/missing.bin")), None);
+    assert_eq!(
+        model.node_at_path(Path::new("/dest/top/a.bin")),
+        None,
+        "a destination path is no row"
+    );
+    assert_eq!(model.source_node(Path::new("/src/elsewhere")), None);
+}
+
+#[test]
+fn skipping_a_folder_settles_every_file_below_it_once() {
+    let mut model = small();
+    let landed = node_at(&model, &["top", "a.bin"]);
+    model.complete(landed);
+    let top = node_at(&model, &["top"]);
+
+    model.skip_subtree(top);
+    model.skip_subtree(top);
+
+    assert_eq!(
+        done_of(&model, &["top"]),
+        (3, 60, 2, 0),
+        "a.bin stays landed; b.bin and c.bin skip once"
+    );
+    assert_eq!(model.leaf_state(landed), LeafState::Done);
+    assert_eq!(model.folder_state(top, false), TreeRowState::Done);
+    assert_eq!(
+        model.folder_state(node_at(&model, &["top", "sub"]), false),
+        TreeRowState::Skipped
+    );
+}
+
+#[test]
+fn a_whole_subtree_landing_at_once_counts_an_opaque_folders_unwalked_files() {
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque"), PathBuf::from("/src/empty")]);
+    recorder.subtree(
+        Path::new("/src/opaque"),
+        &CopyScanResult {
+            file_count: 3,
+            dir_count: 1,
+            total_bytes: 90,
+            dedup_bytes: 90,
+            top_level_is_directory: true,
+            top_level_modified_at: None,
+            top_level_created_at: None,
+        },
+    );
+    recorder.dir(Path::new("/src/empty"));
+    let mut model = recorder.finish(&english());
+    let opaque = node_at(&model, &["opaque"]);
+    let found = model.discover(opaque, "found.bin", NodeKind::File, 30);
+    model.complete(found);
+
+    model.complete_subtree(opaque);
+    model.complete_subtree(node_at(&model, &["empty"]));
+
+    assert_eq!(
+        done_of(&model, &["opaque"]),
+        (3, 90, 0, 0),
+        "the two files the walk never named count too"
+    );
+    assert_eq!(model.folder_state(opaque, false), TreeRowState::Done);
+    assert_eq!(model.folder(NodeId::ROOT).map(|agg| agg.files_done), Some(3));
+    assert_eq!(
+        model.folder_state(node_at(&model, &["empty"]), false),
+        TreeRowState::Done
+    );
+}
+
+#[test]
+fn a_folder_that_failed_is_failed_and_so_is_everything_above_it() {
+    let mut model = small();
+    let sub = node_at(&model, &["top", "sub"]);
+    let error = || WriteOperationError::IoError {
+        path: "/src/top/sub".to_string(),
+        message: "gone".to_string(),
+    };
+
+    model.fail(sub, error());
+    model.fail(sub, error());
+
+    assert_eq!(done_of(&model, &["top"]), (0, 0, 0, 1));
+    assert_eq!(model.folder_state(sub, false), TreeRowState::Failed);
+    assert!(model.failure(sub).is_some());
+}
+
+#[test]
+fn empty_folders_finish_together_and_folders_with_files_keep_their_counts() {
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
+    recorder.dir(Path::new("/src/top"));
+    recorder.dir(Path::new("/src/top/empty"));
+    recorder.file(Path::new("/src/top/a.bin"), 10);
+    let mut model = recorder.finish(&english());
+
+    model.empty_folders_created();
+
+    assert_eq!(
+        model.folder_state(node_at(&model, &["top", "empty"]), false),
+        TreeRowState::Done
+    );
+    assert_eq!(
+        model.folder_state(node_at(&model, &["top"]), false),
+        TreeRowState::Waiting
+    );
+}
+
+#[test]
+fn a_level_names_its_children_and_a_newcomer_joins_it() {
+    let mut model = small();
+    let top = node_at(&model, &["top"]);
+
+    let names = model.children_by_name(top);
+
+    assert_eq!(names.get("a.bin"), Some(&node_at(&model, &["top", "a.bin"])));
+    assert_eq!(names.get("sub"), Some(&node_at(&model, &["top", "sub"])));
+    assert_eq!(names.len(), 3);
+    let late = model.discover(top, "late.bin", NodeKind::File, 1);
+    assert_eq!(model.children_by_name(top).get("late.bin"), Some(&late));
 }

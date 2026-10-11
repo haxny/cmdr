@@ -18,7 +18,8 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use super::super::super::state::update_operation_status;
-use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::super::types::{SourceItemOutcome, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::transfer_driver::emit_source_outcome;
 use super::super::volume_outage::through_outages;
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
 use super::copy_concurrent::ConcurrentCopy;
@@ -50,8 +51,10 @@ impl ConcurrentCopy<'_> {
         source_index: usize,
         source_path: &Path,
     ) -> Result<Option<CopyTask>, WriteFailure> {
-        // Pre-known conflict already accounted upfront in the bulk skip.
+        // Pre-known conflict already accounted upfront in the bulk skip; its
+        // verdict goes out as the driver passes it, in order.
         if self.pre_skip_paths.contains(source_path) {
+            self.skipped_whole(source_path);
             return Ok(None);
         }
 
@@ -148,7 +151,6 @@ impl ConcurrentCopy<'_> {
             }
         }
 
-        let file_name = source_path.file_name().map(|n| n.to_string_lossy().to_string());
         log::debug!(
             "copy_volumes_with_progress: spawning copy {} -> {}",
             source_path.display(),
@@ -213,7 +215,6 @@ impl ConcurrentCopy<'_> {
             dest_path: dest_item_path,
             replaces,
             dest_name_claimed,
-            file_name,
             window: self.file_window.clone(),
             displaced: Arc::clone(&self.displaced),
             created: Arc::new(super::merge_ctx::CreatedPaths::default()),
@@ -389,12 +390,27 @@ impl ConcurrentCopy<'_> {
         }
     }
 
+    /// A source skipped whole, before any task: its tree rows, and its
+    /// `write-source-item-done`. A skipped copy touched no source.
+    fn skipped_whole(&self, source_path: &Path) {
+        let tree = self.state.transfer_tree.reporter();
+        tree.skip_whole(tree.source(source_path));
+        emit_source_outcome(
+            &*self.events,
+            self.operation_id,
+            source_path,
+            SourceItemOutcome::Skipped,
+            false,
+        );
+    }
+
     /// Bumps `files_done` and `bytes_done` for a skipped source and (throttled)
     /// emits a `write-progress` event. Without this, a "Skip all" choice silently
     /// runs through dozens of conflicts with the progress bar pinned at 0% — the
     /// user expects the bar to reflect skipped files since the operation is in
     /// fact processing them.
     fn account_skipped_file(&self, source_path: &Path) {
+        self.skipped_whole(source_path);
         let hint_size = self
             .source_hints
             .get(source_path)

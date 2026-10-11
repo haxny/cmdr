@@ -222,6 +222,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         scan_result.total_bytes
     );
     state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
+    let tree = state.transfer_tree.reporter();
 
     // Pre-flight free-space check, before anything is written.
     log::debug!(
@@ -407,6 +408,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         // tracking per-source outcomes has to hear that the user's "Skip all"
         // covered them, or it waits on a verdict that isn't coming.
         for source in &pre_skip_top_levels {
+            tree.skip_whole(tree.source(source));
             events.emit_source_item_done(WriteSourceItemDoneEvent {
                 operation_id: operation_id.to_string(),
                 source_path: source.display().to_string(),
@@ -441,8 +443,10 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         phase: WriteOperationPhase::Copying,
         conflict_resolution: config.conflict_resolution,
         pre_known_conflicts: config.pre_known_conflicts.clone(),
-        // Sync driver ignores this; `copy_single_item` owns its emits.
+        // Sync driver ignores these; `copy_single_item` owns its emits and the
+        // closure below every verdict.
         emit_per_source_milestone: false,
+        report_source_outcomes: false,
     };
 
     let mut file_iter = files_for_loop.iter();
@@ -473,6 +477,9 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // consistent across iterations.
             let mut local_files = ctx.files_done_so_far;
             let mut local_bytes = ctx.bytes_done_so_far;
+            // The file's tree row, active until `copy_single_item` settles it
+            // with its verdict. An `Err` drops it unsettled: back to waiting.
+            let row = tree.leaf(file_info.tree_node);
             let landed = copy_single_item(
                 &file_info.path,
                 file_info.dest_path(destination),
@@ -499,6 +506,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 &mut already_synced,
                 // Lands where it stays, so the ACL and flags go on at once.
                 None,
+                &row,
             )?;
             let bytes_delta = local_bytes.saturating_sub(ctx.bytes_done_so_far);
 
@@ -620,6 +628,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 events.emit_error(event);
                 return Err(e);
             }
+            tree.empty_folders_in_place();
 
             // Every file and folder has landed, so the folders this copy created
             // can take their source's metadata without a later write bumping

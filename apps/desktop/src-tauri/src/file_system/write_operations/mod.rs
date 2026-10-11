@@ -67,10 +67,16 @@ mod target_names;
 mod transfer;
 mod transfer_sides;
 mod transfer_tree;
+mod tree_view;
 mod types;
 mod unblocked_removal;
 mod unique_name;
 mod validation;
+
+// The live transfer tree's one IPC answer: a window of rows for the dialog and
+// the queue (`transfer_tree/CLAUDE.md`).
+pub(crate) use transfer_tree::{TransferTreeView, TransferTreeViewRequest};
+pub(crate) use tree_view::{TransferTreeViewError, transfer_tree_view};
 
 // Re-export `trash` at this level so `crate::file_system::write_operations::trash`
 // keeps resolving (used by `commands/rename.rs`).

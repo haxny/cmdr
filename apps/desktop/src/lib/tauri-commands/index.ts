@@ -356,6 +356,19 @@ export type {
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,
 } from './operations'
+// The live transfer tree's one window per call (progress dialog + queue).
+export { getTransferTreeView } from './operations'
+export type {
+  ProgressAxis,
+  TransferTreeAnswer,
+  TransferTreeRow,
+  TransferTreeView,
+  TransferTreeViewError,
+  TransferTreeViewRequest,
+  TreeRowKind,
+  TreeRowState,
+  TreeWindow,
+} from './operations'
 
 // The quit gate: the backend holding an exit while operations run, and the
 // dialog's two answers.

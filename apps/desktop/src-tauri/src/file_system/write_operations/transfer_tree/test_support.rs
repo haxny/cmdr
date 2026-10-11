@@ -40,6 +40,32 @@ fn walk(model: &TreeModel, parent: NodeId, depth: usize, lines: &mut Vec<String>
     }
 }
 
+/// The arena as indented lines in tree order with each row's state:
+/// `name/ done` for a folder (`active` while anything below it is in flight),
+/// `name skipped` for a file.
+pub(crate) fn row_states(model: &TreeModel) -> Vec<String> {
+    let mut lines = Vec::new();
+    walk_states(model, NodeId::ROOT, 0, &mut lines);
+    lines
+}
+
+fn walk_states(model: &TreeModel, parent: NodeId, depth: usize, lines: &mut Vec<String>) {
+    let in_flight = model.in_flight_by_folder();
+    for index in 0..model.child_count(parent) {
+        let child = model.child_at(parent, index);
+        let indent = "  ".repeat(depth);
+        let name = model.name(child);
+        if model.kind(child).is_folder() {
+            let state = model.folder_state(child, in_flight.contains_key(&child.get()));
+            lines.push(format!("{indent}{name}/ {}", format!("{state:?}").to_lowercase()));
+            walk_states(model, child, depth + 1, lines);
+        } else {
+            let state = model.leaf_state(child);
+            lines.push(format!("{indent}{name} {}", format!("{state:?}").to_lowercase()));
+        }
+    }
+}
+
 /// The node at `labels`, one per level from the top (`["photos", "a.jpg"]`).
 pub(crate) fn node_at(model: &TreeModel, labels: &[&str]) -> NodeId {
     let mut at = NodeId::ROOT;

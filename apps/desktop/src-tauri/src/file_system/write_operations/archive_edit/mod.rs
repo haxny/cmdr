@@ -50,6 +50,7 @@ mod edit_error;
 mod engine;
 mod fresh_compress;
 mod fresh_plan;
+mod fresh_rows;
 mod fresh_validate;
 mod fresh_zip;
 mod move_out;

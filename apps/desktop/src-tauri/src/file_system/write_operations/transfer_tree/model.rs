@@ -14,6 +14,7 @@
 //!   through the node's `slot`.
 
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -152,6 +153,11 @@ pub(crate) struct TreeModel {
     /// so a folder doesn't flicker shut in the gap between two files.
     last_started: Option<NodeId>,
     failures: HashMap<u32, WriteOperationError>,
+    /// Each selected source's top-level row, by the path the operation names it
+    /// with: how a driver finds its source's row, and where a failing path
+    /// starts its walk down (`node_at_path`). The selection only, ❌ never a
+    /// path per node.
+    sources: HashMap<PathBuf, NodeId>,
 }
 
 /// What the builder hands the arena for one node, in final (breadth-first) id
@@ -296,6 +302,51 @@ impl TreeModel {
         TreeOrderRanks(ranks)
     }
 
+    /// The top-level row of a selected source, by the path the operation names
+    /// it with.
+    pub(crate) fn source_node(&self, source: &Path) -> Option<NodeId> {
+        self.sources.get(source).copied()
+    }
+
+    pub(super) fn set_sources(&mut self, sources: HashMap<PathBuf, NodeId>) {
+        self.sources = sources;
+    }
+
+    /// The row at `path`: its source's row, then down one name per component.
+    /// `None` for a path under no source (a destination path, say) or one the
+    /// tree never held. O(depth × siblings), for the rare caller with nothing
+    /// but a path (a failure), ❌ never per file.
+    pub(crate) fn node_at_path(&self, path: &Path) -> Option<NodeId> {
+        let (source, node) = self
+            .sources
+            .iter()
+            .filter(|(source, _)| path.starts_with(source))
+            .max_by_key(|(source, _)| source.as_os_str().len())?;
+        let below = path.strip_prefix(source).ok()?;
+        below.components().try_fold(*node, |at, component| {
+            self.child_named(at, &component.as_os_str().to_string_lossy())
+        })
+    }
+
+    /// The child of `folder` called `name`, by a walk over its children.
+    pub(crate) fn child_named(&self, folder: NodeId, name: &str) -> Option<NodeId> {
+        (0..self.child_count(folder))
+            .map(|index| self.child_at(folder, index))
+            .find(|child| self.name(*child) == name)
+    }
+
+    /// Every child of `folder` by name, for a walker that lists the same level
+    /// and looks each entry up (`TreeLevel`). Built once per level, dropped
+    /// with it.
+    pub(crate) fn children_by_name(&self, folder: NodeId) -> HashMap<String, NodeId> {
+        (0..self.child_count(folder))
+            .map(|index| {
+                let child = self.child_at(folder, index);
+                (self.name(child).to_owned(), child)
+            })
+            .collect()
+    }
+
     /// A folder's aggregate, or `None` for a file.
     pub(crate) fn folder(&self, id: NodeId) -> Option<&FolderAgg> {
         let node = &self.nodes[id.index()];
@@ -317,6 +368,7 @@ impl TreeModel {
     }
 
     /// The files in flight right now.
+    #[cfg(test)]
     pub(crate) fn active(&self) -> &[ActiveLeaf] {
         &self.active
     }
@@ -340,6 +392,7 @@ impl TreeModel {
         if agg.files_total == 0 {
             return match self.nodes[id.index()].state {
                 LeafState::Done => TreeRowState::Done,
+                LeafState::Skipped => TreeRowState::Skipped,
                 _ if active_beneath => TreeRowState::Active,
                 _ => TreeRowState::Waiting,
             };
@@ -374,6 +427,11 @@ impl TreeModel {
             + extras
             + self.active.capacity() * size_of::<ActiveLeaf>()
             + self.failures.capacity() * size_of::<(u32, WriteOperationError)>()
+            + self
+                .sources
+                .keys()
+                .map(|path| path.capacity() + size_of::<(PathBuf, NodeId)>())
+                .sum::<usize>()
     }
 
     // ---- Mutations: one per file boundary ------------------------------------
@@ -424,13 +482,20 @@ impl TreeModel {
         });
     }
 
-    /// A file that failed, with the typed reason the row shows.
-    pub(crate) fn fail(&mut self, file: NodeId, error: WriteOperationError) {
-        if !self.settle(file, LeafState::Failed) {
+    /// A file or folder that failed, with the typed reason the row shows. A
+    /// folder counts itself among its failures, so it reads failed whatever
+    /// its files did.
+    pub(crate) fn fail(&mut self, node: NodeId, error: WriteOperationError) {
+        if self.kind(node).is_folder() {
+            if self.failures.contains_key(&node.0) {
+                return;
+            }
+            self.folder_mut(node).failed += 1;
+        } else if !self.settle(node, LeafState::Failed) {
             return;
         }
-        self.failures.insert(file.0, error);
-        self.for_each_ancestor(file, |agg| agg.failed += 1);
+        self.failures.insert(node.0, error);
+        self.for_each_ancestor(node, |agg| agg.failed += 1);
     }
 
     /// The driver created this folder. Only an EMPTY folder reads it: one with
@@ -438,6 +503,75 @@ impl TreeModel {
     pub(crate) fn folder_created(&mut self, folder: NodeId) {
         if self.kind(folder).is_folder() {
             self.nodes[folder.index()].state = LeafState::Done;
+        }
+    }
+
+    /// Every empty folder is in place: what a driver that creates them all in
+    /// one pass at the end says (the local engine's scanned-dirs pass).
+    pub(crate) fn empty_folders_created(&mut self) {
+        for index in 1..self.nodes.len() {
+            let node = self.nodes[index];
+            if node.kind.is_folder() && self.folders[node.slot as usize].files_total == 0 {
+                self.nodes[index].state = LeafState::Done;
+            }
+        }
+    }
+
+    /// `top` landed whole in one step (a rename): every file below it is done.
+    pub(crate) fn complete_subtree(&mut self, top: NodeId) {
+        self.settle_subtree(top, LeafState::Done);
+    }
+
+    /// `top` was skipped whole (a top-level Skip, a bulk pre-known conflict):
+    /// every file below it not already settled is skipped.
+    pub(crate) fn skip_subtree(&mut self, top: NodeId) {
+        self.settle_subtree(top, LeafState::Skipped);
+    }
+
+    /// Settles every unsettled file below `top` as `state` (`Done` or
+    /// `Skipped`), plus what an opaque folder's scan counted and its walk never
+    /// named. One report per subtree, O(its size), so ❌ never per file.
+    fn settle_subtree(&mut self, top: NodeId, state: LeafState) {
+        let mut stack = vec![top];
+        let mut opaque = Vec::new();
+        while let Some(id) = stack.pop() {
+            match self.kind(id) {
+                NodeKind::File => match state {
+                    LeafState::Skipped => self.skip(id),
+                    _ => self.complete(id),
+                },
+                kind => {
+                    if self.leaf_state(id) == LeafState::Waiting {
+                        self.nodes[id.index()].state = state;
+                    }
+                    if kind == NodeKind::Opaque {
+                        opaque.push(id);
+                    }
+                    for index in 0..self.child_count(id) {
+                        stack.push(self.child_at(id, index));
+                    }
+                }
+            }
+        }
+        // After its found children settled, whatever an opaque folder still
+        // owes is the files its walk never reached. An opaque folder is never
+        // found inside another, so one pass settles them all.
+        for folder in opaque {
+            let agg = self.folder(folder).copied().unwrap_or_default();
+            let files = agg.files_total.saturating_sub(agg.files_done + agg.failed);
+            let bytes = agg.bytes_total.saturating_sub(agg.bytes_done);
+            if files == 0 && bytes == 0 {
+                continue;
+            }
+            let skipped = if state == LeafState::Skipped { files } else { 0 };
+            let mut at = Some(folder);
+            while let Some(ancestor) = at {
+                let agg = self.folder_mut(ancestor);
+                agg.files_done += files;
+                agg.bytes_done += bytes;
+                agg.skipped += skipped;
+                at = self.parent(ancestor);
+            }
         }
     }
 

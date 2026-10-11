@@ -28,6 +28,7 @@ use crate::file_system::write_operations::ledger::{CopyTransaction, WrittenFile}
 use crate::file_system::write_operations::overwrite::{PostLanding, displace_with_directory, safe_overwrite_dir};
 use crate::file_system::write_operations::scan_source_tracker::FileVerdict;
 use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled, update_operation_status};
+use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 use crate::file_system::write_operations::types::{
     WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -43,10 +44,14 @@ struct PerFileCtx<'a> {
     operation_type: WriteOperationType,
     files_total: usize,
     bytes_total: u64,
+    /// The file's transfer-tree row.
+    row: &'a TreeLeaf,
 }
 
-/// Marks one file as completed: bumps the cumulative counters and emits a
-/// `Copying`-phase `WriteProgressEvent` carrying the bumped values.
+/// Marks one file as completed: settles its tree row by `verdict`, bumps the
+/// cumulative counters, and emits a `Copying`-phase `WriteProgressEvent`
+/// carrying the bumped values. The row settles first, so a view pulled on
+/// that event already shows it.
 ///
 /// Called from every `Ok`-return site in [`copy_single_item`] (regular file
 /// copy, symlink copy, per-file Skip, type-mismatch parent Skip, same-file
@@ -69,7 +74,12 @@ fn record_file_done(
     write_weight: u64,
     files_done: &mut usize,
     bytes_done: &mut u64,
+    verdict: FileVerdict,
 ) {
+    match verdict {
+        FileVerdict::CarriedOut => ctx.row.complete(),
+        FileVerdict::Skipped => ctx.row.skip(),
+    }
     *files_done += 1;
     *bytes_done += write_weight;
     super::super::transfer_driver::emit_progress_and_status(
@@ -218,6 +228,10 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
     // final place. Only files that have one get an entry. `None` applies it on
     // landing.
     deferred_landed: Option<&mut HashMap<PathBuf, LandedMetadata>>,
+    // The file's row in the transfer tree, opened by the caller. Settled here
+    // with the per-file milestone; its byte counter moves per chunk. An `Err`
+    // leaves it unsettled, and the caller's drop puts it back to waiting.
+    row: &TreeLeaf,
 ) -> Result<FileVerdict, WriteOperationError> {
     let progress_ctx = PerFileCtx {
         events,
@@ -226,6 +240,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         operation_type,
         files_total,
         bytes_total,
+        row,
     };
 
     // Check cancellation
@@ -248,7 +263,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
 
     if skipped_subtrees.iter().any(|root| dest_path.starts_with(root)) {
         let _ = fs::symlink_metadata(source).with_path(source)?;
-        record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+        record_file_done(
+            &progress_ctx,
+            source,
+            write_weight,
+            files_done,
+            bytes_done,
+            FileVerdict::Skipped,
+        );
         return Ok(FileVerdict::Skipped);
     }
 
@@ -346,7 +368,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                     // in by scan stays consistent across skip paths.
                     let _ = fs::symlink_metadata(source).with_path(source)?;
                     skipped_subtrees.insert(blocking);
-                    record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+                    record_file_done(
+                        &progress_ctx,
+                        source,
+                        write_weight,
+                        files_done,
+                        bytes_done,
+                        FileVerdict::Skipped,
+                    );
                     return Ok(FileVerdict::Skipped);
                 }
             }
@@ -424,7 +453,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                 Some(resolved) => (resolved.path, resolved.needs_safe_overwrite),
                 None => {
                     // Skip this file but still count it toward progress
-                    record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+                    record_file_done(
+                        &progress_ctx,
+                        source,
+                        write_weight,
+                        files_done,
+                        bytes_done,
+                        FileVerdict::Skipped,
+                    );
                     return Ok(FileVerdict::Skipped);
                 }
             }
@@ -486,7 +522,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // Snapshot the link that landed, so a reversal can tell it apart from
         // anything that replaced it since. One `lstat` on a path just written.
         transaction.record_file(WrittenFile::local(actual_dest));
-        record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+        record_file_done(
+            &progress_ctx,
+            source,
+            write_weight,
+            files_done,
+            bytes_done,
+            FileVerdict::CarriedOut,
+        );
     } else {
         // Handle regular file
         // Pre-fix this branch used `dest_path.exists()`, which follows symlinks
@@ -509,7 +552,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                 Some(resolved) => (resolved.path, resolved.needs_safe_overwrite),
                 None => {
                     // Skip this file but still count it toward progress
-                    record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+                    record_file_done(
+                        &progress_ctx,
+                        source,
+                        write_weight,
+                        files_done,
+                        bytes_done,
+                        FileVerdict::Skipped,
+                    );
                     return Ok(FileVerdict::Skipped);
                 }
             }
@@ -526,7 +576,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                 "copy: skipping {}: source and destination resolve to the same file",
                 source.display()
             );
-            record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+            record_file_done(
+                &progress_ctx,
+                source,
+                write_weight,
+                files_done,
+                bytes_done,
+                FileVerdict::Skipped,
+            );
             return Ok(FileVerdict::Skipped);
         }
 
@@ -560,6 +617,8 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // denominator: a copy writes every byte (including hardlink dupes), so
         // no dedup scaling — the bar tracks actual bytes hitting the disk.
         let progress_cb: ChunkedCopyProgressFn = &|chunk_bytes: u64, _total: u64| {
+            // The row's live bytes: one atomic store, ❌ never the tree's lock.
+            row.bytes().store(chunk_bytes, std::sync::atomic::Ordering::Relaxed);
             if last_emit_time.get().elapsed() >= *progress_interval {
                 let effective_bytes_done = base_bytes_done + chunk_bytes;
                 log::debug!(
@@ -645,7 +704,14 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // Snapshot the file that landed, so a reversal can tell it apart from
         // anything that replaced it since. One `lstat` on a path just written.
         transaction.record_file(WrittenFile::local(actual_dest.clone()));
-        record_file_done(&progress_ctx, source, write_weight, files_done, bytes_done);
+        record_file_done(
+            &progress_ctx,
+            source,
+            write_weight,
+            files_done,
+            bytes_done,
+            FileVerdict::CarriedOut,
+        );
     }
 
     Ok(FileVerdict::CarriedOut)

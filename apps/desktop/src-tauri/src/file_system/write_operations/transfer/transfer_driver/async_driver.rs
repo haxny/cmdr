@@ -9,10 +9,11 @@ use std::time::Instant;
 
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, load_intent};
+use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationError};
 
 use super::{
     ConflictDecision, ConflictDecisionInput, DriverConfig, FetchFut, NameAtDest, PostLoopIntent, ResolveFut,
-    TransferContext, TransferFut, TransferLoopOutcome, TransferOutcome, emit_progress_and_status,
+    TransferContext, TransferFut, TransferLoopOutcome, TransferOutcome, emit_progress_and_status, emit_source_outcome,
 };
 
 /// Async serial driver for volume operations.
@@ -91,8 +92,33 @@ where
     let mut files_skipped = 0usize;
     let mut bytes_skipped = 0u64;
     let mut last_progress_time = Instant::now();
+    // The verdicts this driver decides: a whole source skipped, or a source the
+    // closure failed on. Its rows in the tree, and its `write-source-item-done`
+    // when the caller asked for those. Neither one feeds back into the loop.
+    let tree = state.transfer_tree.reporter();
+    let skipped_whole = |source: &Path| {
+        tree.skip_whole(tree.source(source));
+        if config.report_source_outcomes {
+            emit_source_outcome(events, operation_id, source, SourceItemOutcome::Skipped, false);
+        }
+    };
+    // A cancel decided nothing about the source in hand, so it gets no verdict.
+    // A move whose copy landed and whose original stayed (`SourceNotRemoved`)
+    // didn't fail the item: its closure already said `Done`, source kept.
+    let failed_on = |source: &Path, error: &WriteOperationError| {
+        let failed_the_item = !matches!(
+            error,
+            WriteOperationError::Cancelled { .. } | WriteOperationError::SourceNotRemoved { .. }
+        );
+        if config.report_source_outcomes && failed_the_item {
+            emit_source_outcome(events, operation_id, source, SourceItemOutcome::Failed, false);
+        }
+    };
 
     // ---- Pre-known-conflicts bulk-skip prelude. ----
+    for source in sources.iter().filter(|source| pre_skip_paths.contains(*source)) {
+        skipped_whole(source);
+    }
     if bulk_skip_files > 0 {
         files_done += bulk_skip_files;
         bytes_done += bulk_skip_bytes;
@@ -168,6 +194,7 @@ where
         let name_at_dest = match dest_meta_fetcher(&initial_dest_path).await {
             Ok(answer) => answer,
             Err(e) => {
+                failed_on(source_path, &e);
                 return TransferLoopOutcome {
                     files_done,
                     bytes_done,
@@ -199,6 +226,7 @@ where
 
                 match decision {
                     Ok(ConflictDecision::Skip { bytes_accounted }) => {
+                        skipped_whole(source_path);
                         // Per-iter skip accounting: bump counters and emit
                         // throttled progress so the bar reflects the skip
                         // immediately.
@@ -228,6 +256,7 @@ where
                     // A cancel pressed while the clash was on screen drops the
                     // slot's sender, so the resolver comes back `Cancelled`.
                     Err(e) => {
+                        failed_on(source_path, &e);
                         return TransferLoopOutcome {
                             files_done,
                             bytes_done,
@@ -283,6 +312,7 @@ where
                 }
             }
             Ok(TransferOutcome::Skipped { bytes_accounted }) => {
+                skipped_whole(source_path);
                 files_done += 1;
                 bytes_done += bytes_accounted;
                 files_skipped += 1;
@@ -305,6 +335,7 @@ where
                 }
             }
             Err(e) => {
+                failed_on(source_path, &e);
                 return TransferLoopOutcome {
                     files_done,
                     bytes_done,

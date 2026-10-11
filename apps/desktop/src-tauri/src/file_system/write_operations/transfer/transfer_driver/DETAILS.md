@@ -18,6 +18,25 @@ The async driver resolves the top-level conflict itself and never invokes the cl
 that to the closure, which is why point 2 of the data-safety contract is async-only. ❌ Don't unify the two by moving
 resolution into the sync driver without moving the closure's `&mut` state with it.
 
+## The async driver reports the verdicts it decides
+
+With `DriverConfig::report_source_outcomes` (every volume transfer), the async driver emits `write-source-item-done`
+for the per-source outcomes only IT decides: `Skipped` for a bulk pre-skip, a top-level Skip, and a closure's
+`Skipped`, and `Failed` for an error on that source (the destination probe, the resolver, or the closure). A
+`Cancelled` gets nothing (nothing was decided) and neither does `SourceNotRemoved` (the move's copy landed and its
+closure already said `Done`). The closure reports `Done`, because only it knows whether anything landed and whether the
+source is gone. The same driver marks a whole skipped source's rows in the transfer tree (`skip_whole`), whatever the
+flag says. Contract: `../../DETAILS.md` § "Per-source outcomes".
+
+## A leaf's handle is its tree row
+
+`LeafProgress` owns the file's `transfer_tree::TreeLeaf`: `begin_leaf(node)` makes the row active, `complete` settles it
+done, and `Drop` without `complete` puts it back to waiting, the same three moments the ledger already had. The leaf's
+high-water mark lives in the `TreeLeaf`'s counter, so the bar's in-flight share and the row's bytes are one number.
+`SourceProgress` carries the top-level source's row (`for_source` finds it by path) and the tree reporter a walker
+resolves children through; `skip_leaf(bytes, node)` skips a declined child's row, or its whole subtree for a folder.
+How the tree stays observation-only: `../../transfer_tree/DETAILS.md` § "Observation only, structurally".
+
 ## A `Cancelled` from any closure is a cancel, ❌ never a failure
 
 Both drivers turn every closure `Err` into the loop's ending through `PostLoopIntent::stopped_by`: `Cancelled` ends it as

@@ -638,12 +638,20 @@ async fn moving_into_a_case_differing_folder_on_one_volume_really_moves() {
         children(&volume, "/DCIM").await.is_empty(),
         "and it leaves the folder it came from"
     );
-    // The already-in-place branch is the only thing on this path that speaks per
-    // source (`move_same.rs`), so a real move passing through it silently is
-    // exactly the regression: its `Done` / `source_removed: false` pair would be
-    // the only word the user got about a file that never moved.
-    assert!(
-        events.inner.source_items_done.lock_ignore_poison().is_empty(),
+    // A real move passing through the already-in-place branch is exactly the
+    // regression: its `Done` / `source_removed: false` pair would be the only
+    // word the user got about a file that never moved. The rename's own verdict
+    // says the source is gone.
+    let verdicts: Vec<(String, bool)> = events
+        .inner
+        .source_items_done
+        .lock_ignore_poison()
+        .iter()
+        .map(|event| (event.source_path.clone(), event.source_removed))
+        .collect();
+    assert_eq!(
+        verdicts,
+        vec![("/DCIM/photo.jpg".to_owned(), true)],
         "nothing may report this item already in place"
     );
     let complete = events.inner.complete.lock_ignore_poison();

@@ -127,6 +127,33 @@ The order and its one exception: `write_operations/transfer/DETAILS.md` § "Proc
 - **Dead weight went with the sort**: `FileInfo::modified` / `created` and its sort helpers, and
   `PaneAccess::getPaneSort` (its only readers fed the dialogs). `VolumeCopyConfig` never carried the sort.
 
+## Built in M3 (2026-10-12), and where it differs from the plan below
+
+What each driver reports, the view command, and the safety story: `write_operations/transfer_tree/DETAILS.md` §§ "The
+view command", "How drivers report"; per-source verdicts: `write_operations/DETAILS.md` § "Per-source outcomes".
+Differences:
+
+- **Failure marking lives in the two error GATEWAYS, not `WriteErrorEvent::new`**: `transfer_sides::transfer_stop_event`
+  (local) and `volume/transfer_error.rs::write_error_event_from` (volume) call `TransferTreeSlot::note_failure`.
+  `WriteErrorEvent::new` holds no state, and a lookup from there would weld `event_sinks` and `state` into a module
+  cycle. The typed path accessor is `WriteOperationError::item_path`, which `transfer_sides` now shares (it gained the
+  in-flight variants it was missing: `NameTooLong`, `InvalidName`, `DeletePending`, `SourceInColdStorage`,
+  `SourceChanged`, `SymlinkLoop`). A compress tree holds no source paths, so a compress failure marks no row.
+- **Rename moves get a tree of their items** (`from_sources`), not none: see `transfer_tree/DETAILS.md` § "Where a tree
+  comes from".
+- **The same-volume rename move reports per-source verdicts too.** The plan's "today" list said it already did; it only
+  did for already-in-place items.
+- **Compress derives its rows from the producer's progress ticks** (`CompressRows`), so `produce` is untouched.
+- **The local engine's leaf settles inside `copy_single_item`'s per-file milestone**, before that event goes out, so a
+  view pulled on it never shows a landed file as active.
+- **The view command is `async`** (off the main thread: it takes the tree's lock), and lives in
+  `write_operations/ tree_view.rs`, a leaf above both `transfer_tree` and the state registry.
+- **A tree bug turns the tree off** (`catch_unwind` around every report and view, `ready: false` after), the structural
+  half of "observation only".
+- **Measured**: a file's begin + complete costs 88 ns median against 251 µs per file for a local many-small-files copy.
+- **Not done here**: an MCP or dev call against a running copy (no app was running in this session; the integration
+  suites drive the real engines instead).
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +

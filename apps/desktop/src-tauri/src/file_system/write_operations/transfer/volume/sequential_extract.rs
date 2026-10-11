@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use super::super::super::state::WriteOperationState;
+use super::super::super::transfer_tree::NodeId;
 use super::super::staged_write::StagedWrite;
 use super::super::transfer_driver::SourceProgress;
 use super::folder_metadata::{FolderMetadata, SourceFolderDates};
@@ -41,6 +42,8 @@ pub(super) struct PlannedWrite {
     /// landing needs to tell its own placeholder from the user's file
     /// (`staged_write.rs::LandingName`).
     pub(super) landing: LandingName,
+    /// The member's row in the transfer tree, found by the plan pass's walk.
+    pub(super) row: Option<NodeId>,
 }
 
 /// The plan the one-pass extractor builds in its first pass and consumes in its
@@ -172,7 +175,7 @@ pub(super) async fn extract_sequential_subtree(
         // One decode pass means one member at a time, but this member still
         // takes a leaf handle of its own: it is what carries its bytes on the
         // bar while it writes, and what takes them back off if the write fails.
-        let leaf = progress.begin_leaf();
+        let leaf = progress.begin_leaf(planned.row);
         let on_chunk =
             |progress: crate::file_system::volume::StreamWriteProgress| leaf.on_chunk(progress.bytes_written);
         let written = dest_volume

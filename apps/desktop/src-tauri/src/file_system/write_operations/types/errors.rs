@@ -493,6 +493,37 @@ pub enum WriteOperationError {
 }
 
 impl WriteOperationError {
+    /// The item an in-flight failure happened ON, as its variant names it: the
+    /// file or folder the operation was reading or writing when it stopped.
+    ///
+    /// `None` for a refusal raised before any I/O (no single item, or one that
+    /// isn't a file), and for the variants whose payload is the point
+    /// (`NewDataKeptAt`, `OriginalsKeptAside`, `SourceNotRemoved`): a caller
+    /// that rewrites the error by its path would drop where the user's data
+    /// is. ❌ Never read an item out of a message.
+    pub fn item_path(&self) -> Option<&str> {
+        match self {
+            Self::IoError { path, .. }
+            | Self::ReadError { path, .. }
+            | Self::WriteError { path, .. }
+            | Self::SourceNotFound { path }
+            | Self::DestinationNotFound { path }
+            | Self::DeviceDisconnected { path, .. }
+            | Self::PermissionDenied { path, .. }
+            | Self::DestinationFull { path }
+            | Self::ConnectionInterrupted { path }
+            | Self::FileLocked { path }
+            | Self::MoveNotConfirmed { path, .. }
+            | Self::NameTooLong { path }
+            | Self::InvalidName { path, .. }
+            | Self::DeletePending { path }
+            | Self::SourceInColdStorage { path }
+            | Self::SourceChanged { path }
+            | Self::SymlinkLoop { path } => Some(path),
+            _ => None,
+        }
+    }
+
     /// The one way to build [`PermissionDenied`](Self::PermissionDenied).
     ///
     /// It derives `refusal` from `errno`, so no caller can ship a variant whose

@@ -24,13 +24,14 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
-    CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
+    CancelRollback, SourceItemOutcome, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationPhase, WriteOperationType,
 };
 use super::super::left_in_source::LeftInSource;
 use super::super::transfer_driver::{
     ConflictDecision, ConflictDecisionInput, DriverConfig, LeafProgressLedger, PostLoopIntent, ResolveFut,
     TransferContext, TransferFut, TransferOutcome, build_pre_skip_set, drive_transfer_serial_async,
+    emit_source_outcome,
 };
 use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::DisplacedLedger;
@@ -163,6 +164,9 @@ pub(crate) async fn move_volumes_with_progress(
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Streaming path: the leaf ledger owns leaf-granular milestones.
         emit_per_source_milestone: false,
+        // Skips and failures from the driver, both `Done`s (copied, then
+        // swept) from the closure below.
+        report_source_outcomes: true,
     };
 
     // Per-source state shared with the driver's closures via interior
@@ -441,11 +445,10 @@ pub(crate) async fn move_volumes_with_progress(
                         };
                     let source_facts = SourceFileFacts::from_hint(hint);
 
-                    let file_name = source_path.file_name().map(|n| n.to_string_lossy().to_string());
                     // The driver's tally of every PRIOR source, which the leaves
                     // below add their own bytes on top of.
                     leaf_ledger.reseed_finished(bytes_done_so_far);
-                    let leaf_progress = leaf_ledger.for_source(file_name.clone(), last_progress_time);
+                    let leaf_progress = leaf_ledger.for_source(&source_path, last_progress_time);
                     // The copy phase's per-file ledger. Cross-volume move's own
                     // rollback reverses renames / cleans staging separately, but
                     // the operation-log capture harvests it below for the per-leaf
@@ -611,6 +614,17 @@ pub(crate) async fn move_volumes_with_progress(
                     // copied, or an original saved over after the copy read it.
                     let skipped = created.skipped_source_paths();
                     deep_skipped_files.fetch_add(skipped.len(), Ordering::Relaxed);
+                    // The copy landed, so the item is done with for now; the
+                    // sweep below speaks again, and its word is the last
+                    // (`../../DETAILS.md` § "Per-source outcomes"). A folder
+                    // whose every file was declined landed nothing: a skip.
+                    let verdict = if source_is_dir && !skipped.is_empty() && created.files.lock_ignore_poison().is_empty()
+                    {
+                        SourceItemOutcome::Skipped
+                    } else {
+                        SourceItemOutcome::Done
+                    };
+                    emit_source_outcome(&*events, &operation_id, &source_path, verdict, false);
                     let carried = if source_is_dir {
                         super::source_sweep::CarriedSource::Folder(created.take_source_ledger())
                     } else {
@@ -626,8 +640,13 @@ pub(crate) async fn move_volumes_with_progress(
                                     kept.appeared,
                                     kept.changed,
                                 );
+                                // What the sweep kept is what keeps the source
+                                // standing: a Skip, a newcomer, or a change.
+                                kept.appeared == 0 && kept.changed == 0 && skipped.is_empty()
                             });
-                    if let Err(e) = delete_result {
+                    let source_removed = match delete_result {
+                        Ok(gone) => gone,
+                        Err(e) => {
                         // Same rule as the copy phase: name the file that
                         // actually refused to go, which for a directory source
                         // is a leaf inside it — ❌ never `source_path`, whose
@@ -641,9 +660,15 @@ pub(crate) async fn move_volumes_with_progress(
                         );
                         // ❗ The copy LANDED, so the move didn't fail: say so.
                         return Err(source_not_removed(&e.path, &landed_dest, e.error));
-                    }
+                        }
+                    };
                     // Moved in full, so whatever it set aside is replaced.
                     displaced.landed_under(&landed_dest);
+                    // Swept. Whether the source is gone is the sweep's own
+                    // account of what it kept, ❌ never inferred from "it was a
+                    // move", and ❌ never a fresh probe: on an object store that
+                    // is a billed request per source the estimate doesn't count.
+                    emit_source_outcome(&*events, &operation_id, &source_path, verdict, source_removed);
 
                     // Journal the moved leaves under the REAL volume ids: a file
                     // source → one leaf (source on the source volume, dest on the

@@ -23,6 +23,7 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::state::WriteOperationState;
+use super::super::super::transfer_tree::{TreeOrder, from_sources};
 use super::super::super::types::{
     CancelRollback, RecoveredOriginal, SourceItemOutcome, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent,
     WriteErrorEvent, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
@@ -30,7 +31,7 @@ use super::super::super::types::{
 };
 use super::super::transfer_driver::{
     ConflictDecision, ConflictDecisionInput, DriverConfig, PostLoopIntent, ResolveFut, TransferContext, TransferFut,
-    TransferOutcome, build_pre_skip_set, drive_transfer_serial_async,
+    TransferOutcome, build_pre_skip_set, drive_transfer_serial_async, emit_source_outcome,
 };
 use super::conflict::resolve_volume_conflict;
 use super::displaced_destination::{DisplacedDestination, displace_destination};
@@ -42,6 +43,23 @@ use super::transfer_error::{PathRole, map_volume_error};
 use crate::file_system::volume::{EntryKind, RenameWork, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::types::OpKind;
+
+/// One item's rename landed: its row is done, and its verdict says whether the
+/// source is gone. The caller answers that: a plain rename that returned `Ok`
+/// took the item, and a rename-merge asks the volume, because it leaves the
+/// source folder standing around any child it skipped (❌ never a probe per
+/// plain rename: on an object store it's a billed request).
+fn landed_whole(
+    state: &WriteOperationState,
+    events: &dyn OperationEventSink,
+    operation_id: &str,
+    source: &Path,
+    source_removed: bool,
+) {
+    let tree = state.transfer_tree.reporter();
+    tree.complete_whole(tree.source(source));
+    emit_source_outcome(events, operation_id, source, SourceItemOutcome::Done, source_removed);
+}
 
 /// Resolve `path` against `volume.local_path()` and register it with the
 /// downloads watcher's ignore set. Skips silently when `volume` isn't
@@ -203,6 +221,7 @@ pub(super) async fn move_within_same_volume(
                 }
                 Err(e) => {
                     log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
+                    state.transfer_tree.note_failure(&e);
                     events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
                 }
             }
@@ -420,6 +439,13 @@ pub(crate) async fn move_within_same_volume_with_progress(
     let ordered_sources = sources_in_tree_order(source_paths, &top_level.source_hints);
     let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(top_level.source_hints);
+    // A rename takes each item whole and walks nothing, so the tree is the
+    // items themselves, the same unit the counts above use (`from_sources`).
+    state.transfer_tree.install(from_sources(
+        source_paths,
+        |source| source_hints.get(source).is_some_and(|hint| hint.is_directory),
+        &TreeOrder::active(),
+    ));
 
     // Operation-log journaling for the same-volume move: the one volume id (as both
     // source and dest) plus the set of top-level sources whose conflict resolution
@@ -457,6 +483,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Rename-merge: no streaming, so the driver milestone is the only emit.
         emit_per_source_milestone: true,
+        // Skips and failures from the driver, `Done` from `landed_whole`.
+        report_source_outcomes: true,
     };
 
     // Interior mutability shapes the apply-to-all latch into a Mutex cell so
@@ -759,6 +787,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
                             row_size,
                             buffered_leaves.as_ref(),
                         );
+                        let source_removed = !volume.exists(&source_path).await;
+                        landed_whole(&state, &*events, &operation_id, &source_path, source_removed);
                         // A rename moves no bytes: the item counts 1 (driver's
                         // milestone), the byte axis stays at 0.
                         return Ok(TransferOutcome::Transferred { bytes: 0 });
@@ -805,6 +835,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
                         buffered_leaves.as_ref(),
                     );
 
+                    // The rename returned `Ok`: the item left its source whole.
+                    landed_whole(&state, &*events, &operation_id, &source_path, true);
                     // Per-file milestone emit (bumped `files_done`) lives in the
                     // driver's `Transferred` arm. A rename moves no bytes, so the
                     // byte axis stays at 0.

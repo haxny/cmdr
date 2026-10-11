@@ -72,7 +72,7 @@ async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
 
     let tree = state.transfer_tree.get().expect("the scan installed a tree");
     assert_eq!(
-        tree.read(outline),
+        tree.read(outline).expect("the tree is on"),
         vec![
             "photos/ 2 files 8 B",
             "  2024/ 1 files 5 B",
@@ -140,8 +140,13 @@ async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaq
     .await
     .expect("the copy succeeds");
 
+    // The folder stays opaque (its totals are the scan's), and the copy's walk
+    // fills in the children it met.
     let tree = state.transfer_tree.get().expect("the cached preview installed a tree");
-    assert_eq!(tree.read(outline), vec!["photos/? 1 files 3 B", "notes.txt 2 B"]);
+    assert_eq!(
+        tree.read(outline).expect("the tree is on"),
+        vec!["photos/? 1 files 3 B", "  a.jpg 3 B", "notes.txt 2 B"]
+    );
 }
 
 // ========================================

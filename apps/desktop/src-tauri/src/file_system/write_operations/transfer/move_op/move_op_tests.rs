@@ -469,6 +469,49 @@ fn a_same_fs_merge_that_skipped_a_child_reports_the_source_still_there() {
     assert_eq!(removal_flags_for(&events, &src_dir), vec![false]);
 }
 
+/// A same-FS move renames each item whole and walks nothing, so its tree is the
+/// selected items themselves: a folder row with no children, done once its
+/// rename lands, and a skipped item's row skipped.
+#[test]
+fn a_same_fs_move_shows_one_row_per_item_settled_by_its_rename() {
+    use crate::file_system::write_operations::transfer_tree::test_support::row_states;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src_root = tmp.path().join("src");
+    let dst_root = tmp.path().join("dst");
+    fs::create_dir_all(src_root.join("folder")).unwrap();
+    fs::create_dir_all(&dst_root).unwrap();
+    fs::write(src_root.join("folder/inner.bin"), b"inner").unwrap();
+    fs::write(src_root.join("moved.bin"), b"moved").unwrap();
+    fs::write(src_root.join("clash.bin"), b"incoming").unwrap();
+    fs::write(dst_root.join("clash.bin"), b"theirs").unwrap();
+    let state = make_state(200);
+    let config = WriteOperationConfig {
+        conflict_resolution: ConflictResolution::Skip,
+        ..WriteOperationConfig::default()
+    };
+
+    move_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        "same-fs-move-rows",
+        &state,
+        &[
+            src_root.join("moved.bin"),
+            src_root.join("folder"),
+            src_root.join("clash.bin"),
+        ],
+        &dst_root,
+        &config,
+    )
+    .expect("the move succeeds");
+
+    let tree = state.transfer_tree.get().expect("the move installed a tree");
+    assert_eq!(
+        tree.read(row_states).expect("the tree is on"),
+        vec!["folder/ done", "clash.bin skipped", "moved.bin done"]
+    );
+}
+
 #[test]
 fn a_cross_fs_move_reports_removal_only_after_the_source_delete_phase() {
     // Phase 2 finishes staging while the original is untouched; Phase 4 deletes

@@ -387,8 +387,9 @@ Two latent overwrite holes closed with it: the macOS non-APFS branch and the Lin
 
 ## What a transfer says about each top-level source
 
-Both drivers emit `write-source-item-done` per top-level source, carrying an outcome as well as `source_removed`
-(`../DETAILS.md` § "Per-source outcomes"). Three of the four emit points are non-obvious:
+Every engine, local and volume, emits `write-source-item-done` per top-level source, carrying an outcome as well as
+`source_removed` (`../DETAILS.md` § "Per-source outcomes", which also says which volume code reports which verdict).
+Three of the local engine's four emit points are non-obvious:
 
 - **A copy bulk-skipped by a pre-known conflict** emits `Skipped` from the bulk-skip prelude, before `SourceItemTracker`
   is built. Those sources are removed from `scan_result.files` up front, so nothing later in the run would ever speak

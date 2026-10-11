@@ -142,7 +142,6 @@ pub(super) struct CopyTask {
     /// tell its own placeholder from a file nobody answered for
     /// (`staged_write.rs::LandingName`).
     pub(super) dest_name_claimed: bool,
-    pub(super) file_name: Option<String>,
     /// The operation's one file-copy window, shared with every merge walker.
     pub(super) window: FileWindow,
     /// The operation's ledger of cross-type asides, which a deep clash inside
@@ -185,7 +184,6 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Box
         dest_path,
         replaces,
         dest_name_claimed,
-        file_name,
         window,
         displaced,
         created,
@@ -204,7 +202,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Box
     // rather than whichever file happens to be furthest along. The throttle
     // clock is the operation's, shared with every sibling task, so the event
     // rate the user sees is the operation's and not each task's.
-    let source_progress = leaf_ledger.for_source(file_name, Arc::clone(&last_progress));
+    let source_progress = leaf_ledger.for_source(&source_path, Arc::clone(&last_progress));
     // Deep merge children are never top-level sources, so the resolver never
     // keys into per-source hints for them — an empty map is correct.
     let merge_hints: HashMap<PathBuf, SourceHint> = HashMap::new();

@@ -231,8 +231,9 @@ pub(super) async fn copy_single_path(
         // directory.
         // A top-level FILE source is a leaf like any other: it holds its own
         // share of the in-flight total while it streams, so a sibling task's
-        // file finishing can't take this one's progress off the bar.
-        let leaf = progress.begin_leaf();
+        // file finishing can't take this one's progress off the bar. Its row
+        // is the source's own.
+        let leaf = progress.begin_leaf(progress.node());
         let on_chunk = |file_bytes_done: u64, _file_bytes_total: u64| leaf.on_chunk(file_bytes_done);
         let bytes = stream_pipe_file(
             source_volume,

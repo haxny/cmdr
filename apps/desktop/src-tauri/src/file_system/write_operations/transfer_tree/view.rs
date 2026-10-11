@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 
 use super::model::{LeafState, NodeId, TreeModel, TreeRowState};
-use crate::file_system::write_operations::types::WriteOperationError;
+use crate::file_system::write_operations::types::{ProgressAxis, WriteOperationError};
 
 /// What a view asks for.
 #[derive(Debug, Clone, Deserialize, specta::Type)]
@@ -38,6 +38,10 @@ pub(crate) enum TreeWindow {
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TransferTreeView {
+    /// `false` while the operation scans (no tree yet): every other field is
+    /// empty. Also `false` for a tree a bug turned off, which the transfer
+    /// outlives.
+    pub(crate) ready: bool,
     /// Bumps on every mutation: equal means nothing changed.
     pub(crate) revision: u64,
     /// Rows under the effective expansion.
@@ -47,11 +51,27 @@ pub(crate) struct TransferTreeView {
     pub(crate) rows: Vec<TransferTreeRow>,
     /// Flat index of the topmost active row (or the folder row hiding it).
     pub(crate) focus_row: Option<u32>,
+    /// The axis every folder bar fills along: the operation's bottleneck,
+    /// the same answer its `write-progress` events carry.
+    pub(crate) axis: ProgressAxis,
 }
 
 impl TransferTreeView {
-    pub(super) fn with_revision(self, revision: u64) -> Self {
-        Self { revision, ..self }
+    /// The answer while there's no tree to show.
+    pub(crate) fn not_ready(axis: ProgressAxis) -> Self {
+        Self {
+            ready: false,
+            revision: 0,
+            total_rows: 0,
+            offset: 0,
+            rows: Vec::new(),
+            focus_row: None,
+            axis,
+        }
+    }
+
+    pub(super) fn finished(self, revision: u64, axis: ProgressAxis) -> Self {
+        Self { revision, axis, ..self }
     }
 }
 
@@ -123,11 +143,13 @@ pub(crate) fn flatten(model: &TreeModel, request: &TransferTreeViewRequest) -> T
         Vec::new()
     };
     TransferTreeView {
+        ready: true,
         revision: 0,
         total_rows,
         offset,
         rows,
         focus_row,
+        axis: ProgressAxis::Bytes,
     }
 }
 

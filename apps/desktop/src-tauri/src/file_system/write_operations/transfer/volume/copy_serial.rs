@@ -27,10 +27,10 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
 use super::super::super::state::WriteOperationState;
-use super::super::super::types::{VolumeCopyConfig, WriteOperationPhase, WriteOperationType};
+use super::super::super::types::{SourceItemOutcome, VolumeCopyConfig, WriteOperationPhase, WriteOperationType};
 use super::super::transfer_driver::{
     ConflictDecision, ConflictDecisionInput, DriverConfig, LeafProgressLedger, PostLoopIntent, ResolveFut,
-    TransferContext, TransferFut, TransferOutcome, drive_transfer_serial_async,
+    TransferContext, TransferFut, TransferOutcome, drive_transfer_serial_async, emit_source_outcome,
 };
 use super::super::transfer_probe::{DriverPhase, OperationProbe, TaskRole, TaskRow};
 use super::conflict::resolve_volume_conflict;
@@ -134,6 +134,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
         pre_known_conflicts: config.pre_known_conflicts.clone(),
         // Streaming path: the leaf ledger owns leaf-granular milestones.
         emit_per_source_milestone: false,
+        // Skips and failures from the driver, `Done` from the closure below.
+        report_source_outcomes: true,
     };
     // The driver bounds its closures as
     // `for<'a> FnMut(...) -> Pin<Box<dyn Future + Send + 'a>>` — the
@@ -365,7 +367,6 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                 };
                 let bytes_done_so_far = ctx.bytes_done_so_far;
                 Box::pin(async move {
-                    let file_name = source_path.file_name().map(|n| n.to_string_lossy().to_string());
                     log::debug!(
                         "copy_volumes_with_progress: copying {} -> {}",
                         source_path.display(),
@@ -406,7 +407,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                     // The driver's tally of every PRIOR source, which the leaves
                     // below add their own bytes on top of.
                     leaf_ledger.reseed_finished(bytes_done_so_far);
-                    let leaf_progress = leaf_ledger.for_source(file_name.clone(), last_emit);
+                    let leaf_progress = leaf_ledger.for_source(&source_path, last_emit);
 
                     // Per-source rollback ledger: the files this transfer
                     // streams and the dirs it newly creates inside a
@@ -524,6 +525,17 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             // deep-merge child replaced a dest file. Captured
                             // before `replaces` is consumed.
                             let source_overwrote = replaces.overwrites() || created.any_overwrote();
+                            // A folder whose every file was declined landed
+                            // nothing: that's a skip, the way the local engine
+                            // reports one (`DETAILS.md` § "Per-source outcomes").
+                            let verdict = if source_is_dir
+                                && created.skipped_file_count() > 0
+                                && created.files.lock_ignore_poison().is_empty()
+                            {
+                                SourceItemOutcome::Skipped
+                            } else {
+                                SourceItemOutcome::Done
+                            };
                             let landed_path = match replaces {
                                 Replaces::ViaTemp(orig) => {
                                     if let Err(e) = super::finalize::finalize_safe_replace(
@@ -605,6 +617,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             if source_skipped == 0 {
                                 events.note_source_landed_clean(&source_path);
                             }
+                            // A copy leaves its source exactly where it was.
+                            emit_source_outcome(&*events, &operation_id, &source_path, verdict, false);
                             Ok(TransferOutcome::Transferred { bytes: bytes_copied })
                         }
                         Err(e) => {

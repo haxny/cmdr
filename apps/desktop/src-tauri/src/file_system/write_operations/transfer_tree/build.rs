@@ -268,6 +268,19 @@ impl PathTree {
         Some(parent_id)
     }
 
+    /// Lays the arena out and hands it each source's row. Returns the final id
+    /// of every builder id, as [`TreeBuilder::finish`] does.
+    fn finish(self, order: &TreeOrder) -> (TreeModel, Vec<NodeId>) {
+        let (mut model, final_ids) = self.builder.finish(order);
+        model.set_sources(
+            self.sources
+                .into_iter()
+                .map(|(path, id)| (path, final_ids[id.0 as usize]))
+                .collect(),
+        );
+        (model, final_ids)
+    }
+
     /// A known path made a folder: something turned up inside it.
     fn as_folder(&mut self, id: BuilderId) -> Option<BuilderId> {
         match self.builder.kind(id) {
@@ -355,7 +368,7 @@ impl TreeRecorder {
     /// afterwards, so call it once the scan has returned.
     pub(crate) fn finish(&self, order: &TreeOrder) -> TreeModel {
         let tree = std::mem::replace(&mut *self.tree.lock_ignore_poison(), PathTree::new(&[]));
-        tree.builder.finish(order).0
+        tree.finish(order).0
     }
 }
 
@@ -400,6 +413,18 @@ pub(crate) fn from_per_path(
     recorder.finish(order)
 }
 
+/// A rename move's tree: one row per selected item, and nothing below a
+/// folder. A rename takes a whole item in one call and walks nothing, so the
+/// item IS the unit of work, the same unit its progress counts; a folder row
+/// is done the moment its rename lands (`TreeModel::complete_subtree`).
+pub(crate) fn from_sources(sources: &[PathBuf], is_folder: impl Fn(&Path) -> bool, order: &TreeOrder) -> TreeModel {
+    let mut tree = PathTree::new(sources);
+    for source in sources.iter().filter(|source| is_folder(source)) {
+        tree.dir(source);
+    }
+    tree.finish(order).0
+}
+
 /// The local walk's tree: `dirs` (every folder it entered, the sources among
 /// them) and `files` (every file, link, and special entry it counted). Returns
 /// each file's node, in `files` order, for `FileInfo::tree_node`: `None` for
@@ -415,7 +440,7 @@ pub(crate) fn from_local_scan<'a>(
         tree.dir(dir);
     }
     let file_ids: Vec<Option<BuilderId>> = files.into_iter().map(|(path, size)| tree.file(path, size)).collect();
-    let (model, final_ids) = tree.builder.finish(order);
+    let (model, final_ids) = tree.finish(order);
     let nodes = file_ids
         .into_iter()
         .map(|id| id.map(|id| final_ids[id.0 as usize]))

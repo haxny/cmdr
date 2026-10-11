@@ -20,7 +20,16 @@ Every transfer's scan builds one, and the operation installs it on `WriteOperati
   child the oracle can't name reaches the recorder as a subtree, since that branch never walks it.
 - **Compress**: `from_archive_plan` over `FreshPlan::entries`, whose names are already relative to the selection's
   parent (`../archive_edit/fresh_compress.rs`). `from_archive_plan` also returns each entry's node, in plan order.
-- **Same-FS and same-volume moves** don't scan (they're renames), so they install no tree.
+- **Same-FS and same-volume moves** (renames): `from_sources`, one row per selected item and nothing below a folder
+  (`../transfer/move_op/same_fs.rs`, `../transfer/volume/move_same.rs`).
+
+**Decision: a rename move's rows are its items, not a tree of their contents.** **Why**: a rename takes a whole folder
+in one call and walks nothing, so the item is the unit of work, the same unit the operation's own counts use (a same-FS
+move's status counts items). A scanned tree would show a folder's 312 files at 0/312 and then all at once, which
+claims a per-file progress that never happened, and scanning only to draw rows would cost the walk a rename exists to
+skip. Each row flips done (or skipped) as its rename lands, and a folder row has no children to expand. A
+same-volume move's items already moved into their destination (`already_in_place`) are no rows: they never reach the
+driver.
 
 ## The arena
 
@@ -55,8 +64,11 @@ for a walker's level.
 ## Mutations and folder state
 
 One call per file boundary: `begin` (with the driver's live byte counter), `complete`, `withdraw` (stopped without
-landing: back to waiting), `skip`, `fail` (keeps the typed `WriteOperationError`), `folder_created` (only an EMPTY
-folder reads it), `discover`. A second report on a settled file is ignored, so nothing counts twice.
+landing: back to waiting), `skip`, `fail` (keeps the typed `WriteOperationError`; a folder can fail too, and counts
+itself), `folder_created` (only an EMPTY folder reads it), `discover`. A second report on a settled file is ignored, so
+nothing counts twice. Whole-subtree calls, one per subtree: `complete_subtree` and `skip_subtree` settle every file
+below (plus what an opaque folder's scan counted and its walk never named), and `empty_folders_created` finishes every
+empty folder at once.
 
 Folder state is derived at read time, never stored: failed if any file below failed; else, once every file is settled,
 skipped if all were skipped, done otherwise; else active if anything below is in flight or landed; else waiting. An
@@ -81,3 +93,76 @@ set per request).
 
 `Follow { lead }` puts the focus row `lead` rows from the top, clamped so the window fills; `At { offset }` clamps to
 the row count. `focus_row` is the topmost focus file's row, or the shut folder hiding it.
+
+## The view command
+
+`get_transfer_tree_view(operation_id, request)` (`../tree_view.rs`, its own leaf because it looks the operation up in
+the manager and the state registry, which sit above this module) answers:
+
+- `Err(UnknownOperation)`: no operation by that id (never existed, or settled, and its tree went with it).
+- `Err(NotATransfer)`: an operation type that never builds a tree (delete, trash, rename, an edit inside an existing
+  archive).
+- `Ok` with `ready: false`: queued, scanning, or a tree a bug turned off. Every other field is empty.
+- `Ok` with `ready: true`: the window. `axis` is the bottleneck the operation's last `write-progress` carried
+  (`../eta.rs`), `Bytes` before there was one, so every folder bar fills along the same axis the header's ETA follows.
+
+No event of its own: a view calls it on mount and on each `write-progress` tick, which keeps the backend stateless per
+view. The command is `async` so it never answers on the main thread: a window is microseconds, but it takes the tree's
+lock, which a subtree-at-once report holds for as long as the subtree is big.
+
+## How drivers report (`report.rs`)
+
+A driver holds a `TreeReporter` (`TransferTreeSlot::reporter`), cloned freely, silent when the operation has no tree.
+
+- **A file's row is a `TreeLeaf`**, opened with `reporter.leaf(node)` (active), settled by `complete` / `skip`, and put
+  back to waiting by `Drop` when it was neither (a failure, a cancel, a retry that gave up). Its byte counter is an
+  `Arc<AtomicU64>` the driver advances per chunk with a plain store; the view reads it.
+- **The volume engines' `LeafProgress` owns its `TreeLeaf`** (`../transfer/transfer_driver/progress.rs`), and the
+  leaf's high-water mark IS the row's byte counter, so the bar and the row can't disagree. `SourceProgress` carries the
+  top-level source's row (`for_source` looks it up by path); a top-level file's leaf is that row.
+- **The merge walker resolves rows per level** (`../transfer/volume/merge.rs`): one `TreeLevel` per listed folder,
+  children by name, built once and dropped with the level. A child the scan never saw (an opaque folder's contents, a
+  file that appeared since) joins the tree there (`discover`); a name whose kind changed since the scan gets no row. A
+  level that finished marks its folder in place (only an empty one reads it). The sequential extractor's plan pass
+  records each member's row for its data pass (`PlannedWrite::row`).
+- **The local engine** opens a `TreeLeaf` per `FileInfo::tree_node` around `copy_single_item`, which settles it with
+  its verdict in the per-file milestone (before that event goes out, so a view pulled on it already shows the row) and
+  advances its bytes from the chunked-copy callback. The scanned-dirs pass finishes every empty folder at once. A file
+  without a node (none today) is a no-op.
+- **Subtree-at-once paths**: the async driver's bulk pre-skip and top-level Skip, the concurrent driver's pre-skip and
+  Skip, and the local copy's bulk pre-skip call `skip_whole` on the source's row; a rename move's landed item calls
+  `complete_whole`; a merge child that is a FOLDER answered Skip goes through `SourceProgress::skip_leaf`, which skips
+  its whole subtree.
+- **Cross-FS and cross-volume moves**: the tree tracks the COPY phase; the source sweep after it is a phase of the
+  header, and the rows stay as the copy left them.
+- **Compress** (`../archive_edit/fresh_rows.rs::CompressRows`): the producer writes plan entries one at a time in
+  plan order, and every progress tick says how many it finished, so the entry in flight is the `entries_done`th. The
+  observer derives rows from the ticks alone; `produce` speaks no tree vocabulary. One active row at a time. A remote
+  destination's upload (step 2 of 2) leaves the rows done.
+- **Failures**: the two gateways every transfer's `write-error` goes through, `transfer_sides::transfer_stop_event`
+  (local) and `volume/transfer_error.rs::write_error_event_from` (volume), call `TransferTreeSlot::note_failure`, which
+  marks the row at the error's typed `item_path` (an `OriginalsKeptAside`'s cause's), found by walking down from its
+  source by name. A destination path, or a path the tree never held, marks nothing. The row shows while the error is
+  on screen; keeping it past settle is #261's. A compress tree holds no source paths, so a compress failure marks no
+  row.
+
+### Observation only, structurally
+
+A tree bug must never fail, slow, or alter a transfer:
+
+- Every report returns `()` (or a row id that only feeds later reports), so no driver can branch on the tree.
+- Every report is a no-op without a tree or a row: `TreeReporter::none`, a `None` node, a kind mismatch.
+- `TransferTree::guarded` wraps every read and write in `catch_unwind`: a panic (a bad id indexing the arena, say) is
+  logged, still reaches the crash reporter's hook as the bug it is, and turns the tree off for the rest of the
+  operation; the driver that reported never sees it. Views then answer `ready: false`. Pinned by
+  `report_tests.rs::a_report_that_panics_turns_the_tree_off_and_the_driver_carries_on`.
+- One uncontended mutex per file boundary, never per chunk (below).
+
+### What a report costs
+
+One file's `begin` + `complete` (an `Arc` allocation, two lock acquisitions, an O(depth) walk up): 88 ns median, 35 ns
+best, against 251 µs per file for the whole local copy (2,000 × 4 KB files, 501 ms median), so 0.04% of the
+many-small-files case where per-file overhead is all there is (verified 2026-10-12, release build,
+`report_tests.rs::tree_boundary_cost_bench` and `../transfer/copy/copy_tests.rs::local_copy_bench_many_small_files`, on
+a machine under load average ~190, so the copy figure is noisy; the earlier baseline in `../transfer/DETAILS.md` §
+"Local copies stage" read 394–400 ms on a quieter one).

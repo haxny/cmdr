@@ -142,7 +142,8 @@ pub(in crate::file_system::write_operations) struct MoveSourceCounts {
 }
 
 /// The `write-error` event for a transfer that stopped: the typed error with the
-/// vanished drive named, plus how far the operation had got.
+/// vanished drive named, plus how far the operation had got. Marks the failed
+/// row in the transfer tree on the way.
 ///
 /// ❗ Called while the operation is still registered, so the status cache still
 /// holds its counters. After `on_settled` there is nothing left to read.
@@ -154,6 +155,8 @@ pub(in crate::file_system::write_operations) fn transfer_stop_event(
     sources: Option<MoveSourceCounts>,
 ) -> WriteErrorEvent {
     let error = name_the_vanished_drive(error, state.sides.as_ref());
+    // The row the failure names shows it, while the error is on screen.
+    state.transfer_tree.note_failure(&error);
     WriteErrorEvent::new(operation_id.to_string(), operation_type, error)
         .with_progress_at_stop(progress_at_stop(operation_id, sources))
 }
@@ -205,23 +208,9 @@ pub(in crate::file_system::write_operations) fn name_the_vanished_drive(
 
 /// The path an in-flight failure names, for the both-drives-gone tie-break and
 /// to keep the technical details pointing at the file the operation was on.
-/// `None` for the refusals raised before any I/O, which carry no single path or
-/// name something other than a file.
+/// `None` for the refusals raised before any I/O (`WriteOperationError::item_path`).
 fn failing_path(error: &WriteOperationError) -> Option<&str> {
-    match error {
-        WriteOperationError::IoError { path, .. }
-        | WriteOperationError::ReadError { path, .. }
-        | WriteOperationError::WriteError { path, .. }
-        | WriteOperationError::SourceNotFound { path }
-        | WriteOperationError::DestinationNotFound { path }
-        | WriteOperationError::DeviceDisconnected { path, .. }
-        | WriteOperationError::PermissionDenied { path, .. }
-        | WriteOperationError::DestinationFull { path }
-        | WriteOperationError::ConnectionInterrupted { path }
-        | WriteOperationError::FileLocked { path }
-        | WriteOperationError::MoveNotConfirmed { path, .. } => Some(path),
-        _ => None,
-    }
+    error.item_path()
 }
 
 /// How far the operation had got, from its live status row. A move's source

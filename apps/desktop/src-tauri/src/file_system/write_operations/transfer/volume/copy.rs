@@ -363,12 +363,22 @@ pub async fn copy_between_volumes(
                         op_id,
                         failure.error
                     );
-                    events.emit_error(write_error_event_from(op_id.clone(), WriteOperationType::Copy, failure));
+                    events.emit_error(write_error_event_from(
+                        &state,
+                        op_id.clone(),
+                        WriteOperationType::Copy,
+                        failure,
+                    ));
                 }
                 Err(failure) => {
                     // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
                     crate::log_error!("copy_between_volumes: operation {} failed: {:?}", op_id, failure.error,);
-                    events.emit_error(write_error_event_from(op_id.clone(), WriteOperationType::Copy, failure));
+                    events.emit_error(write_error_event_from(
+                        &state,
+                        op_id.clone(),
+                        WriteOperationType::Copy,
+                        failure,
+                    ));
                 }
             }
 
@@ -1319,6 +1329,9 @@ mod tests;
 #[cfg(test)]
 #[path = "copy_tree_order_tests.rs"]
 mod tree_order_tests;
+#[cfg(test)]
+#[path = "copy_tree_rows_tests.rs"]
+mod tree_rows_tests;
 #[cfg(test)]
 #[path = "copy_wedge_test_support.rs"]
 mod wedge_test_support;

@@ -90,8 +90,8 @@ The full top-level inventory is here:
   a preview), `compress_estimate.rs`. A preview walks for a `ScanPreviewPurpose`: a `Transfer` walk also builds the
   operation's live tree and `CachedScanResult` carries it to the operation the way it carries `per_path`, a `Compress`
   walk samples the size estimate, and a `Delete` walk keeps totals only. `transfer_tree/` is that tree (its own
-  `CLAUDE.md`), installed on `WriteOperationState::transfer_tree` once a copy's, move's, or compress's scan is done.
-  Conflicts and overwrite:
+  `CLAUDE.md`), installed on `WriteOperationState::transfer_tree` once a copy's, move's, or compress's scan is done;
+  `tree_view.rs` answers `get_transfer_tree_view` from it. Conflicts and overwrite:
   `conflict.rs` (policy), `conflict_preflight.rs` (the transfer dialog's BEFORE-the-write check, § "The pre-flight
   conflict check"), `unique_name.rs` (the ` (N)` namer), `conflict_slot.rs` (the one-answer-wins slot behind
   `resolve_write_conflict`), `overwrite.rs` (tests in `overwrite_tests.rs`), `look_alike.rs` (a name a byte-exact
@@ -337,6 +337,13 @@ Rates and ETA are computed in the backend (`eta.rs`) and shipped on every `Write
 - **The frontend hides the SPEED during those waits and keeps the ETA** (`operation-session/DETAILS.md` § "Read surface"). The two are one design: the speed is a claim about right now, which is nothing; the ETA is a claim about the work left, which this exclusion keeps true.
 
 **Skipped work is subtracted before the sample.** `enrich_progress` feeds the estimator `bytes_done` / `bytes_total` / `files_done` / `files_total` NET of `state.skipped_totals()`, while the event it enriches keeps the gross numbers the bars render. A skipped file is done and both bars have to reach their totals, but nothing moved for it, so charging it to the EWMA reads as an instantaneous burst — and a merge declining thousands of children back to back would make that burst the whole reported speed. Remaining work is identical either way (`done` and `total` lose the same term), so this changes the rate and never the ETA's numerator. Every skip site calls `state.note_skipped(files, bytes)`; the list and the throttling that goes with it: `transfer/DETAILS.md` § "Skipped work moves the bars, and stays out of the rate".
+
+**The bottleneck axis:** `EtaStats::bottleneck` (and `WriteProgressEvent::bottleneck`) names the axis whose ETA
+decides, with hysteresis: the other axis takes over only after its ETA has led by more than 10% (`AXIS_LEAD`) for 3 s of
+working time (`AXIS_HOLD`). `Bytes` while warming up, `Files` from the start for an operation that moves no bytes (a
+rename move). Every folder bar in the transfer tree fills along it, so one answer serves every surface; a lead that comes
+and goes inside the hold would redraw them all. Pinned in `eta_tests.rs` (`the_file_count_takes_over_only_after_*`,
+`a_lead_that_ends_before_*`).
 
 **Phase transitions reset:** `update()` reseeds on every `phase` change. Without this, the counters' reset (scanning → copying both restart from 0) would feed a negative delta into the EWMA. Rollback is treated as a forward phase toward target `(0, 0)`: the estimator subtracts the new counters from the previous ones and ETA = current value / decay rate.
 
@@ -710,7 +717,8 @@ See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher archi
 - **`write-settled`**: Emitted once per op after the spawned background task fully returns. See [Settle contract](#settle-contract).
 - **`volumes-busy-changed`**: The set of volume IDs with an in-flight op changed (an op started or finished). Payload is `string[]`. See [Busy-volumes set](#busy-volumes-set).
 - **`operations-changed`**: The operation registry's membership or lifecycle status changed. Thin snapshot (`{ operations: OperationSnapshot[] }`), NOT 200 ms progress. See [Operation manager](#operation-manager).
-- **`write-source-item-done`**: All files for a top-level source item processed (for gradual deselection)
+- **`write-source-item-done`**: A top-level source item is finished with, and how (for gradual deselection). Every
+  transfer engine reports it, the volume ones included. See [Per-source outcomes](#per-source-outcomes).
 - **`dry-run-complete`**: `config.dry_run == true` (returns `DryRunResult`)
 - **`scan-preview-progress`**: During `start_scan_preview`
 - **`scan-preview-complete`**: Preview scan finished
@@ -850,6 +858,10 @@ sweep reverses nothing and only stops the sweep. The frontend names that window 
 ### IPC
 
 `list_operations` (the thin snapshot), `cancel_operation(id)`, `cancel_operations(ids)` (the queue window's "Cancel selected"), `pause_operation(id)` / `resume_operation(id)`, and `pause_all` / `resume_all`. Cancel routes through `cancel_operation`: a Queued op is dropped from the registry without ever spawning (`cancel_if_queued`); a Running/Paused op falls through to the existing `cancel_write_operation(id, rollback=false)` keep-partials path. Pause/resume flip BOTH the live `WriteOperationState` pause gate (so the driver parks) AND the manager record's `LifecycleStatus` (so the UI shows Paused), via `set_paused`, and both RETURN a `PauseOutcome` (`Applied` / `AlreadyInState` / `NotApplicable`) that rides out through `bindings.ts` ([Pause / resume](#pause--resume)). Plus `dismiss_failed_operation(id)` / `dismiss_all_failed_operations()`, which drop retained failures and re-emit, and `retry_failed_operation(id)`, which starts one again and answers a `RetryOutcome` ([Retained failures](#retained-failures)). And `move_queued_operation(id, direction)`, which reorders the line and returns a `QueueMoveOutcome` ([Reordering the line](#reordering-the-line-move_queued)). Registered in the `ipc.rs` manifest; `OperationSnapshot` / `LifecycleStatus` / `OperationsChanged` ride into `bindings.ts`. No capability change: manager commands go through the invoke handler, not the ACL.
+
+`get_transfer_tree_view(id, request)` answers one window of a running copy's, move's, or compress's live tree
+(`tree_view.rs` over `transfer_tree/`; no new event: views pull it on each `write-progress` tick). Its typed refusal is
+`TransferTreeViewError` (`unknown_operation`, `not_a_transfer`); a queued or scanning operation answers `ready: false`.
 
 ### Pause / resume
 
@@ -1197,6 +1209,13 @@ Where each non-`Done` outcome comes from — every one a place the engine alread
 - **A skip decided MID-FLIGHT reports `Skipped`**, via `scan::FileVerdict` returned from `copy_single_item`. This is the one the pre-flight can't see: the local engine resolves per-file conflicts as it walks (a cross-type refusal, a Skip on a clash inside a folder, a source that already IS its destination), long after the bulk-skip pass has run. `copy_single_item` used to return `Ok(())` for both outcomes, so the driver counted every one of them as a transfer — the operation reported "Copied 2 files." having copied one, `files_skipped` stayed 0, and the `had_conflicts` analytics proxy (`files_skipped > 0`) missed the whole class.
 
 **A source is `Done` if ANY of its files landed.** The skip is per file, so one refused child inside a folder doesn't make the folder a skip; `SourceItemTracker` tracks "landed something" per top-level source and only reports `Skipped` for one that landed nothing.
+
+**The volume engines report it too** (the cross-volume copy's serial and concurrent drivers, the cross-volume move, and the same-volume rename move), so a transfer to or from a share deselects gradually. Whoever DECIDES a verdict reports it:
+
+- **The async driver** (`transfer/transfer_driver/async_driver.rs`, `DriverConfig::report_source_outcomes`) reports the ones it decides: `Skipped` for a bulk pre-skip, a top-level Skip, or a closure's `Skipped`, and `Failed` for an error on that source. ❌ Never for a `Cancelled` (nothing was decided) or a `SourceNotRemoved` (the copy landed; the closure already said `Done`).
+- **The closures** report `Done`, because only they know whether anything landed (a folder whose every file was declined is `Skipped`, as on the local engine) and whether the source is gone. The concurrent driver reports from `record_success` / `record_failure` and its own pre-skip and Skip paths (`copy_concurrent*.rs`).
+- **A cross-volume move speaks twice**, like the local cross-FS one: `Done` (source kept) once the copy landed, then again after the sweep with `source_removed` answered by the sweep's own account of what it kept (a Skip, a newcomer, or a changed file keeps the source standing), ❌ never inferred from "it was a move" and ❌ never a fresh probe: on an object store every probe is a billed request the S3 estimate suites count. Pinned by `transfer/volume/copy_tree_rows_tests.rs`.
+- **A same-volume rename move** reports `Done` per renamed item (`move_same.rs::landed_whole`). A plain rename that returned `Ok` took the item whole (`source_removed: true`); a rename-merge asks the volume, since it leaves the source folder standing around a skipped child.
 
 ⚠️ **`FileVerdict` says what the POLICY decided, never what is on disk**, and a destructive act must not read it. The cross-FS move's phase-4 delete set is decided by the LEDGER (`transaction.created_files()` growing across the call), because that records what actually got written; the verdict feeds reporting only, where being wrong costs a wrong label instead of a file. Delete passes `CarriedOut` unconditionally: it has no Skip, so reaching the tracker means the entry is unlinked.
 

@@ -87,9 +87,9 @@
 //! - **Scan phase**: scanning, disk-space check, and source-hint construction are pre-loop concerns
 //!   owned by the caller. They produce the inputs the driver needs (`total_files`, `total_bytes`,
 //!   `pre_skip_paths`).
-//! - **`SourceItemTracker`** (`write-source-item-done` emit): local-FS-only concern. The sync
-//!   driver's closure threads `SourceItemTracker` through itself (it's `!Sync` and lives on the
-//!   serial path only); volume ops don't emit this event today.
+//! - **`SourceItemTracker`**: local-FS-only. The sync driver's closure threads it through itself
+//!   (it's `!Sync` and lives on the serial path only) and reports every `write-source-item-done`.
+//!   The async driver reports the verdicts it decides itself (`DriverConfig::report_source_outcomes`).
 //! - **`CopyTransaction`** (rollback bookkeeping): local-FS-only. The closure captures `&mut
 //!   transaction`; the driver never sees it. On a non-Ok `TransferLoopOutcome.intent`, the caller
 //!   decides whether to invoke `rollback_with_progress`.
@@ -123,7 +123,8 @@ use std::sync::Arc;
 use super::super::event_sinks::OperationEventSink;
 use super::super::state::{WriteOperationState, update_operation_status};
 use super::super::types::{
-    ConflictResolution, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+    ConflictResolution, SourceItemOutcome, WriteOperationError, WriteOperationPhase, WriteOperationType,
+    WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 
 mod async_driver;
@@ -423,6 +424,32 @@ pub(super) struct DriverConfig {
     /// regress the File bar at the end of a directory source (e.g. 9/9 → 1/9).
     /// Ignored by the sync driver, whose closure always owns its emits.
     pub emit_per_source_milestone: bool,
+    /// Whether the ASYNC driver reports the per-source verdicts IT decides on
+    /// `write-source-item-done`: `Skipped` for a bulk pre-skip, a top-level
+    /// Skip, or a closure's `Skipped`, and `Failed` for a closure's error (❌
+    /// never a cancel). The closure reports `Done` itself, because only it
+    /// knows whether anything landed and whether the source is gone. `true`
+    /// for every volume transfer (the cross-volume copy and move, and the
+    /// same-volume rename). Ignored by the sync driver, whose closure reports
+    /// every verdict.
+    pub report_source_outcomes: bool,
+}
+
+/// One `write-source-item-done`: how a top-level source ended. The LAST one a
+/// source gets is its verdict (`../../DETAILS.md` § "Per-source outcomes").
+pub(super) fn emit_source_outcome(
+    events: &dyn OperationEventSink,
+    operation_id: &str,
+    source: &Path,
+    outcome: SourceItemOutcome,
+    source_removed: bool,
+) {
+    events.emit_source_item_done(WriteSourceItemDoneEvent {
+        operation_id: operation_id.to_string(),
+        source_path: source.display().to_string(),
+        source_removed,
+        outcome,
+    });
 }
 
 // ============================================================================

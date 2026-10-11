@@ -32,7 +32,7 @@ use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
 use super::super::super::state::WriteOperationState;
-use super::super::super::transfer_tree::TreeOrder;
+use super::super::super::transfer_tree::{NodeId, TreeOrder};
 use super::super::super::types::WriteOperationError;
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::SourceProgress;
@@ -227,7 +227,7 @@ impl<'a> LeafPool<'a> {
 /// window as a unit of work.
 #[allow(
     clippy::too_many_arguments,
-    reason = "One leaf's whole context: both volumes, both paths, what the listing knows about the source, the safe-replace original, how the write is staged, shared state, the ledger, and the source's progress accounting."
+    reason = "One leaf's whole context: both volumes, both paths, what the listing knows about the source, the safe-replace original, how the write is staged, shared state, the ledger, the source's progress accounting, and the file's tree row."
 )]
 async fn copy_leaf<'a>(
     source_volume: &'a Arc<dyn Volume>,
@@ -241,12 +241,14 @@ async fn copy_leaf<'a>(
     state: &'a Arc<WriteOperationState>,
     created: &'a CreatedPaths,
     progress: &'a Arc<SourceProgress>,
+    node: Option<NodeId>,
 ) -> LeafResult {
     // This leaf's own share of the operation's in-flight byte total, held for
     // its whole life. Siblings streaming beside it hold their own, so neither
     // this one finishing nor a sibling's can take the other's bytes off the bar.
-    // A leaf that never lands withdraws its share when this handle drops.
-    let leaf = progress.begin_leaf();
+    // A leaf that never lands withdraws its share when this handle drops. It is
+    // also the file's tree row, active from here.
+    let leaf = progress.begin_leaf(node);
     let on_chunk = |file_bytes_done: u64, _file_bytes_total: u64| leaf.on_chunk(file_bytes_done);
     // ❗ `.at(&child_source)` is the whole point: this is the deepest frame that
     // knows WHICH file failed. Report it one level up and the user gets the name
@@ -378,6 +380,9 @@ pub(super) async fn copy_directory_streaming(
         merge,
         plan,
         &mut pool,
+        // The walk starts at the source's own row and looks every child up
+        // under it, level by level.
+        progress.node(),
     )
     .await;
     // Unconditional: nothing may still be writing to the destination when this
@@ -416,7 +421,7 @@ pub(super) async fn copy_directory_streaming(
 /// earns a folder its source's date; `AlreadyExisted` when in doubt.
 #[allow(
     clippy::too_many_arguments,
-    reason = "Mirrors copy_single_path's argument list plus the rollback ledger, merge context, the sequential-extract plan sink, and the leaf pool."
+    reason = "Mirrors copy_single_path's argument list plus the rollback ledger, merge context, the sequential-extract plan sink, the leaf pool, and the level's tree row."
 )]
 async fn merge_level<'a>(
     source_volume: &'a Arc<dyn Volume>,
@@ -429,6 +434,9 @@ async fn merge_level<'a>(
     merge: Option<&MergeCtx<'_>>,
     plan: Option<&super::sequential_extract::ExtractPlan>,
     pool: &mut LeafPool<'a>,
+    // This level's row in the transfer tree. Observation only: whether it's
+    // `None`, or what the tree makes of a child, changes nothing below.
+    folder: Option<NodeId>,
 ) -> Result<DirectoryCreation, PathedVolumeError> {
     note_pending_for_local_dest(dest_volume, dest_path);
     // Say what this task is doing before the first `.await` of the level. A
@@ -566,6 +574,9 @@ async fn merge_level<'a>(
     // A move sweeps exactly the folders this walk listed; anything else it
     // finds in the source afterwards arrived later and stays.
     created.record_walked_source_dir(source_path);
+    // The level's children by name, for each entry's tree row: one index per
+    // level, dropped with it.
+    let mut tree_level = progress.tree().level(folder);
 
     for entry in &entries {
         // The cooperative boundary, per entry. The walk's own work (listings,
@@ -580,7 +591,7 @@ async fn merge_level<'a>(
         // The level listing settles almost every child: a byte-exact hit, a
         // look-alike (taken, in ITS spelling), or a name nothing folds onto. Only
         // a case-only match costs a probe, and on an ordinary tree none does.
-        let folder = match dest_index.as_ref() {
+        let dest_folder = match dest_index.as_ref() {
             Some(index) => DestFolder::Listed(index),
             None => DestFolder::CreatedByUs,
         };
@@ -589,11 +600,12 @@ async fn merge_level<'a>(
         let name = ChildName::new(&entry.name)
             .map_err(VolumeError::from)
             .at(&child_source)?;
-        let (child_dest, dest_hit) = where_it_lands(dest_volume, dest_path, name, folder, NewName::Respell)
+        let (child_dest, dest_hit) = where_it_lands(dest_volume, dest_path, name, dest_folder, NewName::Respell)
             .await
             .at(&child_source)?
             .into_parts();
         let dest_hit = dest_hit.as_ref();
+        let child_row = tree_level.child(&entry.name, entry.is_directory, entry.size.unwrap_or(0));
 
         if entry.is_directory {
             // Dir-vs-dir (and dir-into-nothing) always recurses to merge — no
@@ -618,6 +630,7 @@ async fn merge_level<'a>(
                     merge,
                     plan,
                     pool,
+                    child_row,
                 ))
                 .await?;
                 if level == DirectoryCreation::Created {
@@ -657,7 +670,7 @@ async fn merge_level<'a>(
                     created.record_skip(child_source.clone(), skipped_bytes);
                     // ...and credit it to the bars. Without this a merge whose
                     // children all clash reports nothing at all until it ends.
-                    progress.skip_leaf(skipped_bytes);
+                    progress.skip_leaf(skipped_bytes, child_row);
                     continue;
                 }
                 MergeChildDecision::Proceed {
@@ -697,6 +710,7 @@ async fn merge_level<'a>(
                 merge,
                 plan,
                 pool,
+                child_row,
             ))
             .await?;
             if level == DirectoryCreation::Created {
@@ -723,6 +737,7 @@ async fn merge_level<'a>(
                     dest_path: write_dest,
                     replaces,
                     landing,
+                    row: child_row,
                 },
             );
             continue;
@@ -752,11 +767,14 @@ async fn merge_level<'a>(
                 state,
                 created,
                 progress,
+                child_row,
             ),
         )
         .await?;
     }
 
+    // The level is in place, which is all an empty folder's row waits for.
+    progress.tree().folder_in_place(tree_level.folder());
     Ok(if level_made_here {
         DirectoryCreation::Created
     } else {
