@@ -699,7 +699,7 @@ fn capability_flags_are_read_only_and_virtual() {
     assert_eq!(
         volume.metadata_caps(),
         cmdr_fs::metadata::MetadataCaps {
-            reports: cmdr_fs::metadata::MetadataClasses::MODE.union(cmdr_fs::metadata::MetadataClasses::XATTRS),
+            reports: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
             ..cmdr_fs::metadata::MetadataCaps::NONE
         }
     );

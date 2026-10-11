@@ -805,7 +805,7 @@ impl Volume for ClaimsCreationDates {
     }
     fn metadata_caps(&self) -> crate::metadata::MetadataCaps {
         crate::metadata::MetadataCaps {
-            stores: crate::metadata::MetadataClasses::CREATED,
+            stores: MetadataClasses::CREATED,
             ..self.0.metadata_caps()
         }
     }
