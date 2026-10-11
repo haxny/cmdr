@@ -16,6 +16,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import DeleteDialog from './DeleteDialog.svelte'
 import type { ScanPreviewCompleteEvent, ScanPreviewProgressEvent } from '$lib/ipc/bindings'
+import type { DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
 
 /** Scan-event listeners the mounted dialog registered, so a test can drive the walk. */
 const listeners = {
@@ -39,6 +40,15 @@ vi.mock('$lib/tauri-commands', () => ({
   }),
   onScanPreviewError: vi.fn(() => Promise.resolve(() => {})),
   onScanPreviewCancelled: vi.fn(() => Promise.resolve(() => {})),
+}))
+
+const emitted = vi.hoisted(() => [] as Array<{ event: string; payload: unknown }>)
+vi.mock('@tauri-apps/api/event', () => ({
+  emit: vi.fn((event: string, payload: unknown) => {
+    emitted.push({ event, payload })
+    return Promise.resolve()
+  }),
+  listen: vi.fn(() => Promise.resolve(() => {})),
 }))
 
 vi.mock('$lib/settings', () => ({
@@ -248,5 +258,56 @@ describe('DeleteDialog over online-only cloud content', () => {
     await settle()
     expect(onConfirm).toHaveBeenCalledWith('preview-1', true, undefined)
     expect(handedBackText(target), 'the explanation goes with the press it explained').toBeNull()
+  })
+})
+
+/** An agent waiting on the press for its operation id would otherwise time out
+ *  on its short start budget while the walk is still counting, and the trash
+ *  would then start with nobody told its id. So the press asks it to hold. */
+describe('an agent pressing confirm while the walk is still counting', () => {
+  const cloudFolder = {
+    sourceItems: [{ name: 'Work', isDirectory: true, isSymlink: false }],
+    sourcePaths: [FOLDER],
+    isPermanent: false,
+    supportsTrash: true,
+    cloudFolderMayHoldOnlineOnly: true,
+  }
+  const holds = () => emitted.filter(({ payload }) => (payload as { holdMs?: number }).holdMs !== undefined)
+
+  it('asks the dialog confirm round-trip to hold for as long as the dialog waits', async () => {
+    emitted.length = 0
+    const registration: { press: DeleteConfirmer | null } = { press: null }
+    mountDialog({
+      ...cloudFolder,
+      registerConfirmer: (confirm: DeleteConfirmer) => {
+        registration.press = confirm
+        return () => {}
+      },
+    })
+    await settle()
+
+    void registration.press?.({ mcpRequestId: 'req-1' })
+    await settle()
+
+    expect(holds()).toEqual([{ event: 'mcp-response', payload: { requestId: 'req-1', holdMs: 90_000 } }])
+  })
+
+  it('asks an auto-confirmed delete round-trip to hold too', async () => {
+    emitted.length = 0
+    mountDialog({ ...cloudFolder, autoConfirm: true, mcpRequestId: 'req-auto' })
+    await settle()
+
+    expect(holds()).toEqual([{ event: 'mcp-response', payload: { requestId: 'req-auto', holdMs: 90_000 } }])
+  })
+
+  it('asks nothing of a press no agent waits on', async () => {
+    emitted.length = 0
+    const { target } = mountDialog(cloudFolder)
+    await settle()
+
+    confirmButton(target).click()
+    await settle()
+
+    expect(holds()).toEqual([])
   })
 })

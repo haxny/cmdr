@@ -117,6 +117,17 @@ export interface TransferStartConfig extends TransferDispatchConfig {
   mcpRequestId?: string
 }
 
+/**
+ * Tells the agent waiting on a start (`mcpRequestId`) that the answer is coming,
+ * slowly on purpose: the press is waiting up to `holdMs` on something it must
+ * know before it may start anything (a cloud folder's walk deciding trash versus
+ * delete). The round-trip moves its deadline out by that much (`mcp_round_trip_parsed`
+ * in `mcp/executor/mod.rs`), and the start still answers the moment it can.
+ */
+export function holdOperationStartReply(mcpRequestId: string, holdMs: number): void {
+  void emit('mcp-response', { requestId: mcpRequestId, holdMs })
+}
+
 /** How a start ended: named, or refused before it ever ran. */
 export type TransferStartResult =
   | { started: true; operationId: string }

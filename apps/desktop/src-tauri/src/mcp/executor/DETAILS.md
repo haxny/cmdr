@@ -173,6 +173,15 @@ When the backend can't fully validate preconditions (or has to wait on the OS), 
 its reply is allowed to mean (`parse_mcp_response`, `parse_operation_start_response`, `parse_nav_response` in `mod.rs`,
 `parse_tab_move_response` in `app.rs`, all pure and unit-tested). Per-tool:
 
+- **Holds.** A reply of `{ requestId, holdMs }` instead of an answer moves that round-trip's deadline
+  to `holdMs` from now plus its usual budget (capped at `MAX_ROUND_TRIP_HOLD`, 300 s), and the answer still ends the
+  wait the moment it lands. For a frontend that knows its answer will be slow on purpose, so a silent one keeps timing
+  out on the short budget. Its one sender today is the delete dialog waiting on a cloud folder's walk before it knows
+  whether a press may trash (`holdOperationStartReply` in `transfer-dispatch.ts`;
+  `src/lib/file-operations/delete/DETAILS.md` § Cloud storage), which covers both `dialog confirm` and an auto-confirmed
+  `delete`. A transfer has no such phase: its press waits only on the scan-preview IPC, which mints an id and returns.
+  The hold is checked BEFORE the caller's parser, which would read a reply with no `ok` as a failure.
+
 - `move_cursor`, `set_setting` (5 s). The FE verifies the cursor actually landed (filename found, index in range), then
   (move_cursor) flushes the MCP state push (`syncStateToMcpNow`) before replying, so a follow-up `copy`/`move`/`delete`
   reads the new cursor instead of the stale pre-move one. A silent no-op (cursor never moved) was the original

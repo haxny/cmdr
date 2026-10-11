@@ -270,6 +270,7 @@
                 sortOrder={deleteDialogProps.sortOrder}
                 sourceVolumeId={deleteDialogProps.sourceVolumeId}
                 autoConfirm={deleteDialogProps.autoConfirm}
+                mcpRequestId={deleteDialogProps.mcpRequestId}
                 onConfirm={onDeleteConfirm}
                 onConfirmInBackground={onTrashInBackground}
                 registerConfirmer={registerDeleteConfirmer}

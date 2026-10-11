@@ -35,8 +35,6 @@ pub(crate) use ack::{
 #[cfg(test)]
 mod tests;
 
-use std::sync::Mutex;
-
 use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter, Listener, Manager, Runtime};
 
@@ -44,7 +42,6 @@ use crate::agent::chat::budget::{MAX_TOOL_RESULT_TOKENS, estimate_serialized_tok
 
 use super::pane_state::{PaneState, PaneStateStore};
 use super::protocol::{INTERNAL_ERROR, INVALID_PARAMS};
-use crate::ignore_poison::IgnorePoison;
 use crate::pluralize::pluralize;
 
 /// Result of tool execution.
@@ -428,6 +425,11 @@ async fn mcp_round_trip<R: Runtime>(
 /// Default budget for an `mcp-response` round-trip that isn't a navigation.
 const ROUND_TRIP_TIMEOUT_SECS: u64 = 5;
 
+/// The longest a single `holdMs` can stretch a round-trip, so a confused or
+/// hostile hold can't park a tool call for good. Well above the 90 s the delete
+/// dialog waits on a cloud folder's walk, its one user today.
+pub(crate) const MAX_ROUND_TRIP_HOLD: std::time::Duration = std::time::Duration::from_secs(300);
+
 /// A round-trip whose only answer is "the frontend accepted it".
 ///
 /// Same wait and budget as [`mcp_round_trip`], minus the success wording: callers that
@@ -566,6 +568,12 @@ fn parse_nav_response(payload: &str, expected_id: &str) -> Option<Result<NavAck,
 /// the correlated reply, emit, and bound the wait. Each caller brings its own parser, so
 /// what a reply is allowed to say lives with the tool rather than in three copies of this
 /// listener.
+///
+/// A reply carrying `holdMs` instead of an answer is a HOLD: the frontend knows its
+/// answer will legitimately take longer (a delete dialog waiting on a cloud folder's walk
+/// before it knows whether it may trash at all), so the deadline moves to that long from
+/// now plus the usual budget, capped at [`MAX_ROUND_TRIP_HOLD`]. A silent frontend still
+/// times out on the short budget, and a held one still answers the moment it can.
 async fn mcp_round_trip_parsed<R: Runtime, T, F>(
     app: &AppHandle<R>,
     event: &str,
@@ -580,33 +588,76 @@ where
     let request_id = uuid::Uuid::new_v4().to_string();
     payload["requestId"] = json!(request_id);
 
-    let (tx, rx) = tokio::sync::oneshot::channel::<Result<T, String>>();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<RoundTripReply<T>>();
     let expected_id = request_id.clone();
 
-    // Use a Mutex to allow the closure to consume tx exactly once
-    let tx = Mutex::new(Some(tx));
     let listener_id = app.listen("mcp-response", move |event| {
-        if let Some(result) = parse(event.payload(), &expected_id)
-            && let Some(tx) = tx.lock_ignore_poison().take()
-        {
-            let _ = tx.send(result);
+        let reply = match parse_round_trip_hold(event.payload(), &expected_id) {
+            Some(hold) => Some(RoundTripReply::Hold(hold)),
+            None => parse(event.payload(), &expected_id).map(RoundTripReply::Answer),
+        };
+        if let Some(reply) = reply {
+            // A send after we stopped listening has nobody to tell.
+            let _ = tx.send(reply);
         }
     });
 
     app.emit(event, payload)?;
 
-    let result = tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), rx).await;
+    let budget = std::time::Duration::from_secs(timeout_secs);
+    let started = tokio::time::Instant::now();
+    let mut deadline = started + budget;
+    let mut held: Option<std::time::Duration> = None;
+    let result = loop {
+        match tokio::time::timeout_at(deadline, rx.recv()).await {
+            Ok(Some(RoundTripReply::Hold(hold))) => {
+                deadline = tokio::time::Instant::now() + hold + budget;
+                held = Some(hold);
+            }
+            Ok(Some(RoundTripReply::Answer(answer))) => break Ok(answer),
+            Ok(None) => break Err(ToolError::internal("Frontend response channel dropped")),
+            Err(_) => break Err(round_trip_timeout(started.elapsed(), held)),
+        }
+    };
     app.unlisten(listener_id);
 
     match result {
-        Ok(Ok(Ok(value))) => Ok(value),
-        Ok(Ok(Err(err))) => Err(ToolError::internal(err)),
-        Ok(Err(_)) => Err(ToolError::internal("Frontend response channel dropped")),
-        Err(_) => Err(ToolError::internal(format!(
-            "Frontend did not respond within {}",
-            pluralize(timeout_secs, "second")
-        ))),
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(err)) => Err(ToolError::internal(err)),
+        Err(err) => Err(err),
     }
+}
+
+/// What one `mcp-response` meant for a round-trip in flight.
+enum RoundTripReply<T> {
+    /// Wait this much longer: the answer is coming, and slowly on purpose.
+    Hold(std::time::Duration),
+    /// The answer, as the caller's parser read it.
+    Answer(Result<T, String>),
+}
+
+/// A HOLD for `expected_id`: `{ requestId, holdMs }`, capped at [`MAX_ROUND_TRIP_HOLD`].
+/// `None` for anything else, which the caller's parser reads as an answer.
+fn parse_round_trip_hold(payload: &str, expected_id: &str) -> Option<std::time::Duration> {
+    let resp = serde_json::from_str::<Value>(payload).ok()?;
+    if resp.get("requestId").and_then(|v| v.as_str()) != Some(expected_id) {
+        return None;
+    }
+    let hold_ms = resp.get("holdMs")?.as_u64()?;
+    Some(std::time::Duration::from_millis(hold_ms).min(MAX_ROUND_TRIP_HOLD))
+}
+
+/// The timeout, saying how long it waited and, when the frontend asked for longer,
+/// that it did.
+fn round_trip_timeout(waited: std::time::Duration, held: Option<std::time::Duration>) -> ToolError {
+    let waited = pluralize(waited.as_secs(), "second");
+    ToolError::internal(match held {
+        None => format!("Frontend did not respond within {waited}"),
+        Some(hold) => format!(
+            "Frontend did not respond within {waited}, though it asked to wait up to {} for a check before starting",
+            pluralize(hold.as_secs(), "second")
+        ),
+    })
 }
 
 /// Emit an autoConfirm file-op event and wait for the FE to reply with the

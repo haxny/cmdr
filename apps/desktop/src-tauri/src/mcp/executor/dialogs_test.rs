@@ -335,3 +335,91 @@ async fn focusing_settings_when_it_isnt_open_is_refused_up_front() {
         "it must not wait out the ack budget"
     );
 }
+
+/// Stands in for a delete dialog whose press waits on a cloud folder's walk: it
+/// asks the round-trip to hold for `hold_ms`, and only after `answer_after`
+/// (virtual time) does the start answer with `reply`, if at all.
+fn answer_confirm_after_a_hold(
+    app: &AppHandle<tauri::test::MockRuntime>,
+    hold_ms: u64,
+    answer_after: std::time::Duration,
+    reply: Option<Value>,
+) {
+    use tauri::Listener;
+    let handle = app.clone();
+    app.listen("mcp-confirm-dialog", move |event| {
+        let payload: Value = serde_json::from_str(event.payload()).expect("a JSON payload");
+        let request_id = payload["requestId"].clone();
+        handle
+            .emit("mcp-response", json!({ "requestId": request_id, "holdMs": hold_ms }))
+            .expect("emit the hold");
+        let Some(reply) = reply.clone() else { return };
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            // allowed-test-sleep: the walk's answer, in virtual time on a start_paused runtime.
+            tokio::time::sleep(answer_after).await;
+            let mut response = reply;
+            response["requestId"] = request_id;
+            handle.state::<SoftDialogTracker>().close("delete-confirmation");
+            handle.emit("mcp-response", response).expect("emit the reply");
+        });
+    });
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn a_confirm_that_waits_on_a_cloud_walk_still_reports_the_operation_id() {
+    let app = app_with_stores();
+    let handle = app.handle().clone();
+    handle
+        .state::<SoftDialogTracker>()
+        .open("delete-confirmation".to_string());
+    // Well past the 10 s start budget, well inside the hold the dialog asked for.
+    answer_confirm_after_a_hold(
+        &handle,
+        90_000,
+        std::time::Duration::from_secs(60),
+        Some(json!({ "ok": true, "operationId": "op-7" })),
+    );
+
+    let outcome = execute_dialog_command(&handle, &json!({ "action": "confirm", "type": "delete-confirmation" }))
+        .await
+        .unwrap_or_else(|e| panic!("{}", e.message));
+
+    let text = outcome.as_str().expect("an OK line");
+    assert!(text.contains("(operationId: op-7)"), "{text}");
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn a_held_confirm_that_never_starts_times_out_after_the_hold_plus_the_start_budget() {
+    let app = app_with_stores();
+    let handle = app.handle().clone();
+    handle
+        .state::<SoftDialogTracker>()
+        .open("delete-confirmation".to_string());
+    answer_confirm_after_a_hold(&handle, 30_000, std::time::Duration::ZERO, None);
+
+    let started = tokio::time::Instant::now();
+    let outcome = execute_dialog_command(&handle, &json!({ "action": "confirm", "type": "delete-confirmation" })).await;
+
+    outcome.expect_err("nothing ever started");
+    let waited = started.elapsed();
+    assert!(waited >= std::time::Duration::from_secs(40), "{waited:?}");
+    assert!(waited < std::time::Duration::from_secs(41), "{waited:?}");
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn a_hold_past_the_ceiling_is_capped() {
+    let app = app_with_stores();
+    let handle = app.handle().clone();
+    handle
+        .state::<SoftDialogTracker>()
+        .open("delete-confirmation".to_string());
+    answer_confirm_after_a_hold(&handle, u64::MAX, std::time::Duration::ZERO, None);
+
+    let started = tokio::time::Instant::now();
+    let outcome = execute_dialog_command(&handle, &json!({ "action": "confirm", "type": "delete-confirmation" })).await;
+
+    outcome.expect_err("nothing ever started");
+    let ceiling = crate::mcp::executor::MAX_ROUND_TRIP_HOLD + std::time::Duration::from_secs(11);
+    assert!(started.elapsed() <= ceiling, "{:?}", started.elapsed());
+}

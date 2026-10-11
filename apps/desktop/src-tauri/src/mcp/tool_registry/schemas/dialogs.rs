@@ -9,7 +9,7 @@ pub fn dialog_schema() -> Value {
             "action": {
                 "type": "string",
                 "enum": ["open", "focus", "close", "confirm"],
-                "description": "Action to perform. 'confirm' triggers the confirm button on an already-open dialog. On transfer-confirmation and delete-confirmation it returns the started operation's id ('operationId: <id>' in the OK text) for await operation_complete or queue. A press the dialog itself stopped (a refused source, a press already in flight) refuses with data.refusal = 'notStarted' and leaves the dialog open."
+                "description": "Action to perform. 'confirm' triggers the confirm button on an already-open dialog. On transfer-confirmation and delete-confirmation it returns the started operation's id ('operationId: <id>' in the OK text) for await operation_complete or queue. A delete-confirmation trash of a cloud-drive folder answers once the folder's scan rules out online-only files, which can take up to about 90 seconds. A press the dialog itself stopped (a refused source, a press already in flight) refuses with data.refusal = 'notStarted' and leaves the dialog open."
             },
             "type": {
                 "type": "string",

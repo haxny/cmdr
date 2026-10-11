@@ -417,7 +417,8 @@ fn parse_confirm_response(payload: &str, expected_id: &str) -> Option<Result<Con
 /// Budget for a confirm to report its operation's id. Same as an auto-confirmed
 /// `copy`'s (`file_ops.rs`), and for the same reason: it spans the dialog's wait
 /// for its scan preview to start and the write-op IPC that mints the id. A cloud
-/// folder's trash can wait longer than this for its walk, and times out here.
+/// folder's trash that must wait on its walk first asks the round-trip to hold
+/// (`holdMs`, see `mcp_round_trip_parsed`), so it still answers with its id.
 const CONFIRM_START_TIMEOUT_SECS: u64 = 10;
 
 /// Presses the open transfer or delete dialog's own confirm, or with

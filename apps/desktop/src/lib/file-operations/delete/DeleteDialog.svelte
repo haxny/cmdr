@@ -32,6 +32,7 @@
     import { ScanThroughput } from '../scan-throughput'
     import S3CostLine from '../S3CostLine.svelte'
     import { costRequestFor } from '../s3-cost-line'
+    import { holdOperationStartReply } from '../transfer/transfer-dispatch'
     import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
     import { withTimeout } from '$lib/utils/timing'
     import Trans from '$lib/intl/Trans.svelte'
@@ -71,6 +72,9 @@
         sourceVolumeId: string
         /** When true, dialog auto-confirms without user interaction (MCP). */
         autoConfirm?: boolean
+        /** The auto-confirming agent's round-trip id, which the start answers with
+         *  the operation's id. A `dialog confirm` brings its own in `ConfirmOptions`. */
+        mcpRequestId?: string
         /** `origin` names the MCP `dialog confirm` that pressed it, whose round-trip
          *  the start answers with the operation's id. */
         onConfirm: (previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => void
@@ -100,6 +104,7 @@
         sortOrder,
         sourceVolumeId,
         autoConfirm = false,
+        mcpRequestId: autoConfirmRequestId,
         onConfirm,
         onConfirmInBackground,
         registerConfirmer,
@@ -392,6 +397,16 @@
         cleanup()
     })
 
+    /** Waits for the walk to say whether anything is online-only. An agent waiting
+     *  on this press for its operation id (a `dialog confirm`'s `mcpRequestId`, or
+     *  the auto-confirm's own) would time out on its short start budget meanwhile,
+     *  so it's told to hold for as long as this may wait. */
+    async function awaitOnlineOnlyAnswer(mcpRequestId: string | undefined): Promise<void> {
+        const waitingAgent = mcpRequestId ?? autoConfirmRequestId
+        if (waitingAgent !== undefined) holdOperationStartReply(waitingAgent, ONLINE_ONLY_ANSWER_TIMEOUT_MS)
+        await withTimeout(onlineOnlyAnswer, ONLINE_ONLY_ANSWER_TIMEOUT_MS, undefined)
+    }
+
     /** Resolves `true` once the press reached `onConfirm` / `onConfirmInBackground`,
      *  `false` when a guard stopped it (an MCP `dialog confirm` answers the agent
      *  from that). */
@@ -414,7 +429,7 @@
             // A selected folder in a cloud drive: the walk decides whether this is
             // a trash or a delete, and pressing before it answers must not settle
             // it by luck. Everywhere else this block never runs.
-            await withTimeout(onlineOnlyAnswer, ONLINE_ONLY_ANSWER_TIMEOUT_MS, undefined)
+            await awaitOnlineOnlyAnswer(mcpRequestId)
             if (destroyed) return false
             if (onlineOnlyFoundByWalk !== null && !autoConfirm) {
                 // The answer just turned this button from "Move to trash" into a
