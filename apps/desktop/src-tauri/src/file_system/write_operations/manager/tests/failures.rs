@@ -30,19 +30,6 @@ fn private_manager() -> OperationManager {
     OperationManager::new()
 }
 
-/// A private manager that also satisfies `spawn_managed`'s `&'static self`, so
-/// a test can drive a real spawn-to-settle lifecycle in isolation. Needed by
-/// any assertion on `emit_count()`, which counts a WHOLE manager's broadcasts:
-/// on the global one, a sibling test spawning or settling an op moves it
-/// underneath the assertion.
-///
-/// Leaking is the honest price of that signature (an admitted op's task
-/// outlives every borrow), and it's bounded: one small struct per test that
-/// calls this, reclaimed at process exit.
-fn leaked_manager() -> &'static OperationManager {
-    Box::leak(Box::new(OperationManager::new()))
-}
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn retained_failure_stays_hidden_until_the_record_settles() {
     // `emit_error` runs inside the op's own task, BEFORE `on_settled` removes

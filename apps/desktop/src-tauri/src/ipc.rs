@@ -184,6 +184,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::resume_operation,
                     crate::commands::file_system::pause_all,
                     crate::commands::file_system::resume_all,
+                    crate::commands::file_system::move_queued_operation,
                     crate::commands::file_system::dismiss_failed_operation,
                     crate::commands::file_system::dismiss_all_failed_operations,
                     crate::commands::file_system::copy_between_volumes,

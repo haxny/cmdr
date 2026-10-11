@@ -16,6 +16,7 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 mod failures;
+mod reorder;
 
 /// Deadline for every wait here. Generous on purpose: each wait has a real
 /// condition, so a healthy run satisfies it in microseconds and only a genuine
@@ -54,6 +55,19 @@ fn instant_descriptor(op_id: &str, op_type: WriteOperationType, volume_ids: Vec<
         preview_id: None,
         reverses: None,
     }
+}
+
+/// A private manager that also satisfies `spawn_managed`'s `&'static self`, so
+/// a test can drive a real spawn-to-settle lifecycle in isolation. Needed by
+/// any assertion on `emit_count()`, which counts a WHOLE manager's broadcasts:
+/// on the global one, a sibling test spawning or settling an op moves it
+/// underneath the assertion.
+///
+/// Leaking is the honest price of that signature (an admitted op's task
+/// outlives every borrow), and it's bounded: one small struct per test that
+/// calls this, reclaimed at process exit. Shared by `failures` and `reorder`.
+fn leaked_manager() -> &'static OperationManager {
+    Box::leak(Box::new(OperationManager::new()))
 }
 
 fn fresh_state() -> Arc<WriteOperationState> {

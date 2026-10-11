@@ -88,9 +88,10 @@ pub use write_operations::{
 // and `OperationsChanged` are reached directly via `write_operations::` (the IPC
 // event registration and snapshot field), so they don't need a re-export here.
 pub use write_operations::{
-    OperationSnapshot, PauseAllOutcome, PauseOutcome, cancel_operation, cancel_operations,
-    dismiss_all_failed_operations, dismiss_failed_operation, init_operation_event_emitter, list_operations,
-    operations_need_volume, pause_all, pause_operation, resume_all, resume_operation,
+    OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome, cancel_operation,
+    cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, init_operation_event_emitter,
+    list_operations, move_queued_operation, operations_need_volume, pause_all, pause_operation, resume_all,
+    resume_operation,
 };
 // Cross-volume transfers. The three `start_volume_*` entry points own the volume
 // and destination-path resolution and every archive fork (extract out, copy/move

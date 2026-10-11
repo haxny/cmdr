@@ -6,9 +6,9 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { commands, events } from '$lib/ipc/bindings'
-import type { OperationSnapshot, OperationsChanged } from '$lib/ipc/bindings'
+import type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome } from '$lib/ipc/bindings'
 
-export type { OperationSnapshot, OperationsChanged }
+export type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome }
 
 /** Snapshot of every operation the manager currently tracks (queued, running,
  *  paused, and recently-terminal until it's pruned). */
@@ -56,6 +56,18 @@ export async function pauseAll(): Promise<void> {
 /** Resume every paused operation. Its counts are dropped like `pauseAll`'s. */
 export async function resumeAll(): Promise<void> {
   await commands.resumeAll()
+}
+
+/** Move a waiting operation one place earlier or later in line (the queue
+ *  window's ⌥↑ / ⌥↓). Running and paused operations keep their place. The
+ *  outcome is the operation's place after the request, which the window
+ *  announces: it's the one answer `operations-changed` can't give a screen
+ *  reader, since the list re-renders silently. */
+export async function moveQueuedOperation(
+  operationId: string,
+  direction: QueueMoveDirection,
+): Promise<QueueMoveOutcome> {
+  return commands.moveQueuedOperation(operationId, direction)
 }
 
 /** Drop one retained failure from the snapshot. Dismissal is always explicit —

@@ -943,6 +943,16 @@ export const commands = {
    */
   resumeAll: () => __TAURI_INVOKE<PauseAllOutcome>('resume_all'),
   /**
+   *  Moves a waiting operation one place earlier or later in line (the queue
+   *  window's ⌥↑ / ⌥↓). Only waiting operations move; running and paused ones
+   *  keep their place.
+   *
+   *  Returns where the operation ended up, so the window announces its real
+   *  place in line.
+   */
+  moveQueuedOperation: (operationId: string, direction: QueueMoveDirection) =>
+    __TAURI_INVOKE<QueueMoveOutcome>('move_queued_operation', { operationId, direction }),
+  /**
    *  Drops one retained failure from the snapshot (the queue row's Dismiss, and
    *  the foreground error dialog's close path). Dismissal is always explicit: a
    *  failure never expires on its own.
@@ -12680,6 +12690,34 @@ export type Provider =
  *  its exact string form is backend-only.
  */
 export type ProviderTag = 'anthropic' | 'openAi' | 'openAiResponses' | 'gemini' | 'local'
+
+/**
+ *  Which way a waiting operation moves in line: one place nearer the front
+ *  (admitted sooner) or one place nearer the back.
+ */
+export type QueueMoveDirection = 'earlier' | 'later'
+
+/**
+ *  What a request to move a waiting operation did. Like [`PauseOutcome`], it
+ *  rides out to the caller so nobody announces a move that didn't happen.
+ *
+ *  `position` and `waiting` count WAITING operations only (1-based), since
+ *  they're the only ones in line: a running or paused one holds its lanes and
+ *  has no place to trade. They describe the line after the request.
+ */
+export type QueueMoveOutcome =
+  // It traded places with its waiting neighbor and now sits at `position`.
+  | { kind: 'moved'; position: number; waiting: number }
+  /**
+   *  It was already first (moving earlier) or last (moving later). Nothing
+   *  changed and nothing was broadcast.
+   */
+  | { kind: 'at_edge'; position: number; waiting: number }
+  /**
+   *  Not waiting: running, paused, settled, or never registered. Only a
+   *  waiting operation has a place in line to change.
+   */
+  | { kind: 'not_queued' }
 
 /**
  *  `quick-look-closed`: the preview panel left the screen (our `orderOut:`, the

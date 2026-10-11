@@ -10,14 +10,15 @@ use crate::file_system::write_operations::{
     trash_routing_for_selection as ops_trash_routing_for_selection,
 };
 use crate::file_system::{
-    OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, ReadOnlySide, SortColumn, SortOrder,
-    TauriEventSink, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
-    cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
+    OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
+    ReadOnlySide, SortColumn, SortOrder, TauriEventSink, WriteOperationConfig, WriteOperationError,
+    WriteOperationStartResult, cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
     cancel_write_operation as ops_cancel_write_operation, delete_files_start as ops_delete_files_start,
     dismiss_all_failed_operations as ops_dismiss_all_failed_operations,
     dismiss_failed_operation as ops_dismiss_failed_operation, list_operations as ops_list_operations,
-    move_files_start as ops_move_files_start, pause_all as ops_pause_all, pause_operation as ops_pause_operation,
-    resume_all as ops_resume_all, resume_operation as ops_resume_operation, trash_files_start as ops_trash_files_start,
+    move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
+    pause_all as ops_pause_all, pause_operation as ops_pause_operation, resume_all as ops_resume_all,
+    resume_operation as ops_resume_operation, trash_files_start as ops_trash_files_start,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -511,6 +512,18 @@ pub fn pause_all() -> PauseAllOutcome {
 #[specta::specta]
 pub fn resume_all() -> PauseAllOutcome {
     ops_resume_all()
+}
+
+/// Moves a waiting operation one place earlier or later in line (the queue
+/// window's ⌥↑ / ⌥↓). Only waiting operations move; running and paused ones
+/// keep their place.
+///
+/// Returns where the operation ended up, so the window announces its real
+/// place in line.
+#[tauri::command]
+#[specta::specta]
+pub fn move_queued_operation(operation_id: String, direction: QueueMoveDirection) -> QueueMoveOutcome {
+    ops_move_queued_operation(&operation_id, direction)
 }
 
 /// Drops one retained failure from the snapshot (the queue row's Dismiss, and

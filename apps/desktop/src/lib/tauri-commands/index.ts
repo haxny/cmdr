@@ -328,8 +328,8 @@ export {
 } from './write-operations'
 export type { Event, UnlistenFn } from './write-operations'
 
-// Operation manager (queue window): list + pause/resume/cancel + dismissing a
-// retained failure + the thin `operations-changed` membership/status event.
+// Operation manager (queue window): list + pause/resume/cancel + reordering the
+// line + dismissing a retained failure + the thin `operations-changed` membership/status event.
 export {
   listOperations,
   cancelOperation,
@@ -340,9 +340,10 @@ export {
   resumeAll,
   dismissFailedOperation,
   dismissAllFailedOperations,
+  moveQueuedOperation,
   onOperationsChanged,
 } from './operations'
-export type { OperationSnapshot, OperationsChanged } from './operations'
+export type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome } from './operations'
 
 // The quit gate: the backend holding an exit while operations run, and the
 // dialog's two answers.

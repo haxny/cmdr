@@ -135,9 +135,10 @@ pub use state::abort_all_write_operations;
 // `init_operation_event_emitter` wires the emitter at startup; the command
 // helpers back the new `list_operations` / `cancel_operation(s)` IPC.
 pub use manager::{
-    OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, cancel_operation,
-    cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, init_operation_event_emitter,
-    list_operations, operations_need_volume, pause_all, pause_operation, resume_all, resume_operation,
+    OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
+    QueueMoveOutcome, cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation,
+    init_operation_event_emitter, list_operations, move_queued_operation, operations_need_volume, pause_all,
+    pause_operation, resume_all, resume_operation,
 };
 // Managed instant mutations (rename / mkdir / mkfile) + rename validation. The
 // thin IPC commands (`commands/rename.rs`, `commands/file_system/write_ops.rs`)
