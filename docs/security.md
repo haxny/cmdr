@@ -65,9 +65,10 @@ Privacy posture:
 
 ### Two consent models
 
-- **Flow A: user-initiated.** **Help > Send error report…** or the button on error toasts opens a preview dialog showing
-  exactly what's about to be sent (manifest + first 5 / last 20 redacted log lines). Clicking **Send** is the consent,
-  no setting required.
+- **Flow A: user-initiated.** **Help > Send error report…**, or the "Send error report…" offer wherever something went
+  wrong or got slow (error toasts, the transfer error dialog, the folder error screen, failed queue rows, slowness
+  notices), opens a preview dialog showing exactly what's about to be sent (manifest + first 5 / last 20 redacted log
+  lines). Clicking **Send** is the consent, no setting required.
 - **Flow B: auto-send on error.** Gated by `updates.errorReports` (default **off**). When enabled, user-visible errors
   fire a debounced auto-send (60 s window with ±10 s jitter to avoid lock-step reporting under global outages). The
   toast surfaces the send with **View** (opens the same preview as Flow A) and **Change settings**.

@@ -6,8 +6,11 @@ event into a confirmation toast, whose button reopens the SAME report for a note
 
 ## File map
 
-- `error-report-flow.svelte.ts`: reactive store + two entry points, `openErrorReportDialog(initialNote?)` (compose) and
-  `openErrorReportDialogForAutoSentReport()` (amend). `mode` lives in the store, not in a second argument.
+- `error-report-flow.svelte.ts`: reactive store + entry points: `openErrorReportDialog({ from, initialNote? })` and
+  `openErrorReportFor(incident)` (compose), `openErrorReportDialogForAutoSentReport()` (amend), and
+  `hostErrorReportDialog()` (the main window's layout). `mode` lives in the store, not in a second argument.
+- `report-incident.ts` + `ReportOffer.svelte`: the typed `ReportIncident` (surface, operation, error kind) that words
+  the pre-filled note, and the one action every failure and slowness surface renders for it.
 - `ErrorReportDialog.svelte`: one dialog, both modes. `ErrorReportToastContent.svelte`: the post-send toast for both
   outcomes (`kind` picks the sentence).
 - `BundleSavedToastContent.svelte`: the "saved to disk" toast (path + Reveal in Finder).
@@ -35,10 +38,11 @@ event into a confirmation toast, whose button reopens the SAME report for a note
 - **Saving to disk is compose-only**: it writes the zip under the id the send would use, and amend mode has no local
   bundle. It shows in dev, and as the ONLY action when the organization turned reports off (no Send, no attach-email).
   `DETAILS.md` § When the organization turned reports off.
-
-Compose entry points: the Help menu's "Send error report…" (`command-dispatch.ts`'s `help.sendErrorReport`) and the
-inline link on plain-text error toasts (`ToastItem.svelte`), which pre-fills the note. The dialog mounts in
-`(main)/+layout.svelte`.
+- **Offer a report via `ReportOffer` + a typed `ReportIncident`**, ❌ never a hand-rolled button or a note built from a
+  message. A component error toast MUST pass `report`. ❌ Never log at error level to make something reportable (that
+  auto-sends). `DETAILS.md` § Report offers.
+- **Only the main window renders the dialog** (`(main)/+layout.svelte`, AFTER the page, so it opens over the dialogs
+  it's offered from). Other windows ask over `open-error-report`.
 
 The two modes, the managed-off dialog, the Flow B toast, and the caps: `DETAILS.md`. Read it before any non-trivial work
 here: editing, planning, reorganizing, or advising.

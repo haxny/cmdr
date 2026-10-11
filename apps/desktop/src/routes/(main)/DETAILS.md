@@ -333,8 +333,9 @@ A `mcp-key` GoBack/GoForward routes through the bus (`nav.back`/`nav.forward`), 
 ## Cross-window: `foreground-operation`
 
 The operation-queue window's Show button asks THIS window to put one already-running operation into its progress dialog.
-It's the only INBOUND channel here whose sender is another window rather than a menu, a key, or MCP. Which rows offer
-the button, and why only the id travels: `$lib/file-operations/queue/DETAILS.md` § Show.
+It's one of two INBOUND channels whose sender is another window rather than a menu, a key, or MCP; the other,
+`open-error-report`, is the error-report dialog's own (`$lib/error-reporter/DETAILS.md` § Report offers). Which rows
+offer the button, and why only the id travels: `$lib/file-operations/queue/DETAILS.md` § Show.
 
 `setupDialogListeners` owns the receiving half (`onForegroundOperationRequested`):
 

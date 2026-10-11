@@ -216,11 +216,13 @@ new one. It's a reaction to the snapshot the window already subscribes to: no ne
 - **Persistent, never a timer.** The person this is for was away from the keyboard when it happened. A modal was
   considered and rejected: the user pressed Queue precisely to stop being blocked, a settled failure asks for no
   decision, and a modal would steal the keystroke they were mid-way through.
-- **The toast is a PREVIEW: title, the reason's explanation, and "Show in operation queue".** It leaves out the
-  suggestion and clamps the explanation to three lines. The pipeline's prose was written for a dialog with room, and its
-  interpolating variants (`invalid_name`, `read_only_device`) carry paths and device names with no length limit; three
-  lines covers every stock message, so in practice nothing is cut. The full reason, the suggestion, and the Dismiss live
-  on the queue row, one press away.
+- **The toast is a PREVIEW: title, the reason's explanation, "Send error report…", and "Show in operation queue".** The
+  report offer is the toast's `report` (`failureIncidentFor`, or `operationsFailed` for the summary, whose body swaps in
+  its live count), handed down by the toast frame; both actions dismiss the toast. It leaves out the suggestion and
+  clamps the explanation to three lines. The pipeline's prose was written for a dialog with room, and its interpolating
+  variants (`invalid_name`, `read_only_device`) carry paths and device names with no length limit; three lines covers
+  every stock message, so in practice nothing is cut. The full reason, the suggestion, and the Dismiss live on the queue
+  row, one press away.
 - **The toast's title is NOT the pipeline's title.** `queue.failureToast.title` selects on the operation TYPE ("Couldn't
   finish copying"), so the toast names the work the user started. The pipeline's title names the immediate cause instead
   and changes per error class ("Not enough space", "Couldn't find the file"), which reads as a different subject in an

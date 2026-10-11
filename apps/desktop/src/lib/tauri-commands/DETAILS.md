@@ -148,11 +148,13 @@ commands, and notable non-obvious placements.
   main window opens Settings on behalf of a window without window-creation perms), `onViewerWordWrapToggled`,
   `onViewerEditAction` (the viewer bar's Edit > Copy / Select all, which the viewer runs itself),
   `onViewerContextMenuAction` (the same pair from its right-click menu, always over the file),
-  `onPersistRestrictedSetting`, and `requestForegroundOperation` / `onForegroundOperationRequested` (the queue window
-  asking the main window to show one operation in its progress dialog; the payload is the id alone, because the registry
-  snapshot both windows receive is the truth about everything else), and `onMouseNav` (macOS reads the mouse's back /
-  forward navigation in AppKit, because a Logi Options+ mouse posts a swipe rather than a button;
-  `routes/(main)/DETAILS.md` § Mouse back / forward buttons).
+  `onPersistRestrictedSetting`, `requestErrorReportInMainWindow` / `onErrorReportRequested` (in `error-reporter.ts`: a
+  window that doesn't host the error-report dialog asks the main window to open it, pre-filled), and
+  `requestForegroundOperation` / `onForegroundOperationRequested` (the queue window asking the main window to show one
+  operation in its progress dialog; the payload is the id alone, because the registry snapshot both windows receive is
+  the truth about everything else), and `onMouseNav` (macOS reads the mouse's back / forward navigation in AppKit,
+  because a Logi Options+ mouse posts a swipe rather than a button; `routes/(main)/DETAILS.md` § Mouse back / forward
+  buttons).
 - **`git.ts`**: git-browser commands (`getGitRepoInfo`, `subscribeGitState` / `unsubscribeGitState`,
   `getGitStatusForPaths`) plus `onGitStateChanged` over the per-repo `git-state-changed` event.
 - **`go-to-path.ts`**: ⌘G path resolution (`resolveGoToPath`) and the persisted recent-paths list (`getRecentPaths`,

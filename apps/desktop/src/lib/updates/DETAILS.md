@@ -209,10 +209,11 @@ and only then trash the original, so a helper dying at any point leaves two copi
 
 - **Settings > Updates**: a "Check for updates" button at the top of the section, disabled while
   `updateState.status !== 'idle'`, with the status string from `formatUpdateStatus(updateState)` below. A standing
-  failure renders `describeUpdateFailure()` instead, plus a "Send error report" link pre-filled with that same sentence,
-  but only where `updateFailureOffersReport()` says the failure is Cmdr's (a download or install that didn't finish, or
-  a check Cmdr's server refused or answered unreadably). Network trouble gets no link: the report would ride the same
-  broken connection. The toast follows the same rule.
+  failure renders `describeUpdateFailure()` instead, plus a "Send error report…" link (`ReportOffer`, `look="link"`; the
+  main window opens the dialog, since Settings doesn't host it) pre-filled with that same sentence, but only where
+  `updateFailureOffersReport()` says the failure is Cmdr's (a download or install that didn't finish, or a check Cmdr's
+  server refused or answered unreadably). Network trouble gets no link: the report would ride the same broken
+  connection. The toast follows the same rule.
 - **Cmdr menu > Check for updates…**: dispatched as `app.checkForUpdates`. The handler calls `runMenuTriggeredCheck()`,
   which fires `addToast(UpdateCheckToastContent, { id: 'update-check', timeoutMs: 10000 })` then awaits
   `checkForUpdates()`. `addToast` deduplicates by id, so the toast updates in place as the phase changes. When `status`

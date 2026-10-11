@@ -50,7 +50,9 @@ Umbrella-level files:
 - `NewEntryNameField.svelte` + `new-entry-name-check.svelte.ts`: the "Create <kind> in <dir>" subtitle and name field
   the New folder and New file dialogs share, and the rune-backed check behind it (sync validators, then the debounced
   clash lookup against the listing, re-run on every `directory-diff`). The field runs the check's lifecycle; the dialog
-  reads `errorMessage` / `isChecking` and writes `errorMessage` back when the create is refused.
+  reads `errorMessage` / `isChecking` and hands a refused create to `showRefusal`, which sets the message AND `refusal`,
+  the typed incident the field's "Send error report…" reports. Any re-validation clears both, so the offer never
+  outlives the message it's about.
 - `create-submission.svelte.ts` + `StillCreatingNotice.svelte`: the same two dialogs' submit, from OK to how the create
   really ended, slow volumes included (§ "Mutation refusals").
 - `cursor-entry.ts`: `getCursorEntry()`, the backend entry under the pane's cursor with the `..` row shift applied once,
@@ -118,9 +120,10 @@ technical detail beside it there.)
   calls can still produce it.
 - **The create dialogs' submit is `create-submission.svelte.ts`** (`editing` → `creating` → `stillCreating`), shared by
   both dialogs. OK goes busy at once; past the deadline `StillCreatingNotice.svelte` says the volume is slow and Cancel
-  becomes Close (closing doesn't stop a write already in flight). A landing closes the dialog like any create; a refusal
-  goes under the name as usual. Once the dialog is gone, a landing steers nothing (no cursor yank), and a refusal is a
-  persistent toast, the only word the person would otherwise get.
+  becomes Close (closing doesn't stop a write already in flight), with a "Taking long? Send a report" link measured from
+  OK (`submittedAt`). A landing closes the dialog like any create; a refusal goes under the name with its report offer.
+  Once the dialog is gone, a landing steers nothing (no cursor yank), and a refusal is a persistent toast, the only word
+  the person would otherwise get.
 - `mutation-error-messages.test.ts` walks every variant of both enums: exhaustiveness is compiler-enforced, so what it
   catches is a missing catalog key (which renders the key itself) and a message that breaks the error-copy writing
   rules.

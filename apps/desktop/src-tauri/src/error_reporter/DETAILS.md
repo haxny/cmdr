@@ -528,7 +528,15 @@ A bounded ring buffer (capacity 50) of recent triage events. Each `Breadcrumb` i
 
 - `Command { commandId }`: a command-registry id from keyboard, palette, or menu dispatch.
 - Error-report dialog opened, amend dialog opened, and dialog closed. The ordinary open
-  event retains only `hasInitialNote: boolean`, never the note.
+  event retains `hasInitialNote: boolean` (never the note) and `from: ErrorReportEntry`, the
+  KIND of surface that offered it (`helpMenu`, `errorToast`, `transferError`, `queueFailure`,
+  `listingFailure`, `createRefusal`, `connectionFailure`, `slowOperation`, `updateFailure`).
+- `OperationSlow { operation, stillForSecs, waitingOn }`: a slowness notice was on screen (a
+  create still running, a transfer's stall notice). `operation` is `SlowOperation`, this
+  module's own copy of the write-operation vocabulary (the frontend fails to compile if the two
+  drift); `waitingOn` is the stalled side, or `null` for a create. The frontend records it when
+  the notice shows and again when the person reports from it
+  (`apps/desktop/src/lib/error-reporter/DETAILS.md` § Report offers).
 - Feedback dialog opened and closed. Feedback text and email never enter breadcrumbs.
 
 This enum is the privacy boundary. Serde `deny_unknown_fields` rejects unknown variants,

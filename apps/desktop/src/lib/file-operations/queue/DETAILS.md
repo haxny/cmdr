@@ -246,8 +246,10 @@ reopen.
   screen and "Cancel selected" enabled over an operation the backend no-ops. Pinned by
   `apps/desktop/src/routes/queue/queue-selection.svelte.test.ts`.
 - **The row.** No pause, cancel, rollback, or select checkbox — there's nothing live left to act on. A `triangle-alert`
-  glyph and "Couldn't finish" in `--color-error-text`, one Dismiss button, and the reason on line 2 where the readout
-  would be.
+  glyph and "Couldn't finish" in `--color-error-text`, "Send error report…" and Dismiss, and the reason on line 2 where
+  the readout would be. The report (`failureIncidentFor`) opens in the MAIN window, which hosts the dialog
+  (`$lib/error-reporter/DETAILS.md` § Report offers); a stalled row's readout line gets the slow-report link the same
+  way.
 - **Why red here and amber in the corner chip.** Severity follows the THING, not the surface. This row names the
   operation and prints its reason, so it carries the full weight, same as the failure toast. The chip names nothing (a
   count and a glyph), so it stays `--color-warning-text`: a pointer, not a verdict.

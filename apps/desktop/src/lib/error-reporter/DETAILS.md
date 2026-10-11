@@ -10,7 +10,8 @@ must-knows; this is the depth.
 
 What differs, compose → amend:
 
-- Opened by: `openErrorReportDialog(initialNote?)` → `openErrorReportDialogForAutoSentReport()`.
+- Opened by: `openErrorReportDialog({ from, initialNote? })` (directly from the Help menu, through `openErrorReportFor`
+  from every `ReportOffer`) → `openErrorReportDialogForAutoSentReport()`.
 - Preview source: `prepareErrorReportPreview()`, which builds a bundle → `getAutoSentReportPreview()`, which reads the
   backend stash, so the manifest and sample lines are the ones that actually shipped.
 - Submit: `sendErrorReport(note, email, preview.id)` → `amendErrorReport(note, email)` (no id: there's only ever one
@@ -22,9 +23,9 @@ What differs, compose → amend:
 - Copy: everything else, the reference-ID badge and its Copy button included, comes from the same keys or the same
   shape; only the `errorReporter.amend.*` family differs.
 
-The mode lives in the store rather than in a second positional argument to `openErrorReportDialog`, which has ten call
-sites and would be exactly the confusable-parameter shape `cmdr/no-confusable-callback-params` exists to discourage.
-`closeErrorReportDialog()` resets it to `compose`, so a leftover `amend` can't leak into the next Help-menu open.
+The mode lives in the store rather than in the compose request, so a compose caller can't ask for amend mode: only the
+auto-sent toast's own entry point reaches it. `closeErrorReportDialog()` resets it to `compose`, so a leftover `amend`
+can't leak into the next Help-menu open.
 
 ### Why amend exists
 
@@ -42,6 +43,48 @@ retry loop. Branch on `canAmend`, never on a message (`cmdr/no-error-string-matc
 
 An amend can land more than once for the same report; amendments accumulate server-side and `canAmend` stays true. The
 button is therefore disabled DURING the call, not after it.
+
+## Report offers
+
+Every surface where something went wrong or got slow offers the compose dialog through ONE action, `ReportOffer.svelte`,
+handed ONE typed `ReportIncident` (`report-incident.ts`). The incident decides everything the surface used to improvise:
+
+- **The breadcrumb's `from`** (`reportEntryFor`): which KIND of surface offered it (`transferError`, `queueFailure`,
+  `listingFailure`, `createRefusal`, `connectionFailure`, `slowOperation`, `errorToast`, `updateFailure`; the Help menu
+  is `helpMenu`).
+- **The pre-filled note** (`reportNoteFor`): the headline the person saw, then `Reference: <operation>/<kind>` built
+  from the typed tags (`WriteOperationError['type']`, `ListingErrorReason['reason']`, `MutationError['type']`,
+  `UpgradeFailure`). The reference stays the same whatever language the note is in, so triage can search for it. ❌
+  Nothing reads a message to find the kind (`cmdr/no-error-string-match`).
+- **The look**: a failure is the "Send error report…" button (or `look="link"` in a sentence, the Settings update row);
+  a slow incident is always the lighter "Taking long? Send a report" link, since nothing has gone wrong yet.
+
+Where each surface gets its incident: the toast frame (`ui/DETAILS.md` § Toast system), `failureIncidentFor` for a
+retained failure (queue toast and queue row), `stallIncidentFor` for a stall notice (progress dialog and queue row),
+`CreateSubmission`'s refusal for the new-folder and new-file dialogs, the dialog's own typed error in
+`TransferErrorDialog`, and `FriendlyError.listingReason` in `ErrorPane`.
+
+### Slow is reportable
+
+A slow incident carries `since` (when it stopped moving, `Date.now()` time) rather than a duration, so the note's
+duration is the one on screen when the person clicked. It records an `operationSlow` breadcrumb twice: when the notice
+first shows (`ReportOffer`'s mount, so a report sent later from the Help menu still carries it) and when it's reported
+(`openErrorReportFor`, before the dialog-opened crumb, with the current duration). A notice shown in both windows (the
+progress dialog and the queue row) records once per window; the ring holds 50, so that's noise, not loss.
+
+### The dialog lives in the main window
+
+`hostErrorReportDialog()` marks the main window's webview as the host and listens for `open-error-report`. In any other
+webview (the queue window's failed or stalled row, the Settings update row) `openErrorReportDialog` emits that event
+instead, and the host opens the dialog and focuses its window. The host records `errorReportDialogOpened`, so a
+cross-window open logs one crumb, not two. Before the host existed, Settings' "Send error report" flipped a store no
+component rendered and did nothing at all.
+
+### Constraints the offers keep
+
+- ❌ Never log at error level to make something reportable: the error level IS Flow B's auto-send threshold.
+- One incident, one id: the offer only opens the compose dialog, which mints the id at preview as always.
+- Under the managed `DisableCrashAndErrorReports` the offers stay, and the same dialog offers only "Save to disk".
 
 ## When the organization turned reports off
 

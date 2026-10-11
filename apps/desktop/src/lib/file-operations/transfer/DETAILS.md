@@ -47,6 +47,11 @@ and border carry the warning and the text keeps its normal color; the hourglass 
 `--color-warning-text` (the brand `--color-warning` only clocks ~3.3:1 on the tint). The notice renders outside the
 branch that owns the progress bars, so `TransferProgressDialog`'s `showStall` re-states the two phases that branch
 excludes: a scan writes nothing to be stalled about, and a view with no phase yet knows too little to accuse anything.
+The notice ends on "The log has the details." plus a "Taking long? Send a report" link (`stallIncidentFor`: the
+operation, the backend's stillness, the side it waits on), so the log it points at can reach the team in one click. The
+transfer error dialog's footer offers "Send error report…" the same way, without a letter key: reporting is a side trip,
+not an answer to the stop.
+
 Pinned by `TransferProgressDialog.stall.test.ts` (placement, tone, silence while moving, and an axe pass over the
 stalled state, which the tier-3 suite can't reach because it only renders the just-mounted dialog).
 

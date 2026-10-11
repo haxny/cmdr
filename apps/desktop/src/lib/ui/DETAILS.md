@@ -1296,9 +1296,8 @@ Five levels. Pick by what kind of feedback the toast carries, not by how the mes
   `No files on the clipboard. Copy files first with ⌘C.`, `No recently closed tabs in this pane.`, rename-conflict
   notices that don't abort the rename.
 - **`error`** (red): an attempted operation actually failed. Examples: `Couldn't remove ${host}`,
-  `Direct connection failed: …`, `Couldn't delete saved password`. Inline "Send error report…" button auto-attaches for
-  string-content errors, unless the toast sets `suppressErrorReportAction: true` (used by the "Couldn't send error
-  report" toast itself, so a failed send doesn't offer to re-run the flow that just failed).
+  `Direct connection failed: …`, `Couldn't delete saved password`. An error toast offers "Send error report…" (see
+  `report` below).
 
 Tiebreaker: when unsure between two adjacent levels, pick the lower-intensity one. Frequent feedback should be quiet;
 the user can read the text. Color is for the few cases where attention is warranted. Note that `default` is rare on
@@ -1375,9 +1374,16 @@ FIRST toast's `originPane` (consistent with its partial replace of other fields)
   (`align-items: flex-end`) and its own `max-width` (440) caps the widest opt-in, so a wider toast just extends leftward
   while default-width toasts keep hugging the screen edge. Plumbed `ToastOptions` → `Toast` → `ToastContainer` →
   `ToastItem` (inline `max-width`).
-- `suppressErrorReportAction?: boolean`: opt a string error toast out of the auto-attached "Send error report…" action.
-  Set it on a toast that is itself about error reporting (the "Couldn't send error report" failure toast), so it doesn't
-  offer to re-run the flow that just failed. Same `ToastOptions` → `Toast` → `ToastContainer` → `ToastItem` plumbing.
+- `report?: ReportIncident | false`: what the toast's "Send error report…" reports (`$lib/error-reporter/DETAILS.md` §
+  Report offers). The store resolves it into `Toast.report`: an explicit incident wins (any level, so a slowness toast
+  can offer one too); `false` means none; left out, an `error` STRING toast offers one with its own text as the note,
+  and every other toast offers none. The frame renders `ReportOffer` under string content and hands a component the
+  incident as its `report` prop, which the component places in its own `.actions` row with `onOpen` dismissing the
+  toast. `addToast`'s options are typed per content (`ToastOptionsFor`): a component toast at `error` level must pass
+  `report` (`ComponentToastOptions`), because the frame can't word a note for content it can't read. That's the gap this
+  closes: a component error toast used to offer nothing, silently. A toast about error reporting itself (the "Couldn't
+  send error report" toast) passes `false`, so it doesn't offer to re-run the flow that just didn't work. A component
+  toast that never errors types its level `NonErrorToastLevel`.
 
 ### Hover behavior
 
