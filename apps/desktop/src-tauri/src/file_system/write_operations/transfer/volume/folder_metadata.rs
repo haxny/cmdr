@@ -29,6 +29,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
+use super::super::super::metadata_losses::FolderLosses;
 use super::super::super::state::{WriteOperationState, is_cancelled};
 use crate::file_system::volume::Volume;
 
@@ -79,7 +80,7 @@ impl FolderMetadata {
 
     /// Puts every noted folder's metadata on `dest_volume`, deepest first: its
     /// dates, and what `source_volume` says the source folder carries. Counts
-    /// each date a folder arrives without.
+    /// what each folder arrives without, of what it had worth keeping.
     ///
     /// Call it only once the subtree landed in full. Best effort: a refusal is
     /// a `log::warn!` and the copy stands; a destination that can hold none of
@@ -96,13 +97,14 @@ impl FolderMetadata {
             if is_cancelled(&state.intent) {
                 return;
             }
+            let carried = source_set(source_volume, &folder, state).await;
             let outcome = if asking {
-                stamp_one(source_volume, dest_volume, &folder, state).await
+                stamp_one(dest_volume, &folder, &carried).await
             } else {
                 Stamped::NotAsked
             };
             asking = !matches!(outcome, Stamped::HeldNone);
-            note_losses(dest_volume, folder.dates, outcome, state);
+            note_losses(dest_volume, &folder, &carried, outcome, state);
         }
     }
 }
@@ -113,60 +115,80 @@ enum Stamped {
     Answered {
         created: ClassOutcome,
         modified: ClassOutcome,
+        xattrs: ClassOutcome,
     },
-    /// The destination can hold none of a folder's dates; ask it no more.
+    /// The destination can hold none of a folder's metadata; ask it no more.
     HeldNone,
     /// An earlier folder's [`Stamped::HeldNone`] ended the asking.
     NotAsked,
 }
 
-/// Counts what `source` had worth keeping that its folder arrived without:
-/// what the destination's caps say it can't hold, or what it refused.
+/// What the source folder carries beyond its dates: its xattrs (an archive's
+/// sidecar, a local folder's tags), asked only of a source that reports them,
+/// and with the archive's quarantine in place of any a sidecar names.
+async fn source_set(
+    source_volume: &Arc<dyn Volume>,
+    folder: &FilledFolder,
+    state: &WriteOperationState,
+) -> CarriedMetadata {
+    let wanted = source_volume
+        .metadata_caps()
+        .reports
+        .intersection(MetadataClasses::XATTRS);
+    if wanted.is_empty() {
+        return CarriedMetadata::default();
+    }
+    let mut carried = source_volume.folder_metadata(&folder.source, wanted).await;
+    super::extract_quarantine::keep_archive_quarantine(state, source_volume, &mut carried.xattrs);
+    carried
+}
+
+/// Counts what the folder had worth keeping that it arrived without: what the
+/// destination's caps say it can't hold, or what it refused.
 fn note_losses(
     dest_volume: &Arc<dyn Volume>,
-    source: SourceFolderDates,
+    folder: &FilledFolder,
+    carried: &CarriedMetadata,
     outcome: Stamped,
     state: &WriteOperationState,
 ) {
     let caps = dest_volume.metadata_caps();
-    let (created, modified) = match outcome {
-        Stamped::Answered { created, modified } => (created, modified),
-        Stamped::HeldNone | Stamped::NotAsked => (ClassOutcome::NotApplicable, ClassOutcome::NotApplicable),
+    let (created, modified, xattrs) = match outcome {
+        Stamped::Answered {
+            created,
+            modified,
+            xattrs,
+        } => (created, modified, xattrs),
+        Stamped::HeldNone | Stamped::NotAsked => (
+            ClassOutcome::NotApplicable,
+            ClassOutcome::NotApplicable,
+            ClassOutcome::NotApplicable,
+        ),
     };
+    let source = folder.dates;
     let created_worth_keeping = match (source.created_at, source.modified_at) {
         (Some(created), Some(modified)) => created < modified,
         (Some(_), None) => true,
         (None, _) => false,
     };
-    let lost_created = created_worth_keeping
-        && (!caps.folder_stores.contains(MetadataClasses::CREATED) || created == ClassOutcome::Refused);
-    let lost_modified = source.modified_at.is_some() && (!caps.folder_dates || modified == ClassOutcome::Refused);
-    state.metadata_losses.note_folder(lost_created, lost_modified);
+    // The same "worth keeping" a file's xattrs answer: any but the quarantine.
+    let xattrs_worth_keeping = carried.worth_keeping(None, 0).contains(MetadataClasses::XATTRS);
+    state.metadata_losses.note_folder(FolderLosses {
+        created: created_worth_keeping
+            && (!caps.folder_stores.contains(MetadataClasses::CREATED) || created == ClassOutcome::Refused),
+        modified: source.modified_at.is_some() && (!caps.folder_dates || modified == ClassOutcome::Refused),
+        xattrs: xattrs_worth_keeping
+            && (!caps.folder_stores.contains(MetadataClasses::XATTRS) || xattrs == ClassOutcome::Refused),
+    });
 }
 
-/// Stamps one folder: its dates, plus what its source folder carries that the
-/// destination keeps on a folder (asked only then, so an archive folder's
-/// sidecar is never read for a destination that would drop it).
-async fn stamp_one(
-    source_volume: &Arc<dyn Volume>,
-    dest_volume: &Arc<dyn Volume>,
-    folder: &FilledFolder,
-    state: &WriteOperationState,
-) -> Stamped {
+/// Stamps one folder with its dates and `carried`.
+async fn stamp_one(dest_volume: &Arc<dyn Volume>, folder: &FilledFolder, carried: &CarriedMetadata) -> Stamped {
     let at = |secs: u64| UNIX_EPOCH + Duration::from_secs(secs);
-    // xattrs are the only class a folder's source reports beyond its listing
-    // entry (an archive's sidecar); the dates come from that entry.
-    let wanted = dest_volume
-        .metadata_caps()
-        .folder_stores
-        .intersection(MetadataClasses::XATTRS);
-    let mut carried = if wanted.is_empty() {
-        CarriedMetadata::default()
-    } else {
-        source_volume.folder_metadata(&folder.source, wanted).await
+    let carried = CarriedMetadata {
+        created: folder.dates.created_at.map(at),
+        ..carried.clone()
     };
-    super::extract_quarantine::keep_archive_quarantine(state, source_volume, &mut carried.xattrs);
-    carried.created = folder.dates.created_at.map(at);
     let modified = folder.dates.modified_at.map(at);
     if carried.is_empty() && modified.is_none() {
         // A source that carried nothing at all (an S3 prefix) leaves the
@@ -174,6 +196,7 @@ async fn stamp_one(
         return Stamped::Answered {
             created: ClassOutcome::Absent,
             modified: ClassOutcome::Absent,
+            xattrs: ClassOutcome::Absent,
         };
     }
     let dest = folder.dest.as_path();
@@ -191,5 +214,6 @@ async fn stamp_one(
     Stamped::Answered {
         created: report.created,
         modified: report.modified,
+        xattrs: report.xattrs,
     }
 }

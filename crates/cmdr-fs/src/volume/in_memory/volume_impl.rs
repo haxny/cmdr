@@ -285,6 +285,28 @@ impl Volume for InMemoryVolume {
         })
     }
 
+    /// A folder's stored xattrs, the one class a folder reports beyond its
+    /// listing entry, within `wanted` and the caps' `reports`. Empty for a file
+    /// or a missing path.
+    fn folder_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        wanted: MetadataClasses,
+    ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
+        Box::pin(async move {
+            let normalized = self.normalize(path);
+            let entries = self.entries.read_ignore_poison();
+            let Some(entry) = entries.get(&normalized).filter(|entry| entry.metadata.is_directory) else {
+                return CarriedMetadata::default();
+            };
+            CarriedMetadata {
+                xattrs: entry.extra.xattrs.clone(),
+                ..CarriedMetadata::default()
+            }
+            .restricted_to(wanted.intersection(self.metadata_caps.reports))
+        })
+    }
+
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             if self.delete_fails {

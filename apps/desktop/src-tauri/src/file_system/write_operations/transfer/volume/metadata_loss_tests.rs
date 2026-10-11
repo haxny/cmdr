@@ -101,15 +101,20 @@ async fn seed(source: &InMemoryVolume, caps: MetadataCaps) {
     let album = Path::new("/album");
     source.create_directory(album).await.unwrap();
     source.set_modified_at(album, Some(MODIFIED));
-    if caps.reports.contains(MetadataClasses::CREATED) {
-        source.set_carried_metadata(
-            album,
-            CarriedMetadata {
-                created: Some(at(BORN)),
-                ..CarriedMetadata::default()
+    // What the source can report about the folder beyond its date: its
+    // creation date off the listing, its tags through `folder_metadata`.
+    source.set_carried_metadata(
+        album,
+        CarriedMetadata {
+            created: caps.reports.contains(MetadataClasses::CREATED).then(|| at(BORN)),
+            xattrs: if caps.reports.contains(MetadataClasses::XATTRS) {
+                vec![tag()]
+            } else {
+                Vec::new()
             },
-        );
-    }
+            ..CarriedMetadata::default()
+        },
+    );
 }
 
 async fn copy(
@@ -146,7 +151,7 @@ const FILE_CLASSES: [(MetadataClasses, LostMetadataClass); 4] = [
 
 /// What the caps say the completion must report: per class, the file if its
 /// source reports the class and the destination can't store it, plus the folder
-/// for its creation date and its modification date by the same rule.
+/// for its creation date, its tags, and its modification date by the same rule.
 fn expected_losses(source: MetadataCaps, dest: MetadataCaps) -> Option<MetadataLeftBehind> {
     let mut counts = std::collections::BTreeMap::<u8, (LostMetadataClass, u32)>::new();
     let mut bump = |order: u8, class: LostMetadataClass| counts.entry(order).or_insert((class, 0)).1 += 1;
@@ -157,6 +162,9 @@ fn expected_losses(source: MetadataCaps, dest: MetadataCaps) -> Option<MetadataL
     }
     if source.reports.contains(MetadataClasses::CREATED) && !dest.folder_stores.contains(MetadataClasses::CREATED) {
         bump(0, LostMetadataClass::CreationDates);
+    }
+    if source.reports.contains(MetadataClasses::XATTRS) && !dest.folder_stores.contains(MetadataClasses::XATTRS) {
+        bump(3, LostMetadataClass::ExtendedAttributes);
     }
     if !dest.folder_dates {
         bump(4, LostMetadataClass::FolderDates);
@@ -266,6 +274,59 @@ async fn a_tagged_local_file_copied_to_sftp_reports_its_tags_and_an_untagged_one
     )
     .await;
     let plain_copy = copy(source, &[PathBuf::from("plain.txt")], sftp(), Path::new("/")).await;
+
+    assert_eq!(
+        tagged_copy.metadata_left_behind,
+        Some(MetadataLeftBehind {
+            classes: vec![LostMetadata {
+                class: LostMetadataClass::ExtendedAttributes,
+                item_count: 1
+            }]
+        })
+    );
+    assert_eq!(plain_copy.metadata_left_behind, None);
+}
+
+/// A folder whose only xattr is the quarantine had nothing a person would miss,
+/// so a destination that keeps no folder xattrs reports nothing for it
+/// (invariant 10's "worth keeping").
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_folder_with_only_a_quarantine_reports_nothing() {
+    let source = Arc::new(InMemoryVolume::new("Source"));
+    let folder = Path::new("/downloaded");
+    source.create_directory(folder).await.unwrap();
+    source.set_carried_metadata(
+        folder,
+        CarriedMetadata {
+            xattrs: vec![Xattr {
+                name: "com.apple.quarantine".into(),
+                value: b"0083;".to_vec(),
+            }],
+            ..CarriedMetadata::default()
+        },
+    );
+    let dest = Arc::new(InMemoryVolume::new("Dest").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
+    dest.create_directory(Path::new("/to")).await.unwrap();
+
+    let complete = copy(source, &[folder.to_path_buf()], dest, Path::new("/to")).await;
+
+    assert_eq!(complete.metadata_left_behind, None);
+}
+
+/// A local FOLDER through `LocalPosixVolume::folder_metadata` onto SFTP's caps:
+/// a tagged one puts its tags on the note, an untagged one puts nothing there.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_one_nothing() {
+    let dir = TestDir::new("metadata_loss_local_folder_to_sftp");
+    for name in ["tagged", "plain"] {
+        std::fs::create_dir(dir.join(name)).unwrap();
+    }
+    xattr::set(dir.join("tagged"), "user.cmdr.tag", b"red").unwrap();
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*dir));
+    let sftp = || Arc::new(InMemoryVolume::new("SFTP").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
+
+    let tagged_copy = copy(Arc::clone(&source), &[PathBuf::from("tagged")], sftp(), Path::new("/")).await;
+    let plain_copy = copy(source, &[PathBuf::from("plain")], sftp(), Path::new("/")).await;
 
     assert_eq!(
         tagged_copy.metadata_left_behind,

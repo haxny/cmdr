@@ -530,6 +530,30 @@ impl Volume for LocalPosixVolume {
         })
     }
 
+    /// The folder's xattrs (Finder tags, comments, the FinderInfo of a custom
+    /// icon), the one class a folder reports beyond its listing entry: one
+    /// `lstat` and one `listxattr`, plus a read per name, and only when asked.
+    fn folder_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        wanted: MetadataClasses,
+    ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
+        let abs_path = self.resolve(path);
+        Box::pin(async move {
+            if !wanted.contains(MetadataClasses::XATTRS) {
+                return CarriedMetadata::default();
+            }
+            spawn_blocking(move || match std::fs::symlink_metadata(&abs_path) {
+                Ok(meta) if meta.is_dir() => {
+                    CarriedMetadata::of_local_dir(&abs_path, &meta).restricted_to(MetadataClasses::XATTRS)
+                }
+                _ => CarriedMetadata::default(),
+            })
+            .await
+            .expect("spawn_blocking folder_metadata closure doesn't panic and the task is uncancelable")
+        })
+    }
+
     /// Every class, through the host helper: xattrs, the folded mode, then
     /// birth and mtime in one call, then the flags last (Locked would refuse the
     /// others).

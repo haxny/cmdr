@@ -10,7 +10,7 @@
 //! **Who counts.** The cross-volume engine, from the destination's
 //! `MetadataCaps` against the source's: a file at landing
 //! (`transfer/volume/strategy.rs`, `sequential_extract.rs`), a folder when its
-//! dates go on (`transfer/volume/folder_metadata.rs`). The native engine keeps
+//! dates and xattrs go on (`transfer/volume/folder_metadata.rs`). The native engine keeps
 //! everything local disk can hold and counts nothing. The contract:
 //! `docs/specs/transfer-metadata-preservation.md` § "Telling the user".
 
@@ -49,6 +49,15 @@ pub(crate) fn file_losses(source: &dyn Volume, dest: &dyn Volume, stream: &dyn V
         .worth_keeping(stream.modified_at(), cmdr_fs::metadata::default_file_mode())
 }
 
+/// What one FOLDER arrived without, of what it had worth keeping.
+// DEFAULT-OK: nothing lost.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct FolderLosses {
+    pub(crate) created: bool,
+    pub(crate) modified: bool,
+    pub(crate) xattrs: bool,
+}
+
 /// Per-class counts of items that arrived without something worth keeping.
 // DEFAULT-OK: all zero is "nothing left behind yet", the honest start.
 #[derive(Default)]
@@ -73,12 +82,15 @@ impl MetadataLosses {
     }
 
     /// A FOLDER the operation created arrived without its creation date, its
-    /// modification date, or both.
-    pub(crate) fn note_folder(&self, lost_created: bool, lost_modified: bool) {
-        if lost_created {
+    /// modification date, its xattrs, or any mix of them.
+    pub(crate) fn note_folder(&self, lost: FolderLosses) {
+        if lost.created {
             self.bump(LostMetadataClass::CreationDates);
         }
-        if lost_modified {
+        if lost.xattrs {
+            self.bump(LostMetadataClass::ExtendedAttributes);
+        }
+        if lost.modified {
             self.bump(LostMetadataClass::FolderDates);
         }
     }

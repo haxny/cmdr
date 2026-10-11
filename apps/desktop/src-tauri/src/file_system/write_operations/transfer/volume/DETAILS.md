@@ -881,8 +881,9 @@ point here. The plan behind it, and the classes still to come (flags over SMB, x
   (`MetadataCaps::file_classes_at_risk_from`), narrowed to the ones the item had something in
   (`CarriedMetadata::worth_keeping`: a birth before the last edit, a mode a fresh file wouldn't get, any flag, any xattr
   but the quarantine). A class the source can't report is unknown, ❌ never counted. A folder counts its creation date
-  (when its listing had one) and its modification date by the destination's `folder_stores` / `folder_dates`, and a
-  date the destination refused.
+  (when its listing had one), its xattrs (from `Volume::folder_metadata`, asked only of a source whose caps report
+  xattrs: the archive's sidecars, a local folder's tags), and its modification date, by the destination's
+  `folder_stores` / `folder_dates`, plus anything the destination refused.
 - **Free to know, and asked only where it can be lost** (invariant 10): `metadata_losses::file_losses` asks the stream
   nothing for a pair whose caps lose nothing, and otherwise reads `VolumeReadStream::metadata_outline`, which for a
   local file lists xattr NAMES only. Asked before `write_from_stream` consumes the stream; wrappers forward it.

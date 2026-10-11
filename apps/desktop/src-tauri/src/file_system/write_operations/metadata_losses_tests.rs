@@ -64,8 +64,15 @@ fn the_counts_come_out_per_class_in_a_fixed_order() {
     let losses = MetadataLosses::default();
     losses.note_file(MetadataClasses::XATTRS | MetadataClasses::CREATED);
     losses.note_file(MetadataClasses::XATTRS);
-    losses.note_folder(true, true);
-    losses.note_folder(false, true);
+    losses.note_folder(FolderLosses {
+        created: true,
+        modified: true,
+        xattrs: false,
+    });
+    losses.note_folder(FolderLosses {
+        modified: true,
+        ..FolderLosses::default()
+    });
 
     let left = losses.left_behind("op").expect("something stayed behind");
 

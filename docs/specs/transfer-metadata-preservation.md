@@ -978,14 +978,20 @@ decided; then the ask itself, creation and modification dates on files AND folde
     `folder_stores` holds.
   - **A sidecar's quarantine never wins** over the archive's: the file decorator replaces it, and folders go through
     `extract_quarantine::keep_archive_quarantine`.
-  - **A written sidecar carries quarantine too** (only the trigger excludes it). Compress writes none on Linux.
+  - **A written sidecar carries quarantine too** (only the trigger excludes it, with the last-used date). Compress
+    writes none on Linux.
   - **A selected item named `__MACOSX`** (fresh compress) or one landing at a zip's root `__MACOSX` (copy INTO a zip) is
     skipped and counted: the reader hides that folder.
   - **The archive's caps report `MODE | XATTRS`**, so the loss note names tags an extract can't keep.
   - **Found, not fixed**: `ditto -x -k` can't stream any FOLDER entry fresh compress writes, sidecar or not (`zip` 8.6's
     stream mode flags a data descriptor on a directory and never writes one; 9.0.1 doesn't flag it). The DONE check's
     ditto half runs on files; the mutator's seekable writer is unaffected (its cell checks a folder with ditto).
-  - **Not counted**: a folder's xattrs left behind (M5b counts folder dates only).
+  - **A folder's xattrs left behind count too** (David, 2026-10-12): `FolderMetadata` asks a source whose caps report
+    xattrs for the folder's set (`folder_metadata`, which `LocalPosixVolume` and `InMemoryVolume` now answer as well as
+    the archive), counts them by the same "worth keeping" a file's xattrs use, and the loss matrix seeds its folder with
+    a tag. `MetadataLosses::note_folder` takes a `FolderLosses`.
+  - **`com.apple.lastuseddate#PS` never triggers a sidecar** (David, 2026-10-12): it's on most opened files. A sidecar
+    written anyway carries it.
   - No new user-facing strings.
 
 ### M9: The rest: SFTP, S3, WebDAV, MTP, ADB. Size: M–L (1–2 sessions, spikes first)
