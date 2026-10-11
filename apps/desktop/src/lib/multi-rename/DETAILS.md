@@ -15,6 +15,8 @@
   field labels (`multiRename.preview`, the same key that names the table). Both live regions (`role="alert"` for the
   error, `role="status"` for the notice) stay mounted, empty when quiet, so a message arriving is announced; the label
   is `aria-hidden` because the table already carries the name (`ColumnList` takes an `ariaLabel`, no `labelledby`).
+- **Stale preview**: under a spec error the last good preview stays, dimmed with the house disabled opacity (0.5), and
+  so does the footer's summary of it; both fade with `--transition-base` unless the user asked for less motion.
 - **Preview**: reruns `PREVIEW_DELAY_MS` (120 ms) after the last edit. The answer carries the counts (the footer and the
   Rename button) and the first page of rows. The list is the house `ColumnList` (`lib/ui/DETAILS.md` § ColumnList), the
   same look as Search's results, fed the state's windowed `source`: `count` is the rows listed, `getRow` reads the held

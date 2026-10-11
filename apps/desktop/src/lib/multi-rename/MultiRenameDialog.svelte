@@ -138,6 +138,8 @@
     const shownError = $derived(tool.error ?? tool.applyError ?? results.error)
     /** The error line's words: the preview's, Start's, or Results' error, else why Undo rename didn't go. */
     const shownMessage = $derived(shownError ? errorText(shownError) : undoNotice ? tString(undoNotice) : '')
+    /** A spec error keeps the last good preview on screen; it and its summary dim as stale. */
+    const previewStale = $derived(tool.error?.type === 'spec')
     /** Results says what it's doing in the list's heading slot, unless an error has it. */
     const showResultsNotice = $derived(!shownMessage && (results.open || tool.editedCount > 0))
 
@@ -494,7 +496,7 @@
             {/if}
         </div>
 
-        <PreviewList rows={tool.source} />
+        <PreviewList rows={tool.source} stale={previewStale} />
 
         <!-- Inside the dialog, so it portals into the modal's layer (above the scrim, inside its focus trap). -->
         <Menu menu={fieldHistory.menu} ariaLabel={tString('multiRename.history')} minWidth={240} />
@@ -503,7 +505,7 @@
     {#snippet footerLeading()}
         <div class="footer-leading">
             <PresetsControl bind:this={presetsControl} {tool} />
-            <span class="counts" role="status">
+            <span class="counts" class:stale={previewStale} role="status">
                 <Trans
                     key="multiRename.summary"
                     params={{ ready: tool.counts.ready, unchanged: tool.counts.unchanged, problems: tool.counts.problems }}
@@ -727,6 +729,16 @@
         align-items: center;
         gap: var(--spacing-md);
         min-width: 0;
+    }
+
+    .counts.stale {
+        opacity: 0.5;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .counts {
+            transition: opacity var(--transition-base);
+        }
     }
 
     .counts {

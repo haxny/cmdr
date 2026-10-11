@@ -151,6 +151,32 @@ describe('MultiRenameDialog', () => {
     expect(root.querySelector('[role="table"]')?.getAttribute('aria-label')).toBe('Preview')
   })
 
+  it('a mask error dims the last good preview and its summary as stale, and a fixed mask brings them back', async () => {
+    ipc.previewMultiRename.mockResolvedValueOnce({ ok: true, value: READY })
+    ipc.previewMultiRename.mockResolvedValueOnce({
+      ok: false,
+      error: { type: 'spec', error: { type: 'nameMask', error: { type: 'unclosed', at: 0 } } },
+    })
+    const root = await mountSheet()
+    expect(root.querySelector('.preview.stale')).toBeNull()
+    expect(root.querySelector('.counts.stale')).toBeNull()
+
+    const mask = inputs(root)[0]
+    mask.value = '[N'
+    mask.dispatchEvent(new Event('input', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await settle()
+    expect(root.querySelector('.preview.stale')).not.toBeNull()
+    expect(root.querySelector('.counts.stale')).not.toBeNull()
+
+    mask.value = '[N]'
+    mask.dispatchEvent(new Event('input', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await settle()
+    expect(root.querySelector('.preview.stale')).toBeNull()
+    expect(root.querySelector('.counts.stale')).toBeNull()
+  })
+
   it('an error takes the label’s place in the same slot, through the live region that was already there', async () => {
     ipc.previewMultiRename.mockResolvedValue({
       ok: false,

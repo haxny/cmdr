@@ -23,9 +23,11 @@
 
     interface Props {
         rows: ColumnListWindowedSource<PreviewRow>
+        /** The rows are the last good preview under a spec error: dimmed, as the house dims what's unavailable. */
+        stale?: boolean
     }
 
-    const { rows }: Props = $props()
+    const { rows, stale = false }: Props = $props()
 
     /** The icon track, the same as Search's results (`query-ui/result-column-widths.ts`). */
     const ICON_TRACK_PX = 24
@@ -79,7 +81,7 @@
     }
 </script>
 
-<div class="preview">
+<div class="preview" class:stale>
     <ColumnList
         {...columnListProps({
             columns,
@@ -158,6 +160,18 @@
         overflow: hidden;
         border: 1px solid var(--color-border);
         border-radius: var(--radius-sm);
+    }
+
+    /* A stale preview reads as unavailable: the house disabled opacity, faded in unless the
+       user asked for less motion. */
+    .stale {
+        opacity: 0.5;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .preview {
+            transition: opacity var(--transition-base);
+        }
     }
 
     /* Cell contents. The cells themselves (font, tone, the track widths) are `ColumnList`'s. */
