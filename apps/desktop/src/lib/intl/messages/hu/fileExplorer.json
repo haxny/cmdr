@@ -1432,7 +1432,7 @@
   "@fileExplorer.navigation.favoriteUnreachable.phoneUnplugged": {
     "sourceHash": "e0232ec"
   },
-  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Ez a tárhely most nem érhető el ezen a telefonon: {device}.",
+  "fileExplorer.navigation.favoriteUnreachable.storageUnplugged": "Ez a tárhely most nem érhető el ezen az eszközön: {device}.",
   "@fileExplorer.navigation.favoriteUnreachable.storageUnplugged": {
     "sourceHash": "c16cdc6"
   },
