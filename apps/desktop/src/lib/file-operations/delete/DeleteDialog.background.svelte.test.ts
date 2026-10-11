@@ -137,6 +137,15 @@ function backgroundButton(target: HTMLElement): HTMLButtonElement | null {
   )
 }
 
+/** The visible word, without the F2 chip that rides inside the button. */
+function buttonWord(button: HTMLButtonElement | null): string | undefined {
+  const copy = button?.cloneNode(true) as HTMLElement | undefined
+  copy?.querySelectorAll('kbd').forEach((chip) => {
+    chip.remove()
+  })
+  return copy?.textContent.trim()
+}
+
 /** Lets the scan-start promise and the confirm's awaits run. */
 async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await new Promise((done) => setTimeout(done, 0))
@@ -203,13 +212,13 @@ describe('trashing in the background', () => {
   it('reads "Background" with nothing else running, and "Queue" once something is', async () => {
     const quiet = mountDialog()
     await tick()
-    expect(backgroundButton(quiet.target)?.textContent.trim()).toBe('Background')
+    expect(buttonWord(backgroundButton(quiet.target))).toBe('Background')
 
     document.body.innerHTML = ''
     queueRows.rows = [liveRow('other')]
     const busy = mountDialog()
     await tick()
-    expect(backgroundButton(busy.target)?.textContent.trim()).toBe('Queue')
+    expect(buttonWord(backgroundButton(busy.target))).toBe('Queue')
   })
 })
 

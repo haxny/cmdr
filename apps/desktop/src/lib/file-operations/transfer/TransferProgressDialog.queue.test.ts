@@ -274,7 +274,21 @@ function backgroundButtonLabel(target: HTMLElement): string | null {
   const button =
     target.querySelector<HTMLButtonElement>(`button[aria-label="${BACKGROUND_ARIA}"]`) ??
     target.querySelector<HTMLButtonElement>(`button[aria-label="${QUEUE_ARIA}"]`)
-  return button ? button.textContent.trim() : null
+  if (!button) return null
+  // The F2 chip rides inside the button; the word is everything else.
+  const word = button.cloneNode(true) as HTMLElement
+  word.querySelectorAll('kbd').forEach((chip) => {
+    chip.remove()
+  })
+  return word.textContent.trim()
+}
+
+/** The key chip inside the button, which teaches F2 to anyone who clicks instead. */
+function backgroundButtonChip(target: HTMLElement): string | null {
+  const button =
+    target.querySelector<HTMLButtonElement>(`button[aria-label="${BACKGROUND_ARIA}"]`) ??
+    target.querySelector<HTMLButtonElement>(`button[aria-label="${QUEUE_ARIA}"]`)
+  return button?.querySelector('kbd')?.textContent.trim() ?? null
 }
 
 /** Another operation in the queue, one the dialog doesn't own. */
@@ -575,6 +589,8 @@ describe('TransferProgressDialog background/queue button label', () => {
     await tick()
 
     expect(backgroundButtonLabel(target)).toBe('Background')
+    expect(backgroundButtonChip(target), 'the button shows its shortcut').toBe('F2')
+    expect(queryButton(target, BACKGROUND_ARIA)?.getAttribute('aria-keyshortcuts'), 'and says it').toBe('F2')
     expect(queryButton(target, BACKGROUND_ARIA), 'the accessible name follows the word').not.toBeNull()
     expect(queryButton(target, QUEUE_ARIA)).toBeNull()
 
@@ -587,6 +603,7 @@ describe('TransferProgressDialog background/queue button label', () => {
     await tick()
 
     expect(backgroundButtonLabel(target)).toBe('Queue')
+    expect(backgroundButtonChip(target)).toBe('F2')
     expect(queryButton(target, QUEUE_ARIA)).not.toBeNull()
 
     dropView(component)

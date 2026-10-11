@@ -4,9 +4,11 @@
      * trash): confirm, and start the operation with no progress dialog (#381).
      * F2 in the dialog presses it (`start-in-background-key.ts`). One button, two words, by the same rule as the
      * progress dialog's: "Queue" while other work is live, "Background" when the
-     * queue is empty. `transfer/DETAILS.md` § "Starting in the background".
+     * queue is empty. The F2 chip inside it is how a mouse user learns the key.
+     * `transfer/DETAILS.md` § "Starting in the background".
      */
     import Button from '$lib/ui/Button.svelte'
+    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
     import { tString } from '$lib/intl/messages.svelte'
     import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
     import { hasOtherQueuedWork } from '$lib/file-operations/queue/queue-backlog'
@@ -26,12 +28,24 @@
     variant="secondary"
     {onclick}
     {disabled}
+    aria-keyshortcuts="F2"
     tooltipContent={tString('fileOperations.backgroundStart.tooltip')}
     aria-label={queueHasOtherWork
         ? tString('fileOperations.backgroundStart.queueAria')
         : tString('fileOperations.backgroundStart.backgroundAria')}
 >
-    {queueHasOtherWork
-        ? tString('fileOperations.backgroundStart.queue')
-        : tString('fileOperations.backgroundStart.background')}
+    <span class="btn-inner">
+        {queueHasOtherWork
+            ? tString('fileOperations.backgroundStart.queue')
+            : tString('fileOperations.backgroundStart.background')}
+        <span aria-hidden="true"><ShortcutChip key="F2" size="sm" /></span>
+    </span>
 </Button>
+
+<style>
+    .btn-inner {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+</style>

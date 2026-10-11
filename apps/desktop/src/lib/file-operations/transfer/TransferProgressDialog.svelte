@@ -24,6 +24,7 @@
     import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
     import Icon from '$lib/ui/Icon.svelte'
     import Spinner from '$lib/ui/Spinner.svelte'
+    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import { tString } from '$lib/intl/messages.svelte'
@@ -588,6 +589,7 @@
                     <Button
                         variant="secondary"
                         onclick={progress.handleQueue}
+                        aria-keyshortcuts="F2"
                         aria-label={queueHasOtherWork
                             ? tString('fileOperations.transferProgress.queueAria')
                             : tString('fileOperations.transferProgress.backgroundAria')}
@@ -597,6 +599,7 @@
                             {queueHasOtherWork
                                 ? tString('fileOperations.transferProgress.queue')
                                 : tString('fileOperations.transferProgress.background')}
+                            <span aria-hidden="true"><ShortcutChip key="F2" size="sm" /></span>
                         </span>
                     </Button>
                 </span>

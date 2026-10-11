@@ -47,6 +47,15 @@ function backgroundButton(target: HTMLElement): HTMLButtonElement | null {
   )
 }
 
+/** The visible word, without the F2 chip that rides inside the button. */
+function buttonWord(button: HTMLButtonElement | null): string | undefined {
+  const copy = button?.cloneNode(true) as HTMLElement | undefined
+  copy?.querySelectorAll('kbd').forEach((chip) => {
+    chip.remove()
+  })
+  return copy?.textContent.trim()
+}
+
 /** The write-access probe runs on a 300 ms debounce. */
 async function settleExistsCheck(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 350))
@@ -125,6 +134,13 @@ describe('F2 in the transfer dialog', () => {
     expect(await confirmWith({ key: 'F2', metaKey: true })).toEqual([])
   })
 
+  it('shows F2 on the button, so a click teaches the key', async () => {
+    const target = mountDialog({ onConfirm: vi.fn<ConfirmFn>() })
+    await flushMicrotasks()
+
+    expect(backgroundButton(target)?.querySelector('kbd')?.textContent.trim()).toBe('F2')
+  })
+
   it('starts in the background from the button too', async () => {
     const onConfirm = vi.fn<ConfirmFn>()
     const target = mountDialog({ onConfirm })
@@ -160,13 +176,13 @@ describe('F2 in the transfer dialog', () => {
     queueRows.rows = []
     const quiet = mountDialog()
     await tick()
-    expect(backgroundButton(quiet)?.textContent.trim()).toBe('Background')
+    expect(buttonWord(backgroundButton(quiet))).toBe('Background')
 
     document.body.innerHTML = ''
     queueRows.rows = [liveRow()]
     const busy = mountDialog()
     await tick()
-    expect(backgroundButton(busy)?.textContent.trim()).toBe('Queue')
+    expect(buttonWord(backgroundButton(busy))).toBe('Queue')
     queueRows.rows = []
   })
 

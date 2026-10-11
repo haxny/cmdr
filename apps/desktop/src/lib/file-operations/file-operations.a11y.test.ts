@@ -331,7 +331,13 @@ describe('StartInBackgroundButton a11y', () => {
       mount(StartInBackgroundButton, { target: host, props: { onclick: () => {}, disabled } })
       await tick()
       const button = host.querySelector('button')
-      expect(button?.getAttribute('aria-label')).toContain(button?.textContent.trim().toLowerCase())
+      // The F2 chip is decoration; `aria-keyshortcuts` speaks it, so the name matches the word alone.
+      const word = button?.cloneNode(true) as HTMLElement
+      word.querySelectorAll('[aria-hidden="true"]').forEach((chip) => {
+        chip.remove()
+      })
+      expect(button?.getAttribute('aria-label')).toContain(word.textContent.trim().toLowerCase())
+      expect(button?.getAttribute('aria-keyshortcuts')).toBe('F2')
       await expectNoA11yViolations(host)
     }
   })
