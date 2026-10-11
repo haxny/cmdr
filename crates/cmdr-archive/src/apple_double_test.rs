@@ -78,9 +78,10 @@ fn an_all_zero_finder_info_is_no_finder_info() {
 }
 
 #[test]
-fn worth_keeping_ignores_provenance_quarantine_and_an_empty_finder_info() {
+fn worth_keeping_ignores_provenance_quarantine_last_used_date_and_an_empty_finder_info() {
     assert!(!worth_keeping("com.apple.provenance", &[1]));
     assert!(!worth_keeping("com.apple.quarantine", b"0083;"));
+    assert!(!worth_keeping("com.apple.lastuseddate#PS", &[0; 16]));
     assert!(!worth_keeping(FINDER_INFO_XATTR, &[0u8; 32]));
     let mut icon = [0u8; 32];
     icon[8] = 0x04;

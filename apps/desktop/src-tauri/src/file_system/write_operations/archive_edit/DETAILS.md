@@ -222,7 +222,7 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   the producer already holds, a local folder entry's off its folder (`FreshZipSource::Local` on a directory entry is
   that folder, read for nothing else), through `cmdr_archive::mutator::local_{file,folder}_sidecar`, the same pair the
   mutator uses (`crates/cmdr-archive/src/mutation/DETAILS.md` § "Entries' xattrs"). A source carrying only provenance,
-  quarantine, or an all-zero FinderInfo writes none, so an ordinary zip stays clean. A remote source reports no xattrs.
+  quarantine, a last-used date, or an all-zero FinderInfo writes none, so an ordinary zip stays clean. A remote source reports no xattrs.
   The reader hides `__MACOSX`, so the stage's read-back never sees a sidecar, and a SELECTED item named `__MACOSX` is
   skipped and counted by the planner (copy INTO a zip skips one landing at the root `__MACOSX` too): it could never be
   seen again. ❗ `ditto -x -k` can't stream a FOLDER entry this producer writes: `zip` 8.6's stream mode flags a data

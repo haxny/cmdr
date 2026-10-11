@@ -55,6 +55,10 @@ const PROVENANCE_XATTR: &str = "com.apple.provenance";
 /// Gatekeeper's mark. Carried, but never by itself a reason to write a sidecar.
 const QUARANTINE_XATTR: &str = "com.apple.quarantine";
 
+/// When LaunchServices last opened the file: on most files a person has
+/// opened. Carried, but never by itself a reason to write a sidecar.
+const LAST_USED_DATE_XATTR: &str = "com.apple.lastuseddate#PS";
+
 /// The protected namespace (`com.apple.system.Security` is the ACL): the kernel
 /// refuses a user write, so a sidecar naming one is either confused or hostile.
 const SYSTEM_NAMESPACE: &str = "com.apple.system.";
@@ -281,8 +285,9 @@ fn encode(finder_info: &[u8; FINDER_INFO_LEN], attrs: &[(&[u8], &[u8])], resourc
 
 /// The sidecar to write for a source whose xattr names are `names`, reading
 /// each value through `get`, or `None` when nothing it carries is
-/// [`worth_keeping`]. Names come first: a source carrying only provenance and
-/// quarantine (every downloaded file) costs no value read at all. A written
+/// [`worth_keeping`]. Names come first: a source carrying only provenance,
+/// quarantine, and a last-used date (every downloaded, opened file) costs no
+/// value read at all. A written
 /// sidecar carries every admissible xattr, quarantine included; values past
 /// [`MAX_SIDECAR_BYTES`] in total are left out and logged.
 pub(crate) fn sidecar_for(names: Vec<OsString>, mut get: impl FnMut(&OsStr) -> Option<Vec<u8>>) -> Option<Vec<u8>> {
@@ -290,7 +295,10 @@ pub(crate) fn sidecar_for(names: Vec<OsString>, mut get: impl FnMut(&OsStr) -> O
         .into_iter()
         .filter(|name| name.to_str().is_some_and(admissible_xattr_name))
         .collect();
-    if !candidates.iter().any(|name| name != QUARANTINE_XATTR) {
+    if !candidates
+        .iter()
+        .any(|name| name != QUARANTINE_XATTR && name != LAST_USED_DATE_XATTR)
+    {
         return None;
     }
     let mut xattrs = Vec::with_capacity(candidates.len());
@@ -317,11 +325,12 @@ pub(crate) fn sidecar_for(names: Vec<OsString>, mut get: impl FnMut(&OsStr) -> O
 
 /// Whether the xattr `name` with `value` is a reason to write a sidecar at all
 /// (David's call: an ordinary zip stays free of `__MACOSX` for Windows users).
-/// Provenance and quarantine aren't, and neither is a Finder Info that's all
-/// zeros; everything else is. A sidecar that IS written carries quarantine too.
+/// Provenance, quarantine, and the last-used date aren't, and neither is a
+/// Finder Info that's all zeros; everything else is. A sidecar that IS written
+/// carries the quarantine and the last-used date too.
 pub(crate) fn worth_keeping(name: &str, value: &[u8]) -> bool {
     match name {
-        PROVENANCE_XATTR | QUARANTINE_XATTR => false,
+        PROVENANCE_XATTR | QUARANTINE_XATTR | LAST_USED_DATE_XATTR => false,
         FINDER_INFO_XATTR => value.iter().any(|byte| *byte != 0),
         _ => true,
     }

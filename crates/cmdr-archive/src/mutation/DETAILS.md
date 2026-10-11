@@ -59,9 +59,10 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   in `../apple_double.rs`). An added local file's sidecar is read off the fd the add already holds
   (`local_file_sidecar`), a sourced mkdir's off its local folder (`Changeset::mkdir_sources`, `local_folder_sidecar`),
   and either is written right after its item, dated like it. ONLY when the source carries an xattr worth keeping
-  (David's call, so an ordinary zip stays clean for Windows users): provenance, quarantine, and an all-zero FinderInfo
-  aren't, and cost one name-only `flistxattr`. A written sidecar carries quarantine too. macOS only. The host's
-  fresh-ZIP producer calls the same two functions.
+  (David's call, so an ordinary zip stays clean for Windows users): provenance, quarantine, the last-used date
+  (`com.apple.lastuseddate#PS`, on most opened files), and an all-zero FinderInfo aren't, and cost one name-only
+  `flistxattr`. A written sidecar carries the quarantine and the last-used date too. macOS only. The host's fresh-ZIP
+  producer calls the same two functions.
 - **Every delete and rename takes the item's sidecars along** (`with_sidecar_deletes` / `with_sidecar_renames`): its own
   and, for a folder, every one under `__MACOSX/<folder>/`. So F8, F2, and a move OUT of a zip leave no orphan. Every add
   and sourced mkdir also drops any sidecar already at its name: the new item writes its own or has none, and two entries

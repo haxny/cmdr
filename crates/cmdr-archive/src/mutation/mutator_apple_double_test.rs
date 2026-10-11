@@ -116,13 +116,14 @@ fn a_tagged_file_and_folder_added_bring_sidecars_ditto_reads_back() {
 }
 
 #[test]
-fn a_plain_or_only_quarantined_source_adds_no_sidecar() {
+fn a_plain_quarantined_or_merely_opened_source_adds_no_sidecar() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let plain = tmp.path().join("plain.txt");
     std::fs::write(&plain, b"plain").expect("write");
     let quarantined = tmp.path().join("quarantined.txt");
     std::fs::write(&quarantined, b"q").expect("write");
     xattr::set(&quarantined, QUARANTINE, b"0083;5f000000;Safari;").expect("quarantine it");
+    xattr::set(&quarantined, "com.apple.lastuseddate#PS", &[0; 16]).expect("mark it opened");
     let blank_info = tmp.path().join("blank-info.txt");
     std::fs::write(&blank_info, b"b").expect("write");
     xattr::set(&blank_info, FINDER_INFO_XATTR, &[0u8; 32]).expect("set an empty FinderInfo");
@@ -147,10 +148,11 @@ fn a_plain_or_only_quarantined_source_adds_no_sidecar() {
 }
 
 #[test]
-fn a_sidecar_carries_quarantine_along_when_something_else_is_worth_it() {
+fn a_sidecar_carries_quarantine_and_last_used_date_along_when_something_else_is_worth_it() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let file = tagged_file(tmp.path(), "both.txt");
     xattr::set(&file, QUARANTINE, b"0083;5f000000;Safari;").expect("quarantine it");
+    xattr::set(&file, "com.apple.lastuseddate#PS", &[0; 16]).expect("mark it opened");
     let zip = empty_zip(tmp.path());
     let changeset = Changeset {
         adds: vec![AddEntry {
@@ -162,7 +164,7 @@ fn a_sidecar_carries_quarantine_along_when_something_else_is_worth_it() {
     apply(&zip, &changeset, &NoHooks).expect("the edit applies");
     let mut carried = carried_names(&zip, "both.txt");
     carried.sort();
-    assert_eq!(carried, vec![TAGS, QUARANTINE]);
+    assert_eq!(carried, vec!["com.apple.lastuseddate#PS", TAGS, QUARANTINE]);
 }
 
 #[test]
