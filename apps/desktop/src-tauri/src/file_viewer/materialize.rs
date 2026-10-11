@@ -54,7 +54,8 @@ use crate::ignore_poison::RwLockIgnorePoison;
 
 use super::pending_open::PendingOpen;
 use super::{ArchiveFailureKind, ViewerError};
-use crate::file_system::volume::manager::{RoutedKind, get_volume_manager, path_routes_over_its_parent};
+use crate::file_system::volume::RoutedKind;
+use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 
 /// Max bytes to materialize for a single preview. Above this the open is refused
 /// (typed) before any extraction, which doubles as the zip-bomb guard.

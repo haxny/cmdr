@@ -40,7 +40,8 @@ use super::materialize::reap_temps_with_prefix;
 use super::materialize::{RoutedPullFailure, TempSpot, extract_routed_into};
 use super::{ArchiveFailureKind, ViewerError};
 #[cfg(any(target_os = "macos", test))]
-use crate::file_system::volume::manager::{RoutedKind, get_volume_manager, path_routes_over_its_parent};
+use crate::file_system::volume::RoutedKind;
+use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 use crate::ignore_poison::RwLockIgnorePoison;
 
 /// Prefix on each launch's subdir, and on the stand-in dir: what the startup reaper

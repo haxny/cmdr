@@ -17,8 +17,8 @@ use std::sync::atomic::AtomicBool;
 use serde::Serialize;
 
 use super::{Content, FileRow, ReadFailure, TextAsk, UnreadableReason, ok_row, spoken_modified, status_for};
+use crate::file_system::volume::RoutedKind;
 use crate::file_system::volume::VolumeError;
-use crate::file_system::volume::manager::RoutedKind;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_viewer::ViewerError;
 use crate::file_viewer::materialize::MaterializedFile;

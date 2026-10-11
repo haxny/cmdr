@@ -137,7 +137,7 @@ pub fn is_virtual_portal_enabled() -> bool {
 /// point: `.git/branches/` is then whatever is on disk, and a write to it is an
 /// ordinary local write.
 ///
-/// The seams that route by it read [`ResolvedVolume::routed`](crate::file_system::volume::manager::ResolvedVolume)
+/// The seams that route by it read [`ResolvedVolume::routed`](crate::file_system::volume::ResolvedVolume)
 /// instead; this is for the guards that have only a path.
 pub fn portal_serves(path: &Path) -> bool {
     is_virtual_portal_enabled() && cmdr_git::portal_route(path).is_some()

@@ -30,11 +30,7 @@ pub use root_move::RootMove;
 pub use root_replace::RootReplacement;
 use roots::Registration;
 pub use roots::{RootRemoval, StaleRootOutcome, is_stale_mount_errno};
-#[allow(
-    unused_imports,
-    reason = "ResolvedVolume is `resolve`'s return type: named by rustdoc and by any site that binds it, even where today's callers only read its fields"
-)]
-pub use routing::{ResolvedVolume, RoutedKind, path_routes_over_its_parent};
+pub use routing::path_routes_over_its_parent;
 
 #[cfg(test)]
 pub(crate) mod test_support;

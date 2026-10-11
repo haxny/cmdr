@@ -13,9 +13,9 @@ use crate::file_system::listing::cached_listing::OverlayRows;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE, ListingPath};
 use crate::file_system::listing::diff::{DiffChange, PaneRows};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator};
-use crate::file_system::volume::manager::RoutedKind;
 use cmdr_fs::entry::{FileEntry, TagRef};
 pub use cmdr_fs::volume::DirectoryChange;
+use cmdr_fs::volume::RoutedKind;
 
 /// Lightweight summary of one cached listing, for `snapshot_listings`.
 pub struct ListingSummary {

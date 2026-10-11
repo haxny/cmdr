@@ -84,7 +84,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
         .expect("the source volume");
     assert_eq!(
         route,
-        Some(crate::file_system::volume::manager::RoutedKind::GitPortal),
+        Some(crate::file_system::volume::RoutedKind::GitPortal),
         "the snapshot is the portal's"
     );
 

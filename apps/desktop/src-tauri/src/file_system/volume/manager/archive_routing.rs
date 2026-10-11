@@ -11,7 +11,7 @@
 
 use super::super::{Volume, WatchCoverage};
 use super::VolumeManager;
-use super::routing::{ResolvedVolume, RoutedKind};
+use crate::file_system::volume::{ResolvedVolume, RoutedKind};
 use crate::ignore_poison::IgnorePoison;
 use cmdr_archive::{
     ARCHIVE_MAGIC_PREFIX_LEN, ArchiveFormat, ArchiveVolume, bytes_match_archive_magic, confirm_archive_boundary,

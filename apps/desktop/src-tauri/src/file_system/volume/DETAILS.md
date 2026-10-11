@@ -103,7 +103,8 @@ their own volume IDs. A separate metadata check followed by plain `rename` is no
 
 `VolumeManager::resolve(volume_id, path)` (`manager/routing.rs`) answers "which volume serves this path": the
 registered volume for `volume_id`, or a read-only volume minted by one of two ROUTES. Both hand the caller's path back
-verbatim and both are capped by an LRU; `ResolvedVolume.routed` says which one fired.
+verbatim and both are capped by an LRU; `ResolvedVolume.routed` says which one fired. The answer types (`ResolvedVolume`,
+`RoutedKind`) are `cmdr_fs::volume` vocabulary, so a consumer reading them needs no app path.
 
 - **`RoutedKind::GitPortal`** (`manager/git_routing.rs`), when the path reaches into a repo's virtual `.git` trees:
   a `.git/<category>/` segment for one of the six categories, or exactly one of those category directories. Purely

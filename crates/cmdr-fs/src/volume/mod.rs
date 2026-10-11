@@ -1981,6 +1981,7 @@ mod read_stream;
 pub mod remote_paths;
 mod retirement;
 mod root_echo;
+mod routed;
 mod scan_boundary;
 pub mod scan_stop;
 pub mod scan_walk;
@@ -2030,6 +2031,7 @@ pub use remote_paths::{
 };
 pub use retirement::{Retirement, Retires, SelfHandle};
 pub use root_echo::{RootEcho, root_echo};
+pub use routed::{ResolvedVolume, RoutedKind};
 pub use scan_boundary::{ScanBoundary, stopped as scan_stopped};
 pub use scan_stop::{ScanStop, ScanStopSignal};
 pub use scan_walk::{ScanSource, Walking, conflicts_against, fold_batch, scan_conflicts, scan_one, scan_trees};

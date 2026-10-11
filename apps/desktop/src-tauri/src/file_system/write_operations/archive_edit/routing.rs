@@ -11,7 +11,7 @@ use std::sync::Arc;
 use super::super::OperationEventSink;
 use super::super::manager;
 use super::super::types::{ReadOnlySide, WriteOperationError};
-use crate::file_system::volume::manager::RoutedKind;
+use crate::file_system::volume::RoutedKind;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 

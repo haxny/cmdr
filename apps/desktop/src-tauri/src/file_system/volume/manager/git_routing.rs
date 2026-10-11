@@ -8,9 +8,9 @@
 //! `routing.rs`; this is a third inherent `impl VolumeManager` block.
 
 use super::VolumeManager;
-use super::routing::{ResolvedVolume, RoutedKind};
 use crate::file_system::git;
 use crate::file_system::volume::Volume;
+use crate::file_system::volume::{ResolvedVolume, RoutedKind};
 use crate::ignore_poison::IgnorePoison;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

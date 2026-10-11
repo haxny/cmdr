@@ -11,8 +11,8 @@ use super::materialize::{
     materialize_for_inspect_with, materialize_for_viewer_with, reap_orphan_temps,
 };
 use super::session;
+use crate::file_system::volume::RoutedKind;
 use crate::file_system::volume::VolumeError;
-use crate::file_system::volume::manager::RoutedKind;
 
 /// Serializes the tests that drive `open_session` (they share the process-wide extract
 /// dir set by `init_materialize_dir`).

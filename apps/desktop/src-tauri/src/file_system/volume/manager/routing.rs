@@ -9,46 +9,10 @@
 //! It's another inherent `impl VolumeManager` block (a type's impl can span
 //! files within a crate), so every method stays at `VolumeManager::…`.
 
-use super::super::Volume;
+use super::super::ResolvedVolume;
 use super::VolumeManager;
 use std::collections::VecDeque;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
-/// Which route swapped the volume in, when one did.
-///
-/// Both variants mean the same thing to most readers — "this isn't the drive
-/// the caller named, it's a read-only volume mapping a namespace onto it" — so
-/// most sites ask [`ResolvedVolume::is_routed`]. Match a variant only where the
-/// answer is genuinely about that ONE backend (the archive-edit driver, the
-/// archive preview, the routed materialization's error mapping).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RoutedKind {
-    /// The path crossed a `.zip` boundary into an [`ArchiveVolume`](cmdr_archive::ArchiveVolume).
-    Archive,
-    /// The path reached into a repo's virtual `.git` trees, so a
-    /// [`GitPortalVolume`](cmdr_git::GitPortalVolume)
-    /// serves it.
-    GitPortal,
-}
-
-/// Outcome of [`VolumeManager::resolve`]: the volume that should serve `path`.
-///
-/// `path` is ALWAYS the caller's input path unchanged. A routed resolve only
-/// swaps in the read-only volume — which maps the full path into its own
-/// namespace itself — and a passthrough returns the requested volume untouched.
-/// Adoption sites read `resolved.path` so the "full path, unchanged" contract
-/// lives in exactly one place.
-pub struct ResolvedVolume {
-    /// The volume to call, or `None` when `volume_id` isn't registered (an
-    /// unmount race). Sites keep their existing `.ok_or_else(...)?` handling.
-    pub volume: Option<Arc<dyn Volume>>,
-    /// The path to pass to `volume`'s methods — the input path, verbatim.
-    pub path: PathBuf,
-    /// Which route swapped `volume` in, or `None` for a passthrough. Sites use
-    /// it to skip drive-index enrich/verify and the read-only write guards.
-    pub routed: Option<RoutedKind>,
-}
+use std::path::Path;
 
 /// Whether `path` could be served by a ROUTE rather than by the volume that
 /// physically holds it. Pure string work over path segments: no `stat`, no
@@ -65,7 +29,8 @@ pub struct ResolvedVolume {
 /// ordinary local or remote path pays nothing; whoever then acts on the answer
 /// reads [`ResolvedVolume::routed`], never this.
 ///
-/// ❌ Not the same question as [`Volume::routes_over_a_parent`],
+/// ❌ Not the same question as
+/// [`Volume::routes_over_a_parent`](super::super::Volume::routes_over_a_parent),
 /// which asks whether a volume that already EXISTS is one a route minted (what
 /// keeps it out of the mount lookup). This one is about a path, and is asked
 /// before any volume has been resolved. Keeping them apart is what lets this one
@@ -74,24 +39,6 @@ pub fn path_routes_over_its_parent(path: &Path) -> bool {
     let inside_an_archive = cmdr_fs::archive_format::archive_boundary_candidate(path)
         .is_some_and(|(_zip, inner)| !inner.as_os_str().is_empty());
     inside_an_archive || crate::file_system::git::wiring::portal_serves(path)
-}
-
-impl ResolvedVolume {
-    /// An unrouted resolve: the requested volume (if any), path unchanged.
-    pub(super) fn passthrough(volume: Option<Arc<dyn Volume>>, path: &Path) -> Self {
-        Self {
-            volume,
-            path: path.to_path_buf(),
-            routed: None,
-        }
-    }
-
-    /// Whether a route swapped the volume in. True for every read-only routed
-    /// volume, whichever kind: a routed path has no drive-index entry and takes
-    /// no writes, and both of those follow from being routed at all.
-    pub fn is_routed(&self) -> bool {
-        self.routed.is_some()
-    }
 }
 
 impl VolumeManager {

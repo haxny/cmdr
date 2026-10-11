@@ -6,7 +6,7 @@
 //! instead of copying the file.
 
 use super::{resolve_dest_path, resolve_source_volume};
-use crate::file_system::volume::manager::RoutedKind;
+use crate::file_system::volume::RoutedKind;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
 use std::sync::Arc;
