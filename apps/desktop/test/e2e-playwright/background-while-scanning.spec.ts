@@ -27,6 +27,7 @@ import { test, expect } from './fixtures.js'
 import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { recreateFixtures } from '../e2e-shared/fixtures.js'
 import {
+  clickButtonByText,
   closeScopedWindow,
   dismissAllToasts,
   ensureAppReady,
@@ -38,6 +39,28 @@ import {
 import type { TauriPage } from '@srsholmes/tauri-playwright'
 
 const QUEUE_LABEL = 'queue'
+
+/** Whether a queue window exists, from the webview list `openQueueWindow`'s
+ *  `getByLabel` reads. */
+async function queueWindowOpen(main: TauriPage): Promise<boolean> {
+  return main.evaluate<boolean>(`(async function() {
+    var views = await window.__TAURI_INTERNALS__.invoke('plugin:webview|get_all_webviews');
+    return views.some(function(v) { return v.label === ${JSON.stringify(QUEUE_LABEL)}; });
+  })()`)
+}
+
+/** Backgrounding opens NO queue window; its toast carries the way there. Waits
+ *  for that toast's button, checks the window stayed shut, then presses it. */
+async function openQueueFromHandoffToast(main: TauriPage): Promise<void> {
+  await main.waitForFunction(
+    `Array.prototype.some.call(document.querySelectorAll('button'), function(b) {
+      return (b.textContent || '').trim() === 'Show in operation queue';
+    })`,
+    waitBudget(8000),
+  )
+  expect(await queueWindowOpen(main), 'backgrounding leaves the queue window shut').toBe(false)
+  await clickButtonByText(main, 'button', 'Show in operation queue')
+}
 /** The progress dialog (NOT the destination picker). */
 const PROGRESS_DIALOG = '[data-dialog-id="transfer-progress"]'
 
@@ -149,6 +172,7 @@ test.describe('Backgrounding a transfer that is still counting', () => {
       btn.click();
     })()`)
 
+    await openQueueFromHandoffToast(main)
     const queuePage = await main.waitForWindow((w) => w.label === QUEUE_LABEL, { timeout: waitBudget(10_000) })
 
     // The row is there, and the copy is still alive rather than cancelled with
@@ -205,6 +229,7 @@ test.describe('Backgrounding a transfer that is still counting', () => {
       )
       .toBe(true)
 
+    await openQueueFromHandoffToast(main)
     const queuePage = await main.waitForWindow((w) => w.label === QUEUE_LABEL, { timeout: waitBudget(10_000) })
     await expect
       .poll(async () => queuePage.evaluate<number>(`document.querySelectorAll('.queue-row').length`), {
