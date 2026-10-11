@@ -2060,7 +2060,7 @@
   "@settings.control.customPrefix": {
     "sourceHash": "58c3782"
   },
-  "settings.control.backToPresetsAriaLabel": "返回预设",
+  "settings.control.backToPresetsAriaLabel": "返回预置",
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },

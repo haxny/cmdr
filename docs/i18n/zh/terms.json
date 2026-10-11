@@ -656,7 +656,7 @@
   },
   "menu": {
     "chosen": "菜单",
-    "forms": "X menu → X菜单, tight (个人收藏菜单, 预设菜单); context menu → 右键菜单; a named menu in prose → “帮助”菜单",
+    "forms": "X menu → X菜单, tight (个人收藏菜单, 预置菜单); context menu → 右键菜单; a named menu in prose → “帮助”菜单",
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → 打开菜单); catalog 个人收藏菜单, 右键菜单"
   },
@@ -2229,14 +2229,14 @@
   "preset": {
     "avoid": [
       {
-        "form": "预置",
-        "why": "预设 dominates the corpus about 30:1"
+        "form": "预设",
+        "why": "macOS writes the preset noun 预置 (83 of 96 live strings, 预设 12, mostly WorkflowKit); an earlier 30:1 count for 预设 took in every sense of the word"
       }
     ],
-    "chosen": "预设",
+    "chosen": "预置",
     "confidence": "high",
-    "forms": "back to presets 返回预设; Multi-rename: Save the current settings as a preset → 将当前设置保存为预设 (macOS print dialog frame, with this ruling’s 预设); the menu → 预设菜单",
-    "sources": "MS terminology; macOS 27.0.1 live print dialog Save Current Settings as Preset…"
+    "forms": "back to presets 返回预置; Multi-rename: Save the current settings as a preset → 将当前设置保存为预置 (macOS print dialog, verbatim); the menu → 预置菜单",
+    "sources": "macOS 27.0.1 live loctable sweep, 2026-10-11 (print dialog 预置 / 无预置 / 将当前设置保存为预置… / 编辑预置列表…; AVFoundation, hearing aids, Siri voices, iWork style presets the same); DC zh-CN gbpresets 预设 (Tier 3)"
   },
   "preview": {
     "chosen": "预览",
@@ -3519,7 +3519,7 @@
   "load": {
     "chosen": "加载",
     "confidence": "high",
-    "forms": "Load a preset → 加载预设; Load more → 加载更多; Loading… → 正在加载…",
+    "forms": "Load a preset → 加载预置; Load more → 加载更多; Loading… → 正在加载…",
     "sources": "catalog (askCmdr.sessions.loadMore 加载更多, operationLog.dialog.loadMore 再加载 50 条, every 正在加载…); Double Commander zh-CN (Load Preset 1 → 加载预设 1)"
   }
 }
