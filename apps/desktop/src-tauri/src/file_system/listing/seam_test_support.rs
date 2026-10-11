@@ -141,6 +141,7 @@ pub(crate) fn heard(listing_id: &str) -> Vec<Heard> {
 static DISARMS: LazyLock<Mutex<HashMap<String, Vec<bool>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Makes the disarm probe record `listing_id`'s watch disarms.
+#[cfg(target_os = "macos")]
 pub(crate) fn record_disarms_of(listing_id: &str) {
     DISARMS.lock_ignore_poison().insert(listing_id.to_string(), Vec::new());
 }
@@ -158,6 +159,7 @@ pub(crate) fn note_disarm(listing_id: &str) {
 }
 
 /// Per disarm of `listing_id`'s watch, whether the cache still held the listing.
+#[cfg(target_os = "macos")]
 pub(crate) fn disarms_of(listing_id: &str) -> Vec<bool> {
     DISARMS
         .lock_ignore_poison()
