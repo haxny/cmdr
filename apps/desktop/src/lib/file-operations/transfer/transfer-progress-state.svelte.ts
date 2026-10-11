@@ -162,6 +162,12 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
    *  reported the real number. The user never has to sit through this window:
    *  `dismiss()` closes the dialog on their say-so at any moment. */
   const CANCEL_SETTLE_FALLBACK_MS = 20_000
+  /** How long a `write-settled` with no terminal event before it waits for one
+   *  before the view closes anyway. The backend emits the terminal event first,
+   *  so this only covers delivery lag. Without it the view wedges: the settle
+   *  disarms {@link CANCEL_SETTLE_FALLBACK_MS}, and nothing else would close it
+   *  (a cancel at a clash prompt once lost its `write-cancelled` this way). */
+  const SETTLED_WITHOUT_ENDING_GRACE_MS = 1_000
 
   /** When this view appeared, for {@link MIN_DISPLAY_MS}. */
   const viewOpenedAtMs = Date.now()
@@ -209,6 +215,9 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
   /** Latches the wind-down timers so the effect that arms them can re-run
    *  freely. A plain `let`: reading it reactively would re-trigger that effect. */
   let windDownTimersArmed = false
+  /** Closes the view when the backend settled without saying how the operation
+   *  ended. See {@link SETTLED_WITHOUT_ENDING_GRACE_MS}. */
+  let settledWithoutEndingTimer: ReturnType<typeof setTimeout> | null = null
 
   /* ----------------------------------------------------------------------- */
   /* Reading the operation                                                    */
@@ -271,6 +280,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     if (closed) return
     closed = true
     clearWindDownTimers()
+    clearSettledWithoutEndingTimer()
     const remainingMs = holdOpen ? MIN_DISPLAY_MS - (Date.now() - viewOpenedAtMs) : 0
     if (remainingMs > 0) setTimeout(report, remainingMs)
     else report()
@@ -316,6 +326,12 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
       cancelSettleFallbackTimer = null
     }
     windDownTimersArmed = false
+  }
+
+  function clearSettledWithoutEndingTimer(): void {
+    if (settledWithoutEndingTimer === null) return
+    clearTimeout(settledWithoutEndingTimer)
+    settledWithoutEndingTimer = null
   }
 
   /**
@@ -484,6 +500,25 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     const windingDown = op.cancelling || op.outcome?.kind === 'cancelled'
     if (windingDown && !op.settleEventReceived && !reversalLeftRegistry()) armWindDownTimers()
     else clearWindDownTimers()
+  })
+
+  // The backend task is gone, yet nothing said how the operation ended. Nothing
+  // else will close the view now (the settle disarmed the last-resort timer), so
+  // close on what we were told, after a beat for a trailing terminal event.
+  $effect(() => {
+    const op = bound.current
+    if (op === null || !op.settleEventReceived || op.outcome !== null || reversalLeftRegistry()) {
+      clearSettledWithoutEndingTimer()
+      return
+    }
+    if (settledWithoutEndingTimer !== null) return
+    settledWithoutEndingTimer = setTimeout(() => {
+      settledWithoutEndingTimer = null
+      log.warn('op={operationId} settled with no terminal event; closing the dialog', { operationId })
+      close(() => {
+        config.onCancelled(reportedFilesProcessed())
+      })
+    }, SETTLED_WITHOUT_ENDING_GRACE_MS)
   })
 
   // Auto-queue is a decision a DISPATCHING view makes: the manager admitted the
@@ -738,6 +773,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     // took the slot.
     if (operationId) clearForegroundOperation(operationId)
     clearWindDownTimers()
+    clearSettledWithoutEndingTimer()
   }
 
   return {

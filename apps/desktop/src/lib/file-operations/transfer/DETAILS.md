@@ -875,7 +875,11 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   error paths are unchanged: they still close on the existing `MIN_DISPLAY_MS` gate without waiting for settle. The wait
   is never the only exit: `progress.dismiss()` backs a Close button that leaves at once, and the last-resort
   `CANCEL_SETTLE_FALLBACK_MS` (20 s) sits above the backend's 15 s `CANCEL_DRAIN_DEADLINE`, so the automatic path can't
-  report `0 files` before the real count lands. Why it matters: the original incident was an MTP delete cancel followed
+  report `0 files` before the real count lands. A settle disarms that timer, so a `write-settled` with NO terminal event
+  before it gets its own exit: after `SETTLED_WITHOUT_ENDING_GRACE_MS` (1 s, for a trailing event's delivery lag) the
+  view logs a warning and closes as a cancel with the last count it heard. That's a backend contract breach, but it once
+  happened: a cancel at a clash prompt went out as `Failed(Cancelled)` and emitted nothing, and the dialog sat on the
+  stale prompt (cmdr-reports #48). Why the cancel wait matters: the original incident was an MTP delete cancel followed
   by an immediate second F8 — the device was still mid-teardown, the second op queued behind the 17 s tail, hit the 30 s
   op timeout, and wedged the USB session.
 - **Scan preview reuse, and who waits for it.** `TransferDialog` starts a scan preview on mount. If the user confirms

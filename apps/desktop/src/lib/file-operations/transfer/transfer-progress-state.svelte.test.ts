@@ -436,6 +436,53 @@ describe('createTransferProgressState: cancel + settle close-out', () => {
     expect(state.settleSlow).toBe(false)
   })
 
+  it('closes when the backend settles without ever saying how the operation ended', async () => {
+    // `write-settled` disarms the last-resort timer, so a settle with no
+    // `write-cancelled` / `write-complete` / `write-error` before it would
+    // otherwise leave the dialog parked forever. That's how a cancel pressed at
+    // a clash prompt wedged it (cmdr-reports #48): the backend dropped the
+    // terminal event and the stale prompt stayed up.
+    const { state, config } = await startedState()
+    if (!listeners.conflict || !listeners.settled) throw new Error('conflict/settle subscribers never registered')
+    listeners.conflict({
+      operationId: 'op-1',
+      conflictId: 1,
+      sourcePath: '/src/file.txt',
+      destinationPath: '/dst/file.txt',
+      sourceSize: 10,
+      destinationSize: 20,
+      sourceModified: null,
+      destinationModified: null,
+      destinationIsNewer: false,
+      sizeDifference: 10,
+    })
+    void state.handleCancel(false)
+    await settle()
+
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+    vi.advanceTimersByTime(1_500)
+    expect(config.onCancelled).toHaveBeenCalledWith(0)
+  })
+
+  it('gives a terminal event that trails its settle the chance to land first', async () => {
+    const { config } = await startedState()
+    if (!listeners.complete || !listeners.settled) throw new Error('complete/settle subscribers never registered')
+    listeners.settled({ operationId: 'op-1', operationType: 'copy' })
+    flushSync()
+    listeners.complete({
+      operationId: 'op-1',
+      operationType: 'copy',
+      filesProcessed: 2,
+      filesSkipped: 0,
+      bytesProcessed: 20,
+    })
+    flushSync()
+    vi.advanceTimersByTime(1_500)
+    expect(config.onCancelled).not.toHaveBeenCalled()
+    expect(config.onComplete).toHaveBeenCalledTimes(1)
+  })
+
   it('lets the user out at once while the backend is still winding down', async () => {
     const { state, config } = await startedState()
     if (!listeners.progress) throw new Error('progress subscriber never registered')
