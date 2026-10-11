@@ -41,8 +41,8 @@ The full top-level inventory is here:
   the operation-log history engine — ❌ never a batch or a fork of either, so one reversal can't quietly grow a laxer
   rule than the other; only the `Drop` net is unconditional. The persisted leftover ledger is three files:
   `in_flight_records.rs` (what a record IS: its kind, its path space, and what that kind needs),
-  `in_flight_temps.rs` (the log and the store), and `in_flight_sweep.rs` (what a launch and a returning drive DO with
-  one). § "What the sweep does with each kind" below holds the rules; `transfer/DETAILS.md` § "Which path space a
+  `in_flight_temps.rs` (the log and the store), `in_flight_log_writer.rs` (the thread that writes the log, so no
+  record is file I/O on an async worker), and `in_flight_sweep.rs` (what a launch and a returning drive DO with one). § "What the sweep does with each kind" below holds the rules; `transfer/DETAILS.md` § "Which path space a
   recorded partial lives in" holds the path-space decisions, and § "Testing the in-flight temp ledger" below the rules
   its process-wide singleton imposes on tests.
 - **`tests.rs` is the SHARED-vocabulary suite only**: the intent machine, the config the frontend sends, the
@@ -1589,7 +1589,9 @@ the copy names a drive, and the boot disk never goes away, so it meets the rule 
 and hands it to the states it drives with `WriteOperationState::with_in_flight_ledger`. The state holds only that
 `Option<Ledger>` and `Ledger::of` resolves it, so `state` never calls into `in_flight_temps`: that call closed a
 `state` → `in_flight_temps` → `sweep` → `transfer_sides` → `state` module cycle. `Ledger::recording_in(data_dir)` records into a
-fresh log there; dropping it is the crash; `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
+fresh log there; `die()` is the crash (it waits for the writer thread, then stops writing, so a state still holding a
+clone can't add to the log the next run replays); a cell that reads the log while its ledger lives calls `flush_log()`
+first, since lines reach the file from the writer thread; `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
 log; `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
 records and nothing else, and it can assert on all of them whole.
 

@@ -58,12 +58,13 @@ fn a_recorded_orphan_is_swept_at_startup_however_fresh_it_is() {
     let orphan = temp.path().to_path_buf();
     assert!(orphan.exists(), "the fixture partial must be on disk");
     // The process is gone: only the file in the data dir remembers it.
-    drop(previous_run);
+    previous_run.die();
 
     // Joining the sweep is what keeps this honest. It runs off the startup
     // thread (a partial can live on a dead mount), and a deadline racing it
     // would fail on load rather than on a real break.
     let next_run = Ledger::for_test();
+    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -100,7 +101,7 @@ async fn a_recorded_partial_on_a_volume_is_swept_through_that_volume() {
 
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
-    drop(previous_run);
+    previous_run.die();
 
     let next_run = Ledger::for_test();
     let tally = next_run.launch_in(&data_dir).wait();
@@ -127,9 +128,10 @@ fn a_record_whose_volume_isnt_reachable_survives_for_the_next_launch() {
     let orphan = PathBuf::from("/photos/holiday.raw.cmdr-tmp-7777");
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
-    drop(previous_run);
+    previous_run.die();
 
     let next_run = Ledger::for_test();
+    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert_eq!(
@@ -164,7 +166,7 @@ async fn a_deferred_record_is_swept_the_moment_its_volume_arrives() {
     let orphan = PathBuf::from("/photos/holiday.raw.cmdr-tmp-8888");
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
-    drop(previous_run);
+    previous_run.die();
 
     // Launch with the share still away: the record is held, not acted on.
     let next_run = Ledger::for_test();
@@ -204,9 +206,10 @@ async fn a_delete_the_volume_refuses_leaves_the_record_to_retry() {
 
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
-    drop(previous_run);
+    previous_run.die();
 
     let next_run = Ledger::for_test();
+    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert_eq!(tally.swept, 0, "nothing was removed: {tally:?}");
@@ -258,6 +261,7 @@ fn a_local_record_stays_a_bare_path_on_disk() {
     let temp = dir.join("holiday.raw.cmdr-tmp-2222");
     register(&state, &temp, Some(TempHome::LocalFs));
 
+    ledger.flush_log();
     let written = std::fs::read_to_string(data_dir.join(STORE_FILENAME)).unwrap();
     assert_eq!(
         written,
@@ -279,6 +283,7 @@ fn a_partial_with_no_named_path_space_is_kept_in_memory_but_not_persisted() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
+    ledger.flush_log();
     let temp = PathBuf::from("/photos/holiday.raw.cmdr-tmp-3333");
     register(&state, &temp, None);
 
@@ -308,6 +313,7 @@ fn a_landed_temp_is_retired_from_the_log() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
+    ledger.flush_log();
     let temp = dir.join("holiday.raw.cmdr-tmp-1234");
     register(&state, &temp, Some(TempHome::LocalFs));
     deregister(&state, &temp, Some(TempHome::LocalFs));
@@ -336,6 +342,7 @@ fn compaction_shrinks_the_log_without_forgetting_what_is_still_in_flight() {
     register(&state, &long_lived, Some(TempHome::LocalFs));
 
     // Enough churn to cross the compaction threshold several times over.
+    ledger.flush_log();
     let churned: Vec<PathBuf> = (0..400)
         .map(|i| dir.join(format!("small-file-{i:04}.txt.cmdr-tmp-{i:04}")))
         .collect();
@@ -379,11 +386,12 @@ fn compaction_keeps_the_records_waiting_for_a_volume() {
         &waiting,
         Some(TempHome::Volume(volume_id)),
     );
-    drop(previous_run);
+    previous_run.die();
     let next_run = Ledger::for_test();
     next_run.launch_in(&data_dir).wait();
 
     // A local copy in the new session churns the log past compaction.
+    next_run.flush_log();
     let state = state(&next_run);
     for i in 0..400 {
         let churn = dir.join(format!("small-file-{i:04}.txt.cmdr-tmp-{i:04}"));
@@ -471,7 +479,7 @@ async fn a_volume_path_that_is_already_gone_is_counted_not_swallowed() {
         &landed,
         Some(TempHome::Volume(volume_id)),
     );
-    drop(previous_run);
+    previous_run.die();
 
     let next_run = Ledger::for_test();
     let tally = next_run.launch_in(&data_dir).wait();
@@ -514,6 +522,7 @@ fn the_sweep_refuses_a_recorded_path_that_isnt_one_of_our_scratch_files() {
     .unwrap();
     let next_run = Ledger::for_test();
 
+    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -562,9 +571,10 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
         &precious,
         Some(TempHome::Volume(volume_id)),
     );
-    drop(previous_run);
+    previous_run.die();
 
     let next_run = Ledger::for_test();
+    next_run.flush_log();
     let tally = next_run.launch_in(&data_dir).wait();
 
     assert!(
@@ -597,6 +607,7 @@ fn deregistering_clears_both_ledgers() {
     let ledger = Ledger::recording_in(&data_dir);
 
     let state = state(&ledger);
+    ledger.flush_log();
     let temp = dir.join("notes.txt.cmdr-tmp-1234");
     register(&state, &temp, Some(TempHome::LocalFs));
     assert_eq!(state.in_flight_temps.lock_ignore_poison().len(), 1);
@@ -653,6 +664,7 @@ fn a_build_without_kinded_records_skips_them_rather_than_acting_on_them() {
     register(&state, &survivor, Some(TempHome::LocalFs));
 
     // What a build that only knows `+` and `-` would replay.
+    ledger.flush_log();
     let contents = std::fs::read_to_string(data_dir.join(STORE_FILENAME)).unwrap();
     let mut old_reader_saw: Vec<PathBuf> = Vec::new();
     for line in contents.lines() {
@@ -690,7 +702,7 @@ fn a_leftover_on_a_removable_drive_waits_for_that_drive_rather_than_being_forgot
     let state = state_writing_to_drive(&previous_run, volume_id, &drive_root);
     let temp = drive_root.join("footage.mov.cmdr-tmp-2468");
     track(&state, ItemKind::Temp, &temp);
-    drop(previous_run);
+    previous_run.die();
 
     // The drive isn't plugged in, so nothing is registered for it.
     let next_run = Ledger::for_test();
@@ -704,6 +716,7 @@ fn a_leftover_on_a_removable_drive_waits_for_that_drive_rather_than_being_forgot
         },
         "a drive that isn't here decides nothing, rather than resolving against an empty mount point"
     );
+    next_run.flush_log();
     let replayed = read_recorded(&data_dir.join(STORE_FILENAME));
     let [kept] = replayed.as_slice() else {
         panic!("the record survives the launch, alone: {replayed:?}");
@@ -733,6 +746,7 @@ fn a_leftover_on_the_mac_stays_local_homed() {
     let temp = dir.join("notes.txt.cmdr-tmp-1357");
     track(&state, ItemKind::Temp, &temp);
 
+    ledger.flush_log();
     let replayed = read_recorded(&data_dir.join(STORE_FILENAME));
     let [recorded] = replayed.as_slice() else {
         panic!("the temp is recorded, alone: {replayed:?}");

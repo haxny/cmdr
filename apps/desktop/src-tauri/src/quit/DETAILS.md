@@ -92,9 +92,9 @@ The 2 s budget is `DRAIN` plus a tier-2 abort (token flips, no I/O), a ledger fl
 3. **`abort_all_write_operations`** (tier 2) for whatever didn't answer. It stops *waiting* rather than asking again, so
    a dead SMB mount can't hold the exit. The abandoned bytes become the staging layer's problem, which is safe because
    every write stages: an abandoned worker is only ever filling a `.cmdr-tmp-*` nobody will rename.
-4. **`flush_in_flight_temps`.** Every temp is recorded at registration (before its first byte), on a bare `File` with
-   no user-space buffer, so this is a fence rather than a repair — but naming it keeps a future `BufWriter` from
-   quietly dropping the last records the next launch's sweep needs.
+4. **`flush_in_flight_temps`.** Every temp is recorded at registration (before its first byte), but the line is
+   QUEUED to the ledger's writer thread, never written on the async worker that registered it. This waits (at most
+   2 s) for that queue to reach the kernel, so the next launch's sweep sees the last records.
 5. **`AppHandle::exit(0)`**, which runs the existing `RunEvent::Exit` teardown (window geometry, search walks,
    `ptpcamerad`, AI, MCP, mDNS).
 

@@ -62,7 +62,7 @@
 //! the leftover it was chasing. A record whose volume never comes back rides
 //! along to the next launch, which costs one short line in the log file.
 //!
-//! ## Granularity: one append per change, on an open handle, never fsynced
+//! ## Granularity: one append per change, on its own thread, never fsynced
 //!
 //! This sits on the per-file hot path — a 2 000-file local copy hits it 4 000
 //! times — so the write has to be about as cheap as a write can be:
@@ -71,6 +71,10 @@
 //!   open for the session. ❌ No rewrite-the-whole-file (a create + write +
 //!   rename per change measured at **+0.4 ms per file**, tripling a
 //!   many-small-files copy), ❌ no per-change path resolution.
+//! - **❌ Never on the caller's thread.** The callers are async runtime workers,
+//!   so the store only updates its in-memory set and queues the line; a writer
+//!   thread does the `write(2)` (`in_flight_log_writer.rs`, which has the why
+//!   and the crash window it costs).
 //! - **❌ No `fsync`.** An fsync here would cost milliseconds per file and turn
 //!   a copy into a flush-per-file crawl. An unsynced write is already in the
 //!   page cache, so the record survives the process dying — a quit, a panic, a
@@ -100,16 +104,21 @@
 
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, Once};
 
 use super::state::WriteOperationState;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
+use log_writer::LogWriter;
 
 /// The persisted log's file name inside the app data dir.
 const STORE_FILENAME: &str = "in-flight-temps.log";
+
+/// How long the quit teardown waits for queued records to reach the kernel. A
+/// local append takes microseconds; this only bounds a wedged disk, which must
+/// not hold the quit.
+const FLUSH_WAIT: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// Rewrite the log down to just what's recorded once it has grown past this.
 /// Small enough that a session never carries a big file, large enough that a
@@ -236,8 +245,8 @@ impl Ledger {
 struct Store {
     /// `None` until [`init_and_sweep`] runs, which is also what keeps unit
     /// tests from touching disk unless they ask to.
-    log: Option<File>,
-    /// Bytes appended since the last truncation, tracked here so the compaction
+    log: Option<LogWriter>,
+    /// Bytes queued since the last truncation, tracked here so the compaction
     /// check costs no syscall.
     logged_bytes: u64,
     /// Every record the log currently claims exists: this session's in-flight
@@ -254,7 +263,8 @@ struct Store {
 /// Records `temp` as a partial this operation is writing, in both ledgers.
 ///
 /// Call before the first byte can land there, and pair with [`deregister`] the
-/// moment the file stops being a partial.
+/// moment the file stops being a partial. The persisted line is queued, not
+/// written: no file I/O happens on the caller's thread.
 ///
 /// `home` is where the path lives. `None` means the caller couldn't say — a
 /// volume transfer whose operation never named its destination volume, which
@@ -381,24 +391,16 @@ pub(super) fn keep_for_arrival(state: &WriteOperationState, record: TrackedRecor
     ledger.ensure_arrival_listener();
 }
 
-/// Pushes whatever the ledger is holding out to the kernel, so the next launch's
+/// Waits for every queued record to reach the kernel, so the next launch's
 /// sweep can see it. The quit teardown's last act before the process ends.
 ///
-/// Today every record already reaches the kernel inside [`register`] — the log is
-/// a bare `File`, so there is no user-space buffer to lose — and this is the
-/// explicit fence that keeps it that way: if the handle ever gains a `BufWriter`,
-/// the quit path won't silently start dropping the last partials it recorded.
-/// Deliberately NOT an `fsync`; see the module docs on why a power loss is the
-/// directory scan's problem, not this ledger's.
+/// Records are written by the ledger's own thread a moment after they're
+/// queued, so without this a quit could end the process with the last few
+/// still in the queue. Bounded by [`FLUSH_WAIT`]: a wedged disk costs those
+/// records, never the quit. Deliberately NOT an `fsync`; see the module docs on
+/// why a power loss is the directory scan's problem, not this ledger's.
 pub fn flush() {
-    let ledger = Ledger::process();
-    let mut store = ledger.store();
-    let Some(log) = &mut store.log else {
-        return;
-    };
-    if let Err(e) = log.flush() {
-        log::warn!(target: "copy", "couldn't flush the in-flight temp ledger before exit: {e}");
-    }
+    Ledger::process().flush_log();
 }
 
 /// The background sweep [`init_and_sweep`] started, and the only way to learn
@@ -475,9 +477,18 @@ impl Ledger {
                 // `truncate` isn't legal alongside `append`; retire the replayed
                 // records with an explicit `ftruncate` instead.
                 let _ = log.set_len(0);
-                let mut store = self.store();
-                store.log = Some(log);
-                store.logged_bytes = 0;
+                match LogWriter::spawn(log) {
+                    Ok(writer) => {
+                        let mut store = self.store();
+                        store.log = Some(writer);
+                        store.logged_bytes = 0;
+                    }
+                    Err(e) => log::warn!(
+                        target: "copy",
+                        "couldn't start the in-flight temp ledger's writer: {e}. A copy interrupted this session \
+                         will leave its leftovers for the next transfer into that directory to reap."
+                    ),
+                }
             }
             Err(e) => log::warn!(
                 target: "copy",
@@ -534,6 +545,20 @@ impl Ledger {
     }
 
     /// Drops a record the sweep is done with, on disk too.
+    /// Waits, at most [`FLUSH_WAIT`], for everything queued so far to reach the
+    /// log file. The wait happens with the store released.
+    fn flush_log(&self) {
+        let Some(reached) = self.store().log.as_ref().and_then(LogWriter::barrier) else {
+            return;
+        };
+        if reached.recv_timeout(FLUSH_WAIT).is_err() {
+            log::warn!(
+                target: "copy",
+                "the in-flight temp ledger didn't finish writing within {FLUSH_WAIT:?}; its last records may be missing"
+            );
+        }
+    }
+
     fn retire_record(&self, record: &Record) {
         let mut store = self.store();
         store.recorded.remove(record);
@@ -610,29 +635,36 @@ fn read_recorded(path: &Path) -> Vec<Record> {
     live.into_iter().collect()
 }
 
-/// Appends one record under `op`. See the module docs for the format and why
+/// Queues one record under `op`. See the module docs for the format and why
 /// there's no fsync.
 ///
 /// Best-effort: a record we couldn't write costs a leftover the hour-gated
 /// directory scan still catches, so it must never fail a copy.
 fn append(store: &mut Store, op: u8, record: &Record) {
-    let Some(log) = &mut store.log else {
+    let Some(log) = &store.log else {
         return;
     };
-    let Some(encoded) = record.encode() else {
-        // Not valid UTF-8, so it can't be a JSON string. Rare enough to accept:
-        // the directory scan is this path's backstop.
-        log::debug!(target: "copy", "not recording an in-flight leftover: its name isn't UTF-8");
+    let Some(line) = encode_line(op, record) else {
         return;
+    };
+    store.logged_bytes += line.len() as u64;
+    log.append(line);
+}
+
+/// One record's log line under `op`.
+///
+/// `None` for a path that isn't valid UTF-8, so it can't be a JSON string. Rare
+/// enough to accept: the directory scan is that path's backstop.
+fn encode_line(op: u8, record: &Record) -> Option<Vec<u8>> {
+    let Some(encoded) = record.encode() else {
+        log::debug!(target: "copy", "not recording an in-flight leftover: its name isn't UTF-8");
+        return None;
     };
     let mut line = Vec::with_capacity(encoded.len() + 2);
     line.push(op);
     line.extend_from_slice(encoded.as_bytes());
     line.push(b'\n');
-    match log.write_all(&line) {
-        Ok(()) => store.logged_bytes += line.len() as u64,
-        Err(e) => log::debug!(target: "copy", "couldn't record an in-flight leftover: {e}"),
-    }
+    Some(line)
 }
 
 /// Rewrites the log down to just what's recorded once it has grown past
@@ -642,25 +674,27 @@ fn append(store: &mut Store, op: u8, record: &Record) {
 /// driver keeps a window open for the whole transfer, so an idle-only rule would
 /// let a 100k-file copy append megabytes before it ever got a chance to run.
 /// Rewriting the recorded set (a handful of paths) costs one truncate and one
-/// write every ~50 files.
+/// write every ~50 files, queued behind the appends before it like any other
+/// line.
 fn compact_if_large(store: &mut Store) {
     if store.logged_bytes < COMPACT_ABOVE_BYTES {
         return;
     }
-    let recorded: Vec<Record> = store.recorded.iter().cloned().collect();
-    let Some(log) = &mut store.log else {
+    let Some(log) = &store.log else {
         return;
     };
-    // The handle is in append mode, so writes go to the new end without a seek.
-    if let Err(e) = log.set_len(0) {
-        log::debug!(target: "copy", "couldn't compact the in-flight temp ledger: {e}");
-        return;
-    }
-    store.logged_bytes = 0;
-    for record in &recorded {
-        append(store, record.add_op(), record);
-    }
+    let contents: Vec<u8> = store
+        .recorded
+        .iter()
+        .filter_map(|record| encode_line(record.add_op(), record))
+        .flatten()
+        .collect();
+    store.logged_bytes = contents.len() as u64;
+    log.rewrite(contents);
 }
+
+#[path = "in_flight_log_writer.rs"]
+mod log_writer;
 
 #[path = "in_flight_records.rs"]
 mod records;
@@ -697,8 +731,17 @@ impl Ledger {
             .open(data_dir.join(STORE_FILENAME))
             .expect("open a test in-flight temp ledger");
         log.set_len(0).expect("start the test ledger empty");
-        ledger.store().log = Some(log);
+        ledger.store().log = Some(LogWriter::spawn(log).expect("start the test ledger's writer"));
         ledger
+    }
+
+    /// The process dies: whatever it queued has reached the log, as a
+    /// `write(2)` that returned has before a kill, and nothing more is written.
+    /// A state still holding a clone can't write into the log after this, so
+    /// the next run replays exactly what this one left.
+    pub(super) fn die(self) {
+        self.flush_log();
+        self.store().log = None;
     }
 
     /// [`init_and_sweep`] against this ledger: a launch that replays
