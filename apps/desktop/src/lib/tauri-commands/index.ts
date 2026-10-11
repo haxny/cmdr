@@ -342,6 +342,7 @@ export {
   dismissAllFailedOperations,
   moveQueuedOperation,
   onOperationsChanged,
+  onQueueSelectAll,
 } from './operations'
 export type { OperationSnapshot, OperationsChanged, QueueMoveDirection, QueueMoveOutcome } from './operations'
 

@@ -346,6 +346,79 @@ full row width rather than a slot beside the buttons because its columns are fix
 and two buttons would have pushed the window's minimum width past 700 px for the bars to survive. A row with no
 `write-progress` to show — a queued op, or an instant `rename` / `create_folder` / `create_file` — renders line 1 only.
 
+## Keyboard
+
+The list is one Tab stop with a row cursor, so the window works without the mouse (#397). The page owns the cursor and
+the keys (`routes/queue/+page.svelte`); `queue-cursor.svelte.ts` is the bookkeeping, `queue-keys.ts` reads a keypress,
+and each `QueueRow` exports what a key does to ITS operation (`show`, `cancelOrDismiss`, `focusControl`, `focusRow`),
+next to the buttons that do the same.
+
+- **The keys** are fixed-key registry commands in the `Operation queue window` scope
+  (`../../commands/sources/queue-window.ts`), matched whole through `comboMatchesCommand`, so Settings and the Help
+  window list them. Fixed because this window holds no `store:` capability, so it can't read a rebinding: a rebindable
+  key here would be a setting that silently does nothing.
+  - ↑ / ↓ step (no wrap; with no cursor yet, ↓ starts at the top and ↑ at the bottom), Home / End jump. They work from
+    the bare page too, so ↓ answers the moment the window opens.
+  - Space checks the cursor row for "Cancel selected"; ⇧↑ / ⇧↓ extend from an anchor, macOS-table style (turning back
+    toward the anchor takes rows out again, and what was checked before the range began stays); ⌘A checks every row that
+    can still be canceled. A settled failure is never selectable.
+  - Enter is the row's Show; ⌫ (or ⌦) is the row's own Cancel, or Dismiss on a failure. ← / → walk the row's buttons and
+    back out. ⌥↑ / ⌥↓ reorder (below). Escape closes the window.
+- **⌘A arrives as a menu event, not a keydown.** The Edit > Select all accelerator fires before the webview sees the
+  key, and every other secondary window gets the native `selectAll:` (text selection).
+  `apps/desktop/src-tauri/src/menu/menu_handlers.rs` routes it to this window as `queue-select-all` instead
+  (`onQueueSelectAll`); the keydown road stays for a menu that doesn't claim the key (the dev browser).
+- **⌫ cancels with no confirmation, the same policy as the row's Cancel button** (`CLAUDE.md` § "Cancel keeps
+  partials"): cancel keeps every file already written, so a confirm would guard nothing the button doesn't. Rollback,
+  the destructive one, has no key; it's reached through → and still asks.
+- **The cursor is an operation id, ❌ never an index.** `operations-changed` rebuilds the rows whenever anything moves;
+  an index would slide a different operation under the cursor on every reorder or finish. When the cursor's operation
+  leaves, the row that slid into its place takes the cursor (`reconcile`).
+- **Focus follows the cursor row while the grid owns focus.** A finished row, or a keyed `{#each}` moving the focused
+  element during a reorder, drops focus on `<body>`; the page's effect puts it back on the cursor row. `gridOwnsFocus`
+  clears only when focus moves to a REAL element outside the grid (a `null` related target is a removed element or the
+  window blurring).
+- **A click anywhere on a row moves the cursor there**, except a click that ends a text selection in the failure reason
+  (focusing would collapse it).
+- **The cursor looks like the file list's** (`apps/desktop/src/app-file-list.css`): `--color-cursor-inactive` with the
+  accent hairline, `--color-cursor-active` while the grid has focus, winning over the selection fill. It IS the row's
+  focus indicator, so the row drops the browser ring; a focused button keeps the global one.
+
+### Decision: an ARIA grid, not a listbox
+
+The issue left it open: a listbox whose buttons only have keys, or a grid whose ←/→ reach the buttons.
+
+- **A listbox `option` can't contain interactive content.** VoiceOver reads an option as one flat string, so Show,
+  Pause, Cancel, Dismiss, and Rollback would be audible only as words, reachable only through shortcuts nothing on
+  screen announces. Every new row action (#398's Retry, #399's "Send error report…") would then need a key of its own,
+  or be mouse-only.
+- **A grid keeps every button a button.** → lands VoiceOver on a real, named `button` ("Pause this operation"), and a
+  new button in `.actions-cell` joins the walk with no key work at all. The row is the focus target (`role="row"`,
+  roving `tabindex`), named by its summary and status cells (`aria-labelledby`), described by its failure reason, and
+  carries `aria-selected` for "Cancel selected" (`aria-multiselectable` on the grid). Enter and ⌫ carry
+  `aria-keyshortcuts` on the buttons they stand for.
+- **The checkbox stays for the pointer** but leaves the Tab order and the → walk: Space does its job from the row, and
+  the row's `aria-selected` already says it.
+
+### Decision: `ColumnList`'s cursor PATTERN, not the component
+
+`ColumnList` (`../../ui/DETAILS.md` § ColumnList) is the house list, but it's built for single-line records in measured
+columns: a fixed row height for virtual scrolling, `option` rows (or `table` rows with no focus model), and no cursor
+inside a row. A queue row is a two-line grid (the readout spans the second line, see § Row layout), varies in height (a
+failure's reason wraps), holds buttons, and is never more than a few dozen rows. So the queue takes the pattern instead:
+the parent owns the cursor and the keys, the row only paints `is-under-cursor`, and the cursor reads the same as the
+file list's.
+
+### Reordering (⌥↑ / ⌥↓)
+
+The house reorder key (`../../ui/menu-navigation.ts`) and the APG rearrangeable-listbox key; ❌ not ⇧-arrows, which
+extend. The page sends `moveQueuedOperation(id, direction)` and announces the backend's answer in a polite live region
+(`queue.reorder.*`: the new place among WAITING operations, "already first/last", or "only waiting operations can
+move"). Only a waiting row moves; running and paused ones keep their place. The row itself moves when the next
+`operations-changed` lands, and the cursor (an id) moves with it. Backend:
+`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". Drag-to-reorder and "Run
+next" are still #256.
+
 ## Vibrancy + reduce-transparency
 
 `new WebviewWindow(...)` doesn't throw when creation is refused (a missing grant, a label clash): the refusal arrives
@@ -395,14 +468,21 @@ the MAIN window, which already holds those perms — nothing to add there (see `
   types, and the `data-status` / `data-operation-id` E2E hooks. What a click SENDS isn't here: that needs a window
   registry, so it lives in `queue-row-session.svelte.test.ts`. The readout's own behavior (both bars, percents, rates,
   time left, stall) is covered once, in `../TransferProgressReadout.svelte.test.ts`.
-- `QueueRow.a11y.test.ts`: axe over the row in running / paused / queued / selected states.
+- `QueueRow.a11y.test.ts`: axe over the row (a grid `row` mounted in a `grid`) in running / paused / queued / selected /
+  cursor states.
+- `queue-keys.test.ts`: which keypress means which action, whole-combo (⌥⇧↑ is neither a reorder nor an extend).
+- `queue-cursor.svelte.test.ts`: the cursor's steps and edges, following its operation through a reorder or a finish,
+  Space / ⌘A, and the ⇧-arrow range (shrinking back toward the anchor, keeping what was checked before it, skipping a
+  failure).
 - `queue-row-session.svelte.test.ts`: what a row takes from its session and what it asks of it, through real rows on a
   real registry — one `createEtaSmoother` per operation however many ticks or snapshot rebuilds arrive, none in the
   store, a scanning row's files/s, and each control's command (including the toggle following the snapshot status, and
   one cancel however many presses).
 - `apps/desktop/src/routes/queue/queue-selection.svelte.test.ts`: the window's selection bookkeeping, driven through the
   real page and the real store — the count and "Cancel selected" following a checked row, and letting go of one that
-  fails, leaves, or was never theirs.
+  fails, leaves, or was never theirs. Plus the keyboard, through the real page: one Tab stop, ↓ from the bare page, the
+  cursor keys, click-to-cursor, Space / ⇧↓ / the ⌘A menu road, ⌫ cancelling or dismissing, Enter, ⌥↑ and its
+  announcement, focus surviving a reorder and a finish, and the → / ← walk.
 - E2E: `test/e2e-playwright/operation-queue.spec.ts` — two same-lane ops → one Running + one Queued, cancel the queued,
   pause + resume the running; plus the retention contract: a copy fails with NO queue window open, the window opens on
   the failed row and its reason, closes on Escape, reopens still showing it, and only Dismiss clears it. That spec's

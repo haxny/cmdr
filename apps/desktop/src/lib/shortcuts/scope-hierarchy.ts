@@ -29,6 +29,9 @@ export type { CommandScope }
  * - `Main window/Multi-rename` is a sibling too: the ⌃M sheet is a modal over the panes, so
  *   its F2 (the Presets menu) never meets the file list's F2 (Rename).
  *
+ * `Operation queue window` is a window of its own, like `About window`: its arrows and
+ * Enter never meet the main window's, so they share only `App`.
+ *
  * `Command palette` inherits `Main window` (it overlays the main window, so its
  * keys can collide with Main-window keys). `Onboarding` is a modal under `App`
  * only. (The registry has no `Onboarding` commands today; the chain is here so
@@ -47,6 +50,7 @@ const scopeHierarchy: Record<CommandScope, CommandScope[]> = {
   'Main window/Error screen': ['Main window/Error screen', 'Main window', 'App'],
   'Main window/Multi-rename': ['Main window/Multi-rename', 'Main window', 'App'],
   'About window': ['About window', 'App'],
+  'Operation queue window': ['Operation queue window', 'App'],
   Onboarding: ['Onboarding', 'App'],
   'Command palette': ['Command palette', 'Main window', 'App'],
 }

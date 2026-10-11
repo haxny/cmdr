@@ -92,8 +92,8 @@ use crate::volume_broadcast::{
 use crate::window_events::{
     CloseAbout, CloseAllFileViewers, CloseConfirmation, CloseFileViewer, ExecuteCommand, FocusAbout, FocusConfirmation,
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenFavorite,
-    OpenFileViewer, OpenSettings, PersistRestrictedSetting, RevealPath, ShowSearchResultInFolder, TabContextAction,
-    ViewerContextMenuAction, ViewerEditAction, ViewerWordWrapToggled,
+    OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueSelectAll, RevealPath, ShowSearchResultInFolder,
+    TabContextAction, ViewerContextMenuAction, ViewerEditAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
 use crate::ai::{
@@ -1198,6 +1198,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // names kebab-case directly to the wire names, so no `event_name`
             // overrides. `execute-command` is also FE-emitted (LicenseSection).
             ExecuteCommand,
+            QueueSelectAll,
             ShowSearchResultInFolder,
             OpenSettings,
             OpenFileViewer,

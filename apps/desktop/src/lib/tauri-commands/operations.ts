@@ -76,6 +76,16 @@ export async function dismissFailedOperation(operationId: string): Promise<void>
   await commands.dismissFailedOperation(operationId)
 }
 
+/** Edit > Select all (⌘A) while the queue window is focused. The menu
+ *  accelerator fires before the page's keydown sees ⌘A, so this is how the
+ *  window learns of it (`menu_handlers.rs` routes it here instead of the native
+ *  `selectAll:`). Returns an `UnlistenFn`. */
+export async function onQueueSelectAll(callback: () => void): Promise<UnlistenFn> {
+  return events.queueSelectAll.listen(() => {
+    callback()
+  })
+}
+
 /** Drop every retained failure (the queue toolbar's "Dismiss all"). */
 export async function dismissAllFailedOperations(): Promise<void> {
   await commands.dismissAllFailedOperations()

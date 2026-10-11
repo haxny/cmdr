@@ -1234,7 +1234,9 @@ class of bug.
   main window → `execute-command`, where the frontend's `handleCommandExecute` checks
   `document.activeElement` (input/textarea → `.select()` for text, otherwise select files);
   non-main window → native `selectAll:` via `send_native_edit_action()` (without this branch ⌘A is
-  dead in settings text fields — the `FileScoped` focus guard would silently drop it). This avoids
+  dead in settings text fields — the `FileScoped` focus guard would silently drop it); the operation queue window →
+  `queue-select-all`, ahead of that branch, because the queue's ⌘A checks every row for "Cancel selected" and a native
+  `selectAll:` would only highlight its text (`apps/desktop/src/lib/file-operations/queue/DETAILS.md` § Keyboard). This avoids
   PredefinedMenuItem::select_all which would conflict with the custom MenuItem. Deselect all (⌘⇧A)
   stays on the plain `FileScoped` path: AppKit has no standard "deselect all" responder action for
   text fields, so there's nothing native to forward to.

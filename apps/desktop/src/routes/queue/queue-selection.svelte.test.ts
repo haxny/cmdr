@@ -13,16 +13,30 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot, QueueMoveOutcome } from '$lib/ipc/bindings'
 
 const cancelOperations = vi.fn((_ids: string[]) => Promise.resolve())
+const cancelOperation = vi.fn((_id: string) => Promise.resolve())
+const dismissFailedOperation = vi.fn((_id: string) => Promise.resolve())
+const requestForegroundOperation = vi.fn((_id: string) => Promise.resolve())
+const moveQueuedOperation = vi.fn((_id: string, _direction: string): Promise<QueueMoveOutcome> =>
+  Promise.resolve({ kind: 'not_queued' }),
+)
+/** The ⌘A menu road's listener, as the page registers it. */
+let selectAllFromMenu: (() => void) | null = null
 
 vi.mock('$lib/tauri-commands', () => ({
-  cancelOperation: vi.fn(() => Promise.resolve()),
+  cancelOperation: (id: string) => cancelOperation(id),
   cancelOperations: (ids: string[]) => cancelOperations(ids),
   cancelWriteOperation: vi.fn(() => Promise.resolve()),
   dismissAllFailedOperations: vi.fn(() => Promise.resolve()),
-  dismissFailedOperation: vi.fn(() => Promise.resolve()),
+  dismissFailedOperation: (id: string) => dismissFailedOperation(id),
+  moveQueuedOperation: (id: string, direction: string) => moveQueuedOperation(id, direction),
+  onQueueSelectAll: (callback: () => void) => {
+    selectAllFromMenu = callback
+    return Promise.resolve(() => {})
+  },
+  requestForegroundOperation: (id: string) => requestForegroundOperation(id),
   pauseAll: vi.fn(() => Promise.resolve()),
   pauseOperation: vi.fn(() => Promise.resolve()),
   resumeAll: vi.fn(() => Promise.resolve()),
@@ -150,6 +164,11 @@ beforeEach(() => {
   store = null
   instance = undefined
   cancelOperations.mockClear()
+  cancelOperation.mockClear()
+  dismissFailedOperation.mockClear()
+  requestForegroundOperation.mockClear()
+  moveQueuedOperation.mockClear()
+  selectAllFromMenu = null
 })
 
 afterEach(() => {
@@ -216,5 +235,188 @@ describe('queue window selection', () => {
     cancelSelectedButton()?.click()
 
     expect(cancelOperations).toHaveBeenCalledWith(['op-1'])
+  })
+})
+
+// ── Keyboard (DETAILS § Keyboard) ────────────────────────────────────────────
+
+/** Presses a key where focus is (the bare page when nothing is focused), as the
+ *  window's keydown listener receives it. */
+function press(init: KeyboardEventInit): void {
+  const where = document.activeElement ?? document.body
+  where.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }))
+  flushSync()
+}
+
+const DOWN = { key: 'ArrowDown', code: 'ArrowDown' }
+const UP = { key: 'ArrowUp', code: 'ArrowUp' }
+
+function cursorRowId(): string | null {
+  return target.querySelector('.queue-row.is-under-cursor')?.getAttribute('data-operation-id') ?? null
+}
+
+function focusedRowId(): string | null {
+  return document.activeElement?.closest('.queue-row')?.getAttribute('data-operation-id') ?? null
+}
+
+const three = [
+  snapshot({ operationId: 'op-1' }),
+  snapshot({ operationId: 'op-2', status: 'queued' }),
+  snapshot({ operationId: 'op-3', status: 'queued' }),
+]
+
+describe('queue window keyboard', () => {
+  it('is one Tab stop: a single tabbable row, and every row button out of the Tab order', async () => {
+    await renderPage(three)
+
+    expect(target.querySelectorAll('[role="row"][tabindex="0"]')).toHaveLength(1)
+    const buttons = [...target.querySelectorAll('[role="row"] button')]
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.every((b) => b.getAttribute('tabindex') === '-1')).toBe(true)
+  })
+
+  it('↓ from the bare page lands the cursor on the first row and focuses it', async () => {
+    await renderPage(three)
+
+    press(DOWN)
+
+    expect(cursorRowId()).toBe('op-1')
+    expect(focusedRowId()).toBe('op-1')
+  })
+
+  it('↑ / ↓ step, Home / End jump, and the Tab stop follows the cursor', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press(DOWN)
+    expect(cursorRowId()).toBe('op-2')
+    press({ key: 'End', code: 'End' })
+    expect(cursorRowId()).toBe('op-3')
+    press(UP)
+    expect(cursorRowId()).toBe('op-2')
+    press({ key: 'Home', code: 'Home' })
+    expect(focusedRowId()).toBe('op-1')
+    expect(rowFor('op-1')?.getAttribute('tabindex')).toBe('0')
+    expect(rowFor('op-2')?.getAttribute('tabindex')).toBe('-1')
+  })
+
+  it('moves the cursor to a row clicked anywhere', async () => {
+    await renderPage(three)
+
+    rowFor('op-3')?.querySelector<HTMLElement>('.summary-row')?.click()
+    flushSync()
+
+    expect(cursorRowId()).toBe('op-3')
+    expect(focusedRowId()).toBe('op-3')
+  })
+
+  it('Space checks the cursor row for "Cancel selected", and the row says it is selected', async () => {
+    await renderPage(three)
+    press(DOWN)
+
+    press({ key: ' ', code: 'Space' })
+
+    expect(rowFor('op-1')?.getAttribute('aria-selected')).toBe('true')
+    expect(checkboxFor('op-1')?.checked).toBe(true)
+    expect(selectedCountText()).toContain('1')
+  })
+
+  it('⇧↓ extends the selection as the cursor moves', async () => {
+    await renderPage(three)
+    press(DOWN)
+
+    press({ ...DOWN, shiftKey: true })
+    press({ ...DOWN, shiftKey: true })
+
+    expect(selectedCountText()).toContain('3')
+    expect(cursorRowId()).toBe('op-3')
+  })
+
+  it('⌘A (the menu road) checks every row that can still be canceled', async () => {
+    await renderPage([...three, failed('op-4')])
+
+    selectAllFromMenu?.()
+    flushSync()
+
+    expect(selectedCountText()).toContain('3')
+    expect(rowFor('op-4')?.hasAttribute('aria-selected')).toBe(false)
+  })
+
+  it('⌫ cancels the cursor row with no confirmation, like its Cancel button', async () => {
+    await renderPage(three)
+    press(DOWN)
+
+    press({ key: 'Backspace', code: 'Backspace' })
+
+    await vi.waitFor(() => {
+      expect(cancelOperation).toHaveBeenCalledWith('op-1')
+    })
+  })
+
+  it('⌫ dismisses a row that couldn’t finish', async () => {
+    await renderPage([failed('op-1')])
+    press(DOWN)
+
+    press({ key: 'Delete', code: 'Delete' })
+
+    expect(dismissFailedOperation).toHaveBeenCalledWith('op-1')
+  })
+
+  it('Enter shows a running row in the main window, and does nothing on a waiting one', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'Enter', code: 'Enter' })
+    expect(requestForegroundOperation).toHaveBeenCalledWith('op-1')
+
+    requestForegroundOperation.mockClear()
+    press(DOWN)
+    press({ key: 'Enter', code: 'Enter' })
+    expect(requestForegroundOperation).not.toHaveBeenCalled()
+  })
+
+  it('⌥↑ asks the backend to move the waiting row, and announces where it landed', async () => {
+    moveQueuedOperation.mockResolvedValueOnce({ kind: 'moved', position: 1, waiting: 2 })
+    await renderPage(three)
+    press({ key: 'End', code: 'End' })
+
+    press({ ...UP, altKey: true })
+
+    expect(moveQueuedOperation).toHaveBeenCalledWith('op-3', 'earlier')
+    await vi.waitFor(() => {
+      flushSync()
+      expect(target.querySelector('[role="status"]')?.textContent).toBe('Moved up. Now 1 of 2 in line.')
+    })
+  })
+
+  it('keeps the cursor and focus on a reordered row', async () => {
+    await renderPage(three)
+    press({ key: 'End', code: 'End' })
+
+    applySnapshot([three[0], three[2], three[1]])
+
+    expect(cursorRowId()).toBe('op-3')
+    expect(focusedRowId()).toBe('op-3')
+  })
+
+  it('hands the cursor and focus to the row that slid into place when the cursor row finishes', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press(DOWN)
+
+    applySnapshot([three[0], three[2]])
+
+    expect(cursorRowId()).toBe('op-3')
+    expect(focusedRowId()).toBe('op-3')
+  })
+
+  it('→ walks into the row’s buttons and ← walks back out to the row', async () => {
+    await renderPage(three)
+    press(DOWN)
+
+    press({ key: 'ArrowRight', code: 'ArrowRight' })
+    expect(document.activeElement?.tagName).toBe('BUTTON')
+    expect(focusedRowId()).toBe('op-1')
+
+    press({ key: 'ArrowLeft', code: 'ArrowLeft' })
+    expect(document.activeElement).toBe(rowFor('op-1'))
   })
 })

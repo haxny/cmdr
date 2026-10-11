@@ -30,6 +30,14 @@
     interface Props {
         row: OperationRow
         selected: boolean
+        /** The window's row cursor is on this row. The page owns the cursor and the keys;
+         *  the row only draws it. DETAILS § Keyboard. */
+        isCursor?: boolean
+        /** This row is the grid's one Tab stop (roving tabindex): the cursor row, or the
+         *  first row before there's a cursor. */
+        tabbable?: boolean
+        /** Focus landed on the row or one of its buttons, so the cursor follows it there. */
+        onFocusRow?: () => void
         onToggleSelect: () => void
         /** Stop showing a retained failure. Not a command on the operation (it
          *  has none left): the page drops the row the backend retained. The only
@@ -38,7 +46,19 @@
         onDismiss: () => void
     }
 
-    const { row, selected, onToggleSelect, onDismiss }: Props = $props()
+    const {
+        row,
+        selected,
+        isCursor = false,
+        tabbable = false,
+        onFocusRow,
+        onToggleSelect,
+        onDismiss,
+    }: Props = $props()
+
+    /** Prefix for the ids the row's name and description point at. */
+    const domId = $props.id()
+    let rowEl: HTMLDivElement | undefined = $state()
 
     const snapshot = $derived(row.snapshot)
     const progress = $derived(row.progress)
@@ -260,14 +280,96 @@
      *  the question in different words. `../reversal-wording.ts`. */
     const inFlightVariant = $derived(inFlightRollbackVariant(opKindForWireType(snapshot.operationType)))
 
+    // ── The row's half of the window's keyboard (DETAILS § Keyboard) ─────────
+    // The page owns the cursor and reads the keys; what a key DOES to one
+    // operation stays here, next to the buttons that do the same, so the two
+    // can't drift apart.
+
+    /** Puts keyboard focus on the row itself, where the screen reader reads it. */
+    export function focusRow(): void {
+        rowEl?.focus({ preventScroll: false })
+    }
+
+    /** Enter: the Show button's action, where the row offers Show. `false` where it
+     *  doesn't (a waiting, instant, or settled operation). */
+    export function show(): boolean {
+        if (!canForeground) return false
+        void showInMainWindow()
+        return true
+    }
+
+    /** ⌫: the row's own Cancel or Dismiss, whichever it offers. Like the Cancel
+     *  button, no confirmation: cancel keeps every file already written. */
+    export function cancelOrDismiss(): boolean {
+        if (isFailed) {
+            onDismiss()
+            return true
+        }
+        if (!isActionable) return false
+        void op?.cancel()
+        return true
+    }
+
+    /** ← / →: steps keyboard focus through the row's buttons, left to right, and
+     *  from the first one back to the row. `false` when there's nowhere to go. */
+    export function focusControl(step: -1 | 1): boolean {
+        if (!rowEl) return false
+        const buttons = [...rowEl.querySelectorAll<HTMLButtonElement>('.actions-cell button:not(:disabled)')]
+        const at = buttons.indexOf(document.activeElement as HTMLButtonElement)
+        const next = at === -1 ? (step === 1 ? 0 : null) : at + step
+        if (next === null || next >= buttons.length) return false
+        if (next < 0) {
+            rowEl.focus()
+            return true
+        }
+        buttons[next].focus()
+        return true
+    }
+
+    /** A click anywhere on the row puts the cursor there, the way a click picks a
+     *  row in any list. Two clicks are left alone: one that ends a text selection in
+     *  the failure reason (focusing would collapse it), and one inside a button that
+     *  already holds focus. */
+    function handleRowClick(): void {
+        if (!rowEl) return
+        const textSelection = window.getSelection()
+        if (textSelection && !textSelection.isCollapsed) return
+        if (document.activeElement && document.activeElement !== rowEl && rowEl.contains(document.activeElement)) return
+        rowEl.focus({ preventScroll: true })
+    }
+
 </script>
 
-<li class="queue-row" class:selected data-operation-id={snapshot.operationId} data-status={status}>
-    <div class="select-cell">
+<!-- A grid row: the page's arrow keys move between rows, ← / → reach the
+     buttons, and the row's name is its summary plus its status. Every button
+     leaves the Tab order (`tabindex={-1}`), so the list is one Tab stop.
+     DETAILS § Keyboard has the grid-over-listbox call. -->
+<div
+    bind:this={rowEl}
+    class="queue-row"
+    class:selected
+    class:is-under-cursor={isCursor}
+    role="row"
+    tabindex={tabbable ? 0 : -1}
+    aria-selected={isFailed ? undefined : selected}
+    aria-labelledby="{domId}-summary {domId}-status"
+    aria-describedby={reason ? `${domId}-reason` : undefined}
+    data-operation-id={snapshot.operationId}
+    data-status={status}
+    onfocusin={() => onFocusRow?.()}
+    onclick={handleRowClick}
+>
+    <div class="select-cell" role="gridcell">
         <!-- The checkbox exists for "Cancel selected", so a settled failure has
-             nothing to offer it. -->
+             nothing to offer it. Out of the Tab order and the ← / → walk: Space on
+             the row checks it, and the row's `aria-selected` says so. -->
         {#if !isFailed}
-            <Checkbox checked={selected} onCheckedChange={onToggleSelect} ariaLabel={tString('queue.row.selectAria')} />
+            <Checkbox
+                checked={selected}
+                onCheckedChange={onToggleSelect}
+                ariaLabel={tString('queue.row.selectAria')}
+                tabindex={-1}
+            />
         {/if}
     </div>
 
@@ -275,7 +377,7 @@
         <Icon name={typeIcon} size={16} />
     </span>
 
-    <div class="summary-row">
+    <div class="summary-row" role="gridcell" id="{domId}-summary">
         <span class="op-label">{label}</span>
         {#if snapshot.source}
             <span class="path" use:tooltip={{ text: snapshot.source, overflowOnly: true }}>{sourcePhrase}</span>
@@ -287,6 +389,8 @@
     </div>
 
     <span
+        id="{domId}-status"
+        role="gridcell"
         class="status-cell"
         class:running={isRunning && !awaitingAnswer}
         class:paused={isPaused}
@@ -306,7 +410,7 @@
         <span class="status-text">{statusLabel}</span>
     </span>
 
-    <div class="actions-cell">
+    <div class="actions-cell" role="gridcell">
         {#if canForeground}
             <!-- ❌ Not a command on the operation: nothing about it changes, only
                  where it's shown. The main window decides whether it can take
@@ -316,6 +420,8 @@
                 size="mini"
                 onclick={() => void showInMainWindow()}
                 aria-label={tString('queue.row.foregroundAria')}
+                aria-keyshortcuts="Enter"
+                tabindex={-1}
             >
                 <span class="btn-inner">
                     <Icon name="app-window" size={13} />
@@ -333,6 +439,7 @@
                 size="mini"
                 onclick={() => void op?.togglePause()}
                 aria-label={pauseResumeAria}
+                tabindex={-1}
             >
                 <span class="btn-inner">
                     <Icon name={isPaused ? 'play' : 'pause'} size={13} />
@@ -346,6 +453,8 @@
                 size="mini"
                 onclick={() => void op?.cancel()}
                 aria-label={tString('queue.row.cancelAria')}
+                aria-keyshortcuts="Backspace"
+                tabindex={-1}
             >
                 <span class="btn-inner">
                     <Icon name="x" size={13} />
@@ -354,7 +463,14 @@
             </Button>
         {/if}
         {#if isFailed}
-            <Button variant="secondary" size="mini" onclick={onDismiss} aria-label={tString('queue.row.dismissAria')}>
+            <Button
+                variant="secondary"
+                size="mini"
+                onclick={onDismiss}
+                aria-label={tString('queue.row.dismissAria')}
+                aria-keyshortcuts="Backspace"
+                tabindex={-1}
+            >
                 <span class="btn-inner">
                     <Icon name="x" size={13} />
                     {tString('queue.row.dismiss')}
@@ -369,6 +485,7 @@
                 variant="danger"
                 size="mini"
                 tooltipContent={tString(inFlightRollbackTooltipKey(inFlightVariant))}
+                tabindex={-1}
                 onclick={() => {
                     rollbackAsked = true
                 }}
@@ -402,7 +519,7 @@
          The pipeline's own title is left out on purpose: it would read
          "Couldn't copy" right beside the status cell's "Couldn't finish". -->
     {#if reason}
-        <div class="reason-cell">
+        <div class="reason-cell" role="gridcell" id="{domId}-reason">
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- markup from the typed error via `failureReasonFor`: escaped names/paths plus size tiers, no user input. Same boundary as `FallbackErrorContent`. -->
             <p class="reason-message selectable">{@html reason.message}</p>
             <p class="reason-suggestion selectable">{reason.suggestion}</p>
@@ -413,7 +530,7 @@
          line the progress dialog shows, so the two surfaces can't disagree
          about what a scanning operation looks like. -->
     {#if showScanLine && progress}
-        <div class="readout-cell">
+        <div class="readout-cell" role="gridcell">
             <ScanPhaseBody
                 density="compact"
                 sourceFolderPath={snapshot.source ?? ''}
@@ -432,7 +549,7 @@
     <!-- Second line, spanning everything right of the icon gutter: the same
          dual-bar readout the copy dialog shows, in its compact density. -->
     {#if showReadout && progress}
-        <div class="readout-cell">
+        <div class="readout-cell" role="gridcell">
             <TransferProgressReadout
                 density="compact"
                 bytesDone={progress.bytesDone}
@@ -448,7 +565,7 @@
             />
         </div>
     {/if}
-</li>
+</div>
 
 <style>
     .queue-row {
@@ -467,6 +584,32 @@
     .queue-row.selected {
         background: var(--color-accent-subtle);
         border-color: var(--color-border-subtle);
+    }
+
+    /* The cursor is the file list's: a quiet fill with an accent hairline, which
+       turns accent once the list has focus (`app-file-list.css`). It wins over
+       the selection fill, so the cursor stays findable inside a selected block. */
+    .queue-row.is-under-cursor {
+        background: var(--color-cursor-inactive);
+        box-shadow: inset 0 0 0 1px var(--color-cursor-outline);
+    }
+
+    :global(.queue-grid:focus-within) .queue-row.is-under-cursor {
+        background: var(--color-cursor-active);
+    }
+
+    /* The cursor IS the focus indicator for a focused row, so the browser's ring
+       would draw a second, competing box. A focused BUTTON keeps the global ring. */
+    .queue-row:focus-visible {
+        outline: none;
+    }
+
+    /* Under the cursor's tint the muted tones read at full contrast, as in
+       `ColumnList` (secondary and tertiary drop below AA on the lighter accent
+       tints). The status colors that carry meaning keep theirs. */
+    .queue-row.is-under-cursor :is(.path, .arrow, .type-cell, .reason-message, .reason-suggestion),
+    .queue-row.is-under-cursor .status-cell:not(.running, .failed, .awaiting-answer) {
+        color: var(--color-text-primary);
     }
 
     .select-cell {

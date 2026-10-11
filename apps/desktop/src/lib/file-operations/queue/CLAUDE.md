@@ -6,7 +6,7 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 ## Module map
 
 - `queue-window.ts` opens the window (perms in `src-tauri/capabilities/queue.json`), `operations-store.svelte.ts` is the
-  single reactive source it renders from, `QueueRow.svelte` a row, shell `routes/queue/+page.svelte`.
+  single reactive source it renders from, `QueueRow.svelte` a row, shell (and keyboard) `routes/queue/+page.svelte`.
 - Pure helpers: `failure-reason.ts` (a retained failure's title/explanation/suggestion), `queue-backlog.ts`
   (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label).
 
@@ -14,10 +14,9 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 
 - **It's a HARD window, not a modal** (a real `WebviewWindow` on `/queue`, sibling to Settings): the main window stays
   usable while operations run.
-- **Progress is DEFINED with the copy dialog, not here.** Rows render `../TransferProgressReadout.svelte` (whose
-  fixed-width columns set `queue-window.ts`'s `MIN_WIDTH`), and every ESTIMATE comes from the row's session via
-  `bindOperationSession`, ❌ never the raw tick. The session keeps a parked row's speed off the screen while its time
-  left stays. ❌ No smoother in the store: it holds membership and the latest tick, both stateless.
+- **Progress is DEFINED with the copy dialog, not here.** Rows render `../TransferProgressReadout.svelte` (its
+  fixed-width columns set `MIN_WIDTH`), and every ESTIMATE comes from the row's session (`bindOperationSession`), ❌
+  never the raw tick. ❌ No smoother in the store: it holds membership and the latest tick, both stateless.
 - **Two streams, never poll**: `operations-changed` is the THIN membership + status snapshot, `write-progress` drives
   the live bars, keyed by `operationId` and pruned to snapshot membership. ❌ Don't fatten it with per-tick data.
 - **Rows cover copy/move/delete/trash AND the instant ops** (`rename` / `create_folder` / `create_file`), which emit no
@@ -43,10 +42,11 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   rollback, no confirm (why `capabilities/queue.json` DROPS `dialog:allow-ask`/`store:default`). `session.rollback()`
   shows ONLY where `supportsRollback` and `reversalWindowClosed` allow it, ❌ never inferred from the type.
 - **Window perms fail SILENTLY**: `await` every Tauri call in try/catch with a `log.warn`, and smoke-test with
-  `pnpm dev` after a perm change. Being its own webview, the page inits its own i18n / theme / transparency / text size
-  (`initWindowSettings()`, `lib/settings/CLAUDE.md`).
+  `pnpm dev` after a perm change. Its own webview, the page inits its own settings (`initWindowSettings()`).
+- **The list is a one-Tab-stop ARIA grid; its cursor is an operation ID**, ❌ not an index. ⌘A arrives as
+  `queue-select-all` from the menu, ❌ never a keydown. DETAILS § Keyboard.
 - **One opener, one store per webview**: `openQueueWindow`, plus the main window's own
   (`main-window-operations.svelte.ts`). ❌ Backgrounding never opens it: `queue-handoff-toast.ts` instead (DETAILS §
   "Backgrounding never opens the window").
 
-Depth (the store's API, retained failures, vibrancy, decisions): `DETAILS.md`. Read it before non-trivial work here.
+Depth (store API, failures, keyboard, decisions): `DETAILS.md`. Read it before non-trivial work here.

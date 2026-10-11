@@ -50,6 +50,7 @@ const scopeOrder: readonly { scope: CommandScope; titleKey: MessageKey }[] = [
   { scope: 'Main window/Error screen', titleKey: 'shortcuts.scope.errorScreen' },
   { scope: 'Main window/Multi-rename', titleKey: 'shortcuts.scope.multiRename' },
   { scope: 'Command palette', titleKey: 'shortcuts.scope.commandPalette' },
+  { scope: 'Operation queue window', titleKey: 'shortcuts.scope.queueWindow' },
   { scope: 'About window', titleKey: 'shortcuts.scope.aboutWindow' },
   { scope: 'Onboarding', titleKey: 'shortcuts.scope.onboarding' },
 ]

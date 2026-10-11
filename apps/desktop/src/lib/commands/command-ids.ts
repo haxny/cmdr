@@ -47,6 +47,22 @@ export const COMMAND_IDS = [
   'help.whatsNew',
   'feedback.send',
   'queue.show',
+  // Keys the operation queue window answers itself
+  'queue.cursorUp',
+  'queue.cursorDown',
+  'queue.cursorFirst',
+  'queue.cursorLast',
+  'queue.extendUp',
+  'queue.extendDown',
+  'queue.toggleSelected',
+  'queue.selectAll',
+  'queue.showInMainWindow',
+  'queue.cancelOrDismiss',
+  'queue.moveEarlier',
+  'queue.moveLater',
+  'queue.nextControl',
+  'queue.previousControl',
+  'queue.close',
 
   // Operation log (alpha)
   'log.operationLog',

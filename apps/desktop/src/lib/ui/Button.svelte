@@ -32,6 +32,11 @@
         /** The key that presses this button, for a screen reader; pair it with an `aria-hidden` visible chip. */
         'aria-keyshortcuts'?: string
         /**
+         * `-1` takes the button out of the Tab order while it stays clickable and focusable from
+         * code: for a composite widget (a grid row) whose arrow keys reach its buttons instead.
+         */
+        tabindex?: -1 | 0
+        /**
          * Focus this button after mount. Uses `requestAnimationFrame` so it lands
          * after a parent `ModalDialog` has settled its own mount-time focus (the
          * dialog leaves the scrim unfocused once something inside owns focus).
@@ -51,6 +56,7 @@
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedby,
         'aria-keyshortcuts': ariaKeyshortcuts,
+        tabindex,
         autoFocus = false,
         children,
     }: Props = $props()
@@ -74,6 +80,7 @@
     aria-label={ariaLabel}
     aria-describedby={ariaDescribedby}
     aria-keyshortcuts={ariaKeyshortcuts}
+    {tabindex}
     use:tooltip={tooltipContent}
 >
     {@render children()}

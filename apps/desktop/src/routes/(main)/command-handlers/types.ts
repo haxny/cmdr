@@ -73,6 +73,22 @@ export type DispatchExemptId =
   | 'network.selectHost'
   | 'share.back'
   | 'share.selectShare'
+  // The operation queue window's keys: a window of its own, answered by its keydown.
+  | 'queue.cursorUp'
+  | 'queue.cursorDown'
+  | 'queue.cursorFirst'
+  | 'queue.cursorLast'
+  | 'queue.extendUp'
+  | 'queue.extendDown'
+  | 'queue.toggleSelected'
+  | 'queue.selectAll'
+  | 'queue.showInMainWindow'
+  | 'queue.cancelOrDismiss'
+  | 'queue.moveEarlier'
+  | 'queue.moveLater'
+  | 'queue.nextControl'
+  | 'queue.previousControl'
+  | 'queue.close'
   // ErrorPane owns ⌘D through its own CAPTURE-phase document listener, which runs
   // ahead of the dispatch spine on purpose (it must beat any user binding on ⌘D).
   | 'errorPane.toggleTechnicalDetails'

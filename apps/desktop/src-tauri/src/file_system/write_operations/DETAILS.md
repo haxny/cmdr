@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (public API + the `start_write_operation` lifecycle), `manager.rs` (registry + lane admission), `state.rs`
+- `mod.rs` (public API + the `start_write_operation` lifecycle), `manager.rs` (registry + lane admission; its wire types in `manager/wire.rs`, reordering the line in `manager/reorder.rs`), `state.rs`
   (`WriteOperationRegistry`, `WriteOperationState`, the settle guard, plus `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`),
   `status_cache.rs` (the status cache, the busy-volumes set it derives, the external drag-out seam, and

@@ -31,6 +31,14 @@ pub struct ExecuteCommand {
     pub command_id: String,
 }
 
+/// `queue-select-all`: Edit > Select all (⌘A) while the operation queue window
+/// is focused. The menu accelerator fires before the webview sees the key, and
+/// the native `selectAll:` every other secondary window gets would select the
+/// page's TEXT; the queue's ⌘A means "check every row for Cancel selected",
+/// which only its page can do. Payloadless, emitted to `queue` only.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+pub struct QueueSelectAll;
+
 /// `show-search-result-in-folder`: a snapshot context-menu click. The primary
 /// right-clicked path travels with the event so the frontend never rereads a
 /// potentially different cursor or selection after the native popup closes.

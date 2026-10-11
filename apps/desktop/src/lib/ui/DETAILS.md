@@ -590,6 +590,8 @@ by one, so a native attribute only reaches the `<button>` if `Props` names it: `
 keeps the NAME short ("Roll back") while still telling a screen reader which row the button belongs to; the operation
 log's rows point it at the row's own head button. `aria-keyshortcuts` names the bare letter a decision prompt answers
 with (`../file-operations/decision-keys.ts`), whose visible chip is `aria-hidden` so it stays out of the name.
+`tabindex={-1}` is for a button inside a composite widget whose arrow keys reach it instead of Tab (the operation
+queue's grid rows, `../file-operations/queue/DETAILS.md` § Keyboard): still clickable, out of the Tab order.
 
 **`disabled` vs `ariaDisabled` ("blocked").** `disabled` is the inert one: no click, no focus, `pointer-events: none`.
 `ariaDisabled` renders the same dimmed look and `not-allowed` cursor but keeps the button focusable, in the tab order,
@@ -1793,8 +1795,9 @@ primitive directly.
 
 A presentational wrapper over Ark's `Checkbox`. Props: `checked` (bindable), `disabled`, `indeterminate`, `id`,
 `ariaLabel`, `required` (`aria-required` on the control; a visible asterisk elsewhere is decoration only),
-`onCheckedChange`, `children` (an inline label right of the box). Ark's root is a `<label>`, so the label text toggles
-the box for free.
+`onCheckedChange`, `tabindex` (on the hidden input; `-1` for a row whose own key checks it, like the operation queue's
+Space), `children` (an inline label right of the box). Ark's root is a `<label>`, so the label text toggles the box for
+free.
 
 **The indicator's size is fixed and its glyphs are toggled with `visibility`, never `display`.** The root is
 `inline-flex`, so the line it sits on takes its baseline from the first flex item's first child, the indicator. An empty

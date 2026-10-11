@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte'
+    import { onMount, onDestroy, tick } from 'svelte'
     import { SvelteSet } from 'svelte/reactivity'
     import { getCurrentWindow } from '@tauri-apps/api/window'
     import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -13,13 +13,18 @@
         cancelOperations,
         dismissAllFailedOperations,
         dismissFailedOperation,
+        moveQueuedOperation,
+        onQueueSelectAll,
         pauseAll,
         resumeAll,
+        type QueueMoveDirection,
     } from '$lib/tauri-commands'
     import { tString } from '$lib/intl/messages.svelte'
     import Button from '$lib/ui/Button.svelte'
     import Icon from '$lib/ui/Icon.svelte'
     import QueueRow from '$lib/file-operations/queue/QueueRow.svelte'
+    import { createQueueCursor } from '$lib/file-operations/queue/queue-cursor.svelte'
+    import { queueKeyAction, type QueueKeyAction } from '$lib/file-operations/queue/queue-keys'
     import {
         createOperationsStore,
         isHiddenSettledStatus,
@@ -38,6 +43,7 @@
     let unlistenFocusSelf: UnlistenFn | undefined
     let unlistenRectTracking: (() => void) | undefined
     let unsubscribeLanguage: (() => void) | undefined
+    let unlistenSelectAll: UnlistenFn | undefined
 
     /** Ids the user has checked for "Cancel selected". A `SvelteSet` so toggling
      *  is O(1) AND reactive on in-place mutation (add/delete), per the project's
@@ -66,6 +72,144 @@
     })
 
     const selectedCount = $derived(selectedIds.size)
+
+    // ── Keyboard (DETAILS § Keyboard) ───────────────────────────────────────
+    // The list is an ARIA grid with ONE Tab stop: the cursor row. The arrows move
+    // the cursor, ← / → reach the focused row's buttons, and the row's own keys
+    // (Enter, ⌫) do what its buttons do. The cursor follows an operation id, so
+    // a reorder or a finished operation never slides another one under it.
+
+    const rowIds = $derived(rows.map((r) => r.snapshot.operationId))
+
+    const cursor = createQueueCursor({
+        ids: () => rowIds,
+        selection: selectedIds,
+        isSelectable: (id) => {
+            const row = rows.find((r) => r.snapshot.operationId === id)
+            return row !== undefined && !isTerminalStatus(row.snapshot.status)
+        },
+    })
+
+    /** Each row's keyboard half (`QueueRow`'s exports), by operation id. */
+    const rowApis: Record<string, QueueRow | undefined> = {}
+
+    let gridEl: HTMLDivElement | undefined = $state()
+
+    /** The grid held focus last, so a row that leaves (it finished, or a reorder
+     *  moved its element) hands focus to the cursor's new row instead of dropping
+     *  it on the page. Cleared only when focus genuinely moves elsewhere. */
+    let gridOwnsFocus = $state(false)
+
+    /** The live region's text: where a reordered operation landed. */
+    let announcement = $state('')
+
+    // The cursor follows its operation, or takes the row that slid into its place.
+    $effect(() => {
+        void rowIds
+        cursor.reconcile()
+    })
+
+    // Keep focus on the cursor row while the grid owns it: a row that vanished, or
+    // a keyed `{#each}` moving the focused element, leaves focus on <body>.
+    $effect(() => {
+        void rowIds
+        const id = cursor.cursorId
+        if (!gridOwnsFocus || id === null || !gridEl) return
+        const active = document.activeElement
+        if (active === null || active === document.body || !gridEl.contains(active)) rowApis[id]?.focusRow()
+    })
+
+    /** The row Tab lands on: the cursor row, or the first row before there is one. */
+    const tabStopId = $derived(
+        cursor.cursorId !== null && rowIds.includes(cursor.cursorId) ? cursor.cursorId : (rowIds[0] ?? null),
+    )
+
+    function handleGridFocusOut(event: FocusEvent): void {
+        const next = event.relatedTarget
+        // `null` is focus going nowhere: a removed element, or the window losing
+        // focus. Either way the grid still owns it when it comes back.
+        if (next instanceof Node && !gridEl?.contains(next)) gridOwnsFocus = false
+    }
+
+    function focusCursorRow(): void {
+        const id = cursor.cursorId
+        if (id !== null) rowApis[id]?.focusRow()
+    }
+
+    async function moveCursorRow(direction: QueueMoveDirection): Promise<void> {
+        const id = cursor.cursorId
+        if (id === null) return
+        try {
+            const outcome = await moveQueuedOperation(id, direction)
+            // Announced fresh each time: a live region repeats nothing it already says.
+            announcement = ''
+            await tick()
+            announcement =
+                outcome.kind === 'moved'
+                    ? tString('queue.reorder.moved', { direction, position: outcome.position, waiting: outcome.waiting })
+                    : outcome.kind === 'at_edge'
+                      ? tString('queue.reorder.atEdge', { direction })
+                      : tString('queue.reorder.notQueued')
+        } catch (error) {
+            log.warn('Failed to move operation {operationId}: {error}', { operationId: id, error: String(error) })
+        }
+    }
+
+    /** Runs a key the grid answers. `false` leaves the key to whoever else wants it. */
+    function runGridAction(action: QueueKeyAction): boolean {
+        switch (action.kind) {
+            case 'cursor':
+                cursor.move(action.to)
+                focusCursorRow()
+                return true
+            case 'extend':
+                cursor.extend(action.to)
+                focusCursorRow()
+                return true
+            case 'toggleSelected':
+                cursor.toggle()
+                return true
+            case 'selectAll':
+                cursor.selectAll()
+                return true
+            case 'move':
+                void moveCursorRow(action.direction)
+                return true
+            case 'show':
+            case 'cancelOrDismiss':
+            case 'control':
+                return runRowAction(action)
+            case 'close':
+                return false
+        }
+    }
+
+    /** The keys that act on the cursor row's own operation, through the row. */
+    function runRowAction(action: Extract<QueueKeyAction, { kind: 'show' | 'cancelOrDismiss' | 'control' }>): boolean {
+        const id = cursor.cursorId
+        const api = id === null ? undefined : rowApis[id]
+        if (!api) return false
+        if (action.kind === 'show') return api.show()
+        if (action.kind === 'cancelOrDismiss') return api.cancelOrDismiss()
+        return api.focusControl(action.step)
+    }
+
+    /** Whether the grid answers a key pressed on `target`. Inside the grid, yes;
+     *  on the bare page too (nothing focused yet, or focus dropped after a click),
+     *  so ↓ works the moment the window opens. ❌ Never inside a dialog (the
+     *  rollback question has its own keys) or on the toolbar. */
+    function gridHears(target: EventTarget | null): boolean {
+        if (!(target instanceof Element)) return true
+        if (target.closest('[role="dialog"], [role="alertdialog"]')) return false
+        if (gridEl?.contains(target)) return true
+        return target === document.body || target.classList.contains('queue-window')
+    }
+
+    /** Enter and Space press a focused BUTTON natively, and ⌫ belongs to the
+     *  row wherever focus is in it; the row's own keys apply only on the row. */
+    function isRowOnlyKey(action: QueueKeyAction, target: EventTarget | null): boolean {
+        return (action.kind === 'show' || action.kind === 'toggleSelected') && target instanceof HTMLButtonElement
+    }
 
     function toggleSelect(operationId: string): void {
         if (selectedIds.has(operationId)) selectedIds.delete(operationId)
@@ -124,17 +268,27 @@
         }
     }
 
+    function closeWindow(): void {
+        // Defer the close past the current event-loop tick so any in-flight IPC
+        // ack settles before the webview is destroyed. `setTimeout(0)`, not rAF
+        // (throttled when unfocused on macOS). Mirrors Settings / Shortcuts.
+        const win = getCurrentWindow()
+        setTimeout(() => {
+            void win.close()
+        }, 0)
+    }
+
     function handleKeydown(event: KeyboardEvent): void {
-        if (event.key === 'Escape') {
+        if (event.defaultPrevented) return
+        const action = queueKeyAction(event)
+        if (action === null) return
+        if (action.kind === 'close') {
             event.preventDefault()
-            // Defer the close past the current event-loop tick so any in-flight IPC
-            // ack settles before the webview is destroyed. `setTimeout(0)`, not rAF
-            // (throttled when unfocused on macOS). Mirrors Settings / Shortcuts.
-            const win = getCurrentWindow()
-            setTimeout(() => {
-                void win.close()
-            }, 0)
+            closeWindow()
+            return
         }
+        if (!gridHears(event.target) || isRowOnlyKey(action, event.target)) return
+        if (runGridAction(action)) event.preventDefault()
     }
 
     onMount(async () => {
@@ -170,6 +324,13 @@
 
             // Remember position/size within the session so a reopen lands in place.
             unlistenRectTracking = await trackOwnRect('queue')
+
+            // ⌘A reaches this window as a menu event, never as a keydown (the
+            // accelerator fires first). The keydown road above stays for a menu
+            // that doesn't claim it (the dev browser).
+            unlistenSelectAll = await onQueueSelectAll(() => {
+                cursor.selectAll()
+            })
         } catch (error) {
             log.error('Failed to initialize operation-queue window: {error}', { error })
         }
@@ -178,6 +339,7 @@
     onDestroy(() => {
         unlistenFocusSelf?.()
         unlistenRectTracking?.()
+        unlistenSelectAll?.()
         unsubscribeLanguage?.()
         store.dispose()
         destroyOperationSessions()
@@ -187,7 +349,7 @@
     })
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 <main class="queue-window" tabindex="-1">
     <h1 class="sr-only">{tString('queue.windowTitle')}</h1>
@@ -230,18 +392,40 @@
                 <p class="empty-body">{tString('queue.empty.body')}</p>
             </div>
         {:else}
-            <ul class="queue-list" aria-label={tString('queue.list.aria')}>
+            <div
+                bind:this={gridEl}
+                class="queue-list queue-grid"
+                role="grid"
+                aria-label={tString('queue.list.aria')}
+                aria-multiselectable="true"
+                onfocusin={() => {
+                    gridOwnsFocus = true
+                }}
+                onfocusout={handleGridFocusOut}
+            >
                 {#each rows as row (row.snapshot.operationId)}
+                    {@const id = row.snapshot.operationId}
                     <QueueRow
+                        bind:this={rowApis[id]}
                         {row}
-                        selected={selectedIds.has(row.snapshot.operationId)}
-                        onToggleSelect={() => { toggleSelect(row.snapshot.operationId); }}
-                        onDismiss={() => void dismissRow(row.snapshot.operationId)}
+                        selected={selectedIds.has(id)}
+                        isCursor={cursor.cursorId === id}
+                        tabbable={tabStopId === id}
+                        onFocusRow={() => {
+                            if (cursor.cursorId !== id) cursor.place(id)
+                        }}
+                        onToggleSelect={() => {
+                            toggleSelect(id)
+                        }}
+                        onDismiss={() => void dismissRow(id)}
                     />
                 {/each}
-            </ul>
+            </div>
         {/if}
     {/if}
+    <!-- Where a reordered operation landed. The list re-renders silently, so
+         this is the only way a screen reader hears that ⌥↑ / ⌥↓ did anything. -->
+    <div class="sr-only" role="status" aria-live="polite">{announcement}</div>
 </main>
 
 <style>
@@ -320,7 +504,6 @@
         overflow-y: auto;
         padding: var(--spacing-sm);
         margin: 0;
-        list-style: none;
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xxs);

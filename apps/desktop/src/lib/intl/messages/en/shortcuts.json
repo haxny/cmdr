@@ -92,6 +92,12 @@
     "screenshot": "settings-keyboard-shortcuts.png"
   },
 
+  "shortcuts.scope.queueWindow": "Operation queue",
+  "@shortcuts.scope.queueWindow": {
+    "description": "Group heading in the Keyboard shortcuts list for the keys that work in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes). Use the same name as the window title, queue.windowTitle. A short section title.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
+
   "shortcuts.scope.aboutWindow": "About window",
   "@shortcuts.scope.aboutWindow": {
     "description": "Group heading in the Keyboard shortcuts list for commands in the About window. A short section title.",

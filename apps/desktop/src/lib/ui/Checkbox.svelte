@@ -28,6 +28,11 @@
          */
         required?: boolean
         onCheckedChange?: (checked: boolean) => void
+        /**
+         * `-1` takes the box out of the Tab order while it stays clickable: for a row in a
+         * composite widget whose own key (Space) checks it instead.
+         */
+        tabindex?: -1 | 0
         children?: Snippet
     }
 
@@ -41,6 +46,7 @@
         ariaDescribedBy,
         required = false,
         onCheckedChange,
+        tabindex,
         children,
     }: Props = $props()
     /* eslint-enable prefer-const */
@@ -77,6 +83,7 @@
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-required={required ? 'true' : undefined}
+        {tabindex}
     />
 </Checkbox.Root>
 

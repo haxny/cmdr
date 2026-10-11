@@ -5089,6 +5089,7 @@ export const events = {
   operationsChanged: makeEvent<OperationsChanged>('operations-changed'),
   osLocalesChanged: makeEvent<OsLocalesChanged>('os-locales-changed'),
   persistRestrictedSetting: makeEvent<PersistRestrictedSetting>('persist-restricted-setting'),
+  queueSelectAll: makeEvent<QueueSelectAll>('queue-select-all'),
   quickLookClosed: makeEvent<QuickLookClosed>('quick-look-closed'),
   quickLookKey: makeEvent<QuickLookKeyEvent>('quick-look-key'),
   quitCalledOff: makeEvent<QuitCalledOff>('quit-called-off'),
@@ -12718,6 +12719,15 @@ export type QueueMoveOutcome =
    *  waiting operation has a place in line to change.
    */
   | { kind: 'not_queued' }
+
+/**
+ *  `queue-select-all`: Edit > Select all (⌘A) while the operation queue window
+ *  is focused. The menu accelerator fires before the webview sees the key, and
+ *  the native `selectAll:` every other secondary window gets would select the
+ *  page's TEXT; the queue's ⌘A means "check every row for Cancel selected",
+ *  which only its page can do. Payloadless, emitted to `queue` only.
+ */
+export type QueueSelectAll = null
 
 /**
  *  `quick-look-closed`: the preview panel left the screen (our `orderOut:`, the

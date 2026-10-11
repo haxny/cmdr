@@ -46,16 +46,21 @@ beforeEach(() => {
   document.body.innerHTML = ''
 })
 
-// QueueRow is an <li>, so it's mounted into a <ul> to keep the list semantics
-// valid for axe (a bare <li> is a structure violation).
-async function mountRow(r: OperationRow, selected = false): Promise<HTMLElement> {
-  const list = document.createElement('ul')
+// QueueRow is a grid `row`, so it's mounted into a `grid` the way the page does,
+// to keep the structure valid for axe (a bare `row` is a required-parent violation).
+async function mountRow(r: OperationRow, selected = false, isCursor = false): Promise<HTMLElement> {
+  const list = document.createElement('div')
+  list.setAttribute('role', 'grid')
+  list.setAttribute('aria-label', 'Operations')
+  list.setAttribute('aria-multiselectable', 'true')
   document.body.appendChild(list)
   mount(QueueRow, {
     target: list,
     props: {
       row: r,
       selected,
+      isCursor,
+      tabbable: isCursor,
       onToggleSelect: () => {},
       onDismiss: () => {},
     },
@@ -82,6 +87,16 @@ describe('QueueRow a11y', () => {
 
   it('a selected delete row has no a11y violations', async () => {
     const list = await mountRow(row('running', 'delete', runningProgress), true)
+    await expectNoA11yViolations(list)
+  })
+
+  // The cursor row is the grid's Tab stop: focusable, named by its summary and
+  // status, and saying whether it's in the "Cancel selected" set.
+  it('the row under the cursor has no a11y violations', async () => {
+    const list = await mountRow(row('running', 'copy', runningProgress), true, true)
+    const gridRow = list.querySelector('[role="row"]')
+    expect(gridRow?.getAttribute('tabindex')).toBe('0')
+    expect(gridRow?.getAttribute('aria-selected')).toBe('true')
     await expectNoA11yViolations(list)
   })
 

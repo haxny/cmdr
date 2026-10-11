@@ -26,6 +26,7 @@ import { multiRenameCommands } from './sources/multi-rename'
 import { browsersCommands } from './sources/browsers'
 import { mcpCommands } from './sources/mcp'
 import { aboutWindowCommands } from './sources/about-window'
+import { queueWindowCommands } from './sources/queue-window'
 import { commandPaletteCommands } from './sources/command-palette'
 
 /**
@@ -85,6 +86,22 @@ export const FIXED_KEY_COMMAND_IDS = [
   'network.selectHost',
   'share.back',
   'share.selectShare',
+  // The operation queue window's keys, answered by its own keydown.
+  'queue.cursorUp',
+  'queue.cursorDown',
+  'queue.cursorFirst',
+  'queue.cursorLast',
+  'queue.extendUp',
+  'queue.extendDown',
+  'queue.toggleSelected',
+  'queue.selectAll',
+  'queue.showInMainWindow',
+  'queue.cancelOrDismiss',
+  'queue.moveEarlier',
+  'queue.moveLater',
+  'queue.nextControl',
+  'queue.previousControl',
+  'queue.close',
   // Family 4 — deliberate override. ErrorPane claims ⌘D through a CAPTURE-phase
   // document listener that runs ahead of the dispatch spine, so it wins over
   // whatever the user bound ⌘D to. Fixed because releasing the key would falsify
@@ -107,6 +124,7 @@ const commandSources: CommandSource[] = [
   ...browsersCommands,
   ...mcpCommands,
   ...aboutWindowCommands,
+  ...queueWindowCommands,
   ...commandPaletteCommands,
 ]
 

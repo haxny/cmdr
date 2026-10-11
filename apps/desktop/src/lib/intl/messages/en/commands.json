@@ -482,6 +482,66 @@
   "@commands.fileMultiRename.description": {
     "description": "Longer help text for \"Multi-rename\", shown as a secondary line in the command palette."
   },
+  "commands.queueCursorUp.label": "Previous operation",
+  "@commands.queueCursorUp.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above."
+  },
+  "commands.queueCursorDown.label": "Next operation",
+  "@commands.queueCursorDown.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation below."
+  },
+  "commands.queueCursorFirst.label": "First operation",
+  "@commands.queueCursorFirst.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the top row."
+  },
+  "commands.queueCursorLast.label": "Last operation",
+  "@commands.queueCursorLast.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the bottom row."
+  },
+  "commands.queueExtendUp.label": "Extend the selection up",
+  "@commands.queueExtendUp.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor up and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started."
+  },
+  "commands.queueExtendDown.label": "Extend the selection down",
+  "@commands.queueExtendDown.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor down and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started."
+  },
+  "commands.queueToggleSelected.label": "Add the operation to the selection, or remove it",
+  "@commands.queueToggleSelected.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks or unchecks the row under the cursor for “Cancel selected”. An operation that couldn’t finish can’t be selected."
+  },
+  "commands.queueSelectAll.label": "Select every operation",
+  "@commands.queueSelectAll.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks every row that can still be canceled, for “Cancel selected”."
+  },
+  "commands.queueShowInMainWindow.label": "Show the operation in the main window",
+  "@commands.queueShowInMainWindow.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It brings the operation under the cursor back into the main window’s progress dialog, like the row’s Show button. Only running and paused operations can be shown."
+  },
+  "commands.queueCancelOrDismiss.label": "Cancel the operation, or dismiss one that couldn’t finish",
+  "@commands.queueCancelOrDismiss.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own button does: it cancels a running, paused, or waiting operation (files already copied are kept, and there’s no confirmation, same as the Cancel button), or removes a row for an operation that couldn’t finish, like Dismiss."
+  },
+  "commands.queueMoveEarlier.label": "Move the waiting operation up in line",
+  "@commands.queueMoveEarlier.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place nearer the front of the line, so it starts sooner. Running and paused operations keep their place."
+  },
+  "commands.queueMoveLater.label": "Move the waiting operation down in line",
+  "@commands.queueMoveLater.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place further back in the line, so it starts later. Running and paused operations keep their place."
+  },
+  "commands.queueNextControl.label": "Next button in the row",
+  "@commands.queueNextControl.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus from the row to its buttons (Pause, Cancel, and so on), one at a time, left to right."
+  },
+  "commands.queuePreviousControl.label": "Previous button in the row",
+  "@commands.queuePreviousControl.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus to the previous button in the row, and back to the row itself from the first one."
+  },
+  "commands.queueClose.label": "Close the operation queue",
+  "@commands.queueClose.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It closes the operation queue window. Operations keep running."
+  },
   "commands.multiRenameOpenPresets.label": "Open the presets menu",
   "@commands.multiRenameOpenPresets.label": {
     "description": "Row in the Keyboard shortcuts list: what F2 does while the Multi-rename tool is open. It opens the menu of saved rename settings (presets), as in Total Commander. Read-only (the key can't be rebound)."

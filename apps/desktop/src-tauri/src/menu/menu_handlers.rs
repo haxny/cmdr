@@ -528,6 +528,22 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
+    // === Select all in the operation queue: its rows, not its text ===
+    // Ahead of the edit-action block below, which would send the native `selectAll:` and
+    // highlight the page's text. The queue's own keydown never sees ⌘A (the accelerator
+    // fires first), so this event is the key's only road there.
+    if id == SELECT_ALL_ID
+        && app
+            .get_webview_window("queue")
+            .is_some_and(|w| w.is_focused().unwrap_or(false))
+    {
+        use tauri_specta::Event as _;
+        if let Err(e) = crate::window_events::QueueSelectAll.emit_to(app, "queue") {
+            log::warn!(target: "menu", "failed to emit queue-select-all: {e}");
+        }
+        return;
+    }
+
     // === Edit-action exception: file semantics in main window, native text semantics elsewhere ===
     // Custom MenuItems for Cut/Copy/Paste/Select all route through execute-command in the main
     // window so the frontend can decide between file and text semantics. In non-main windows

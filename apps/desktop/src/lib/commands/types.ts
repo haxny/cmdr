@@ -25,6 +25,7 @@ export type CommandScope =
   | 'Main window/Error screen' // The full-pane error screen (ErrorPane)
   | 'Main window/Multi-rename' // The ⌃M Multi-rename sheet
   | 'About window' // About window commands
+  | 'Operation queue window' // The operation queue window's own keys
   | 'Onboarding' // FDA prompt
   | 'Command palette' // Command palette modal
 

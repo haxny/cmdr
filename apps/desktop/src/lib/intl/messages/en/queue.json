@@ -162,6 +162,29 @@
     "screenshot": "quit-confirmation-one-copy.png"
   },
 
+  "queue.reorder.moved": "{direction, select, earlier {Moved up.} other {Moved down.}} Now {position} of {waiting} in line.",
+  "@queue.reorder.moved": {
+    "description": "Spoken by a screen reader (never shown) after the user moves a waiting operation in the operation queue with Option-Up or Option-Down. Waiting operations start in this order once their drive is free, so moving one up means it starts sooner. The second sentence says where it is now, counting only the waiting operations: running ones aren’t in line. Keep both sentences short; they’re read out after every keypress.",
+    "placeholders": {
+      "direction": "\"earlier\" when the operation moved up (toward the front of the line), anything else when it moved down",
+      "position": "the operation’s place in line after the move, counting from 1 at the front",
+      "waiting": "how many operations are waiting in line"
+    }
+  },
+
+  "queue.reorder.atEdge": "{direction, select, earlier {Already first in line.} other {Already last in line.}}",
+  "@queue.reorder.atEdge": {
+    "description": "Spoken by a screen reader (never shown) when the user tries to move a waiting operation in the operation queue further than it can go: up when it already starts next, or down when it already starts last. Nothing moved.",
+    "placeholders": {
+      "direction": "\"earlier\" when the user tried to move it up (toward the front of the line), anything else when down"
+    }
+  },
+
+  "queue.reorder.notQueued": "Only waiting operations can move.",
+  "@queue.reorder.notQueued": {
+    "description": "Spoken by a screen reader (never shown) when the user presses Option-Up or Option-Down on an operation queue row that isn’t waiting: it’s already running, paused, or stopped, and those keep their place. \"Waiting\" matches the status word on waiting rows (queue.row.status)."
+  },
+
   "queue.toolbar.pauseAll": "Pause all",
   "@queue.toolbar.pauseAll": {
     "description": "Toolbar button that pauses every running operation at once.",
