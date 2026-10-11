@@ -89,6 +89,6 @@
   },
   "errorReporter.offer.slow": "¿Está tardando mucho? Envía un reporte",
   "@errorReporter.offer.slow": {
-    "sourceHash": "ceaf3b7"
+    "sourceHash": "d6be3ab"
   }
 }
