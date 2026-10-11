@@ -222,6 +222,26 @@ async fn export_matches_the_bytes_offered() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn copy_within_matches_what_is_offered() {
+    let (volume, dir) = stock_server_with_scratch("copy-within-handshake").await;
+    let from = format!("{dir}/original.txt");
+    volume
+        .create_file(Path::new(&from), b"copied on the server")
+        .await
+        .expect(FIXTURE);
+
+    conformance::assert_copy_within_matches_what_is_offered(
+        &volume,
+        Path::new(&from),
+        Path::new(&format!("{dir}/duplicate.txt")),
+    )
+    .await;
+
+    clean_scratch(&volume, &dir).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
 async fn a_copy_keeps_the_source_date() {
     let (volume, dir) = stock_server_with_scratch("dated-copy").await;
     let dated = format!("{dir}/dated.txt");

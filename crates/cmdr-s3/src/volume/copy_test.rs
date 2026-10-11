@@ -558,6 +558,21 @@ async fn a_copy_from_another_backend_is_not_this_servers_to_make() {
     assert!(matches!(outcome, Err(VolumeError::NotSupported)), "got {outcome:?}");
 }
 
+/// The engine asks this before it stages anything for a copy (ERR-PTRGY), so
+/// it has to say yes to every place of this account, this one included, and
+/// no to anything else.
+#[tokio::test]
+async fn only_a_place_of_this_account_may_copy_here() {
+    let volume = super::test_support::make_test_volume(Some("photos"));
+    let sibling = super::test_support::make_test_volume(Some("archive"));
+    assert!(volume.may_copy_on_server_from(&volume));
+    assert!(
+        volume.may_copy_on_server_from(&sibling),
+        "a sibling place of one account"
+    );
+    assert!(!volume.may_copy_on_server_from(&InMemoryVolume::new("elsewhere")));
+}
+
 /// One `#[tokio::test]` per fixture for each cell, `#[ignore]`d for the shared
 /// fixture lane.
 macro_rules! on_both_fixtures {

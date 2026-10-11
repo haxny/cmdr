@@ -302,6 +302,10 @@ impl Volume for WebdavVolume {
         Box::pin(self.noting(self.copy_within_impl(from, to, on_progress)))
     }
 
+    fn supports_copy_within(&self) -> bool {
+        true
+    }
+
     // ── Lifecycle ────────────────────────────────────────────────────
 
     fn retirement(&self) -> Option<&Retirement> {

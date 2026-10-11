@@ -808,6 +808,12 @@ the window. Without it a folder copy's row read `spawned` for the whole walk, so
 like a task that had never started. It is a WORKING phase, so `wait_reason()` is `None` (the level waits on source and
 destination in turn, and naming either would be a guess) and `is_abortable_on_stall()` is false.
 
+**`TaskPhase::CopyingOnServer`** (label `"copying-on-server"`) covers a server-side copy, from its stage to its cleanup
+(`volume/server_side_copy.rs`). It used to report `Streaming` with `0/0` bytes, so a dump couldn't tell a task stuck
+there from one stuck mid-stream (ERR-PTRGY). It waits on `Destination`, the server doing the copy. It is NOT abortable
+on a stall: a one-call copy (SFTP's `copy-data`) moves no counted byte from start to end, so stillness proves nothing,
+and only an SMB end can prove a connection dead while no SMB pair copies on the server.
+
 NOT registered, on purpose: the same-volume move (`volume/move_same.rs` + `rename_merge.rs`) is a rename, so it streams
 no bytes and has no wedge of this shape; and the local-FS copy, delete, and trash keep no in-flight table at all, which
 `WriteOperationState::activity` handles by falling back to its own pause gate and conflict slot. Pinned by
@@ -989,7 +995,8 @@ take this long, an 8 MiB MTP window needs USB at 45 KB/s.
 
 - **Per-task, not per-operation.** A batch where any task still moves bytes leaves every other task's clock running on
   its own merits.
-- **Only `OpeningSource` / `Streaming`** (`TaskPhase::is_abortable_on_stall`). Every park is deliberate and
+- **Only `OpeningSource` / `Streaming`** (`TaskPhase::is_abortable_on_stall`; `CopyingOnServer` is reported only, see
+  its paragraph above). Every park is deliberate and
   self-limiting — a pause ends when the user resumes, a source yield when foreground drains, a destination yield at its
   hard cap, a conflict when the human answers, a backoff on its timer — so aborting one would break something working
   as designed. A deliberate park also RESTARTS the clock, so parked seconds are never charged to the budget.

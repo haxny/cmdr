@@ -141,6 +141,21 @@ async fn export_matches_the_bytes_offered() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn copy_within_matches_what_is_offered() {
+    let (_server, volume) = seeded().await;
+    volume
+        .create_file(&fixture_path("/sdcard/original.txt"), b"copied on the device")
+        .await
+        .expect("seed the source");
+    conformance::assert_copy_within_matches_what_is_offered(
+        volume.as_ref(),
+        &fixture_path("/sdcard/original.txt"),
+        &fixture_path("/sdcard/duplicate.txt"),
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn not_found_carries_the_path() {
     let (_server, volume) = seeded().await;
     conformance::assert_not_found_carries_the_path(volume.as_ref(), &fixture_path("/sdcard/no-such-file.txt")).await;

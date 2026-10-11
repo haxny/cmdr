@@ -1799,6 +1799,10 @@ pub trait Volume: Send + Sync {
     /// that as "do it the ordinary way" rather than as a failure: every backend
     /// answers it today, and a server that simply lacks the extension answers it
     /// at runtime.
+    ///
+    /// ❗ A backend that implements this also answers
+    /// [`supports_copy_within`](Self::supports_copy_within), or the engine never
+    /// asks it.
     fn copy_within<'a>(
         &'a self,
         from: &'a Path,
@@ -1827,8 +1831,9 @@ pub trait Volume: Send + Sync {
     /// answering [`VolumeError::Cancelled`].
     ///
     /// `NotSupported` means "stream it instead", never a failure. Default:
-    /// [`copy_within`](Self::copy_within) when `source` is this very volume
-    /// and `mode` is `CreateOrReplace` (its contract truncates), else
+    /// [`copy_within`](Self::copy_within) when
+    /// [`may_copy_on_server_from`](Self::may_copy_on_server_from) holds and
+    /// `mode` is `CreateOrReplace` (its contract truncates), else
     /// `NotSupported`.
     fn copy_on_server<'a>(
         &'a self,
@@ -1839,12 +1844,38 @@ pub trait Volume: Send + Sync {
         progress: &'a dyn ServerCopyProgress,
     ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            if mode.refuses_occupied() || !std::ptr::addr_eq(self as *const Self, source as *const dyn Volume) {
+            if mode.refuses_occupied() || !self.may_copy_on_server_from(source) {
                 return Err(VolumeError::NotSupported);
             }
             self.copy_within(from, to, &|done, total| progress.advanced(done, total))
                 .await
         })
+    }
+
+    /// Whether [`copy_within`](Self::copy_within) is implemented here at all.
+    /// Default `false`.
+    ///
+    /// A claim about the BACKEND: a server without the extension still answers
+    /// `true` and refuses at runtime, which costs one wasted question per file.
+    fn supports_copy_within(&self) -> bool {
+        false
+    }
+
+    /// Whether [`copy_on_server`](Self::copy_on_server) from `source` CAN
+    /// succeed, asked before the engine stages anything for it. `false` means it
+    /// would certainly answer `NotSupported`; `true` means "ask", and it may
+    /// still say no (a server lacking the extension, a provider that copies
+    /// within one bucket only).
+    ///
+    /// ❗ No request and no I/O: it runs on an async worker, on the per-file hot
+    /// path of every cross-volume copy. And ❌ a false `false` silently loses the fast path,
+    /// so a backend that overrides `copy_on_server` overrides this too, from the
+    /// same concrete-type-and-identity test, ❌ never a path.
+    ///
+    /// Default: `source` is this very volume instance and it
+    /// [`supports_copy_within`](Self::supports_copy_within).
+    fn may_copy_on_server_from(&self, source: &dyn Volume) -> bool {
+        self.supports_copy_within() && std::ptr::addr_eq(self as *const Self, source as *const dyn Volume)
     }
 }
 

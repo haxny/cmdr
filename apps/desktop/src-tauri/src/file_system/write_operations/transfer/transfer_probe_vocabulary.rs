@@ -46,6 +46,13 @@ pub enum TaskPhase {
     /// perfectly healthy transfer read as a task that had never started
     /// (`ERR-AYVM4`, 54 s in).
     Walking = 9,
+    /// Inside `Volume::copy_on_server`: the destination's server is copying the
+    /// file for itself, so no byte crosses this Mac and the row's counters move
+    /// only as the backend reports (between an S3 copy's parts; never, for
+    /// SFTP's one-call `copy-data`). Named apart from `Streaming` because a dump
+    /// of a copy stuck here has to say so, not read `streaming 0/0`
+    /// (ERR-PTRGY).
+    CopyingOnServer = 10,
 }
 
 impl TaskPhase {
@@ -61,6 +68,7 @@ impl TaskPhase {
             Self::ResolvingConflict => "resolving-conflict",
             Self::WaitingToRetry => "waiting-to-retry",
             Self::Walking => "walking",
+            Self::CopyingOnServer => "copying-on-server",
         }
     }
 
@@ -80,6 +88,9 @@ impl TaskPhase {
             // stopped moving" about a NAS that was busy (ERR-CNK7M).
             Self::OpeningSource => Some(TransferWaitReason::Source),
             Self::ResolvingConflict => Some(TransferWaitReason::Conflict),
+            // The destination was handed the whole file and is copying it on
+            // its own server: it's the one being waited on.
+            Self::CopyingOnServer => Some(TransferWaitReason::Destination),
             Self::Spawned
             | Self::Streaming
             | Self::ParkedPause
@@ -103,6 +114,12 @@ impl TaskPhase {
     /// resumes, a yield when foreground drains (and the destination yield is
     /// hard-capped), a conflict when the human answers, a retry backoff on its own
     /// timer — so aborting one would break something that was working as designed.
+    ///
+    /// ❌ Not [`Self::CopyingOnServer`], though it is a backend call too. Stillness
+    /// is no evidence there: a one-call copy (SFTP's `copy-data`) moves no counted
+    /// byte from its first second to its last. And only an SMB end can prove a
+    /// connection dead, while no SMB pair copies on the server. Reported, never
+    /// acted on.
     pub(super) const fn is_abortable_on_stall(self) -> bool {
         matches!(self, Self::OpeningSource | Self::Streaming)
     }
@@ -118,6 +135,7 @@ impl TaskPhase {
             7 => Self::ResolvingConflict,
             8 => Self::WaitingToRetry,
             9 => Self::Walking,
+            10 => Self::CopyingOnServer,
             _ => Self::Spawned,
         }
     }

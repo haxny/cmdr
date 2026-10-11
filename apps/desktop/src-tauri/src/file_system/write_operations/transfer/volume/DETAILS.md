@@ -562,6 +562,21 @@ copies between any places of one account (`crates/cmdr-s3/DETAILS.md` § "Server
 a path that belongs to a DIFFERENT server is not a failure; on one that holds a same-named file it is the wrong file,
 copied silently. So the engine never decides it from paths or ids; it hands over both volumes and takes the answer.
 
+**Nothing is staged for a pair that can't copy on the server.** `try_server_side_copy` first asks
+`Volume::may_copy_on_server_from(source)`, a pure predicate from the same concrete-type-and-identity test (default: the
+very same instance, on a backend that `supports_copy_within`; S3: any place of its account). `false` returns
+`Ok(None)` before the stage. That's nearly every transfer: anything to or from a local disk, SMB, or MTP. **Why**:
+asking every pair cost a stage, two persisted ledger records, and a delete of a temp nobody wrote, per file, all on the
+async worker. In ERR-PTRGY (an SMB-to-local move of 44 PDFs, Cmdr 0.50.0) one of those per-file deletes sat for 100 s
+before its `stat` returned, under `streaming 0/0` with no stall verdict possible. The root cause of that 100 s is NOT
+confirmed: the bundle shows the `stat` of the never-written temp returning at 12:55:19.982 and nothing else, every
+ledger and staging lock is held only for in-memory work plus one local append, and the destination sat in a
+cloud-synced folder while the NAS was slow. The step is gone for that pair either way, and `TaskPhase::CopyingOnServer`
+plus a debug line per sub-step (asking, the answer with its elapsed time, the cleared stage) make the next one
+readable. Pinned by `strategy_server_side_copy_tests.rs::a_destination_that_cannot_copy_from_the_source_stages_nothing_for_it`
+and the cross-backend `conformance::assert_copy_within_matches_what_is_offered`, which catches a backend that
+implements `copy_within` but forgets `supports_copy_within` (the engine would then never ask it).
+
 **`Ok(None)` means "do it the ordinary way"**, and that is the answer for everything except a clean success, a cancel,
 and a taken name:
 
@@ -588,7 +603,8 @@ while the parts already in flight finish. A backend that copies in one call (SFT
 its pause lands at the next file, bounded by the walk above: `merge_level` parks per entry (§ "Pause in the volume
 walks"), at most the operation's `FileWindow` width of leaves still finishing.
 
-Cells: `strategy_server_side_copy_tests.rs` (who's asked, the fallback, staging, the final-name copy on a whole-publish
+Cells: `strategy_server_side_copy_tests.rs` (who's asked, a pair that's never asked staging nothing, the probe phase,
+the fallback, staging, the final-name copy on a whole-publish
 destination, a sibling place of one account, cancel, and the checkpoint parking a paused copy) with counting doubles;
 `crates/cmdr-sftp/src/volume/copy_test.rs` and `crates/cmdr-s3/src/volume/copy_test.rs` for what real servers do;
 `backend_suites/s3_rename_integration_test.rs` for a cross-bucket copy through the engine, on the server or streamed.

@@ -271,6 +271,19 @@ pub(super) struct CopyFrom<'a> {
 }
 
 impl S3Volume {
+    /// `source` as a place this server can copy from: a place of this same
+    /// account (endpoint and key id), this one included. The one test both
+    /// `copy_on_server` and `may_copy_on_server_from` ask.
+    ///
+    /// ❗ One account, because a copy names its source by bucket and key, which
+    /// mean something else on another account.
+    pub(super) fn same_account_peer<'s>(&self, source: &'s dyn Volume) -> Option<&'s S3Volume> {
+        source
+            .as_any()
+            .downcast_ref::<S3Volume>()
+            .filter(|peer| peer.inner.account() == self.inner.account())
+    }
+
     /// The engine's server-side copy: `from` on `source` to `to` here, when
     /// `source` is a place of this same account and the provider can copy
     /// between the two buckets. `NotSupported` sends the engine to streaming.
@@ -282,14 +295,9 @@ impl S3Volume {
         mode: WriteMode,
         progress: &dyn ServerCopyProgress,
     ) -> Result<u64, VolumeError> {
-        let Some(peer) = source.as_any().downcast_ref::<S3Volume>() else {
+        let Some(peer) = self.same_account_peer(source) else {
             return Err(VolumeError::NotSupported);
         };
-        // ❗ One account (endpoint and key id): a copy names its source by
-        // bucket and key, which mean something else on another account.
-        if peer.inner.account() != self.inner.account() {
-            return Err(VolumeError::NotSupported);
-        }
         let from_remote = peer.to_remote_path(from)?;
         let to_remote = self.to_remote_path(to)?;
         let (

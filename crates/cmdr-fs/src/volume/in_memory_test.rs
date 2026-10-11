@@ -393,6 +393,21 @@ async fn export_honors_the_shared_handshake_contract() {
     conformance::assert_export_matches_the_bytes_offered(&volume, Path::new("/exported.txt"), content).await;
 }
 
+/// The shared server-side-copy handshake: the double copies nothing on a
+/// server, so it claims nothing and answers `NotSupported`.
+#[tokio::test]
+async fn copy_within_honors_the_shared_handshake_contract() {
+    let volume = InMemoryVolume::new("Test");
+    volume.create_file(Path::new("/original.txt"), b"bytes").await.unwrap();
+
+    conformance::assert_copy_within_matches_what_is_offered(
+        &volume,
+        Path::new("/original.txt"),
+        Path::new("/duplicate.txt"),
+    )
+    .await;
+}
+
 /// The shared `NotFound`-payload assertion. The double is the oracle every other
 /// backend's fixtures are compared against, so it owes the payload too.
 #[tokio::test]

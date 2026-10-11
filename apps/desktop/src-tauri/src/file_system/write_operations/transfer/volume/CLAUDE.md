@@ -33,8 +33,8 @@ Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive). File map: `DE
 - **What a file carries rides its stream** (`VolumeReadStream::metadata`); the DESTINATION puts it on the temp. ❌ No
   engine-side `chmod` or xattr write; wrappers forward `metadata`. Extract quarantine: a stream decorator, and folders
   at creation, ❌ never in `folder_metadata.rs`. § "Copies keep the source's metadata".
-- **Every file copy asks `Volume::copy_on_server` first**; the BACKEND picks its sources, ❌ never a path. Staged unless
-  whole-publish; anything but a cancel or a taken name falls back to streaming.
+- **Every file copy asks `may_copy_on_server_from`, then `copy_on_server`**: the BACKEND picks, ❌ never by path, ❌
+  nothing stages before a yes. All but a cancel or a taken name falls back to streaming.
 - **A same-volume move whose `rename_work` says copy takes the copy-then-delete engine**, ❌ never `rename`.
 - **A staged temp the destination won't release is REPORTED** (`CancelRollback::staged_leftovers`), ❌ not just
   logged.

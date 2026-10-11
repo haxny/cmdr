@@ -497,6 +497,12 @@ protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-da
   (`as_any().downcast_ref`), ❌ never a path: two S3 places of one account are two instances that can copy between them,
   while a copy on a server the source path doesn't belong to copies the wrong file, silently. The default answers only
   for the very same instance (`std::ptr::addr_eq`), through `copy_within`.
+- ❗ **`may_copy_on_server_from(source)` is the same test as a pure predicate**, asked before the engine stages anything
+  (ERR-PTRGY: asking every pair cost a stage and a delete per file). `false` means `copy_on_server` would certainly say
+  `NotSupported`; `true` only means "ask". Default: the same instance, on a backend that `supports_copy_within` (SFTP,
+  WebDAV, ADB); S3 overrides both from one helper (`same_account_peer`). A backend that overrides `copy_on_server`
+  overrides this too, or the engine never asks it; `conformance::assert_copy_within_matches_what_is_offered` catches the
+  `copy_within` half of that.
 - **`NotSupported` means "stream it"**, never a failure: a backend with no such operation, a server lacking the
   extension, or a source it doesn't recognize.
 - **`to` is written under `mode`, as `write_from_stream` writes it.** A whole-publishing backend
@@ -508,8 +514,8 @@ protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-da
   partial, then answers `Cancelled`), and `checkpoint` is where a backend that copies in pieces (S3's parts) waits out a
   pause before starting each one.
 
-**`Volume::copy_within(from, to, on_progress)`** is the older, same-volume-only form that SFTP and ADB implement; the
-default `copy_on_server` calls it, so they need nothing more.
+**`Volume::copy_within(from, to, on_progress)`** is the older, same-volume-only form that SFTP, WebDAV, and ADB
+implement; the default `copy_on_server` calls it, so they need nothing more than `supports_copy_within() == true`.
 
 **`Volume::rename_work(path)`** answers whether renaming one ENTRY is one call (`RenameWork::OneCall`, the default, with
 no I/O) or a copy plus a delete (`CopyThenDelete`: an object store's folder or big file). Every `rename` caller asks it

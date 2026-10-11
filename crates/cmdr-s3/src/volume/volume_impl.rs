@@ -365,6 +365,13 @@ impl Volume for S3Volume {
         Box::pin(self.noting(self.copy_on_server_impl(source, from, to, mode, progress)))
     }
 
+    /// Any place of this account. Whether the provider copies between the two
+    /// buckets is decided per file, since a place at the account root has no
+    /// bucket of its own to compare.
+    fn may_copy_on_server_from(&self, source: &dyn Volume) -> bool {
+        self.same_account_peer(source).is_some()
+    }
+
     /// ❗ No watcher, so this patch is what keeps a pane honest after a copy.
     fn notify_mutation<'a>(
         &'a self,

@@ -374,6 +374,12 @@ impl Volume for SftpVolume {
         Box::pin(self.noting(self.copy_within_impl(from, to, on_progress)))
     }
 
+    /// Whether the server has `copy-data` is only known per session, so this
+    /// says "ask" and `copy_within` answers for the server.
+    fn supports_copy_within(&self) -> bool {
+        true
+    }
+
     // ── Lifecycle ────────────────────────────────────────────────────
 
     /// ❗ Published because the reconnect loop outlives the call that started it,

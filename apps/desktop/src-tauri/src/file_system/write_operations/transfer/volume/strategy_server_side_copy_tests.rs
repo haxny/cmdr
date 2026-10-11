@@ -122,6 +122,10 @@ impl Volume for ServerCopyVolume {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
 
+    fn supports_copy_within(&self) -> bool {
+        true
+    }
+
     fn copy_within<'a>(
         &'a self,
         from: &'a Path,
@@ -345,6 +349,14 @@ impl StorePlace {
     fn copies(&self) -> Vec<(std::path::PathBuf, WriteMode)> {
         self.copies.lock().expect("test lock").clone()
     }
+
+    /// `source` as a place of this account, the way `S3Volume` matches one.
+    fn same_account_peer<'s>(&self, source: &'s dyn Volume) -> Option<&'s StorePlace> {
+        source
+            .as_any()
+            .downcast_ref::<StorePlace>()
+            .filter(|peer| peer.account == self.account)
+    }
 }
 
 impl Volume for StorePlace {
@@ -395,6 +407,10 @@ impl Volume for StorePlace {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
 
+    fn may_copy_on_server_from(&self, source: &dyn Volume) -> bool {
+        self.same_account_peer(source).is_some()
+    }
+
     fn copy_on_server<'a>(
         &'a self,
         source: &'a dyn Volume,
@@ -404,12 +420,9 @@ impl Volume for StorePlace {
         progress: &'a dyn ServerCopyProgress,
     ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            let Some(peer) = source.as_any().downcast_ref::<StorePlace>() else {
+            let Some(peer) = self.same_account_peer(source) else {
                 return Err(VolumeError::NotSupported);
             };
-            if peer.account != self.account {
-                return Err(VolumeError::NotSupported);
-            }
             self.copies.lock().expect("test lock").push((to.to_path_buf(), mode));
             if progress.checkpoint().await.is_break() {
                 return Err(VolumeError::Cancelled(to.display().to_string()));
@@ -516,6 +529,155 @@ async fn a_paused_server_side_copy_parks_at_its_checkpoint() {
     state.pause_gate.resume();
     task.await.unwrap().unwrap();
     assert!(place.inner.exists(Path::new("b.bin")).await);
+}
+
+/// An ordinary destination (a local disk, an SMB share) that counts every
+/// server-side copy it's offered and every delete it's asked for.
+///
+/// The deletes are the tell: a server-copy attempt that stages and then hears
+/// `NotSupported` deletes the temp it never wrote, once per file.
+struct PlainDest {
+    inner: Arc<InMemoryVolume>,
+    offered: AtomicUsize,
+    deletes: AtomicUsize,
+}
+
+impl PlainDest {
+    fn new(name: &str) -> Arc<Self> {
+        Arc::new(Self {
+            inner: Arc::new(InMemoryVolume::new(name)),
+            offered: AtomicUsize::new(0),
+            deletes: AtomicUsize::new(0),
+        })
+    }
+}
+
+impl Volume for PlainDest {
+    forward_volume_methods!(
+        inner => name,
+        root,
+        lane_key,
+        exists,
+        get_space_info,
+        local_path,
+        supports_streaming,
+        supports_export,
+        supports_local_fs_access,
+        operations_are_local,
+        max_concurrent_ops,
+        create_directory_errors_on_existing_dir,
+        scan_for_copy,
+        scan_for_copy_batch,
+        scan_for_conflicts,
+        supports_unknown_length_writes, write_is_single_shot,
+        list_directory,
+        get_metadata,
+        is_directory,
+        create_file,
+        create_directory,
+        rename,
+        open_read_stream,
+        write_from_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn is_writable(&self) -> bool {
+        true
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.deletes.fetch_add(1, Ordering::SeqCst);
+        self.inner.delete(path)
+    }
+
+    fn copy_on_server<'a>(
+        &'a self,
+        source: &'a dyn Volume,
+        from: &'a Path,
+        to: &'a Path,
+        mode: WriteMode,
+        progress: &'a dyn ServerCopyProgress,
+    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+        self.offered.fetch_add(1, Ordering::SeqCst);
+        self.inner.copy_on_server(source, from, to, mode, progress)
+    }
+}
+
+/// ❗ ERR-PTRGY: a destination that can't copy from this source is never
+/// offered the copy, so nothing is staged for it and nothing is deleted after.
+///
+/// An SMB-to-local move used to stage a temp, record it in the persisted
+/// ledger, hear `NotSupported`, and delete the temp it never wrote, for every
+/// file. One of those per-file deletes is where a user's move sat for 100 s.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_destination_that_cannot_copy_from_the_source_stages_nothing_for_it() {
+    let source = Arc::new(InMemoryVolume::new("nas"));
+    source.create_file(Path::new("scan.pdf"), b"pages").await.unwrap();
+    let dest = PlainDest::new("mac");
+    let source_volume: Arc<dyn Volume> = source;
+    let dest_volume: Arc<dyn Volume> = dest.clone();
+    let state = make_state();
+
+    let bytes = pipe(&source_volume, &dest_volume, &state, "scan.pdf", "scan.pdf")
+        .await
+        .unwrap();
+
+    assert_eq!(bytes, 5);
+    assert_eq!(dest.offered.load(Ordering::SeqCst), 0, "the copy was never offered");
+    assert_eq!(
+        dest.deletes.load(Ordering::SeqCst),
+        0,
+        "and no temp was staged for it, so none was deleted"
+    );
+    assert!(dest.inner.exists(Path::new("scan.pdf")).await);
+}
+
+/// A server-side copy reads as itself in the transfer probe, never as
+/// `streaming 0/0`: a dump of a copy stuck there has to say where it is.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_server_side_copy_names_its_own_phase_in_the_probe() {
+    use super::super::super::transfer_probe::{self, TaskRole, TaskRow};
+    use crate::file_system::write_operations::test_support::TestOperationGuard;
+
+    let place = StorePlace::new("bucket", "acct-1");
+    place.inner.create_file(Path::new("a.bin"), b"0123").await.unwrap();
+    let as_volume: Arc<dyn Volume> = place.clone();
+    let guard = TestOperationGuard::register_state("server-copy-phase", make_state());
+    let state = Arc::clone(guard.state());
+    let op_probe = transfer_probe::register_operation(
+        guard.id(),
+        1,
+        1,
+        transfer_probe::TransferEnds::none(),
+        Arc::clone(&state),
+        Arc::new(crate::file_system::write_operations::event_sinks::CollectorEventSink::new()),
+    );
+    let task_probe = op_probe
+        .probe()
+        .begin_task(TaskRow::source(0), TaskRole::File, "a.bin", "b.bin");
+    // Parked at the copy's checkpoint, so the dump is read mid-copy.
+    state.pause_gate.pause();
+
+    let task = {
+        let as_volume = Arc::clone(&as_volume);
+        let state = Arc::clone(&state);
+        let handle = task_probe.probe();
+        tokio::spawn(transfer_probe::CURRENT_TASK_PROBE.scope(handle, async move {
+            pipe(&as_volume, &as_volume, &state, "a.bin", "b.bin").await
+        }))
+    };
+    crate::test_support::wait_until_async(Duration::from_secs(5), "the copy to reach its checkpoint", || {
+        !place.copies().is_empty()
+    })
+    .await;
+
+    let dump = op_probe.probe().render_dump("test");
+    assert!(dump.contains("copying-on-server"), "{dump}");
+    state.pause_gate.resume();
+    task.await.unwrap().unwrap();
 }
 
 /// A `ListingProgress` import keeps the forwarding macro's signatures nameable.

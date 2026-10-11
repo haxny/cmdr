@@ -251,6 +251,18 @@ async fn export_matches_the_bytes_offered() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
+async fn copy_within_matches_what_is_offered() {
+    let (volume, dir) = stock_server_with_scratch().await;
+    let from = dir.join("original.txt");
+    volume.create_file(&from, b"copied on the server").await.expect(FIXTURE);
+
+    conformance::assert_copy_within_matches_what_is_offered(&volume, &from, &dir.join("duplicate.txt")).await;
+
+    clean(&volume, &dir).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
 async fn not_found_carries_the_path() {
     // A 404 carries Apache's own HTML page and no path, and that is what the
     // frontend would render as the missing file's name unless the mapper puts

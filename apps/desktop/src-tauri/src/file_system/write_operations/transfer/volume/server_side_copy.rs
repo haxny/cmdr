@@ -7,6 +7,7 @@ use std::ops::ControlFlow;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Instant;
 
 use super::super::super::state::{WriteOperationState, is_cancelled};
 use super::super::recovered_name::FinalizeFailure;
@@ -21,6 +22,12 @@ use crate::file_system::volume::{ServerCopyProgress, Volume, VolumeError};
 /// `Ok(None)` means "do it the ordinary way", and that is the answer for
 /// everything except a clean success, a genuine cancel, and a refused name:
 ///
+/// - **A pair that can't copy on the server at all**
+///   (`Volume::may_copy_on_server_from`), answered before anything is staged.
+///   That's nearly every transfer (anything to or from a local disk, SMB, or
+///   MTP), and an attempt costs a stage, two ledger records, and a delete of a
+///   temp nobody wrote, per file. One of those deletes is where a user's
+///   SMB-to-local move sat for 100 s (ERR-PTRGY).
 /// - **`NotSupported`**, from a backend with no server-side copy, one whose
 ///   server lacks the extension, or one that doesn't recognize `source` as a
 ///   place it can copy from. ❗ That last decision is the BACKEND's, from the
@@ -59,12 +66,25 @@ pub(super) async fn try_server_side_copy(
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
 ) -> Result<Option<u64>, FinalizeFailure> {
+    if !dest_volume.may_copy_on_server_from(source_volume.as_ref()) {
+        return Ok(None);
+    }
+    // Before the stage, so a dump of a task stuck anywhere in here names this
+    // step and never reads as `streaming 0/0`.
+    set_task_phase(TaskPhase::CopyingOnServer);
+    set_task_bytes(0, 0);
+    let started = Instant::now();
     // ❌ Never the single-shot answer: only whole-publish holds for a copy.
     let staging = resolve_staging(staging, dest_volume.publishes_writes_whole());
     let staged = StagedWrite::begin(state, dest_path, staging);
     note_pending_for_local_dest(dest_volume, staged.target());
-    set_task_phase(TaskPhase::Streaming);
-    set_task_bytes(0, 0);
+    log::debug!(
+        target: "copy",
+        "try_server_side_copy: asking {} to copy {} on the server, into {}",
+        dest_volume.name(),
+        source_path.display(),
+        staged.target().display(),
+    );
     let progress = EngineCopyProgress {
         state,
         on_file_progress,
@@ -85,6 +105,17 @@ pub(super) async fn try_server_side_copy(
             &progress,
         ) => result,
     };
+    log::debug!(
+        target: "copy",
+        "try_server_side_copy: {} answered for {} after {:?}: {}",
+        dest_volume.name(),
+        dest_path.display(),
+        started.elapsed(),
+        match &outcome {
+            Ok(bytes) => format!("done, size {bytes}"),
+            Err(e) => e.to_string(),
+        },
+    );
 
     match outcome {
         Ok(bytes) => {
@@ -103,18 +134,15 @@ pub(super) async fn try_server_side_copy(
             staged.abandon(dest_volume).await;
             Err(e.into())
         }
-        Err(VolumeError::NotSupported) => {
+        // `NotSupported` or a real failure; the answer above already logged which.
+        Err(_) => {
             staged.abandon_attempt(dest_volume).await;
-            Ok(None)
-        }
-        Err(e) => {
             log::debug!(
                 target: "copy",
-                "try_server_side_copy: {} couldn't copy {} on the server ({e}); streaming it instead",
-                dest_volume.name(),
+                "try_server_side_copy: cleared the stage for {} after {:?}; streaming it instead",
                 dest_path.display(),
+                started.elapsed(),
             );
-            staged.abandon_attempt(dest_volume).await;
             Ok(None)
         }
     }

@@ -279,6 +279,24 @@ async fn export_honors_the_shared_handshake_contract() {
         .await;
 }
 
+/// The shared server-side-copy handshake: a local disk has no server to copy
+/// for it, so LocalPosix claims nothing and answers `NotSupported`. That `false`
+/// is what keeps every local-destination transfer from staging a server-side
+/// copy per file (ERR-PTRGY).
+#[tokio::test]
+async fn copy_within_honors_the_shared_handshake_contract() {
+    let test_dir = TestDir::new("copy_within_handshake_conformance_test");
+    let volume = LocalPosixVolume::local_folder("Test", &*test_dir);
+    volume.create_file(Path::new("original.txt"), b"bytes").await.unwrap();
+
+    cmdr_fs::volume::conformance::assert_copy_within_matches_what_is_offered(
+        &volume,
+        Path::new("original.txt"),
+        Path::new("duplicate.txt"),
+    )
+    .await;
+}
+
 /// The shared `NotFound`-payload assertion: the string the frontend renders as
 /// the missing file's name really is its path.
 ///

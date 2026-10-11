@@ -295,6 +295,10 @@ impl Volume for AdbVolume {
         Box::pin(self.noting(self.copy_within_impl(from, to, on_progress)))
     }
 
+    fn supports_copy_within(&self) -> bool {
+        true
+    }
+
     /// ❗ No watcher here, so this patch is the ONLY thing that keeps a
     /// destination pane honest after a copy.
     fn notify_mutation<'a>(

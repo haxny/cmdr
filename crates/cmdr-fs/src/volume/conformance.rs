@@ -437,6 +437,46 @@ pub async fn assert_writability_matches_the_mutations_offered(volume: &dyn Volum
     }
 }
 
+/// [`Volume::supports_copy_within`] answers for what
+/// [`Volume::copy_within`] does: a backend whose server copied `from` to `to`
+/// claims it, and one that doesn't claim it answers `NotSupported`.
+///
+/// `from` must already exist on `volume` and `to` must not; a copy that lands is
+/// deleted again afterwards.
+///
+/// **Why this one is worth a shared assertion.** The engine asks
+/// `may_copy_on_server_from` before it stages anything for a server-side copy,
+/// and the default reads `supports_copy_within` (ERR-PTRGY: asking every pair
+/// cost a stage and a delete per file). So a backend that implements
+/// `copy_within` and forgets the predicate is never asked again: every copy
+/// inside one server goes down the link and back up, with no failing method and
+/// no log line to find it by. A server without the extension still passes, by
+/// answering `NotSupported`.
+pub async fn assert_copy_within_matches_what_is_offered(volume: &dyn Volume, from: &Path, to: &Path) {
+    let copied = volume
+        .copy_within(from, to, &|_, _| std::ops::ControlFlow::Continue(()))
+        .await;
+    match copied {
+        Ok(_) => {
+            assert!(
+                volume.supports_copy_within(),
+                "{} copied {} on the server, so it must say `supports_copy_within()`, or the engine never asks it",
+                volume.name(),
+                from.display(),
+            );
+            volume
+                .delete(to)
+                .await
+                .unwrap_or_else(|e| panic!("cleanup: {} must delete the copy it made: {e:?}", volume.name()));
+        }
+        Err(VolumeError::NotSupported) => {}
+        Err(e) => panic!(
+            "{} answered `copy_within` with {e:?}: one that claims it must copy, and one that doesn't must say `NotSupported`",
+            volume.name(),
+        ),
+    }
+}
+
 /// [`Volume::supports_export`] answers for the bytes the backend actually hands
 /// out, in whichever direction it claims — and
 /// [`Volume::supports_streaming`] agrees with it.
