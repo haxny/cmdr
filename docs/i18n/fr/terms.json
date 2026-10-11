@@ -300,7 +300,7 @@
     "accept": ["renommage en masse", "Renommer par lot"],
     "confidence": "high",
     "forms": "batch rename (noun) → renommage par lot; the Multi-Rename Tool's command, menu item and sheet title (infinitive label) → Renommer par lot (Renommer par lot… in the File menu); mass-rename → renommage en masse",
-    "sources": "Double Commander (tfrmmultirename.caption \"Multi-Rename Tool\" → \"Renommer par lot\"); Total Commander (WCMD.INC 2400 \"Renommer par lots\", WCMD.LNG 6601 \"Outil *Renommer par lots*\", WCMD.MNU \"Outil Renommer (par lots)\"); catalog (interface de renommage par lot)"
+    "sources": "Double Commander (tfrmmultirename.caption \"Multi-Rename Tool\" → \"Renommer par lot\"); Total Commander WCMD.INC 2400 \"Outil spécial “Renommer par lots”\" (the pile's fr WCMD.LNG is truncated at 377 lines with no 66xx ids and it has no WCMD.MNU, so the earlier 6601 and MNU citations can't be verified, 2026-10-11); catalog (interface de renommage par lot)"
   },
   "binary-view": {
     "chosen": "Binaire",
@@ -438,8 +438,8 @@
     "chosen": "casse",
     "accept": ["majuscules", "minuscules", "majuscule", "minuscule"],
     "confidence": "high",
-    "forms": "setting labels follow macOS (Sensible à la casse, Respecter la casse); an explanatory sentence says majuscules et minuscules, since casse is typographic jargon; letter-case menu options → Première lettre en majuscule, minuscules, MAJUSCULES (TC 6611)",
-    "sources": "macOS (\"Sensible à la casse\"); Total Commander WCMD.LNG 6611 (\"1° lettre en majuscule\", \"Tout en MAJUSCULES\")"
+    "forms": "setting labels follow macOS (Sensible à la casse, Respecter la casse); an explanatory sentence says majuscules et minuscules, since casse is typographic jargon; letter-case menu options → Première lettre en majuscule, minuscules, MAJUSCULES",
+    "sources": "macOS (\"Sensible à la casse\"); Double Commander (tfrmmultirename.cbcasesens.hint Sensibilité à la casse; ulng.rsmulrenfilenamestylelist Pas de changement;MAJUSCULE;minuscule;Premier caractère majuscule;…). The TC 6611 citation (\"1° lettre en majuscule\") can't be verified: the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
   },
   "certificate": {
     "chosen": "certificat",
@@ -3496,24 +3496,25 @@
     "accept": ["masque"],
     "confidence": "high",
     "forms": "Name mask → Masque de nom; the extension field stays Extension",
-    "sources": "Total Commander WCMD.LNG 6602 « Masque p.renom. : nom fichier »; Double Commander (« Masque »)"
+    "sources": "Double Commander (tfrmmultirename.gbmaska « Masque »); MS terminology (mask → masque). The TC 6602 citation (« Masque p.renom. : nom fichier ») can't be verified: the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
   },
   "rename-counter": {
     "chosen": "compteur",
     "confidence": "high",
     "forms": "Edit counter → Modifier le compteur; the counter popover's fields → Début, Pas, Chiffres (the popover title Compteur already names the counter, so Start drops « du compteur »); its preview line → Donne 1, 3, 5…, affichés sous la forme 001, 003, 005",
-    "sources": "Total Commander WCMD.LNG 6605 « [C] Compteur », 6617-6619 (« Partir de : », « Par pas de : », « Chiffres : »); Double Commander (« Compteur »); macOS Finder BulkRenameWindow (« Nom et compteur »)"
+    "sources": "Double Commander (gbcounter « Compteur »); macOS Finder BulkRenameWindow (« Nom et compteur »). Pas and Chiffres rest on this ruling: DC says « Nombre de départ », « Intervalle », « Largeur », and the TC 6605 / 6617–6619 citations (« [C] Compteur », « Partir de : », « Par pas de : », « Chiffres : ») can't be verified, since the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
   },
   "diacritics": {
-    "chosen": "accents",
-    "confidence": "tentative",
-    "forms": "Remove diacritics → Retirer les accents (the checkbox, the preset, and the shortcut row quote it byte for byte)",
+    "chosen": "signes diacritiques",
+    "accept": ["diacritique"],
+    "confidence": "high",
+    "forms": "Remove diacritics → Retirer les signes diacritiques (the checkbox, the preset, and the shortcut row quote it byte for byte)",
     "avoid": [
       {
-        "form": "diacritiques",
-        "why": "correct but bookish for an everyday checkbox"
+        "form": "accents",
+        "why": "imprecise: the feature also strips the cedilla, tilde, and diaeresis (ç, ñ, ü); DC writes accents only where the English says accents"
       }
     ],
-    "sources": "catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics); reference pile not present on this machine, so not re-mined"
+    "sources": "MS terminology FRENCH.tbx (diacritic → signe diacritique); Xfce Thunar (_Match diacritics → Faire correspondre les signes diacritiques); macOS 27.0.1 CoreText FeatureTypeNames (Diacritics → Diacritiques), 2026-10-11"
   }
 }

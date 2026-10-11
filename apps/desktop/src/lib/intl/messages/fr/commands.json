@@ -416,7 +416,7 @@
   "@commands.multiRenameLetterCase.label": {
     "sourceHash": "da7409c"
   },
-  "commands.multiRenameRemoveDiacritics.label": "Activer ou désactiver « Retirer les accents »",
+  "commands.multiRenameRemoveDiacritics.label": "Activer ou désactiver « Retirer les signes diacritiques »",
   "@commands.multiRenameRemoveDiacritics.label": {
     "sourceHash": "3f5cf53"
   },

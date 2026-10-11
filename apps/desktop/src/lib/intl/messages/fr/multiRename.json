@@ -84,7 +84,7 @@
   "@multiRename.case.words": {
     "sourceHash": "fdeb85e"
   },
-  "multiRename.removeDiacritics": "Retirer les accents",
+  "multiRename.removeDiacritics": "Retirer les signes diacritiques",
   "@multiRename.removeDiacritics": {
     "sourceHash": "4103ca1"
   },
@@ -156,7 +156,7 @@
   "@multiRename.presets.replace": {
     "sourceHash": "95e1543"
   },
-  "multiRename.preset.removeDiacritics": "Retirer les accents",
+  "multiRename.preset.removeDiacritics": "Retirer les signes diacritiques",
   "@multiRename.preset.removeDiacritics": {
     "sourceHash": "4103ca1"
   },

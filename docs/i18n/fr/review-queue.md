@@ -66,8 +66,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **The online-only delete warnings** (`fileOperations.delete.cloudOnline*`): shipped as a draft, never read by a human.
 - **The Multi-Rename Tool** (`multiRename.*`): `Initiale De Chaque Mot En Majuscule` (`case.words`, the capitals show
   the result, as in English; French has no title case, so a native should confirm it reads as a demo, not a typo);
-  `Retirer les accents` for « Remove diacritics » (covers ç, ü, ß→ss in practice, though only some of those are «
-  accents »); `Première correspondance uniquement`; `une recherche avec remplacement`
+  `Retirer les signes diacritiques` for « Remove diacritics » (MS and Thunar's term, precise for ç and ü; is it too
+  bookish for a checkbox?); `Première correspondance uniquement`; `une recherche avec remplacement`
   (`commands.fileMultiRename.description`); the counter popover's preview line
   `Donne 1, 3, 5…, affichés sous la forme 001, 003, 005` (`counterEditor.counts*`: is `Donne` natural with the counter
   as implied subject?); `# sans changement` in the footer summary (picked over `inchangé` so no agreement is needed).
