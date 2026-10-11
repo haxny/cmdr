@@ -284,35 +284,14 @@ grep -iE 'panel' hu/total-commander/WCMD.LNG.utf8        # pane → "panel" (e.g
 grep -iE 'könyvjelz|kedvenc|favorit|hotlist' hu/total-commander/WCMD.INC.utf8   # bookmark/favorites framing
 ```
 
-> [!CAUTION] **The `.utf8` suffix is true per FILE, not per language, so look before you decode.** Some TC files were
-> converted as if their bytes were windows-1252, whatever the real codepage was, and later re-extracted correctly, but
-> not all of them. In the same `zh-CN/` folder, `WCMD.LNG.utf8` is genuine UTF-8 (`6601="批量重命名工具"`) while
-> `WCMD.INC.utf8` is mojibake (`All="È«²¿"`, which is `全部`). Read a few non-ASCII lines raw first: if they read as the
-> language, use the file as-is, because the reversal below turns genuine UTF-8 into `???`. If they read like `È«²¿`,
-> `Táº¥t cáº£`, or `Âñå`, reverse it. Reading mojibake as-is and calling the term unsourced is the trap. (Verified
-> 2026-10-11, raw read plus the reversal on each file: `WCMD.LNG.utf8` reads raw for `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`,
-> `uk`, `bg`, `ar`, `he`, `th`, `sr-Cyrl`, `hu`, `pl`, `cs`, and `tr`, and is mojibake for `vi`, `ro`, `mk`, `lv`, `hy`,
-> and `ka`. `el` and `lt` carry each string twice, once genuine and once mojibake, so a grep returns both. The menu file
-> `WCMD.INC.utf8` is mojibake for every language outside windows-1252/1250, `zh-CN` and `zh-TW` included. Double
-> Commander's zh `.po` files are genuine UTF-8.) The header's `codepage=` line names the original codepage (`65001` is
-> UTF-8). To reverse a file, map the windows-1252 characters back to bytes, then decode with the real codepage:
->
-> ```js
-> // node: <tag> -> codepage. hu/pl/cs = windows-1250, ru/bg/mk = windows-1251, el = windows-1253, tr = windows-1254,
-> // lt/lv = windows-1257, zh = gbk, zh-TW = big5, ja = shift_jis, ko = euc-kr, vi/ro/hy/ka = utf-8 (UTF-8 before the
-> // bad conversion).
-> const cp = new TextDecoder('windows-1252')
-> const rev = new Map()
-> for (let b = 0; b < 256; b++) rev.set(cp.decode(Uint8Array.of(b)), b)
-> const bytes = Uint8Array.from(Array.from(text).map((c) => rev.get(c) ?? 0x3f))
-> const real = new TextDecoder(codepage).decode(bytes)
-> ```
->
-> It's **lossy** for the five bytes windows-1252 leaves undefined (`0x81`, `0x8D`, `0x8F`, `0x90`, `0x9D`), so a few
-> characters come back as `?`: `vi` loses the `ọ` in `Chọn`, `ka` a letter in most words. Enough survives to read a
-> term; don't quote a reversed TC string verbatim without checking it against another source. For `el` and `lt`, reverse
-> only the mojibake lines. Double Commander's `.po` files are genuine UTF-8 and have none of this, so prefer DC where
-> both cover the term.
+> [!CAUTION] **Every TC file is genuine UTF-8; quote only what you can grep.** An earlier decode left a third of the
+> files as mojibake or cut short (`vi`/`ro`/`ka`/`mk` garbled, `fr` truncated at ID 673, every non-windows-1252 `.INC`
+> garbled), and agents reconstructed strings from it: `vi` rulings cited TC wording that the real file doesn't contain.
+> `fetch.sh` now decodes each `.INC` with its `.LNG` sibling's codepage, treats `65001` as UTF-8, and refuses an output
+> whose line count differs from its source. (Verified 2026-10-11 by re-extracting all 48 languages and reading each
+> raw.) So if a TC line reads as garbage or an ID you expect is missing, the pile is stale or broken: re-run
+> `_extract/competitor-fetch/fetch.sh tc` rather than reversing or guessing, and never cite a TC string you didn't find
+> verbatim.
 
 To pin an English source to a TC ID, cross-reference `TOTALCMD.INC` (the English menu reference in the installer CAB);
 TC ships no English `WCMD.LNG` (English is compiled in), so there's no English-side string file to diff against — value

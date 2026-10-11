@@ -70,9 +70,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   purpose to show the result (EN `Every Word Capitalized`); `Bỏ dấu` for Remove diacritics.
 - **Counter popover** (`multiRename.counterEditor.*`): `Bước nhảy` for Step (over the earlier bare `Bước`, which the
   catalog uses for onboarding steps); `Số bắt đầu` as a noun label for Start; the preview
-  `Đếm 1, 3, 5…, hiển thị thành 001, 003, 005` (confirm `hiển thị thành` reads natural over `hiện ra là`). The reference
-  pile wasn't on the machine this batch ran on, so the counter terms rest on the TC citation already in `terms.json`
-  plus the catalog's own earlier `Bộ đếm bắt đầu từ` / `Số chữ số`.
+  `Đếm 1, 3, 5…, hiển thị thành 001, 003, 005` (confirm `hiển thị thành` reads natural over `hiện ra là`). Total
+  Commander says `Bắt đầu bởi:` / `Khoảng bước:` / `Chữ số:` (6617–6619, checked 2026-10-11), so neither label follows
+  it; they rest on the catalog's own earlier `Bộ đếm bắt đầu từ` / `Số chữ số`.
 - **Placeholder tooltips** (`multiRename.placeholderHelp.*`): `thêm số 0 ở đầu` for "with leading zeros" and
   `đưa chuột lên đó` for hovering (`counterEditHint`) have no Tier 1 or catalog source; `bước nhảy âm` for "a minus
   step".

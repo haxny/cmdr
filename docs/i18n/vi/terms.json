@@ -321,7 +321,7 @@
     "chosen": "tính toán",
     "confidence": "high",
     "forms": "Calculate folder sizes → Tính toán kích cỡ thư mục; stop the work → dừng tính toán; adding up in prose → cộng dồn",
-    "sources": "macOS Finder ViewOptionsWindow 65.title (Tính toán tất cả kích cỡ); TC 5138 Tính toán dung lượng chiếm (503 has bare Tính dung lượng)"
+    "sources": "macOS Finder ViewOptionsWindow 65.title (Tính toán tất cả kích cỡ); TC 503 Tính toán khoảng trống, 5138 Tính toán khoảng trống bị chiếm giữ bởi các thư mục con"
   },
   "cable": {
     "chosen": "cáp",
@@ -1060,7 +1060,7 @@
     "exceptions": {
       "errors.git.missingObject.message": "English-sense: git's pack files are git jargon, kept English (`pack file`)."
     },
-    "sources": "macOS/MS convention (tệp)"
+    "sources": "macOS/MS convention (tệp). Total Commander vi uses the older tập tin throughout (332 strings, no tệp), the folder-vs-directory kind of split; first-party vendors outrank it"
   },
   "file-list": {
     "chosen": "danh sách tệp",
@@ -1973,7 +1973,7 @@
     "chosen": "bảo vệ bằng mật khẩu",
     "confidence": "high",
     "forms": "được bảo vệ bằng mật khẩu",
-    "sources": "Total Commander / Double Commander vi phrasing"
+    "sources": "GNOME Nautilus vi (“%s” is password-protected → được bảo vệ bằng mật khẩu); MS terminology (password protection → bảo vệ bằng mật khẩu, id 2037458)"
   },
   "paste": {
     "chosen": "dán",
@@ -2130,7 +2130,7 @@
   "quick-filter": {
     "chosen": "bộ lọc nhanh",
     "confidence": "high",
-    "sources": "TC vi 3018/3019 (tắt/bật lọc nhanh) + the filter ruling’s noun bộ lọc"
+    "sources": "MS terminology (Quick Filter → Bộ lọc Nhanh, id 2319699) + the filter ruling’s noun bộ lọc; TC vi has no quick-filter string"
   },
   "quick-look": {
     "chosen": "Xem nhanh",
@@ -3123,7 +3123,7 @@
     "chosen": "dấu cách",
     "confidence": "high",
     "forms": "key label Dấu cách, chord ⇧Dấu cách (macOS: Giữ Command Dấu cách); in a sentence → phím dấu cách",
-    "sources": "macOS AppKit FunctionKeyNames (Space), SystemSettings Siri/Spotlight SPACEBAR_KEY → Dấu cách (Space bar → Thanh dấu cách); AppKit Date Picker help (phím dấu cách); TC 5139 (phím cách)"
+    "sources": "macOS AppKit FunctionKeyNames (Space), SystemSettings Siri/Spotlight SPACEBAR_KEY → Dấu cách (Space bar → Thanh dấu cách); AppKit Date Picker help (phím dấu cách). TC 5139 says phím khoảng cách (an older phrasing, outweighed by macOS)"
   },
   "spaces": {
     "chosen": "Spaces",
@@ -3145,7 +3145,7 @@
     "chosen": "đổi tên hàng loạt",
     "confidence": "high",
     "forms": "command, menu item, and sheet title → Đổi tên hàng loạt (menu with a trailing …); TC's tool name → Công cụ đổi tên hàng loạt",
-    "sources": "Total Commander vi (6601 Công cụ đổi tên hàng loạt; INC -9 Mở thao tác đổi tên hàng loạt đã lưu); KDE Dolphin vi (Open the bulk rename dialog → Mở hộp thoại đổi tên hàng loạt); catalog (onboarding.stepAi.table.rowRename Đổi tên hàng loạt, .renameWithout giao diện đổi tên hàng loạt)"
+    "sources": "KDE Dolphin vi (Open the bulk rename dialog → Mở hộp thoại đổi tên hàng loạt); catalog (onboarding.stepAi.table.rowRename Đổi tên hàng loạt, .renameWithout giao diện đổi tên hàng loạt). Total Commander vi disagrees: 6601 Công cụ Đa-Đổi tên, INC -9 Mở thao tác đa-đổi tên được lưu trữ (\"multi-rename\", a calque of TC's English we don't follow)"
   },
   "load": {
     "chosen": "tải",
@@ -3189,6 +3189,6 @@
     "accept": ["hiệu lực"],
     "confidence": "high",
     "forms": "Not a valid name → Tên không hợp lệ; isn't valid → không hợp lệ; a license valid until a date → có hiệu lực đến {date}; Validity → Hiệu lực",
-    "sources": "Total Commander vi (1908 Tên không hợp lệ; 608 Tên tệp không hợp lệ!); GNOME Nautilus vi (The name “%s” is not valid → Tên “%s” không hợp lệ); MS terminology (invalid → không hợp lệ); catalog (errors.write.invalidName.title, ai.cloud.authError, licensing.dialog.validityValidUntil Có hiệu lực đến)"
+    "sources": "Total Commander vi (608 Tên tập tin được chỉ rõ không hợp lệ!; 1908 says Tên không đúng); GNOME Nautilus vi (The name “%s” is not valid → Tên “%s” không hợp lệ); MS terminology (invalid → không hợp lệ); catalog (errors.write.invalidName.title, ai.cloud.authError, licensing.dialog.validityValidUntil Có hiệu lực đến)"
   }
 }

@@ -300,12 +300,12 @@
     "accept": ["renommage en masse", "Renommer par lot"],
     "confidence": "high",
     "forms": "batch rename (noun) → renommage par lot; the Multi-Rename Tool's command, menu item and sheet title (infinitive label) → Renommer par lot (Renommer par lot… in the File menu); mass-rename → renommage en masse",
-    "sources": "Double Commander (tfrmmultirename.caption \"Multi-Rename Tool\" → \"Renommer par lot\"); Total Commander WCMD.INC 2400 \"Outil spécial “Renommer par lots”\" (the pile's fr WCMD.LNG is truncated at 377 lines with no 66xx ids and it has no WCMD.MNU, so the earlier 6601 and MNU citations can't be verified, 2026-10-11); catalog (interface de renommage par lot)"
+    "sources": "Double Commander (tfrmmultirename.caption \"Multi-Rename Tool\" → \"Renommer par lot\"); Total Commander WCMD.INC 2400 \"Outil spécial “Renommer par lots”\", LNG 6601 \"Outil *Renommer par lots*\"; catalog (interface de renommage par lot)"
   },
   "binary-view": {
     "chosen": "Binaire",
     "confidence": "high",
-    "sources": "DC (Vue en Binaire); MS (binary → binaire); no TC fr in the pile"
+    "sources": "DC (Vue en Binaire); MS (binary → binaire); TC 5842 Lister start mode (Texte / Binaire / Hexa)"
   },
   "brief-view": {
     "accept": ["brève"],
@@ -439,7 +439,7 @@
     "accept": ["majuscules", "minuscules", "majuscule", "minuscule"],
     "confidence": "high",
     "forms": "setting labels follow macOS (Sensible à la casse, Respecter la casse); an explanatory sentence says majuscules et minuscules, since casse is typographic jargon; letter-case menu options → Première lettre en majuscule, minuscules, MAJUSCULES",
-    "sources": "macOS (\"Sensible à la casse\"); Double Commander (tfrmmultirename.cbcasesens.hint Sensibilité à la casse; ulng.rsmulrenfilenamestylelist Pas de changement;MAJUSCULE;minuscule;Premier caractère majuscule;…). The TC 6611 citation (\"1° lettre en majuscule\") can't be verified: the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
+    "sources": "macOS (\"Sensible à la casse\"); Double Commander (tfrmmultirename.cbcasesens.hint Sensibilité à la casse; ulng.rsmulrenfilenamestylelist Pas de changement;MAJUSCULE;minuscule;Premier caractère majuscule;…); TC 6611 (Inchangé / Tout en minuscules / Tout en MAJUSCULES / 1° lettre en majuscule)"
   },
   "certificate": {
     "chosen": "certificat",
@@ -1444,7 +1444,7 @@
   "hex": {
     "chosen": "Hexadécimal",
     "confidence": "high",
-    "sources": "DC (Vue en Hexadécimal); MS (hex, hexadecimal → hexadécimal); no TC fr in the pile"
+    "sources": "DC (Vue en Hexadécimal); MS (hex, hexadecimal → hexadécimal); TC 5614 Lister option (Hexadécima&l)"
   },
   "hidden": {
     "accept": ["masqué"],
@@ -3496,13 +3496,13 @@
     "accept": ["masque"],
     "confidence": "high",
     "forms": "Name mask → Masque de nom; the extension field stays Extension",
-    "sources": "Double Commander (tfrmmultirename.gbmaska « Masque »); MS terminology (mask → masque). The TC 6602 citation (« Masque p.renom. : nom fichier ») can't be verified: the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
+    "sources": "Double Commander (tfrmmultirename.gbmaska « Masque »); MS terminology (mask → masque); TC 6602 (« Mas&que p.renom. : nom  fichier »)"
   },
   "rename-counter": {
     "chosen": "compteur",
     "confidence": "high",
     "forms": "Edit counter → Modifier le compteur; the counter popover's fields → Début, Pas, Chiffres (the popover title Compteur already names the counter, so Start drops « du compteur »); its preview line → Donne 1, 3, 5…, affichés sous la forme 001, 003, 005",
-    "sources": "Double Commander (gbcounter « Compteur »); macOS Finder BulkRenameWindow (« Nom et compteur »). Pas and Chiffres rest on this ruling: DC says « Nombre de départ », « Intervalle », « Largeur », and the TC 6605 / 6617–6619 citations (« [C] Compteur », « Partir de : », « Par pas de : », « Chiffres : ») can't be verified, since the pile's fr WCMD.LNG is truncated before the 66xx ids, 2026-10-11"
+    "sources": "Double Commander (gbcounter « Compteur »); macOS Finder BulkRenameWindow (« Nom et compteur »). Pas and Chiffres rest on this ruling: DC says « Nombre de départ », « Intervalle », « Largeur », and TC 6605 / 6617–6619 say « [C] &Compteur », « Partir de : », « Par pas de : », « Chiffres : »"
   },
   "diacritics": {
     "chosen": "signes diacritiques",

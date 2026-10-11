@@ -158,14 +158,6 @@ Vietnamese has no grammatical number, so one form covers all counts.
 - **ICU mechanics** (catalog-level): double every apostrophe in a value (`'` becomes `''`) and keep every
   `{placeholder}` and `<tag>` verbatim. Full rules: the agent-handoff block in `docs/guides/i18n-translation.md` and
   `apps/desktop/src/lib/intl/messages/CLAUDE.md`.
-- **The vi Total Commander files are lossily double-encoded; decode before mining them.**
-  `_ignored/i18n/vi/total-commander/WCMD.LNG.utf8` and `WCMD.INC.utf8` hold UTF-8 bytes that were read as cp1252 and
-  re-saved as UTF-8, so a plain grep for `nguồn`, `đích`, or `chờ` returns ZERO hits and the source looks empty (it
-  isn't). Recover it in memory with `raw.encode('cp1252').decode('utf-8')`, keeping the C1 bytes (0x80–0x9F) that
-  Python's cp1252 codec leaves unmapped: register an error handler that passes `chr(n)` through as byte `n`. Even then a
-  few bytes were dropped by the original bad conversion, so about 700 characters stay unrecoverable (`ỏ` in `bỏ qua`,
-  the initial `Đ`); read around the holes rather than trusting a single line. Don't write the decoded copy into the
-  pile; decode to a scratch file.
 - **Text expansion bites the queue-row status cell.** `fileOperations.transferProgress.stallNotice` is
   `Không có tiến triển trong {duration}` against English's `No progress for {duration}` (~3× the character count), and
   one key feeds two surfaces: the progress dialog and the narrow queue row, which otherwise shows `còn {duration}`. The
