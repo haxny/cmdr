@@ -137,7 +137,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'file.delete': 'Delete',
   'file.deletePermanently': 'Delete permanently',
   'file.goToTrash': 'Go to trash',
-  'dialog.confirm': 'Confirm open dialog',
+  'dialog.confirm': 'Confirm the dialog on screen',
   // Platform-conditional names resolve to the non-macOS label under jsdom.
   'file.showInFinder': 'Show in file manager',
   'file.openTerminalHere': 'Open terminal here',
