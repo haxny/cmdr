@@ -247,7 +247,7 @@
   "@multiRename.cancel": {
     "sourceHash": "19766ed"
   },
-  "multiRename.undo": "Deshacer renombrado",
+  "multiRename.undo": "Deshacer cambio de nombre",
   "@multiRename.undo": {
     "sourceHash": "4e0f79b"
   },

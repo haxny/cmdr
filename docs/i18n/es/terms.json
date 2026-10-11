@@ -811,7 +811,7 @@
     "accept": ["diacrític"],
     "forms": "Remove diacritics (checkbox and preset) → Quitar diacríticos; its palette toggle quotes it: Activar o desactivar “Quitar diacríticos”",
     "confidence": "high",
-    "sources": "catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics); reference pile not on this machine, so not re-mined"
+    "sources": "macOS 27.0.1 (26A434) CoreText FeatureTypeNames (Diacritics → Diacríticos), 2026-10-11; MS terminology (diacritic → diacrítico); catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics)"
   },
   "dialog": {
     "chosen": "diálogo",
@@ -2247,7 +2247,7 @@
   "rename": {
     "chosen": "renombrar",
     "accept": ["renombr", "cambio de nombre", "cambios de nombre", "renómbr"],
-    "forms": "verb renombrar (button and prose: renombra uno de ellos); noun el cambio de nombre (a rename, the rename plan); Renombrando",
+    "forms": "verb renombrar (button and prose: renombra uno de ellos); noun el cambio de nombre (a rename, the rename plan; Undo rename → Deshacer cambio de nombre, Finder RN2, never Deshacer renombrado, which names the tool); Renombrando",
     "avoid": [
       {
         "form": "cambiar el nombre (verb in prose)",
@@ -2268,7 +2268,7 @@
     "chosen": "contador",
     "forms": "the popover: Contador; its ▾ button Editar el contador; fields Inicio / Incremento / Dígitos (a counter's step is Incremento, never the onboarding Paso); preview line Numera así: 1, 3, 5…",
     "confidence": "high",
-    "sources": "catalog (commands.fileMultiRename.description un contador; the retired counter fields shipped Contador desde / Incremento / Dígitos); fr/ru siblings cite Total Commander [C] Compteur / Счётчик; es pile not on this machine"
+    "sources": "Total Commander WCMD.LNG 6605 [C] Contador, 6616 Definir contador [C], 6617 Inicio:, 6618 Incremento:, 6619 Números:; Double Commander (gbcounter Contador, Start Number → Número inicial, Width → Dígitos); macOS Finder BulkRenameWindow (Nombre y contador, Iniciar números en el:); catalog (commands.fileMultiRename.description un contador)"
   },
   "replace": {
     "chosen": "Reemplazar",

@@ -65,5 +65,5 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   Microsoft's full `marcador de posición` is the reserve.
 - **Counter popover** (`multiRename.counterEditor.*`): the preview line `Numera así: 1, 3, 5…` (and
   `…, que aparecen como 001, 003, 005`) dodges `Cuenta 1, 3, 5…`, which reads as the noun "account"; a native reader
-  should say whether it sounds natural. `Inicio` for the counter's start field is a bare noun; `Empezar en` (Total
-  Commander's shape) is the reserve if `Inicio` reads as "Home".
+  should say whether it sounds natural. `Inicio` for the counter's start field is Total Commander's own label
+  (`6617="Inicio:"`); if a reader takes it as "Home", Finder's `Iniciar números en el:` is the reserve.

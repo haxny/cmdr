@@ -19,6 +19,10 @@
   "@multiRename.error.timedOut": {
     "sourceHash": "c97a77e"
   },
+  "multiRename.replace": "Reemplazar con",
+  "@multiRename.replace": {
+    "sourceHash": "64ca552"
+  },
   "multiRename.presets.title": "Preconfiguraciones",
   "@multiRename.presets.title": {
     "sourceHash": "8ae0fa8"

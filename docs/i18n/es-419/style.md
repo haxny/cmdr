@@ -73,6 +73,12 @@ with `plutil`, 236,620 strings that exist in `en`, `es`, and `es_419` (2026-09-2
   `Guardar configuración actual como preconfiguración…` (es `Guardar ajustes actuales como preajuste…`). Agreement
   follows the gender (`una preconfiguración llamada`, `¿Reemplazarla?`, `(editada)`). Verified on macOS 27.0.1 (26A434),
   `.loctable` sweep, 2026-10-09.
+- **Replace with → `Reemplazar con`** (`multiRename.replace`): Finder's own batch-rename window forks this exact label
+  (`BulkRenameWindow` `erz-Yf-3kR.title`: es `Reemplazar por:`, es_419 `Reemplazar con:`), and so does the system-wide
+  `Replace With` (`Reemplazar por` / `Reemplazar con`). `reemplazar por` is also heard in Latin America, so this fork
+  mirrors Apple rather than fixing a misreading. Verified on macOS 27.0.1 (26A434), `.loctable` sweep plus the pile's
+  Finder bundle, 2026-10-11. `Deshacer cambio de nombre` (`multiRename.undo`) doesn't fork: Apple's es_419
+  `Deshacer renombrar` is no more regional, and `es`'s form reads fine here.
 - **backup → `respaldo`**: `copia(s) de seguridad` 744 / 0, `respaldo` 6 / 703.
 - **Full Disk Access → `Acceso completo al disco`**: the Privacy & Security pane is `Acceso total al disco` in `es` and
   `Acceso completo al disco` in `es_419` and `es_US`
