@@ -45,7 +45,7 @@ pub(super) struct SourceFolderDates {
 
 impl SourceFolderDates {
     /// What a listing entry says about its folder.
-    pub(super) fn of_entry(entry: &crate::file_system::listing::FileEntry) -> Self {
+    pub(super) fn of_entry(entry: &cmdr_fs::entry::FileEntry) -> Self {
         Self {
             modified_at: entry.modified_at,
             created_at: entry.created_at,
