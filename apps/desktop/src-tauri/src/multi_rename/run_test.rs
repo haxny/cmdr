@@ -11,7 +11,7 @@ use super::session::{FIRST_PAGE, PreviewFilter, close, is_open, open, page, prev
 use super::transform::CaseChange;
 use crate::file_system::listing::cached_listing::LISTING_CACHE;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
-use crate::file_system::listing::list_directory_core;
+use crate::file_system::volume::backends::list_directory_core;
 use crate::file_system::write_operations::CollectorEventSink;
 use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use crate::test_support::{TestDir, wait_until_async};

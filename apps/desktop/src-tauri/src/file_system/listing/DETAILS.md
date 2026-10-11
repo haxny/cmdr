@@ -59,25 +59,8 @@ turns that state off for every folder it serves. Nothing about that fails loudly
 appearing), which is why `a_local_directory_read_emits_progress_events` in `streaming_test.rs` drives the whole chain
 against a real `LocalPosixVolume`: the rest of that suite runs on `InMemoryVolume` and can't see a backend drop it.
 
-The local backend can't take the callback where the work happens. `on_progress` is `Sync` but not `Send`, and
-`LocalPosixVolume` runs its stat loop on `spawn_blocking`, which demands `Send + 'static`. So the two halves are split:
-
-- `list_directory_core_with_tally` publishes into a `ListingTally` (`reading.rs`) as it stats, one relaxed atomic bump
-  per entry, unthrottled. That's free next to the `stat` it accompanies.
-- `LocalPosixVolume::list_directory` samples the tally every `PROGRESS_SAMPLE_INTERVAL` from a `tokio::select!` against
-  the `JoinHandle`, and calls `on_progress` from there. The callback never leaves the async task that owns it.
-
-Two details the loop depends on. The `select!` is `biased` so a listing that finished during a tick returns its real
-result rather than spending another sample on an approximate count. And a snapshot of zero is dropped rather than
-emitted, because the blocking pool may not have picked the task up yet and "Loaded 0 files..." is worse than the
-"Opening folder..." it would replace.
-
-Putting the throttle in the sampler rather than the stat loop means one place decides how often the number changes,
-and it's the place that knows it's driving a UI. `PROGRESS_SAMPLE_INTERVAL` is 200 ms in production and 1 ms under
-test, so `listing_a_local_directory_reports_progress_while_it_reads` can pin the wiring against a 5,000-entry scratch
-dir instead of needing one big enough to outlast a real interval.
-
-SMB and MTP wire `on_progress` through their own listing loops directly, having no `spawn_blocking` hop to cross.
+How `LocalPosixVolume` feeds the callback from a `spawn_blocking` stat loop: `volume/backends/DETAILS.md` § "The local
+reader".
 
 ## Caching
 
@@ -740,14 +723,7 @@ through `flush_all_pending()` without waiting for the transport window.
 
 ## File metadata tiers
 
-Tiers 1-2 are fetched eagerly (stat + uid→name), tiers 3-4 deferred. With 50k+ files, each metadata piece has a
-different cost: Tier 1 (name, size, dates, permissions) is free from a single `stat()`; Tier 2 (owner name, symlink
-target) is ~1 μs and cacheable; Tier 3 (macOS Spotlight/NSURL metadata) costs ~50-100 μs/file; Tier 4 (EXIF, PDF) costs
-1-100 ms+ and reads file content. See [full tier table](../../../../../../docs/notes/file-metadata-tiers.md).
-
-macOS extended metadata (`addedAt`, `openedAt`) needs `listxattr()` / `getxattr()` beyond the fast
-`fs::read_dir()` + `metadata()` path. Available via `get_extended_metadata_batch()` but not wired into the streaming
-path yet.
+What the local reader fetches eagerly and what it defers: `volume/backends/DETAILS.md` § "The local reader".
 
 ## Finder tags
 

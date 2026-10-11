@@ -707,7 +707,7 @@ mod macos_fs_tests {
     /// `list_directory_core`, this fails — keeping the 100k-dir hot path clean.
     #[test]
     fn list_directory_core_does_not_load_tags() {
-        use crate::file_system::listing::list_directory_core;
+        use crate::file_system::volume::backends::list_directory_core;
 
         let dir = temp_dir("core_no_tags");
         let file = dir.join("tagged.txt");

@@ -69,8 +69,8 @@ behind it, so the interesting gap is between `RETURNING` and `listing-complete r
 one of the `read_directory_with_progress CANCELLED (…)` events instead of `COMPLETE`, naming the point it bailed.
 
 The non-streaming core (`list_directory_core START`, `readdir START/END`, `stat_loop START/END`, `sort START/END`,
-`list_directory_core END`, in `listing/reading.rs`) emits its own events when that path runs. macOS extended metadata
-appears separately as `get_extended_metadata_batch START/END, count`.
+`list_directory_core END`, in `volume/backends/local_posix/reading.rs`) emits its own events when that path runs. macOS
+extended metadata appears separately as `get_extended_metadata_batch START/END, count`.
 
 ## What to look at
 
@@ -94,7 +94,8 @@ appears separately as `get_extended_metadata_batch START/END, count`.
 
 - `apps/desktop/src-tauri/src/benchmark.rs`: the Rust emitter (`log_event`, `log_event_value`, `reset_epoch`).
 - `apps/desktop/src/lib/benchmark.ts`: the frontend emitter, forwarding through `benchmarkLog`.
-- `apps/desktop/src-tauri/src/file_system/listing/streaming.rs` and `reading.rs`: the instrumented backend paths.
+- `apps/desktop/src-tauri/src/file_system/listing/streaming.rs` and
+  `file_system/volume/backends/local_posix/reading.rs`: the instrumented backend paths.
 - `apps/desktop/src/lib/file-explorer/pane/listing-loader.ts`: the instrumented frontend path.
 
 ## Recording a result

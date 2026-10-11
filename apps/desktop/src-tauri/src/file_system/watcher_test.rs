@@ -263,7 +263,7 @@ async fn test_handle_directory_change_detects_new_entries() {
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
     use crate::file_system::listing::caching_test_support::{TestListing, unique_test_id};
-    use crate::file_system::listing::list_directory_core;
+    use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::start_watching;
     use crate::test_support::{TestDir, wait_until};
     use std::time::Duration;
@@ -397,7 +397,7 @@ fn rewrite_a_dotfile_beside_a_visible_file(
 ) {
     use crate::file_system::listing::caching_test_support::{TestListing, unique_test_id};
     use crate::file_system::listing::diff_emitter::hold_for_test;
-    use crate::file_system::listing::list_directory_core;
+    use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
     use notify_debouncer_full::DebouncedEvent;
     use notify_debouncer_full::notify::{

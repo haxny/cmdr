@@ -419,7 +419,7 @@ fn a_journaled_mtime_equals_the_live_reading_undo_rechecks_it_against() {
     let fingerprint = SourceFingerprint::capture_local(&source).expect("capture");
 
     let (size, mtime) = fingerprint.journal_snapshot();
-    let live = crate::file_system::listing::get_single_entry(&source).expect("read the live entry");
+    let live = crate::file_system::volume::backends::get_single_entry(&source).expect("read the live entry");
 
     assert_eq!(mtime, live.modified_at.map(|secs| secs as i64));
     assert_eq!(size, live.size.map(|size| size as i64));

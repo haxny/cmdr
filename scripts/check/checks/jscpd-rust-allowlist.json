@@ -16,7 +16,7 @@
       "lines": 13,
       "reason": "TODO: `quick_look_open` and `quick_look_set_path` differ by one method call and share the rest: the `volume_supports_local_fs` gate with its debug line, the 2 s `blocking_with_timeout`, the channel, the `run_on_main_thread` closure that pulls `QuickLookState` and locks it, and the `rx.recv()` reply. Extract `on_quick_look_main(app, volume_id, path, skip_label, action)` in this file, taking the controller call as the closure, so one command passes `ctrl.open_on_main(app, path)` and the other `ctrl.set_path_on_main(path)`. The three commands stay separate `#[tauri::command]` functions, which is what the module doc argues for; only their bodies collapse."
     },
-    "apps/desktop/src-tauri/src/file_system/listing/reading.rs": {
+    "apps/desktop/src-tauri/src/file_system/volume/backends/local_posix/reading.rs": {
       "lines": 26,
       "reason": "TODO: the POSIX metadata-to-`FileEntry` derivation shared by `get_single_entry` and `process_dir_entry`: `modified` and `created` as seconds since the epoch, `uid` and `gid` through `get_owner_name` and `get_group_name`, `physical_size` as `blocks() * 512`, and the hardlink-only `inode` with its explaining comment carried in both copies. Extract `fn posix_fields(metadata: \u0026fs::Metadata) -\u003e PosixFields` in `reading.rs` returning a small plain struct, and let both call sites spread it into their `FileEntry` literal. Each keeps what genuinely differs: how it obtains the metadata (`symlink_metadata` on a path against `DirEntry::metadata`) and how it derives the name. The helper reads fields already in hand, so the 100k-entry listing path pays nothing, and the hardlink-dedup rule stops living in two places."
     },

@@ -539,7 +539,7 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
 fn synthetic_entry_diff_leaves_a_row_the_listing_already_holds() {
     use crate::file_system::listing::caching_test_support::TestListing;
     use crate::file_system::listing::diff_emitter::{hold_for_test, pending_changes_for_test};
-    use crate::file_system::listing::reading::get_single_entry;
+    use crate::file_system::volume::backends::get_single_entry;
 
     let tmp = create_test_dir("synthetic_diff_duplicate");
     let new_path = tmp.path().join("made.txt");

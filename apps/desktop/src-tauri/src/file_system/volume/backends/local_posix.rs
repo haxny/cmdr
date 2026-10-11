@@ -7,19 +7,23 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
+pub(crate) mod mutation;
+pub(crate) mod reading;
+#[cfg(test)]
+mod reading_test;
 mod scan;
 mod streams;
 
 use super::{
     CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
-use crate::file_system::listing::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, WriteMode};
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport};
 use cmdr_fs::volume::MountClass;
+use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -331,7 +335,7 @@ impl Volume for LocalPosixVolume {
             // with the lister. Instead the lister publishes into a shared `ListingTally` and
             // this side samples it on a timer, leaving the callback on the async task that
             // owns it. Without this the pane sits on "Opening folder…" for a big folder's
-            // whole read. `listing/DETAILS.md` § "Local listing progress".
+            // whole read. `volume/backends/DETAILS.md` § "The local reader".
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
             let mut listing = spawn_blocking(move || {
@@ -451,7 +455,7 @@ impl Volume for LocalPosixVolume {
         mutation: super::MutationEvent,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
         Box::pin(async move {
-            crate::file_system::listing::mutation::patch_listing_after_local_mutation(volume_id, parent_path, mutation);
+            mutation::patch_listing_after_local_mutation(volume_id, parent_path, mutation);
         })
     }
 

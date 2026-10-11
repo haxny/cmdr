@@ -204,6 +204,48 @@ Resolving the id instead would answer with the SUCCESSOR after a swap and mark a
   sit beside the app code they assert on. What they pin, the Docker fixture ports, and the soak and wedge harnesses:
   `file_system/write_operations/DETAILS.md` § "The SMB app-side suites".
 
+## The local reader
+
+`local_posix/reading.rs` is the `std::fs` reader: `list_directory_core` (one `read_dir` plus an `lstat` per entry, built
+into `FileEntry`s and sorted), `get_single_entry` (one stat), and `get_extended_metadata_batch`. `LocalPosixVolume`
+lists and stats through it, and so do the paths that read a local directory with no volume in hand: the watcher's
+unregistered-volume fallback and its per-entry re-stat, `tags.rs`, and `create.rs`'s synthetic row. It's the local
+backend's reader, not the listing engine's, which is why it sits here and `listing/` only sees the `FileEntry`s it
+returns. `local_posix/mutation.rs` is the other half: `patch_listing_after_local_mutation`, what a successful local
+mutation means for the listing cache (volume `DETAILS.md` § "Mutation notification").
+
+**Progress.** The pane's "Loaded N files…" readout needs `on_progress` fed while the stat loop runs (why it matters:
+`listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the work happens.
+`on_progress` is `Sync` but not `Send`, and `LocalPosixVolume` runs its stat loop on `spawn_blocking`, which demands
+`Send + 'static`. So the two halves are split:
+
+- `list_directory_core_with_tally` publishes into a `ListingTally` as it stats, one relaxed atomic bump per entry,
+  unthrottled. That's free next to the `stat` it accompanies.
+- `LocalPosixVolume::list_directory` samples the tally every `PROGRESS_SAMPLE_INTERVAL` from a `tokio::select!` against
+  the `JoinHandle`, and calls `on_progress` from there. The callback never leaves the async task that owns it.
+
+Two details the loop depends on. The `select!` is `biased` so a listing that finished during a tick returns its real
+result rather than spending another sample on an approximate count. And a snapshot of zero is dropped rather than
+emitted, because the blocking pool may not have picked the task up yet and "Loaded 0 files..." is worse than the
+"Opening folder..." it would replace.
+
+Putting the throttle in the sampler rather than the stat loop means one place decides how often the number changes,
+and it's the place that knows it's driving a UI. `PROGRESS_SAMPLE_INTERVAL` is 200 ms in production and 1 ms under
+test, so `listing_a_local_directory_reports_progress_while_it_reads` can pin the wiring against a 5,000-entry scratch
+dir instead of needing one big enough to outlast a real interval.
+
+SMB and MTP wire `on_progress` through their own listing loops directly, having no `spawn_blocking` hop to cross.
+
+**Metadata tiers.** Tiers 1-2 are fetched eagerly (stat + uid→name), tiers 3-4 deferred. With 50k+ files, each
+metadata piece has a different cost: Tier 1 (name, size, dates, permissions) is free from a single `stat()`; Tier 2
+(owner name, symlink target) is ~1 μs and cacheable; Tier 3 (macOS Spotlight/NSURL metadata) costs ~50-100 μs/file;
+Tier 4 (EXIF, PDF) costs 1-100 ms+ and reads file content. See
+[full tier table](../../../../../../../docs/notes/file-metadata-tiers.md).
+
+macOS extended metadata (`addedAt`, `openedAt`) needs `listxattr()` / `getxattr()` beyond the fast `fs::read_dir()` +
+`metadata()` path. Available via `get_extended_metadata_batch()` but not wired into the streaming path yet. Finder tags
+are deferred too, and `list_directory_core` never reads them: `listing/DETAILS.md` § "Finder tags".
+
 ## Local renames are atomic-exclusive
 
 `LocalPosixVolume` routes every non-forced rename through the shared atomic-exclusive primitive,

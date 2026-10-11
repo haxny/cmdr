@@ -83,7 +83,7 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
     let destination = tmp.join("after.txt");
     fs::write(&source, "reviewed").expect("write fixture");
     let row = local_row("journaled", source.clone(), destination.clone());
-    let live = crate::file_system::listing::get_single_entry(&source).expect("read the live entry");
+    let live = crate::file_system::volume::backends::get_single_entry(&source).expect("read the live entry");
 
     let op_id = "op-bulk-rename-mtime";
     super::super::super::journal::open_local_op(op_id, OpKind::Rename, Initiator::User, 1, Some("root"));

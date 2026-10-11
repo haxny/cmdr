@@ -21,6 +21,12 @@ pub use local_posix::LocalPosixVolume;
 pub(crate) use local_posix::get_space_info_for_path;
 pub(crate) use local_posix::rename_local_exclusive;
 pub(crate) use local_posix::rename_volume_error;
+// The local reader: the `std::fs` listing and stat that `LocalPosixVolume`, the
+// watcher's unregistered-volume fallback, `tags.rs`, and `create.rs` read through.
+// `mutation.rs` beside it is what a local mutation means for the listing cache.
+#[cfg(test)]
+pub(crate) use local_posix::reading::list_directory;
+pub(crate) use local_posix::reading::{get_single_entry, list_directory_core};
 
 // Re-export shared `volume/` types so each backend submodule can keep using
 // `super::Volume`, `super::VolumeError`, `super::MutationEvent`, etc. without

@@ -1,7 +1,8 @@
-//! Low-level directory reading and FileEntry construction.
+//! The local `std::fs` reader: directory reading and `FileEntry` construction.
 //!
-//! Pure I/O functions that read from disk and build FileEntry objects.
-//! No Tauri or caching dependencies; consumed by operations.rs and streaming.rs.
+//! Pure I/O functions that read from disk and build `FileEntry` objects. No Tauri
+//! or caching dependencies; `LocalPosixVolume`, the watcher, `tags.rs`, and
+//! `create.rs` read through it. See `backends/DETAILS.md` § "The local reader".
 
 #![allow(
     dead_code,

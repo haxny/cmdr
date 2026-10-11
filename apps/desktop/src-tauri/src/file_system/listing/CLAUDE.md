@@ -4,10 +4,10 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- Read: **reading.rs**, **streaming.rs** (its end's app bookkeeping: **listing_end.rs**), **stall.rs**. Cache and
+- Read: **streaming.rs** (its end's app bookkeeping: **listing_end.rs**), **stall.rs**. Cache and
   mutate: **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**,
   **path_index.rs**, **name_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
-  `FileEntry` comes from `cmdr-fs`.
+  `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
 
 ## Invariants and gotchas
 

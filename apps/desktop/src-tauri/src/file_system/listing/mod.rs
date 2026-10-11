@@ -11,13 +11,11 @@ pub(crate) mod foreign_path;
 pub(crate) mod fuzzy_jump;
 pub(crate) mod listing_end;
 pub(crate) mod listing_host;
-pub(crate) mod mutation;
 pub(crate) mod name_filter;
 pub use name_filter::NameFilterResult;
 pub(crate) mod operations;
 pub(crate) mod orphan_reaper;
 pub(crate) mod path_index;
-pub(crate) mod reading;
 pub(crate) mod sorting;
 pub(crate) mod stall;
 pub(crate) mod stalled_on;
@@ -34,7 +32,6 @@ pub use operations::{
     get_file_beside, get_file_range, get_listing_stats, keep_listings_alive, list_directory_end,
     refresh_listing_index_sizes, resort_listing, set_listing_include_hidden,
 };
-pub use reading::{ListingTally, get_single_entry, list_directory_core, list_directory_core_with_tally};
 pub use sorting::{DirectorySortMode, SortColumn, SortOrder};
 pub use streaming::{StreamingListingStartResult, cancel_listing, list_directory_start_streaming};
 
