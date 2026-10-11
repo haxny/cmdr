@@ -337,7 +337,9 @@ Every one is a pure name and path predicate with no I/O, a hard requirement sinc
 
 `detect_filesystem_for_path` reaches `crate::volumes::get_mount_point` (macOS) or `crate::file_system::linux_mounts`
 (Linux). Classification is platform-free and detection is thin platform wiring, so only the classification is here.
-Callers that want detection are app-side anyway.
+Callers that want detection are app-side anyway. `mount_is_local_disk` is classification too: a pure allowlist over the
+probe's source and type strings, shared by the index's walker choice, a watch's coverage, and the listing engine's stall
+diagnosis.
 
 ## Gotcha: `cfg(test)`-conditioned BEHAVIOR stops meaning anything in a dependency
 

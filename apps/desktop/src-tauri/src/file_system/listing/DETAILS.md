@@ -888,7 +888,7 @@ combined line otherwise. Classified once per listing, at its first stall:
   `getfsstat(MNT_NOWAIT)` snapshot (`volumes::mount_type_and_source_for`), Linux `/proc/mounts`
   (`linux_mounts::mount_entry_for_path`). Network types on an explicit allowlist (`smbfs`, `nfs`, `afpfs`, `webdav`,
   `ftp`; `cifs`, `smb3`, `nfs4`, `fuse.sshfs`, `fuse.rclone`, `fuse.s3fs`, …) are `server`; a known local disk
-  (`index_provider::mount_is_local_disk`) is `drive`; anything else (GVFS's `fuse.gvfsd-fuse`, which holds phones and
+  (`cmdr_fs::filesystem_kind::mount_is_local_disk`) is `drive`; anything else (GVFS's `fuse.gvfsd-fuse`, which holds phones and
   shares alike, macFUSE, cloud clients' mounts, autofs, `9p`) is `unknown`.
 - **The table lookup is lexical**, so a path that reads as a local disk is resolved through its symlinks first
   (`~/nas` → `/Volumes/nas`) on a blocking thread, bounded at 500 ms. A timeout means the probe hit the hung mount,

@@ -80,7 +80,7 @@ fn classify_mount(fs_type: &str, source: &str) -> StalledOn {
     );
     if network {
         StalledOn::Server
-    } else if crate::file_system::index_provider::mount_is_local_disk(Some(source), Some(fs_type)) {
+    } else if cmdr_fs::filesystem_kind::mount_is_local_disk(Some(source), Some(fs_type)) {
         StalledOn::Drive
     } else {
         StalledOn::Unknown

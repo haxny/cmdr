@@ -15,6 +15,8 @@
 //! thin platform-specific wiring that resolves a path to its OS
 //! filesystem-type string and feeds it in — needs the app's mount tables, so it
 //! stays there and calls [`FilesystemInfo::from_raw_type`].
+//! [`mount_is_local_disk`] is the same kind of pure classification over a probe's
+//! answer, so it lives here too.
 
 use serde::{Deserialize, Serialize};
 
@@ -187,6 +189,47 @@ impl FilesystemInfo {
     }
 }
 
+/// Whether a mount is a KNOWN local disk: its source is a block device (`/dev/…`:
+/// disks, partitions, attached disk images), or its type is a local disk type
+/// whose source isn't a device node (ZFS datasets, a container's overlay root,
+/// RAM-backed mounts).
+///
+/// An allowlist on purpose. Everything else (FUSE, cloud mounts like `pcloudfs`,
+/// network shares, an unprobeable mount) reads as network, so the index picks
+/// the network walker for it: a miss here is a slower walk of a local disk, while
+/// a miss in a network denylist crawls a remote tree at local-walker speed.
+/// ❌ Don't trust `MNT_LOCAL` instead: Xcode's `devicefs` is flagged local.
+/// ❌ Don't fold this into `volumes::is_network_fs_type`: that one also picks the
+/// volume-ID derivation, so widening it would re-ID existing FUSE volumes.
+pub fn mount_is_local_disk(source: Option<&str>, fs_type: Option<&str>) -> bool {
+    if source.is_some_and(|s| s.starts_with("/dev/")) {
+        return true;
+    }
+    let Some(fs_type) = fs_type else { return false };
+    matches!(
+        fs_type.to_ascii_lowercase().as_str(),
+        "apfs"
+            | "hfs"
+            | "exfat"
+            | "msdos"
+            | "vfat"
+            | "ntfs"
+            | "ntfs3"
+            | "ufsd_ntfs"
+            | "zfs"
+            | "btrfs"
+            | "bcachefs"
+            | "ext2"
+            | "ext3"
+            | "ext4"
+            | "xfs"
+            | "f2fs"
+            | "overlay"
+            | "tmpfs"
+            | "ramfs"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,5 +313,74 @@ mod tests {
             None
         );
         assert_eq!(FilesystemInfo::from_raw_type(None).kind, FilesystemKind::Other);
+    }
+
+    /// Block-device-backed mounts are local whatever their type: disks, partitions,
+    /// and attached disk images (verified on macOS 26 with `hdiutil attach`,
+    /// 2026-09-30: exFAT, FAT, and HFS+ images report `/dev/diskNs1` sources).
+    #[test]
+    fn a_block_device_backed_mount_is_a_local_disk() {
+        for (source, fs_type) in [
+            ("/dev/disk3s1s1", "apfs"),
+            ("/dev/disk4s1", "exfat"),
+            ("/dev/disk5s1", "msdos"),
+            ("/dev/disk6s1", "hfs"),
+            ("/dev/sda1", "ext4"),
+            ("/dev/sdb1", "fuseblk"),
+            ("/dev/mapper/vg-root", "xfs"),
+        ] {
+            assert!(
+                mount_is_local_disk(Some(source), Some(fs_type)),
+                "{fs_type} from {source} is a local disk"
+            );
+        }
+    }
+
+    /// A known local disk type is local even when its source isn't a device node:
+    /// ZFS datasets, a container's overlay root, and RAM-backed mounts.
+    #[test]
+    fn a_known_local_type_is_a_local_disk_without_a_device_source() {
+        for (source, fs_type) in [
+            ("tank/home", "zfs"),
+            ("overlay", "overlay"),
+            ("tmpfs", "tmpfs"),
+            ("rpool/ROOT/ubuntu", "ZFS"),
+        ] {
+            assert!(
+                mount_is_local_disk(Some(source), Some(fs_type)),
+                "{fs_type} from {source} is a local disk"
+            );
+        }
+    }
+
+    /// The regression: FUSE and cloud filesystems aren't local disks, so a drive
+    /// index scoped into one picks the network walker instead of crawling the
+    /// remote tree at local-walker speed. Network shares stay network, and so does
+    /// FUSE-T posing as `nfs`.
+    #[test]
+    fn fuse_cloud_and_network_mounts_are_not_local_disks() {
+        for (source, fs_type) in [
+            ("pCloud", "pcloudfs"),
+            ("rclone:remote", "macfuse"),
+            ("sshfs@host:/home/me", "osxfuse"),
+            ("sshfs@host:/home/me", "fuse.sshfs"),
+            ("//me@nas/share", "smbfs"),
+            ("nas:/export", "nfs"),
+            ("fuse-t:/remote", "nfs"),
+            ("https://dav.example.com", "webdav"),
+            ("devicefs", "devicefs"),
+        ] {
+            assert!(
+                !mount_is_local_disk(Some(source), Some(fs_type)),
+                "{fs_type} from {source} must not read as a local disk"
+            );
+        }
+    }
+
+    /// A mount that couldn't be probed isn't known to be local, so it gets the
+    /// network walker: slower if it was local after all, but it can't crawl a wire.
+    #[test]
+    fn an_unprobed_mount_is_not_a_local_disk() {
+        assert!(!mount_is_local_disk(None, None));
     }
 }
