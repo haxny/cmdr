@@ -2575,6 +2575,15 @@
     "confidence": "tentative",
     "sources": "standard NL"
   },
+  "screen": {
+    "chosen": "scherm",
+    "forms": "on screen → op het scherm (toetsenbord op het scherm); compounds schermtoetsenbord, schermbeveiliging",
+    "exceptions": {
+      "queryUi.results.live.stopTooltip": "stays on screen → blijft staan, the everyday idiom for a result list that keeps showing"
+    },
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): toetsenbord op het scherm, schermtoetsenbord, toegangsscherm"
+  },
   "screenshot": {
     "accept": ["schermafbeeldingen", "schermopname"],
     "chosen": "schermafbeelding",

@@ -2416,6 +2416,12 @@
     "confidence": "high",
     "sources": "macOS Finder (phạm vi tìm kiếm)"
   },
+  "screen": {
+    "chosen": "màn hình",
+    "forms": "on screen → trên màn hình (bàn phím trên màn hình)",
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): bàn phím trên màn hình, màn hình khóa"
+  },
   "screenshot": {
     "accept": ["quay màn hình"],
     "chosen": "chụp màn hình",

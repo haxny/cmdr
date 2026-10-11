@@ -548,9 +548,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "Bekräfta den öppna dialogen",
+  "commands.dialogConfirm.label": "Bekräfta dialogen på skärmen",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "Visa i Finder",
   "@commands.fileShowInFinder.mac.label": {

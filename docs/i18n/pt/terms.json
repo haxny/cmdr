@@ -2355,6 +2355,13 @@
     "confidence": "high",
     "sources": "shipped pt catalog"
   },
+  "screen": {
+    "chosen": "tela",
+    "forms": "on screen → na tela; compounds Protetor de Tela, Tela Bloqueada",
+    "avoid": [{ "form": "ecrã", "why": "pt-PT; Cmdr ships pt-BR" }],
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): No Protetor de Tela e na Tela Bloqueada (pt_BR)"
+  },
   "screenshot": {
     "chosen": "captura de tela",
     "accept": ["capturas de tela", "gravação de tela"],

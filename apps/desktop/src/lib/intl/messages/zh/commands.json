@@ -548,9 +548,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "确认打开对话框",
+  "commands.dialogConfirm.label": "确认屏幕上的对话框",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "在 Finder 中显示",
   "@commands.fileShowInFinder.mac.label": {

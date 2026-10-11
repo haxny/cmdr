@@ -550,9 +550,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "Bevestig open dialoogvenster",
+  "commands.dialogConfirm.label": "Bevestig dialoogvenster op het scherm",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "Toon in Finder",
   "@commands.fileShowInFinder.mac.label": {

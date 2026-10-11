@@ -548,9 +548,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "Öffnen-Dialog bestätigen",
+  "commands.dialogConfirm.label": "Dialog auf dem Bildschirm bestätigen",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "Im Finder anzeigen",
   "@commands.fileShowInFinder.mac.label": {

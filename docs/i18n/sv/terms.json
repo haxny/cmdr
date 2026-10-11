@@ -2518,6 +2518,15 @@
     "forms": "the chip label is Sök i",
     "sources": "MS terminology"
   },
+  "screen": {
+    "chosen": "skärm",
+    "forms": "on screen → på skärmen (tangentbordet på skärmen); compounds skärmtangentbord, låsskärm",
+    "exceptions": {
+      "queryUi.results.live.stopTooltip": "stays on screen → blir kvar, the everyday idiom for a result list that keeps showing"
+    },
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): tangentbordet på skärmen, skärmtangentbord, på låsskärmen"
+  },
   "screenshot": {
     "accept": ["skärminspelning"],
     "chosen": "skärmbild",

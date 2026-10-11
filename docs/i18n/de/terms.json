@@ -2704,6 +2704,15 @@
     "forms": "the search filter label → Suchen in; the recent-search summary → Bereich: {scope}",
     "sources": "derived; aligns with pane → Bereich"
   },
+  "screen": {
+    "chosen": "Bildschirm",
+    "forms": "on screen → auf dem Bildschirm; compounds Bildschirmtastatur, Sperrbildschirm",
+    "exceptions": {
+      "queryUi.results.live.stopTooltip": "stays on screen → bleibt sichtbar, the everyday idiom for a result list that keeps showing"
+    },
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): Bildschirmtastatur, Auf Bildschirmschoner und Sperrbildschirm"
+  },
   "screenshot": {
     "accept": ["Bildschirmfotos", "Bildschirmaufnahme"],
     "chosen": "Bildschirmfoto",

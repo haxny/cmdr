@@ -548,9 +548,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "Xác nhận hộp thoại mở",
+  "commands.dialogConfirm.label": "Xác nhận hộp thoại trên màn hình",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "Hiển thị trong Finder",
   "@commands.fileShowInFinder.mac.label": {

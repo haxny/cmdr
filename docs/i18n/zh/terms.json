@@ -2662,6 +2662,13 @@
     "forms": "search scope / Search in 搜索范围",
     "sources": "descriptive"
   },
+  "screen": {
+    "chosen": "屏幕",
+    "accept": ["录屏"],
+    "forms": "on screen → 屏幕上的…; compounds 屏幕键盘, 屏幕保护程序",
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\") (zh_CN): 屏幕键盘, 屏幕保护程序和锁屏"
+  },
   "screenshot": {
     "accept": ["录屏"],
     "chosen": "截屏",

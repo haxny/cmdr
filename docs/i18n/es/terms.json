@@ -2411,6 +2411,12 @@
     "confidence": "tentative",
     "sources": "standard technical term"
   },
+  "screen": {
+    "chosen": "pantalla",
+    "forms": "on screen → en pantalla (teclado en pantalla)",
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): teclado en pantalla, pantalla de bloqueo"
+  },
   "screenshot": {
     "chosen": "capturas de pantalla",
     "accept": ["grabación de pantalla"],

@@ -548,9 +548,9 @@
   "@commands.fileGoToTrash.description": {
     "sourceHash": "73eae92"
   },
-  "commands.dialogConfirm.label": "Megnyitási párbeszéd megerősítése",
+  "commands.dialogConfirm.label": "Képernyőn megjelenő párbeszédablak megerősítése",
   "@commands.dialogConfirm.label": {
-    "sourceHash": "b58a959"
+    "sourceHash": "fef0684"
   },
   "commands.fileShowInFinder.mac.label": "Megjelenítés a Finderben",
   "@commands.fileShowInFinder.mac.label": {

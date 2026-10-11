@@ -2796,7 +2796,7 @@
     "distinct": ["full-screen"],
     "en": "screen",
     "match": ["screen", "screens"],
-    "notMatch": ["screen reader", "screen readers", "full screen"],
+    "notMatch": ["screen reader", "screen readers", "full screen", "full-screen"],
     "sense": "A display, or a phone's screen."
   },
   "screenshot": {

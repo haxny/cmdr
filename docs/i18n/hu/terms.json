@@ -3079,6 +3079,13 @@
     "confidence": "high",
     "sources": "catalog (queryUi.recent.scopeSummary)"
   },
+  "screen": {
+    "chosen": "képernyő",
+    "accept": ["kijelző"],
+    "forms": "a phone's screen → kijelző (Ébreszd fel a kijelzőjét); on screen → képernyőn megjelenő (a képernyőn megjelenő billentyűzet); compounds képernyő-billentyűzet, képernyővédő",
+    "confidence": "high",
+    "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): képernyőn megjelenő billentyűzet, képernyő-billentyűzet, Képernyővédőn és zárolási képernyőn"
+  },
   "screenshot": {
     "chosen": "képernyőfotó",
     "accept": ["képernyőfelvétel"],
