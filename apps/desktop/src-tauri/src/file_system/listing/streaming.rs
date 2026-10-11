@@ -13,13 +13,13 @@ use tokio_util::sync::CancellationToken;
 use crate::benchmark;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
+use crate::file_system::listing::listing_end::{
+    AppListingEndEffects, error_analytics_category, finish_streaming_listing,
+};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::volume::friendly_error::{
-    ListingError, archive_needs_password_listing_error, archive_unreadable_listing_error, enrich_with_provider,
-    listing_error_for_restricted_empty_root, listing_error_from_volume_error,
-};
+use crate::file_system::volume::friendly_error::{ListingError, listing_error_for_restricted_empty_root};
 use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::watcher::start_watching_detached;
 #[cfg(test)]
@@ -228,13 +228,8 @@ impl ListingEventSink for TauriListingEventSink {
     fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
         // PII-free analytics: a listing failed with a categorized error. Only the
         // category enum crosses; never the path, message, or any provider detail.
-        if let Some(e) = &error {
-            let category = serde_json::to_value(e.category)
-                .ok()
-                .and_then(|v| v.as_str().map(str::to_string));
-            if let Some(category) = category {
-                crate::analytics::events::capture("error_encountered", serde_json::json!({ "category": category }));
-            }
+        if let Some(category) = error_analytics_category(error.as_ref()) {
+            crate::analytics::events::capture("error_encountered", serde_json::json!({ "category": category }));
         }
         let _ = ListingErrorEvent {
             listing_id: listing_id.to_string(),
@@ -263,7 +258,11 @@ pub(crate) struct CollectorListingEventSink {
     /// Per completed listing, the stored spelling it reported (`None` = as asked).
     pub stored_paths: std::sync::Mutex<Vec<(String, Option<String>)>>,
     pub errors: std::sync::Mutex<Vec<(String, String)>>,
+    /// Per error, the typed classification it carried.
+    pub classified: std::sync::Mutex<Vec<(String, Option<ListingError>)>>,
     pub cancelled: std::sync::Mutex<Vec<String>>,
+    /// Every event's kind (`"opening"`, `"progress"`, …), in emit order.
+    pub sequence: std::sync::Mutex<Vec<&'static str>>,
 }
 
 #[cfg(test)]
@@ -277,36 +276,52 @@ impl CollectorListingEventSink {
             complete: std::sync::Mutex::new(Vec::new()),
             stored_paths: std::sync::Mutex::new(Vec::new()),
             errors: std::sync::Mutex::new(Vec::new()),
+            classified: std::sync::Mutex::new(Vec::new()),
             cancelled: std::sync::Mutex::new(Vec::new()),
+            sequence: std::sync::Mutex::new(Vec::new()),
         }
+    }
+
+    /// The kinds of every event so far, in emit order.
+    pub fn sequence(&self) -> Vec<&'static str> {
+        self.sequence.lock_ignore_poison().clone()
+    }
+
+    fn note(&self, kind: &'static str) {
+        self.sequence.lock_ignore_poison().push(kind);
     }
 }
 
 #[cfg(test)]
 impl ListingEventSink for CollectorListingEventSink {
     fn emit_opening(&self, listing_id: &str) {
+        self.note("opening");
         self.opening.lock_ignore_poison().push(listing_id.to_string());
     }
 
     fn emit_stalled(&self, listing_id: &str, stalled_on: StalledOn) {
+        self.note("stalled");
         self.stalled
             .lock_ignore_poison()
             .push((listing_id.to_string(), stalled_on));
     }
 
     fn emit_progress(&self, listing_id: &str, loaded_count: usize) {
+        self.note("progress");
         self.progress
             .lock_ignore_poison()
             .push((listing_id.to_string(), loaded_count));
     }
 
     fn emit_read_complete(&self, listing_id: &str, total_count: usize) {
+        self.note("read_complete");
         self.read_complete
             .lock_ignore_poison()
             .push((listing_id.to_string(), total_count));
     }
 
     fn emit_complete(&self, listing_id: &str, total_count: usize, _volume_root: String, stored_path: Option<String>) {
+        self.note("complete");
         self.complete
             .lock_ignore_poison()
             .push((listing_id.to_string(), total_count));
@@ -315,11 +330,16 @@ impl ListingEventSink for CollectorListingEventSink {
             .push((listing_id.to_string(), stored_path));
     }
 
-    fn emit_error(&self, listing_id: &str, message: String, _error: Option<ListingError>) {
+    fn emit_error(&self, listing_id: &str, message: String, error: Option<ListingError>) {
+        self.note("error");
         self.errors.lock_ignore_poison().push((listing_id.to_string(), message));
+        self.classified
+            .lock_ignore_poison()
+            .push((listing_id.to_string(), error));
     }
 
     fn emit_cancelled(&self, listing_id: &str) {
+        self.note("cancelled");
         self.cancelled.lock_ignore_poison().push(listing_id.to_string());
     }
 }
@@ -389,66 +409,14 @@ pub async fn list_directory_start_streaming(
             cache.remove(&listing_id_for_cleanup);
         }
 
-        // Handle task result
-        match result {
-            Err(e) => {
-                // Function returned an error (volume not found, permission denied, I/O, etc.)
-                // A failed `.zip` browse — the archive is damaged, encrypted, an
-                // unsupported format, or a file with an archive extension that isn't
-                // really an archive — collapses to `NotSupported`/`IoError` at the
-                // `ArchiveVolume` layer. Swap in the dedicated "damaged archive" copy
-                // so the pane doesn't show a generic listing error. A valid archive
-                // with a missing inner path stays `NotFound` (not an integrity fault),
-                // and the archive case skips provider enrichment (no cloud suggestion).
-                let listing_error = if let VolumeError::NeedsPassword { wrong_attempt } = e {
-                    // A HEADER-encrypted archive needs its password to even list; the
-                    // FE renders a password prompt, not an error pane. Skip provider
-                    // enrichment (no cloud suggestion on a password prompt).
-                    archive_needs_password_listing_error(wrong_attempt)
-                } else if matches!(e, VolumeError::NotSupported | VolumeError::IoError { .. })
-                    && cmdr_archive::path_targets_archive_file(&path_for_error)
-                {
-                    archive_unreadable_listing_error()
-                } else {
-                    let mut generic = listing_error_from_volume_error(&e, &path_for_error);
-                    enrich_with_provider(&mut generic, &path_for_error);
-                    generic
-                };
-                if matches!(&e, VolumeError::PermissionDenied { .. }) {
-                    crate::restricted_paths::record_denial(&path_for_error);
-                }
-                // A stale-mount errno here is the only evidence we ever get that
-                // the volume's active mount died: probing for it would block on
-                // the wedged mount itself. If the same filesystem is reachable
-                // through another mount, this moves the volume there.
-                crate::file_system::volume::note_root_failure(&volume_id_owned, &e);
-                let message = e.to_string();
-                // Record into the MCP recent-errors ring buffer so `cmdr://state`
-                // surfaces what just failed, without callers grepping the log file.
-                crate::mcp::listing_errors::record(
-                    &listing_id_for_cleanup,
-                    &volume_id_owned,
-                    &path_for_error.to_string_lossy(),
-                    &message,
-                    Some(&listing_error),
-                );
-                // One line per failed listing, carrying the TYPED reason, so a log
-                // answers "why did this listing fail" without reading code.
-                log::debug!(
-                    "listing {listing_id_for_cleanup} on volume {volume_id_owned} ended in error: {:?} ({:?}){}",
-                    listing_error.reason,
-                    listing_error.category,
-                    e.errno_field(),
-                );
-                events_for_error.emit_error(&listing_id_for_cleanup, message, Some(listing_error));
-            }
-            Ok(()) => {
-                // Success: listing-complete already emitted. If this path was
-                // previously recorded as TCC-restricted, drop it: the user
-                // must have granted access (per-folder TCC popup or FDA toggle).
-                crate::restricted_paths::clear_path(&path_for_error);
-            }
-        }
+        finish_streaming_listing(
+            events_for_error.as_ref(),
+            &AppListingEndEffects,
+            &listing_id_for_cleanup,
+            &volume_id_owned,
+            &path_for_error,
+            result,
+        );
     });
 
     benchmark::log_event("list_directory_start_streaming RETURNING");
