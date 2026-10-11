@@ -237,7 +237,7 @@ pub fn store_metrics(font_id: String, widths: HashMap<u32, f32>) -> Result<(), S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::listing::caching_test_support::unique_test_id;
+    use cmdr_fs::testing::unique_test_id;
 
     fn seed(widths: &[(u32, f32)]) -> String {
         let font_id = unique_test_id("font-metrics");

@@ -1,9 +1,10 @@
 //! Test isolation for the process-global `LISTING_CACHE`.
 
+use cmdr_fs::testing::unique_test_id;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use super::cached_listing::{CachedListing, LISTING_CACHE, epoch_millis_now};
 use super::operations::list_directory_end;
@@ -186,18 +187,6 @@ impl TestListing {
         LISTING_CACHE.write_ignore_poison().insert(listing_id.clone(), listing);
         TestListingGuard { listing_id }
     }
-}
-
-/// A process-unique key for a test-owned entry in any global map (a listing id, a
-/// font id, an operation id). The counter alone would collide across
-/// concurrently-running test binaries, so the pid goes in too.
-pub(crate) fn unique_test_id(tag: &str) -> String {
-    static N: AtomicU64 = AtomicU64::new(0);
-    format!(
-        "test-{tag}-{}-{}",
-        std::process::id(),
-        N.fetch_add(1, Ordering::Relaxed)
-    )
 }
 
 /// A `Volume` whose `listing_watch_coverage` answer a test pins, delegating every

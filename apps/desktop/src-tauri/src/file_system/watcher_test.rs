@@ -262,10 +262,11 @@ async fn test_handle_directory_change_detects_new_entries() {
 #[cfg(target_os = "macos")]
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
-    use crate::file_system::listing::caching_test_support::{TestListing, unique_test_id};
+    use crate::file_system::listing::caching_test_support::TestListing;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::start_watching;
     use crate::test_support::{TestDir, wait_until};
+    use cmdr_fs::testing::unique_test_id;
     use std::time::Duration;
 
     let scratch = TestDir::new("watch-root-replaced");
@@ -365,9 +366,9 @@ fn a_detached_arm_attaches_the_watch() {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
-    use crate::file_system::listing::caching_test_support::unique_test_id;
     use crate::file_system::watcher::arm_and_reconcile;
     use crate::test_support::TestDir;
+    use cmdr_fs::testing::unique_test_id;
 
     let scratch = TestDir::new("detached-arm-orphan");
     let watched = scratch.join("dir");
@@ -395,10 +396,11 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     crate::test_support::TestDir,
     crate::file_system::listing::caching_test_support::TestListingGuard,
 ) {
-    use crate::file_system::listing::caching_test_support::{TestListing, unique_test_id};
+    use crate::file_system::listing::caching_test_support::TestListing;
     use crate::file_system::listing::diff_emitter::hold_for_test;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
+    use cmdr_fs::testing::unique_test_id;
     use notify_debouncer_full::DebouncedEvent;
     use notify_debouncer_full::notify::{
         Event,

@@ -189,13 +189,14 @@ impl Volume for SwappedMidListing {
 /// is gone, or the pane keeps the kernel's spelling on a byte-exact share.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelling() {
-    use crate::file_system::listing::caching_test_support::{TestListingGuard, unique_test_id};
+    use crate::file_system::listing::caching_test_support::TestListingGuard;
     use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
     use crate::file_system::listing::streaming::{
         CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
     };
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::test_support::wait_until_async;
+    use cmdr_fs::testing::unique_test_id;
 
     let volume_id = format!("respell-mid-listing-{}", uuid::Uuid::new_v4());
     let kernel = InMemoryVolume::new("Share");

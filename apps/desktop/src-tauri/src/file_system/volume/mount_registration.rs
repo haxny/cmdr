@@ -170,7 +170,7 @@ fn adopt_with(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::listing::caching_test_support::unique_test_id;
+    use cmdr_fs::testing::unique_test_id;
 
     fn identity(root: &str, volume_id: &str) -> MountIdentity {
         MountIdentity {

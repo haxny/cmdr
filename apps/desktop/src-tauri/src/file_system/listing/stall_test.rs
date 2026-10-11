@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use tokio::sync::watch;
 
-use crate::file_system::listing::caching_test_support::{TestListingGuard, unique_test_id};
+use crate::file_system::listing::caching_test_support::TestListingGuard;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::stall::{HungReads, StallPolicy, StallWatch};
 use crate::file_system::listing::stalled_on::StalledOn;
@@ -26,6 +26,7 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
 /// Short enough to keep the suite fast, long enough that a healthy read never trips it.

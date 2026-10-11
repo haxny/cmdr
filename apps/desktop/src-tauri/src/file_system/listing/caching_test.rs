@@ -6,10 +6,11 @@ use super::caching::{
     apply_tags_to_listing, carry_forward_tags, find_listings_for_path_on_volume, has_entry, insert_entry_sorted,
     notify_added, notify_removed, remove_entries_by_paths, remove_entry_by_name, update_entry_sorted,
 };
-use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
+use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::PaneRows;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::{FileEntry, TagRef};
+use cmdr_fs::testing::unique_test_id;
 
 fn tag(name: &str, color: u8) -> TagRef {
     TagRef {

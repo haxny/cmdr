@@ -17,7 +17,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::caching::{notify_full_refresh, publish_replacement};
-use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
+use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_start_with_volume;
 use super::seam_test_support::{MARKER_ROW, MARKER_VOLUME_NAME, ensure_seam_overlay};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
@@ -26,6 +26,7 @@ use super::streaming::{
 };
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::InMemoryVolume;
 
 fn entry(name: &str) -> FileEntry {

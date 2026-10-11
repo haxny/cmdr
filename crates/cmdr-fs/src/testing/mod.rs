@@ -1,6 +1,7 @@
 //! The two things a Rust test needs from the host: somewhere to write, and a way to wait.
 //!
-//! [`TestDir`] is the scratch directory. [`wait_until`] serves sync `#[test]`s,
+//! [`TestDir`] is the scratch directory; [`unique_test_id`] names a test-owned entry
+//! in a process-wide map. [`wait_until`] serves sync `#[test]`s,
 //! [`wait_until_async`] serves `#[tokio::test]`s; both poll a condition to a
 //! deadline and panic when it never holds, so a wait can't silently pass. Don't
 //! hand-roll a poll loop, and don't sleep a fixed span hoping the work landed:
@@ -96,6 +97,18 @@ impl AsRef<Path> for TestDir {
     fn as_ref(&self) -> &Path {
         self.0.path()
     }
+}
+
+/// A process-unique key for a test-owned entry in any global map (a listing id, a
+/// font id, an operation id, a volume id). The counter alone would collide across
+/// concurrently-running test binaries, so the pid goes in too.
+pub fn unique_test_id(tag: &str) -> String {
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    format!(
+        "test-{tag}-{}-{}",
+        std::process::id(),
+        N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    )
 }
 
 /// How often we re-check the condition: short enough that a satisfied wait returns promptly, long

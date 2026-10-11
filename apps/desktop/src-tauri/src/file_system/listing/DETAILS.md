@@ -135,7 +135,7 @@ once (`cargo nextest` gets isolation free from process-per-test, but the module-
 Three failure modes follow, and `caching_test_support.rs` closes all three:
 
 - **Colliding keys.** Two tests picking the same literal listing id clobber each other. `TestListing::insert(tag)` mints
-  a process-unique id (`unique_test_id`: tag + pid + counter).
+  a process-unique id (`cmdr_fs::testing::unique_test_id`: tag + pid + counter).
 - **Leaks on a failed assertion.** A hand-rolled `cache.remove(...)` placed after the assertions never runs when one
   fails, so the entry stays visible to every later test. `TestListingGuard`'s `Drop` tears down through the production
   `list_directory_end` (entry, watcher, and pending coalesced diff together), and `Drop` runs on unwind.

@@ -17,7 +17,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use super::caching_test_support::{TestListing, TestListingGuard, unique_test_id};
+use super::caching_test_support::{TestListing, TestListingGuard};
 use super::operations::list_directory_end;
 use super::seam_test_support::{Heard, heard, record_lifecycle_of};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
@@ -25,6 +25,7 @@ use super::streaming::{
     CollectorListingEventSink, ListingEventSink, StreamingListingState, read_directory_with_progress,
 };
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 async fn stream(listing_id: &str, volume_id: &str, path: &Path) {
