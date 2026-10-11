@@ -59,10 +59,9 @@ pub fn is_network_filesystem(path: &Path) -> bool {
 /// write cannot be given a timeout".
 ///
 /// `dest` (the staged temp) is created owner-only, so a private file is never
-/// readable by others while its bytes stream. After the data, on the open fd
-/// (`cmdr_fs::metadata::apply_staged`): the xattrs, the source's exact mode,
-/// then birth, mtime, and atime in one call; then the flush, so the metadata is
-/// as durable as the bytes.
+/// readable by others while its bytes stream. After the data and its flush, on
+/// the open fd (`cmdr_fs::metadata::apply_staged`): the xattrs, the source's
+/// exact mode, then birth, mtime, and atime in one call.
 ///
 /// The ACL and the user flags don't go on the temp: Locked and a `deny delete`
 /// ACL refuse the landing rename, so they come back in [`Staged::landed`] for
@@ -111,6 +110,24 @@ pub fn chunked_copy_with_metadata(
         progress_callback,
     )?;
 
+    // Flush the file's data pages durably before signalling success.
+    //
+    // `sync_all` defeating cancellation only applies *during* the chunk loop;
+    // at this point we've left the loop, there's nothing left to cancel, and
+    // the next thing the caller does is emit `write-complete`. Without this,
+    // the user can pull a USB drive after "Copy finished" and lose a file
+    // that lived only in the OS page cache.
+    //
+    // ❗ Before the dates, not after: on a macOS SMB mount, writes still
+    // buffered when the dates go on reach the server at the handle's real
+    // close (the landing rename), and the server stamps that close's time as
+    // the mtime (verified against the Docker Samba share, macOS 27.0,
+    // 2026-10-11: a time-set before the flush read back the rename's time).
+    flush_to_disk(&dst_file).map_err(|e| WriteOperationError::WriteError {
+        path: dest.display().to_string(),
+        message: format!("Couldn't flush destination to disk: {}", e),
+    })?;
+
     // Best effort: a refused class is logged and the copy stands (rule 1).
     let carried = CarriedMetadata::of_local_file(&src_file, &src_meta);
     let times = StagedTimes {
@@ -125,19 +142,6 @@ pub fn chunked_copy_with_metadata(
             source.display()
         );
     }
-
-    // Flush the file's data pages durably before signalling success.
-    //
-    // `sync_all` defeating cancellation only applies *during* the chunk loop;
-    // at this point we've left the loop, there's nothing left to cancel, and
-    // the next thing the caller does is emit `write-complete`. Without this,
-    // the user can pull a USB drive after "Copy finished" and lose a file
-    // that lived only in the OS page cache. `sync_data` is the cheaper
-    // `fdatasync` variant — file data + size are durable; mtime can lag.
-    flush_to_disk(&dst_file).map_err(|e| WriteOperationError::WriteError {
-        path: dest.display().to_string(),
-        message: format!("Couldn't flush destination to disk: {}", e),
-    })?;
 
     log::debug!(
         "chunked_copy: completed {} bytes from {} to {}",
