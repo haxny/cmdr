@@ -253,6 +253,7 @@ describe('SourcesGonePrompt a11y', () => {
           supportsRollback: true,
           reverses: null,
           error: null,
+          canRetry: false,
         },
         answering: true,
         onContinue: () => {},

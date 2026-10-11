@@ -33,6 +33,7 @@ function fixture(
       supportsRollback: false,
       reverses: null,
       error: null,
+      canRetry: false,
     },
   }
 }

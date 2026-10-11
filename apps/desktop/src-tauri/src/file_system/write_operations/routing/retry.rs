@@ -24,6 +24,13 @@
 //! - **No source binding**: the binding is a promise to whoever started the
 //!   original (`source_binding.rs`), and the person clicking Retry is looking at
 //!   the row, not at that promise.
+//!
+//! Everything else a start does, the retry does too, because it IS a start: it
+//! queues behind a busy lane like any operation, and one that waited checks its
+//! sources when admitted and asks "move the rest / cancel" about any that left
+//! meanwhile (`../queued_sources.rs`). One admitted at once is a fresh start the
+//! person just asked for, so a source gone by then fails it with its own typed
+//! error, exactly as a new copy of that file would.
 
 use std::future::Future;
 use std::path::PathBuf;

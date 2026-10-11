@@ -57,6 +57,7 @@ function row(id: string, status: OperationSnapshot['status'] = 'running'): Opera
       supportsRollback: false,
       reverses: null,
       error: null,
+      canRetry: false,
     },
     progress: null,
   }
