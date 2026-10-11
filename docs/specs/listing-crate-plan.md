@@ -16,16 +16,17 @@ later WASM build harder for free.
 
 ## Loud rules (read before touching anything)
 
-- **Byte-identical behavior, except the five changes in § "Behavior changes, called out".** Each of those lands in its
-  own commit with a red test first and is named in the commit body. Anything else that changes behavior is a bug in the
-  milestone, not a judgment call.
+- **Byte-identical behavior, except the six changes in § "Behavior changes, called out"** and the standalone bug fix in
+  § "Before M0". Each lands in its own commit with a red test first and is named in the commit body. Anything else that
+  changes behavior is a bug in the milestone, not a judgment call.
 - **The TS bindings must not move.** Every event name, payload shape, and type name the frontend sees stays the same.
   `desktop-bindings-fresh` regenerates `apps/desktop/src/lib/ipc/bindings.ts` and must report zero diff on every
   milestone. This is the proof that moving `tauri_specta` derives app-side lost nothing.
 - **Characterize first.** M0 lands before any production change. Pin reality, not this plan's expectations, and verify
   every new timing- or order-sensitive pin goes red when you break the thing it pins.
 - **`main` ships after every milestone.** Each milestone compiles, passes its lanes, and leaves the app working. The
-  temporary shims in M3a exist for exactly this; they die in M4b.
+  temporary shims in M3a exist for exactly this; they die in M4b. Each milestone is sized for one executor in a few
+  hours; when one runs long, stop at a green commit boundary and hand the rest on, never leave `main` mid-milestone red.
 - **Every invariant in `file_system/listing/CLAUDE.md` survives.** The footer lists them, plus the ones this refactor
   adds. Where this plan turns a rule into a type, the rule's doc line shrinks or goes; it never silently disappears.
 - **No `tokio::spawn`, `tokio::task::spawn_blocking`, or `std::thread::spawn` in the engine.** Everything spawns on the
@@ -38,7 +39,7 @@ later WASM build harder for free.
 - **No seam, observer, or overlay is called while an engine lock is held**, and a closure the API runs under the cache
   lock (`with_rows`, the ONLY one left after M4a; see § "Public API") must not call back into `Listings`. Today's code
   honors the first half everywhere but ONE place: `refresh_listing_index_sizes` runs `index().enrich` (two SQLite
-  queries) under the cache WRITE lock, once per index event per pane. That's behavior change 5, fixed in M3b. The
+  queries) under the cache WRITE lock, once per index event per pane. That's behavior change 5, fixed in M3c. The
   index-size observer READS the cache from inside `listing_opened`, so an observer call under the write lock would
   deadlock on the first open. Resolve the collator (`ReadingLocale`) and the scratch visibility BEFORE taking the cache
   lock and pass them in as values.
@@ -198,7 +199,9 @@ answer:
 - **Missed by the first survey (review round 1):**
   - `write_operations/create.rs::emit_synthetic_entry_diff` (production, also the paste writer): stats the new entry,
     enriches it itself, then `find_listings_for_path` (volume-LESS) + `insert_entry_sorted` per listing. It bypasses the
-    composer (no index apply, no badge invalidation) and `notify_added`'s upsert. M4a maps it explicitly; see M4a.
+    composer (no index apply, no badge invalidation) and `notify_added`'s upsert. The volume-less match is a live bug (a
+    local create at `/tmp/x` adds a row to an SFTP pane showing a remote `/tmp`), fixed in § "Before M0"; the re-route
+    through the composer is behavior change 6 (M4a).
   - `commands/e2e.rs::flush_file_watcher` → `watcher::flush_all_watchers` → `handle_directory_change` per watch, then
     `diff_emitter::flush_all_pending`. E2E relies on the re-read having LANDED when it returns (behavior change 3).
   - `commands/settings.rs::set_show_virtual_git_portal` → git wiring's refresh; its "async is load-bearing because
@@ -259,7 +262,7 @@ didn't, keep the flat layout for that pair rather than asking for an allowlist e
 exists so the IPC pass-throughs read one-to-one.
 
 - **A pane opens and closes a listing:** `start(ListingRequest)` (spawns the streaming read on the host runtime, returns
-  immediately), `cancel(id)`, `end(id)`, `keep_alive(ids) -> Vec<String>`.
+  immediately), `cancel(id)`, `end(id)`, `keep_alive(ids) -> Vec<ListingId>`.
 - **Row-space reads** (every index is a pane row; no entry index crosses this boundary, by construction): `file_range`,
   `total_count`, `find_file_index`, `find_file_indices`, `file_beside`, `file_at`, `paths_at_indices`,
   `files_at_indices`, `stats`, `selection_snapshot`, and `with_rows(id, include_hidden, |VisibleRows| …)` for app
@@ -270,10 +273,14 @@ exists so the IPC pass-throughs read one-to-one.
 - **Change intake:** `directory_changed(volume_id, parent, DirectoryChange)` (panes only; the app composes the index and
   badge halves around it), `observe_children(id, Vec<(PathBuf, Option<FileEntry>)>)` (the watcher's incremental path:
   the engine classifies add/remove/modify, enriches, carries tags forward, and publishes, in today's removes → adds →
-  modifies order), `refresh(id) -> RefreshOutcome` (the watcher's and ⌘R's full re-read, through the turnstile;
-  `RefreshOutcome::DirectoryGone` is what the app turns into `directory-deleted`), `begin_read(id) -> ReadTicket` +
-  `refresh_from_entries(ticket, entries)` (the watcher's unregistered-volume `std::fs` fallback; the ticket is taken
-  BEFORE the app reads, see behavior change 3), `refresh_archive_listings` (async), `respell_on_volume`, `apply_tags`,
+  modifies order), `refresh(id) -> RefreshOutcome` (the watcher's and ⌘R's full re-read; NOT through the turnstile, see
+  behavior change 3), `begin_read(id) -> Option<ReadTicket>` + `refresh_from_entries(ticket, entries)` (the watcher's
+  unregistered-volume `std::fs` fallback; the ticket is taken BEFORE the app reads, see behavior change 3).
+  `RefreshOutcome` is `Landed`, `Superseded` (a newer read already published), `DirectoryGone` (the app emits
+  `directory-deleted` and stops the watch, as today), `NoVolume` (nothing serves the listing's volume id: the app's cue
+  to run `begin_read` → `list_directory_core` → `refresh_from_entries`, which is today's in-function fallback split at
+  the seam), `ListingGone`, or `Skipped` (`PermissionDenied` silently, any other read error logged at warn, as today).
+  `refresh_archive_listings` (async), `respell_on_volume`, `apply_tags`,
   `update_index_sizes(id, &[(path, IndexSizes)])`, `refresh_index_sizes(id)`. `IndexSizes` is the seven `recursive_*`
   fields as one `Copy` value: data, not a closure, so the app can't touch a name or path under the cache write lock
   (today's `FnMut(usize, &mut FileEntry)` can, and a renamed entry would desync the path index).
@@ -303,7 +310,8 @@ entry index, the diff queue, the turnstile map, `HungReads`, `StallPolicy` (a `t
 
 Each trait is `Send + Sync`, answered app-side by one adapter in the new app module `listing_host/` (beside
 `index_host.rs` and `volume_host.rs`), defaults to a no-op under `Listings::detached()`, and has a recording or scripted
-fake under `testing`.
+fake under `testing`. The no-op defaults are public unit types in `host` (`NoVolumes`, `NoEvents`, …), so a caller can
+pass one to `Listings::builder` explicitly: the app's test-binary fallback is `builder(AppVolumes, NoEvents)`.
 
 1. **`ListingVolumes`: which volume serves a path.** `get(volume_id)`, `resolve(volume_id, path)` (async, routes archive
    and git-portal paths), `resolve_local_only(volume_id, path)` (sync, for the oracle), and
@@ -314,19 +322,22 @@ fake under `testing`.
    one answers mount identity for scanning, this one answers routing for reading; sharing a trait would couple two
    crates through methods neither needs.
 2. **`ListingEvents`: what happened to a listing.** `opening`, `stalled(StalledOn)`, `progress(loaded)`,
-   `read_complete(total)`, `finished(ListingEnd)`, `diff(id, Vec<DirectoryDiffBatch>)`, `respelled(id, &Path)`.
-   `ListingEnd` is `Complete { total_count, volume_root, stored_path, empty_at_volume_root }`, `Cancelled`, or
-   `Failed { error: VolumeError }`, each with the listing id, volume id, and path. Why the facts and not wire events:
-   the restricted-empty-root hint, error classification, analytics, the MCP ring, and TCC bookkeeping are product
-   policy, and pinning them in M0 against today's `TauriListingEventSink` lets the adapter prove it kept every one. App:
+   `read_complete(total)`, `finished(ListingEnd)`, `diff(id, Vec<DirectoryDiffBatch>)`, `respelled(id, &Path)`. Every
+   method takes `&ListingId` first. `ListingEnd` is
+   `Complete { total_count, volume_root, stored_path, empty_at_volume_root }`, `Cancelled`, or
+   `Failed { error: VolumeError }`, each with the volume id and path. Why the facts and not wire events: the
+   restricted-empty-root hint, error classification, analytics, the MCP ring, and TCC bookkeeping are product policy,
+   and pinning them in M0 against today's `TauriListingEventSink` lets the adapter prove it kept every one. App:
    `TauriListingEvents`, which also owns the wire structs (moved from `streaming.rs`, `diff.rs`, `foreign_path.rs`,
    names and derives unchanged). Default: drops everything.
 3. **`ListingIndex`: what the drive index knows.** `enrich(volume_id, &mut [FileEntry])`,
-   `verify_directory(volume_id, path)`. App: `AppListingIndex` over `index_host::index()`. Default: no-op.
-   `apply_directory_change` is NOT here: it's a different subsystem hearing the same change, so the app's composer
-   `listing_host::directory_changed` calls the index, then `sync_status::invalidate_dir`, then
-   `listings().directory_changed`, in today's order. `AppListings` (the backends' `cmdr_fs` `ListingHost`), git wiring,
-   the local mutation patch, and the rename command all call the composer.
+   `verify_directory(volume_id, path)`. App: `AppListingIndex` over `index_host::index()`. Default: no-op. ❗ The trait
+   doc states the contract behavior change 5 relies on: `enrich` writes only the seven `recursive_*` fields, and only on
+   non-symlink directories (verified in `cmdr_index`'s `enrich_entries_with_index_on_volume` / `apply_dir_stats`,
+   2026-10-11 on `7be64c4ff`); `FakeIndex` honors it. `apply_directory_change` is NOT here: it's a different subsystem
+   hearing the same change, so the app's composer `listing_host::directory_changed` calls the index, then
+   `sync_status::invalidate_dir`, then `listings().directory_changed`, in today's order. `AppListings` (the backends'
+   `cmdr_fs` `ListingHost`), git wiring, the local mutation patch, and the rename command all call the composer.
 4. **`ListingOverlay`: rows a pane sees that no volume holds.** Today's trait, unchanged in shape, moved in. Builder
    input `.overlay(Arc<dyn ListingOverlay>)`, in registration order. App: the git portal's `GitPortalOverlay`.
 5. **`ListingObserver`: what keeps something alive while a pane shows a directory.** Today's `ListingLifecycle`, renamed
@@ -361,7 +372,7 @@ Each one lands as its own commit with a red test first, and the commit body name
 1. **No more "no `AppHandle` yet" gate** (`notify_directory_changed`'s `has_app`). Before setup finished, and in every
    test, a directory change used to no-op; now it patches the panes, and the events seam drops what nobody listens to.
    In production no listing exists before setup, so nothing observable changes; in tests, code paths that were silently
-   skipped start running (M2a landmine).
+   skipped start running (M2b landmine).
 2. **The FSEvents watch disarms after the cache removal, not before**, because it's now an observer. Safe for the same
    reason the existing close-after-removal rule exists: `arm_and_reconcile` already reconciles against membership, and
    an event landing in the gap finds no listing.
@@ -381,8 +392,9 @@ Each one lands as its own commit with a red test first, and the commit body name
    (review round 2), because a generation taken too early drops a FRESHER read:
    - `FullRefresh` takes it AFTER acquiring its turn, immediately before `list_directory`, never at spawn or while
      queued (a queued refresh holding an early generation would lose to a ⌘R that started later but read earlier).
-   - `refresh_from_entries` takes it through `begin_read(id) -> ReadTicket` BEFORE the app's `std::fs` read, so the
-     generation dates the app's read, not the hand-over.
+   - `refresh` and the respell re-read take it after resolving the volume, immediately before `list_directory`.
+   - `refresh_from_entries` takes it through `begin_read(id) -> Option<ReadTicket>` BEFORE the app's `std::fs` read, so
+     the generation dates the app's read, not the hand-over. `None` means the listing is gone; the app skips the read.
    - `Replaced` takes it on arrival. The backend's own read predates that by a little; accepted, since a `cmdr_fs`
      signature change would be needed to date it and the backend serializes its own re-reads.
    - The streaming read's cache insert publishes generation 0 for the listing, so any later re-read wins.
@@ -391,7 +403,7 @@ Each one lands as its own commit with a red test first, and the commit body name
      would drop every re-read during a busy burst). Name it in the commit body so nobody "fixes" it silently. Red test:
      a slow `FullRefresh` started first and a ⌘R started second that finishes first; the older read must not land.
      Second cell: a `FullRefresh` queued behind a held turn, a ⌘R that publishes while it waits; the queued one must
-     still land (it reads later). The reviewer may still veto, in which case `refresh` keeps today's unserialized path.
+     still land (it reads later). Lands in M3c.
 4. **A backend's `Replaced` re-read asks the overlays whether they apply.** ❗ The `Replaced` arm is SYNCHRONOUS today
    (`notify_directory_changed` runs on the backend's thread) and `decorate` is async (`extra_entries` on the blocking
    pool). Awaiting the full pipeline there would make the patch land later than an `Added` / `Removed` the same backend
@@ -400,22 +412,67 @@ Each one lands as its own commit with a red test first, and the commit body name
    applied synchronously exactly as today; one applies → escalate to a spawned full re-read of that directory instead of
    decorating in place. Red test for the escalation branch with a test overlay that applies to an in-memory volume.
    `applies_to` needs a `&dyn Volume`, which the arm doesn't hold today: take it from the sync `ListingVolumes::get`,
-   outside every lock; `None` means no overlay can apply (today's path). The escalation IS the `FullRefresh` arm for
-   those listings (same turnstile, same generation rule), and the backend's entries are dropped, not half-applied.
+   outside every lock; `None` means no overlay can apply (today's path). No new lock edge: the arm already reads the
+   volume registry on the backend's thread through `ListingPath::on_volume` (verified 2026-10-11 on `7be64c4ff`). The
+   escalation IS the `FullRefresh` arm for those listings (same turnstile, same generation rule), and the backend's
+   entries are dropped, not half-applied.
 5. **`refresh_index_sizes` enriches outside the cache lock.** Today `refresh_listing_index_sizes` holds the cache WRITE
    lock across `index().enrich` (two indexed SQLite queries over every row), once per index event per open pane, so an
-   index storm stalls every pane read and IPC accessor behind it. Instead: under a read lock clone the rows enrich can
-   change (verify in `cmdr_index`'s `enrich_entries_with_index_on_volume` which rows that is; if it's directories only,
-   clone only those), enrich the clones with no lock held, then write the results back by path as `IndexSizes` through
-   the same writer `update_index_sizes` uses (which keeps both maps and doesn't bump `last_accessed_ms`). A row added in
-   between was enriched by its own insert; a row removed in between is skipped by the by-path write. Red test: a
-   `FakeIndex` whose enrich blocks on a gate; a `file_range` on the same listing must return while it's held.
+   index storm stalls every pane read and IPC accessor behind it; it also goes through `entries_mut`, which drops the
+   path map and the row map on every index event. Instead, in this order:
+   - Under a READ lock, clone the non-symlink directories (the only rows enrich writes; see seam 3) and the listing's
+     current read generation (behavior change 3). No dirs → return.
+   - Enrich the clones with no lock held.
+   - Under the WRITE lock, if the read generation moved, drop the result: the re-read that replaced the rows enriched
+     them itself, at least as recently. Otherwise write the seven fields back by path as `IndexSizes` through the writer
+     `update_index_sizes` uses (`update_index_sizes_by_path`: keeps both maps, doesn't re-sort, doesn't bump
+     `last_accessed_ms`).
+   - By path is order-independent, so a re-sort in between is harmless. A row added in between was enriched by its own
+     insert; a row removed or renamed in between is skipped. A `Modified` patch in between (patches don't bump the
+     generation) can get sizes one index event older written over its own enrich; the next index event corrects it,
+     which is the same window today's code has between two events.
+   - The kept maps are part of the change (no more full map rebuild per index event); name it in the commit body. Red
+     tests: a `FakeIndex` whose enrich blocks on a gate, and a `file_range` on the same listing returns while it's held;
+     a re-read that publishes while the gate is held, and the stale sizes are dropped.
+6. **A Cmdr-made create reaches the panes the way every other local mutation does.** `emit_synthetic_entry_diff` (mkdir,
+   mkfile, paste-as-file) becomes one call to the local backend's
+   `patch_listing_after_local_mutation(volume_id, parent, MutationEvent::Created(name))`, the function
+   `LocalPosixVolume::notify_mutation` already runs for deletes and renames. What changes: an entry the listing already
+   holds (the watcher stat'd it first) is upserted with the create's fresher stat instead of dropped, tags carried
+   forward, exactly `notify_added`'s documented reason; and the composer's index apply (a no-op for `root`) and
+   cloud-badge invalidation now run for a create too. `should_emit_synthetic_diff` stays as the gate. Red test: a
+   listing holding the new path with a stale size gets the on-disk size (today it keeps the stale one); M0's
+   insert-if-absent pin is updated in the same commit with the reason. Lands in M4a, after M2b removed the `has_app`
+   gate (before that, the composer no-ops in the test binary and the red test would pass vacuously).
 
 ## Milestones
 
 Each milestone is one executor's work. "Lanes" names what the milestone must leave green; always add the cadence in
 `AGENTS.md` § "Checker script" (`--fast` while iterating, plain `pnpm check` at the end) and `--include-slow` where
 noted.
+
+### Before M0: a create lands only in panes on its own volume
+
+**Scope.** One standalone bug fix on today's code, its own commit (`fix(create): …`), landed before M0 so M0 pins the
+fixed behavior. `emit_synthetic_entry_diff` finds its listings with the volume-less `find_listings_for_path`, so a
+mkdir, mkfile, or paste-as-file into a local `/tmp` also inserts a row into an SFTP, WebDAV, or S3 pane that shows a
+remote `/tmp`. Replace the lookup with `find_listings_for_path_on_volume(Some(volume_id), parent_path)`, using the id
+the function already derives (`None` → `root`).
+
+**Why the id is right.** The frontend passes the pane's own `volumeId` (`file-operation-commands.ts`, the mkdir and
+mkfile dialogs, `paste_clipboard_as_file`), `create_*_core` writes through that same id, and the pane's listing carries
+it, so an external disk's pane matches under its own id. Only volume-less callers fall back to `root`, and they also
+wrote through `root`. A pane on a DIFFERENT local volume that shows the same directory stops getting the instant row and
+gets it from its FSEvents watch (~200 ms), like any outside write. `ListingPath::on_volume` spells local paths verbatim,
+so the match is otherwise unchanged. (Verified 2026-10-11 on `7be64c4ff` by reading `create.rs`, `paste_clipboard.rs`,
+and the TS callers.)
+
+**Test plan.** Red first in `write_operations/create/tests`: a `TestListing` on `root` and one on a second volume id,
+both at the same real temp dir; `emit_synthetic_entry_diff(None, …)` adds the row to the `root` listing only (red today:
+both gain it). This path has no `has_app` gate, so the cell runs in the test binary today.
+
+**DONE.** The cell red then green; `create.rs` no longer names `find_listings_for_path`; lanes: `desktop-rust-tests`,
+`desktop-rust-clippy`.
 
 ### M0: Characterize what the seams will cut through
 
@@ -445,7 +502,7 @@ plain function both call, so a test can drive it without an `AppHandle`. Zero be
   `archive_watch_integration_test`).
 - `flush_all_watchers` returns only after every listing's re-read landed in the cache.
 - `emit_synthetic_entry_diff` on a path the listing already holds emits nothing (today's `insert_entry_sorted` duplicate
-  guard), so M4a's re-route either keeps that or names a fifth behavior change.
+  guard). M4a's behavior change 6 flips this pin on purpose, in its own commit.
 - Poison: none. Don't pin poisoned-lock behavior; M3a changes it deliberately (see there).
 
 **Landmines.** `analytics::events::capture` may have no test observer; if it doesn't, pin the category string the
@@ -463,7 +520,10 @@ a second collector. Timing pins use `wait_until_async` and held flush windows, n
 **Scope.**
 
 1. Re-point every `file_system::listing::{FileEntry, metadata::FileEntry, metadata::TagRef, ExtendedMetadata}` import in
-   the app at `cmdr_fs::entry`, and drop the `metadata` alias and those re-exports.
+   the app at `cmdr_fs::entry`, and drop the `metadata` alias and those re-exports. Inside `listing/`, also re-point
+   every app path that is only a `cmdr_fs` re-export (`crate::ignore_poison`, and the `crate::file_system::volume::`
+   items that are `cmdr_fs::volume` items: `Volume`, `VolumeError`, `DirectoryChange`, the friendly-error helpers, …) at
+   `cmdr_fs` directly, so M2c's grep counts only real app reaches.
 2. Move `reading.rs` and `mutation.rs` (and their tests) next to the local backend under `file_system/volume/backends/`
    (they are what `LocalPosixVolume`, the watcher, `tags.rs`, and `create.rs` read through).
    `patch_listing_after_local_mutation` keeps calling `notify_directory_changed` for now.
@@ -486,44 +546,33 @@ cells, which test the local reader, not the engine. `cargo check -p cmdr-fs` and
 **Docs.** What `listing/DETAILS.md` says about `reading.rs` and `mutation.rs` moves to the local backend's docs in the
 same commit (single-source), leaving a one-line pointer; M6 doesn't have to find it later.
 
-**DONE.** No production code in `listing/` names `benchmark`, `index_provider`, `cmdr_archive`, or the scratch-name
-helpers; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-clippy-linux`, `desktop-rust-rustdoc`,
-`index-crate-isolation`, `desktop-rust-module-cycles` (slow), `file-length`, `desktop-rust-jscpd`,
-`desktop-bindings-fresh`.
+**DONE.**
+`rg -n 'crate::(benchmark|ignore_poison|file_system::index_provider)|archive_boundary_candidate|crate::file_system::staging::(could_be|is_safe_save|hidden_with)' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*'`
+finds only `cmdr_fs::archive_format::archive_boundary_candidate` uses, and `listing/` holds no `reading.rs` or
+`mutation.rs` (`cmdr_archive::path_targets_archive_file` legitimately stays until M2a); lanes: `desktop-rust-tests`,
+`desktop-rust-clippy`, `desktop-rust-clippy-linux`, `desktop-rust-rustdoc`, `index-crate-isolation`,
+`desktop-rust-module-cycles` (slow), `file-length`, `desktop-rust-jscpd`, `desktop-bindings-fresh`.
 
-### M2a: The seams exist; events, runtime, overlays, and observers go through them
+### M2a: The seams exist; events and the runtime go through them
 
-**Scope.** Create `file_system/listing/host/` with all eight traits in their final shape (§ "Seam design"), their no-op
-defaults, and a process-wide host slot that the app's new `listing_host::install` fills (the interim shape `cmdr-index`
-used: accessors resolve a slot today and become handle fields in M3a with no call-site churn). Create the app module
-`listing_host/` with `install` and the adapters. In this milestone, route through the seams:
+**Scope.** Create `file_system/listing/host/` with all eight traits in their final shape (§ "Seam design"), their public
+no-op defaults, and a process-wide host slot that the app's new `listing_host::install` fills (the interim shape
+`cmdr-index` used: accessors resolve a slot today and become handle fields in M3a with no call-site churn). Create the
+app module `listing_host/` with `install` and the events adapter; `lib.rs` calls `listing_host::install` early in
+`setup()` (before `volume_host::install`). In this milestone, route through the seams:
 
 - Every event: the seven streaming events, `directory-diff`, `listing-respelled`, all via `ListingEvents`. The wire
   structs move to `listing_host/events.rs` unchanged. The M0-extracted reaction function moves into
-  `TauriListingEvents::finished`. `WATCHER_MANAGER.app_handle` is no longer read from `listing/`.
-- Every spawn: through the host runtime handle.
-- `listing_overlays.rs` and `listing_lifecycle.rs` fold into `host/overlays.rs` and `host/observers.rs`; their
-  registries become the slot's lists. `lib.rs` calls `listing_host::install` early in `setup()` (before
-  `volume_host::install`), passing the git overlay, then the observers in order: the watcher, git arming, index sizes.
-  `git::overlay::register`, `git::arming::register`, and `listing_index_sizes::start`'s registration call become
-  constructors handed to `install`.
+  `TauriListingEvents::finished`, taking `cmdr_archive::path_targets_archive_file` with it. `WATCHER_MANAGER.app_handle`
+  is no longer read from `listing/`, EXCEPT the `has_app` gate in `notify_directory_changed`, which M2b removes as its
+  own behavior change (keep it reading the same flag until then).
+- Every spawn: through the host runtime handle (update `commands/settings.rs`'s stale `tokio::spawn` comment).
 - `listing/listing_host.rs` (`AppListings`) moves to `crate::listing_host::backends`, so there is one `listing_host`.
-- The watcher becomes an observer (behavior change 2, own commit, M0's close-ordering pin updated with the reason).
-- The `has_app` gate goes (behavior change 1, own commit).
 
-**Intentions.** After M2a, `rg 'tauri' file_system/listing` finds nothing outside tests.
+**Intentions.** After M2a, the only `tauri` left in `listing/` production code is the `has_app` read.
 
-**Landmines.** Removing the `has_app` gate makes `notify_directory_changed` live in the test binary for the first time:
-write-operation and local-backend tests that hold a `TestListing` on a directory they then mutate will start seeing
-patches, and `FullRefresh` arms now spawn background re-reads onto the fallback runtime that can outlive their test. Run
-the whole `desktop-rust-tests` lane, and fix a test only by understanding what it asserted.
+**Landmines.**
 
-- **Test registration stays global until M4b.** There is one process-wide slot in M2a, so a per-test host is not
-  possible yet: `overlay_refresh_test`, git `overlay_tests`, and `arming_tests` keep registering into the slot's lists
-  (first registration per id wins, as today). Per-test engines arrive with the handle.
-- **The fallback must include the watcher observer.** Today every listing on a watchable volume arms a watch with no
-  registration at all; if the test-binary fallback wires observers only when `install` runs, the M0 arming pin goes red,
-  or worse, a test that asserts "no watch" passes vacuously.
 - **A read before `install` must be loud, never a silent permanent fallback.** `index()` uses `get_or_init`, so an early
   read wins the `OnceLock` forever and `install` can only log; for listings that would mean an engine whose events go
   nowhere, and every pane would sit on "loading". In non-test builds, a read before `install` is a `log_error!` plus the
@@ -531,21 +580,52 @@ the whole `desktop-rust-tests` lane, and fix a test only by understanding what i
 - **Adapters resolve the app per call, never at construction.** `listing_host::install` runs before
   `index_host::install` (line order in `lib.rs::setup`), so an adapter that captured `index()` at build would win
   `INDEX`'s `OnceLock` with an unconfigured index. Same for the volume manager.
+
+**Test plan.** M0's matrix passes unchanged against `TauriListingEvents`' reaction function. A new cell builds a host
+with `RecordingEvents` and checks the event sequence of a streaming listing end to end.
+
+**DONE.** `rg -n 'tauri' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*'` finds only the `has_app` read;
+`desktop-bindings-fresh` zero diff; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-clippy-linux`,
+`desktop-rust-tests-linux`, `desktop-ipc-unused`, `desktop-rust-discarded-outcome`, `desktop-rust-lock-poison`.
+
+### M2b: Overlays and observers become host lists; the watcher is an observer
+
+**Scope.**
+
+- `listing_overlays.rs` and `listing_lifecycle.rs` fold into `host/overlays.rs` and `host/observers.rs`; their
+  registries become the slot's lists. `listing_host::install` now also takes the git overlay, then the observers in
+  order: the watcher, git arming, index sizes. `git::overlay::register`, `git::arming::register`, and
+  `listing_index_sizes::start`'s registration call become constructors handed to `install`.
+- The watcher becomes an observer (behavior change 2, own commit, M0's close-ordering pin updated with the reason).
+- The `has_app` gate goes (behavior change 1, own commit).
+
+**Intentions.** After M2b, `rg 'tauri' file_system/listing` finds nothing outside tests, and the lifecycle is one
+ordered list.
+
+**Landmines.** Removing the `has_app` gate makes `notify_directory_changed` live in the test binary for the first time:
+write-operation and local-backend tests that hold a `TestListing` on a directory they then mutate will start seeing
+patches, and `FullRefresh` arms now spawn background re-reads onto the fallback runtime that can outlive their test. Run
+the whole `desktop-rust-tests` lane, and fix a test only by understanding what it asserted.
+
+- **Test registration stays global until M4b.** There is one process-wide slot until M3a, so a per-test host is not
+  possible yet: `overlay_refresh_test`, git `overlay_tests`, and `arming_tests` keep registering into the slot's lists
+  (first registration per id wins, as today). Per-test engines arrive with the handle.
+- **The fallback must include the watcher observer.** Today every listing on a watchable volume arms a watch with no
+  registration at all; if the test-binary fallback wires observers only when `install` runs, the M0 arming pin goes red,
+  or worse, a test that asserts "no watch" passes vacuously.
 - **Only the observer VALUES move to `install`.** `listing_index_sizes::start` keeps starting its worker where it does
   today (it needs the `AppHandle` and its channel); `git::overlay::register` / `arming::register` become constructors.
 
 **Test plan.** Behavior changes 1 and 2 each get their red cell before their commit: (1) a `TestListing` on a directory
 that a `DirectoryChange::Added` names gains the row (red while the `has_app` gate stands); (2) a recording observer
 registered after the watcher sees the watch already disarmed AND the listing already gone from the cache on close (M0's
-close-ordering pin, updated with the reason). M0's matrix passes unchanged against `TauriListingEvents`' reaction
-function. A new cell builds a host with `RecordingEvents` and checks the event sequence of a streaming listing end to
-end.
+close-ordering pin, updated with the reason).
 
-**DONE.** No `tauri::` in `listing/` production code; `desktop-bindings-fresh` zero diff; lanes: `desktop-rust-tests`,
-`desktop-rust-clippy`, `desktop-rust-clippy-linux`, `desktop-rust-tests-linux`, `desktop-ipc-unused`,
-`desktop-rust-discarded-outcome`, `desktop-rust-lock-poison`.
+**DONE.** `rg -n 'tauri' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*'` finds nothing;
+`rg -n 'listing_overlays|listing_lifecycle' apps/desktop/src-tauri/src` finds nothing; lanes as M2a plus
+`desktop-svelte-e2e-playwright` (watch arming moved, and E2E is where a pane that stops updating shows).
 
-### M2b: The rest of the app reaches go through the seams
+### M2c: The rest of the app reaches go through the seams
 
 **Scope.** `ListingVolumes` (every `get_volume_manager()` in `listing/`, mount adoption plus `why_unregistered` as one
 `unregistered` call), `ListingIndex` (every `index_host::index()`), the app composer `listing_host::directory_changed`
@@ -553,7 +633,7 @@ end.
 visibility as engine state set by `file_system::staging`'s setters (which become forwarders, so settings live-apply is
 untouched).
 
-**Intentions.** After M2b, production code in `listing/` names nothing in the app crate outside `listing/` itself and
+**Intentions.** After M2c, production code in `listing/` names nothing in the app crate outside `listing/` itself and
 `cmdr_fs`. That is the precondition for the move, reached while still in the app, where a mistake is a normal compile
 error.
 
@@ -566,8 +646,9 @@ locale string; pulling the locale per sort must not rebuild a collator per sort.
 **Test plan.** `stall_test` and `streaming_test` run against `FakeVolumes`-shaped answers where they used the global
 registry only to resolve. M0's collation golden passes with `ReadingLocale` fixed per test.
 
-**DONE.** `rg 'crate::' file_system/listing --glob '!*test*'` finds only `crate::file_system::listing::` paths and
-nothing else; lanes as M2a plus `desktop-rust-module-cycles` (slow) and `desktop-rust-cfg-gate`.
+**DONE.**
+`rg -n 'crate::' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*' | rg -v 'crate::file_system::listing'`
+finds nothing; lanes as M2a plus `desktop-rust-module-cycles` (slow) and `desktop-rust-cfg-gate`.
 
 ### M3a: The engine owns its state (`Listings`)
 
@@ -603,12 +684,14 @@ reaches for the global would quietly work in the app and break for every other c
 **Test plan.** Whole suite green through the shims, unchanged. One new test builds two engines side by side and shows a
 listing in one is invisible to the other.
 
-**DONE.** `rg 'static ' file_system/listing --glob '!*test*'` finds only constants; lanes: `desktop-rust-tests`,
-`desktop-rust-clippy`, `desktop-rust-lock-poison`, `desktop-rust-tests-linux`.
+**DONE.**
+`rg -n '^\s*(pub(\([a-z]+\))?\s+)?static\s|LazyLock|thread_local!' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*'`
+finds nothing (a `const` is fine; `'static` bounds don't match); `lock-poison-allowlist.json` has no `listing/` entry;
+lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-lock-poison`, `desktop-rust-tests-linux`.
 
 ### M3b: Rules become types
 
-**Scope.** Three refactors plus behavior change 5, one commit each, all behavior-preserving except changes 4 and 5.
+**Scope.** Three refactors, one commit each, all behavior-preserving except change 4.
 
 1. **`Prepared` entries.** One function in `read/pipeline.rs` runs enrich (skipped for a routed volume), then the
    overlays, and returns `Prepared { entries, overlay_rows }`, constructible nowhere else. `CachedListing::new` and the
@@ -621,8 +704,7 @@ listing in one is invisible to the other.
 3. **`ReadSession`.** The streaming read's foreground hold, cancel token, and stall watch live in one struct created at
    the read's first statement, so the hold lives exactly as long as the read and can't be bound to `_`.
 
-Also hoist the remaining per-entry seam calls (the incremental path's per-entry `enrich`) to one call per batch, and
-land behavior change 5 (`refresh_index_sizes` enriches outside the cache lock) as a fourth commit.
+Also hoist the remaining per-entry seam calls (the incremental path's per-entry `enrich`) to one call per batch.
 
 **Intentions.** Each `❗`/`❌` line in `listing/CLAUDE.md` that this makes unrepresentable shrinks to a one-line pointer
 at the type.
@@ -631,52 +713,78 @@ at the type.
 force a recount where today's code keeps it. The token must not hold the queue mutex across the cache lock in the
 reverse order anywhere (`end` takes cache then queue today).
 
-**Test plan.** Red first for both behavior changes here: change 4's escalation cell (a test overlay whose `applies_to`
-matches an in-memory volume; the `Replaced` arm must re-read and the overlay rows must be present), and change 5's
-gated-enrich cell (a test-local index fake until M4b's `FakeIndex`). M0's overlay and close-ordering pins stay green.
+**Test plan.** Red first for change 4's escalation cell (a test overlay whose `applies_to` matches an in-memory volume;
+the `Replaced` arm must re-read and the overlay rows must be present). M0's overlay and close-ordering pins stay green.
 Deleting the overlay step from the pipeline fails compilation or the M0 overlay pins, never neither.
 
-**DONE.** Lanes as M3a plus `desktop-rust-module-cycles` (slow).
+**DONE.** `rg -n 'decorate\(' apps/desktop/src-tauri/src --glob '!*test*'` finds the definition and exactly one call, in
+the pipeline function; lanes as M3a plus `desktop-rust-module-cycles` (slow).
+
+### M3c: One re-read path, ordered by read generation
+
+**Scope.** The engine gains the watcher's half of a re-read, and full re-reads get their generation. One commit each:
+
+1. `Listings::refresh`, `begin_read` + `refresh_from_entries`, and `observe_children` (§ "Public API"), lifted out of
+   `file_system/watcher.rs`'s `handle_directory_change` and `handle_directory_change_incremental`. The watcher keeps the
+   OS half (debounce, rebasing, the stat, the over-500 / unknown-kind fallback decision, the `std::fs` read on
+   `RefreshOutcome::NoVolume`, `directory-deleted`, `stop_watching`) and calls these. `flush_all_watchers` awaits
+   `refresh` per watch, then flushes pending diffs, as today. Zero behavior delta.
+2. Behavior change 3 (the per-listing read generation), red tests first.
+3. Behavior change 5 (`refresh_index_sizes` enriches outside the cache lock), red tests first. It needs change 3's
+   generation, which is why it lands here and not in M3b.
+
+**Intentions.** One place owns "a full re-read lands", so the generation check has exactly one replace step to guard.
+
+**Landmines.** `refresh` returns only once its read landed or was superseded; `flush_all_watchers` (E2E) and the ⌘R
+command's 2 s `TimedOut` wait both depend on that. `PermissionDenied` stays silent and other read errors stay a warn
+log, as today. The watcher's `coverage_for_listings` stays app-side.
+
+**Test plan.** M0's watcher-incremental and `flush_all_watchers` pins pass through the new methods unchanged before
+commit 2. Change 3's two cells and change 5's two cells (§ "Behavior changes, called out"), each red first.
+
+**DONE.** `file_system/watcher.rs` names no `get_listing_entries`, `update_listing_entries`, `insert_entry_sorted`,
+`remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, or `decorate`; lanes: `desktop-rust-tests`,
+`desktop-rust-clippy`, `desktop-rust-tests-linux`, `desktop-rust-test-sleep`, `desktop-svelte-e2e-playwright` (the
+watcher's re-read and `flush_file_watcher` are what E2E leans on).
 
 ### M4a: The app programs against the public API
 
-**Scope.** Write the crate-to-be's API as a `pub` re-export list in `listing/mod.rs` (§ "Public API") and move every
-production caller onto it: `commands/file_system/listing.rs` (pure pass-throughs; `list_directory_start_streaming`
-builds its `StreamingListingStartResult` app-side), `ipc.rs` registrations, `listing_index_sizes` (`update_index_sizes`,
+**Scope.** Write the crate-to-be's API as a `pub` re-export list in `listing/mod.rs` (§ "Public API"), make every other
+`listing/` submodule private (`mod`, not `pub mod`; `host` stays public, and `caching_test_support` stays
+`#[cfg(test)] pub(crate)` until M4b), and move every production caller onto the re-exports:
+`commands/file_system/listing.rs` (pure pass-throughs; `list_directory_start_streaming` builds its
+`StreamingListingStartResult` app-side), `ipc.rs` registrations, `listing_index_sizes` (`update_index_sizes`,
 `folder_entries_named`, `contains`, `location`), `multi_rename/session.rs` (`entries_named`), `mcp/executor/tags.rs`
 (`listings_for_path_on_volume` + `apply_tags`), git wiring and arming, the write-operation oracle callers,
-`commands/search.rs` (`collator()`), `agent/tools/read/pane_listing.rs`, and the watcher: `observe_children` replaces
-its incremental classification, `refresh` replaces `handle_directory_change`'s body (the watcher keeps the OS half:
-debounce, rebasing, the stat, the fallback decision, `directory-deleted`), and `refresh_from_entries` takes its
-`std::fs` fallback. `refresh` returns only once its read landed (or was superseded by a newer one), which
-`flush_all_watchers` and the ⌘R command's 2 s `TimedOut` wait both depend on. `create.rs::emit_synthetic_entry_diff`
-moves onto a panes-only intake call that keeps today's insert-if-absent semantics (M0's pin), or, if the executor routes
-it through `directory_changed`'s upsert, that is behavior change 6 and needs David's OK first. ❓ For David either way:
-it finds its listings with today's volume-LESS verbatim match, so a local create at `/tmp/x` also inserts a row into an
-SFTP or WebDAV pane that happens to show a remote `/tmp`. It knows its volume id (`None` means `root`); the
-volume-scoped `listings_for_path_on_volume` would fix that, but a listing on an external disk under `/Volumes/…` carries
-that disk's id, not `root`, so the scoped lookup needs the caller's real id first. Don't change it without his call.
-Behavior change 3 lands here, own commit, red test first. `brief_columns.rs` moves to `font_metrics/brief_columns.rs`
-and reads rows through `with_rows`. Production shims are deleted; test-only shims stay `#[cfg(test)]`.
-`file_system::staging`'s two setters and getters stop being production API: `lib.rs` and the two settings commands call
-`listings().set_scratch_visibility` directly (reading `scratch_visibility()` to flip one flag), the functions shrink to
-`#[cfg(test)]` shims for `ShowTempsGuard`, and M4b deletes both with the shared state they guarded. No forwarder
-outlives the refactor.
+`commands/search.rs` (`collator()`), `agent/tools/read/pane_listing.rs`, and the watcher's remaining reaches
+(`ListingId` wrapping, membership). The watcher's re-read already moved in M3c.
 
-**Intentions.** Nothing outside `listing/` names a `listing::` path other than the re-export list.
+Behavior change 6, own commit, red test first: `create.rs::emit_synthetic_entry_diff` becomes the local backend's
+`patch_listing_after_local_mutation(volume_id, parent, MutationEvent::Created(name))` (`name` is `new_path`'s file name,
+`parent` the expanded parent the caller already passes), so `create.rs` and `paste_clipboard.rs` stop naming the engine.
+
+`brief_columns.rs` moves to `font_metrics/brief_columns.rs` and reads rows through `with_rows`. Production shims are
+deleted; test-only shims stay `#[cfg(test)]`. `file_system::staging`'s two setters and getters stop being production
+API: `lib.rs` and the two settings commands call `listings().set_scratch_visibility` directly (reading
+`scratch_visibility()` to flip one flag), the functions shrink to `#[cfg(test)]` shims for `ShowTempsGuard`, and M4b
+deletes both with the shared state they guarded. No forwarder outlives the refactor.
+
+**Intentions.** Nothing outside `listing/` names a `listing::` path other than the re-export list, and the compiler
+enforces it.
 
 **Landmines.** `listing_index_sizes` writes sizes without dropping the row map (`update_index_sizes_by_path` keeps both
-maps); the API method must keep that, or every index event rebuilds a 300,000-row map. `refresh` must keep the "volume
-unregistered" and `PermissionDenied` exits silent, as today. Commands keep their `blocking_with_timeout` wrappers
-app-side; the engine never sees a deadline. The watcher's `coverage_for_listings` stays app-side.
+maps); the API method must keep that, or every index event rebuilds a 300,000-row map. Commands keep their
+`blocking_with_timeout` wrappers app-side; the engine never sees a deadline. If this milestone runs long, split at the
+natural seam: commit the create re-route and `brief_columns` first, then the caller migration and the module privacy.
 
-**Test plan.** The watcher incremental pins from M0 pass through `observe_children`. A new red-first test shows a ⌘R
-re-read and a `FullRefresh` of one directory can no longer land out of order.
+**Test plan.** Change 6's cell (§ "Behavior changes, called out"). Everything else is a pure re-route: the suite passes
+unchanged apart from import paths.
 
-**DONE.** `rg 'file_system::listing::[a-z_]+::' apps/desktop/src-tauri/src --glob '!file_system/listing/**'` finds no
-production hit; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-tests-linux`,
-`desktop-bindings-fresh`, `desktop-ipc-unused`, `file-length`, plus `desktop-svelte-e2e-playwright` (the pane, the
-watcher, and Brief columns all moved).
+**DONE.** It compiles with every `listing/` submodule but `host` private (so no caller outside can name
+`listing::<module>::`); `rg -n 'emit_synthetic_entry_diff' apps/desktop/src-tauri/src` finds nothing; lanes:
+`desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-tests-linux`, `desktop-bindings-fresh`, `desktop-ipc-unused`,
+`file-length`, `desktop-rust-jscpd`, plus `desktop-svelte-e2e-playwright` (the pane, mkdir's cursor-land, and Brief
+columns all moved).
 
 ### M4b: Tests own their engine
 
@@ -732,6 +840,11 @@ version. `cargo check -p cmdr-listing` must build alone, and `cargo tree -p cmdr
 `rt-multi-thread` coming from this crate's own manifest. `module-cycles`: compare the new crate's homes with what
 `cmdr::file_system` showed before the move; a new home means an edge to cut, not a number to add. `cargo-deny` sees a
 new member; `cargo-machete` / `cargo-udeps` will flag the ICU crates if they stay in the app manifest.
+
+- `file-length-allowlist.json`'s `caching.rs` entry carries a TODO split (full-refresh machinery, the oracle, the
+  lookups and patch helpers); the target layout's `read/refresh.rs`, `engine/oracle.rs`, `engine/intake.rs`, and
+  `cache/mutate.rs` ARE that split, so the entry goes rather than re-pathing. Same test for every other listing entry in
+  `file-length` and `jscpd-rust`: re-path only what the new layout didn't already fix.
 
 **Test plan.** Everything that passed in M4b passes, now as two test binaries; `desktop-bindings-fresh` zero diff.
 
@@ -880,3 +993,31 @@ Added by this refactor:
 - M6: closing-pointer line, reachability path for each new doc, single-source homes for rationale now in module doc
   comments, and retired rules becoming pointers at their types.
 - Invariants: 24 tightened (only `with_rows` runs under the lock), 25 extended to `listing_host()`, added 26.
+
+## Review round 3 (verify round 2's designs, settle the create question, executability)
+
+- `create.rs` (round 2's open question, decided): the volume-less match is a bug, fixed as a standalone commit before M0
+  with the volume-scoped lookup. Round 2's worry doesn't hold: the frontend passes the pane's own `volumeId`, the create
+  writes through it, and the pane's listing carries it. The re-route through the local mutation patch (upsert, index
+  apply, badge invalidation) became behavior change 6 in M4a, after M2b removes the `has_app` gate that would make its
+  red test vacuous.
+- Behavior change 5: verified enrich writes only seven fields on non-symlink dirs, so it clones dirs only (now a stated
+  `ListingIndex` contract). By-path write-back was unsafe against a re-read that publishes mid-enrich (staler sizes over
+  fresher ones); it now drops the result when the read generation moved, and therefore moved to M3c after change 3.
+  Named that today's version also drops both maps per index event.
+- `refresh` can't hand over the `std::fs` fallback unless it says the volume is gone: `RefreshOutcome` gained `NoVolume`
+  (and the rest of its variants are spelled out). Round 2's M4a landmine said the unregistered exit is silent; it falls
+  back today, so that line went. `begin_read` returns `Option`.
+- Verified sound: `Replaced` taking `&dyn Volume` from `ListingVolumes::get` (no new lock edge), the weak `ListingHost`,
+  `ListingId`, `builder(volumes, events)` (no-op defaults are now public types so the test fallback can name
+  `NoEvents`), `update_index_sizes` taking data. `keep_alive` returns `Vec<ListingId>`; every `ListingEvents` method
+  takes the id.
+- Executability: M2a was two executors' work, split into M2a (events, runtime, `AppListings`) and M2b (overlays,
+  observers, behavior changes 1 and 2); old M2b is M2c. M4a carried the watcher rewrite and change 3; those moved to a
+  new M3c with change 5. M1 now re-points `crate::ignore_poison` and the `cmdr_fs` re-exports, which M2c's grep would
+  otherwise trip on.
+- DONE criteria made mechanical: exact `rg` commands for M1, M2a, M2b, M2c, M3a (the old `'static '` grep matched trait
+  bounds), M3b, and M3c; M4a is compiler-enforced by making every submodule but `host` private.
+- Lanes: verified every named lane exists in `scripts/check/checks/registry.go`; added `desktop-svelte-e2e-playwright`
+  where watcher or create behavior moves (M2b, M3c, M4a) and `desktop-rust-jscpd` to M4a. M5 drops the `caching.rs`
+  `file-length` entry, since the target layout is its TODO split.
