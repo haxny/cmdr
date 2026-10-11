@@ -41,6 +41,7 @@ use super::materialize::{RoutedPullFailure, TempSpot, extract_routed_into};
 use super::{ArchiveFailureKind, ViewerError};
 #[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::RoutedKind;
+#[cfg(any(target_os = "macos", test))]
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 use crate::ignore_poison::RwLockIgnorePoison;
 
