@@ -33,6 +33,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 /// `foo.zip` builds into the same-directory sibling `foo.zip.cmdr-tmp-<uuid>`
 /// (the app-wide scratch convention, shortened when it wouldn't fit); the
 /// sibling placement keeps the final rename atomic on one filesystem.
+use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 use cmdr_fs::staging::{StagingTemp, temp_sibling_prefix};
 
 /// Chunk size for streaming an added file's bytes into the compressor: bounds
@@ -307,16 +308,15 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
         hooks.on_progress(progress);
     }
 
-    // Flush the central directory and durably persist the temp before the swap.
-    let temp_file = writer.finish().map_err(MutationError::Zip)?;
-    temp_file.sync_all().map_err(MutationError::Io)?;
-    drop(temp_file);
-
-    // A rewrite yields a fresh inode; carry the original's mode, times, and
-    // xattrs (macOS Finder tags, quarantine, creation date) onto the temp so an
+    // Flush the central directory. A rewrite yields a fresh inode, so the
+    // original's xattrs (Finder tags, quarantine), mode, and creation and
+    // modification dates go onto the temp before it's durably persisted, so an
     // edit doesn't strip what a plain copy keeps. Best-effort: metadata loss
     // never fails a data-safe edit.
-    preserve_archive_metadata(archive_path, &temp_path);
+    let temp_file = writer.finish().map_err(MutationError::Zip)?;
+    let landed = carry_archive_metadata(archive_path, &temp_file);
+    temp_file.sync_all().map_err(MutationError::Io)?;
+    drop(temp_file);
 
     // The atomic swap: on one filesystem this is the single instant the archive
     // changes. A concurrent reader sees either the old-complete or new-complete
@@ -324,6 +324,15 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     hooks.note_pending(archive_path);
     std::fs::rename(&temp_path, archive_path).map_err(MutationError::Io)?;
     guard.disarm();
+
+    // The ACL and flags only now: a `deny delete` ACL on the temp would have
+    // refused the swap (`EACCES`).
+    if !landed.is_empty() {
+        let report = apply_landed(archive_path, &landed);
+        if report.any_refused() {
+            log::warn!(target: "archive_mutator", "{} lost some of its metadata in the edit: {report:?}", archive_path.display());
+        }
+    }
 
     // Best-effort: fsync the parent dir so the rename itself is durable across a
     // power loss (the bytes are already fsynced above).
@@ -553,63 +562,30 @@ fn fsync_parent_dir(archive_path: &Path) {
     }
 }
 
-/// Carries the original archive's identity metadata onto the freshly built temp,
-/// so an edit-in-place preserves what a plain file copy would (mode, timestamps,
-/// extended attributes). Best-effort; never fails the edit.
-#[cfg(target_os = "macos")]
-fn preserve_archive_metadata(from: &Path, to: &Path) {
-    use std::ffi::CString;
-    use std::os::unix::ffi::OsStrExt;
-
-    // copyfile flags (from <copyfile.h>): metadata only, never the data — the
-    // temp already holds the rebuilt archive bytes. STAT (mode + times, INCLUDING
-    // the creation/birth date, which lives in the inode's `st_birthtime`, not an
-    // xattr) | ACL | XATTR (Finder tags, quarantine, and `com.apple.FinderInfo`
-    // copied VERBATIM — a faithful copy that preserves the custom-icon flag, never
-    // zeroing it, so the `tags.rs` FinderInfo gotcha doesn't apply here).
-    const COPYFILE_ACL: u32 = 1 << 0;
-    const COPYFILE_STAT: u32 = 1 << 1;
-    const COPYFILE_XATTR: u32 = 1 << 2;
-    const COPYFILE_METADATA: u32 = COPYFILE_ACL | COPYFILE_STAT | COPYFILE_XATTR;
-
-    #[link(name = "System", kind = "dylib")]
-    unsafe extern "C" {
-        fn copyfile(from: *const i8, to: *const i8, state: *mut std::ffi::c_void, flags: u32) -> std::ffi::c_int;
-    }
-
-    let (Ok(from_c), Ok(to_c)) = (
-        CString::new(from.as_os_str().as_bytes()),
-        CString::new(to.as_os_str().as_bytes()),
-    ) else {
-        return;
+/// Puts the original archive's metadata that may sit on a staged temp onto the
+/// rebuilt `temp` (through its fd), and answers what goes on only after the
+/// swap: its ACL and user flags. The shared helper (`cmdr_fs::metadata`) owns
+/// the order. `com.apple.FinderInfo` is copied VERBATIM, a faithful copy that
+/// keeps the custom-icon flag, so the `tags.rs` FinderInfo gotcha doesn't apply.
+fn carry_archive_metadata(original: &Path, temp: &File) -> LandedMetadata {
+    let source = match File::open(original).and_then(|file| file.metadata().map(|meta| (file, meta))) {
+        Ok(source) => source,
+        Err(e) => {
+            log::warn!(target: "archive_mutator", "couldn't read the metadata of {}: {e}", original.display());
+            return LandedMetadata::default();
+        }
     };
-    // SAFETY: both C strings are valid null-terminated paths that outlive the
-    // call; a null state pointer is the documented "no progress state" form; the
-    // flag set omits COPYFILE_DATA so only metadata is written onto the existing
-    // temp. The return value is best-effort (metadata loss never fails the edit).
-    let result = unsafe { copyfile(from_c.as_ptr(), to_c.as_ptr(), std::ptr::null_mut(), COPYFILE_METADATA) };
-    if result != 0 {
-        log::warn!(target: "archive_mutator", "couldn't preserve archive metadata onto {}", to.display());
+    let (file, meta) = source;
+    let carried = CarriedMetadata::of_local_file(&file, &meta);
+    let times = StagedTimes {
+        modified: meta.modified().ok(),
+        accessed: meta.accessed().ok(),
+    };
+    let report = apply_staged(StagedItem::File(temp), &carried, times);
+    if report.any_refused() {
+        log::warn!(target: "archive_mutator", "the rebuilt {} took only some of its metadata: {report:?}", original.display());
     }
-}
-
-/// Non-macOS metadata carry-over: mode, mtime, and extended attributes. There are
-/// no Finder tags to worry about off macOS.
-#[cfg(not(target_os = "macos"))]
-fn preserve_archive_metadata(from: &Path, to: &Path) {
-    if let Ok(meta) = std::fs::metadata(from) {
-        let _ = std::fs::set_permissions(to, meta.permissions());
-        if let Ok(mtime) = meta.modified() {
-            let _ = filetime::set_file_mtime(to, filetime::FileTime::from_system_time(mtime));
-        }
-    }
-    if let Ok(names) = xattr::list(from) {
-        for name in names {
-            if let Ok(Some(value)) = xattr::get(from, &name) {
-                let _ = xattr::set(to, &name, &value);
-            }
-        }
-    }
+    LandedMetadata::of_source_acl(original).with_flags(carried.flags)
 }
 
 /// Removes the in-progress temp on any early return (error or cancel), so a

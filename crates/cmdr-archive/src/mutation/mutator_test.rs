@@ -399,6 +399,85 @@ fn an_edit_preserves_the_archive_mode_mtime_and_xattrs() {
     }
 }
 
+/// The archive's own birth, ACL, and flags across an edit (macOS): birth goes on
+/// the rebuilt temp with the mtime in one call, and the ACL and flags only after
+/// the swap, so the temp never wears what would refuse its removal.
+#[cfg(target_os = "macos")]
+mod archive_file_metadata {
+    use cmdr_fs::testing::metadata_fixture::{
+        ACCESSED_SECS, BIRTH_SECS, Follow, HIDDEN_FLAG, MODIFIED_SECS, MetadataFixture, add_deny_delete_acl,
+        birth_secs, flags, has_acl, modified_secs, set_flags, set_times,
+    };
+
+    use super::*;
+
+    fn edit(path: &Path) -> Result<(), MutationError> {
+        apply(
+            path,
+            &Changeset {
+                adds: vec![add_bytes("added.txt", b"x")],
+                ..Default::default()
+            },
+            &NoHooks,
+        )
+    }
+
+    fn dated_zip(fixture: &MetadataFixture) -> PathBuf {
+        let path = write_zip(fixture, "dated", &build_zip(&[stored("keep.txt", b"keep".to_vec())]));
+        set_times(&path, BIRTH_SECS, MODIFIED_SECS, ACCESSED_SECS, Follow::Yes);
+        path
+    }
+
+    #[test]
+    fn an_edit_keeps_the_archives_birth_time() {
+        let fixture = MetadataFixture::new("mutator_birth");
+        let path = dated_zip(&fixture);
+
+        edit(&path).expect("apply edit");
+
+        assert_eq!(birth_secs(&path), BIRTH_SECS);
+        assert_eq!(modified_secs(&path), MODIFIED_SECS);
+    }
+
+    /// Replacing a `deny delete` archive means removing it, which its ACL forbids
+    /// (`EACCES`), like Locked forbids it (`EPERM`). The edit refuses, the
+    /// original stays untouched, and the rebuilt temp, which never wore the ACL,
+    /// is cleaned up.
+    #[test]
+    fn an_edit_of_a_deny_delete_archive_is_refused_and_leaves_nothing_behind() {
+        let fixture = MetadataFixture::new("mutator_acl");
+        let path = dated_zip(&fixture);
+        add_deny_delete_acl(&path);
+        let before = std::fs::read(&path).expect("read the original");
+
+        let result = edit(&path);
+
+        assert!(
+            matches!(&result, Err(MutationError::Io(e)) if e.kind() == io::ErrorKind::PermissionDenied),
+            "{result:?}"
+        );
+        assert_eq!(std::fs::read(&path).expect("read the original"), before);
+        assert!(has_acl(&path));
+        let names: Vec<_> = std::fs::read_dir(&*fixture)
+            .expect("list")
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names, vec![path.file_name().expect("name").to_owned()], "no temp left");
+    }
+
+    #[test]
+    fn an_edit_keeps_hidden() {
+        let fixture = MetadataFixture::new("mutator_hidden");
+        let path = dated_zip(&fixture);
+        set_flags(&path, HIDDEN_FLAG);
+
+        edit(&path).expect("apply edit");
+
+        assert_eq!(flags(&path) & HIDDEN_FLAG, HIDDEN_FLAG);
+    }
+}
+
 // ---- Data-safety: encrypted-entry handling -----------------------------------
 //
 // `zip`'s raw copy reconstructs an entry's options from `ZipFile::options()`,
