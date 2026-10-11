@@ -123,6 +123,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "Показать в очереди операций",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, one {Не удалось завершить {countText} операцию} few {Не удалось завершить {countText} операции} many {Не удалось завершить {countText} операций} other {Не удалось завершить {countText} операции}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

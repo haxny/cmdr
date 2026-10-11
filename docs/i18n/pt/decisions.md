@@ -57,7 +57,7 @@ the installed macOS `pt_BR.lproj` bundles.
 - `Fila de operações` over `Fila de transferências` because the queue also holds deletes, renames, and creations;
   `transferência` stays the narrow word for one copy or move in flight. It sits beside `Registro de operações` in the
   View menu and shares its head noun on purpose: rename both or neither.
-- `operação` is feminine like `transferência`, so `Encontre-a`, `ela`, and `selecionadas` agree unchanged.
+- `operação` is feminine like `transferência`, so `desta`, `ela`, and `selecionadas` agree unchanged.
 
 ## Queue chip, dismiss, and failure notices (`queue.row.dismiss*`, `queue.toolbar.dismissAll`, `queue.failureToast.*`, `queue.chip.*`)
 

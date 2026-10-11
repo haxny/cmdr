@@ -124,6 +124,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "In der Vorgangswarteschlange anzeigen",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, one {{countText} Vorgang nicht abgeschlossen} other {{countText} Vorgänge nicht abgeschlossen}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

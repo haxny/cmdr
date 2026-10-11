@@ -760,17 +760,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "Впереди {countText}, поэтому операция ждет своей очереди. Найдите ее в очереди операций.",
+  "fileOperations.transferProgress.queuedToast": "Впереди {countText}, поэтому операция ждет своей очереди.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# операция} few {# операции} many {# операций} other {# операции}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Выполнение продолжается в фоне. Найдите операцию в очереди операций.",
+  "fileOperations.transferProgress.backgroundedToast": "Выполнение продолжается в фоне.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "В фоне",
   "@fileOperations.backgroundStart.background": {
@@ -792,9 +792,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Отправлено в фон. Найдите операцию в очереди операций.",
+  "fileOperations.backgroundStart.startedToast": "Отправлено в фон.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "Для архива «{archiveName}» нужен пароль. Cmdr запросит его, как только закроется открытое диалоговое окно.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

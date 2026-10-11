@@ -759,17 +759,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "前面還有 {countText}，所以它得排隊等一下。可以在「操作佇列」裡找到它。",
+  "fileOperations.transferProgress.queuedToast": "前面還有 {countText}，所以它得排隊等一下。",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, other {# 項操作}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "還在背景執行。可以在「操作佇列」裡找到它。",
+  "fileOperations.transferProgress.backgroundedToast": "還在背景執行。",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "背景執行",
   "@fileOperations.backgroundStart.background": {
@@ -791,9 +791,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "已移到背景。可以在「操作佇列」裡找到它。",
+  "fileOperations.backgroundStart.startedToast": "已移到背景。",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "「{archiveName}」需要密碼。目前開啟的對話方塊一關閉，Cmdr 就會問你密碼。",
   "@fileOperations.backgroundStart.needsPasswordToast": {

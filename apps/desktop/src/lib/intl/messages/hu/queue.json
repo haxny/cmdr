@@ -123,6 +123,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "Megjelenítés a műveleti sorban",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, one {{countText} műveletet nem sikerült befejezni} other {{countText} műveletet nem sikerült befejezni}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

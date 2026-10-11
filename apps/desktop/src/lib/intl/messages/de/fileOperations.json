@@ -764,17 +764,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} davor, daher wartet dieser hier noch. Du findest ihn in der Vorgangswarteschlange.",
+  "fileOperations.transferProgress.queuedToast": "{countText} davor, daher wartet dieser hier noch.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# Vorgang} other {# Vorgänge}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Läuft weiter im Hintergrund. Du findest ihn in der Vorgangswarteschlange.",
+  "fileOperations.transferProgress.backgroundedToast": "Läuft weiter im Hintergrund.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "Im Hintergrund",
   "@fileOperations.backgroundStart.background": {
@@ -796,9 +796,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Cmdr kümmert sich im Hintergrund darum. Du findest den Vorgang in der Vorgangswarteschlange.",
+  "fileOperations.backgroundStart.startedToast": "Cmdr kümmert sich im Hintergrund darum.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "Für „{archiveName}“ ist das Passwort nötig. Cmdr fragt danach, sobald der offene Dialog geschlossen ist.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

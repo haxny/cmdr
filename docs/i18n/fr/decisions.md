@@ -206,8 +206,7 @@ values write the catalog's `’`.
   names the window, and `commands.queueShow.label` is the bare window name.
 - Per-row aria labels share one family: `Mettre cette opération en pause`, `Reprendre…`, `Annuler…`, `Sélectionner…`,
   `Ignorer cette opération`.
-- `queuedToast` and `backgroundedToast` refer back in the feminine (`celle-ci`, `Retrouvez-la`), since `opération` is on
-  screen; keep the two parallel.
+- `queuedToast` refers back in the feminine (`celle-ci`, `elle attend`), since `opération` is on screen.
 - `queueTooltip` keeps `transfert`: that tooltip really describes a transfer.
 
 ## La pastille de progression et l'avis « N'a pas pu se terminer » (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)

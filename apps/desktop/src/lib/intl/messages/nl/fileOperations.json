@@ -762,17 +762,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "Er {countText} deze voor, dus deze wacht op zijn beurt. Vind hem in de bewerkingenwachtrij.",
+  "fileOperations.transferProgress.queuedToast": "Er {countText} deze voor, dus deze wacht op zijn beurt.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {gaat # bewerking} other {gaan # bewerkingen}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Loopt nog op de achtergrond. Vind hem in de bewerkingenwachtrij.",
+  "fileOperations.transferProgress.backgroundedToast": "Loopt nog op de achtergrond.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "Op de achtergrond",
   "@fileOperations.backgroundStart.background": {
@@ -794,9 +794,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Cmdr regelt het op de achtergrond. Je vindt de bewerking in de bewerkingenwachtrij.",
+  "fileOperations.backgroundStart.startedToast": "Cmdr regelt het op de achtergrond.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "Voor ‘{archiveName}’ is het wachtwoord nodig. Cmdr vraagt erom zodra het geopende venster sluit.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

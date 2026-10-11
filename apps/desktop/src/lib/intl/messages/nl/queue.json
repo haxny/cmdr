@@ -124,6 +124,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "Toon in de bewerkingenwachtrij",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, one {{countText} bewerking is} other {{countText} bewerkingen zijn}} niet voltooid",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

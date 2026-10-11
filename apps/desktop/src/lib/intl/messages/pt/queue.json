@@ -123,6 +123,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "Mostrar na fila de operações",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "Não foi possível concluir {count, plural, one {{countText} operação} many {{countText} operações} other {{countText} operações}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

@@ -763,17 +763,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} devant celle-ci, elle attend donc son tour. Retrouvez-la dans la file d’attente des opérations.",
+  "fileOperations.transferProgress.queuedToast": "{countText} devant celle-ci, elle attend donc son tour.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# opération} many {# opérations} other {# opérations}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Toujours en cours en arrière-plan. Retrouvez-la dans la file d’attente des opérations.",
+  "fileOperations.transferProgress.backgroundedToast": "Toujours en cours en arrière-plan.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "En arrière-plan",
   "@fileOperations.backgroundStart.background": {
@@ -795,9 +795,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Envoyée en arrière-plan. Retrouvez-la dans la file d’attente des opérations.",
+  "fileOperations.backgroundStart.startedToast": "Envoyée en arrière-plan.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "Il faut le mot de passe pour « {archiveName} ». Cmdr vous le demandera dès que la boîte de dialogue ouverte sera fermée.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

@@ -123,6 +123,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "在「操作佇列」中顯示",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, other {{countText} 項操作無法完成}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

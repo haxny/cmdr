@@ -762,17 +762,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} na frente desta, então ela está aguardando sua vez. Encontre-a na fila de operações.",
+  "fileOperations.transferProgress.queuedToast": "{countText} na frente desta, então ela está aguardando sua vez.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# operação} many {# operações} other {# operações}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Ainda rodando em segundo plano. Encontre-a na fila de operações.",
+  "fileOperations.transferProgress.backgroundedToast": "Ainda rodando em segundo plano.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "Em segundo plano",
   "@fileOperations.backgroundStart.background": {
@@ -794,9 +794,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Enviada para segundo plano. Encontre-a na fila de operações.",
+  "fileOperations.backgroundStart.startedToast": "Enviada para segundo plano.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "“{archiveName}” precisa de senha. O Cmdr vai pedi-la assim que a caixa de diálogo aberta fechar.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

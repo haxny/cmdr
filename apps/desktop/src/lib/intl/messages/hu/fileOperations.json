@@ -761,17 +761,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} van előtte, így várnia kell a sorára. Megtalálod a műveleti sorban.",
+  "fileOperations.transferProgress.queuedToast": "{countText} van előtte, így várnia kell a sorára.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# művelet} other {# művelet}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Tovább fut a háttérben. Megtalálod a műveleti sorban.",
+  "fileOperations.transferProgress.backgroundedToast": "Tovább fut a háttérben.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "Háttérben",
   "@fileOperations.backgroundStart.background": {
@@ -793,9 +793,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "A háttérben intézi a Cmdr. Megtalálod a műveleti sorban.",
+  "fileOperations.backgroundStart.startedToast": "A háttérben intézi a Cmdr.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "„{archiveName}” jelszót kér. A Cmdr elkéri tőled, amint bezárul a nyitott párbeszédablak.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

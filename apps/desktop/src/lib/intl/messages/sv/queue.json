@@ -123,6 +123,10 @@
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
+  "queue.handoffToast.action": "Visa i åtgärdskön",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
   "queue.failureToast.summary": "{count, plural, one {{countText} åtgärd gick inte att slutföra} other {{countText} åtgärder gick inte att slutföra}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"

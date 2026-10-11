@@ -155,8 +155,8 @@ The path renders on its own line below, so the sentence ends on a colon and stan
 
 `Cola de operaciones` (the window lists deletes, renames, and more, not only transfers) pairs with
 `Registro de operaciones`. `commands.queueShow.label` is the bare window title, ❌ not `Mostrar la cola…`. The feminine
-head noun keeps its clitics (`La encontrarás`); a masculine replacement would need them all redone. `transferencia`
-still names the copy or move itself.
+head noun keeps its agreement (`esta`); a masculine replacement would need them all redone. `transferencia` still names
+the copy or move itself.
 
 ## El chip de la esquina y el aviso de operación sin terminar (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss`/`.dismissAria`, `queue.toolbar.dismissAll`)
 

@@ -140,8 +140,8 @@ over a pile-ideal form that would fork a term mid-catalog.
   copy / move dialog keeps the narrow `lần truyền`. The test is the surface, as in English.
 - The bare plural heading is `Các thao tác` over a bare `Thao tác`, which collides with `transferDialog.operationAria`
   ("Action") and mismatches `queue.empty.body`.
-- The queued toast says `thao tác` three times on purpose: a `nó` in the middle would bind to the jobs ahead of it and
-  invert the meaning.
+- The queued toast says `thao tác` twice on purpose: a `nó` in the middle would bind to the jobs ahead of it and invert
+  the meaning.
 
 ## Huy hiệu tiến trình ở góc + thông báo chưa hoàn tất (`queue.chip.*`, `queue.failureToast.*`, `queue.row.dismiss*`, `queue.toolbar.dismissAll`)
 

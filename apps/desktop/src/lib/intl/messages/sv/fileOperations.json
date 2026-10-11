@@ -761,17 +761,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} före den här, så den väntar på sin tur. Hitta den i åtgärdskön.",
+  "fileOperations.transferProgress.queuedToast": "{countText} före den här, så den väntar på sin tur.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# åtgärd} other {# åtgärder}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Körs fortfarande i bakgrunden. Hitta den i åtgärdskön.",
+  "fileOperations.transferProgress.backgroundedToast": "Körs fortfarande i bakgrunden.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "I bakgrunden",
   "@fileOperations.backgroundStart.background": {
@@ -793,9 +793,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Skickad till bakgrunden. Hitta den i åtgärdskön.",
+  "fileOperations.backgroundStart.startedToast": "Skickad till bakgrunden.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "Det behövs ett lösenord för ”{archiveName}”. Cmdr frågar efter det så fort den öppna dialogen stängs.",
   "@fileOperations.backgroundStart.needsPasswordToast": {

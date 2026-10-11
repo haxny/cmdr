@@ -760,17 +760,17 @@
   "@fileOperations.transferProgress.queueTooltip": {
     "sourceHash": "89ce770"
   },
-  "fileOperations.transferProgress.queuedToast": "{countText} đang ở phía trước, nên thao tác này phải chờ đến lượt. Tìm nó trong hàng đợi thao tác.",
+  "fileOperations.transferProgress.queuedToast": "{countText} đang ở phía trước, nên thao tác này phải chờ đến lượt.",
   "@fileOperations.transferProgress.queuedToast": {
-    "sourceHash": "1bb57e1"
+    "sourceHash": "e35148a"
   },
   "fileOperations.transferProgress.queuedToastCount": "{count, plural, other {# thao tác}}",
   "@fileOperations.transferProgress.queuedToastCount": {
     "sourceHash": "85023e6"
   },
-  "fileOperations.transferProgress.backgroundedToast": "Vẫn đang chạy ở chế độ nền. Tìm nó trong hàng đợi thao tác.",
+  "fileOperations.transferProgress.backgroundedToast": "Vẫn đang chạy ở chế độ nền.",
   "@fileOperations.transferProgress.backgroundedToast": {
-    "sourceHash": "7c79c9a"
+    "sourceHash": "b898845"
   },
   "fileOperations.backgroundStart.background": "Chạy nền",
   "@fileOperations.backgroundStart.background": {
@@ -792,9 +792,9 @@
   "@fileOperations.backgroundStart.tooltip": {
     "sourceHash": "06543f5"
   },
-  "fileOperations.backgroundStart.startedToast": "Đã chuyển sang chế độ nền. Tìm nó trong hàng đợi thao tác.",
+  "fileOperations.backgroundStart.startedToast": "Đã chuyển sang chế độ nền.",
   "@fileOperations.backgroundStart.startedToast": {
-    "sourceHash": "2ac1316"
+    "sourceHash": "6d85cb1"
   },
   "fileOperations.backgroundStart.needsPasswordToast": "“{archiveName}” cần mật khẩu. Cmdr sẽ hỏi bạn ngay khi hộp thoại đang mở đóng lại.",
   "@fileOperations.backgroundStart.needsPasswordToast": {
