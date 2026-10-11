@@ -12,6 +12,7 @@
 //! what a test reaches for.
 
 use crate::entry::FileEntry;
+use crate::metadata::{CarriedMetadata, MetadataReport};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -473,31 +474,42 @@ pub trait Volume: Send + Sync {
         })
     }
 
-    /// Sets the modification date of the file or folder at `path`, at the finest
-    /// precision the backend keeps (whole seconds on most).
+    /// Puts `carried` and `modified` on the file or folder at `path`, which has
+    /// already landed under its final name, at the finest precision the
+    /// backend keeps (whole seconds on most).
     ///
-    /// The cross-volume copy calls it on every FOLDER it created, once that
-    /// folder's contents have landed (writing a child bumps its folder's date).
-    /// A file's date travels on its write instead (`write_from_stream` reads
-    /// [`VolumeReadStream::modified_at`]), so a backend needn't route that here.
-    /// Best effort for the caller: an error is logged and the copy stands. The
-    /// contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// Two callers, one body: the cross-volume copy calls it on every FOLDER it
+    /// created once that folder's contents have landed (writing a child bumps
+    /// its folder's date), and on a FILE right after its landing rename for the
+    /// part of its metadata that would have refused that rename
+    /// ([`CarriedMetadata::after_landing`]: Locked). Everything else a file
+    /// carries travels on its write (`write_from_stream` asks
+    /// [`VolumeReadStream::metadata`] and reads
+    /// [`VolumeReadStream::modified_at`]). A routed mode is folded
+    /// ([`crate::metadata::routed_mode`]), never put on as is.
+    ///
+    /// Total, like the host helper it usually wraps: every class reports
+    /// `Kept`, `Refused`, `NotApplicable`, or `Absent`, and nothing here fails
+    /// a copy. The contract:
+    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     ///
-    /// **A shared conformance assertion enforces it**: every backend that
-    /// implements it runs `conformance::assert_set_modified_dates_a_folder`
-    /// (test builds only).
+    /// **Shared conformance assertions enforce it**: every backend that
+    /// implements it runs `conformance::assert_apply_metadata_dates_a_folder`
+    /// and `conformance::assert_apply_metadata_keeps` (test builds only).
     ///
-    /// Default: `NotSupported`, for a store with no folder date to set (S3's
-    /// prefixes, an MTP device, WebDAV) or no way to set one (ADB's sync
-    /// protocol), and for every read-only backend.
-    fn set_modified<'a>(
+    /// Default: `NotApplicable` for every class handed in
+    /// ([`MetadataReport::none_applicable`]), for a store with no folder date
+    /// to set (S3's prefixes, an MTP device, WebDAV) or no way to set one
+    /// (ADB's sync protocol), and for every read-only backend.
+    fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
-        modified: std::time::SystemTime,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        let _ = (path, modified);
-        Box::pin(async { Err(VolumeError::NotSupported) })
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async move { MetadataReport::none_applicable(carried, modified) })
     }
 
     /// Deletes a single file or **empty** directory.
@@ -941,18 +953,14 @@ pub trait Volume: Send + Sync {
     /// header, 7z's unix extension), and ADB (the device's own `stat`). `false`
     /// for SMB, SFTP, WebDAV, and MTP, none of which carry one.
     ///
-    /// **What it buys is a round trip, not a branch.** The cross-volume copy
-    /// engine puts the source's mode on what it writes to a local destination
-    /// (`write_operations/transfer/volume/landed_mode.rs`), and for a TOP-LEVEL
-    /// file it has no listing in hand, so it would have to ask
-    /// `get_metadata`. On a share that has no mode to give, that is one wasted
-    /// stat per selected file — the same shape as the 15k-MTP-listing stall the
-    /// source hints exist to prevent. This answers it for free instead.
+    /// A planner that walks listings asks it before trusting a mode (the
+    /// archive compress planner). A copy doesn't: each of these backends' read
+    /// streams reports its file's mode through [`VolumeReadStream::metadata`].
     ///
     /// Default `false`: a backend that has modes says so, and one that doesn't
     /// can't be asked for them. ❗ Answering `true` without real bits is worse
-    /// than answering nothing: the engine treats a non-zero mode as a fact and
-    /// puts it on the user's file.
+    /// than answering nothing: a non-zero mode is a fact somebody puts on the
+    /// user's file.
     fn reports_posix_mode(&self) -> bool {
         false
     }
@@ -1168,6 +1176,7 @@ pub trait Volume: Send + Sync {
                 // Callers that need per-path type should read `per_path`.
                 top_level_is_directory: false,
                 top_level_modified_at: None,
+                top_level_created_at: None,
             };
             let mut per_path = Vec::with_capacity(paths.len());
             for path in paths {

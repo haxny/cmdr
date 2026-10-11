@@ -100,6 +100,7 @@ fn scan_tree_keeping<'a>(
                 dedup_bytes: size,
                 top_level_is_directory: false,
                 top_level_modified_at: top.modified_at,
+                top_level_created_at: top.created_at,
             });
         }
         let mut result = CopyScanResult {
@@ -109,6 +110,7 @@ fn scan_tree_keeping<'a>(
             dedup_bytes: 0,
             top_level_is_directory: true,
             top_level_modified_at: top.modified_at,
+            top_level_created_at: top.created_at,
         };
         walk_directory(source, path, boundary, &mut result, files).await?;
         Ok(result)
@@ -178,6 +180,7 @@ pub fn fold_batch(per_path: Vec<(PathBuf, CopyScanResult)>) -> BatchScanResult {
         dedup_bytes: 0,
         top_level_is_directory: false,
         top_level_modified_at: None,
+        top_level_created_at: None,
     };
     for (_, scan) in &per_path {
         aggregate.file_count += scan.file_count;
@@ -188,6 +191,7 @@ pub fn fold_batch(per_path: Vec<(PathBuf, CopyScanResult)>) -> BatchScanResult {
     if let [(_, only)] = per_path.as_slice() {
         aggregate.top_level_is_directory = only.top_level_is_directory;
         aggregate.top_level_modified_at = only.top_level_modified_at;
+        aggregate.top_level_created_at = only.top_level_created_at;
     }
     BatchScanResult {
         aggregate,

@@ -36,7 +36,9 @@
 
 mod blockers;
 mod carried;
+mod classes;
 mod flags;
+mod mode;
 mod staged;
 
 use std::path::Path;
@@ -46,7 +48,9 @@ pub use blockers::{
     remove_dir_clearing_blockers, remove_file_clearing_blockers, remove_tree_clearing_blockers,
 };
 pub use carried::{CarriedMetadata, Xattr};
+pub use classes::MetadataClasses;
 pub use flags::UserFlags;
+pub use mode::{default_file_mode, default_folder_mode, routed_mode};
 pub use staged::{StagedItem, StagedTimes, apply_staged};
 
 /// What happened to one metadata class on one item.
@@ -94,8 +98,31 @@ impl MetadataReport {
         flags: ClassOutcome::Absent,
     };
 
-    /// Whether any class was refused.
-    pub fn any_refused(&self) -> bool {
+    /// The report of a destination that can hold none of what it was handed:
+    /// `NotApplicable` for each class `carried` (and `modified`) has a value
+    /// for, `Absent` for the rest. The default answer of
+    /// `Volume::apply_metadata`.
+    pub fn none_applicable(carried: &CarriedMetadata, modified: Option<std::time::SystemTime>) -> Self {
+        Self::uniform(carried, modified, ClassOutcome::NotApplicable)
+    }
+
+    /// `outcome` for each class `carried` (and `modified`) has a value for,
+    /// `Absent` for the rest: the report of a destination that answers every
+    /// class the same way.
+    pub fn uniform(carried: &CarriedMetadata, modified: Option<std::time::SystemTime>, outcome: ClassOutcome) -> Self {
+        let class = |present: bool| if present { outcome } else { ClassOutcome::Absent };
+        Self {
+            xattrs: class(!carried.xattrs.is_empty()),
+            mode: class(carried.mode.is_some()),
+            created: class(carried.created.is_some()),
+            modified: class(modified.is_some()),
+            acl: ClassOutcome::Absent,
+            flags: class(!carried.flags.is_empty()),
+        }
+    }
+
+    /// Every class reported, in one fixed order.
+    fn classes(&self) -> [ClassOutcome; 6] {
         [
             self.xattrs,
             self.mode,
@@ -104,7 +131,22 @@ impl MetadataReport {
             self.acl,
             self.flags,
         ]
-        .contains(&ClassOutcome::Refused)
+    }
+
+    /// Whether the destination couldn't hold ANY class it was handed: nothing
+    /// kept, nothing refused, and at least one class it can't hold. A caller
+    /// applying the same kind of set item after item (a folder pass) stops
+    /// asking on this answer.
+    pub fn holds_none(&self) -> bool {
+        let classes = self.classes();
+        classes.contains(&ClassOutcome::NotApplicable)
+            && !classes.contains(&ClassOutcome::Kept)
+            && !classes.contains(&ClassOutcome::Refused)
+    }
+
+    /// Whether any class was refused.
+    pub fn any_refused(&self) -> bool {
+        self.classes().contains(&ClassOutcome::Refused)
     }
 }
 

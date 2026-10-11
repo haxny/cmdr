@@ -7,6 +7,7 @@
 use super::SmbVolume;
 use super::mapping::map_smb_error;
 use super::session::update_state_on_smb_error;
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{
     ChannelReadStream, MutationEvent, StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
@@ -157,6 +158,8 @@ pub(super) struct InlineReadStream {
     total_size: u64,
     bytes_read: u64,
     modified_at: Option<std::time::SystemTime>,
+    /// The server's `CreationTime`, from the same CREATE response.
+    created: Option<std::time::SystemTime>,
 }
 
 impl InlineReadStream {
@@ -167,7 +170,15 @@ impl InlineReadStream {
             total_size,
             bytes_read: 0,
             modified_at,
+            created: None,
         }
+    }
+
+    /// The source file's creation date, for [`VolumeReadStream::metadata`].
+    #[must_use]
+    pub(super) fn with_created(mut self, created: Option<std::time::SystemTime>) -> Self {
+        self.created = created;
+        self
     }
 }
 
@@ -176,13 +187,29 @@ struct OpenedDownload {
     total_size: u64,
     /// The server's `LastWriteTime`, from the same CREATE response.
     modified_at: Option<std::time::SystemTime>,
+    /// The server's `CreationTime`, from the same CREATE response.
+    created: Option<std::time::SystemTime>,
 }
 
 /// The times a copy stamps on what it wrote: the source's `LastWriteTime` and
-/// nothing else, so the server keeps its own creation and access times. `None`
-/// for a source with no date, which leaves the server's.
-fn source_times(modified: Option<std::time::SystemTime>) -> Option<smb2::FileTimes> {
-    modified.map(|t| smb2::FileTimes::new().set_modified(t))
+/// `CreationTime`, both in the one `FILE_BASIC_INFORMATION` either alone
+/// would cost, so the server keeps only its own access time. `None` when the
+/// source has neither, which leaves the server's.
+fn source_times(
+    modified: Option<std::time::SystemTime>,
+    created: Option<std::time::SystemTime>,
+) -> Option<smb2::FileTimes> {
+    if modified.is_none() && created.is_none() {
+        return None;
+    }
+    let mut times = smb2::FileTimes::new();
+    if let Some(modified) = modified {
+        times = times.set_modified(modified);
+    }
+    if let Some(created) = created {
+        times = times.set_created(created);
+    }
+    Some(times)
 }
 
 /// Stamps the source's date on a streaming writer's OWN handle, before
@@ -214,6 +241,14 @@ impl VolumeReadStream for InlineReadStream {
 
     fn modified_at(&self) -> Option<std::time::SystemTime> {
         self.modified_at
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        CarriedMetadata {
+            created: self.created,
+            ..CarriedMetadata::default()
+        }
+        .restricted_to(wanted)
     }
 }
 
@@ -276,6 +311,7 @@ impl SmbVolume {
             let opened = OpenedDownload {
                 total_size,
                 modified_at: download.info().and_then(|info| info.modified.to_system_time()),
+                created: download.info().and_then(|info| info.created.to_system_time()),
             };
             if opened_tx.send(Ok(opened)).is_err() {
                 // Caller dropped the stream before receiving size. Drop download
@@ -357,7 +393,11 @@ impl SmbVolume {
 
         Ok(
             ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(opened.total_size))
-                .with_modified_at(opened.modified_at),
+                .with_modified_at(opened.modified_at)
+                .with_metadata(CarriedMetadata {
+                    created: opened.created,
+                    ..CarriedMetadata::default()
+                }),
         )
     }
 
@@ -437,7 +477,10 @@ impl SmbVolume {
             // fast-path and the streaming fallback drive their write on
             // this same clone — no second `clone_session` needed.
             let (tree, mut conn) = self.clone_session().await?;
-            let times = source_times(stream.modified_at());
+            // SMB stores the creation date beside the modification date; the
+            // rest (mode, flags, xattrs) isn't settable over this client yet.
+            let carried = stream.metadata(MetadataClasses::CREATED);
+            let times = source_times(stream.modified_at(), carried.created);
 
             // Best-effort delete of a partial file on a FRESH cloned session.
             // Once a `FileWriter` is open and bytes have streamed into it, an
@@ -550,7 +593,7 @@ impl SmbVolume {
                             let written =
                                 self.handle_smb_result("write_from_stream(compound)", &smb_path, write_result)?;
                             // The frame's CLOSE already stamped the server's own
-                            // date, so this goes by path, after it. Best effort,
+                            // dates, so these go by path, after it. Best effort,
                             // like `stamp_writer`.
                             if let Some(times) = times
                                 && let Err(e) = tree.set_times(&mut conn, &smb_path, times).await

@@ -67,23 +67,34 @@ impl SmbVolume {
         Ok(())
     }
 
-    /// Sets `LastWriteTime` alone on a file or folder, by path (one
-    /// CREATE + SET_INFO + CLOSE frame), then tells the panes about it. The
-    /// server keeps its own creation and access times.
-    pub(super) async fn set_modified_impl(&self, path: &Path, modified: SystemTime) -> Result<(), VolumeError> {
+    /// Sets `CreationTime` and `LastWriteTime` on a file or folder, by path, in
+    /// the one CREATE + SET_INFO + CLOSE frame either alone would cost, then
+    /// tells the panes about it. A `None` leaves that time the server's own,
+    /// and the server keeps its own access time.
+    pub(super) async fn set_times_impl(
+        &self,
+        path: &Path,
+        created: Option<SystemTime>,
+        modified: Option<SystemTime>,
+    ) -> Result<(), VolumeError> {
         let smb_path = self.to_smb_path(path)?;
 
         debug!(
-            "SmbVolume::set_modified: share={:?}, path={:?}",
+            "SmbVolume::set_times: share={:?}, path={:?}",
             self.inner.share_name, smb_path
         );
 
         {
+            let mut times = smb2::FileTimes::new();
+            if let Some(created) = created {
+                times = times.set_created(created);
+            }
+            if let Some(modified) = modified {
+                times = times.set_modified(modified);
+            }
             let (tree, mut conn) = self.clone_session().await?;
-            let result = tree
-                .set_times(&mut conn, &smb_path, smb2::FileTimes::new().set_modified(modified))
-                .await;
-            self.handle_smb_result("set_modified", &smb_path, result)?;
+            let result = tree.set_times(&mut conn, &smb_path, times).await;
+            self.handle_smb_result("set_times", &smb_path, result)?;
         }
 
         if let (Some(parent), Some(name)) = (path.parent(), path.file_name())

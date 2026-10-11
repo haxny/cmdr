@@ -283,6 +283,61 @@ async fn a_copy_off_a_phone_keeps_the_source_date() {
     a_copy_off_the_server_keeps_the_source_date(Arc::clone(&phone.volume), phone.dir.clone(), Duration::ZERO).await;
 }
 
+/// A file copied off a phone lands with the mode the device's `stat` reports,
+/// folded through the umask: a script stays executable and a private file stays
+/// private. The mode rides the read stream's own `stat`, so selecting each file
+/// on its own (no listing in hand) costs no extra round trip.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_file_copied_off_a_phone_keeps_its_mode() {
+    use std::os::unix::fs::PermissionsExt as _;
+    let mut tree = FakeTree::new();
+    tree.add_dir("/sdcard/modes");
+    for (name, mode) in [("run.sh", 0o755), ("private.txt", 0o600)] {
+        tree.write_file(
+            &format!("/sdcard/modes/{name}"),
+            b"#!/bin/sh\n".to_vec(),
+            mode,
+            1_611_909_015,
+        )
+        .expect("seed the file on the phone");
+    }
+    let phone = dialed_phone_with("R58M-Modes-Off", "modes-off", tree).await;
+    let on_phone = |name: &str| {
+        PathBuf::from(format!(
+            "{}/sdcard/modes/{name}",
+            cmdr_fs::volume::adb_app_root(phone.serial)
+        ))
+    };
+    let local = registered_local("adb_modes_off_phone");
+
+    let running = start_copy_by_id(
+        "modes-off-phone",
+        phone.volume_id.clone(),
+        vec![on_phone("run.sh"), on_phone("private.txt")],
+        local.volume_id.clone(),
+        String::new(),
+        VolumeCopyConfig::default(),
+    )
+    .await;
+    running.settle().await;
+    running.assert_no_errors();
+
+    let mode = |name: &str| {
+        std::fs::metadata(local.dir.join(name))
+            .expect("the copy landed")
+            .permissions()
+            .mode()
+            & 0o777
+    };
+    let default = cmdr_fs::metadata::default_file_mode();
+    assert_eq!(
+        mode("run.sh"),
+        cmdr_fs::metadata::routed_mode(0o755, default).expect("a mode"),
+        "a script lands executable"
+    );
+    assert_eq!(mode("private.txt"), 0o600, "a private file stays private");
+}
+
 // ── Mutations on the phone, and the pane patches they owe ────────────
 
 /// A phone registered with a host that records every pane patch.

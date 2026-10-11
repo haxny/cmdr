@@ -37,7 +37,7 @@ use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::SourceProgress;
 use super::super::transfer_probe::{CURRENT_TASK_PROBE, TaskPhase, TaskProbeHandle, TaskRole, set_task_phase};
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
-use super::folder_dates::FolderDates;
+use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::landing::{DestFolder, NewName, where_it_lands};
 use super::merge_ctx::{CreatedPaths, FileWindow, MergeCtx, MergeProbe};
 use super::naming::take_back_reservation;
@@ -85,7 +85,7 @@ struct LeafPool<'a> {
     first_error: Option<PathedVolumeError>,
     /// Every folder below the root this walk created, noted as the walk leaves
     /// it, so the subtree can date them once its leaves have drained.
-    folders: FolderDates,
+    folders: FolderMetadata,
 }
 
 impl<'a> LeafPool<'a> {
@@ -97,7 +97,7 @@ impl<'a> LeafPool<'a> {
             in_flight: FuturesUnordered::new(),
             bytes: 0,
             first_error: None,
-            folders: FolderDates::default(),
+            folders: FolderMetadata::default(),
         }
     }
 
@@ -354,10 +354,10 @@ pub(super) async fn copy_directory_streaming(
     // in the plan and leave the byte write to the caller's single decode pass.
     // `None` ⇒ normal streaming copy.
     plan: Option<&super::sequential_extract::ExtractPlan>,
-    // The source folder's own date, from the scan's stat of it
-    // (`SourceHint::modified_at`): the one date no listing in the walk carries.
-    // Dates `dest_path` once the subtree landed, if the walk created it.
-    source_modified_at: Option<u64>,
+    // The source folder's own dates, from the scan's stat of it
+    // (`SourceHint`): the one folder no listing in the walk carries. Stamped on
+    // `dest_path` once the subtree landed, if the walk created it.
+    source_dates: SourceFolderDates,
 ) -> Result<u64, PathedVolumeError> {
     // ONE pool for this whole subtree, so a file at depth 5 shares the window
     // with a file at depth 1 instead of opening one of its own per level.
@@ -396,12 +396,12 @@ pub(super) async fn copy_directory_streaming(
     // failed or cancelled subtree returned above and dates nothing.
     let mut folders = std::mem::take(&mut pool.folders);
     if root == DirectoryCreation::Created {
-        folders.note_filled(dest_path.to_path_buf(), source_modified_at);
+        folders.note_filled(dest_path.to_path_buf(), source_dates);
     }
     match plan {
         // PLAN MODE wrote no file yet: the data pass dates the folders once its
         // decode lands every member.
-        Some(plan) => plan.hold_folder_dates(folders),
+        Some(plan) => plan.hold_folder_metadata(folders),
         None => folders.stamp(dest_volume, state).await,
     }
     Ok(pool.bytes)
@@ -479,7 +479,8 @@ async fn merge_level<'a>(
                     created.record_dir(dest_path.to_path_buf());
                     // Made here, so it is the extract's to quarantine, now rather than
                     // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                    super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, dest_path);
+                    super::extract_quarantine::quarantine_created_folder(state, source_volume, dest_volume, dest_path)
+                        .await;
                     made_here = true;
                     false
                 }
@@ -502,12 +503,13 @@ async fn merge_level<'a>(
                         created.record_dir(dest_path.to_path_buf());
                         // Made here, so it is the extract's to quarantine, now rather than
                         // in a pass a cancel or failure would skip (`extract_quarantine.rs`).
-                        super::extract_quarantine::quarantine_created_item(
+                        super::extract_quarantine::quarantine_created_folder(
                             state,
                             source_volume,
                             dest_volume,
                             dest_path,
-                        );
+                        )
+                        .await;
                         made_here = true;
                         false
                     }
@@ -597,7 +599,7 @@ async fn merge_level<'a>(
                 ))
                 .await?;
                 if level == DirectoryCreation::Created {
-                    pool.folders.note_filled(child_dest, entry.modified_at);
+                    pool.folders.note_filled(child_dest, SourceFolderDates::of_entry(entry));
                 }
                 continue;
             }
@@ -675,7 +677,7 @@ async fn merge_level<'a>(
             ))
             .await?;
             if level == DirectoryCreation::Created {
-                pool.folders.note_filled(write_dest, entry.modified_at);
+                pool.folders.note_filled(write_dest, SourceFolderDates::of_entry(entry));
             }
             continue;
         }
@@ -697,10 +699,6 @@ async fn merge_level<'a>(
                     dest_path: write_dest,
                     replaces,
                     landing,
-                    // The plan pass is the only one that lists the source, so
-                    // the mode has to be recorded here or the data pass has
-                    // nothing to land the file with.
-                    source_mode: entry.permissions,
                 },
             );
             continue;
@@ -719,9 +717,8 @@ async fn merge_level<'a>(
             copy_leaf(
                 source_volume,
                 child_source,
-                // The walker listed this level, so the child's size AND mode are
-                // already in hand: a deep file costs the copy engine no extra
-                // round trip to land with the bits its source reported.
+                // The walker listed this level, so the child's size is already
+                // in hand: SMB takes its one-frame read with it.
                 SourceFileFacts::from_entry(entry),
                 dest_volume,
                 write_dest,

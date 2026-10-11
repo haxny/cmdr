@@ -558,30 +558,45 @@ pinned to the old root would keep feeding paths that no longer name anything.
 ## Dates on copies
 
 The contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
-source's date".
+source's metadata".
 
-- **Source half: both foreground read paths report the server's `LastWriteTime`** (the streamed download and the hinted
-  one-frame compound read), from the read's own CREATE response: `FileDownload::info()` on the streamed path,
-  `read_file_compound_sized_with_info` on the compound one. No extra frame; the wire-shape cells pin a hinted read at
-  `(1, 3)`, so a stat creeping back in shows there as `(2, 7)`.
+- **Source half: both foreground read paths report the server's `LastWriteTime` and `CreationTime`** (the streamed
+  download and the hinted one-frame compound read), from the read's own CREATE response: `FileDownload::info()` on the
+  streamed path (`ChannelReadStream::with_metadata`), `read_file_compound_sized_with_info` on the compound one
+  (`InlineReadStream::with_created`). No extra frame; the wire-shape cells pin a hinted read at `(1, 3)`, so a stat
+  creeping back in shows there as `(2, 7)`.
 - **The scan pool's prefetch stays dateless**: enrichment never copies those bytes.
-- **Destination half: `write_from_stream_impl` stamps `LastWriteTime` only** (`smb2::FileTimes::set_modified`; every
-  other time goes as 0, "don't change"), best effort: a refused stamp is a `warn!` and the copy succeeds. Gotcha/Why:
-  the server rewrites a file's date when the handle that WROTE it closes, so the moment matters. The streaming writer
-  stamps its own handle before `finish()` (`stamp_writer`, which `FileWriter::set_times` orders after the pending
-  writes); the one-frame compound write has already closed its handle, so it stamps by path right after, one more
-  compound frame (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a writer is still open: its close wins. A
-  one-shot write to the user's real name (unstaged, `write_is_single_shot`) shows the server's date for that one frame.
-- **Pinned by** `conformance_test.rs`: `smb_integration_a_copy_keeps_the_source_date_per_the_shared_contract` (the
-  shared assertions, compound path), `smb_integration_a_streamed_write_keeps_the_source_date` (the writer path), and
-  `smb_integration_a_read_stream_reports_the_listed_date_on_both_read_paths` (the read half on a file aged inside the
-  fixture container with `touch -d`);
+- **Destination half: `write_from_stream_impl` stamps `LastWriteTime` and `CreationTime`**, both in the one
+  `FILE_BASIC_INFORMATION` (`source_times`; access and change times go as 0, "don't change"), so the creation date costs
+  no frame. It asks the stream for `CREATED` alone: mode, flags, and xattrs aren't settable over this client yet. Best
+  effort: a refused stamp is a `warn!` and the copy succeeds. Gotcha/Why: the server rewrites a file's date when the
+  handle that WROTE it closes, so the moment matters. The streaming writer stamps its own handle before `finish()`
+  (`stamp_writer`, which `FileWriter::set_times` orders after the pending writes); the one-frame compound write has
+  already closed its handle, so it stamps by path right after, one more compound frame (CREATE+SET_INFO+CLOSE). ❌ Never
+  stamp by path while a writer is still open: its close wins. A one-shot write to the user's real name (unstaged,
+  `write_is_single_shot`) shows the server's dates for that one frame.
+- **The landing rename keeps `CreationTime`** (verified on the Docker guest share, Samba 4.20.6 with
+  `store dos attributes = yes`,
+  `conformance_test.rs::smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract`, 2026-10-11):
+  `FileRenameInformation` doesn't touch `FILE_BASIC_INFORMATION`, and Samba keeps birth in its `user.DOSATTRIB` xattr,
+  which the rename carries. A share with `store dos attributes = no` can't keep it; QNAP's answer is unverified.
+- **Folding the one-frame write's stamp into its compound would save a round trip per small file, and Samba allows it**
+  (verified on the Docker guest share, Samba 4.20.6, 2026-10-11: CREATE+WRITE+FLUSH+SET_INFO+CLOSE in one compound, five
+  of five files listed the SET_INFO's dates, not the CLOSE's). Not adopted: it needs `smb2` to take `FileTimes` in
+  `write_file_compound`, and Windows refuses a FLUSH that isn't last in its compound, so that path needs its own shape
+  and a Windows check. Until then the stamp is the second frame.
+- **Pinned by** `conformance_test.rs`: `smb_integration_a_copy_keeps_the_source_date_per_the_shared_contract` and
+  `smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract` (the shared assertions, compound path,
+  through a staging-shaped temp and its rename), `smb_integration_a_streamed_write_keeps_the_source_date` (the writer
+  path, SMB to SMB, both dates), and `smb_integration_a_read_stream_reports_the_listed_date_on_both_read_paths` (the
+  read half on a file aged inside the fixture container with `touch -d`, both dates on both paths);
   `wire_shape_integration_test.rs::smb_integration_a_dated_single_shot_write_adds_one_frame_for_its_date` counts the
-  stamp's frame.
-- **Folders: `set_modified` stamps `LastWriteTime` by path** (`mutation.rs`, `Tree::set_times`, which opens with no
-  create options so a directory opens like a file; one frame), then patches the parent listing with a `Modified`. The
-  copy engine calls it on each folder it created once the contents landed. Pinned by
-  `smb_integration_set_modified_dates_a_folder` and the engine's `smb_integration_folders_copied_*` cells.
+  stamp's frame. Through the engine: `smb_transfer_semantics_test.rs`'s `..._keeps_the_creation_dates` cells.
+- **Folders: `apply_metadata` stamps `CreationTime` and `LastWriteTime` by path** (`mutation.rs::set_times_impl`,
+  `Tree::set_times`, which opens with no create options so a directory opens like a file; one frame for both), then
+  patches the parent listing with a `Modified`. The copy engine calls it on each folder it created once the contents
+  landed. Mode, flags, and xattrs answer `NotApplicable`. Pinned by `smb_integration_apply_metadata_dates_a_folder`, the
+  creation-date conformance cell, and the engine's `smb_integration_folders_copied_*` cells.
 
 ## Copy concurrency and the credit window
 

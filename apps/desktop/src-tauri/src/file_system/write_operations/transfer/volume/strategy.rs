@@ -198,7 +198,7 @@ pub(super) async fn copy_single_path(
                 created,
                 progress,
                 merge,
-                source_facts.modified_at,
+                source_facts.folder_dates,
             ))
             .await;
         }
@@ -212,7 +212,7 @@ pub(super) async fn copy_single_path(
             progress,
             merge,
             None,
-            source_facts.modified_at,
+            source_facts.folder_dates,
         ))
         .await
     } else {
@@ -388,6 +388,10 @@ pub(super) async fn stream_pipe_file(
         };
         let size = stream.total_size().known().ok_or(VolumeError::NotSupported)?;
         let length = crate::file_system::volume::StreamLength::Known(size);
+        // An extract carries the archive's quarantine with the rest of what
+        // the source reports, so the destination puts it on before the landing
+        // like any other xattr (`extract_quarantine.rs`).
+        let stream = super::extract_quarantine::quarantine_stream(state, source_volume, stream);
         // ONE probe, two consumers: the staging decision below and the
         // destination-side foreground yield's floor exemption (handed to the
         // `CheckpointStream`). See `resolve_staging`.
@@ -549,23 +553,9 @@ pub(super) async fn stream_pipe_file(
             }
         };
 
-        // Past the last byte, and BEFORE the rename: an archive's quarantine,
-        // then the source's mode, go on what was written, so the file never
-        // wears the wrong metadata under its real name. The xattr goes first: a
-        // path xattr write on a `0444` file is refused. Both are no-ops unless
-        // the destination is a local filesystem and the source has something to
-        // carry (`extract_quarantine.rs`, `landed_mode.rs`); neither fails the copy.
-        super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, staged.target());
-        super::landed_mode::apply_source_mode(
-            source_volume,
-            source_path,
-            source_facts.mode,
-            dest_volume,
-            staged.target(),
-        )
-        .await;
-
-        // Past the last byte: give the file its final name.
+        // Past the last byte: give the file its final name. What the source
+        // carries beyond its bytes is already on it: the destination asked the
+        // stream and put it on the staged write (`Volume::write_from_stream`).
         match staged.commit(dest_volume).await {
             Ok(()) => {
                 // Landed, so a ` (N)` placeholder at the name is filled, not ours

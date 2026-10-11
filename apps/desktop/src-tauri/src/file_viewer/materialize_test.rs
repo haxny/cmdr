@@ -367,6 +367,11 @@ impl crate::file_system::volume::VolumeReadStream for CountingStream {
     fn modified_at(&self) -> Option<std::time::SystemTime> {
         self.inner.modified_at()
     }
+
+    /// The source's own metadata, so a destination that stores it keeps it.
+    fn metadata(&self, wanted: cmdr_fs::metadata::MetadataClasses) -> cmdr_fs::metadata::CarriedMetadata {
+        self.inner.metadata(wanted)
+    }
 }
 
 impl crate::file_system::volume::Volume for SlowPhone {

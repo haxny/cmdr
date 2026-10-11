@@ -62,10 +62,11 @@ fn read_blob_matches_git_show_bytes() {
     let commit = virtual_listing::resolve_ref_commit(&handle, Cat::Branches, "main")
         .unwrap()
         .expect("main exists");
-    let blob_id = tree::lookup_blob_id(&handle, commit, "scripts/run.sh")
+    let blob = tree::lookup_blob(&handle, commit, "scripts/run.sh")
         .unwrap()
         .expect("the blob is there");
-    let bytes = tree::read_blob(&handle, blob_id).unwrap();
+    assert_eq!(blob.mode, 0o755, "the tree records it executable");
+    let bytes = tree::read_blob(&handle, blob.id).unwrap();
     let expected = git_cli_capture(&root, &["show", "main:scripts/run.sh"]);
     assert_eq!(bytes, expected);
     cleanup(&dir);
@@ -78,12 +79,12 @@ async fn blob_stream_drains_to_full_blob() {
     let commit = virtual_listing::resolve_ref_commit(&handle, Cat::Branches, "main")
         .unwrap()
         .expect("main exists");
-    let blob_id = tree::lookup_blob_id(&handle, commit, "README.md")
+    let blob = tree::lookup_blob(&handle, commit, "README.md")
         .unwrap()
         .expect("the blob is there");
-    let bytes = tree::read_blob(&handle, blob_id).unwrap();
+    let bytes = tree::read_blob(&handle, blob.id).unwrap();
 
-    let mut stream = GitBlobReadStream::new(bytes.clone());
+    let mut stream = GitBlobReadStream::new(bytes.clone(), blob.mode);
     let mut drained = Vec::new();
     while let Some(chunk) = stream.next_chunk().await {
         drained.extend_from_slice(&chunk.unwrap());

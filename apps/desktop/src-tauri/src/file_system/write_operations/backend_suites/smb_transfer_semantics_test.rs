@@ -402,15 +402,26 @@ async fn smb_integration_folders_copied_off_a_share_keep_their_dates() {
 #[cfg(target_os = "macos")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
-async fn smb_integration_a_copy_onto_a_share_loses_the_creation_date_today() {
+async fn smb_integration_a_copy_onto_a_share_keeps_the_creation_dates() {
     let (remote, dir) = fixture().await;
-    super::network_dates_test_support::a_copy_onto_the_server_loses_the_creation_date_today(remote, dir).await;
+    super::network_dates_test_support::a_copy_onto_the_server_keeps_the_creation_dates(remote, dir).await;
 }
 
 #[cfg(target_os = "macos")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
-async fn smb_integration_a_copy_off_a_share_loses_the_creation_date_today() {
+async fn smb_integration_a_copy_off_a_share_keeps_the_creation_dates() {
     let (remote, dir) = fixture().await;
-    super::network_dates_test_support::a_copy_off_the_server_loses_the_creation_date_today(remote, dir).await;
+    super::network_dates_test_support::a_copy_off_the_server_keeps_the_creation_dates(remote, dir).await;
+}
+
+/// SMB to SMB on one share: `SmbVolume` has no server-side copy, so even a
+/// same-share copy streams through the app, and the creation date has to ride
+/// the stream like any other.
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_copy_within_a_share_keeps_the_creation_dates() {
+    let (remote, dir) = fixture().await;
+    super::network_dates_test_support::a_copy_within_the_server_keeps_the_creation_dates(remote, dir).await;
 }

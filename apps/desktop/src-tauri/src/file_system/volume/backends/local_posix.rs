@@ -17,6 +17,7 @@ use crate::file_system::listing::{FileEntry, ListingTally, get_single_entry, lis
 use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, WriteMode};
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::metadata::{CarriedMetadata, MetadataReport};
 use cmdr_fs::volume::MountClass;
 use std::future::Future;
 use std::io;
@@ -482,20 +483,21 @@ impl Volume for LocalPosixVolume {
         })
     }
 
-    fn set_modified<'a>(
+    /// Every class, through the host helper: xattrs, the folded mode, then
+    /// birth and mtime in one call, then the flags last (Locked would refuse the
+    /// others).
+    fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
-        modified: std::time::SystemTime,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
         let abs_path = self.resolve(path);
+        let carried = carried.clone();
         Box::pin(async move {
-            spawn_blocking(move || {
-                // mtime alone: the access time stays the store's own.
-                filetime::set_file_mtime(&abs_path, filetime::FileTime::from_system_time(modified))
-                    .map_err(|e| VolumeError::from_io_at(&e, &abs_path))
-            })
-            .await
-            .expect("spawn_blocking set_file_mtime closure doesn't panic and the task is uncancelable")
+            spawn_blocking(move || streams::apply_metadata_at(&abs_path, &carried, modified))
+                .await
+                .expect("spawn_blocking apply_metadata closure doesn't panic and the task is uncancelable")
         })
     }
 

@@ -19,6 +19,7 @@ fn one_file(bytes: u64) -> CopyScanResult {
         dedup_bytes: bytes,
         top_level_is_directory: false,
         top_level_modified_at: None,
+        top_level_created_at: None,
     }
 }
 
@@ -226,6 +227,7 @@ fn folder(files: usize, dirs: usize, bytes: u64) -> CopyScanResult {
         dedup_bytes: bytes,
         top_level_is_directory: true,
         top_level_modified_at: None,
+        top_level_created_at: None,
     }
 }
 

@@ -143,6 +143,7 @@ impl Volume for BoundaryWalkingVolume {
                             dedup_bytes: ENTRIES as u64,
                             top_level_is_directory: true,
                             top_level_modified_at: None,
+                            top_level_created_at: None,
                         },
                     )
                 })

@@ -159,6 +159,7 @@ pub(super) async fn scan_subtree_with_oracle(
                     dedup_bytes: child_totals.dedup_bytes,
                     top_level_is_directory: true,
                     top_level_modified_at: entry.modified_at,
+                    top_level_created_at: entry.created_at,
                 },
             ));
             if let Some(cb) = on_progress {
@@ -189,6 +190,7 @@ pub(super) async fn scan_subtree_with_oracle(
                     dedup_bytes: dedup_contribution,
                     top_level_is_directory: false,
                     top_level_modified_at: entry.modified_at,
+                    top_level_created_at: entry.created_at,
                 },
             ));
             if let Some(cb) = on_progress {

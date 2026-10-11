@@ -13,6 +13,7 @@ use super::state::ConnectionState;
 use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
@@ -20,7 +21,7 @@ use cmdr_fs::volume::{
     WriteMode,
 };
 use cmdr_fs::volume::{ListingProgress, Retirement};
-use log::debug;
+use log::{debug, warn};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
@@ -295,12 +296,38 @@ impl Volume for SmbVolume {
         Box::pin(self.create_directory_impl(path))
     }
 
-    fn set_modified<'a>(
+    /// The creation and modification dates, in the one frame a date alone
+    /// costs. Mode, flags, and xattrs aren't settable over this client yet:
+    /// `NotApplicable` (`DETAILS.md` § "What a copy keeps").
+    fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
-        modified: std::time::SystemTime,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        Box::pin(self.set_modified_impl(path, modified))
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
+        Box::pin(async move {
+            let mut report = MetadataReport::none_applicable(carried, modified);
+            if carried.created.is_none() && modified.is_none() {
+                return report;
+            }
+            let outcome = match self.set_times_impl(path, carried.created, modified).await {
+                Ok(()) => ClassOutcome::Kept,
+                Err(e) => {
+                    warn!(
+                        "SmbVolume::apply_metadata: {} keeps the server's dates, not the source's: {e}",
+                        path.display()
+                    );
+                    ClassOutcome::Refused
+                }
+            };
+            if carried.created.is_some() {
+                report.created = outcome;
+            }
+            if modified.is_some() {
+                report.modified = outcome;
+            }
+            report
+        })
     }
 
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
@@ -483,9 +510,10 @@ impl Volume for SmbVolume {
                                 self.handle_smb_result("open_read_stream_with_hint(compound)", &smb_path, read_result)?;
                             if data.len() as u64 == size {
                                 let modified_at = info.modified.to_system_time();
-                                return Ok(
-                                    Box::new(InlineReadStream::new(data, modified_at)) as Box<dyn VolumeReadStream>
-                                );
+                                return Ok(Box::new(
+                                    InlineReadStream::new(data, modified_at)
+                                        .with_created(info.created.to_system_time()),
+                                ) as Box<dyn VolumeReadStream>);
                             }
                             debug!(
                                 "SmbVolume::open_read_stream_with_hint: compound read returned {} bytes, expected {}; falling back to streaming",

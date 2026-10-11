@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::to_volume_error;
 use crate::{ArchiveByteSource, ArchiveEntryReader, SubtreeExtractReader};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{ExtractedFile, SequentialExtract, Volume, VolumeError, VolumeReadStream};
 
 /// Wraps an [`ArchiveEntryReader`] as a [`VolumeReadStream`], mapping the core's
@@ -30,6 +31,19 @@ pub(super) struct ArchiveVolumeReadStream {
     pub(super) delivered: u64,
     /// The entry's date as the archive's index recorded it.
     pub(super) modified_at: Option<SystemTime>,
+    /// The entry's mode as the archive's index recorded it.
+    pub(super) mode: Option<u32>,
+}
+
+/// What an archive member carries beyond its bytes and its date: the mode the
+/// archive recorded, and nothing else (no creation date, no flags; xattrs ride
+/// `__MACOSX` sidecars, which aren't read yet).
+fn member_metadata(mode: Option<u32>, wanted: MetadataClasses) -> CarriedMetadata {
+    CarriedMetadata {
+        mode,
+        ..CarriedMetadata::default()
+    }
+    .restricted_to(wanted)
 }
 
 /// An archive's recorded Unix-seconds date as a `SystemTime`. A pre-1970 date is
@@ -77,6 +91,10 @@ impl VolumeReadStream for ArchiveVolumeReadStream {
     fn modified_at(&self) -> Option<SystemTime> {
         self.modified_at
     }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        member_metadata(self.mode, wanted)
+    }
 }
 
 /// The [`SequentialExtract`] over an archive subtree: the [`Volume`] adapter for
@@ -99,6 +117,8 @@ pub(super) struct ArchiveSequentialExtract {
     current_size: u64,
     /// That member's date, for the same reason.
     current_modified_at: Option<SystemTime>,
+    /// And its mode.
+    current_mode: Option<u32>,
 }
 
 impl ArchiveSequentialExtract {
@@ -108,6 +128,7 @@ impl ArchiveSequentialExtract {
             archive_path,
             current_size: 0,
             current_modified_at: None,
+            current_mode: None,
         }
     }
 }
@@ -120,6 +141,7 @@ impl SequentialExtract for ArchiveSequentialExtract {
                 Some(member) => {
                     self.current_size = member.size;
                     self.current_modified_at = recorded_date(member.modified);
+                    self.current_mode = member.mode;
                     Ok(Some(ExtractedFile {
                         source_path: self.archive_path.join(&member.inner_path),
                         size: member.size,
@@ -136,6 +158,7 @@ impl SequentialExtract for ArchiveSequentialExtract {
             total: self.current_size,
             delivered: 0,
             modified_at: self.current_modified_at,
+            mode: self.current_mode,
         })
     }
 }
@@ -148,6 +171,7 @@ struct MemberStream {
     total: u64,
     delivered: u64,
     modified_at: Option<SystemTime>,
+    mode: Option<u32>,
 }
 
 impl VolumeReadStream for MemberStream {
@@ -175,6 +199,10 @@ impl VolumeReadStream for MemberStream {
 
     fn modified_at(&self) -> Option<SystemTime> {
         self.modified_at
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        member_metadata(self.mode, wanted)
     }
 }
 

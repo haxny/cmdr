@@ -6,6 +6,7 @@
 //! and `max_concurrent_ops`) are the difference between a stale pane and a
 //! serialized transfer.
 
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataReport};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -254,12 +255,30 @@ impl Volume for SftpVolume {
         true
     }
 
-    fn set_modified<'a>(
+    /// The modification date alone: SFTP v3 has no creation date, and the
+    /// mode isn't carried yet (`DETAILS.md`). The rest is `NotApplicable`.
+    fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
-        modified: std::time::SystemTime,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        Box::pin(self.noting(self.set_modified_impl(path, modified)))
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
+        Box::pin(async move {
+            let mut report = MetadataReport::none_applicable(carried, modified);
+            if let Some(modified) = modified {
+                report.modified = match self.noting(self.set_modified_impl(path, modified)).await {
+                    Ok(()) => ClassOutcome::Kept,
+                    Err(e) => {
+                        log::warn!(
+                            "SftpVolume::apply_metadata: {} keeps the server's date, not the source's: {e}",
+                            path.display()
+                        );
+                        ClassOutcome::Refused
+                    }
+                };
+            }
+            report
+        })
     }
 
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {

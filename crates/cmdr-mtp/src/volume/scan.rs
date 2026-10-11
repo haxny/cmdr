@@ -89,6 +89,7 @@ impl MtpVolume {
                         dedup_bytes: 0,
                         top_level_is_directory: false,
                         top_level_modified_at: None,
+                        top_level_created_at: None,
                     },
                     per_path: Vec::new(),
                     files: None,
@@ -147,6 +148,7 @@ impl MtpVolume {
                 // Aggregate over multiple paths: not meaningful for a batch.
                 top_level_is_directory: false,
                 top_level_modified_at: None,
+                top_level_created_at: None,
             };
 
             for group in groups.values() {
@@ -200,6 +202,7 @@ impl MtpVolume {
                             // The parent listing in hand carries the folder's
                             // own date, which the subtree walk never sees.
                             scan.top_level_modified_at = entry.modified_at;
+                            scan.top_level_created_at = entry.created_at;
                             aggregate.file_count += scan.file_count;
                             aggregate.dir_count += scan.dir_count;
                             aggregate.total_bytes += scan.total_bytes;
@@ -220,6 +223,7 @@ impl MtpVolume {
                                     dedup_bytes: size,
                                     top_level_is_directory: false,
                                     top_level_modified_at: entry.modified_at,
+                                    top_level_created_at: entry.created_at,
                                 },
                             );
                         }

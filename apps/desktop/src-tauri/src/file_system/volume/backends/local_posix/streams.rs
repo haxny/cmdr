@@ -1,6 +1,7 @@
 //! Moving bytes in and out of a local file: the chunked read stream the backend
 //! hands out, the ranged read beside it, and the durable streaming write every
-//! cross-volume copy landing on local disk goes through.
+//! cross-volume copy landing on local disk goes through, with the metadata the
+//! source carried (`cmdr_fs::metadata`, the one place the ordering lives).
 //!
 //! Split out the way the MTP backend's `mtp/streams.rs` is: byte movement has
 //! its own vocabulary (chunk sizes, `pread` short reads, fdatasync) and reads as
@@ -10,7 +11,12 @@
 use super::super::{VolumeError, VolumeReadStream};
 use super::LocalPosixVolume;
 use crate::file_system::volume::{StreamLength, StreamWriteProgress, WriteMode};
+use cmdr_fs::metadata::{
+    CarriedMetadata, LandedMetadata, MetadataClasses, MetadataReport, StagedItem, StagedTimes, UserFlags, apply_landed,
+    apply_staged, default_file_mode, default_folder_mode, routed_mode,
+};
 use std::future::Future;
+use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::Path;
 use std::pin::Pin;
 use tokio::task::spawn_blocking;
@@ -25,8 +31,9 @@ struct LocalPosixReadStream {
     file: Option<std::fs::File>,
     total_size: u64,
     bytes_read: u64,
-    /// From the `stat` the open already takes, so it costs nothing.
-    modified_at: Option<std::time::SystemTime>,
+    /// The `stat` the open already took: the date, the creation date, the
+    /// mode, and the flags, for nothing.
+    stat: std::fs::Metadata,
 }
 
 /// 1 MiB chunks, matching `chunked_copy.rs`'s constant.
@@ -80,7 +87,17 @@ impl VolumeReadStream for LocalPosixReadStream {
     }
 
     fn modified_at(&self) -> Option<std::time::SystemTime> {
-        self.modified_at
+        self.stat.modified().ok()
+    }
+
+    /// Off the open's `stat`, plus the xattrs off the fd when the destination
+    /// keeps them (one `flistxattr` for a file with none).
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        match &self.file {
+            Some(file) => CarriedMetadata::of_local_file_wanting(file, &self.stat, wanted),
+            // Past EOF the fd is gone; the stat still answers.
+            None => CarriedMetadata::of_local_stat(&self.stat).restricted_to(wanted.without(MetadataClasses::XATTRS)),
+        }
     }
 }
 
@@ -110,7 +127,7 @@ impl LocalPosixVolume {
                     file: Some(file),
                     total_size,
                     bytes_read: 0,
-                    modified_at: metadata.modified().ok(),
+                    stat: metadata,
                 }) as Box<dyn VolumeReadStream>)
             })
             .await
@@ -151,8 +168,12 @@ impl LocalPosixVolume {
         })
     }
 
-    /// Streams `stream` into `dest`, then `sync_data`s the file (and
-    /// best-effort fsyncs the parent dir) before reporting success.
+    /// Streams `stream` into `dest`, then `sync_data`s the file, puts the
+    /// source's metadata on it, and best-effort fsyncs the parent dir before
+    /// reporting success.
+    ///
+    /// The source's user flags aren't put on: Locked would refuse the landing
+    /// rename, so the caller applies them after it (`Volume::apply_metadata`).
     pub(super) fn write_from_stream_impl<'a>(
         &'a self,
         dest: &'a Path,
@@ -173,13 +194,29 @@ impl LocalPosixVolume {
                     .map_err(|e| VolumeError::from_io_at(&e, &parent_for_error))?;
             }
 
+            // Asked once, before the first chunk: everything a local file keeps
+            // but the flags (above). A routed source's mode is folded through
+            // the umask, never put on as is.
+            let carried = stream.metadata(MetadataClasses::ALL.without(MetadataClasses::FLAGS));
+            let landed_mode = carried.mode.and_then(|mode| routed_mode(mode, default_file_mode()));
+            let carried = CarriedMetadata {
+                mode: landed_mode,
+                ..carried
+            };
+
             // Open destination file on the blocking pool. `CreateNew` is
             // `O_EXCL`: a file already at the name is refused atomically and
-            // left alone, before anything of ours exists to clean up.
+            // left alone, before anything of ours exists to clean up. A file
+            // whose source has a mode is created owner-only and gets that mode
+            // after its last byte, so a private file is never readable by
+            // others while it streams; one without keeps the umask's default.
             let dest_for_open = dest_abs.clone();
             let mut file = spawn_blocking(move || {
                 let mut options = std::fs::OpenOptions::new();
                 options.write(true);
+                if landed_mode.is_some() {
+                    options.mode(0o600);
+                }
                 match mode {
                     WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => options.create_new(true),
                     WriteMode::CreateOrReplace => options.create(true).truncate(true),
@@ -232,40 +269,44 @@ impl LocalPosixVolume {
             // reporting "complete" here without an fdatasync would let the user
             // eject / sleep and lose data (on a move, from both sides). This
             // gives the same "durable as each file completes" property the
-            // local-FS chunked copy path already has (`transfer/chunked_copy.rs`
-            // → `dst_file.sync_data()`): a crash mid-batch leaves earlier files
-            // safe.
+            // local-FS chunked copy path already has (`transfer/chunked_copy.rs`):
+            // a crash mid-batch leaves earlier files safe.
             //
             // Best-effort on error, matching `durability::flush_created_destinations`:
-            // a failed `sync_data` is logged under `target: "write_durability"`,
-            // NOT propagated. The bytes are written either way, and failing a
+            // a failed sync is logged under `target: "write_durability"`, NOT
+            // propagated. The bytes are written either way, and failing a
             // completed multi-GB transfer at the final fsync is worse UX than
             // accepting a small durability-window risk on a filesystem that
             // can't sync.
             //
-            // The source's date goes on the open handle first, after the last
-            // byte (a later write would bump it again), so the sync covers it
-            // too. Best effort: the bytes are the copy, the date is courtesy.
-            let modified_at = stream.modified_at();
+            // Then the source's metadata, on the open handle, after the last
+            // byte AND the flush: xattrs, the mode, then birth and mtime in one
+            // call (`apply_staged`). ❗ Flush first: on a macOS SMB mount, writes
+            // still buffered when the dates go on reach the server at the
+            // handle's real close, which stamps its own mtime. Best effort: the
+            // bytes are the copy.
+            let times = StagedTimes {
+                modified: stream.modified_at(),
+                accessed: None,
+            };
             let dest_for_sync = dest_abs.clone();
             file = spawn_blocking(move || {
                 use std::io::Write;
                 // Userspace flush first (harmless no-op on a raw File, but
                 // correct if the writer is ever wrapped in a BufWriter).
                 let _ = file.flush();
-                if let Some(date) = modified_at
-                    && let Err(e) = file.set_modified(date)
-                {
-                    log::warn!(
-                        target: "local_posix",
-                        "write_from_stream: couldn't keep the source's date on {}: {e}",
-                        dest_for_sync.display()
-                    );
-                }
-                if let Err(e) = file.sync_data() {
+                if let Err(e) = cmdr_fs::durable::sync_file_data(&file) {
                     log::warn!(
                         target: "write_durability",
                         "write_from_stream: fdatasync failed for {}: {e}",
+                        dest_for_sync.display()
+                    );
+                }
+                let report = apply_staged(StagedItem::File(&file), &carried, times);
+                if report.any_refused() {
+                    log::warn!(
+                        target: "local_posix",
+                        "write_from_stream: {} took only some of the source's metadata: {report:?}",
                         dest_for_sync.display()
                     );
                 }
@@ -299,4 +340,56 @@ impl LocalPosixVolume {
             Ok(bytes_written)
         })
     }
+}
+
+/// [`Volume::apply_metadata`](crate::file_system::volume::Volume::apply_metadata)
+/// for a local item that has landed: the xattrs, the routed mode folded against
+/// the item's kind, birth and mtime in one call, then the flags last (Locked
+/// refuses every later write).
+pub(super) fn apply_metadata_at(
+    path: &Path,
+    carried: &CarriedMetadata,
+    modified: Option<std::time::SystemTime>,
+) -> MetadataReport {
+    // The kind decides the default the mode folds against; an item that can't
+    // be stat'ed keeps the mode it has.
+    let mode = carried.mode.and_then(|mode| {
+        let default = match std::fs::symlink_metadata(path) {
+            Ok(meta) if meta.is_dir() => default_folder_mode(),
+            Ok(_) => default_file_mode(),
+            Err(e) => {
+                log::debug!(target: "local_posix", "apply_metadata: couldn't stat {}: {e}", path.display());
+                return None;
+            }
+        };
+        routed_mode(mode, default)
+    });
+    let staged = CarriedMetadata {
+        mode,
+        flags: UserFlags::NONE,
+        ..carried.clone()
+    };
+    let mut report = if staged.is_empty() && modified.is_none() {
+        MetadataReport::ABSENT
+    } else {
+        apply_staged(
+            StagedItem::Path(path),
+            &staged,
+            StagedTimes {
+                modified,
+                accessed: None,
+            },
+        )
+    };
+    if !carried.flags.is_empty() {
+        report.flags = apply_landed(path, &LandedMetadata::default().with_flags(carried.flags)).flags;
+    }
+    if report.any_refused() {
+        log::warn!(
+            target: "local_posix",
+            "apply_metadata: {} took only some of the source's metadata: {report:?}",
+            path.display()
+        );
+    }
+    report
 }

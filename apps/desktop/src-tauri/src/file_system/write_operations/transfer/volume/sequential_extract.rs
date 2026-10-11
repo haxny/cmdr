@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 use super::super::super::state::WriteOperationState;
 use super::super::staged_write::StagedWrite;
 use super::super::transfer_driver::SourceProgress;
-use super::folder_dates::FolderDates;
+use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::strategy::{LandingName, Replaces, note_pending_for_local_dest, resolve_staging, staging_for};
@@ -34,11 +34,6 @@ pub(super) struct PlannedWrite {
     /// landing needs to tell its own placeholder from the user's file
     /// (`staged_write.rs::LandingName`).
     pub(super) landing: LandingName,
-    /// The mode the source entry reported, carried from the planning pass
-    /// because it is the only one that lists the archive (`0` when the format
-    /// recorded none). The data pass puts it on what it writes, so an executable
-    /// inside a `.tar.gz` lands the same way one inside a `.zip` does.
-    pub(super) source_mode: u32,
 }
 
 /// The plan the one-pass extractor builds in its first pass and consumes in its
@@ -53,9 +48,9 @@ pub(super) struct PlannedWrite {
 #[derive(Default)]
 pub(super) struct ExtractPlan {
     writes: Mutex<HashMap<PathBuf, PlannedWrite>>,
-    /// The folders the planning pass created, dated only once the data pass has
-    /// landed every member in them.
-    folder_dates: Mutex<FolderDates>,
+    /// The folders the planning pass created, stamped only once the data pass
+    /// has landed every member in them.
+    folder_metadata: Mutex<FolderMetadata>,
 }
 
 impl ExtractPlan {
@@ -64,9 +59,9 @@ impl ExtractPlan {
     }
 
     /// Hands over the folders the planning pass created, for the data pass to
-    /// date when it's done.
-    pub(super) fn hold_folder_dates(&self, folders: FolderDates) {
-        *self.folder_dates.lock_ignore_poison() = folders;
+    /// stamp when it's done.
+    pub(super) fn hold_folder_metadata(&self, folders: FolderMetadata) {
+        *self.folder_metadata.lock_ignore_poison() = folders;
     }
 
     /// Removes and returns the planned write for `source_path`, or `None` if the
@@ -109,8 +104,8 @@ pub(super) async fn extract_sequential_subtree(
     created: &CreatedPaths,
     progress: &Arc<SourceProgress>,
     merge: Option<&MergeCtx<'_>>,
-    // The source folder's own date, for `copy_directory_streaming`.
-    source_modified_at: Option<u64>,
+    // The source folder's own dates, for `copy_directory_streaming`.
+    source_dates: SourceFolderDates,
 ) -> Result<u64, PathedVolumeError> {
     // Phase 1: build the directory structure + resolve conflicts, recording each
     // file's resolved destination in the plan (no bytes streamed).
@@ -125,7 +120,7 @@ pub(super) async fn extract_sequential_subtree(
         progress,
         merge,
         Some(&plan),
-        source_modified_at,
+        source_dates,
     ))
     .await?;
 
@@ -163,7 +158,9 @@ pub(super) async fn extract_sequential_subtree(
         // does (covers a Downloads-landing local dest; a no-op for MTP/SMB).
         note_pending_for_local_dest(dest_volume, &planned.dest_path);
         note_pending_for_local_dest(dest_volume, staged.target());
-        let stream = extractor.current_stream();
+        // The member reports its own mode off the archive's index; an extract
+        // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
+        let stream = super::extract_quarantine::quarantine_stream(state, source_volume, extractor.current_stream());
         // One decode pass means one member at a time, but this member still
         // takes a leaf handle of its own: it is what carries its bytes on the
         // bar while it writes, and what takes them back off if the write fails.
@@ -180,19 +177,6 @@ pub(super) async fn extract_sequential_subtree(
                 return Err(e).at(&file.source_path);
             }
         };
-        // Before the rename, exactly as `stream_pipe_file` does it: the archive's
-        // quarantine, then the mode the planning pass read off the archive
-        // listing, go on the staged bytes, so what appears under the real name
-        // has never worn the wrong metadata. The xattr before the `chmod`.
-        super::extract_quarantine::quarantine_created_item(state, source_volume, dest_volume, staged.target());
-        super::landed_mode::apply_source_mode(
-            source_volume,
-            &file.source_path,
-            Some(planned.source_mode),
-            dest_volume,
-            staged.target(),
-        )
-        .await;
         staged
             .commit(dest_volume)
             .await
@@ -229,7 +213,7 @@ pub(super) async fn extract_sequential_subtree(
 
     // Every member landed, so the folders the planning pass created take their
     // source dates now; a failed or stopped pass returned above and dates none.
-    let folders = std::mem::take(&mut *plan.folder_dates.lock_ignore_poison());
+    let folders = std::mem::take(&mut *plan.folder_metadata.lock_ignore_poison());
     folders.stamp(dest_volume, state).await;
 
     Ok(total_bytes)

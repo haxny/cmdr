@@ -131,6 +131,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
                 dedup_bytes: 15,
                 top_level_is_directory: false,
                 top_level_modified_at: None,
+                top_level_created_at: None,
             },
         )]
     };

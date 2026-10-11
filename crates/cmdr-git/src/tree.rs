@@ -238,8 +238,17 @@ pub fn read_blob(handle: &RepoHandle, blob_id: gix::ObjectId) -> Result<Vec<u8>,
     Ok(blob.data.clone())
 }
 
-/// Resolves a blob `ObjectId` for a path inside a commit's tree.
-pub fn lookup_blob_id(handle: &RepoHandle, commit_id: gix::ObjectId, sub_path: &str) -> Lookup<gix::ObjectId> {
+/// A blob a path resolved to: its object and the mode its tree entry records.
+pub struct BlobEntry {
+    /// The blob's object id, for [`read_blob`].
+    pub id: gix::ObjectId,
+    /// The entry's permission bits ([`mode_of_kind`]), which is what keeps a
+    /// script copied out of a snapshot executable.
+    pub mode: u32,
+}
+
+/// Resolves the blob at a path inside a commit's tree.
+pub fn lookup_blob(handle: &RepoHandle, commit_id: gix::ObjectId, sub_path: &str) -> Lookup<BlobEntry> {
     let repo = handle.to_thread_local();
     let commit = repo
         .find_commit(commit_id)
@@ -255,13 +264,24 @@ pub fn lookup_blob_id(handle: &RepoHandle, commit_id: gix::ObjectId, sub_path: &
     };
     // A directory has no bytes to open, which reads the same way as a name
     // that isn't in the snapshot at all.
-    if !matches!(
-        entry.mode().kind(),
-        EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link
-    ) {
+    let kind = entry.mode().kind();
+    if !matches!(kind, EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link) {
         return Ok(None);
     }
-    Ok(Some(entry.object_id()))
+    Ok(Some(BlobEntry {
+        id: entry.object_id(),
+        mode: mode_of_kind(kind),
+    }))
+}
+
+/// A tree entry's kind IS its mode: what the listing reports and what a copy
+/// out of the snapshot lands with.
+fn mode_of_kind(kind: EntryKind) -> u32 {
+    match kind {
+        EntryKind::Blob => 0o644,
+        EntryKind::Link => 0o777,
+        EntryKind::BlobExecutable | EntryKind::Tree | EntryKind::Commit => 0o755,
+    }
 }
 
 fn apply_kind(
@@ -270,27 +290,16 @@ fn apply_kind(
     repo: &gix::Repository,
     oid: &gix::hash::oid,
 ) -> Result<(), FriendlyGitError> {
+    fe.permissions = mode_of_kind(kind);
     match kind {
-        EntryKind::Tree => {
-            fe.permissions = 0o755;
-        }
-        EntryKind::Blob => {
-            fe.permissions = 0o644;
-            fe.size = blob_size(repo, oid);
-        }
-        EntryKind::BlobExecutable => {
-            fe.permissions = 0o755;
-            fe.size = blob_size(repo, oid);
-        }
-        EntryKind::Link => {
-            fe.permissions = 0o777;
+        EntryKind::Tree => {}
+        EntryKind::Blob | EntryKind::BlobExecutable | EntryKind::Link => {
             fe.size = blob_size(repo, oid);
         }
         EntryKind::Commit => {
             // Submodule pointer. `submodules.rs` sets `redirect_to_path` so
             // the FE opens the working dir directly; we surface as a dir.
             fe.is_directory = true;
-            fe.permissions = 0o755;
         }
     }
     Ok(())

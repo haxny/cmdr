@@ -10,7 +10,7 @@ use std::fs::{File, Metadata};
 use std::path::Path;
 use std::time::SystemTime;
 
-use super::UserFlags;
+use super::{MetadataClasses, UserFlags};
 
 /// The xattr macOS stamps on every file a process writes. The kernel ignores a
 /// write of it (verified on macOS 27.0, `xattr -w` then `-p` reads back the
@@ -54,27 +54,55 @@ impl CarriedMetadata {
     /// all for a class the stat already answers. A file with no xattrs costs one
     /// `flistxattr`.
     pub fn of_local_file(file: &File, meta: &Metadata) -> Self {
-        use xattr::FileExt as _;
-        let xattrs = match file.list_xattr() {
-            Ok(names) => names
-                .filter(carries)
-                .filter_map(|name| match file.get_xattr(&name) {
-                    Ok(Some(value)) => Some(Xattr { name, value }),
-                    Ok(None) => None,
-                    Err(e) => {
-                        log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
-                        None
-                    }
-                })
-                .collect(),
-            Err(e) => {
-                log::debug!(target: "metadata", "couldn't list a source's xattrs: {e}");
-                Vec::new()
-            }
+        Self::of_local_file_wanting(file, meta, MetadataClasses::ALL)
+    }
+
+    /// [`Self::of_local_file`], restricted to `wanted`: the xattrs (the only
+    /// class that costs a call) are read only when wanted.
+    pub fn of_local_file_wanting(file: &File, meta: &Metadata, wanted: MetadataClasses) -> Self {
+        let xattrs = if wanted.contains(MetadataClasses::XATTRS) {
+            local_xattrs(file)
+        } else {
+            Vec::new()
         };
         Self {
             xattrs,
-            ..Self::of_stat(meta)
+            ..Self::of_local_stat(meta)
+        }
+        .restricted_to(wanted)
+    }
+
+    /// This set with every class outside `wanted` dropped.
+    #[must_use]
+    pub fn restricted_to(mut self, wanted: MetadataClasses) -> Self {
+        if !wanted.contains(MetadataClasses::CREATED) {
+            self.created = None;
+        }
+        if !wanted.contains(MetadataClasses::MODE) {
+            self.mode = None;
+        }
+        if !wanted.contains(MetadataClasses::FLAGS) {
+            self.flags = UserFlags::NONE;
+        }
+        if !wanted.contains(MetadataClasses::XATTRS) {
+            self.xattrs = Vec::new();
+        }
+        self
+    }
+
+    /// Whether the set carries nothing at all, the common case for a source
+    /// that can't report a class.
+    pub fn is_empty(&self) -> bool {
+        self.created.is_none() && self.mode.is_none() && self.flags.is_empty() && self.xattrs.is_empty()
+    }
+
+    /// The part of this set that goes on only AFTER the landing rename,
+    /// because on the staged item it would refuse that rename: the user flags
+    /// (Locked does; the rest land with it so Hidden can't race ahead).
+    pub fn after_landing(&self) -> Self {
+        Self {
+            flags: self.flags,
+            ..Self::default()
         }
     }
 
@@ -97,18 +125,42 @@ impl CarriedMetadata {
     pub fn of_local_dir(path: &Path, meta: &Metadata) -> Self {
         Self {
             xattrs: xattrs_at(path),
-            ..Self::of_stat(meta)
+            ..Self::of_local_stat(meta)
         }
     }
 
-    /// The classes a stat answers: creation date, mode, and (macOS) flags.
-    fn of_stat(meta: &Metadata) -> Self {
+    /// The classes a local item's stat answers: creation date, mode, and
+    /// (macOS) flags. No call at all.
+    pub fn of_local_stat(meta: &Metadata) -> Self {
         use std::os::unix::fs::PermissionsExt as _;
         Self {
             created: meta.created().ok(),
             mode: Some(meta.permissions().mode() & 0o7777),
             flags: flags_of(meta),
             xattrs: Vec::new(),
+        }
+    }
+}
+
+/// The xattrs worth carrying off the open `file`. A file with none costs one
+/// `flistxattr`.
+fn local_xattrs(file: &File) -> Vec<Xattr> {
+    use xattr::FileExt as _;
+    match file.list_xattr() {
+        Ok(names) => names
+            .filter(carries)
+            .filter_map(|name| match file.get_xattr(&name) {
+                Ok(Some(value)) => Some(Xattr { name, value }),
+                Ok(None) => None,
+                Err(e) => {
+                    log::debug!(target: "metadata", "couldn't read xattr {name:?}: {e}");
+                    None
+                }
+            })
+            .collect(),
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't list a source's xattrs: {e}");
+            Vec::new()
         }
     }
 }

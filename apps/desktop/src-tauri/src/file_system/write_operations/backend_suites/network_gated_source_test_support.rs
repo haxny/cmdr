@@ -244,6 +244,11 @@ impl VolumeReadStream for GatedLiveStream {
     fn modified_at(&self) -> Option<std::time::SystemTime> {
         self.inner.modified_at()
     }
+
+    /// The source's own metadata, so a destination that stores it keeps it.
+    fn metadata(&self, wanted: cmdr_fs::metadata::MetadataClasses) -> cmdr_fs::metadata::CarriedMetadata {
+        self.inner.metadata(wanted)
+    }
 }
 
 impl Volume for GatedReads {

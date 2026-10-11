@@ -26,7 +26,7 @@
     },
     "apps/desktop/src-tauri/src/file_system/volume/backends/local_posix.rs": {
       "lines": 802,
-      "reason": "TODO: the `impl Volume for LocalPosixVolume` block plus the query and mutation bodies it can't spread across files. `scan` and `streams` already moved to `local_posix/`; the mutation bodies (create, delete, rename, `set_modified`) should follow into `local_posix/mutation.rs` as `pub(super)` inherent methods with one-line delegators here, the shape `cmdr-sftp` and `cmdr-smb` use."
+      "reason": "TODO: the `impl Volume for LocalPosixVolume` block plus the query and mutation bodies it can't spread across files. `scan` and `streams` already moved to `local_posix/`; the mutation bodies (create, delete, rename, `apply_metadata`) should follow into `local_posix/mutation.rs` as `pub(super)` inherent methods with one-line delegators here, the shape `cmdr-sftp` and `cmdr-smb` use."
     },
     "apps/desktop/src-tauri/src/file_system/write_operations/delete/walker.rs": {
       "lines": 942,

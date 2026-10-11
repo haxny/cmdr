@@ -298,10 +298,11 @@ metadata"; this is how SFTP keeps it.
 - **SFTP v3 times are a `u32` of whole seconds**, and atime rides along (the attribute carries both), so atime gets the
   same value. A sub-second source date truncates; one before 1970 or past 2106 can't be said at all.
 - **Best effort**: a refused `SETSTAT` or an unsayable date is a `warn!`, and the copy still succeeds.
-- **Folders**: `set_modified` sends the same path `SETSTAT` (`mutation.rs::set_modified_impl`), then patches the parent
-  listing with a `Modified`. The copy engine calls it on each folder it created once the contents landed; an unsayable
-  date is an `IoError` there, which the engine logs. Pinned by `conformance_test.rs::set_modified_dates_a_folder` and
-  the engine's `sftp_integration_folders_copied_*` cells.
+- **Folders**: `apply_metadata` sends the same path `SETSTAT` (`mutation.rs::set_modified_impl`) for the modification
+  date, then patches the parent listing with a `Modified`; every other class answers `NotApplicable` (no creation date
+  in v3). The copy engine calls it on each folder it created once the contents landed; an unsayable date reports
+  `Refused`, which the engine logs. Pinned by `conformance_test.rs::apply_metadata_dates_a_folder` and the engine's
+  `sftp_integration_folders_copied_*` cells.
 - **Pinned by** `conformance_test::a_copy_keeps_the_source_date` (both halves against stock OpenSSH),
   `copy_test::sftp_integration_a_server_side_copy_keeps_the_source_date`, and the two
   `sftp_integration_*_keeps_the_source_date` engine cells in
@@ -858,8 +859,8 @@ that would catch it.
 **`FileEntry.permissions` carries the file-type bits and nothing else** (`mapping.rs::entry_of_type`). The type is what
 lets a walker (the fresh-ZIP planner) skip a FIFO, socket, or device without opening it: a read of a FIFO blocks the
 single-threaded `sftp-server`, and with it every operation sharing this volume's channel. The permission bits stay unset
-on purpose, because copies carry the low nine as a mode (`landed_mode`) and this backend doesn't report modes
-(`reports_posix_mode` stays `false`).
+on purpose, because a copy onto local disk carries a reported mode's low nine bits (`VolumeReadStream::metadata`, folded
+by `cmdr_fs::metadata::routed_mode`) and this backend doesn't report modes yet (`reports_posix_mode` stays `false`).
 
 ❗ **A bare server-absolute path is REFUSED**, not accepted as a courtesy: with the prefix in place the app never spells
 one, so leniency buys only that hole. The three root aliases stay (`/`, `.`, the empty path).

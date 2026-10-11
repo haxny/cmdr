@@ -245,16 +245,68 @@ async fn smb_integration_a_copy_keeps_the_source_date_per_the_shared_contract() 
 /// A folder dated after a file landed in it lists that date.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
-async fn smb_integration_set_modified_dates_a_folder() {
+async fn smb_integration_apply_metadata_dates_a_folder() {
     let smb_vol = Arc::new(make_docker_volume().await);
     let base = test_dir_name();
     ensure_clean(&smb_vol, &base).await;
     smb_vol.create_directory(Path::new(&base)).await.unwrap();
 
-    cmdr_fs::volume::conformance::assert_set_modified_dates_a_folder(
+    cmdr_fs::volume::conformance::assert_apply_metadata_dates_a_folder(
         smb_vol.as_ref(),
         Path::new(&format!("{base}/dated")),
         Duration::ZERO,
+    )
+    .await;
+
+    ensure_clean(&smb_vol, &base).await;
+}
+
+/// The shared metadata assertions, over a real share: SMB keeps and reports
+/// the creation date (`CreationTime`) on a file written in one frame, on a file
+/// streamed through the writer, and on a folder. Mode, flags, and xattrs aren't
+/// carried over this client yet.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract() {
+    use cmdr_fs::metadata::MetadataClasses;
+    let smb_vol = Arc::new(make_docker_volume().await);
+    let base = test_dir_name();
+    ensure_clean(&smb_vol, &base).await;
+    smb_vol.create_directory(Path::new(&base)).await.unwrap();
+
+    // A staging-shaped name, so the write goes through the temp and the rename
+    // the copy engine lands it with, which mustn't cost the creation date.
+    let temp = format!("{base}/born.txt.cmdr-tmp-conformance");
+    let born = format!("{base}/born.txt");
+    cmdr_fs::volume::conformance::assert_write_from_stream_keeps_metadata(
+        smb_vol.as_ref(),
+        Path::new(&temp),
+        MetadataClasses::CREATED,
+    )
+    .await;
+    smb_vol
+        .rename(Path::new(&temp), Path::new(&born), false)
+        .await
+        .expect("the landing rename");
+    let landed = smb_vol
+        .get_metadata(Path::new(&born))
+        .await
+        .expect("stat the landed file");
+    assert_eq!(
+        landed.created_at,
+        Some(cmdr_fs::volume::conformance::BIRTH_SECS),
+        "the landing rename keeps the CreationTime the write put on the temp"
+    );
+    cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_metadata(
+        smb_vol.as_ref(),
+        Path::new(&born),
+        MetadataClasses::CREATED,
+    )
+    .await;
+    cmdr_fs::volume::conformance::assert_apply_metadata_keeps(
+        smb_vol.as_ref(),
+        Path::new(&format!("{base}/born")),
+        MetadataClasses::CREATED,
     )
     .await;
 
@@ -288,6 +340,12 @@ async fn smb_integration_a_streamed_write_keeps_the_source_date() {
         .await
         .unwrap();
     age_in_the_container(&aged, cmdr_fs::volume::conformance::SOURCE_DATE_SECS);
+    let birth = std::time::UNIX_EPOCH + Duration::from_secs(cmdr_fs::volume::conformance::BIRTH_SECS);
+    let born = cmdr_fs::metadata::CarriedMetadata {
+        created: Some(birth),
+        ..Default::default()
+    };
+    smb_vol.apply_metadata(Path::new(&aged), &born, None).await;
 
     let stream = smb_vol.open_read_stream(Path::new(&aged)).await.unwrap();
     assert!(
@@ -306,16 +364,16 @@ async fn smb_integration_a_streamed_write_keeps_the_source_date() {
         .await
         .unwrap();
 
-    let listed = smb_vol
-        .get_metadata(Path::new(&copy))
-        .await
-        .unwrap()
-        .modified_at
-        .expect("SMB lists `LastWriteTime` on every file");
+    let listed = smb_vol.get_metadata(Path::new(&copy)).await.unwrap();
     assert_eq!(
-        listed,
-        cmdr_fs::volume::conformance::SOURCE_DATE_SECS,
+        listed.modified_at,
+        Some(cmdr_fs::volume::conformance::SOURCE_DATE_SECS),
         "a streamed copy must keep the source's date (2021-01-29 08:30:15 UTC)"
+    );
+    assert_eq!(
+        listed.created_at,
+        Some(cmdr_fs::volume::conformance::BIRTH_SECS),
+        "a streamed SMB-to-SMB copy must keep the source's creation date (2015-03-01)"
     );
 
     ensure_clean(&smb_vol, &base).await;
@@ -357,6 +415,22 @@ async fn smb_integration_a_read_stream_reports_the_listed_date_on_both_read_path
         Some(cmdr_fs::volume::conformance::SOURCE_DATE_SECS),
         "the one-frame compound read of {aged} must report the date the share lists"
     );
+    let listed_created = smb_vol.get_metadata(Path::new(&aged)).await.unwrap().created_at;
+    let reported_created = hinted
+        .metadata(cmdr_fs::metadata::MetadataClasses::CREATED)
+        .created
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs());
+    assert_eq!(
+        reported_created, listed_created,
+        "the one-frame compound read of {aged} must report the creation date the share lists"
+    );
+    cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_metadata(
+        smb_vol.as_ref(),
+        Path::new(&aged),
+        cmdr_fs::metadata::MetadataClasses::CREATED,
+    )
+    .await;
 
     ensure_clean(&smb_vol, &base).await;
 }

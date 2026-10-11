@@ -73,6 +73,7 @@ fn completed_result(sources: Vec<PathBuf>, files: &[PathBuf], source_root: &std:
                     dedup_bytes: total,
                     top_level_is_directory: false,
                     top_level_modified_at: None,
+                    top_level_created_at: None,
                 },
             )
         })

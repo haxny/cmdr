@@ -31,8 +31,8 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
   `stream_pipe_file`, both cancel tiers, `copy_single_path`); the vocabulary both halves and both drivers speak
   (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside it in `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
   recurses there, a file child goes to `strategy.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which
-  is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_dates.rs` holds what the
-  walk notes about the folders it created, dated once the subtree landed (§ "Copies keep the source's metadata").
+  is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_metadata.rs` holds what
+  the walk notes about the folders it created, stamped once the subtree landed (§ "Copies keep the source's metadata").
 - **The move is three files, and the dependency runs ONE way.** `r#move` is the DISPATCHER and nothing else: it picks
   same-volume (`move_same`), both-local (`move_files_start`, one level up), or cross-volume (`move_cross`), then owns
   the managed-op lifecycle around whichever it picked. Both engines are leaves under it. ❗ Nothing in an engine may
@@ -740,69 +740,49 @@ test_overwrite_on_a_whole_publishing_destination_replaces_in_place, test_a_faile
 
 ## What mode a landed file wears
 
-**The rule: the volume REPORTS a mode, this engine APPLIES it, and only on a LOCAL destination.** `landed_mode.rs` is
-the whole of it. Every backend that knows a file's permissions answers them on `FileEntry::permissions` — the git
-portal off the tree entry's `EntryKind`, the archive backend off the zip external attributes / the tar header / the 7z
-unix extension, `LocalPosixVolume` off `st_mode`, ADB off the device's `stat`. Nothing carried that across: the bytes
-go through `Volume::write_from_stream`, which creates a plain new file, so a `run.sh` copied out of a branch snapshot
-or extracted from a release zip landed `0o644` and the user had to `chmod` it themselves.
+**The rule: the source REPORTS a mode on its read stream, the LOCAL destination folds and applies it.** Every backend
+that knows a file's permissions reports them from what its open already holds (`VolumeReadStream::metadata`, the
+`MODE` class): the git portal off the tree entry's kind (`cmdr-git`'s `tree::lookup_blob`), the archive backend off the
+index entry (zip external attributes, the tar header, 7z's unix extension; the one-pass `MemberStream` too),
+`LocalPosixVolume` off the open's `stat`, ADB off the `stat` its open sends. `LocalPosixVolume::write_from_stream` folds
+it and puts it on the staged temp. Without this, a `run.sh` copied out of a branch snapshot or a release zip lands
+`0o644` and the user has to `chmod` it.
 
-**`0` is the "no permission concept" answer, and it is the whole gate.** `FileEntry::permissions` documents it, and
-every backend keeps to it: SMB, SFTP, WebDAV, and MTP all report `0`. ❗ MTP used to report a fabricated
-`0o755`/`0o644`; PTP has no mode, and once a non-zero reading became a fact the copy engine acts on, a
-plausible-looking guess would have widened a landed file under a strict umask on nobody's authority. It is
+**`0` is the "no permission concept" answer.** `FileEntry::permissions` documents it, and SMB, SFTP, WebDAV, and MTP
+report `0` (their streams report no mode at all). ❗ MTP used to report a fabricated `0o755`/`0o644`; PTP has no mode,
+and a plausible-looking guess would widen a landed file under a strict umask on nobody's authority. It is
 `NO_PERMISSION_CONCEPT` in `cmdr-mtp`'s `directory_ops.rs` now, named so the next person doesn't re-add one.
 
-**The fold, and why it can't widen anything.** `landed_mode(source_mode, created_mode)` intersects the source's low
-nine bits with the mode the destination filesystem just gave the fresh temp, allowing an execute bit wherever the
-matching read bit survived (`created | ((created & 0o444) >> 2)`). `created_mode` already has the user's umask baked
-in, so the intersection re-applies that umask without ever reading it — no `umask(2)` get-then-set race, no cached
-process-wide value. It is what `git checkout` and every unzip do:
+**The fold, and why it can't widen anything** (`cmdr_fs::metadata::routed_mode`): the source's low nine bits,
+intersected with what a fresh item gets under the user's umask, with execute allowed wherever the matching read
+survived. It is what `git checkout` and every unzip do: `0o755` lands `0o755` under `022` and `0o700` under `077`; a
+`0o600` source stays `0o600`; a Windows zip's `0o666` stand-in lands the `0o644` a plain new file would have had.
+setuid, setgid, and sticky never travel on a routed copy (untrusted metadata); the local-to-local copy keeps them, and
+that asymmetry is deliberate: there both sides ARE the filesystem.
 
-- `0o755` source, `022` umask ⇒ `0o755`. Same source, `077` umask ⇒ `0o700`, ❌ never a world-readable `0o755`.
-- `0o600` source ⇒ `0o600`: the fold narrows as readily as it widens, which is what makes it a copy of the mode rather
-  than an executable-bit patch.
-- A Windows-made zip reports `0o666` (rc-zip turns a DOS creator's attributes into that stand-in, a read-only flag
-  wearing a mode's clothes). Folded, it lands the `0o644` a plain new file would have had anyway.
-- Equal to what was created ⇒ `None`, so the common case spends no `chmod` at all.
+**Decision/Why the umask is probed once, ❌ not read off the temp.** A temp is created owner-only (`0600`) when its
+source has a mode, so a private file is never readable by others while it streams, which makes the temp's mode useless
+as a umask proxy. `umask(2)` can't be read without setting it, and setting it for an instant widens every file another
+thread creates meanwhile. So `cmdr_fs::metadata::default_file_mode` makes one throwaway folder per process and reads
+back what the umask left. A source with no mode keeps today's create (no `0600`, no `chmod`), or every SMB → local file
+would land `0600`.
 
-**setuid, setgid, and sticky never travel.** A routed volume's mode is metadata out of a repo object or an archive
-header, which is untrusted input and not authority enough for one of those bits. The local-FS-to-local-FS copy DOES
-keep them (macOS `copyfile` with `COPYFILE_STAT`, `chunked_copy.rs`'s `set_permissions` on the fallback), and that
-asymmetry is deliberate: there both sides are the filesystem.
+**It happens on the staged temp, before the rename**, in the host helper's order (xattrs, mode, then dates). ❌ It never
+fails a copy: a destination that ignores `chmod` (FAT, exFAT, some network mounts) is one debug line.
 
-**It happens on the STAGED temp, before the rename.** Same reason the staging exists — the visible file never appears
-with one mode and flips to another. A `SingleShot` write has no temp and takes its `chmod` right after the bytes, which
-is the only order available and harmless (the file is complete). ❌ It never fails a copy: an unreadable stat, a
-destination that ignores `chmod` (FAT, exFAT, some network mounts), a source that vanished — each is one debug line and
-the bytes stand.
+**No round trip.** The mode rides the stream the copy opened anyway, so a TOP-LEVEL file costs nothing extra. (The
+engine used to `get_metadata` the source per top-level file, gated on `Volume::reports_posix_mode`; that probe is gone.)
+`reports_posix_mode` still answers for the archive compress planner, and folds into M5b's `MetadataCaps`.
 
-**Who supplies the mode, and the one round trip it can cost.** `SourceFileFacts` (beside `SourceHint` in
-`preflight.rs`) carries what the caller already learned about a source FILE: its size and its mode, both honest
-`Option`s where absent means nobody looked. The merge walker lists each level anyway, so every deep file's mode is free
-(`SourceFileFacts::from_entry`). A TOP-LEVEL file has only the preflight hint, and `CopyScanResult` counts bytes rather
-than stat'ing modes — so `apply_source_mode` asks the source itself, once per top-level file, only when the destination
-is local, and only after that file's bytes have already crossed.
+**Folders keep their default mode on a cross-volume copy.** Decision/Why: a routed folder's mode is rarely meaningful
+(git trees are all `0o755`, `/sdcard` modes are `0771`), and a folder without owner write would refuse every reversal
+that removes its contents. The native engine carries folder modes (`../copy/`).
 
-❗ **That probe is gated on `Volume::reports_posix_mode()`**, which is why it costs nothing on a backend that has no
-modes to give. Without the gate, pulling 10,000 selected files off an SMB share would spend 10,000 stats to be told
-`0` each time — the same shape as the 15k-MTP-listing stall the source hints exist to prevent. `true` on
-`LocalPosixVolume`, the git portal, the archive backend, and ADB; `false` (the default) everywhere else. ❗ A backend
-answering `true` without real bits is worse than one answering nothing: the engine treats a non-zero mode as a fact and
-puts it on the user's file. ❌ Don't instead add a mode to `CopyScanResult`: that would put a field through 40-odd
-construction sites across every backend to save a stat the copy has already paid a whole file for.
-
-**Three write paths, three hooks, and they must stay in step.** `stream_pipe_file` (every streamed cross-volume file,
-copy and cross-volume move alike, since `move_cross.rs` routes through `copy_single_path`), `sequential_extract.rs`'s
-data pass (which writes its own files — the mode rides `PlannedWrite::source_mode`, recorded by the plan pass, the only
-one that lists the archive), and `try_server_side_copy`, which needs no hook: it is `Volume::copy_on_server`, where the
-backend copying a file on its own server owns what it copies. A fourth write path owes the same call.
-
-Pinned by `landed_mode_tests.rs` (the fold, per umask and per source shape), `copy_snapshot_out_tests.rs` and
-`copy_extract_out_tests.rs` (end to end out of the two routed volumes, into a real local destination, both alone and
-inside a folder — the two shapes take different routes through the engine), `move_tests.rs`
-(`a_cross_volume_move_carries_the_executable_bit`), and `strategy_sequential_tests.rs`
-(`a_sequential_extract_carries_the_executable_bit`).
+Pinned by `crates/cmdr-fs/src/metadata/mode_tests.rs` (the fold, per umask and source shape), `copy_metadata_tests.rs::
+a_routed_mode_lands_folded_with_no_source_stat`, `copy_snapshot_out_tests.rs` and `copy_extract_out_tests.rs` (both
+routed volumes, alone and inside a folder), `backend_suites/adb_transfer_test.rs::a_file_copied_off_a_phone_keeps_its_mode`,
+`move_tests.rs::a_cross_volume_move_carries_the_executable_bit`, and
+`strategy_sequential_tests.rs::a_sequential_extract_carries_the_executable_bit`.
 
 ## An extract carries the archive's quarantine
 
@@ -817,12 +797,14 @@ inside a folder — the two shapes take different routes through the engine), `m
   a remote parent (direct SMB, MTP) or a nested archive. `cmdr-archive` never reads its parent's xattrs itself. Every
   non-archive source answers `None` with no syscall. A trait method, ❌ not a downcast plus a `pub` accessor: the engine
   stays backend-blind, and `cmdr-archive`'s public surface stays at its `index-crate-isolation` ceiling.
-- **Files: on the staged temp, before `apply_source_mode`**, at the same two hooks as the mode (`stream_pipe_file` and
-  `sequential_extract.rs`'s data pass). The xattr goes first because a path xattr write on a `0444` file is `EACCES`.
-- **Folders: the moment `merge.rs`'s level creates one** (the `Ok(())` arms beside `created.record_dir`), so a folder
-  the walk merged into keeps its own metadata, and a zip's implicit folders, a cancelled walk's folders, and the
-  one-pass extractor's plan-mode folders (made before any byte) are all covered. ❌ Not in `folder_dates.rs`, which
-  skips exactly those.
+- **Files: in the source's xattrs.** `quarantine_stream` wraps the source stream at both hooks (`stream_pipe_file` and
+  `sequential_extract.rs`'s data pass) in a decorator that adds the value to `metadata(XATTRS)`, so the destination puts
+  it on the staged temp with any other xattr, before the mode (the host helper's order; a path xattr write on a `0444`
+  file is `EACCES`). A destination that stores no xattrs never asks for it.
+- **Folders: the moment `merge.rs`'s level creates one** (the `Ok(())` arms beside `created.record_dir`), through
+  `Volume::apply_metadata` with an xattrs-only set, so a folder the walk merged into keeps its own metadata, and a zip's
+  implicit folders, a cancelled walk's folders, and the one-pass extractor's plan-mode folders (made before any byte)
+  are all covered. ❌ Not in `folder_metadata.rs`, which skips exactly those.
 - **The user's destination folder isn't the extract's**: `copy.rs`'s Phase 0.5 `create_directory_all` makes the folder
   the user extracts INTO, not something out of the archive, so it gets nothing.
 - A move out of a zip (`archive_edit/move_out.rs`) extracts through this same engine, so it's covered with no hook of
@@ -833,105 +815,109 @@ unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out
 
 ## Copies keep the source's metadata
 
-**The rule: the source REPORTS its file's modification date on the read stream, the destination WRITES it.** This is
-the canonical home of the contract; the trait doc, the conformance assertions, and the backend docs point here. Local →
-local copies keep file dates on their own path (`chunked_copy.rs`, copyfile/clonefile); their folders are below.
+**The rule: the source REPORTS what its file carries on the read stream, the destination WRITES the classes it can
+store.** This is the canonical home of the contract; the trait docs, the conformance assertions, and the backend docs
+point here. The plan behind it, and the classes still to come (flags over SMB, xattrs, the loss note): 
+`docs/specs/transfer-metadata-preservation.md`. Local → local copies keep everything on their own path
+(`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below.
 
-- **Source half**: `VolumeReadStream::modified_at` is a REQUIRED trait method, so a new backend can't skip it by
-  omission. A stream answers the date its open already learned (the stat or listing it did anyway), ❌ never an extra
-  round trip. `None` means "no meaningful date" (fresh `create_file` bytes, a generated ZIP, a git blob, a test double),
-  and a wrapper (`CheckpointStream`, `fresh_compress.rs`'s pause wrapper) forwards its inner stream's answer. `ChannelReadStream` takes the
-  date through `with_modified_at`.
-- **Destination half**: every destination that can store a date writes `stream.modified_at()` inside
-  `write_from_stream`, so every engine path (staged, single-shot, whole-publish) gets it with no engine code. A staged
-  write sets it on the temp, and the engine's final rename carries it, so the real name never shows a wrong date. An
-  in-place writer sets it after the last byte (a later write would bump it again).
-- **Best effort**: a date that won't set is a `log::warn!`, and the copy still succeeds; the bytes are the copy.
-- **`None` leaves the destination's own date**, ❌ never an invented one. Only mtime is in scope: where a protocol
-  forces atime alongside (SFTP `ATTR_ACMODTIME`), atime gets the same value. Sub-second where both ends keep it.
-- **Not covered**: birth time and permissions (§ "What mode a landed file wears").
+- **Source half**: `VolumeReadStream::modified_at` (REQUIRED, so a new backend can't skip mtime by omission) and
+  `VolumeReadStream::metadata(wanted)` (default empty: creation date, mode, user flags, xattrs, as a
+  `cmdr_fs::metadata::CarriedMetadata`). A stream answers from what its open already learned (the stat, the listing
+  entry, the CREATE response), ❌ never an extra round trip, and reads a costly class (a local file's xattrs) only when
+  `wanted` asks. A wrapper (`CheckpointStream`, `fresh_compress.rs`'s pause wrapper, the quarantine decorator) forwards
+  both. `ChannelReadStream` takes them through `with_modified_at` and `with_metadata`.
+- **Destination half**: every destination that can store a class writes it inside `write_from_stream`, asking
+  `metadata` once, before the first chunk, for the classes it stores. So every engine path (staged, single-shot,
+  whole-publish) gets it with no engine code. A staged write sets it on the temp and the engine's final rename carries
+  it; an in-place writer sets it after the last byte.
+- **The user flags never go on in `write_from_stream`**: Locked refuses the landing rename, so they belong after it,
+  through `Volume::apply_metadata` (`CarriedMetadata::after_landing`). No cross-volume pair carries one yet (local to
+  local is native; SMB stores none until M6), so the engine doesn't snapshot them; M6 wires that with its consumer.
+- **Best effort**: every apply returns a `MetadataReport` and has no error path; a refused class is a `log::warn!`, and
+  the copy stands.
+- **`None` leaves the destination's own value**, ❌ never an invented one. atime is never carried across volumes (where
+  a protocol forces it alongside, SFTP's `ATTR_ACMODTIME`, it gets the mtime).
 
-**Folders keep their source's date too, set AFTER their contents land.** Writing a child bumps its folder's date on
+**Folders keep their source's dates too, set AFTER their contents land.** Writing a child bumps its folder's date on
 every real store, so a folder dated when it's created lists "now" by the end of the copy.
 
-- **Cross-volume** (`folder_dates.rs`): `merge_level` answers whether IT created a level (`DirectoryCreation`), and its
-  parent notes each created child folder with the source date the parent's listing carried, as the walk leaves it
-  (post-order). `copy_directory_streaming` stamps the list through `Volume::set_modified` only once the subtree's leaves
-  have drained with no error, then the top-level folder last. Its date is the one no walk listing carries, so it rides
-  in from the preflight scan's stat of the top-level path (`CopyScanResult::top_level_modified_at` → `SourceHint` →
-  `SourceFileFacts::modified_at`) at no round trip of its own. A source whose scan carried none (an S3 prefix, MTP's
-  single-path scan, a top-level dispatch with no hint) leaves it the destination's. The one-pass sequential extract
-  hands the list to its `ExtractPlan` and stamps after the data pass, since the planning pass writes no file.
-- **Decision/Why the scan carries the root's date, ❌ not a `get_metadata` at stamp time**: that stat was one more
+- **Cross-volume** (`folder_metadata.rs`): `merge_level` answers whether IT created a level (`DirectoryCreation`), and
+  its parent notes each created child folder with the dates the parent's listing carried (`SourceFolderDates`:
+  modification AND creation), as the walk leaves it (post-order). `copy_directory_streaming` stamps the list through
+  `Volume::apply_metadata` only once the subtree's leaves have drained with no error, then the top-level folder last.
+  Its dates are the ones no walk listing carries, so they ride in from the preflight scan's stat of the top-level path
+  (`CopyScanResult::top_level_{modified,created}_at` → `SourceHint` → `SourceFileFacts::folder_dates`) at no round
+  trip of their own. A source whose scan carried none (an S3 prefix, MTP's single-path scan, a top-level dispatch with
+  no hint) leaves them the destination's. The one-pass sequential extract hands the list to its `ExtractPlan` and
+  stamps after the data pass.
+- **Decision/Why the scan carries the root's dates, ❌ not a `get_metadata` at stamp time**: that stat was one more
   request per top-level folder, which `s3_engine_integration_test.rs::the_engine_sends_what_the_estimate_counts`
-  caught as a HEAD and a LIST over the cost estimate (an S3 prefix has no date to find, so it was pure cost), and a
-  whole parent listing on MTP.
+  caught as a HEAD and a LIST over the cost estimate, and a whole parent listing on MTP.
 - **Local → local and the cross-FS local move** keep every class a folder has, not only its date
   (`../copy/folder_metadata.rs`, `../DETAILS.md` § "Folders keep their metadata"): after the file loop and the
   empty-folder pass, every folder in the transaction's `created_dirs` takes its scanned source folder's xattrs, dates,
   mode, ACL, and flags. The move puts what can't refuse Phase 3 on its STAGED folders, and Phase 3's rename carries it.
-- **Only folders the copy CREATED.** A merge into a folder the user already had leaves it to the store: it's theirs,
-  and the copy only added to it. A folder the merge created inside it is the copy's own and is dated.
-- **Never on a failed or stopped copy**: one failure fails the whole subtree, so nothing in it is dated, not even a
-  folder whose own contents all landed. Every stamp also checks the intent first.
-- **Best effort, and cheap where it can't happen**: a refusal is a `log::warn!`. `set_modified` defaults to
-  `NotSupported` (S3's prefixes, MTP, WebDAV, ADB's sync protocol has no setstat, read-only backends), and the first
-  `NotSupported` ends the pass.
-- **Decision/Why a defaulted trait method, ❌ not a required one**: every mutation on the trait defaults to
-  `NotSupported` and opts in, and over 20 test doubles and wrappers would each need a refusal body. The omission a
-  required method would catch is caught instead by `conformance::assert_set_modified_dates_a_folder`, which every
-  backend that implements it runs. ❗ A wrapper volume forwards it explicitly (`forward_volume_methods!`'s
-  `set_modified`), or it silently takes the default.
+- **Only folders the copy CREATED.** A merge into a folder the user already had leaves it to the store.
+- **Never on a failed or stopped copy**: one failure fails the whole subtree, so nothing in it is stamped. Every stamp
+  also checks the intent first.
+- **Cheap where it can't happen**: `apply_metadata` defaults to `NotApplicable` for every class (S3's prefixes, MTP,
+  WebDAV, ADB's sync protocol has no setstat, read-only backends), and the first answer that holds nothing
+  (`MetadataReport::holds_none`) ends the pass.
+- **Decision/Why a defaulted trait method, ❌ not a required one**: every mutation on the trait defaults and opts in,
+  and over 20 test doubles and wrappers would each need a refusal body. The omission a required method would catch is
+  caught instead by `conformance::assert_apply_metadata_dates_a_folder`, which every backend that implements it runs.
+  ❗ A wrapper volume forwards it explicitly (`forward_volume_methods!`'s `apply_metadata`), or it silently takes the
+  default.
 
 **Where each backend stands.**
 
-- **Local** (`local_posix/streams.rs`): reports the open's `stat` date; writes it with `File::set_modified` on the open
-  handle after the last byte, before `sync_data`. Dates a folder with `filetime::set_file_mtime`.
-- **S3**: reports and writes the date as `x-amz-meta-mtime` (`crates/cmdr-s3/DETAILS.md`).
-- **`InMemoryVolume`**: keeps the stream's date (whole seconds), so an engine test copying onto it sees what a real
-  destination does. It also moves a folder's date to now when an entry lands in or leaves it, which is what lets an
+- **Local** (`local_posix/streams.rs`): reports the open's `stat` (mtime, birth, mode, flags) and its xattrs off the fd
+  when asked. Writes through `cmdr_fs::metadata::apply_staged` on the open handle after the last byte AND the flush
+  (`cmdr_fs::durable::sync_file_data`): xattrs, the folded mode, then birth and mtime in one call. ❗ Flush first: on a
+  macOS SMB mount, writes still buffered when the dates go on reach the server at the handle's real close, which
+  stamps its own mtime (verified in M3). `apply_metadata` does a folder (or a landed file's flags) by path, the same
+  helper. Birth is macOS-only: Linux can't set one (`NotApplicable`).
+- **S3**: reports and writes the date as `x-amz-meta-mtime` (`crates/cmdr-s3/DETAILS.md`). No creation date yet (M9).
+- **`InMemoryVolume`**: the reference. Stores and reports every class (`carried_metadata`, `set_carried_metadata`),
+  keeps whole seconds, and moves a folder's date to now when an entry lands in or leaves it, which is what lets an
   engine test tell a folder dated after its contents from one dated before.
-- **ADB**: reports the open's `STAT`/`STA2` date; writes it as the push's `DONE` mtime (a u32: whole seconds, clamped
-  at 2106), falling back to now only for a dateless source (`crates/cmdr-adb/DETAILS.md`).
+- **ADB**: reports the open's `STAT`/`STA2` date and mode; writes the date as the push's `DONE` mtime (a u32: whole
+  seconds, clamped at 2106), falling back to now only for a dateless source (`crates/cmdr-adb/DETAILS.md`).
 - **MTP**: reports the `DateModified` from the `ObjectInfo` the read's open already fetched; writes it as the upload's
-  `DateModified`, in UTC with a `Z`. Whole seconds. A zoneless device date reads as the Mac's local time at that
-  date (`crates/cmdr-mtp/DETAILS.md` § "Dates on copies").
-- **SMB**: reports the server's `LastWriteTime` on both foreground read paths (streamed and one-frame compound); writes
-  `LastWriteTime` alone through SET_INFO, on the streaming writer's own handle before it closes, or by path right after
-  a one-frame compound write (one more frame). The read date rides on the read's own CREATE response
-  (`crates/cmdr-smb/DETAILS.md` § "Dates on copies"). Dates a folder by path (`Tree::set_times`, one frame).
-- **Archive (source only)**: reports each entry's date from the parsed index, on random-access reads and the one-pass
-  sequential extract alike (whole seconds; zip's DOS time keeps even seconds).
+  `DateModified`, in UTC with a `Z` (`crates/cmdr-mtp/DETAILS.md` § "Dates on copies").
+- **SMB**: reports the server's `LastWriteTime` and `CreationTime` on both foreground read paths (streamed and one-frame
+  compound), both off the read's own CREATE response; writes both in the one `FILE_BASIC_INFORMATION` it already
+  sent for the date (zero new frames): on the streaming writer's own handle before it closes, or by path right after a
+  one-frame compound write. Folders by path, both times in one compound. The landing rename keeps `CreationTime`
+  (`crates/cmdr-smb/DETAILS.md` § "Dates on copies").
+- **Archive (source only)**: reports each entry's date and mode from the parsed index, on random-access reads and the
+  one-pass sequential extract alike (whole seconds; zip's DOS time keeps even seconds). No creation date in a zip.
+- **Git portal (source only)**: the tree entry's mode; no date (a blob sits in many commits).
 - **SFTP**: reports the mtime from the `fstat` its open already sends; writes it with a path `SETSTAT` on the staging
-  temp after the awaited close (so a server buffering until close can't bump it), before the final rename. Whole
-  seconds, atime set alongside. Server-side `copy-data` copies keep it too (`crates/cmdr-sftp/DETAILS.md` § "Dates on
-  copies"). Dates a folder with the same path `SETSTAT`.
+  temp after the awaited close, before the final rename. Whole seconds, atime set alongside. No creation date in SFTP
+  v3 (`crates/cmdr-sftp/DETAILS.md` § "Dates on copies").
 - **WebDAV**: reports the GET's `Last-Modified`; writes it as an `X-OC-Mtime` header on the PUT, which Nextcloud,
-  ownCloud, and rclone honor. ❗ Plain Apache `mod_dav` can't store a date at all, so a copy onto it keeps the server's
-  own: best effort by design, with the destination half pinned on Nextcloud (`crates/cmdr-webdav/DETAILS.md` §
+  ownCloud, and rclone honor. ❗ Plain Apache `mod_dav` can't store a date at all (`crates/cmdr-webdav/DETAILS.md` §
   "Dates").
 
 **How it's pinned.** Two layers, so a gap shows where it lives:
 
-- **Per backend**, in its own crate: `cmdr_fs::volume::conformance::assert_write_from_stream_keeps_the_source_date`
-  (the destination half, with a `tolerance` for a coarse clock) and `assert_read_stream_reports_the_listed_date` (the
-  source half, on a file dated a day or more back, so a stream reporting "now" can't pass). Every mutable backend's
-  `conformance_test.rs` runs both; a read-only backend, or a server that stores no date (Apache `mod_dav`), runs only
-  the second, seeded by its fixture's own means.
-- **Through the engine**: `backend_suites/network_dates_test_support.rs`'s
-  `a_copy_onto_the_server_keeps_the_source_date` and `a_copy_off_the_server_keeps_the_source_date`, with cells for ADB,
-  MTP (`mtp_dates_test.rs`, on the virtual device), SMB (`smb_transfer_semantics_test.rs`), and SFTP; WebDAV runs only the copy-off half, through `a_copy_off_the_server_keeps_the_date_it_lists` on a file its
-  fixture dated. Plus `in_memory_dates_test.rs`, which pins the engine's own half (the checkpoint wrapper,
-  staging, the final rename) against the double in the unit lane. S3's engine cell is
+- **Per backend**, in its own crate: `cmdr_fs::volume::conformance`'s `assert_write_from_stream_keeps_the_source_date`
+  and `assert_read_stream_reports_the_listed_date` (mtime, both halves), and `assert_write_from_stream_keeps_metadata`,
+  `assert_apply_metadata_keeps`, and `assert_read_stream_reports_the_listed_metadata` (the classes a listing shows,
+  passed explicitly per backend: local and `InMemoryVolume` every class, SMB the creation date).
+- **Through the engine**: `backend_suites/network_dates_test_support.rs`'s mtime scenarios (ADB, MTP, SMB, SFTP;
+  WebDAV copy-off only) and creation-date scenarios (`a_copy_onto_the_server_keeps_the_creation_dates`,
+  `a_copy_off_the_server_keeps_the_creation_dates`, `a_copy_within_the_server_keeps_the_creation_dates`: a one-frame
+  file, a streamed file, and a folder each, on the SMB cells); `in_memory_dates_test.rs`; `copy_metadata_tests.rs`
+  (onto local disk: file and folder birth, the folded mode); and S3's
   `s3_transfer_integration_test.rs::copying_onto_a_bucket_lands_every_byte_and_the_mtime`.
-- **Folder dates**: `conformance::assert_set_modified_dates_a_folder` per backend (local, in-memory, SFTP, SMB);
+- **Folder dates**: `conformance::assert_apply_metadata_dates_a_folder` per backend (local, in-memory, SFTP, SMB);
   `copied_folders_onto_the_server_keep_their_dates` and `copied_folders_off_the_server_keep_their_dates` through the
-  engine (in-memory, SFTP, SMB cells); `folder_dates_tests.rs` (both drivers, a merge, a failure partway);
-  `strategy_sequential_tests.rs::sequential_extract_keeps_the_folders_dates`; and for the local engine
+  engine (in-memory, SFTP, SMB cells); `folder_metadata_tests.rs` (both drivers, a merge, a failure partway, creation
+  dates); `strategy_sequential_tests.rs::sequential_extract_keeps_the_folders_dates`; and for the local engine
   `../copy/folder_dates_tests.rs` plus `move_op_tests.rs::cross_fs_move_keeps_folder_dates`.
-- **Creation dates (not kept yet)**: `network_dates_test_support.rs`'s two `..._loses_the_creation_date_today`
-  scenarios pin, on the SMB cells, that a copy onto a share is born at copy time and a copy off one is born at its
-  modification date. They flip in M5a of `docs/specs/transfer-metadata-preservation.md`.
 
 **Why it took a test layer of its own.** Every copy suite checksums both ends, and a destination stamping its own date
 passes all of them. On 2026-10-07 a 562-photo copy from a Pixel (ADB) onto a QNAP (SFTP) landed every file dated to

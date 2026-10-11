@@ -6,6 +6,7 @@ use super::{InMemoryEntry, InMemoryVolume};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
+use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport};
 use crate::volume::{
     BackendKind, ConnectionState, CopyScanResult, IndexWalk, LaneKey, RenameWork, ScanConflict, SourceItemInfo,
     SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteAccess, WriteMode,
@@ -24,6 +25,8 @@ struct InMemoryReadStream {
     offset: usize,
     /// The entry's `modified_at`, as the stream reports it.
     modified_at: Option<std::time::SystemTime>,
+    /// Every other class the entry carries, as the stream reports it.
+    metadata: CarriedMetadata,
     /// See [`InMemoryVolume::with_read_chunk_delay`]. `None` ⇒ no await ever pends.
     chunk_delay: Option<std::time::Duration>,
 }
@@ -54,6 +57,10 @@ impl VolumeReadStream for InMemoryReadStream {
 
     fn modified_at(&self) -> Option<std::time::SystemTime> {
         self.modified_at
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.metadata.clone().restricted_to(wanted)
     }
 }
 
@@ -226,6 +233,7 @@ impl Volume for InMemoryVolume {
                 InMemoryEntry {
                     metadata,
                     content: None,
+                    extra: CarriedMetadata::default(),
                 },
             );
 
@@ -233,24 +241,27 @@ impl Volume for InMemoryVolume {
         })
     }
 
-    fn set_modified<'a>(
+    /// Stores every class it's handed, like the reference it is: a listing
+    /// shows the dates and the mode, [`InMemoryVolume::carried_metadata`] the
+    /// rest. A path that isn't there refuses every class.
+    fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
-        modified: std::time::SystemTime,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
         Box::pin(async move {
-            // Whole seconds, like the listing it shows up in.
-            let secs = modified
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|_| VolumeError::NotSupported)?
-                .as_secs();
             let normalized = self.normalize(path);
             let mut entries = self.entries.write_ignore_poison();
-            let entry = entries
-                .get_mut(&normalized)
-                .ok_or_else(|| VolumeError::NotFound(normalized.display().to_string()))?;
-            entry.metadata.modified_at = Some(secs);
-            Ok(())
+            let Some(entry) = entries.get_mut(&normalized) else {
+                return MetadataReport::uniform(carried, modified, ClassOutcome::Refused);
+            };
+            // Whole seconds, like the listing it shows up in.
+            if let Some(secs) = modified.and_then(|date| date.duration_since(std::time::UNIX_EPOCH).ok()) {
+                entry.metadata.modified_at = Some(secs.as_secs());
+            }
+            Self::store_carried(entry, carried.clone());
+            MetadataReport::uniform(carried, modified, ClassOutcome::Kept)
         })
     }
 
@@ -443,6 +454,7 @@ impl Volume for InMemoryVolume {
                     dedup_bytes: entry.metadata.size.unwrap_or(0),
                     top_level_is_directory: false,
                     top_level_modified_at: entry.metadata.modified_at,
+                    top_level_created_at: entry.metadata.created_at,
                 });
             }
 
@@ -481,6 +493,7 @@ impl Volume for InMemoryVolume {
                 // contract on this backend.
                 top_level_is_directory: true,
                 top_level_modified_at: entries.get(&normalized).and_then(|entry| entry.metadata.modified_at),
+                top_level_created_at: entries.get(&normalized).and_then(|entry| entry.metadata.created_at),
             })
         })
     }
@@ -531,6 +544,7 @@ impl Volume for InMemoryVolume {
                 data,
                 offset: 0,
                 modified_at,
+                metadata: Self::carried_of(entry),
                 chunk_delay: self.read_chunk_delay,
             }) as Box<dyn VolumeReadStream>)
         })
@@ -581,6 +595,9 @@ impl Volume for InMemoryVolume {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
         Box::pin(async move {
+            // Everything but the flags, which a real destination puts on only
+            // after the landing rename (`Volume::apply_metadata`).
+            let carried = stream.metadata(MetadataClasses::ALL.without(MetadataClasses::FLAGS));
             let mut data = Vec::new();
             let mut bytes_written = 0u64;
 
@@ -613,6 +630,9 @@ impl Volume for InMemoryVolume {
                 .and_then(|date| date.duration_since(std::time::UNIX_EPOCH).ok())
             {
                 self.set_modified_at(dest, Some(secs.as_secs()));
+            }
+            if !carried.is_empty() {
+                self.set_carried_metadata(dest, carried);
             }
             Ok(bytes_written)
         })

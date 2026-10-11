@@ -370,6 +370,7 @@ impl ArchiveVolume {
                 skip_remaining: offset,
                 delivered: 0,
                 modified_at: streams::recorded_date(index.get(&inner).and_then(|node| node.modified)),
+                mode: index.get(&inner).and_then(|node| node.mode),
             }) as Box<dyn VolumeReadStream>)
         })
     }
@@ -547,6 +548,7 @@ impl Volume for ArchiveVolume {
                     dedup_bytes: size,
                     top_level_is_directory: false,
                     top_level_modified_at: node.modified.and_then(|secs| u64::try_from(secs).ok()),
+                    top_level_created_at: None,
                 });
             }
             let top_level_modified_at = node.modified.and_then(|secs| u64::try_from(secs).ok());
@@ -578,6 +580,7 @@ impl Volume for ArchiveVolume {
                 dedup_bytes: total_bytes,
                 top_level_is_directory: true,
                 top_level_modified_at,
+                top_level_created_at: None,
             })
         })
     }

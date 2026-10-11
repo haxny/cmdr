@@ -7,6 +7,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use super::{ExtractedFile, ScanStop, StreamLength, VolumeError};
+use crate::metadata::{CarriedMetadata, MetadataClasses};
 
 /// A stream of bytes read from a volume.
 ///
@@ -41,6 +42,27 @@ pub trait VolumeReadStream: Send {
     /// and where each backend stands: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     fn modified_at(&self) -> Option<std::time::SystemTime>;
+
+    /// What the file being read carries beyond its bytes and its mtime
+    /// (creation date, mode, user flags, xattrs), restricted to `wanted`: the
+    /// classes the DESTINATION can store, so a source never reads what nobody
+    /// keeps (a local source lists its xattrs only for a destination that
+    /// stores them).
+    ///
+    /// Answered from what the open already learned (the stat, the listing
+    /// entry, the CREATE response), ❌ never a new round trip: a class the open
+    /// didn't return is simply left out. A destination asks once, before the
+    /// first chunk.
+    ///
+    /// Default: nothing, for a stream with no source item behind it (fresh
+    /// `create_file` bytes, a generated archive, a test double). ❗ A wrapper
+    /// stream forwards its inner stream's answer. Which backend reports what:
+    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// § "Copies keep the source's metadata".
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        let _ = wanted;
+        CarriedMetadata::default()
+    }
 
     /// The operation's Cancel and pause, for a destination that reads AHEAD of
     /// the wire. A pause parks the stream's own `next_chunk`, which stops a

@@ -37,6 +37,7 @@ use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
 };
+use super::folder_metadata::SourceFolderDates;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use crate::file_system::volume::{
     EntryKind, ListingProgress, ScanBoundary, ScanStop, ScanStopSignal, Volume, VolumeError,
@@ -67,9 +68,11 @@ pub(super) struct SourceHint {
     pub size: u64,
     /// The top-level path's own modification date (Unix seconds), from the
     /// stat the scan already did. What a copied top-level FOLDER is dated with
-    /// once its contents land (`folder_dates.rs`); `None` leaves it the
+    /// once its contents land (`folder_metadata.rs`); `None` leaves it the
     /// destination's own.
     pub modified_at: Option<u64>,
+    /// Its creation date, from the same stat, for the same folder.
+    pub created_at: Option<u64>,
 }
 
 /// What the caller already knows about ONE source FILE, from the listing or scan
@@ -90,16 +93,10 @@ pub(super) struct SourceFileFacts {
     /// `open_read_stream_with_hint`, which lets SMB take its one-round-trip
     /// compound read for a file that fits in one READ.
     pub size: Option<u64>,
-    /// The POSIX mode the source volume reported for it
-    /// (`FileEntry::permissions`, where `0` means the backend has no permission
-    /// concept). `None` means the caller had no listing, not that there is no
-    /// mode: `landed_mode::apply_source_mode` then asks the source itself, but
-    /// only when the destination is local and only after the bytes have landed.
-    pub mode: Option<u32>,
-    /// The source's modification date (Unix seconds). A FILE's date travels on
-    /// its read stream instead; this is what dates a copied FOLDER once its
-    /// contents land (`folder_dates.rs`).
-    pub modified_at: Option<u64>,
+    /// The source's modification and creation dates. A FILE's travel on its
+    /// read stream instead; these are what a copied FOLDER gets once its
+    /// contents land (`folder_metadata.rs`).
+    pub folder_dates: SourceFolderDates,
 }
 
 impl SourceFileFacts {
@@ -108,19 +105,19 @@ impl SourceFileFacts {
     pub(super) fn from_entry(entry: &crate::file_system::listing::FileEntry) -> Self {
         Self {
             size: entry.size,
-            mode: Some(entry.permissions),
-            modified_at: entry.modified_at,
+            folder_dates: SourceFolderDates::of_entry(entry),
         }
     }
 
     /// What a top-level dispatch knows off its [`SourceHint`]: the size for a
-    /// FILE source, the date, and no mode (the scan counts bytes, it doesn't stat
-    /// modes).
+    /// FILE source, and the dates.
     pub(super) fn from_hint(hint: Option<SourceHint>) -> Self {
         Self {
             size: hint.and_then(|h| (!h.is_directory).then_some(h.size)),
-            mode: None,
-            modified_at: hint.and_then(|h| h.modified_at),
+            folder_dates: SourceFolderDates {
+                modified_at: hint.and_then(|h| h.modified_at),
+                created_at: hint.and_then(|h| h.created_at),
+            },
         }
     }
 }
@@ -256,6 +253,7 @@ pub(super) async fn scan_volume_sources(
                     is_directory: scan.top_level_is_directory,
                     size,
                     modified_at: scan.top_level_modified_at,
+                    created_at: scan.top_level_created_at,
                 },
             );
         }
@@ -368,6 +366,7 @@ pub(super) async fn scan_volume_sources(
                 is_directory: scan.top_level_is_directory,
                 size,
                 modified_at: scan.top_level_modified_at,
+                created_at: scan.top_level_created_at,
             },
         );
     }
@@ -452,6 +451,7 @@ pub(super) async fn top_level_move_hints(
                         is_directory: false,
                         size: scan.total_bytes,
                         modified_at: scan.top_level_modified_at,
+                        created_at: scan.top_level_created_at,
                     },
                 );
             }
@@ -488,6 +488,7 @@ pub(super) async fn top_level_move_hints(
                         is_directory,
                         size,
                         modified_at: entry.modified_at,
+                        created_at: entry.created_at,
                     },
                 );
             }

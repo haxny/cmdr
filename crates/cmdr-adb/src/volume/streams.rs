@@ -10,6 +10,7 @@
 use std::ops::ControlFlow;
 use std::path::Path;
 
+use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
 use log::debug;
@@ -59,6 +60,12 @@ impl AdbVolume {
         }
         let total_size = stat.size;
         let modified_at = stat.modified_at();
+        // The device's mode, off the same `stat`: what keeps a `0600` file
+        // private and a script executable when it lands on local disk.
+        let carried = CarriedMetadata {
+            mode: Some(stat.mode & 0o7777),
+            ..CarriedMetadata::default()
+        };
 
         let (chunk_tx, chunk_rx) = tokio::sync::mpsc::channel::<Result<Vec<u8>, VolumeError>>(STREAM_CHANNEL_CAPACITY);
         let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel::<()>();
@@ -70,7 +77,11 @@ impl AdbVolume {
             .runtime()
             .spawn(async move { produce(inner, session, device, offset, chunk_tx, cancel_rx).await });
 
-        Ok(ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(total_size)).with_modified_at(modified_at))
+        Ok(
+            ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(total_size))
+                .with_modified_at(modified_at)
+                .with_metadata(carried),
+        )
     }
 
     /// Reads one bounded range without `RECV` downloading the prefix.

@@ -285,10 +285,69 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
 
 /// And dates a folder, so an engine test can see a copied folder keep its date.
 #[tokio::test]
-async fn set_modified_honors_the_shared_folder_date_contract() {
+async fn apply_metadata_honors_the_shared_folder_date_contract() {
     let volume = InMemoryVolume::new("Test");
 
-    conformance::assert_set_modified_dates_a_folder(&volume, Path::new("/dated"), std::time::Duration::ZERO).await;
+    conformance::assert_apply_metadata_dates_a_folder(&volume, Path::new("/dated"), std::time::Duration::ZERO).await;
+}
+
+/// The reference keeps every class a listing shows, as a destination, on a file
+/// and on a folder, and reports them as a source.
+#[tokio::test]
+async fn the_double_honors_the_shared_metadata_contract() {
+    use crate::metadata::MetadataClasses;
+    let volume = InMemoryVolume::new("Test");
+    let every_class = MetadataClasses::ALL;
+
+    conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("/born.txt"), every_class).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new("/born.txt"), every_class).await;
+    conformance::assert_apply_metadata_keeps(&volume, Path::new("/born"), every_class).await;
+}
+
+/// The flags and xattrs have no listing field, so the reference pins them here:
+/// a write keeps the xattrs and leaves the flags for after the landing, and
+/// `apply_metadata` adds the flags.
+#[tokio::test]
+async fn the_double_keeps_xattrs_on_the_write_and_flags_after_it() {
+    use crate::metadata::{CarriedMetadata, MetadataClasses, UserFlags, Xattr};
+    let source = InMemoryVolume::new("Source");
+    source
+        .create_file(Path::new("/tagged.txt"), b"tagged")
+        .await
+        .expect("seed");
+    let tag = Xattr {
+        name: "user.tag".into(),
+        value: b"red".to_vec(),
+    };
+    source.set_carried_metadata(
+        Path::new("/tagged.txt"),
+        CarriedMetadata {
+            flags: UserFlags::LOCKED,
+            xattrs: vec![tag.clone()],
+            ..CarriedMetadata::default()
+        },
+    );
+    let dest = InMemoryVolume::new("Dest");
+    let stream = source.open_read_stream(Path::new("/tagged.txt")).await.expect("open");
+    let after_landing = stream.metadata(MetadataClasses::ALL).after_landing();
+    dest.write_from_stream(
+        Path::new("/tagged.txt"),
+        WriteMode::CreateNew,
+        StreamLength::Known(6),
+        stream,
+        &|_| std::ops::ControlFlow::Continue(()),
+    )
+    .await
+    .expect("write");
+
+    let landed = dest.carried_metadata(Path::new("/tagged.txt")).expect("landed");
+    assert_eq!(landed.xattrs, vec![tag]);
+    assert_eq!(landed.flags, UserFlags::NONE, "flags wait for the landing");
+
+    dest.apply_metadata(Path::new("/tagged.txt"), &after_landing, None)
+        .await;
+    let landed = dest.carried_metadata(Path::new("/tagged.txt")).expect("landed");
+    assert_eq!(landed.flags, UserFlags::LOCKED);
 }
 
 #[tokio::test]

@@ -137,16 +137,35 @@ async fn a_copy_keeps_the_source_date_per_the_shared_contract() {
 /// A copy onto local disk dates the folders it created, once their contents
 /// landed.
 #[tokio::test]
-async fn set_modified_honors_the_shared_folder_date_contract() {
+async fn apply_metadata_honors_the_shared_folder_date_contract() {
     let test_dir = TestDir::new("folder_date_conformance_test");
     let volume = LocalPosixVolume::local_folder("Test", &*test_dir);
 
-    cmdr_fs::volume::conformance::assert_set_modified_dates_a_folder(
+    cmdr_fs::volume::conformance::assert_apply_metadata_dates_a_folder(
         &volume,
         Path::new("dated"),
         std::time::Duration::ZERO,
     )
     .await;
+}
+
+/// The classes local disk keeps and reports, on a file and on a folder: the
+/// creation date (macOS only: Linux can't set a birth time) and the mode.
+#[tokio::test]
+async fn local_disk_honors_the_shared_metadata_contract() {
+    use cmdr_fs::metadata::MetadataClasses;
+    let test_dir = TestDir::new("metadata_conformance_test");
+    let volume = LocalPosixVolume::local_folder("Test", &*test_dir);
+    let kept = if cfg!(target_os = "macos") {
+        MetadataClasses::CREATED | MetadataClasses::MODE
+    } else {
+        MetadataClasses::MODE
+    };
+
+    cmdr_fs::volume::conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("born.txt"), kept).await;
+    cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_metadata(&volume, Path::new("born.txt"), kept)
+        .await;
+    cmdr_fs::volume::conformance::assert_apply_metadata_keeps(&volume, Path::new("born"), kept).await;
 }
 
 #[tokio::test]

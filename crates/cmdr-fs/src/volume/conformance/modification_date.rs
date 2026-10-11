@@ -12,6 +12,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::metadata::{CarriedMetadata, ClassOutcome};
 use crate::volume::{StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// The date [`assert_write_from_stream_keeps_the_source_date`] hands its
@@ -149,7 +150,7 @@ pub async fn assert_read_stream_reports_the_listed_date(volume: &dyn Volume, pat
     );
 }
 
-/// A folder [`Volume::set_modified`] dated lists that date, though writing its
+/// A folder [`Volume::apply_metadata`] dated lists that date, though writing its
 /// contents bumped it to "now" first.
 ///
 /// Creates `dir`, writes a file into it (which is what bumps a folder's date on
@@ -161,7 +162,7 @@ pub async fn assert_read_stream_reports_the_listed_date(volume: &dyn Volume, pat
 /// AFTER its contents land, by a call nothing else exercises, and a backend
 /// answering `Ok` without storing anything passes every copy suite: the bytes
 /// are all there.
-pub async fn assert_set_modified_dates_a_folder(volume: &dyn Volume, dir: &Path, tolerance: Duration) {
+pub async fn assert_apply_metadata_dates_a_folder(volume: &dyn Volume, dir: &Path, tolerance: Duration) {
     assert!(
         !volume.exists(dir).await,
         "fixture precondition: {} must not exist yet",
@@ -184,10 +185,19 @@ pub async fn assert_set_modified_dates_a_folder(volume: &dyn Volume, dir: &Path,
         .await
         .unwrap_or_else(|e| panic!("a file must land in {}, got {e:?}", dir.display()));
 
-    volume
-        .set_modified(dir, UNIX_EPOCH + Duration::new(SOURCE_DATE_SECS, SOURCE_DATE_NANOS))
-        .await
-        .unwrap_or_else(|e| panic!("dating the folder {} must succeed, got {e:?}", dir.display()));
+    let report = volume
+        .apply_metadata(
+            dir,
+            &CarriedMetadata::default(),
+            Some(UNIX_EPOCH + Duration::new(SOURCE_DATE_SECS, SOURCE_DATE_NANOS)),
+        )
+        .await;
+    assert_eq!(
+        report.modified,
+        ClassOutcome::Kept,
+        "dating the folder {} must succeed; got {report:?}",
+        dir.display()
+    );
 
     let listed = volume
         .get_metadata(dir)

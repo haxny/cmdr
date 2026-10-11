@@ -107,6 +107,11 @@ impl LocalPosixVolume {
                         .and_then(|meta| meta.modified().ok())
                         .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
                         .map(|since| since.as_secs()),
+                    top_level_created_at: top_meta
+                        .as_ref()
+                        .and_then(|meta| meta.created().ok())
+                        .and_then(|created| created.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|since| since.as_secs()),
                 })
             })
             .await

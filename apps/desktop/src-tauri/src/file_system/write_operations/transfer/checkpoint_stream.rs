@@ -148,6 +148,11 @@ impl VolumeReadStream for CheckpointStream {
         self.inner.modified_at()
     }
 
+    /// The source's own metadata, so a destination that stores it keeps it.
+    fn metadata(&self, wanted: cmdr_fs::metadata::MetadataClasses) -> cmdr_fs::metadata::CarriedMetadata {
+        self.inner.metadata(wanted)
+    }
+
     /// The operation's Cancel and pause, for a destination that buffers ahead
     /// of this stream: S3 drains a local source into part buffers in
     /// milliseconds, so the park in [`Self::checkpoint`] never reaches the

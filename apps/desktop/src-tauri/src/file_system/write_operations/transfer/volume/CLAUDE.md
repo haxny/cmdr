@@ -30,10 +30,9 @@ Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive). File map: `DE
 
 - **A cross-volume file write stages on `.cmdr-tmp-<uuid>`**, renamed in after its last byte. Ask
   `../staged_write.rs::resolve_staging`; ❌ only single-shot or whole-publish earns an exemption, NEVER smallness.
-- **Pre-rename, the temp takes an archive's quarantine, then the SOURCE's mode** (`extract_quarantine.rs`,
-  `landed_mode.rs`), local destinations only. Mode: never wider than created, `0` means none (❌ never guessed).
-  Folders take it at creation, ❌ never in `folder_dates.rs` (skips cancelled subtrees). New write or mkdir paths owe
-  both.
+- **What a file carries rides its stream** (`VolumeReadStream::metadata`); the DESTINATION puts it on the temp. ❌ No
+  engine-side `chmod` or xattr write; wrappers forward `metadata`. Extract quarantine: a stream decorator, and folders
+  at creation, ❌ never in `folder_metadata.rs`. § "Copies keep the source's metadata".
 - **Every file copy asks `Volume::copy_on_server` first**; the BACKEND picks its sources, ❌ never a path. Staged unless
   whole-publish; anything but a cancel or a taken name falls back to streaming.
 - **A same-volume move whose `rename_work` says copy takes the copy-then-delete engine**, ❌ never `rename`.

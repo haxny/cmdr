@@ -15,6 +15,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 
 /// 256 KB – matches the consumer-friendly chunk size used by network read streams.
@@ -25,15 +26,18 @@ pub struct GitBlobReadStream {
     data: Vec<u8>,
     total_size: u64,
     pos: usize,
+    /// The mode the tree entry records (`0o644`, or `0o755` for an executable).
+    mode: u32,
 }
 
 impl GitBlobReadStream {
-    pub fn new(data: Vec<u8>) -> Self {
+    pub fn new(data: Vec<u8>, mode: u32) -> Self {
         let total_size = data.len() as u64;
         Self {
             data,
             total_size,
             pos: 0,
+            mode,
         }
     }
 }
@@ -63,6 +67,16 @@ impl VolumeReadStream for GitBlobReadStream {
         // A blob has no date of its own; the same blob sits in many commits.
         None
     }
+
+    /// The tree entry's mode, and nothing else: a blob has no creation date,
+    /// flags, or xattrs.
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        CarriedMetadata {
+            mode: Some(self.mode),
+            ..CarriedMetadata::default()
+        }
+        .restricted_to(wanted)
+    }
 }
 
 #[cfg(test)]
@@ -80,7 +94,7 @@ mod tests {
     #[tokio::test]
     async fn yields_whole_blob_in_chunks() {
         let data: Vec<u8> = (0..(CHUNK_SIZE * 2 + 17)).map(|i| (i % 256) as u8).collect();
-        let mut stream = GitBlobReadStream::new(data.clone());
+        let mut stream = GitBlobReadStream::new(data.clone(), 0o644);
         assert_eq!(
             stream.total_size(),
             cmdr_fs::volume::StreamLength::Known(data.len() as u64)
@@ -92,14 +106,14 @@ mod tests {
 
     #[tokio::test]
     async fn empty_blob_yields_no_chunks() {
-        let mut stream = GitBlobReadStream::new(Vec::new());
+        let mut stream = GitBlobReadStream::new(Vec::new(), 0o644);
         assert!(stream.next_chunk().await.is_none());
     }
 
     #[tokio::test]
     async fn small_blob_single_chunk() {
         let data = b"hello, world!".to_vec();
-        let mut stream = GitBlobReadStream::new(data.clone());
+        let mut stream = GitBlobReadStream::new(data.clone(), 0o644);
         let chunk = stream.next_chunk().await.unwrap().unwrap();
         assert_eq!(chunk, data);
         assert!(stream.next_chunk().await.is_none());

@@ -112,6 +112,7 @@ impl MtpConnectionManager {
                     // This path listed the folder, never its parent, so nothing
                     // here carried the folder's own date.
                     top_level_modified_at: None,
+                    top_level_created_at: None,
                 })
             }
             Err(e) => {
@@ -198,6 +199,7 @@ impl MtpConnectionManager {
             // The caller listed the folder's CONTENTS; its own date was in a
             // parent listing this walk never made.
             top_level_modified_at: None,
+            top_level_created_at: None,
         })
     }
 
@@ -234,6 +236,7 @@ impl MtpConnectionManager {
             dedup_bytes: entry.size.unwrap_or(0),
             top_level_is_directory: false,
             top_level_modified_at: entry.modified_at,
+            top_level_created_at: entry.created_at,
         })
     }
 }

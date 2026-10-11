@@ -1,4 +1,4 @@
-//! A copied folder keeps its source folder's date, through both drivers.
+//! A copied folder keeps its source folder's dates, through both drivers.
 //!
 //! `InMemoryVolume` moves a folder's date when an entry lands in it, as every
 //! real store does, so a folder dated BEFORE its contents land reads "now" here
@@ -185,6 +185,54 @@ async fn a_copy_that_fails_partway_dates_no_folder() {
             assert!(
                 listed != Some(FOLDER_DATE) && listed != Some(INNER_FOLDER_DATE),
                 "{folder}: only part of its source landed, so it must not carry a source date; it lists {listed:?}"
+            );
+        }
+    }
+}
+
+/// The creation dates ride the same pass: every folder the copy created is born
+/// when its source folder was, through both drivers, and a top-level folder's
+/// comes from the scan's stat like its modification date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn copied_folders_keep_their_creation_dates_through_both_drivers() {
+    const BORN: u64 = 1_425_168_000; // 2015-03-01
+    const INNER_BORN: u64 = 1_451_606_400; // 2016-01-01
+    let born = |secs: u64| cmdr_fs::metadata::CarriedMetadata {
+        created: Some(std::time::UNIX_EPOCH + Duration::from_secs(secs)),
+        ..Default::default()
+    };
+    for (op, names) in [
+        ("op-folder-birth-serial", vec!["solo"]),
+        ("op-folder-birth-concurrent", vec!["one", "two", "three"]),
+    ] {
+        let (source, dest) = volumes();
+        dest.create_directory(Path::new("/inbox")).await.unwrap();
+        let mut sources = Vec::new();
+        for name in &names {
+            let root = seed_dated_folder(&source, name).await;
+            source.set_carried_metadata(&root.join("inner"), born(INNER_BORN));
+            source.set_carried_metadata(&root, born(BORN));
+            sources.push(root);
+        }
+
+        copy(op, &source, &sources, Arc::clone(&dest) as Arc<dyn Volume>)
+            .await
+            .expect("the copy succeeds");
+
+        for name in &names {
+            let created = |path: String| {
+                let dest = Arc::clone(&dest);
+                async move { dest.get_metadata(Path::new(&path)).await.unwrap().created_at }
+            };
+            assert_eq!(
+                created(format!("/inbox/{name}")).await,
+                Some(BORN),
+                "{op}: /inbox/{name}"
+            );
+            assert_eq!(
+                created(format!("/inbox/{name}/inner")).await,
+                Some(INNER_BORN),
+                "{op}: /inbox/{name}/inner"
             );
         }
     }

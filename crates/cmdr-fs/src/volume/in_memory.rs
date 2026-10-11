@@ -14,6 +14,7 @@ use super::{BackendKind, ConnectionState, IndexWalk, SpaceInfo, VolumeError};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
+use crate::metadata::CarriedMetadata;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -24,6 +25,11 @@ mod volume_impl;
 struct InMemoryEntry {
     metadata: FileEntry,
     content: Option<Vec<u8>>,
+    /// The classes `FileEntry` has no field for (the user flags and the
+    /// xattrs), so the double stores and reports every class a copy carries.
+    /// `created_at` and `permissions` stay on `metadata`, where a listing
+    /// reads them.
+    extra: CarriedMetadata,
 }
 
 /// An in-memory volume for testing without touching the real file system.
@@ -354,6 +360,60 @@ impl InMemoryVolume {
             .modified_at = modified_at;
     }
 
+    /// Everything the entry at `path` carries beyond its bytes and its mtime, in
+    /// the shape a copy carries it: `created_at` (whole seconds) and
+    /// `permissions` (`None` for 0) off the listing, the flags and xattrs off
+    /// the double's own store. `None` when the path isn't present.
+    pub fn carried_metadata(&self, path: &Path) -> Option<CarriedMetadata> {
+        let normalized = self.normalize(path);
+        self.entries.read_ignore_poison().get(&normalized).map(Self::carried_of)
+    }
+
+    /// Test helper: makes the existing entry at `path` carry `carried`, as a
+    /// source a copy reads (`created`, `mode`, the flags, and the xattrs;
+    /// `None` leaves that field as it was). Panics if the path isn't present.
+    pub fn set_carried_metadata(&self, path: &Path, carried: CarriedMetadata) {
+        let normalized = self.normalize(path);
+        let mut entries = self.entries.write_ignore_poison();
+        let entry = entries
+            .get_mut(&normalized)
+            .expect("set_carried_metadata: entry must exist");
+        Self::store_carried(entry, carried);
+    }
+
+    /// The [`CarriedMetadata`] an entry reports.
+    fn carried_of(entry: &InMemoryEntry) -> CarriedMetadata {
+        CarriedMetadata {
+            created: entry
+                .metadata
+                .created_at
+                .map(|secs| std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs)),
+            mode: (entry.metadata.permissions != 0).then_some(entry.metadata.permissions),
+            flags: entry.extra.flags,
+            xattrs: entry.extra.xattrs.clone(),
+        }
+    }
+
+    /// Stores what `carried` has a value for on `entry`: the date and mode on
+    /// its listing, the flags added to its own, each xattr replacing one of the
+    /// same name. The reference answer of every class a destination keeps.
+    fn store_carried(entry: &mut InMemoryEntry, carried: CarriedMetadata) {
+        if let Some(secs) = carried
+            .created
+            .and_then(|created| created.duration_since(std::time::UNIX_EPOCH).ok())
+        {
+            entry.metadata.created_at = Some(secs.as_secs());
+        }
+        if let Some(mode) = carried.mode {
+            entry.metadata.permissions = mode;
+        }
+        entry.extra.flags = entry.extra.flags | carried.flags;
+        for xattr in carried.xattrs {
+            entry.extra.xattrs.retain(|kept| kept.name != xattr.name);
+            entry.extra.xattrs.push(xattr);
+        }
+    }
+
     /// Makes [`Volume::read_range`] return `NotSupported`, modeling a remote
     /// backend without a positioned-read primitive (`SmbVolume` before its smb2
     /// primitive lands). `get_metadata` still works, so `VolumeManager::resolve`
@@ -493,6 +553,7 @@ impl InMemoryVolume {
                     InMemoryEntry {
                         metadata: entry,
                         content: None,
+                        extra: CarriedMetadata::default(),
                     },
                 );
             }
@@ -588,6 +649,7 @@ impl InMemoryVolume {
             InMemoryEntry {
                 metadata,
                 content: Some(data),
+                extra: CarriedMetadata::default(),
             },
         );
     }

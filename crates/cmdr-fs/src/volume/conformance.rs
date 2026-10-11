@@ -24,15 +24,20 @@ use super::{
 };
 
 mod directory_creation;
+mod metadata;
 mod modification_date;
 
 pub use directory_creation::{
     assert_create_directory_all_goes_through_a_link_to_a_folder, assert_create_directory_all_refuses_a_file_in_the_way,
     assert_create_directory_all_reports_an_existing_dir_honestly,
 };
+pub use metadata::{
+    BIRTH_SECS, assert_apply_metadata_keeps, assert_read_stream_reports_the_listed_metadata,
+    assert_write_from_stream_keeps_metadata,
+};
 pub use modification_date::{
-    SOURCE_DATE_NANOS, SOURCE_DATE_SECS, assert_read_stream_reports_the_listed_date,
-    assert_set_modified_dates_a_folder, assert_write_from_stream_keeps_the_source_date,
+    SOURCE_DATE_NANOS, SOURCE_DATE_SECS, assert_apply_metadata_dates_a_folder,
+    assert_read_stream_reports_the_listed_date, assert_write_from_stream_keeps_the_source_date,
 };
 
 /// The size `path` reports right now, for a fixture precondition or an

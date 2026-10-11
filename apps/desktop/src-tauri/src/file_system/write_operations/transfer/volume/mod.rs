@@ -24,11 +24,8 @@ mod extract_quarantine;
 // concatenates it with the child's header and resolves the merged doc in THIS
 // scope, so the child's links to its own items break.
 mod finalize;
-mod folder_dates;
+mod folder_metadata;
 mod item_identity;
-/// What mode a file lands with on a LOCAL destination. The volumes report a
-/// mode; this is the layer that applies it.
-mod landed_mode;
 mod landing;
 mod merge;
 mod merge_ctx;
@@ -138,9 +135,13 @@ mod finalize_recovery_tests;
 #[cfg(test)]
 mod dest_precheck_failure_tests;
 
-/// A copied folder keeps its source folder's date, dated after its contents.
+/// A copied folder keeps its source folder's dates, stamped after its contents.
 #[cfg(test)]
-mod folder_dates_tests;
+mod folder_metadata_tests;
+
+/// A copy onto local disk keeps creation dates and a routed source's mode.
+#[cfg(test)]
+mod copy_metadata_tests;
 
 /// A selected local link copied to another volume lands as what it points at.
 #[cfg(test)]

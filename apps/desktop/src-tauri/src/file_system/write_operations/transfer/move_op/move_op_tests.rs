@@ -368,6 +368,7 @@ fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
                     dedup_bytes: other_metadata.len(),
                     top_level_is_directory: false,
                     top_level_modified_at: None,
+                    top_level_created_at: None,
                 },
             )],
             None,

@@ -378,8 +378,8 @@ the transfer layer renders as the user's own file name, and the second into `Vol
 git-specific repair copy.
 
 Four things resolve to `Ok(None)`: a name `gix`'s tree walk doesn't find (`tree::resolve_tree_at`, `get_tree_entry`,
-`lookup_blob_id`), a blob asked for as a directory or a directory asked for as a blob, a branch or tag whose ref isn't
-in the repo (typed `gix::reference::find::existing::Error::NotFound`, ❌ never a string match), and any name under
+`lookup_blob`), a blob asked for as a directory or a directory asked for as a blob, a branch or tag whose ref isn't in
+the repo (typed `gix::reference::find::existing::Error::NotFound`, ❌ never a string match), and any name under
 `worktrees/` or `submodules/` deeper than the leaf, since neither browses a commit tree.
 
 `log::resolve_commit_id` and `stash::resolve_stash_commit` still answer `Err` for a revspec they can't parse: an
@@ -393,6 +393,10 @@ surface yet. So `GitBlobReadStream` owns the full `Vec<u8>` and yields 256 KB ch
 **Memory cost equals blob size; chunked yield is for the consumer API, not memory streaming.** We refuse blobs over
 `tree::MAX_BLOB_BYTES` (256 MB) up-front via `FriendlyGitErrorKind::BlobTooLarge` rather than OOM. Revisit when gix
 exposes a chunked loose-object reader.
+
+The stream reports the tree entry's mode (`VolumeReadStream::metadata`, from `tree::lookup_blob`'s `BlobEntry`: `0o644`,
+`0o755` for an executable, `0o777` for a link), so a script copied out of a snapshot onto local disk lands executable
+with no second lookup. No date: one blob sits in many commits.
 
 ## Ref-name flat rendering
 

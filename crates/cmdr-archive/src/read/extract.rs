@@ -46,6 +46,9 @@ pub struct SubtreeMember {
     /// Last-modified time as a Unix timestamp in seconds, as the tree recorded
     /// it, so an extracted file keeps the member's date.
     pub modified: Option<i64>,
+    /// The permission bits the archive recorded, so an extracted executable
+    /// stays one. `None` when the format recorded none.
+    pub mode: Option<u32>,
 }
 
 /// The frames the producer sends over the single channel: a member header, then

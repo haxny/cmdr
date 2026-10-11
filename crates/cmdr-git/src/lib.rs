@@ -135,12 +135,12 @@ fn open_blob(handle: &RepoHandle, cat: path::Cat, name: &str, sub: &str) -> Look
     let Some(commit_id) = resolve_commit_for_cat(handle, cat, name)? else {
         return Ok(None);
     };
-    let Some(blob_id) = tree::lookup_blob_id(handle, commit_id, sub)? else {
+    let Some(blob) = tree::lookup_blob(handle, commit_id, sub)? else {
         return Ok(None);
     };
-    let bytes = tree::read_blob(handle, blob_id)?;
+    let bytes = tree::read_blob(handle, blob.id)?;
     Ok(Some(
-        Box::new(read_blob::GitBlobReadStream::new(bytes)) as Box<dyn VolumeReadStream>
+        Box::new(read_blob::GitBlobReadStream::new(bytes, blob.mode)) as Box<dyn VolumeReadStream>
     ))
 }
 

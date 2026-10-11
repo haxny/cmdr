@@ -4,6 +4,7 @@
 use std::pin::Pin;
 
 use super::{StreamLength, VolumeError, VolumeReadStream};
+use crate::metadata::{CarriedMetadata, MetadataClasses};
 
 /// A [`VolumeReadStream`] a background producer feeds through a bounded channel.
 ///
@@ -22,6 +23,7 @@ pub struct ChannelReadStream {
     total_size: StreamLength,
     bytes_read: u64,
     modified_at: Option<std::time::SystemTime>,
+    metadata: CarriedMetadata,
 }
 
 impl ChannelReadStream {
@@ -42,6 +44,7 @@ impl ChannelReadStream {
             total_size,
             bytes_read: 0,
             modified_at: None,
+            metadata: CarriedMetadata::default(),
         }
     }
 
@@ -51,6 +54,15 @@ impl ChannelReadStream {
     #[must_use]
     pub fn with_modified_at(mut self, modified_at: Option<std::time::SystemTime>) -> Self {
         self.modified_at = modified_at;
+        self
+    }
+
+    /// The rest of what the source file carries, for
+    /// [`VolumeReadStream::metadata`]. Pass what the open already learned;
+    /// the stream hands out the classes a destination asks for.
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: CarriedMetadata) -> Self {
+        self.metadata = metadata;
         self
     }
 }
@@ -86,5 +98,9 @@ impl VolumeReadStream for ChannelReadStream {
 
     fn modified_at(&self) -> Option<std::time::SystemTime> {
         self.modified_at
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.metadata.clone().restricted_to(wanted)
     }
 }

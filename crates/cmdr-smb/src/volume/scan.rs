@@ -41,6 +41,7 @@ impl SmbVolume {
                 // The stat below fills it; the share root has no stat and no
                 // date to keep.
                 top_level_modified_at: None,
+                top_level_created_at: None,
             };
 
             // Before the stat: a cancel that landed while the previous subtree
@@ -57,6 +58,7 @@ impl SmbVolume {
                     self.handle_smb_result("scan_for_copy(stat)", smb_path, r)?
                 };
                 result.top_level_modified_at = filetime_to_unix_secs(info.modified);
+                result.top_level_created_at = filetime_to_unix_secs(info.created);
 
                 if !info.is_directory {
                     result.file_count = 1;
@@ -142,6 +144,7 @@ impl SmbVolume {
                         dedup_bytes: 0,
                         top_level_is_directory: false,
                         top_level_modified_at: None,
+                        top_level_created_at: None,
                     },
                     per_path: Vec::new(),
                     files: None,
@@ -217,6 +220,7 @@ impl SmbVolume {
                             dedup_bytes: entry.size.unwrap_or(0),
                             top_level_is_directory: false,
                             top_level_modified_at: entry.modified_at,
+                            top_level_created_at: entry.created_at,
                         });
                         boundary.file(entry.size.unwrap_or(0)).await?;
                     }
@@ -347,6 +351,7 @@ impl SmbVolume {
                                 dedup_bytes: info.size,
                                 top_level_is_directory: false,
                                 top_level_modified_at: filetime_to_unix_secs(info.modified),
+                                top_level_created_at: filetime_to_unix_secs(info.created),
                             });
                             files_from_stats.push(info.size);
                         }

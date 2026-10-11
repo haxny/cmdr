@@ -8,6 +8,7 @@
 //! an `InMemoryVolume`, so the write lands through the normal `write_from_stream`.
 
 use super::super::faulty_volume::forward_volume_methods;
+use super::super::folder_metadata::SourceFolderDates;
 use super::super::transfer_error::PathedVolumeError;
 use super::test_support::make_state;
 use super::*;
@@ -262,7 +263,10 @@ async fn sequential_extract_keeps_the_folders_dates() {
         &fixture.inner("docs"),
         Some(true),
         SourceFileFacts {
-            modified_at: scan.top_level_modified_at,
+            folder_dates: SourceFolderDates {
+                modified_at: scan.top_level_modified_at,
+                created_at: scan.top_level_created_at,
+            },
             ..SourceFileFacts::default()
         },
         &dest,
@@ -379,6 +383,7 @@ impl Volume for StopAfterFirstWrite {
         operations_are_local, max_concurrent_ops, scan_for_copy, open_read_stream, supports_unknown_length_writes,
         write_is_single_shot,
         create_directory_errors_on_existing_dir,
+        apply_metadata,
     );
 
     fn as_any(&self) -> &dyn std::any::Any {

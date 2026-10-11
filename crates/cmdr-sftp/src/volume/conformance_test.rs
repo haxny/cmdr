@@ -235,10 +235,10 @@ async fn a_copy_keeps_the_source_date() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
-async fn set_modified_dates_a_folder() {
+async fn apply_metadata_dates_a_folder() {
     let (volume, dir) = stock_server_with_scratch("dated-folder").await;
 
-    conformance::assert_set_modified_dates_a_folder(
+    conformance::assert_apply_metadata_dates_a_folder(
         &volume,
         Path::new(&format!("{dir}/dated")),
         std::time::Duration::ZERO,

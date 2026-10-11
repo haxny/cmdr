@@ -127,6 +127,7 @@ impl Volume for ProgressEmittingVolume {
                 dedup_bytes: emit.bytes,
                 top_level_is_directory: false,
                 top_level_modified_at: None,
+                top_level_created_at: None,
             };
             let per_path = paths
                 .iter()
@@ -140,6 +141,7 @@ impl Volume for ProgressEmittingVolume {
                             dedup_bytes: 0,
                             top_level_is_directory: false,
                             top_level_modified_at: None,
+                            top_level_created_at: None,
                         },
                     )
                 })

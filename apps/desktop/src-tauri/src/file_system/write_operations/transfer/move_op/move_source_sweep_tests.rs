@@ -48,6 +48,7 @@ fn seed_preview(preview_id: &str, source: &Path, files: &[PathBuf], dirs: Vec<Pa
                     dedup_bytes: total_bytes,
                     top_level_is_directory: source.is_dir(),
                     top_level_modified_at: None,
+                    top_level_created_at: None,
                 },
             )],
             None,

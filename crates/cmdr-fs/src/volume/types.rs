@@ -363,6 +363,11 @@ pub struct CopyScanResult {
     /// own. `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     pub top_level_modified_at: Option<u64>,
+    /// The scanned top-level path's own creation date (Unix seconds), from the
+    /// same stat, or `None` when that stat carried none (most backends but
+    /// local, SMB, and MTP) or the result is an aggregate over several paths.
+    /// What a copied top-level FOLDER is born with, for the same reason.
+    pub top_level_created_at: Option<u64>,
 }
 
 /// Result of a batch scan over multiple source paths.

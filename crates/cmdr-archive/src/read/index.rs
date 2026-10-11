@@ -350,6 +350,7 @@ impl ArchiveIndex {
             inner_path: path.to_string(),
             size: self.file_size(path).unwrap_or(0),
             modified: node.modified,
+            mode: node.mode,
         };
 
         // A file root extracts just itself; a directory root walks its subtree.

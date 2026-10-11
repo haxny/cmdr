@@ -19,6 +19,7 @@
 #![deny(missing_docs)]
 
 pub mod archive_format;
+pub mod durable;
 pub mod entry;
 pub mod file_provider;
 pub mod filesystem_kind;
