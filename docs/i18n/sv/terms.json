@@ -818,9 +818,9 @@
   },
   "diacritics": {
     "chosen": "diakritiska tecken",
-    "confidence": "tentative",
+    "confidence": "high",
     "forms": "the option and its shortcut row → Ta bort diakritiska tecken",
-    "sources": "shipped catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics); standard Swedish linguistics term; no macOS or file-manager hit on macOS 27.0.1 (Finder, AppKit loctables), reference pile absent on this machine"
+    "sources": "shipped catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics); standard Swedish linguistics term; MS terminology (diacritic → diakritiskt tecken, diakritiskt); no macOS or file-manager hit on macOS 27.0.1 (Finder, AppKit loctables)"
   },
   "dialog": {
     "accept": ["dialogruta"],
@@ -2341,12 +2341,13 @@
     "chosen": "byt namn",
     "confidence": "high",
     "decision": "Rename toasts",
-    "forms": "Byt namn på …; noun namnbyte (ett namnbyte, namnbytet, namnbyten), which takes av: namnbytet av ”X”",
-    "sources": "macOS Finder (Byt namn på …), Thunar/Dolphin (Namnbyte)"
+    "forms": "Byt namn på …; noun namnbyte (ett namnbyte, namnbytet, namnbyten), which takes av: namnbytet av ”X”; a count of files that WILL be renamed → # redo för namnbyte (multiRename.summary, matching multiRename.status.ready Redo för namnbyte)",
+    "sources": "macOS Finder (Byt namn på …), Thunar/Dolphin (Namnbyte)",
+    "note": "A pending count never uses present-tense byter namn: # byter namn reads as a rename already running. The pile has no bare count label for it (Finder BulkRenameWindow shows none; Thunar's to be renamed is filer att döpa om / att byta namn på, which needs the noun filer), so # redo för namnbyte is tentative, built on the ruled noun and the sibling status string."
   },
   "rename-counter": {
     "chosen": "räknare",
-    "confidence": "tentative",
+    "confidence": "high",
     "forms": "the popover title Räknare; its button Redigera räknare; fields Startvärde, Steg, Antal siffror; the preview line Räknar 1, 3, 5…",
     "avoid": [
       {
@@ -2354,7 +2355,7 @@
         "why": "Finder’s Byt namn uses it for the format (Namn och sekvensnummer), the number itself, not the setting you edit"
       }
     ],
-    "sources": "shipped catalog (commands.fileMultiRename.description en räknare); macOS 27.0.1 Finder BulkRenameWindow (Name and Counter → Namn och sekvensnummer, Start numbers at → Starta med nummer); reference pile absent on this machine, so Total/Double Commander unverified"
+    "sources": "shipped catalog (commands.fileMultiRename.description en räknare); macOS 27.0.1 Finder BulkRenameWindow (Name and Counter → Namn och sekvensnummer, Start numbers at → Starta med nummer); Total Commander sv (6605 [C]  Räknare, 6616 Definiera räknaren [C], 6617 Börja med:, 6618 Steglängd:, 6619 Antal siffror:); MS terminology (counter → räknare); no Double Commander sv catalog in the pile. Startvärde/Steg vary from TC's Börja med/Steglängd but share the root, and steg is ruled (step)"
   },
   "renew": {
     "accept": ["förnyelse", "förnyas"],
@@ -3269,7 +3270,7 @@
         "why": "Total Commander/Double Commander's noun (Massomdöpningsverktyg, Verktyg för massomdöpning) builds on döpa om, while Cmdr's rename name is byt namn (macOS Finder)"
       }
     ],
-    "sources": "catalog (onboarding.stepAi.table.rowRename Massbyt namn, .renameWithout massbyte av namn); Total Commander sv (6601 Massomdöpningsverktyg, INC 2400 Döp om flera filer); Double Commander sv (Multi-Rename Tool → Verktyg för massomdöpning); macOS Finder has no tool name (Byt namn på ^0 objekt…, Byt namn på Finder-objekt:)"
+    "sources": "catalog (onboarding.stepAi.table.rowRename Massbyt namn, .renameWithout massbyte av namn); Total Commander sv (6601 Massomdöpningsverktyg, INC 2400 Döp om flera filer); Double Commander sv (Multi-Rename Tool → Verktyg för massomdöpning, unverified: the pile has no sv Double Commander catalog); macOS Finder has no tool name (Byt namn på ^0 objekt…, Byt namn på Finder-objekt:)"
   },
   "problem": {
     "chosen": "problem",
@@ -3292,6 +3293,6 @@
     "accept": ["regex", "reguljära uttrycket", "reguljära uttryck"],
     "confidence": "high",
     "forms": "an option or field label → Reguljärt uttryck; the short mode name Regex stays (queryUi.mode.regex.label, viewer.search.regex) and compounds with a hyphen (Regex-läge, regex-sökningar)",
-    "sources": "catalog (queryUi.bar.placeholder.regex Reguljärt uttryck, queryUi.mode.regex.label Regex); Double Commander sv (Regular expressions → Reguljära uttryck); Total Commander sv (6626 RegEx)"
+    "sources": "catalog (queryUi.bar.placeholder.regex Reguljärt uttryck, queryUi.mode.regex.label Regex); Double Commander sv (Regular expressions → Reguljära uttryck, unverified: the pile has no sv Double Commander catalog); Total Commander sv (6626 RegE&x); MS terminology (regular expression → reguljärt uttryck)"
   }
 }

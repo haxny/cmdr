@@ -240,7 +240,7 @@
   "@multiRename.error.timedOut": {
     "sourceHash": "a336ee5"
   },
-  "multiRename.summary": "{ready, plural, one {# byter namn} other {# byter namn}} · {unchanged, plural, one {# oförändrad} other {# oförändrade}} · <problemsToggle>{problems, plural, one {# problem} other {# problem}}</problemsToggle>",
+  "multiRename.summary": "{ready, plural, one {# redo för namnbyte} other {# redo för namnbyte}} · {unchanged, plural, one {# oförändrad} other {# oförändrade}} · <problemsToggle>{problems, plural, one {# problem} other {# problem}}</problemsToggle>",
   "@multiRename.summary": {
     "sourceHash": "ca7be9b"
   },
