@@ -134,7 +134,7 @@ pub fn chunked_copy_with_metadata(
     // the user can pull a USB drive after "Copy finished" and lose a file
     // that lived only in the OS page cache. `sync_data` is the cheaper
     // `fdatasync` variant — file data + size are durable; mtime can lag.
-    dst_file.sync_data().map_err(|e| WriteOperationError::WriteError {
+    flush_to_disk(&dst_file).map_err(|e| WriteOperationError::WriteError {
         path: dest.display().to_string(),
         message: format!("Couldn't flush destination to disk: {}", e),
     })?;
@@ -150,6 +150,28 @@ pub fn chunked_copy_with_metadata(
         bytes,
         landed: LandedMetadata::of_source_acl(source).with_flags(carried.flags),
     })
+}
+
+/// `sync_data`, which on macOS is `F_FULLFSYNC`, falling back to `fsync(2)`
+/// where the filesystem doesn't offer the full barrier: an SMB mount of a Samba
+/// share answers `ENOTSUP` (verified against the Docker guest share, macOS 27.0,
+/// 2026-10-11), which used to fail every chunked copy onto it. SQLite falls back
+/// the same way.
+fn flush_to_disk(file: &std::fs::File) -> std::io::Result<()> {
+    match file.sync_data() {
+        #[cfg(target_os = "macos")]
+        Err(e) if e.raw_os_error() == Some(libc::ENOTSUP) => {
+            use std::os::unix::io::AsRawFd as _;
+            // SAFETY: `file` is open for the whole call, so its fd is valid;
+            // `fsync` touches nothing but that fd.
+            if unsafe { libc::fsync(file.as_raw_fd()) } == 0 {
+                Ok(())
+            } else {
+                Err(std::io::Error::last_os_error())
+            }
+        }
+        other => other,
+    }
 }
 
 /// Test seam: parks a chunked copy part-way through a file, so a test can pull
