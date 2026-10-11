@@ -262,3 +262,96 @@ pub(super) async fn a_copy_off_the_server_keeps_the_date_it_lists(remote: Arc<dy
         "the copy on local disk must keep the date the server lists ({source_date}); it lists {landed}, {off_by} s off"
     );
 }
+
+/// What `path` lists as its creation date.
+async fn listed_creation_date(volume: &dyn Volume, path: &Path, what: &str) -> u64 {
+    volume
+        .get_metadata(path)
+        .await
+        .unwrap_or_else(|e| panic!("{what}: {} must be stattable, got {e:?}", path.display()))
+        .created_at
+        .unwrap_or_else(|| panic!("{what}: {} lists no creation date at all", path.display()))
+}
+
+/// A file copied onto the server from local disk, born years before it was last
+/// modified: the copy's creation date on the server is the moment of the copy.
+///
+/// Characterization (`docs/specs/transfer-metadata-preservation.md` § "M0"): the
+/// target is the local file's birth, which the SMB writer can send in the
+/// `FILE_BASIC_INFORMATION` it already sends for the modification date.
+#[cfg(target_os = "macos")]
+pub(super) async fn a_copy_onto_the_server_loses_the_creation_date_today(remote: Arc<dyn Volume>, dir: PathBuf) {
+    // FLIPS IN M5a: the server lists the local file's birth (BIRTH_SECS).
+    use cmdr_fs::testing::metadata_fixture::{BIRTH_SECS, MODIFIED_SECS, MetadataFixture, birth_secs};
+
+    let fixture = MetadataFixture::new("network_birth_onto_server");
+    let local_file = fixture.rich_file("born.bin");
+    assert_eq!(birth_secs(&local_file), BIRTH_SECS, "fixture precondition");
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*fixture));
+    let before_the_copy = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("the clock is past 1970")
+        .as_secs();
+
+    run_copy(
+        "birth-onto-server",
+        Arc::clone(&local),
+        vec![PathBuf::from("born.bin")],
+        Arc::clone(&remote),
+        dir.clone(),
+    )
+    .await;
+
+    let landed = dir.join("born.bin");
+    let created = listed_creation_date(remote.as_ref(), &landed, "after the copy").await;
+    assert!(
+        created + 60 >= before_the_copy,
+        "the copy on the server is born at copy time ({before_the_copy}), not at the local file's birth ({BIRTH_SECS}); it lists {created}"
+    );
+    let modified = listed_date(remote.as_ref(), &landed, "after the copy").await;
+    assert_eq!(modified, MODIFIED_SECS as u64, "while its modification date is kept");
+
+    clean_deep(remote.as_ref(), &dir).await;
+}
+
+/// A file copied off the server, created on the server long after its listed
+/// modification date: the local copy's birth reads that modification date, since
+/// the local writer sets only mtime and APFS drags birth down to it.
+///
+/// Characterization (`docs/specs/transfer-metadata-preservation.md` § "M0"): the
+/// target is the server's creation date, which the download's CREATE response
+/// already carries.
+#[cfg(target_os = "macos")]
+pub(super) async fn a_copy_off_the_server_loses_the_creation_date_today(remote: Arc<dyn Volume>, dir: PathBuf) {
+    // FLIPS IN M5a: the local copy is born when the server says the file was.
+    use cmdr_fs::testing::metadata_fixture::birth_secs;
+
+    let on_server = dir.join("born.txt");
+    assert_write_from_stream_keeps_the_source_date(remote.as_ref(), &on_server, Duration::ZERO).await;
+    let listed_created = listed_creation_date(remote.as_ref(), &on_server, "the seed").await;
+    let listed_modified = listed_date(remote.as_ref(), &on_server, "the seed").await;
+    assert!(
+        listed_created > listed_modified + 24 * 60 * 60,
+        "fixture precondition: the seed must be created well after its modification date; it lists created {listed_created}, modified {listed_modified}"
+    );
+
+    let local_dir = TestDir::new("network_birth_off_server");
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*local_dir));
+    run_copy(
+        "birth-off-server",
+        Arc::clone(&remote),
+        vec![on_server],
+        Arc::clone(&local),
+        PathBuf::from(""),
+    )
+    .await;
+
+    let landed_birth = birth_secs(&local_dir.join("born.txt"));
+    assert_eq!(
+        landed_birth.unsigned_abs(),
+        listed_modified,
+        "the local copy's birth reads the server's modification date, not its creation date ({listed_created})"
+    );
+
+    clean_deep(remote.as_ref(), &dir).await;
+}

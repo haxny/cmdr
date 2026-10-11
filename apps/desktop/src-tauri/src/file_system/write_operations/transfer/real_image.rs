@@ -408,3 +408,40 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
     drop(mac_dir);
     unregister_operation_status(op_id);
 }
+
+/// A copy onto another volume takes the chunked arm, which sets only mtime: HFS+
+/// (like APFS) then drags the copy's birth down to that mtime. The one cell of the
+/// metadata matrix (`metadata_matrix_tests.rs`) that crosses a real volume boundary.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+async fn a_copy_onto_another_volume_loses_the_files_birth_time_today() {
+    // FLIPS IN M3: birth == BIRTH_SECS on the HFS+ copy.
+    use cmdr_fs::testing::metadata_fixture::{MODIFIED_SECS, MetadataFixture, birth_secs, modified_secs};
+
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
+    let volume = image.volumes()[0].clone();
+    let fixture = MetadataFixture::new("real-image-birth");
+    let source = fixture.rich_file("f.txt");
+
+    let events = Arc::new(CollectorEventSink::new());
+    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let result = copy_files_with_progress_inner(
+        &*events,
+        "op-real-image-birth",
+        &state,
+        std::slice::from_ref(&source),
+        &volume.mount_point,
+        &WriteOperationConfig::default(),
+    );
+    assert!(result.is_ok(), "the copy lands: {result:?}");
+
+    let landed = volume.mount_point.join("f.txt");
+    assert_eq!(modified_secs(&landed), MODIFIED_SECS, "mtime is kept");
+    assert_eq!(birth_secs(&landed), MODIFIED_SECS, "birth reads the source's mtime");
+    assert_ne!(
+        birth_secs(&source),
+        MODIFIED_SECS,
+        "the source's own birth differs, so the pin bites"
+    );
+}

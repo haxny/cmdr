@@ -7,10 +7,10 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: planned, not started (2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource
-cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1
-agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh
-read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
+**Status**: M0 (characterization) done, M1 next (2026-10-11); review rounds 1 (correctness and data safety), 2
+(architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code,
+fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the
+file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -160,7 +160,10 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
     map, `:323`).
   - ❗ Phase 3's `OverwriteOlder` compares the STAGED copy's mtime with the destination's (`T/linux_copy.rs:128-131`
     explains), so mtime on the staged copy is load-bearing for conflict logic.
-  - A Locked SOURCE can't be deleted by Phase 4 (`EPERM`); M0 pins what happens today.
+  - A Locked SOURCE can't be deleted by Phase 4 (`EPERM`). M0 found the one-volume rig never gets there: its staged copy
+    takes the clone arm, which carries `uchg` onto the temp, so the staging landing fails first (`EPERM`) and leaves
+    that Locked temp in the staging tree, where no cleanup can remove it. On a real cross-volume move the chunked arm
+    lands it unlocked and Phase 4's delete is what refuses; no cell pins that path yet.
 
 ### Cross-volume (the volume engine)
 
@@ -485,7 +488,8 @@ decided; then the ask itself, creation and modification dates on files AND folde
   - a Locked file, clone: the copy fails and a `uchg` temp stays behind;
   - a `deny delete` file, clone AND chunked: fails to land;
   - a cross-FS move of a folder holding a `deny delete` file: fails at the staging landing;
-  - a cross-FS move of a Locked source: whatever Phase 4 does today;
+  - a cross-FS move of a Locked source: fails at the staging landing today, before Phase 4 (M0 finding, § "Fresh read");
+    M1 pins what Phase 4 then does with the Locked source;
   - a same-FS move of a Locked file: `EPERM` (out of scope by David's decision; filed as a follow-up in M10);
   - an extract of a quarantined zip: no quarantine (flips in M2).
 - **Pinned losses** (flip in M3, M4, M5a): file birth on the chunked arm, flags on the chunked arm, symlink dates, every

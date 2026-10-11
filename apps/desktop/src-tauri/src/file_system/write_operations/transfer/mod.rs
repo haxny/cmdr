@@ -56,6 +56,8 @@ mod hardlink_progress_tests;
 #[cfg(test)]
 pub(crate) mod liveness_test_support;
 #[cfg(test)]
+mod metadata_matrix_tests;
+#[cfg(test)]
 mod move_integration_test;
 #[cfg(test)]
 mod self_collision_tests;

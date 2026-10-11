@@ -17,7 +17,7 @@ pub(super) fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> 
 /// Drives a same-FS local move (`move_with_rename`) of `sources` into `dst_dir`
 /// under the given resolution. Within one tempdir, source and dest share a
 /// filesystem, so `move_files_with_progress_inner` routes to the rename path.
-pub(super) fn run_same_fs_move(
+pub(in crate::file_system::write_operations::transfer) fn run_same_fs_move(
     sources: &[PathBuf],
     dst_dir: &Path,
     resolution: ConflictResolution,
@@ -35,7 +35,7 @@ pub(super) fn run_same_fs_move(
 
 /// Drives a cross-FS local move (`move_with_staging`) of `sources` into
 /// `dst_dir` under the given resolution.
-pub(super) fn run_cross_fs_move(
+pub(in crate::file_system::write_operations::transfer) fn run_cross_fs_move(
     sources: &[PathBuf],
     dst_dir: &Path,
     resolution: ConflictResolution,

@@ -58,7 +58,9 @@ the next section.
 - `testing/`: behind the `testing` feature. `TestDir` and the two waits in `mod.rs`; `tcp_proxy.rs` (`TcpProxy`, a
   loopback proxy a network backend's test puts in front of a shared Docker fixture to cut the connection, refused or
   silent, without touching a container other runs lease; its header has the usage); on macOS, `disk_images/` (the
-  synthetic APFS/HFS+ image harness and its guarded runner, § "`testing::disk_images`").
+  synthetic APFS/HFS+ image harness and its guarded runner, § "`testing::disk_images`") and `metadata_fixture.rs` (files
+  and folders carrying birth, flags, an ACL, xattrs, and mode, for the copy-keeps-metadata cells; its `Drop` unlocks and
+  strips ACLs so a Locked leftover can't fail the cleanup).
 
 ## Why each thing is here rather than in the app
 

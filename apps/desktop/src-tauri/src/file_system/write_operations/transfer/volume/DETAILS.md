@@ -901,6 +901,9 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   engine (in-memory, SFTP, SMB cells); `folder_dates_tests.rs` (both drivers, a merge, a failure partway);
   `strategy_sequential_tests.rs::sequential_extract_keeps_the_folders_dates`; and for the local engine
   `../copy/folder_dates_tests.rs` plus `move_op_tests.rs::cross_fs_move_keeps_folder_dates`.
+- **Creation dates (not kept yet)**: `network_dates_test_support.rs`'s two `..._loses_the_creation_date_today`
+  scenarios pin, on the SMB cells, that a copy onto a share is born at copy time and a copy off one is born at its
+  modification date. They flip in M5a of `docs/specs/transfer-metadata-preservation.md`.
 
 **Why it took a test layer of its own.** Every copy suite checksums both ends, and a destination stamping its own date
 passes all of them. On 2026-10-07 a 562-photo copy from a Pixel (ADB) onto a QNAP (SFTP) landed every file dated to

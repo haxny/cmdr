@@ -255,3 +255,57 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
     // (b) Its content is the target-path bytes, written verbatim (never followed).
     assert_eq!(std::fs::read(&landed).expect("read dest"), b"/etc/passwd");
 }
+
+/// A zip downloaded by a browser carries `com.apple.quarantine`, and `ditto -x`,
+/// bsdtar, and Archive Utility copy it onto everything they extract, so Gatekeeper
+/// still checks an app that came out of it.
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn extracting_a_quarantined_zip_drops_the_quarantine_today() {
+    // FLIPS IN M2: every extracted file and folder carries the zip's quarantine.
+    use cmdr_archive::{ArchiveFormat, ArchiveVolume};
+    use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
+    use cmdr_fs::volume::host::VolumeHost;
+
+    let (_tmp, zip_path) = build_extract_out_fixture();
+    set_xattr(&zip_path, QUARANTINE_XATTR, QUARANTINE_VALUE);
+
+    let dest_dir = tempfile::tempdir().expect("dest tempdir");
+    let parent: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Parent").with_local_fs_access());
+    let source: Arc<dyn Volume> = Arc::new(ArchiveVolume::new(
+        parent,
+        zip_path.clone(),
+        ArchiveFormat::Zip,
+        VolumeHost::detached(),
+    ));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dest_dir.path().to_str().expect("dest path"),
+    ));
+
+    let result = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "extract-out-quarantine-op",
+        &make_state(),
+        Arc::clone(&source),
+        &[zip_path.join("readme.txt"), zip_path.join("docs")],
+        Arc::clone(&dest),
+        Path::new("/"),
+        &VolumeCopyConfig {
+            progress_interval_ms: 0,
+            ..VolumeCopyConfig::default()
+        },
+    )
+    .await;
+    assert!(result.is_ok(), "extract-out should succeed: {result:?}");
+
+    for landed in ["readme.txt", "docs", "docs/a.txt"] {
+        let path = dest_dir.path().join(landed);
+        assert!(path.exists(), "the extract made {landed}");
+        assert_eq!(
+            xattr::get(&path, QUARANTINE_XATTR).expect("read the quarantine"),
+            None,
+            "the extract left {landed} unquarantined"
+        );
+    }
+}

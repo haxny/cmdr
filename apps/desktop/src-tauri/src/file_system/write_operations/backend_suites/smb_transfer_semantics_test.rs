@@ -398,3 +398,19 @@ async fn smb_integration_folders_copied_off_a_share_keep_their_dates() {
     let (remote, dir) = fixture().await;
     copied_folders_off_the_server_keep_their_dates(remote, dir).await;
 }
+
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_copy_onto_a_share_loses_the_creation_date_today() {
+    let (remote, dir) = fixture().await;
+    super::network_dates_test_support::a_copy_onto_the_server_loses_the_creation_date_today(remote, dir).await;
+}
+
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_copy_off_a_share_loses_the_creation_date_today() {
+    let (remote, dir) = fixture().await;
+    super::network_dates_test_support::a_copy_off_the_server_loses_the_creation_date_today(remote, dir).await;
+}

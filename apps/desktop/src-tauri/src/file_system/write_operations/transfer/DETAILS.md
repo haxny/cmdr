@@ -61,6 +61,12 @@ facts that none of those carry live here:
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own). `transfer_probe_opening_tests.rs`
   pins what a transfer says before its first byte and while a response is still arriving.
+- **`metadata_matrix_tests.rs` pins what a LOCAL copy or move keeps of each metadata class today** (birth, flags, ACL,
+  xattrs, mode, symlink dates, folders), one cell per path and class, over `cmdr_fs::testing::metadata_fixture`. Cells
+  that pin a bug or a loss carry `// FLIPS IN M<n>`, naming the `docs/specs/transfer-metadata-preservation.md` milestone
+  that converts them; it reaches the move engines through `move_op/test_support.rs`. Its siblings outside this file:
+  the extract cell in `volume/copy_extract_out_tests.rs`, the APFS → HFS+ cell in `real_image.rs`, and the SMB
+  creation-date cells in `backend_suites/network_dates_test_support.rs`.
 
 ## Copy + move semantics
 

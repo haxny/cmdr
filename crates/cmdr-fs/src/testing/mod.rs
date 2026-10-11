@@ -14,12 +14,17 @@
 //! images for tests that need a real removable volume, created, attached, and torn
 //! down through one guarded runner.
 //!
-//! [`tcp_proxy`] is the fourth: a proxy a network backend's test puts between
+//! On macOS, `metadata_fixture` builds files and folders carrying every metadata
+//! class (birth, flags, ACL, xattrs, mode) for the copy-keeps-metadata cells.
+//!
+//! [`tcp_proxy`] is the fourth:a proxy a network backend's test puts between
 //! its client and a shared Docker fixture, so it can cut the connection (closed
 //! or silent) without touching a container other runs are using.
 
 #[cfg(target_os = "macos")]
 pub mod disk_images;
+#[cfg(target_os = "macos")]
+pub mod metadata_fixture;
 pub mod tcp_proxy;
 
 use std::future::Future;
