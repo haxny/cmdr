@@ -284,15 +284,23 @@ grep -iE 'panel' hu/total-commander/WCMD.LNG.utf8        # pane → "panel" (e.g
 grep -iE 'könyvjelz|kedvenc|favorit|hotlist' hu/total-commander/WCMD.INC.utf8   # bookmark/favorites framing
 ```
 
-> [!CAUTION] **The `.utf8` suffix is only true for Western Europe.** Every TC file in the pile was converted as if its
-> bytes were windows-1252, whatever the language's real codepage was. So `de`/`es`/`fr`/`nl`/`pt`/`sv` read correctly
-> and everything else is mojibake or quietly wrong: `zh` reads `Ñ¡ÔñÀ©Õ¹Ãû…`, `vi` reads `Chá»n táº¥t cáº£…`, and `hu`
-> looks fine while saying `nevû` for `nevű`. Reading one of these as-is and calling the term unsourced is the trap.
-> Recover the original bytes by reversing the windows-1252 mapping, then decode with the real codepage:
+> [!CAUTION] **The `.utf8` suffix is true per FILE, not per language, so look before you decode.** Some TC files were
+> converted as if their bytes were windows-1252, whatever the real codepage was, and later re-extracted correctly, but
+> not all of them. In the same `zh-CN/` folder, `WCMD.LNG.utf8` is genuine UTF-8 (`6601="批量重命名工具"`) while
+> `WCMD.INC.utf8` is mojibake (`All="È«²¿"`, which is `全部`). Read a few non-ASCII lines raw first: if they read as the
+> language, use the file as-is, because the reversal below turns genuine UTF-8 into `???`. If they read like `È«²¿`,
+> `Táº¥t cáº£`, or `Âñå`, reverse it. Reading mojibake as-is and calling the term unsourced is the trap. (Verified
+> 2026-10-11, raw read plus the reversal on each file: `WCMD.LNG.utf8` reads raw for `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`,
+> `uk`, `bg`, `ar`, `he`, `th`, `sr-Cyrl`, `hu`, `pl`, `cs`, and `tr`, and is mojibake for `vi`, `ro`, `mk`, `lv`, `hy`,
+> and `ka`. `el` and `lt` carry each string twice, once genuine and once mojibake, so a grep returns both. The menu file
+> `WCMD.INC.utf8` is mojibake for every language outside windows-1252/1250, `zh-CN` and `zh-TW` included. Double
+> Commander's zh `.po` files are genuine UTF-8.) The header's `codepage=` line names the original codepage (`65001` is
+> UTF-8). To reverse a file, map the windows-1252 characters back to bytes, then decode with the real codepage:
 >
 > ```js
-> // node: <tag> -> codepage. hu/pl/cs = windows-1250, ru = windows-1251, el = windows-1253, tr = windows-1254,
-> // zh = gbk, zh-TW = big5, ja = shift_jis, ko = euc-kr, vi = utf-8 (it was already UTF-8 before the conversion).
+> // node: <tag> -> codepage. hu/pl/cs = windows-1250, ru/bg/mk = windows-1251, el = windows-1253, tr = windows-1254,
+> // lt/lv = windows-1257, zh = gbk, zh-TW = big5, ja = shift_jis, ko = euc-kr, vi/ro/hy/ka = utf-8 (UTF-8 before the
+> // bad conversion).
 > const cp = new TextDecoder('windows-1252')
 > const rev = new Map()
 > for (let b = 0; b < 256; b++) rev.set(cp.decode(Uint8Array.of(b)), b)
@@ -301,10 +309,10 @@ grep -iE 'könyvjelz|kedvenc|favorit|hotlist' hu/total-commander/WCMD.INC.utf8  
 > ```
 >
 > It's **lossy** for the five bytes windows-1252 leaves undefined (`0x81`, `0x8D`, `0x8F`, `0x90`, `0x9D`), so a few
-> characters come back as `?`: `vi` loses the `ọ` in `Chọn`, `ja` loses a kana here and there. Enough survives to read a
-> term; don't quote a `vi` or `ja` TC string verbatim without checking it against another source. (Verified 2026-09-16
-> across `hu`, `vi`, `zh`, `zh-TW`, `ru`, `tr`, `el`, `ja`, `ko`.) Double Commander's `.po` files are genuine UTF-8 and
-> have none of this, so prefer DC where both cover the term.
+> characters come back as `?`: `vi` loses the `ọ` in `Chọn`, `ka` a letter in most words. Enough survives to read a
+> term; don't quote a reversed TC string verbatim without checking it against another source. For `el` and `lt`, reverse
+> only the mojibake lines. Double Commander's `.po` files are genuine UTF-8 and have none of this, so prefer DC where
+> both cover the term.
 
 To pin an English source to a TC ID, cross-reference `TOTALCMD.INC` (the English menu reference in the installer CAB);
 TC ships no English `WCMD.LNG` (English is compiled in), so there's no English-side string file to diff against — value
