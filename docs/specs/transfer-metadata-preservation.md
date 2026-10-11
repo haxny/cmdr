@@ -7,8 +7,8 @@ backends, everything but mtime. A move makes the loss permanent, since the origi
 metadata**. `ditto` parity is the floor, not the ceiling, and our own measurements show `ditto` itself drops creation
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
-**Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), and M4 (local
-folders) done (2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost,
+**Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
+folders), and M5a (creation dates across volumes, SMB first) done (2026-10-11); review rounds 1 (correctness and data safety), 2 (architecture, resource cost,
 executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1
 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh
 read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
@@ -264,13 +264,11 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
   QNAP-shaped `vfs_fruit` answer stays unverified until M7's fixture.
 - **Same-FS move**: keeps everything; a Locked item FAILS (`rename` `EPERM`, out of scope). **Cross-FS local move**: the
   chunked row, made permanent; a Locked source stays behind (Phase 4 can't delete it).
-- **Local → SMB (direct)**: mtime keep; birth LOST (`CreationTime` = now; the fix needs no smb2 change, M5a);
-  hidden/Locked LOST (needs smb2 attributes); xattrs LOST (needs smb2#9 + a server with streams); mode/ACL n/a. Folders:
-  mtime keep, the rest as files.
-- **SMB → local**: mtime keep; birth LOST (the CREATE response and listing already carry it); hidden/readonly LOST;
-  xattrs LOST (smb2#9).
-- **SMB → SMB copy** (any share: `SmbVolume` has no server-side copy, so even a same-share copy streams): mtime only;
-  birth LOST. A move within one share renames and keeps all.
+- **Local → SMB (direct)**: mtime and birth keep (M5a, files and folders); hidden/Locked LOST (needs smb2 attributes);
+  xattrs LOST (needs smb2#9 + a server with streams); mode/ACL n/a.
+- **SMB → local**: mtime and birth keep (M5a, files and folders); hidden/readonly LOST; xattrs LOST (smb2#9).
+- **SMB → SMB copy** (any share: `SmbVolume` has no server-side copy, so even a same-share copy streams): mtime and
+  birth keep (M5a). A move within one share renames and keeps all.
 - **Local ↔ SFTP**: mtime keep; birth n/a; mode LOST both ways (attrs carry `permissions`); xattrs n/a.
 - **Local ↔ WebDAV**: mtime keep; birth LOST toward Nextcloud only if `X-OC-CTime` works (to verify), else n/a; folder
   dates n/a; the rest n/a.
@@ -800,6 +798,39 @@ decided; then the ask itself, creation and modification dates on files AND folde
 - **DONE**: the cells above are green; `apply_source_mode` is gone; docs updated (`volume/DETAILS.md` § "Copies keep the
   source's metadata", `cmdr-fs` volume docs, `cmdr-smb` docs). The report asks David for the Finder check: through a
   fresh mount, Date Created shows the original on files and folders Cmdr copied to a share, and a copy back keeps it.
+- **Done** (2026-10-11). Where the code differs from the plan above:
+  - **The engine doesn't snapshot the post-landing flags yet.** No cross-volume pair carries one in M5a (local to local
+    is native, SMB stores none until M6, and no other source reports flags), so the snapshot would be untestable
+    plumbing through `stream_pipe_file`'s many callers and both finalizers. The vocabulary is in place
+    (`CarriedMetadata::after_landing`; `apply_metadata` puts flags on last on local and `InMemoryVolume`), and M6 wires
+    the snapshot with its first consumer (SMB `READONLY`), applying it after `staged.commit` and after
+    `finalize_safe_replace`.
+  - **An extract's folder quarantine stays at creation**, through `apply_metadata` with an xattrs-only set, ❌ not in
+    `FolderMetadata`: that pass skips undated folders (a zip's implicit ones) and every folder of a cancelled subtree,
+    M2's reason. The file half is the planned decorator (`extract_quarantine::quarantine_stream`). The plain
+    `xattr::set` exception to invariant 11 is gone.
+  - **No folder mode across volumes.** `FolderMetadata` carries the modification and creation dates only: a routed
+    folder's mode is rarely meaningful (git trees are all `0o755`, `/sdcard` `0771`), and a folder without owner write
+    would refuse every reversal that removes its contents. Files carry the folded mode as planned.
+  - **The top-level folder's birth rides the scan**, like its mtime: `CopyScanResult::top_level_created_at` (local, SMB,
+    MTP, `scan_walk`, and `InMemoryVolume` fill it; the archive has none), through `SourceHint` and
+    `SourceFileFacts::folder_dates`. A `get_metadata` at stamp time would be the per-folder request the S3 cost cell
+    already caught once.
+  - **The umask is probed once per process** with a throwaway folder (`cmdr_fs::metadata::default_file_mode`), since the
+    `0600` temp can't be its proxy and `umask(2)` can't be read without setting it. The fold moved to
+    `cmdr_fs::metadata::routed_mode`; `landed_mode.rs` is gone.
+  - **The local destination asks the stream once, before the first chunk**, so a local source's xattrs are read while
+    its fd is still open (the stream drops it at EOF), and the temp can be created `0600` only when there's a mode.
+  - **The flush moved to `cmdr_fs::durable::sync_file_data`**, shared by the chunked arm and the local destination, so
+    the destination now also falls back to `fsync` on a Samba mount's `ENOTSUP`, then sets the dates.
+  - **git**: `tree::lookup_blob_id` became `lookup_blob`, returning the entry's mode beside the id.
+  - **SMB evidence**: `CreationTime` survives the landing rename on the Docker guest share (Samba 4.20.6,
+    `store dos attributes = yes`), anchored in `crates/cmdr-smb/DETAILS.md` § "Dates on copies".
+  - **The one-frame write's round trip (optional)**: Samba 4.20.6 keeps a SET_INFO placed inside
+    CREATE+WRITE+FLUSH+SET_INFO+CLOSE (five of five files listed its dates, not the CLOSE's), so folding is safe there.
+    Not adopted: it needs `smb2` to take `FileTimes` in `write_file_compound`, and Windows refuses a FLUSH that isn't
+    last in its compound. Recorded in the same `DETAILS.md` section.
+  - No new user-facing strings.
 
 ### M5b: The user hears about what couldn't be kept. Size: M (1 session)
 
