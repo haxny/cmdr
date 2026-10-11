@@ -620,10 +620,15 @@
         return isAuto && conflictPolicy === 'skip'
     }
 
-    async function handleConfirm(isAuto = false, { startInBackground = false }: ConfirmOptions = {}) {
+    /** Resolves `true` once the press reached `onConfirm`, `false` when a guard
+     *  stopped it (an MCP `dialog confirm` answers the agent from that). */
+    async function handleConfirm(
+        isAuto = false,
+        { startInBackground = false, mcpRequestId: confirmRequestId }: ConfirmOptions = {},
+    ): Promise<boolean> {
         // A refused source can't be read, so there's nothing to confirm. A confirm that
         // beats the refusal (MCP auto-confirm) reaches the backend, which refuses it typed.
-        if (pathError || scan.sourceRefusal || confirmed) return
+        if (pathError || scan.sourceRefusal || confirmed) return false
         confirmed = true
         confirmPending = true
         // Compress auto-confirm must not silently overwrite an existing archive:
@@ -637,7 +642,7 @@
                 const { emit } = await import('@tauri-apps/api/event')
                 void emit('mcp-response', { requestId: mcpRequestId, ok: true })
             }
-            return
+            return false
         }
         // Same-volume move: dispatch IMMEDIATELY. No deep scan ever ran (the
         // backend renames server-side, zero bytes), so there's nothing to wait
@@ -646,8 +651,8 @@
         // check only gates `skip`.
         if (isSameVolumeMove) {
             scan.cancelPreview()
-            await confirmTransfer({ previewId: null, isAuto, startInBackground })
-            return
+            await confirmTransfer({ previewId: null, isAuto, startInBackground, confirmRequestId })
+            return true
         }
         // Wait for `startScanPreview` so `previewId` is non-null on a fast
         // confirm (MCP, Playwright, rapid Enter). Dropping this is a three-part
@@ -663,17 +668,20 @@
         // can take minutes on a big remote dir, and only `skip` consumes its
         // names.
         await scan.scanStarted
-        await confirmTransfer({ previewId: scan.previewId, isAuto, startInBackground })
+        await confirmTransfer({ previewId: scan.previewId, isAuto, startInBackground, confirmRequestId })
+        return true
     }
 
     async function confirmTransfer({
         previewId,
         isAuto,
         startInBackground,
+        confirmRequestId,
     }: {
         previewId: string | null
         isAuto: boolean
         startInBackground: boolean
+        confirmRequestId: string | undefined
     }) {
         if (needsConflictNames(isAuto) && !isRenameMode) await (conflictCheckPromise ??= conflicts.check())
         onConfirm({
@@ -691,16 +699,19 @@
                 : {}),
             // F2 / Background: the one difference from Enter.
             ...(startInBackground ? { startInBackground: true } : {}),
+            ...(confirmRequestId !== undefined ? { mcpRequestId: confirmRequestId } : {}),
         })
     }
 
     // An MCP `dialog confirm` is the Confirm button under a policy the agent named:
     // same path, same box contents, same preview. Registered during init, so a
     // confirm that lands while the mount is still resolving the home dir finds it.
-    // Asking for the background presses the Background button instead.
-    const unregisterConfirmer = registerConfirmer?.((policy, options) => {
+    // Asking for the background presses the Background button instead. The
+    // agent's round-trip id rides the payload, so the start answers it with the
+    // operation's id; a press a guard stopped says so here.
+    const unregisterConfirmer = registerConfirmer?.(async (policy, options) => {
         conflictPolicy = policy
-        void handleConfirm(false, options)
+        return (await handleConfirm(false, options)) ? 'pressed' : 'notStarted'
     })
 
     function handleCancel() {

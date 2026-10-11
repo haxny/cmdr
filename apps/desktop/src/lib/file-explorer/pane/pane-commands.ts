@@ -39,7 +39,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     dialogType: ConfirmDialogType,
     onConflict?: string,
     options?: ConfirmOptions,
-  ): ProgrammaticConfirmVerdict {
+  ): Promise<ProgrammaticConfirmVerdict> {
     return dialogs.confirmOpenDialog(dialogType, onConflict, options)
   }
 

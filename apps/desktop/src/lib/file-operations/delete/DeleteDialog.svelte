@@ -36,7 +36,7 @@
     import { withTimeout } from '$lib/utils/timing'
     import Trans from '$lib/intl/Trans.svelte'
     import { t, tString } from '$lib/intl/messages.svelte'
-    import type { ConfirmOptions, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
+    import type { ConfirmOptions, ConfirmOrigin, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
     import StartInBackgroundButton from '../StartInBackgroundButton.svelte'
     import { isStartInBackgroundKey, swallowHeldKeyRepeat } from '../start-in-background-key'
 
@@ -71,12 +71,14 @@
         sourceVolumeId: string
         /** When true, dialog auto-confirms without user interaction (MCP). */
         autoConfirm?: boolean
-        onConfirm: (previewId: string | null, isPermanent: boolean) => void
+        /** `origin` names the MCP `dialog confirm` that pressed it, whose round-trip
+         *  the start answers with the operation's id. */
+        onConfirm: (previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => void
         /** F2 or the Background button: TRASH with no progress dialog. No mode
          *  rides along, so this can't start a permanent delete; the dialog offers
          *  it only while it would trash. Absent, the dialog offers no background
          *  start at all. */
-        onConfirmInBackground?: (previewId: string | null) => void
+        onConfirmInBackground?: (previewId: string | null, origin?: ConfirmOrigin) => void
         /** Takes this dialog's own confirm for as long as it's mounted, so an MCP
          *  `dialog confirm` presses the same button a person does. Returns the
          *  unregister. */
@@ -390,9 +392,13 @@
         cleanup()
     })
 
-    async function handleConfirm({ startInBackground = false }: ConfirmOptions = {}) {
-        if (confirming) return
-        if (startInBackground && !canTrashInBackground) return
+    /** Resolves `true` once the press reached `onConfirm` / `onConfirmInBackground`,
+     *  `false` when a guard stopped it (an MCP `dialog confirm` answers the agent
+     *  from that). */
+    async function handleConfirm({ startInBackground = false, mcpRequestId }: ConfirmOptions = {}): Promise<boolean> {
+        if (confirming) return false
+        if (startInBackground && !canTrashInBackground) return false
+        const origin: ConfirmOrigin | undefined = mcpRequestId !== undefined ? { mcpRequestId } : undefined
         confirming = true
         handedBackForOnlineOnly = false
         log.info('Delete confirmed: isPermanent={isPermanent}, items={count}, inBackground={inBackground}', {
@@ -409,7 +415,7 @@
             // a trash or a delete, and pressing before it answers must not settle
             // it by luck. Everywhere else this block never runs.
             await withTimeout(onlineOnlyAnswer, ONLINE_ONLY_ANSWER_TIMEOUT_MS, undefined)
-            if (destroyed) return
+            if (destroyed) return false
             if (onlineOnlyFoundByWalk !== null && !autoConfirm) {
                 // The answer just turned this button from "Move to trash" into a
                 // permanent delete, and the banner beside it changed too. Hand the
@@ -419,7 +425,7 @@
                 // auto-confirm asked for the delete outright, so it goes through.
                 confirming = false
                 handedBackForOnlineOnly = true
-                return
+                return false
             }
         }
 
@@ -428,25 +434,27 @@
             // A press that meant "trash, out of sight" never becomes a delete.
             if (!onConfirmInBackground || isPermanent) {
                 confirming = false
-                return
+                return false
             }
             confirmed = true
-            onConfirmInBackground(previewId)
-            return
+            onConfirmInBackground(previewId, origin)
+            return true
         }
 
         confirmed = true
-        onConfirm(previewId, isPermanent)
+        onConfirm(previewId, isPermanent, origin)
+        return true
     }
 
     // An MCP `dialog confirm` is the Confirm button: same preview, same mode.
     // Registered during init, so a confirm that lands while the scan is still
     // starting finds it and waits for the id like a fast Enter does. Asking for
     // the background presses the Background button, under the same trash-only rule.
-    const unregisterConfirmer = registerConfirmer?.((options) => {
+    // The agent's round-trip id rides along, so the start answers it with the
+    // operation's id; a press a guard stopped says so here.
+    const unregisterConfirmer = registerConfirmer?.(async (options) => {
         if (options?.startInBackground && !canTrashInBackground) return 'refusedPermanentDelete'
-        void handleConfirm(options)
-        return 'pressed'
+        return (await handleConfirm(options)) ? 'pressed' : 'notStarted'
     })
 
     function handleCancel() {

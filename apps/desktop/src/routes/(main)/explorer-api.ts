@@ -253,7 +253,7 @@ export interface ExplorerAPI {
     dialogType: ConfirmDialogType,
     onConflict?: string,
     options?: ConfirmOptions,
-  ) => ProgrammaticConfirmVerdict
+  ) => Promise<ProgrammaticConfirmVerdict>
   isConfirmationDialogOpen: () => boolean
   isRenaming: () => boolean
   /**

@@ -140,12 +140,14 @@ budget on timeout.
   dialogs from `copy`/`move`/`delete` (`autoConfirm: false`), `mkdir`, `mkfile`, and `dialog open about`.
 - **`SoftDialogDisappeared(id)`**: fires when a soft dialog with that id is no longer tracked. Used by
   `dialog close <confirmation>` (the FE `ModalDialog` fires `notifyDialogClosed` on unmount), and by
-  `dialog confirm <transfer|delete>`: a confirm the FE acted on takes the dialog down in the same tick it starts the
-  operation. ❌ Don't ack a confirm on `GenerationAdvanced`: a compress, or a copy onto a slow volume, changes nothing
-  in either pane until its first file lands, so the tool answered "not acknowledged" about an operation that had
-  started (a 300 MB compress onto a phone, 2026-09-30). ❗ This signal is also true of a dialog that was never open, so
-  `confirm_open_dialog` checks the tracker FIRST and refuses a confirm of nothing with `invalid_params`. A confirm the
-  dialog declines (an invalid path in its box) leaves the dialog up and times out, which is the honest answer.
+  `dialog confirm <transfer|delete>`, AFTER its round-trip: the press carries the request id into the start, which
+  answers with the spawned `operationId` (as an auto-confirmed `copy` does), and the FE takes the dialog down in the
+  same tick it starts the operation. ❌ Don't ack a confirm on `GenerationAdvanced`: a compress, or a copy onto a slow
+  volume, changes nothing in either pane until its first file lands, so the tool answered "not acknowledged" about an
+  operation that had started (a 300 MB compress onto a phone, 2026-09-30). ❗ This signal is also true of a dialog that
+  was never open, so `confirm_and_await_start` checks the tracker FIRST and refuses a confirm of nothing with
+  `invalid_params`. A press the dialog's own guard stops (a refused source, a press already in flight, a cloud trash
+  handed back) answers `refusal: "notStarted"` at once, typed, and the dialog stays up.
 - **`WindowAppeared(label)`**: fires when a `webview_windows()` entry matches (exact, or `viewer-*`). Used by
   `dialog open settings|file-viewer` and `dialog focus file-viewer`. `dialog focus settings` needs no ack: the backend
   raises that window itself (`set_focus`), and a closed one is `invalid_params`.

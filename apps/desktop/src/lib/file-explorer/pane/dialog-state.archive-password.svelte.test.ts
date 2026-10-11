@@ -308,7 +308,7 @@ describe('archive-password supplied over MCP', () => {
     dialogs.startTransferProgress(copyProps())
     dialogs.handleTransferError(needsPassword(false), null)
 
-    dialogs.confirmOpenDialog('archive-password')
+    void dialogs.confirmOpenDialog('archive-password')
 
     // ⭐ The proof. A person's submit re-shows the progress dialog on a fresh
     // dispatch; this must not, or extraction would be the one write that skips
@@ -328,7 +328,7 @@ describe('archive-password supplied over MCP', () => {
     dialogs.startTransferProgress(copyProps())
     dialogs.handleTransferError(needsPassword(false), null)
 
-    dialogs.confirmOpenDialog('archive-password')
+    void dialogs.confirmOpenDialog('archive-password')
 
     expect(clearArchivePassword).not.toHaveBeenCalled()
     // The backend stored it before confirming, so the frontend stores nothing:
@@ -346,7 +346,7 @@ describe('archive-password supplied over MCP', () => {
       retry,
     })
 
-    dialogs.confirmOpenDialog('archive-password')
+    void dialogs.confirmOpenDialog('archive-password')
 
     expect(retry).toHaveBeenCalled()
     expect(dialogs.showArchivePasswordDialog).toBe(false)
@@ -355,7 +355,7 @@ describe('archive-password supplied over MCP', () => {
 
   it('is a no-op when no prompt is up', () => {
     const { dialogs } = makeState()
-    dialogs.confirmOpenDialog('archive-password')
+    void dialogs.confirmOpenDialog('archive-password')
 
     expect(dialogs.showArchivePasswordDialog).toBe(false)
     expect(notifyArchivePasswordDismissed).not.toHaveBeenCalled()

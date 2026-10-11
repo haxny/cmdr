@@ -43,21 +43,41 @@ export interface TransferConfirmPayload {
   /** F2 or the Background button: start the operation with no progress dialog
    *  (`background-operations.svelte.ts`). Everything else is what Enter sends. */
   startInBackground?: boolean
+  /** Pressed by an MCP `dialog confirm`: its round-trip id, which the start
+   *  answers with the operation's id. Wins over the dialog's own. */
+  mcpRequestId?: string
+}
+
+/** Who waits on a confirm's start: an MCP `dialog confirm`, by its round-trip id. */
+export interface ConfirmOrigin {
+  mcpRequestId?: string
 }
 
 /** How a programmatic confirm presses the button: Confirm, or (with
  *  `startInBackground`) the Background button beside it. */
-export interface ConfirmOptions {
+export interface ConfirmOptions extends ConfirmOrigin {
   startInBackground?: boolean
 }
+
+/**
+ * What a programmatic press did. `pressed`: it reached the start, which answers
+ * an MCP round-trip itself. `notStarted`: a guard the dialog holds for a person
+ * too stopped it, and the dialog stays up. `refusedPermanentDelete`: a
+ * background press on a delete dialog that would delete permanently.
+ */
+export type ConfirmPress = 'pressed' | 'notStarted' | 'refusedPermanentDelete'
 
 /**
  * The transfer dialog's own confirm, as something a caller outside it can press
  * (the MCP `dialog confirm`): the same function its button runs, under the
  * conflict policy the caller names. `startInBackground` presses the Background
- * button instead, with the same guards F2 has.
+ * button instead, with the same guards F2 has. Resolves once the press reached
+ * the start or a guard.
  */
-export type TransferConfirmer = (conflictResolution: ConflictResolution, options?: ConfirmOptions) => void
+export type TransferConfirmer = (
+  conflictResolution: ConflictResolution,
+  options?: ConfirmOptions,
+) => Promise<ConfirmPress>
 
 /**
  * The delete dialog's own confirm, as something a caller outside it can press
@@ -65,11 +85,7 @@ export type TransferConfirmer = (conflictResolution: ConflictResolution, options
  * `startInBackground` presses the Background button instead, which exists only
  * for a TRASH: on a permanent delete it does nothing, as F2 does, and says so.
  */
-export type DeleteConfirmer = (options?: ConfirmOptions) => DeleteConfirmPress
-
-/** What a delete dialog's press did: pressed, or a background press refused
- *  because the dialog would delete permanently. */
-export type DeleteConfirmPress = 'pressed' | 'refusedPermanentDelete'
+export type DeleteConfirmer = (options?: ConfirmOptions) => Promise<ConfirmPress>
 
 /**
  * What a transfer operation reports when it finishes: `TransferProgressDialog`'s
@@ -132,8 +148,9 @@ export interface TransferProgressPropsData {
   fileCount?: number
   /** Top-level folders the operation will transfer (for the completion toast's per-type split). */
   folderCount?: number
-  /** MCP round-trip id, present only for an auto-confirmed MCP op. Forwarded to
-   *  the progress state so it replies `mcp-response` with the spawned operationId. */
+  /** MCP round-trip id, present only for an op an agent started (an auto-confirm,
+   *  or a `dialog confirm`). Forwarded to the start, which replies `mcp-response`
+   *  with the spawned operationId. */
   mcpRequestId?: string
   /** Who triggered this operation (`aiClient` for MCP-originated writes). */
   initiator?: Initiator

@@ -19,23 +19,36 @@
 
 import { conflictPolicyFromMcpName } from '$lib/file-operations/transfer/conflict-policy'
 import { getAppLogger } from '$lib/logging/logger'
-import type { ConfirmOptions, DeleteConfirmer, TransferConfirmer } from './dialog-props'
+import type { ConfirmOptions, ConfirmPress, DeleteConfirmer, TransferConfirmer } from './dialog-props'
 
 const log = getAppLogger('fileExplorer')
 
 /**
- * What a programmatic confirm did, for the MCP reply. Mirrored by
- * `BackgroundConfirmAck` in `src-tauri/src/mcp/executor/dialogs.rs`: the refusal
- * crosses as this typed field, ❌ never as message text.
+ * What a programmatic confirm did, for the MCP reply. Mirrored by `ConfirmAck`
+ * in `src-tauri/src/mcp/executor/dialogs.rs`: the refusal crosses as this typed
+ * field, ❌ never as message text. `pressed` reached the start, and the start
+ * answers the round-trip with its operation id (`options.mcpRequestId`).
  */
 export type ProgrammaticConfirmVerdict =
   | { pressed: true }
   | {
       pressed: false
       /** `permanentDelete`: a background press on a dialog that would delete
-       *  permanently. `notReady`: no such dialog is open and mounted. */
-      refusal: 'permanentDelete' | 'notReady'
+       *  permanently. `notStarted`: the dialog took the press and a guard of its
+       *  own started nothing. `notReady`: no such dialog is open and mounted. */
+      refusal: 'permanentDelete' | 'notStarted' | 'notReady'
     }
+
+function verdictFor(press: ConfirmPress): ProgrammaticConfirmVerdict {
+  switch (press) {
+    case 'pressed':
+      return PRESSED
+    case 'notStarted':
+      return { pressed: false, refusal: 'notStarted' }
+    case 'refusedPermanentDelete':
+      return { pressed: false, refusal: 'permanentDelete' }
+  }
+}
 
 const PRESSED: ProgrammaticConfirmVerdict = { pressed: true }
 const NOT_READY: ProgrammaticConfirmVerdict = { pressed: false, refusal: 'notReady' }
@@ -80,13 +93,14 @@ export function createProgrammaticConfirm(deps: ProgrammaticConfirmDeps) {
 
     /** Programmatically confirm an open dialog (for MCP confirm action). With
      *  `startInBackground` it presses the dialog's Background button (F2)
-     *  instead, under the same rules, and the verdict says whether it did: the
-     *  MCP tool answers the agent from it (`mcp/executor/dialogs.rs`). */
-    confirmOpenDialog(
+     *  instead, under the same rules. Resolves once the press reached the start
+     *  or a guard, and the verdict says which: the MCP tool answers the agent
+     *  from it (`mcp/executor/dialogs.rs`). */
+    async confirmOpenDialog(
       dialogType: string,
       onConflict?: string,
       options: ConfirmOptions = {},
-    ): ProgrammaticConfirmVerdict {
+    ): Promise<ProgrammaticConfirmVerdict> {
       if (dialogType === 'transfer-confirmation' && deps.isTransferDialogOpen()) {
         // A policy the backend accepted but the map doesn't know would quietly
         // become `skip`, so an agent that asked to be asked per file would
@@ -103,8 +117,7 @@ export function createProgrammaticConfirm(deps: ProgrammaticConfirmDeps) {
           log.warn('A programmatic confirm found the transfer dialog open but not mounted yet; nothing confirmed')
           return NOT_READY
         }
-        press(mapped ?? 'skip', options)
-        return PRESSED
+        return verdictFor(await press(mapped ?? 'skip', options))
       } else if (dialogType === 'delete-confirmation' && deps.isDeleteDialogOpen()) {
         // Same press as the button: the scan preview the dialog started and the
         // mode it shows now, including a trash the walk turned into a delete (then
@@ -116,7 +129,7 @@ export function createProgrammaticConfirm(deps: ProgrammaticConfirmDeps) {
         }
         // A background press on a dialog that would delete permanently is refused by
         // the dialog itself (it's the one operation nothing undoes), typed.
-        return press(options) === 'refusedPermanentDelete' ? { pressed: false, refusal: 'permanentDelete' } : PRESSED
+        return verdictFor(await press(options))
       } else if (dialogType === 'archive-password' && deps.isArchivePasswordOpen()) {
         // The `unlock_archive` tool already stored the password on the backend;
         // this is the follow-up. ⚠️ It settles a transfer rather than

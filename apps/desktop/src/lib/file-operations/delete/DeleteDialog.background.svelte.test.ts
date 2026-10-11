@@ -202,7 +202,7 @@ describe('trashing in the background', () => {
     const { press, backgrounds, confirms } = mountDialog()
     await settle()
 
-    expect(press()({ startInBackground: true })).toBe('pressed')
+    expect(await press()({ startInBackground: true })).toBe('pressed')
     await settle()
 
     expect(backgrounds).toEqual(['preview-1'])
@@ -228,7 +228,7 @@ describe('never a permanent delete', () => {
     await settle()
     expect(backgroundButton(dialog.target)).toBeNull()
     typeKey(dialog.target, { key: 'F2' })
-    expect(dialog.press()({ startInBackground: true }), 'the MCP press says why').toBe('refusedPermanentDelete')
+    expect(await dialog.press()({ startInBackground: true }), 'the MCP press says why').toBe('refusedPermanentDelete')
     await settle()
     expect(dialog.backgrounds).toEqual([])
     expect(dialog.confirms).toEqual([])

@@ -132,4 +132,14 @@ describe('a Move inside its own folder', () => {
     expect(left.startRename).not.toHaveBeenCalled()
     expect(dialogs.showTransferProgressDialog).toBe(true)
   })
+
+  it('keeps the transfer for an agent’s `dialog confirm` on a person’s dialog, which waits the same way', () => {
+    const { dialogs, left } = setup()
+    dialogs.showTransfer(moveProps())
+
+    dialogs.handleTransferConfirm({ ...CONFIRM, mcpRequestId: 'req-2' })
+
+    expect(left.startRename).not.toHaveBeenCalled()
+    expect(dialogs.transferProgressProps?.mcpRequestId).toBe('req-2')
+  })
 })

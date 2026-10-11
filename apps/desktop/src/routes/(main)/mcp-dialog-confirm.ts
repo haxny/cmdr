@@ -1,12 +1,14 @@
 /**
  * MCP `dialog confirm`: press the open dialog's confirm, or with
- * `startInBackground` its Background button (F2), and for a background press
- * tell the agent whether it happened.
+ * `startInBackground` its Background button (F2), and answer the agent with the
+ * operation that press started.
  *
- * Only the background press is a round-trip (`mcp/executor/dialogs.rs`): it can
- * be refused, and a refused press leaves the dialog up, which the backend's
- * "dialog went away" ack can't tell from a slow one. A permanent delete refuses
- * it, and the refusal crosses as the typed `refusal` field, ❌ never as text.
+ * Every confirm is a round-trip (`mcp/executor/dialogs.rs`). Its id rides the
+ * press into the start, and a press that got there is answered by the START
+ * (`transfer-dispatch.ts::startTransferOperation`) with the spawned
+ * `operationId`, or by the start gate with what's in the way, exactly as an
+ * auto-confirmed `copy` is. Only a press that didn't get there answers here: a
+ * refusal crosses as the typed `refusal` field, ❌ never as text.
  */
 
 import type { ConfirmDialogType } from '$lib/commands'
@@ -20,7 +22,7 @@ export async function confirmDialogForMcp(args: {
   type: ConfirmDialogType
   onConflict?: string
   startInBackground?: boolean
-  /** The MCP round-trip id. Present only for a background confirm. */
+  /** The MCP round-trip id. */
   requestId: string | undefined
 }): Promise<void> {
   const { explorer, type, onConflict, startInBackground, requestId } = args
@@ -35,12 +37,11 @@ export async function confirmDialogForMcp(args: {
     await reply({ ok: false, error: 'Explorer is not ready' })
     return
   }
-  const verdict = explorer.confirmDialog(type, onConflict, { startInBackground })
-  if (verdict.pressed) {
-    await reply({ ok: true })
-  } else if (verdict.refusal === 'permanentDelete') {
-    await reply({ ok: false, refusal: 'permanentDelete' })
-  } else {
+  const verdict = await explorer.confirmDialog(type, onConflict, { startInBackground, mcpRequestId: requestId })
+  if (verdict.pressed) return
+  if (verdict.refusal === 'notReady') {
     await reply({ ok: false, error: `No ${type} dialog is open and ready to confirm` })
+  } else {
+    await reply({ ok: false, refusal: verdict.refusal })
   }
 }

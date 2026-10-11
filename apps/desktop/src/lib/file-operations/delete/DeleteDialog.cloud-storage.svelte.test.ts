@@ -199,7 +199,7 @@ describe('DeleteDialog over online-only cloud content', () => {
     expect(bannerText(target)).toBe('')
     confirmButton(target).click()
     await settle()
-    expect(onConfirm).toHaveBeenCalledWith('preview-1', false)
+    expect(onConfirm).toHaveBeenCalledWith('preview-1', false, undefined)
   })
 
   /** The race the whole wait exists for. Pressing "Move to trash" while the walk
@@ -246,7 +246,7 @@ describe('DeleteDialog over online-only cloud content', () => {
     // And the second press, now over a dialog that says what it will do, goes.
     confirmButton(target).click()
     await settle()
-    expect(onConfirm).toHaveBeenCalledWith('preview-1', true)
+    expect(onConfirm).toHaveBeenCalledWith('preview-1', true, undefined)
     expect(handedBackText(target), 'the explanation goes with the press it explained').toBeNull()
   })
 })

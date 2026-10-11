@@ -1189,7 +1189,9 @@ smaller change, but it holds the slot until the id lands and can flash a frame.
 - **Cancel and rollback**: from the queue window's row, like any background job. **Quit gate**: backend-owned, it sees
   the registry, so nothing to do here. **Foreground claim**: none, on purpose (above).
 
-**MCP.** `dialog confirm` with `background: true` presses the same button: both confirmers take `{ startInBackground }`
-(`../../file-explorer/pane/dialog-props.ts::ConfirmOptions`), and the delete one answers `refusedPermanentDelete`
-instead of pressing, which reaches the agent as `data.refusal`. Flow and contract:
+**MCP.** `dialog confirm` with `background: true` presses the same button: both confirmers take
+`{ startInBackground, mcpRequestId }` (`../../file-explorer/pane/dialog-props.ts::ConfirmOptions`) and resolve a
+`ConfirmPress`. The request id rides the payload into `background.start`, so `startTransferOperation` answers the agent
+with the operation's id; the delete one answers `refusedPermanentDelete` instead of pressing, and a press a guard stops
+answers `notStarted`, both reaching the agent as `data.refusal`. Flow and contract:
 `apps/desktop/src-tauri/src/mcp/DETAILS.md` (the dialogs entry).

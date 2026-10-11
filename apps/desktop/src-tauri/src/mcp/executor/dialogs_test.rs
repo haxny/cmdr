@@ -1,4 +1,4 @@
-//! Tests for `dialogs.rs`: the confirm acks, the background confirm round-trip, and focus.
+//! Tests for `dialogs.rs`: the confirm round-trip (foreground and background), and focus.
 
 use super::*;
 use crate::mcp::dialog_state::KnownDialog;
@@ -32,23 +32,13 @@ fn app_with_stores() -> tauri::App<tauri::test::MockRuntime> {
     app
 }
 
-/// Stands in for the frontend: a confirm takes the dialog down, and nothing
-/// in either pane changes until the operation's first file lands.
-fn close_dialog_on_confirm(app: &AppHandle<tauri::test::MockRuntime>, dialog_type: &'static str) {
-    use tauri::Listener;
-    let handle = app.clone();
-    app.listen("mcp-confirm-dialog", move |_| {
-        handle.state::<SoftDialogTracker>().close(dialog_type);
-    });
-}
-
 #[tokio::test]
 async fn a_confirm_acks_once_its_dialog_is_gone_with_no_pane_change() {
     for dialog_type in ["transfer-confirmation", "delete-confirmation"] {
         let app = app_with_stores();
         let handle = app.handle().clone();
         handle.state::<SoftDialogTracker>().open(dialog_type.to_string());
-        close_dialog_on_confirm(&handle, dialog_type);
+        answer_confirm(&handle, dialog_type, json!({ "ok": true, "operationId": "op-1" }));
 
         // Pre-fix this waited for a pane-state push, which a compress or a copy
         // onto a slow volume doesn't make for seconds: the tool answered "not
@@ -56,6 +46,111 @@ async fn a_confirm_acks_once_its_dialog_is_gone_with_no_pane_change() {
         let outcome = execute_dialog_command(&handle, &json!({ "action": "confirm", "type": dialog_type })).await;
         assert!(outcome.is_ok(), "{dialog_type}: {:?}", outcome.err().map(|e| e.message));
     }
+}
+
+#[tokio::test]
+async fn a_confirm_reports_the_started_operation_id() {
+    for (dialog_type, background) in [
+        ("transfer-confirmation", false),
+        ("delete-confirmation", false),
+        ("transfer-confirmation", true),
+        ("delete-confirmation", true),
+    ] {
+        let app = app_with_stores();
+        let handle = app.handle().clone();
+        handle.state::<SoftDialogTracker>().open(dialog_type.to_string());
+        answer_confirm(&handle, dialog_type, json!({ "ok": true, "operationId": "op-42" }));
+
+        let outcome = execute_dialog_command(
+            &handle,
+            &json!({ "action": "confirm", "type": dialog_type, "background": background }),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{dialog_type} background={background}: {}", e.message));
+
+        let text = outcome.as_str().expect("an OK line");
+        assert!(
+            text.contains("(operationId: op-42)"),
+            "{dialog_type} background={background}: {text}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_confirm_whose_start_was_refused_reports_no_operation_id() {
+    let app = app_with_stores();
+    let handle = app.handle().clone();
+    handle
+        .state::<SoftDialogTracker>()
+        .open("transfer-confirmation".to_string());
+    answer_confirm(
+        &handle,
+        "transfer-confirmation",
+        json!({ "ok": false, "error": "Destination is read-only" }),
+    );
+
+    let outcome = execute_dialog_command(
+        &handle,
+        &json!({ "action": "confirm", "type": "transfer-confirmation", "background": true }),
+    )
+    .await;
+
+    let error = outcome.expect_err("a refused start started nothing");
+    assert!(error.message.contains("Destination is read-only"), "{}", error.message);
+    assert!(!error.message.contains("operationId"), "{}", error.message);
+}
+
+#[tokio::test]
+async fn a_confirm_the_dialog_did_not_act_on_is_refused_typed() {
+    for background in [false, true] {
+        let app = app_with_stores();
+        let handle = app.handle().clone();
+        handle
+            .state::<SoftDialogTracker>()
+            .open("delete-confirmation".to_string());
+        answer_confirm(
+            &handle,
+            "delete-confirmation",
+            json!({ "ok": false, "refusal": "notStarted" }),
+        );
+
+        let outcome = execute_dialog_command(
+            &handle,
+            &json!({ "action": "confirm", "type": "delete-confirmation", "background": background }),
+        )
+        .await;
+
+        let error = outcome.expect_err("the dialog started nothing");
+        assert_eq!(error.code, ToolError::invalid_params("").code);
+        assert_eq!(
+            error.data,
+            Some(json!({ "refusal": "notStarted" })),
+            "background={background}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_foreground_confirm_the_start_gate_refused_names_the_blocking_dialog() {
+    let app = app_with_stores();
+    let handle = app.handle().clone();
+    handle
+        .state::<SoftDialogTracker>()
+        .open("transfer-confirmation".to_string());
+    answer_confirm(
+        &handle,
+        "transfer-confirmation",
+        json!({ "ok": false, "blockedBy": "transfer-progress", "error": "in the way" }),
+    );
+
+    let outcome = execute_dialog_command(
+        &handle,
+        &json!({ "action": "confirm", "type": "transfer-confirmation" }),
+    )
+    .await;
+
+    let error = outcome.expect_err("the progress slot is taken");
+    assert_eq!(error.data, Some(json!({ "blockingDialog": "transfer-progress" })));
 }
 
 #[tokio::test]
@@ -76,10 +171,11 @@ async fn a_confirm_with_no_such_dialog_open_is_refused_up_front() {
     );
 }
 
-/// Stands in for the frontend's answer to a background confirm: replies on
-/// `mcp-response` with what the dialog's Background press did, and takes the
-/// dialog down when it pressed. Returns the payloads it saw.
-fn answer_background_confirm(
+/// Stands in for the frontend's answer to a confirm: replies on `mcp-response`
+/// with what the press, and the start it led to, did, and takes the dialog down
+/// when it pressed (a start the gate refused takes it down too). Returns the
+/// payloads it saw.
+fn answer_confirm(
     app: &AppHandle<tauri::test::MockRuntime>,
     dialog_type: &'static str,
     reply: Value,
@@ -93,7 +189,7 @@ fn answer_background_confirm(
         seen_in_listener.lock().expect("unpoisoned").push(payload.clone());
         let mut response = reply.clone();
         response["requestId"] = payload["requestId"].clone();
-        if response["ok"] == json!(true) {
+        if response["ok"] == json!(true) || response.get("blockedBy").is_some() {
             handle.state::<SoftDialogTracker>().close(dialog_type);
         }
         handle.emit("mcp-response", response).expect("emit the reply");
@@ -107,7 +203,7 @@ async fn a_background_confirm_presses_the_background_button_and_acks_once_the_di
         let app = app_with_stores();
         let handle = app.handle().clone();
         handle.state::<SoftDialogTracker>().open(dialog_type.to_string());
-        let seen = answer_background_confirm(&handle, dialog_type, json!({ "ok": true }));
+        let seen = answer_confirm(&handle, dialog_type, json!({ "ok": true, "operationId": "op-1" }));
 
         let outcome = execute_dialog_command(
             &handle,
@@ -129,7 +225,7 @@ async fn a_background_confirm_of_a_permanent_delete_is_refused_typed() {
     handle
         .state::<SoftDialogTracker>()
         .open("delete-confirmation".to_string());
-    answer_background_confirm(
+    answer_confirm(
         &handle,
         "delete-confirmation",
         json!({ "ok": false, "refusal": "permanentDelete" }),
@@ -173,15 +269,34 @@ async fn a_background_confirm_of_a_dialog_with_no_background_is_refused_up_front
 }
 
 #[test]
-fn a_background_confirm_reply_keeps_its_typed_refusal() {
-    let parse = |payload: Value| parse_background_confirm_response(&payload.to_string(), "req-1");
+fn a_confirm_reply_keeps_its_operation_id_and_typed_refusals() {
+    let parse = |payload: Value| parse_confirm_response(&payload.to_string(), "req-1");
+    assert_eq!(
+        parse(json!({ "requestId": "req-1", "ok": true, "operationId": "op-9" })),
+        Some(Ok(ConfirmAck::Started(OperationStartAck::Started {
+            operation_id: Some("op-9".to_string())
+        })))
+    );
+    // A move that renamed in place: confirmed, with no operation to name.
     assert_eq!(
         parse(json!({ "requestId": "req-1", "ok": true })),
-        Some(Ok(BackgroundConfirmAck::Pressed))
+        Some(Ok(ConfirmAck::Started(OperationStartAck::Started {
+            operation_id: None
+        })))
+    );
+    assert_eq!(
+        parse(json!({ "requestId": "req-1", "ok": false, "blockedBy": "transfer-progress" })),
+        Some(Ok(ConfirmAck::Started(OperationStartAck::Blocked {
+            blocking_dialog: "transfer-progress".to_string()
+        })))
     );
     assert_eq!(
         parse(json!({ "requestId": "req-1", "ok": false, "refusal": "permanentDelete" })),
-        Some(Ok(BackgroundConfirmAck::RefusedPermanentDelete))
+        Some(Ok(ConfirmAck::RefusedPermanentDelete))
+    );
+    assert_eq!(
+        parse(json!({ "requestId": "req-1", "ok": false, "refusal": "notStarted" })),
+        Some(Ok(ConfirmAck::NotStarted))
     );
     assert_eq!(
         parse(json!({ "requestId": "req-1", "ok": false, "error": "no explorer" })),

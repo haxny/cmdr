@@ -84,6 +84,7 @@
         TransferConfirmPayload,
         TransferConfirmer,
         DeleteConfirmer,
+        ConfirmOrigin,
         TransferCompletePayload,
     } from './dialog-props'
     import { explorerState } from './explorer-state.svelte'
@@ -1552,10 +1553,10 @@
     }}
     showDeleteDialog={dialogs.showDeleteDialog}
     deleteDialogProps={dialogs.deleteDialogProps}
-    onDeleteConfirm={(previewId: string | null, isPermanent: boolean) => {
-        dialogs.handleDeleteConfirm(previewId, isPermanent)
+    onDeleteConfirm={(previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => {
+        dialogs.handleDeleteConfirm(previewId, isPermanent, origin)
     }}
-    onTrashInBackground={(previewId: string | null) => { dialogs.handleTrashInBackground(previewId); }}
+    onTrashInBackground={(previewId: string | null, origin?: ConfirmOrigin) => { dialogs.handleTrashInBackground(previewId, origin); }}
     onDeleteCancel={() => {
         dialogs.handleDeleteCancel()
     }}

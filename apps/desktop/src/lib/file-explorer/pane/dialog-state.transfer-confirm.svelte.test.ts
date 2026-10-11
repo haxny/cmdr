@@ -251,7 +251,7 @@ describe('an MCP confirm on the transfer dialog', () => {
 
   /** What an MCP `dialog confirm` does: presses the open dialog's own confirm, through the dialog state. */
   function confirmFromMcp(dialogs: ReturnType<typeof createDialogState>, onConflict?: string): void {
-    dialogs.confirmOpenDialog('transfer-confirmation', onConflict)
+    void dialogs.confirmOpenDialog('transfer-confirmation', onConflict)
   }
 
   /** Waits for the confirm to dispatch: the dialog and its props are gone, and the progress dialog is up. */

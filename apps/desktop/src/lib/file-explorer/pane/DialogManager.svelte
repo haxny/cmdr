@@ -20,6 +20,7 @@
         TransferConfirmPayload,
         TransferConfirmer,
         DeleteConfirmer,
+        ConfirmOrigin,
         TransferCompletePayload,
     } from './dialog-props'
     import type { FriendlyError, WriteOperationError } from '../types'
@@ -122,9 +123,9 @@
         onNewFileCreated: (fileName: string) => void
         onNewFileCancel: () => void
         onAlertClose: () => void
-        onDeleteConfirm: (previewId: string | null, isPermanent: boolean) => void
+        onDeleteConfirm: (previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => void
         /** The delete dialog's F2 / Background button: always a trash, never a delete. */
-        onTrashInBackground: (previewId: string | null) => void
+        onTrashInBackground: (previewId: string | null, origin?: ConfirmOrigin) => void
         onDeleteCancel: () => void
     } = $props()
 

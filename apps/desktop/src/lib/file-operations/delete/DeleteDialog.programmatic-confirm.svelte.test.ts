@@ -8,7 +8,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import DeleteDialog from './DeleteDialog.svelte'
-import type { DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import type { ConfirmOrigin, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
 
 vi.mock('$lib/tauri-commands', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
@@ -47,6 +47,7 @@ function mountDialog() {
   target = document.createElement('div')
   document.body.appendChild(target)
   const confirms: Array<{ previewId: string | null; isPermanent: boolean }> = []
+  const origins: Array<ConfirmOrigin | undefined> = []
   const registration: { press: DeleteConfirmer | null; unregistered: boolean } = { press: null, unregistered: false }
   component = mount(DeleteDialog, {
     target,
@@ -60,7 +61,10 @@ function mountDialog() {
       sortColumn: 'name',
       sortOrder: 'ascending',
       sourceVolumeId: 'root',
-      onConfirm: (previewId: string | null, isPermanent: boolean) => confirms.push({ previewId, isPermanent }),
+      onConfirm: (previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) => {
+        confirms.push({ previewId, isPermanent })
+        origins.push(origin)
+      },
       registerConfirmer: (press: DeleteConfirmer) => {
         registration.press = press
         return () => {
@@ -70,7 +74,7 @@ function mountDialog() {
       onCancel: () => {},
     },
   }) as Record<string, unknown>
-  return { confirms, registration }
+  return { confirms, origins, registration }
 }
 
 async function settle(): Promise<void> {
@@ -90,10 +94,32 @@ describe('an MCP confirm on the delete dialog', () => {
     await tick()
 
     expect(registration.press, 'the dialog registers its own confirm').not.toBeNull()
-    registration.press?.()
+    void registration.press?.()
     await settle()
 
     expect(confirms).toEqual([{ previewId: 'preview-1', isPermanent: true }])
+  })
+
+  it('hands the round-trip id to the delete it starts, and says it pressed', async () => {
+    const { origins, registration } = mountDialog()
+    await settle()
+
+    const press = await registration.press?.({ mcpRequestId: 'req-1' })
+
+    expect(press).toBe('pressed')
+    expect(origins).toEqual([{ mcpRequestId: 'req-1' }])
+  })
+
+  it('says it started nothing when a press is already in flight', async () => {
+    const { confirms, registration } = mountDialog()
+    await settle()
+
+    const first = registration.press?.()
+    const second = await registration.press?.({ mcpRequestId: 'req-2' })
+    await first
+
+    expect(second).toBe('notStarted')
+    expect(confirms).toHaveLength(1)
   })
 
   it('takes its confirm back when it closes', async () => {

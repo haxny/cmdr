@@ -57,6 +57,7 @@ import type {
   AlertDialogPropsData,
   DeleteDialogPropsData,
   DialogStateDeps,
+  ConfirmOrigin,
   ForegroundOperationVerdict,
   NewFileDialogPropsData,
   NewFolderDialogPropsData,
@@ -483,10 +484,12 @@ export function createDialogState(deps: DialogStateDeps) {
   }
 
   /** The birth context a confirmed delete or trash starts from, or `null` with
-   *  no delete dialog up. */
+   *  no delete dialog up. An MCP `dialog confirm`'s round-trip (`origin`) wins
+   *  over the dialog's own, so the start answers the agent that pressed. */
   function deleteBirthProps(
     previewId: string | null,
     operationType: 'delete' | 'trash',
+    origin: ConfirmOrigin | undefined,
   ): TransferProgressPropsData | null {
     if (!deleteDialogProps) return null
     // Collect per-item sizes for trash progress if available.
@@ -505,7 +508,7 @@ export function createDialogState(deps: DialogStateDeps) {
       previewId,
       sourceVolumeId: deleteDialogProps.sourceVolumeId,
       itemSizes,
-      mcpRequestId: deleteDialogProps.mcpRequestId,
+      mcpRequestId: origin?.mcpRequestId ?? deleteDialogProps.mcpRequestId,
       initiator: deleteDialogProps.initiator,
       // A delete creates nothing, so there is never a copy to name.
       duplicateFollowUp: 'nothing',
@@ -646,9 +649,17 @@ export function createDialogState(deps: DialogStateDeps) {
       newName,
       renameInPlace,
       startInBackground,
+      mcpRequestId: confirmRequestId,
     }: TransferConfirmPayload) {
       if (!transferDialogProps) return
-      if (renameInPlace && destinationName && renameInSourcePane(transferDialogProps, destinationName, deps)) {
+      // An MCP `dialog confirm` waits for the operation's id like an auto-confirm
+      // does, so its round-trip wins, and it keeps a rename in place a transfer.
+      const mcpRequestId = confirmRequestId ?? transferDialogProps.mcpRequestId
+      if (
+        renameInPlace &&
+        destinationName &&
+        renameInSourcePane({ ...transferDialogProps, mcpRequestId }, destinationName, deps)
+      ) {
         showTransferDialog = false
         transferDialogProps = null
         return
@@ -671,7 +682,7 @@ export function createDialogState(deps: DialogStateDeps) {
         preKnownConflicts,
         fileCount: transferDialogProps.fileCount,
         folderCount: transferDialogProps.folderCount,
-        mcpRequestId: transferDialogProps.mcpRequestId,
+        mcpRequestId,
         initiator: transferDialogProps.initiator,
         duplicateFollowUp: destinationName ? 'nothing' : transferDialogProps.duplicateFollowUp,
         newName,
@@ -698,8 +709,8 @@ export function createDialogState(deps: DialogStateDeps) {
       deps.onRefocus()
     },
 
-    handleDeleteConfirm(previewId: string | null, isPermanent: boolean) {
-      const props = deleteBirthProps(previewId, isPermanent ? 'delete' : 'trash')
+    handleDeleteConfirm(previewId: string | null, isPermanent: boolean, origin?: ConfirmOrigin) {
+      const props = deleteBirthProps(previewId, isPermanent ? 'delete' : 'trash', origin)
       if (!props) return
       startBirthOperation(props)
       showDeleteDialog = false
@@ -709,8 +720,8 @@ export function createDialogState(deps: DialogStateDeps) {
     /** The delete dialog's F2 / Background button: a TRASH with no progress
      *  dialog. It takes no mode on purpose, so a permanent delete can't be
      *  started out of sight from here, whatever the dialog sends. */
-    handleTrashInBackground(previewId: string | null) {
-      const props = deleteBirthProps(previewId, 'trash')
+    handleTrashInBackground(previewId: string | null, origin?: ConfirmOrigin) {
+      const props = deleteBirthProps(previewId, 'trash', origin)
       if (!props) return
       showDeleteDialog = false
       deleteDialogProps = null

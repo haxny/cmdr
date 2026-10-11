@@ -48,6 +48,7 @@ import { listeners, settle, snapshot } from '$lib/file-operations/transfer/test-
 import { copyBetweenVolumes, deleteFiles, listOperations, trashFiles } from '$lib/tauri-commands'
 import { dispatchTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
 import { addToast } from '$lib/ui/toast'
+import { emit } from '@tauri-apps/api/event'
 import { setForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
 import TrashCompleteToastContent from '$lib/file-operations/delete/TrashCompleteToastContent.svelte'
 import {
@@ -198,6 +199,30 @@ describe('F2 in the transfer dialog', () => {
     expect(dialogs.showTransferProgressDialog).toBe(true)
     // The second operation took the slot, rather than being refused over the first.
     expect(dialogs.transferProgressProps?.destinationPath).toBe('/Users/me/second')
+  })
+})
+
+describe('an MCP confirm in the background', () => {
+  // The `dialog confirm` round-trip's id rides the press into the start, which
+  // answers it with the id the backend minted, as an auto-confirmed `copy` does.
+  it('answers its round-trip with the started copy’s operationId', async () => {
+    const { dialogs } = makeState()
+    dialogs.showTransfer(transferDialogProps())
+
+    dialogs.handleTransferConfirm(confirmPayload({ startInBackground: true, mcpRequestId: 'req-7' }))
+    await settle()
+
+    expect(emit).toHaveBeenCalledWith('mcp-response', { requestId: 'req-7', ok: true, operationId: 'op-1' })
+  })
+
+  it('answers its round-trip with the started trash’s operationId', async () => {
+    const { dialogs } = makeState()
+    dialogs.showDeleteConfirmation(deleteDialogProps())
+
+    dialogs.handleTrashInBackground('preview-9', { mcpRequestId: 'req-8' })
+    await settle()
+
+    expect(emit).toHaveBeenCalledWith('mcp-response', { requestId: 'req-8', ok: true, operationId: 'op-1' })
   })
 })
 

@@ -164,12 +164,35 @@ describe('F2 in the transfer dialog', () => {
     })
     await flushMicrotasks()
 
-    captured.press?.('skip', { startInBackground: true })
+    const press = captured.press?.('skip', { startInBackground: true, mcpRequestId: 'req-1' })
     await flushMicrotasks()
 
+    expect(await press).toBe('pressed')
+    // The round-trip id rides along, so the start answers the agent with its id.
     expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ conflictResolution: 'skip', startInBackground: true }),
+      expect.objectContaining({ conflictResolution: 'skip', startInBackground: true, mcpRequestId: 'req-1' }),
     )
+  })
+
+  it('says an MCP confirm started nothing when a press is already in flight', async () => {
+    const captured: { press: TransferConfirmer | null } = { press: null }
+    const onConfirm = vi.fn<ConfirmFn>()
+    mountDialog({
+      onConfirm,
+      registerConfirmer: (confirm) => {
+        captured.press = confirm
+        return () => {}
+      },
+    })
+    await flushMicrotasks()
+
+    const first = captured.press?.('skip')
+    const second = await captured.press?.('skip', { mcpRequestId: 'req-2' })
+    await first
+    await flushMicrotasks()
+
+    expect(second).toBe('notStarted')
+    expect(onConfirm).toHaveBeenCalledOnce()
   })
 
   it('reads "Background" with nothing else running, and "Queue" once something is', async () => {

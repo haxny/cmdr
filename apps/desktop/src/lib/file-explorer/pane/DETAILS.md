@@ -892,7 +892,10 @@ with; the dialog holds what it will actually send (the edited path, the picked v
 the two differ from the first frame: the box names `<folder>/<name>.zip` and the props only the folder, which the
 backend's `ensure_zip_writable` refuses as a read-only destination. A confirm that lands mid-startup waits for the scan
 start like a person's fast Enter does; it does not wait for the conflict-name listing (only the auto-confirm does), so
-it stays inside the MCP ack budget. Pinned by `dialog-state.transfer-confirm.svelte.test.ts`.
+it stays inside the MCP ack budget. Pinned by `dialog-state.transfer-confirm.svelte.test.ts`. The press carries the MCP
+round-trip id (`ConfirmOptions.mcpRequestId`) into `onConfirm` / `onConfirmInBackground`, and `dialog-state` puts it on
+the birth props ahead of the dialog's own, so the START answers the agent with the operation's id; the press itself
+resolves `pressed` / `notStarted` (`ConfirmPress`), and only a press that started nothing answers from here.
 
 `handleTransferConfirm` takes no scan flag: the progress dialog doesn't wait for a `TransferDialog` preview, because the
 backend registers the operation at confirm and its own task waits for the preview it claimed

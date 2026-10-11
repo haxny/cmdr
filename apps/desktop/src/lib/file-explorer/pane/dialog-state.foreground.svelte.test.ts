@@ -264,6 +264,26 @@ describe('an operation born while an adopted one is showing', () => {
     expect(dialogs.adoptedProgressProps).toBeNull()
     expect(dialogs.transferProgressProps?.operationType).toBe('delete')
   })
+
+  // The progress dialog's start answers that round-trip with the operationId.
+  it('hands an MCP confirm’s round-trip id to the delete it starts', () => {
+    const { dialogs } = makeState()
+    dialogs.showDeleteConfirmation({
+      sourceItems: [],
+      sourcePaths: [`${SOURCE_FOLDER}/a.jpg`],
+      sourceFolderPath: SOURCE_FOLDER,
+      isPermanent: true,
+      supportsTrash: true,
+      isFromCursor: false,
+      sortColumn: 'name',
+      sortOrder: 'ascending',
+      sourceVolumeId: 'root',
+    })
+
+    dialogs.handleDeleteConfirm(null, true, { mcpRequestId: 'req-3' })
+
+    expect(dialogs.transferProgressProps?.mcpRequestId).toBe('req-3')
+  })
 })
 
 describe("an adopted view's outcomes touch no pane", () => {

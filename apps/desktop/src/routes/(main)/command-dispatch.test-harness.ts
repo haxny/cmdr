@@ -157,7 +157,7 @@ export function makeExplorerSpy(): Record<string, ReturnType<typeof vi.fn>> {
   for (const m of methods) spy[m] = vi.fn()
   // Defaults for the methods whose return value the arm branches on.
   spy.getFocusedPane.mockReturnValue('left')
-  spy.confirmDialog.mockReturnValue({ pressed: true })
+  spy.confirmDialog.mockResolvedValue({ pressed: true })
   return spy
 }
 
@@ -616,6 +616,7 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     expect: (e) => {
       expect(e.confirmDialog).toHaveBeenCalledExactlyOnceWith('transfer-confirmation', 'overwrite_all', {
         startInBackground: undefined,
+        mcpRequestId: undefined,
       })
     },
   },
