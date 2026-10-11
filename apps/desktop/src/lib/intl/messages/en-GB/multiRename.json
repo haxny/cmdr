@@ -1,0 +1,14 @@
+{
+  "multiRename.case.words": "Every Word Capitalised",
+  "@multiRename.case.words": {
+    "sourceHash": "fdeb85e"
+  },
+  "multiRename.normalizeUnicode": "Normalise Unicode",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
+  "multiRename.preset.normalizeUnicode": "Normalise Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  }
+}

@@ -66,5 +66,9 @@
   "commands.handler.openTerminalHere.appMissingUnnamed": "Your terminal app isn’t installed any more, so this opened in Terminal.",
   "@commands.handler.openTerminalHere.appMissingUnnamed": {
     "sourceHash": "8e40ade"
+  },
+  "commands.multiRenameNormalizeUnicode.label": "Turn Normalise Unicode on or off",
+  "@commands.multiRenameNormalizeUnicode.label": {
+    "sourceHash": "fc2b801"
   }
 }
