@@ -38,7 +38,9 @@ use super::macos_copy::{CopyProgressContext, copy_single_file_native};
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 use super::super::error_classification::IoResultExt;
-use super::super::overwrite::stage_and_land_file;
+use cmdr_fs::metadata::LandedMetadata;
+
+use super::super::overwrite::{PostLanding, Staged, stage_and_land_file};
 use super::super::state::WriteOperationState;
 use super::super::types::WriteOperationError;
 use super::chunked_copy::ChunkedCopyProgressFn;
@@ -113,8 +115,9 @@ fn is_apfs(path: &Path) -> bool {
 // Strategy selection
 // ============================================================================
 
-/// Outcome of a single-file copy: bytes written, plus whether the destination
-/// is already durable on disk.
+/// Outcome of a single-file copy: bytes written, whether the destination is
+/// already durable on disk, and the rename-blocking metadata a
+/// [`PostLanding::HandBack`] caller still owes the file.
 ///
 /// `already_durable` is `true` when the strategy either flushed the file itself
 /// (chunked copy's inline `sync_data`) or when a flush is moot because the data
@@ -124,10 +127,13 @@ fn is_apfs(path: &Path) -> bool {
 /// only in the page cache (Linux `copy_file_range` without reflink, the
 /// `std::fs::copy` fallback), so the caller must flush the destination before
 /// reporting completion.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub(super) struct StrategyCopyOutcome {
     pub bytes: u64,
     pub already_durable: bool,
+    /// Empty unless the caller asked for [`PostLanding::HandBack`] and the file
+    /// has an ACL or flags that would refuse its next rename.
+    pub handed_back: LandedMetadata,
 }
 
 /// How the bytes of one local file get from source to destination.
@@ -192,6 +198,7 @@ pub(super) fn copy_file_with_strategy(
     source: &Path,
     dest: &Path,
     needs_safe_overwrite: bool,
+    post_landing: PostLanding,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<StrategyCopyOutcome, WriteOperationError> {
     let strategy = select_local_copy_strategy(source, dest);
@@ -200,16 +207,30 @@ pub(super) fn copy_file_with_strategy(
         source.display(),
         dest.display()
     );
-    copy_file_using(strategy, state, source, dest, needs_safe_overwrite, progress_callback)
+    copy_file_using(
+        strategy,
+        state,
+        source,
+        dest,
+        needs_safe_overwrite,
+        post_landing,
+        progress_callback,
+    )
 }
 
 /// [`copy_file_with_strategy`] with the mechanism chosen by the caller.
+///
+/// Every arm keeps rename-blocking metadata off the temp: the clone arm's
+/// landing clears what the clone carried over (`overwrite::stage_and_land_file`
+/// step 3), and the chunked arm reads its source's ACL here and hands it to the
+/// landing instead of writing it onto the temp.
 pub(super) fn copy_file_using(
     strategy: LocalCopyStrategy,
     state: &Arc<WriteOperationState>,
     source: &Path,
     dest: &Path,
     needs_safe_overwrite: bool,
+    post_landing: PostLanding,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<StrategyCopyOutcome, WriteOperationError> {
     let cancelled = &state.intent;
@@ -221,48 +242,56 @@ pub(super) fn copy_file_using(
         #[cfg(target_os = "macos")]
         LocalCopyStrategy::AppleClone => {
             let context = CopyProgressContext::with_cancellation(Arc::clone(cancelled));
-            let bytes = stage_and_land_file(state, dest, needs_safe_overwrite, |target| {
-                copy_single_file_native(source, target, false, Some(&context))
+            let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
+                copy_single_file_native(source, target, false, Some(&context)).map(Staged::bytes)
             })?;
             // Clonefile shares CoW extents with the source: flushing is moot.
             Ok(StrategyCopyOutcome {
-                bytes,
+                bytes: landed.bytes,
                 already_durable: true,
+                handed_back: landed.handed_back,
             })
         }
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         LocalCopyStrategy::Chunked => {
             // Chunked copy `sync_data`s the file itself before returning.
-            let bytes = stage_and_land_file(state, dest, needs_safe_overwrite, |target| {
-                chunked_copy_with_metadata(source, target, cancelled, progress_callback)
+            let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
+                let bytes = chunked_copy_with_metadata(source, target, cancelled, progress_callback)?;
+                Ok(Staged {
+                    bytes,
+                    landed: LandedMetadata::of_source_acl(source),
+                })
             })?;
             Ok(StrategyCopyOutcome {
-                bytes,
+                bytes: landed.bytes,
                 already_durable: true,
+                handed_back: landed.handed_back,
             })
         }
         #[cfg(target_os = "linux")]
         LocalCopyStrategy::KernelCopyRange => {
             // `copy_file_range(2)` doesn't flush (and reflink shares CoW extents,
             // but we can't cheaply tell here), so the caller flushes the dest.
-            let bytes = stage_and_land_file(state, dest, needs_safe_overwrite, |target| {
-                copy_single_file_linux(source, target, false, cancelled, progress_callback)
+            let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
+                copy_single_file_linux(source, target, false, cancelled, progress_callback).map(Staged::bytes)
             })?;
             Ok(StrategyCopyOutcome {
-                bytes,
+                bytes: landed.bytes,
                 already_durable: false,
+                handed_back: landed.handed_back,
             })
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         LocalCopyStrategy::StdCopy => {
             let _ = (cancelled, progress_callback); // Unused on this platform
             // The std fallback doesn't flush; the caller's end-of-op pass does.
-            let bytes = stage_and_land_file(state, dest, needs_safe_overwrite, |target| {
-                fs::copy(source, target).with_path(source)
+            let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
+                fs::copy(source, target).with_path(source).map(Staged::bytes)
             })?;
             Ok(StrategyCopyOutcome {
-                bytes,
+                bytes: landed.bytes,
                 already_durable: false,
+                handed_back: landed.handed_back,
             })
         }
     }
@@ -293,7 +322,7 @@ mod tests {
 
         fs::write(&src, "Hello, copy strategy!").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, None);
+        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().bytes, 21);
@@ -310,7 +339,7 @@ mod tests {
         fs::write(&src, "New content").unwrap();
         fs::write(&dst, "Old content").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, true, None);
+        let result = copy_file_with_strategy(&running_state(), &src, &dst, true, PostLanding::Apply, None);
 
         assert!(result.is_ok());
         assert!(dst.exists());
@@ -328,7 +357,7 @@ mod tests {
         fs::write(&src, "#!/bin/bash").unwrap();
         fs::set_permissions(&src, fs::Permissions::from_mode(0o755)).unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, None);
+        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
 
         assert!(result.is_ok());
         let dst_perms = fs::metadata(&dst).unwrap().permissions().mode();
@@ -412,7 +441,7 @@ mod tests {
 
         fs::write(&src, "").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, None);
+        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().bytes, 0);

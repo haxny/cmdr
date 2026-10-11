@@ -13,11 +13,21 @@
 //! fallback all hand it a closure that puts bytes at a path.
 //! [`safe_overwrite_dir`] is its type-agnostic sibling, for a materializer that
 //! creates a directory rather than a file.
+//!
+//! **Rename-blocking metadata goes on AFTER the landing rename.** `uchg` or a
+//! `deny delete` ACL on the temp makes the rename refuse (`EPERM`/`EACCES`), so
+//! the closure hands that set back instead of writing it ([`Staged::landed`]),
+//! and a temp that arrives wearing one anyway (an APFS clone copies the source's
+//! flags and ACL in the same call) is cleared and retried once. Either way the
+//! set lands on the FINAL name through `cmdr_fs::metadata::apply_landed`, or
+//! goes back to a caller that renames the item again later ([`PostLanding`]).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
+
+use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 
 use super::error_classification::classify_io_error;
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
@@ -35,6 +45,43 @@ pub(super) struct ResolvedDestination {
     pub needs_safe_overwrite: bool,
 }
 
+/// What a write closure put at the staging path.
+pub(super) struct Staged {
+    pub bytes: u64,
+    /// What has to go on after the landing rename (an ACL a chunked copy read
+    /// off its source), so the temp never wears it. Empty for most files.
+    pub landed: LandedMetadata,
+}
+
+impl Staged {
+    /// A write with nothing to put on after landing.
+    pub(super) fn bytes(bytes: u64) -> Self {
+        Staged {
+            bytes,
+            landed: LandedMetadata::default(),
+        }
+    }
+}
+
+/// Who puts the rename-blocking set on the landed file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum PostLanding {
+    /// The landing does, on the final name. Every copy that lands where it stays.
+    Apply,
+    /// The caller does, after it renames the item again: a cross-FS move's
+    /// staging landing, which Phase 3 still has to rename (and which a Locked or
+    /// `deny delete` item would refuse).
+    HandBack,
+}
+
+/// What [`stage_and_land_file`] landed.
+pub(super) struct Landed {
+    pub bytes: u64,
+    /// The rename-blocking set the caller owes the item, under
+    /// [`PostLanding::HandBack`]. Always empty under [`PostLanding::Apply`].
+    pub handed_back: LandedMetadata,
+}
+
 /// Lands one local file write at `dest` through a staging sibling, replacing an
 /// existing entry only when `replacing` says so.
 ///
@@ -50,8 +97,15 @@ pub(super) struct ResolvedDestination {
 ///    (the aside).
 /// 3. Rename the temp onto `dest`. Without `replacing` this refuses to clobber
 ///    an entry that appeared underneath us ([`rename_no_replace`]), keeping the
-///    `O_EXCL`-shaped guarantee a direct create used to give.
+///    `O_EXCL`-shaped guarantee a direct create used to give. A refusal the temp
+///    itself causes (`uchg` or a `deny delete` ACL, which an APFS clone carries
+///    over) is cleared and the rename retried ONCE; a second refusal surfaces the
+///    first error, and the temp, now cleared, is removable.
 /// 4. `replacing` only: delete the aside.
+/// 5. The rename-blocking set (the closure's plus whatever step 3 cleared) goes
+///    on `dest` under [`PostLanding::Apply`], or back to the caller. Best effort:
+///    a refusal is logged, the file stays landed. A crash between step 3 and
+///    here leaves the file without its ACL or flags, and nothing records that.
 ///
 /// A failure at any step before 3 completes leaves the original `dest`
 /// untouched. The temp is registered as an in-flight partial for exactly as
@@ -69,10 +123,11 @@ pub(super) fn stage_and_land_file<F>(
     state: &Arc<WriteOperationState>,
     dest: &Path,
     replacing: bool,
+    post_landing: PostLanding,
     write_bytes: F,
-) -> Result<u64, WriteOperationError>
+) -> Result<Landed, WriteOperationError>
 where
-    F: FnOnce(&Path) -> Result<u64, WriteOperationError>,
+    F: FnOnce(&Path) -> Result<Staged, WriteOperationError>,
 {
     // The temp's guard lives to the end of this function (and the aside's too,
     // when there is one), keeping the scratch out of the pane for as long as
@@ -97,8 +152,8 @@ where
     let temp_record = in_flight_temps::track(state, ItemKind::Temp, temp_path);
 
     // Step 1: fill the temp.
-    let bytes = match write_bytes(temp_path) {
-        Ok(bytes) => bytes,
+    let Staged { bytes, mut landed } = match write_bytes(temp_path) {
+        Ok(staged) => staged,
         Err(e) => {
             discard_temp(state, &temp_record);
             return Err(e);
@@ -145,7 +200,7 @@ where
     }
 
     // Step 3: give the bytes their real name.
-    if let Err(e) = land_temp(temp_path, dest, replacing) {
+    if let Err(e) = land_temp_clearing_blockers(temp_path, dest, replacing, &mut landed) {
         // Restore the aside if we set one. If the restore ALSO fails, the user's
         // original survives orphaned under the recognizable `.cmdr-temp-<uuid>`
         // name, and its RECORD survives with it, so the next launch (or the
@@ -229,7 +284,69 @@ where
         }
     }
 
-    Ok(bytes)
+    // Step 5: the rename-blocking set, on the name the file now has.
+    if landed.is_empty() {
+        return Ok(Landed {
+            bytes,
+            handed_back: landed,
+        });
+    }
+    match post_landing {
+        PostLanding::Apply => {
+            let report = apply_landed(dest, &landed);
+            if report.any_refused() {
+                log::warn!(
+                    target: "copy",
+                    "{} landed without some of its metadata: {report:?}",
+                    dest.display()
+                );
+            }
+            Ok(Landed {
+                bytes,
+                handed_back: LandedMetadata::default(),
+            })
+        }
+        PostLanding::HandBack => Ok(Landed {
+            bytes,
+            handed_back: landed,
+        }),
+    }
+}
+
+/// [`land_temp`], and when the TEMP refuses it (`uchg`, a `deny delete` ACL):
+/// clear those, retry once, and fold what was cleared into `landed` so it goes
+/// back on the landed file. The landing rename is the probe, so an ordinary
+/// temp costs exactly one rename.
+///
+/// A second refusal (the folder itself refuses) answers the FIRST error, the
+/// one that names why the landing couldn't happen.
+fn land_temp_clearing_blockers(
+    temp: &Path,
+    dest: &Path,
+    replacing: bool,
+    landed: &mut LandedMetadata,
+) -> std::io::Result<()> {
+    let refused = match land_temp(temp, dest, replacing) {
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => e,
+        other => return other,
+    };
+    let Unblock::Cleared(cleared) = clear_blockers(temp) else {
+        return Err(refused);
+    };
+    match land_temp(temp, dest, replacing) {
+        Ok(()) => {
+            landed.merge(cleared);
+            Ok(())
+        }
+        Err(retry) => {
+            log::debug!(
+                target: "copy",
+                "{} still refused its landing after clearing its flags and ACL: {retry}",
+                temp.display()
+            );
+            Err(refused)
+        }
+    }
 }
 
 /// Removes a temp whose write or landing failed, and stops tracking it.

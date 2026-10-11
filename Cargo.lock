@@ -1411,7 +1411,6 @@ dependencies = [
  "ed25519-dalek",
  "encoding_rs",
  "env_logger",
- "exacl",
  "fern",
  "file-rotate",
  "filetime",
@@ -1544,6 +1543,7 @@ version = "0.0.0"
 dependencies = [
  "blake3",
  "dirs 6.0.0",
+ "exacl",
  "libc",
  "libmimalloc-sys",
  "log",

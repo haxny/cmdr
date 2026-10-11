@@ -20,11 +20,12 @@ mod macos {
 
     use cmdr_fs::staging::STAGING_TEMP_MARKER;
     use cmdr_fs::testing::metadata_fixture::{
-        ACCESSED_SECS, BIRTH_SECS, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, accessed_secs, birth_secs,
-        flags, mode, modified_secs, xattrs,
+        ACCESSED_SECS, BIRTH_SECS, HIDDEN_FLAG, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, accessed_secs,
+        add_acl_entry, birth_secs, flags, has_acl, mode, modified_secs, xattrs,
     };
 
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+    use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::WriteOperationState;
     use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
     use crate::file_system::write_operations::transfer::copy_strategy::{
@@ -49,7 +50,7 @@ mod macos {
         source: &Path,
         dest: &Path,
     ) -> Result<StrategyCopyOutcome, WriteOperationError> {
-        copy_file_using(strategy, &state(), source, dest, false, None)
+        copy_file_using(strategy, &state(), source, dest, false, PostLanding::Apply, None)
     }
 
     /// Asserts the pair takes the clone arm on this machine, so a clone cell can't
@@ -60,12 +61,6 @@ mod macos {
             LocalCopyStrategy::AppleClone,
             "the fixture's temp dir must be one APFS volume for a clone cell to mean anything"
         );
-    }
-
-    fn has_acl(path: &Path) -> bool {
-        !exacl::getfacl(path, None)
-            .unwrap_or_else(|e| panic!("read the ACL of {}: {e}", path.display()))
-            .is_empty()
     }
 
     /// The `.cmdr-tmp-*` items left in `dir`.
@@ -79,13 +74,6 @@ mod macos {
                     .collect()
             })
             .unwrap_or_default()
-    }
-
-    /// The one `.cmdr-tmp-*` a failed landing left in `dir`.
-    fn the_leftover_temp(dir: &Path) -> PathBuf {
-        let temps = staging_temps(dir);
-        assert_eq!(temps.len(), 1, "one temp stays behind: {temps:?}");
-        temps.into_iter().next().expect("one temp")
     }
 
     fn copy_tree(sources: &[PathBuf], dst: &Path) {
@@ -103,45 +91,57 @@ mod macos {
 
     // ── Clone arm (same APFS volume) ────────────────────────────────────────
 
-    /// The clone carries `uchg` onto the temp, and the landing rename refuses it
-    /// (`EPERM`). The temp stays behind Locked, so nothing can `unlink` it.
+    /// The clone carries `uchg` onto the temp and the landing rename refuses it
+    /// (`EPERM`), so the landing clears it, lands, and puts it back on the landed
+    /// file. The clone's birth time survives all three steps.
     #[test]
-    fn a_locked_file_cloned_within_one_volume_fails_to_land_today() {
-        // FLIPS IN M1: lands Locked, birth kept, no temp left.
+    fn a_locked_file_cloned_within_one_volume_lands_locked_with_its_birth_time() {
         let fixture = MetadataFixture::new("matrix_clone_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("locked.txt");
         assert_clone_arm(&source, &dest);
 
-        let result = copy_one(LocalCopyStrategy::AppleClone, &source, &dest);
+        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
-        assert!(matches!(result, Err(WriteOperationError::IoError { .. })), "{result:?}");
-        assert!(!dest.exists(), "nothing lands at the real name");
-        let temp = the_leftover_temp(&dst);
-        assert_eq!(
-            flags(&temp) & LOCKED_FLAG,
-            LOCKED_FLAG,
-            "the clone made the temp Locked"
-        );
+        assert_eq!(flags(&dest) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
+        assert_eq!(birth_secs(&dest), BIRTH_SECS);
+        assert_eq!(modified_secs(&dest), MODIFIED_SECS);
+        assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
     }
 
-    /// `COPYFILE_ACL` puts the `deny delete` ACL on the temp, and the landing
-    /// rename refuses it (`EACCES`).
+    /// `COPYFILE_ACL` puts the `deny delete` ACL on the temp and the landing
+    /// rename refuses it (`EACCES`), so the landing strips it, lands, and puts it
+    /// back on the landed file.
     #[test]
-    fn a_deny_delete_file_cloned_within_one_volume_fails_to_land_today() {
-        // FLIPS IN M1: lands with its ACL, no temp left.
+    fn a_deny_delete_file_cloned_within_one_volume_lands_with_its_acl() {
         let fixture = MetadataFixture::new("matrix_clone_acl");
         let source = fixture.deny_delete_file("acl.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("acl.txt");
         assert_clone_arm(&source, &dest);
 
-        let result = copy_one(LocalCopyStrategy::AppleClone, &source, &dest);
+        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
-        assert!(matches!(result, Err(WriteOperationError::IoError { .. })), "{result:?}");
-        assert!(!dest.exists(), "nothing lands at the real name");
-        assert!(has_acl(&the_leftover_temp(&dst)), "the clone put the ACL on the temp");
+        assert!(has_acl(&dest), "the landed file wears the ACL");
+        assert_eq!(birth_secs(&dest), BIRTH_SECS);
+        assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
+    }
+
+    /// The landing rename is the probe: a file with nothing to clear lands with
+    /// one `copyfile` and one `rename`, and never reaches the metadata helper.
+    #[test]
+    fn a_plain_file_through_the_clone_arm_never_calls_the_metadata_helper() {
+        let fixture = MetadataFixture::new("matrix_clone_plain");
+        let source = fixture.rich_file("f.txt");
+        let dst = dst_dir(&fixture);
+        let dest = dst.join("f.txt");
+        assert_clone_arm(&source, &dest);
+        let before = cmdr_fs::metadata::helper_calls_on_this_thread();
+
+        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
+
+        assert_eq!(cmdr_fs::metadata::helper_calls_on_this_thread(), before);
     }
 
     /// A keep cell: the clone carries every class of a file with no rename-blocker.
@@ -164,21 +164,19 @@ mod macos {
 
     // ── Chunked arm (every other local pair) ────────────────────────────────
 
-    /// `copy_acls` writes the ACL onto the temp, and the landing rename refuses
-    /// it (`EACCES`).
+    /// The source's ACL goes on after the landing rename, which a `deny delete`
+    /// ACL on the temp would refuse (`EACCES`).
     #[test]
-    fn a_deny_delete_file_copied_chunked_fails_to_land_today() {
-        // FLIPS IN M1: lands with its ACL, applied after the rename.
+    fn a_deny_delete_file_copied_chunked_lands_with_its_acl() {
         let fixture = MetadataFixture::new("matrix_chunked_acl");
         let source = fixture.deny_delete_file("acl.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("acl.txt");
 
-        let result = copy_one(LocalCopyStrategy::Chunked, &source, &dest);
+        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
-        assert!(matches!(result, Err(WriteOperationError::IoError { .. })), "{result:?}");
-        assert!(!dest.exists(), "nothing lands at the real name");
-        assert!(has_acl(&the_leftover_temp(&dst)), "the ACL went onto the temp");
+        assert!(has_acl(&dest), "the landed file wears the ACL");
+        assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
     }
 
     /// Only mtime is set, and APFS drags birth down to it.
@@ -319,65 +317,69 @@ mod macos {
 
     // ── Moves ───────────────────────────────────────────────────────────────
 
-    /// The one `.cmdr-tmp-*` anywhere under `root`: a failed move's staging tree
-    /// is removed in the background, and only an unremovable temp (and the
-    /// folders holding it) are sure to be there when the cell looks.
-    fn the_one_staged_temp(root: &Path) -> PathBuf {
+    /// Every item under `root` that wears `uchg` or an ACL, `root` excluded.
+    fn rename_blocked_items(root: &Path) -> Vec<PathBuf> {
         fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
             let Ok(entries) = std::fs::read_dir(dir) else { return };
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.to_string_lossy().contains(STAGING_TEMP_MARKER) {
-                    out.push(path);
-                } else if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                if flags(&path) & LOCKED_FLAG != 0 || has_acl(&path) {
+                    out.push(path.clone());
+                }
+                if entry.file_type().is_ok_and(|t| t.is_dir()) {
                     walk(&path, out);
                 }
             }
         }
-        let mut temps = Vec::new();
-        walk(root, &mut temps);
-        assert_eq!(temps.len(), 1, "one temp stays behind: {temps:?}");
-        temps.into_iter().next().expect("one temp")
+        let mut found = Vec::new();
+        walk(root, &mut found);
+        found
     }
 
-    /// The staged copy's clone carries the ACL onto its temp, whose landing INTO
-    /// the staging tree is refused (`EACCES`), so the move stops before Phase 3.
+    /// The staged copies land unlocked and ACL-free INSIDE the staging tree, and
+    /// take their Locked flag and ACL only once Phase 3 has renamed them into
+    /// place. Phase 4 then can't delete either original (`uchg` refuses with
+    /// `EPERM`, `deny delete` with `EACCES`), so the move stops there with every
+    /// original kept: nothing is lost, both copies exist.
     #[test]
-    fn a_cross_fs_move_of_a_folder_holding_a_deny_delete_file_fails_at_the_staging_landing_today() {
-        // FLIPS IN M1: the move lands the folder, the file keeps its ACL, the source is gone.
-        let fixture = MetadataFixture::new("matrix_move_acl");
+    fn a_cross_fs_move_of_a_folder_holding_a_locked_and_a_deny_delete_file_lands_both() {
+        let fixture = MetadataFixture::new("matrix_move_folder");
         let folder = fixture.join("album");
         std::fs::create_dir(&folder).expect("create the folder");
-        let inner = fixture.deny_delete_file("album/acl.txt");
+        let locked = fixture.locked_file("album/locked.txt");
+        let acl = fixture.deny_delete_file("album/acl.txt");
         let dst = dst_dir(&fixture);
 
         let result = run_cross_fs_move(
             std::slice::from_ref(&folder),
             &dst,
             ConflictResolution::Stop,
-            "op-matrix-move-acl",
+            "op-matrix-move-folder",
         );
 
+        let landed = dst.join("album");
+        assert_eq!(flags(&landed.join("locked.txt")) & LOCKED_FLAG, LOCKED_FLAG);
+        assert_eq!(birth_secs(&landed.join("locked.txt")), BIRTH_SECS);
+        assert!(has_acl(&landed.join("acl.txt")), "the landed file wears the ACL");
         assert!(
-            matches!(result, Err(WriteOperationError::IoError { .. })),
-            "{:?}",
+            matches!(result, Err(WriteOperationError::PermissionDenied { .. })),
+            "Phase 4 can't remove a Locked or `deny delete` original: {:?}",
             result.err()
         );
-        assert!(inner.exists(), "the source stays");
-        assert!(!dst.join("album").exists(), "nothing lands at the real name");
-        let temp = the_one_staged_temp(&dst);
-        assert!(
-            has_acl(&temp),
-            "the ACL'd temp stays in the staging tree, where no cleanup can remove it"
-        );
+        assert!(locked.exists() && acl.exists(), "both originals stay");
+        let names: Vec<String> = std::fs::read_dir(&dst)
+            .expect("list dst")
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["album".to_string()], "the staging folder is gone");
     }
 
-    /// The staged copy's clone carries `uchg` onto its temp, whose landing INTO
-    /// the staging tree is refused (`EPERM`). Phase 4's delete of the Locked
-    /// source is never reached.
+    /// The staged copy lands unlocked inside the staging tree and takes `uchg`
+    /// after Phase 3. Phase 4's delete of the Locked original is refused
+    /// (`EPERM`), so the move stops with the original kept.
     #[test]
-    fn a_cross_fs_move_of_a_locked_file_fails_at_the_staging_landing_today() {
-        // FLIPS IN M1: the clone lands Locked; what Phase 4 then does with the Locked source is M1's to pin.
+    fn a_cross_fs_move_of_a_locked_file_lands_locked_and_keeps_the_original() {
         let fixture = MetadataFixture::new("matrix_move_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
@@ -389,19 +391,57 @@ mod macos {
             "op-matrix-move-locked",
         );
 
+        let landed = dst.join("locked.txt");
+        assert_eq!(flags(&landed) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
+        assert_eq!(birth_secs(&landed), BIRTH_SECS);
         assert!(
-            matches!(result, Err(WriteOperationError::IoError { .. })),
+            matches!(
+                result,
+                Err(WriteOperationError::PermissionDenied {
+                    errno: Some(libc::EPERM),
+                    ..
+                })
+            ),
             "{:?}",
             result.err()
         );
-        assert!(source.exists(), "the source stays");
-        assert!(!dst.join("locked.txt").exists(), "nothing lands at the real name");
-        let temp = the_one_staged_temp(&dst);
-        assert_eq!(
-            flags(&temp) & LOCKED_FLAG,
-            LOCKED_FLAG,
-            "the Locked temp stays in the staging tree, where no cleanup can remove it"
+        assert!(source.exists(), "the Locked original stays");
+    }
+
+    /// Phase 3 fails (the destination refuses new files, so the staged files
+    /// can't be renamed into it), and the staging cleanup removes the whole
+    /// staging tree: nothing in it wears a rename-blocker, because those only go
+    /// on after Phase 3.
+    #[test]
+    fn a_cross_fs_move_whose_phase_3_fails_leaves_a_removable_staging_tree() {
+        let fixture = MetadataFixture::new("matrix_move_phase3");
+        let locked = fixture.locked_file("locked.txt");
+        let acl = fixture.deny_delete_file("acl.txt");
+        let dst = dst_dir(&fixture);
+        // The staging folder is a subdirectory, which this still allows.
+        add_acl_entry(&dst, "everyone deny add_file");
+
+        let result = run_cross_fs_move(
+            &[locked.clone(), acl.clone()],
+            &dst,
+            ConflictResolution::Stop,
+            "op-matrix-move-phase3",
         );
+
+        // The refusal names a staged item, so Phase 2 did stage both.
+        assert!(
+            matches!(
+                &result,
+                Err(WriteOperationError::IoError { path, .. }) if path.contains(cmdr_fs::staging::STAGING_DIR_PREFIX)
+            ),
+            "Phase 3 can't land a file: {:?}",
+            result.err()
+        );
+        assert!(locked.exists() && acl.exists(), "both originals stay");
+        crate::test_support::wait_until(Duration::from_secs(5), "the staging tree's removal", || {
+            std::fs::read_dir(&dst).is_ok_and(|mut entries| entries.next().is_none())
+        });
+        assert_eq!(rename_blocked_items(&dst), Vec::<PathBuf>::new());
     }
 
     /// `rename(2)` refuses a Locked item (`EPERM`). Out of scope by David's
@@ -445,6 +485,7 @@ mod linux {
     use std::sync::Arc;
     use std::time::Duration;
 
+    use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::WriteOperationState;
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use crate::test_support::TestDir;
@@ -465,7 +506,7 @@ mod linux {
 
     fn copy(strategy: LocalCopyStrategy, source: &Path, dest: &Path) {
         let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
-        copy_file_using(strategy, &state, source, dest, false, None).expect("the copy lands");
+        copy_file_using(strategy, &state, source, dest, false, PostLanding::Apply, None).expect("the copy lands");
     }
 
     fn mode(path: &Path) -> u32 {

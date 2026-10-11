@@ -13,6 +13,8 @@ use std::time::{Duration, Instant};
 use super::super::macos_copy::copy_symlink;
 
 use super::super::chunked_copy::ChunkedCopyProgressFn;
+use cmdr_fs::metadata::LandedMetadata;
+
 use super::super::copy_strategy::copy_file_with_strategy;
 use super::dest_chain::leaf_in_the_way;
 
@@ -20,7 +22,7 @@ use crate::file_system::write_operations::conflict::{ApplyToAll, IncomingItem, r
 use crate::file_system::write_operations::error_classification::IoResultExt;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::ledger::{CopyTransaction, WrittenFile};
-use crate::file_system::write_operations::overwrite::{displace_with_directory, safe_overwrite_dir};
+use crate::file_system::write_operations::overwrite::{PostLanding, displace_with_directory, safe_overwrite_dir};
 use crate::file_system::write_operations::scan_source_tracker::FileVerdict;
 use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled, update_operation_status};
 use crate::file_system::write_operations::types::{
@@ -207,6 +209,12 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
     // reflink). The end-of-op flush pass skips these so a long chunked batch
     // isn't fsynced twice. See `durability::flush_created_destinations`.
     already_synced: &mut HashSet<PathBuf>,
+    // `Some` when the caller renames what lands here AGAIN (a cross-FS move's
+    // staging tree): each file's rename-blocking set (ACL, Locked) goes in here
+    // under the path it landed at, for the caller to apply once it's in its
+    // final place. Only files that have one get an entry. `None` applies it on
+    // landing.
+    deferred_landed: Option<&mut HashMap<PathBuf, LandedMetadata>>,
 ) -> Result<FileVerdict, WriteOperationError> {
     let progress_ctx = PerFileCtx {
         events,
@@ -577,7 +585,24 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
             }
         };
 
-        let outcome = copy_file_with_strategy(state, source, &actual_dest, needs_safe_overwrite, Some(progress_cb))?;
+        let post_landing = if deferred_landed.is_some() {
+            PostLanding::HandBack
+        } else {
+            PostLanding::Apply
+        };
+        let outcome = copy_file_with_strategy(
+            state,
+            source,
+            &actual_dest,
+            needs_safe_overwrite,
+            post_landing,
+            Some(progress_cb),
+        )?;
+        if let Some(deferred) = deferred_landed
+            && !outcome.handed_back.is_empty()
+        {
+            deferred.insert(actual_dest.clone(), outcome.handed_back);
+        }
         // Byte accounting uses `write_weight` below (matches the scan's
         // `total_bytes` even when a clonefile reports 0 copied bytes), so the
         // strategy's own byte count is intentionally unused here.

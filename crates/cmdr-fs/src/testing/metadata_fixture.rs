@@ -256,12 +256,24 @@ pub fn set_flags(path: &Path, flags: u32) {
 /// Adds `everyone deny delete` to `path`'s ACL, the way Finder's sharing panel and
 /// `chmod +a` do.
 pub fn add_deny_delete_acl(path: &Path) {
+    add_acl_entry(path, "everyone deny delete");
+}
+
+/// Adds one `chmod +a` entry (like `"everyone deny add_file"`) to `path`'s ACL.
+pub fn add_acl_entry(path: &Path, entry: &str) {
     let status = Command::new("chmod")
-        .args(["+a", "everyone deny delete"])
+        .args(["+a", entry])
         .arg(path)
         .status()
         .expect("fixture: run chmod +a");
-    assert!(status.success(), "fixture: chmod +a on {}", path.display());
+    assert!(status.success(), "fixture: chmod +a {entry:?} on {}", path.display());
+}
+
+/// Whether `path` itself (never a symlink's target) carries an extended ACL.
+pub fn has_acl(path: &Path) -> bool {
+    !exacl::getfacl(path, exacl::AclOption::SYMLINK_ACL)
+        .unwrap_or_else(|e| panic!("read the ACL of {}: {e}", path.display()))
+        .is_empty()
 }
 
 /// Sets the xattr `name` on `path` (following a symlink), panicking on refusal.

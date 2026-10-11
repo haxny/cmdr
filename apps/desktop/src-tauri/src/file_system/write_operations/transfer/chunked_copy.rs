@@ -54,11 +54,14 @@ pub fn is_network_filesystem(path: &Path) -> bool {
 /// abandons the thread instead: `../DETAILS.md` § "A local blocking read or
 /// write cannot be given a timeout".
 ///
-/// After the data copy, all metadata is preserved:
+/// After the data copy, the metadata that may sit on a staged temp follows:
 /// - Extended attributes (includes macOS resource forks, Finder info)
-/// - ACLs (access control lists)
 /// - Timestamps (modification time, access time)
 /// - Permissions
+///
+/// The ACL doesn't: a `deny delete` one refuses the landing rename, so the
+/// caller reads it off the source and puts it on after landing
+/// (`copy_strategy::copy_file_using`).
 ///
 /// The optional progress callback is called after each chunk with
 /// (bytes_copied_so_far, total_bytes).
@@ -281,13 +284,10 @@ fn copy_metadata(source: &Path, dest: &Path) -> Result<(), WriteOperationError> 
     // 1. Copy extended attributes (includes resource forks, Finder info)
     copy_xattrs(source, dest)?;
 
-    // 2. Copy ACLs
-    copy_acls(source, dest)?;
-
-    // 3. Copy timestamps
+    // 2. Copy timestamps
     copy_timestamps(source, dest)?;
 
-    // 4. Copy permissions
+    // 3. Copy permissions
     copy_permissions(source, dest)?;
 
     Ok(())
@@ -332,34 +332,6 @@ fn copy_xattrs(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
         }
     }
 
-    Ok(())
-}
-
-/// Copies ACLs (access control lists) from source to destination.
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "freebsd"))]
-fn copy_acls(source: &Path, dest: &Path) -> Result<(), WriteOperationError> {
-    use exacl::{AclOption, getfacl, setfacl};
-
-    // Get ACL from source (best effort - not all filesystems support ACLs)
-    let acl = match getfacl(source, AclOption::empty()) {
-        Ok(acl) => acl,
-        Err(e) => {
-            log::debug!("copy_acls: failed to get ACL from {}: {}", source.display(), e);
-            return Ok(());
-        }
-    };
-
-    // Set ACL on destination
-    if let Err(e) = setfacl(&[dest], &acl, AclOption::empty()) {
-        log::debug!("copy_acls: failed to set ACL on {}: {}", dest.display(), e);
-    }
-
-    Ok(())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "freebsd")))]
-fn copy_acls(_source: &Path, _dest: &Path) -> Result<(), WriteOperationError> {
-    // ACLs not supported on this platform
     Ok(())
 }
 

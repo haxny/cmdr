@@ -18,6 +18,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cmdr_fs::metadata::{LandedMetadata, apply_landed};
+
 use super::super::copy::{
     JournalDestUnder, copy_single_item, create_scanned_dirs_at_destination, date_created_dirs_like_their_sources,
 };
@@ -28,7 +30,7 @@ use super::rename_onto_free_name;
 use super::source_sweep::{LandedOriginal, SourceStamp, SourceSweep, delete_sources_after_move};
 
 use crate::file_system::staging::StagingTemp;
-use crate::file_system::write_operations::cancellable::remove_dir_all_in_background;
+use crate::file_system::write_operations::cancellable::remove_staging_tree_in_background;
 use crate::file_system::write_operations::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use crate::file_system::write_operations::durability::flush_created_destinations;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
@@ -143,6 +145,11 @@ pub(super) fn move_with_staging(
     // `transaction.created_dirs`. Phase 3 moves the staged tree out, so before
     // the flush every one of them is mapped to where it landed (`landed_at`).
     let mut already_synced: HashSet<PathBuf> = HashSet::new();
+    // The ACL and Locked flag of each staged file that has one, keyed by STAGED
+    // path. Either would refuse Phase 3's rename (and a failed move's staging
+    // cleanup), so they go on only once Phase 3 has put the item in its final
+    // place. Sparse: a move of ordinary files holds an empty map.
+    let mut deferred_landed: HashMap<PathBuf, LandedMetadata> = HashMap::new();
 
     // Emit initial copying phase event
     state.emit_progress_via_sink(
@@ -237,6 +244,7 @@ pub(super) fn move_with_staging(
                 &mut dir_remap,
                 &mut skipped_subtrees,
                 &mut already_synced,
+                Some(&mut deferred_landed),
             )?;
 
             // ❗ The LEDGER is the witness here, ❌ never `verdict`. Deleting an
@@ -277,7 +285,7 @@ pub(super) fn move_with_staging(
 
     if let Err(e) = copy_result {
         // Cleanup staging directory in background (may block on network mounts)
-        remove_dir_all_in_background(staging_dir.clone());
+        remove_staging_tree_in_background(staging_dir.clone());
         let event = transfer_stop_event(operation_id, WriteOperationType::Move, state, e, None);
         let e = event.error.clone();
         events.emit_error(event);
@@ -298,7 +306,7 @@ pub(super) fn move_with_staging(
         &mut created_dirs,
         &dir_remap,
     ) {
-        remove_dir_all_in_background(staging_dir.clone());
+        remove_staging_tree_in_background(staging_dir.clone());
         let event = transfer_stop_event(operation_id, WriteOperationType::Move, state, e, None);
         let e = event.error.clone();
         events.emit_error(event);
@@ -460,7 +468,7 @@ pub(super) fn move_with_staging(
 
     if let Err(e) = rename_result {
         // Cleanup staging directory in background (may block on network mounts)
-        remove_dir_all_in_background(staging_dir);
+        remove_staging_tree_in_background(staging_dir);
         let event = transfer_stop_event(operation_id, WriteOperationType::Move, state, e, None);
         let e = event.error.clone();
         events.emit_error(event);
@@ -503,6 +511,22 @@ pub(super) fn move_with_staging(
         }
         Some(remap(p))
     };
+    // Every staged item is in its final place now, so what would have refused
+    // its rename goes on: the ACL, then the flags (`apply_landed`). Before the
+    // flush, which then makes them durable with everything else. Best effort: a
+    // refusal costs the item its ACL or flags, never the move.
+    for (staged, set) in &deferred_landed {
+        let Some(landed) = landed_at(staged) else { continue };
+        let report = apply_landed(&landed, set);
+        if report.any_refused() {
+            log::warn!(
+                target: "copy",
+                "move_with_staging: op={} {} landed without some of its metadata: {report:?}",
+                operation_id,
+                landed.display()
+            );
+        }
+    }
     let final_dests: Vec<PathBuf> = transaction
         .created_file_paths()
         .iter()

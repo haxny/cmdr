@@ -28,10 +28,17 @@ pub(super) fn remove_file_in_background(path: PathBuf) {
     });
 }
 
-/// Deletes a directory tree on a detached thread. Returns immediately. Best-effort.
-pub(super) fn remove_dir_all_in_background(path: PathBuf) {
+/// Deletes a cross-FS move's staging tree on a detached thread. Returns
+/// immediately. Best-effort.
+///
+/// The tree is the move's own, so an item in it that refuses its unlink (a
+/// Locked or `deny delete` copy) is cleared and the removal retried, the same
+/// clearing every other reversal does before removing what it made
+/// (`cmdr_fs::metadata::remove_tree_clearing_blockers`). A plain tree costs one
+/// `remove_dir_all`.
+pub(super) fn remove_staging_tree_in_background(path: PathBuf) {
     std::thread::spawn(move || {
-        if let Err(e) = fs::remove_dir_all(&path) {
+        if let Err(e) = cmdr_fs::metadata::remove_tree_clearing_blockers(&path) {
             log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
         }
     });

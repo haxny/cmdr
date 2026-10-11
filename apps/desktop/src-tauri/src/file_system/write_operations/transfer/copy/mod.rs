@@ -509,6 +509,8 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 &mut dir_remap,
                 &mut skipped_subtrees,
                 &mut already_synced,
+                // Lands where it stays, so the ACL and flags go on at once.
+                None,
             )?;
             let bytes_delta = local_bytes.saturating_sub(ctx.bytes_done_so_far);
 

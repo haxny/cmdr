@@ -512,6 +512,7 @@ fn copy_one_file_knowing(source: &Path, dest_dir: &Path, created_dirs: &mut Hash
         &mut HashMap::new(),
         &mut HashSet::new(),
         &mut HashSet::new(),
+        None,
     )
     .expect("the copy should land");
 

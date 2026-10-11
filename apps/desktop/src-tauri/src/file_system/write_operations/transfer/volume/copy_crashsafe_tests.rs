@@ -551,6 +551,7 @@ async fn cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failur
 // the 4 GB-copy-then-quit scenario describes.
 
 mod local_staging {
+    use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use crate::file_system::write_operations::types::WriteOperationError;
@@ -613,8 +614,16 @@ mod local_staging {
             }
         };
 
-        copy_file_using(LocalCopyStrategy::Chunked, &state, &src, &dest, false, Some(&observe))
-            .expect("the copy itself must succeed");
+        copy_file_using(
+            LocalCopyStrategy::Chunked,
+            &state,
+            &src,
+            &dest,
+            false,
+            PostLanding::Apply,
+            Some(&observe),
+        )
+        .expect("the copy itself must succeed");
 
         assert!(
             !saw_real_name.get(),
@@ -668,6 +677,7 @@ mod local_staging {
             &src,
             &dest,
             false,
+            PostLanding::Apply,
             Some(&cancel_after_first_chunk),
         );
 
@@ -708,6 +718,7 @@ mod local_staging {
             &dest,
             // Not an overwrite: nobody resolved a conflict for this path.
             false,
+            PostLanding::Apply,
             None,
         );
 
@@ -736,8 +747,16 @@ mod local_staging {
         fs::write(&src, "new bytes").unwrap();
         fs::write(&dest, "old bytes").unwrap();
 
-        copy_file_using(LocalCopyStrategy::Chunked, &running_state(), &src, &dest, true, None)
-            .expect("the overwrite must succeed");
+        copy_file_using(
+            LocalCopyStrategy::Chunked,
+            &running_state(),
+            &src,
+            &dest,
+            true,
+            PostLanding::Apply,
+            None,
+        )
+        .expect("the overwrite must succeed");
 
         assert_eq!(fs::read_to_string(&dest).unwrap(), "new bytes");
         let leftovers: Vec<PathBuf> = fs::read_dir(&dir)

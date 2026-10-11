@@ -1,0 +1,206 @@
+//! What a copy puts on the item it wrote beyond the bytes, in the order the
+//! filesystem allows: the one host helper every copy path calls, so the ordering
+//! rules live in exactly one place.
+//!
+//! **Total, by type.** Every apply function returns a [`MetadataReport`] and has
+//! no error path, so a refused metadata write can never fail a copy: the bytes
+//! are the copy. Each class is its own independent step; a refused ACL never
+//! skips the flags after it.
+//!
+//! **Some metadata can't go on before the landing rename.** `uchg`/`uappnd` on an
+//! item (`EPERM`) and an ACL with `deny delete` on it (`EACCES`) make `rename(2)`
+//! refuse, and so does a staging tree that has to be renamed again later. So the
+//! rename-blocking set ([`LandedMetadata`]: the ACL, then the user flags) goes on
+//! the LANDED item through [`apply_landed`], ACL first, because `uchg` refuses a
+//! later ACL write.
+//!
+//! **What Cmdr made, Cmdr can remove.** A copy that carried Locked or `deny
+//! delete` onto its landed item made something `unlink(2)` refuses, even for its
+//! owner. [`clear_blockers`] clears the user flags and strips the ACL of one
+//! item, and the `remove_*_clearing_blockers` helpers do it only after a first
+//! removal is refused, so a plain item costs exactly the removal it did before.
+//! ❗ They act on the item itself, never a symlink's target.
+//!
+//! macOS carries both classes. On Linux the ACL is a POSIX ACL, which carries no
+//! `deny` entries and blocks no rename; the flags (`chattr`) need a capability a
+//! desktop app doesn't have, so they answer [`ClassOutcome::NotApplicable`] and
+//! nothing ever needs clearing. Background and the measurements behind each
+//! rule: `DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on".
+
+mod blockers;
+mod flags;
+
+use std::path::Path;
+
+pub use blockers::{
+    RemovalRefusal, Unblock, clear_blockers, remove_dir_clearing_blockers, remove_file_clearing_blockers,
+    remove_tree_clearing_blockers,
+};
+pub use flags::UserFlags;
+
+/// What happened to one metadata class on one item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClassOutcome {
+    /// The item carries the source's value.
+    Kept,
+    /// The source had a value and the destination refused it. Logged, never an
+    /// error: the copy stands.
+    Refused,
+    /// The platform or the destination can't hold this class.
+    NotApplicable,
+    /// The source had nothing of this class to carry.
+    Absent,
+}
+
+/// Per class, what one apply call did. Returned by every apply function in
+/// place of a `Result`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MetadataReport {
+    /// The ACL.
+    pub acl: ClassOutcome,
+    /// The user flags (Hidden, Locked, append-only, no-dump).
+    pub flags: ClassOutcome,
+}
+
+impl MetadataReport {
+    /// Whether any class was refused.
+    pub fn any_refused(&self) -> bool {
+        self.acl == ClassOutcome::Refused || self.flags == ClassOutcome::Refused
+    }
+}
+
+/// An ACL as the helper carries it: opaque entries, read and written whole.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Acl(Vec<exacl::AclEntry>);
+
+/// The metadata that goes on an item only after its landing rename, because on
+/// the staged item it would refuse that rename or a later one.
+///
+/// Small and `Clone`: a cross-filesystem move holds one per item that has any,
+/// keyed by staged path, until its Phase 3 has renamed everything into place.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LandedMetadata {
+    acl: Option<Acl>,
+    flags: UserFlags,
+}
+
+impl LandedMetadata {
+    /// The set carrying only `source`'s ACL, read without following a symlink.
+    /// Empty when it has none, when it can't be read, and on Linux when its
+    /// POSIX ACL is only the three mode entries every file has (`chmod` already
+    /// carries those).
+    pub fn of_source_acl(source: &Path) -> Self {
+        Self {
+            acl: read_acl(source),
+            flags: UserFlags::NONE,
+        }
+    }
+
+    /// Whether there's nothing to apply, the common case. A caller that holds
+    /// an empty set skips [`apply_landed`] entirely.
+    pub fn is_empty(&self) -> bool {
+        self.acl.is_none() && self.flags.is_empty()
+    }
+
+    /// The user flags to add on landing.
+    pub fn flags(&self) -> UserFlags {
+        self.flags
+    }
+
+    /// Whether the set carries an ACL.
+    pub fn has_acl(&self) -> bool {
+        self.acl.is_some()
+    }
+
+    /// Folds `other` in: its ACL replaces this one when it has one, and its
+    /// flags join these.
+    pub fn merge(&mut self, other: LandedMetadata) {
+        if other.acl.is_some() {
+            self.acl = other.acl;
+        }
+        self.flags = self.flags | other.flags;
+    }
+}
+
+/// Puts `set` on the landed item at `path`: the ACL, then the flags (added to
+/// what the item already wears), each only when the set has one, each
+/// independent of the other.
+pub fn apply_landed(path: &Path, set: &LandedMetadata) -> MetadataReport {
+    note_helper_call();
+    let acl = match &set.acl {
+        None => ClassOutcome::Absent,
+        Some(acl) => write_acl(path, acl),
+    };
+    let flags = if set.flags.is_empty() {
+        ClassOutcome::Absent
+    } else {
+        flags::add_flags(path, set.flags)
+    };
+    MetadataReport { acl, flags }
+}
+
+#[cfg(target_os = "macos")]
+fn read_acl(path: &Path) -> Option<Acl> {
+    match exacl::getfacl(path, exacl::AclOption::SYMLINK_ACL) {
+        Ok(entries) if !entries.is_empty() => Some(Acl(entries)),
+        Ok(_) => None,
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", path.display());
+            None
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn read_acl(path: &Path) -> Option<Acl> {
+    match exacl::getfacl(path, None) {
+        // A named user or group, or a default ACL, is what makes it more than the mode.
+        Ok(entries)
+            if entries
+                .iter()
+                .any(|e| !e.name.is_empty() || e.flags.contains(exacl::Flag::DEFAULT)) =>
+        {
+            Some(Acl(entries))
+        }
+        Ok(_) => None,
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't read the ACL of {}: {e}", path.display());
+            None
+        }
+    }
+}
+
+fn write_acl(path: &Path, acl: &Acl) -> ClassOutcome {
+    #[cfg(target_os = "macos")]
+    let written = exacl::setfacl(&[path], &acl.0, exacl::AclOption::SYMLINK_ACL);
+    #[cfg(not(target_os = "macos"))]
+    let written = exacl::setfacl(&[path], &acl.0, None);
+    match written {
+        Ok(()) => ClassOutcome::Kept,
+        Err(e) => {
+            log::debug!(target: "metadata", "couldn't set the ACL on {}: {e}", path.display());
+            ClassOutcome::Refused
+        }
+    }
+}
+
+/// Test seam: how many times this thread has called into the helper's
+/// syscall-making entry points ([`apply_landed`], [`clear_blockers`]), so a test
+/// can prove a plain file never reaches them.
+#[cfg(any(test, feature = "testing"))]
+pub fn helper_calls_on_this_thread() -> u32 {
+    HELPER_CALLS.with(std::cell::Cell::get)
+}
+
+#[cfg(any(test, feature = "testing"))]
+thread_local! {
+    static HELPER_CALLS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+fn note_helper_call() {
+    #[cfg(any(test, feature = "testing"))]
+    HELPER_CALLS.with(|calls| calls.set(calls.get() + 1));
+}
+
+#[cfg(test)]
+mod tests;
