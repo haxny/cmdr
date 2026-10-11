@@ -936,6 +936,14 @@
   "@fileOperations.cancelRollback.reason.failed.counted": {
     "sourceHash": "fa172fb"
   },
+  "fileOperations.cancelRollback.reason.locked.named": "Giữ nguyên {name}: mục này bị khóa và Cmdr không mở khóa được.",
+  "@fileOperations.cancelRollback.reason.locked.named": {
+    "sourceHash": "1345440"
+  },
+  "fileOperations.cancelRollback.reason.locked.counted": "Giữ nguyên {countText} {count, plural, other {mục}}: chúng bị khóa và Cmdr không mở khóa được.",
+  "@fileOperations.cancelRollback.reason.locked.counted": {
+    "sourceHash": "9070a49"
+  },
   "fileOperations.cancelRollback.stagedLeftover.named": "Không xóa được {name}, một bản sao chưa hoàn chỉnh còn lại ở đích. Bạn có thể xóa nó mà không mất gì, và Cmdr cũng sẽ dọn nó trong một lần truyền sau tới đó.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
     "sourceHash": "d47b49d"

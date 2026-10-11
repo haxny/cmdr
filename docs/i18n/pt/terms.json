@@ -1544,7 +1544,7 @@
   },
   "locked": {
     "chosen": "bloqueado",
-    "accept": ["bloquead", "desbloque"],
+    "accept": ["bloquead", "desbloque", "bloqueio"],
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR (AXNODE1 Bloqueado)"
   },

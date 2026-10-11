@@ -938,6 +938,14 @@
   "@fileOperations.cancelRollback.reason.failed.counted": {
     "sourceHash": "fa172fb"
   },
+  "fileOperations.cancelRollback.reason.locked.named": "{name} laten staan: daar zit een beveiliging op die Cmdr niet kan opheffen.",
+  "@fileOperations.cancelRollback.reason.locked.named": {
+    "sourceHash": "1345440"
+  },
+  "fileOperations.cancelRollback.reason.locked.counted": "{countText} {count, plural, one {onderdeel} other {onderdelen}} laten staan: daar zit een beveiliging op die Cmdr niet kan opheffen.",
+  "@fileOperations.cancelRollback.reason.locked.counted": {
+    "sourceHash": "9070a49"
+  },
   "fileOperations.cancelRollback.stagedLeftover.named": "{name} verwijderen lukte niet: een onvolledig exemplaar dat op de bestemming is blijven staan. Je kunt het gerust verwijderen, en Cmdr ruimt het bij een latere overdracht daarheen op.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
     "sourceHash": "d47b49d"

@@ -3421,7 +3421,7 @@
     "en": "Undo",
     "match": ["undo", "undone", "undoing", "can't be undone"],
     "note": "Three different actions share the English word; many locales need three words.",
-    "notMatch": ["undo the move"],
+    "notMatch": ["undo the move", "locked in a way cmdr can't undo"],
     "sense": "Reversing the last action (text undo, putting trashed files back, reverting an AI rename run)."
   },
   "unexpected": {

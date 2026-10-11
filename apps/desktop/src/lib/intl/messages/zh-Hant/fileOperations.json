@@ -935,6 +935,14 @@
   "@fileOperations.cancelRollback.reason.failed.counted": {
     "sourceHash": "fa172fb"
   },
+  "fileOperations.cancelRollback.reason.locked.named": "{name} 維持原樣：它被鎖定了，Cmdr 無法解鎖。",
+  "@fileOperations.cancelRollback.reason.locked.named": {
+    "sourceHash": "1345440"
+  },
+  "fileOperations.cancelRollback.reason.locked.counted": "有 {countText} 個{count, plural, other {項目}}維持原樣：它們被鎖定了，Cmdr 無法解鎖。",
+  "@fileOperations.cancelRollback.reason.locked.counted": {
+    "sourceHash": "9070a49"
+  },
   "fileOperations.cancelRollback.stagedLeftover.named": "無法刪除 {name}，這是留在目標位置的一個不完整副本。你可以放心刪掉它，Cmdr 之後往那裡傳輸時也會清掉它。",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
     "sourceHash": "d47b49d"

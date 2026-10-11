@@ -937,6 +937,14 @@
   "@fileOperations.cancelRollback.reason.failed.counted": {
     "sourceHash": "fa172fb"
   },
+  "fileOperations.cancelRollback.reason.locked.named": "{name} se ha quedado donde está: tiene un bloqueo que Cmdr no puede quitar.",
+  "@fileOperations.cancelRollback.reason.locked.named": {
+    "sourceHash": "1345440"
+  },
+  "fileOperations.cancelRollback.reason.locked.counted": "{countText} {count, plural, one {elemento} many {elementos} other {elementos}} se han quedado donde están: tienen un bloqueo que Cmdr no puede quitar.",
+  "@fileOperations.cancelRollback.reason.locked.counted": {
+    "sourceHash": "9070a49"
+  },
   "fileOperations.cancelRollback.stagedLeftover.named": "Cmdr no ha podido eliminar {name}, una copia parcial que se ha quedado en el destino. Puedes borrarla sin problema, y Cmdr la eliminará en una transferencia posterior a ese sitio.",
   "@fileOperations.cancelRollback.stagedLeftover.named": {
     "sourceHash": "d47b49d"
