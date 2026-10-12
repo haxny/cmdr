@@ -2933,12 +2933,6 @@
     },
     {
       "name": "quick-xml",
-      "version": "0.41.0",
-      "license": "MIT",
-      "url": "https://github.com/tafia/quick-xml"
-    },
-    {
-      "name": "quick-xml",
       "version": "0.42.0",
       "license": "MIT",
       "url": "https://github.com/tafia/quick-xml"

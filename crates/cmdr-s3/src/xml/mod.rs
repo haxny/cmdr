@@ -65,13 +65,13 @@ fn parse_tree(body: &str) -> Result<Element, Malformed> {
                     return Err(Malformed);
                 }
                 stack.push(Element {
-                    name: local_name(start.local_name().as_ref())?,
+                    name: start.local_name().as_ref().to_string(),
                     ..Element::default()
                 });
             }
             Event::Empty(start) => {
                 let element = Element {
-                    name: local_name(start.local_name().as_ref())?,
+                    name: start.local_name().as_ref().to_string(),
                     ..Element::default()
                 };
                 match stack.last_mut() {
@@ -86,13 +86,13 @@ fn parse_tree(body: &str) -> Result<Element, Malformed> {
                     None => return Ok(element),
                 }
             }
-            // A text node never holds an entity: quick-xml 0.41 splits
+            // A text node never holds an entity: quick-xml 0.42 splits
             // `a&amp;b` into `Text(a)`, `GeneralRef(amp)`, `Text(b)`
             // (`crates/cmdr-webdav/src/propfind.rs` has the evidence). Resolving
             // the reference is what keeps the `&` in a key.
             Event::Text(text) => {
                 if let Some(top) = stack.last_mut() {
-                    top.text.push_str(&text.decode().map_err(|_| Malformed)?);
+                    top.text.push_str(&text);
                 }
             }
             Event::GeneralRef(reference) => {
@@ -100,24 +100,20 @@ fn parse_tree(body: &str) -> Result<Element, Malformed> {
                     if let Ok(Some(c)) = reference.resolve_char_ref() {
                         top.text.push(c);
                     } else {
-                        let name = reference.decode().map_err(|_| Malformed)?;
-                        top.text.push_str(resolve_predefined_entity(&name).ok_or(Malformed)?);
+                        top.text
+                            .push_str(resolve_predefined_entity(&reference).ok_or(Malformed)?);
                     }
                 }
             }
             Event::CData(data) => {
                 if let Some(top) = stack.last_mut() {
-                    top.text.push_str(&data.decode().map_err(|_| Malformed)?);
+                    top.text.push_str(&data);
                 }
             }
             Event::Eof => return Err(Malformed),
             Event::Decl(_) | Event::PI(_) | Event::Comment(_) | Event::DocType(_) => {}
         }
     }
-}
-
-fn local_name(bytes: &[u8]) -> Result<String, Malformed> {
-    std::str::from_utf8(bytes).map(str::to_string).map_err(|_| Malformed)
 }
 
 #[cfg(test)]

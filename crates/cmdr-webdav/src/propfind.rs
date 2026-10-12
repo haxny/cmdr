@@ -12,25 +12,25 @@ use quick_xml::name::ResolveResult;
 use quick_xml::reader::NsReader;
 
 /// The namespace every WebDAV property lives in.
-const DAV: &[u8] = b"DAV:";
+const DAV: &str = "DAV:";
 
 /// ownCloud's namespace, which Nextcloud inherited at the fork and still uses.
 /// The one property read from it is `size`; `crates/cmdr-webdav/DETAILS.md`
 /// § What a real server answers carries why a non-standard property earns its
 /// place here.
-const OC: &[u8] = b"http://owncloud.org/ns";
+const OC: &str = "http://owncloud.org/ns";
 
 /// How an `oc:` name is held on the element stack. DAV local names never
 /// contain a colon, so the prefix keeps the two namespaces from colliding.
-const OC_PREFIX: &[u8] = b"oc:";
+const OC_PREFIX: &str = "oc:";
 
 /// Nextcloud's own namespace. The one property read from it is
 /// `creation_time`, and only to learn whether the server keeps creation dates
 /// (`DETAILS.md` § "Dates").
-const NC: &[u8] = b"http://nextcloud.org/ns";
+const NC: &str = "http://nextcloud.org/ns";
 
 /// How an `nc:` name is held on the element stack, like [`OC_PREFIX`].
-const NC_PREFIX: &[u8] = b"nc:";
+const NC_PREFIX: &str = "nc:";
 
 /// One `response` element, with the properties this backend asks for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -74,7 +74,7 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
     let mut entries = Vec::new();
     let mut saw_multistatus = false;
     // Where the cursor is, as a stack of DAV: local names.
-    let mut stack: Vec<Vec<u8>> = Vec::new();
+    let mut stack: Vec<String> = Vec::new();
     let mut current: Option<PropfindEntry> = None;
     let mut pending = PropfindEntry::default();
     let mut pending_status_ok = true;
@@ -85,16 +85,16 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
         match event {
             Event::Start(start) => {
                 let local = stack_name(&ns, start.local_name().as_ref());
-                match local.as_slice() {
-                    b"multistatus" => saw_multistatus = true,
-                    b"response" => {
+                match local.as_str() {
+                    "multistatus" => saw_multistatus = true,
+                    "response" => {
                         current = Some(PropfindEntry::default());
                     }
-                    b"propstat" => {
+                    "propstat" => {
                         pending = PropfindEntry::default();
                         pending_status_ok = true;
                     }
-                    b"collection" if stack.last().is_some_and(|parent| parent == b"resourcetype") => {
+                    "collection" if stack.last().is_some_and(|parent| parent == "resourcetype") => {
                         pending.is_collection = true;
                     }
                     _ => {}
@@ -105,67 +105,59 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
             Event::Empty(start) => {
                 let in_dav = matches!(ns, ResolveResult::Bound(namespace) if namespace.as_ref() == DAV);
                 if in_dav
-                    && start.local_name().as_ref() == b"collection"
-                    && stack.last().is_some_and(|parent| parent == b"resourcetype")
+                    && start.local_name().as_ref() == "collection"
+                    && stack.last().is_some_and(|parent| parent == "resourcetype")
                 {
                     pending.is_collection = true;
                 }
             }
             // A text node never holds an entity: the reader splits `a&amp;b`
-            // into `Text(a)`, `GeneralRef(amp)`, `Text(b)`, and `decode` only
-            // handles the character encoding (verified on `quick-xml` 0.41.0,
-            // `reader/state.rs` + `events/mod.rs`, 2026-09-01). Unescaping the
+            // into `Text(a)`, `GeneralRef(amp)`, `Text(b)`, and the text derefs
+            // to the raw `str` between them (verified on `quick-xml` 0.42.0, the
+            // `an_escaped_entity_is_unescaped_exactly_once` test, 2026-10-12). Unescaping the
             // text would find nothing; resolving the reference is what keeps
             // the `&`.
-            Event::Text(t) => {
-                if let Ok(decoded) = t.decode() {
-                    text.push_str(&decoded);
-                }
-            }
+            Event::Text(t) => text.push_str(&t),
             Event::GeneralRef(r) => {
                 if let Ok(Some(c)) = r.resolve_char_ref() {
                     text.push(c);
-                } else if let Ok(name) = r.decode()
-                    && let Some(resolved) = resolve_predefined_entity(&name)
-                {
+                } else if let Some(resolved) = resolve_predefined_entity(&r) {
                     text.push_str(resolved);
                 }
             }
-            Event::CData(c) => {
-                text.push_str(&String::from_utf8_lossy(&c));
-            }
+            Event::CData(c) => text.push_str(&c),
             Event::End(_) => {
                 let Some(local) = stack.pop() else {
                     return Err(NotMultistatus);
                 };
                 let value = text.trim().to_string();
-                match local.as_slice() {
-                    b"href" if stack.last().is_some_and(|parent| parent == b"response") => {
+                match local.as_str() {
+                    "href" if stack.last().is_some_and(|parent| parent == "response") => {
                         if let Some(entry) = current.as_mut() {
                             entry.href = decode_href(&value);
                         }
                     }
-                    b"status" if stack.last().is_some_and(|parent| parent == b"propstat") => {
+                    "status" if stack.last().is_some_and(|parent| parent == "propstat") => {
                         pending_status_ok = status_is_success(&value);
                     }
-                    b"getcontentlength" => pending.size = value.parse().ok(),
-                    b"getlastmodified" => {
+                    "getcontentlength" => pending.size = value.parse().ok(),
+                    "getlastmodified" => {
                         pending.modified_at = httpdate::parse_http_date(&value).ok().and_then(unix_secs);
                     }
                     // ❗ Nextcloud answers 1970-01-01 for an item with no creation
                     // time recorded (everything not uploaded with `X-OC-CTime`):
                     // that's "unknown", or a copy off the server would stamp it.
-                    b"creationdate" => pending.created_at = parse_rfc3339(&value).filter(|&secs| secs != 0),
-                    b"quota-available-bytes" => pending.quota_available = value.parse().ok(),
-                    b"quota-used-bytes" => pending.quota_used = value.parse().ok(),
-                    b"oc:size" => pending.oc_size = value.parse().ok(),
-                    b"nc:creation_time" => pending.nc_creation_time = value.parse().ok(),
-                    b"propstat" => {
+                    "creationdate" => pending.created_at = parse_rfc3339(&value).filter(|&secs| secs != 0),
+                    "quota-available-bytes" => pending.quota_available = value.parse().ok(),
+                    "quota-used-bytes" => pending.quota_used = value.parse().ok(),
+                    "oc:size" => pending.oc_size = value.parse().ok(),
+                    "nc:creation_time" => pending.nc_creation_time = value.parse().ok(),
+                    "propstat" => {
                         if pending_status_ok && let Some(entry) = current.as_mut() {
                             merge(entry, &pending);
                         }
                     }
-                    b"response" => {
+                    "response" => {
                         if let Some(entry) = current.take() {
                             entries.push(entry);
                         }
@@ -190,7 +182,7 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
 pub(crate) fn every_propstat_succeeded(body: &str) -> Result<bool, NotMultistatus> {
     let mut reader = NsReader::from_str(body);
     let mut saw_multistatus = false;
-    let mut stack: Vec<Vec<u8>> = Vec::new();
+    let mut stack: Vec<String> = Vec::new();
     let mut text = String::new();
     let mut all = true;
     loop {
@@ -198,22 +190,18 @@ pub(crate) fn every_propstat_succeeded(body: &str) -> Result<bool, NotMultistatu
         match event {
             Event::Start(start) => {
                 let local = stack_name(&ns, start.local_name().as_ref());
-                if local == b"multistatus" {
+                if local == "multistatus" {
                     saw_multistatus = true;
                 }
                 text.clear();
                 stack.push(local);
             }
-            Event::Text(t) => {
-                if let Ok(decoded) = t.decode() {
-                    text.push_str(&decoded);
-                }
-            }
+            Event::Text(t) => text.push_str(&t),
             Event::End(_) => {
                 let Some(local) = stack.pop() else {
                     return Err(NotMultistatus);
                 };
-                if local == b"status" && stack.last().is_some_and(|parent| parent == b"propstat") {
+                if local == "status" && stack.last().is_some_and(|parent| parent == "propstat") {
                     all &= status_is_success(text.trim());
                 }
                 text.clear();
@@ -240,20 +228,12 @@ fn merge(entry: &mut PropfindEntry, from: &PropfindEntry) {
 /// How an element is held on the stack: its local name for a `DAV:` element,
 /// the same prefixed with `oc:` for an ownCloud one and `nc:` for a Nextcloud one, and empty for a namespace
 /// this parser reads nothing from.
-fn stack_name(ns: &ResolveResult, local: &[u8]) -> Vec<u8> {
+fn stack_name(ns: &ResolveResult, local: &str) -> String {
     match ns {
-        ResolveResult::Bound(namespace) if namespace.as_ref() == DAV => local.to_vec(),
-        ResolveResult::Bound(namespace) if namespace.as_ref() == OC => {
-            let mut name = OC_PREFIX.to_vec();
-            name.extend_from_slice(local);
-            name
-        }
-        ResolveResult::Bound(namespace) if namespace.as_ref() == NC => {
-            let mut name = NC_PREFIX.to_vec();
-            name.extend_from_slice(local);
-            name
-        }
-        _ => Vec::new(),
+        ResolveResult::Bound(namespace) if namespace.as_ref() == DAV => local.to_string(),
+        ResolveResult::Bound(namespace) if namespace.as_ref() == OC => format!("{OC_PREFIX}{local}"),
+        ResolveResult::Bound(namespace) if namespace.as_ref() == NC => format!("{NC_PREFIX}{local}"),
+        _ => String::new(),
     }
 }
 

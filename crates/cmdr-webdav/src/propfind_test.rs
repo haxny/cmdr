@@ -203,7 +203,7 @@ fn creation_dates_read_with_and_without_an_offset() {
     assert_eq!(parse_rfc3339("yesterday"), None);
 }
 
-/// `quick-xml` 0.41 hands an entity over as its own `GeneralRef` event, never
+/// `quick-xml` 0.42 hands an entity over as its own `GeneralRef` event, never
 /// inside a text node (so a text-level `unescape` finds nothing and the `&`
 /// used to vanish: `a&amp;b` came out as `ab`). Resolving the reference once
 /// gives exactly `a&b`. The name comes from the `href` (the parser never

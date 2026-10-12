@@ -716,7 +716,7 @@ account-root place has no bucket of its own to compare.
   response parser in `xml/`; the `s3_xml` target drives it (`fuzz/DETAILS.md`).
 - **The element tree** (`xml/mod.rs`): bodies are small, so each is read into a tree first, matched by local name (AWS
   uses a default namespace, some servers none). Text is kept untrimmed because keys may begin or end with spaces;
-  `Element::value` trims for numbers, dates, and tokens. Entities resolve through `GeneralRef` (quick-xml 0.41 splits
+  `Element::value` trims for numbers, dates, and tokens. Entities resolve through `GeneralRef` (quick-xml 0.42 splits
   them out of text nodes; `crates/cmdr-webdav/src/propfind.rs` has the evidence). A 32-level depth cap keeps a hostile
   body from building a tree whose recursive drop overflows the stack.
 - **Every parser checks the root.** An `<Error>` root inside a 2xx is `BodyError::Embedded`, boxed to keep `Result`
