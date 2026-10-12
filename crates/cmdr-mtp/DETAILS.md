@@ -151,6 +151,22 @@ metadata".)
   DST-dependent one.
 - **Pinned by** `a_copy_keeps_the_source_date_per_the_shared_contract` on the virtual device, which stamps a received
   `DateModified` onto the backing file and reports each file's mtime back.
+- **Creation dates: n/a on Android, so nothing sends one.** AOSP's `MtpServer::doSendObjectInfo` parses the
+  `SendObjectInfo` `DateCreated` string and drops it; `doSendObject` applies only `DateModified`, by `futimens`. And
+  `MtpDatabase.getObjectInfo` answers `DateCreated` with the MODIFIED time
+  (`outCreatedModified[0] = obj.getModifiedTime()`), so a phone's listed creation date is its modification date. (Read
+  in AOSP `main`, `frameworks/av/media/mtp/MtpServer.cpp` and `frameworks/base/media/java/android/mtp/MtpDatabase.java`,
+  2026-10-12.) Underneath, Linux has no call that sets a birth time at all (`statx` reads it), so no Android MTP server
+  could keep one. `MtpVolume` keeps `MetadataCaps::NONE`, and the loss note says creation dates stayed behind. ❌ No
+  code path behind a switch: `mtp-rs` 0.33.0's `NewObjectInfo` has no `DateCreated` field (the PTP `ObjectInfo` does),
+  so sending one needs an `mtp-rs` release, worth it only for a non-Android device that keeps it.
+- **Hand test** (David, a phone with USB debugging on, five minutes): on the Mac,
+  `touch -t 201503010000 old.txt; touch -m -t 202001150000 old.txt` and check `stat -f '%SB / %Sm' old.txt` reads 2015
+  / 2020. Copy it onto the phone's `Download` with Cmdr over MTP. `adb shell stat -c '%w / %y' /sdcard/Download/old.txt`
+  should read the copy's own time (or `-`) / 2020-01-15: the birth is the phone's, whatever MTP sends. Cmdr's pane on
+  the phone should list Created equal to Modified, and a copy back to the Mac should land birth 2020-01-15 (equal to
+  mtime) with no creation-date loss reported, since nothing earlier than the mtime came back. Any other answer means a
+  phone keeps more than AOSP does: record it here with the model and Android version.
 
 ## Two features, two different axes
 

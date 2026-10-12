@@ -949,7 +949,8 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   word (`0660` for a modeless source), which `/sdcard` ignores, so the caps don't claim it
   (`crates/cmdr-adb/DETAILS.md`).
 - **MTP**: reports the `DateModified` from the `ObjectInfo` the read's open already fetched; writes it as the upload's
-  `DateModified`, in UTC with a `Z` (`crates/cmdr-mtp/DETAILS.md` § "Dates on copies").
+  `DateModified`, in UTC with a `Z`. No creation date: Android drops a sent `DateCreated` and lists the modification
+  date in its place (`crates/cmdr-mtp/DETAILS.md` § "Dates on copies").
 - **SMB**: reports the server's `LastWriteTime` and `CreationTime` on both foreground read paths (streamed and one-frame
   compound), both off the read's own CREATE response; writes both in the one `FILE_BASIC_INFORMATION` it already
   sent for the date (zero new frames): on the streaming writer's own handle before it closes, or by path right after a
