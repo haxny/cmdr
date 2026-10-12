@@ -215,12 +215,15 @@ async function probeGallery(page: TauriPage): Promise<boolean> {
 /**
  * Closes whatever the gallery just opened, and reports whether it actually went.
  *
- * Escape closes a `ModalDialog`, but a soft sheet can swallow it — the onboarding wizard
- * does, deliberately — and a surface left up swallows the keystrokes of every spec after
- * it on the shard. That's not hypothetical: it killed four `file-operations` rename tests
- * three specs downstream, each reporting a missing `.rename-input`. So the fallback is the
- * wizard's own contract (`onboarding.spec.ts`): click the footer's forward button until it
- * unmounts. The caller fails the sweep on anything still open rather than carrying it.
+ * Escape closes a `ModalDialog` that has an `onclose`, but some surfaces refuse it on
+ * purpose: the onboarding wizard, and a question whose every way out is an answer
+ * (`sources-gone`, no `onclose`, so no × and no Escape). A surface left up swallows the
+ * keystrokes of every spec after it on the shard. That's not hypothetical: it killed four
+ * `file-operations` rename tests three specs downstream, each reporting a missing
+ * `.rename-input`. So the fallback clicks the primary (rightmost) footer button until it
+ * unmounts: the wizard's own forward contract (`onboarding.spec.ts`), and for a gallery
+ * `ModalDialog` an answer whose fixture callback only closes the preview. The caller fails
+ * the sweep on anything still open rather than carrying it.
  */
 async function closeGallerySurface(page: TauriPage, dialogId: string): Promise<boolean> {
   const selector = `[data-dialog-id="${dialogId}"]`
@@ -232,7 +235,7 @@ async function closeGallerySurface(page: TauriPage, dialogId: string): Promise<b
     // The onboarding wizard's Beta step blocks its forward button until the terms are ticked.
     await acceptOnboardingTermsIfPresent(page)
     await page.evaluate(`(function() {
-        var btns = document.querySelectorAll('${selector} .primary-slot button');
+        var btns = document.querySelectorAll('${selector} .primary-slot button, ${selector} .modal-footer-actions button');
         if (btns.length > 0) btns[btns.length - 1].click();
     })()`)
     await expect

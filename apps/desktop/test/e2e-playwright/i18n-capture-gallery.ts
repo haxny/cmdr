@@ -137,13 +137,28 @@ async function closePreview(main: TauriPage, dialogId: string): Promise<void> {
     await closeOnboardingWizardIfOpen(main).catch(() => {})
   }
   await dismissOverlay(main).catch(() => {})
+  // A `ModalDialog` with no `onclose` (`sources-gone`: both ways out are answers) has no
+  // Escape either. Its gallery callbacks only close the preview, so answer it with the
+  // primary (rightmost) footer button, the one Enter would press.
+  if (await main.isVisible(selector).catch(() => false)) {
+    await main
+      .evaluate(
+        `(function() {
+          var btns = document.querySelectorAll('${selector} .modal-footer-actions button');
+          if (btns.length > 0) btns[btns.length - 1].click();
+        })()`,
+      )
+      .catch(() => {})
+  }
   const closed = await expect
     .poll(async () => !(await main.isVisible(selector).catch(() => false)), { timeout: waitBudget(3000) })
     .toBeTruthy()
     .then(() => true)
     .catch(() => false)
   if (!closed) {
-    console.warn(`[i18n-capture] gallery: ${dialogId} stayed open after Escape; it may show behind the next shot.`)
+    console.warn(
+      `[i18n-capture] gallery: ${dialogId} stayed open after Escape and its primary button; it may show behind the next shot.`,
+    )
   }
 }
 

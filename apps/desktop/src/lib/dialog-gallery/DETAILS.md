@@ -99,8 +99,10 @@ earlier surface recorded, so the run doesn't write ~90 near-identical PNGs. Both
 preview before staging the next one, and the capture sink's `rerender` re-resolves every MOUNTED string: a dialog still
 up when the next shot happens records ITS keys against the next surface, so the coupler would hand a translator
 onboarding copy pointing at a screenshot of the operation log. The onboarding wizard is the standing case (it refuses
-Escape on purpose, so `closePreview` clicks through its primary slot instead), and a preview that survives its close
-logs a warning naming the culprit. Add the exit in the same change as the dialog, before its row ever runs in a capture.
+Escape on purpose, so `closePreview` clicks through its primary slot instead). A `ModalDialog` with no `onclose`
+(`sources-gone`) needs nothing new: both closers (`closePreview` and `dialog-inset.spec.ts`) fall back to its rightmost
+footer button, which in the gallery only closes the preview. A preview that survives its close logs a warning naming the
+culprit. Add the exit in the same change as the dialog, before its row ever runs in a capture.
 
 ## What actually reaches a production bundle
 
