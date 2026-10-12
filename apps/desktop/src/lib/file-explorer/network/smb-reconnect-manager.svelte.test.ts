@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { flushSync } from 'svelte'
 import type { SignInShape, VolumeConnection, VolumeConnectionChanged } from '#lib/ipc/bindings.js'
 
 // Hoisted mocks: must run before importing the module under test.
@@ -36,6 +37,7 @@ import {
   smbReconnectManager,
   RECONNECT_DELAYS_MS,
   TOTAL_ATTEMPTS,
+  TOTAL_DURATION_MS,
   ordinalCount,
   reconnectProgressMessage,
 } from './smb-reconnect-manager.svelte'
@@ -356,6 +358,61 @@ describe('smbReconnectManager', () => {
     await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS[0])
     emit('vol-once', 'connected')
     expect(onSuccess).toHaveBeenCalledTimes(1)
+
+    unsub()
+  })
+
+  it('a reactive reader sees every transition, Cancel included (ERR-VZ4CV)', async () => {
+    // Regression: each transition mutated the SAME entry object and re-set it,
+    // and `SvelteMap.set` stays silent when the value is identical. The pane's
+    // `$derived` froze on its first read: "Retry now" stayed disabled over a
+    // cycle that had long given up, and Cancel left the view on screen.
+    await smbReconnectManager.init()
+    const unsub = smbReconnectManager.subscribe('vol-reactive')
+    let seen: string | null = null
+    const dispose = $effect.root(() => {
+      const status = $derived(smbReconnectManager.getState('vol-reactive')?.status ?? null)
+      $effect(() => {
+        seen = status
+      })
+    })
+    smbReconnectManager.startCycle('vol-reactive')
+    flushSync()
+    expect(seen).toBe('waiting')
+
+    let fail!: (e: Error) => void
+    mockReconnect.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => (fail = reject)))
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS[0])
+    flushSync()
+    expect(seen).toBe('attempting')
+
+    fail(new Error('still down'))
+    await vi.advanceTimersByTimeAsync(0)
+    flushSync()
+    expect(seen).toBe('waiting')
+
+    smbReconnectManager.cancel('vol-reactive')
+    flushSync()
+    expect(seen).toBeNull()
+
+    dispose()
+    unsub()
+  })
+
+  it('a Cancel during an attempt stays cancelled when that attempt fails', async () => {
+    await smbReconnectManager.init()
+    const unsub = smbReconnectManager.subscribe('vol-cancel-inflight')
+    smbReconnectManager.startCycle('vol-cancel-inflight')
+    let fail!: (e: Error) => void
+    mockReconnect.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => (fail = reject)))
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS[0])
+    expect(smbReconnectManager.getState('vol-cancel-inflight')?.status).toBe('attempting')
+
+    smbReconnectManager.cancel('vol-cancel-inflight')
+    fail(new Error('still down'))
+    await vi.advanceTimersByTimeAsync(TOTAL_DURATION_MS + 100)
+    expect(smbReconnectManager.getState('vol-cancel-inflight')).toBeNull()
+    expect(mockReconnect).toHaveBeenCalledTimes(1)
 
     unsub()
   })

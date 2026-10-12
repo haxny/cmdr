@@ -533,7 +533,11 @@ When a direct-SMB session drops mid-use, four pieces coordinate to recover:
    `reconnect-error.ts` and read back with `asReconnectError`. The manager LOGS it through `describeReconnectRefusal`,
    which names the reason (`volume/needsPassword`) rather than a sentence a copy edit could change under it. None of
    this is user-facing: the reconnecting view, the gave-up banner, and the sign-in form each carry their own translated
-   copy. The error-path map is `docs/guides/error-handling.md`.
+   copy. The error-path map is `docs/guides/error-handling.md`. ❗ A pane hears a transition because the entry's `state`
+   and `signIn` are `$state.raw` fields that each transition REASSIGNS, ❌ never through `map.set` of the same entry:
+   `SvelteMap.set` stays silent on an identical value, and that froze the view on its first read (`ERR-VZ4CV`: Retry now
+   disabled over a cycle that had long given up, Cancel and Disconnect leaving the view up). A Cancel bumps the entry's
+   `cycle`, so an attempt in flight when it lands drops its answer rather than scheduling the next tick.
 4. **`FilePane.svelte`** subscribes via `$effect` whenever the pane is on an SMB volume. Subscription is refcounted
    (both panes on one share share a cycle), and on success the `onSuccess` callback re-runs `loadDirectory`.
    `../pane/smb-view-state.svelte.ts` turns the manager's status into the ONE `RemoteConnectState` the pane renders, in

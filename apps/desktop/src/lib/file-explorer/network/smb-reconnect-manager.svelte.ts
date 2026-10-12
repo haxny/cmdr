@@ -64,9 +64,18 @@ export interface ReconnectState {
   waitStartedAt: number
 }
 
-interface VolumeEntry {
-  state: ReconnectState
-  refcount: number
+/**
+ * One volume's cycle.
+ *
+ * ❗ `state` and `signIn` are `$state.raw` FIELDS, and every transition assigns a
+ * new object to them. That assignment is what a pane's `$derived` hears. Re-setting
+ * the same entry in the map is not: `SvelteMap.set` stays silent when the value is
+ * identical, so a manager that mutated the entry and called `map.set` froze every
+ * view on its first read (`ERR-VZ4CV`: "Retry now" disabled over a cycle that had
+ * long given up, Cancel and Disconnect leaving the view on screen).
+ */
+class VolumeEntry {
+  state = $state.raw<ReconnectState>(freshState())
   /**
    * What a sign-in on this volume would ask for, as of the last `needs-auth`
    * flip. `null` until one happens.
@@ -82,11 +91,18 @@ interface VolumeEntry {
    * protocol or from the mode the sheet is in. Whether the username is editable
    * is the VARIANT's answer (`crates/cmdr-fs/src/volume/connection.rs`).
    */
-  signIn: SignInShape | null
+  signIn = $state.raw<SignInShape | null>(null)
+  refcount = 0
   /** Active `setTimeout` handle for the next attempt, if `status === 'waiting'`. */
-  timerId: ReturnType<typeof setTimeout> | null
+  timerId: ReturnType<typeof setTimeout> | null = null
+  /**
+   * Bumped by every Cancel. An attempt that was in flight when it landed reads a
+   * different number on its way back and drops its answer, so a failure can't
+   * schedule the next attempt of a cycle the person called off.
+   */
+  cycle = 0
   /** Subscribers' success callbacks. Fired when state transitions back to Direct. */
-  successCallbacks: Set<() => void>
+  successCallbacks = new Set<() => void>()
 }
 
 class SmbReconnectManager {
@@ -142,7 +158,7 @@ class SmbReconnectManager {
     return untrack(() => {
       let entry = this.map.get(volumeId)
       if (!entry) {
-        entry = freshEntry()
+        entry = new VolumeEntry()
         this.map.set(volumeId, entry)
       }
       entry.refcount++
@@ -201,7 +217,7 @@ class SmbReconnectManager {
     untrack(() => {
       let entry = this.map.get(volumeId)
       if (!entry) {
-        entry = freshEntry()
+        entry = new VolumeEntry()
         this.map.set(volumeId, entry)
       }
       if (entry.timerId !== null || entry.state.status === 'attempting') return
@@ -240,9 +256,8 @@ class SmbReconnectManager {
       if (!entry) return
       if (entry.timerId) clearTimeout(entry.timerId)
       entry.timerId = null
+      entry.cycle++
       entry.state = freshState()
-      // Force reactivity by re-setting the entry with a new state object.
-      this.map.set(volumeId, entry)
     })
   }
 
@@ -275,7 +290,6 @@ class SmbReconnectManager {
       if (entry.timerId) clearTimeout(entry.timerId)
       entry.timerId = null
       entry.state = { ...entry.state, status: 'needs-auth' }
-      this.map.set(volumeId, entry) // notify subscribers
       return true
     })
     if (!flipped) return
@@ -299,7 +313,6 @@ class SmbReconnectManager {
       const entry = this.map.get(volumeId)
       if (!entry) return
       entry.signIn = prompt
-      this.map.set(volumeId, entry) // notify subscribers
     })
   }
 
@@ -321,7 +334,6 @@ class SmbReconnectManager {
       if (entry.timerId) clearTimeout(entry.timerId)
       entry.timerId = null
       entry.state = { ...entry.state, status: 'needs-host-key' }
-      this.map.set(volumeId, entry) // notify subscribers
     })
   }
 
@@ -338,7 +350,6 @@ class SmbReconnectManager {
       if (entry.timerId) clearTimeout(entry.timerId)
       entry.timerId = null
       entry.state = freshState()
-      this.map.set(volumeId, entry) // notify subscribers
       for (const cb of entry.successCallbacks) {
         try {
           cb()
@@ -368,7 +379,6 @@ class SmbReconnectManager {
     entry.timerId = setTimeout(() => {
       void this.runAttempt(volumeId, attemptIndex)
     }, delay)
-    this.map.set(volumeId, entry) // notify subscribers
   }
 
   /**
@@ -379,9 +389,9 @@ class SmbReconnectManager {
   private async runAttempt(volumeId: string, attemptIndex: number): Promise<void> {
     const entry = this.map.get(volumeId)
     if (!entry) return
-    entry.state = { ...entry.state, status: 'attempting', attemptIndex }
+    const cycle = entry.cycle
     entry.timerId = null
-    this.map.set(volumeId, entry) // notify subscribers
+    entry.state = { ...entry.state, status: 'attempting', attemptIndex }
 
     try {
       await reconnectVolume(volumeId)
@@ -398,16 +408,16 @@ class SmbReconnectManager {
         volumeId,
         reason: refusal === null ? String(e) : describeReconnectRefusal(refusal),
       })
-      // Re-fetch entry: `cancel` may have run during the attempt.
+      // Re-fetch entry: the last subscriber may have left during the attempt,
+      // and a Cancel may have called this cycle off.
       const e2 = this.map.get(volumeId)
-      if (!e2) return
+      if (!e2 || e2.cycle !== cycle) return
       // The backend may have emitted `needs_credentials` during this attempt (stale password).
       // `handleNeedsAuth` already stopped the cycle; don't schedule another doomed retry.
       if (e2.state.status === 'needs-auth' || e2.state.status === 'needs-host-key') return
       const next = attemptIndex + 1
       if (next >= TOTAL_ATTEMPTS) {
         e2.state = { ...e2.state, status: 'gave-up' }
-        this.map.set(volumeId, e2) // notify subscribers
       } else {
         this.beginAttempt(volumeId, next)
       }
@@ -421,16 +431,6 @@ function freshState(): ReconnectState {
     attemptIndex: 0,
     currentDelayMs: RECONNECT_DELAYS_MS[0],
     waitStartedAt: performance.now(),
-  }
-}
-
-function freshEntry(): VolumeEntry {
-  return {
-    state: freshState(),
-    refcount: 0,
-    signIn: null,
-    timerId: null,
-    successCallbacks: new Set(),
   }
 }
 
