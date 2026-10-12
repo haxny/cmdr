@@ -1106,7 +1106,11 @@ pane) with no engine lock held while the index answers, which is two indexed SQL
 3. Under the WRITE lock, drop the answers if the published generation moved: the re-read that replaced the rows asked
    the index again once they landed, later than this did. Otherwise write the seven `recursive_*` fields back by path as
    `IndexSizes` through `update_index_sizes_by_path`, which keeps both maps, doesn't re-sort, and doesn't bump
-   `last_accessed_ms`.
+   `last_accessed_ms`, and publish every shown row whose sizes moved as a modify, under the same lock.
+
+The publish keeps the pane on the cache's numbers. The app's index-size worker sends only what differs from the cache,
+so a size written here silently never reached the pane: a re-read's diff carries the pipeline's sizes, the replace
+step's newer ones landed in the cache alone, and the worker, comparing against them, saw nothing to send.
 
 The published generation, never the last one handed out: a re-read in flight that then fails or is superseded must not
 cost these sizes with nothing to replace them. By path is order-independent, so a re-sort in between is harmless; a row
@@ -1118,9 +1122,11 @@ The replace step (`update_listing_entries`) runs the same routine once its rows 
 for, and enriches nothing under its lock. That second ask is what makes "the re-read enriched them later" true: the
 pipeline's own enrich ran BEFORE the replace, so an index event between the two would otherwise lose its sizes to the
 generation check. A routed re-read (an archive, a git snapshot) is never enriched, by the pipeline or by the replace.
-`resort_listing` runs the same routine before it takes the cache lock, so a sort by size sees the index's current sizes
-and no pane read waits behind the index. That makes the rule hold with no exception: no seam runs under an engine lock.
-Pinned by `index_sizes_test.rs`.
+`resort_listing` asks the index (`ask_index_sizes`) before it takes the cache lock, so a sort by size sees the index's
+current sizes and no pane read waits behind the index, and writes the answers silently under its own lock after its
+sequence check: the resort drops every pending diff and the pane re-fetches, and a publish would move the very sequence
+the caller asked it to check. That makes the rule hold with no exception: no seam runs under an engine lock. Pinned by
+`index_sizes_test.rs`.
 
 ## Where each crate invariant lives
 

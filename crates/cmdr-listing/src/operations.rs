@@ -512,11 +512,11 @@ impl Inner {
         expected_sequence: Option<u64>,
     ) -> Result<ResortResult, ListingLookupError> {
         // All three before the lock, since each asks the host. Sorting by size needs
-        // the index's current folder sizes; they land by path with no engine lock
-        // held while the index answers (`index_sizes.rs`).
+        // the index's current folder sizes, asked with no engine lock held while the
+        // index answers (`index_sizes.rs`).
         let visibility = self.scratch_visibility();
         let collator = self.collator();
-        self.enrich_index_sizes(listing_id);
+        let asked = self.ask_index_sizes(listing_id);
         let mut cache = self.write_cache();
 
         let (listing, publish) = cache
@@ -529,6 +529,12 @@ impl Inner {
             return Err(ListingLookupError::changed(listing_id));
         }
         listing.touch();
+        // Written silently: the resort drops every pending diff and the pane
+        // re-fetches its rows, sizes included. A publish here would also move the
+        // sequence the caller just checked.
+        if let Some(asked) = asked {
+            asked.write_to(listing);
+        }
 
         // Collect filenames of selected files before re-sorting
         let selected_filenames: Option<Vec<String>> = if all_selected {

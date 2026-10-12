@@ -4,6 +4,7 @@
 //! Each cell builds its own engine over a scripted index, so the index can be
 //! held mid-enrich while the test does something to the same listing.
 
+use std::collections::VecDeque;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -22,6 +23,7 @@ use super::host::{ListingIndex, ListingVolumes, NoEvents, Unregistered};
 use super::listing_id::ListingId;
 use super::pipeline::{OverlayRows, Prepared};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use super::testing::{hold_diffs, pending_changes};
 use cmdr_fs::testing::{wait_until, wait_until_async};
 
 const DIR: &str = "/sized";
@@ -33,6 +35,8 @@ const WAIT: Duration = Duration::from_secs(5);
 /// call open until the test releases it.
 struct ScriptedIndex {
     size: AtomicU64,
+    /// Answers for the next calls, in order, ahead of `size`.
+    answers: Mutex<VecDeque<u64>>,
     calls: AtomicUsize,
     /// The 1-based call to hold, or 0 for none.
     held_call: usize,
@@ -44,7 +48,8 @@ impl ListingIndex for ScriptedIndex {
     fn enrich(&self, _volume_id: &str, entries: &mut [FileEntry]) {
         let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
         // The size this call answers is what the index held when it was asked.
-        let size = self.size.load(Ordering::SeqCst);
+        let scripted = self.answers.lock_ignore_poison().pop_front();
+        let size = scripted.unwrap_or_else(|| self.size.load(Ordering::SeqCst));
         if call == self.held_call {
             let _ = self.entered.lock_ignore_poison().send(());
             // A dropped sender (the test failed and unwound) lets it go too.
@@ -81,6 +86,7 @@ fn scripted_index(size: u64, held_call: usize) -> (Arc<ScriptedIndex>, Hold) {
     let (release_tx, release_rx) = channel();
     let index = Arc::new(ScriptedIndex {
         size: AtomicU64::new(size),
+        answers: Mutex::new(VecDeque::new()),
         calls: AtomicUsize::new(0),
         held_call,
         entered: Mutex::new(entered_tx),
@@ -277,6 +283,28 @@ async fn a_reread_enriches_its_rows_with_no_engine_lock_held() {
     reread.await.expect("the re-read task ends");
 
     assert_eq!(folder_size(&engine), Some(9));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_reread_hands_the_pane_the_sizes_its_rows_landed_with() {
+    // Call 1 is the read pipeline's enrich, before the read lands; call 2 is the
+    // replace step's, after. The index learned something in between, and the app's
+    // index-size worker compares against the cache, so a size written there
+    // without telling the pane would never reach it.
+    let (index, _hold) = scripted_index(0, 0);
+    index.answers.lock_ignore_poison().extend([1, 2]);
+    let engine = engine_with(Arc::clone(&index), None).await;
+    hold_diffs(&engine, LISTING);
+
+    engine.refresh(&ListingId::new(LISTING)).await;
+
+    assert_eq!(folder_size(&engine), Some(2));
+    let shown = pending_changes(&engine, LISTING)
+        .into_iter()
+        .rev()
+        .find(|change| change.entry.path == FOLDER)
+        .map(|change| change.entry.recursive_size);
+    assert_eq!(shown, Some(Some(2)), "the pane must end on the size the cache holds");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

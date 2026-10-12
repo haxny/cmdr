@@ -442,6 +442,9 @@ Each one lands as its own commit with a red test first, and the commit body name
      runs the same off-lock, generation-checked routine, and a routed re-read is never enriched. That second ask is what
      makes "the re-read enriched them at least as recently" true. Red tests: a `file_range` returns while the replace
      step's enrich is held; a routed re-read keeps no index sizes.
+   - **Part of this change (conformance review):** the off-lock routine publishes every row whose sizes it moved as a
+     modify, under its write lock, since the app's index-size worker diffs against the cache and a silent write there
+     left the pane on the pipeline's older sizes. A resort writes silently (it re-sends every row anyway).
    - **Part of this change (lead's M4a decision):** `resort_listing` also enriched every row under the cache WRITE lock
      before re-sorting. It now runs the same off-lock, generation-checked routine before taking the lock, then sorts.
      With that, invariant 24 holds with no exception. Red test: a `file_range` returns while a resort's enrich is held.

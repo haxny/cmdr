@@ -303,7 +303,8 @@ impl CachedListing {
     }
 
     /// Rewrites the index-derived folder sizes of the entries at `paths`, in place: `update` gets
-    /// each found entry with its position in `paths`. A path the listing doesn't hold is skipped.
+    /// each found entry with its position in `paths`, and says whether it wrote. A path the listing
+    /// doesn't hold is skipped. Returns the entry index of every row `update` wrote.
     ///
     /// **Deliberately not routed through [`Self::entries_mut`]**, for the reason
     /// [`Self::set_tags_by_path`] gives: a recursive size is not a name or a visibility input, so
@@ -313,14 +314,18 @@ impl CachedListing {
     pub(crate) fn update_index_sizes_by_path(
         &mut self,
         paths: &[String],
-        mut update: impl FnMut(usize, &mut FileEntry),
-    ) {
+        mut update: impl FnMut(usize, &mut FileEntry) -> bool,
+    ) -> Vec<usize> {
         let found = self.indices_of_paths(paths.iter().map(String::as_str));
+        let mut written = Vec::new();
         for (position, index) in found.into_iter().enumerate() {
-            if let Some(index) = index {
-                update(position, &mut self.entries[index]);
+            if let Some(index) = index
+                && update(position, &mut self.entries[index])
+            {
+                written.push(index);
             }
         }
+        written
     }
 
     /// The rows a pane with this `include_hidden` is showing, indexed in constant

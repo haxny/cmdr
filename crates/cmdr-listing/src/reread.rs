@@ -195,7 +195,9 @@ impl Inner {
         // The pipeline enriched these rows before the read landed; an index event
         // that came in between asked about the rows this replaced, and its answer is
         // now dropped as stale (`index_sizes.rs`). So ask again for the rows that
-        // landed, with no lock held. A routed volume's rows have no index to ask.
+        // landed, with no lock held, and publish the sizes that moved since: the
+        // diff above carried the pipeline's. A routed volume's rows have no index
+        // to ask.
         if indexed {
             self.enrich_index_sizes(listing_id);
         }
