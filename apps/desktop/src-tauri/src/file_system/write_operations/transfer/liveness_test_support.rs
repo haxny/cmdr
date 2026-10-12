@@ -59,7 +59,7 @@ impl ScriptedConnectionVolume {
     pub(crate) fn receive(&self, n: u64) {
         let _ = self
             .bytes_received
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |b| {
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |b| {
                 Some(if b == NO_COUNT { n } else { b + n })
             });
     }

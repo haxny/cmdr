@@ -683,17 +683,16 @@ async fn tier_b_fixture(
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     let mut sources = Vec::new();
-    let outcome: TierBOutcome;
 
-    match kind {
+    let outcome: TierBOutcome = match kind {
         ItemKind::File => {
             source.create_file(Path::new("/solo.bin"), b"SRC-solo").await.unwrap();
             sources.push(PathBuf::from("/solo.bin"));
-            outcome = TierBOutcome {
+            TierBOutcome {
                 at_dest: vec![("/solo.bin", b"SRC-solo")],
                 at_source: vec![("/solo.bin", b"SRC-solo")],
                 source_survives_a_move: false,
-            };
+            }
         }
         ItemKind::DirOntoFreshDest => {
             source.create_directory(Path::new("/album")).await.unwrap();
@@ -709,11 +708,11 @@ async fn tier_b_fixture(
             sources.push(PathBuf::from("/album"));
             let landed: Vec<(&'static str, &'static [u8])> =
                 vec![("/album/one.bin", b"SRC-one"), ("/album/inner/two.bin", b"SRC-two")];
-            outcome = TierBOutcome {
+            TierBOutcome {
                 at_dest: landed.clone(),
                 at_source: landed,
                 source_survives_a_move: false,
-            };
+            }
         }
         ItemKind::DirOntoExistingFile => {
             source.create_directory(Path::new("/album")).await.unwrap();
@@ -723,15 +722,15 @@ async fn tier_b_fixture(
                 .unwrap();
             dest.create_file(Path::new("/album"), b"DEST-was-a-file").await.unwrap();
             sources.push(PathBuf::from("/album"));
-            outcome = TierBOutcome {
+            TierBOutcome {
                 // The clash is refused, so what's readable at the destination is
                 // the destination's OWN file, exactly as it was.
                 at_dest: vec![("/album", b"DEST-was-a-file")],
                 at_source: vec![("/album/one.bin", b"SRC-one")],
                 source_survives_a_move: true,
-            };
+            }
         }
-    }
+    };
 
     if concurrent {
         for name in ["/filler_a.bin", "/filler_b.bin"] {

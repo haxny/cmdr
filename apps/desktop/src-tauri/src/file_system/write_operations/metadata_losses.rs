@@ -123,7 +123,7 @@ impl MetadataLosses {
     fn bump(&self, class: LostMetadataClass) {
         let index = CLASSES.iter().position(|known| *known == class).unwrap_or_default();
         // Saturating: a count past `u32::MAX` items still reads as "a lot".
-        let _ = self.counts[index].fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1));
+        let _ = self.counts[index].try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1));
     }
 }
 

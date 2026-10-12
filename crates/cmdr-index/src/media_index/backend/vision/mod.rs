@@ -712,11 +712,15 @@ fn read_feature_print(request: &VNGenerateImageFeaturePrintRequest) -> Option<Ve
 
     let vector: Vec<f32> = match element_type {
         VNElementType::Float => bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect(),
         VNElementType::Double => bytes
-            .chunks_exact(8)
+            .as_chunks::<8>()
+            .0
+            .iter()
             .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]) as f32)
             .collect(),
         // An unknown element type (should never happen) ⇒ no usable embedding.

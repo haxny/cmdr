@@ -191,7 +191,7 @@ impl TapChannel {
         // Saturating: an underflow here would wrap the bound to "never drop anything".
         let _ = self
             .queued_rollups
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| Some(n.saturating_sub(1)));
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| Some(n.saturating_sub(1)));
     }
 }
 

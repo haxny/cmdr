@@ -130,7 +130,7 @@ impl Volume for SmbVolume {
             let prev = self
                 .inner
                 .scan_session_refs
-                .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| Some(n.saturating_sub(1)))
+                .try_update(Ordering::AcqRel, Ordering::Acquire, |n| Some(n.saturating_sub(1)))
                 .unwrap_or(0);
             // Close only when the LAST session ends; an earlier end while a sibling
             // still scans would tear the pool out from under it mid-flight.

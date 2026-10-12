@@ -545,7 +545,9 @@ pub(crate) fn decode_embedding_f16(bytes: &[u8]) -> Option<Vec<f16>> {
     }
     Some(
         bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| f16::from_le_bytes([c[0], c[1]]))
             .collect(),
     )
