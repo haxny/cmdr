@@ -4,10 +4,6 @@ packages:
   # `eslint` devDependency its RuleTester unit tests import.
   - eslint-plugins
 
-# Don't prompt before wiping node_modules when pnpm decides it's stale;
-# our checker runs pnpm non-interactively and there's no human to answer.
-confirmModulesPurge: false
-
 # ── Supply-chain defences (pnpm 11+) ────────────────────────────────────────
 # Project-side belt-and-suspenders so anyone cloning Cmdr gets the same
 # install-side guarantees even without the matching keys in their `~/.npmrc`.

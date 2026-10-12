@@ -251,10 +251,10 @@ repo, so one blocking call covers every lane and no agent has to remember anythi
 
 **It cannot cover `node_modules`, which is why the script blocks on that stage instead.** `pnpm check` runs pnpm's own
 dependency verification BEFORE `scripts/check.sh` starts, so `awaitWorktreeWarming` has already been overtaken by the
-time it runs: pnpm sees a half-cloned `node_modules`, judges it stale, and (with our `confirmModulesPurge: false`)
-reinstalls it over the copy in flight without prompting. Measured 2026-09-09: 42.7 s reinstalling 767 packages on top of
-a live `cp -Rc`. The runner being pure Go (`go run .`) keeps `check.sh` itself off `node_modules`, but the pnpm wrapper
-in front of it is not ours to gate.
+time it runs: pnpm sees a half-cloned `node_modules`, judges it stale, and (pnpm 12 never asks first) reinstalls it over
+the copy in flight without prompting. Measured 2026-09-09: 42.7 s reinstalling 767 packages on top of a live `cp -Rc`.
+The runner being pure Go (`go run .`) keeps `check.sh` itself off `node_modules`, but the pnpm wrapper in front of it is
+not ours to gate.
 
 **Two runs in ONE worktree race in front of the runner, and the failure names an unrelated file.** `pnpm check` goes
 through `pnpm install` first, whose `prepare` step runs `svelte-kit sync` per app; two of those walking the same
