@@ -114,7 +114,7 @@ export const commands = {
    *  So `force: false` short-circuits when the listing lives on a **non-local**
    *  volume that reports [`WatchCoverage::EveryWriter`]. There the cache is being
    *  kept fresh by the volume's `notify_mutation` pipeline (per-file `Added` /
-   *  `Removed` / `Modified` events patched into `LISTING_CACHE` after every
+   *  `Removed` / `Modified` events patched into the listing cache after every
    *  successful mutation), so a full `list_directory` re-read is pure redundancy
    *  and costs a lot on slow backends: a 1k-entry MTP folder takes ~17 s and holds
    *  the USB session, colliding with the user's next op.
@@ -475,7 +475,7 @@ export const commands = {
   /**
    *  Returns the widest filename's text-only width (in px) per Brief-mode column.
    *
-   *  Pure read path: takes a snapshot of `LISTING_CACHE` for `listing_id` and
+   *  Pure read path: takes a snapshot of the listing cache for `listing_id` and
    *  measures each column's widest filename with `font_metrics::calculate_max_width_with_suffixes`.
    *  The FE applies chrome + clamp on top.
    *
@@ -545,7 +545,7 @@ export const commands = {
    *  the cached listing, or `None` when nothing matches. Powers the type-to-jump
    *  feature in `FilePane.svelte`. Hidden entries are skipped when `include_hidden`
    *  is false. The frontend adjusts for the synthetic `..` parent offset before
-   *  setting the cursor (the parent entry is never in `LISTING_CACHE`).
+   *  setting the cursor (the parent entry is never in the listing cache).
    */
   findFirstFuzzyMatch: (listingId: string, query: string, includeHidden: boolean) =>
     typedError<number | null, FuzzyJumpError>(
@@ -1244,7 +1244,7 @@ export const commands = {
    */
   refreshListingIndexSizes: (listingId: string) =>
     typedError<null, string>(__TAURI_INVOKE('refresh_listing_index_sizes', { listingId })),
-  // Initiates native drag from Rust directly, looking up paths from `LISTING_CACHE` (macOS only).
+  // Initiates native drag from Rust directly, looking up paths from the listing cache (macOS only).
   startSelectionDrag: (
     listingId: string,
     selectedIndices: number[],
@@ -6018,7 +6018,7 @@ export type BriefColumnsErrorKind =
   | 'listingNotFound'
   /**
    *  The IPC deadline expired before the computation finished, typically because
-   *  a large listing held `LISTING_CACHE`'s write lock. Transient.
+   *  a large listing held the listing cache's write lock. Transient.
    */
   | 'timeout'
   // Unclassified (lock poisoning and the like). Treated as transient.

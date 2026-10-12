@@ -771,13 +771,13 @@ impl Inner {
     /// content watch (`archive::watch`, a `notify` watch on a LOCAL parent) and the
     /// SMB share watcher (`smb_watcher`, for a REMOTE parent that has no local
     /// `notify` transport — see `crates/cmdr-smb/DETAILS.md` § "SMB archive push-refresh").
-    /// It deliberately does NOT go through [`notify_directory_changed`]: that
+    /// It deliberately does NOT go through `notify_directory_changed`: that
     /// function runs the drive-index sync (`apply_smb_change`) up front, and an
     /// archive-inner path (`/…/foo.zip/dir`) isn't a real filesystem path, so feeding
     /// it to the index would be meaningless. Here we only refresh the pane listings.
     ///
     /// A listing whose re-read fails (a mid-write, truncated central directory) is
-    /// left untouched by [`notify_full_refresh`] — it keeps its previous entries
+    /// left untouched by `notify_full_refresh` — it keeps its previous entries
     /// rather than blanking the pane, and the next change event retries. The FE only
     /// surfaces the damaged-archive banner at navigation time, never from this
     /// refresh path.

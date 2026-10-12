@@ -85,7 +85,7 @@ pub fn install(app: &AppHandle) {
 /// The app's listing engine.
 ///
 /// In a test binary nothing installs, so the first read builds the test engine
-/// ([`test_listings`]) and keeps it, quietly. In the app a read before
+/// (`test_listings`) and keeps it, quietly. In the app a read before
 /// [`install`] is a bug that would leave every pane on "loading", so it's loud,
 /// and it answers from a SEPARATE detached engine: the slot stays free for
 /// [`install`], which then reports the early read.

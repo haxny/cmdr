@@ -199,7 +199,7 @@ impl Inner {
     }
 }
 
-/// Reports a read that [`read_directory_with_progress`] returned as an error:
+/// Reports a read that `read_directory_with_progress` returned as an error:
 /// the one `finished` it doesn't report itself, since the read's own task removes
 /// its cancel token first. An `Ok` was already reported, as complete or cancelled.
 pub(crate) fn report_failure(
