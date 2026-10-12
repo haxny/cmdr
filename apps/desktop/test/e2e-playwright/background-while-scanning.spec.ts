@@ -150,8 +150,7 @@ test.describe('Backgrounding a transfer that is still counting', () => {
     const backgroundButton = await main.evaluate<boolean>(`(function() {
       var dialog = document.querySelector(${JSON.stringify(PROGRESS_DIALOG)});
       if (!dialog) return false;
-      var byLabel = function(label) { return dialog.querySelector('button[aria-label="' + label + '"]'); };
-      return !!(byLabel('Keep this running in the background') || byLabel('Send to the operation queue'));
+      return !!dialog.querySelector('button[aria-keyshortcuts="F2"]');
     })()`)
     expect(backgroundButton, 'a scanning transfer must offer Background').toBe(true)
 
@@ -166,9 +165,7 @@ test.describe('Backgrounding a transfer that is still counting', () => {
     // Background it. The modal unmounts; the operation keeps going.
     await main.evaluate(`(function() {
       var dialog = document.querySelector(${JSON.stringify(PROGRESS_DIALOG)});
-      var btn =
-        dialog.querySelector('button[aria-label="Keep this running in the background"]') ||
-        dialog.querySelector('button[aria-label="Send to the operation queue"]');
+      var btn = dialog.querySelector('button[aria-keyshortcuts="F2"]');
       btn.click();
     })()`)
 

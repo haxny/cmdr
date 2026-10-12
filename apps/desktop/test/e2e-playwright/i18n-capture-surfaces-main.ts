@@ -71,7 +71,7 @@ async function clearSelection(main: TauriPage): Promise<void> {
  *   document, which the bar's `<svelte:document onkeydown>` reads) so the bar
  *   swaps to its Shift fork (New file, Rename, Delete permanently, and the empty
  *   F-key slots), recording `fileExplorer.functionKeyBar.{newFile*,permanently*,
- *   deletePermanently*,noShift*}` the default fork never shows.
+ *   noShift*}` the default fork never shows.
  *
  * The Quick Look educational toast (`fileExplorer.quickLookHint.*`) is NOT here:
  * `captureQuickLookHint` in `i18n-capture-staged.ts` owns it.
