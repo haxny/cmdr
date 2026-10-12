@@ -127,7 +127,7 @@ pub fn resolve() -> Vec<PathBuf> {
                 &cmdr_listing::ListingId::new(listing_id.clone()),
                 indices,
                 *include_hidden,
-                *has_parent,
+                cmdr_listing::ParentRow::when(*has_parent),
             )
             .unwrap_or_default(),
         SelectedRows::Paths { paths } => paths.iter().map(PathBuf::from).collect(),

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use objc2::MainThreadMarker;
 
 #[cfg(target_os = "macos")]
-use cmdr_listing::ListingId;
+use cmdr_listing::{ListingId, ParentRow};
 
 use crate::clipboard;
 use crate::file_system::write_operations::MutationError;
@@ -38,7 +38,12 @@ fn selected_paths(
 ) -> Result<Vec<PathBuf>, String> {
     let indices = resolve_indices(selected_indices, cursor_index, has_parent);
     crate::listing_host::listings()
-        .paths_at_indices(&ListingId::new(listing_id), &indices, include_hidden, has_parent)
+        .paths_at_indices(
+            &ListingId::new(listing_id),
+            &indices,
+            include_hidden,
+            ParentRow::when(has_parent),
+        )
         .map_err(|e| e.to_string())
 }
 

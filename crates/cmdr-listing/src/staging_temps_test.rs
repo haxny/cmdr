@@ -8,6 +8,7 @@
 
 use super::host::ScratchVisibility;
 use super::testing::{TestEngine, TestListing, TestListingGuard};
+use crate::RowSpan;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::staging::StagingTemp;
 use std::path::Path;
@@ -61,7 +62,7 @@ async fn a_temp_a_running_operation_owns_is_left_out_of_the_listing() {
     let range = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 10, true)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, true)
         .unwrap();
     assert_eq!(range.len(), 1);
     assert_eq!(range[0].name, "photo.jpg");
@@ -93,7 +94,7 @@ async fn a_leftover_from_a_finished_operation_is_shown() {
     let range = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 10, true)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, true)
         .unwrap();
     assert!(range.iter().any(|e| e.name == name), "the leftover must be listed");
 }
@@ -118,7 +119,7 @@ async fn every_accessor_agrees_on_whether_a_temp_is_there() {
         listing
             .engine()
             .inner
-            .get_file_range(listing.id(), 0, 10, true)
+            .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, true)
             .unwrap()
             .len(),
         1

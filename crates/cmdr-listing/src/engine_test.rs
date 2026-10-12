@@ -1,6 +1,7 @@
 //! Two engines share nothing: each owns its listings, its diff queue, and its
 //! background work, and dropping one lets it go.
 
+use crate::RowSpan;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -44,10 +45,15 @@ fn a_listing_in_one_engine_is_invisible_to_another() {
     let second = Listings::detached();
     insert_listing(&first, "shared-id");
 
-    let rows = first.inner.get_file_range("shared-id", 0, 10, true).unwrap();
+    let rows = first
+        .inner
+        .get_file_range("shared-id", RowSpan { start: 0, count: 10 }, true)
+        .unwrap();
     assert_eq!(rows.len(), 1);
     assert!(matches!(
-        second.inner.get_file_range("shared-id", 0, 10, true),
+        second
+            .inner
+            .get_file_range("shared-id", RowSpan { start: 0, count: 10 }, true),
         Err(ListingLookupError::Gone { .. })
     ));
 

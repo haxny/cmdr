@@ -544,12 +544,16 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 33 root promises, 47 `Listings` methods, one public module (`host`), and 20
-public items inside it. The numbers are what the crate exposed the day the extraction finished, with no headroom, so an
-addition has to be argued for. Everything counted exists for a named caller:
+`index-crate-isolation` holds this crate to 36 root promises, 47 `Listings` methods, one public module (`host`), and 20
+public items inside it. The numbers are exactly what the crate exposes, with no headroom, so an addition has to be
+argued for. Everything counted exists for a named caller:
 
 - **The handle and its vocabulary** (root): `Listings`, `ListingsBuilder` (the constructors, `builder` and `detached`,
-  are two of the 47 methods), `ListingId`, `ListingRequest`, `PaneMarks`, and the `host` module.
+  are two of the 47 methods), `ListingId`, `ListingRequest`, and the `host` module.
+- **Named arguments** (root): `PaneMarks` (a pane's cursor and selection, for `resort`, `set_include_hidden`, and
+  `set_name_filter_guarded`), `RowSpan` (`file_range`'s start and count), `ParentRow` (`paths_at_indices`' `..` offset),
+  and `OnNoMatch` (the quick filter's refusal). Each replaces a confusable positional `usize` or `bool` pair; the IPC
+  commands keep their wire params and build them at the boundary, so `bindings.ts` doesn't move.
 - **A pane opening, reading, and closing a listing** (the IPC pass-throughs in `commands/file_system/listing.rs`): the
   `start` / `cancel` / `end` / `keep_alive` methods, the 14 row-space reads (`file_range` through `with_rows`, plus
   `compare_directories` and `fuzzy_find_first_match`), the five pane settings (`resort`, `set_include_hidden`,

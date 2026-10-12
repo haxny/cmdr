@@ -4,8 +4,8 @@ use crate::listing_host::listings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_listing::{
     CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult, DirectorySortMode, FuzzyJumpError,
-    ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, PaneMarks, ResortResult, RowBeside,
-    SelectionSnapshot, SortColumn, SortOrder,
+    ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, OnNoMatch, PaneMarks, ParentRow,
+    ResortResult, RowBeside, RowSpan, SelectionSnapshot, SortColumn, SortOrder,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -369,7 +369,7 @@ pub async fn get_file_range(
     count: usize,
     include_hidden: bool,
 ) -> Result<Vec<FileEntry>, ListingLookupError> {
-    listings().file_range(&ListingId::new(listing_id), start, count, include_hidden)
+    listings().file_range(&ListingId::new(listing_id), RowSpan { start, count }, include_hidden)
 }
 
 /// Returns the widest filename's text-only width (in px) per Brief-mode column.
@@ -540,7 +540,7 @@ pub async fn get_paths_at_indices(
             &ListingId::new(listing_id),
             &selected_indices,
             include_hidden,
-            has_parent,
+            ParentRow::when(has_parent),
         )
         .map(|paths| paths.into_iter().map(|p| p.to_string_lossy().into_owned()).collect())
 }
@@ -640,9 +640,16 @@ pub async fn set_listing_name_filter(
         &ListingId::new(listing_id),
         pattern.as_deref(),
         include_hidden,
-        cursor_filename.as_deref(),
-        &selected_indices,
-        refuse_empty,
+        PaneMarks {
+            cursor_filename: cursor_filename.as_deref(),
+            selected: Some(&selected_indices),
+            all_selected: false,
+        },
+        if refuse_empty {
+            OnNoMatch::Refuse
+        } else {
+            OnNoMatch::Apply
+        },
         expected_sequence,
     )
 }

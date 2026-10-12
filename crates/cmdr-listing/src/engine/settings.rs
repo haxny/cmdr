@@ -3,24 +3,13 @@
 
 use crate::host::ScratchVisibility;
 use crate::listing_id::ListingId;
+use crate::operations::PaneMarks;
 use crate::quick_filter::NameFilterResult;
+use crate::quick_filter::OnNoMatch;
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::{ListingLookupError, ResortResult};
 
 use super::Listings;
-
-/// Where the pane's cursor and selection stood before a change that moves
-/// rows, so the answer says where they landed.
-// DEFAULT-OK: no cursor and nothing selected is a pane that marked nothing.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct PaneMarks<'a> {
-    /// The name under the cursor.
-    pub cursor_filename: Option<&'a str>,
-    /// The selected rows, as the pane numbered them before the change.
-    pub selected: Option<&'a [usize]>,
-    /// Every row is selected (`selected` is then ignored).
-    pub all_selected: bool,
-}
 
 impl Listings {
     /// Re-sorts `id` in place, asking the index for fresh folder sizes first.
@@ -68,26 +57,24 @@ impl Listings {
     }
 
     /// Sets (or, with `None` or an empty pattern, clears) the pane's quick
-    /// filter. With `refuse_empty`, a pattern matching nothing is refused; with
-    /// `expected_sequence`, so is a request whose rows aren't the committed ones.
-    #[allow(clippy::too_many_arguments, reason = "the pane's whole quick-filter request")]
+    /// filter, and says where `marks` landed. `on_no_match` says whether a
+    /// pattern matching nothing is refused; with `expected_sequence`, so is a
+    /// request whose rows aren't the committed ones.
     pub fn set_name_filter_guarded(
         &self,
         id: &ListingId,
         pattern: Option<&str>,
         include_hidden: bool,
-        cursor_filename: Option<&str>,
-        selected: &[usize],
-        refuse_empty: bool,
+        marks: PaneMarks<'_>,
+        on_no_match: OnNoMatch,
         expected_sequence: Option<u64>,
     ) -> Result<NameFilterResult, ListingLookupError> {
         self.inner.set_listing_name_filter_guarded(
             id.as_str(),
             pattern,
             include_hidden,
-            cursor_filename,
-            selected,
-            refuse_empty,
+            marks,
+            on_no_match,
             expected_sequence,
         )
     }

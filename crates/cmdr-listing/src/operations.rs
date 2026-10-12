@@ -293,14 +293,13 @@ impl Inner {
     pub(crate) fn get_file_range(
         &self,
         listing_id: &str,
-        start: usize,
-        count: usize,
+        span: RowSpan,
         include_hidden: bool,
     ) -> Result<Vec<FileEntry>, ListingLookupError> {
         self.with_listing(listing_id, |listing| {
             let rows = listing.rows(include_hidden);
-            let end = start.saturating_add(count).min(rows.len());
-            (start..end)
+            let end = span.start.saturating_add(span.count).min(rows.len());
+            (span.start..end)
                 .filter_map(|row| rows.get(row).cloned())
                 .collect::<Vec<FileEntry>>()
         })
@@ -428,19 +427,19 @@ impl Inner {
         listing_id: &str,
         selected_indices: &[usize],
         include_hidden: bool,
-        has_parent: bool,
+        parent_row: ParentRow,
     ) -> Result<Vec<PathBuf>, ListingLookupError> {
         self.with_listing(listing_id, |listing| {
             let rows = listing.rows(include_hidden);
             let mut paths = Vec::with_capacity(selected_indices.len());
             for &frontend_idx in selected_indices {
-                // Skip ".." entry (frontend index 0 when has_parent is true)
-                if has_parent && frontend_idx == 0 {
-                    continue;
-                }
-
-                // Convert frontend index to backend index
-                let backend_idx = if has_parent { frontend_idx - 1 } else { frontend_idx };
+                // The pane's `..` row names no entry; every row below it sits one
+                // below the listing's.
+                let backend_idx = match parent_row {
+                    ParentRow::Shown if frontend_idx == 0 => continue,
+                    ParentRow::Shown => frontend_idx - 1,
+                    ParentRow::Absent => frontend_idx,
+                };
 
                 if let Some(entry) = rows.get(backend_idx) {
                     paths.push(PathBuf::from(&entry.path));
@@ -474,6 +473,46 @@ impl Inner {
 // ============================================================================
 // Re-sorting
 // ============================================================================
+
+/// Where the pane's cursor and selection stood before a change that moves
+/// rows, so the answer says where they landed.
+// DEFAULT-OK: no cursor and nothing selected is a pane that marked nothing.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PaneMarks<'a> {
+    /// The name under the cursor.
+    pub cursor_filename: Option<&'a str>,
+    /// The selected rows, as the pane numbered them before the change.
+    pub selected: Option<&'a [usize]>,
+    /// Every row is selected (`selected` is then ignored).
+    pub all_selected: bool,
+}
+
+/// A run of a pane's rows: `count` rows from row `start`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RowSpan {
+    /// The first row.
+    pub start: usize,
+    /// How many rows, at most.
+    pub count: usize,
+}
+
+/// Whether the pane numbers a `..` row at the top of its rows, which the
+/// listing doesn't hold.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParentRow {
+    /// The pane's row 0 is `..`: it names no entry, and every other row sits
+    /// one below the listing's.
+    Shown,
+    /// The pane's rows are the listing's.
+    Absent,
+}
+
+impl ParentRow {
+    /// [`Self::Shown`] when `shown`, for a caller holding the pane's flag.
+    pub fn when(shown: bool) -> Self {
+        if shown { Self::Shown } else { Self::Absent }
+    }
+}
 
 /// Result of re-sorting a directory listing.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]

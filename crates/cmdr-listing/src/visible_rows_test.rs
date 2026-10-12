@@ -7,6 +7,7 @@
 //! COUNT, so that is what these assert; a wall-clock assertion would be both
 //! flaky and silent on a small fixture.
 
+use crate::RowSpan;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -145,7 +146,7 @@ fn a_repeated_read_of_an_unchanged_listing_does_not_walk_again() {
             listing
                 .engine()
                 .inner
-                .get_file_range(listing.id(), 0, 50, true)
+                .get_file_range(listing.id(), RowSpan { start: 0, count: 50 }, true)
                 .expect("listing is cached");
         }
     });
@@ -162,7 +163,7 @@ fn rows_of(listing: &TestListingGuard, include_hidden: bool) -> Vec<String> {
     let by_range: Vec<String> = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 1_000, include_hidden)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 1_000 }, include_hidden)
         .expect("listing is cached")
         .into_iter()
         .map(|e| e.name)

@@ -4,6 +4,7 @@
 //! files starting with "." from directory listings.
 
 use super::testing::{TestEngine, TestListing, TestListingGuard};
+use crate::RowSpan;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
@@ -92,7 +93,7 @@ async fn test_get_file_range_with_hidden_returns_all() {
     let range = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 10, true)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, true)
         .unwrap();
 
     assert_eq!(range.len(), 7, "Should return all 7 entries");
@@ -114,7 +115,7 @@ async fn test_get_file_range_without_hidden_excludes_dot_files() {
     let range = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 10, false)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, false)
         .unwrap();
 
     assert_eq!(range.len(), 4, "Should return only 4 visible entries");
@@ -141,13 +142,13 @@ async fn test_get_file_range_pagination_respects_hidden_filter() {
     let page1 = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 2, false)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 2 }, false)
         .unwrap();
     // Get next 2 visible entries
     let page2 = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 2, 2, false)
+        .get_file_range(listing.id(), RowSpan { start: 2, count: 2 }, false)
         .unwrap();
 
     assert_eq!(page1.len(), 2, "First page should have 2 entries");
@@ -346,7 +347,7 @@ async fn test_directory_with_only_hidden_files() {
     let range_without = listing
         .engine()
         .inner
-        .get_file_range(listing.id(), 0, 10, false)
+        .get_file_range(listing.id(), RowSpan { start: 0, count: 10 }, false)
         .unwrap();
 
     assert_eq!(count_with, 3, "All 3 hidden files should be counted");

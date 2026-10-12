@@ -12,20 +12,19 @@ use crate::fuzzy_jump::FuzzyJumpError;
 use crate::listing_id::ListingId;
 use crate::stats::ListingStats;
 use crate::visible_rows::VisibleRows;
-use crate::{ListingLookupError, RowBeside, SelectionSnapshot};
+use crate::{ListingLookupError, ParentRow, RowBeside, RowSpan, SelectionSnapshot};
 
 use super::Listings;
 
 impl Listings {
-    /// Up to `count` rows from row `start`.
+    /// The rows `span` covers, as many as the pane has.
     pub fn file_range(
         &self,
         id: &ListingId,
-        start: usize,
-        count: usize,
+        span: RowSpan,
         include_hidden: bool,
     ) -> Result<Vec<FileEntry>, ListingLookupError> {
-        self.inner.get_file_range(id.as_str(), start, count, include_hidden)
+        self.inner.get_file_range(id.as_str(), span, include_hidden)
     }
 
     /// The row named `name`, or a unique look-alike spelling of it: where the
@@ -70,17 +69,17 @@ impl Listings {
         self.inner.get_file_at(id.as_str(), row, include_hidden)
     }
 
-    /// The paths on the pane's rows `rows`. With `has_parent`, the pane's row 0
-    /// is its `..` row: skipped, and every other row shifts down by one.
+    /// The paths on the pane's rows `rows`. With a `..` row shown, the pane's
+    /// row 0 is skipped and every other row shifts down by one.
     pub fn paths_at_indices(
         &self,
         id: &ListingId,
         rows: &[usize],
         include_hidden: bool,
-        has_parent: bool,
+        parent_row: ParentRow,
     ) -> Result<Vec<PathBuf>, ListingLookupError> {
         self.inner
-            .get_paths_at_indices(id.as_str(), rows, include_hidden, has_parent)
+            .get_paths_at_indices(id.as_str(), rows, include_hidden, parent_row)
     }
 
     /// The entries on rows `rows` (no `..` offset: the caller adjusts).

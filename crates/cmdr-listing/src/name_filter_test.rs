@@ -10,6 +10,7 @@ use super::pipeline::Prepared;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use super::sorting_test_support::sort_entries;
 use super::testing::{TestEngine, TestListing, TestListingGuard, pending_changes, replace_entries};
+use super::{OnNoMatch, PaneMarks};
 use cmdr_fs::entry::FileEntry;
 
 const DIR: &str = "/test/name-filter";
@@ -230,13 +231,21 @@ fn a_new_epoch_enqueue_between_filter_unlock_and_return_survives_flush() {
     let result = listing
         .engine()
         .inner
-        .set_listing_name_filter_inner(listing.id(), Some("pdf"), false, None, &[], false, None, || {
-            // This callback runs after the real cache write lock is released,
-            // exactly where a watcher can enqueue before the setter returns.
-            listing.engine().inner.diffs.hold(listing.id());
-            listing.engine().inner.notify_added(listing.id(), entry("bravo.pdf"));
-            assert_eq!(pending_changes(listing.engine(), listing.id()).len(), 1);
-        })
+        .set_listing_name_filter_inner(
+            listing.id(),
+            Some("pdf"),
+            false,
+            PaneMarks::default(),
+            OnNoMatch::Apply,
+            None,
+            || {
+                // This callback runs after the real cache write lock is released,
+                // exactly where a watcher can enqueue before the setter returns.
+                listing.engine().inner.diffs.hold(listing.id());
+                listing.engine().inner.notify_added(listing.id(), entry("bravo.pdf"));
+                assert_eq!(pending_changes(listing.engine(), listing.id()).len(), 1);
+            },
+        )
         .expect("listing is cached");
 
     let batches = listing.engine().inner.diffs.take_pending(listing.id());
@@ -466,10 +475,14 @@ fn a_filter_change_invalidates_guarded_selection_from_the_previous_rows() {
         .unwrap();
     assert_eq!(snapshot.paths, vec![entry("charlie.pdf").path]);
     assert!(matches!(
-        listing
-            .engine()
-            .inner
-            .set_listing_name_filter_guarded(listing.id(), None, false, None, &[1], false, Some(0)),
+        listing.engine().inner.set_listing_name_filter_guarded(
+            listing.id(),
+            None,
+            false,
+            selecting(&[1]),
+            OnNoMatch::Apply,
+            Some(0)
+        ),
         Err(ListingLookupError::Changed { .. })
     ));
     assert_eq!(row_names(&listing), vec!["alpha.pdf", "charlie.pdf"]);
@@ -498,9 +511,8 @@ fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
             listing.id(),
             Some("z"),
             false,
-            None,
-            &[0],
-            false,
+            selecting(&[0]),
+            OnNoMatch::Apply,
             Some(0)
         ),
         Err(ListingLookupError::Changed { .. })
@@ -508,9 +520,24 @@ fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
     let result = listing
         .engine()
         .inner
-        .set_listing_name_filter_guarded(listing.id(), Some("z"), false, None, &[1], false, Some(1))
+        .set_listing_name_filter_guarded(
+            listing.id(),
+            Some("z"),
+            false,
+            selecting(&[1]),
+            OnNoMatch::Apply,
+            Some(1),
+        )
         .unwrap();
     assert_eq!(result.new_selected_indices, vec![0]);
     assert_eq!(result.sequence, Some(2));
     assert_eq!(row_names(&listing), vec!["z.pdf"]);
+}
+
+/// A pane that selected `rows` and has no cursor.
+fn selecting(rows: &[usize]) -> PaneMarks<'_> {
+    PaneMarks {
+        selected: Some(rows),
+        ..PaneMarks::default()
+    }
 }

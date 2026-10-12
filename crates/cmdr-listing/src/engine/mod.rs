@@ -35,8 +35,6 @@ mod reread;
 mod rows;
 mod settings;
 
-pub use settings::PaneMarks;
-
 /// The listing engine: every open listing, and the seams it asks the host
 /// through. Cheap to clone; every clone is the same engine.
 #[derive(Clone)]

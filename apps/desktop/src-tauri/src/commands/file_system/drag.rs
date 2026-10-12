@@ -5,7 +5,7 @@ use crate::file_system::volume::manager::path_routes_over_its_parent;
 #[cfg(target_os = "macos")]
 use crate::native_drag::{self, DragSessionLocality};
 #[cfg(target_os = "macos")]
-use cmdr_listing::ListingId;
+use cmdr_listing::{ListingId, ParentRow};
 #[cfg(target_os = "macos")]
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]
@@ -117,7 +117,7 @@ pub fn start_selection_drag(
             &ListingId::new(listing_id.clone()),
             &selected_indices,
             include_hidden,
-            has_parent,
+            ParentRow::when(has_parent),
         )
         .map_err(|e| e.to_string())?;
 

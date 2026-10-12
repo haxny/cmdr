@@ -9,6 +9,17 @@ use serde::{Deserialize, Serialize};
 use crate::Inner;
 use crate::ListingLookupError;
 use crate::name_filter::NameFilter;
+use crate::operations::PaneMarks;
+
+/// What a quick-filter change does with a pattern that matches no row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OnNoMatch {
+    /// Refuse it and keep the previous filter (`accepted: false`): Total
+    /// Commander's rule that typing only ever narrows down to the last match.
+    Refuse,
+    /// Apply it, and the pane shows no rows.
+    Apply,
+}
 
 /// Where the pane's cursor and selection land after a quick-filter change, in
 /// the new row space.
@@ -39,7 +50,7 @@ impl Inner {
     /// and carries the cursor and selection into the new row space, all under ONE
     /// write lock so no diff or read can land between the old row space and the new.
     ///
-    /// With `refuse_empty`, a pattern that matches no row is refused and the old
+    /// With `OnNoMatch::Refuse`, a pattern that matches no row is refused and the old
     /// filter stays (`accepted: false`): Total Commander's rule that typing only
     /// ever narrows down to the last match, never past it. Deciding it here, under
     /// the same lock, is what makes the refusal exact; the frontend can't know the
@@ -61,54 +72,50 @@ impl Inner {
             listing_id,
             pattern,
             include_hidden,
-            cursor_filename,
-            selected_indices,
-            refuse_empty,
+            PaneMarks {
+                cursor_filename,
+                selected: Some(selected_indices),
+                all_selected: false,
+            },
+            if refuse_empty {
+                OnNoMatch::Refuse
+            } else {
+                OnNoMatch::Apply
+            },
             None,
             #[cfg(test)]
             || {},
         )
     }
 
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Filter reconfiguration carries a guarded selection"
-    )]
     pub(crate) fn set_listing_name_filter_guarded(
         &self,
         listing_id: &str,
         pattern: Option<&str>,
         include_hidden: bool,
-        cursor_filename: Option<&str>,
-        selected_indices: &[usize],
-        refuse_empty: bool,
+        marks: PaneMarks<'_>,
+        on_no_match: OnNoMatch,
         expected_sequence: Option<u64>,
     ) -> Result<NameFilterResult, ListingLookupError> {
         self.set_listing_name_filter_inner(
             listing_id,
             pattern,
             include_hidden,
-            cursor_filename,
-            selected_indices,
-            refuse_empty,
+            marks,
+            on_no_match,
             expected_sequence,
             #[cfg(test)]
             || {},
         )
     }
 
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Filter reconfiguration carries a guarded selection and test hook"
-    )]
     pub(crate) fn set_listing_name_filter_inner(
         &self,
         listing_id: &str,
         pattern: Option<&str>,
         include_hidden: bool,
-        cursor_filename: Option<&str>,
-        selected_indices: &[usize],
-        refuse_empty: bool,
+        marks: PaneMarks<'_>,
+        on_no_match: OnNoMatch,
         expected_sequence: Option<u64>,
         #[cfg(test)] after_unlock: impl FnOnce(),
     ) -> Result<NameFilterResult, ListingLookupError> {
@@ -127,17 +134,23 @@ impl Inner {
 
             let selected_names: Vec<String> = {
                 let rows = listing.rows(include_hidden);
-                selected_indices
-                    .iter()
-                    .filter_map(|&row| rows.get(row).map(|entry| entry.name.clone()))
-                    .collect()
+                if marks.all_selected {
+                    rows.iter().map(|entry| entry.name.clone()).collect()
+                } else {
+                    marks
+                        .selected
+                        .unwrap_or_default()
+                        .iter()
+                        .filter_map(|&row| rows.get(row).map(|entry| entry.name.clone()))
+                        .collect()
+                }
             };
 
             let previous = listing.name_filter().cloned();
             let next = pattern.and_then(NameFilter::new);
             // Asked of every entry, not of the current rows: the new pattern needn't
             // narrow the old one, so a row the old filter hides may be its only match.
-            let refused = refuse_empty
+            let refused = on_no_match == OnNoMatch::Refuse
                 && next.is_some()
                 && next != previous
                 && !listing
@@ -163,7 +176,7 @@ impl Inner {
             NameFilterResult {
                 accepted: !refused,
                 total_count: rows.len(),
-                new_cursor_index: cursor_filename.and_then(|name| names_to_rows.get(name).copied()),
+                new_cursor_index: marks.cursor_filename.and_then(|name| names_to_rows.get(name).copied()),
                 new_selected_indices: selected_names
                     .iter()
                     .filter_map(|name| names_to_rows.get(name.as_str()).copied())

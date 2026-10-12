@@ -4,6 +4,7 @@
 //! Each cell builds its own engine over a scripted index, so the index can be
 //! held mid-enrich while the test does something to the same listing.
 
+use crate::RowSpan;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -197,7 +198,9 @@ fn read_range_returns(engine: &Listings) {
         let engine = engine.clone();
         let done = Arc::clone(&done);
         std::thread::spawn(move || {
-            let _ = engine.inner.get_file_range(LISTING, 0, 10, true);
+            let _ = engine
+                .inner
+                .get_file_range(LISTING, RowSpan { start: 0, count: 10 }, true);
             done.store(true, Ordering::SeqCst);
         })
     };
