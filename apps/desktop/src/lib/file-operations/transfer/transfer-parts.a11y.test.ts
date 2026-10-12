@@ -1,8 +1,8 @@
 /**
  * Tier 3 a11y tests for the presentational pieces the transfer dialogs and toasts
  * compose: the compression controls, the direction arrow, the scan-phase body,
- * the variant-derived error copy, the cancelled-rollback summary, and the
- * progress dialog's Rollback button.
+ * the variant-derived error copy, the cancelled-rollback summary, the
+ * progress dialog's Rollback button, and its stalled-transfer notice.
  *
  * One file per component would cost about five times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
@@ -52,6 +52,11 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
 }))
 
+// The stall notice's report link opens the report flow and leaves a
+// breadcrumb on click; neither has a place in a mount-only axe pass.
+vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor: vi.fn() }))
+vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+
 import CompressEstimateLine from './CompressEstimateLine.svelte'
 import CompressLevelControl from './CompressLevelControl.svelte'
 import DirectionIndicator from './DirectionIndicator.svelte'
@@ -59,6 +64,7 @@ import FallbackErrorContent from './FallbackErrorContent.svelte'
 import ScanPhaseBody from './ScanPhaseBody.svelte'
 import CancelRollbackToastContent from './CancelRollbackToastContent.svelte'
 import TransferRollbackControls from './TransferRollbackControls.svelte'
+import TransferStallNotice from './TransferStallNotice.svelte'
 import type { TransferRollback } from './transfer-rollback.svelte'
 
 /** A fresh container, appended to the document and ready to mount into. */
@@ -400,6 +406,28 @@ describe('TransferRollbackControls a11y', () => {
     mount(TransferRollbackControls, {
       target,
       props: { rollback: rollbackIn(null), isRollingBack: true, disabled: true },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+})
+
+/**
+ * Tier 3 a11y tests for `TransferStallNotice.svelte`.
+ *
+ * The warning card at the foot of the progress dialog, with and without the
+ * in-flight line, so both shapes of its text column get an axe pass.
+ * `TransferProgressDialog.stall.test.ts` covers it in place in the dialog.
+ */
+describe('TransferStallNotice a11y', () => {
+  it.each([
+    ['the destination stopped, files in flight', 'destination', 3],
+    ['nothing explains it, nothing in flight', 'unknown', 0],
+  ] as const)('has no a11y violations when %s', async (_label, reason, inFlight) => {
+    const target = container()
+    mount(TransferStallNotice, {
+      target,
+      props: { stall: { stillForSeconds: 42, reason, inFlight }, operationType: 'copy' },
     })
     await tick()
     await expectNoA11yViolations(target)
