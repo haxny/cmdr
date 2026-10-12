@@ -25,7 +25,7 @@ pub fn inject_listing_error(volume_id: String, error_code: i32) -> Result<(), St
 #[tauri::command]
 #[specta::specta]
 pub fn fail_next_brief_column_widths(count: usize) {
-    crate::file_system::listing::brief_columns::FAIL_NEXT_WIDTH_CALLS.store(count, std::sync::atomic::Ordering::SeqCst);
+    crate::font_metrics::brief_columns::FAIL_NEXT_WIDTH_CALLS.store(count, std::sync::atomic::Ordering::SeqCst);
 }
 
 /// Debug-only: makes sure the dialog gallery's throwaway fixture directory

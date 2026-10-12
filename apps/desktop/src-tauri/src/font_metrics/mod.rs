@@ -20,6 +20,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::ignore_poison::RwLockIgnorePoison;
 
+pub(crate) mod brief_columns;
+#[cfg(test)]
+mod brief_columns_test;
+
 /// Cache for font metrics, keyed by font ID (like "system-400-12")
 static METRICS_CACHE: LazyLock<RwLock<HashMap<String, FontMetrics>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 

@@ -198,7 +198,7 @@ pub fn compute_brief_column_text_widths(
 
     let start = Instant::now();
 
-    let cache = super::operations::reconciled_cache(&[listing_id]);
+    let cache = crate::file_system::listing::operations::reconciled_cache(&[listing_id]);
 
     let listing = cache
         .get(listing_id)
@@ -258,17 +258,16 @@ pub fn compute_brief_column_text_widths(
             items.push((entry.name.as_str(), tag_cluster_width(colored_tag_count(entry))));
         }
 
-        let width =
-            crate::font_metrics::calculate_max_width_with_suffixes(&items, font_id, &mut missing).ok_or_else(|| {
-                log::warn!(
-                    target: "brief_columns",
-                    "Font metrics not ready for font_id='{}' (listing={}, col={})",
-                    font_id,
-                    listing_id,
-                    col,
-                );
-                BriefColumnsError::FontMetricsNotReady
-            })?;
+        let width = super::calculate_max_width_with_suffixes(&items, font_id, &mut missing).ok_or_else(|| {
+            log::warn!(
+                target: "brief_columns",
+                "Font metrics not ready for font_id='{}' (listing={}, col={})",
+                font_id,
+                listing_id,
+                col,
+            );
+            BriefColumnsError::FontMetricsNotReady
+        })?;
 
         // Guarantee finite values so FE prefix-sums (Float64Array) stay valid.
         // `calculate_max_width_with_suffixes` returns sums over per-char widths from the cached

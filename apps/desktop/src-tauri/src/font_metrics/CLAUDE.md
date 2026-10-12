@@ -3,8 +3,9 @@
 Binary font metrics cache and text width calculation for Brief mode column sizing. Rust can't access system fonts, so
 the frontend measures character widths via the Canvas API and ships them to Rust over IPC.
 
-The whole module is `mod.rs` (plus `mod_test.rs`). `calculate_max_width_with_suffixes` is the basis for per-column text widths in
-Brief mode via `file_system::listing::brief_columns` (which powers the `get_brief_column_text_widths` IPC).
+`mod.rs` (plus `mod_test.rs`) holds the cache and the width math. `brief_columns.rs` (plus `brief_columns_test.rs`) sizes
+each Brief column from a cached listing's rows with `calculate_max_width_with_suffixes`, behind the
+`get_brief_column_text_widths` IPC.
 
 ## Public API
 

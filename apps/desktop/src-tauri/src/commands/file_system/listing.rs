@@ -4,10 +4,9 @@ use crate::file_system::get_files_at_indices as ops_get_files_at_indices;
 use crate::file_system::get_paths_at_indices as ops_get_paths_at_indices;
 use crate::file_system::listing::name_filter::set_listing_name_filter_guarded as ops_set_listing_name_filter;
 use crate::file_system::{
-    BriefColumnWidths, BriefColumnsIpcError, DirectorySortMode, ListingLookupError, ListingStats, NameFilterResult,
-    ResortResult, RowBeside, SortColumn, SortOrder, StreamingListingStartResult, cancel_listing as ops_cancel_listing,
-    compute_brief_column_text_widths as ops_compute_brief_column_text_widths, find_file_index as ops_find_file_index,
-    find_file_indices as ops_find_file_indices,
+    DirectorySortMode, ListingLookupError, ListingStats, NameFilterResult, ResortResult, RowBeside, SortColumn,
+    SortOrder, StreamingListingStartResult, cancel_listing as ops_cancel_listing,
+    find_file_index as ops_find_file_index, find_file_indices as ops_find_file_indices,
     fuzzy_find_first_match_in_listing as ops_fuzzy_find_first_match_in_listing, get_file_at as ops_get_file_at,
     get_file_beside as ops_get_file_beside, get_file_range as ops_get_file_range,
     get_listing_stats as ops_get_listing_stats, keep_listings_alive as ops_keep_listings_alive,
@@ -22,12 +21,15 @@ use tokio::time::Duration;
 use crate::deadline::{
     TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag, timeout_detached_typed,
 };
-use crate::file_system::listing::brief_columns::BriefColumnsError;
 use crate::file_system::listing::compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
 use crate::file_system::listing::fuzzy_jump::FuzzyJumpError;
 use crate::file_system::validation::{MAX_NAME_BYTES, MAX_PATH_BYTES};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::held_in_another_spelling;
+use crate::font_metrics::brief_columns::{
+    BriefColumnWidths, BriefColumnsError, BriefColumnsIpcError,
+    compute_brief_column_text_widths as ops_compute_brief_column_text_widths,
+};
 use crate::listing_index_sizes::count::{CountFolderSizesError, FolderSizeCountOutcome};
 use cmdr_fs::volume::WatchCoverage;
 

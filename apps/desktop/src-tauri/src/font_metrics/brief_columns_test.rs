@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 
 use super::brief_columns::{BriefColumnsError, compute_brief_column_text_widths};
-use super::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
 

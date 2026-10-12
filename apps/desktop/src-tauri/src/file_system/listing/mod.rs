@@ -1,6 +1,5 @@
 //! Directory listing module - reading, operations, caching, metadata, sorting, streaming.
 
-pub(crate) mod brief_columns;
 pub(crate) mod cached_listing;
 pub(crate) mod caching;
 pub(crate) mod collation;
@@ -24,7 +23,6 @@ pub(crate) mod visible_rows;
 
 // Re-export types so they're available both externally and locally in this module
 // (call sites import them from `crate::file_system::listing` directly).
-pub use brief_columns::{BriefColumnWidths, BriefColumnsIpcError, compute_brief_column_text_widths};
 pub use fuzzy_jump::fuzzy_find_first_match_in_listing;
 pub use operations::{
     ListingLookupError, ListingStats, ResortResult, RowBeside, find_file_index, find_file_indices, get_file_at,
@@ -54,8 +52,6 @@ pub(crate) use operations::{get_listing_entries, update_listing_entries};
 #[cfg(test)]
 mod archive_watch_integration_test;
 #[cfg(test)]
-mod brief_columns_test;
-#[cfg(test)]
 mod caching_oracle_test;
 #[cfg(test)]
 mod caching_reaper_test;
@@ -77,6 +73,8 @@ mod diff_emitter_test;
 mod diff_test;
 #[cfg(test)]
 mod find_file_index_test;
+#[cfg(test)]
+mod fuzzy_jump_test;
 #[cfg(test)]
 mod hidden_files_test;
 #[cfg(test)]
