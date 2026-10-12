@@ -14,8 +14,8 @@ import { commands } from './command-registry'
 import { mcpCommands } from './sources/mcp'
 import type { CommandId } from './command-ids'
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => true,
 }))
 
