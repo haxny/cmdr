@@ -2,12 +2,9 @@
 
 use std::sync::Arc;
 
-use cmdr_fs::volume::host::listings::ListingHost;
-
 use crate::collation::NameCollator;
 
 use super::Listings;
-use super::backends::EngineListingHost;
 
 impl Listings {
     /// Starts the backstop that reclaims listings whose close never arrived
@@ -21,14 +18,6 @@ impl Listings {
     /// host feature that sorts rows the way a listing does (search results).
     pub fn collator(&self) -> Arc<NameCollator> {
         self.inner.collator()
-    }
-
-    /// This engine as a storage backend's `ListingHost`, panes only: a backend
-    /// built with it patches, asks, and refreshes this engine's listings. It
-    /// holds the engine weakly, so a volume keeping it doesn't keep the engine
-    /// alive, and answers nothing once the engine is gone.
-    pub fn listing_host(&self) -> Arc<dyn ListingHost> {
-        Arc::new(EngineListingHost::new(&self.inner))
     }
 
     /// Sends every queued diff batch now, for an end-to-end test that waits on

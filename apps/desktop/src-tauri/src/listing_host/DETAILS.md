@@ -50,7 +50,7 @@ before `index_host::install`, and capturing `index()` would win its slot with an
   `/proc/mounts` on Linux (`linux_mounts::mount_entry_for_path`).
 - `backends.rs`, `AppListings`: the backends' `cmdr_fs` `ListingHost` (installed by `volume_host::install`). The
   oracle, the open-listing question, and the archive refresh are the engine's answers; `directory_changed` goes through
-  the composer, which is why the app doesn't hand backends `Listings::listing_host()`.
+  the composer, so the index and badges hear a backend's change before the panes do.
 
 ## The composer
 

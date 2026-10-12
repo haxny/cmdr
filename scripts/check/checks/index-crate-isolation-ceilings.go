@@ -319,7 +319,7 @@ var surfaceGuardedCrates = []struct {
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
 			RootPromises:   33,
-			HandleMethods:  48,
+			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,
 		},

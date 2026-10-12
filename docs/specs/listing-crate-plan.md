@@ -85,12 +85,13 @@ later WASM build harder for free.
    from `Index::builder()` / `VolumeHost::builder()`, where every seam is optional, on purpose: an engine with no
    volumes lists nothing and one with no events leaves every pane on "loading", so forgetting either is a bug the
    compiler should catch, not a degraded mode.
-9. **The engine answers `cmdr_fs`'s `ListingHost` itself, panes-only:**
-   `Listings::listing_host() -> Arc<dyn ListingHost>`, holding a `Weak<Inner>` (a strong one would close a cycle
-   `Listings` → `ListingVolumes` → volume → `VolumeHost` → `Listings` for any consumer that hands volumes over as
-   values; it degrades to the no-op answers once the engine is gone). A non-Tauri consumer wires backends to the engine
-   in one line. The app's `backends` adapter delegates the oracle, open-listing, and archive-refresh methods to it and
-   keeps only `directory_changed`, which goes through the composer (index → badges → panes).
+9. **(Deleted at the conformance review: nothing called it, and it bypassed the composer order, invariant 21.) The
+   engine answers `cmdr_fs`'s `ListingHost` itself, panes-only:** `Listings::listing_host() -> Arc<dyn ListingHost>`,
+   holding a `Weak<Inner>` (a strong one would close a cycle `Listings` → `ListingVolumes` → volume → `VolumeHost` →
+   `Listings` for any consumer that hands volumes over as values; it degrades to the no-op answers once the engine is
+   gone). A non-Tauri consumer wires backends to the engine in one line. The app's `backends` adapter delegates the
+   oracle, open-listing, and archive-refresh methods to it and keeps only `directory_changed`, which goes through the
+   composer (index → badges → panes).
 
 ## Fresh survey (run 2026-10-11 on `1fd54c18f`, this worktree)
 
@@ -1228,8 +1229,8 @@ Added by this refactor:
 23. Gate behavior on `any(test, feature = "testing")`, never `cfg(test)` alone.
 24. No seam, observer, or overlay runs under an engine lock (after change 5, with no exception); `with_rows` is the one
     public closure run under the cache lock, and it never re-enters `Listings`. Everything else crosses as data.
-25. Background loops hold the engine weakly; a dropped `Listings` stops its reaper, and `listing_host()` holds it weakly
-    too, so no `VolumeHost` keeps it alive.
+25. Background loops hold the engine weakly; a dropped `Listings` stops its reaper. (The engine-built `listing_host()`
+    is gone: nothing called it, and it bypassed the composer order, invariant 21.)
 26. A listing id is a `ListingId` in every Rust signature; only the IPC boundary sees a `String`.
 
 ## Review round 1 (correctness and behavior preservation)

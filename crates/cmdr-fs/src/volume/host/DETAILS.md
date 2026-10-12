@@ -382,8 +382,7 @@ surfaces at the end of a move: check every `[\`Type::method\`]` link for an app-
 `apps/desktop/src-tauri/src/volume_host.rs` builds the one host and hands it out; each answer is a small adapter next to
 the subsystem that can actually give it.
 
-- `ListingHost` ⇒ `listing_host::backends::AppListings` (a host with no composer of its own can hand backends the
-  engine's `cmdr_listing::Listings::listing_host()` instead)
+- `ListingHost` ⇒ `listing_host::backends::AppListings`
 - `VolumeEventSink` ⇒ `events::volume_mapping::TauriVolumeEvents`
 - `CredentialStore` ⇒ `network::credential_store::KeychainCredentials`
 - `HostKeys` ⇒ `network::sftp_host_keys::AppHostKeys`

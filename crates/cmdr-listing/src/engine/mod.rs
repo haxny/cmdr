@@ -27,7 +27,6 @@ use super::host::{
 use super::stall::HungReads;
 use super::{Inner, ScratchSettings};
 
-mod backends;
 mod housekeeping;
 mod intake;
 mod open;

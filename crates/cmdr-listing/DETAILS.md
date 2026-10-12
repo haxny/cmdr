@@ -544,12 +544,12 @@ at `i` GOES. Applying the un-inverted permutation scrambles the whole listing wi
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 33 root promises, 48 `Listings` methods, one public module (`host`), and 20
+`index-crate-isolation` holds this crate to 33 root promises, 47 `Listings` methods, one public module (`host`), and 20
 public items inside it. The numbers are what the crate exposed the day the extraction finished, with no headroom, so an
 addition has to be argued for. Everything counted exists for a named caller:
 
 - **The handle and its vocabulary** (root): `Listings`, `ListingsBuilder` (the constructors, `builder` and `detached`,
-  are two of the 48 methods), `ListingId`, `ListingRequest`, `PaneMarks`, and the `host` module.
+  are two of the 47 methods), `ListingId`, `ListingRequest`, `PaneMarks`, and the `host` module.
 - **A pane opening, reading, and closing a listing** (the IPC pass-throughs in `commands/file_system/listing.rs`): the
   `start` / `cancel` / `end` / `keep_alive` methods, the 14 row-space reads (`file_range` through `with_rows`, plus
   `compare_directories` and `fuzzy_find_first_match`), the five pane settings (`resort`, `set_include_hidden`,
@@ -564,9 +564,8 @@ addition has to be argued for. Everything counted exists for a named caller:
   oracle methods (`authoritative_listing` through `summaries`) and `ListingSummary`.
 - **Sorting outside a listing** (search results, the local reader): `SortColumn`, `SortOrder`, `DirectorySortMode`,
   `SortableEntry`, `entry_comparator`, `sort_entries`, `NameCollator`, and `Listings::collator`.
-- **Housekeeping**: `start_orphan_reaper`, `listing_host` (a backend's `ListingHost` for a host with no composer of its
-  own), `flush_pending_diffs` (the `playwright-e2e` feature only), and `stored_spellings` (a Finder drop's foreign
-  spelling, resolved once).
+- **Housekeeping**: `start_orphan_reaper`, `flush_pending_diffs` (the `playwright-e2e` feature only), and
+  `stored_spellings` (a Finder drop's foreign spelling, resolved once).
 - **The seams** (`host`, the 20 items): the eight traits, the six `No*` defaults (the two list seams need none), and the
   values they exchange (`ListingEnd`, `OpenedListing`, `ForegroundHold`, `MountFacts`, `Unregistered`), plus
   `ScratchVisibility`. The seam files themselves are `pub(crate)`; a host names a seam only as `cmdr_listing::host::X`.
@@ -654,8 +653,11 @@ shipped build.
   out that outlives a call hold `Inner` weakly and give up, or answer the no-op, once the last `Listings` is dropped.
   **Why:** a strong handle in a loop leaks one engine per test, and one held by a volume closes a cycle (`Listings` →
   volumes → a volume → its `VolumeHost` → `Listings`) for any host that hands volumes over as values. Per-event tasks (a
-  refresh, the 50 ms diff flush) hold it strongly, because they end. Cmdr wires its backends' `ListingHost` app-side
-  (`listing_host/DETAILS.md` § "The adapters"), since its `directory_changed` must go through the composer.
+  refresh, the 50 ms diff flush) hold it strongly, because they end.
+- **The engine is never a backend's `ListingHost` itself.** A host wires its backends' `cmdr_fs` `ListingHost` to its
+  own composer (Cmdr's: `listing_host/DETAILS.md` § "The adapters"). **Why:** a backend's `directory_changed` must reach
+  the index and the badges before the panes (`index → badges → panes`), and an engine-built host would patch the panes
+  alone.
 - **What isn't the engine:** the local backend's `std::fs` reader and mutation patch
   (`apps/desktop/src-tauri/src/file_system/volume/backends/local_posix/`), Brief column widths, the FSEvents watcher's
   OS half, and every wire event struct. They answer to the engine's API from the app.
