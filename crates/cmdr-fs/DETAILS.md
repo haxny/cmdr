@@ -49,18 +49,20 @@ the next section.
   Samba mount needs).
 - `staging.rs`: `StagingTemp`, the ONLY way to name a scratch file. `src/staging/names.rs` is the one name builder
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
-- Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive detection, and the extension-only split of a path at its
-  archive component), `benchmark.rs` (the env-gated `[TIMELINE]` stderr events,
-  `docs/guides/benchmarking-file-loading.md`), `firmlinks.rs` (`normalize_path`; the index and the app's watchers have
-  to agree on it), `file_provider.rs` (the cloud-domain marker), `filesystem_kind.rs`, `path_locations.rs` (how many
-  PLACES a set of directories amounts to), `path_hash.rs` (the fixed 64-bit folder-path hash two resident maps key on
-  instead of the path: search's importance weights and the media coverage score cache), `git_meta` (what a git portal
-  row's Size cell states), `name_fold.rs` (the ONE "same name, spelled another way" key: NFC + lowercase, shared by
-  share IDs, transfer conflict buckets, the SMB spelling resolve, and cursor placement), `log_rollup`, `log_detail`
-  (`LogDetail`: external OS/server/CLI text as one Debug-quoted, 1 KiB-capped log field that the app's report pass
-  redacts; see `apps/desktop/src-tauri/src/redact/DETAILS.md`), `tcc_paths`, `ignore_poison`, `pluralize`, `thread_qos`,
-  `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of `Utility`-QoS threads, so
-  background work that comes in streams, like index walks, reuses threads instead of creating one per job).
+- Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs
+  on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive
+  detection, and the extension-only split of a path at its archive component), `benchmark.rs` (the env-gated
+  `[TIMELINE]` stderr events, `docs/guides/benchmarking-file-loading.md`), `firmlinks.rs` (`normalize_path`; the index
+  and the app's watchers have to agree on it), `file_provider.rs` (the cloud-domain marker), `filesystem_kind.rs`,
+  `path_locations.rs` (how many PLACES a set of directories amounts to), `path_hash.rs` (the fixed 64-bit folder-path
+  hash two resident maps key on instead of the path: search's importance weights and the media coverage score cache),
+  `git_meta` (what a git portal row's Size cell states), `name_fold.rs` (the ONE "same name, spelled another way" key:
+  NFC + lowercase, shared by share IDs, transfer conflict buckets, the SMB spelling resolve, and cursor placement),
+  `log_rollup`, `log_detail` (`LogDetail`: external OS/server/CLI text as one Debug-quoted, 1 KiB-capped log field that
+  the app's report pass redacts; see `apps/desktop/src-tauri/src/redact/DETAILS.md`), `tcc_paths`, `ignore_poison`,
+  `pluralize`, `thread_qos`, `thread_cpu`, `process_memory`, `utility_pool.rs` (`UtilityPool`, a keep-alive pool of
+  `Utility`-QoS threads, so background work that comes in streams, like index walks, reuses threads instead of creating
+  one per job).
 - `testing/`: behind the `testing` feature. `TestDir`, the two waits, and `unique_test_id` (a pid-and-counter key for a
   test-owned entry in a global map) in `mod.rs`; `tcp_proxy.rs` (`TcpProxy`, a loopback proxy a network backend's test
   puts in front of a shared Docker fixture to cut the connection, refused or silent, without touching a container other
