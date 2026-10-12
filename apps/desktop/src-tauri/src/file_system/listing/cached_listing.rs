@@ -19,6 +19,7 @@ use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::path_index::PathIndexCache;
 pub(crate) use crate::file_system::listing::pipeline::OverlayRows;
 use crate::file_system::listing::pipeline::Prepared;
+use crate::file_system::listing::reread::ReadGeneration;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::visible_rows::{ScratchProjection, VisibleRows, VisibleRowsCache};
 use cmdr_fs::entry::{FileEntry, TagRef};
@@ -164,6 +165,9 @@ pub(crate) struct CachedListing {
     /// watch keeps fresh would hand six virtual folders straight to a walker
     /// that then tries to remove them.
     overlay_rows: usize,
+    /// The newest full re-read that landed here, by when it started reading.
+    /// A re-read older than this is dropped (`reread.rs`).
+    pub published_generation: ReadGeneration,
 }
 
 impl CachedListing {
@@ -215,6 +219,7 @@ impl CachedListing {
             last_accessed_ms: AtomicU64::new(engine.epoch_millis_now()),
             epoch: engine.epoch,
             overlay_rows,
+            published_generation: ReadGeneration::INSERT,
         }
     }
 

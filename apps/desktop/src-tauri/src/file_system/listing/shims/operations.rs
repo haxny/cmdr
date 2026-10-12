@@ -179,7 +179,8 @@ pub fn resort_listing(
 // shim: removed in M4b
 #[cfg(test)]
 pub(crate) fn update_listing_entries(listing_id: &str, prepared: Prepared) {
-    installed().update_listing_entries(listing_id, prepared);
+    // A re-read starting now, as a test's hand-over always is.
+    installed().update_listing_entries(listing_id, prepared, installed().next_read_generation());
 }
 
 /// `Inner::get_selection_snapshot` on the installed engine.

@@ -113,6 +113,8 @@ mod path_index_test;
 #[cfg(test)]
 mod probe_test_support;
 #[cfg(test)]
+mod read_generation_test;
+#[cfg(test)]
 mod row_beside_test;
 #[cfg(test)]
 pub(crate) mod seam_test_support;

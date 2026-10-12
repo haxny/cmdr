@@ -460,7 +460,8 @@ pub async fn handle_directory_change(listing_id: &str) {
         RefreshOutcome::DirectoryGone(path) => directory_deleted(listing_id, &path),
         // Volume unregistered: fall back to std::fs for local paths.
         RefreshOutcome::NoVolume => reread_with_std_fs(listings, &id).await,
-        RefreshOutcome::Landed | RefreshOutcome::ListingGone | RefreshOutcome::Skipped => {}
+        RefreshOutcome::Landed | RefreshOutcome::Superseded | RefreshOutcome::ListingGone | RefreshOutcome::Skipped => {
+        }
     }
 }
 

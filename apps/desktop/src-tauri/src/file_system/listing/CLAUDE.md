@@ -4,7 +4,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- **engine.rs** (`Listings`). Read: **streaming.rs**, **stall.rs**, **pipeline.rs**, **reread.rs** (the watcher's re-read and patch). App seams: **host/**. Cache and mutate:
+- **engine.rs** (`Listings`). Read: **streaming.rs**, **stall.rs**, **pipeline.rs**, **reread.rs**. App seams: **host/**. Cache and mutate:
   **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**, **path_index.rs**, **name_filter.rs**,
   **quick_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
   `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
@@ -15,13 +15,14 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
   `CachedListing::rows` is the ONLY filter point, on READ; by-path callers go through `index_of_path` /
   `indices_of_paths`. ❗ A MUTATING caller resolves BEFORE `entries_mut`, which drops both maps. `entries` stays
   private: accessors that grew their own filter were each a row off.
-- **Mutation owners allocate revisions and enqueue stamped batches under the cache write lock**: the queue's only
-  writer, `Publish`, is borrowed from it (`write_cache`). The emitter coalesces transport, never boundaries or revisions. Indices are pane rows, not entry indices.
+- **Mutation owners allocate revisions and enqueue stamped batches under the cache write lock**: only `Publish`,
+  borrowed from `write_cache`, writes the queue. The emitter coalesces transport, never boundaries or revisions.
   Rows use committed exact-path scratch decisions. Reconcile and publish scratch drift BEFORE an entry mutation or
   guarded index consumption, then check the expected revision. `DETAILS.md` § "Diff event coalescing".
 - **Quick-filter changes share that revision** and drop superseded pending batches under the cache write lock,
   never after unlocking. Guard selection remapping before changing the filter. `DETAILS.md` § "The quick filter and in-flight diffs".
-- **Refreshes of ONE directory stay serialized** (`notify_full_refresh`), or an older read lands last.
+- **No full re-read lands after a newer one**: each carries the generation it STARTED reading at. `DETAILS.md` §
+  "Read generations".
 - **Overlay rows fold in through `pipeline.rs`'s `Prepared`**, the only entries a listing stores. `DETAILS.md` §
   "The overlay step".
 - **A close notifies the observers (`host/observers.rs`) AFTER the cache removal**, ❌ never before: an observer's detached arm
@@ -32,7 +33,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 - ❌ **A listing never aborts a read**, on cancel or when a retry wins: detaching lets it unwind; aborting wedges an
   MTP phone. A read quiet for `stall_after` emits `listing-stalled` and keeps waiting, ❌ never a deadline that ends
   it. `DETAILS.md` § "Stalled listings".
-- **Every spawn goes through the engine's runtime**: on a watcher's OS thread a bare `tokio::spawn` panics.
+- **Every spawn goes through the engine's runtime**: a bare `tokio::spawn` panics on a watcher's OS thread.
 - **Sorting has ONE comparator**, `entry_comparator` over `SortableEntry` (`FileEntry` plus a search-results row). ❌
   Never add a second. A sort change invalidates the frontend's cached range, so bump `cacheGeneration`.
 - **Names rank by Unicode collation (`collation.rs`), ❌ never code points or `to_lowercase`** (macOS holds NFC and NFD

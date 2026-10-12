@@ -14,7 +14,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, Weak};
 use std::time::Instant;
 
@@ -174,6 +174,7 @@ impl ListingsBuilder {
                 streaming: RwLock::new(HashMap::new()),
                 diffs,
                 refresh_slots: RwLock::new(HashMap::new()),
+                read_generations: AtomicU64::new(0),
                 hung_reads: Arc::new(HungReads::new()),
                 collators: RwLock::new(HashMap::new()),
             }),
@@ -238,6 +239,8 @@ pub(crate) struct Inner {
     pub(super) diffs: Arc<DiffQueue>,
     /// Per-directory refresh turnstiles (`caching.rs`).
     pub(super) refresh_slots: RwLock<HashMap<(String, PathBuf), RefreshSlot>>,
+    /// The last read generation handed out (`reread.rs`).
+    pub(super) read_generations: AtomicU64,
     /// Every volume's listing reads, and which of them are hung (`stall.rs`).
     hung_reads: Arc<HungReads>,
     /// One collator per locale tag (`collation.rs`).

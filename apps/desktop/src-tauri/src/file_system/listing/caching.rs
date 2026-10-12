@@ -12,6 +12,7 @@ use crate::file_system::listing::cached_listing::CachedListing;
 use crate::file_system::listing::diff::{DiffChange, PaneRows};
 use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::pipeline::{Prepared, ReadBy};
+use crate::file_system::listing::reread::ReadGeneration;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator_with};
 use cmdr_fs::entry::{FileEntry, TagRef};
 pub use cmdr_fs::volume::DirectoryChange;
@@ -33,7 +34,7 @@ pub struct ListingSummary {
 /// refresh is already queued behind the running one.
 pub(crate) struct RefreshSlot {
     lock: Arc<tokio::sync::Mutex<()>>,
-    queued: Arc<std::sync::atomic::AtomicBool>,
+    pub(super) queued: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Inner {
@@ -502,10 +503,12 @@ impl Inner {
                 // The backend already re-read the directory, so there's nothing to ask
                 // it for: prepare once for the volume, then publish per listing. This is
                 // where the diffing a device backend used to do for itself lives now.
+                // Dated on arrival: the backend serializes its own re-reads.
+                let generation = self.next_read_generation();
                 match self.prepare_handed_over(volume_id, parent_path, entries) {
                     Some(prepared) => {
                         for (listing_id, ..) in &listings {
-                            self.publish_replacement(listing_id, prepared.clone());
+                            self.publish_replacement(listing_id, prepared.clone(), generation);
                         }
                     }
                     // An overlay applies here, and this arm can't wait on it: re-read
@@ -682,9 +685,10 @@ impl Inner {
     /// decorated, with the count of contributed rows the listing has to keep: a
     /// `.git/` listing that regained its six virtual rows in this refresh must not
     /// read as authoritative to a walker afterwards (`host/overlays.rs`). Callers
-    /// prepare ONCE per directory rather than once per listing.
-    pub(crate) fn publish_replacement(&self, listing_id: &str, prepared: Prepared) {
-        self.update_listing_entries(listing_id, prepared);
+    /// prepare ONCE per directory rather than once per listing. Dropped when the
+    /// listing already published a re-read newer than `generation`.
+    pub(crate) fn publish_replacement(&self, listing_id: &str, prepared: Prepared, generation: ReadGeneration) {
+        self.update_listing_entries(listing_id, prepared, generation);
     }
 
     /// The body of one refresh, with the directory's turn already held.
@@ -707,6 +711,8 @@ impl Inner {
             }
         };
 
+        // After the turn, right before the read (`reread.rs`).
+        let generation = self.next_read_generation();
         let new_entries = match vol.list_directory(&parent_path, None).await {
             Ok(entries) => entries,
             Err(e) => {
@@ -726,7 +732,7 @@ impl Inner {
         let prepared = self.prepare(read_by, &volume_id, &parent_path, new_entries).await;
 
         for (listing_id, ..) in &listings {
-            self.publish_replacement(listing_id, prepared.clone());
+            self.publish_replacement(listing_id, prepared.clone(), generation);
         }
     }
 

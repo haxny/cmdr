@@ -19,7 +19,6 @@ pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
 use crate::file_system::listing::engine::Inner;
 #[cfg(test)]
 use crate::file_system::listing::pipeline::ReadBy;
-use crate::file_system::listing::pipeline::{OverlayRows, Prepared};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries_with};
 #[cfg(test)]
 use cmdr_fs::benchmark;
@@ -578,40 +577,6 @@ impl Inner {
             new_cursor_index,
             new_selected_indices,
         })
-    }
-}
-
-// ============================================================================
-// Internal cache accessors for file watcher
-// ============================================================================
-
-impl Inner {
-    /// Replaces a listing's entries with a re-read's (`pipeline.rs`), re-sorted
-    /// the listing's way, and publishes what changed.
-    pub(crate) fn update_listing_entries(&self, listing_id: &str, prepared: Prepared) {
-        let (entries, overlay_rows) = prepared.into_parts();
-        // Both resolved before the lock: each asks the host.
-        let visibility = self.scratch_visibility();
-        let collator = self.collator();
-        let mut cache = self.write_cache();
-        if let Some((listing, publish)) = cache.get_mut(listing_id) {
-            listing.reconcile_scratch(listing_id, visibility, &publish);
-            listing.touch();
-            let mut entries = entries;
-            self.index.enrich(&listing.volume_id, &mut entries);
-            sort_entries_with(
-                &collator,
-                &mut entries,
-                listing.sort_by,
-                listing.sort_order,
-                listing.directory_sort_mode,
-            );
-            let changes = listing.replace_entries(entries, visibility);
-            if let OverlayRows::Recounted(count) = overlay_rows {
-                listing.set_overlay_rows(count);
-            }
-            listing.publish_changes(&publish, listing_id, changes);
-        }
     }
 }
 

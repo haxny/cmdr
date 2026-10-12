@@ -176,6 +176,7 @@ impl Inner {
         let Some(volume) = resolved.volume else {
             return;
         };
+        let generation = self.next_read_generation();
         let listed = match list_as_stored(volume.as_ref(), &path, None, None).await {
             Ok(listed) => listed,
             Err(e) => {
@@ -191,14 +192,14 @@ impl Inner {
         };
         let prepared = self.prepare(read_by, &volume_id, &stored, entries).await;
         if stored == path {
-            self.publish_replacement(&listing_id, prepared);
+            self.publish_replacement(&listing_id, prepared, generation);
             return;
         }
         // The diff tells the pane what came and went, but it matches rows by name, so
         // it can't see every path changing spelling: the entries are written whole on
         // top, and the pane refetches its rows when it adopts the new spelling.
-        self.publish_replacement(&listing_id, prepared.clone());
-        self.update_listing_entries(&listing_id, prepared);
+        self.publish_replacement(&listing_id, prepared.clone(), generation);
+        self.update_listing_entries(&listing_id, prepared, generation);
         self.rekey_listing(&listing_id, &volume_id, &stored);
     }
 

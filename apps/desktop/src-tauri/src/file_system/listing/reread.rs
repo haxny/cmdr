@@ -6,21 +6,35 @@
 //!
 //! The OS half (debouncing, rebasing event paths, the stat, when to fall back to
 //! a full re-read, telling the pane its directory is gone) stays with the host.
+//!
+//! **No full re-read lands after a newer one did.** Every full re-read (this
+//! file's two, a `FullRefresh`, a respell, a backend's `Replaced`) takes a
+//! [`ReadGeneration`] when it STARTS reading, and [`Inner::update_listing_entries`],
+//! the one step that stores a re-read, drops it under the cache write lock when
+//! the listing already published a newer one. Incremental patches take none and
+//! bump none: a re-read that started before a patch can still land after it and
+//! carry the older state, since bumping would drop every re-read during a busy
+//! burst. `DETAILS.md` § "Read generations".
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::Ordering;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::VolumeError;
 
 use super::engine::{Inner, Listings};
 use super::listing_id::ListingId;
-use super::pipeline::ReadBy;
+use super::pipeline::{OverlayRows, Prepared, ReadBy};
+use super::sorting::sort_entries_with;
 
 /// How a full re-read of one listing ended.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RefreshOutcome {
     /// The re-read replaced the listing's entries.
     Landed,
+    /// A re-read that started later already published, so this one's older
+    /// answer was dropped.
+    Superseded,
     /// The directory itself is gone (`NotFound`). The host tells the pane and
     /// stops whatever watches it. Carries the listing's path.
     DirectoryGone(PathBuf),
@@ -42,6 +56,18 @@ pub struct ReadTicket {
     id: ListingId,
     volume_id: String,
     path: PathBuf,
+    generation: ReadGeneration,
+}
+
+/// When a full re-read started reading, from its engine's one counter: a later
+/// start has a higher generation. A listing remembers the newest one it
+/// published, and a re-read older than that is dropped.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct ReadGeneration(u64);
+
+impl ReadGeneration {
+    /// What the streaming read's cache insert publishes, so any later re-read wins.
+    pub(crate) const INSERT: Self = Self(0);
 }
 
 impl ReadTicket {
@@ -84,6 +110,13 @@ impl Listings {
 }
 
 impl Inner {
+    /// The generation for a full re-read starting NOW. ❗ Take it immediately
+    /// before the read, after any turn or volume lookup it waits on: one taken
+    /// while queued would lose to a read that started later.
+    pub(crate) fn next_read_generation(&self) -> ReadGeneration {
+        ReadGeneration(self.read_generations.fetch_add(1, Ordering::Relaxed) + 1)
+    }
+
     pub(crate) async fn refresh(&self, id: &ListingId) -> RefreshOutcome {
         let Some((volume_id, path)) = self.get_listing_volume_id_and_path(id.as_str()) else {
             return RefreshOutcome::ListingGone;
@@ -97,6 +130,7 @@ impl Inner {
             return RefreshOutcome::NoVolume;
         };
 
+        let generation = self.next_read_generation();
         let entries = match volume.list_directory(&path, None).await {
             Ok(entries) => entries,
             Err(VolumeError::NotFound(_)) => return RefreshOutcome::DirectoryGone(path),
@@ -115,8 +149,7 @@ impl Inner {
             routed: is_routed,
         };
         let prepared = self.prepare(read_by, &volume_id, &path, entries).await;
-        self.update_listing_entries(id.as_str(), prepared);
-        RefreshOutcome::Landed
+        self.update_listing_entries(id.as_str(), prepared, generation)
     }
 
     pub(crate) fn begin_read(&self, id: &ListingId) -> Option<ReadTicket> {
@@ -125,13 +158,65 @@ impl Inner {
             id: id.clone(),
             volume_id,
             path,
+            // Taken here, before the host reads, so it dates the read rather
+            // than the hand-over.
+            generation: self.next_read_generation(),
         })
     }
 
     pub(crate) async fn refresh_from_entries(&self, ticket: ReadTicket, entries: Vec<FileEntry>) -> RefreshOutcome {
-        let ReadTicket { id, volume_id, path } = ticket;
+        let ReadTicket {
+            id,
+            volume_id,
+            path,
+            generation,
+        } = ticket;
         let prepared = self.prepare(ReadBy::StdFs, &volume_id, &path, entries).await;
-        self.update_listing_entries(id.as_str(), prepared);
+        self.update_listing_entries(id.as_str(), prepared, generation)
+    }
+
+    /// Replaces a listing's entries with a re-read's (`pipeline.rs`), re-sorted
+    /// the listing's way, and publishes what changed: THE step every full
+    /// re-read lands through. Drops the re-read when the listing already
+    /// published one that started later than `generation`.
+    pub(crate) fn update_listing_entries(
+        &self,
+        listing_id: &str,
+        prepared: Prepared,
+        generation: ReadGeneration,
+    ) -> RefreshOutcome {
+        let (entries, overlay_rows) = prepared.into_parts();
+        // Both resolved before the lock: each asks the host.
+        let visibility = self.scratch_visibility();
+        let collator = self.collator();
+        let mut cache = self.write_cache();
+        let Some((listing, publish)) = cache.get_mut(listing_id) else {
+            return RefreshOutcome::ListingGone;
+        };
+        if listing.published_generation > generation {
+            log::debug!(
+                target: "listing",
+                "listing {listing_id}: dropping a re-read that a newer one already superseded"
+            );
+            return RefreshOutcome::Superseded;
+        }
+        listing.published_generation = generation;
+        listing.reconcile_scratch(listing_id, visibility, &publish);
+        listing.touch();
+        let mut entries = entries;
+        self.index.enrich(&listing.volume_id, &mut entries);
+        sort_entries_with(
+            &collator,
+            &mut entries,
+            listing.sort_by,
+            listing.sort_order,
+            listing.directory_sort_mode,
+        );
+        let changes = listing.replace_entries(entries, visibility);
+        if let OverlayRows::Recounted(count) = overlay_rows {
+            listing.set_overlay_rows(count);
+        }
+        listing.publish_changes(&publish, listing_id, changes);
         RefreshOutcome::Landed
     }
 

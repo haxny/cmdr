@@ -148,9 +148,11 @@ pub(crate) async fn notify_full_refresh(
 #[cfg(test)]
 pub(crate) fn publish_replacement(listing_id: &str, entries: Vec<FileEntry>, overlay_rows: usize) {
     use crate::file_system::listing::pipeline::{OverlayRows, Prepared};
+    // A re-read starting now, as a test's hand-over always is.
     installed().publish_replacement(
         listing_id,
         Prepared::for_test(entries, OverlayRows::Recounted(overlay_rows)),
+        installed().next_read_generation(),
     );
 }
 

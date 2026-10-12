@@ -990,3 +990,32 @@ tree doesn't accumulate one per directory it has left.
 ❌ Don't "optimize" this back into concurrent refreshes. The cost it removes is real and the failure it prevents is
 silent: the pane looks settled and correct, which is why it went unexplained through several E2E flakes before the
 duration evidence pinned it.
+
+## Read generations
+
+The turnstile orders `FullRefresh`es of one directory, and nothing else: ⌘R and the watcher's re-read
+(`Listings::refresh`), the `std::fs` hand-over (`begin_read` + `refresh_from_entries`), a respell, and a backend's
+`Replaced` never queue on it. So every full re-read also takes a `ReadGeneration` (`reread.rs`) from the engine's one
+counter at the moment it STARTS reading, and `Inner::update_listing_entries`, the one step that stores a re-read, drops
+it under the cache write lock when the listing already published a newer one (`RefreshOutcome::Superseded`).
+
+When each one takes it, because a generation taken too early drops a FRESHER read:
+
+- A `FullRefresh` after acquiring its turn, right before `list_directory`, never while queued.
+- `refresh` and the respell after resolving the volume, right before the read.
+- `begin_read` when the ticket is issued, before the app's own read, so it dates the read rather than the hand-over.
+- `Replaced` on arrival. The backend's read predates that a little; accepted, since dating it needs a `cmdr_fs` change
+  and the backend serializes its own re-reads.
+- The streaming read's insert publishes `ReadGeneration::INSERT` (0), so any later re-read wins.
+
+Equal generations both land: the respell writes one read twice when the spelling changed.
+
+**Incremental patches take none and bump none.** A re-read that started before an `Added`, `Removed`, `Modified`, or
+`observe_children` patch can still land after it and carry the older state, as it always could; bumping on every patch
+would drop every re-read during a busy burst. Don't "fix" it silently.
+
+**Why not put `refresh` through the turnstile.** Three breaks: `notify_full_refresh` returns early when the waiting berth
+is taken, so an awaited ⌘R would return before its read landed and E2E's `flush_file_watcher` would go flaky; a turn held
+by a read stalled on a dead mount is held forever (a read is never aborted), so ⌘R would queue behind it instead of
+reading through the recovered mount; and the turnstile keys on the notifier's raw path while a listing keys on its
+`ListingPath`, which differ for MTP. Pinned by `read_generation_test.rs`.
