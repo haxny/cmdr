@@ -242,3 +242,38 @@ async fn smb_integration_a_file_that_shrank_since_the_scan_is_read_in_full() {
 
     ensure_clean(&vol, &dir).await;
 }
+
+/// The viewer's seam (#303): one open, then reads anywhere in the file, each
+/// exactly the bytes asked for, clamped at EOF, and a directory refused.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_random_reader_serves_positioned_reads_over_one_handle() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+
+    let size = 3 * 1024 * 1024 + 17;
+    let data: Vec<u8> = (0..size).map(|i| (i % 251) as u8).collect();
+    let smb_path = format!("{}/random.bin", dir);
+    vol.create_file(Path::new(&smb_path), &data).await.unwrap();
+
+    let reader = vol.open_random_reader(Path::new(&smb_path)).await.unwrap();
+    assert_eq!(reader.size(), size as u64);
+    for offset in [0usize, size / 2, size - 100, 1] {
+        let got = reader.read_at(offset as u64, 64 * 1024).await.unwrap();
+        let end = (offset + 64 * 1024).min(size);
+        assert_eq!(got, &data[offset..end], "read at {offset}");
+    }
+    assert!(reader.read_at(size as u64, 10).await.unwrap().is_empty());
+    reader.close().await.unwrap();
+
+    let refused = vol.open_random_reader(Path::new(&dir)).await;
+    assert!(
+        matches!(refused, Err(VolumeError::IsADirectory(_))),
+        "got {:?}",
+        refused.err()
+    );
+
+    ensure_clean(&vol, &dir).await;
+}

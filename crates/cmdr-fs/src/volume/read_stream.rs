@@ -1,7 +1,8 @@
-//! The two stream traits a `Volume` hands back: [`VolumeReadStream`], one
-//! file's bytes in chunks plus the date the file carries, and
-//! [`SequentialExtract`], a one-pass walk over a sequential archive's members.
-//! Both are re-exported from `volume`, beside the trait that returns them.
+//! The reader traits a `Volume` hands back: [`VolumeReadStream`], one file's
+//! bytes in chunks plus the date the file carries, [`VolumeRandomReader`], one
+//! held-open file read by absolute offset, and [`SequentialExtract`], a one-pass
+//! walk over a sequential archive's members. All are re-exported from `volume`,
+//! beside the trait that returns them.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -131,4 +132,33 @@ pub trait SequentialExtract: Send {
     /// the destination's `write_from_stream`. Valid until the next
     /// [`next_file`](Self::next_file); call exactly once per member.
     fn current_stream(&self) -> Box<dyn VolumeReadStream>;
+}
+
+/// One file a volume holds open and reads by absolute offset, `pread`-style.
+///
+/// For a caller that jumps around one file many times, like the file viewer
+/// scrolling a multi-GB log on a share: [`Volume::read_range`](super::Volume::read_range)
+/// opens and closes the file per call, which costs an extra round trip per read
+/// on a network backend. This keeps the handle, so each read is one.
+pub trait VolumeRandomReader: Send + Sync {
+    /// The file's size as the open saw it. Reads clamp to it, so a file that grew
+    /// since needs a fresh reader to read the new bytes.
+    fn size(&self) -> u64;
+
+    /// Up to `len` bytes at `offset`. Fewer only at end of file (as of the open);
+    /// a read wholly past it yields an empty `Vec`. No cursor, so concurrent calls
+    /// are independent.
+    #[allow(
+        clippy::type_complexity,
+        reason = "async trait method returns a pinned boxed future by design"
+    )]
+    fn read_at(
+        &self,
+        offset: u64,
+        len: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + '_>>;
+
+    /// Releases the handle. A reader dropped without this may hold a server-side
+    /// handle until the backend's session ends.
+    fn close(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send>>;
 }

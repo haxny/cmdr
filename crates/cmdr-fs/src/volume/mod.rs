@@ -1593,6 +1593,27 @@ pub trait Volume: Send + Sync {
         Box::pin(async { Err(VolumeError::NotSupported) })
     }
 
+    /// Opens `path` once for many positioned reads ([`VolumeRandomReader`]).
+    ///
+    /// [`read_range`](Self::read_range)'s sibling for a caller that reads one file
+    /// over and over: the file viewer holds one for a whole session over a file
+    /// whose bytes it would otherwise pull through an OS mount or a temp copy.
+    ///
+    /// Default is `NotSupported`, and the caller falls back to what it did before.
+    /// Implemented by `SmbVolume` (one smb2 `FileReader`). A local volume leaves
+    /// the default: its paths open with `std::fs`, which is already a held handle.
+    #[allow(
+        clippy::type_complexity,
+        reason = "async trait method returns a pinned boxed future by design"
+    )]
+    fn open_random_reader<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeRandomReader>, VolumeError>> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async { Err(VolumeError::NotSupported) })
+    }
+
     /// Whether pausing a streaming read from this volume needs to release a
     /// scarce backend resource (rather than park the open stream in place).
     ///
@@ -2044,7 +2065,7 @@ pub use share_link::{ShareLink, ShareLinkExpiry};
 pub use in_memory::InMemoryVolume;
 pub use mkdir_all::{LeadsTo, MadeDirectories, MakesDirectories};
 pub use patching::{PatchSource, patch_created, patch_deleted, patch_mutation, patch_renamed};
-pub use read_stream::{SequentialExtract, VolumeReadStream};
+pub use read_stream::{SequentialExtract, VolumeRandomReader, VolumeReadStream};
 pub use remote_paths::{
     ServerPath, adb_app_root, adb_serial_of_path, s3_app_root, server_of_path, sftp_app_root, webdav_app_root,
 };

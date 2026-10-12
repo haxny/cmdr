@@ -29,6 +29,7 @@ mod mapping;
 mod mutation;
 mod paths;
 mod query;
+mod random_reader;
 mod reconnect;
 mod scan;
 mod scan_pool;

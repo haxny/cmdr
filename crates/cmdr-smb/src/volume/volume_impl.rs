@@ -17,8 +17,8 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, Metadata
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
-    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WatchCoverage,
-    WriteMode,
+    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeRandomReader,
+    VolumeReadStream, WatchCoverage, WriteMode,
 };
 use cmdr_fs::volume::{ListingProgress, Retirement};
 use log::debug;
@@ -595,6 +595,13 @@ impl Volume for SmbVolume {
             self.handle_smb_result("read_range(close)", &smb_path, close_result)?;
             Ok(data)
         })
+    }
+
+    fn open_random_reader<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeRandomReader>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.open_random_reader_impl(path))
     }
 
     /// A write that fits one compound CREATE+WRITE+FLUSH+CLOSE frame is
