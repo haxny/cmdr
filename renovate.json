@@ -68,7 +68,6 @@
         "oxfmt",
         "oxlint",
         "stylelint",
-        "prettier",
         "eslint",
         "/^stylelint-/",
         "/^eslint-/",

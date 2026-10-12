@@ -769,6 +769,6 @@ Payment-provider, pricing, and device-limit decisions live with the code that im
 
 ## Dependencies
 
-Runtime: `hono`, `@noble/ed25519`, `resend`, `aws4fetch`. Dev: `wrangler`, `vitest`, `typescript`, `eslint`, `prettier`.
+Runtime: `hono`, `@noble/ed25519`, `resend`, `aws4fetch`. Dev: `wrangler`, `vitest`, `typescript`, `eslint`.
 
 See also: `apps/desktop/src/lib/licensing/CLAUDE.md` (the frontend licensing feature).

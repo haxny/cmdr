@@ -732,10 +732,10 @@ Status can be: `OK` (green), `warn` (yellow), `SKIPPED` (yellow), `FAILED` (red)
 
 ### The auto-fix notice
 
-The formatters (`oxfmt`, `rustfmt`, prettier, `eslint --fix`) rewrite the tree on a local run and only CHECK under
-`--ci`. So a reformat that lands AFTER the last commit reads green locally and red in CI: the working tree holds the
-fix, the commit doesn't. That reddened CI on 2026-08-18, and the per-check `SuccessWithChanges` line was too easy to
-miss in a fifty-check run.
+The formatters (`oxfmt`, `rustfmt`, `eslint --fix`) rewrite the tree on a local run and only CHECK under `--ci`. So a
+reformat that lands AFTER the last commit reads green locally and red in CI: the working tree holds the fix, the commit
+doesn't. That reddened CI on 2026-08-18, and the per-check `SuccessWithChanges` line was too easy to miss in a
+fifty-check run.
 
 `runChecks` snapshots `git status --porcelain -z` before the run and again after, and prints the set difference as the
 LAST line of the run, on both the green and the red path: "This run rewrote N committed files … Commit:", each named.
@@ -818,7 +818,7 @@ output formatting, clearer failure messages. Auto-installed by the check script 
 
 **Decision**: Auto-fix locally, check-only in CI. **Why**: Developers get instant fixes locally (less friction), CI
 ensures code is properly formatted before merge. Controlled by the `--ci` flag. Formatters/linters fix files locally,
-report only in CI. `runPrettierCheck` and `runESLintCheck` in `checks/common.go` handle both modes.
+report only in CI. `runOxfmtCheck` and `runESLintCheck` in `checks/common.go` handle both modes.
 
 **Decision**: Skip `pnpm install` when lockfile is unchanged. **Why**: `pnpm install` takes ~20s and pegs all CPUs even
 when deps haven't changed. A marker file (`node_modules/.pnpm-install-marker`) stores `pnpm-lock.yaml`'s mtime after

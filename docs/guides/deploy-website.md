@@ -5,7 +5,7 @@ The website (getcmdr.com) is automatically deployed when changes are pushed to t
 ## How it works
 
 1. Push to `main` (or merge a PR)
-2. GitHub Actions runs the `website` job (Prettier, ESLint, typecheck, build, Playwright, Lighthouse)
+2. GitHub Actions runs the `website` job (oxfmt, ESLint, typecheck, build, Playwright, Lighthouse)
 3. If all checks pass, the `deploy-website` job sends a webhook to the server
 4. The server verifies the signature and runs the deploy script:
    - Pulls the latest code

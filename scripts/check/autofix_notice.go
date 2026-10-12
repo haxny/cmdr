@@ -11,7 +11,7 @@ import (
 
 // The auto-fix notice.
 //
-// Formatters (`oxfmt`, `rustfmt`, prettier, eslint --fix) rewrite the tree on a
+// Formatters (`oxfmt`, `rustfmt`, eslint --fix) rewrite the tree on a
 // local run and only CHECK in CI. So a reformat that lands AFTER an agent's last
 // commit reads green here and red there: the working tree holds the fix, the
 // commit doesn't, and nothing in the run's output says the difference matters.

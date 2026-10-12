@@ -65,7 +65,7 @@ Color scheme.
 - **Typed lint needs `astro sync` first**; the `.astro` block omits the `no-unsafe-*` rules (only false positives
   there). [DETAILS.md](DETAILS.md) § Typed linting.
 - `site` must be set in `astro.config.ts` for RSS and OG image URLs.
-- Keep `compressHTML: true` (Astro 7's `'jsx'` breaks home + pricing), mirrored by `.prettierrc`'s `astroCompressHTML`.
+- Keep `compressHTML: true` (Astro 7's `'jsx'` breaks home + pricing).
 - **A new fetch origin goes in `connect-src`** (`nginx-security-headers.conf`), or prod silently blocks it.
   [DETAILS.md](DETAILS.md) § Security headers.
 - Remark42 comments disabled in dev. Setup: `docs/guides/deploying-remark42.md`.

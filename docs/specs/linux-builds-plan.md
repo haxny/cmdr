@@ -375,7 +375,7 @@ Evidence and the per-item detail: `docs/notes/linux-gaps-2026-08-10.md`.
 - [ ] Build platform-aware Download.astro with macOS/Linux card toggle and arch selector for Linux
 - [ ] Add "Also available for Linux/macOS" cross-platform links
 - [ ] Drop the "Linux in alpha (self-build for now)" clause from the `Download.astro` newsletter CTA
-- [ ] Run website checks: `pnpm check website-prettier website-eslint website-typecheck website-build website-e2e`
+- [ ] Run website checks: `pnpm check website-oxfmt website-eslint website-typecheck website-build website-e2e`
 
 ### Milestone 3: Verification
 

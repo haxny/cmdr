@@ -55,7 +55,7 @@ CheckDefinition{
     CIOnly:      false, // true = run only in --ci mode (or when named explicitly)
     CpuWeight:   2,     // avg cores busy; 0/unset = 1. Governs concurrent admission.
     Inputs:      svelteInputs, // path globs this check reads (for the input-fingerprint cache)
-    DependsOn:   []string{"desktop-svelte-prettier"},
+    DependsOn:   []string{"desktop-oxfmt"},
     Run:         RunDesktopESLint,
 }
 ```
@@ -217,7 +217,7 @@ below for the section-aware patterns to follow.
   `go version -m` on the binary: the module version must equal the pin AND the recorded Go toolchain must equal
   `MiseGoVersion`, since a tool built by an older Go can't parse a newer stdlib (that mismatch reads as
   `method must have no type parameters` inside `math/rand`, which names neither the tool nor its age).
-- **`runPrettierCheck(ctx, ...)`** / **`runESLintCheck(ctx, ...)`** — auto-fix locally, check-only under `--ci`.
+- **`runOxfmtCheck(ctx, ...)`** / **`runESLintCheck(ctx, ...)`** — auto-fix locally, check-only under `--ci`.
   Centralizes the dual-mode behavior so individual checks don't reinvent it.
 - **`indentOutput(s)`** — indents captured stdout/stderr for error messages.
 - **`trimBuildNoise(s)`** — cuts everything before the last `Compiling …` line; when no such line exists (build failed
@@ -1984,14 +1984,14 @@ doubles as production code.
   names, so the lane that does compile the test still catches a rename. Atoms are read from `filter =` declarations
   only, never from comments quoting one). The crates' code is also covered by the desktop Rust lanes above, which all
   run workspace-wide; this scope is for checks about the crate boundary itself.
-- **Desktop / Svelte**: prettier, eslint, svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript,
-  stylelint, css-unused, a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a
-  directory-level `*.a11y.test.ts` that imports it), ui-primitive-coverage (every top-level `lib/ui/*.svelte` primitive
-  has a Debug > Components catalog section), dialog-gallery-coverage (every `SOFT_DIALOG_REGISTRY` id has a row in the
-  Debug > Soft dialogs gallery, and every row names a registered id), btn-restyle, bare-poll, ipc-unused (every
-  `tauri-commands` wrapper and `commands.*` binding has a caller; § "IPC dead code"), e2e-stale-selector (ERROR; a
-  Playwright selector naming a class or `data-*` attribute that appears nowhere in `apps/desktop/src`, see § "E2E stale
-  selectors"), svelte-check, import-cycles, jscpd (the frontend clone list, TypeScript and Svelte), message-keys-fresh
+- **Desktop / Svelte**: eslint, svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint,
+  css-unused, a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
+  `*.a11y.test.ts` that imports it), ui-primitive-coverage (every top-level `lib/ui/*.svelte` primitive has a Debug >
+  Components catalog section), dialog-gallery-coverage (every `SOFT_DIALOG_REGISTRY` id has a row in the Debug > Soft
+  dialogs gallery, and every row names a registered id), btn-restyle, bare-poll, ipc-unused (every `tauri-commands`
+  wrapper and `commands.*` binding has a caller; § "IPC dead code"), e2e-stale-selector (ERROR; a Playwright selector
+  naming a class or `data-*` attribute that appears nowhere in `apps/desktop/src`, see § "E2E stale selectors"),
+  svelte-check, import-cycles, jscpd (the frontend clone list, TypeScript and Svelte), message-keys-fresh
   (regenerate-and-diff `keys.gen.ts` from the message catalogs), message-key-naming (the `area.feature.leaf` shape +
   known-area first segment), message-keys-unused (catalog keys never referenced in `src/`; error-level, with a closed
   dynamic-prefix allowlist for runtime-built keys), message-screenshots-fresh (ERROR on a structural break: a
@@ -2053,8 +2053,8 @@ doubles as production code.
   `Cargo.lock` + `pnpm-lock.yaml` via cargo-about and `pnpm licenses list`, plus the hand-kept vendored credits of §
   "Vendored credits"; the accepted-license list is derived from `deny.toml` rather than duplicated, the output is pinned
   to be identical on macOS and Linux, and the runner's input fingerprint is what keeps it off unrelated runs)
-- **Website / Astro**: prettier, astro-sync, eslint, typecheck, build, html-validate, bundle-size (warn-only), e2e.
-  `astro-sync` generates Astro's gitignored `types.d.ts` and `website-eslint` depends on it: the type-aware rules read
+- **Website / Astro**: astro-sync, eslint, typecheck, build, html-validate, bundle-size (warn-only), e2e. `astro-sync`
+  generates Astro's gitignored `types.d.ts` and `website-eslint` depends on it: the type-aware rules read
   `astro:content` through it, and on an unsynced tree every blog-post field is `any`, so the `no-unsafe-*` rules bury
   the run in ~90 false positives. `website-eslint` refuses to run when the file is missing rather than report those.
 - **Website / Docker**: docker-build

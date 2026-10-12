@@ -208,7 +208,7 @@ const {
         {
             /* PostHog: session replay, heatmaps, click tracking.
             Loaded from PostHog's CDN to avoid bundling dompurify (has an unpatched XSS advisory).
-            Snippet lives in public/scripts/posthog-init.js (extracted to avoid prettier parse errors).
+            Snippet lives in public/scripts/posthog-init.js (kept out of the page markup).
             Injected after `?r=` expansion settles (window.__cmdrRReady) so the first pageview records
             the expanded URL. posthog-init.js reads its config from `document.currentScript.dataset`,
             so the injected element carries the same data-ph-* attributes the static tag did. */
