@@ -8,11 +8,11 @@ metadata**. `ditto` parity is the floor, not the ceiling, and our own measuremen
 dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
 **Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
-folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11), M8 (archives) done
-(2026-10-12); review rounds 1 (correctness and data safety), 2 (architecture, resource cost, executability, Linux, SMB),
-and 3 (coherence, the M5a seam traced against the code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue:
-none yet. Evidence: the notes file above, plus the file:line citations in § "Fresh read". Sizes are rough agent-sessions
-(one session ≈ one focused milestone agent run).
+folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11), M8 (archives) and
+M9 (SFTP, S3, WebDAV, MTP, ADB) done (2026-10-12); review rounds 1 (correctness and data safety), 2 (architecture,
+resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture
+verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line
+citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -79,9 +79,9 @@ it, and tells the user once per operation which classes the destination couldn't
 
 - **mtime**: everywhere a protocol can store it (today's contract, unchanged).
 - **Birth (creation) time**: everywhere a destination can store it: APFS, HFS+, exFAT, FAT (2 s / 10 ms resolution), SMB
-  (`CreationTime`), the macOS SMB mount (smbfs forwards it), S3 (rclone's `btime`), Nextcloud WebDAV (if `X-OC-CTime`
-  holds up). Impossible: SFTP v3, ADB, Linux local filesystems (birth is read-only via `statx`), MTP on Android (to
-  verify).
+  (`CreationTime`), the macOS SMB mount (smbfs forwards it), S3 (rclone's `btime`), Nextcloud WebDAV (`X-OC-CTime`,
+  verified in M9). Impossible: SFTP v3, ADB, Linux local filesystems (birth is read-only via `statx`), MTP on Android
+  (AOSP drops a sent `DateCreated`, M9).
 - **atime**: kept where cheap and already done (local, SFTP's forced pair); never reported, never extended. Nobody reads
   it, and `noatime`/`relatime` make it meaningless on most destinations.
 - **Mode**: local-to-local exactly (today); every routed source → local via the `landed_mode` fold (today); folders too
@@ -270,14 +270,17 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
 - **SMB → local**: mtime and birth keep (M5a, files and folders); hidden/readonly LOST; xattrs LOST (smb2#9).
 - **SMB → SMB copy** (any share: `SmbVolume` has no server-side copy, so even a same-share copy streams): mtime and
   birth keep (M5a). A move within one share renames and keeps all.
-- **Local ↔ SFTP**: mtime keep; birth n/a; mode LOST both ways (attrs carry `permissions`); xattrs n/a.
-- **Local ↔ WebDAV**: mtime keep; birth LOST toward Nextcloud only if `X-OC-CTime` works (to verify), else n/a; folder
-  dates n/a; the rest n/a.
-- **Local ↔ S3**: mtime keep; birth and mode LOST (rclone keys exist); folders n/a. S3 → S3 server copy keeps every
-  `x-amz-meta-*`.
-- **Local ↔ MTP**: mtime keep; birth to verify (`DateCreated` is a field Android likely ignores), folder dates n/a.
-- **Local ↔ ADB**: mtime keep; mode sends a fixed `0660` (low value: `/sdcard` ignores modes); birth and folder dates
-  n/a.
+- **Local ↔ SFTP**: mtime and file mode keep both ways (M9, folded, a private file streamed private); birth n/a; folder
+  mode not carried (M5a's rule); xattrs n/a.
+- **Local → WebDAV**: mtime keep where the server stores one (Nextcloud, not `mod_dav`). Onto Nextcloud (the connect
+  probe finds `nc:creation_time`): file birth, folder birth, and folder dates keep (M9). Elsewhere n/a and reported.
+  **WebDAV → local**: mtime keep; file birth not reported (a GET carries none); folder birth off the listing.
+- **Local ↔ S3**: mtime, birth, and mode keep (M9, rclone's `btime` and `mode`); folders n/a. S3 → S3 server copy keeps
+  every `x-amz-meta-*`.
+- **Local ↔ MTP**: mtime keep; birth n/a on Android (verified from AOSP source in M9: `DateCreated` is dropped on upload
+  and reported as the mtime); folder dates n/a.
+- **Local → ADB**: mtime keep; mode sent folded in `SEND` (M9) but reported lost, since `/sdcard` ignores modes; birth
+  and folder dates n/a. **ADB → local**: mtime and mode keep.
 - **Archive → local** (copy or move out): mtime and mode keep; xattrs from a zip's `__MACOSX` and a tar's `._name` and
   pax records keep, on files and folders (M8); quarantine keep (M2); folder dates keep. 7z carries no sidecars.
 - **Local → zip** (fresh or into an existing one): mtime and mode keep; xattrs keep as `__MACOSX` sidecars when worth
@@ -1013,6 +1016,29 @@ decided; then the ask itself, creation and modification dates on files AND folde
   fixture or double, its caps updated so M5b's derived expectations follow; plus an S3 server-copy cell that keeps
   `btime`. Each backend is its own crate and its own commit, so two agents can take two backends at once.
 - **DONE**: every matrix cell is Kept or Reported, no cell is a silent drop.
+- **Done** (2026-10-12). Where the code differs from the plan above:
+  - **SFTP**: the mode folds under the USER's umask (the server's is unknowable). The open can't carry attrs
+    (`openssh-sftp-client` 0.15 sends empty ones), so a mode narrower than that default costs one `FSETSTAT` on the
+    handle before the first byte, which keeps a private file private while it streams (rule 5); a plain file costs
+    nothing new. The listing now carries the permission bits beside the file type, so the stream and the listing agree.
+    No folder mode (M5a's rule stands).
+  - **S3**: rclone's formats verified at rclone `4f19e9c`: `btime` in RFC 3339 (Cmdr writes UTC, reads any offset),
+    `mode` as the whole `st_mode` in octal (`100644`). ❗ rclone reads `btime` back as `Last-Modified`, so it doesn't
+    read Cmdr's; Cmdr reads rclone's. The mode is stored as the source reported it and folded where it lands. A listing
+    (`ListObjectsV2`) carries neither; a HEAD and a GET do. About 150 bytes of the 2 KB budget.
+  - **WebDAV**: the spike held on `nextcloud:34.0.2-apache`, and a folder's `d:lastmodified` and `nc:creation_time` take
+    one PROPPATCH too, so Nextcloud also gained folder dates (a step past the plan). The caps are PER VOLUME: the
+    connect probe alone asks for `nc:creation_time`, and only a server that has it gets `X-OC-CTime` or a PROPPATCH
+    (`mod_dav` would store the PROPPATCH as dead properties). Found and fixed: Nextcloud lists `creationdate` 1970 for
+    anything without a recorded one, which a copy off it carried onto local folders as their birth.
+  - **MTP**: no code path behind a switch. AOSP's source settles it without a phone: `MtpServer` drops a sent
+    `DateCreated` and `MtpDatabase` reports the mtime in its place, and Linux can't set a birth time at all. `mtp-rs`
+    0.33.0's `NewObjectInfo` has no `DateCreated` field, so the path would need an `mtp-rs` release for no Android gain.
+    The hand test that confirms it on a real phone is in `crates/cmdr-mtp/DETAILS.md` § "Dates on copies".
+  - **ADB**: `SEND` carries the folded mode, but the caps don't claim `MODE`: `/sdcard` ignores it, so claiming it would
+    silence a true loss for nearly every copy. Over-reported only on `/data/local/tmp` and rooted filesystems.
+  - The app's loss matrix (`metadata_loss_tests.rs`) lists S3 and Nextcloud-class WebDAV on their own.
+  - No new user-facing strings.
 
 ### M10: Close-out. Size: S (1 session)
 

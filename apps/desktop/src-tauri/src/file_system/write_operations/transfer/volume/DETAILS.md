@@ -975,7 +975,8 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 - **Per backend**, in its own crate: `cmdr_fs::volume::conformance`'s `assert_write_from_stream_keeps_the_source_date`
   and `assert_read_stream_reports_the_listed_date` (mtime, both halves), and `assert_write_from_stream_keeps_metadata`,
   `assert_apply_metadata_keeps`, and `assert_read_stream_reports_the_listed_metadata` (the classes a listing shows,
-  each backend held to its own `metadata_caps()`: local, `InMemoryVolume`, SMB, and SFTP;
+  each backend held to its own `metadata_caps()`: local, `InMemoryVolume`, SMB, SFTP, S3, ADB, and WebDAV (Nextcloud
+  and Apache, whose caps differ);
   `in_memory_test.rs::a_backend_claiming_a_class_it_drops_fails_the_contract` proves a drifted claim fails).
 - **The loss note**: `metadata_loss_tests.rs`, the caps-derived matrix (every real backend's caps as a source against
   every writable one's, through the engine on configured `InMemoryVolume` doubles: each class kept, reported, or never
