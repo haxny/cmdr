@@ -9,8 +9,8 @@
     let fullWidthValue = $state('copy')
 
     const tabsOptions = [
-        { value: 'ai', label: 'Ask anything', badge: 'AI', hint: '⌥A', ariaLabel: 'AI mode (Alt+A)' },
-        { value: 'filename', label: 'Filename', hint: '⌥F', ariaLabel: 'Filename mode (Alt+F)' },
+        { value: 'ai', label: 'Ask anything', badge: 'AI', hint: '⌥A', keyShortcuts: 'Alt+A' },
+        { value: 'filename', label: 'Filename', hint: '⌥F', keyShortcuts: 'Alt+F' },
         {
             value: 'content',
             label: 'Content',
@@ -18,7 +18,7 @@
             tooltip: 'Coming soon: full-text search inside files',
             ariaLabel: 'Content mode (coming soon)',
         },
-        { value: 'regex', label: 'Regex', hint: '⌥R', ariaLabel: 'Regex mode (Alt+R)' },
+        { value: 'regex', label: 'Regex', hint: '⌥R', keyShortcuts: 'Alt+R' },
     ]
 
     const togglesOptions = [

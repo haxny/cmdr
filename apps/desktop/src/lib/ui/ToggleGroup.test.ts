@@ -173,6 +173,16 @@ describe('ToggleGroup (tabs semantics)', () => {
     const tabs = getTabs(target)
     expect(tabs[0].getAttribute('aria-label')).toBe('AI mode (Alt+A)')
   })
+
+  it('names a tab by its content and announces its key through aria-keyshortcuts, never the hint', async () => {
+    const opts: Option[] = [{ value: 'f', label: 'Filename', hint: '⌥F', keyShortcuts: 'Alt+F' }]
+    const { target } = setupTabs(opts, 'f')
+    await tick()
+    const tab = getTabs(target)[0]
+    expect(tab.getAttribute('aria-label')).toBeNull()
+    expect(tab.getAttribute('aria-keyshortcuts')).toBe('Alt+F')
+    expect(tab.querySelector('.tg-hint')?.getAttribute('aria-hidden')).toBe('true')
+  })
 })
 
 describe('ToggleGroup (toggles semantics)', () => {
@@ -194,6 +204,18 @@ describe('ToggleGroup (toggles semantics)', () => {
     expect(items).toHaveLength(3)
     expect(items[1].getAttribute('data-state')).toBe('on')
     expect(items[0].getAttribute('data-state')).toBe('off')
+  })
+
+  it('announces an option’s key through aria-keyshortcuts', async () => {
+    const keyed: Option[] = [
+      { value: 'kb', label: 'kB', hint: '⌥K', keyShortcuts: 'Alt+K' },
+      { value: 'mb', label: 'MB' },
+    ]
+    const { target } = setupToggles(keyed, 'kb')
+    await tick()
+    const items = Array.from(target.querySelectorAll('[data-scope="toggle-group"][data-part="item"]'))
+    expect(items[0].getAttribute('aria-keyshortcuts')).toBe('Alt+K')
+    expect(items[1].getAttribute('aria-keyshortcuts')).toBeNull()
   })
 
   it('fires onChange with the new value on click', async () => {

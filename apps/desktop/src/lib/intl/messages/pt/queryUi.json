@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "Modo IA: pergunte o que quiser (Alt+A)",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "Nome de arquivo",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "Modo nome de arquivo (Alt+F)",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "Conteúdo",
   "@queryUi.mode.content.label": {
@@ -71,10 +63,6 @@
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125",
     "sameAsSourceJustification": "Glossary-locked: 'Regex' kept verbatim (glossary 'regex . Regex . confirmed')."
-  },
-  "queryUi.mode.regex.aria": "Modo regex (Alt+R)",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "Modo de busca",
   "@queryUi.mode.groupAria": {

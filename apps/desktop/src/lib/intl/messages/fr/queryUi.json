@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "Mode IA : tout demander (Alt+A)",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "Nom de fichier",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "Mode nom de fichier (Alt+F)",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "Contenu",
   "@queryUi.mode.content.label": {
@@ -71,10 +63,6 @@
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125",
     "sameAsSourceJustification": "'Regex' is the short UI form of 'expression régulière'; per the glossary, kept verbatim as the short label."
-  },
-  "queryUi.mode.regex.aria": "Mode regex (Alt+R)",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "Mode de recherche",
   "@queryUi.mode.groupAria": {

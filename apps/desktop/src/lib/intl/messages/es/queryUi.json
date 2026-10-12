@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "Modo IA: pregunta lo que sea (Alt+A)",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "Nombre de archivo",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "Modo nombre de archivo (Alt+F)",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "Contenido",
   "@queryUi.mode.content.label": {
@@ -71,10 +63,6 @@
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125",
     "sameAsSourceJustification": "'Regex' kept verbatim (glossary: regex -> Regex); the tight mode chip keeps the short technical term."
-  },
-  "queryUi.mode.regex.aria": "Modo Regex (Alt+R)",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "Modo de búsqueda",
   "@queryUi.mode.groupAria": {

@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "Chế độ AI: hỏi bất cứ điều gì (Alt+A)",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "Tên tệp",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "Chế độ tên tệp (Alt+F)",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "Nội dung",
   "@queryUi.mode.content.label": {
@@ -71,10 +63,6 @@
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125",
     "sameAsSourceJustification": "Technical loanword 'Regex'; kept verbatim in vi (glossary: regex -> Regex). Tight mode chip."
-  },
-  "queryUi.mode.regex.aria": "Chế độ Regex (Alt+R)",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "Chế độ tìm kiếm",
   "@queryUi.mode.groupAria": {

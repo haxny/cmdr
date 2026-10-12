@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "AI-modus: vraag het maar (Alt+A)",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "Bestandsnaam",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "Bestandsnaam-modus (Alt+F)",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "Inhoud",
   "@queryUi.mode.content.label": {
@@ -71,10 +63,6 @@
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125",
     "sameAsSourceJustification": "'Regex' is the short form of 'regular expression', a tight mode chip kept verbatim in Dutch (tech term, no common Dutch equivalent)."
-  },
-  "queryUi.mode.regex.aria": "Regex-modus (Alt+R)",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "Zoekmodus",
   "@queryUi.mode.groupAria": {

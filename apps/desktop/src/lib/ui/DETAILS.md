@@ -1783,15 +1783,22 @@ last cells to the pill, so no per-cell corner rounding is needed).
 
 `ToggleGroupOption` shape:
 
-| Field       | Type       | Notes                                                                                           |
-| ----------- | ---------- | ----------------------------------------------------------------------------------------------- |
-| `value`     | `string`   | Identity                                                                                        |
-| `label`     | `string`   | Visible text                                                                                    |
-| `badge`     | `string?`  | Small uppercase pill rendered before the label (for example `AI`)                               |
-| `hint`      | `string?`  | Mono text after the label (for example `⌥A`); `aria-hidden`                                     |
-| `disabled`  | `boolean?` | Per-option disable. Combine with `tooltip` for "visible-disabled" affordances                   |
-| `tooltip`   | `string?`  | Tooltip text; stays active on hover/focus even when `disabled` is set (the "Coming soon" idiom) |
-| `ariaLabel` | `string?`  | Override the accessible name when the visible label alone isn't enough                          |
+| Field          | Type       | Notes                                                                                                                 |
+| -------------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| `value`        | `string`   | Identity                                                                                                              |
+| `label`        | `string`   | Visible text                                                                                                          |
+| `badge`        | `string?`  | Small uppercase pill rendered before the label (for example `AI`)                                                     |
+| `hint`         | `string?`  | Mono text after the label (for example `⌥A`); `aria-hidden`                                                           |
+| `disabled`     | `boolean?` | Per-option disable. Combine with `tooltip` for "visible-disabled" affordances                                         |
+| `tooltip`      | `string?`  | Tooltip text; stays active on hover/focus even when `disabled` is set (the "Coming soon" idiom)                       |
+| `keyShortcuts` | `string?`  | The key that picks it, in `aria-keyshortcuts` syntax (`Alt+F`): how a screen reader learns the key `hint` shows       |
+| `ariaLabel`    | `string?`  | Overrides the accessible name. Only to ADD words (the disabled Content chip's "coming soon"), ❌ never for a shortcut |
+
+**A cell's accessible name is its content; the shortcut rides on `keyShortcuts`.** axe-core (4.14+,
+`label-content-name-mismatch`, WCAG 2.5.3) requires an `ariaLabel` to contain the cell's visible text as one contiguous
+run of words, and it counts the `aria-hidden` hint as visible and glued to the label (`Filename⌥F` reads as
+`filename f`). So "Filename mode (Alt+F)" fails, and any `ariaLabel` on a hinted cell would too. Leave `ariaLabel` off
+and the name is "Filename" (the hint is `aria-hidden`), which also holds in every language by construction.
 
 When to add a wrapper (like `SettingToggleGroup`) versus using `ToggleGroup` directly: wrap when the options come from a
 single source of truth that the consumer already owns (the settings registry, a config object). Otherwise, use the

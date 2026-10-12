@@ -45,14 +45,14 @@
                 label: tString('queryUi.mode.ai.label'),
                 badge: 'AI',
                 hint: '⌥A',
-                ariaLabel: tString('queryUi.mode.ai.aria'),
+                keyShortcuts: 'Alt+A',
             })
         }
         list.push({
             value: 'filename',
             label: tString('queryUi.mode.filename.label'),
             hint: '⌥F',
-            ariaLabel: tString('queryUi.mode.filename.aria'),
+            keyShortcuts: 'Alt+F',
         })
         list.push({
             value: 'content',
@@ -65,7 +65,7 @@
             value: 'regex',
             label: tString('queryUi.mode.regex.label'),
             hint: '⌥R',
-            ariaLabel: tString('queryUi.mode.regex.aria'),
+            keyShortcuts: 'Alt+R',
         })
         return list
     })

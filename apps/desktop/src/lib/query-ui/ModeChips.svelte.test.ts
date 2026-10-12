@@ -101,6 +101,18 @@ describe('SearchModeChips', () => {
     cleanup()
   })
 
+  it('names each keyed chip by its content and announces its ⌥ key through aria-keyshortcuts', async () => {
+    // WCAG 2.5.3 (label in name): axe counts the ⌥ hint as visible text, so an
+    // aria-label like "Filename mode (Alt+F)" could never contain "Filename ⌥F".
+    // The name comes from the content (the hint is aria-hidden) and the key moves out.
+    const { chips, cleanup } = setup({ aiEnabled: true })
+    await tick()
+    const keyed = [chips[0], chips[1], chips[3]]
+    expect(keyed.map((c) => c.getAttribute('aria-label'))).toEqual([null, null, null])
+    expect(keyed.map((c) => c.getAttribute('aria-keyshortcuts'))).toEqual(['Alt+A', 'Alt+F', 'Alt+R'])
+    cleanup()
+  })
+
   it('Content chip has a Coming soon aria-label', async () => {
     const { chips, cleanup } = setup({ aiEnabled: true })
     await tick()

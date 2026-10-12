@@ -43,17 +43,9 @@
   "@queryUi.mode.ai.label": {
     "sourceHash": "4aff15d"
   },
-  "queryUi.mode.ai.aria": "AI 模式：随便问（Alt+A）",
-  "@queryUi.mode.ai.aria": {
-    "sourceHash": "1708462"
-  },
   "queryUi.mode.filename.label": "文件名",
   "@queryUi.mode.filename.label": {
     "sourceHash": "971b974"
-  },
-  "queryUi.mode.filename.aria": "文件名模式（Alt+F）",
-  "@queryUi.mode.filename.aria": {
-    "sourceHash": "62a5f87"
   },
   "queryUi.mode.content.label": "内容",
   "@queryUi.mode.content.label": {
@@ -70,10 +62,6 @@
   "queryUi.mode.regex.label": "正则",
   "@queryUi.mode.regex.label": {
     "sourceHash": "0f27125"
-  },
-  "queryUi.mode.regex.aria": "正则模式（Alt+R）",
-  "@queryUi.mode.regex.aria": {
-    "sourceHash": "7c0b401"
   },
   "queryUi.mode.groupAria": "搜索模式",
   "@queryUi.mode.groupAria": {

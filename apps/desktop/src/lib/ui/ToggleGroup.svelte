@@ -14,8 +14,12 @@
      * `disabled` blocks activation. Combined with `tooltip`, this is the "visible-disabled with tooltip"
      *   pattern used for "Coming soon" affordances: the option stays interactive enough that the tooltip
      *   still fires on hover / focus.
-     * `ariaLabel` overrides the computed accessible name when the visible label alone isn't enough
-     *   (for example to include the keyboard shortcut for AT users).
+     * `keyShortcuts` is the key that picks the option, in `aria-keyshortcuts` syntax (`Alt+F`). It's
+     *   how a screen reader learns the key `hint` shows, since the hint stays out of the name.
+     * `ariaLabel` overrides the computed accessible name. ❌ Not for a keyboard shortcut (that's
+     *   `keyShortcuts`): it must contain the cell's visible text, `hint` included, or it fails WCAG
+     *   2.5.3 (label in name), which axe enforces. Use it only to ADD words, like a disabled cell's
+     *   "coming soon".
      */
     export interface ToggleGroupOption {
         value: string
@@ -25,6 +29,7 @@
         hint?: string
         disabled?: boolean
         tooltip?: string
+        keyShortcuts?: string
         ariaLabel?: string
     }
 </script>
@@ -163,6 +168,7 @@
                 role="tab"
                 aria-selected={option.value === value}
                 aria-label={option.ariaLabel}
+                aria-keyshortcuts={option.keyShortcuts}
                 tabindex={index === focusableIndex ? 0 : -1}
                 disabled={disabled || option.disabled}
                 onclick={() => {
@@ -201,6 +207,7 @@
                 class="tg-item"
                 disabled={disabled || option.disabled}
                 aria-label={option.ariaLabel}
+                aria-keyshortcuts={option.keyShortcuts}
             >
                 <span class="tg-item-inner" use:tooltip={option.tooltip ?? ''}>
                     {#if option.icon}
