@@ -16,7 +16,6 @@
     import TransferConflictDialog from './TransferConflictDialog.svelte'
     import { createTransferProgressState } from './transfer-progress-state.svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
-    import SectionCard from '#lib/ui/SectionCard.svelte'
     import Button from '#lib/ui/Button.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
@@ -24,12 +23,14 @@
     import Spinner from '#lib/ui/Spinner.svelte'
     import KeyHint from '#lib/ui/KeyHint.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
+    import TransferTree from '../transfer-tree/TransferTree.svelte'
+    import type { TransferTreeOperation } from '../transfer-tree/row-format'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import { stallIncidentFor, stallNoticeFor, waitLineFor } from './transfer-stall'
-    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import { stallNoticeFor, waitLineFor } from './transfer-stall'
+    import TransferStallNotice from './TransferStallNotice.svelte'
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
     import { rollbackConfirmVariant, reversalTitleKey } from '../reversal-wording'
     import TransferRollbackControls from './TransferRollbackControls.svelte'
@@ -123,6 +124,9 @@
         onQueue,
         mcpRequestId,
     }: Props = $props()
+
+    /** The tree's height before the user resizes the dialog, in rows. */
+    const TREE_ROWS = 8
 
     /** Wide enough that the shared readout's fixed columns (amount, percent,
      *  rate, time left) still leave the bars a readable width. It's also the
@@ -282,6 +286,24 @@
      *  view with no phase yet knows too little to accuse anything of being stuck. */
     const showStall = $derived(stall !== null && !isIndeterminateProgressPhase(phase) && !phaseUnknown)
 
+    /** The operations that build a live tree of their selection. Delete, trash, and an
+     *  edit inside an existing archive keep the plain readout. */
+    const treeOperation = $derived<TransferTreeOperation | null>(
+        operationType === 'copy' || operationType === 'move' || operationType === 'compress' ? operationType : null,
+    )
+    /** The tree shows once the operation is past its scan and has an id to ask about.
+     *  ❌ Not while a reversal runs: its rows would still say "done" about files that
+     *  are going away. */
+    const treeOperationId = $derived(
+        treeOperation !== null &&
+            !isScanning &&
+            !phaseUnknown &&
+            !isRollingBack &&
+            reversalVariant === null
+            ? progress.operationId
+            : null,
+    )
+
     /** With an empty queue you're not queueing behind anything, you're sending
      *  this out of sight, so the button says "Background" instead. It reads the
      *  main window's operations store, the same live rows the corner chip reads,
@@ -364,7 +386,7 @@
               progress.detach()
           }}
     containerStyle={DIALOG_WIDTH_STYLE}
-    resizable="horizontal"
+    resizable={treeOperationId !== null && !conflictEvent ? true : 'horizontal'}
 >
     {#snippet title()}
         {#if reversalVariant !== null}
@@ -434,6 +456,9 @@
             }}
         />
     {:else}
+        <!-- A column filling the body, so a dialog the user made taller hands the
+             slack to the tree, the one child that grows. -->
+        <div class="progress-body">
         <!-- Where the files are going (copy/move only). An adopted operation
              brings its two paths and no pane-relative direction, and naming
              neither end would be worse than naming both without the arrow
@@ -503,11 +528,24 @@
                 />
             </div>
 
-            <!-- Current file (active phase only; scanning shows it inside scanPhaseBody) -->
-            {#if currentFile}
+            <!-- Current file (active phase only; scanning shows it inside scanPhaseBody).
+                 The tree names every file at work, so it takes this line's place. -->
+            {#if currentFile && treeOperationId === null}
                 <div class="current-file" use:useShortenMiddle={{ text: currentFile, preferBreakAt: '/' }}>
                 </div>
             {/if}
+        {/if}
+
+        {#if treeOperation !== null && treeOperationId !== null}
+            <!-- Keyed by id: a tree's operation is fixed for its life. -->
+            {#key treeOperationId}
+                <TransferTree
+                    operationId={treeOperationId}
+                    tick={progress.progressTick}
+                    operation={treeOperation}
+                    defaultRows={TREE_ROWS}
+                />
+            {/key}
         {/if}
 
         {#if destUsesNativeSmb}
@@ -522,37 +560,7 @@
              readout. Full content width, warning-toned, and built from the house
              card so it can't drift from the conflict block in `TransferDialog`. -->
         {#if showStall && stall}
-            <div class="stall-notice">
-                <SectionCard tone="warning">
-                    <div class="stall-body" role="status">
-                        <span class="stall-icon" aria-hidden="true"><Icon name="hourglass" size={16} /></span>
-                        <div class="stall-text">
-                            <p class="stall-reason">
-                                {#if stall.reason === 'destination'}
-                                    {tString('fileOperations.transferProgress.stallWaitingDestination')}
-                                {:else if stall.reason === 'source'}
-                                    {tString('fileOperations.transferProgress.stallWaitingSource')}
-                                {:else}
-                                    {tString('fileOperations.transferProgress.stallUnknown')}
-                                {/if}
-                            </p>
-                            {#if stall.inFlight > 0}
-                                <!-- Why the finished count can read lower than what
-                                     the user can see at the destination. -->
-                                <p class="stall-detail">
-                                    {tString('fileOperations.transferProgress.stallInFlight', {
-                                        count: stall.inFlight,
-                                    })}
-                                </p>
-                            {/if}
-                            <p class="stall-detail">
-                                {tString('fileOperations.transferProgress.stallLogHint')}
-                                <ReportOffer incident={stallIncidentFor(stall, operationType)} />
-                            </p>
-                        </div>
-                    </div>
-                </SectionCard>
-            </div>
+            <TransferStallNotice {stall} {operationType} />
         {/if}
 
         <!-- Action buttons -->
@@ -626,6 +634,7 @@
                 />
             {/if}
         </div>
+        </div>
     {/if}
 </ModalDialog>
 
@@ -640,6 +649,16 @@
 {/if}
 
 <style>
+    /* Fills the body (which a resized dialog makes taller than its content) as a
+       column, so the tree's `flex: 1 1 auto` takes the slack. At its natural height
+       it's exactly as tall as what's in it. */
+    .progress-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
     /* Scan wait section (wraps the ScanPhaseBody child during the scan phases) */
     .scan-wait-section {
         padding: var(--spacing-md) 0 var(--spacing-lg);
@@ -664,57 +683,6 @@
        internal widths. */
     .progress-section {
         margin-bottom: var(--spacing-md);
-    }
-
-    /* Full content width: no side inset of its own, so the card lines up with
-       the readout above it instead of sitting in from both edges. The card
-       carries the tint, the border, and its own generous padding; all this
-       wrapper owns is the gap below, which the button row's top padding
-       already supplies. */
-    .stall-notice :global(.section-card-wrap) {
-        margin-bottom: 0;
-    }
-
-    .stall-body {
-        display: flex;
-        gap: var(--spacing-md);
-        align-items: flex-start;
-    }
-
-    /* The one colored mark on the card. A tone colors the SURFACE and text keeps
-       its own color (`#lib/ui/DETAILS.md` § SectionCard), so the icon is where
-       the warning reads as a warning. `--color-warning-text`, not
-       `--color-warning`: the brand orange clocks ~3.3:1 on this tint. */
-    .stall-icon {
-        color: var(--color-warning-text);
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        /* Optically centered on the first line of the reason, whose line box is
-           taller than the 16px glyph. */
-        padding-top: 1px;
-    }
-
-    .stall-text {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xs);
-        min-width: 0;
-    }
-
-    /* Matches the conflict card's summary line in `TransferDialog`: the verdict
-       reads at the body size, in ordinary primary text on the tint. */
-    .stall-reason {
-        margin: 0;
-        font-size: var(--font-size-md);
-        color: var(--color-text-primary);
-        font-weight: 500;
-    }
-
-    .stall-detail {
-        margin: 0;
-        font-size: var(--font-size-sm);
-        color: var(--color-text-secondary);
     }
 
     /* Current file */

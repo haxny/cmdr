@@ -740,6 +740,14 @@
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"
   },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, other {Còn {countText} tệp}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, other {Còn {countText} mục}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
   "fileOperations.transferProgress.smbNativeNote": "Mục chia sẻ này dùng kết nối hệ thống. Việc hủy và hoàn tác có thể bị trễ.",
   "@fileOperations.transferProgress.smbNativeNote": {
     "sourceHash": "5344d07"

@@ -870,6 +870,10 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
     get activity(): TransferActivity | null {
       return session()?.progress?.activity ?? null
     },
+    /** The last progress tick, for a view that pulls on each (the transfer tree). */
+    get progressTick(): unknown {
+      return session()?.progress ?? null
+    },
     /** This operation's backend id, `null` until the start command answers. The
      *  dialog needs it to exclude itself from the queue it's asking about. */
     get operationId(): string | null {

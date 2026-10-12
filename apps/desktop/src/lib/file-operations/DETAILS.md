@@ -195,6 +195,9 @@ catalog keys.
   and the percentage until a real total lands — the same answer `hasBytesRow` gives the size axis, and the same one the
   corner chip gives a scanning operation. Both callers gate the whole readout on the phase anyway; this is here so a
   third surface that forgets can't invent "(0%)" over an operation that's moving.
+- **"N left" starts the time-left line** ("1,312 files left", or items, by the same noun), opposite the ETA. It shows
+  only with a real total and while anything is left, and it shares the line the ETA already reserved, so it costs no
+  height on either surface.
 - **The count row's noun comes from `progressCountKind`**, not from the operation type alone: a trash moves ITEMS, and
   so does the closing stage of a cross-disk move, whose bar runs over the top-level sources rather than the leaves the
   copy stage counted; that stage is `transfer/DETAILS.md` § "Removing the originals".

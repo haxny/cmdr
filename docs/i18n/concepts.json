@@ -3334,10 +3334,20 @@
   },
   "time-left": {
     "en": "left",
-    "match": ["remaining", "time left", "m left", "s left", "h left"],
-    "notMatch": ["left out"],
-    "note": "\"Left\" as a direction (left pane), \"left alone\", and \"left out\" (skipped) are other concepts.",
-    "sense": "Time remaining in a progress readout (\"3m left\")."
+    "match": [
+      "remaining",
+      "time left",
+      "m left",
+      "s left",
+      "h left",
+      "file left",
+      "files left",
+      "item left",
+      "items left"
+    ],
+    "notMatch": ["left out", "left behind"],
+    "note": "\"Left\" as a direction (left pane), \"left alone\", \"left behind\", and \"left out\" (skipped) are other concepts.",
+    "sense": "What a progress readout still has to go: time (\"3m left\") or a count (\"1,312 files left\"), shown side by side, so both take the same word."
   },
   "timeout": {
     "en": "timeout",

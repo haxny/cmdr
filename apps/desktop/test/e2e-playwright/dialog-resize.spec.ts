@@ -15,12 +15,29 @@
  *
  * The operation log is the both-axes case (`resizable`) and Go to path the
  * width-only one (`resizable="horizontal"`); both open through their production
- * menu command, so no gallery-carrying build is needed.
+ * menu command, so no gallery-carrying build is needed. The copy progress dialog
+ * is the one that turns resizable mid-life: both axes once its file tree shows,
+ * and the tree, not dead space, takes the height a drag adds.
  */
 
+import fs from 'fs'
+import path from 'path'
 import { waitBudget } from './wait-budget.js'
 import { test, expect } from './fixtures.js'
-import { ensureAppReady, dismissOverlay, dismissAllToasts, dispatchMenuCommand } from './helpers.js'
+import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
+import { recreateFixtures } from '../e2e-shared/fixtures.js'
+import {
+  ensureAppReady,
+  dismissOverlay,
+  dismissAllToasts,
+  dispatchMenuCommand,
+  clickButtonByText,
+  flushFileWatcher,
+  getFixtureRoot,
+  moveCursorToFile,
+  TRANSFER_DIALOG,
+} from './helpers.js'
+import { clickTransferStart } from './conflict-helpers.js'
 import type { TauriPage } from '@srsholmes/tauri-playwright'
 
 /** Sub-pixel slack only: a real drift here is tens of pixels. */
@@ -28,6 +45,7 @@ const TOLERANCE_PX = 1.5
 
 const OPERATION_LOG = 'operation-log'
 const GO_TO_PATH = 'go-to-path'
+const TRANSFER_PROGRESS = 'transfer-progress'
 
 /**
  * What each dialog renders only once its body has settled, which is what every
@@ -43,6 +61,7 @@ const GO_TO_PATH = 'go-to-path'
 const SETTLED = {
   [OPERATION_LOG]: `[data-dialog-id="${OPERATION_LOG}"] .op-list, [data-dialog-id="${OPERATION_LOG}"] .notice`,
   [GO_TO_PATH]: `[data-dialog-id="${GO_TO_PATH}"] .dialog-body`,
+  [TRANSFER_PROGRESS]: `[data-dialog-id="${TRANSFER_PROGRESS}"] .transfer-tree [role="treeitem"]`,
 }
 
 interface PanelRect {
@@ -197,5 +216,50 @@ test.describe('Dialog edge resizing', () => {
     expect(await bandDirections(page, GO_TO_PATH)).toEqual(['w', 'e'])
     // Above the panel there's only the scrim, so the pointer keeps its normal arrow.
     expect(await bandOutside(page, GO_TO_PATH, 'n')).toContain('not a band')
+  })
+
+  test('a copy’s progress dialog grows both ways once its tree shows, and the tree takes the height', async ({
+    tauriPage,
+  }) => {
+    const page = tauriPage as TauriPage
+    const fixtureRoot = getFixtureRoot()
+    recreateFixtures(fixtureRoot)
+    const folder = path.join(fixtureRoot, 'left', 'tree-resize')
+    fs.mkdirSync(folder, { recursive: true })
+    for (let i = 0; i < 12; i++) fs.writeFileSync(path.join(folder, `file-${String(i)}.txt`), 'x'.repeat(1024))
+    await ensureAppReady(page)
+    await flushFileWatcher(page)
+    // Paced per file, so the dialog stays up long enough to measure.
+    await page.evaluate(`window.__TAURI_INTERNALS__.invoke('set_test_throttle', { ms: 400 })`)
+    try {
+      expect(await moveCursorToFile(page, 'tree-resize')).toBe(true)
+      await dispatchMenuCommand(page, 'file.copy')
+      await page.waitForSelector(TRANSFER_DIALOG, 5000)
+      await clickTransferStart(page)
+      await page.waitForSelector(SETTLED[TRANSFER_PROGRESS], waitBudget(10000))
+
+      expect(await bandOutside(page, TRANSFER_PROGRESS, 's')).toBe('s:ns-resize')
+      const treeHeight = () =>
+        page.evaluate<number>(
+          `document.querySelector('[data-dialog-id="${TRANSFER_PROGRESS}"] .transfer-tree').getBoundingClientRect().height`,
+        )
+      const before = await panelRect(page, TRANSFER_PROGRESS)
+      const treeBefore = await treeHeight()
+
+      await dragBand(page, TRANSFER_PROGRESS, 's', 0, 80)
+      const after = await panelRect(page, TRANSFER_PROGRESS)
+
+      expect(Math.abs(after.height - (before.height + 80))).toBeLessThan(TOLERANCE_PX)
+      expect(Math.abs((await treeHeight()) - (treeBefore + 80))).toBeLessThan(TOLERANCE_PX)
+      await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] button`, 'Cancel')
+      await expect
+        .poll(async () => !(await page.isVisible(`[data-dialog-id="${TRANSFER_PROGRESS}"]`)), {
+          timeout: waitBudget(10000),
+        })
+        .toBeTruthy()
+    } finally {
+      await page.evaluate(`window.__TAURI_INTERNALS__.invoke('set_test_throttle', { ms: null })`)
+      restoreFixtureTree(fixtureRoot)
+    }
   })
 })

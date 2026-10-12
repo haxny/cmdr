@@ -742,6 +742,14 @@
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"
   },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, one {{countText} arquivo restante} many {{countText} arquivos restantes} other {{countText} arquivos restantes}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, one {{countText} item restante} many {{countText} itens restantes} other {{countText} itens restantes}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
   "fileOperations.transferProgress.smbNativeNote": "Este compartilhamento usa a conexão do sistema. O cancelamento e a reversão podem demorar.",
   "@fileOperations.transferProgress.smbNativeNote": {
     "sourceHash": "5344d07"

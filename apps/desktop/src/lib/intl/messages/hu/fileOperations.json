@@ -741,6 +741,14 @@
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"
   },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, one {{countText} fájl van hátra} other {{countText} fájl van hátra}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, one {{countText} elem van hátra} other {{countText} elem van hátra}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
   "fileOperations.transferProgress.smbNativeNote": "Ez a megosztás a rendszerkapcsolatot használja. A megszakítás és a visszagörgetés késhet.",
   "@fileOperations.transferProgress.smbNativeNote": {
     "sourceHash": "5344d07"

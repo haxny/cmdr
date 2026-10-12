@@ -14,6 +14,8 @@
     the bars, which both keeps the bars wide and lets the estimate switch between
     "1h 8m left" and "56m 24s left" without moving anything above it.
 
+    Under them, opposite the time left, how many files (or items) are left.
+
     BOTH densities label their bars. The two densities differ only in the size of
     the bar, the gaps, and the bar's floor.
 -->
@@ -107,6 +109,17 @@
             : tString('fileOperations.transferProgress.progressFiles'),
     )
 
+    /** "1,312 files left", once there's a total to count against and while any are. */
+    const leftText = $derived.by(() => {
+        const left = filesTotal - filesDone
+        if (!hasCountFraction || left <= 0) return null
+        const key =
+            countKind === 'items'
+                ? 'fileOperations.transferProgress.itemsLeft'
+                : 'fileOperations.transferProgress.filesLeft'
+        return tString(key, { count: left, countText: formatNumber(left) })
+    })
+
     /** The source's receive rate, when that's what the time line shows. It
      *  renders through a `<Size>` widget, so it can't be part of `timeText`. */
     const receivingRate = $derived(!stall && waitLine?.kind === 'receiving' ? waitLine.bytesPerSecond : null)
@@ -169,6 +182,7 @@
     <!-- Rendered even while empty (see `.time:empty` below): the line holds its
          height so the readout doesn't grow a row, and shove everything under it
          down, the moment the estimator warms up. -->
+    <span class="left">{leftText ?? ''}</span>
     <span class="time" class:stalled={stall !== null || waitLine?.kind === 'reconnecting'}
         >{#if receivingRate !== null}<Trans
                 key="fileOperations.transferProgress.sourceReceiving"
@@ -233,9 +247,16 @@
     }
 
     /* Its own row under the bars: the bars get the width back, and an estimate
-       firming up from "1h 8m left" to "56m 24s left" moves nothing else. */
+       firming up from "1h 8m left" to "56m 24s left" moves nothing else. The
+       count left starts the row, the time left ends it. */
+    .left {
+        grid-column: 1 / 3;
+        white-space: nowrap;
+        color: var(--color-text-tertiary);
+    }
+
     .time {
-        grid-column: 1 / -1;
+        grid-column: 3 / -1;
         justify-self: end;
         white-space: nowrap;
         color: var(--color-text-tertiary);

@@ -187,7 +187,7 @@ describe('TransferProgressDialog stall notice', () => {
     void unmount(component)
   })
 
-  it('puts the notice below the current-file line and above the actions', async () => {
+  it('puts the notice below the file tree and above the actions', async () => {
     const { component, target } = await mountDialog()
     if (!progressCb) throw new Error('subscriber never registered')
 
@@ -204,13 +204,13 @@ describe('TransferProgressDialog stall notice', () => {
     await tick()
 
     const notice = target.querySelector('.stall-notice')
-    const currentFile = target.querySelector('.current-file')
+    const tree = target.querySelector('.transfer-tree')
     const buttons = target.querySelector('.button-row')
-    expect(notice && currentFile && buttons, 'all three blocks render').toBeTruthy()
-    if (!notice || !currentFile || !buttons) throw new Error('missing blocks')
+    expect(notice && tree && buttons, 'all three blocks render').toBeTruthy()
+    if (!notice || !tree || !buttons) throw new Error('missing blocks')
     // `DOCUMENT_POSITION_FOLLOWING` reads "the argument comes after this node".
     // The notice belongs at the foot of the body, not wedged into the readout.
-    expect(currentFile.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tree.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(notice.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     void unmount(component)
   })

@@ -122,6 +122,25 @@ describe('TransferProgressReadout', () => {
     expect(texts('.time')).toEqual([''])
   })
 
+  it('says how many are left, in the count row’s noun, beside the time left', () => {
+    render({ ...halfway, filesDone: 1_000, filesTotal: 2_312, etaSeconds: seconds(154) })
+    expect(texts('.left')).toEqual(['1,312 files left'])
+    expect(texts('.time')).toEqual(['2m 34s left'])
+
+    document.body.innerHTML = ''
+    render({ ...halfway, filesDone: 3, countKind: 'items', density: 'compact' })
+    expect(texts('.left')).toEqual(['1 item left'])
+  })
+
+  it('says nothing is left only once there’s a total to count against, and not at the end', () => {
+    render({ bytesDone: 0, bytesTotal: 0, filesDone: 17, filesTotal: 0 })
+    expect(texts('.left')).toEqual([''])
+
+    document.body.innerHTML = ''
+    render({ ...halfway, filesDone: 4 })
+    expect(texts('.left')).toEqual([''])
+  })
+
   it('a stall displaces the countdown we no longer believe', () => {
     render({
       ...halfway,

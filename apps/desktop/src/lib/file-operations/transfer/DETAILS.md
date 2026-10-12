@@ -107,6 +107,8 @@ prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion
   renders the button in its three readings. It's split that way because the two halves can't share a subtree: the button
   sits in the dialog's button row, while `RollbackConfirmDialog` stacks over the whole dialog and is also raised from
   the conflict body, which replaces that row. `../DETAILS.md` § "Rollback asks first".
+- **`TransferStallNotice.svelte`** is the stalled-transfer card at the foot of the progress dialog (§ "The
+  stalled-transfer notice").
 - **`ScanPhaseBody.svelte` is shared by the progress dialog and the queue row** (`comfortable` and `compact` densities),
   so a change to it lands on both surfaces.
 - **`transfer-complete-toast.ts::composeTransferCompleteToast` splits TOP-LEVEL items by type only** ("Moved 1 file and
@@ -1111,6 +1113,20 @@ and `list_operations()` doesn't have it either. For a dialog that just dispatche
 the sliver between the start command answering and the session claiming its id — and the honest reading is "it's over,
 we don't know how", so the view closes through `onCancelled(0)` rather than sitting empty. The buffered terminal event
 normally wins that race, which is why this is a corner rather than a path.
+
+## The live file tree (progress dialog)
+
+A copy, move, or compress shows `../transfer-tree/TransferTree.svelte` under the readout once it's past its scan and has
+an id (`treeOperationId`); delete, trash, and an edit inside an existing archive keep the plain readout. It pulls on the
+session's progress tick (`progress.progressTick`), 8 rows tall at most before a resize, as few as it has.
+
+- **The dialog is fully resizable only while the tree shows** (`resizable={… ? true : 'horizontal'}`): the tree is the
+  one child that absorbs extra height. The non-conflict body is a `.progress-body` column filling the body, so a taller
+  dialog hands its slack to the tree's `flex: 1 1 auto`; at its natural height the dialog is exactly as tall as its
+  content. The size isn't persisted.
+- **The tree takes the current-file line's place**: it names every file at work, the line only one of them.
+- **❌ No tree during a reversal** (an in-flight rollback or an adopted undo): its rows would still say "done" about
+  files that are going away. A clash replaces the body as before, so the tree remounts after it, losing hand toggles.
 
 ## Pause, Queue, and auto-queue (progress dialog)
 

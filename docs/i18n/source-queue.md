@@ -293,3 +293,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   viewer's tail toggle is the only follow precedent (`tail`). Add both, or `follow` to `tail`. (pt, zh, zh-Hant)
 - Term consistency ties `fileOperations.transferTree.state.compressing` (a row's state) to
   `fileOperations.transferProgress.stageCompressing` (the dialog's stage); fr and nl wanted different forms. (fr, nl)
+- `fileOperations.transferProgress.etaRemaining`: the description doesn't say whether "{duration} left" starts its cell
+  or sits mid-line, so de (`noch`), nl (`nog`), and vi (`còn`) ship it lowercase while es and ru capitalize. Now that
+  `filesLeft` / `itemsLeft` start the same line opposite it (capitalized: `Noch …`, `Nog …`, `Còn …`), say where the ETA
+  lands (the readout cell and the queue chip) so those three can realign to sentence case. (de, nl, vi)

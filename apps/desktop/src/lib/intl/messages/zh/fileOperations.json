@@ -739,6 +739,14 @@
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"
   },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, other {剩余 {countText} 个文件}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, other {剩余 {countText} 个项目}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
   "fileOperations.transferProgress.smbNativeNote": "这个共享使用系统连接。取消和回滚可能会有延迟。",
   "@fileOperations.transferProgress.smbNativeNote": {
     "sourceHash": "5344d07"

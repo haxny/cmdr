@@ -741,6 +741,14 @@
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"
   },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, one {{countText} fil kvar} other {{countText} filer kvar}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, one {{countText} objekt kvar} other {{countText} objekt kvar}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
   "fileOperations.transferProgress.smbNativeNote": "Den här delade mappen använder systemanslutningen. Det kan ta tid att avbryta eller ångra.",
   "@fileOperations.transferProgress.smbNativeNote": {
     "sourceHash": "5344d07"
