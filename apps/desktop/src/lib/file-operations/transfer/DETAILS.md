@@ -712,7 +712,7 @@ Two niceties on top:
   the copy merges, so "will be created" would lie, and compress's overwrite warning (below) must show for an archive
   it's about to replace in place. It costs one listing of the parent, only for a non-ASCII name that missed on a
   byte-exact volume; a listing that fails reads as "couldn't tell". Backend:
-  `apps/desktop/src-tauri/src/commands/file_system/listing.rs`.
+  `apps/desktop/src-tauri/src/commands/file_system/path_checks.rs`.
 - **Red "nothing can go here" notice.** The same debounced probe also asks `destinationWriteAccess` (the
   `destination_write_access` command: `Volume::write_access_at` on the resolved folder, 2 s, `unknown` for an
   unregistered volume). A definite `unwritable` shows a red line under the box (`#transfer-path-refusal`, keys

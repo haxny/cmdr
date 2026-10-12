@@ -604,7 +604,7 @@ identical-looking twin beside the user's entry.
   warned: its overwrite warning asks `destination_exists` (`transfer-dest-exists.svelte.ts`), which counts a look-alike
   via `held_in_another_spelling`, and MCP auto-confirm refuses to proceed on the same answer. Cells:
   `archive_edit/compress_remote_tests.rs`, `apps/desktop/src-tauri/src/commands/file_system/destination_exists_test.rs`.
-- **The dialogs' existence probe** (`apps/desktop/src-tauri/src/commands/file_system/listing.rs::destination_exists`) is the look-alike-aware twin
+- **The dialogs' existence probe** (`apps/desktop/src-tauri/src/commands/file_system/path_checks.rs::destination_exists`) is the look-alike-aware twin
   of `path_exists`, which stays byte-exact for the panes (a remembered path and the eviction poll then LIST the path,
   and a "yes" for a look-alike would send them to a miss).
 - The transfers apply the same rule through `transfer/volume/landing.rs`: `transfer/volume/DETAILS.md` § "Look-alike
