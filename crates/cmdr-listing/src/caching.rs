@@ -11,7 +11,7 @@ use crate::Inner;
 use crate::listing_id::ListingId;
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
-pub use cmdr_fs::volume::DirectoryChange;
+pub(crate) use cmdr_fs::volume::DirectoryChange;
 
 /// One open listing at a glance ([`Listings::summaries`](super::Listings::summaries)).
 #[derive(Debug, Clone)]

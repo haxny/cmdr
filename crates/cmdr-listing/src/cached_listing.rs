@@ -98,9 +98,9 @@ impl ListingPath {
 /// Cached directory listing for on-demand virtual scrolling.
 pub(crate) struct CachedListing {
     /// Volume ID this listing belongs to (like "root", "dropbox")
-    pub volume_id: String,
+    pub(crate) volume_id: String,
     /// The directory, in its volume's one spelling. See [`ListingPath`].
-    pub path: ListingPath,
+    pub(crate) path: ListingPath,
     /// Cached file entries, exactly what's on disk. What the PANE shows is a
     /// subset of this (`visible_rows`), so ❗ reach for [`Self::rows`] to answer
     /// anything index-shaped. Private so `entries_mut` is the only way to change
@@ -122,19 +122,19 @@ pub(crate) struct CachedListing {
     /// an index. Rebuilt lazily after any mutation; see `path_index.rs`.
     path_index: PathIndexCache,
     /// Current sort column
-    pub sort_by: SortColumn,
+    pub(crate) sort_by: SortColumn,
     /// Current sort order
-    pub sort_order: SortOrder,
+    pub(crate) sort_order: SortOrder,
     /// How directories are sorted relative to the current sort column
-    pub directory_sort_mode: DirectorySortMode,
+    pub(crate) directory_sort_mode: DirectorySortMode,
     /// Committed visible revision. Allocated under the cache write lock for a
     /// visible patch, sort, or visibility change, never by the transport emitter.
     /// Lives on the listing so it works for all volume types, including SMB/MTP
     /// which don't use the FSEvents-based `WatchedDirectory`.
-    pub sequence: AtomicU64,
+    pub(crate) sequence: AtomicU64,
     /// When this listing was created. Used by `snapshot_listings` for triage,
     /// surfacing orphan listings (e.g., volume dropdown previews) in error reports.
-    pub created_at: Instant,
+    pub(crate) created_at: Instant,
     /// Milliseconds since [`Self::epoch`] at the last access (read accessor, resort, or
     /// watcher/notify cache patch).
     ///
@@ -148,7 +148,7 @@ pub(crate) struct CachedListing {
     /// sees a stale timestamp on a listing nobody has touched for hours: a genuine leak.
     /// `AtomicU64` (not `Mutex<Instant>`) so the read accessors, which already hold a
     /// shared cache read lock, can stamp it lock-free.
-    pub last_accessed_ms: AtomicU64,
+    pub(crate) last_accessed_ms: AtomicU64,
     /// The engine's epoch, which `last_accessed_ms` counts from. `Instant` isn't an
     /// integer, so it can't sit in an `AtomicU64` for lock-free touch-on-read;
     /// milliseconds since it can. Monotonic, never affected by wall-clock jumps.
@@ -164,7 +164,7 @@ pub(crate) struct CachedListing {
     overlay_rows: usize,
     /// The newest full re-read that landed here, by when it started reading.
     /// A re-read older than this is dropped (`reread.rs`).
-    pub published_generation: ReadGeneration,
+    pub(crate) published_generation: ReadGeneration,
 }
 
 impl CachedListing {

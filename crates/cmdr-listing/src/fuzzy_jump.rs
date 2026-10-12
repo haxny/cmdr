@@ -58,7 +58,7 @@ use cmdr_fs::entry::FileEntry;
 /// uses it directly as a cursor index (plus the `+1` parent-entry offset when
 /// `hasParent`), so the two spaces must line up: taking the rows from the caller
 /// rather than re-deriving them here is what guarantees they do.
-pub fn find_first_match<'a>(rows: impl Iterator<Item = &'a FileEntry>, query: &str) -> Option<usize> {
+pub(crate) fn find_first_match<'a>(rows: impl Iterator<Item = &'a FileEntry>, query: &str) -> Option<usize> {
     if query.is_empty() {
         return None;
     }

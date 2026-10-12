@@ -1,10 +1,13 @@
 // The lint set this crate is held to lives in the workspace root's
 // `[workspace.lints]`, opted into by `Cargo.toml`'s `lints.workspace = true`.
-// These two can't go with them: `unused_crate_dependencies` is judged per
+// These three can't go with them: `unused_crate_dependencies` is judged per
 // compilation unit (as a package-wide flag every test target would report unused
-// externs for deps only the lib uses), and `missing_docs` is this crate's own
-// contract: its API is a deliverable rather than a side effect.
+// externs for deps only the lib uses), and `missing_docs` and `unreachable_pub`
+// are this crate's own contract: its API is a deliverable rather than a side
+// effect, and the capped surface (`DETAILS.md`) counts only what `lib.rs`
+// re-exports, so a `pub` deep in a private module is a promise nobody can keep.
 #![warn(unused_crate_dependencies)]
+#![warn(unreachable_pub)]
 #![deny(missing_docs)]
 // `clippy.toml` refuses an ambient spawn in the engine; a test drives the engine
 // from threads and tasks of its own, which is exactly what a host does.

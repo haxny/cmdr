@@ -30,9 +30,9 @@ use cmdr_fs::entry::FileEntry;
 /// Result of starting a new directory listing synchronously.
 #[cfg(test)]
 #[derive(Debug, Clone)]
-pub struct ListingStartResult {
-    pub listing_id: String,
-    pub total_count: usize,
+pub(crate) struct ListingStartResult {
+    pub(crate) listing_id: String,
+    pub(crate) total_count: usize,
 }
 
 impl Inner {
@@ -41,7 +41,7 @@ impl Inner {
     /// runtime for its events. A test seam only; every pane lists through the
     /// streaming path.
     #[cfg(test)]
-    pub async fn list_directory_start_with_volume(
+    pub(crate) async fn list_directory_start_with_volume(
         &self,
         volume_id: &str,
         path: &Path,

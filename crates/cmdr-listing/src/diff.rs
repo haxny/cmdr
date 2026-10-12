@@ -115,9 +115,9 @@ impl DiffChange {
 /// on a side where the pane doesn't show it (hidden, scratch, not there yet, or
 /// gone). A row, never an entry index: see `CachedListing::pane_rows`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PaneRows {
-    pub before: Option<usize>,
-    pub after: Option<usize>,
+pub(crate) struct PaneRows {
+    pub(crate) before: Option<usize>,
+    pub(crate) after: Option<usize>,
 }
 
 /// One committed transition, with indices in its own old/new row spaces.
@@ -147,7 +147,7 @@ pub struct DirectoryDiffBatch {
 /// The rows that kept their relative order are the longest increasing run of old
 /// positions read in new order, so the smallest possible set is called moved.
 #[cfg(test)]
-pub fn compute_diff(
+pub(crate) fn compute_diff(
     old: &[FileEntry],
     new: &[FileEntry],
     include_hidden: bool,

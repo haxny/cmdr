@@ -26,6 +26,13 @@ use cmdr_fs::volume::VolumeError;
 // ============================================================================
 
 /// State for an in-progress streaming listing
+#[cfg_attr(
+    not(any(test, feature = "testing")),
+    allow(
+        unreachable_pub,
+        reason = "public for the `testing` fixtures, which hand it to a host's tests"
+    )
+)]
 pub struct StreamingListingState {
     /// The listing's stop signal. Read at the sync cancellation points (before
     /// read, after read, at cache insert), awaited by the `select!` that races
