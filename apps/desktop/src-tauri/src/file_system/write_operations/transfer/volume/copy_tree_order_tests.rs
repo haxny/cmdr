@@ -11,10 +11,10 @@
 use super::super::faulty_volume::forward_volume_methods;
 use super::tests::make_state;
 use super::*;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::{InMemoryVolume, ListingProgress};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::entry::FileEntry;
 
 /// A remote-shaped source whose listings come back reversed and which records
 /// every file it opens.
