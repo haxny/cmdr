@@ -304,11 +304,11 @@ fn a_captured_projection_pins_rows_without_double_sampling_settings_or_ownership
     let name = temp.path().file_name().unwrap().to_str().unwrap();
     let entries = vec![entry(name), entry("b.sb-temp"), entry("c")];
     let cache = VisibleRowsCache::new();
-    let committed = ScratchProjection::for_entries(&entries, &ScratchProjection::default());
+    let committed = ScratchProjection::for_entries(&entries, &ScratchProjection::default(), installed_visibility());
     assert_eq!(cache.rows(&entries, true, None, &committed).len(), 1);
     set_show_staging_temps(true);
     set_show_safe_save_files(true);
-    let capture = committed.live();
+    let capture = committed.live(installed_visibility());
     set_show_staging_temps(false);
     set_show_safe_save_files(false);
     assert_eq!(cache.rows(&entries, true, None, &capture).len(), 3);
@@ -320,5 +320,16 @@ fn a_captured_projection_pins_rows_without_double_sampling_settings_or_ownership
     drop(owner);
     // Ownership can expire between capture and row construction too.
     assert_eq!(cache.rows(&entries, true, None, &committed).len(), 1);
-    assert_eq!(cache.rows(&entries, true, None, &committed.live()).len(), 2);
+    assert_eq!(
+        cache
+            .rows(&entries, true, None, &committed.live(installed_visibility()))
+            .len(),
+        2
+    );
+}
+
+/// The scratch settings the installed engine holds now, as the engine reads them
+/// once per operation.
+fn installed_visibility() -> crate::file_system::listing::host::ScratchVisibility {
+    crate::file_system::listing::installed().scratch_visibility()
 }

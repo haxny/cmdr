@@ -7,7 +7,7 @@
 #[test]
 fn test_cancel_listing_sets_flag() {
     use super::cancel_listing;
-    use super::streaming::{STREAMING_STATE, StreamingListingState};
+    use super::streaming::{StreamingListingState, streaming_state};
     use std::sync::Arc;
 
     // Create a test listing ID and state
@@ -16,7 +16,7 @@ fn test_cancel_listing_sets_flag() {
 
     // Store it in the streaming state cache
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         cache.insert(listing_id.to_string(), Arc::clone(&state));
     }
 
@@ -31,7 +31,7 @@ fn test_cancel_listing_sets_flag() {
 
     // Cleanup
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         cache.remove(listing_id);
     }
 }
@@ -49,7 +49,7 @@ fn test_cancel_listing_nonexistent_does_not_panic() {
 // ============================================================================
 
 /// Tests that `list_directory_start_with_volume` reads entries from an InMemoryVolume,
-/// caches them in LISTING_CACHE, and returns the correct count.
+/// caches them in the listing cache, and returns the correct count.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_list_directory_start_with_volume_caches_entries() {
     use crate::file_system::listing::caching_test_support::TestListingGuard;

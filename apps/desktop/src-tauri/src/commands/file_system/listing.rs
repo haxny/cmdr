@@ -365,7 +365,7 @@ pub async fn get_file_range(
 
 /// Returns the widest filename's text-only width (in px) per Brief-mode column.
 ///
-/// Pure read path: takes a snapshot of `LISTING_CACHE` for `listing_id` and
+/// Pure read path: takes a snapshot of the listing cache for `listing_id` and
 /// measures each column's widest filename with `font_metrics::calculate_max_width_with_suffixes`.
 /// The FE applies chrome + clamp on top.
 ///
@@ -480,7 +480,7 @@ pub async fn find_file_indices(
 /// the cached listing, or `None` when nothing matches. Powers the type-to-jump
 /// feature in `FilePane.svelte`. Hidden entries are skipped when `include_hidden`
 /// is false. The frontend adjusts for the synthetic `..` parent offset before
-/// setting the cursor (the parent entry is never in `LISTING_CACHE`).
+/// setting the cursor (the parent entry is never in the listing cache).
 #[tauri::command]
 #[specta::specta]
 pub async fn find_first_fuzzy_match(
@@ -649,7 +649,7 @@ async fn watcher_backed_listing_path(listing_id: &str) -> Option<PathBuf> {
 /// So `force: false` short-circuits when the listing lives on a **non-local**
 /// volume that reports [`WatchCoverage::EveryWriter`]. There the cache is being
 /// kept fresh by the volume's `notify_mutation` pipeline (per-file `Added` /
-/// `Removed` / `Modified` events patched into `LISTING_CACHE` after every
+/// `Removed` / `Modified` events patched into the listing cache after every
 /// successful mutation), so a full `list_directory` re-read is pure redundancy
 /// and costs a lot on slow backends: a 1k-entry MTP folder takes ~17 s and holds
 /// the USB session, colliding with the user's next op.

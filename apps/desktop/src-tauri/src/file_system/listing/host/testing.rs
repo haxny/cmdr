@@ -1,5 +1,5 @@
-//! Recording fakes for the seams, for tests that drive the engine, and the
-//! test binary's stand-in for the app's install.
+//! Recording fakes for the seams, for tests that drive the engine, and test
+//! registration on the app's shared engine.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -8,25 +8,21 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::events::StalledOn;
 use super::events::{ListingEnd, ListingEvents};
-use super::{ListingObserver, ListingOverlay, ListingSeams};
+use super::{ListingObserver, ListingOverlay};
 use crate::file_system::listing::diff::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
 
-/// What the slot holds in a test binary, where nothing installs: the app's
-/// test stand-in (`crate::listing_host::test_seams`).
-pub(crate) fn fallback_seams() -> ListingSeams {
-    crate::listing_host::test_seams()
-}
-
-/// Adds `overlay` to the shared slot. Test registration stays global until each
-/// test builds its own engine; the first registration per id wins.
+/// Adds `overlay` to the shared engine. Test registration stays global until
+/// each test builds its own engine; the first registration per id wins.
+// shim: removed in M4b
 pub(crate) fn register_overlay(overlay: Arc<dyn ListingOverlay>) {
-    super::seams().add_overlay(overlay);
+    crate::file_system::listing::installed().add_overlay(overlay);
 }
 
-/// Adds `observer` to the shared slot, after every observer already there.
+/// Adds `observer` to the shared engine, after every observer already there.
+// shim: removed in M4b
 pub(crate) fn register_observer(observer: Arc<dyn ListingObserver>) {
-    super::seams().add_observer(observer);
+    crate::file_system::listing::installed().add_observer(observer);
 }
 
 /// Records every report, per kind and in one combined order.

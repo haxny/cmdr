@@ -327,7 +327,7 @@ pub fn run() {
             // `$effect` teardown that threw), so their entry vector + OS watcher would
             // otherwise pin for the rest of the session. Mirrors the search index's
             // backstop timer and the viewer's window-`Destroyed` net.
-            file_system::start_orphan_listing_reaper();
+            listing_host::listings().start_orphan_reaper();
 
             // Stash the AppHandle for the viewer's per-session watcher manager
             // threads so they can emit `viewer:file-changed:<sid>` events.

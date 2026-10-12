@@ -11,7 +11,7 @@
 //! the ids this test owns. An unrestricted sweep would evict concurrently-running
 //! tests' listings out of the process-global cache.
 
-use super::cached_listing::LISTING_CACHE;
+use super::cached_listing::listing_cache;
 use super::caching_test_support::TestListing;
 use super::operations::{ListingLookupError, get_file_at, keep_listings_alive};
 use super::orphan_reaper::{ORPHAN_IDLE_WINDOW, orphan_ids, reap_orphaned_listings_at_for};
@@ -242,7 +242,7 @@ fn guard_removes_its_listing_even_when_the_test_body_panics() {
         .to_string();
 
     assert!(
-        !LISTING_CACHE.read_ignore_poison().contains_key(&id),
+        !listing_cache().read_ignore_poison().contains_key(&id),
         "Drop must remove the entry on unwind, not only on the happy path"
     );
 }

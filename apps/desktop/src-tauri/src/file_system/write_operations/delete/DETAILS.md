@@ -7,7 +7,7 @@ Depth and rationale. `CLAUDE.md` holds the must-knows; the decision detail lives
 `delete_volume_files_with_progress_inner` consumes the scan preview via `take_cached_scan_result(preview_id, sources)`. On hit, top-level
 files come straight from `CopyScanResult` with no `is_directory` probe; top-level dirs recurse via the oracle-aware
 walker. On no-preview paths (MCP, programmatic), the parent oracle answers the top-level type when the source's parent
-is watcher-fresh in `LISTING_CACHE`, and otherwise the walker resolves it. Both emit paths use
+is watcher-fresh in the listing cache, and otherwise the walker resolves it. Both emit paths use
 `with_scan_meta(current_dir, dirs_done, None)` so the scanning UI shows the dir count and the directory the walker is
 currently in. The per-entry callback is throttled so the FE tally climbs mid-listing on slow MTP roundtrips.
 

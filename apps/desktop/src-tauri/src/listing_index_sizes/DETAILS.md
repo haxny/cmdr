@@ -13,7 +13,7 @@
    A listing also rereads the rows a reading said would flip their hourglass on their own (`schedule.rs` rechecks), at
    that moment and outside the cooldown.
 5. The refresh (on the blocking pool) reads the touched rows' `dir_stats` plus the listing's own, keeps the rows whose
-   `RowSizes` moved, writes them into `LISTING_CACHE`, and emits `listing-index-sizes-changed` with their readings and,
+   `RowSizes` moved, writes them into the listing cache, and emits `listing-index-sizes-changed` with their readings and,
    when it moved, the listing's own reading (the `..` row). Nothing moved: nothing is sent.
 6. The frontend (`src/lib/file-explorer/pane/index-events.ts` → `FilePane.applyIndexSizes`) writes the readings onto
    its cached rows and the cursor entry in place, re-reads only the status-bar totals, and pushes the MCP pane state.
@@ -96,7 +96,7 @@ runs on; `count/` walks what it can't (SFTP, WebDAV, S3, archives, an excluded f
   directly, retaining no async waiter after cancellation. A hung syscall cannot be interrupted; its blocking worker
   holds only the path, stop signal, and private totals until it returns. Volume resolution likewise owns its in-flight
   future independently of the UI wait and never starts a late walk after cancellation.
-- **Readings travel the index's road** (`count/publish.rs`): written into `LISTING_CACHE` (`update_index_sizes_by_path`),
+- **Readings travel the index's road** (`count/publish.rs`): written into the listing cache (`update_index_sizes_by_path`),
   then sent as `listing-index-sizes-changed`; restoring a row sends a `full` event, since "no size" isn't a reading an
   event can carry. Restoration restores manual ownership as well as sizes, so an unreadable or quickly cancelled retry
   keeps an existing manual lower bound retryable on indexed volumes. The frontend has no new row path.

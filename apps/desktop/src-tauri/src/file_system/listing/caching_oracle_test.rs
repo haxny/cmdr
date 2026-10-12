@@ -26,7 +26,7 @@ fn make_test_entry(name: &str) -> FileEntry {
 }
 
 /// A test-owned cached listing with a controllable sequence, on the test's own
-/// volume id. Removed from `LISTING_CACHE` when the returned guard drops.
+/// volume id. Removed from the listing cache when the returned guard drops.
 fn insert_listing_with_sequence(
     tag: &str,
     volume_id: &str,
@@ -163,7 +163,7 @@ fn try_get_authoritative_listing_picks_highest_sequence() {
 #[test]
 fn try_get_authoritative_listing_miss_for_start_streaming_watcher_gap() {
     // Simulates the documented race window between
-    // `list_directory_start_streaming` populating LISTING_CACHE and
+    // `list_directory_start_streaming` populating the listing cache and
     // `start_watching` inserting into WATCHER_MANAGER: the listing exists
     // in cache, but the volume reports no watcher yet (here: by reporting
     // `None` from the test volume's `listing_watch_coverage`). The oracle

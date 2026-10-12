@@ -203,7 +203,8 @@ mod tests {
             .entries(vec![entry_at(root, "stale.txt")])
             .insert("listing-host-archive");
 
-        crate::file_system::listing::host::runtime()
+        crate::file_system::listing::installed()
+            .runtime()
             .block_on(AppListings.refresh_archive_listings(&volume_id, &PathBuf::from(root)));
 
         assert_eq!(

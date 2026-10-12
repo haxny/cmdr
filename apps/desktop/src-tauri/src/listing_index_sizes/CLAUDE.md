@@ -27,7 +27,7 @@ when its size, counts, or hourglass actually move.
 - **The index decides when the hourglass shows** (after 2 s of continuous updating, `cmdr-index` `read/pending_sizes.rs`).
   It flips with no batch, so a reading's `recursive_size_pending_changes_in` books a recheck of that row. ❌ Don't put
   rechecks behind the cooldown: the hourglass would show late, or not at all when it's short.
-- **Moved rows go into `LISTING_CACHE` BEFORE the event** (`update_index_sizes_by_path`), so the status-bar totals the
+- **Moved rows go into the listing cache BEFORE the event** (`update_index_sizes_by_path`), so the status-bar totals the
   pane re-reads, and MCP, see them.
 - **While the main window is hidden, nothing runs** (`main_window_visibility`); batches merge into one refresh per
   listing on show. ❌ Don't let a due deadline arm while hidden: the loop would spin.

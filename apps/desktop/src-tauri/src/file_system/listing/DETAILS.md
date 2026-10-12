@@ -64,10 +64,19 @@ reader".
 
 ## Caching
 
-The record and the map are `cached_listing.rs`, everything that patches one or notifies about it is `caching.rs`, and
-the six-hour backstop that reclaims a leaked one is `orphan_reaper.rs`.
+The record is `cached_listing.rs`, everything that patches one or notifies about it is `caching.rs`, and the six-hour
+backstop that reclaims a leaked one is `orphan_reaper.rs`.
 
-- **`LISTING_CACHE`**: global `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
+- **The engine** (`engine.rs`): `Listings`, a cheap-to-clone `Arc<Inner>`, built by `Listings::builder(volumes,
+  events)` (the other seams optional) or `Listings::detached()`. `Inner` holds the seams the host handed over and every
+  piece of engine state: the cache, the in-flight reads' cancel tokens, the pending diffs, the refresh turnstiles, the
+  hung-read registry, the collator per locale, the epoch `last_accessed_ms` counts from, and the scratch settings. Two
+  engines share nothing. Each module adds its operations as an `impl Inner` block. The app builds one in
+  `listing_host::install` and hands it out as `listing_host::listings()`; the free functions callers outside the engine
+  still name are shims over it (`shims/`, one file per engine module, which re-exports its own; all go in M4b). A scratch-visibility or
+  collator read happens BEFORE the cache lock and travels down as a value; `CachedListing` keeps no reference to its
+  engine (it copies the epoch).
+- **The cache** (`Inner::cache`): `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
 - **`CachedListing`**: `{ volume_id, path, entries, visible_rows, path_index, sort_by, sort_order,
   directory_sort_mode, sequence, created_at, last_accessed_ms, overlay_rows }`. `entries` is private: `entries()` reads,
   `entries_mut()` / `set_entries()` change it and drop BOTH maps on the way, `rows(include_hidden)` is what every read
@@ -96,23 +105,26 @@ showing a directory. Cmdr installs three, in order (`listing_host/mod.rs`): the 
 virtual path can't arm through FSEvents), and `listing_index_sizes`. ❗ The close call comes AFTER the cache removal: an
 observer's own detached arm reconciles against listing-cache membership, so releasing while the entry is still there
 lets a racing arm re-take what was just released. The change watch disarms in that same call, so an FSEvents event
-landing between the removal and the disarm finds no listing to patch. The test binary's slot holds the change watch too
-(`listing_host::test_seams`), so a listing in a test arms a watch as it does in the app.
+landing between the removal and the disarm finds no listing to patch. The test binary's shared engine holds the change
+watch too (`listing_host::test_listings`), so a listing in a test arms a watch as it does in the app. An observer that
+keeps a record per open listing asks `OpenedListing::still_open` before keeping one: a close can race the open and
+reach every observer first.
 
 ### Backstop reaper
 
-`start_orphan_listing_reaper` (spawned in `lib.rs` setup) sweeps every `REAPER_SWEEP_INTERVAL` (30 min) and tears down
+`Listings::start_orphan_reaper` (called in `lib.rs` setup) sweeps every `REAPER_SWEEP_INTERVAL` (30 min) and tears down
 any listing idle past `ORPHAN_IDLE_WINDOW` (6 h) via the same `list_directory_end` path, so a leaked listing (close IPC
-never delivered) can't pin its entry vector and OS watcher for the whole session. Pure, clock-injectable seam:
-`orphan_ids(now_ms, window_ms, …)` and `reap_orphaned_listings_at(now_ms, window_ms)`. Mirrors the search index's
-idle/backstop timers and the file viewer's window-`Destroyed` net.
+never delivered) can't pin its entry vector and OS watcher for the whole session. Its loop holds the engine weakly and
+ends once the last handle is dropped. Pure, clock-injectable seam: `orphan_ids(now_ms, window_ms, …)` and
+`reap_orphaned_listings_at_for(now_ms, window_ms, only)`. Mirrors the search index's idle/backstop timers and the file
+viewer's window-`Destroyed` net.
 
 It keys on `last_accessed_ms`, NOT `created_at`. `created_at` is stamped once and never refreshed, so an age-based reaper
-keyed on it would evict a pane open all session. `last_accessed_ms` (an `AtomicU64` of ms-since-a-process-epoch) is
+keyed on it would evict a pane open all session. `last_accessed_ms` (an `AtomicU64` of ms since the engine's epoch) is
 bumped by every operation that proves the listing still backs a live pane: the read accessors (`get_file_range`,
 `get_file_at`, `get_file_beside`, `get_listing_stats`, the index/path/batch lookups), `resort_listing`, and every
 watcher/notify cache patch (`insert_entry_sorted` / `remove_entries_by_paths` / `remove_entry_by_name` /
-`update_entry_sorted` / `update_listing_entries`). `AtomicU64` so read accessors stamp it lock-free under a shared `LISTING_CACHE.read()`. The
+`update_entry_sorted` / `update_listing_entries`). `AtomicU64` so read accessors stamp it lock-free under a shared cache read lock. The
 6 h window is deliberately generous: we'd rather never evict a live listing than aggressively reclaim.
 `refresh_listing_index_sizes` intentionally does NOT touch it: it's driven by background indexing, not user/FS activity,
 so touching there could keep a truly-orphaned listing alive indefinitely.
@@ -132,9 +144,10 @@ listing only once it has landed, so a read racing a navigation (which also answe
 clipboard and drag commands still flatten it into their `String` errors; the pane recovers through its next read or
 heartbeat.
 
-#### Test isolation for `LISTING_CACHE`
+#### Test isolation for the shared engine's cache
 
-`cargo test` runs the crate's tests as threads in ONE process, so `LISTING_CACHE` is shared by every listing test at
+`cargo test` runs the crate's tests as threads in ONE process, and they share the one engine `listing_host::listings()`
+hands out, so its cache is shared by every listing test at
 once (`cargo nextest` gets isolation free from process-per-test, but the module-run command and CI's lib run don't).
 Three failure modes follow, and `caching_test_support.rs` closes all three:
 
@@ -146,7 +159,7 @@ Three failure modes follow, and `caching_test_support.rs` closes all three:
 - **Cache-wide assertions.** `find_listings_for_path_on_volume`, `find_listings_on_volume`, and the orphan sweep all scan the
   whole map, so a shared path or volume id makes a count assertion depend on what else is running. Those tests derive a
   unique path / volume id per test. For the sweep, `reap_orphaned_listings_at_for(now, window, only)` restricts the
-  wired teardown to the ids the test owns; production keeps calling the unrestricted `reap_orphaned_listings_at`.
+  wired teardown to the ids the test owns; production calls the unrestricted `reap_orphaned_listings`.
   `TestListing` also stamps `last_accessed_ms` at NOW (a live pane's value) rather than 0, so a fixture isn't
   orphan-eligible under someone else's sweep in the first place. Pinned by
   `caching_reaper_test::a_reaper_sweep_leaves_a_sibling_tests_listing_alone`.
@@ -188,7 +201,7 @@ that set is settled by construction.
 **Two slots, one per `include_hidden`**, so a pane toggling hidden files — or two readers disagreeing about the flag
 mid-toggle — can never be handed the map built for the other answer.
 
-**Validity needs no version counter.** Every accessor holds the `LISTING_CACHE` READ lock, and every mutation needs the
+**Validity needs no version counter.** Every accessor holds the cache READ lock, and every mutation needs the
 WRITE lock, so `entries` cannot move under a reader. `entries_mut()` drops both maps as it hands the vector out, which
 is why no mutation path has to remember anything.
 
@@ -339,7 +352,7 @@ walking on tags nobody asked to wait for. It is the "just opened" step in the re
 
 **Decision: materialize `(path hash, entry index)` pairs, sorted by hash.** A lookup hashes once, binary-searches, and
 compares the real path of the entries whose hash matches. Same build-once-and-index shape as the row map, and the same
-validity argument: `entries_mut()` drops it, and every accessor holds the `LISTING_CACHE` lock, so no version counter is
+validity argument: `entries_mut()` drops it, and every accessor holds the cache lock, so no version counter is
 needed.
 
 **Why hashes and not a `HashMap<String, usize>`.** Twelve bytes per entry against 100+ for a map that owns a second copy
@@ -376,7 +389,7 @@ is walking a big directory every watcher event landing in it is a hash rather th
 
 ❗ **A mutating caller resolves BEFORE it takes `entries_mut`.** That is the whole reason `update_entry_sorted` and the
 removals can reach a map at all: `entries_mut` drops both maps as it hands the vector out, so a lookup after it can only
-walk. The `LISTING_CACHE` write lock is held across both, so the index is still true when the mutation lands, and the
+walk. The cache write lock is held across both, so the index is still true when the mutation lands, and the
 invariant is untouched — `path_index_test::a_mutation_still_drops_the_map_it_rode` pins that they still drop it. One
 side effect worth having: a modify or removal that takes no row leaves both maps standing rather than dropping them for a
 row it never touched, which matters because an add-only watcher event calls the removal batch with an empty path list.
@@ -481,7 +494,7 @@ surface used is that one call and `Vec<u8>`'s upstream `CollationKeySink` impl; 
 arrives as a red Renovate PR rather than on `main`. What type checking cannot see is a change to the key BYTES, which
 is what the never-persist rule and the ordering tests above cover.
 
-**Locale changes are pulled, not pushed.** `active_collator` caches one collator per locale tag and re-asks
+**Locale changes are pulled, not pushed.** `Inner::collator` caches one collator per locale tag and re-asks
 the host's `ReadingLocale` on each call, so the next sort after an OS language switch uses the new language. Listings
 already sorted keep their order until something re-reads them, exactly as they do when the sort column changes.
 
@@ -534,9 +547,9 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   one `unregistered` question that folds mount adoption and "why is it missing"), what the drive index knows (`index`),
   the foreground hold (`leases`), the reading language (`locale`), and the mount table (`mounts`). The app answers each
   in `listing_host/`, resolving its subsystem per call. The two scratch-visibility settings are engine state the host
-  sets (`host::set_scratch_visibility`; `file_system::staging`'s setters forward to it). In the test binary the slot
-  holds every app answer except events and the runtime (`listing_host::test_seams`), so tests list through the real
-  registry and index, as the app does.
+  sets (`Listings::set_scratch_visibility`; `file_system::staging`'s setters forward to it). The test binary's shared
+  engine holds every app answer except events and the runtime (`listing_host::test_listings`), so tests list through
+  the real registry and index, as the app does.
 - **Watcher starts AFTER listing-complete**: watcher diffs rely on cached entries; starting before the cache is
   populated would miss initial state.
 - **Incremental watcher path with fallback to full re-read**: most FS changes touch a few files. The incremental path
@@ -585,7 +598,7 @@ Used by the watcher's incremental path and synthetic mkdir to patch listings wit
 `CachedListing::path` is a `ListingPath`, and `ListingPath::on_volume(volume_id, path)` is the only way to make one: it
 asks the registered volume for its spelling (`Volume::listing_path`, identity by default). Every store
 (`CachedListing::new`) and every path-keyed lookup (`find_listings_for_path_on_volume`, `get_cached_listing`,
-`try_get_authoritative_listing`, the archive refresh) builds its key through it BEFORE taking `LISTING_CACHE`, since it
+`try_get_authoritative_listing`, the archive refresh) builds its key through it BEFORE taking the cache, since it
 asks the host's volume seam.
 
 **Decision:** canonicalize in the cache, not at each caller. **Why:** a pane path enters from the frontend (navigation,
@@ -806,7 +819,7 @@ what's on disk).
 
 ## The foreground lease a listing holds
 
-`read_directory_with_progress` takes a foreground hold on the volume (`host::leases()`, which Cmdr answers with a
+`read_directory_with_progress` takes a foreground hold on the volume (the `leases` seam, which Cmdr answers with a
 `priority::foreground` lease) as its FIRST statement and holds it
 for the whole body. That is what tells a background SMB upload and the index scan that the user is waiting on this
 share right now, for however long the folder actually takes to come back. The command entry point

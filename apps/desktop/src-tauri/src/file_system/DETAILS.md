@@ -528,9 +528,9 @@ Two supporting changes came with it:
   Root-rename detection is unaffected too, since `watch_root_identity_changed` matches on `Modify(Name(_))`, which the
   debouncer emits either way. Linux already ran this path with `NoCache`.
 
-**The reconcile half of a detached arm is not optional.** `list_directory_end` removes the listing from `LISTING_CACHE`
+**The reconcile half of a detached arm is not optional.** `list_directory_end` removes the listing from the listing cache
 and then removes a watch the arm may not have inserted yet, so an arm can land on a listing nobody will ever close
-again. `arm_and_reconcile` re-checks `LISTING_CACHE` membership after arming and tears the watch down if the listing
+again. `arm_and_reconcile` re-checks the listing cache membership after arming and tears the watch down if the listing
 went away; without that, each such navigation strands an FSEvents stream, its CFRunLoop thread, and a manager entry for
 the life of the process, each one still costing `fseventsd` fan-out. Pinned by
 `watcher_test::a_detached_arm_that_lost_the_race_leaves_no_watch_behind`, which drives `arm_and_reconcile` directly so
@@ -546,7 +546,7 @@ line (`cmdr-smb`'s `slow_calls`).
 
 ## Watcher path rebasing
 
-On macOS, FSEvents reports canonical paths (`/private/tmp/…`) while `LISTING_CACHE` holds the user-navigated form
+On macOS, FSEvents reports canonical paths (`/private/tmp/…`) while the listing cache holds the user-navigated form
 (`/tmp/…`). `watcher.rs::rebase_event_path` compares the firmlink-normalized forms
 (`indexing::paths::firmlinks::normalize_path`) and rebases matching event paths onto the listing's directory. A raw
 `path.parent() == dir_path` comparison silently dropped every event for listings under `/tmp`, `/var`, and `/etc`, so

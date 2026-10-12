@@ -43,42 +43,43 @@ pub use cmdr_fs::staging::StagingTemp;
 #[cfg(test)]
 use cmdr_fs::staging::hidden_with_settings;
 
-use crate::file_system::listing::host::{ScratchVisibility, scratch_visibility, set_scratch_visibility};
+use crate::file_system::listing::host::ScratchVisibility;
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
+use crate::listing_host::listings;
 
-// The two settings are the listing engine's state (`listing::host`, which
-// documents their defaults); these forward to it, so settings live-apply and
+// The two settings are the listing engine's state (`Listings::set_scratch_visibility`;
+// `listing::host::ScratchVisibility` documents their defaults); these forward to it, so settings live-apply and
 // startup seeding name one place in the app.
 
 /// Applies the `advanced.showStagingTempFiles` setting. Seeded at startup from
 /// `load_settings`, then pushed on every change (settings § live-apply rule).
 pub fn set_show_staging_temps(show: bool) {
-    set_scratch_visibility(ScratchVisibility {
+    listings().set_scratch_visibility(ScratchVisibility {
         show_staging_temps: show,
-        ..scratch_visibility()
+        ..listings().scratch_visibility()
     });
 }
 
 /// Whether Cmdr's scratch files are being shown.
 #[cfg(test)]
 pub fn show_staging_temps() -> bool {
-    scratch_visibility().show_staging_temps
+    listings().scratch_visibility().show_staging_temps
 }
 
 /// Applies the `advanced.showSafeSaveFiles` setting. Seeded at startup from
 /// `load_settings`, then pushed on every change (settings § live-apply rule).
 pub fn set_show_safe_save_files(show: bool) {
-    set_scratch_visibility(ScratchVisibility {
+    listings().set_scratch_visibility(ScratchVisibility {
         show_safe_save_files: show,
-        ..scratch_visibility()
+        ..listings().scratch_visibility()
     });
 }
 
 /// Whether safe-save scratch is being shown.
 #[cfg(test)]
 pub fn show_safe_save_files() -> bool {
-    scratch_visibility().show_safe_save_files
+    listings().scratch_visibility().show_safe_save_files
 }
 
 /// Should `name` be left out of the pane under the settings now? The listing

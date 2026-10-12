@@ -43,7 +43,7 @@ use tauri_specta::Event;
 use tokio::sync::mpsc;
 use tokio::time::Instant;
 
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
 use crate::file_system::listing::listing_id::ListingId;
 use crate::ignore_poison::IgnorePoison;
@@ -108,17 +108,15 @@ impl ListingObserver for IndexSizeListings {
 
     fn listing_opened(&self, opened: &OpenedListing<'_>) {
         let listing_id = opened.id.as_str();
-        // The cache already holds the listing (the open path inserts before it notifies), and its
-        // record carries both the volume id and the volume's one spelling of the folder.
-        let Some(listing) = LISTING_CACHE
-            .read_ignore_poison()
-            .get(listing_id)
-            .map(|listing| OpenListing {
-                volume_id: listing.volume_id.clone(),
-                index_dir: cmdr_fs::firmlinks::normalize_path(&listing.path.as_path().to_string_lossy()),
-            })
-        else {
+        // The open path inserts before it notifies, but a close racing it can reach every observer
+        // first, and a record made after that close would outlive the listing.
+        if !opened.still_open() {
             return;
+        }
+        // The stored spelling is the volume's one spelling of the folder, the one the cache keys on.
+        let listing = OpenListing {
+            volume_id: opened.volume_id.to_string(),
+            index_dir: cmdr_fs::firmlinks::normalize_path(&opened.stored_path.to_string_lossy()),
         };
         OPEN.lock_ignore_poison().insert(listing_id.to_string(), listing);
     }
@@ -317,7 +315,7 @@ fn refresh_blocking(
     }
     if !moved.is_empty() {
         let moved_paths: Vec<String> = moved.iter().map(|(position, _)| paths[*position].clone()).collect();
-        if let Some(listing) = LISTING_CACHE.write_ignore_poison().get_mut(listing_id) {
+        if let Some(listing) = listing_cache().write_ignore_poison().get_mut(listing_id) {
             listing.update_index_sizes_by_path(&moved_paths, |i, entry| moved[i].1.apply_to(entry));
         }
     }
@@ -389,7 +387,7 @@ fn recheck_of(
 /// The listing's own path and the folder rows `touched` names, with their cached entries, or `None`
 /// when the listing is gone.
 fn rows_to_read(listing_id: &str, touched: &Touched) -> Option<(String, Vec<(String, FileEntry)>)> {
-    let cache = LISTING_CACHE.read_ignore_poison();
+    let cache = listing_cache().read_ignore_poison();
     let listing = cache.get(listing_id)?;
     let dir_path = listing.path.as_path().to_string_lossy().into_owned();
     let is_folder = |entry: &&FileEntry| entry.is_directory && !entry.is_symlink;

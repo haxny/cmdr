@@ -10,8 +10,7 @@
 //! § "Collating names".
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use icu_collator::options::{CollatorOptions, Strength};
 use icu_collator::preferences::CollationNumericOrdering;
@@ -19,6 +18,8 @@ use icu_collator::{Collator, CollatorBorrowed, CollatorPreferences};
 use icu_locale_core::Locale;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+
+use crate::file_system::listing::engine::Inner;
 
 /// A file name's collation weights, serialized to bytes that order the same way
 /// the collator does.
@@ -93,34 +94,32 @@ fn build(locale: &str) -> Option<CollatorBorrowed<'static>> {
     Collator::try_new(prefs, options).ok()
 }
 
-/// The collator for the locale the user reads now, built once per locale.
-///
-/// A language switch is picked up here rather than pushed: the host's
-/// [`ReadingLocale`](super::host::ReadingLocale) answers the language the user
-/// reads now, so the next sort asks for a collator for the new language. Listings already sorted keep their order until something
-/// re-reads them, the same way they do when the sort column changes.
-///
-/// Locales are a bounded set (14 catalogs ship), so the cache never grows past
-/// a handful of entries.
-pub fn active_collator() -> Arc<NameCollator> {
-    static CACHE: RwLock<Option<HashMap<String, Arc<NameCollator>>>> = RwLock::new(None);
+impl Inner {
+    /// The collator for the locale the user reads now, built once per locale.
+    ///
+    /// A language switch is picked up here rather than pushed: the host's
+    /// [`ReadingLocale`](super::host::ReadingLocale) answers the language the user
+    /// reads now, so the next sort asks for a collator for the new language.
+    /// Listings already sorted keep their order until something re-reads them, the
+    /// same way they do when the sort column changes.
+    ///
+    /// Locales are a bounded set (14 catalogs ship), so the cache never grows past
+    /// a handful of entries.
+    ///
+    /// ❗ Ask before taking the listing cache: it asks the host.
+    pub(crate) fn collator(&self) -> Arc<NameCollator> {
+        let locale = self.locale();
 
-    let locale = super::host::locale().locale();
+        if let Some(cached) = self.collators.read_ignore_poison().get(&locale) {
+            return Arc::clone(cached);
+        }
 
-    if let Some(cached) = CACHE
-        .read_ignore_poison()
-        .as_ref()
-        .and_then(|by_locale| by_locale.get(&locale))
-    {
-        return Arc::clone(cached);
+        let collator = Arc::new(NameCollator::new(&locale));
+        self.collators
+            .write_ignore_poison()
+            .insert(locale, Arc::clone(&collator));
+        collator
     }
-
-    let collator = Arc::new(NameCollator::new(&locale));
-    CACHE
-        .write_ignore_poison()
-        .get_or_insert_with(HashMap::new)
-        .insert(locale, Arc::clone(&collator));
-    collator
 }
 
 #[cfg(test)]

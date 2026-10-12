@@ -21,9 +21,13 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_fs::name_fold::fold_name;
 
+use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::operations::ListingLookupError;
 use crate::file_system::listing::visible_rows::VisibleRows;
 use cmdr_fs::entry::FileEntry;
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub use crate::file_system::listing::shims::compare::*;
 
 /// How far apart two modification times can be and still count as the same, in
 /// seconds. FAT and many network shares store time in 2 s steps, so a faithful
@@ -88,44 +92,47 @@ pub struct CompareDirectoriesResult {
     pub settled: bool,
 }
 
-/// Compares the files two panes show and answers which rows each should mark.
-pub fn compare_directories(
-    left_listing_id: &str,
-    left_include_hidden: bool,
-    right_listing_id: &str,
-    right_include_hidden: bool,
-    mode: CompareDirectoriesMode,
-) -> Result<CompareDirectoriesResult, ListingLookupError> {
-    let cache = super::operations::reconciled_cache(&[left_listing_id, right_listing_id]);
-    let left = cache
-        .get(left_listing_id)
-        .ok_or_else(|| ListingLookupError::gone(left_listing_id))?;
-    let right = cache
-        .get(right_listing_id)
-        .ok_or_else(|| ListingLookupError::gone(right_listing_id))?;
-    left.touch();
-    right.touch();
-    let left_sequence = left.sequence.load(Ordering::Acquire);
-    let right_sequence = right.sequence.load(Ordering::Acquire);
-    let settled = left.include_hidden() == left_include_hidden && right.include_hidden() == right_include_hidden;
+impl Inner {
+    /// Compares the files two panes show and answers which rows each should mark.
+    pub(crate) fn compare_directories(
+        &self,
+        left_listing_id: &str,
+        left_include_hidden: bool,
+        right_listing_id: &str,
+        right_include_hidden: bool,
+        mode: CompareDirectoriesMode,
+    ) -> Result<CompareDirectoriesResult, ListingLookupError> {
+        let cache = self.reconciled_cache(&[left_listing_id, right_listing_id]);
+        let left = cache
+            .get(left_listing_id)
+            .ok_or_else(|| ListingLookupError::gone(left_listing_id))?;
+        let right = cache
+            .get(right_listing_id)
+            .ok_or_else(|| ListingLookupError::gone(right_listing_id))?;
+        left.touch();
+        right.touch();
+        let left_sequence = left.sequence.load(Ordering::Acquire);
+        let right_sequence = right.sequence.load(Ordering::Acquire);
+        let settled = left.include_hidden() == left_include_hidden && right.include_hidden() == right_include_hidden;
 
-    let left_rows = left.rows(left_include_hidden);
-    let right_rows = right.rows(right_include_hidden);
-    let left_files = Counterparts::of(&left_rows);
-    let right_files = Counterparts::of(&right_rows);
-    let left_marked = rows_to_mark(&left_rows, &left_files, &right_files, mode);
-    let right_marked = rows_to_mark(&right_rows, &right_files, &left_files, mode);
-    drop(left_rows);
-    drop(right_rows);
-    drop(cache);
+        let left_rows = left.rows(left_include_hidden);
+        let right_rows = right.rows(right_include_hidden);
+        let left_files = Counterparts::of(&left_rows);
+        let right_files = Counterparts::of(&right_rows);
+        let left_marked = rows_to_mark(&left_rows, &left_files, &right_files, mode);
+        let right_marked = rows_to_mark(&right_rows, &right_files, &left_files, mode);
+        drop(left_rows);
+        drop(right_rows);
+        drop(cache);
 
-    Ok(CompareDirectoriesResult {
-        left: left_marked,
-        right: right_marked,
-        left_sequence,
-        right_sequence,
-        settled,
-    })
+        Ok(CompareDirectoriesResult {
+            left: left_marked,
+            right: right_marked,
+            left_sequence,
+            right_sequence,
+            settled,
+        })
+    }
 }
 
 /// The files one pane shows, looked up by name the way the other pane's names

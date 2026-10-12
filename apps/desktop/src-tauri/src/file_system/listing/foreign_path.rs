@@ -23,8 +23,12 @@ use std::path::{Path, PathBuf};
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::OverlayRows;
+use crate::file_system::listing::engine::Inner;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub(crate) use crate::file_system::listing::shims::foreign_path::*;
 
 /// A directory listing, and the path it lists as its volume spells it.
 pub(crate) struct Listed {
@@ -110,110 +114,116 @@ pub(crate) async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -
     stored
 }
 
-/// Re-reads every pane listing on `volume_id` through the backend now serving
-/// it, landing each on its stored spelling.
-///
-/// For a backend swap, the macOS kernel mount handing a share to a direct SMB
-/// connection: the open listings were read by the OLD backend, so their paths
-/// and every entry path carry the kernel's spelling (decomposed), which the new
-/// byte-exact backend misses. Until they're re-read, opening, copying, or
-/// deleting an accented entry in an open pane goes nowhere. A listing whose own
-/// path changed spelling is re-keyed, so the watcher's reports reach it, and its
-/// pane is told (`listing-respelled`); the entries arrive as an ordinary diff.
-///
-/// Fire-and-forget, one task per listing, each holding its directory's refresh
-/// turn so it can't interleave with a watcher's re-read of the same directory.
-pub(crate) fn respell_listings_on_volume(volume_id: &str) {
-    for (listing_id, path, ..) in super::caching::find_listings_on_volume(volume_id) {
-        crate::file_system::listing::host::runtime().spawn(respell_listing(volume_id.to_string(), listing_id, path));
-    }
-}
-
-/// Re-reads a just-cached pane listing when the backend that read it no longer
-/// serves `volume_id`.
-///
-/// [`respell_listings_on_volume`] sees only the listings cached when the swap
-/// lands, and a pane landing on a kernel-mounted share starts the upgrade at the
-/// same moment it starts listing (`network::smb_pane_upgrade`), so the swap
-/// routinely lands mid-read. Checked after the cache insert, this closes that
-/// window: a swap before the insert is seen here, one after it sees the listing.
-/// Not for a routed listing (an archive), whose volume is never the registered one.
-pub(crate) fn respell_if_read_by_a_replaced_backend(
-    volume_id: &str,
-    listing_id: &str,
-    path: &Path,
-    read_by: &std::sync::Arc<dyn Volume>,
-) {
-    let serving = super::host::volumes().get(volume_id);
-    if serving.is_some_and(|serving| !std::sync::Arc::ptr_eq(&serving, read_by)) {
-        log::debug!(
-            "listing {listing_id} was read by a backend replaced mid-read; re-reading {}",
-            path.display()
-        );
-        crate::file_system::listing::host::runtime().spawn(respell_listing(
-            volume_id.to_string(),
-            listing_id.to_string(),
-            path.to_path_buf(),
-        ));
-    }
-}
-
-/// One listing's respell; `pub(super)` so a test can await it directly.
-pub(super) async fn respell_listing(volume_id: String, listing_id: String, path: PathBuf) {
-    let _turn = super::caching::refresh_turn(&volume_id, &path).await;
-    let resolved = super::host::volumes().resolve(&volume_id, &path).await;
-    let is_routed = resolved.is_routed();
-    let Some(volume) = resolved.volume else {
-        return;
-    };
-    let listed = match list_as_stored(volume.as_ref(), &path, None, None).await {
-        Ok(listed) => listed,
-        Err(e) => {
-            // The pane keeps what it has; its next navigation or refresh asks again.
-            log::debug!("respell_listing: couldn't re-read {}: {e}", path.display());
-            return;
+impl Inner {
+    /// Re-reads every pane listing on `volume_id` through the backend now serving
+    /// it, landing each on its stored spelling.
+    ///
+    /// For a backend swap, the macOS kernel mount handing a share to a direct SMB
+    /// connection: the open listings were read by the OLD backend, so their paths
+    /// and every entry path carry the kernel's spelling (decomposed), which the new
+    /// byte-exact backend misses. Until they're re-read, opening, copying, or
+    /// deleting an accented entry in an open pane goes nowhere. A listing whose own
+    /// path changed spelling is re-keyed, so the watcher's reports reach it, and its
+    /// pane is told (`listing-respelled`); the entries arrive as an ordinary diff.
+    ///
+    /// Fire-and-forget, one task per listing, each holding its directory's refresh
+    /// turn so it can't interleave with a watcher's re-read of the same directory.
+    pub(crate) fn respell_listings_on_volume(self: &std::sync::Arc<Self>, volume_id: &str) {
+        for (listing_id, path, ..) in self.find_listings_on_volume(volume_id) {
+            // A strong handle: the respell ends.
+            let engine = std::sync::Arc::clone(self);
+            let volume_id = volume_id.to_string();
+            self.runtime
+                .spawn(async move { engine.respell_listing(volume_id, listing_id, path).await });
         }
-    };
-    let Listed {
-        path: stored,
-        mut entries,
-    } = listed;
-    if !is_routed {
-        super::host::index().enrich(&volume_id, &mut entries);
     }
-    let overlay_rows = super::host::overlays::decorate(&volume, &stored, &mut entries).await;
-    if stored == path {
-        super::caching::publish_replacement(&listing_id, entries, overlay_rows);
-        return;
+
+    /// Re-reads a just-cached pane listing when the backend that read it no longer
+    /// serves `volume_id`.
+    ///
+    /// [`respell_listings_on_volume`] sees only the listings cached when the swap
+    /// lands, and a pane landing on a kernel-mounted share starts the upgrade at the
+    /// same moment it starts listing (`network::smb_pane_upgrade`), so the swap
+    /// routinely lands mid-read. Checked after the cache insert, this closes that
+    /// window: a swap before the insert is seen here, one after it sees the listing.
+    /// Not for a routed listing (an archive), whose volume is never the registered one.
+    pub(crate) fn respell_if_read_by_a_replaced_backend(
+        self: &std::sync::Arc<Self>,
+        volume_id: &str,
+        listing_id: &str,
+        path: &Path,
+        read_by: &std::sync::Arc<dyn Volume>,
+    ) {
+        let serving = self.volumes.get(volume_id);
+        if serving.is_some_and(|serving| !std::sync::Arc::ptr_eq(&serving, read_by)) {
+            log::debug!(
+                "listing {listing_id} was read by a backend replaced mid-read; re-reading {}",
+                path.display()
+            );
+            // A strong handle: the respell ends.
+            let engine = std::sync::Arc::clone(self);
+            let (volume_id, listing_id, path) = (volume_id.to_string(), listing_id.to_string(), path.to_path_buf());
+            self.runtime
+                .spawn(async move { engine.respell_listing(volume_id, listing_id, path).await });
+        }
     }
-    // The diff tells the pane what came and went, but it matches rows by name, so
-    // it can't see every path changing spelling: the entries are written whole on
-    // top, and the pane refetches its rows when it adopts the new spelling.
-    super::caching::publish_replacement(&listing_id, entries.clone(), overlay_rows);
-    super::operations::update_listing_entries(&listing_id, entries, OverlayRows::Recounted(overlay_rows));
-    rekey_listing(&listing_id, &volume_id, &stored);
-}
 
-/// Moves `listing_id` to `stored`, the same directory in its volume's spelling,
-/// and tells its pane. A no-op when the pane closed meanwhile.
-fn rekey_listing(listing_id: &str, volume_id: &str, stored: &Path) {
-    use crate::file_system::listing::cached_listing::{LISTING_CACHE, ListingPath};
-    use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-
-    // Built before taking the cache: it reads the volume registry.
-    let key = ListingPath::on_volume(volume_id, stored);
-    {
-        let mut cache = LISTING_CACHE.write_ignore_poison();
-        let Some(listing) = cache.get_mut(listing_id) else {
+    /// One listing's respell; `pub(super)` so a test can await it directly.
+    pub(crate) async fn respell_listing(&self, volume_id: String, listing_id: String, path: PathBuf) {
+        let _turn = self.refresh_turn(&volume_id, &path).await;
+        let resolved = self.volumes.resolve(&volume_id, &path).await;
+        let is_routed = resolved.is_routed();
+        let Some(volume) = resolved.volume else {
             return;
         };
-        listing.path = key;
+        let listed = match list_as_stored(volume.as_ref(), &path, None, None).await {
+            Ok(listed) => listed,
+            Err(e) => {
+                // The pane keeps what it has; its next navigation or refresh asks again.
+                log::debug!("respell_listing: couldn't re-read {}: {e}", path.display());
+                return;
+            }
+        };
+        let Listed {
+            path: stored,
+            mut entries,
+        } = listed;
+        if !is_routed {
+            self.index.enrich(&volume_id, &mut entries);
+        }
+        let overlay_rows = self.decorate(&volume, &stored, &mut entries).await;
+        if stored == path {
+            self.publish_replacement(&listing_id, entries, overlay_rows);
+            return;
+        }
+        // The diff tells the pane what came and went, but it matches rows by name, so
+        // it can't see every path changing spelling: the entries are written whole on
+        // top, and the pane refetches its rows when it adopts the new spelling.
+        self.publish_replacement(&listing_id, entries.clone(), overlay_rows);
+        self.update_listing_entries(&listing_id, entries, OverlayRows::Recounted(overlay_rows));
+        self.rekey_listing(&listing_id, &volume_id, &stored);
     }
-    log::info!("listing {listing_id} respelled to the volume's own spelling");
-    crate::file_system::listing::host::events().respelled(
-        &crate::file_system::listing::listing_id::ListingId::new(listing_id),
-        stored,
-    );
+
+    /// Moves `listing_id` to `stored`, the same directory in its volume's spelling,
+    /// and tells its pane. A no-op when the pane closed meanwhile.
+    fn rekey_listing(&self, listing_id: &str, volume_id: &str, stored: &Path) {
+        use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+
+        // Built before taking the cache: it reads the volume registry.
+        let key = self.listing_path(volume_id, stored);
+        {
+            let mut cache = self.cache.write_ignore_poison();
+            let Some(listing) = cache.get_mut(listing_id) else {
+                return;
+            };
+            listing.path = key;
+        }
+        log::info!("listing {listing_id} respelled to the volume's own spelling");
+        self.events.respelled(
+            &crate::file_system::listing::listing_id::ListingId::new(listing_id),
+            stored,
+        );
+    }
 }
 
 #[cfg(test)]

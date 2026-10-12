@@ -150,7 +150,7 @@ fn event_targets_watch_root_rejects_children_and_neighbours() {
 // ============================================================================
 
 /// Tests that `handle_directory_change` re-reads a directory via the Volume trait
-/// and updates the LISTING_CACHE when the volume's contents have changed.
+/// and updates the listing cache when the volume's contents have changed.
 ///
 /// This also covers the `notify_full_refresh` / `FullRefresh` code path in caching.rs,
 /// since both use the same mechanism: re-read via Volume, compute diff, update cache.

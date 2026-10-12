@@ -1,7 +1,7 @@
 //! File system watcher with debouncing, incremental processing, and diff computation.
 //!
 //! Watches directories for changes and emits `directory-diff` events to frontend.
-//! Uses the unified LISTING_CACHE from operations.rs (no duplicate cache).
+//! Uses the unified the listing cache from operations.rs (no duplicate cache).
 //! Two processing paths: incremental (stat + classify individual events, patch cache
 //! in-place via cache helpers) and full re-read fallback (> 500 events or unknown
 //! event kinds).
@@ -66,7 +66,7 @@ pub struct DirectoryDeletedEvent {
 }
 
 /// State for a watched directory.
-/// NOTE: No `entries` field - we use the unified LISTING_CACHE instead.
+/// NOTE: No `entries` field - we use the unified the listing cache instead.
 pub(crate) struct WatchedDirectory {
     #[allow(dead_code, reason = "Debouncer must be held to keep watching")]
     debouncer: Debouncer<RecommendedWatcher, NoCache>,
@@ -122,7 +122,7 @@ pub fn app_handle_present() -> bool {
 /// * `listing_id` - The listing ID from list_directory_start
 /// * `path` - The directory path to watch
 ///
-/// Note: Initial entries are read from LISTING_CACHE when needed.
+/// Note: Initial entries are read from the listing cache when needed.
 pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
     log::debug!("start_watching: listing_id={}, path={}", listing_id, path.display());
     let listing_id_owned = listing_id.to_string();
@@ -167,7 +167,7 @@ pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
         .watch(path, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch path: {}", e))?;
 
-    // Store in manager (no entries - we use LISTING_CACHE)
+    // Store in manager (no entries - we use the listing cache)
     let coverage = coverage_for_watched_path(path);
     let mut manager = WATCHER_MANAGER.write().map_err(|_| "Failed to acquire watcher lock")?;
 
@@ -241,12 +241,12 @@ pub fn start_watching_detached(listing_id: &str, path: &Path) {
 /// Arms the watch, then hands it back if the listing ended while we were arming.
 ///
 /// The reconcile half is not optional. `list_directory_end` removes the listing from
-/// `LISTING_CACHE` and then removes a watch that a detached arm may not have inserted
+/// the listing cache and then removes a watch that a detached arm may not have inserted
 /// yet, so the arm can land on a listing nobody will ever close again. Left alone that
 /// strands an FSEvents stream, its CFRunLoop thread, and a manager entry for the life
 /// of the process, each still costing `fseventsd` fan-out.
 ///
-/// `LISTING_CACHE` membership is the liveness signal because `list_directory_end` is
+/// the listing cache membership is the liveness signal because `list_directory_end` is
 /// what clears it, and reading it is a plain lookup that doesn't bump `last_accessed_ms`
 /// (this is background work, not user activity — see `listing/CLAUDE.md`).
 pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
@@ -500,8 +500,8 @@ pub async fn handle_directory_change(listing_id: &str) {
 
     // Look up this listing's volume id so we can re-read through the Volume trait.
     let volume_id = {
-        use crate::file_system::listing::cached_listing::LISTING_CACHE;
-        let cache = match LISTING_CACHE.read() {
+        use crate::file_system::listing::cached_listing::listing_cache;
+        let cache = match listing_cache().read() {
             Ok(c) => c,
             Err(_) => return,
         };
@@ -511,7 +511,7 @@ pub async fn handle_directory_change(listing_id: &str) {
         }
     };
 
-    // Get old entries and path from the unified LISTING_CACHE
+    // Get old entries and path from the unified the listing cache
     let Some((path, _)) = get_listing_entries(listing_id) else {
         return; // Listing no longer exists
     };
@@ -616,7 +616,7 @@ pub async fn handle_directory_change(listing_id: &str) {
 /// debouncer's window (plus FSEvents coalescing on macOS) adds 1–10 s of
 /// latency per FS mutation under E2E. This helper sidesteps the debouncer:
 /// it grabs every active listing_id, then `handle_directory_change` re-reads
-/// each one via the Volume trait, computes the diff, updates LISTING_CACHE,
+/// each one via the Volume trait, computes the diff, updates the listing cache,
 /// and emits a `directory-diff` event.
 ///
 /// Feature-gated to `playwright-e2e` so production builds can't accidentally

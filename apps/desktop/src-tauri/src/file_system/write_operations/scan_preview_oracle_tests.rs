@@ -119,7 +119,7 @@ impl Volume for CountingWatchedVolume {
 }
 
 /// Unique-per-test id so tests can run in parallel without colliding in
-/// `LISTING_CACHE` / `VolumeManager`.
+/// the listing cache / `VolumeManager`.
 fn unique(suffix: &str) -> String {
     static N: AtomicU64 = AtomicU64::new(0);
     format!(
@@ -176,9 +176,9 @@ fn make_symlinked_dir_entry(name: &str, parent: &str) -> FileEntry {
     }
 }
 
-/// Inserts a CachedListing directly into LISTING_CACHE. Returns the listing_id.
+/// Inserts a CachedListing directly into the installed engine's cache. Returns the listing_id.
 /// A cached pane listing owned by the caller: the guard removes it from the
-/// process-global `LISTING_CACHE` on drop, unwind included.
+/// process-global the listing cache on drop, unwind included.
 #[must_use = "bind the guard; dropping it immediately removes the listing"]
 fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry>) -> TestListingGuard {
     TestListing::new()
@@ -277,7 +277,7 @@ async fn scan_preview_falls_through_when_watcher_dead() {
 }
 
 /// Test 3: when a subfolder of the scanned dir is open in another pane (a
-/// second watcher-backed listing in `LISTING_CACHE`), the walker reuses that
+/// second watcher-backed listing in the listing cache), the walker reuses that
 /// subfolder's listing and never lists it via the volume.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {

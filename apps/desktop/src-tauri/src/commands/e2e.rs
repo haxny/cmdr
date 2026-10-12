@@ -198,7 +198,7 @@ fn stage_rollup(folder: &str) {
 ///
 /// This command sidesteps the debouncer: it iterates every active listing and
 /// calls `handle_directory_change` (re-reads via the Volume trait, computes
-/// the diff, updates LISTING_CACHE, emits `directory-diff`). After it
+/// the diff, updates the listing cache, emits `directory-diff`). After it
 /// returns, the frontend has the full delta.
 ///
 /// Feature-gated to `playwright-e2e` so production builds can't accidentally

@@ -281,8 +281,8 @@ pub fn persist_restricted_window_setting(
 /// navigation. We refresh every cached listing under any subscribed repo's
 /// `.git/` so the change is visible immediately.
 /// `async` keeps the fan-out off the IPC main thread, where a sync Tauri command
-/// runs. The refreshes it starts spawn onto the listing engine's injected runtime
-/// (`file_system::listing::host::runtime`), which resolves from any thread; a bare
+/// runs. The refreshes it starts spawn onto the runtime the listing engine was
+/// built with (`ListingsBuilder::runtime`), which resolves from any thread; a bare
 /// `tokio::spawn` from a sync command once panicked with "there is no reactor
 /// running" (crash report 2026-05-05).
 #[tauri::command]

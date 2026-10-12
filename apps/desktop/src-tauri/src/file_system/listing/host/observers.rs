@@ -13,13 +13,14 @@
 //! observer here holds for a pane the MCP server drove, for a window that never
 //! rendered a chip, and for whatever asks next.
 //!
-//! The host hands its observers over at install, in order
-//! ([`ListingSeams::observer`](super::ListingSeams::observer)).
+//! The host hands its observers to the engine's builder, in order
+//! (`ListingsBuilder::observer`).
 
 use std::path::Path;
 
 use cmdr_fs::volume::Volume;
 
+use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::listing_id::ListingId;
 
 /// A listing that just entered the cache, as an observer hears it. The facts an
@@ -28,21 +29,24 @@ pub struct OpenedListing<'a> {
     /// The listing's id; [`ListingObserver::listing_closed`] names it again.
     pub id: &'a ListingId,
     /// The volume the pane asked for, which keys the listing.
-    #[expect(
-        dead_code,
-        reason = "issue #301: `IndexSizeListings` reads these instead of the cache once each test owns its engine (M3a)"
-    )]
     pub volume_id: &'a str,
     /// The volume that served the read (for a routed path, the routed one).
     pub volume: &'a dyn Volume,
     /// The directory as the read listed it.
     pub path: &'a Path,
     /// The directory in the volume's listing spelling, the one the cache keys on.
-    #[expect(
-        dead_code,
-        reason = "issue #301: `IndexSizeListings` reads these instead of the cache once each test owns its engine (M3a)"
-    )]
     pub stored_path: &'a Path,
+    /// The engine that opened it, for [`Self::still_open`].
+    pub(crate) engine: &'a Inner,
+}
+
+impl OpenedListing<'_> {
+    /// Whether the listing is still in the engine that opened it. A close can
+    /// race the open and reach every observer first, so an observer that keeps a
+    /// record per open listing asks before keeping one.
+    pub fn still_open(&self) -> bool {
+        self.engine.contains(self.id.as_str())
+    }
 }
 
 /// A subsystem that cares which directories a pane has open.
@@ -64,20 +68,22 @@ pub trait ListingObserver: Send + Sync {
     fn listing_closed(&self, id: &ListingId);
 }
 
-/// Tells every observer, in order, that a listing opened.
-pub(crate) fn listing_opened(opened: &OpenedListing<'_>) {
-    for observer in super::observers() {
-        observer.listing_opened(opened);
+impl Inner {
+    /// Tells every observer, in order, that a listing opened.
+    pub(crate) fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        for observer in self.observers() {
+            observer.listing_opened(opened);
+        }
     }
-}
 
-/// Tells every observer, in order, that `id` left the cache.
-///
-/// ❗ Call it AFTER the cache removal, never before: an observer's own detached
-/// arm reconciles against cache membership, so releasing while the entry is
-/// still there lets a racing arm re-take what the close just gave back.
-pub(crate) fn listing_closed(id: &ListingId) {
-    for observer in super::observers() {
-        observer.listing_closed(id);
+    /// Tells every observer, in order, that `id` left the cache.
+    ///
+    /// ❗ Call it AFTER the cache removal, never before: an observer's own detached
+    /// arm reconciles against cache membership, so releasing while the entry is
+    /// still there lets a racing arm re-take what the close just gave back.
+    pub(crate) fn listing_closed(&self, id: &ListingId) {
+        for observer in self.observers() {
+            observer.listing_closed(id);
+        }
     }
 }

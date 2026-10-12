@@ -5,7 +5,7 @@
 //! counter-wrapping `InMemoryVolume` (adapted from
 //! `write_operations::delete_volume_reuse_tests`) whose `listing_watch_coverage` is
 //! flipped per test and whose reads can be stalled on a gate, seeded into
-//! `LISTING_CACHE` and `VolumeManager`. Then we call the command and assert whether
+//! the listing cache and `VolumeManager`. Then we call the command and assert whether
 //! `list_directory` ran, and whether it finished.
 use super::*;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};

@@ -4,8 +4,8 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- Read: **streaming.rs**, **stall.rs**. App seams: **host/**. Cache and mutate: **cached_listing.rs**,
-  **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**, **path_index.rs**, **name_filter.rs**,
+- **engine.rs** (`Listings`). Read: **streaming.rs**, **stall.rs**. App seams: **host/**. Cache and mutate:
+  **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**, **path_index.rs**, **name_filter.rs**,
   **quick_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
   `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
 
@@ -22,29 +22,29 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 - **Quick-filter changes share that revision** and drop superseded pending batches under the cache write lock,
   never after unlocking. Guard selection remapping before changing the filter. `DETAILS.md` § "The quick filter and in-flight diffs".
 - **Refreshes of ONE directory stay serialized** (`notify_full_refresh`), or an older read lands last.
-- **`host::overlays::decorate` folds in rows no volume holds**, between enrich and the sort, in all FIVE read paths
+- **`host::overlays::decorate` folds in rows no volume holds**, between enrich and sort, in all FIVE read paths
   (`DETAILS.md` § "The overlay step"); miss one and a refresh strips them.
 - **A close notifies the observers (`host/observers.rs`) AFTER the cache removal**, ❌ never before: an observer's detached arm
   reconciles against cache membership.
 - **The orphan reaper keys on `last_accessed_ms`**, bumped by reads, cache patches, and the panes'
   `keep_listings_alive` heartbeat (idle panes make no reads). ❌ Never from `refresh_listing_index_sizes`.
-- **`read_directory_with_progress` holds a `host::leases()` foreground hold** for its whole body: ❌ never bind it to `_`.
+- **`read_directory_with_progress` holds a foreground hold** for its whole body: ❌ never bind it to `_`.
 - ❌ **A listing never aborts a read**, on cancel or when a retry wins: detaching lets it unwind; aborting wedges an
   MTP phone. A read quiet for `stall_after` emits `listing-stalled` and keeps waiting, ❌ never a deadline that ends
   it. `DETAILS.md` § "Stalled listings".
-- **Every spawn goes through `host::runtime()`** (FullRefresh via `caching::spawn_full_refresh`): on a watcher's OS
-  thread a bare `tokio::spawn` panics.
+- **Every spawn goes through the engine's runtime**: on a watcher's OS thread a bare `tokio::spawn` panics.
 - **Sorting has ONE comparator**, `entry_comparator` over `SortableEntry` (`FileEntry` plus a search-results row). ❌
   Never add a second. A sort change invalidates the frontend's cached range, so bump `cacheGeneration`.
 - **Names rank by Unicode collation (`collation.rs`), ❌ never code points or `to_lowercase`** (macOS holds NFC and NFD
   side by side). Both readings, live `compare` and prebuilt `key`, end with a raw-bytes tiebreak, else two spellings of
   one name tie and the watcher sees a phantom `Move`. ❌ Never persist a `NameKey`.
-- **A listing's path is a `ListingPath`, built only by `ListingPath::on_volume`** (the volume's one spelling,
+- **A listing's path is a `ListingPath`, built only by `ListingPath::on_volume`** (the volume's spelling,
   `Volume::listing_path`). ❌ Never compare a raw path to it: MTP reports `mtp://…` where the pane holds `/DCIM`.
 - **Only a pane open or a Finder drop/paste resolves a foreign spelling** (`list_as_stored`, `stored_spellings`): ❌
   never a walker, scan, or refresh, where a miss means gone and a resolve returns a look-alike twin. `DETAILS.md` § "A
   pane path the volume stores another way".
-- **New listing state hangs off a struct, not a `static`**; fixtures use `caching_test_support::TestListing`.
+- **New listing state is an `Inner` field, ❌ never a `static`**, reached through `self`, ❌ never
+  `listing::installed()`. Fixtures: `caching_test_support::TestListing`.
 - **Finder tags are deferred**: `list_directory_core` never reads them, and every modify path calls
   `carry_forward_tags` BEFORE storing, else an mtime touch blanks a file's dots. ❌ Never route enrich through it.
 

@@ -18,9 +18,9 @@
 //! authoritative for a walker: `CachedListing::has_overlay_rows` says so and the
 //! fresh-listing oracle declines it (`listing/caching.rs`).
 //!
-//! The host hands its contributors over at install, in order
-//! ([`ListingSeams::overlay`](super::ListingSeams::overlay)), and the pipeline
-//! folds over whatever the slot holds.
+//! The host hands its contributors to the engine's builder, in order
+//! (`ListingsBuilder::overlay`), and the pipeline folds over whatever the engine
+//! holds.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -28,6 +28,12 @@ use std::sync::Arc;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
+use tokio::runtime::Handle;
+
+use crate::file_system::listing::engine::Inner;
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub(crate) use crate::file_system::listing::shims::overlays::*;
 
 /// A source of extra rows for one kind of directory.
 pub trait ListingOverlay: Send + Sync + 'static {
@@ -48,35 +54,38 @@ pub trait ListingOverlay: Send + Sync + 'static {
     fn extra_entries(&self, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
 }
 
-/// Folds every applicable contributor's rows into `entries`, and reports how
-/// many rows they added.
-///
-/// **A contributed row SHADOWS a real one of the same name.** A repo created by
-/// an older git carries a real (deprecated) `.git/branches/` directory, and the
-/// portal's `branches` row is the one the user came for; showing two rows called
-/// `branches` would be worse than either.
-///
-/// Sorting happens after this returns, so a contributor hands rows over in any
-/// order.
-pub(crate) async fn decorate(volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
-    let applicable: Vec<Arc<dyn ListingOverlay>> = super::overlays()
-        .into_iter()
-        .filter(|overlay| overlay.applies_to(volume.as_ref(), path))
-        .collect();
-    if applicable.is_empty() {
-        return 0;
-    }
+impl Inner {
+    /// Folds every applicable contributor's rows into `entries`, and reports how
+    /// many rows they added.
+    ///
+    /// **A contributed row SHADOWS a real one of the same name.** A repo created by
+    /// an older git carries a real (deprecated) `.git/branches/` directory, and the
+    /// portal's `branches` row is the one the user came for; showing two rows called
+    /// `branches` would be worse than either.
+    ///
+    /// Sorting happens after this returns, so a contributor hands rows over in any
+    /// order.
+    pub(crate) async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
+        let applicable: Vec<Arc<dyn ListingOverlay>> = self
+            .overlays()
+            .into_iter()
+            .filter(|overlay| overlay.applies_to(volume.as_ref(), path))
+            .collect();
+        if applicable.is_empty() {
+            return 0;
+        }
 
-    let contributed = gather(applicable, Arc::clone(volume), path.to_path_buf()).await;
-    if contributed.is_empty() {
-        return 0;
-    }
+        let contributed = gather(&self.runtime, applicable, Arc::clone(volume), path.to_path_buf()).await;
+        if contributed.is_empty() {
+            return 0;
+        }
 
-    let names: HashSet<&str> = contributed.iter().map(|entry| entry.name.as_str()).collect();
-    entries.retain(|entry| !names.contains(entry.name.as_str()));
-    let added = contributed.len();
-    entries.extend(contributed);
-    added
+        let names: HashSet<&str> = contributed.iter().map(|entry| entry.name.as_str()).collect();
+        entries.retain(|entry| !names.contains(entry.name.as_str()));
+        let added = contributed.len();
+        entries.extend(contributed);
+        added
+    }
 }
 
 /// Runs the applicable contributors on the host runtime's blocking pool: one of
@@ -87,8 +96,13 @@ pub(crate) async fn decorate(volume: &Arc<dyn Volume>, path: &Path, entries: &mu
 /// entries are already in hand by the time this runs, and a pane showing a
 /// repo's real `.git/` contents beats a pane showing a listing error because
 /// `gix` tripped over a damaged object.
-async fn gather(overlays: Vec<Arc<dyn ListingOverlay>>, volume: Arc<dyn Volume>, path: PathBuf) -> Vec<FileEntry> {
-    super::runtime()
+async fn gather(
+    runtime: &Handle,
+    overlays: Vec<Arc<dyn ListingOverlay>>,
+    volume: Arc<dyn Volume>,
+    path: PathBuf,
+) -> Vec<FileEntry> {
+    runtime
         .spawn_blocking(move || {
             overlays
                 .iter()

@@ -25,7 +25,7 @@ use cmdr_fs::entry::FileEntry;
 ///
 /// A test that can pick a UNIQUE volume id should do that instead; this is for
 /// the few that have to exercise a hardcoded one. Mirrors
-/// `listing::caching_test_support::TestListingGuard` (over `LISTING_CACHE`) and
+/// `listing::caching_test_support::TestListingGuard` (over the listing cache) and
 /// `write_operations::test_support::TestOperationGuard` (over
 /// `WRITE_OPERATION_STATE`).
 ///

@@ -1,6 +1,6 @@
 //! Unit tests for `compute_brief_column_text_widths`.
 //!
-//! These tests insert a listing into `LISTING_CACHE` and seed `font_metrics`
+//! These tests insert a listing into the listing cache and seed `font_metrics`
 //! with deterministic per-codepoint widths so we can assert exact pixel sums.
 //! Each font ID gets a fixed width-per-char so the widest filename's width
 //! collapses to `width_per_char * name.chars().count()`.

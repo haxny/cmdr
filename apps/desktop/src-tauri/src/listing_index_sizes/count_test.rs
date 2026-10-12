@@ -7,7 +7,7 @@ use cmdr_fs::volume::InMemoryVolume;
 
 use super::ListingIndexSizesChanged;
 use super::count::{CountFolderSizesError, CountPlan, cancel, count_with, plan};
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
 use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::ignore_poison::RwLockIgnorePoison;
@@ -270,7 +270,7 @@ async fn a_stopped_lower_bound_on_an_indexed_volume_stays_retryable() {
     let ran = count_with(listing.id(), first, volume(), &sink).await;
     assert_eq!(ran.counted, 1);
     // Leave a lower bound on the row, as a stopped walk does.
-    if let Some(l) = LISTING_CACHE.write_ignore_poison().get_mut(listing.id()) {
+    if let Some(l) = listing_cache().write_ignore_poison().get_mut(listing.id()) {
         l.update_index_sizes_by_path(&["/data/photos".to_string()], |_, e| {
             e.recursive_size_complete = Some(false);
         });

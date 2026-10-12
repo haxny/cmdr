@@ -68,7 +68,7 @@ async fn execute_tag_macos<R: Runtime>(app: &AppHandle<R>, params: &Value) -> To
 
     // Flush the pane's MCP state so the `[tags:…]` marker shows in cmdr://state
     // promptly instead of ~2 s later (the debounced sync). `refresh_listing_tags`
-    // patched the backend `LISTING_CACHE` synchronously, and the FE's
+    // patched the backend the listing cache synchronously, and the FE's
     // `syncPaneStateToMcp` re-reads that cache via `getFileAt` — so the forced push
     // carries the new tags without racing the 50 ms-coalesced `directory-diff`.
     // Best-effort: the tags already landed on disk and in the cache, so a flush
@@ -211,10 +211,7 @@ fn refresh_listing_tags(
         return;
     }
     let volume_id = state.volume_id.as_deref().unwrap_or("root");
-    let key = crate::file_system::listing::cached_listing::ListingPath::on_volume(
-        volume_id,
-        std::path::Path::new(&state.path),
-    );
+    let key = crate::file_system::listing::installed().listing_path(volume_id, std::path::Path::new(&state.path));
     let listing = crate::file_system::listing::caching::snapshot_listings()
         .into_iter()
         .find(|l| l.volume_id == volume_id && l.path.as_path() == key.as_path());

@@ -12,15 +12,17 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::stream::{FuturesUnordered, StreamExt};
+use tokio::runtime::Handle;
 use tokio::sync::Notify;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::foreign_path::{Listed, list_as_stored};
+use crate::file_system::listing::host::MountTable;
 use crate::file_system::listing::stalled_on::StalledOn;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::friendly_error::{ErrorCategory, listing_error_from_volume_error};
@@ -74,7 +76,7 @@ struct ReadState {
 
 /// Every volume's listing reads, and which of them are hung.
 ///
-/// One per process in production (`StallWatch::production`); a test makes its own.
+/// One per engine (`Inner::stall_watch`); a test makes its own.
 pub(crate) struct HungReads {
     volumes: Mutex<HashMap<String, HashMap<u64, ReadState>>>,
     /// Pinged whenever a read leaves or stops being hung, which can open the gate.
@@ -181,22 +183,11 @@ impl Drop for ReadSlot {
     }
 }
 
-static PRODUCTION_READS: LazyLock<Arc<HungReads>> = LazyLock::new(|| Arc::new(HungReads::new()));
-
 /// What a listing needs to watch its reads: the policy and the shared registry.
 #[derive(Clone)]
 pub(crate) struct StallWatch {
     pub policy: StallPolicy,
     pub reads: Arc<HungReads>,
-}
-
-impl StallWatch {
-    pub(crate) fn production() -> Self {
-        Self {
-            policy: StallPolicy::PRODUCTION,
-            reads: Arc::clone(&PRODUCTION_READS),
-        }
-    }
 }
 
 // ============================================================================
@@ -273,6 +264,10 @@ type AttemptFuture = Pin<Box<dyn Future<Output = (u64, Result<Listed, VolumeErro
 /// streaming listing calls in here, so naming its sink would weld the two modules
 /// into a cycle (`module-cycles`).
 pub(crate) struct ListingRead<'a> {
+    /// Where each read's task runs.
+    pub runtime: &'a Handle,
+    /// What a stalled folder is mounted on.
+    pub mounts: &'a Arc<dyn MountTable>,
     /// The read went `stall_after` without a new entry, with what the folder lives on.
     pub on_stalled: &'a (dyn Fn(StalledOn) + Sync),
     /// A read's running entry count, for the pane's "Loaded N files…" line.
@@ -394,7 +389,9 @@ pub(crate) async fn read_until_answered(read: ListingRead<'_>, watch: &StallWatc
                     let on = match stalled_on {
                         Some(on) => on,
                         None => {
-                            let on = super::stalled_on::stalled_on(read.volume, read.path).await;
+                            let on =
+                                super::stalled_on::stalled_on(read.runtime, Arc::clone(read.mounts), read.volume, read.path)
+                                    .await;
                             stalled_on = Some(on);
                             on
                         }
@@ -433,7 +430,7 @@ fn spawn_read(read: &ListingRead<'_>, slot: ReadSlot, beat: Arc<Beat>, cancel: C
     let path: PathBuf = read.path.to_path_buf();
     let report_progress = Arc::clone(&read.on_progress);
     let listing_id = read.listing_id.to_string();
-    let task = crate::file_system::listing::host::runtime().spawn(async move {
+    let task = read.runtime.spawn(async move {
         // Stall-probe: marker logged as the FIRST executable line inside the spawned task.
         // If `read_directory_with_progress: entry` fires but this `task started` line doesn't,
         // the tokio runtime didn't schedule this task (worker starvation). If both fire but

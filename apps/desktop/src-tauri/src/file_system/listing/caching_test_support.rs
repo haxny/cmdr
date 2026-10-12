@@ -1,4 +1,4 @@
-//! Test isolation for the process-global `LISTING_CACHE`.
+//! Test isolation for the process-global the listing cache.
 
 use cmdr_fs::testing::unique_test_id;
 use std::future::Future;
@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use super::cached_listing::{CachedListing, LISTING_CACHE, epoch_millis_now};
+use super::cached_listing::{CachedListing, epoch_millis_now, listing_cache};
 use super::operations::list_directory_end;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
@@ -16,10 +16,10 @@ use cmdr_fs::volume::{
     VolumeReadStream, WatchCoverage,
 };
 
-/// A `LISTING_CACHE` entry owned by ONE test, torn down on drop.
+/// A the listing cache entry owned by ONE test, torn down on drop.
 ///
 /// **Why this exists.** `cargo test` runs a crate's tests as threads in ONE
-/// process, so `LISTING_CACHE` is shared by every listing test at once. Three
+/// process, so the listing cache is shared by every listing test at once. Three
 /// things go wrong without a guard: two tests that pick the same literal listing
 /// id clobber each other's entries; a test whose assertion fails before its
 /// manual `cache.remove(...)` leaks the entry into every later test's view of the
@@ -55,7 +55,7 @@ impl TestListingGuard {
     /// Runs `f` against this test's `CachedListing` under the cache read lock.
     /// Panics if the entry is gone, which is the assertion a test wants anyway.
     pub(crate) fn with_listing<R>(&self, f: impl FnOnce(&CachedListing) -> R) -> R {
-        let cache = LISTING_CACHE.read_ignore_poison();
+        let cache = listing_cache().read_ignore_poison();
         let listing = cache
             .get(&self.listing_id)
             .unwrap_or_else(|| panic!("listing `{}` is no longer cached", self.listing_id));
@@ -74,7 +74,7 @@ impl TestListingGuard {
 
     /// Whether the entry is still in the cache. For tests that assert on teardown.
     pub(crate) fn is_cached(&self) -> bool {
-        LISTING_CACHE.read_ignore_poison().contains_key(&self.listing_id)
+        listing_cache().read_ignore_poison().contains_key(&self.listing_id)
     }
 }
 
@@ -84,7 +84,7 @@ impl Drop for TestListingGuard {
     }
 }
 
-/// Builder for a test-owned `LISTING_CACHE` entry. Defaults to an empty listing
+/// Builder for a test-owned the listing cache entry. Defaults to an empty listing
 /// on `root` at `/test`, sorted Name / Ascending / LikeFiles, hidden files shown.
 ///
 /// `last_accessed_ms` defaults to NOW, matching a listing that a live pane just
@@ -173,6 +173,7 @@ impl TestListing {
     pub(crate) fn insert(self, tag: &str) -> TestListingGuard {
         let listing_id = unique_test_id(tag);
         let listing = CachedListing::new(
+            super::installed(),
             self.volume_id,
             self.path,
             self.entries,
@@ -184,7 +185,9 @@ impl TestListing {
         .with_overlay_rows(self.overlay_rows);
         listing.sequence.store(self.sequence, Ordering::Relaxed);
         listing.last_accessed_ms.store(self.last_accessed_ms, Ordering::Relaxed);
-        LISTING_CACHE.write_ignore_poison().insert(listing_id.clone(), listing);
+        listing_cache()
+            .write_ignore_poison()
+            .insert(listing_id.clone(), listing);
         TestListingGuard { listing_id }
     }
 }

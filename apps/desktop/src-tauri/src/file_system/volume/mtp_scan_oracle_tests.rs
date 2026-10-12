@@ -4,7 +4,7 @@
 //! Two scenarios pinned:
 //!
 //! 1. **Oracle hit**: when the parent listing is watcher-backed (the device is connected and
-//!    `LISTING_CACHE` holds the entries), the MTP batch scan reads child sizes from the cache and
+//!    the listing cache holds the entries), the MTP batch scan reads child sizes from the cache and
 //!    doesn't hit the device. We pin this with a test-only call counter on
 //!    `MtpVolume::list_directory` (`super::backends::mtp::testing`): zero calls after the scan.
 //! 2. **Cold cache, parent-grouped**: when there's no cached listing, the existing parent-grouping
@@ -106,7 +106,7 @@ async fn mtp_scan_uses_oracle_on_hit_skips_list_directory() {
     // and the `listing_watch_coverage` gate reports coverage (device connected).
     get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
 
-    // Pre-populate `LISTING_CACHE` for the parent with sizes that don't match
+    // Pre-populate the listing cache for the parent with sizes that don't match
     // any real file on the virtual device. If the oracle short-circuit fails
     // (override calls `list_directory` and uses real sizes), `total_bytes`
     // would be the device's real numbers, not these cached ones.

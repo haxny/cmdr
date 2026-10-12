@@ -417,7 +417,7 @@ async fn scan_volume_recursive(
             );
         };
 
-        // Oracle-first: if this directory is watcher-backed in `LISTING_CACHE`,
+        // Oracle-first: if this directory is watcher-backed in the listing cache,
         // reuse the cached entries and skip the volume round-trip entirely.
         // Falls through to `volume.list_directory` on miss, preserving the
         // per-entry progress callback for slow MTP listings.

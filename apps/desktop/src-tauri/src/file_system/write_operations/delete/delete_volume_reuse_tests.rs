@@ -166,7 +166,7 @@ fn make_file_entry(name: &str, parent: &str, size: u64, is_dir: bool) -> FileEnt
 }
 
 /// A cached pane listing owned by the caller: the guard removes it from the
-/// process-global `LISTING_CACHE` on drop, unwind included.
+/// process-global the listing cache on drop, unwind included.
 #[must_use = "bind the guard; dropping it immediately removes the listing"]
 fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry>) -> TestListingGuard {
     TestListing::new()
@@ -315,7 +315,7 @@ async fn delete_without_preview_id_still_walks() {
 }
 
 /// Test 3: no `preview_id`, but the parent listing is watcher-fresh in
-/// `LISTING_CACHE`. The walker should consult the oracle for the top-level
+/// the listing cache. The walker should consult the oracle for the top-level
 /// `is_directory` decision and skip the trait probe entirely. Asserts the
 /// `is_directory` call count stays at zero.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

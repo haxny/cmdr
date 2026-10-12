@@ -1,4 +1,4 @@
-//! The cached listing record and the process-global map it lives in.
+//! The cached listing record, which lives in its engine's cache (`engine.rs`).
 //!
 //! One `CachedListing` is one directory as a PANE sees it: what the volume
 //! read, plus whatever a listing overlay contributed, plus the two lazily
@@ -9,9 +9,12 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{LazyLock, RwLock};
+use std::sync::{Arc, RwLockReadGuard};
 use std::time::Instant;
 
+use crate::file_system::listing::diff_emitter::DiffQueue;
+use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::host::{ListingVolumes, ScratchVisibility};
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::path_index::PathIndexCache;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
@@ -19,43 +22,42 @@ use crate::file_system::listing::visible_rows::{ScratchProjection, VisibleRows, 
 use cmdr_fs::entry::{FileEntry, TagRef};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-/// Cache for directory listings (on-demand virtual scrolling).
-/// Key: listing_id, Value: cached listing with all entries.
-pub(crate) static LISTING_CACHE: LazyLock<RwLock<HashMap<String, CachedListing>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub(crate) use crate::file_system::listing::shims::cached_listing::*;
 
-/// Normal directories keep the shared-lock path and do not scan or clone entries.
-/// A drifted projection is rechecked and published under the mutation lock.
-pub(crate) fn reconciled_cache(ids: &[&str]) -> std::sync::RwLockReadGuard<'static, HashMap<String, CachedListing>> {
-    loop {
-        let cache = LISTING_CACHE.read_ignore_poison();
-        if !ids
-            .iter()
-            .any(|id| cache.get(*id).is_some_and(CachedListing::scratch_has_drift))
-        {
-            return cache;
-        }
-        drop(cache);
-        let mut cache = LISTING_CACHE.write_ignore_poison();
-        for id in ids {
-            if let Some(listing) = cache.get_mut(*id) {
-                listing.reconcile_scratch(id);
+impl Inner {
+    /// The cache under its read lock, with every listing in `ids` reconciled to
+    /// the scratch settings first.
+    ///
+    /// Normal directories keep the shared-lock path and do not scan or clone entries.
+    /// A drifted projection is rechecked and published under the mutation lock.
+    pub(crate) fn reconciled_cache(&self, ids: &[&str]) -> RwLockReadGuard<'_, HashMap<String, CachedListing>> {
+        // Read once, before the lock: the settings are engine state, and every
+        // listing in this pass reconciles to the same answer.
+        let visibility = self.scratch_visibility();
+        loop {
+            let cache = self.cache.read_ignore_poison();
+            if !ids.iter().any(|id| {
+                cache
+                    .get(*id)
+                    .is_some_and(|listing| listing.scratch_has_drift(visibility))
+            }) {
+                return cache;
+            }
+            drop(cache);
+            let mut cache = self.cache.write_ignore_poison();
+            for id in ids {
+                if let Some(listing) = cache.get_mut(*id) {
+                    listing.reconcile_scratch(id, visibility, &self.diffs);
+                }
             }
         }
     }
-}
 
-/// Process-start reference point for the `last_accessed_ms` field on `CachedListing`.
-///
-/// `Instant` isn't an integer, so we can't store it in an `AtomicU64` for lock-free
-/// touch-on-read. Instead we store milliseconds elapsed since this epoch. Monotonic,
-/// never affected by wall-clock jumps, and good for ~584 million years before the
-/// `u64` overflows.
-static LISTING_EPOCH: LazyLock<Instant> = LazyLock::new(Instant::now);
-
-/// Milliseconds elapsed since `LISTING_EPOCH`. Used to stamp `last_accessed_ms`.
-pub(crate) fn epoch_millis_now() -> u64 {
-    LISTING_EPOCH.elapsed().as_millis() as u64
+    /// Whether the cache holds `listing_id`.
+    pub(crate) fn contains(&self, listing_id: &str) -> bool {
+        self.cache.read_ignore_poison().contains_key(listing_id)
+    }
 }
 
 /// The directory a cached listing shows, spelled the ONE way its volume keys it.
@@ -73,11 +75,11 @@ pub(crate) struct ListingPath(PathBuf);
 
 impl ListingPath {
     /// `path` in the spelling `volume_id`'s volume keys listings under; verbatim
-    /// when no volume is registered under that id.
+    /// when `volumes` serves nothing under that id.
     ///
-    /// ❗ Call it before taking `LISTING_CACHE`: it asks the host's volume seam.
-    pub(crate) fn on_volume(volume_id: &str, path: &Path) -> Self {
-        let volume = super::host::volumes().get(volume_id);
+    /// ❗ Call it before taking the cache: it asks the host's volume seam.
+    pub(crate) fn on_volume(volumes: &dyn ListingVolumes, volume_id: &str, path: &Path) -> Self {
+        let volume = volumes.get(volume_id);
         Self(volume.map_or_else(|| path.to_path_buf(), |volume| volume.listing_path(path)))
     }
 
@@ -127,7 +129,7 @@ pub(crate) struct CachedListing {
     /// When this listing was created. Used by `snapshot_listings` for triage,
     /// surfacing orphan listings (e.g., volume dropdown previews) in error reports.
     pub created_at: Instant,
-    /// Milliseconds since `LISTING_EPOCH` at the last access (read accessor, resort, or
+    /// Milliseconds since [`Self::epoch`] at the last access (read accessor, resort, or
     /// watcher/notify cache patch).
     ///
     /// **Decision**: track last-access for the orphan reaper, NOT `created_at`.
@@ -139,8 +141,12 @@ pub(crate) struct CachedListing {
     /// and every watcher/notify diff that patches the cache. So the reaper only ever
     /// sees a stale timestamp on a listing nobody has touched for hours: a genuine leak.
     /// `AtomicU64` (not `Mutex<Instant>`) so the read accessors, which already hold a
-    /// shared `LISTING_CACHE.read()` lock, can stamp it lock-free.
+    /// shared cache read lock, can stamp it lock-free.
     pub last_accessed_ms: AtomicU64,
+    /// The engine's epoch, which `last_accessed_ms` counts from. `Instant` isn't an
+    /// integer, so it can't sit in an `AtomicU64` for lock-free touch-on-read;
+    /// milliseconds since it can. Monotonic, never affected by wall-clock jumps.
+    epoch: Instant,
     /// How many of `entries` a [`ListingOverlay`](crate::file_system::listing::host::ListingOverlay)
     /// contributed: rows the PANE shows that no volume holds.
     ///
@@ -168,9 +174,19 @@ pub(crate) enum OverlayRows {
 }
 
 impl CachedListing {
-    /// A listing freshly filled from a volume read: sequence 0, created and
-    /// accessed now. `include_hidden` is the pane's setting at the time.
+    /// A listing freshly filled from a volume read, for `engine`: sequence 0,
+    /// created and accessed now. `include_hidden` is the pane's setting at the
+    /// time.
+    ///
+    /// ❗ Build it before taking the cache: it asks the volume seam for the
+    /// listing's spelling. It reads its epoch and scratch settings off `engine`
+    /// and keeps no reference to it.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "a listing is born with its engine, its directory, its rows, and the pane's hidden-files and three sort settings"
+    )]
     pub(crate) fn new(
+        engine: &Inner,
         volume_id: String,
         path: PathBuf,
         entries: Vec<FileEntry>,
@@ -179,9 +195,10 @@ impl CachedListing {
         sort_order: SortOrder,
         directory_sort_mode: DirectorySortMode,
     ) -> Self {
-        let scratch_projection = ScratchProjection::for_entries(&entries, &ScratchProjection::default());
+        let scratch_projection =
+            ScratchProjection::for_entries(&entries, &ScratchProjection::default(), engine.scratch_visibility());
         Self {
-            path: ListingPath::on_volume(&volume_id, &path),
+            path: engine.listing_path(&volume_id, &path),
             volume_id,
             entries,
             include_hidden,
@@ -194,7 +211,8 @@ impl CachedListing {
             directory_sort_mode,
             sequence: AtomicU64::new(0),
             created_at: Instant::now(),
-            last_accessed_ms: AtomicU64::new(epoch_millis_now()),
+            last_accessed_ms: AtomicU64::new(engine.epoch_millis_now()),
+            epoch: engine.epoch,
             overlay_rows: 0,
         }
     }
@@ -223,10 +241,11 @@ impl CachedListing {
     }
 
     /// Refreshes `last_accessed_ms` to now. Cheap, lock-free; safe to call under a shared
-    /// `LISTING_CACHE.read()` lock. Every accessor that proves a live pane calls this so
-    /// the orphan reaper never evicts a listing in active use.
+    /// cache read lock. Every accessor that proves a live pane calls this so the
+    /// orphan reaper never evicts a listing in active use.
     pub(crate) fn touch(&self) {
-        self.last_accessed_ms.store(epoch_millis_now(), Ordering::Relaxed);
+        self.last_accessed_ms
+            .store(self.epoch.elapsed().as_millis() as u64, Ordering::Relaxed);
     }
 
     /// Everything on disk, in sort order. For an index a PANE gave you, ask
@@ -355,13 +374,15 @@ impl CachedListing {
         self.rows(self.include_hidden)
     }
 
-    pub(crate) fn scratch_has_drift(&self) -> bool {
-        self.scratch_projection.has_drift()
+    /// Whether a scratch decision this listing committed differs from what
+    /// `visibility` says now.
+    pub(crate) fn scratch_has_drift(&self, visibility: ScratchVisibility) -> bool {
+        self.scratch_projection.has_drift(visibility)
     }
 
     /// Pin a newly admitted entry before deriving its row or publication count.
-    pub(crate) fn admit_entry(&mut self, entry: &FileEntry) {
-        self.scratch_projection.admit(entry);
+    pub(crate) fn admit_entry(&mut self, entry: &FileEntry, visibility: ScratchVisibility) {
+        self.scratch_projection.admit(entry, visibility);
     }
 
     pub(crate) fn forget_entry(&mut self, entry: &FileEntry) {
@@ -383,8 +404,13 @@ impl CachedListing {
 
     /// Commit projection drift BEFORE any consumer interprets old row indices.
     /// Both sides come from captured decisions, never a second ownership sample.
-    pub(crate) fn reconcile_scratch(&mut self, listing_id: &str) {
-        let next = self.scratch_projection.live();
+    pub(crate) fn reconcile_scratch(
+        &mut self,
+        listing_id: &str,
+        visibility: ScratchVisibility,
+        diffs: &Arc<DiffQueue>,
+    ) {
+        let next = self.scratch_projection.live(visibility);
         if next == self.scratch_projection {
             return;
         }
@@ -401,12 +427,16 @@ impl CachedListing {
             super::diff::diff_rows(&old, &new)
         };
         self.scratch_projection = next;
-        self.publish_transition(listing_id, changes);
+        self.publish_transition(diffs, listing_id, changes);
     }
 
     /// Replacement diffs compare projected rows, including newly admitted paths.
-    pub(crate) fn replace_entries(&mut self, entries: Vec<FileEntry>) -> Vec<super::diff::DiffChange> {
-        let next = ScratchProjection::for_entries(&entries, &self.scratch_projection);
+    pub(crate) fn replace_entries(
+        &mut self,
+        entries: Vec<FileEntry>,
+        visibility: ScratchVisibility,
+    ) -> Vec<super::diff::DiffChange> {
+        let next = ScratchProjection::for_entries(&entries, &self.scratch_projection, visibility);
         let changes = {
             let old: Vec<_> = self.pane_rows().iter().collect();
             let new: Vec<_> = entries
@@ -431,17 +461,22 @@ impl CachedListing {
     }
 
     /// Publication is part of the mutation, under the same cache write lock.
-    pub(crate) fn publish_changes(&mut self, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
+    pub(crate) fn publish_changes(
+        &mut self,
+        diffs: &Arc<DiffQueue>,
+        listing_id: &str,
+        changes: Vec<super::diff::DiffChange>,
+    ) {
         if changes.is_empty() {
             return;
         }
-        self.publish_transition(listing_id, changes);
+        self.publish_transition(diffs, listing_id, changes);
     }
 
-    fn publish_transition(&mut self, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
+    fn publish_transition(&mut self, diffs: &Arc<DiffQueue>, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
         let from_sequence = self.sequence.load(Ordering::Relaxed);
         let sequence = self.advance_sequence();
-        super::diff_emitter::enqueue_diff(
+        diffs.enqueue(
             listing_id,
             super::diff::DirectoryDiffBatch {
                 from_sequence,

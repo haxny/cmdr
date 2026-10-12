@@ -6,7 +6,7 @@ use cmdr_fs::volume::ListingProgress;
 use cmdr_index::store::DirStats;
 
 use super::jobs;
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::cached_listing::listing_cache;
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::listing_index_sizes::refresh::RowSizes;
 use crate::listing_index_sizes::{FolderSizes, ListingIndexSizesChanged};
@@ -52,7 +52,7 @@ pub(super) enum Wrote {
 }
 
 pub(super) fn listing_is_open(listing_id: &str) -> bool {
-    LISTING_CACHE.read_ignore_poison().get(listing_id).is_some()
+    listing_cache().read_ignore_poison().get(listing_id).is_some()
 }
 
 /// Writes `stats` onto the folder's cached row, then sends it to the pane. The
@@ -98,7 +98,7 @@ pub(super) fn restore(listing_id: &str, folder: &str, before: RowSizes, before_m
 }
 
 fn write_to_cache(listing_id: &str, folder: &str, write: impl FnOnce(&mut FileEntry)) -> Wrote {
-    let mut cache = LISTING_CACHE.write_ignore_poison();
+    let mut cache = listing_cache().write_ignore_poison();
     let Some(listing) = cache.get_mut(listing_id) else {
         return Wrote::NoListing;
     };

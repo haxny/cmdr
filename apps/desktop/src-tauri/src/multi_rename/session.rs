@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::file_system::listing::cached_listing::{LISTING_CACHE, reconciled_cache};
+use crate::file_system::listing::cached_listing::{listing_cache, reconciled_cache};
 use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use cmdr_fs::entry::FileEntry;
 
@@ -215,7 +215,7 @@ fn with_session<R>(session_id: &str, f: impl FnOnce(&mut Session) -> R) -> Resul
 /// with the Results names in `edits`.
 fn compute(inputs: &Inputs, compiled: &Compiled, edits: &NameEdits) -> Result<Vec<PreviewRow>, MultiRenameError> {
     let (present, missing, siblings) = {
-        let cache = LISTING_CACHE.read_ignore_poison();
+        let cache = listing_cache().read_ignore_poison();
         let listing = cache.get(&inputs.listing_id).ok_or_else(|| MultiRenameError::Gone {
             listing_id: inputs.listing_id.clone(),
         })?;

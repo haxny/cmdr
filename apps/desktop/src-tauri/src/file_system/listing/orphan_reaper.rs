@@ -7,12 +7,19 @@
 //! the same path the close IPC uses, so the cache entry, its watcher, and any
 //! pending diff go together.
 
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::cached_listing::{LISTING_CACHE, epoch_millis_now};
+use crate::file_system::listing::engine::Inner;
+
+// shim: removed in M4b. The reaper's tests name this here; it forwards to the installed engine.
+#[cfg(test)]
+pub(crate) use crate::file_system::listing::shims::orphan_reaper::*;
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
 
 /// Idle window after which an untouched listing is treated as orphaned and reaped.
 ///
@@ -55,84 +62,87 @@ pub(crate) fn orphan_ids<'a>(
         .collect()
 }
 
-/// Scans the cache for orphaned listings (idle past `ORPHAN_IDLE_WINDOW`) and tears each
-/// down via the same path as the explicit `list_directory_end` IPC: cache entry removed,
-/// `WATCHER_MANAGER` watcher dropped, pending coalesced diff dropped.
-///
-/// This is the backstop reaper. The fast, primary eviction is still the FE-fired
-/// `list_directory_end`; this only catches listings whose close IPC was never delivered.
-/// Returns the IDs it reaped (empty in the common case), for logging/tests.
-pub(crate) fn reap_orphaned_listings() -> Vec<String> {
-    reap_orphaned_listings_at(epoch_millis_now(), ORPHAN_IDLE_WINDOW.as_millis() as u64)
-}
-
-/// `reap_orphaned_listings` with the clock and idle window injected, so tests can
-/// simulate "6 hours idle" deterministically (the real epoch clock starts at process
-/// launch, so a real 6 h gap can't be produced in a unit test without sleeping).
-pub(crate) fn reap_orphaned_listings_at(now_ms: u64, window_ms: u64) -> Vec<String> {
-    reap_orphaned_listings_scoped(now_ms, window_ms, None)
-}
-
-/// `reap_orphaned_listings_at` restricted to the listing ids in `only`.
-///
-/// The sweep walks the process-global cache, and under `cargo test` that cache is
-/// shared by every concurrently-running listing test, so an unrestricted sweep
-/// evicts other tests' fixtures (cache entry AND watcher) mid-assertion. The
-/// reaper's own tests scope the sweep to the ids they own; production passes
-/// `None` and sweeps everything.
-#[cfg(test)]
-pub(crate) fn reap_orphaned_listings_at_for(now_ms: u64, window_ms: u64, only: &[&str]) -> Vec<String> {
-    reap_orphaned_listings_scoped(now_ms, window_ms, Some(only))
-}
-
-fn reap_orphaned_listings_scoped(now_ms: u64, window_ms: u64, only: Option<&[&str]>) -> Vec<String> {
-    let ids = {
-        // Recover from a poisoned lock rather than returning empty: this is the
-        // BACKSTOP, so a single panic elsewhere silently retiring it for the rest
-        // of the session is the one outcome it must not have. Reading last-access
-        // stamps out of a map a panicking writer left behind is safe.
-        let cache = LISTING_CACHE.read_ignore_poison();
-        orphan_ids(
-            now_ms,
-            window_ms,
-            cache
-                .iter()
-                .filter(|(id, _)| only.is_none_or(|ids| ids.contains(&id.as_str())))
-                .map(|(id, listing)| (id.as_str(), listing.last_accessed_ms.load(Ordering::Relaxed))),
-        )
-    };
-
-    for id in &ids {
-        // Reuse the exact teardown the explicit close IPC uses, so the cache entry AND
-        // its watcher (and any pending diff) are released together.
-        crate::file_system::listing::operations::list_directory_end(id);
-        log::warn!(
-            target: "listing_cache",
-            "Reaped orphaned listing `{id}`: no access or heartbeat for >= {} min. Its `list_directory_end` IPC was likely never delivered (a skipped FE cleanup).",
-            ORPHAN_IDLE_WINDOW.as_secs() / 60,
-        );
+impl Inner {
+    /// Scans the cache for orphaned listings (idle past `ORPHAN_IDLE_WINDOW`) and tears each
+    /// down via the same path as the explicit `list_directory_end` IPC: cache entry removed,
+    /// every observer told (the change watch among them), pending coalesced diff dropped.
+    ///
+    /// This is the backstop reaper. The fast, primary eviction is still the FE-fired
+    /// `list_directory_end`; this only catches listings whose close IPC was never delivered.
+    /// Returns the IDs it reaped (empty in the common case), for logging/tests.
+    pub(crate) fn reap_orphaned_listings(&self) -> Vec<String> {
+        self.reap_orphaned_listings_scoped(self.epoch_millis_now(), ORPHAN_IDLE_WINDOW.as_millis() as u64, None)
     }
 
-    ids
-}
+    /// `reap_orphaned_listings` with the clock and idle window injected, restricted to the
+    /// listing ids in `only`, so tests can simulate "6 hours idle" deterministically (the
+    /// engine's epoch clock starts at its build, so a real 6 h gap can't be produced in a
+    /// unit test without sleeping).
+    ///
+    /// The sweep walks the whole cache, and under `cargo test` the installed engine's cache
+    /// is shared by every concurrently-running listing test, so an unrestricted sweep evicts
+    /// other tests' fixtures (cache entry AND watcher) mid-assertion. The reaper's own tests
+    /// scope the sweep to the ids they own; production passes `None` and sweeps everything.
+    #[cfg(test)]
+    pub(crate) fn reap_orphaned_listings_at_for(&self, now_ms: u64, window_ms: u64, only: &[&str]) -> Vec<String> {
+        self.reap_orphaned_listings_scoped(now_ms, window_ms, Some(only))
+    }
 
-/// Spawns the periodic backstop reaper task. Call once during app setup.
-///
-/// Wakes every `REAPER_SWEEP_INTERVAL` and calls `reap_orphaned_listings`. Runs on
-/// the host's runtime so it survives for the process lifetime; the task ends only
-/// when the runtime shuts down at app exit.
-pub(crate) fn start_orphan_listing_reaper() {
-    crate::file_system::listing::host::runtime().spawn(async {
-        loop {
-            tokio::time::sleep(REAPER_SWEEP_INTERVAL).await;
-            let reaped = reap_orphaned_listings();
-            if !reaped.is_empty() {
-                log::info!(
-                    target: "listing_cache",
-                    "Orphan-listing reaper swept {} leaked listing(s)",
-                    reaped.len(),
-                );
-            }
+    fn reap_orphaned_listings_scoped(&self, now_ms: u64, window_ms: u64, only: Option<&[&str]>) -> Vec<String> {
+        let ids = {
+            // Recover from a poisoned lock rather than returning empty: this is the
+            // BACKSTOP, so a single panic elsewhere silently retiring it for the rest
+            // of the session is the one outcome it must not have. Reading last-access
+            // stamps out of a map a panicking writer left behind is safe.
+            let cache = self.cache.read_ignore_poison();
+            orphan_ids(
+                now_ms,
+                window_ms,
+                cache
+                    .iter()
+                    .filter(|(id, _)| only.is_none_or(|ids| ids.contains(&id.as_str())))
+                    .map(|(id, listing)| (id.as_str(), listing.last_accessed_ms.load(Ordering::Relaxed))),
+            )
+        };
+
+        for id in &ids {
+            // Reuse the exact teardown the explicit close IPC uses, so the cache entry AND
+            // its watcher (and any pending diff) are released together.
+            self.list_directory_end(id);
+            log::warn!(
+                target: "listing_cache",
+                "Reaped orphaned listing `{id}`: no access or heartbeat for >= {} min. Its `list_directory_end` IPC was likely never delivered (a skipped FE cleanup).",
+                ORPHAN_IDLE_WINDOW.as_secs() / 60,
+            );
         }
-    });
+
+        ids
+    }
+
+    /// Spawns the periodic backstop reaper task on the engine's runtime. Call once.
+    ///
+    /// Wakes every `REAPER_SWEEP_INTERVAL` and calls `reap_orphaned_listings`. The loop
+    /// holds the engine WEAKLY and ends at the first wake after the last handle is
+    /// dropped, so an engine a test or tool drops doesn't leave a reaper behind.
+    pub(crate) fn start_orphan_reaper(self: &Arc<Self>) {
+        let engine = self.downgrade();
+        self.runtime.spawn(async move {
+            loop {
+                tokio::time::sleep(REAPER_SWEEP_INTERVAL).await;
+                // Upgraded only for the sweep: holding it across the sleep would keep
+                // the engine alive for as long as the loop runs.
+                let Some(engine) = engine.upgrade() else {
+                    return;
+                };
+                let reaped = engine.reap_orphaned_listings();
+                if !reaped.is_empty() {
+                    log::info!(
+                        target: "listing_cache",
+                        "Orphan-listing reaper swept {} leaked listing(s)",
+                        reaped.len(),
+                    );
+                }
+            }
+        });
+    }
 }

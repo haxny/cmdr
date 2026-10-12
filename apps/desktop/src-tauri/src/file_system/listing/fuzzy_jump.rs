@@ -19,7 +19,7 @@
 //! ## Why a separate module
 //!
 //! `find_first_match` is a pure function over an iterator of entries with no
-//! `LISTING_CACHE` lock, no `tokio`. That makes it trivial to unit-test against
+//! the listing cache lock, no `tokio`. That makes it trivial to unit-test against
 //! in-memory fixtures and keeps the Tauri command layer
 //! (`commands/file_system/listing.rs`) a thin pass-through that just grabs the
 //! read lock and delegates here.
@@ -32,7 +32,11 @@ use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
 };
 
+use crate::file_system::listing::engine::Inner;
 use cmdr_fs::entry::FileEntry;
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub use crate::file_system::listing::shims::fuzzy_jump::*;
 
 /// Returns the row number of the highest-scoring fuzzy match for `query` among the
 /// rows a pane is showing, or `None` if no entry matches.
@@ -46,7 +50,7 @@ use cmdr_fs::entry::FileEntry;
 ///   that character case-sensitive (delegated to nucleo-matcher).
 /// - Ties (equal score) resolve to the lower index, which matches the listing's active sort order.
 /// - Empty query → `None`. Empty listing → `None`.
-/// - The synthetic `..` parent entry is **not** in `LISTING_CACHE` (it's prepended by the
+/// - The synthetic `..` parent entry is **not** in the listing cache (it's prepended by the
 ///   frontend), so there's no special case for it here.
 ///
 /// ## Index space
@@ -111,35 +115,38 @@ impl std::fmt::Display for FuzzyJumpError {
 
 impl std::error::Error for FuzzyJumpError {}
 
-/// Convenience wrapper that grabs the `LISTING_CACHE` read lock, runs
-/// `find_first_match`, and emits a single `type_to_jump` debug log line with
-/// the per-call timing. The Tauri command in `commands::file_system::listing`
-/// is a thin async pass-through over this.
-pub fn fuzzy_find_first_match_in_listing(
-    listing_id: &str,
-    query: &str,
-    include_hidden: bool,
-) -> Result<Option<usize>, FuzzyJumpError> {
-    let started = Instant::now();
-    // Recovering is right for a read of a cache: a panic elsewhere left the map
-    // intact, and refusing every jump afterwards would be worse than reading it.
-    let cache = super::operations::reconciled_cache(&[listing_id]);
+impl Inner {
+    /// Convenience wrapper that grabs the cache read lock, runs
+    /// `find_first_match`, and emits a single `type_to_jump` debug log line with
+    /// the per-call timing. The Tauri command in `commands::file_system::listing`
+    /// is a thin async pass-through over this.
+    pub(crate) fn fuzzy_find_first_match_in_listing(
+        &self,
+        listing_id: &str,
+        query: &str,
+        include_hidden: bool,
+    ) -> Result<Option<usize>, FuzzyJumpError> {
+        let started = Instant::now();
+        // Recovering is right for a read of a cache: a panic elsewhere left the map
+        // intact, and refusing every jump afterwards would be worse than reading it.
+        let cache = self.reconciled_cache(&[listing_id]);
 
-    let listing = cache.get(listing_id).ok_or_else(|| FuzzyJumpError::ListingNotFound {
-        listing_id: listing_id.to_string(),
-    })?;
+        let listing = cache.get(listing_id).ok_or_else(|| FuzzyJumpError::ListingNotFound {
+            listing_id: listing_id.to_string(),
+        })?;
 
-    let rows = listing.rows(include_hidden);
-    let result = find_first_match(rows.iter(), query);
-    let elapsed_us = started.elapsed().as_micros();
-    log::debug!(
-        target: "type_to_jump",
-        "listing_id={} query_len={} include_hidden={} result_index={:?} elapsed_us={}",
-        listing_id,
-        query.chars().count(),
-        include_hidden,
-        result,
-        elapsed_us,
-    );
-    Ok(result)
+        let rows = listing.rows(include_hidden);
+        let result = find_first_match(rows.iter(), query);
+        let elapsed_us = started.elapsed().as_micros();
+        log::debug!(
+            target: "type_to_jump",
+            "listing_id={} query_len={} include_hidden={} result_index={:?} elapsed_us={}",
+            listing_id,
+            query.chars().count(),
+            include_hidden,
+            result,
+            elapsed_us,
+        );
+        Ok(result)
+    }
 }

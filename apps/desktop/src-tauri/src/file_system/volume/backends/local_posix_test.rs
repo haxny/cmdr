@@ -770,7 +770,7 @@ fn test_listing_watch_coverage_flips_with_watcher_lifecycle() {
         "expected no coverage before listing opens"
     );
 
-    // Seed a listing in the cache (the watcher reads its path via LISTING_CACHE).
+    // Seed a listing in the cache (the watcher reads its path via the listing cache).
     let listing = TestListing::new().path(&path).insert("listing-is-watched");
 
     // Listing exists but no watcher: still `None` (the race-window contract).

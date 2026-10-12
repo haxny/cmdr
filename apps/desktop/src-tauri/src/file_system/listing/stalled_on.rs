@@ -7,9 +7,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cmdr_fs::volume::{BackendKind, Volume};
+use tokio::runtime::Handle;
 
+use crate::file_system::listing::host::MountTable;
 pub use crate::file_system::listing::host::events::StalledOn;
-use crate::file_system::listing::host::{self, MountTable};
 
 /// How long the stall report waits for the symlink-resolving probe before it
 /// settles for [`StalledOn::Unknown`]. A healthy local disk resolves in
@@ -23,18 +24,21 @@ const RESOLVE_TIMEOUT: Duration = Duration::from_millis(500);
 /// just stalled. The table lookup is lexical, so a path that reads as a local disk
 /// is resolved through its symlinks first (`~/nas` → `/Volumes/nas`), off-thread
 /// and bounded by [`RESOLVE_TIMEOUT`].
-pub(crate) async fn stalled_on(volume: &Arc<dyn Volume>, path: &Path) -> StalledOn {
+pub(crate) async fn stalled_on(
+    runtime: &Handle,
+    mounts: Arc<dyn MountTable>,
+    volume: &Arc<dyn Volume>,
+    path: &Path,
+) -> StalledOn {
     if let Some(answer) = stalled_on_backend(volume.backend_kind()) {
         return answer;
     }
-    let mounts = host::mounts();
     let lexical = stalled_on_mount_of(mounts.as_ref(), path);
     if lexical != StalledOn::Drive {
         return lexical;
     }
     let path = path.to_path_buf();
-    let resolved =
-        host::runtime().spawn_blocking(move || stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(&path)));
+    let resolved = runtime.spawn_blocking(move || stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(&path)));
     match tokio::time::timeout(RESOLVE_TIMEOUT, resolved).await {
         Ok(Ok(answer)) => answer,
         // Timed out (the probe sits on a hung mount) or the task panicked.
@@ -219,7 +223,7 @@ mod tests {
     fn a_temp_folder_reads_as_a_drive() {
         // Holds where the temp dir is a local disk: a dev Mac's APFS, a Linux box's ext4 or tmpfs.
         let dir = tempfile::tempdir().unwrap();
-        let mounts = host::mounts();
+        let mounts = &crate::file_system::listing::installed().mounts;
         assert_eq!(
             stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(dir.path())),
             StalledOn::Drive

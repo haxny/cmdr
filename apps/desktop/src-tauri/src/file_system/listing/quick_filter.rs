@@ -8,9 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::operations::ListingLookupError;
+
+// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+pub use crate::file_system::listing::shims::quick_filter::*;
 
 /// Where the pane's cursor and selection land after a quick-filter change, in
 /// the new row space.
@@ -36,139 +39,145 @@ pub struct NameFilterResult {
     pub sequence: Option<u64>,
 }
 
-/// Sets (or, with an empty or `None` pattern, clears) the pane's quick filter,
-/// and carries the cursor and selection into the new row space, all under ONE
-/// write lock so no diff or read can land between the old row space and the new.
-///
-/// With `refuse_empty`, a pattern that matches no row is refused and the old
-/// filter stays (`accepted: false`): Total Commander's rule that typing only
-/// ever narrows down to the last match, never past it. Deciding it here, under
-/// the same lock, is what makes the refusal exact; the frontend can't know the
-/// count before asking.
-///
-/// Superseded pending transitions are dropped under the cache write lock, before
-/// a watcher can publish a transition in the new row space.
-#[cfg(test)]
-pub fn set_listing_name_filter(
-    listing_id: &str,
-    pattern: Option<&str>,
-    include_hidden: bool,
-    cursor_filename: Option<&str>,
-    selected_indices: &[usize],
-    refuse_empty: bool,
-) -> Result<NameFilterResult, ListingLookupError> {
-    set_listing_name_filter_inner(
-        listing_id,
-        pattern,
-        include_hidden,
-        cursor_filename,
-        selected_indices,
-        refuse_empty,
-        None,
-        #[cfg(test)]
-        || {},
-    )
-}
-
-#[allow(
-    clippy::too_many_arguments,
-    reason = "Filter reconfiguration carries a guarded selection"
-)]
-pub fn set_listing_name_filter_guarded(
-    listing_id: &str,
-    pattern: Option<&str>,
-    include_hidden: bool,
-    cursor_filename: Option<&str>,
-    selected_indices: &[usize],
-    refuse_empty: bool,
-    expected_sequence: Option<u64>,
-) -> Result<NameFilterResult, ListingLookupError> {
-    set_listing_name_filter_inner(
-        listing_id,
-        pattern,
-        include_hidden,
-        cursor_filename,
-        selected_indices,
-        refuse_empty,
-        expected_sequence,
-        #[cfg(test)]
-        || {},
-    )
-}
-
-#[allow(
-    clippy::too_many_arguments,
-    reason = "Filter reconfiguration carries a guarded selection and test hook"
-)]
-pub(super) fn set_listing_name_filter_inner(
-    listing_id: &str,
-    pattern: Option<&str>,
-    include_hidden: bool,
-    cursor_filename: Option<&str>,
-    selected_indices: &[usize],
-    refuse_empty: bool,
-    expected_sequence: Option<u64>,
-    #[cfg(test)] after_unlock: impl FnOnce(),
-) -> Result<NameFilterResult, ListingLookupError> {
-    let result = {
-        let mut cache = LISTING_CACHE.write_ignore_poison();
-        let listing = cache
-            .get_mut(listing_id)
-            .ok_or_else(|| ListingLookupError::gone(listing_id))?;
-        listing.reconcile_scratch(listing_id);
-        super::operations::check_expected(listing_id, listing, expected_sequence)?;
-        if expected_sequence.is_some() && listing.include_hidden() != include_hidden {
-            return Err(ListingLookupError::changed(listing_id));
-        }
-        listing.touch();
-
-        let selected_names: Vec<String> = {
-            let rows = listing.rows(include_hidden);
-            selected_indices
-                .iter()
-                .filter_map(|&row| rows.get(row).map(|entry| entry.name.clone()))
-                .collect()
-        };
-
-        let previous = listing.name_filter().cloned();
-        let next = pattern.and_then(NameFilter::new);
-        // Asked of every entry, not of the current rows: the new pattern needn't
-        // narrow the old one, so a row the old filter hides may be its only match.
-        let refused = refuse_empty
-            && next.is_some()
-            && next != previous
-            && !listing
-                .entries()
-                .iter()
-                .any(|entry| listing.shows_with_filter(entry, include_hidden, next.as_ref()));
-        let changed = !refused && listing.set_name_filter(next);
-        // Under the write lock, so no diff can be sequenced between the switch and this.
-        let sequence = if changed {
-            let sequence = listing.advance_sequence();
-            super::diff_emitter::drop_pending(listing_id);
-            Some(sequence)
-        } else {
-            expected_sequence
-        };
-
-        let rows = listing.rows(include_hidden);
-        let names_to_rows: HashMap<&str, usize> = rows
-            .iter()
-            .enumerate()
-            .map(|(row, entry)| (entry.name.as_str(), row))
-            .collect();
-        NameFilterResult {
-            accepted: !refused,
-            total_count: rows.len(),
-            new_cursor_index: cursor_filename.and_then(|name| names_to_rows.get(name).copied()),
-            new_selected_indices: selected_names
-                .iter()
-                .filter_map(|name| names_to_rows.get(name.as_str()).copied())
-                .collect(),
-            sequence,
-        }
-    };
+impl Inner {
+    /// Sets (or, with an empty or `None` pattern, clears) the pane's quick filter,
+    /// and carries the cursor and selection into the new row space, all under ONE
+    /// write lock so no diff or read can land between the old row space and the new.
+    ///
+    /// With `refuse_empty`, a pattern that matches no row is refused and the old
+    /// filter stays (`accepted: false`): Total Commander's rule that typing only
+    /// ever narrows down to the last match, never past it. Deciding it here, under
+    /// the same lock, is what makes the refusal exact; the frontend can't know the
+    /// count before asking.
+    ///
+    /// Superseded pending transitions are dropped under the cache write lock, before
+    /// a watcher can publish a transition in the new row space.
     #[cfg(test)]
-    after_unlock();
-    Ok(result)
+    pub(crate) fn set_listing_name_filter(
+        &self,
+        listing_id: &str,
+        pattern: Option<&str>,
+        include_hidden: bool,
+        cursor_filename: Option<&str>,
+        selected_indices: &[usize],
+        refuse_empty: bool,
+    ) -> Result<NameFilterResult, ListingLookupError> {
+        self.set_listing_name_filter_inner(
+            listing_id,
+            pattern,
+            include_hidden,
+            cursor_filename,
+            selected_indices,
+            refuse_empty,
+            None,
+            #[cfg(test)]
+            || {},
+        )
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "Filter reconfiguration carries a guarded selection"
+    )]
+    pub(crate) fn set_listing_name_filter_guarded(
+        &self,
+        listing_id: &str,
+        pattern: Option<&str>,
+        include_hidden: bool,
+        cursor_filename: Option<&str>,
+        selected_indices: &[usize],
+        refuse_empty: bool,
+        expected_sequence: Option<u64>,
+    ) -> Result<NameFilterResult, ListingLookupError> {
+        self.set_listing_name_filter_inner(
+            listing_id,
+            pattern,
+            include_hidden,
+            cursor_filename,
+            selected_indices,
+            refuse_empty,
+            expected_sequence,
+            #[cfg(test)]
+            || {},
+        )
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "Filter reconfiguration carries a guarded selection and test hook"
+    )]
+    pub(crate) fn set_listing_name_filter_inner(
+        &self,
+        listing_id: &str,
+        pattern: Option<&str>,
+        include_hidden: bool,
+        cursor_filename: Option<&str>,
+        selected_indices: &[usize],
+        refuse_empty: bool,
+        expected_sequence: Option<u64>,
+        #[cfg(test)] after_unlock: impl FnOnce(),
+    ) -> Result<NameFilterResult, ListingLookupError> {
+        let visibility = self.scratch_visibility();
+        let result = {
+            let mut cache = self.cache.write_ignore_poison();
+            let listing = cache
+                .get_mut(listing_id)
+                .ok_or_else(|| ListingLookupError::gone(listing_id))?;
+            listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+            super::operations::check_expected(listing_id, listing, expected_sequence)?;
+            if expected_sequence.is_some() && listing.include_hidden() != include_hidden {
+                return Err(ListingLookupError::changed(listing_id));
+            }
+            listing.touch();
+
+            let selected_names: Vec<String> = {
+                let rows = listing.rows(include_hidden);
+                selected_indices
+                    .iter()
+                    .filter_map(|&row| rows.get(row).map(|entry| entry.name.clone()))
+                    .collect()
+            };
+
+            let previous = listing.name_filter().cloned();
+            let next = pattern.and_then(NameFilter::new);
+            // Asked of every entry, not of the current rows: the new pattern needn't
+            // narrow the old one, so a row the old filter hides may be its only match.
+            let refused = refuse_empty
+                && next.is_some()
+                && next != previous
+                && !listing
+                    .entries()
+                    .iter()
+                    .any(|entry| listing.shows_with_filter(entry, include_hidden, next.as_ref()));
+            let changed = !refused && listing.set_name_filter(next);
+            // Under the write lock, so no diff can be sequenced between the switch and this.
+            let sequence = if changed {
+                let sequence = listing.advance_sequence();
+                self.diffs.drop_pending(listing_id);
+                Some(sequence)
+            } else {
+                expected_sequence
+            };
+
+            let rows = listing.rows(include_hidden);
+            let names_to_rows: HashMap<&str, usize> = rows
+                .iter()
+                .enumerate()
+                .map(|(row, entry)| (entry.name.as_str(), row))
+                .collect();
+            NameFilterResult {
+                accepted: !refused,
+                total_count: rows.len(),
+                new_cursor_index: cursor_filename.and_then(|name| names_to_rows.get(name).copied()),
+                new_selected_indices: selected_names
+                    .iter()
+                    .filter_map(|name| names_to_rows.get(name.as_str()).copied())
+                    .collect(),
+                sequence,
+            }
+        };
+        #[cfg(test)]
+        after_unlock();
+        Ok(result)
+    }
 }

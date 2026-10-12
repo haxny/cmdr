@@ -40,16 +40,12 @@ use std::sync::{RwLock, RwLockReadGuard};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::host::{self, ScratchVisibility};
+use crate::file_system::listing::host::ScratchVisibility;
 use crate::file_system::listing::name_filter::NameFilter;
 use cmdr_fs::entry::FileEntry;
 
-/// Whether `name` is scratch the pane leaves out under `visibility`.
-fn hidden_with(name: &str, visibility: ScratchVisibility) -> bool {
-    cmdr_fs::staging::hidden_with_settings(name, visibility.show_staging_temps, visibility.show_safe_save_files)
-}
-
-/// Whether `name` is scratch the pane leaves out under the user's settings now.
+/// Whether `name` is scratch the pane leaves out under `visibility`, the
+/// user's settings as the engine holds them now.
 ///
 /// The cache holds what's on disk; its committed scratch projection records
 /// this decision on admission and reconciles drift at read/mutation boundaries
@@ -58,8 +54,8 @@ fn hidden_with(name: &str, visibility: ScratchVisibility) -> bool {
 /// the watcher skips the removal that would clear it, and it stays in the pane
 /// pointing at nothing. The `.sb-` filter lived there until 2026-08-01 and had
 /// precisely that bug.
-fn is_hidden_from_listings(name: &str) -> bool {
-    hidden_with(name, host::scratch_visibility())
+fn hidden_with(name: &str, visibility: ScratchVisibility) -> bool {
+    cmdr_fs::staging::hidden_with_settings(name, visibility.show_staging_temps, visibility.show_safe_save_files)
 }
 
 /// Exact-path scratch decisions committed with the listing revision. Ordinary
@@ -69,8 +65,7 @@ fn is_hidden_from_listings(name: &str) -> bool {
 pub(crate) struct ScratchProjection(HashMap<String, (String, bool)>);
 
 impl ScratchProjection {
-    pub(crate) fn for_entries(entries: &[FileEntry], previous: &Self) -> Self {
-        let visibility = host::scratch_visibility();
+    pub(crate) fn for_entries(entries: &[FileEntry], previous: &Self, visibility: ScratchVisibility) -> Self {
         Self(
             entries
                 .iter()
@@ -87,8 +82,7 @@ impl ScratchProjection {
         )
     }
 
-    pub(crate) fn live(&self) -> Self {
-        let visibility = host::scratch_visibility();
+    pub(crate) fn live(&self, visibility: ScratchVisibility) -> Self {
         Self(
             self.0
                 .iter()
@@ -97,20 +91,19 @@ impl ScratchProjection {
         )
     }
 
-    pub(crate) fn has_drift(&self) -> bool {
-        let visibility = host::scratch_visibility();
+    pub(crate) fn has_drift(&self, visibility: ScratchVisibility) -> bool {
         self.0
             .values()
             .any(|(name, hidden)| *hidden != hidden_with(name, visibility))
     }
 
-    pub(crate) fn admit(&mut self, entry: &FileEntry) {
+    pub(crate) fn admit(&mut self, entry: &FileEntry, visibility: ScratchVisibility) {
         if !cmdr_fs::staging::could_be_hidden_from_listings(&entry.name) {
             self.0.remove(&entry.path);
         } else if !self.0.get(&entry.path).is_some_and(|(name, _)| name == &entry.name) {
             self.0.insert(
                 entry.path.clone(),
-                (entry.name.clone(), is_hidden_from_listings(&entry.name)),
+                (entry.name.clone(), hidden_with(&entry.name, visibility)),
             );
         }
     }
@@ -153,7 +146,7 @@ impl VisibleRowsCache {
     /// The filter is the listing's own, so it is not part of the slot key: a
     /// filter change drops both slots instead.
     ///
-    /// ⚠️ Callers must already hold the `LISTING_CACHE` read lock (every accessor
+    /// ⚠️ Callers must already hold the listing cache read lock (every accessor
     /// does). That's what makes the map stable for the lifetime of the returned
     /// value: mutation needs the cache WRITE lock, so `entries` cannot move under
     /// a reader and a map that validates here stays valid.
@@ -238,7 +231,11 @@ impl VisibleMap {
 /// setting.
 #[cfg(test)]
 pub(crate) fn shows(entry: &FileEntry, include_hidden: bool, name_filter: Option<&NameFilter>) -> bool {
-    shown_by_setting(entry, include_hidden, name_filter) && !is_hidden_from_listings(&entry.name)
+    shown_by_setting(entry, include_hidden, name_filter)
+        && !hidden_with(
+            &entry.name,
+            crate::file_system::listing::installed().scratch_visibility(),
+        )
 }
 
 /// The hidden-file and name-filter predicates, independent of scratch ownership.
@@ -387,33 +384,5 @@ impl<'a> VisibleRows<'a> {
     }
 }
 
-/// Counts entries examined by the visibility predicate on THIS thread, so a test
-/// can pin how many times an accessor walks the listing.
-///
-/// The wedge this guards against is a scan count, not a duration: a per-row
-/// accessor that re-walks the whole listing is invisible in a unit test's wall
-/// clock on a small fixture and stops the app answering IPC on a real one.
-/// Counting is the only measurement that survives both.
-///
-/// Thread-local, because `cargo test` runs the crate's tests as threads in one
-/// process and a process-wide counter would mix every concurrent listing test's
-/// walking into the reading.
 #[cfg(test)]
-pub(crate) mod scan_probe {
-    use std::cell::Cell;
-
-    thread_local! {
-        static EXAMINED: Cell<u64> = const { Cell::new(0) };
-    }
-
-    /// One entry passed through the visibility predicate.
-    pub(crate) fn record() {
-        EXAMINED.with(|c| c.set(c.get() + 1));
-    }
-
-    /// Entries this thread has examined so far. Take a `before` and an `after`
-    /// and subtract.
-    pub(crate) fn examined() -> u64 {
-        EXAMINED.with(Cell::get)
-    }
-}
+pub(crate) use super::probe_test_support::scan_probe;

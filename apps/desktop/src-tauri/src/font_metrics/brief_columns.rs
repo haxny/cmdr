@@ -1,6 +1,6 @@
 //! Per-column text-width computation for Brief mode.
 //!
-//! Pure-logic module: reads from `LISTING_CACHE`, iterates entries in column-major
+//! Pure-logic module: reads from the listing cache, iterates entries in column-major
 //! order, and returns the widest filename's text-only width per column. Chrome
 //! (icon, padding, gap) and clamping (`MIN_COLUMN_WIDTH`, `MAX_BRIEF_COLUMN_WIDTH`)
 //! are FE concerns and are added there.
@@ -44,7 +44,7 @@ pub enum BriefColumnsError {
     FontMetricsNotReady,
     /// `items_per_column == 0` (would divide by zero). FE clamps to >= 1.
     InvalidItemsPerColumn,
-    /// The listing ID isn't in `LISTING_CACHE` (already ended, or never started).
+    /// The listing ID isn't in the listing cache (already ended, or never started).
     ListingNotFound(String),
     /// Catch-all for cache-lock poisoning etc.
     Other(String),
@@ -66,7 +66,7 @@ pub enum BriefColumnsErrorKind {
     /// The listing ended or hasn't started. Transient across a navigation.
     ListingNotFound,
     /// The IPC deadline expired before the computation finished, typically because
-    /// a large listing held `LISTING_CACHE`'s write lock. Transient.
+    /// a large listing held the listing cache's write lock. Transient.
     Timeout,
     /// Unclassified (lock poisoning and the like). Treated as transient.
     Other,
@@ -177,8 +177,8 @@ fn tag_cluster_width(colored_count: usize) -> f32 {
 /// point is reported in `missing_code_points`, so the caller can measure it and
 /// come back for exact widths.
 ///
-/// Reads `LISTING_CACHE` with a read lock. Caller is responsible for wrapping
-/// the call in a timeout if `LISTING_CACHE` could be write-locked.
+/// Reads the listing cache with a read lock. Caller is responsible for wrapping
+/// the call in a timeout if the listing cache could be write-locked.
 pub fn compute_brief_column_text_widths(
     listing_id: &str,
     items_per_column: usize,

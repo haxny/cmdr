@@ -100,7 +100,7 @@ pub fn start_drag_paths(
     Err("Drag operation is not yet supported on this platform".to_string())
 }
 
-/// Initiates native drag from Rust directly, looking up paths from `LISTING_CACHE` (macOS only).
+/// Initiates native drag from Rust directly, looking up paths from the listing cache (macOS only).
 #[cfg(target_os = "macos")]
 #[tauri::command]
 #[specta::specta]

@@ -9,7 +9,7 @@ use super::plan::{MultiRenameSpec, RowStatus};
 use super::run::apply;
 use super::session::{FIRST_PAGE, PreviewFilter, close, is_open, open, page, preview_session, spec_of};
 use super::transform::CaseChange;
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
 use crate::file_system::volume::backends::list_directory_core;
 use crate::file_system::write_operations::CollectorEventSink;
@@ -66,7 +66,7 @@ fn land_file_on_top(listing: &TestListingGuard, dir: &Path, name: &str) {
         .into_iter()
         .find(|e| e.name == name)
         .expect("the new file lists");
-    let mut cache = LISTING_CACHE.write_ignore_poison();
+    let mut cache = listing_cache().write_ignore_poison();
     let cached = cache.get_mut(listing.id()).expect("the listing is cached");
     cached.entries_mut().insert(0, entry);
     cached.advance_sequence();
@@ -75,7 +75,7 @@ fn land_file_on_top(listing: &TestListingGuard, dir: &Path, name: &str) {
 /// Takes `name` off disk and out of the cached listing.
 fn remove_file(listing: &TestListingGuard, dir: &Path, name: &str) {
     std::fs::remove_file(dir.join(name)).expect("the file removes");
-    let mut cache = LISTING_CACHE.write_ignore_poison();
+    let mut cache = listing_cache().write_ignore_poison();
     let cached = cache.get_mut(listing.id()).expect("the listing is cached");
     cached.entries_mut().retain(|e| e.name != name);
     cached.advance_sequence();

@@ -6,6 +6,7 @@ pub(crate) mod collation;
 pub(crate) mod compare;
 pub(crate) mod diff;
 pub(crate) mod diff_emitter;
+pub(crate) mod engine;
 pub(crate) mod foreign_path;
 pub(crate) mod fuzzy_jump;
 pub(crate) mod host;
@@ -15,12 +16,24 @@ pub(crate) mod operations;
 pub(crate) mod orphan_reaper;
 pub(crate) mod path_index;
 pub(crate) mod quick_filter;
+mod shims;
 pub use quick_filter::NameFilterResult;
 pub(crate) mod sorting;
 pub(crate) mod stall;
 pub(crate) mod stalled_on;
+pub(crate) mod stats;
 pub(crate) mod streaming;
 pub(crate) mod visible_rows;
+
+pub use engine::{Listings, ListingsBuilder};
+
+/// The app's installed engine, for the free functions that still forward to it
+/// from outside the engine. ❌ Never call it from engine code, which reaches its
+/// own state through `self`.
+// shim: removed in M4b
+pub(crate) fn installed() -> &'static std::sync::Arc<engine::Inner> {
+    crate::listing_host::listings().inner()
+}
 
 // Re-export types so they're available both externally and locally in this module
 // (call sites import them from `crate::file_system::listing` directly).
@@ -41,7 +54,6 @@ pub(crate) use caching::{
     get_cached_listing, get_listing_volume_id_and_path, has_entry, insert_entry_sorted, remove_entries_by_paths,
     update_entry_sorted,
 };
-pub(crate) use orphan_reaper::start_orphan_listing_reaper;
 // Notification API for volume mutations
 pub(crate) use cached_listing::OverlayRows;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -73,6 +85,8 @@ mod diff_emitter_test;
 #[cfg(test)]
 mod diff_test;
 #[cfg(test)]
+mod engine_test;
+#[cfg(test)]
 mod find_file_index_test;
 #[cfg(test)]
 mod fuzzy_jump_test;
@@ -94,6 +108,8 @@ mod overlay_refresh_test;
 mod pane_diff_test;
 #[cfg(test)]
 mod path_index_test;
+#[cfg(test)]
+mod probe_test_support;
 #[cfg(test)]
 mod row_beside_test;
 #[cfg(test)]

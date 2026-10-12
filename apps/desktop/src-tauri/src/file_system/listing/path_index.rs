@@ -51,7 +51,7 @@ impl PathIndexCache {
     /// path (scrolled away, already removed, or a caller aiming at the wrong
     /// listing).
     ///
-    /// ⚠️ Callers must hold the `LISTING_CACHE` lock covering `entries`, which is
+    /// ⚠️ Callers must hold the listing cache lock covering `entries`, which is
     /// what makes an index still true when it comes back: mutation needs the
     /// write lock, so entries can't move under a resolve.
     ///
@@ -82,7 +82,7 @@ impl PathIndexCache {
     /// landing in it is a hash rather than a walk.
     ///
     /// ⚠️ Same lock contract as [`Self::resolve`]: the caller holds the
-    /// `LISTING_CACHE` lock covering `entries`. ❗ And a MUTATING caller must ask
+    /// the listing cache lock covering `entries`. ❗ And a MUTATING caller must ask
     /// BEFORE it takes `entries_mut`, which drops the map.
     pub(crate) fn resolve_one(&self, entries: &[FileEntry], path: &str) -> Option<usize> {
         if let Some(map) = self.map.read_ignore_poison().as_ref() {
@@ -157,42 +157,5 @@ fn scan_for_path(entries: &[FileEntry], path: &str) -> Option<usize> {
     })
 }
 
-/// Counts entries a path lookup touched on THIS thread, and maps built, so a
-/// test can pin what a batch of updates costs.
-///
-/// The defect these guard is a scan COUNT, invisible in a unit test's wall clock
-/// on a small fixture and 64 ms of write-locked listing walking per enrichment
-/// chunk on a real one. Thread-local for the same reason
-/// `visible_rows::scan_probe` is: `cargo test` runs the crate's tests as threads
-/// in one process, and a process-wide counter would mix every concurrent
-/// listing test's work into the reading.
 #[cfg(test)]
-pub(crate) mod lookup_probe {
-    use std::cell::Cell;
-
-    thread_local! {
-        static EXAMINED: Cell<u64> = const { Cell::new(0) };
-        static BUILDS: Cell<u64> = const { Cell::new(0) };
-    }
-
-    /// One entry hashed into a map, or compared against a wanted path.
-    pub(crate) fn record_examined() {
-        EXAMINED.with(|c| c.set(c.get() + 1));
-    }
-
-    /// One map built from scratch.
-    pub(crate) fn record_build() {
-        BUILDS.with(|c| c.set(c.get() + 1));
-    }
-
-    /// Entries this thread has examined so far. Take a `before` and an `after`
-    /// and subtract.
-    pub(crate) fn examined() -> u64 {
-        EXAMINED.with(Cell::get)
-    }
-
-    /// Maps this thread has built so far.
-    pub(crate) fn builds() -> u64 {
-        BUILDS.with(Cell::get)
-    }
-}
+pub(crate) use super::probe_test_support::lookup_probe;

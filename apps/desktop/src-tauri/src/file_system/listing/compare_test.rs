@@ -526,7 +526,7 @@ fn scratch_aba_never_exposes_different_rows_at_the_same_revision() {
     let left = pane("scratch-aba", L, vec![file(L, "a.sb-temp", 1, 1), file(L, "b", 1, 1)]);
     super::diff_emitter::hold_for_test(left.id());
     left.with_listing(|listing| {
-        assert!(!listing.scratch_has_drift());
+        assert!(!listing.scratch_has_drift(crate::file_system::listing::installed().scratch_visibility()));
         set_show_safe_save_files(true); // Flip AFTER validation, BEFORE another row read.
         assert_eq!(listing.pane_rows().get(0).unwrap().path, format!("{L}/b"));
         assert_eq!(listing.sequence.load(std::sync::atomic::Ordering::Acquire), 0);

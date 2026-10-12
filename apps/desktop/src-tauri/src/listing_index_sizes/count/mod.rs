@@ -37,7 +37,7 @@ use tokio::time::Instant;
 use serde::{Deserialize, Serialize};
 use tokio::time::MissedTickBehavior;
 
-use crate::file_system::listing::cached_listing::LISTING_CACHE;
+use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::volume::Volume;
 use crate::ignore_poison::RwLockIgnorePoison;
 
@@ -110,7 +110,7 @@ pub(crate) fn plan(
     index_owns: impl Fn(&str) -> bool,
 ) -> Result<CountPlan, CountFolderSizesError> {
     let manual = jobs::manual_paths(listing_id, publish::listing_is_open);
-    let cache = LISTING_CACHE.read_ignore_poison();
+    let cache = listing_cache().read_ignore_poison();
     let listing = cache.get(listing_id).ok_or_else(|| CountFolderSizesError::Gone {
         listing_id: listing_id.to_string(),
     })?;

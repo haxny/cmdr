@@ -465,7 +465,7 @@ impl Volume for LocalPosixVolume {
 
     fn listing_watch_coverage(&self, path: &Path) -> WatchCoverage {
         // Resolve relative-to-volume paths to their absolute form so the comparison
-        // against `LISTING_CACHE` (which stores absolute paths) lines up.
+        // against the listing cache (which stores absolute paths) lines up.
         let abs_path = self.resolve(path);
         // Find any listing on this path (volume-agnostic: the listing cache is keyed
         // by listing_id and tagged with a volume_id, but LocalPosixVolume doesn't

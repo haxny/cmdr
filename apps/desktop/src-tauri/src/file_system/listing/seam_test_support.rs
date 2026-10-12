@@ -15,7 +15,7 @@ use std::sync::{Arc, LazyLock, Mutex, Once};
 
 use tokio_util::sync::CancellationToken;
 
-use super::cached_listing::LISTING_CACHE;
+use super::cached_listing::listing_cache;
 use super::host::testing::{register_observer, register_overlay};
 use super::host::{ListingObserver, ListingOverlay, OpenedListing};
 use super::listing_id::ListingId;
@@ -97,7 +97,7 @@ impl RecordingObserver {
         if !WATCHED.lock_ignore_poison().contains(listing_id) {
             return;
         }
-        let cached = LISTING_CACHE.read_ignore_poison().contains_key(listing_id);
+        let cached = listing_cache().read_ignore_poison().contains_key(listing_id);
         HEARD
             .lock_ignore_poison()
             .entry(listing_id.to_string())
@@ -152,7 +152,7 @@ pub(crate) fn note_disarm(listing_id: &str) {
     if !DISARMS.lock_ignore_poison().contains_key(listing_id) {
         return;
     }
-    let cached = LISTING_CACHE.read_ignore_poison().contains_key(listing_id);
+    let cached = listing_cache().read_ignore_poison().contains_key(listing_id);
     if let Some(seen) = DISARMS.lock_ignore_poison().get_mut(listing_id) {
         seen.push(cached);
     }

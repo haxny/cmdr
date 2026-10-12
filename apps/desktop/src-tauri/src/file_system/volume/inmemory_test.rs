@@ -205,7 +205,7 @@ async fn test_volume_manager_with_inmemory() {
 #[test]
 fn test_streaming_state_lifecycle() {
     use crate::file_system::listing::cancel_listing;
-    use crate::file_system::listing::streaming::{STREAMING_STATE, StreamingListingState};
+    use crate::file_system::listing::streaming::{StreamingListingState, streaming_state};
     use std::sync::Arc;
 
     // Create and register a streaming state
@@ -214,13 +214,13 @@ fn test_streaming_state_lifecycle() {
 
     // Insert into cache
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         cache.insert(listing_id.to_string(), Arc::clone(&state));
     }
 
     // Verify it exists in cache
     {
-        let cache = STREAMING_STATE.read().unwrap();
+        let cache = streaming_state().read().unwrap();
         assert!(cache.contains_key(listing_id));
     }
 
@@ -230,13 +230,13 @@ fn test_streaming_state_lifecycle() {
 
     // Cleanup (simulate what the streaming task does)
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         cache.remove(listing_id);
     }
 
     // Verify it's gone
     {
-        let cache = STREAMING_STATE.read().unwrap();
+        let cache = streaming_state().read().unwrap();
         assert!(!cache.contains_key(listing_id));
     }
 }
@@ -244,7 +244,7 @@ fn test_streaming_state_lifecycle() {
 #[test]
 fn test_multiple_concurrent_streaming_states() {
     use crate::file_system::listing::cancel_listing;
-    use crate::file_system::listing::streaming::{STREAMING_STATE, StreamingListingState};
+    use crate::file_system::listing::streaming::{StreamingListingState, streaming_state};
     use std::sync::Arc;
 
     // Create multiple streaming states
@@ -253,7 +253,7 @@ fn test_multiple_concurrent_streaming_states() {
 
     // Insert all into cache
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         for (id, state) in ids.iter().zip(states.iter()) {
             cache.insert(id.to_string(), Arc::clone(state));
         }
@@ -261,7 +261,7 @@ fn test_multiple_concurrent_streaming_states() {
 
     // Verify all exist
     {
-        let cache = STREAMING_STATE.read().unwrap();
+        let cache = streaming_state().read().unwrap();
         assert!(cache.len() >= 3); // May have other tests' entries
     }
 
@@ -275,7 +275,7 @@ fn test_multiple_concurrent_streaming_states() {
 
     // Cleanup
     {
-        let mut cache = STREAMING_STATE.write().unwrap();
+        let mut cache = streaming_state().write().unwrap();
         for id in ids.iter() {
             cache.remove(*id);
         }
