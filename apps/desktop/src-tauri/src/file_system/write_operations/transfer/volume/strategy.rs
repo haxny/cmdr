@@ -15,7 +15,8 @@ use std::time::Duration;
 use super::super::super::metadata_losses;
 use super::super::super::state::WriteOperationState;
 use super::super::checkpoint_stream::CheckpointStream;
-use super::super::staged_write::{StagedWrite, clear_unlanded_temp};
+use super::super::interrupted_landing::{InterruptedLanding, settle_interrupted_landing};
+use super::super::staged_write::StagedWrite;
 // Re-exported so the sibling test modules (and any future caller reached through
 // this module's API) name the staging choice without a second import path.
 use super::super::recovered_name::FinalizeFailure;
@@ -632,16 +633,29 @@ pub(super) async fn stream_pipe_file(
                 continue;
             }
             // The landing failed with NOTHING cleared because the destination
-            // went away under it (the share dropped between the last byte and
-            // the rename): the destination still holds what it held, and the
-            // temp is a spare copy its discard couldn't reach. Wait for the
-            // share, take the temp away, and run the file again. ❌ Never with
-            // `new_data_at` set: then the temp was the only copy, and `land`
-            // has already moved it somewhere safe.
+            // went away under it: the rename may never have reached the server,
+            // or the server performed it and the drop swallowed the reply. Wait
+            // for the share, then settle which (`interrupted_landing.rs`): our
+            // file whole at its name counts as landed; anything else takes the
+            // temp away and runs the file again. ❌ Never with `new_data_at`
+            // set: then the temp was the only copy, and `land` has already
+            // moved it somewhere safe.
             Err(failure) if failure.new_data_at.is_none() => {
                 match wait_after_failure(state, &failure.error, &[source_volume, dest_volume], &mut outages).await {
                     OutageEnd::Back => {
-                        clear_unlanded_temp(state, dest_volume, &landing_from).await;
+                        set_task_phase(TaskPhase::Finalizing);
+                        let settled =
+                            settle_interrupted_landing(state, dest_volume, &landing_from, dest_path, bytes).await;
+                        if settled == InterruptedLanding::Landed {
+                            log::info!(
+                                target: "copy",
+                                "stream_pipe_file: {} landed before the drop swallowed the reply; counting it done",
+                                dest_path.display(),
+                            );
+                            state.claimed_names.release_placeholder(dest_path);
+                            state.metadata_losses.note_file(lost);
+                            return Ok(bytes);
+                        }
                         log::info!(
                             target: "copy",
                             "stream_pipe_file: landing {} again now that its volume is back",

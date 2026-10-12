@@ -439,21 +439,6 @@ impl StagedWrite {
     }
 }
 
-/// Takes away the temp a failed landing left behind because the destination was
-/// GONE when the landing tried to discard it, once the destination is back
-/// (`volume_outage.rs`), and drops it from the in-flight set. The file then runs
-/// again from a clean slate.
-///
-/// ❗ Only for a landing that failed with nothing cleared (`new_data_at: None`):
-/// then the temp is a spare copy and the destination still holds whatever it
-/// held. With the way cleared, the temp is the only copy of the new bytes, and
-/// `land` has already moved it out of temp space.
-pub(super) async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume: &Arc<dyn Volume>, temp: &Path) {
-    if discard_unplaced_temp(dest_volume, temp).await {
-        super::super::in_flight_temps::deregister(state, temp, dest_home(state));
-    }
-}
-
 /// The path space this operation's staged partials live in: the DESTINATION
 /// volume's, since a staged temp is a sibling of the file being written.
 ///
@@ -462,7 +447,7 @@ pub(super) async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume
 /// ledger then skips the path rather than guessing at a path space (see
 /// `in_flight_temps::register`); the operation's own in-memory ledger still
 /// carries it, and that one deletes through the volume handle it already holds.
-fn dest_home(state: &WriteOperationState) -> Option<TempHome<'_>> {
+pub(super) fn dest_home(state: &WriteOperationState) -> Option<TempHome<'_>> {
     state.dest_volume_id().map(TempHome::Volume)
 }
 

@@ -11,7 +11,7 @@ use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
-use crate::file_system::write_operations::transfer::outage_volume_test_support::OutageVolume;
+use crate::file_system::write_operations::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use crate::test_support::wait_until_async;
 
@@ -262,5 +262,148 @@ async fn a_copy_that_starts_while_the_share_is_gone_waits_for_it() {
             .and_then(|a| a.reconnecting_volume.as_deref())
             == Some("Naspolya")),
         "the windows were told what the copy was waiting for"
+    );
+}
+
+/// Copies `/batch` (four files) onto a share armed to drop around the landing
+/// rename of the second file, and hands back the outcome. With `theirs`, someone
+/// else saves that file's name with those bytes while the share is gone.
+async fn copy_through_a_drop_at_landing(
+    lane: &str,
+    side: RenameDrop,
+    theirs: Option<&'static [u8]>,
+) -> (Arc<InMemoryVolume>, Result<(), WriteOperationError>) {
+    let source = source_with(4).await;
+    let (inner, nas, dest) = nas(lane);
+    nas.drop_at_rename(1, side);
+    let state = outage_state(Duration::from_secs(30));
+    let op = TestOperationGuard::register_state(lane, Arc::clone(&state));
+    let watched = Arc::clone(&state);
+    let behind_the_share = Arc::clone(&inner);
+    let share = Arc::clone(&nas);
+    tokio::spawn(async move {
+        wait_until_async(WAIT, "the copy to wait for the share", || {
+            watched.outage.waiting_for().is_some()
+        })
+        .await;
+        if let Some(theirs) = theirs {
+            // Ours landed before the drop; they save over it.
+            behind_the_share
+                .delete(Path::new("/batch/f1.txt"))
+                .await
+                .expect("ours is there to save over");
+            behind_the_share
+                .create_file(Path::new("/batch/f1.txt"), theirs)
+                .await
+                .expect("their save");
+        }
+        share.become_reachable();
+    });
+
+    let outcome = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id(),
+        &state,
+        source,
+        &[PathBuf::from("/batch")],
+        dest,
+        Path::new("/"),
+        &VolumeCopyConfig {
+            progress_interval_ms: 0,
+            ..VolumeCopyConfig::default()
+        },
+    )
+    .await
+    .map(|_| ())
+    .map_err(|failure| failure.error);
+    (inner, outcome)
+}
+
+async fn names_in_batch(inner: &Arc<InMemoryVolume>) -> Vec<String> {
+    let mut names: Vec<String> = inner
+        .list_directory(Path::new("/batch"), None)
+        .await
+        .expect("the destination folder")
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect();
+    names.sort();
+    names
+}
+
+async fn content_of(inner: &Arc<InMemoryVolume>, path: &str) -> Vec<u8> {
+    let mut stream = inner.open_read_stream(Path::new(path)).await.expect("the file opens");
+    let mut bytes = Vec::new();
+    while let Some(chunk) = stream.next_chunk().await {
+        bytes.extend_from_slice(&chunk.expect("a chunk"));
+    }
+    bytes
+}
+
+/// The server performed the landing rename and the drop swallowed its reply:
+/// the file is whole at its name and the temp is gone. Once the share is back,
+/// the copy recognizes the file as the one IT just landed and counts it done,
+/// rather than re-copying it into its own file and failing with
+/// `DestinationExists` (the live-SMB cell
+/// `smb_outage_test::smb_integration_a_copy_waits_out_a_dropped_network_and_finishes`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_landing_the_drop_swallowed_counts_as_landed() {
+    let (inner, outcome) =
+        copy_through_a_drop_at_landing("outage-landed-unanswered", RenameDrop::AfterTheServerPerformsIt, None).await;
+
+    outcome.expect("a landing the server performed is the copy's own file, not a conflict");
+    for n in 0..4 {
+        assert_eq!(
+            content_of(&inner, &format!("/batch/f{n}.txt")).await,
+            format!("file {n}").into_bytes(),
+            "f{n} must land byte-exact"
+        );
+    }
+    assert_eq!(
+        names_in_batch(&inner).await,
+        ["f0.txt", "f1.txt", "f2.txt", "f3.txt"],
+        "no staged partial survives"
+    );
+}
+
+/// The landing rename never reached the server: the temp is still there, so the
+/// file runs again and lands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_landing_the_drop_stopped_runs_the_file_again() {
+    let (inner, outcome) =
+        copy_through_a_drop_at_landing("outage-landing-unsent", RenameDrop::BeforeTheServerSeesIt, None).await;
+
+    outcome.expect("a landing that never happened runs again once the share is back");
+    assert_eq!(content_of(&inner, "/batch/f1.txt").await, b"file 1".to_vec());
+    assert_eq!(
+        names_in_batch(&inner).await,
+        ["f0.txt", "f1.txt", "f2.txt", "f3.txt"],
+        "no staged partial survives"
+    );
+}
+
+/// The landing's reply was lost AND, while the share was gone, someone else
+/// replaced the file at that name with theirs. The copy can't call that file its
+/// own, so it takes the normal late-clash path: it fails naming the conflict and
+/// leaves their file alone.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_name_someone_else_took_during_the_outage_stays_a_conflict() {
+    const THEIRS: &[u8] = b"someone else's file, saved while the share was away";
+    let (inner, outcome) = copy_through_a_drop_at_landing(
+        "outage-landed-then-taken",
+        RenameDrop::AfterTheServerPerformsIt,
+        Some(THEIRS),
+    )
+    .await;
+
+    let error = outcome.expect_err("a file the copy can't prove its own is never claimed");
+    assert!(
+        matches!(error, WriteOperationError::DestinationExists { .. }),
+        "the clash is reported as one: {error:?}"
+    );
+    assert_eq!(
+        content_of(&inner, "/batch/f1.txt").await,
+        THEIRS.to_vec(),
+        "theirs survives"
     );
 }

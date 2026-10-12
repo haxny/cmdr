@@ -6,7 +6,9 @@
 //! [`Volume::connection_state`] reads `Disconnected` (what `cmdr-smb`'s
 //! `check_connection` does). [`Volume::attempt_reconnect`] succeeds only once
 //! the test has made the server reachable again, and a test can also arm the
-//! session to drop at the start of the Nth write, which is the mid-copy outage.
+//! session to drop at the start of the Nth write, which is the mid-copy outage,
+//! or around the Nth rename: before the server sees it, or after the server
+//! performed it but before its reply arrived (the landing a drop swallows).
 //!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
@@ -40,6 +42,18 @@ pub(crate) struct OutageVolume {
     writes: AtomicUsize,
     /// Drop the session at the start of this (0-based) write.
     drop_at_write: Mutex<Option<usize>>,
+    renames: AtomicUsize,
+    /// Drop the session around this (0-based) rename, and on which side of it.
+    drop_at_rename: Mutex<Option<(usize, RenameDrop)>>,
+}
+
+/// Which side of a rename the session drops on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RenameDrop {
+    /// The request never reaches the server: nothing moves.
+    BeforeTheServerSeesIt,
+    /// The server performs the rename, and the reply is lost with the session.
+    AfterTheServerPerformsIt,
 }
 
 impl OutageVolume {
@@ -53,6 +67,8 @@ impl OutageVolume {
             reconnect_attempts: AtomicUsize::new(0),
             writes: AtomicUsize::new(0),
             drop_at_write: Mutex::new(None),
+            renames: AtomicUsize::new(0),
+            drop_at_rename: Mutex::new(None),
         })
     }
 
@@ -82,6 +98,12 @@ impl OutageVolume {
     /// `n` (0-based) starts.
     pub(crate) fn drop_at_write(&self, n: usize) {
         *self.drop_at_write.lock_ignore_poison() = Some(n);
+    }
+
+    /// The session drops (and the server goes away) around rename number `n`
+    /// (0-based), on the given side of it.
+    pub(crate) fn drop_at_rename(&self, n: usize, side: RenameDrop) {
+        *self.drop_at_rename.lock_ignore_poison() = Some((n, side));
     }
 
     pub(crate) fn reconnect_attempts(&self) -> usize {
@@ -195,6 +217,17 @@ impl Volume for OutageVolume {
     }
     fn rename<'a>(&'a self, from: &'a Path, to: &'a Path, force: bool) -> Fut<'a, Result<(), VolumeError>> {
         Box::pin(async move {
+            let n = self.renames.fetch_add(1, Ordering::SeqCst);
+            let armed = *self.drop_at_rename.lock_ignore_poison();
+            match armed {
+                Some((at, RenameDrop::BeforeTheServerSeesIt)) if at == n => self.go_away(),
+                Some((at, RenameDrop::AfterTheServerPerformsIt)) if at == n => {
+                    self.gate()?;
+                    self.inner.rename(from, to, force).await?;
+                    self.go_away();
+                }
+                _ => {}
+            }
             self.gate()?;
             self.inner.rename(from, to, force).await
         })

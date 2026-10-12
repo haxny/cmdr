@@ -289,6 +289,12 @@ pub(super) fn register(state: &WriteOperationState, temp: &Path, home: Option<Te
     append(&mut store, record.add_op(), &record);
 }
 
+/// Whether this operation still tracks `temp` as its own removable partial:
+/// registered, and not yet released by a landing, a discard, or a sweep.
+pub(super) fn is_registered(state: &WriteOperationState, temp: &Path) -> bool {
+    state.in_flight_temps.lock_ignore_poison().iter().any(|p| p == temp)
+}
+
 /// Stops tracking `temp`: it landed under its real name, or it's gone. `home`
 /// must be the one [`register`] was given.
 pub(super) fn deregister(state: &WriteOperationState, temp: &Path, home: Option<TempHome<'_>>) {

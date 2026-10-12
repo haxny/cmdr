@@ -61,6 +61,7 @@ facts that none of those carry live here:
   `volume_outage_tests.rs` beside it and `outage_volume_test_support.rs`'s `OutageVolume` as the double: a volume whose
   session a test drops and restores, like the SMB share in `#398`. The operation-side slot it fills lives one level up,
   in `../outage_slot.rs`, so the activity classifier can read it without reaching into this layer.
+  `interrupted_landing.rs` settles a landing rename the outage cut off (§ "A landing the drop cut off").
 - **`transfer_probe_ends.rs` is what the probe asks the two volumes**, another `#[path]` child: `TransferEnds` (the
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own). `transfer_probe_opening_tests.rs`
@@ -974,9 +975,10 @@ again:
 
 - `stream_pipe_file`, three places: the source open (nothing staged yet), the write (the failed attempt's temp is
   cleared AFTER the wait, when the delete can reach the share), and the landing rename when it failed with nothing
-  cleared (`new_data_at: None`: the temp is a spare copy, so `staged_write::clear_unlanded_temp` takes it away and the
-  file runs again). ❌ Never after a landing that cleared the way: then the temp is the only copy, and `land` already
-  moved it somewhere safe.
+  cleared (`new_data_at: None`). Once the share is back, `interrupted_landing.rs` settles whether the rename happened
+  (§ "A landing the drop cut off" below): if it did, the file is done; if not, the temp is a spare copy, so it's taken
+  away and the file runs again. ❌ Never after a landing that cleared the way: then the temp is the only copy, and
+  `land` already moved it somewhere safe.
 - `through_outages` around each merge level's prepare (a create whose second run answers `AlreadyExists` and reads as
   "there", plus two listings) and around every driver's top-level destination probe (a read). ❗ Only a call that's safe
   to run twice goes through it.
@@ -988,13 +990,32 @@ again:
 **Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), the post-loop
 folder dates and source sweep, delete and trash, and the local engines. Each would fail on an outage as it always did.
 
-**Residual risk, accepted.** A landing rename the server performed whose reply the drop swallowed: the second run's
-rename finds no temp and fails the file, though the file is whole at its name. Data-safe, rare (the drop has to land
-between the rename and its reply), and the failure is honest about what it saw.
+**A landing the drop cut off (`interrupted_landing.rs`).** A rename whose reply never arrives may have happened or
+not: the drop can come before the server saw it, or after it performed it. Run again blind, the second case re-copies
+the file and its landing meets OUR file at a name the caller believed free, which `land` rightly refuses as an
+unresolved clash: a copy that waited out the outage then failed with `DestinationExists` over its own file. Not rare: the
+live-SMB cell (`backend_suites/smb_outage_test.rs`) hit it whenever the cut fell inside a landing of the concurrent
+window. So once the share is back the landing is settled first, and counts as DONE only on proof, all three of:
+
+- the temp is still in the operation's in-flight set, so no discard of ours took it (a discard releases it);
+- the temp is gone from the destination, and the only move ever asked of that `.cmdr-tmp-<uuid>` was ours;
+- the final name holds a file of exactly the size we wrote, so nothing replaced it while the share was away.
+
+Anything less clears the temp and runs the file again, as before: a temp still there means the rename never happened,
+and a name someone else took meets the ordinary late-clash refusal (`DestinationExists`, their file untouched). ❌ Don't
+loosen it to "something is at the name": a file claimed by mistake enters the rollback ledger as ours, and an undo
+deletes it. No mtime check: whether a backend keeps the source's mtime, and at what precision, varies, and the temp's
+fate already proves whose file it is.
+
+**Residual risk, accepted.** A SINGLE-SHOT write (`WriteMode::CreateNew`, no temp: SMB's compound write for a small
+file) whose reply the drop swallowed: the second run's `CreateNew` meets the file the server already created and fails
+the file with `DestinationExists`. Data-safe and honest, but no temp means no proof the file is ours, so it isn't
+claimed.
 
 Pinned by `volume_outage_tests.rs` (the state machine: back, give-up, cancel, pause, sign-in, a queued job after a
 give-up, a Retry after one, a shared deadline, `through_outages`'s cap) and `volume/copy_outage_tests.rs` (the real
-copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate).
+copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate, and a landing cut off before the
+server saw it, after it performed it, and after it performed it with the name then taken by someone else).
 
 ### The watchdog ACTS
 
