@@ -140,7 +140,7 @@ pub(super) async fn drive_transfer_concurrent(ctx: ConcurrentCopy<'_>) -> Concur
 /// One task per top-level source item, streaming end to end. The future owns
 /// everything it touches (`copy_concurrent_task.rs`), so the window carries no
 /// lifetime and the phases around it stay free to borrow the driver.
-type CopyTaskFuture = Pin<Box<dyn Future<Output = Result<CopyTaskSuccess, CopyTaskFailure>> + Send>>;
+type CopyTaskFuture = Pin<Box<dyn Future<Output = Result<CopyTaskSuccess, Box<CopyTaskFailure>>> + Send>>;
 
 /// The sliding window and the state that changes as it runs.
 ///
@@ -356,7 +356,7 @@ impl<'a> ConcurrentDriver<'a> {
             }
         };
         match next {
-            Some(settled) => AwaitStep::Settled(Box::new(settled)),
+            Some(settled) => AwaitStep::Settled(Box::new(settled.map_err(|failure| *failure))),
             None => AwaitStep::Finished,
         }
     }

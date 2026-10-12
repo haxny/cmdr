@@ -168,8 +168,9 @@ pub(super) struct CopyTask {
 /// Streams one top-level source item end to end.
 ///
 /// The `Err` payload's `cleanup_temp` is the whole reason this returns a struct
-/// rather than a `VolumeError`: see [`CopyTaskFailure`].
-pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, CopyTaskFailure> {
+/// rather than a `VolumeError`: see [`CopyTaskFailure`]. Boxed, since it carries
+/// the per-file rollback ledger and would otherwise size every `Ok` too.
+pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Box<CopyTaskFailure>> {
     let CopyTask {
         events,
         operation_id,
@@ -282,7 +283,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Cop
                     // directory ledger to carry. The failure is the
                     // DESTINATION's, and when the original is already gone it
                     // also says where the new bytes ended up.
-                    return Err(CopyTaskFailure {
+                    return Err(Box::new(CopyTaskFailure {
                         failed_path: dest_path,
                         reported_path: orig,
                         source_path,
@@ -293,7 +294,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Cop
                         overwrote: task_overwrote,
                         created_files,
                         created_dirs,
-                    });
+                    }));
                 }
                 // Landed at `orig`; the temp `dest_path` is gone after the
                 // rename. Report the temp as the partial to remove and `orig` as
@@ -334,7 +335,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Cop
         // records the individual partials instead of the dir root — the post-loop
         // must never recursively delete a merged dest dir and destroy
         // pre-existing dest-only files.
-        Err(e) => Err(CopyTaskFailure {
+        Err(e) => Err(Box::new(CopyTaskFailure {
             failed_path: dest_path,
             reported_path: e.path,
             source_path,
@@ -347,6 +348,6 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskSuccess, Cop
             overwrote: task_overwrote,
             created_files,
             created_dirs,
-        }),
+        })),
     }
 }
