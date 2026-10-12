@@ -462,13 +462,14 @@ pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<
         return;
     }
 
-    // Enrich new/modified entries with index data
-    for entry in &mut adds {
-        index().enrich(&volume_id, std::slice::from_mut(entry));
-    }
-    for entry in &mut modifies {
-        index().enrich(&volume_id, std::slice::from_mut(entry));
-    }
+    // Enrich new/modified entries with index data: ONE call for the batch, since
+    // a seam is called per mutation, never per entry. Every entry is a direct
+    // child of the listing's directory, so the batch resolves one parent.
+    let added = adds.len();
+    let mut batch: Vec<FileEntry> = adds.into_iter().chain(modifies).collect();
+    index().enrich(&volume_id, &mut batch);
+    let modifies = batch.split_off(added);
+    let adds = batch;
 
     // Apply changes: removes first (their rows are the OLD pane's), then adds, then
     // modifies. `remove_entries_by_paths` resolves every entry against the pre-removal
