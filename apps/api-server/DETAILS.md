@@ -631,14 +631,15 @@ defines two projects, and a test's runtime is a choice:
 
 - **`node`** (default, `environment: 'node'`) runs everything not listed below. Fast, and it has the whole Node standard
   library, which is exactly why it can't prove anything about production's runtime.
-- **`workerd`** (`vitest.workerd.config.ts`, `@cloudflare/vitest-pool-workers`) runs the files in its exported
-  `workerdTests` list inside workerd, under this Worker's own `wrangler.toml`. Add a file to that list to move it
-  across; `vitest.config.ts` excludes it from the node project automatically.
+- **`workerd`** (`vitest.workerd.config.ts`, `@cloudflare/vitest-plugin`) runs the files in its exported `workerdTests`
+  list inside workerd, under this Worker's own `wrangler.toml`. Add a file to that list to move it across;
+  `vitest.config.ts` excludes it from the node project automatically.
 
 **The `workerd` project can't catch a Node-only global either.** The pool needs Node APIs to run Vitest itself inside
 workerd, so it force-enables `nodejs_compat_v2` on the test worker whatever the config says: `Buffer` and `process`
-exist there (verified with a probe test on `@cloudflare/vitest-pool-workers` 0.22.0, 2026-09-16). It buys real bindings
-and real Worker semantics, ❌ never runtime-parity proof.
+exist there (verified with a probe test on `@cloudflare/vitest-pool-workers` 0.22.0, the plugin's name before its rename
+to `@cloudflare/vitest-plugin`, 2026-09-16). It buys real bindings and real Worker semantics, ❌ never runtime-parity
+proof.
 
 **Wrangler's `createTestHarness` is the lane that proves parity**, and the only one. It builds `src/index.ts` and runs
 it in workerd under the real `wrangler.toml`, with test-only secrets passed in, so a Node API anywhere along an

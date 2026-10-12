@@ -87,7 +87,7 @@ overrides:
   postcss-selector-parser@7: ^7.1.6
   proxy-addr@2: ^2.0.8
   qs@6: ^6.16.0
-  # `@cloudflare/vitest-pool-workers` pins an older `miniflare`, which pins these exactly.
+  # `miniflare` (under `wrangler` and `@cloudflare/vitest-plugin`) pins these exactly.
   sharp@0.35: ^0.35.4
   undici@7: ^7.29.1
   undici@8: ^8.10.2
