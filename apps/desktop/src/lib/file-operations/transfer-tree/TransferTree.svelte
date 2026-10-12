@@ -223,7 +223,9 @@
         if (rowHeight > 0) tree.scrolledTo(Math.floor(scrollTop / rowHeight))
     }
 
+    /** A wheel over rows that all fit scrolls the page around the tree (the queue window), not the tree. */
     function onWheel(event: WheelEvent): void {
+        if (!scroller || scroller.scrollHeight <= scroller.clientHeight) return
         if (event.deltaY !== 0) tree.pauseFollowing()
     }
 

@@ -173,6 +173,27 @@ describe('TransferTree', () => {
     expect(followButton()).toBeNull()
   })
 
+  it('pauses following on a wheel only when the tree has somewhere to scroll', async () => {
+    await render('flat-5000', 3)
+    const scroller = target.querySelector<HTMLElement>('.scroller')
+    if (!scroller) throw new Error('no scroller')
+    const wheel = () => {
+      scroller.dispatchEvent(new WheelEvent('wheel', { deltaY: 40, bubbles: true }))
+      flushSync()
+    }
+
+    // jsdom lays nothing out, so the rows fit: the wheel scrolls the page around it.
+    wheel()
+    await settle()
+    expect(followButton()).toBeNull()
+
+    Object.defineProperty(scroller, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 100 })
+    wheel()
+    await settle()
+    expect(followButton()).not.toBeNull()
+  })
+
   it('keeps the tab stop on one row, the work’s while nobody has moved', async () => {
     const { advance } = await render('flat-5000', 3)
     const stops = () => rows().filter((row) => row.tabIndex === 0)
