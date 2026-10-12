@@ -8,7 +8,10 @@
 //! the test has made the server reachable again, and a test can also arm the
 //! session to drop at the start of the Nth write, which is the mid-copy outage,
 //! or around the Nth rename: before the server sees it, or after the server
-//! performed it but before its reply arrived (the landing a drop swallows).
+//! performed it but before its reply arrived (the landing a drop swallows). It
+//! can also land every write in one shot (SMB's compound write for a small
+//! file) and drop right after the Nth write completed, the same swallowed reply
+//! for a write that had no temp.
 //!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
@@ -42,6 +45,10 @@ pub(crate) struct OutageVolume {
     writes: AtomicUsize,
     /// Drop the session at the start of this (0-based) write.
     drop_at_write: Mutex<Option<usize>>,
+    /// Drop the session right after this (0-based) write completed.
+    drop_after_write: Mutex<Option<usize>>,
+    /// Promise single-shot writes (`Volume::write_is_single_shot`).
+    single_shot: AtomicBool,
     renames: AtomicUsize,
     /// Drop the session around this (0-based) rename, and on which side of it.
     drop_at_rename: Mutex<Option<(usize, RenameDrop)>>,
@@ -67,6 +74,8 @@ impl OutageVolume {
             reconnect_attempts: AtomicUsize::new(0),
             writes: AtomicUsize::new(0),
             drop_at_write: Mutex::new(None),
+            drop_after_write: Mutex::new(None),
+            single_shot: AtomicBool::new(false),
             renames: AtomicUsize::new(0),
             drop_at_rename: Mutex::new(None),
         })
@@ -98,6 +107,18 @@ impl OutageVolume {
     /// `n` (0-based) starts.
     pub(crate) fn drop_at_write(&self, n: usize) {
         *self.drop_at_write.lock_ignore_poison() = Some(n);
+    }
+
+    /// Write number `n` (0-based) completes on the server, and then the session
+    /// drops (and the server goes away) before its reply arrives.
+    pub(crate) fn drop_after_write(&self, n: usize) {
+        *self.drop_after_write.lock_ignore_poison() = Some(n);
+    }
+
+    /// Lands every write in one indivisible shot, as SMB's compound write does
+    /// for a small file, so the transfer writes straight to the final name.
+    pub(crate) fn write_single_shot(&self) {
+        self.single_shot.store(true, Ordering::SeqCst);
     }
 
     /// The session drops (and the server goes away) around rename number `n`
@@ -271,9 +292,18 @@ impl Volume for OutageVolume {
                 self.go_away();
             }
             self.gate()?;
-            self.inner
+            let written = self
+                .inner
                 .write_from_stream(dest, mode, length, stream, on_progress)
-                .await
+                .await?;
+            if *self.drop_after_write.lock_ignore_poison() == Some(n) {
+                self.go_away();
+                return Err(VolumeError::DeviceDisconnected("the session is down".to_owned()));
+            }
+            Ok(written)
         })
+    }
+    fn write_is_single_shot<'a>(&'a self, _length: StreamLength) -> Fut<'a, bool> {
+        Box::pin(async move { self.single_shot.load(Ordering::SeqCst) })
     }
 }

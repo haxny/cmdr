@@ -15,7 +15,9 @@ use std::time::Duration;
 use super::super::super::metadata_losses;
 use super::super::super::state::WriteOperationState;
 use super::super::checkpoint_stream::CheckpointStream;
-use super::super::interrupted_landing::{InterruptedLanding, settle_interrupted_landing};
+use super::super::interrupted_landing::{
+    InterruptedLanding, create_went_unanswered, settle_interrupted_landing, settle_unanswered_create,
+};
 use super::super::staged_write::StagedWrite;
 // Re-exported so the sibling test modules (and any future caller reached through
 // this module's API) name the staging choice without a second import path.
@@ -376,7 +378,20 @@ pub(super) async fn stream_pipe_file(
     // ride. Each one that ends with the volume back gives the file a fresh set
     // of attempts; the cap is what keeps a flapping link from holding it forever.
     let mut outages: u32 = 0;
+    // Set when an attempt's create at the FINAL name (a single-shot write) failed
+    // on the transport: the server may have completed it, so the next attempt
+    // settles that before writing again (`interrupted_landing.rs`).
+    let mut unanswered_create = None;
     loop {
+        if let Some((size, lost)) = unanswered_create.take()
+            && settle_unanswered_create(source_volume, source_path, size, dest_volume, dest_path).await
+                == InterruptedLanding::Landed
+        {
+            log::info!(target: "copy", "stream_pipe_file: {} was written whole before the reply was lost", dest_path.display());
+            state.claimed_names.release_placeholder(dest_path);
+            state.metadata_losses.note_file(lost);
+            return Ok(size);
+        }
         // Opening the source is a device round-trip on MTP / SMB and can hang on
         // its own; it needs to be distinguishable from streaming in a dump. It
         // happens BEFORE the staging decision because that decision needs the
@@ -516,6 +531,9 @@ pub(super) async fn stream_pipe_file(
                 return Err(hard_abort_error(dest_path).into());
             }
         };
+        if create_went_unanswered(&staged, &write_result) {
+            unanswered_create = Some((size, lost));
+        }
         // A volume that went away entirely (the share dropped off the network
         // and its session reads `Disconnected`): wait for it to come back
         // rather than burn the attempts below in a second, then run the file

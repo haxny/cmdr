@@ -29,6 +29,20 @@
 //! name someone else took meets the landing's ordinary clash refusal. ❌ Never
 //! loosen the checks into "something is at the name": a file claimed by mistake
 //! goes into the rollback ledger as ours, and an undo would delete it.
+//!
+//! **A write with no temp.** A SINGLE-SHOT write (`WriteMode::CreateNew` at the
+//! final name: SMB's compound CREATE+WRITE+FLUSH+CLOSE for a small file, an
+//! object store's PUT) has the same ambiguity and no temp to read it from. Run
+//! again blind, its `CreateNew` meets our own file and refuses it. So the next
+//! attempt first asks [`settle_unanswered_create`], which counts the file done
+//! only when the name holds a file of exactly our size whose bytes are the
+//! source's, compared in full. The name was free when the conflict check
+//! looked, our create to it went unanswered, and what's there now is
+//! byte-for-byte what we sent. ❌ Never on size alone, and never on the mtime:
+//! the compound write stamps the source's dates in a separate request after it,
+//! which an unanswered write never reached. A 0-byte file our CREATE left
+//! without its WRITE, or a file someone else saved, isn't the source's bytes,
+//! so it stays the ordinary clash.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -36,8 +50,8 @@ use std::sync::Arc;
 use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
 use super::recovered_name::discard_unplaced_temp;
-use super::staged_write::dest_home;
-use crate::file_system::volume::{Volume, VolumeError};
+use super::staged_write::{StagedWrite, dest_home};
+use crate::file_system::volume::{Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// What a landing whose reply the outage swallowed turned out to have done.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,4 +114,84 @@ async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume: &Arc<dyn 
     if discard_unplaced_temp(dest_volume, temp).await {
         in_flight_temps::deregister(state, temp, dest_home(state));
     }
+}
+
+/// Whether this attempt's write was a create at the FINAL name (a single-shot
+/// `CreateNew`) that failed on the transport, so the server may have completed
+/// it anyway: the next attempt must [`settle_unanswered_create`] first.
+pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<u64, VolumeError>) -> bool {
+    matches!(
+        staged.write_mode(),
+        WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder
+    ) && matches!(result, Err(e) if super::retry::is_retryable(e))
+}
+
+/// Settles a single-shot create of `size` bytes at `final_path` whose reply never
+/// came: [`InterruptedLanding::Landed`] only when the file there is exactly the
+/// source's bytes. [`InterruptedLanding::RunAgain`] leaves the name alone, so a
+/// file that isn't provably ours meets the next attempt's `CreateNew` refusal.
+pub(super) async fn settle_unanswered_create(
+    source_volume: &Arc<dyn Volume>,
+    source_path: &Path,
+    size: u64,
+    dest_volume: &Arc<dyn Volume>,
+    final_path: &Path,
+) -> InterruptedLanding {
+    let same_size = matches!(
+        dest_volume.get_metadata(final_path).await,
+        Ok(entry) if !entry.is_directory && !entry.is_symlink && entry.size == Some(size)
+    );
+    if !same_size {
+        return InterruptedLanding::RunAgain;
+    }
+    let (Ok(ours), Ok(at_the_name)) = (
+        source_volume.open_read_stream_with_hint(source_path, Some(size)).await,
+        dest_volume.open_read_stream(final_path).await,
+    ) else {
+        return InterruptedLanding::RunAgain;
+    };
+    if same_bytes(ours, at_the_name).await {
+        InterruptedLanding::Landed
+    } else {
+        InterruptedLanding::RunAgain
+    }
+}
+
+/// Whether two streams yield the same bytes, whatever their chunking. A read
+/// error on either side is "can't prove it", so `false`.
+async fn same_bytes(mut a: Box<dyn VolumeReadStream>, mut b: Box<dyn VolumeReadStream>) -> bool {
+    let (mut a_buf, mut a_at, mut b_buf, mut b_at) = (Vec::new(), 0, Vec::new(), 0);
+    loop {
+        let Some(a_more) = refill(&mut *a, &mut a_buf, &mut a_at).await else {
+            return false;
+        };
+        let Some(b_more) = refill(&mut *b, &mut b_buf, &mut b_at).await else {
+            return false;
+        };
+        if !a_more || !b_more {
+            return !a_more && !b_more;
+        }
+        let n = (a_buf.len() - a_at).min(b_buf.len() - b_at);
+        if a_buf[a_at..a_at + n] != b_buf[b_at..b_at + n] {
+            return false;
+        }
+        a_at += n;
+        b_at += n;
+    }
+}
+
+/// Makes sure `buf[*at..]` holds unread bytes. `Some(false)` at the end of the
+/// stream, `None` on a read error.
+async fn refill(stream: &mut dyn VolumeReadStream, buf: &mut Vec<u8>, at: &mut usize) -> Option<bool> {
+    while *at >= buf.len() {
+        match stream.next_chunk().await {
+            Some(Ok(chunk)) => {
+                *buf = chunk;
+                *at = 0;
+            }
+            Some(Err(_)) => return None,
+            None => return Some(false),
+        }
+    }
+    Some(true)
 }

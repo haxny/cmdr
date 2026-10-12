@@ -28,12 +28,18 @@ use crate::file_system::write_operations::{
 use crate::test_support::wait_until_async;
 
 /// Files in the folder. Enough that the outage lands in the middle, with files
-/// on both sides of it.
-const FILE_COUNT: usize = 12;
+/// on both sides of it: more than [`PAUSE_AFTER_FILES`] plus a whole concurrent
+/// window (SMB's default is 10 slots), so the walk still has files it hasn't
+/// started when the network goes. The walk parks per entry while paused, but a
+/// file already in flight runs to its end, and with 12 files the whole rest of
+/// the folder sometimes fit in the window and landed before the cut.
+const FILE_COUNT: usize = 32;
 
-/// Each file's size: past one compound write's worth, so the files take the
-/// staged streaming writer, which is the path that has a partial to clean up
-/// after a dropped connection.
+/// Each file's size. Small enough that a file can go out as ONE compound write
+/// at its final name (single-shot, no temp) and big enough that one can take the
+/// staged writer instead, depending on the uplink smb2 has measured by then: a
+/// drop can swallow the reply of either, and the copy has to settle both
+/// (`transfer/interrupted_landing.rs`).
 const FILE_BYTES: usize = 256 * 1024;
 
 /// The copy pauses once this many files have landed, which is where the test

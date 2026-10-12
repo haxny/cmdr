@@ -407,3 +407,115 @@ async fn a_name_someone_else_took_during_the_outage_stays_a_conflict() {
         "theirs survives"
     );
 }
+
+/// Copies `/batch` (four files) onto a share that lands every write in one shot
+/// (no temp, `CreateNew` at the final name) and drops right after the server
+/// completed the second file's write, before its reply arrived. With `theirs`,
+/// someone else saves that name while the share is gone.
+async fn copy_through_a_swallowed_single_shot_write(
+    lane: &str,
+    theirs: Option<&'static [u8]>,
+) -> (Arc<InMemoryVolume>, Result<(), WriteOperationError>) {
+    let source = source_with(4).await;
+    let (inner, nas, dest) = nas(lane);
+    nas.write_single_shot();
+    nas.drop_after_write(1);
+    let state = outage_state(Duration::from_secs(30));
+    let op = TestOperationGuard::register_state(lane, Arc::clone(&state));
+    let watched = Arc::clone(&state);
+    let behind_the_share = Arc::clone(&inner);
+    let share = Arc::clone(&nas);
+    tokio::spawn(async move {
+        wait_until_async(WAIT, "the copy to wait for the share", || {
+            watched.outage.waiting_for().is_some()
+        })
+        .await;
+        if let Some(theirs) = theirs {
+            behind_the_share
+                .delete(Path::new("/batch/f1.txt"))
+                .await
+                .expect("ours is there to save over");
+            behind_the_share
+                .create_file(Path::new("/batch/f1.txt"), theirs)
+                .await
+                .expect("their save");
+        }
+        share.become_reachable();
+    });
+
+    let outcome = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id(),
+        &state,
+        source,
+        &[PathBuf::from("/batch")],
+        dest,
+        Path::new("/"),
+        &VolumeCopyConfig {
+            progress_interval_ms: 0,
+            ..VolumeCopyConfig::default()
+        },
+    )
+    .await
+    .map(|_| ())
+    .map_err(|failure| failure.error);
+    (inner, outcome)
+}
+
+/// A single-shot write the server completed and the drop swallowed the reply
+/// of: once the share is back, the file at the name is byte-for-byte the source,
+/// so the copy counts it done rather than re-creating it into its own file and
+/// failing with `DestinationExists` (SMB's compound write for a small file; the
+/// live-SMB cell's actual failure).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write("outage-single-shot-unanswered", None).await;
+
+    outcome.expect("a write the server completed is the copy's own file, not a conflict");
+    for n in 0..4 {
+        assert_eq!(
+            content_of(&inner, &format!("/batch/f{n}.txt")).await,
+            format!("file {n}").into_bytes(),
+            "f{n} must land byte-exact"
+        );
+    }
+}
+
+/// The same swallowed single-shot write, but someone else saved the name while
+/// the share was gone: their file isn't the source's bytes, so it stays a
+/// conflict and stays theirs.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_single_shot_name_someone_else_took_during_the_outage_stays_a_conflict() {
+    const THEIRS: &[u8] = b"theirs!"; // one byte longer than "file 1"
+    let (inner, outcome) = copy_through_a_swallowed_single_shot_write("outage-single-shot-taken", Some(THEIRS)).await;
+
+    let error = outcome.expect_err("a file the copy can't prove its own is never claimed");
+    assert!(
+        matches!(error, WriteOperationError::DestinationExists { .. }),
+        "the clash is reported as one: {error:?}"
+    );
+    assert_eq!(
+        content_of(&inner, "/batch/f1.txt").await,
+        THEIRS.to_vec(),
+        "theirs survives"
+    );
+}
+
+/// Same size, different bytes: size alone never proves a temp-less write ours.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_single_shot_name_taken_with_the_same_size_stays_a_conflict() {
+    const THEIRS: &[u8] = b"theirs"; // exactly as long as "file 1"
+    let (inner, outcome) =
+        copy_through_a_swallowed_single_shot_write("outage-single-shot-same-size", Some(THEIRS)).await;
+
+    let error = outcome.expect_err("a same-size file with other bytes is never claimed");
+    assert!(
+        matches!(error, WriteOperationError::DestinationExists { .. }),
+        "the clash is reported as one: {error:?}"
+    );
+    assert_eq!(
+        content_of(&inner, "/batch/f1.txt").await,
+        THEIRS.to_vec(),
+        "theirs survives"
+    );
+}

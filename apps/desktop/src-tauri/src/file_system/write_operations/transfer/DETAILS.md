@@ -61,7 +61,8 @@ facts that none of those carry live here:
   `volume_outage_tests.rs` beside it and `outage_volume_test_support.rs`'s `OutageVolume` as the double: a volume whose
   session a test drops and restores, like the SMB share in `#398`. The operation-side slot it fills lives one level up,
   in `../outage_slot.rs`, so the activity classifier can read it without reaching into this layer.
-  `interrupted_landing.rs` settles a landing rename the outage cut off (§ "A landing the drop cut off").
+  `interrupted_landing.rs` settles a landing rename, or a single-shot write, whose reply the drop swallowed (§ "A landing
+  the drop cut off").
 - **`transfer_probe_ends.rs` is what the probe asks the two volumes**, another `#[path]` child: `TransferEnds` (the
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own). `transfer_probe_opening_tests.rs`
@@ -1007,15 +1008,28 @@ loosen it to "something is at the name": a file claimed by mistake enters the ro
 deletes it. No mtime check: whether a backend keeps the source's mtime, and at what precision, varies, and the temp's
 fate already proves whose file it is.
 
-**Residual risk, accepted.** A SINGLE-SHOT write (`WriteMode::CreateNew`, no temp: SMB's compound write for a small
-file) whose reply the drop swallowed: the second run's `CreateNew` meets the file the server already created and fails
-the file with `DestinationExists`. Data-safe and honest, but no temp means no proof the file is ours, so it isn't
-claimed.
+**A single-shot write the drop cut off.** A write with no temp (`WriteMode::CreateNew` at the final name: SMB's
+compound CREATE+WRITE+FLUSH+CLOSE, which on a fresh connection carries any file up to 512 KiB and on a measured fast
+link up to `max_write`) has the same ambiguity, and it is the live cell's commoner failure: the rerun's `CreateNew` meets
+the file the server already completed. There's no temp to read the answer from, so when an attempt's `CreateNew` fails
+on the transport (`interrupted_landing::create_went_unanswered`), the NEXT attempt (after a blip retry or an outage
+wait) first runs `settle_unanswered_create`: the file counts as done only when the name holds a file of exactly our
+size whose bytes equal the source's, compared in full by re-reading both. ❌ Never on size alone (a same-size file
+someone saved stays theirs, pinned), and never on mtime: the compound write stamps the source's dates in a separate
+request after the frame, which an unanswered write never reached. Anything less runs the file again and meets the
+ordinary clash, which also covers a 0-byte file our CREATE made without its WRITE: it can't be told from someone else's
+empty file, so it's reported, never claimed.
+
+**Residual risk, accepted.** A byte-identical file someone else saved at the name during the outage is claimed as ours,
+so it enters the rollback ledger and an undo would remove it. Content-identical to the source and saved in the seconds
+the share was away, at a name that was free when the copy looked: we accept that over failing every NAS copy whose
+reply a drop swallowed.
 
 Pinned by `volume_outage_tests.rs` (the state machine: back, give-up, cancel, pause, sign-in, a queued job after a
 give-up, a Retry after one, a shared deadline, `through_outages`'s cap) and `volume/copy_outage_tests.rs` (the real
-copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate, and a landing cut off before the
-server saw it, after it performed it, and after it performed it with the name then taken by someone else).
+copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate, a landing cut off before the server
+saw it, after it performed it, and after it performed it with the name then taken by someone else, and a single-shot
+write the drop swallowed, with the name then taken by a different-size and a same-size file).
 
 ### The watchdog ACTS
 
