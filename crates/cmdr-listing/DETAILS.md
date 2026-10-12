@@ -120,12 +120,12 @@ reclaims a leaked listing `orphan_reaper.rs`.
   `pipeline` in sibling groups that use each other.
 
 - **The public API** is `lib.rs`'s `pub use` list: `Listings`' methods (in `engine/`, one file per caller group:
-  `open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`, plus `backends.rs`, the engine's own
-  weak `cmdr_fs` `ListingHost`) and the types they take and return. Every submodule but `host` is private, so the
-  compiler keeps callers on that list. A listing id crosses it as a `ListingId`; only IPC sees a `String`. Methods
-  return owned data; `with_rows` is the one closure the engine runs under its cache lock, and it must never call back
-  into the engine. A scratch-visibility or collator read happens BEFORE the cache lock and travels down as a value;
-  `CachedListing` keeps no reference to its engine (it copies the epoch).
+  `open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`, `reread.rs`) and the types they take
+  and return. Every submodule but `host` is private, so the compiler keeps callers on that list. A listing id crosses it
+  as a `ListingId`; only IPC sees a `String`. Methods return owned data; `with_rows` is the one closure the engine runs
+  under its cache lock, and it must never call back into the engine. A scratch-visibility or collator read happens
+  BEFORE the cache lock and travels down as a value; `CachedListing` keeps no reference to its engine (it copies the
+  epoch).
 - **The cache** (`Inner::cache`): `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
 - **`CachedListing`**:
   `{ volume_id, path, entries, visible_rows, path_index, sort_by, sort_order, directory_sort_mode, sequence, created_at, last_accessed_ms, overlay_rows }`.
@@ -644,7 +644,9 @@ shipped build.
   `the_same_added_applied_twice_counts_once`.
 - **The engine is a handle, `Listings`**, not crate statics. **Why:** a static cache made every test share one cache
   (unique ids, scoped reaper sweeps, a process-wide lock serializing every scratch-visibility test) and kept the cache
-  global for any other consumer. The app holds its one engine in a `OnceLock` (`listing_host::listings()`).
+  global for any other consumer. The app holds its one engine in a `OnceLock` (`listing_host::listings()`). Two
+  process-wide registries the engine reads stay where they are, because neither is listing state: `cmdr_fs::staging`'s
+  in-flight scratch set and the ICU collation data behind `NameCollator`.
 - **`Listings::builder(volumes, events)` takes the two seams a consumer can't do without as arguments**; the other six
   default to no-ops, and `Listings::detached()` defaults all eight. **Why:** an engine with no volumes lists nothing and
   one with no events leaves every pane on "loading", so forgetting either is a compile error, not a degraded mode. The
@@ -1073,6 +1075,15 @@ silent: the pane looks settled and correct, which is why it went unexplained thr
 duration evidence pinned it.
 
 ## Read generations
+
+**The re-read API** (`reread.rs`, the watcher's and ⌘R's half): `refresh(id)` re-reads through the volume and returns
+only once its read landed or was superseded, which E2E's `flush_file_watcher` and ⌘R's 2 s `TimedOut` wait both rely on.
+It answers a `RefreshOutcome`: `Landed`, `Superseded`, `DirectoryGone` (the host emits `directory-deleted` and stops the
+watch), `NoVolume` (nothing serves the listing's volume id: the host's cue to `begin_read`, read the directory itself,
+and hand the entries over with `refresh_from_entries`), `ListingGone`, or `Skipped` (`PermissionDenied` silently, any
+other read error logged at warn). `observe_children(id, children)` is the incremental path: the engine classifies each
+stat'd child as add, remove, or modify, enriches them in one call, carries tags forward, and publishes removes, then
+adds, then modifies.
 
 The turnstile orders `FullRefresh`es of one directory, and nothing else: ⌘R and the watcher's re-read
 (`Listings::refresh`), the `std::fs` hand-over (`begin_read` + `refresh_from_entries`), a respell, and a backend's

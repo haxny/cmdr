@@ -35,9 +35,6 @@ Read this before adding, wiping, or reorganizing a spec.
 - `db-first-listings-plan.md`: **Serve directory listings from the SQLite index instead of `readdir` + `stat`**, so
   first paint is a query. Blocked on a measurement first. Issues: [#244](https://github.com/vdavid/cmdr/issues/244),
   [#245](https://github.com/vdavid/cmdr/issues/245).
-- `listing-crate-plan.md`: **The listing engine is tangled with the app (Tauri events, the volume registry, the index,
-  analytics, MCP, TCC) and lives in process-wide statics.** A Tauri-free `crates/cmdr-listing` with one `Listings`
-  handle and eight host seams, done characterize-then-convert. Issue: [#301](https://github.com/vdavid/cmdr/issues/301).
 - `mdm-managed-preferences-plan.md`: **IT can't turn off Cmdr's usage stats, crash reports, updates, or cloud AI for
   everyone.** Managed preferences in the `com.veszelovszki.cmdr` domain, enforced in the backend, shown as locked in
   Settings, with a published sample profile. Issue: [#118](https://github.com/vdavid/cmdr/issues/118).
