@@ -27,6 +27,7 @@ fn directory_entry_to_file_entry_file() {
         is_directory: false,
         created: smb2::pack::FileTime(133_485_408_000_000_000),
         modified: smb2::pack::FileTime(133_485_408_000_000_000),
+        attributes: smb2::FileAttributes::default(),
     };
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share/Documents");
@@ -48,6 +49,7 @@ fn directory_entry_to_file_entry_directory() {
         is_directory: true,
         created: smb2::pack::FileTime::ZERO,
         modified: smb2::pack::FileTime::ZERO,
+        attributes: smb2::FileAttributes::default(),
     };
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share");
