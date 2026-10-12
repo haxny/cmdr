@@ -335,14 +335,21 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
         hooks.on_progress(progress);
     }
 
-    // Flush the central directory. A rewrite yields a fresh inode, so the
-    // original's xattrs (Finder tags, quarantine), mode, and creation and
-    // modification dates go onto the temp before it's durably persisted, so an
-    // edit doesn't strip what a plain copy keeps. Best-effort: metadata loss
-    // never fails a data-safe edit.
+    // Flush the central directory and make the bytes durable. A rewrite yields
+    // a fresh inode, so the original's xattrs (Finder tags, quarantine), mode,
+    // and creation and modification dates then go onto the temp, so an edit
+    // doesn't strip what a plain copy keeps. Best-effort: metadata loss never
+    // fails a data-safe edit.
+    //
+    // ❗ The flush goes first, through `sync_file_data`: on a Finder-mounted
+    // SMB share, `F_FULLFSYNC` (std's `sync_all`) answers `ENOTSUP`, which
+    // failed every edit of a zip there, and writes still buffered when the
+    // dates go on reach the server at the real close, which stamps its own
+    // mtime (verified against the Docker Samba guest share mounted with
+    // `mount_smbfs`, macOS 27.0, 2026-10-12).
     let temp_file = writer.finish().map_err(MutationError::Zip)?;
+    cmdr_fs::durable::sync_file_data(&temp_file).map_err(MutationError::Io)?;
     let landed = carry_archive_metadata(archive_path, &temp_file);
-    temp_file.sync_all().map_err(MutationError::Io)?;
     drop(temp_file);
 
     // The atomic swap: on one filesystem this is the single instant the archive
