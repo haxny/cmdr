@@ -40,6 +40,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::patching::patch_created;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
@@ -260,10 +261,14 @@ impl S3Volume {
                 raw_os_error: None,
             }
         })?;
-        // The source file's own date, carried as `x-amz-meta-mtime`, and this
-        // write's token, so a cut-off PUT can find its own leftover.
+        // The source file's own date, creation date, and mode, carried in
+        // rclone's keys, and this write's token, so a cut-off PUT can find its
+        // own leftover. The stream answers from what its open holds.
+        let carried = stream.metadata(MetadataClasses::CREATED.union(MetadataClasses::MODE));
         let metadata = ObjectMetadata {
             mtime: stream.modified_at(),
+            created: carried.created,
+            mode: carried.mode,
             write_token: Some(crate::metadata::write_token()),
             carried: Vec::new(),
         };

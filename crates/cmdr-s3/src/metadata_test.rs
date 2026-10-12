@@ -57,3 +57,54 @@ fn garbage_is_not_an_mtime() {
         assert_eq!(parse_mtime(text), None, "{text:?}");
     }
 }
+
+// ── rclone's `--metadata` keys ───────────────────────────────────────
+
+#[test]
+fn a_creation_date_goes_out_as_rclones_rfc3339_in_utc() {
+    // `time.RFC3339Nano`: the fraction only when there is one.
+    assert_eq!(
+        super::format_btime(UNIX_EPOCH + Duration::from_secs(1_425_168_000)).as_deref(),
+        Some("2015-03-01T00:00:00Z")
+    );
+    assert_eq!(
+        super::format_btime(UNIX_EPOCH + Duration::new(1_425_168_000, 120_000_000)).as_deref(),
+        Some("2015-03-01T00:00:00.12Z")
+    );
+}
+
+#[test]
+fn a_creation_date_reads_back_whatever_offset_rclone_wrote() {
+    // rclone's local backend formats in the machine's zone, so an offset is
+    // what a bucket filled by rclone on a laptop in Stockholm holds.
+    let born = UNIX_EPOCH + Duration::from_secs(1_425_168_000);
+    assert_eq!(super::parse_btime("2015-03-01T01:00:00+01:00"), Some(born));
+    assert_eq!(
+        super::parse_btime(&super::format_btime(born).expect("a 2015 date")),
+        Some(born)
+    );
+    assert_eq!(
+        super::parse_btime("1425168000"),
+        None,
+        "an mtime-shaped value isn't a btime"
+    );
+}
+
+#[test]
+fn a_mode_goes_out_as_rclones_whole_st_mode_in_octal() {
+    assert_eq!(super::format_mode(0o644), "100644");
+    assert_eq!(super::format_mode(0o4755), "104755");
+}
+
+#[test]
+fn a_mode_reads_back_its_permission_bits_only() {
+    assert_eq!(super::parse_mode("100644"), Some(0o644));
+    assert_eq!(super::parse_mode("0100664"), Some(0o664), "rclone's documented example");
+    assert_eq!(
+        super::parse_mode("40755"),
+        Some(0o755),
+        "a folder's mode reads the same way"
+    );
+    assert_eq!(super::parse_mode("rwxr-xr-x"), None);
+    assert_eq!(super::parse_mode(""), None);
+}

@@ -32,18 +32,19 @@ const MODIFIED: u64 = 1_611_909_015;
 /// A mode no umask gives a fresh file.
 const EXECUTABLE: u32 = 0o755;
 
-/// Every backend as a SOURCE. MTP, WebDAV, and S3 report nothing beyond mtime.
+/// Every backend as a SOURCE. MTP and WebDAV report nothing beyond mtime.
 fn sources() -> Vec<(&'static str, MetadataCaps)> {
     vec![
         ("local", LocalPosixVolume::METADATA_CAPS),
         ("SMB", cmdr_smb::volume::SmbVolume::METADATA_CAPS),
         ("SFTP", cmdr_sftp::SftpVolume::METADATA_CAPS),
         ("ADB", cmdr_adb::AdbVolume::METADATA_CAPS),
+        ("S3", cmdr_s3::S3Volume::METADATA_CAPS),
         ("archive", archive_caps()),
         // The git portal answers this shape inline (pinned in its own crate's
         // volume tests).
         ("git", MetadataCaps::MODE_REPORTER),
-        ("MTP / WebDAV / S3", MetadataCaps::NONE),
+        ("MTP / WebDAV", MetadataCaps::NONE),
     ]
 }
 
@@ -54,7 +55,8 @@ fn destinations() -> Vec<(&'static str, MetadataCaps)> {
         ("SMB", cmdr_smb::volume::SmbVolume::METADATA_CAPS),
         ("SFTP", cmdr_sftp::SftpVolume::METADATA_CAPS),
         ("ADB", cmdr_adb::AdbVolume::METADATA_CAPS),
-        ("MTP / WebDAV / S3", MetadataCaps::NONE),
+        ("S3", cmdr_s3::S3Volume::METADATA_CAPS),
+        ("MTP / WebDAV", MetadataCaps::NONE),
     ]
 }
 

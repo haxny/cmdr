@@ -61,6 +61,19 @@ impl S3Volume {
     }
 }
 
+impl S3Volume {
+    /// A file's creation date and mode, stored and reported as rclone's
+    /// `x-amz-meta-btime` and `x-amz-meta-mode` beside the mtime, so they ride the
+    /// PUT and the GET a copy already makes (`DETAILS.md` § "Creation date and mode").
+    /// A folder is a prefix: nothing to store on it.
+    pub const METADATA_CAPS: cmdr_fs::metadata::MetadataCaps = cmdr_fs::metadata::MetadataCaps {
+        stores: cmdr_fs::metadata::MetadataClasses::CREATED.union(cmdr_fs::metadata::MetadataClasses::MODE),
+        reports: cmdr_fs::metadata::MetadataClasses::CREATED.union(cmdr_fs::metadata::MetadataClasses::MODE),
+        folder_stores: cmdr_fs::metadata::MetadataClasses::NONE,
+        folder_dates: false,
+    };
+}
+
 impl Volume for S3Volume {
     fn name(&self) -> &str {
         &self.name
@@ -132,6 +145,11 @@ impl Volume for S3Volume {
     /// ❗ Implementing the read path does not declare it; this does.
     fn supports_export(&self) -> bool {
         true
+    }
+
+    /// [`Self::METADATA_CAPS`].
+    fn metadata_caps(&self) -> cmdr_fs::metadata::MetadataCaps {
+        Self::METADATA_CAPS
     }
 
     #[allow(

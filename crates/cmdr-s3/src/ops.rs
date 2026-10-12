@@ -16,7 +16,9 @@ use md5::{Digest as _, Md5};
 use url::Url;
 
 use crate::encoding::{encode_component, encode_key};
-use crate::metadata::{MTIME_HEADER, WRITE_TOKEN_HEADER, format_mtime};
+use crate::metadata::{
+    BTIME_HEADER, MODE_HEADER, MTIME_HEADER, WRITE_TOKEN_HEADER, format_btime, format_mode, format_mtime,
+};
 use crate::profile::{ConditionalOp, LocateError, NoOverwrite, ProviderProfile};
 use crate::request::{Body, Dialect, S3Request};
 use crate::sigv4::{AmzTime, Credentials, Scope, presign};
@@ -64,6 +66,10 @@ pub(crate) struct Built {
 pub(crate) struct ObjectMetadata {
     /// The source file's modification time (`x-amz-meta-mtime`).
     pub mtime: Option<SystemTime>,
+    /// The source file's creation date (`x-amz-meta-btime`).
+    pub created: Option<SystemTime>,
+    /// The source file's permission bits (`x-amz-meta-mode`).
+    pub mode: Option<u32>,
     /// The identity of the PUT writing it (`x-amz-meta-cmdr-write`), so a
     /// cut-off write can tell its own leftover from anyone else's object.
     pub write_token: Option<String>,
@@ -432,6 +438,14 @@ fn with_metadata(request: S3Request, metadata: &ObjectMetadata) -> S3Request {
         Some(mtime) => request.header(name(MTIME_HEADER), value(&format_mtime(mtime))),
         None => request,
     };
+    let request = match metadata.created.and_then(format_btime) {
+        Some(btime) => request.header(name(BTIME_HEADER), value(&btime)),
+        None => request,
+    };
+    let request = match metadata.mode {
+        Some(mode) => request.header(name(MODE_HEADER), value(&format_mode(mode))),
+        None => request,
+    };
     let mut request = match &metadata.write_token {
         Some(token) => request.header(name(WRITE_TOKEN_HEADER), value(token)),
         None => request,
@@ -473,7 +487,7 @@ fn name(text: &'static str) -> HeaderName {
     HeaderName::from_static(text)
 }
 
-/// A header value this module builds: digits, base64, an rclone mtime, or
+/// A header value this module builds: digits, base64, an rclone mtime, btime, or mode, or
 /// a percent-encoded path, all printable ASCII.
 fn value(text: &str) -> HeaderValue {
     HeaderValue::from_str(text).expect("an S3 header value built here is printable ASCII")

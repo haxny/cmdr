@@ -44,8 +44,7 @@ fn header<'a>(request: &'a S3Request, name: &str) -> Option<&'a str> {
 fn with_mtime() -> ObjectMetadata {
     ObjectMetadata {
         mtime: Some(UNIX_EPOCH + Duration::from_secs(MTIME)),
-        write_token: None,
-        carried: Vec::new(),
+        ..ObjectMetadata::default()
     }
 }
 
@@ -111,12 +110,37 @@ fn put_object_streams_its_body_and_writes_the_rclone_mtime() {
 #[test]
 fn put_object_carries_the_write_token() {
     let metadata = ObjectMetadata {
-        mtime: None,
         write_token: Some("1f-abc-0".to_string()),
-        carried: Vec::new(),
+        ..ObjectMetadata::default()
     };
     let built = put_object(&aws(), "photos", "a.jpg", 1, Overwrite::Replace, &metadata).unwrap();
     assert_eq!(header(&built.request, "x-amz-meta-cmdr-write"), Some("1f-abc-0"));
+}
+
+/// The creation date and mode ride beside the mtime in rclone's keys and
+/// formats, and only when the source had them.
+#[test]
+fn put_object_carries_the_creation_date_and_mode_in_rclones_keys() {
+    let metadata = ObjectMetadata {
+        created: Some(UNIX_EPOCH + Duration::from_secs(1_425_168_000)),
+        mode: Some(0o755),
+        ..ObjectMetadata::default()
+    };
+    let built = put_object(&aws(), "photos", "a.jpg", 1, Overwrite::Replace, &metadata).unwrap();
+    assert_eq!(header(&built.request, "x-amz-meta-btime"), Some("2015-03-01T00:00:00Z"));
+    assert_eq!(header(&built.request, "x-amz-meta-mode"), Some("100755"));
+
+    let plain = put_object(
+        &aws(),
+        "photos",
+        "b.jpg",
+        1,
+        Overwrite::Replace,
+        &ObjectMetadata::default(),
+    )
+    .unwrap();
+    assert_eq!(header(&plain.request, "x-amz-meta-btime"), None);
+    assert_eq!(header(&plain.request, "x-amz-meta-mode"), None);
 }
 
 #[test]

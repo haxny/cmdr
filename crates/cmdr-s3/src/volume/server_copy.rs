@@ -98,6 +98,10 @@ impl SourceObject {
     pub(super) fn restated(&self) -> ObjectMetadata {
         ObjectMetadata {
             mtime: self.mtime,
+            // A source's `btime` and `mode` ride in `carried` with its other
+            // `x-amz-meta-*`, byte for byte.
+            created: None,
+            mode: None,
             write_token: None,
             carried: self.carried.clone(),
         }

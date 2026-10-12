@@ -64,6 +64,9 @@ async fn a_place_keeps_the_write_promises(service: FixtureService) {
     conformance::assert_write_from_stream_keeps_the_source_date(&volume, &at("dated.txt"), std::time::Duration::ZERO)
         .await;
     conformance::assert_read_stream_reports_the_listed_date(&volume, &at("dated.txt")).await;
+    conformance::assert_write_from_stream_keeps_metadata(&volume, &at("born.txt")).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, &at("born.txt")).await;
+    conformance::assert_apply_metadata_keeps(&volume, &at("born")).await;
 }
 
 async fn a_place_keeps_the_read_promises(service: FixtureService) {

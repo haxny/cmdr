@@ -39,8 +39,9 @@ percent-encoding = "2"
 # takes these as-is.
 http = "1"
 # The ISO 8601 timestamps S3 lists carry (`2009-10-12T17:50:30.000Z`) and the
-# signer's date fields. A strict subset of the app's features.
-time = { version = "0.3", features = ["parsing"] }
+# signer's date fields, and rclone's `btime` (RFC 3339) both ways. A strict subset of the
+# app's features.
+time = { version = "0.3", features = ["parsing", "formatting"] }
 # R2 stores keys NFC; the profile composes them before they leave.
 unicode-normalization = "0.1"
 log = "0.4"

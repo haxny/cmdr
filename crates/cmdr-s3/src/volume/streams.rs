@@ -11,15 +11,16 @@ use std::path::Path;
 use std::pin::Pin;
 use std::time::SystemTime;
 
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 use http::StatusCode;
 
 use super::S3Volume;
 use super::errors::map_s3_error;
 use super::paths::{Holder, Resolved, Target, target_of};
-use super::query::stored_mtime;
+use super::query::{carried_from_headers, stored_mtime};
 use crate::error::S3Error;
-use crate::metadata::MTIME_HEADER;
+use crate::metadata::{BTIME_HEADER, MODE_HEADER, MTIME_HEADER};
 use crate::ops::{self, ByteRange};
 use crate::transport::{Opened, REQUEST_BUDGET};
 
@@ -74,6 +75,9 @@ pub(super) struct S3ReadStream {
     /// The object's date off the GET's own headers, so a copy's destination
     /// keeps it (`VolumeReadStream::modified_at`).
     modified_at: Option<SystemTime>,
+    /// The creation date and mode off the same headers (rclone's `btime` and
+    /// `mode`), when a copy put them there.
+    carried: CarriedMetadata,
 }
 
 impl VolumeReadStream for S3ReadStream {
@@ -115,6 +119,10 @@ impl VolumeReadStream for S3ReadStream {
     fn modified_at(&self) -> Option<SystemTime> {
         self.modified_at
     }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        self.carried.clone().restricted_to(wanted)
+    }
 }
 
 impl S3Volume {
@@ -132,6 +140,7 @@ impl S3Volume {
             offset,
         );
         let modified_at = stored_mtime(opened.header(MTIME_HEADER), opened.header("last-modified"));
+        let carried = carried_from_headers(opened.header(BTIME_HEADER), opened.header(MODE_HEADER));
         match answered {
             Answered::Window { total, skip } => Ok(S3ReadStream {
                 body: Some(opened),
@@ -140,6 +149,7 @@ impl S3Volume {
                 skip,
                 path: remote,
                 modified_at,
+                carried,
             }),
             Answered::PastTheEnd { total } => Ok(S3ReadStream {
                 body: None,
@@ -148,6 +158,7 @@ impl S3Volume {
                 skip: 0,
                 path: remote,
                 modified_at,
+                carried,
             }),
             Answered::Refused => Err(refusal(opened, &remote).await),
         }
@@ -187,6 +198,7 @@ impl S3Volume {
             skip,
             path: remote,
             modified_at: None,
+            carried: CarriedMetadata::default(),
         };
         let mut out = Vec::with_capacity(len);
         while out.len() < len {

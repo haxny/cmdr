@@ -192,6 +192,39 @@ async fn a_source_without_an_mtime_keeps_its_date(service: FixtureService) {
     }
 }
 
+/// A copy on the server keeps the creation date and mode a copy put on the
+/// source (rclone's `btime` and `mode`), in one request or in parts: both
+/// restate every `x-amz-meta-*` the source carries.
+async fn a_copy_keeps_the_creation_date_and_mode(service: FixtureService) {
+    let volume = connect_fixture(service, Some(FIXTURE_BUCKET)).await;
+    volume.set_part_floor(5 * MIB as u64);
+    let prefix = scratch_prefix("copy-born");
+    let small = self_describing_bytes(MIB, "small");
+    let big = self_describing_bytes(11 * MIB, "big");
+    let small_key = format!("{prefix}small.bin");
+    let big_key = format!("{prefix}big.bin");
+    S3Target::Fixture(service)
+        .seed_with(
+            FIXTURE_BUCKET,
+            &[object(&small_key, &small), object(&big_key, &big)],
+            &[
+                (crate::metadata::BTIME_HEADER, "2015-03-01T01:00:00+01:00"),
+                (crate::metadata::MODE_HEADER, "100750"),
+            ],
+        )
+        .await;
+
+    for from in [&small_key, &big_key] {
+        let to = format!("{from}.copy");
+        copy(&volume, &volume, from, &to, WriteMode::CreateNew, &Watch::default())
+            .await
+            .expect("the copy lands");
+        let copied = volume.get_metadata(&at(&volume, &to)).await.expect("a stat");
+        assert_eq!(copied.created_at, Some(1_425_168_000), "{from}: the creation date");
+        assert_eq!(copied.permissions, 0o750, "{from}: the mode");
+    }
+}
+
 /// Two places of one account copy between their buckets on the server.
 async fn a_copy_between_two_buckets_of_one_account_runs_on_the_server(service: FixtureService) {
     let source = connect_fixture(service, Some(FIXTURE_BUCKET)).await;
@@ -600,6 +633,8 @@ on_both_fixtures! {
            a_big_object_copies_in_parts_keeping_its_bytes_and_date_on_garage;
     a_source_without_an_mtime_keeps_its_date
         => a_source_without_an_mtime_keeps_its_date_on_versitygw, a_source_without_an_mtime_keeps_its_date_on_garage;
+    a_copy_keeps_the_creation_date_and_mode
+        => a_copy_keeps_the_creation_date_and_mode_on_versitygw, a_copy_keeps_the_creation_date_and_mode_on_garage;
     a_copy_between_two_buckets_of_one_account_runs_on_the_server
         => a_copy_between_two_buckets_of_one_account_runs_on_the_server_on_versitygw,
            a_copy_between_two_buckets_of_one_account_runs_on_the_server_on_garage;

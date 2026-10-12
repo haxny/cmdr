@@ -186,6 +186,8 @@ impl S3Target {
             for seed in batch {
                 let metadata = ObjectMetadata {
                     mtime: seed.mtime,
+                    created: None,
+                    mode: None,
                     write_token: None,
                     carried: Vec::new(),
                 };

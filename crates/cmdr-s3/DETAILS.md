@@ -690,10 +690,10 @@ account-root place has no bucket of its own to compare.
   ignore `If-None-Match` on a copy, fixture README); a multipart copy refuses at its completion, as an upload does. A
   HEAD after every copy verifies it.
 - **The date survives**: every server-side copy restates the source's metadata (`REPLACE`): its `x-amz-meta-mtime`, else
-  its `Last-Modified` as the mtime, its content headers (`Content-Type`, `Content-Encoding`, `Cache-Control`,
-  `Content-Disposition`, `Content-Language`), and its other user metadata (both fixtures honour `REPLACE`,
-  `copy_test.rs`). A multipart copy names the same metadata at its creation. Lost by restating: `Expires` and a website
-  redirect, which nothing Cmdr writes uses.
+  its `Last-Modified` as the mtime, its `btime` and `mode` (§ "Creation date and mode"), its content headers
+  (`Content-Type`, `Content-Encoding`, `Cache-Control`, `Content-Disposition`, `Content-Language`), and its other user
+  metadata (both fixtures honour `REPLACE`, `copy_test.rs`). A multipart copy names the same metadata at its creation.
+  Lost by restating: `Expires` and a website redirect, which nothing Cmdr writes uses.
 - ❗ **Every server-side copy carries its own write token** (`x-amz-meta-cmdr-write`, never the source's), so a copy
   whose answer is lost asks `landed_whole` (one HEAD, never a delete): our token at the source's size means the server
   applied it, and the copy reports it. For a `CompleteMultipartUpload` that's any failed completion; for a one-request
@@ -784,6 +784,31 @@ one, and refuses anything that isn't digits, one optional `-`, and one optional 
 A write takes the date from the source stream (`VolumeReadStream::modified_at`: a local file's `stat`, another S3
 object's own `x-amz-meta-mtime` or `Last-Modified`) and sets it on the PUT or on `CreateMultipartUpload`, never on the
 parts. A source with no date writes none. A rename copies the metadata with the object.
+
+### Creation date and mode
+
+A file's creation date and mode ride beside the mtime in rclone's `--metadata` keys (`S3Volume::METADATA_CAPS` claims
+`CREATED` and `MODE`, files only: a folder is a prefix):
+
+- **Keys and formats** (rclone `4f19e9c`, 2026-10-09, read from source): `x-amz-meta-btime` in RFC 3339 with nanoseconds
+  (`backend/local/metadata.go` formats it `time.RFC3339Nano`; `backend/s3/s3.go` stores it as user metadata "since we
+  can't set it"), and `x-amz-meta-mode` as the whole `st_mode` in octal (`%0o`: `100644`). Cmdr writes the btime in UTC
+  and reads any offset (rclone's local backend writes the machine's zone); it reads a mode's permission bits only.
+- **Both ways at no request**: a write takes them from the source stream's `metadata` beside the date and sets them on
+  the PUT or `CreateMultipartUpload`; the read stream reports them off the GET's headers, `get_metadata` off the HEAD's.
+  ❗ A listing carries no user metadata (§ "Listing and stat"), so a pane row shows neither until Get info HEADs it.
+- **Server-side copy and rename keep them**: they restate every `x-amz-meta-*` (§ "Server-side copy").
+- ❗ **rclone reads `btime` back as `Last-Modified`**: its S3 `Metadata()` overwrites the stored key with the upload
+  time. So Cmdr reads rclone's `btime`, and rclone reads Cmdr's `mode` but not its `btime`. ❌ Never fall back to
+  `Last-Modified` as a creation date the way rclone does: that's the upload, and a copy off the bucket would stamp it on
+  the user's file.
+- **The 2 KB budget**: S3 caps an object's user metadata at 2 KB (keys and values). The four keys Cmdr writes (`mtime`,
+  `btime`, `mode`, `cmdr-write`) come to about 150 bytes; a server-side copy restates whatever else the source carried,
+  which the source's own PUT already fit in the same budget.
+- **Pinned by** `conformance_test.rs` (`assert_write_from_stream_keeps_metadata` and
+  `assert_read_stream_reports_the_listed_metadata` on both fixtures),
+  `copy_test.rs::a_copy_keeps_the_creation_date_and_mode` (one request and in parts), and the codec and request tests in
+  `metadata_test.rs` and `ops_test.rs`.
 
 ## Cost estimates
 

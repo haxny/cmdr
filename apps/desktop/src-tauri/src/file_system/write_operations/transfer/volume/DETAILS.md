@@ -937,7 +937,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   macOS SMB mount, writes still buffered when the dates go on reach the server at the handle's real close, which
   stamps its own mtime (verified in M3). `apply_metadata` does a folder (or a landed file's flags) by path, the same
   helper. Birth is macOS-only: Linux can't set one (`NotApplicable`).
-- **S3**: reports and writes the date as `x-amz-meta-mtime` (`crates/cmdr-s3/DETAILS.md`). No creation date yet (M9).
+- **S3**: reports and writes the date as `x-amz-meta-mtime`, and a file's creation date and mode as rclone's
+  `x-amz-meta-btime` and `x-amz-meta-mode`, on the PUT and GET a copy already makes. The mode is stored as the source
+  reported it (a bucket runs nothing), and folded where it lands on a filesystem (`crates/cmdr-s3/DETAILS.md` §
+  "Creation date and mode").
 - **`InMemoryVolume`**: the reference. Stores and reports every class (`carried_metadata`, `set_carried_metadata`),
   or only what `with_metadata_caps` says, so it stands in for any backend's caps; keeps whole seconds, and moves a folder's date to now when an entry lands in or leaves it, which is what lets an
   engine test tell a folder dated after its contents from one dated before.

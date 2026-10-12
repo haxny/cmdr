@@ -7,11 +7,29 @@
 //! up to nine fractional digits and trailing zeros dropped, like
 //! `1354040105.123456789`. Matching it means Cmdr and rclone read each other's
 //! dates.
+//!
+//! The creation date and mode travel in rclone's `--metadata` keys too (`btime`
+//! and `mode`, from `backend/local/metadata.go`; `backend/s3/s3.go` writes
+//! `btime` as user metadata "since we can't set it" and every other key as is;
+//! read at rclone `4f19e9c`, 2026-10-09): `btime` in RFC 3339 with nanoseconds,
+//! `mode` as the whole `st_mode` in octal, like `100644`. Together with the
+//! mtime and a write token they stay near 150 bytes of S3's 2 KB user-metadata
+//! budget, so a copy never nears it on its own (`DETAILS.md` § "Creation date
+//! and mode").
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
+
 /// The header carrying the mtime. S3 stores metadata keys lowercase.
 pub(crate) const MTIME_HEADER: &str = "x-amz-meta-mtime";
+
+/// The header carrying the creation date (rclone's `btime`).
+pub(crate) const BTIME_HEADER: &str = "x-amz-meta-btime";
+
+/// The header carrying the mode (rclone's `mode`).
+pub(crate) const MODE_HEADER: &str = "x-amz-meta-mode";
 
 /// The header naming the one PUT that wrote an object (`write_token`), so a
 /// write that was cut off can recognise and remove what a server kept of it
@@ -65,6 +83,32 @@ pub(crate) fn parse_mtime(text: &str) -> Option<SystemTime> {
         UNIX_EPOCH.checked_add(offset)
     }
 }
+
+/// `at` as rclone's `btime`: RFC 3339 in UTC, the fraction only when there is
+/// one. `None` for a date RFC 3339 can't say (past the year 9999).
+pub(crate) fn format_btime(at: SystemTime) -> Option<String> {
+    OffsetDateTime::from(at).format(&Rfc3339).ok()
+}
+
+/// A `btime` in RFC 3339, in any offset (rclone's local backend writes the
+/// machine's zone), or `None` when it isn't one.
+pub(crate) fn parse_btime(text: &str) -> Option<SystemTime> {
+    OffsetDateTime::parse(text, &Rfc3339).ok().map(SystemTime::from)
+}
+
+/// A file's permission bits as rclone's `mode`: the whole `st_mode` of a
+/// regular file, in octal.
+pub(crate) fn format_mode(mode: u32) -> String {
+    format!("{:o}", S_IFREG | (mode & 0o7777))
+}
+
+/// The permission bits of an rclone `mode`, or `None` when it isn't octal.
+pub(crate) fn parse_mode(text: &str) -> Option<u32> {
+    u32::from_str_radix(text, 8).ok().map(|mode| mode & 0o7777)
+}
+
+/// `S_IFREG`, the file-type bits rclone's `mode` carries for a file.
+const S_IFREG: u32 = 0o100_000;
 
 /// Nanoseconds as seconds with up to nine decimals, trailing zeros dropped.
 fn fixed_point(nanos: u128) -> String {

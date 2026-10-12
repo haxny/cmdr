@@ -9,6 +9,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{ListingProgress, VolumeError};
 use tokio_util::sync::CancellationToken;
 
@@ -17,7 +18,7 @@ use super::errors::map_s3_error;
 use super::listing::{Child, FILE_SUFFIX, can_hold_keys, children_of, settle};
 use super::paths::{Holder, Resolved, Target, child_of, target_of};
 use crate::error::S3Error;
-use crate::metadata::{MTIME_HEADER, parse_mtime};
+use crate::metadata::{BTIME_HEADER, MODE_HEADER, MTIME_HEADER, parse_btime, parse_mode, parse_mtime};
 use crate::ops::{self, ListObjectsParams};
 use crate::request::S3Request;
 use crate::transport::{Answer, QUERY_BUDGET, S3Client, map_exchange_error};
@@ -246,8 +247,22 @@ impl S3Volume {
         let mut entry = FileEntry::new(name, app_path.to_string_lossy().into_owned(), false, false);
         entry.size = head.object_length();
         entry.modified_at = modified_from_head(head.header(MTIME_HEADER), head.header("last-modified"));
+        let carried = carried_from_headers(head.header(BTIME_HEADER), head.header(MODE_HEADER));
+        entry.created_at = carried.created.and_then(unix_secs);
+        entry.permissions = carried.mode.unwrap_or(0);
         entry.in_cold_storage = cold_from_head(head.header("x-amz-storage-class"), head.header("x-amz-archive-status"));
         Some(entry)
+    }
+}
+
+/// The creation date and mode a HEAD or GET answers with, from rclone's
+/// `btime` and `mode` keys; empty for an object no copy carried them onto.
+/// Never `Last-Modified` as a creation date: that's the upload, not the birth.
+pub(super) fn carried_from_headers(btime: Option<&str>, mode: Option<&str>) -> CarriedMetadata {
+    CarriedMetadata {
+        created: btime.and_then(parse_btime),
+        mode: mode.and_then(parse_mode),
+        ..CarriedMetadata::default()
     }
 }
 
