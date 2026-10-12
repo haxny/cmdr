@@ -38,7 +38,9 @@ nothing else, so a read path that skips the overlays doesn't compile. Five paths
 (`caching::notify_full_refresh_locked`), a backend swap's re-read (`foreign_path::respell_listing`), and the watcher's
 full re-read, also ⌘R (`file_system/watcher.rs`'s `handle_directory_change`). Its `std::fs` fallback, with no volume to
 decorate through, keeps the count the listing had (`OverlayRows::Unchanged`). A device backend's `Replaced` hand-over
-runs no overlay and records zero contributed rows (`Inner::prepare_handed_over`).
+is synchronous and can't wait on the overlays' blocking gather, so it asks only their zero-I/O `applies_to`
+(`Inner::prepare_handed_over`): none applies (every device backend today) and it records zero contributed rows; one
+applies and the arm drops the backend's entries and re-reads the directory as a `FullRefresh` does.
 
 Today's one contributor is the git portal, which puts the six virtual category rows into a repo's `.git/` listing.
 Placement matters three ways:
@@ -679,7 +681,8 @@ sizes), then calls this. `DirectoryChange` variants:
 - `Modified(FileEntry)`: single modify, patches via `update_entry_sorted`.
 - `Renamed { old_name, new_entry }`: same-dir rename (remove old + insert new).
 - `Replaced(Vec<FileEntry>)`: the backend already re-read the directory and hands the contents over; the host sorts them
-  the listing's way, diffs, stores, and publishes (`publish_replacement`).
+  the listing's way, diffs, stores, and publishes (`publish_replacement`). Where an overlay applies, it re-reads like
+  `FullRefresh` instead (§ "The overlay step").
 - `FullRefresh`: re-reads via the Volume trait, computes a diff against the cache.
 
 `Replaced` and `FullRefresh` differ only in who does the read, and both end in the same `publish_replacement`. Report

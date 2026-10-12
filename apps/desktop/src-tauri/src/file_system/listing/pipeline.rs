@@ -115,17 +115,33 @@ impl Inner {
         }
     }
 
-    /// A device backend's own re-read (`DirectoryChange::Replaced`), enriched.
+    /// A device backend's own re-read of `path` (`DirectoryChange::Replaced`),
+    /// enriched, or `None` when an overlay applies there.
     ///
     /// Synchronous: the arm runs on the backend's thread, and an `Added` the
-    /// backend sends right after must land after it. It records zero
-    /// contributed rows, since no overlay contributes to a device backend.
-    pub(crate) fn prepare_handed_over(&self, volume_id: &str, mut entries: Vec<FileEntry>) -> Prepared {
+    /// backend sends right after must land after it, so it can't wait on the
+    /// overlays' blocking gather. It asks only their zero-I/O `applies_to`:
+    /// none applies (every device backend today) and the entries go in with zero
+    /// contributed rows; one applies and the caller re-reads the directory
+    /// instead, dropping these entries rather than half-applying them.
+    pub(crate) fn prepare_handed_over(
+        &self,
+        volume_id: &str,
+        path: &Path,
+        mut entries: Vec<FileEntry>,
+    ) -> Option<Prepared> {
+        // Asked outside every engine lock: the volume seam reads the host's
+        // registry. No volume served means no overlay can apply.
+        if let Some(volume) = self.volumes.get(volume_id)
+            && !self.applicable_overlays(volume.as_ref(), path).is_empty()
+        {
+            return None;
+        }
         self.index.enrich(volume_id, &mut entries);
-        Prepared {
+        Some(Prepared {
             entries,
             overlay_rows: OverlayRows::Recounted(0),
-        }
+        })
     }
 
     /// The overlays that have something to say about `path` on `volume`, in

@@ -5,14 +5,16 @@
 //! which holds no contributed row, so a path that skips the overlays strips
 //! them from an open pane.
 //!
-//! A device backend's `Replaced` hand-over is the one replacement that records
-//! zero contributed rows, pinned at its arm in `notify_directory_changed`.
+//! A device backend's `Replaced` hand-over records zero contributed rows when no
+//! overlay applies to its volume, pinned at its arm in `notify_directory_changed`,
+//! and escalates to a full re-read of the directory when one does.
 //!
 //! The overlay is `seam_test_support`'s marker, which decorates only a volume
 //! with its name. What the git portal decides is `file_system/git/overlay_tests.rs`.
 
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use super::caching::{DirectoryChange, notify_directory_changed, notify_full_refresh};
 use super::caching_test_support::{TestListing, TestListingGuard};
@@ -24,7 +26,7 @@ use crate::file_system::listing::host::ListingEvents;
 use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::testing::unique_test_id;
+use cmdr_fs::testing::{unique_test_id, wait_until_async};
 use cmdr_fs::volume::InMemoryVolume;
 
 fn entry(name: &str) -> FileEntry {
@@ -184,5 +186,32 @@ fn a_replaced_hand_over_records_zero_overlay_rows() {
     assert!(
         !listing.with_listing(|l| l.has_overlay_rows()),
         "a backend's hand-over counts no contributed row"
+    );
+}
+
+/// Behavior change 4 (issue #301): a `Replaced` hand-over on a volume an overlay
+/// applies to can't decorate in place (the arm is synchronous and the overlays
+/// aren't), so it drops the backend's entries and re-reads the directory the way
+/// a `FullRefresh` does, which folds the overlay rows back in.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_replaced_hand_over_on_a_decorated_volume_re_reads_with_the_overlays() {
+    let volume = MarkerVolume::new("overlay-path-replaced-escalates");
+    let listing = volume.stale_listing("overlay-path-replaced-escalates");
+
+    notify_directory_changed(
+        &volume.0,
+        Path::new("/"),
+        DirectoryChange::Replaced(vec![entry("a.txt"), entry("from-the-backend.txt")]),
+    );
+
+    wait_until_async(Duration::from_secs(5), "the escalated re-read to land", || {
+        listing.entry_names().iter().any(|n| n == MARKER_ROW)
+    })
+    .await;
+    assert_decorated(&listing);
+    assert!(
+        !listing.entry_names().iter().any(|n| n == "from-the-backend.txt"),
+        "the backend's entries are dropped, not half-applied: {:?}",
+        listing.entry_names()
     );
 }

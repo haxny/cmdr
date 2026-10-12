@@ -502,9 +502,15 @@ impl Inner {
                 // The backend already re-read the directory, so there's nothing to ask
                 // it for: prepare once for the volume, then publish per listing. This is
                 // where the diffing a device backend used to do for itself lives now.
-                let prepared = self.prepare_handed_over(volume_id, entries);
-                for (listing_id, ..) in &listings {
-                    self.publish_replacement(listing_id, prepared.clone());
+                match self.prepare_handed_over(volume_id, parent_path, entries) {
+                    Some(prepared) => {
+                        for (listing_id, ..) in &listings {
+                            self.publish_replacement(listing_id, prepared.clone());
+                        }
+                    }
+                    // An overlay applies here, and this arm can't wait on it: re-read
+                    // the directory the way a `FullRefresh` does, which decorates.
+                    None => self.spawn_full_refresh(volume_id.to_string(), parent_path.to_path_buf(), listings),
                 }
             }
             DirectoryChange::FullRefresh => {
