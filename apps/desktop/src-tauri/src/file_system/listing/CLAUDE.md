@@ -28,7 +28,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
   reconciles against cache membership.
 - **The orphan reaper keys on `last_accessed_ms`**, bumped by reads, cache patches, and the panes'
   `keep_listings_alive` heartbeat (idle panes make no reads). ❌ Never from `refresh_listing_index_sizes`.
-- **`read_directory_with_progress` holds a foreground hold** for its whole body: ❌ never bind it to `_`.
+- **A streaming read's foreground hold lives in its `ReadSession`** (`streaming.rs`), for exactly the read's body.
 - ❌ **A listing never aborts a read**, on cancel or when a retry wins: detaching lets it unwind; aborting wedges an
   MTP phone. A read quiet for `stall_after` emits `listing-stalled` and keeps waiting, ❌ never a deadline that ends
   it. `DETAILS.md` § "Stalled listings".

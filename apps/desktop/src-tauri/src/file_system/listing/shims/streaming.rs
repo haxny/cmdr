@@ -82,19 +82,16 @@ pub(crate) async fn read_directory_with_progress(
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
 ) -> Result<(), VolumeError> {
-    installed()
-        .read_directory_with_progress(
-            events,
-            listing_id,
-            state,
-            volume_id,
-            path,
-            include_hidden,
-            sort_by,
-            sort_order,
-            dir_sort_mode,
-        )
-        .await
+    let request = StreamingRequest {
+        listing_id: listing_id.to_string(),
+        volume_id: volume_id.to_string(),
+        path: path.to_path_buf(),
+        include_hidden,
+        sort_by,
+        sort_order,
+        dir_sort_mode,
+    };
+    installed().read_directory_with_progress(events, state, &request).await
 }
 
 /// `Inner::cancel_listing` on the installed engine.

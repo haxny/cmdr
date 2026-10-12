@@ -828,8 +828,8 @@ what's on disk).
 ## The foreground lease a listing holds
 
 `read_directory_with_progress` takes a foreground hold on the volume (the `leases` seam, which Cmdr answers with a
-`priority::foreground` lease) as its FIRST statement and holds it
-for the whole body. That is what tells a background SMB upload and the index scan that the user is waiting on this
+`priority::foreground` lease) as its FIRST statement, inside a `ReadSession` (`streaming.rs`), and holds it for the
+whole body. That is what tells a background SMB upload and the index scan that the user is waiting on this
 share right now, for however long the folder actually takes to come back. The command entry point
 (`commands/file_system/listing.rs`) still stamps the volume's timestamp on the way in: it covers the non-streaming path
 and seeds the debounce, and the lease covers the listing itself. Design, both halves, and what bounds a held lease:
@@ -837,8 +837,9 @@ and seeds the debounce, and the lease covers the listing itself. Design, both ha
 
 **It is RAII and nothing else.** Every exit gives it back with no code on the path: the error return, the three
 cancellation returns, the restricted-empty-root return, a panic inside the task, and the task's future being dropped
-when the runtime shuts down. The two things that would break it are binding the guard to `_` (which drops it
-immediately) and adding a manual release beside the drop.
+when the runtime shuts down. The hold is a private field of `ReadSession`, which also carries the read's cancel token
+and stall watch, and the read's body takes the session by value and reaches the token only through it: there is no
+guard to bind to `_`, and the hold drops exactly when the body ends. ❌ Don't add a manual release beside the drop.
 
 **Cancel releases it, deliberately.** The `select!` cancel arm returns while the detached backend task is still
 unwinding, so the lease goes back before the wire work has finished. That is the right answer, not a leak: the pane has

@@ -14,7 +14,9 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use crate::file_system::listing::cached_listing::CachedListing;
 use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::foreign_path::Listed;
-use crate::file_system::listing::host::{ListingEnd, ListingEvents, OpenedListing, Unregistered};
+use crate::file_system::listing::host::{
+    ForegroundHold, ForegroundLeases, ListingEnd, ListingEvents, OpenedListing, Unregistered,
+};
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::pipeline::ReadBy;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
@@ -66,6 +68,42 @@ impl StreamingListingState {
             cancel: CancellationToken::new(),
             stall,
         }
+    }
+}
+
+/// One streaming read, from its first statement to its last: the foreground
+/// hold, and the cancel token and stall watch the read answers to.
+///
+/// The hold is a private field, so it lives exactly as long as the read: the
+/// read's body takes the session by value and reaches its cancel token and
+/// stall watch only through it, so there's no hold to bind to `_` and drop
+/// early. Released by drop on every exit (error, cancel, panic, or the task
+/// being dropped at shutdown), so no path can leak it and pin a share busy.
+#[must_use = "a session that isn't kept releases its foreground hold at once"]
+pub(crate) struct ReadSession {
+    /// The user is waiting on this volume until the read ends (`host/leases.rs`).
+    _hold: ForegroundHold,
+    /// The read's cancel token and stall watch, shared with the cancel map.
+    state: Arc<StreamingListingState>,
+}
+
+impl ReadSession {
+    /// Takes `volume_id`'s foreground hold for a read answering to `state`.
+    fn begin(leases: &dyn ForegroundLeases, volume_id: &str, state: &Arc<StreamingListingState>) -> Self {
+        Self {
+            _hold: leases.hold(volume_id),
+            state: Arc::clone(state),
+        }
+    }
+
+    /// The read's stop signal (see [`StreamingListingState::cancel`]).
+    fn cancel(&self) -> &CancellationToken {
+        &self.state.cancel
+    }
+
+    /// When the read counts as stalled.
+    fn stall(&self) -> &StallWatch {
+        &self.state.stall
     }
 }
 
@@ -145,33 +183,18 @@ impl Inner {
         // A strong handle: the read ends.
         let engine = Arc::clone(self);
         self.runtime.spawn(async move {
-            let StreamingRequest {
-                listing_id,
-                volume_id,
-                path,
-                include_hidden,
-                sort_by,
-                sort_order,
-                dir_sort_mode,
-            } = request;
-            let result = engine
-                .read_directory_with_progress(
-                    &events,
-                    &listing_id,
-                    &state,
-                    &volume_id,
-                    &path,
-                    include_hidden,
-                    sort_by,
-                    sort_order,
-                    dir_sort_mode,
-                )
-                .await;
+            let result = engine.read_directory_with_progress(&events, &state, &request).await;
 
             // Clean up streaming state
-            engine.streaming.write_ignore_poison().remove(&listing_id);
+            engine.streaming.write_ignore_poison().remove(&request.listing_id);
 
-            report_failure(events.as_ref(), &listing_id, &volume_id, &path, result);
+            report_failure(
+                events.as_ref(),
+                &request.listing_id,
+                &request.volume_id,
+                &request.path,
+                result,
+            );
         });
     }
 }
@@ -199,37 +222,49 @@ pub(crate) fn report_failure(
 }
 
 impl Inner {
-    /// Reads a directory with progress reporting.
+    /// Reads a directory with progress reporting, answering to `state`'s cancel
+    /// token and stall watch.
     ///
     /// Async implementation that spawns the Volume I/O in a background task
     /// and uses `tokio::select!` with a cancellation polling loop for responsive ESC handling.
     /// Uses the Volume abstraction to support both local filesystem and MTP devices.
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Streaming operation requires many state parameters"
-    )]
     pub(crate) async fn read_directory_with_progress(
         self: &Arc<Self>,
         events: &Arc<dyn ListingEvents>,
-        listing_id: &str,
         state: &Arc<StreamingListingState>,
-        volume_id: &str,
-        path: &Path,
-        include_hidden: bool,
-        sort_by: SortColumn,
-        sort_order: SortOrder,
-        dir_sort_mode: DirectorySortMode,
+        request: &StreamingRequest,
     ) -> Result<(), VolumeError> {
         // Hold the volume busy for the REAL duration of this listing. The command
         // entry point's timestamp seeds the debounce but decays in half a second,
         // while an SMB listing of a big folder can take ten; without the lease a
         // background upload or index scan resumes and competes for the rest of the
-        // user's wait. Released by drop on every exit — error, cancel, panic, or the
-        // task being dropped at shutdown — so no path can leak it and pin the share
-        // busy. Cancel releases it deliberately: the pane has moved on, so the user
-        // is no longer waiting on this listing even while the backend unwinds behind
-        // it. The host owns the signal (the leases seam).
-        let _foreground_hold = self.leases.hold(volume_id);
+        // user's wait. Cancel releases it deliberately: the pane has moved on, so the
+        // user is no longer waiting on this listing even while the backend unwinds
+        // behind it. The host owns the signal (the leases seam).
+        let session = ReadSession::begin(self.leases.as_ref(), &request.volume_id, state);
+        self.read_in_session(events, session, request).await
+    }
+
+    /// The read itself. It owns `session`, so the foreground hold lives exactly
+    /// as long as this body, and the cancel token is reachable only through it.
+    async fn read_in_session(
+        self: &Arc<Self>,
+        events: &Arc<dyn ListingEvents>,
+        session: ReadSession,
+        request: &StreamingRequest,
+    ) -> Result<(), VolumeError> {
+        let StreamingRequest {
+            listing_id,
+            volume_id,
+            path,
+            include_hidden,
+            sort_by,
+            sort_order,
+            dir_sort_mode,
+        } = request;
+        let (listing_id, volume_id, path) = (listing_id.as_str(), volume_id.as_str(), path.as_path());
+        let (include_hidden, sort_by, sort_order, dir_sort_mode) =
+            (*include_hidden, *sort_by, *sort_order, *dir_sort_mode);
 
         benchmark::log_event("read_directory_with_progress START");
         log::debug!(
@@ -250,7 +285,7 @@ impl Inner {
         events.opening(&id);
 
         // Check cancellation before starting
-        if state.cancel.is_cancelled() {
+        if session.cancel().is_cancelled() {
             benchmark::log_event("read_directory_with_progress CANCELLED (before read)");
             events.finished(&id, cancelled());
             return Ok(());
@@ -298,9 +333,9 @@ impl Inner {
                 volume_id,
                 volume: &volume,
                 path,
-                cancel: &state.cancel,
+                cancel: session.cancel(),
             },
-            &state.stall,
+            session.stall(),
         )
         .await;
         let listed = match outcome {
@@ -332,7 +367,7 @@ impl Inner {
         events.read_complete(&id, entries.len());
 
         // Check cancellation one more time before finalizing
-        if state.cancel.is_cancelled() {
+        if session.cancel().is_cancelled() {
             benchmark::log_event("read_directory_with_progress CANCELLED (after read)");
             events.finished(&id, cancelled());
             return Ok(());
@@ -387,7 +422,7 @@ impl Inner {
         {
             let mut cache = self.cache.write_ignore_poison();
             // Check cancellation while holding the lock - makes check+insert atomic
-            if state.cancel.is_cancelled() {
+            if session.cancel().is_cancelled() {
                 // Out of the lock before reporting: no seam runs under it.
                 drop(cache);
                 benchmark::log_event("read_directory_with_progress CANCELLED (at cache insert)");
