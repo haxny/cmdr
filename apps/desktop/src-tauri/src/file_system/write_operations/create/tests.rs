@@ -519,7 +519,7 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
         .insert("synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
-    emit_synthetic_entry_diff(None, &new_path, tmp.path());
+    patch_listings_after_create(None, &new_path, tmp.path());
 
     assert_eq!(
         on_root.entry_names(),
@@ -532,12 +532,15 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
     );
 }
 
-/// A create whose path the listing already holds (the watcher stat'd it first)
-/// leaves that row alone: the insert's duplicate guard drops the synthetic row,
-/// stale size and all, and nothing reaches the pane.
+/// A create whose path the listing already holds (the watcher stat'd it first,
+/// or a stale row for a file deleted outside Cmdr whose removal hasn't landed)
+/// refreshes that row with the create's own stat, as every other local mutation
+/// does (`notify_added`'s upsert). No create overwrites (mkdir and mkfile refuse a
+/// taken name, paste retries `pasted (N)`), so the row at that path is this file.
 #[test]
-fn synthetic_entry_diff_leaves_a_row_the_listing_already_holds() {
+fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
     use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::diff::DiffChangeType;
     use crate::file_system::listing::diff_emitter::{hold_for_test, pending_changes_for_test};
     use crate::file_system::volume::backends::get_single_entry;
 
@@ -552,11 +555,16 @@ fn synthetic_entry_diff_leaves_a_row_the_listing_already_holds() {
         .insert("synthetic-diff-duplicate");
     hold_for_test(listing.id());
 
-    emit_synthetic_entry_diff(None, &new_path, tmp.path());
+    patch_listings_after_create(None, &new_path, tmp.path());
 
-    assert_eq!(listing.entries()[0].size, Some(1), "the stale row stays as it was");
+    let entries = listing.entries();
+    assert_eq!(entries.len(), 1, "the create upserts; it never adds a second row");
+    assert_eq!(entries[0].size, Some(14), "the row carries the on-disk size");
+    let changes = pending_changes_for_test(listing.id());
+    assert_eq!(changes.len(), 1, "the pane hears one change");
     assert!(
-        pending_changes_for_test(listing.id()).is_empty(),
-        "nothing reaches the pane"
+        matches!(changes[0].change_type, DiffChangeType::Modify),
+        "the pane hears a modify, got {:?}",
+        changes[0].change_type
     );
 }

@@ -54,7 +54,7 @@ pub use streaming::{StreamingListingStartResult, cancel_listing, list_directory_
 pub use operations::{get_files_at_indices, get_paths_at_indices};
 
 // Internal re-exports for file_system module internals (pub(crate) for crate-internal use)
-pub(crate) use caching::{get_cached_listing, get_listing_volume_id_and_path, insert_entry_sorted};
+pub(crate) use caching::{get_cached_listing, get_listing_volume_id_and_path};
 // Notification API for volume mutations
 #[cfg(test)]
 pub(crate) use operations::update_listing_entries;

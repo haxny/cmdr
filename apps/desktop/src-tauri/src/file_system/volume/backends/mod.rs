@@ -24,6 +24,7 @@ pub(crate) use local_posix::rename_volume_error;
 // The local reader: the `std::fs` listing and stat that `LocalPosixVolume`, the
 // watcher's unregistered-volume fallback, `tags.rs`, and `create.rs` read through.
 // `mutation.rs` beside it is what a local mutation means for the listing cache.
+pub(crate) use local_posix::mutation::patch_listing_after_local_mutation;
 #[cfg(test)]
 pub(crate) use local_posix::reading::list_directory;
 pub(crate) use local_posix::reading::{get_single_entry, list_directory_core};

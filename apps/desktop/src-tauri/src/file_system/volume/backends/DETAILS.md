@@ -209,10 +209,11 @@ Resolving the id instead would answer with the SUCCESSOR after a swap and mark a
 `local_posix/reading.rs` is the `std::fs` reader: `list_directory_core` (one `read_dir` plus an `lstat` per entry, built
 into `FileEntry`s and sorted), `get_single_entry` (one stat), and `get_extended_metadata_batch`. `LocalPosixVolume`
 lists and stats through it, and so do the paths that read a local directory with no volume in hand: the watcher's
-unregistered-volume fallback and its per-entry re-stat, `tags.rs`, and `create.rs`'s synthetic row. It's the local
-backend's reader, not the listing engine's, which is why it sits here and `listing/` only sees the `FileEntry`s it
-returns. `local_posix/mutation.rs` is the other half: `patch_listing_after_local_mutation`, what a successful local
-mutation means for the listing cache (`file_system/volume/DETAILS.md` § "Mutation notification").
+unregistered-volume fallback and its per-entry re-stat, and `tags.rs`. It's the local backend's reader, not the
+listing engine's, which is why it sits here and `listing/` only sees the `FileEntry`s it returns.
+`local_posix/mutation.rs` is the other half: `patch_listing_after_local_mutation`, what a successful local mutation
+means for the listing cache (`file_system/volume/DETAILS.md` § "Mutation notification"). `create.rs`'s instant row for
+mkdir, mkfile, and paste-as-file goes through it too.
 
 **Progress.** The pane's "Loaded N files…" readout needs `on_progress` fed while the stat loop runs (why it matters:
 `listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the work happens.

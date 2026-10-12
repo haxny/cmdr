@@ -8,6 +8,7 @@ use cmdr_fs::volume::DirectoryChange;
 
 use super::installed;
 use crate::file_system::listing::caching::ListingSummary;
+#[cfg(test)]
 use crate::file_system::listing::diff::PaneRows;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 
@@ -43,6 +44,7 @@ pub(crate) fn find_listings_on_volume(
 
 /// `Inner::insert_entry_sorted` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub fn insert_entry_sorted(listing_id: &str, entry: FileEntry) -> Option<PaneRows> {
     installed().insert_entry_sorted(listing_id, entry)
 }

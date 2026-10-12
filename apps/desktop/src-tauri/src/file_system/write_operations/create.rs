@@ -15,7 +15,7 @@
 //! `manager::run_instant`). There's no inner timeout: the work runs to its own
 //! end, and the `InstantTaskGuard` releases the busy set even on a panic.
 //!
-//! The synthetic-listing-diff update (`emit_synthetic_entry_diff` /
+//! The instant listing update (`patch_listings_after_create` /
 //! `should_emit_synthetic_diff`) lives here, co-located with the create op it
 //! serves: it's the listing-cache half of "a new entry appeared", and keeping it
 //! next to the create keeps the command a pure pass-through.
@@ -27,8 +27,8 @@ use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
-use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::volume::{MutationEvent, Volume};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 
 /// Whether a routed archive add creates a directory entry or an empty file.
@@ -127,7 +127,7 @@ async fn create_directory_managed_inner(
     // Synthetic diff only works for volumes backed by the local filesystem.
     // Protocol-only volumes (MTP) handle UI updates through their own event systems.
     if should_emit_synthetic_diff(volume_id_for_diff.as_deref()) {
-        emit_synthetic_entry_diff(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
+        patch_listings_after_create(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
     }
     (
         Ok(new_path.to_string_lossy().to_string()),
@@ -201,7 +201,7 @@ async fn create_file_managed_inner(
     };
 
     if should_emit_synthetic_diff(volume_id_for_diff.as_deref()) {
-        emit_synthetic_entry_diff(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
+        patch_listings_after_create(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
     }
     (
         Ok(new_path.to_string_lossy().to_string()),
@@ -461,46 +461,28 @@ pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
     }
 }
 
-/// Queues a synthetic `directory-diff` event for a newly created entry.
+/// Lands a newly created entry in the panes on its own volume, the way every
+/// other local mutation does: the local backend's mutation patch stats it and
+/// hands an `Added` to the composer (index, badges, then panes). A pane that
+/// already holds the path (the watcher got there first) gets the fresher stat as
+/// an upsert, tags carried forward.
 ///
-/// Best-effort: if any step fails (stat, cache lookup, etc.) we log a warning
-/// and return. The watcher will pick up the change later.
+/// `new_path`'s own file name, never the name the user typed: the paste retry
+/// loop may have picked `pasted (N)`. `None` is the local filesystem (`root`);
+/// this only runs for local-FS volumes (`should_emit_synthetic_diff`).
 ///
 /// `pub(super)` so the sibling paste-clipboard writer reuses it (see
 /// `should_emit_synthetic_diff`).
-pub(super) fn emit_synthetic_entry_diff(volume_id: Option<&str>, entry_path: &Path, parent_path: &Path) {
-    use crate::file_system::listing::caching::find_listings_for_path_on_volume;
-    use crate::file_system::listing::insert_entry_sorted;
-    use crate::file_system::volume::backends::get_single_entry;
-
-    // 1. Construct a FileEntry for the new entry
-    let mut entry = match get_single_entry(entry_path) {
-        Ok(e) => e,
-        Err(e) => {
-            log::warn!("Synthetic entry diff: couldn't stat new entry: {}", e);
-            return;
-        }
-    };
-
-    // 2. Enrich with index data. `None` means the local filesystem (`root`); this
-    // path only runs for local-FS volumes (`should_emit_synthetic_diff`).
-    let volume_id = volume_id.unwrap_or(cmdr_index::ROOT_VOLUME_ID);
-    crate::index_host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
-
-    // 3. Find the listings on the create's own volume. A pane on another volume
-    // that shows the same path string (an SFTP pane on a remote `/tmp`) holds a
-    // different directory; a local pane on another volume id gets the entry from
-    // its own watch.
-    let listings = find_listings_for_path_on_volume(Some(volume_id), parent_path);
-    if listings.is_empty() {
+pub(super) fn patch_listings_after_create(volume_id: Option<&str>, new_path: &Path, parent_path: &Path) {
+    let Some(name) = new_path.file_name() else {
+        log::warn!("Created entry has no file name: {}", new_path.display());
         return;
-    }
-
-    // 4. For each listing, insert and enqueue (nothing, to a pane that doesn't show it)
-    for (listing_id, _sort_by, _sort_order, _dir_sort_mode) in listings {
-        // The insertion owns revision allocation and publication under its write lock.
-        let _ = insert_entry_sorted(&listing_id, entry.clone());
-    }
+    };
+    crate::file_system::volume::backends::patch_listing_after_local_mutation(
+        volume_id.unwrap_or(cmdr_index::ROOT_VOLUME_ID),
+        parent_path,
+        MutationEvent::Created(name.to_string_lossy().into_owned()),
+    );
 }
 
 #[cfg(test)]

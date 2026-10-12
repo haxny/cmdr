@@ -129,7 +129,7 @@ pub(crate) async fn write_payload_to_dir(
     // Synthetic listing diff so the new file appears and the FE cursor-lands
     // (mirrors create_file). Local-FS volumes only.
     if super::create::should_emit_synthetic_diff(volume_id.as_deref()) {
-        super::create::emit_synthetic_entry_diff(volume_id.as_deref(), &new_path, dir);
+        super::create::patch_listings_after_create(volume_id.as_deref(), &new_path, dir);
     }
 
     Ok(Some(PastedClipboardFile {

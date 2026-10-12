@@ -560,14 +560,15 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   stats each changed path, classifies add/remove/modify against the cache, and patches in-place via
   `insert_entry_sorted` / `remove_entries_by_paths` / `update_entry_sorted`. Falls back to full `handle_directory_change`
   when events exceed 500 or contain unknown kinds (`Any` / `Other`), which can't be reliably classified.
-- **Synthetic diff for entry creation (`emit_synthetic_entry_diff`)**: `create_directory` / `create_file` return before
-  the watcher fires; without it the new entry wouldn't appear until the next debounce (~200 ms). The command handler
-  stats the new entry, inserts into all affected listings, and emits a `directory-diff` immediately. The watcher's later
-  duplicate is prevented by `has_entry`.
+- **Instant row for entry creation (`patch_listings_after_create`)**: `create_directory` / `create_file` and the paste
+  writer return before the watcher fires; without it the new entry wouldn't appear until the next debounce (~200 ms).
+  The create hands the local backend's mutation patch a `MutationEvent::Created`, which stats the entry and sends an
+  `Added` through the composer (index, badges, panes), like every other local mutation. `notify_added` upserts, so a
+  row the watcher added first gets the create's fresher stat, and the watcher's later duplicate is a modify.
 
 ## Cache helpers (caching.rs)
 
-Used by the watcher's incremental path and synthetic mkdir to patch listings without full re-reads:
+Used by the watcher's incremental path and the change intake to patch listings without full re-reads:
 
 - `find_listings_for_path_on_volume(volume_id, path)`: all listing IDs whose directory matches the path on that volume
   (multiple panes/tabs may show the same directory). `None` matches verbatim across every volume (below).
@@ -697,8 +698,8 @@ A re-stat whose sort-relevant fields changed re-inserts the entry at its new sor
 `DiffChangeType::Move` (`../DETAILS.md` § "Reordered rows"), which is what lets the pane cursor follow the row.
 Natural deduplication: `insert_entry_sorted` returns `None` for duplicates, `remove_entry_by_name` returns `None` if
 already removed. Callers: `Volume::notify_mutation()` (after each successful create/delete/rename on all volume types)
-and the `rename_file` command (local FS renames). `emit_synthetic_entry_diff` remains a legacy fallback for
-`create_file` / `create_directory` on volumes where `supports_local_fs_access()` is `true`.
+and the `rename_file` command (local FS renames). A create on a volume where `supports_local_fs_access()` is `true`
+goes through the same local mutation patch (`patch_listings_after_create`).
 
 `refresh_archive_listings(volume_id, archive_path)` is a sibling entry point for the archive content watch: it
 `FullRefresh`es every open listing at or inside a changed `.zip` (parent drive id + full path) WITHOUT the drive-index

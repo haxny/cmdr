@@ -375,6 +375,69 @@ fn a_renamed_folder_keeps_its_children() {
     );
 }
 
+/// The same `Added` applied twice leaves the folder sizes where one left them.
+/// Cmdr's own create sends its `Added` through the composer, beside the drive's
+/// own watch reporting the same file, so on an indexed external drive the index
+/// hears one create twice and must not count it twice.
+#[test]
+fn the_same_added_applied_twice_counts_once() {
+    use crate::indexing::store::{DirStatsById, ROOT_ID};
+
+    let (conn, dir) = seed_index();
+    IndexStore::upsert_dir_stats_by_id(
+        &conn,
+        &[DirStatsById {
+            entry_id: 2,
+            recursive_logical_size: 11,
+            recursive_physical_size: 11,
+            recursive_file_count: 1,
+            recursive_dir_count: 1,
+            recursive_has_symlinks: false,
+            min_subtree_epoch: 0,
+        }],
+    )
+    .expect("seed the folder's stats");
+    let stats = |conn: &rusqlite::Connection| {
+        [ROOT_ID, 2].map(|id| IndexStore::get_dir_stats_by_id(conn, id).expect("readable"))
+    };
+    let apply = |change: &DirectoryChange| {
+        let writer = IndexWriter::spawn(&dir.path().join("smb-watch-test.db"), crate::NoopEventSink::shared())
+            .expect("spawn writer");
+        assert!(
+            resolve_and_send_for_test(&conn, &writer, "/Volumes/share", "/Volumes/share/sub", change),
+            "the change must translate to a write"
+        );
+        writer.flush_blocking().expect("flush");
+        writer.shutdown();
+    };
+
+    for change in [
+        DirectoryChange::Added(file_entry("new.txt", "/Volumes/share/sub/new.txt", 7)),
+        DirectoryChange::Added(FileEntry::new(
+            "made".into(),
+            "/Volumes/share/sub/made".into(),
+            true,
+            false,
+        )),
+    ] {
+        apply(&change);
+        let once = stats(&conn);
+        apply(&change);
+        assert_eq!(
+            stats(&conn),
+            once,
+            "a second identical Added must not move any folder size"
+        );
+    }
+    assert_eq!(
+        stats(&conn)[1]
+            .as_ref()
+            .map(|s| (s.recursive_logical_size, s.recursive_file_count, s.recursive_dir_count)),
+        Some((18, 2, 2)),
+        "each create counted exactly once"
+    );
+}
+
 #[test]
 fn join_rel_normalizes_the_separator() {
     assert_eq!(join_rel("/", "a.txt"), "/a.txt");
