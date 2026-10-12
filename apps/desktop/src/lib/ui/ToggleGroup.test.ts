@@ -8,17 +8,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import ToggleGroup from './ToggleGroup.svelte'
-
-interface Option {
-  value: string
-  label: string
-  badge?: string
-  hint?: string
-  disabled?: boolean
-  tooltip?: string
-  ariaLabel?: string
-}
+import ToggleGroup, { type ToggleGroupOption as Option } from './ToggleGroup.svelte'
 
 function setupTabs(options: Option[], value: string, opts: Partial<{ disabled: boolean }> = {}) {
   const target = document.createElement('div')
