@@ -555,15 +555,6 @@ impl Volume for InMemoryVolume {
         boundary: &'a crate::volume::ScanBoundary<'a>,
     ) -> Pin<Box<dyn Future<Output = Result<crate::volume::BatchScanResult, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
-            let mut aggregate = CopyScanResult {
-                file_count: 0,
-                dir_count: 0,
-                total_bytes: 0,
-                dedup_bytes: 0,
-                top_level_is_directory: false,
-                top_level_modified_at: None,
-                top_level_created_at: None,
-            };
             let mut per_path = Vec::with_capacity(paths.len());
             for path in paths {
                 boundary.check().await?;
@@ -572,17 +563,14 @@ impl Volume for InMemoryVolume {
                     self.record_subtree(path, recorder.as_ref());
                 }
                 boundary.counted(&scan).await?;
-                aggregate.file_count += scan.file_count;
-                aggregate.dir_count += scan.dir_count;
-                aggregate.total_bytes += scan.total_bytes;
-                aggregate.dedup_bytes += scan.dedup_bytes;
                 per_path.push((path.clone(), scan));
             }
-            Ok(crate::volume::BatchScanResult {
-                aggregate,
-                per_path,
-                files: None,
-            })
+            let mut batch = crate::volume::fold_batch(per_path);
+            // The default's aggregate, which never claims a type for the batch.
+            batch.aggregate.top_level_is_directory = false;
+            batch.aggregate.top_level_modified_at = None;
+            batch.aggregate.top_level_created_at = None;
+            Ok(batch)
         })
     }
 
