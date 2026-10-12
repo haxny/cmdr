@@ -605,7 +605,9 @@ async fn merge_level<'a>(
             .at(&child_source)?
             .into_parts();
         let dest_hit = dest_hit.as_ref();
-        let child_row = tree_level.child(&entry.name, entry.is_directory, entry.size.unwrap_or(0));
+        // The scan's kind, which counts a link as one entry even where this
+        // walk recurses through it (a backend whose listing follows links).
+        let child_row = tree_level.child(&entry.name, merges_as_a_directory(entry), entry.size.unwrap_or(0));
 
         if entry.is_directory {
             // Dir-vs-dir (and dir-into-nothing) always recurses to merge — no
@@ -773,8 +775,13 @@ async fn merge_level<'a>(
         .await?;
     }
 
-    // The level is in place, which is all an empty folder's row waits for.
-    progress.tree().folder_in_place(tree_level.folder());
+    // The level is in place, which is all an empty folder's row waits for. A
+    // level with a FILE's row is a link this walk recursed through: the scan
+    // counted it as one entry, which has now landed.
+    match tree_level.folder() {
+        Some(row) => progress.tree().folder_in_place(Some(row)),
+        None => progress.tree().complete_whole(folder),
+    }
     Ok(if level_made_here {
         DirectoryCreation::Created
     } else {

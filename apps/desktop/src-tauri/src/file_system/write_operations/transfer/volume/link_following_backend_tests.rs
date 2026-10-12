@@ -20,14 +20,16 @@ use super::move_cross::move_volumes_with_progress;
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, read, write_file};
 use crate::file_system::volume::{
-    CopyScanResult, InMemoryVolume, ListingProgress, LocalPosixVolume, SpaceInfo, StreamLength, StreamWriteProgress,
-    Volume, VolumeError, VolumeReadStream, WriteMode,
+    BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, LocalPosixVolume, ScanBoundary, SpaceInfo,
+    StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -43,6 +45,19 @@ struct LinkFollowingVolume {
     /// (a conflict resolution setting it aside), a link to `target` takes the
     /// freed name, as another writer could between the resolver and the landing.
     link_takes_freed_name: Option<(PathBuf, PathBuf)>,
+    /// Scan through the shared `scan_walk`, as ADB and SFTP do: it counts a
+    /// link as one entry, where the inner backend's own walk skips links.
+    shared_scan_walk: bool,
+}
+
+impl ScanSource for LinkFollowingVolume {
+    fn scan_stat<'a>(&'a self, path: &'a Path) -> Walking<'a, FileEntry> {
+        self.inner.get_metadata(path)
+    }
+
+    fn scan_list<'a>(&'a self, path: &'a Path) -> Walking<'a, Vec<FileEntry>> {
+        self.inner.list_directory(path, None)
+    }
 }
 
 impl Volume for LinkFollowingVolume {
@@ -105,6 +120,17 @@ impl Volume for LinkFollowingVolume {
     ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
         self.inner.scan_for_copy(path)
     }
+    fn scan_for_copy_batch_with_boundary<'a>(
+        &'a self,
+        paths: &'a [PathBuf],
+        boundary: &'a ScanBoundary<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
+        if self.shared_scan_walk {
+            scan_walk::scan_trees(self, paths, boundary)
+        } else {
+            self.inner.scan_for_copy_batch_with_boundary(paths, boundary)
+        }
+    }
     fn open_read_stream<'a>(
         &'a self,
         path: &'a Path,
@@ -131,8 +157,51 @@ fn following_volume() -> (Arc<dyn Volume>, TempDir) {
     let volume: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
         inner: LocalPosixVolume::local_folder("V", dir.path().to_path_buf()),
         link_takes_freed_name: None,
+        shared_scan_walk: false,
     });
     (volume, dir)
+}
+
+/// The progress tree's row for a link to a folder inside a copied folder. The
+/// shared scan walk records the link as one file (it never walks a link),
+/// while this backend's listing calls it a directory and the merge walk carries
+/// what it points at. Its row must still settle, or it waits forever and every
+/// folder above it never reads done.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copied_folder_holding_a_dir_link_ends_with_every_tree_row_done() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path();
+    let source: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
+        inner: LocalPosixVolume::local_folder("V", root.to_path_buf()),
+        link_takes_freed_name: None,
+        shared_scan_walk: true,
+    });
+    plant_target(root);
+    write_file(root, "src/album/plain.txt", b"PLAIN");
+    link(root, "src/album/link", "outside/target");
+    let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+    let state = make_state();
+
+    let result = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "op-follow-tree-rows",
+        &state,
+        source,
+        &[PathBuf::from("src/album")],
+        dest,
+        Path::new("/"),
+        &config(ConflictResolution::Stop),
+    )
+    .await;
+    assert!(result.is_ok(), "expected Ok, got {result:?}");
+
+    let rows = state
+        .transfer_tree
+        .get()
+        .expect("the scan installed a tree")
+        .read(row_states)
+        .expect("the tree is on");
+    assert_eq!(rows, vec!["album/ done", "  link done", "  plain.txt done"]);
 }
 
 /// A same-volume merge's folder child answered Overwrite against a FILE: the
@@ -146,6 +215,7 @@ async fn a_link_racing_into_a_freed_name_is_never_merged_into() {
     let volume: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
         inner: LocalPosixVolume::local_folder("V", root.to_path_buf()),
         link_takes_freed_name: Some((PathBuf::from("dst/album/thing"), root.join("outside/target"))),
+        shared_scan_walk: false,
     });
     plant_target(root);
     write_file(root, "src/album/thing/mine.txt", b"MINE");
