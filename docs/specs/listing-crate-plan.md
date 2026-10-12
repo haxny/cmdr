@@ -874,6 +874,35 @@ Deleting the overlay step from the pipeline fails compilation or the M0 overlay 
 **DONE.** `rg -n 'decorate\(' apps/desktop/src-tauri/src --glob '!*test*'` finds the definition and exactly one call, in
 the pipeline function; lanes as M3a plus `desktop-rust-module-cycles` (slow).
 
+Executor notes:
+
+- The pipeline is flat `listing/pipeline.rs` for now (M5 groups it under `read/`). `Inner::prepare(ReadBy, …)` covers
+  the five volume reads (`ReadBy::Volume { volume, routed }`) and the watcher's `std::fs` fallback (`ReadBy::StdFs`:
+  enrich, `OverlayRows::Unchanged`); `Replaced` uses the sync sibling `prepare_handed_over`, which shares the
+  `applies_to` filter. `decorate` is private to the pipeline; tests that pin the overlay step alone reach it through
+  `pipeline_test_support.rs` (excluded by the DONE grep), and tests seed listings with a `#[cfg(test)]`
+  `Prepared::for_test`. `OverlayRows` moved into `pipeline.rs`; `CachedListing::with_overlay_rows` went.
+- Finding for M3c: `update_listing_entries` (every replace: `FullRefresh`, `Replaced`, respell, the watcher's re-read)
+  re-enriches the entries under the cache WRITE lock, a second under-lock seam call the loud rules miss (beside
+  `refresh_listing_index_sizes` and resort). It also enriches routed (archive, git snapshot) re-reads, which the
+  pipeline deliberately skips. Kept byte-identical here; dropping it is a behavior change (routed rows stop picking up
+  index sizes on refresh), best named alongside change 5.
+- Log and order only: `verify_directory` now runs after the overlays on the streaming read and sync start, and
+  `listing_done`'s `enrich_ms` times enrich plus overlays.
+- Change 4 checks `applies_to` and spawns the refresh at the notifier's `parent_path`, the same key the `FullRefresh`
+  arm uses.
+- The publish token: `CacheWrite<'_, V>` (generic, so `diff_emitter.rs` needn't name `CachedListing` and no
+  `cached_listing ↔ diff_emitter` cycle forms) and `Publish<'_>`, from `Inner::write_cache`. `DiffQueue::enqueue` /
+  `drop_pending` are private; `CacheWrite::remove` is `end`'s cache-then-queue drop. `advance_sequence` stays ungated
+  (resort and the hidden toggle bump it beside `publish.drop_pending`; a `multi_rename` test bumps it directly). Writers
+  that never publish (streaming insert, re-key, index sizes) keep the plain guard.
+- `ReadSession` lives in `streaming.rs`; `read_directory_with_progress(events, state, &StreamingRequest)` creates it and
+  hands it by value to the private `read_in_session`. The test shim keeps the positional signature.
+- The watcher's incremental enrich is one call for adds plus modifies (own `perf(watcher)` commit).
+- `module-cycles`: `cmdr::file_system::listing` [15, 2, 2] vs [14, 2, 2] at M3a's head (measured): `pipeline` joins the
+  hub M3a's `impl Inner`-per-module plus `shims` re-exports created (`fuzzy_jump` / `quick_filter` ↔ their shims are the
+  2s). No `cmdr`-level `file_system ↔ listing_host` tangle shows. M4b deleting the shims should shrink it.
+
 ### M3c: One re-read path, ordered by read generation
 
 **Scope.** The engine gains the watcher's half of a re-read, and full re-reads get their generation. One commit each:
