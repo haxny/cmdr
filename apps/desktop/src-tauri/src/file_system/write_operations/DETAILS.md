@@ -1327,7 +1327,7 @@ write-op test at once. `test_support::TestOperationGuard` owns one entry per tes
   by `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`. Keep the guard on the stack: a
   `std::mem::forget` or a clone that outlives the test defeats it.
 
-Same shape as `listing::caching_test_support::TestListingGuard` (over the listing cache) and
+Same shape as `listing::testing::TestListingGuard` (over the listing cache) and
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
 The operation-log journal slot is the exception to the unique-key pattern: it's a single value, not a keyed map, so
@@ -1479,7 +1479,7 @@ Every SMB cell whose other half is this app rather than the protocol lives here:
 `smb_stream_write_integration_test.rs` (a `LocalPosixVolume` source streaming onto the share). They connect through
 `cmdr_smb::volume::testing`, wrapped by `smb_test_support.rs` so the volume they get carries the app's real
 `VolumeHost` and the listing cache, index, and activity tracker see what the share reports. Two cells that assert on
-other modules reach `smb_test_support` from there: `listing/smb_pane_close_watch_integration_test.rs` and
+other modules reach `smb_test_support` from there: `listing_host/tests/smb_pane_close_watch_integration_test.rs` and
 `volume/smb_media_fetch_integration_test.rs`.
 
 - **The semantics, safety, look-alike, and archive cells delegate** to the shared `network_*_test_support.rs`

@@ -9,12 +9,12 @@ use super::plan::{MultiRenameSpec, RowStatus};
 use super::run::apply;
 use super::session::{FIRST_PAGE, PreviewFilter, close, is_open, open, page, preview_session, spec_of};
 use super::transform::CaseChange;
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
-use crate::file_system::listing::listing_cache;
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::backends::list_directory_core;
 use crate::file_system::write_operations::CollectorEventSink;
-use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::volume::DirectoryChange;
 
 pub(super) fn strip_diacritics() -> MultiRenameSpec {
     MultiRenameSpec {
@@ -44,7 +44,7 @@ pub(super) fn folder(tag: &str, names: &[&str]) -> (TestDir, TestListingGuard) {
         .volume("root")
         .path(dir.to_path_buf())
         .entries(list_directory_core(&dir).expect("the dir lists"))
-        .insert(tag);
+        .insert(crate::listing_host::listings(), tag);
     (dir, listing)
 }
 
@@ -57,8 +57,8 @@ pub(super) fn names_on_disk(dir: &Path) -> Vec<String> {
     names
 }
 
-/// Puts `name` on disk and into the cached listing at row 0, the way a watcher
-/// would land a file that sorts before everything else.
+/// Puts `name` on disk and into the cached listing, the way a watcher lands a
+/// file. Every name a cell lands sorts before everything else, so it takes row 0.
 fn land_file_on_top(listing: &TestListingGuard, dir: &Path, name: &str) {
     std::fs::write(dir.join(name), b"x").expect("scratch dir is writable");
     let entry = list_directory_core(dir)
@@ -66,19 +66,22 @@ fn land_file_on_top(listing: &TestListingGuard, dir: &Path, name: &str) {
         .into_iter()
         .find(|e| e.name == name)
         .expect("the new file lists");
-    let mut cache = listing_cache().write_ignore_poison();
-    let cached = cache.get_mut(listing.id()).expect("the listing is cached");
-    cached.entries_mut().insert(0, entry);
-    cached.advance_sequence();
+    listing
+        .engine()
+        .directory_changed("root", dir, DirectoryChange::Added(entry));
+    assert_eq!(
+        listing.entry_names().first().map(String::as_str),
+        Some(name),
+        "it landed on row 0"
+    );
 }
 
 /// Takes `name` off disk and out of the cached listing.
 fn remove_file(listing: &TestListingGuard, dir: &Path, name: &str) {
     std::fs::remove_file(dir.join(name)).expect("the file removes");
-    let mut cache = listing_cache().write_ignore_poison();
-    let cached = cache.get_mut(listing.id()).expect("the listing is cached");
-    cached.entries_mut().retain(|e| e.name != name);
-    cached.advance_sequence();
+    listing
+        .engine()
+        .directory_changed("root", dir, DirectoryChange::Removed(name.to_string()));
 }
 
 pub(super) async fn settled(events: &CollectorEventSink) {

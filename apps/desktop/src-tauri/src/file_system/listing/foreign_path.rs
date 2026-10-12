@@ -22,14 +22,10 @@ use std::path::{Path, PathBuf};
 
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::pipeline::ReadBy;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub(crate) use crate::file_system::listing::shims::foreign_path::*;
 
 /// A directory listing, and the path it lists as its volume spells it.
 pub(crate) struct Listed {

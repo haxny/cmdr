@@ -505,18 +505,20 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 /// pane on a different volume picks the entry up from its own watch instead.
 #[test]
 fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
 
     let tmp = create_test_dir("synthetic_diff_volume");
     let new_path = tmp.path().join("made");
     fs::create_dir(&new_path).expect("create the new folder on disk");
 
-    let on_root = TestListing::new().path(tmp.path()).insert("synthetic-diff-root");
+    let on_root = TestListing::new()
+        .path(tmp.path())
+        .insert(crate::listing_host::listings(), "synthetic-diff-root");
     let other_volume_id = unique("synthetic-diff-remote");
     let on_other = TestListing::new()
         .volume(&other_volume_id)
         .path(tmp.path())
-        .insert("synthetic-diff-remote");
+        .insert(crate::listing_host::listings(), "synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
     patch_listings_after_create(None, &new_path, tmp.path());
@@ -540,8 +542,8 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
 #[test]
 fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
     use crate::file_system::listing::DiffChangeType;
-    use crate::file_system::listing::caching_test_support::TestListing;
-    use crate::file_system::listing::{hold_for_test, pending_changes_for_test};
+    use crate::file_system::listing::testing::TestListing;
+    use crate::file_system::listing::testing::{hold_diffs, pending_changes};
     use crate::file_system::volume::backends::get_single_entry;
 
     let tmp = create_test_dir("synthetic_diff_duplicate");
@@ -552,15 +554,15 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
     let listing = TestListing::new()
         .path(tmp.path())
         .entries(vec![stale])
-        .insert("synthetic-diff-duplicate");
-    hold_for_test(listing.id());
+        .insert(crate::listing_host::listings(), "synthetic-diff-duplicate");
+    hold_diffs(listing.engine(), listing.id());
 
     patch_listings_after_create(None, &new_path, tmp.path());
 
     let entries = listing.entries();
     assert_eq!(entries.len(), 1, "the create upserts; it never adds a second row");
     assert_eq!(entries[0].size, Some(14), "the row carries the on-disk size");
-    let changes = pending_changes_for_test(listing.id());
+    let changes = pending_changes(listing.engine(), listing.id());
     assert_eq!(changes.len(), 1, "the pane hears one change");
     assert!(
         matches!(changes[0].change_type, DiffChangeType::Modify),

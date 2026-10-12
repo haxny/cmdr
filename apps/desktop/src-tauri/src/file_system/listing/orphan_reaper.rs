@@ -13,14 +13,7 @@ use std::time::Duration;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::engine::Inner;
-
-// shim: removed in M4b. The reaper's tests name this here; it forwards to the installed engine.
-#[cfg(test)]
-#[cfg(test)]
-pub(crate) use crate::file_system::listing::shims::orphan_reaper::*;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+use crate::file_system::listing::Inner;
 
 /// Idle window after which an untouched listing is treated as orphaned and reaped.
 ///

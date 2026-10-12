@@ -1,7 +1,7 @@
 //! Tests for the streaming directory listing pipeline.
 //!
-//! Uses `RecordingEvents` and `InMemoryVolume` to test
-//! `read_directory_with_progress` without a Tauri runtime.
+//! Each test reads through an engine of its own: volumes it registered,
+//! reports recorded, foreground holds counted.
 
 use std::future::Future;
 use std::path::Path;
@@ -10,17 +10,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::listing::caching_test_support::TestListingGuard;
-use crate::file_system::listing::host::ListingEvents;
-use crate::file_system::listing::host::testing::RecordingEvents;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
-use crate::file_system::volume::LocalPosixVolume;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::priority::foreground;
-use crate::test_support::{TestDir, wait_until_async};
+use crate::file_system::listing::Listings;
+use crate::file_system::listing::testing::StreamingListingState;
+use crate::file_system::listing::testing::{TestEngine, TestListingGuard, request};
+use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 
@@ -38,50 +32,30 @@ fn test_entry(name: &str, is_dir: bool) -> FileEntry {
     }
 }
 
-/// Registers an `InMemoryVolume` with the global `VolumeManager` and returns the volume ID.
-/// Caller must call `cleanup_volume` after the test.
-fn register_test_volume(volume_id: &str, entries: Vec<FileEntry>) {
+/// Registers an `InMemoryVolume` holding `entries` in `engine` under `volume_id`.
+fn register_test_volume(engine: &TestEngine, volume_id: &str, entries: Vec<FileEntry>) {
     let volume = Arc::new(InMemoryVolume::with_entries("Test Volume", entries));
-    get_volume_manager().register(volume_id, volume);
-}
-
-/// Removes the test volume. The listing entry is owned by a `TestListingGuard`,
-/// which tears it down on drop (unwind included).
-fn cleanup(volume_id: &str) {
-    get_volume_manager().unregister(volume_id);
-}
-
-fn new_state() -> Arc<StreamingListingState> {
-    Arc::new(StreamingListingState::new())
+    engine.volumes.register(volume_id, volume);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_list_populates_cache() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-cache-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-cache"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-cache"));
 
     let entries = vec![
         test_entry("photos", true),
         test_entry("zebra.txt", false),
         test_entry("apple.txt", false),
     ];
-    register_test_volume(volume_id, entries);
+    register_test_volume(&engine, volume_id, entries);
 
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = new_state();
+    let state = engine.streaming_state();
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_ok(), "Expected Ok, got {:?}", result);
 
@@ -96,42 +70,25 @@ async fn test_streaming_list_populates_cache() {
     });
 
     // Verify complete event
-    let collector = events.as_ref() as *const dyn ListingEvents as *const RecordingEvents;
-    // SAFETY: (test) `events` was constructed just above as `Arc::new(RecordingEvents::new())`,
-    // so the trait object's concrete type is statically known to be `RecordingEvents`. The
-    // pointer comes straight from that live `Arc` (no provenance gap), so the downcast and reborrow are
-    // valid for the borrow's lifetime.
-    let collector = unsafe { &*collector };
-    let complete = collector.complete.lock().unwrap();
+    let complete = engine.events.complete.lock().unwrap();
     assert_eq!(complete.len(), 1);
     assert_eq!(complete[0].1, 3); // total_count
-
-    cleanup(volume_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_list_emits_opening_and_complete() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-events-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-events"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-events"));
 
-    register_test_volume(volume_id, vec![test_entry("file.txt", false)]);
+    register_test_volume(&engine, volume_id, vec![test_entry("file.txt", false)]);
 
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = new_state();
+    let sink = &engine.events;
+    let state = engine.streaming_state();
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_ok());
 
@@ -149,36 +106,25 @@ async fn test_streaming_list_emits_opening_and_complete() {
     // No errors or cancellations
     assert!(sink.failed.lock().unwrap().is_empty());
     assert!(sink.cancelled.lock().unwrap().is_empty());
-
-    cleanup(volume_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_list_cancellation() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-cancel-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-cancel"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-cancel"));
 
-    register_test_volume(volume_id, vec![test_entry("file.txt", false)]);
+    register_test_volume(&engine, volume_id, vec![test_entry("file.txt", false)]);
 
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = new_state();
+    let sink = &engine.events;
+    let state = engine.streaming_state();
 
     // Set cancelled BEFORE calling
     state.cancel.cancel();
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_ok());
 
@@ -192,30 +138,19 @@ async fn test_streaming_list_cancellation() {
 
     // No complete event
     assert!(sink.complete.lock().unwrap().is_empty());
-
-    cleanup(volume_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_list_volume_not_found() {
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-notfound"));
+    let engine = TestEngine::new();
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-notfound"));
     let volume_id = &format!("nonexistent-volume-{}", uuid::Uuid::new_v4());
 
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = new_state();
+    let state = engine.streaming_state();
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     match result {
         Err(VolumeError::NotFound(path)) => assert_eq!(path, "/", "NotFound carries the listed path"),
@@ -223,29 +158,36 @@ async fn test_streaming_list_volume_not_found() {
     }
 }
 
+/// An id nothing serves, which the host says is a server nobody connected yet:
+/// the read answers `NotConnected`, never the `NotFound` the frontend reads as
+/// "this folder was deleted".
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_streaming_list_on_a_volume_nobody_connected_is_not_connected() {
+    let engine = TestEngine::new();
+    engine.volumes.not_connected("saved-server");
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-not-connected"));
+
+    let result = engine
+        .read_with(&engine.streaming_state(), &request(listing.id(), "saved-server", "/"))
+        .await;
+
+    assert!(matches!(result, Err(VolumeError::NotConnected(_))), "got {result:?}");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_list_empty_directory() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-empty-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-empty"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-empty"));
 
-    register_test_volume(volume_id, vec![]);
+    register_test_volume(&engine, volume_id, vec![]);
 
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = new_state();
+    let sink = &engine.events;
+    let state = engine.streaming_state();
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_ok());
 
@@ -256,8 +198,6 @@ async fn test_streaming_list_empty_directory() {
     let complete = sink.complete.lock().unwrap();
     assert_eq!(complete.len(), 1);
     assert_eq!(complete[0].1, 0);
-
-    cleanup(volume_id);
 }
 
 /// A pane that asks for a directory by a spelling its volume doesn't store (the
@@ -266,12 +206,13 @@ async fn test_streaming_list_empty_directory() {
 /// watcher reports changes under, and the frontend is told to adopt it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_foreign_spelling_lands_the_listing_on_the_stored_path() {
-    use crate::file_system::listing::caching_test_support::SpelledVolume;
+    let engine = TestEngine::new();
+    use crate::file_system::listing::testing::SpelledVolume;
 
     let stored = "/fot\u{f3}k";
     let foreign = "/foto\u{301}k";
     let volume_id = &format!("test-spelling-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-spelling"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-spelling"));
     let inner = InMemoryVolume::new("Share");
     inner.create_directory(Path::new(stored)).await.unwrap();
     inner
@@ -279,23 +220,15 @@ async fn a_foreign_spelling_lands_the_listing_on_the_stored_path() {
         .await
         .unwrap();
     let volume = SpelledVolume::new(inner).resolving(foreign, Ok(Some(stored)));
-    get_volume_manager().register(volume_id, Arc::new(volume));
+    engine.volumes.register(volume_id, Arc::new(volume));
 
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &new_state(),
-        volume_id,
-        Path::new(foreign),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
-    cleanup(volume_id);
+    let sink = &engine.events;
+    let result = engine
+        .read_with(
+            &engine.streaming_state(),
+            &request(listing.id(), volume_id, Path::new(foreign)),
+        )
+        .await;
 
     assert!(result.is_ok(), "the foreign spelling must list, got {result:?}");
     listing.with_listing(|cached| {
@@ -436,37 +369,30 @@ const FLAG_FLIPS_WITHIN: std::time::Duration = std::time::Duration::from_secs(2)
 /// transaction and wedges the phone.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cancel_unwinds_the_listing_instead_of_aborting_it() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-coop-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-coop"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-coop"));
 
     let volume = Arc::new(CooperativeCancelVolume::new());
     let started = Arc::clone(&volume.started);
     let finished = Arc::clone(&volume.finished);
     let aborted = Arc::clone(&volume.aborted);
-    get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine
+        .volumes
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = new_state();
+    let sink = &engine.events;
+    let state = engine.streaming_state();
 
     let read = {
-        let events = Arc::clone(&events);
+        let engine = Listings::clone(&engine);
         let state = Arc::clone(&state);
         let volume_id = volume_id.clone();
         let listing_id = listing.id().to_string();
         tokio::spawn(async move {
-            read_directory_with_progress(
-                &events,
-                &listing_id,
-                &state,
-                &volume_id,
-                Path::new("/"),
-                true,
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )
-            .await
+            engine
+                .read_with(&state, &request(&listing_id, &volume_id, Path::new("/")))
+                .await
         })
     };
 
@@ -496,62 +422,6 @@ async fn test_cancel_unwinds_the_listing_instead_of_aborting_it() {
         !aborted.load(Ordering::SeqCst),
         "the listing future was dropped mid-flight; on MTP that abandons a PTP transaction and wedges the device"
     );
-
-    cleanup(volume_id);
-}
-
-/// The whole chain a real local folder takes to the pane's "Loaded N files..." line:
-/// `read_directory_with_progress` -> `Volume::list_directory` -> `listing-progress`. The
-/// other tests here run on `InMemoryVolume`, which can't catch a local backend that drops
-/// its `on_progress`.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_local_directory_read_emits_progress_events() {
-    let dir = TestDir::new("streaming_local_progress");
-    for i in 0..5_000 {
-        std::fs::write(dir.join(format!("file_{i:05}.txt")), b"x").expect("writing a scratch file succeeds");
-    }
-
-    let volume_id = &format!("test-local-progress-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-local-progress"));
-    get_volume_manager().register(
-        volume_id,
-        Arc::new(LocalPosixVolume::local_folder("Test Volume", &*dir)),
-    );
-
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = new_state();
-
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new(""),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
-    assert!(result.is_ok(), "listing the scratch dir succeeds: {:?}", result.err());
-
-    let progress = sink.progress.lock_ignore_poison();
-    assert!(
-        !progress.is_empty(),
-        "reading 5,000 local entries emitted no listing-progress, so the pane would sit on \"Opening folder…\""
-    );
-    assert!(
-        progress.iter().all(|(id, _)| id == listing.id()),
-        "progress must be tagged with the listing that asked for it"
-    );
-    assert_eq!(
-        sink.read_complete.lock_ignore_poison().first().map(|(_, total)| *total),
-        Some(5_000),
-        "read-complete reports the full count"
-    );
-
-    cleanup(volume_id);
 }
 
 /// A listing holds a foreground lease for as long as it actually runs, not for the
@@ -560,39 +430,28 @@ async fn a_local_directory_read_emits_progress_events() {
 /// come back, instead of resuming while the user is still watching a spinner.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-lease-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-lease"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-lease"));
 
     let volume = Arc::new(CooperativeCancelVolume::new());
     let started = Arc::clone(&volume.started);
-    get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine
+        .volumes
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    assert_eq!(
-        foreground::global().volume_lease_count(volume_id),
-        0,
-        "nobody has listed this volume yet"
-    );
+    assert_eq!(engine.leases.held(), 0, "nobody has listed this volume yet");
 
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = new_state();
+    let state = engine.streaming_state();
     let read = {
-        let events = Arc::clone(&events);
+        let engine = Listings::clone(&engine);
         let state = Arc::clone(&state);
         let volume_id = volume_id.clone();
         let listing_id = listing.id().to_string();
         tokio::spawn(async move {
-            read_directory_with_progress(
-                &events,
-                &listing_id,
-                &state,
-                &volume_id,
-                Path::new("/"),
-                true,
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )
-            .await
+            engine
+                .read_with(&state, &request(&listing_id, &volume_id, Path::new("/")))
+                .await
         })
     };
 
@@ -601,7 +460,7 @@ async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
     })
     .await;
     assert_eq!(
-        foreground::global().volume_lease_count(volume_id),
+        engine.leases.held(),
         1,
         "the share must read busy while the listing is still on the wire"
     );
@@ -612,16 +471,15 @@ async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
         .expect("a cancelled listing still returns Ok");
 
     assert_eq!(
-        foreground::global().volume_lease_count(volume_id),
+        engine.leases.held(),
         0,
         "a cancelled listing gives its lease back: the pane moved on, so nobody is waiting on it"
     );
-    assert!(
-        !foreground::global().idle_for_volume(volume_id, std::time::Duration::from_secs(30)),
-        "the listing stamped the share, so the debounce keeps background work off it afterwards"
+    assert_eq!(
+        engine.leases.taken(),
+        [volume_id.as_str()],
+        "the hold was this volume's (the app's half, the debounce stamp, is `listing_host/tests/`)"
     );
-
-    cleanup(volume_id);
 }
 
 /// The error path gives the lease back too. A volume that isn't there returns
@@ -629,81 +487,64 @@ async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
 /// would pin the share busy for the rest of the session.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_that_fails_gives_its_lease_back() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-lease-missing-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-lease-error"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-lease-error"));
 
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = new_state();
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let state = engine.streaming_state();
+    let result = engine
+        .read_with(&state, &request(listing.id(), volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_err(), "an unregistered volume can't be listed");
-    assert_eq!(foreground::global().volume_lease_count(volume_id), 0);
+    assert_eq!(engine.leases.held(), 0);
 }
 
 /// Two panes listing one share: the volume stays busy until the LAST listing ends.
 /// A flag instead of a count would free the share the moment either one finished.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn two_concurrent_listings_on_one_volume_both_have_to_finish() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-lease-pair-{}", uuid::Uuid::new_v4());
-    let left = TestListingGuard::adopt(unique_test_id("streaming-lease-left"));
-    let right = TestListingGuard::adopt(unique_test_id("streaming-lease-right"));
+    let left = TestListingGuard::adopt(&engine, unique_test_id("streaming-lease-left"));
+    let right = TestListingGuard::adopt(&engine, unique_test_id("streaming-lease-right"));
 
     let volume = Arc::new(CooperativeCancelVolume::new());
-    get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine
+        .volumes
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     let spawn_listing = |listing_id: String, state: Arc<StreamingListingState>| {
         let volume_id = volume_id.clone();
+        let engine = Listings::clone(&engine);
         tokio::spawn(async move {
-            let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-            read_directory_with_progress(
-                &events,
-                &listing_id,
-                &state,
-                &volume_id,
-                Path::new("/"),
-                true,
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )
-            .await
+            engine
+                .read_with(&state, &request(&listing_id, &volume_id, Path::new("/")))
+                .await
         })
     };
 
-    let left_state = new_state();
-    let right_state = new_state();
+    let left_state = engine.streaming_state();
+    let right_state = engine.streaming_state();
     let left_read = spawn_listing(left.id().to_string(), Arc::clone(&left_state));
     let right_read = spawn_listing(right.id().to_string(), Arc::clone(&right_state));
 
     wait_until_async(FLAG_FLIPS_WITHIN, "both listings to take their leases", || {
-        foreground::global().volume_lease_count(volume_id) == 2
+        engine.leases.held() == 2
     })
     .await;
 
     left_state.cancel.cancel();
     left_read.await.expect("the first listing task must not panic").ok();
     assert_eq!(
-        foreground::global().volume_lease_count(volume_id),
+        engine.leases.held(),
         1,
         "the second pane is still waiting on this share"
     );
 
     right_state.cancel.cancel();
     right_read.await.expect("the second listing task must not panic").ok();
-    assert_eq!(foreground::global().volume_lease_count(volume_id), 0);
-
-    cleanup(volume_id);
+    assert_eq!(engine.leases.held(), 0);
 }
 
 /// The listing task being DROPPED (app shutdown tears the runtime down mid-listing)
@@ -711,31 +552,25 @@ async fn two_concurrent_listings_on_one_volume_both_have_to_finish() {
 /// is the whole reason the lease is RAII rather than a pair of calls.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn dropping_the_listing_task_mid_flight_gives_the_lease_back() {
+    let engine = TestEngine::new();
     let volume_id = &format!("test-lease-dropped-{}", uuid::Uuid::new_v4());
-    let listing = TestListingGuard::adopt(unique_test_id("streaming-lease-dropped"));
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-lease-dropped"));
 
     let volume = Arc::new(CooperativeCancelVolume::new());
     let started = Arc::clone(&volume.started);
-    get_volume_manager().register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine
+        .volumes
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = new_state();
+    let state = engine.streaming_state();
     let read = {
+        let engine = Listings::clone(&engine);
         let volume_id = volume_id.clone();
         let listing_id = listing.id().to_string();
         tokio::spawn(async move {
-            read_directory_with_progress(
-                &events,
-                &listing_id,
-                &state,
-                &volume_id,
-                Path::new("/"),
-                true,
-                SortColumn::Name,
-                SortOrder::Ascending,
-                DirectorySortMode::LikeFiles,
-            )
-            .await
+            engine
+                .read_with(&state, &request(&listing_id, &volume_id, Path::new("/")))
+                .await
         })
     };
 
@@ -743,16 +578,14 @@ async fn dropping_the_listing_task_mid_flight_gives_the_lease_back() {
         started.load(Ordering::SeqCst)
     })
     .await;
-    assert_eq!(foreground::global().volume_lease_count(volume_id), 1);
+    assert_eq!(engine.leases.held(), 1);
 
     // The one thing that drops a running task's future where it stands.
     read.abort();
     wait_until_async(FLAG_FLIPS_WITHIN, "the dropped task's lease to come back", || {
-        foreground::global().volume_lease_count(volume_id) == 0
+        engine.leases.held() == 0
     })
     .await;
-
-    cleanup(volume_id);
 }
 
 /// A read the volume held past a second is what a busy NAS looks like from here,

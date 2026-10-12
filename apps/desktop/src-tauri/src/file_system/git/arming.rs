@@ -40,12 +40,6 @@ pub fn observer() -> Arc<dyn ListingObserver> {
     Arc::new(GitPortalListings)
 }
 
-/// Adds the observer to the test binary's shared listing slot. Idempotent.
-#[cfg(test)]
-pub fn register() {
-    crate::file_system::listing::host::testing::register_observer(observer());
-}
-
 impl ListingObserver for GitPortalListings {
     fn id(&self) -> &'static str {
         "git-portal"

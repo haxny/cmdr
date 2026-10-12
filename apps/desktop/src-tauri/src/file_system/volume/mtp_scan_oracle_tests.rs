@@ -20,7 +20,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{MtpVolume, ScanBoundary, Volume, WatchCoverage};
 use crate::mtp::connection_manager;
@@ -59,7 +59,7 @@ fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry
         .path(path)
         .entries(entries)
         .sequence(1)
-        .insert(tag)
+        .insert(crate::listing_host::listings(), tag)
 }
 
 /// Keeps a test's virtual device alive and exclusive: the process-wide lock (all

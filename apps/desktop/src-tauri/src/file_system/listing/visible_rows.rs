@@ -230,12 +230,13 @@ impl VisibleMap {
 /// `/.hidden` at a volume root), never a name test; scratch hides whatever the
 /// setting.
 #[cfg(test)]
-pub(crate) fn shows(entry: &FileEntry, include_hidden: bool, name_filter: Option<&NameFilter>) -> bool {
-    shown_by_setting(entry, include_hidden, name_filter)
-        && !hidden_with(
-            &entry.name,
-            crate::file_system::listing::installed().scratch_visibility(),
-        )
+pub(crate) fn shows(
+    entry: &FileEntry,
+    include_hidden: bool,
+    name_filter: Option<&NameFilter>,
+    visibility: ScratchVisibility,
+) -> bool {
+    shown_by_setting(entry, include_hidden, name_filter) && !hidden_with(&entry.name, visibility)
 }
 
 /// The hidden-file and name-filter predicates, independent of scratch ownership.

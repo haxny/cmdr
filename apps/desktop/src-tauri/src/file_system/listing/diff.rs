@@ -122,8 +122,8 @@ pub struct DirectoryDiffBatch {
     pub changes: Vec<DiffChange>,
 }
 
-/// Computes the diff a pane with this `include_hidden` and quick filter sees
-/// between two sorted readings of its directory.
+/// Computes the diff a pane with this `include_hidden`, quick filter, and
+/// scratch visibility sees between two sorted readings of its directory.
 ///
 /// It diffs the rows the pane shows on each side (`visible_rows::shows`), so the
 /// indices are rows, an entry hidden on both sides is left out, and one that turns
@@ -140,9 +140,16 @@ pub fn compute_diff(
     new: &[FileEntry],
     include_hidden: bool,
     name_filter: Option<&NameFilter>,
+    visibility: crate::file_system::listing::host::ScratchVisibility,
 ) -> Vec<DiffChange> {
-    let old: Vec<&FileEntry> = old.iter().filter(|e| shows(e, include_hidden, name_filter)).collect();
-    let new: Vec<&FileEntry> = new.iter().filter(|e| shows(e, include_hidden, name_filter)).collect();
+    let old: Vec<&FileEntry> = old
+        .iter()
+        .filter(|e| shows(e, include_hidden, name_filter, visibility))
+        .collect();
+    let new: Vec<&FileEntry> = new
+        .iter()
+        .filter(|e| shows(e, include_hidden, name_filter, visibility))
+        .collect();
     diff_rows(&old, &new)
 }
 

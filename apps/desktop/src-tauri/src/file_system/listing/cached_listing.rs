@@ -12,8 +12,8 @@ use std::sync::RwLockReadGuard;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::diff_emitter::{CacheWrite, Publish};
-use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::host::{ListingVolumes, ScratchVisibility};
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::path_index::PathIndexCache;
@@ -24,10 +24,6 @@ use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOr
 use crate::file_system::listing::visible_rows::{ScratchProjection, VisibleRows, VisibleRowsCache};
 use cmdr_fs::entry::{FileEntry, TagRef};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub(crate) use crate::file_system::listing::shims::cached_listing::*;
 
 impl Inner {
     /// The cache under its read lock, with every listing in `ids` reconciled to

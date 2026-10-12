@@ -7,10 +7,9 @@ use cmdr_fs::volume::InMemoryVolume;
 
 use super::ListingIndexSizesChanged;
 use super::count::{CountFolderSizesError, CountPlan, cancel, count_with, plan};
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
-use crate::file_system::listing::listing_cache;
+use crate::file_system::listing::IndexSizes;
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::{LocalPosixVolume, Volume};
-use crate::ignore_poison::RwLockIgnorePoison;
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
 
@@ -42,7 +41,7 @@ fn pane(tag: &str, rows: Vec<FileEntry>) -> TestListingGuard {
         .path(DIR)
         .include_hidden(false)
         .entries(rows)
-        .insert(tag)
+        .insert(crate::listing_host::listings(), tag)
 }
 
 fn volume() -> Arc<dyn Volume> {
@@ -200,7 +199,7 @@ async fn a_folder_the_disk_cant_read_goes_back_to_what_it_showed_and_is_reported
             },
             FileEntry::new("photos".to_string(), photos.clone(), true, false),
         ])
-        .insert("count-unreadable");
+        .insert(crate::listing_host::listings(), "count-unreadable");
     let (_events, sink) = collect();
     let plan = plan(listing.id(), false, None, |_| false).expect("cached");
     let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Disk", "/"));
@@ -270,11 +269,19 @@ async fn a_stopped_lower_bound_on_an_indexed_volume_stays_retryable() {
     let ran = count_with(listing.id(), first, volume(), &sink).await;
     assert_eq!(ran.counted, 1);
     // Leave a lower bound on the row, as a stopped walk does.
-    if let Some(l) = listing_cache().write_ignore_poison().get_mut(listing.id()) {
-        l.update_index_sizes_by_path(&["/data/photos".to_string()], |_, e| {
-            e.recursive_size_complete = Some(false);
-        });
-    }
+    let row = listing
+        .entries()
+        .into_iter()
+        .find(|e| e.path == "/data/photos")
+        .expect("the folder row");
+    let lower_bound = IndexSizes {
+        recursive_size_complete: Some(false),
+        ..IndexSizes::of(&row)
+    };
+    listing
+        .engine()
+        .update_index_sizes(&listing.listing_id(), &[("/data/photos".to_string(), lower_bound)])
+        .expect("the listing is cached");
 
     let again = plan(listing.id(), false, Some(&only), |_| true).expect("cached");
 

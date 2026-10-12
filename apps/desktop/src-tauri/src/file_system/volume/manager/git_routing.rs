@@ -216,7 +216,7 @@ mod tests {
     /// question the listing overlay asks.
     #[tokio::test]
     async fn a_volume_with_no_local_path_never_routes_to_the_portal() {
-        use crate::file_system::listing::caching_test_support::WatchCoverageVolume;
+        use crate::file_system::listing::testing::WatchCoverageVolume;
         use crate::file_system::volume::WatchCoverage;
 
         let manager = VolumeManager::new();

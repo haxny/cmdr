@@ -1,29 +1,14 @@
-//! Recording fakes for the seams, for tests that drive the engine, and test
-//! registration on the app's shared engine.
+//! The events fake: every report the engine makes, recorded.
 
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 
-use super::events::StalledOn;
-use super::events::{ListingEnd, ListingEvents};
-use super::{ListingObserver, ListingOverlay};
 use crate::file_system::listing::DirectoryDiffBatch;
+use crate::file_system::listing::host::events::StalledOn;
+use crate::file_system::listing::host::{ListingEnd, ListingEvents};
 use crate::file_system::listing::listing_id::ListingId;
-
-/// Adds `overlay` to the shared engine. Test registration stays global until
-/// each test builds its own engine; the first registration per id wins.
-// shim: removed in M4b
-pub(crate) fn register_overlay(overlay: Arc<dyn ListingOverlay>) {
-    crate::file_system::listing::installed().add_overlay(overlay);
-}
-
-/// Adds `observer` to the shared engine, after every observer already there.
-// shim: removed in M4b
-pub(crate) fn register_observer(observer: Arc<dyn ListingObserver>) {
-    crate::file_system::listing::installed().add_observer(observer);
-}
 
 /// Records every report, per kind and in one combined order.
 // DEFAULT-OK: a recorder that has heard nothing yet holds empty lists.

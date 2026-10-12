@@ -36,137 +36,12 @@
 //! liveness token behind it, and why a guard alone isn't enough) is documented
 //! where it lives, in `cmdr_fs::staging`.
 
-#[cfg(test)]
-use std::sync::Mutex;
-
 pub use cmdr_fs::staging::StagingTemp;
-#[cfg(test)]
-use cmdr_fs::staging::hidden_with_settings;
-
-#[cfg(test)]
-use crate::file_system::listing::host::ScratchVisibility;
-#[cfg(test)]
-use crate::ignore_poison::IgnorePoison;
-#[cfg(test)]
-use crate::listing_host::listings;
-
-// The two settings are the listing engine's state (`Listings::set_scratch_visibility`;
-// `listing::host::ScratchVisibility` documents their defaults). These test shims flip one flag of the shared
-// engine for `ShowTempsGuard`'s tests; M4b deletes them with the shared state they guard.
-
-/// Flips the shared engine's `show_staging_temps`.
-// shim: removed in M4b
-#[cfg(test)]
-pub fn set_show_staging_temps(show: bool) {
-    listings().set_scratch_visibility(ScratchVisibility {
-        show_staging_temps: show,
-        ..listings().scratch_visibility()
-    });
-}
-
-/// Whether Cmdr's scratch files are being shown.
-#[cfg(test)]
-pub fn show_staging_temps() -> bool {
-    listings().scratch_visibility().show_staging_temps
-}
-
-/// Flips the shared engine's `show_safe_save_files`.
-// shim: removed in M4b
-#[cfg(test)]
-pub fn set_show_safe_save_files(show: bool) {
-    listings().set_scratch_visibility(ScratchVisibility {
-        show_safe_save_files: show,
-        ..listings().scratch_visibility()
-    });
-}
-
-/// Whether safe-save scratch is being shown.
-#[cfg(test)]
-pub fn show_safe_save_files() -> bool {
-    listings().scratch_visibility().show_safe_save_files
-}
-
-/// Should `name` be left out of the pane under the settings now? The listing
-/// engine's own answer is `listing/visible_rows.rs`'s; this one is for the tests
-/// below.
-#[cfg(test)]
-pub fn is_hidden_from_listings(name: &str) -> bool {
-    hidden_with_settings(name, show_staging_temps(), show_safe_save_files())
-}
-
-/// Serializes tests whose expectations depend on either visibility setting, and
-/// restores both on drop.
-///
-/// The settings are process-wide, so a test flipping one would otherwise change
-/// the answer under every concurrently running test that asserts something is
-/// hidden. Take this in any test that reads or writes them, including the ones
-/// relying on the defaults.
-///
-/// ❌ ONE AT A TIME. Taking a second guard while the first is alive re-locks a
-/// non-reentrant `Mutex` on the same thread, which deadlocks the whole test
-/// binary with no timeout to end it — every other test taking the guard then
-/// piles up behind it, and the run looks like a hang rather than a failure.
-/// Scope the first in a block before taking the second. [`set_both`](Self::set_both)
-/// asserts on a same-thread re-take so the mistake fails one test loudly.
-#[cfg(test)]
-pub(crate) struct ShowTempsGuard {
-    previous_staging: bool,
-    previous_safe_save: bool,
-    _lock: std::sync::MutexGuard<'static, ()>,
-}
-
-/// Serializes the settings across tests.
-#[cfg(test)]
-static SHOW_TEMPS_LOCK: Mutex<()> = Mutex::new(());
-
-/// Which thread holds [`SHOW_TEMPS_LOCK`], so a same-thread re-take can be caught
-/// before it deadlocks. Sound to read without holding the lock: only the holder
-/// ever stores its own id, so seeing our own id proves we already hold it.
-#[cfg(test)]
-static SHOW_TEMPS_OWNER: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
-
-#[cfg(test)]
-impl ShowTempsGuard {
-    /// Sets the Cmdr-scratch setting, leaving safe-save at its default (shown).
-    pub(crate) fn set(show: bool) -> Self {
-        Self::set_both(show, true)
-    }
-
-    pub(crate) fn set_both(show_staging: bool, show_safe_save: bool) -> Self {
-        let me = std::thread::current().id();
-        assert!(
-            *SHOW_TEMPS_OWNER.lock_ignore_poison() != Some(me),
-            "ShowTempsGuard is already held by this thread: scope the first one in a block \
-             before taking a second, or it deadlocks the test binary"
-        );
-
-        let lock = SHOW_TEMPS_LOCK.lock_ignore_poison();
-        *SHOW_TEMPS_OWNER.lock_ignore_poison() = Some(me);
-        let guard = Self {
-            _lock: lock,
-            previous_staging: show_staging_temps(),
-            previous_safe_save: show_safe_save_files(),
-        };
-        set_show_staging_temps(show_staging);
-        set_show_safe_save_files(show_safe_save);
-        guard
-    }
-}
-
-#[cfg(test)]
-impl Drop for ShowTempsGuard {
-    fn drop(&mut self) {
-        set_show_staging_temps(self.previous_staging);
-        set_show_safe_save_files(self.previous_safe_save);
-        // Before `_lock` releases (fields drop after this body).
-        *SHOW_TEMPS_OWNER.lock_ignore_poison() = None;
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cmdr_fs::staging::is_staging_temp_in_flight;
+    use cmdr_fs::staging::{hidden_with_settings, is_staging_temp_in_flight};
     use std::path::Path;
     use std::sync::Arc;
 
@@ -174,6 +49,12 @@ mod tests {
     /// the returned `Arc` is dropped, which is what settling does for real.
     fn running_operation() -> Arc<()> {
         Arc::new(())
+    }
+
+    /// Whether `name` stays out of the pane under `(show_staging_temps,
+    /// show_safe_save_files)`.
+    fn hidden(name: &str, (show_staging, show_safe_save): (bool, bool)) -> bool {
+        hidden_with_settings(name, show_staging, show_safe_save)
     }
 
     fn name_of(temp: &StagingTemp) -> String {
@@ -188,14 +69,14 @@ mod tests {
     /// moment it drops it isn't.
     #[test]
     fn a_live_guard_hides_its_temp_and_dropping_it_stops() {
-        let _show = ShowTempsGuard::set(false);
+        let settings = (false, true);
         let op = running_operation();
         let temp = StagingTemp::mint(Path::new("/dir/photo.jpg"), Some(Arc::downgrade(&op)));
         let name = name_of(&temp);
 
-        assert!(is_hidden_from_listings(&name));
+        assert!(hidden(&name, settings));
         drop(temp);
-        assert!(!is_hidden_from_listings(&name));
+        assert!(!hidden(&name, settings));
     }
 
     /// David's first edge case: an operation that wedges and leaves its temps on
@@ -204,17 +85,17 @@ mod tests {
     /// the operation's liveness is what has to answer.
     #[test]
     fn a_leftover_from_a_dead_operation_is_visible_even_if_its_guard_leaked() {
-        let _show = ShowTempsGuard::set(false);
+        let settings = (false, true);
         let op = running_operation();
         let temp = StagingTemp::mint(Path::new("/dir/photo.jpg"), Some(Arc::downgrade(&op)));
         let name = name_of(&temp);
-        assert!(is_hidden_from_listings(&name), "hidden while the operation runs");
+        assert!(hidden(&name, settings), "hidden while the operation runs");
 
         drop(op);
 
         // The guard deliberately stays alive, standing in for the abandoned task.
         assert!(
-            !is_hidden_from_listings(&name),
+            !hidden(&name, settings),
             "a leftover nobody is running for must be visible"
         );
         drop(temp);
@@ -226,15 +107,15 @@ mod tests {
     /// shows up rather than lurking.
     #[test]
     fn a_moves_staging_directory_hides_while_the_move_owns_it() {
-        let _show = ShowTempsGuard::set(false);
+        let settings = (false, true);
         let op = running_operation();
         let name = format!(".cmdr-staging-{}", uuid::Uuid::new_v4());
         let guard = StagingTemp::adopt(Path::new("/dest").join(&name), Some(Arc::downgrade(&op)));
 
-        assert!(is_hidden_from_listings(&name), "hidden while the move runs");
+        assert!(hidden(&name, settings), "hidden while the move runs");
         drop(guard);
         assert!(
-            !is_hidden_from_listings(&name),
+            !hidden(&name, settings),
             "a staging folder nobody owns is a leftover the user must see"
         );
     }
@@ -242,31 +123,31 @@ mod tests {
     /// Ordinary files are never touched.
     #[test]
     fn an_ordinary_file_is_never_hidden() {
-        let _show = ShowTempsGuard::set(false);
+        let settings = (false, true);
         let _temp = StagingTemp::mint(Path::new("/dir/photo.jpg"), None);
-        assert!(!is_hidden_from_listings("photo.jpg"));
-        assert!(!is_hidden_from_listings(".gitignore"));
+        assert!(!hidden("photo.jpg", settings));
+        assert!(!hidden(".gitignore", settings));
     }
 
     /// Safe-save scratch shows by default: it's another app's business, and
     /// hiding someone else's files by name is a bigger claim than hiding our own.
     #[test]
     fn safe_save_scratch_is_shown_by_default() {
-        let _show = ShowTempsGuard::set_both(false, true);
-        assert!(!is_hidden_from_listings("notes.txt.sb-1e64c894-vFWIzN"));
+        let settings = (false, true);
+        assert!(!hidden("notes.txt.sb-1e64c894-vFWIzN", settings));
     }
 
     /// Turning the setting off hides it purely by name: no operation owns another
     /// app's scratch, so there's nothing else to go on.
     #[test]
     fn safe_save_scratch_hides_by_name_alone() {
-        let _show = ShowTempsGuard::set_both(false, false);
-        assert!(is_hidden_from_listings("notes.txt.sb-1e64c894-vFWIzN"));
+        let settings = (false, false);
+        assert!(hidden("notes.txt.sb-1e64c894-vFWIzN", settings));
         assert!(
-            is_hidden_from_listings("notes.txt.sb-1e64c894"),
+            hidden("notes.txt.sb-1e64c894", settings),
             "the temp DIRECTORY hides too, not just the file inside it"
         );
-        assert!(!is_hidden_from_listings("notes.txt"));
+        assert!(!hidden("notes.txt", settings));
     }
 
     /// The two categories are independent switches, so neither setting can
@@ -277,17 +158,15 @@ mod tests {
         let cmdr_name = name_of(&temp);
         let safe_save_name = "notes.txt.sb-1e64c894-vFWIzN";
 
-        // One guard at a time: the second must not be taken until the first has
-        // dropped (see `ShowTempsGuard`).
         {
-            let _show = ShowTempsGuard::set_both(true, false);
-            assert!(!is_hidden_from_listings(&cmdr_name), "Cmdr scratch shown");
-            assert!(is_hidden_from_listings(safe_save_name), "safe-save hidden");
+            let settings = (true, false);
+            assert!(!hidden(&cmdr_name, settings), "Cmdr scratch shown");
+            assert!(hidden(safe_save_name, settings), "safe-save hidden");
         }
         {
-            let _show = ShowTempsGuard::set_both(false, true);
-            assert!(is_hidden_from_listings(&cmdr_name), "Cmdr scratch hidden");
-            assert!(!is_hidden_from_listings(safe_save_name), "safe-save shown");
+            let settings = (false, true);
+            assert!(hidden(&cmdr_name, settings), "Cmdr scratch hidden");
+            assert!(!hidden(safe_save_name, settings), "safe-save shown");
         }
     }
 
@@ -298,8 +177,8 @@ mod tests {
         let temp = StagingTemp::mint(Path::new("/dir/photo.jpg"), None);
         let name = name_of(&temp);
 
-        let _show = ShowTempsGuard::set(true);
-        assert!(!is_hidden_from_listings(&name));
+        let settings = (true, true);
+        assert!(!hidden(&name, settings));
         assert!(is_staging_temp_in_flight(&name), "still in flight, just not hidden");
     }
 }

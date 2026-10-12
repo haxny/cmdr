@@ -196,7 +196,7 @@ fn reports_settled_on(sink: &RecordingGitStateSink, branch: &str) -> Vec<(PathBu
 /// land.
 #[test]
 fn a_report_selects_every_open_virtual_listing_for_the_repo() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::DEFAULT_VOLUME_ID;
 
     let dir = temp_dir("wiring", "refresh_selection");
@@ -211,15 +211,15 @@ fn a_report_selects_every_open_virtual_listing_for_the_repo() {
         TestListing::new()
             .volume(DEFAULT_VOLUME_ID)
             .path(branches.clone())
-            .insert("wiring-refresh-branches"),
+            .insert(crate::listing_host::listings(), "wiring-refresh-branches"),
         TestListing::new()
             .volume(DEFAULT_VOLUME_ID)
             .path(commits.clone())
-            .insert("wiring-refresh-commits"),
+            .insert(crate::listing_host::listings(), "wiring-refresh-commits"),
         TestListing::new()
             .volume(DEFAULT_VOLUME_ID)
             .path(dot_git.clone())
-            .insert("wiring-refresh-dot-git"),
+            .insert(crate::listing_host::listings(), "wiring-refresh-dot-git"),
     ];
 
     let selected = super::wiring::listings_a_repo_change_re_reads(&root);
@@ -251,7 +251,7 @@ fn a_report_selects_every_open_virtual_listing_for_the_repo() {
 /// the fixture reproduces it wherever the suite runs.
 #[test]
 fn a_listing_reached_through_a_symlink_is_still_the_repos() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::DEFAULT_VOLUME_ID;
 
     let dir = temp_dir("wiring", "symlinked_spelling");
@@ -271,7 +271,7 @@ fn a_listing_reached_through_a_symlink_is_still_the_repos() {
     let _listing = TestListing::new()
         .volume(DEFAULT_VOLUME_ID)
         .path(through_link.clone())
-        .insert("wiring-symlinked-branches");
+        .insert(crate::listing_host::listings(), "wiring-symlinked-branches");
 
     let selected = super::wiring::listings_a_repo_change_re_reads(&root);
     assert!(

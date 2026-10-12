@@ -21,13 +21,13 @@ mod path_index;
 mod pipeline;
 mod quick_filter;
 mod reread;
-#[cfg(test)]
-mod shims;
 mod sorting;
 mod stall;
 mod stalled_on;
 mod stats;
 mod streaming;
+#[cfg(test)]
+pub(crate) mod testing;
 mod visible_rows;
 
 // The public API names a few types the app only meets as values (returned, or
@@ -48,41 +48,156 @@ pub use operations::{ListingLookupError, ResortResult, RowBeside, SelectionSnaps
 pub use quick_filter::NameFilterResult;
 #[allow(unused_imports, reason = "public API the app meets only as values")]
 pub use reread::{ReadTicket, RefreshOutcome};
-pub use sorting::{
-    DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator_with as entry_comparator,
-    sort_entries_with as sort_entries,
-};
+pub use sorting::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator, sort_entries};
 pub use stalled_on::StalledOn;
 pub use stats::ListingStats;
 pub use streaming::ListingRequest;
 pub use visible_rows::VisibleRows;
 
-// Test shims and test-only names at the root, for tests (inside and outside the
-// engine) that still drive the one shared engine. M4b deletes them with the
-// shims, once every test builds its own engine.
-#[cfg(test)]
-pub(crate) use {
-    cached_listing::listing_cache,
-    caching::try_get_authoritative_listing,
-    diff_emitter::{hold_for_test, pending_changes_for_test},
-    fuzzy_jump::fuzzy_find_first_match_in_listing,
-    operations::{list_directory_end, list_directory_start_with_volume, update_listing_entries},
-    pipeline::OverlayRows,
-    streaming::{StreamingListingState, cancel_listing, read_directory_with_progress, streaming_state},
-};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, RwLock, Weak};
+use std::time::Instant;
 
-/// The app's installed engine, for the test shims that still forward to it.
-/// ❌ Never call it from engine code, which reaches its own state through `self`.
-// shim: removed in M4b
-#[cfg(test)]
-pub(crate) fn installed() -> &'static std::sync::Arc<engine::Inner> {
-    crate::listing_host::listings().inner()
+use tokio::runtime::Handle;
+
+use cached_listing::{CachedListing, ListingPath};
+use caching::RefreshSlot;
+use diff_emitter::DiffQueue;
+use host::{
+    ForegroundLeases, ListingEvents, ListingIndex, ListingObserver, ListingOverlay, ListingVolumes, MountTable,
+    ReadingLocale, ScratchVisibility,
+};
+use stall::{HungReads, StallPolicy, StallWatch};
+use streaming::StreamingListingState;
+
+/// The engine's state: the seams it asks, and everything it keeps between two
+/// calls. One per [`Listings`]; nothing here is process-wide.
+///
+/// Defined here at the module root, the parent of every module that implements
+/// a part of it (`impl Inner` in `caching.rs`, `streaming.rs`, …), so the
+/// engine's modules hang off one hub instead of circling through `engine/`.
+pub(crate) struct Inner {
+    /// Where the engine reports what happened to a listing.
+    events: Arc<dyn ListingEvents>,
+    /// Which volume serves a path.
+    volumes: Arc<dyn ListingVolumes>,
+    /// What the drive index knows.
+    index: Arc<dyn ListingIndex>,
+    /// Who hands out foreground holds.
+    leases: Arc<dyn ForegroundLeases>,
+    /// Which language names collate in.
+    locale: Arc<dyn ReadingLocale>,
+    /// What a filesystem path is mounted on.
+    mounts: Arc<dyn MountTable>,
+    /// The runtime every spawn goes to. ❌ Never `tokio::spawn` in the engine:
+    /// it INHERITS an ambient runtime, and a watcher's OS thread has none, so it
+    /// panics there.
+    runtime: Handle,
+    /// Rows a pane sees that no volume holds, in the order the host added them.
+    overlays: Vec<Arc<dyn ListingOverlay>>,
+    /// Who hears every open and close, in the order the host added them.
+    observers: Vec<Arc<dyn ListingObserver>>,
+    /// The scratch files the user asked to see.
+    scratch: ScratchSettings,
+    /// Every open listing, by listing id.
+    cache: RwLock<HashMap<String, CachedListing>>,
+    /// What a listing's `last_accessed_ms` counts from.
+    epoch: Instant,
+    /// Every streaming read still running, by listing id: its cancel token and
+    /// stall watch.
+    streaming: RwLock<HashMap<String, Arc<StreamingListingState>>>,
+    /// Committed diff batches waiting for their coalesced flush.
+    diffs: Arc<DiffQueue>,
+    /// Per-directory refresh turnstiles (`caching.rs`).
+    refresh_slots: RwLock<HashMap<(String, PathBuf), RefreshSlot>>,
+    /// The last read generation handed out (`reread.rs`).
+    read_generations: AtomicU64,
+    /// Every volume's listing reads, and which of them are hung (`stall.rs`).
+    hung_reads: Arc<HungReads>,
+    /// One collator per locale tag (`collation.rs`).
+    collators: RwLock<HashMap<String, Arc<NameCollator>>>,
 }
 
-// The app's half of `cmdr-archive`'s live-content watch: what a refresh does to
-// the listing cache, which is this module's side of the seam.
-#[cfg(test)]
-mod archive_watch_integration_test;
+impl Inner {
+    /// Which scratch files the user asked to see, read once per operation and
+    /// passed down as a value, ❗ before any cache lock is taken.
+    pub(crate) fn scratch_visibility(&self) -> ScratchVisibility {
+        self.scratch.get()
+    }
+
+    /// Milliseconds since this engine's epoch: what `last_accessed_ms` holds.
+    pub(crate) fn epoch_millis_now(&self) -> u64 {
+        self.epoch.elapsed().as_millis() as u64
+    }
+
+    /// `path` in the spelling `volume_id`'s volume keys listings under.
+    ///
+    /// ❗ Call it before taking the cache: it asks the host's volume seam.
+    pub(crate) fn listing_path(&self, volume_id: &str, path: &std::path::Path) -> ListingPath {
+        ListingPath::on_volume(self.volumes.as_ref(), volume_id, path)
+    }
+
+    /// Which language names collate in, as the host answers it now.
+    fn locale(&self) -> String {
+        self.locale.locale()
+    }
+
+    /// The stall policy production reads use, and this engine's registry of
+    /// hung reads.
+    fn stall_watch(&self) -> StallWatch {
+        StallWatch {
+            policy: StallPolicy::PRODUCTION,
+            reads: Arc::clone(&self.hung_reads),
+        }
+    }
+
+    /// The overlays, in registration order.
+    fn overlays(&self) -> &[Arc<dyn ListingOverlay>] {
+        &self.overlays
+    }
+
+    /// The observers, in registration order.
+    fn observers(&self) -> &[Arc<dyn ListingObserver>] {
+        &self.observers
+    }
+
+    /// A weak handle, for a background loop that must not keep the engine alive.
+    fn downgrade(self: &Arc<Self>) -> Weak<Self> {
+        Arc::downgrade(self)
+    }
+}
+
+/// [`ScratchVisibility`] behind two atomics, so a read never takes a lock.
+struct ScratchSettings {
+    show_staging_temps: AtomicBool,
+    show_safe_save_files: AtomicBool,
+}
+
+impl ScratchSettings {
+    fn new(visibility: ScratchVisibility) -> Self {
+        Self {
+            show_staging_temps: AtomicBool::new(visibility.show_staging_temps),
+            show_safe_save_files: AtomicBool::new(visibility.show_safe_save_files),
+        }
+    }
+
+    fn get(&self) -> ScratchVisibility {
+        ScratchVisibility {
+            show_staging_temps: self.show_staging_temps.load(Ordering::Relaxed),
+            show_safe_save_files: self.show_safe_save_files.load(Ordering::Relaxed),
+        }
+    }
+
+    fn set(&self, visibility: ScratchVisibility) {
+        self.show_staging_temps
+            .store(visibility.show_staging_temps, Ordering::Relaxed);
+        self.show_safe_save_files
+            .store(visibility.show_safe_save_files, Ordering::Relaxed);
+    }
+}
+
 #[cfg(test)]
 mod caching_oracle_test;
 #[cfg(test)]
@@ -91,10 +206,8 @@ mod caching_reaper_test;
 mod caching_replacement_test;
 #[cfg(test)]
 mod caching_test;
-#[cfg(test)]
-pub(crate) mod caching_test_support;
-// Name order itself, split from `sorting_test` because it pins the process-wide
-// reading language and shares that lock with `intl::native_strings`.
+// Name order itself, split from `sorting_test` because it reads each test's
+// own fixed language.
 #[cfg(test)]
 mod collation_test;
 #[cfg(test)]
@@ -115,16 +228,12 @@ mod hidden_files_test;
 mod index_sizes_test;
 #[cfg(test)]
 mod lifecycle_order_test;
-#[cfg(all(test, feature = "virtual-mtp"))]
-mod mtp_listing_path_test;
 #[cfg(test)]
 mod name_filter_test;
 #[cfg(test)]
 mod operations_test;
 #[cfg(test)]
 mod overlay_read_paths_test;
-#[cfg(test)]
-mod overlay_refresh_test;
 #[cfg(test)]
 mod pane_diff_test;
 #[cfg(test)]
@@ -135,13 +244,6 @@ mod probe_test_support;
 mod read_generation_test;
 #[cfg(test)]
 mod row_beside_test;
-#[cfg(test)]
-pub(crate) mod seam_test_support;
-// A pane close drops a listing, and must not reach the volume's own watcher.
-// Docker-gated, over a real `cmdr-smb` session, because the SMB watcher's
-// lifetime is what the regression was about.
-#[cfg(all(test, any(target_os = "macos", target_os = "linux")))]
-mod smb_pane_close_watch_integration_test;
 #[cfg(test)]
 mod sorting_dir_mode_test;
 #[cfg(test)]
@@ -156,8 +258,6 @@ mod stall_test;
 mod stats_test;
 #[cfg(test)]
 mod streaming_events_test;
-#[cfg(test)]
-mod streaming_reaction_test;
 #[cfg(test)]
 mod streaming_test;
 #[cfg(test)]

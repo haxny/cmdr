@@ -10,9 +10,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::overlay::GitPortalOverlay;
-use crate::file_system::listing::caching_test_support::{TestListing, WatchCoverageVolume};
 use crate::file_system::listing::host::ListingOverlay;
-use crate::file_system::listing::host::overlays::decorate;
+use crate::file_system::listing::testing::{TestListing, WatchCoverageVolume};
 use crate::file_system::volume::{LocalPosixVolume, Volume, WatchCoverage};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 
@@ -31,20 +30,33 @@ fn repo(name: &str) -> PathBuf {
 async fn a_dot_git_that_is_not_this_repos_gitdir_gets_no_rows() {
     let dir = repo("stray_dot_git");
     super::wiring::set_virtual_portal_enabled(true);
-    super::overlay::register();
 
     let stray = dir.join("fixtures").join("sample").join(".git");
     std::fs::create_dir_all(&stray).expect("make the placeholder");
 
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Test", &dir));
     let mut entries = volume.list_directory(&stray, None).await.expect("listing it");
-    assert_eq!(decorate(&volume, &stray, &mut entries).await, 0, "{entries:?}");
+    assert_eq!(
+        crate::file_system::listing::testing::decorate(crate::listing_host::listings(), &volume, &stray, &mut entries)
+            .await,
+        0,
+        "{entries:?}"
+    );
 
     // The repo's own `.git` still gets them, so the check isn't just refusing
     // everything.
     let real = dir.join(".git");
     let mut real_entries = volume.list_directory(&real, None).await.expect("listing .git");
-    assert_eq!(decorate(&volume, &real, &mut real_entries).await, 6);
+    assert_eq!(
+        crate::file_system::listing::testing::decorate(
+            crate::listing_host::listings(),
+            &volume,
+            &real,
+            &mut real_entries
+        )
+        .await,
+        6
+    );
 
     cleanup(&dir);
 }
@@ -107,15 +119,15 @@ fn the_toggle_refresh_reaches_a_dot_git_pane_with_no_repo_subscription() {
     let at_dot_git = TestListing::new()
         .volume("local-external-1234")
         .path(dot_git.clone())
-        .insert("git-toggle-dot-git");
+        .insert(crate::listing_host::listings(), "git-toggle-dot-git");
     let inside = TestListing::new()
         .volume("root")
         .path(dot_git.join("branches"))
-        .insert("git-toggle-inside");
+        .insert(crate::listing_host::listings(), "git-toggle-inside");
     let elsewhere = TestListing::new()
         .volume("root")
         .path(dir.join("src"))
-        .insert("git-toggle-elsewhere");
+        .insert(crate::listing_host::listings(), "git-toggle-elsewhere");
 
     let targeted = super::wiring::listings_inside_a_dot_git();
     let paths: Vec<&PathBuf> = targeted.iter().map(|(_, path)| path).collect();
@@ -149,11 +161,11 @@ fn the_refresh_reaches_a_portal_listing_on_a_non_default_volume() {
     let on_external = TestListing::new()
         .volume("local-external-1234")
         .path(dot_git.join("branches"))
-        .insert("git-refresh-external");
+        .insert(crate::listing_host::listings(), "git-refresh-external");
     let elsewhere = TestListing::new()
         .volume("local-external-1234")
         .path(dir.join("src"))
-        .insert("git-refresh-elsewhere");
+        .insert(crate::listing_host::listings(), "git-refresh-elsewhere");
 
     let targeted = super::wiring::listings_a_repo_change_re_reads(&root);
     let paths: Vec<&PathBuf> = targeted.iter().map(|(_, path)| path).collect();

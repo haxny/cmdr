@@ -5,8 +5,7 @@
 //! accented name decomposed while the share stores it composed. The cursor
 //! should still land on that row, and only when exactly one row answers.
 
-use super::caching_test_support::{TestListing, TestListingGuard};
-use super::operations::find_file_index;
+use super::testing::{TestEngine, TestListing, TestListingGuard};
 use cmdr_fs::entry::FileEntry;
 
 fn listing(tag: &str, names: &[&str]) -> TestListingGuard {
@@ -18,22 +17,43 @@ fn listing(tag: &str, names: &[&str]) -> TestListingGuard {
         .volume("test")
         .path("/album")
         .entries(entries)
-        .insert(tag)
+        .insert(&TestEngine::new(), tag)
 }
 
 #[test]
 fn an_exact_name_finds_its_row() {
     let listing = listing("find-exact", &["a.jpg", "r\u{e9}sz.jpg"]);
 
-    assert_eq!(find_file_index(listing.id(), "r\u{e9}sz.jpg", true).unwrap(), Some(1));
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "r\u{e9}sz.jpg", true)
+            .unwrap(),
+        Some(1)
+    );
 }
 
 #[test]
 fn a_name_in_another_unicode_form_or_case_finds_its_one_look_alike() {
     let listing = listing("find-folded", &["a.jpg", "r\u{e9}sz.jpg"]);
 
-    assert_eq!(find_file_index(listing.id(), "re\u{301}sz.jpg", true).unwrap(), Some(1));
-    assert_eq!(find_file_index(listing.id(), "R\u{c9}SZ.JPG", true).unwrap(), Some(1));
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "re\u{301}sz.jpg", true)
+            .unwrap(),
+        Some(1)
+    );
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "R\u{c9}SZ.JPG", true)
+            .unwrap(),
+        Some(1)
+    );
 }
 
 /// The exact spelling wins even beside a look-alike: it's the row the caller named.
@@ -41,7 +61,14 @@ fn a_name_in_another_unicode_form_or_case_finds_its_one_look_alike() {
 fn an_exact_match_beats_a_look_alike() {
     let listing = listing("find-exact-first", &["re\u{301}sz.jpg", "r\u{e9}sz.jpg"]);
 
-    assert_eq!(find_file_index(listing.id(), "r\u{e9}sz.jpg", true).unwrap(), Some(1));
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "r\u{e9}sz.jpg", true)
+            .unwrap(),
+        Some(1)
+    );
 }
 
 /// Two look-alikes and no exact match: no guess, the caller's own fallback runs.
@@ -49,5 +76,12 @@ fn an_exact_match_beats_a_look_alike() {
 fn two_look_alikes_and_no_exact_match_find_nothing() {
     let listing = listing("find-ambiguous", &["re\u{301}sz.jpg", "R\u{e9}sz.jpg"]);
 
-    assert_eq!(find_file_index(listing.id(), "r\u{e9}sz.jpg", true).unwrap(), None);
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "r\u{e9}sz.jpg", true)
+            .unwrap(),
+        None
+    );
 }

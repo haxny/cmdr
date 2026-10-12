@@ -8,7 +8,7 @@ use tokio::time::Instant;
 
 use super::jobs::{self, Joined};
 use super::{HOURGLASS_DELAY, count_with, plan};
-use crate::file_system::listing::caching_test_support::TestListing;
+use crate::file_system::listing::testing::TestListing;
 use crate::listing_index_sizes::ListingIndexSizesChanged;
 use crate::listing_index_sizes::refresh::RowSizes;
 use cmdr_fs::entry::FileEntry;
@@ -27,7 +27,7 @@ async fn esc_during_resolution_finds_the_job_and_prevents_a_walk() {
     let listing = TestListing::new()
         .path("/data")
         .entries(vec![folder("/data/a")])
-        .insert("jobs-startup");
+        .insert(crate::listing_host::listings(), "jobs-startup");
     let id = listing.id().to_string();
     let requested = plan(listing.id(), false, None, |_| false).expect("cached");
     let resolved = async move {
@@ -67,7 +67,7 @@ fn restoring_a_manual_partial_preserves_its_ownership() {
     let listing = TestListing::new()
         .path("/data")
         .entries(vec![folder("/data/a")])
-        .insert("jobs-manual-restore");
+        .insert(crate::listing_host::listings(), "jobs-manual-restore");
     jobs::mark_manual(listing.id(), "/data/a");
     let Joined::Owner(job) = jobs::enqueue(listing.id(), queued(&["/data/a"]), Instant::now()) else {
         panic!("owner");
@@ -84,7 +84,7 @@ async fn ui_cancellation_does_not_drop_an_in_flight_scan() {
     let listing = TestListing::new()
         .path("/data")
         .entries(vec![folder("/data/a")])
-        .insert("jobs-scan-lifetime");
+        .insert(crate::listing_host::listings(), "jobs-scan-lifetime");
     let volume: Arc<dyn crate::file_system::volume::Volume> = Arc::new(WedgedVolume::new("lifetime"));
     let weak = Arc::downgrade(&volume);
     let id = listing.id().to_string();
@@ -144,7 +144,7 @@ async fn a_cancel_puts_lit_waiting_rows_back_and_stops() {
         .path("/data")
         .include_hidden(false)
         .entries(vec![folder("/data/a"), folder("/data/b")])
-        .insert("jobs-cancel");
+        .insert(crate::listing_host::listings(), "jobs-cancel");
     let events: Arc<Mutex<Vec<ListingIndexSizesChanged>>> = Arc::default();
     let sink_events = Arc::clone(&events);
     let sink = move |e: ListingIndexSizesChanged| sink_events.lock().expect("test lock").push(e);

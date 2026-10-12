@@ -4,6 +4,8 @@
 //!
 //! The fake volume stands in for a kernel mount whose server went silent: every
 //! read blocks until the test says the server is back, then answers from a script.
+//! The engine's mount table puts `/` on a local disk, so a stall there names a
+//! drive; the app's real table is its own cell (`listing_host/mounts.rs`).
 
 use std::collections::VecDeque;
 use std::future::Future;
@@ -15,14 +17,12 @@ use std::time::Duration;
 
 use tokio::sync::watch;
 
-use crate::file_system::listing::caching_test_support::TestListingGuard;
-use crate::file_system::listing::host::ListingEvents;
-use crate::file_system::listing::host::testing::RecordingEvents;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::Listings;
 use crate::file_system::listing::stall::{HungReads, StallPolicy, StallWatch};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
-use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::listing::testing::{
+    FakeMountTable, StreamingListingState, TestEngine, TestListingGuard, request,
+};
 use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -171,12 +171,20 @@ impl Volume for SilentServerVolume {
     }
 }
 
-/// One volume, one sink, and the switch that brings its server back.
+/// An engine whose mount table puts `/` on a local disk, as every machine the
+/// tests run on does.
+fn engine_on_a_local_disk() -> TestEngine {
+    TestEngine::builder()
+        .mounts(Arc::new(FakeMountTable::default().mount("/", "apfs", "/dev/disk3s1s1")))
+        .build()
+}
+
+/// One engine, one volume, and the switch that brings its server back.
 struct Rig {
+    engine: TestEngine,
     volume_id: String,
     volume: Arc<SilentServerVolume>,
     server: watch::Sender<bool>,
-    sink: Arc<RecordingEvents>,
     watch: StallWatch,
 }
 
@@ -189,12 +197,15 @@ impl Rig {
         let (server, server_back) = watch::channel(false);
         let volume = Arc::new(SilentServerVolume::new(server_back, script));
         let volume_id = format!("test-stall-{}", uuid::Uuid::new_v4());
-        get_volume_manager().register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+        let engine = engine_on_a_local_disk();
+        engine
+            .volumes
+            .register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
         Self {
+            engine,
             volume_id,
             volume,
             server,
-            sink: Arc::new(RecordingEvents::new()),
             watch: StallWatch {
                 policy,
                 reads: Arc::new(HungReads::new()),
@@ -211,24 +222,15 @@ impl Rig {
         tokio::task::JoinHandle<Result<(), VolumeError>>,
     ) {
         let state = Arc::new(StreamingListingState::with_stall_watch(self.watch.clone()));
-        let events: Arc<dyn ListingEvents> = Arc::clone(&self.sink) as Arc<dyn ListingEvents>;
         let task = {
+            let engine = Listings::clone(&self.engine);
             let state = Arc::clone(&state);
             let volume_id = self.volume_id.clone();
             let listing_id = listing_id.to_string();
             tokio::spawn(async move {
-                read_directory_with_progress(
-                    &events,
-                    &listing_id,
-                    &state,
-                    &volume_id,
-                    Path::new("/"),
-                    true,
-                    SortColumn::Name,
-                    SortOrder::Ascending,
-                    DirectorySortMode::LikeFiles,
-                )
-                .await
+                engine
+                    .read_with(&state, &request(&listing_id, &volume_id, Path::new("/")))
+                    .await
             })
         };
         (state, task)
@@ -236,7 +238,8 @@ impl Rig {
 
     async fn wait_for_stall(&self, listing_id: &str) {
         wait_until_async(WITHIN, "the listing to report itself stalled", || {
-            self.sink
+            self.engine
+                .events
                 .stalled
                 .lock_ignore_poison()
                 .iter()
@@ -250,18 +253,13 @@ impl Rig {
     }
 
     fn completed(&self, listing_id: &str) -> Option<usize> {
-        self.sink
+        self.engine
+            .events
             .complete
             .lock_ignore_poison()
             .iter()
             .find(|(id, _)| id == listing_id)
             .map(|(_, count)| *count)
-    }
-}
-
-impl Drop for Rig {
-    fn drop(&mut self) {
-        get_volume_manager().unregister(&self.volume_id);
     }
 }
 
@@ -278,17 +276,17 @@ fn prompt(answer: Answer) -> Step {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_read_that_never_answers_reports_the_listing_stalled_within_the_deadline() {
     let rig = Rig::new(vec![hang_then(Answer::Entries(1))]);
-    let listing = TestListingGuard::adopt(unique_test_id("stall-never"));
+    let listing = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-never"));
 
     let (state, task) = rig.start(listing.id());
     rig.wait_for_stall(listing.id()).await;
 
-    assert!(rig.sink.complete.lock_ignore_poison().is_empty());
-    assert!(rig.sink.failed.lock_ignore_poison().is_empty());
+    assert!(rig.engine.events.complete.lock_ignore_poison().is_empty());
+    assert!(rig.engine.events.failed.lock_ignore_poison().is_empty());
     // The event names what the folder lives on: this volume is a plain filesystem
     // backend reading `/`, which is a local disk on every machine the tests run on.
     assert_eq!(
-        rig.sink.stalled.lock_ignore_poison().as_slice(),
+        rig.engine.events.stalled.lock_ignore_poison().as_slice(),
         [(listing.id().to_string(), StalledOn::Drive)]
     );
 
@@ -296,7 +294,7 @@ async fn a_read_that_never_answers_reports_the_listing_stalled_within_the_deadli
     let result = task.await.expect("listing task must not panic");
     assert!(result.is_ok(), "a cancel is not a refusal, got {result:?}");
     assert_eq!(
-        rig.sink.cancelled.lock_ignore_poison().as_slice(),
+        rig.engine.events.cancelled.lock_ignore_poison().as_slice(),
         [listing.id().to_string()]
     );
 }
@@ -307,7 +305,7 @@ async fn a_read_that_never_answers_reports_the_listing_stalled_within_the_deadli
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_stalled_listing_recovers_on_its_own_when_the_server_comes_back() {
     let rig = Rig::new(vec![hang_then(Answer::NotConnected), hang_then(Answer::Entries(2))]);
-    let listing = TestListingGuard::adopt(unique_test_id("stall-recover"));
+    let listing = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-recover"));
 
     let (_state, task) = rig.start(listing.id());
     rig.wait_for_stall(listing.id()).await;
@@ -317,7 +315,7 @@ async fn a_stalled_listing_recovers_on_its_own_when_the_server_comes_back() {
     assert!(result.is_ok(), "got {result:?}");
     assert_eq!(rig.completed(listing.id()), Some(2));
     assert!(
-        rig.sink.failed.lock_ignore_poison().is_empty(),
+        rig.engine.events.failed.lock_ignore_poison().is_empty(),
         "a stuck read's refusal is stale: it must not reach the pane"
     );
 }
@@ -332,7 +330,7 @@ async fn a_stalled_listing_retries_prompt_transient_refusals_until_it_lands() {
         prompt(Answer::TimedOut),
         prompt(Answer::Entries(3)),
     ]);
-    let listing = TestListingGuard::adopt(unique_test_id("stall-transient"));
+    let listing = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-transient"));
 
     let (_state, task) = rig.start(listing.id());
     rig.wait_for_stall(listing.id()).await;
@@ -356,7 +354,7 @@ async fn a_prompt_lasting_refusal_after_a_stall_ends_the_listing() {
         ..TEST_POLICY
     };
     let rig = Rig::with_policy(vec![hang_then(Answer::NotConnected), prompt(Answer::NotFound)], policy);
-    let listing = TestListingGuard::adopt(unique_test_id("stall-gone"));
+    let listing = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-gone"));
 
     let (_state, task) = rig.start(listing.id());
     rig.wait_for_stall(listing.id()).await;
@@ -371,7 +369,7 @@ async fn a_prompt_lasting_refusal_after_a_stall_ends_the_listing() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancelling_a_stalled_listing_stops_its_retries() {
     let rig = Rig::new(vec![hang_then(Answer::TimedOut), prompt(Answer::TimedOut)]);
-    let listing = TestListingGuard::adopt(unique_test_id("stall-cancel"));
+    let listing = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-cancel"));
 
     let (state, task) = rig.start(listing.id());
     rig.wait_for_stall(listing.id()).await;
@@ -398,13 +396,13 @@ async fn cancelling_a_stalled_listing_stops_its_retries() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn reads_on_a_hung_volume_stay_bounded_however_many_listings_start() {
     let rig = Rig::new(vec![hang_then(Answer::Entries(1))]);
-    let first = TestListingGuard::adopt(unique_test_id("stall-bound-first"));
+    let first = TestListingGuard::adopt(&rig.engine, unique_test_id("stall-bound-first"));
     let (_first_state, _first_task) = rig.start(first.id());
     rig.wait_for_stall(first.id()).await;
 
     let mut more = Vec::new();
     for i in 0..10 {
-        let guard = TestListingGuard::adopt(unique_test_id(&format!("stall-bound-{i}")));
+        let guard = TestListingGuard::adopt(&rig.engine, unique_test_id(&format!("stall-bound-{i}")));
         let (state, task) = rig.start(guard.id());
         more.push((guard, state, task));
     }
@@ -485,34 +483,24 @@ async fn a_read_that_keeps_making_progress_never_reports_a_stall() {
         }
     }
 
+    let engine = engine_on_a_local_disk();
     let volume_id = format!("test-steady-{}", uuid::Uuid::new_v4());
-    get_volume_manager().register(
+    engine.volumes.register(
         &volume_id,
         Arc::new(SlowButSteady {
             root: PathBuf::from("/"),
         }) as Arc<dyn Volume>,
     );
-    let listing = TestListingGuard::adopt(unique_test_id("stall-steady"));
-    let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("stall-steady"));
+    let sink = &engine.events;
     let state = Arc::new(StreamingListingState::with_stall_watch(StallWatch {
         policy: TEST_POLICY,
         reads: Arc::new(HungReads::new()),
     }));
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        &volume_id,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
-    get_volume_manager().unregister(&volume_id);
+    let result = engine
+        .read_with(&state, &request(listing.id(), &volume_id, Path::new("/")))
+        .await;
 
     assert!(result.is_ok(), "got {result:?}");
     assert!(

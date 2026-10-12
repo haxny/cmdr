@@ -8,7 +8,7 @@
 //! the listing cache and `VolumeManager`. Then we call the command and assert whether
 //! `list_directory` ran, and whether it finished.
 use super::*;
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_fs::entry::FileEntry;
@@ -119,7 +119,11 @@ impl Volume for CountingVolume {
 }
 
 fn insert_listing(tag: &str, volume_id: &str, path: &str) -> TestListingGuard {
-    TestListing::new().volume(volume_id).path(path).sequence(1).insert(tag)
+    TestListing::new()
+        .volume(volume_id)
+        .path(path)
+        .sequence(1)
+        .insert(listings(), tag)
 }
 
 /// Watched volume: short-circuit fires, `list_directory` never called.

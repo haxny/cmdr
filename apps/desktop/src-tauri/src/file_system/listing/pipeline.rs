@@ -16,10 +16,10 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
 use tokio::runtime::Handle;
 
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::collation::NameCollator;
-use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::host::ListingOverlay;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries_with};
+use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 
 /// What a cache update knows about the [`ListingOverlay`] rows inside the
 /// entries it is about to write.
@@ -62,7 +62,7 @@ impl Prepared {
         sort_order: SortOrder,
         dir_sort_mode: DirectorySortMode,
     ) {
-        sort_entries_with(collator, &mut self.entries, sort_by, sort_order, dir_sort_mode);
+        sort_entries(collator, &mut self.entries, sort_by, sort_order, dir_sort_mode);
     }
 
     /// Whether the drive index holds these rows (`false` for a routed volume).
@@ -166,8 +166,9 @@ impl Inner {
     /// registration order. Cheap: `applies_to` is zero-I/O by contract.
     fn applicable_overlays(&self, volume: &dyn Volume, path: &Path) -> Vec<Arc<dyn ListingOverlay>> {
         self.overlays()
-            .into_iter()
+            .iter()
             .filter(|overlay| overlay.applies_to(volume, path))
+            .cloned()
             .collect()
     }
 
@@ -181,7 +182,7 @@ impl Inner {
     ///
     /// Sorting happens after this returns, so a contributor hands rows over in any
     /// order.
-    async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
+    pub(super) async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
         let applicable = self.applicable_overlays(volume.as_ref(), path);
         if applicable.is_empty() {
             return 0;
@@ -227,7 +228,3 @@ async fn gather(
             Vec::new()
         })
 }
-
-#[cfg(test)]
-#[path = "pipeline_test_support.rs"]
-pub(crate) mod test_support;

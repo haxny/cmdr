@@ -11,6 +11,7 @@ use super::Listings;
 
 /// Where the pane's cursor and selection stood before a change that moves
 /// rows, so the answer says where they landed.
+// DEFAULT-OK: no cursor and nothing selected is a pane that marked nothing.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PaneMarks<'a> {
     /// The name under the cursor.

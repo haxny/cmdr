@@ -18,7 +18,7 @@ use super::super::event_sinks::CollectorEventSink;
 use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState, insert_scan_result};
 use super::super::types::{CancelRollbackOutcome, WriteOperationConfig, WriteOperationError};
 use super::walker::delete_volume_files_with_progress_inner;
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_fs::entry::FileEntry;
@@ -174,7 +174,7 @@ fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry
         .path(path)
         .entries(entries)
         .sequence(1)
-        .insert(tag)
+        .insert(crate::listing_host::listings(), tag)
 }
 
 fn make_state() -> Arc<WriteOperationState> {

@@ -10,14 +10,9 @@
 
 use std::path::PathBuf;
 
-use super::caching::{
-    apply_tags_to_listing, carry_forward_tags, has_entry, insert_entry_sorted, remove_entries_by_paths,
-    update_entry_sorted,
-};
-use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::PaneRows;
-use super::operations::get_file_at;
 use super::path_index::lookup_probe;
+use super::testing::{TestEngine, TestListing, TestListingGuard};
 use super::visible_rows::scan_probe;
 use cmdr_fs::entry::{FileEntry, TagRef};
 
@@ -38,7 +33,7 @@ fn big_listing(tag: &str) -> TestListingGuard {
         .volume("test")
         .path("/big")
         .entries(entries)
-        .insert(tag)
+        .insert(&TestEngine::new(), tag)
 }
 
 /// A chunk of tag updates spread over the whole listing, the way the sweep's
@@ -71,7 +66,12 @@ fn examined_while(f: impl FnOnce()) -> u64 {
 fn a_chunk_of_tag_updates_walks_the_listing_at_most_once() {
     let listing = big_listing("path-index-chunk");
 
-    let examined = examined_while(|| apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK)));
+    let examined = examined_while(|| {
+        listing
+            .engine()
+            .inner
+            .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK))
+    });
 
     assert!(
         examined <= (ENTRY_COUNT + CHUNK * 2) as u64,
@@ -96,10 +96,18 @@ fn tagging_the_end_of_a_listing_costs_what_tagging_the_start_costs() {
 
     // Warm the map the way the sweep's first chunk does, so this measures the
     // steady state rather than the build.
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
 
-    let at_start = examined_while(|| apply_tags_to_listing(listing.id(), update(1)));
-    let at_end = examined_while(|| apply_tags_to_listing(listing.id(), update(ENTRY_COUNT - 1)));
+    let at_start = examined_while(|| listing.engine().inner.apply_tags_to_listing(listing.id(), update(1)));
+    let at_end = examined_while(|| {
+        listing
+            .engine()
+            .inner
+            .apply_tags_to_listing(listing.id(), update(ENTRY_COUNT - 1))
+    });
 
     assert!(
         at_end <= at_start + 8,
@@ -114,11 +122,22 @@ fn tagging_the_end_of_a_listing_costs_what_tagging_the_start_costs() {
 fn a_tag_update_leaves_the_row_map_standing() {
     let listing = big_listing("path-index-row-map");
     // Build the row map, as any pane read does.
-    get_file_at(listing.id(), 0, true).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .get_file_at(listing.id(), 0, true)
+        .expect("listing is cached");
 
     let before = scan_probe::examined();
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
-    get_file_at(listing.id(), ENTRY_COUNT - 1, true).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .get_file_at(listing.id(), ENTRY_COUNT - 1, true)
+        .expect("listing is cached");
     let rescanned = scan_probe::examined() - before;
 
     assert_eq!(
@@ -135,7 +154,10 @@ fn a_context_menu_sized_update_builds_no_map() {
     let listing = big_listing("path-index-small");
 
     let before = lookup_probe::builds();
-    apply_tags_to_listing(listing.id(), chunk_of_updates(4));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(4));
     let builds = lookup_probe::builds() - before;
 
     assert_eq!(builds, 0, "a 4-path update built {builds} map(s) for its own use");
@@ -145,9 +167,17 @@ fn a_context_menu_sized_update_builds_no_map() {
 #[test]
 fn a_small_update_rides_a_map_that_already_exists() {
     let listing = big_listing("path-index-small-warm");
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
 
-    let examined = examined_while(|| apply_tags_to_listing(listing.id(), chunk_of_updates(4)));
+    let examined = examined_while(|| {
+        listing
+            .engine()
+            .inner
+            .apply_tags_to_listing(listing.id(), chunk_of_updates(4))
+    });
 
     assert!(
         examined <= 16,
@@ -161,13 +191,20 @@ fn a_small_update_rides_a_map_that_already_exists() {
 #[test]
 fn tags_land_correctly_after_an_insert_moves_every_index() {
     let listing = big_listing("path-index-invalidation");
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
 
     // Sorts to the very front, so every existing entry's index moves by one.
-    insert_entry_sorted(listing.id(), entry("aaa-newcomer.bin")).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .insert_entry_sorted(listing.id(), entry("aaa-newcomer.bin"))
+        .expect("listing is cached");
 
     let target = format!("/big/file-{:06}.bin", ENTRY_COUNT - 1);
-    apply_tags_to_listing(
+    listing.engine().inner.apply_tags_to_listing(
         listing.id(),
         vec![(
             target.clone(),
@@ -206,7 +243,10 @@ fn deep_row() -> String {
 /// A listing whose path map the sweep's first chunk has already built.
 fn mapped_listing(tag: &str) -> TestListingGuard {
     let listing = big_listing(tag);
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
     listing
 }
 
@@ -217,7 +257,7 @@ fn a_re_stat_rides_the_map_a_tag_sweep_built() {
     // A row the sweep's chunk DID tag, so the carry-forward has something to carry.
     let mut restat = entry(&format!("file-{:06}.bin", ENTRY_COUNT - ENTRY_COUNT / CHUNK));
 
-    let examined = examined_while(|| carry_forward_tags(listing.id(), &mut restat));
+    let examined = examined_while(|| listing.engine().inner.carry_forward_tags(listing.id(), &mut restat));
 
     assert_eq!(
         restat.tags.len(),
@@ -237,7 +277,7 @@ fn an_existence_check_rides_the_map_a_tag_sweep_built() {
     let listing = mapped_listing("path-index-has-entry");
     let mut found = false;
 
-    let examined = examined_while(|| found = has_entry(listing.id(), &deep_row()));
+    let examined = examined_while(|| found = listing.engine().inner.has_entry(listing.id(), &deep_row()));
 
     assert!(found, "the deep row is cached");
     assert!(
@@ -252,7 +292,12 @@ fn a_removal_rides_the_map_a_tag_sweep_built() {
     let listing = mapped_listing("path-index-remove");
     let mut removed = Vec::new();
 
-    let examined = examined_while(|| removed = remove_entries_by_paths(listing.id(), &[PathBuf::from(deep_row())]));
+    let examined = examined_while(|| {
+        removed = listing
+            .engine()
+            .inner
+            .remove_entries_by_paths(listing.id(), &[PathBuf::from(deep_row())])
+    });
 
     assert_eq!(
         removed.iter().map(|(rows, _)| rows.before).collect::<Vec<_>>(),
@@ -274,7 +319,7 @@ fn a_modify_rides_the_map_a_tag_sweep_built() {
     let restat = entry(&format!("file-{:06}.bin", ENTRY_COUNT - 1));
     let mut result = None;
 
-    let examined = examined_while(|| result = update_entry_sorted(listing.id(), restat));
+    let examined = examined_while(|| result = listing.engine().inner.update_entry_sorted(listing.id(), restat));
 
     assert!(
         result
@@ -300,7 +345,7 @@ fn an_inserts_duplicate_guard_rides_the_map_a_tag_sweep_built() {
         after: None,
     });
 
-    let examined = examined_while(|| inserted = insert_entry_sorted(listing.id(), duplicate));
+    let examined = examined_while(|| inserted = listing.engine().inner.insert_entry_sorted(listing.id(), duplicate));
 
     assert_eq!(inserted, None, "a path the listing already held was inserted anyway");
     assert!(
@@ -316,11 +361,17 @@ fn an_inserts_duplicate_guard_rides_the_map_a_tag_sweep_built() {
 fn a_mutation_still_drops_the_map_it_rode() {
     let listing = mapped_listing("path-index-mutation-drops");
 
-    update_entry_sorted(listing.id(), entry(&format!("file-{:06}.bin", ENTRY_COUNT - 1)))
+    listing
+        .engine()
+        .inner
+        .update_entry_sorted(listing.id(), entry(&format!("file-{:06}.bin", ENTRY_COUNT - 1)))
         .expect("the deep row is cached");
 
     let before = lookup_probe::builds();
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
 
     assert_eq!(
         lookup_probe::builds() - before,
@@ -338,11 +389,14 @@ fn a_single_path_caller_builds_no_map() {
     let mut restat = entry(&format!("file-{:06}.bin", ENTRY_COUNT - 1));
 
     let before = lookup_probe::builds();
-    has_entry(listing.id(), &deep_row());
-    carry_forward_tags(listing.id(), &mut restat);
-    insert_entry_sorted(listing.id(), restat.clone());
-    update_entry_sorted(listing.id(), restat);
-    remove_entries_by_paths(listing.id(), &[PathBuf::from(deep_row())]);
+    listing.engine().inner.has_entry(listing.id(), &deep_row());
+    listing.engine().inner.carry_forward_tags(listing.id(), &mut restat);
+    listing.engine().inner.insert_entry_sorted(listing.id(), restat.clone());
+    listing.engine().inner.update_entry_sorted(listing.id(), restat);
+    listing
+        .engine()
+        .inner
+        .remove_entries_by_paths(listing.id(), &[PathBuf::from(deep_row())]);
 
     assert_eq!(
         lookup_probe::builds() - before,
@@ -369,7 +423,7 @@ fn a_batch_of_removals_walks_the_listing_at_most_once() {
         .collect();
     let mut removed = Vec::new();
 
-    let examined = examined_while(|| removed = remove_entries_by_paths(listing.id(), &paths));
+    let examined = examined_while(|| removed = listing.engine().inner.remove_entries_by_paths(listing.id(), &paths));
 
     assert_eq!(removed.len(), CHUNK, "the batch skipped rows it was asked to remove");
     assert!(
@@ -389,7 +443,7 @@ fn a_batch_of_removals_reports_pre_removal_indices_highest_first() {
         .map(|i| PathBuf::from(format!("/big/file-{i:06}.bin")))
         .collect();
 
-    let removed = remove_entries_by_paths(listing.id(), &paths);
+    let removed = listing.engine().inner.remove_entries_by_paths(listing.id(), &paths);
 
     let indices: Vec<Option<usize>> = removed.iter().map(|(rows, _)| rows.before).collect();
     assert_eq!(
@@ -409,11 +463,17 @@ fn a_batch_of_removals_reports_pre_removal_indices_highest_first() {
 fn a_removal_batch_that_takes_nothing_keeps_the_maps() {
     let listing = mapped_listing("path-index-remove-batch-noop");
 
-    remove_entries_by_paths(listing.id(), &[]);
-    remove_entries_by_paths(listing.id(), &[PathBuf::from("/big/never-existed.bin")]);
+    listing.engine().inner.remove_entries_by_paths(listing.id(), &[]);
+    listing
+        .engine()
+        .inner
+        .remove_entries_by_paths(listing.id(), &[PathBuf::from("/big/never-existed.bin")]);
 
     let before = lookup_probe::builds();
-    apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), chunk_of_updates(CHUNK));
 
     assert_eq!(
         lookup_probe::builds() - before,
@@ -432,7 +492,7 @@ fn a_batch_of_removals_skips_paths_the_listing_never_held() {
         PathBuf::from("/big/never-existed.bin"),
     ];
 
-    let removed = remove_entries_by_paths(listing.id(), &paths);
+    let removed = listing.engine().inner.remove_entries_by_paths(listing.id(), &paths);
 
     assert_eq!(removed.len(), 1);
     assert_eq!(removed[0].0.before, Some(3));

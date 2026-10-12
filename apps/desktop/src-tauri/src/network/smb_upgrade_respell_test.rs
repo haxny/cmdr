@@ -8,7 +8,7 @@
 //! respell the swap leaves a pane whose every accented entry opens nowhere.
 
 use super::*;
-use crate::file_system::listing::caching_test_support::TestListing;
+use crate::file_system::listing::testing::TestListing;
 use crate::file_system::write_operations::backend_suites::smb_test_support::*;
 use cmdr_fs::entry::FileEntry;
 use cmdr_smb::volume::{MountAnchor, connect_smb_volume};
@@ -42,7 +42,7 @@ async fn smb_integration_a_pane_in_an_accented_folder_survives_the_upgrade_to_a_
         .volume(&volume_id)
         .path(&kernel_album)
         .entries(vec![FileEntry::new(NFD_FILE.to_string(), kernel_photo, false, false)])
-        .insert("upgrade-respell");
+        .insert(crate::listing_host::listings(), "upgrade-respell");
 
     let successor = connect_smb_volume(
         "public",

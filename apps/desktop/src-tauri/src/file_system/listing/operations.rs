@@ -14,18 +14,14 @@ use uuid::Uuid;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::cached_listing::CachedListing;
-use crate::file_system::listing::engine::Inner;
 #[cfg(test)]
 use crate::file_system::listing::pipeline::ReadBy;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries_with};
+use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 #[cfg(test)]
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub use crate::file_system::listing::shims::operations::*;
 
 // ============================================================================
 // Listing lifecycle
@@ -539,7 +535,7 @@ impl Inner {
         };
 
         // Re-sort the entries
-        sort_entries_with(&collator, listing.entries_mut(), sort_by, sort_order, dir_sort_mode);
+        sort_entries(&collator, listing.entries_mut(), sort_by, sort_order, dir_sort_mode);
         listing.sort_by = sort_by;
         listing.directory_sort_mode = dir_sort_mode;
         listing.sort_order = sort_order;

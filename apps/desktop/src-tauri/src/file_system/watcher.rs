@@ -292,7 +292,7 @@ impl ListingObserver for WatchedListings {
 /// Stop watching a directory for a given listing.
 pub fn stop_watching(listing_id: &str) {
     #[cfg(test)]
-    crate::file_system::listing::seam_test_support::note_disarm(listing_id);
+    crate::listing_host::tests::support::note_disarm(listing_id);
     let removed = WATCHER_MANAGER.write_ignore_poison().watches.remove(listing_id);
 
     // Drop OUTSIDE the lock. Dropping a `WatchedDirectory` tears an FSEvents run loop

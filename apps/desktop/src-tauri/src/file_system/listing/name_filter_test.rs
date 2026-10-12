@@ -3,15 +3,13 @@
 //! `directory-diff` speaks.
 
 use super::cached_listing::OverlayRows;
-use super::caching::notify_added;
-use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::{DiffChangeType, compute_diff};
-use super::diff_emitter::{hold_for_test, pending_changes_for_test, take_batches_for_test};
+use super::host::ScratchVisibility;
 use super::name_filter::NameFilter;
-use super::operations::{find_file_index, get_file_at, get_total_count, update_listing_entries};
 use super::pipeline::Prepared;
-use super::quick_filter::set_listing_name_filter;
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use super::sorting_test_support::sort_entries;
+use super::testing::{TestEngine, TestListing, TestListingGuard, pending_changes, replace_entries};
 use cmdr_fs::entry::FileEntry;
 
 const DIR: &str = "/test/name-filter";
@@ -87,16 +85,23 @@ fn pane(tag: &str) -> TestListingGuard {
         .path(DIR)
         .include_hidden(false)
         .entries(entries())
-        .insert(tag);
-    hold_for_test(listing.id());
+        .insert(&TestEngine::new(), tag);
+    listing.engine().inner.diffs.hold(listing.id());
     listing
 }
 
 fn row_names(listing: &TestListingGuard) -> Vec<String> {
-    let count = get_total_count(listing.id(), false).expect("listing is cached");
+    let count = listing
+        .engine()
+        .inner
+        .get_total_count(listing.id(), false)
+        .expect("listing is cached");
     (0..count)
         .map(|row| {
-            get_file_at(listing.id(), row, false)
+            listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), row, false)
                 .expect("listing is cached")
                 .expect("row is within the count")
                 .name
@@ -108,24 +113,48 @@ fn row_names(listing: &TestListingGuard) -> Vec<String> {
 fn a_filtered_pane_shows_only_the_rows_that_match() {
     let listing = pane("name-filter-rows");
 
-    let result =
-        set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
 
     assert_eq!(result.total_count, 2);
     assert_eq!(row_names(&listing), vec!["alpha.pdf", "charlie.pdf"]);
     assert_eq!(
-        find_file_index(listing.id(), "charlie.pdf", false).ok().flatten(),
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "charlie.pdf", false)
+            .ok()
+            .flatten(),
         Some(1)
     );
-    assert_eq!(find_file_index(listing.id(), "bravo.txt", false).ok().flatten(), None);
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), "bravo.txt", false)
+            .ok()
+            .flatten(),
+        None
+    );
 }
 
 #[test]
 fn clearing_the_filter_shows_every_row_again() {
     let listing = pane("name-filter-clear");
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
 
-    let result = set_listing_name_filter(listing.id(), None, false, None, &[], false).expect("listing is cached");
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), None, false, None, &[], false)
+        .expect("listing is cached");
 
     assert_eq!(result.total_count, 4, "hidden files stay hidden");
     assert_eq!(
@@ -138,8 +167,11 @@ fn clearing_the_filter_shows_every_row_again() {
 fn the_filter_never_shows_a_hidden_file_the_pane_hides() {
     let listing = pane("name-filter-hidden");
 
-    let result =
-        set_listing_name_filter(listing.id(), Some("zsh"), false, None, &[], false).expect("listing is cached");
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("zsh"), false, None, &[], false)
+        .expect("listing is cached");
 
     assert_eq!(result.total_count, 0);
 }
@@ -148,7 +180,10 @@ fn the_filter_never_shows_a_hidden_file_the_pane_hides() {
 fn the_cursor_and_selection_ride_along_into_the_filtered_rows() {
     let listing = pane("name-filter-carry");
     // Rows: alpha.pdf 0, bravo.txt 1, charlie.pdf 2, delta.txt 3.
-    let result = set_listing_name_filter(listing.id(), Some("pdf"), false, Some("charlie.pdf"), &[1, 2], false)
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, Some("charlie.pdf"), &[1, 2], false)
         .expect("listing is cached");
 
     assert_eq!(result.new_cursor_index, Some(1));
@@ -163,7 +198,10 @@ fn the_cursor_and_selection_ride_along_into_the_filtered_rows() {
 fn a_cursor_on_a_row_the_filter_leaves_out_has_nowhere_to_go() {
     let listing = pane("name-filter-cursor-out");
 
-    let result = set_listing_name_filter(listing.id(), Some("pdf"), false, Some("bravo.txt"), &[], false)
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, Some("bravo.txt"), &[], false)
         .expect("listing is cached");
 
     assert_eq!(result.new_cursor_index, None);
@@ -172,38 +210,36 @@ fn a_cursor_on_a_row_the_filter_leaves_out_has_nowhere_to_go() {
 #[test]
 fn a_filter_change_discards_old_rows_at_the_real_flush_boundary() {
     let listing = pane("name-filter-drop");
-    notify_added(listing.id(), entry("echo.txt"));
-    assert_eq!(pending_changes_for_test(listing.id()).len(), 1);
+    listing.engine().inner.notify_added(listing.id(), entry("echo.txt"));
+    assert_eq!(pending_changes(listing.engine(), listing.id()).len(), 1);
 
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
 
-    assert!(take_batches_for_test(listing.id()).is_empty());
+    assert!(listing.engine().inner.diffs.take_pending(listing.id()).is_empty());
 }
 
 #[test]
 fn a_new_epoch_enqueue_between_filter_unlock_and_return_survives_flush() {
     let listing = pane("name-filter-new-epoch-pending-race");
-    notify_added(listing.id(), entry("echo.txt"));
+    listing.engine().inner.notify_added(listing.id(), entry("echo.txt"));
 
-    let result = super::quick_filter::set_listing_name_filter_inner(
-        listing.id(),
-        Some("pdf"),
-        false,
-        None,
-        &[],
-        false,
-        None,
-        || {
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter_inner(listing.id(), Some("pdf"), false, None, &[], false, None, || {
             // This callback runs after the real cache write lock is released,
             // exactly where a watcher can enqueue before the setter returns.
-            hold_for_test(listing.id());
-            notify_added(listing.id(), entry("bravo.pdf"));
-            assert_eq!(pending_changes_for_test(listing.id()).len(), 1);
-        },
-    )
-    .expect("listing is cached");
+            listing.engine().inner.diffs.hold(listing.id());
+            listing.engine().inner.notify_added(listing.id(), entry("bravo.pdf"));
+            assert_eq!(pending_changes(listing.engine(), listing.id()).len(), 1);
+        })
+        .expect("listing is cached");
 
-    let batches = take_batches_for_test(listing.id());
+    let batches = listing.engine().inner.diffs.take_pending(listing.id());
     assert_eq!(batches.len(), 1);
     let diff = &batches[0];
     assert_eq!(diff.sequence, result.sequence.unwrap() + 1);
@@ -212,20 +248,24 @@ fn a_new_epoch_enqueue_between_filter_unlock_and_return_survives_flush() {
     assert_eq!(change.change_type, DiffChangeType::Add);
     assert_eq!(change.entry.name, "bravo.pdf");
     assert_eq!(change.index, 1);
-    assert!(pending_changes_for_test(listing.id()).is_empty());
+    assert!(pending_changes(listing.engine(), listing.id()).is_empty());
 }
 
 #[test]
 fn a_new_file_the_filter_leaves_out_is_nothing_the_pane_hears_about() {
     let listing = pane("name-filter-diff");
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
-    hold_for_test(listing.id());
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
+    listing.engine().inner.diffs.hold(listing.id());
 
-    notify_added(listing.id(), entry("echo.txt"));
-    assert!(pending_changes_for_test(listing.id()).is_empty());
+    listing.engine().inner.notify_added(listing.id(), entry("echo.txt"));
+    assert!(pending_changes(listing.engine(), listing.id()).is_empty());
 
-    notify_added(listing.id(), entry("bravo.pdf"));
-    let queued: Vec<(DiffChangeType, String, usize)> = pending_changes_for_test(listing.id())
+    listing.engine().inner.notify_added(listing.id(), entry("bravo.pdf"));
+    let queued: Vec<(DiffChangeType, String, usize)> = pending_changes(listing.engine(), listing.id())
         .into_iter()
         .map(|c| (c.change_type, c.entry.name, c.index))
         .collect();
@@ -243,10 +283,11 @@ fn a_batch_diff_speaks_the_filtered_rows() {
         entry("echo.txt"),
     ]);
 
-    let changes: Vec<(DiffChangeType, String, usize)> = compute_diff(&old, &new, false, filter.as_ref())
-        .into_iter()
-        .map(|c| (c.change_type, c.entry.name, c.index))
-        .collect();
+    let changes: Vec<(DiffChangeType, String, usize)> =
+        compute_diff(&old, &new, false, filter.as_ref(), ScratchVisibility::default())
+            .into_iter()
+            .map(|c| (c.change_type, c.entry.name, c.index))
+            .collect();
 
     assert_eq!(
         changes,
@@ -264,13 +305,17 @@ fn one_onet_onets(tag: &str) -> TestListingGuard {
         .path(DIR)
         .include_hidden(false)
         .entries(sorted(vec![entry("one.txt"), entry("onet.txt"), entry("onets.txt")]))
-        .insert(tag);
-    hold_for_test(listing.id());
+        .insert(&TestEngine::new(), tag);
+    listing.engine().inner.diffs.hold(listing.id());
     listing
 }
 
 fn type_pattern(listing: &TestListingGuard, pattern: &str) -> super::quick_filter::NameFilterResult {
-    set_listing_name_filter(listing.id(), Some(pattern), false, None, &[], true).expect("listing is cached")
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some(pattern), false, None, &[], true)
+        .expect("listing is cached")
 }
 
 #[test]
@@ -310,7 +355,10 @@ fn a_refused_pattern_keeps_the_cursor_and_selection_where_they_were() {
     let listing = one_onet_onets("name-filter-refuse-carry");
     type_pattern(&listing, "onet");
     // Rows now: onet.txt 0, onets.txt 1.
-    let result = set_listing_name_filter(listing.id(), Some("onetx"), false, Some("onets.txt"), &[0], true)
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("onetx"), false, Some("onets.txt"), &[0], true)
         .expect("listing is cached");
 
     assert!(!result.accepted);
@@ -331,12 +379,16 @@ fn a_refusal_looks_past_the_rows_the_current_filter_hides() {
 #[test]
 fn a_change_read_in_the_old_row_space_is_never_sent_after_the_filter_changed() {
     let listing = pane("name-filter-race");
-    notify_added(listing.id(), entry("echo.txt"));
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
-    assert!(take_batches_for_test(listing.id()).is_empty());
-    hold_for_test(listing.id());
-    notify_added(listing.id(), entry("bravo.pdf"));
-    let sent = take_batches_for_test(listing.id());
+    listing.engine().inner.notify_added(listing.id(), entry("echo.txt"));
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
+    assert!(listing.engine().inner.diffs.take_pending(listing.id()).is_empty());
+    listing.engine().inner.diffs.hold(listing.id());
+    listing.engine().inner.notify_added(listing.id(), entry("bravo.pdf"));
+    let sent = listing.engine().inner.diffs.take_pending(listing.id());
     assert_eq!(sent.len(), 1);
     assert_eq!(sent[0].changes[0].index, 1);
     assert_eq!(sent[0].from_sequence, 2);
@@ -346,10 +398,17 @@ fn a_change_read_in_the_old_row_space_is_never_sent_after_the_filter_changed() {
 #[test]
 fn a_filter_change_names_the_sequence_its_rows_start_at() {
     let listing = pane("name-filter-seq");
-    let changed =
-        set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
+    let changed = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
     assert_eq!(changed.sequence, Some(1));
-    let same = set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
+    let same = listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
     assert_eq!(same.sequence, None, "nothing changed, so the pane keeps its sequence");
 }
 
@@ -360,10 +419,22 @@ fn a_re_read_that_crossed_a_filter_change_is_diffed_again_in_the_new_rows() {
     let mut fresh = entries();
     fresh.push(entry("echo.pdf"));
     let fresh = sorted(fresh);
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
-    hold_for_test(listing.id());
-    update_listing_entries(listing.id(), Prepared::for_test(fresh, OverlayRows::Unchanged));
-    let sent = take_batches_for_test(listing.id())
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .expect("listing is cached");
+    listing.engine().inner.diffs.hold(listing.id());
+    replace_entries(
+        listing.engine(),
+        listing.id(),
+        Prepared::for_test(fresh, OverlayRows::Unchanged),
+    );
+    let sent = listing
+        .engine()
+        .inner
+        .diffs
+        .take_pending(listing.id())
         .into_iter()
         .flat_map(|batch| batch.changes);
 
@@ -374,17 +445,31 @@ fn a_re_read_that_crossed_a_filter_change_is_diffed_again_in_the_new_rows() {
 
 #[test]
 fn a_filter_change_invalidates_guarded_selection_from_the_previous_rows() {
-    use super::operations::{ListingLookupError, get_selection_snapshot};
+    use super::operations::ListingLookupError;
     let listing = pane("name-filter-selection-revision");
-    set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).unwrap();
+    listing
+        .engine()
+        .inner
+        .set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false)
+        .unwrap();
     assert!(matches!(
-        get_selection_snapshot(listing.id(), false, &[1], 0),
+        listing
+            .engine()
+            .inner
+            .get_selection_snapshot(listing.id(), false, &[1], 0),
         Err(ListingLookupError::Changed { .. })
     ));
-    let snapshot = get_selection_snapshot(listing.id(), false, &[1], 1).unwrap();
+    let snapshot = listing
+        .engine()
+        .inner
+        .get_selection_snapshot(listing.id(), false, &[1], 1)
+        .unwrap();
     assert_eq!(snapshot.paths, vec![entry("charlie.pdf").path]);
     assert!(matches!(
-        super::quick_filter::set_listing_name_filter_guarded(listing.id(), None, false, None, &[1], false, Some(0)),
+        listing
+            .engine()
+            .inner
+            .set_listing_name_filter_guarded(listing.id(), None, false, None, &[1], false, Some(0)),
         Err(ListingLookupError::Changed { .. })
     ));
     assert_eq!(row_names(&listing), vec!["alpha.pdf", "charlie.pdf"]);
@@ -393,8 +478,7 @@ fn a_filter_change_invalidates_guarded_selection_from_the_previous_rows() {
 #[test]
 fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
     use super::operations::ListingLookupError;
-    use crate::file_system::staging::{ShowTempsGuard, StagingTemp};
-    let _settings = ShowTempsGuard::set(false);
+    use crate::file_system::staging::StagingTemp;
     let owner = std::sync::Arc::new(());
     let temp = StagingTemp::mint(
         &std::path::Path::new(DIR).join("a.pdf"),
@@ -405,12 +489,12 @@ fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
         .path(DIR)
         .include_hidden(false)
         .entries(sorted(vec![entry(name), entry("z.pdf")]))
-        .insert("name-filter-scratch-guard");
-    hold_for_test(listing.id());
+        .insert(&TestEngine::new(), "name-filter-scratch-guard");
+    listing.engine().inner.diffs.hold(listing.id());
     assert_eq!(row_names(&listing), vec!["z.pdf"]);
     drop(owner);
     assert!(matches!(
-        super::quick_filter::set_listing_name_filter_guarded(
+        listing.engine().inner.set_listing_name_filter_guarded(
             listing.id(),
             Some("z"),
             false,
@@ -421,16 +505,11 @@ fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
         ),
         Err(ListingLookupError::Changed { .. })
     ));
-    let result = super::quick_filter::set_listing_name_filter_guarded(
-        listing.id(),
-        Some("z"),
-        false,
-        None,
-        &[1],
-        false,
-        Some(1),
-    )
-    .unwrap();
+    let result = listing
+        .engine()
+        .inner
+        .set_listing_name_filter_guarded(listing.id(), Some("z"), false, None, &[1], false, Some(1))
+        .unwrap();
     assert_eq!(result.new_selected_indices, vec![0]);
     assert_eq!(result.sequence, Some(2));
     assert_eq!(row_names(&listing), vec!["z.pdf"]);

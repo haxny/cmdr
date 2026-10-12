@@ -1,15 +1,14 @@
 //! `try_get_authoritative_listing` tests, the fresh-listing oracle.
 //!
 //! They pin the volume's coverage answer through `WatchCoverageVolume`
-//! (`caching_test_support`), which is what lets all three be tested without an
-//! `AppHandle` or a real `WATCHER_MANAGER` entry.
+//! (`testing`), which is what lets all three be tested without a real change
+//! watch.
 
 use std::path::Path;
 use std::sync::Arc;
 
-use super::caching::try_get_authoritative_listing;
-use super::caching_test_support::{TestListing, TestListingGuard, WatchCoverageVolume};
-use crate::file_system::volume::manager::get_volume_manager;
+use super::Listings;
+use super::testing::{TestEngine, TestListing, TestListingGuard, WatchCoverageVolume};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{Volume, WatchCoverage};
@@ -25,9 +24,9 @@ fn make_test_entry(name: &str) -> FileEntry {
     }
 }
 
-/// A test-owned cached listing with a controllable sequence, on the test's own
-/// volume id. Removed from the listing cache when the returned guard drops.
+/// A cached listing in `engine` with a controllable sequence.
 fn insert_listing_with_sequence(
+    engine: &Listings,
     tag: &str,
     volume_id: &str,
     path: &str,
@@ -39,7 +38,7 @@ fn insert_listing_with_sequence(
         .path(path)
         .entries(entries)
         .sequence(sequence)
-        .insert(tag)
+        .insert(engine, tag)
 }
 
 fn unique(suffix: &str) -> String {
@@ -48,40 +47,38 @@ fn unique(suffix: &str) -> String {
 
 #[test]
 fn try_get_authoritative_listing_hit_when_volume_reports_every_writer() {
+    let engine = TestEngine::new();
     let vid = unique("hit_vid");
     let path = "/oracle/hit";
 
     let vol = Arc::new(WatchCoverageVolume::new("hit-vol", WatchCoverage::EveryWriter));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
     let entries = vec![make_test_entry("a.txt"), make_test_entry("b.txt")];
-    let _lid = insert_listing_with_sequence("listing", &vid, path, entries.clone(), 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, entries.clone(), 0);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(result.is_some(), "expected Some(entries) on watched listing");
     let returned = result.unwrap();
     assert_eq!(returned.len(), entries.len());
     assert_eq!(returned[0].name, "a.txt");
     assert_eq!(returned[1].name, "b.txt");
-
-    get_volume_manager().unregister(&vid);
 }
 
 #[test]
 fn try_get_authoritative_listing_miss_when_volume_reports_no_coverage() {
+    let engine = TestEngine::new();
     let vid = unique("miss_watch_vid");
     let path = "/oracle/miss_watch";
 
     let vol = Arc::new(WatchCoverageVolume::new("miss-vol", WatchCoverage::None));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
     let entries = vec![make_test_entry("a.txt")];
-    let _lid = insert_listing_with_sequence("listing", &vid, path, entries, 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, entries, 0);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(result.is_none(), "expected None when watcher is dead");
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// A LIVE watch that can't see other writers must not authorize skipping a read.
@@ -93,6 +90,7 @@ fn try_get_authoritative_listing_miss_when_volume_reports_no_coverage() {
 /// copy scan is exactly how a file nobody told us about gets missed.
 #[test]
 fn try_get_authoritative_listing_miss_when_watch_sees_only_this_machine() {
+    let engine = TestEngine::new();
     let vid = unique("this_machine_vid");
     let path = "/oracle/this_machine";
 
@@ -100,45 +98,46 @@ fn try_get_authoritative_listing_miss_when_watch_sees_only_this_machine() {
         "mounted-share-vol",
         WatchCoverage::ThisMachineOnly,
     ));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
-    let _lid = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("a.txt")], 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("a.txt")], 0);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(
         result.is_none(),
         "a watch blind to other writers must not substitute for a read"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 #[test]
 fn try_get_authoritative_listing_miss_when_no_listing_exists() {
+    let engine = TestEngine::new();
     let vid = unique("miss_no_listing_vid");
     let vol = Arc::new(WatchCoverageVolume::new("no-listing-vol", WatchCoverage::EveryWriter));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
-    let result = try_get_authoritative_listing(&vid, Path::new("/oracle/nothing_here"));
+    let result = engine
+        .inner
+        .try_get_authoritative_listing(&vid, Path::new("/oracle/nothing_here"));
     assert!(result.is_none(), "expected None when no listing matches");
-
-    get_volume_manager().unregister(&vid);
 }
 
 #[test]
 fn try_get_authoritative_listing_miss_when_volume_not_registered() {
+    let engine = TestEngine::new();
     let vid = unique("no_vol");
     let path = "/oracle/no_vol";
 
     // Listing exists in cache, but no volume is registered for this ID.
-    let _lid = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("a.txt")], 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("a.txt")], 0);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(result.is_none(), "expected None when volume isn't registered");
 }
 
 #[test]
 fn try_get_authoritative_listing_picks_highest_sequence() {
+    let engine = TestEngine::new();
     // Two listings on the same (volume_id, path) with different sequence
     // numbers. The oracle must return the entries from the higher-sequence
     // listing, deterministically — never the lower-sequence one.
@@ -146,22 +145,21 @@ fn try_get_authoritative_listing_picks_highest_sequence() {
     let path = "/oracle/seq_path";
 
     let vol = Arc::new(WatchCoverageVolume::new("seq-vol", WatchCoverage::EveryWriter));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
-    let _lid_lo = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("low.txt")], 1);
-    let _lid_hi = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("high.txt")], 9);
+    let _lid_lo = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("low.txt")], 1);
+    let _lid_hi = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("high.txt")], 9);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(result.is_some());
     let returned = result.unwrap();
     assert_eq!(returned.len(), 1);
     assert_eq!(returned[0].name, "high.txt", "expected the higher-sequence listing");
-
-    get_volume_manager().unregister(&vid);
 }
 
 #[test]
 fn try_get_authoritative_listing_miss_for_start_streaming_watcher_gap() {
+    let engine = TestEngine::new();
     // Simulates the documented race window between
     // `list_directory_start_streaming` populating the listing cache and
     // `start_watching` inserting into WATCHER_MANAGER: the listing exists
@@ -171,21 +169,19 @@ fn try_get_authoritative_listing_miss_for_start_streaming_watcher_gap() {
     let vid = unique("race_vid");
     let path = "/oracle/race";
 
-    // `WatchCoverage::None` mirrors "WATCHER_MANAGER has no entry yet" on the
-    // local backend without needing an AppHandle.
+    // `WatchCoverage::None` mirrors "no watch armed yet" on the local backend.
     let vol = Arc::new(WatchCoverageVolume::new("race-vol", WatchCoverage::None));
-    get_volume_manager().register(&vid, vol);
+    engine.volumes.register(&vid, vol);
 
-    let _lid = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("a.txt")], 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("a.txt")], 0);
 
-    let result = try_get_authoritative_listing(&vid, Path::new(path));
+    let result = engine.inner.try_get_authoritative_listing(&vid, Path::new(path));
     assert!(result.is_none(), "expected None during the streaming->watcher gap");
-
-    get_volume_manager().unregister(&vid);
 }
 
 #[test]
 fn try_get_authoritative_listing_reflects_flip_to_unwatched() {
+    let engine = TestEngine::new();
     // Sanity check: flipping the watcher flag flips the oracle's verdict
     // on subsequent calls. Documents that the oracle is a live query and
     // doesn't memoize per-listing.
@@ -193,13 +189,21 @@ fn try_get_authoritative_listing_reflects_flip_to_unwatched() {
     let path = "/oracle/flip";
 
     let vol: Arc<WatchCoverageVolume> = Arc::new(WatchCoverageVolume::new("flip-vol", WatchCoverage::EveryWriter));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    engine.volumes.register(&vid, vol.clone() as Arc<dyn Volume>);
 
-    let _lid = insert_listing_with_sequence("listing", &vid, path, vec![make_test_entry("x.txt")], 0);
+    let _lid = insert_listing_with_sequence(&engine, "listing", &vid, path, vec![make_test_entry("x.txt")], 0);
 
-    assert!(try_get_authoritative_listing(&vid, Path::new(path)).is_some());
+    assert!(
+        engine
+            .inner
+            .try_get_authoritative_listing(&vid, Path::new(path))
+            .is_some()
+    );
     vol.set_coverage(WatchCoverage::None);
-    assert!(try_get_authoritative_listing(&vid, Path::new(path)).is_none());
-
-    get_volume_manager().unregister(&vid);
+    assert!(
+        engine
+            .inner
+            .try_get_authoritative_listing(&vid, Path::new(path))
+            .is_none()
+    );
 }

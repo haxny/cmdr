@@ -10,8 +10,8 @@ use tokio_util::sync::CancellationToken;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::cached_listing::CachedListing;
-use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::foreign_path::Listed;
 use crate::file_system::listing::host::{
     ForegroundHold, ForegroundLeases, ListingEnd, ListingEvents, OpenedListing, Unregistered,
@@ -22,10 +22,6 @@ use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOr
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use cmdr_fs::benchmark;
 use cmdr_fs::volume::VolumeError;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub use crate::file_system::listing::shims::streaming::*;
 
 // ============================================================================
 // Types and state
@@ -113,9 +109,9 @@ pub struct ListingRequest {
 
 impl Inner {
     /// Registers the listing's cancel token, then spawns its read onto the host's
-    /// runtime, reporting to `events`. The token is registered BEFORE this returns,
-    /// so a cancel that follows at once still finds the read.
-    pub(crate) fn start_streaming_listing(self: &Arc<Self>, events: Arc<dyn ListingEvents>, request: ListingRequest) {
+    /// runtime, reporting to the host's events. The token is registered BEFORE
+    /// this returns, so a cancel that follows at once still finds the read.
+    pub(crate) fn start_streaming_listing(self: &Arc<Self>, request: ListingRequest) {
         // Create streaming state with cancellation flag
         let state = Arc::new(StreamingListingState::with_stall_watch(self.stall_watch()));
 
@@ -127,13 +123,13 @@ impl Inner {
         // A strong handle: the read ends.
         let engine = Arc::clone(self);
         self.runtime.spawn(async move {
-            let result = engine.read_directory_with_progress(&events, &state, &request).await;
+            let result = engine.read_directory_with_progress(&state, &request).await;
 
             // Clean up streaming state
             engine.streaming.write_ignore_poison().remove(request.id.as_str());
 
             report_failure(
-                events.as_ref(),
+                engine.events.as_ref(),
                 request.id.as_str(),
                 &request.volume_id,
                 &request.path,
@@ -174,7 +170,6 @@ impl Inner {
     /// Uses the Volume abstraction to support both local filesystem and MTP devices.
     pub(crate) async fn read_directory_with_progress(
         self: &Arc<Self>,
-        events: &Arc<dyn ListingEvents>,
         state: &Arc<StreamingListingState>,
         request: &ListingRequest,
     ) -> Result<(), VolumeError> {
@@ -186,14 +181,13 @@ impl Inner {
         // user is no longer waiting on this listing even while the backend unwinds
         // behind it. The host owns the signal (the leases seam).
         let session = ReadSession::begin(self.leases.as_ref(), &request.volume_id, state);
-        self.read_in_session(events, session, request).await
+        self.read_in_session(session, request).await
     }
 
     /// The read itself. It owns `session`, so the foreground hold lives exactly
     /// as long as this body, and the cancel token is reachable only through it.
     async fn read_in_session(
         self: &Arc<Self>,
-        events: &Arc<dyn ListingEvents>,
         session: ReadSession,
         request: &ListingRequest,
     ) -> Result<(), VolumeError> {
@@ -218,6 +212,7 @@ impl Inner {
             path.display()
         );
 
+        let events = &self.events;
         let id = ListingId::new(listing_id);
         let cancelled = || ListingEnd::Cancelled {
             volume_id: volume_id.to_string(),

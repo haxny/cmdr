@@ -56,7 +56,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::file_system::listing::caching_test_support::{TestListing, WatchCoverageVolume};
+    use crate::file_system::listing::testing::{TestListing, WatchCoverageVolume};
     use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_fs::testing::unique_test_id;
     use cmdr_fs::volume::{InMemoryVolume, Volume, WatchCoverage};
@@ -83,7 +83,7 @@ mod tests {
             .volume(&volume_id)
             .path(path)
             .entries(vec![entry_at(path, "a.txt"), entry_at(path, "b.txt")])
-            .insert("listing-host-watched");
+            .insert(crate::listing_host::listings(), "listing-host-watched");
 
         let answer = AppListings
             .authoritative_listing(&volume_id, Path::new(path))
@@ -112,7 +112,7 @@ mod tests {
             .volume(&volume_id)
             .path(path)
             .entries(vec![entry_at(path, "a.txt")])
-            .insert("listing-host-unwatched");
+            .insert(crate::listing_host::listings(), "listing-host-unwatched");
 
         assert!(
             AppListings.authoritative_listing(&volume_id, Path::new(path)).is_none(),
@@ -134,7 +134,7 @@ mod tests {
             .volume(&volume_id)
             .path(shown)
             .entries(vec![entry_at(shown, "kept.txt")])
-            .insert("listing-host-quiet");
+            .insert(crate::listing_host::listings(), "listing-host-quiet");
 
         AppListings.directory_changed(
             &volume_id,
@@ -158,17 +158,17 @@ mod tests {
             .volume(&one)
             .path("/DCIM")
             .entries(vec![entry_at("/DCIM", "a.jpg")])
-            .insert("listing-host-open-1");
+            .insert(crate::listing_host::listings(), "listing-host-open-1");
         let second = TestListing::new()
             .volume(&one)
             .path("/Download")
             .entries(Vec::new())
-            .insert("listing-host-open-2");
+            .insert(crate::listing_host::listings(), "listing-host-open-2");
         let third = TestListing::new()
             .volume(&two)
             .path("/")
             .entries(Vec::new())
-            .insert("listing-host-open-3");
+            .insert(crate::listing_host::listings(), "listing-host-open-3");
 
         let mut open = AppListings.volumes_with_open_listings(&device);
         open.sort();
@@ -205,9 +205,10 @@ mod tests {
             .volume(&volume_id)
             .path(root)
             .entries(vec![entry_at(root, "stale.txt")])
-            .insert("listing-host-archive");
+            .insert(crate::listing_host::listings(), "listing-host-archive");
 
-        crate::file_system::listing::installed()
+        // The shared fallback runtime, the one the test binary's engine spawns on.
+        cmdr_fs::volume::host::VolumeHost::detached()
             .runtime()
             .block_on(AppListings.refresh_archive_listings(&volume_id, &PathBuf::from(root)));
 

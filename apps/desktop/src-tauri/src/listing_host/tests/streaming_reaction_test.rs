@@ -3,30 +3,26 @@
 //! runs around it (the MCP recent-errors ring, the analytics category, the
 //! TCC-restricted set's record and clear, and the stale-mount check).
 //!
-//! Each cell drives exactly what `list_directory_start_streaming`'s spawned task
-//! does, reporting to the app's real `TauriListingEvents` policy minus the
-//! `AppHandle`: `read_directory_with_progress`, then `report_failure`, with the
-//! wire events collected and a recording [`ListingEndEffects`]. These cells are
-//! the proof that moving the policy behind the `ListingEvents` seam (issue #301)
-//! kept every reaction.
+//! Each cell builds an engine of its own that reports to the app's real
+//! `TauriListingEvents` policy minus the `AppHandle`, with the wire events
+//! collected and a recording [`ListingEndEffects`], and drives exactly what a
+//! `start` read's task does (`read_as_task`). These cells are the proof that the
+//! policy behind the `ListingEvents` seam kept every reaction.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
 
-use super::caching_test_support::{SpelledVolume, TestListingGuard};
-use super::host::{ListingEnd, ListingEvents};
-use super::listing_id::ListingId;
-use super::seam_test_support::cancel_at_decorate;
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use super::stalled_on::StalledOn;
-use super::streaming::{StreamingListingState, read_directory_with_progress, report_failure};
-use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::listing::host::{ListingEnd, ListingEvents, ListingOverlay};
+use crate::file_system::listing::testing::{
+    SpelledVolume, StreamingListingState, TestEngine, TestListingGuard, request,
+};
+use crate::file_system::listing::{DirectoryDiffBatch, ListingId, StalledOn};
 use crate::listing_host::events::{ListingEndEffects, TauriListingEvents, WireCollector, error_analytics_category};
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::entry::FileEntry;
@@ -100,66 +96,96 @@ struct Ended {
     listing: TestListingGuard,
 }
 
-/// The app's reaction policy over a collected wire and recorded bookkeeping.
-fn app_reaction() -> (Arc<WireCollector>, Arc<RecordingEffects>, Arc<dyn ListingEvents>) {
-    let wire = Arc::new(WireCollector::default());
-    let effects = Arc::new(RecordingEffects::default());
-    let events: Arc<dyn ListingEvents> = Arc::new(TauriListingEvents::with(Arc::clone(&wire), Arc::clone(&effects)));
-    (wire, effects, events)
+/// One cell's engine, reporting through the app's reaction policy over a
+/// collected wire and recorded bookkeeping.
+struct App {
+    engine: TestEngine,
+    wire: Arc<WireCollector>,
+    effects: Arc<RecordingEffects>,
 }
 
-/// Runs one streaming listing of `path` on `volume_id` through the spawned
-/// task's two steps, given the read's state.
-async fn run_listing(volume_id: &str, path: &Path, state: Arc<StreamingListingState>) -> Ended {
-    let listing = TestListingGuard::adopt(unique_test_id("reaction"));
-    let (sink, effects, events) = app_reaction();
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        volume_id,
-        path,
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
-    report_failure(events.as_ref(), listing.id(), volume_id, path, result);
-    let errors: Vec<Option<ListingError>> = sink
-        .classified
-        .lock_ignore_poison()
-        .iter()
-        .map(|(_, e)| e.clone())
-        .collect();
-    let analytics = errors.iter().map(|e| error_analytics_category(e.as_ref())).collect();
-    Ended {
-        events: sink.sequence(),
-        effects: effects.calls(),
-        errors,
-        analytics,
-        listing,
+impl App {
+    /// An engine serving `volume`.
+    fn serving(volume: &Registered) -> Self {
+        Self::build(volume, None, |reaction| reaction)
+    }
+
+    /// An engine serving `volume`, with `overlay` folded into its reads and
+    /// `wrap` in front of the app's reaction.
+    fn build(
+        volume: &Registered,
+        overlay: Option<Arc<dyn ListingOverlay>>,
+        wrap: impl FnOnce(Arc<dyn ListingEvents>) -> Arc<dyn ListingEvents>,
+    ) -> Self {
+        let wire = Arc::new(WireCollector::default());
+        let effects = Arc::new(RecordingEffects::default());
+        let reaction: Arc<dyn ListingEvents> =
+            Arc::new(TauriListingEvents::with(Arc::clone(&wire), Arc::clone(&effects)));
+        let mut builder = TestEngine::builder()
+            .volume(&volume.0, Arc::clone(&volume.1))
+            .events(wrap(reaction));
+        if let Some(overlay) = overlay {
+            builder = builder.overlay(overlay);
+        }
+        Self {
+            engine: builder.build(),
+            wire,
+            effects,
+        }
+    }
+
+    /// A fresh read's state on this engine.
+    fn state(&self) -> Arc<StreamingListingState> {
+        self.engine.streaming_state()
+    }
+
+    /// Runs one streaming listing of `path` on `volume_id` through the spawned
+    /// task's two steps, given the read's state.
+    async fn run(&self, volume_id: &str, path: &Path, state: Arc<StreamingListingState>) -> Ended {
+        let listing = TestListingGuard::adopt(&self.engine, unique_test_id("reaction"));
+        self.engine
+            .read_as_task(&state, &request(listing.id(), volume_id, path))
+            .await;
+        let errors: Vec<Option<ListingError>> = self
+            .wire
+            .classified
+            .lock_ignore_poison()
+            .iter()
+            .map(|(_, e)| e.clone())
+            .collect();
+        let analytics = errors.iter().map(|e| error_analytics_category(e.as_ref())).collect();
+        Ended {
+            events: self.wire.sequence(),
+            effects: self.effects.calls(),
+            errors,
+            analytics,
+            listing,
+        }
     }
 }
+
+/// Runs one listing of `path` on `volume` through a fresh app engine, given a
+/// way to set up the read's state.
+async fn run_listing(volume: &Registered, path: &Path, setup: impl FnOnce(&StreamingListingState)) -> Ended {
+    let app = App::serving(volume);
+    let state = app.state();
+    setup(&state);
+    app.run(&volume.0, path, state).await
+}
+
+/// A read with nothing done to its state first.
+fn as_is(_: &StreamingListingState) {}
 
 fn entry(name: &str) -> FileEntry {
     FileEntry::new(name.to_string(), format!("/{name}"), false, false)
 }
 
-/// Registers `volume` under a fresh id; the guard unregisters it.
-struct Registered(String);
+/// A volume under a fresh id, for a cell's engine to serve.
+struct Registered(String, Arc<dyn Volume>);
 
 impl Registered {
     fn new(tag: &str, volume: Arc<dyn Volume>) -> Self {
-        let id = unique_test_id(tag);
-        get_volume_manager().register(&id, volume);
-        Self(id)
-    }
-}
-
-impl Drop for Registered {
-    fn drop(&mut self) {
-        get_volume_manager().unregister(&self.0);
+        Self(unique_test_id(tag), volume)
     }
 }
 
@@ -195,7 +221,7 @@ async fn a_listing_that_lands_completes_and_clears_its_path_from_the_restricted_
         "reaction-ok",
         Arc::new(InMemoryVolume::with_entries("Ok", vec![entry("a.txt")])),
     );
-    let ended = run_listing(&volume.0, Path::new("/"), Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, Path::new("/"), as_is).await;
 
     assert_eq!(ended.events, ["opening", "read_complete", "complete"]);
     assert_eq!(ended.effects, [Effect::ClearRestricted(PathBuf::from("/"))]);
@@ -222,10 +248,7 @@ async fn a_cancel_before_the_read_ends_the_listing_unread() {
         "reaction-cancel-before",
         Arc::new(InMemoryVolume::with_entries("Before", vec![entry("a.txt")])),
     );
-    let state = Arc::new(StreamingListingState::new());
-    state.cancel.cancel();
-
-    let ended = run_listing(&volume.0, Path::new("/"), state).await;
+    let ended = run_listing(&volume, Path::new("/"), |state| state.cancel.cancel()).await;
 
     assert_cancelled(&ended, &["opening", "cancelled"], Path::new("/"));
 }
@@ -303,12 +326,14 @@ async fn a_cancel_during_the_read_ends_the_listing_without_waiting_for_it() {
             started: Arc::clone(&started),
         }),
     );
-    let state = Arc::new(StreamingListingState::new());
+    let app = Arc::new(App::serving(&volume));
+    let state = app.state();
 
     let run = {
+        let app = Arc::clone(&app);
         let volume_id = volume.0.clone();
         let state = Arc::clone(&state);
-        tokio::spawn(async move { run_listing(&volume_id, Path::new("/"), state).await })
+        tokio::spawn(async move { app.run(&volume_id, Path::new("/"), state).await })
     };
     wait_until_async(Duration::from_secs(10), "the read to start", || {
         started.load(Ordering::SeqCst)
@@ -324,7 +349,8 @@ async fn a_cancel_during_the_read_ends_the_listing_without_waiting_for_it() {
 /// before the after-read check. Delegates every report to the app's reaction.
 struct CancelOnReadComplete {
     inner: Arc<dyn ListingEvents>,
-    cancel: CancellationToken,
+    /// The read's token, set once the engine handed out the read's state.
+    cancel: Arc<OnceLock<CancellationToken>>,
 }
 
 impl ListingEvents for CancelOnReadComplete {
@@ -339,12 +365,14 @@ impl ListingEvents for CancelOnReadComplete {
     }
     fn read_complete(&self, id: &ListingId, total: usize) {
         self.inner.read_complete(id, total);
-        self.cancel.cancel();
+        if let Some(cancel) = self.cancel.get() {
+            cancel.cancel();
+        }
     }
     fn finished(&self, id: &ListingId, end: ListingEnd) {
         self.inner.finished(id, end);
     }
-    fn diff(&self, id: &ListingId, batches: Vec<super::diff::DirectoryDiffBatch>) {
+    fn diff(&self, id: &ListingId, batches: Vec<DirectoryDiffBatch>) {
         self.inner.diff(id, batches);
     }
     fn respelled(&self, id: &ListingId, path: &Path) {
@@ -358,31 +386,48 @@ async fn a_cancel_after_the_read_ends_the_listing_before_it_is_cached() {
         "reaction-cancel-after",
         Arc::new(InMemoryVolume::with_entries("After", vec![entry("a.txt")])),
     );
-    let state = Arc::new(StreamingListingState::new());
-    let listing = TestListingGuard::adopt(unique_test_id("reaction-after"));
-    let (collector, effects, reaction) = app_reaction();
-    let events: Arc<dyn ListingEvents> = Arc::new(CancelOnReadComplete {
-        inner: reaction,
-        cancel: state.cancel.clone(),
+    let cancel = Arc::new(OnceLock::new());
+    let app = App::build(&volume, None, |reaction| {
+        Arc::new(CancelOnReadComplete {
+            inner: reaction,
+            cancel: Arc::clone(&cancel),
+        })
     });
+    let state = app.state();
+    let _ = cancel.set(state.cancel.clone());
 
-    let result = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        &volume.0,
-        Path::new("/"),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
-    report_failure(events.as_ref(), listing.id(), &volume.0, Path::new("/"), result);
+    let ended = app.run(&volume.0, Path::new("/"), state).await;
+    let (collector, effects, listing) = (&app.wire, &app.effects, &ended.listing);
 
     assert_eq!(collector.sequence(), ["opening", "read_complete", "cancelled"]);
     assert_eq!(effects.calls(), [Effect::ClearRestricted(PathBuf::from("/"))]);
     assert!(!listing.is_cached(), "a cancelled read never lands in the cache");
+}
+
+/// Cancels the read of the volume named `volume_name` the moment the pipeline
+/// reaches the overlays: after the after-read cancel check, before the insert.
+struct CancelAtDecorate {
+    volume_name: String,
+    cancel: Arc<OnceLock<CancellationToken>>,
+}
+
+impl ListingOverlay for CancelAtDecorate {
+    fn id(&self) -> &'static str {
+        "cancel-at-decorate"
+    }
+
+    fn applies_to(&self, volume: &dyn Volume, _path: &Path) -> bool {
+        if volume.name() == self.volume_name
+            && let Some(cancel) = self.cancel.get()
+        {
+            cancel.cancel();
+        }
+        false
+    }
+
+    fn extra_entries(&self, _volume: &dyn Volume, _path: &Path) -> Vec<FileEntry> {
+        Vec::new()
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -392,11 +437,20 @@ async fn a_cancel_at_the_cache_insert_leaves_nothing_cached() {
         "reaction-cancel-insert",
         Arc::new(InMemoryVolume::with_entries(volume_name.as_str(), vec![entry("a.txt")])),
     );
-    let state = Arc::new(StreamingListingState::new());
     // Fires at the overlay step: past the after-read check, before the insert.
-    cancel_at_decorate(&volume_name, state.cancel.clone());
+    let cancel = Arc::new(OnceLock::new());
+    let app = App::build(
+        &volume,
+        Some(Arc::new(CancelAtDecorate {
+            volume_name: volume_name.clone(),
+            cancel: Arc::clone(&cancel),
+        })),
+        |reaction| reaction,
+    );
+    let state = app.state();
+    let _ = cancel.set(state.cancel.clone());
 
-    let ended = run_listing(&volume.0, Path::new("/"), state).await;
+    let ended = app.run(&volume.0, Path::new("/"), state).await;
 
     assert_cancelled(&ended, &["opening", "read_complete", "cancelled"], Path::new("/"));
 }
@@ -416,7 +470,7 @@ async fn a_permission_denied_listing_records_the_denial() {
         },
     );
 
-    let ended = run_listing(&volume.0, path, Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, path, as_is).await;
 
     assert_eq!(ended.events, ["opening", "error"]);
     let reason = reason_of(&ended);
@@ -438,7 +492,7 @@ async fn a_listing_that_needs_a_password_asks_for_it() {
     let path = cloud_path("locked.zip");
     let volume = refused_with("reaction-password", VolumeError::NeedsPassword { wrong_attempt: false });
 
-    let ended = run_listing(&volume.0, &path, Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, &path, as_is).await;
 
     assert_eq!(ended.events, ["opening", "error"]);
     assert!(
@@ -470,7 +524,7 @@ async fn a_damaged_archive_reads_as_unreadable() {
     std::fs::write(&archive, b"not a zip at all").expect("scratch dir is writable");
     let volume = refused_with("reaction-damaged", VolumeError::NotSupported);
 
-    let ended = run_listing(&volume.0, &archive, Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, &archive, as_is).await;
 
     assert_eq!(ended.events, ["opening", "error"]);
     assert!(
@@ -506,7 +560,7 @@ async fn a_generic_error_names_the_cloud_provider_behind_the_path() {
         },
     );
 
-    let ended = run_listing(&volume.0, &path, Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, &path, as_is).await;
 
     assert_eq!(ended.events, ["opening", "error"]);
     assert!(
@@ -540,19 +594,13 @@ async fn a_generic_error_names_the_cloud_provider_behind_the_path() {
 /// the same as a success.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_empty_icloud_root_reads_as_restricted_yet_clears_the_path() {
-    // The literal id `listing_error_for_restricted_empty_root` matches. No other
-    // test registers it.
-    let volume_id = "cloud-icloud";
-    get_volume_manager().register(volume_id, Arc::new(InMemoryVolume::new("iCloud Drive")));
-    struct Unregister;
-    impl Drop for Unregister {
-        fn drop(&mut self) {
-            get_volume_manager().unregister("cloud-icloud");
-        }
-    }
-    let _unregister = Unregister;
+    // The literal id `listing_error_for_restricted_empty_root` matches.
+    let volume = Registered(
+        "cloud-icloud".to_string(),
+        Arc::new(InMemoryVolume::new("iCloud Drive")),
+    );
 
-    let ended = run_listing(volume_id, Path::new("/"), Arc::new(StreamingListingState::new())).await;
+    let ended = run_listing(&volume, Path::new("/"), as_is).await;
 
     assert_eq!(ended.events, ["opening", "read_complete", "error"]);
     assert!(

@@ -28,3 +28,27 @@ impl MountTable for AppMountTable {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The real table answers for a temp folder, and with a local disk: a dev
+    /// Mac's APFS, a Linux box's ext4 or tmpfs. What the engine makes of that
+    /// answer is its own cell (`stalled_on.rs`).
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn a_temp_folder_reads_as_a_drive() {
+        let dir = tempfile::tempdir().unwrap();
+        let resolved = std::fs::canonicalize(dir.path()).unwrap();
+        let mount = AppMountTable
+            .mount_of(&resolved)
+            .expect("a temp folder is on some mount");
+        assert!(
+            cmdr_fs::filesystem_kind::mount_is_local_disk(Some(&mount.source), Some(&mount.fs_type)),
+            "a temp folder sits on a local disk; got {} from {}",
+            mount.fs_type,
+            mount.source
+        );
+    }
+}

@@ -19,7 +19,7 @@ use icu_locale_core::Locale;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::Inner;
 
 /// A file name's collation weights, serialized to bytes that order the same way
 /// the collator does.

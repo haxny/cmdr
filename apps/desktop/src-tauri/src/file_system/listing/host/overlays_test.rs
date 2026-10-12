@@ -5,10 +5,10 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::overlays::{ListingOverlay, decorate};
-use super::testing::register_overlay;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use super::overlays::ListingOverlay;
+use crate::file_system::listing::testing::{TestEngine, decorate};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 /// An overlay that contributes one row per name it was built with, for
 /// whatever directory it was pointed at.
@@ -47,21 +47,23 @@ fn real_row(name: &str) -> FileEntry {
 }
 
 fn a_volume() -> Arc<dyn Volume> {
-    Arc::new(LocalPosixVolume::local_folder("Test", Path::new("/"))) as Arc<dyn Volume>
+    Arc::new(InMemoryVolume::new("Test")) as Arc<dyn Volume>
 }
 
 /// `decorate` folds a contributor's rows in and reports how many it added.
 #[tokio::test]
 async fn a_contributor_adds_its_rows_to_the_listing() {
     let at = PathBuf::from("/overlay/adds");
-    register_overlay(Arc::new(FixedRows {
-        id: "test-adds",
-        at: at.clone(),
-        names: vec!["branches", "tags"],
-    }));
+    let engine = TestEngine::builder()
+        .overlay(Arc::new(FixedRows {
+            id: "test-adds",
+            at: at.clone(),
+            names: vec!["branches", "tags"],
+        }))
+        .build();
 
     let mut entries = vec![real_row("HEAD"), real_row("config")];
-    let added = decorate(&a_volume(), &at, &mut entries).await;
+    let added = decorate(&engine, &a_volume(), &at, &mut entries).await;
 
     assert_eq!(added, 2);
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
@@ -74,15 +76,17 @@ async fn a_contributor_adds_its_rows_to_the_listing() {
 #[tokio::test]
 async fn a_contributed_row_shadows_a_real_one_of_the_same_name() {
     let at = PathBuf::from("/overlay/shadows");
-    register_overlay(Arc::new(FixedRows {
-        id: "test-shadows",
-        at: at.clone(),
-        names: vec!["branches"],
-    }));
+    let engine = TestEngine::builder()
+        .overlay(Arc::new(FixedRows {
+            id: "test-shadows",
+            at: at.clone(),
+            names: vec!["branches"],
+        }))
+        .build();
 
     // A repo made by an older git carries a real, deprecated `.git/branches/`.
     let mut entries = vec![real_row("branches"), real_row("HEAD")];
-    let added = decorate(&a_volume(), &at, &mut entries).await;
+    let added = decorate(&engine, &a_volume(), &at, &mut entries).await;
 
     assert_eq!(added, 1);
     let branches: Vec<&FileEntry> = entries.iter().filter(|e| e.name == "branches").collect();
@@ -95,8 +99,9 @@ async fn a_contributed_row_shadows_a_real_one_of_the_same_name() {
 /// which is every listing in the app but a handful.
 #[tokio::test]
 async fn a_directory_no_contributor_claims_is_left_alone() {
+    let engine = TestEngine::new();
     let mut entries = vec![real_row("a.txt"), real_row("b.txt")];
-    let added = decorate(&a_volume(), Path::new("/overlay/untouched"), &mut entries).await;
+    let added = decorate(&engine, &a_volume(), Path::new("/overlay/untouched"), &mut entries).await;
 
     assert_eq!(added, 0);
     assert_eq!(entries.len(), 2);
@@ -107,15 +112,17 @@ async fn a_directory_no_contributor_claims_is_left_alone() {
 #[tokio::test]
 async fn a_contributor_registered_twice_only_counts_once() {
     let at = PathBuf::from("/overlay/twice");
+    let mut builder = TestEngine::builder();
     for _ in 0..2 {
-        register_overlay(Arc::new(FixedRows {
+        builder = builder.overlay(Arc::new(FixedRows {
             id: "test-twice",
             at: at.clone(),
             names: vec!["branches"],
         }));
     }
+    let engine = builder.build();
 
     let mut entries = Vec::new();
-    assert_eq!(decorate(&a_volume(), &at, &mut entries).await, 1);
+    assert_eq!(decorate(&engine, &a_volume(), &at, &mut entries).await, 1);
     assert_eq!(entries.len(), 1);
 }

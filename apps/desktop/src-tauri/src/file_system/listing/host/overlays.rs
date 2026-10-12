@@ -28,10 +28,6 @@ use std::path::Path;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
 
-// shim: removed in M4b. The tests that pin the overlay step alone name it here.
-#[cfg(test)]
-pub(crate) use crate::file_system::listing::pipeline::test_support::decorate;
-
 /// A source of extra rows for one kind of directory.
 pub trait ListingOverlay: Send + Sync + 'static {
     /// The contributor's stable name (`"git-portal"`), the key the slot dedupes

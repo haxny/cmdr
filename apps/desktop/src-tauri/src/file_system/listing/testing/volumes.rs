@@ -1,203 +1,24 @@
-//! Test isolation for the process-global the listing cache.
+//! Volumes whose answers a test scripts: a pinned watch coverage, a foreign
+//! spelling table, and a read script that makes an early read finish late.
 
-use cmdr_fs::testing::unique_test_id;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use super::cached_listing::{CachedListing, epoch_millis_now, listing_cache};
-use super::operations::list_directory_end;
-use super::pipeline::{OverlayRows, Prepared};
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError,
     VolumeReadStream, WatchCoverage,
 };
-
-/// A the listing cache entry owned by ONE test, torn down on drop.
-///
-/// **Why this exists.** `cargo test` runs a crate's tests as threads in ONE
-/// process, so the listing cache is shared by every listing test at once. Three
-/// things go wrong without a guard: two tests that pick the same literal listing
-/// id clobber each other's entries; a test whose assertion fails before its
-/// manual `cache.remove(...)` leaks the entry into every later test's view of the
-/// cache; and any test that asserts on cache-WIDE state (`find_listings_for_path_on_volume`
-/// counts, an orphan sweep) sees foreign listings. A UNIQUE id, teardown from
-/// `Drop` (which runs on unwind, so a panicking test cleans up too), and a
-/// unique path per cache-wide assertion fix all three.
-///
-/// Mirrors `indexing::tests::stress_test_helpers::TestInstanceGuard`, the same
-/// pattern over `INDEX_REGISTRY`. Keep the guard on the stack: a `std::mem::forget`
-/// or a clone that outlives the test defeats the whole thing.
-///
-/// Teardown goes through the production `list_directory_end`, so the entry, its
-/// watcher, and any pending coalesced diff are released together.
-pub(crate) struct TestListingGuard {
-    listing_id: String,
-}
-
-impl TestListingGuard {
-    /// Takes ownership of a listing id that production code created (a
-    /// `list_directory_start_*` call), so the test doesn't hand-roll teardown.
-    pub(crate) fn adopt(listing_id: impl Into<String>) -> Self {
-        Self {
-            listing_id: listing_id.into(),
-        }
-    }
-
-    /// The unique listing id. Pass it wherever a test would have used a literal.
-    pub(crate) fn id(&self) -> &str {
-        &self.listing_id
-    }
-
-    /// Runs `f` against this test's `CachedListing` under the cache read lock.
-    /// Panics if the entry is gone, which is the assertion a test wants anyway.
-    pub(crate) fn with_listing<R>(&self, f: impl FnOnce(&CachedListing) -> R) -> R {
-        let cache = listing_cache().read_ignore_poison();
-        let listing = cache
-            .get(&self.listing_id)
-            .unwrap_or_else(|| panic!("listing `{}` is no longer cached", self.listing_id));
-        f(listing)
-    }
-
-    /// This listing's cached entries.
-    pub(crate) fn entries(&self) -> Vec<FileEntry> {
-        self.with_listing(|listing| listing.entries().to_vec())
-    }
-
-    /// This listing's cached entry names, in cache order. The common assertion.
-    pub(crate) fn entry_names(&self) -> Vec<String> {
-        self.with_listing(|listing| listing.entries().iter().map(|e| e.name.clone()).collect())
-    }
-
-    /// Whether the entry is still in the cache. For tests that assert on teardown.
-    pub(crate) fn is_cached(&self) -> bool {
-        listing_cache().read_ignore_poison().contains_key(&self.listing_id)
-    }
-}
-
-impl Drop for TestListingGuard {
-    fn drop(&mut self) {
-        list_directory_end(&self.listing_id);
-    }
-}
-
-/// Builder for a test-owned the listing cache entry. Defaults to an empty listing
-/// on `root` at `/test`, sorted Name / Ascending / LikeFiles, hidden files shown.
-///
-/// `last_accessed_ms` defaults to NOW, matching a listing that a live pane just
-/// touched. A stamp of 0 would make the fixture orphan-eligible under any other
-/// test's `reap_orphaned_listings_at` sweep, which is exactly the cross-test
-/// eviction this module exists to stop; the reaper's own tests set it explicitly.
-pub(crate) struct TestListing {
-    volume_id: String,
-    path: PathBuf,
-    sort_by: SortColumn,
-    sort_order: SortOrder,
-    directory_sort_mode: DirectorySortMode,
-    entries: Vec<FileEntry>,
-    include_hidden: bool,
-    sequence: u64,
-    last_accessed_ms: u64,
-    overlay_rows: usize,
-}
-
-impl TestListing {
-    pub(crate) fn new() -> Self {
-        Self {
-            volume_id: "root".to_string(),
-            path: PathBuf::from("/test"),
-            sort_by: SortColumn::Name,
-            sort_order: SortOrder::Ascending,
-            directory_sort_mode: DirectorySortMode::LikeFiles,
-            entries: Vec::new(),
-            include_hidden: true,
-            sequence: 0,
-            last_accessed_ms: epoch_millis_now(),
-            overlay_rows: 0,
-        }
-    }
-
-    pub(crate) fn volume(mut self, volume_id: &str) -> Self {
-        self.volume_id = volume_id.to_string();
-        self
-    }
-
-    pub(crate) fn path(mut self, path: impl Into<PathBuf>) -> Self {
-        self.path = path.into();
-        self
-    }
-
-    pub(crate) fn sort(mut self, by: SortColumn, order: SortOrder, mode: DirectorySortMode) -> Self {
-        self.sort_by = by;
-        self.sort_order = order;
-        self.directory_sort_mode = mode;
-        self
-    }
-
-    pub(crate) fn entries(mut self, entries: Vec<FileEntry>) -> Self {
-        self.entries = entries;
-        self
-    }
-
-    /// The pane's hidden-files setting, which picks the row space its diffs
-    /// speak. Defaults to showing everything, where a row IS its entry index in
-    /// a fixture with no in-flight scratch.
-    pub(crate) fn include_hidden(mut self, include_hidden: bool) -> Self {
-        self.include_hidden = include_hidden;
-        self
-    }
-
-    pub(crate) fn sequence(mut self, sequence: u64) -> Self {
-        self.sequence = sequence;
-        self
-    }
-
-    pub(crate) fn last_accessed_ms(mut self, last_accessed_ms: u64) -> Self {
-        self.last_accessed_ms = last_accessed_ms;
-        self
-    }
-
-    /// How many of the entries a listing overlay contributed. Nonzero makes this
-    /// a PANE listing, which the fresh-listing oracle declines.
-    pub(crate) fn overlay_rows(mut self, overlay_rows: usize) -> Self {
-        self.overlay_rows = overlay_rows;
-        self
-    }
-
-    /// Inserts the listing under a unique id derived from `tag` and hands back the
-    /// RAII guard. Bind it (`let listing = …`), never `let _ = …`: a `_` binding
-    /// drops immediately and the entry is gone before the test runs.
-    pub(crate) fn insert(self, tag: &str) -> TestListingGuard {
-        let listing_id = unique_test_id(tag);
-        let listing = CachedListing::new(
-            super::installed(),
-            self.volume_id,
-            self.path,
-            Prepared::for_test(self.entries, OverlayRows::Recounted(self.overlay_rows)),
-            self.include_hidden,
-            self.sort_by,
-            self.sort_order,
-            self.directory_sort_mode,
-        );
-        listing.sequence.store(self.sequence, Ordering::Relaxed);
-        listing.last_accessed_ms.store(self.last_accessed_ms, Ordering::Relaxed);
-        listing_cache()
-            .write_ignore_poison()
-            .insert(listing_id.clone(), listing);
-        TestListingGuard { listing_id }
-    }
-}
 
 /// A `Volume` whose `listing_watch_coverage` answer a test pins, delegating every
 /// other method to an `InMemoryVolume`.
 ///
 /// The fresh-listing oracle only answers on `EveryWriter`, and `InMemoryVolume`
 /// reports `None` (the trait's default). Pinning the answer is what lets a test
-/// drive all three states without an `AppHandle` or a real `WATCHER_MANAGER`
+/// drive all three states without a real change watch
 /// entry — including `ThisMachineOnly`, which has no other reachable fixture.
 pub(crate) struct WatchCoverageVolume {
     inner: InMemoryVolume,
@@ -469,7 +290,7 @@ impl ScriptedListVolume {
     /// Scripted reads not yet consumed. A test asserts on this to count how many
     /// times the directory was actually read.
     pub(crate) fn unread(&self) -> usize {
-        self.script.lock().map(|s| s.len()).unwrap_or(0)
+        self.script.lock_ignore_poison().len()
     }
 }
 
@@ -491,7 +312,7 @@ impl Volume for ScriptedListVolume {
         _path: &'a Path,
         _on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        let next = self.script.lock().ok().and_then(|mut s| s.pop_front());
+        let next = self.script.lock_ignore_poison().pop_front();
         Box::pin(async move {
             match next {
                 Some((delay, entries)) => {

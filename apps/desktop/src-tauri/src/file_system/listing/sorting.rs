@@ -7,10 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::file_system::listing::collation::{NameCollator, NameKey};
 use cmdr_fs::entry::FileEntry;
 
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub use crate::file_system::listing::shims::sorting::*;
-
 // ============================================================================
 // Sorting configuration
 // ============================================================================
@@ -213,7 +209,7 @@ fn known_dir_size<E: SortableEntry + ?Sized>(e: &E) -> Option<u64> {
 /// never under a cache lock: the engine's collator asks the host for the live
 /// reading locale, and a language switch mid-sort would otherwise reorder rows
 /// against each other and break the strict-weak-ordering `sort_by` needs.
-pub fn entry_comparator_with<E: SortableEntry + ?Sized>(
+pub fn entry_comparator<E: SortableEntry + ?Sized>(
     collator: Arc<NameCollator>,
     sort_by: SortColumn,
     sort_order: SortOrder,
@@ -395,7 +391,7 @@ fn compare_by_column<E: SortableEntry + ?Sized>(
 /// Collates each name ONCE into a [`NameKey`] and sorts on those, rather than
 /// collating a pair per comparison: a 100k listing does 100k collations instead
 /// of ~1.7M. `DETAILS.md` § "Collating names" carries the measurement.
-pub fn sort_entries_with(
+pub fn sort_entries(
     collator: &Arc<NameCollator>,
     entries: &mut [FileEntry],
     sort_by: SortColumn,
@@ -416,7 +412,7 @@ pub fn sort_entries_with(
             .collect();
 
         let comparator =
-            entry_comparator_with::<Keyed<'_, FileEntry>>(Arc::clone(collator), sort_by, sort_order, dir_sort_mode);
+            entry_comparator::<Keyed<'_, FileEntry>>(Arc::clone(collator), sort_by, sort_order, dir_sort_mode);
         order.sort_by(|a, b| comparator(&keyed[*a as usize], &keyed[*b as usize]));
     }
 

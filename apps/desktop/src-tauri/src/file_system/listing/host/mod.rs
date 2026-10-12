@@ -36,8 +36,6 @@ pub mod observers;
 pub mod overlays;
 #[cfg(test)]
 mod overlays_test;
-#[cfg(test)]
-pub(crate) mod testing;
 pub mod volumes;
 
 pub use events::{ListingEnd, ListingEvents, NoEvents};

@@ -10,10 +10,9 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use super::caching_test_support::{TestListing, TestListingGuard};
-use super::operations::{find_file_index, get_file_at, get_file_range, get_total_count};
-use crate::file_system::listing::caching::insert_entry_sorted;
-use crate::file_system::staging::{ShowTempsGuard, StagingTemp};
+use super::host::ScratchVisibility;
+use super::testing::{TestEngine, TestListing, TestListingGuard};
+use crate::file_system::staging::StagingTemp;
 use cmdr_fs::entry::FileEntry;
 
 use super::visible_rows::scan_probe;
@@ -35,7 +34,7 @@ fn big_listing(tag: &str) -> TestListingGuard {
         .volume("test")
         .path("/big")
         .entries(entries)
-        .insert(tag)
+        .insert(&TestEngine::new(), tag)
 }
 
 /// Entries examined while running `f`, on this thread.
@@ -55,7 +54,11 @@ fn fetching_a_hundred_rows_near_the_end_walks_the_listing_at_most_once() {
 
     let examined = examined_while(|| {
         for index in first..ENTRY_COUNT {
-            let row = get_file_at(listing.id(), index, true).expect("listing is cached");
+            let row = listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), index, true)
+                .expect("listing is cached");
             assert_eq!(row.expect("row is in bounds").name, format!("file-{index:06}.bin"));
         }
     });
@@ -74,12 +77,20 @@ fn a_row_near_the_end_costs_what_a_row_near_the_start_costs() {
 
     let at_top = examined_while(|| {
         for index in 0..VISIBLE_ROWS {
-            get_file_at(listing.id(), index, true).expect("listing is cached");
+            listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), index, true)
+                .expect("listing is cached");
         }
     });
     let at_bottom = examined_while(|| {
         for index in ENTRY_COUNT - VISIBLE_ROWS..ENTRY_COUNT {
-            get_file_at(listing.id(), index, true).expect("listing is cached");
+            listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), index, true)
+                .expect("listing is cached");
         }
     });
 
@@ -97,7 +108,10 @@ fn an_out_of_bounds_row_walks_the_listing_at_most_once() {
 
     let examined = examined_while(|| {
         assert!(
-            get_file_at(listing.id(), ENTRY_COUNT + 10, true)
+            listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), ENTRY_COUNT + 10, true)
                 .expect("listing is cached")
                 .is_none(),
             "past the end of the listing"
@@ -115,12 +129,24 @@ fn an_out_of_bounds_row_walks_the_listing_at_most_once() {
 #[test]
 fn a_repeated_read_of_an_unchanged_listing_does_not_walk_again() {
     let listing = big_listing("visible-rows-repeat");
-    get_total_count(listing.id(), true).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .get_total_count(listing.id(), true)
+        .expect("listing is cached");
 
     let examined = examined_while(|| {
         for _ in 0..10 {
-            get_total_count(listing.id(), true).expect("listing is cached");
-            get_file_range(listing.id(), 0, 50, true).expect("listing is cached");
+            listing
+                .engine()
+                .inner
+                .get_total_count(listing.id(), true)
+                .expect("listing is cached");
+            listing
+                .engine()
+                .inner
+                .get_file_range(listing.id(), 0, 50, true)
+                .expect("listing is cached");
         }
     });
 
@@ -133,21 +159,31 @@ fn a_repeated_read_of_an_unchanged_listing_does_not_walk_again() {
 
 /// Every accessor's answer for a listing, so one assertion covers all of them.
 fn rows_of(listing: &TestListingGuard, include_hidden: bool) -> Vec<String> {
-    let by_range: Vec<String> = get_file_range(listing.id(), 0, 1_000, include_hidden)
+    let by_range: Vec<String> = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 1_000, include_hidden)
         .expect("listing is cached")
         .into_iter()
         .map(|e| e.name)
         .collect();
 
     assert_eq!(
-        get_total_count(listing.id(), include_hidden).expect("listing is cached"),
+        listing
+            .engine()
+            .inner
+            .get_total_count(listing.id(), include_hidden)
+            .expect("listing is cached"),
         by_range.len(),
         "the count and the range disagree about how many rows there are"
     );
 
     for (row, name) in by_range.iter().enumerate() {
         assert_eq!(
-            get_file_at(listing.id(), row, include_hidden)
+            listing
+                .engine()
+                .inner
+                .get_file_at(listing.id(), row, include_hidden)
                 .expect("listing is cached")
                 .map(|e| e.name)
                 .as_deref(),
@@ -155,13 +191,20 @@ fn rows_of(listing: &TestListingGuard, include_hidden: bool) -> Vec<String> {
             "row {row} reads differently one at a time than in a range"
         );
         assert_eq!(
-            find_file_index(listing.id(), name, include_hidden).expect("listing is cached"),
+            listing
+                .engine()
+                .inner
+                .find_file_index(listing.id(), name, include_hidden)
+                .expect("listing is cached"),
             Some(row),
             "looking `{name}` up by name lands somewhere else"
         );
     }
     assert!(
-        get_file_at(listing.id(), by_range.len(), include_hidden)
+        listing
+            .engine()
+            .inner
+            .get_file_at(listing.id(), by_range.len(), include_hidden)
             .expect("listing is cached")
             .is_none(),
         "one past the last row must read as nothing"
@@ -190,7 +233,6 @@ fn short_name(temp: &StagingTemp) -> String {
 /// than as nothing at all.
 #[test]
 fn scratch_scattered_through_a_listing_never_shifts_the_rows_around_it() {
-    let _show = ShowTempsGuard::set(false);
     let operation = Arc::new(());
     let first = in_flight_temp("aaa.bin", &operation);
     let middle = in_flight_temp("mmm.bin", &operation);
@@ -207,7 +249,7 @@ fn scratch_scattered_through_a_listing_never_shifts_the_rows_around_it() {
             entry("echo.txt"),
             entry(&short_name(&last)),
         ])
-        .insert("visible-rows-scattered");
+        .insert(&TestEngine::new(), "visible-rows-scattered");
 
     assert_eq!(
         rows_of(&listing, true),
@@ -238,7 +280,6 @@ fn scratch_scattered_through_a_listing_never_shifts_the_rows_around_it() {
 /// answer's rows.
 #[test]
 fn hiding_dotfiles_and_hiding_scratch_stay_independent() {
-    let _show = ShowTempsGuard::set(false);
     let operation = Arc::new(());
     let temp = in_flight_temp("copying.bin", &operation);
 
@@ -251,7 +292,7 @@ fn hiding_dotfiles_and_hiding_scratch_stay_independent() {
             entry("notes.txt"),
             entry("photo.jpg"),
         ])
-        .insert("visible-rows-axes");
+        .insert(&TestEngine::new(), "visible-rows-axes");
 
     assert_eq!(
         rows_of(&listing, true),
@@ -279,11 +320,15 @@ fn a_row_added_after_the_first_read_shows_up_in_the_next_one() {
         .volume("test")
         .path("/mutating")
         .entries(vec![entry("bravo.txt"), entry("delta.txt")])
-        .insert("visible-rows-mutation");
+        .insert(&TestEngine::new(), "visible-rows-mutation");
 
     assert_eq!(rows_of(&listing, true), vec!["bravo.txt", "delta.txt"]);
 
-    insert_entry_sorted(listing.id(), entry("charlie.txt")).expect("the row is new to this listing");
+    listing
+        .engine()
+        .inner
+        .insert_entry_sorted(listing.id(), entry("charlie.txt"))
+        .expect("the row is new to this listing");
 
     assert_eq!(
         rows_of(&listing, true),
@@ -297,20 +342,23 @@ fn a_row_added_after_the_first_read_shows_up_in_the_next_one() {
 #[test]
 fn a_captured_projection_pins_rows_without_double_sampling_settings_or_ownership() {
     use super::visible_rows::{ScratchProjection, VisibleRowsCache};
-    use crate::file_system::staging::{set_show_safe_save_files, set_show_staging_temps};
-    let _settings = ShowTempsGuard::set_both(false, false);
+    let engine = TestEngine::new();
+    let visibility = |shown: bool| ScratchVisibility {
+        show_staging_temps: shown,
+        show_safe_save_files: shown,
+    };
+    engine.set_scratch_visibility(visibility(false));
     let owner = Arc::new(());
     let temp = StagingTemp::mint(Path::new("/big/a"), Some(Arc::downgrade(&owner)));
     let name = temp.path().file_name().unwrap().to_str().unwrap();
     let entries = vec![entry(name), entry("b.sb-temp"), entry("c")];
     let cache = VisibleRowsCache::new();
-    let committed = ScratchProjection::for_entries(&entries, &ScratchProjection::default(), installed_visibility());
+    let committed =
+        ScratchProjection::for_entries(&entries, &ScratchProjection::default(), engine.scratch_visibility());
     assert_eq!(cache.rows(&entries, true, None, &committed).len(), 1);
-    set_show_staging_temps(true);
-    set_show_safe_save_files(true);
-    let capture = committed.live(installed_visibility());
-    set_show_staging_temps(false);
-    set_show_safe_save_files(false);
+    engine.set_scratch_visibility(visibility(true));
+    let capture = committed.live(engine.scratch_visibility());
+    engine.set_scratch_visibility(visibility(false));
     assert_eq!(cache.rows(&entries, true, None, &capture).len(), 3);
     assert_eq!(
         cache.rows(&entries, true, None, &capture).get(0).unwrap().path,
@@ -322,14 +370,8 @@ fn a_captured_projection_pins_rows_without_double_sampling_settings_or_ownership
     assert_eq!(cache.rows(&entries, true, None, &committed).len(), 1);
     assert_eq!(
         cache
-            .rows(&entries, true, None, &committed.live(installed_visibility()))
+            .rows(&entries, true, None, &committed.live(engine.scratch_visibility()))
             .len(),
         2
     );
-}
-
-/// The scratch settings the installed engine holds now, as the engine reads them
-/// once per operation.
-fn installed_visibility() -> crate::file_system::listing::host::ScratchVisibility {
-    crate::file_system::listing::installed().scratch_visibility()
 }

@@ -9,16 +9,15 @@
 //! received a Cmdr-made delete or move: the files stayed on screen and the user
 //! acted on them again (field reports ERR-QW42X and ERR-46A6B, Pixel 8a, v0.44.0).
 //!
-//! These cells stop at the match rather than at the patch because the patch
-//! bails without an `AppHandle` (`notify_directory_changed`), and the match is
+//! These cells stop at the match rather than at the patch, because the match is
 //! the step that failed.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::file_system::listing::caching::{find_listings_for_path_on_volume, try_get_authoritative_listing};
-use crate::file_system::listing::caching_test_support::TestListing;
+use crate::file_system::listing::testing::TestListing;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::listing_host::listings;
 use crate::mtp::test_support::{self, device_lock};
 use cmdr_fs::volume::Volume;
 
@@ -55,13 +54,14 @@ async fn a_pane_entered_with_enter_is_found_at_the_url_changes_are_reported_unde
         .volume(&volume_id)
         .path(&entered)
         .entries(rows)
-        .insert("mtp-entered-with-enter");
+        .insert(listings(), "mtp-entered-with-enter");
 
     // Where `MtpVolume::notify_mutation` and the event loop report a change in it.
     let reported = PathBuf::from(format!("mtp://{}/{}/Documents", device.id, device.storage_id));
-    let found: Vec<String> = find_listings_for_path_on_volume(Some(&volume_id), &reported)
-        .into_iter()
-        .map(|(listing_id, ..)| listing_id)
+    let found: Vec<String> = listings()
+        .listings_for_path_on_volume(&volume_id, &reported)
+        .iter()
+        .map(|id| id.as_str().to_string())
         .collect();
     assert_eq!(
         found,
@@ -93,9 +93,9 @@ async fn a_pane_opened_at_the_url_answers_the_oracle_at_the_inner_path() {
         .volume(&volume_id)
         .path(&opened)
         .entries(rows)
-        .insert("mtp-opened-at-url");
+        .insert(listings(), "mtp-opened-at-url");
 
-    let answer = try_get_authoritative_listing(&volume_id, Path::new("/Documents"));
+    let answer = listings().authoritative_listing(&volume_id, Path::new("/Documents"));
     assert!(
         answer.is_some_and(|entries| entries.iter().any(|entry| entry.name == "report.txt")),
         "a walker asking at the inner path must be served the pane opened at the URL"

@@ -31,6 +31,8 @@ pub(crate) mod index;
 pub(crate) mod leases;
 pub(crate) mod locale;
 pub(crate) mod mounts;
+#[cfg(test)]
+pub(crate) mod tests;
 pub(crate) mod volumes;
 
 use std::path::Path;
@@ -117,13 +119,27 @@ fn builder(events: Arc<dyn ListingEvents>) -> ListingsBuilder {
 /// The engine the test binary shares, since nothing there calls [`install`]:
 /// events dropped, the fallback runtime, every app answer (the tests list
 /// through the real volume registry, index, lease, language, and mount table),
-/// and the change watch, so a listing on a watchable volume arms a watch in
-/// tests as it does in the app.
+/// the git portal's overlay, and the change watch and git arming observers, so
+/// a listing behaves in tests as it does in the app. Index sizes stay out (its
+/// worker needs an `AppHandle`); last comes the lifecycle probe the app's
+/// ordering cells read (`tests/support.rs`).
 #[cfg(test)]
 fn test_listings() -> Listings {
     builder(Arc::new(crate::file_system::listing::host::NoEvents))
+        .overlay(crate::file_system::git::overlay::overlay())
         .observer(crate::file_system::watcher::observer())
+        .observer(crate::file_system::git::arming::observer())
+        .observer(tests::support::lifecycle_probe())
         .build()
+}
+
+/// An engine of a test's own with every app answer to its questions (the real
+/// volume registry, index, lease, language, and mount table), reporting to
+/// `events`: for a test that reads what the engine reported, which the shared
+/// test engine drops. No observers, so nothing arms a watch.
+#[cfg(test)]
+pub(crate) fn engine_reporting_to(events: Arc<dyn ListingEvents>) -> Listings {
+    builder(events).build()
 }
 
 /// A directory changed on a volume: tells every subsystem that keeps a copy of

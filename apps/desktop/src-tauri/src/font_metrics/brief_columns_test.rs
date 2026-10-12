@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 
 use super::brief_columns::{BriefColumnsError, compute_brief_column_text_widths};
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
 
@@ -59,7 +59,9 @@ fn make_entry(name: &str) -> FileEntry {
 }
 
 fn insert_listing(tag: &str, entries: Vec<FileEntry>) -> TestListingGuard {
-    TestListing::new().entries(entries).insert(tag)
+    TestListing::new()
+        .entries(entries)
+        .insert(crate::listing_host::listings(), tag)
 }
 
 // ============================================================================

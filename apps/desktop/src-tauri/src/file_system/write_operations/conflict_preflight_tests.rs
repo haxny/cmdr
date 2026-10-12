@@ -4,7 +4,7 @@
 use super::{
     Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats, scan_volume_for_conflicts_within,
 };
-use crate::file_system::listing::caching_test_support::{TestListing, WatchCoverageVolume};
+use crate::file_system::listing::testing::{TestListing, WatchCoverageVolume};
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::{InMemoryVolume, LocalPosixVolume, SourceItemInfo};
 use crate::test_support::WedgedVolume;
@@ -333,7 +333,7 @@ async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
             FileEntry::new("a.jpg".to_string(), format!("{dir}/a.jpg"), false, false),
             FileEntry::new("Burst".to_string(), format!("{dir}/Burst"), true, false),
         ])
-        .insert("pane-stat-source");
+        .insert(crate::listing_host::listings(), "pane-stat-source");
 
     // The caller's placeholder says `Burst` is a file; only a stat can correct it.
     let conflicts = scan_volume_for_conflicts_within(

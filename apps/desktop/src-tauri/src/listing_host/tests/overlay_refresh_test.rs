@@ -8,18 +8,19 @@
 //! would silently empty the portal out of it.
 //!
 //! What the overlays themselves decide: `file_system/listing/host/overlays_test.rs` and
-//! `file_system/git/overlay_tests.rs`.
+//! `file_system/git/overlay_tests.rs`. That a diff patch keeps the contributed
+//! count is the engine's own cell (`file_system/listing/overlay_read_paths_test.rs`).
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::file_system::listing::caching::notify_full_refresh;
-use crate::file_system::listing::caching_test_support::TestListing;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::testing::{TestListing, decorate, full_refresh};
 use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::Volume;
+
+use crate::listing_host::listings;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 
 const CATEGORIES: [&str; 6] = ["branches", "tags", "commits", "stash", "worktrees", "submodules"];
@@ -44,7 +45,6 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
     let dir = repo("full_refresh");
     let dot_git = dir.join(".git");
     crate::file_system::git::wiring::set_virtual_portal_enabled(true);
-    crate::file_system::git::overlay::register();
 
     let volume_id = unique_test_id("overlay-refresh-vol");
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Repo", &dir));
@@ -52,14 +52,14 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
 
     // A pane's listing as the first read left it: real entries plus the six.
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = decorate(listings(), &volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6);
     let listing = TestListing::new()
         .volume(&volume_id)
         .path(dot_git.clone())
         .entries(entries)
         .overlay_rows(added)
-        .insert("overlay-refresh");
+        .insert(listings(), "overlay-refresh");
 
     // What the FSEvents watch on `.git/` drives after any `.git/*` write.
     refresh(&volume_id, &dot_git, listing.id()).await;
@@ -73,7 +73,7 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
         );
     }
     assert!(
-        listing.with_listing(|l| l.has_overlay_rows()),
+        listing.has_overlay_rows(),
         "the refreshed listing is still a pane view, not a walker's picture of the directory"
     );
 
@@ -88,7 +88,7 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
         assert!(!names.iter().any(|n| n == category), "{category} in {names:?}");
     }
     assert!(
-        !listing.with_listing(|l| l.has_overlay_rows()),
+        !listing.has_overlay_rows(),
         "nothing was contributed, so nothing marks this a pane view"
     );
 
@@ -98,68 +98,7 @@ async fn a_full_refresh_of_dot_git_tracks_what_the_overlay_contributes() {
 
 /// One watcher-driven `FullRefresh` of `path`, landing on `listing_id`.
 async fn refresh(volume_id: &str, path: &std::path::Path, listing_id: &str) {
-    notify_full_refresh(
-        volume_id.to_string(),
-        path.to_path_buf(),
-        vec![(
-            listing_id.to_string(),
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
-        )],
-    )
-    .await;
-}
-
-/// A watcher DIFF patch is not a re-read: it hands the cache entries that a
-/// previous read already decorated, so it must leave the contributed-row count
-/// exactly where it was. Zeroing it would tell the fresh-listing oracle that a
-/// pane's `.git/` view is a picture of the directory, and hand six rows with no
-/// inode behind them to a delete walker.
-#[tokio::test]
-async fn a_diff_patch_leaves_the_contributed_row_count_alone() {
-    let dir = repo("diff_patch");
-    let dot_git = dir.join(".git");
-    crate::file_system::git::wiring::set_virtual_portal_enabled(true);
-    crate::file_system::git::overlay::register();
-
-    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Repo", &dir));
-    let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
-    assert_eq!(added, 6);
-
-    let listing = TestListing::new()
-        .volume(&unique_test_id("overlay-diff-vol"))
-        .path(dot_git.clone())
-        .entries(entries.clone())
-        .overlay_rows(added)
-        .insert("overlay-diff");
-
-    // What `file_system/watcher.rs` does when FSEvents reports one new file:
-    // the decorated set plus a row, written straight back.
-    entries.push(cmdr_fs::entry::FileEntry::new(
-        "COMMIT_EDITMSG".to_string(),
-        dot_git.join("COMMIT_EDITMSG").display().to_string(),
-        false,
-        false,
-    ));
-    crate::file_system::listing::update_listing_entries(
-        listing.id(),
-        crate::file_system::listing::pipeline::Prepared::for_test(
-            entries,
-            crate::file_system::listing::OverlayRows::Unchanged,
-        ),
-    );
-
-    assert!(
-        listing.with_listing(|l| l.has_overlay_rows()),
-        "a diff patch must not turn a pane's decorated listing into a walker's picture of the directory"
-    );
-    let names = listing.entry_names();
-    assert!(names.iter().any(|n| n == "COMMIT_EDITMSG"), "{names:?}");
-    assert!(names.iter().any(|n| n == "branches"), "{names:?}");
-
-    cleanup(&dir);
+    full_refresh(listings(), volume_id, path, listing_id).await;
 }
 
 /// The OTHER refresh path: `refresh_listing` (⌘R, and the top-up every copy,
@@ -172,21 +111,20 @@ async fn a_listing_refresh_of_dot_git_keeps_the_portal_rows() {
     let dir = repo("listing_refresh");
     let dot_git = dir.join(".git");
     crate::file_system::git::wiring::set_virtual_portal_enabled(true);
-    crate::file_system::git::overlay::register();
 
     let volume_id = unique_test_id("overlay-listing-refresh-vol");
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Repo", &dir));
     get_volume_manager().register(&volume_id, Arc::clone(&volume));
 
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
-    let added = crate::file_system::listing::host::overlays::decorate(&volume, &dot_git, &mut entries).await;
+    let added = decorate(listings(), &volume, &dot_git, &mut entries).await;
     assert_eq!(added, 6);
     let listing = TestListing::new()
         .volume(&volume_id)
         .path(dot_git.clone())
         .entries(entries)
         .overlay_rows(added)
-        .insert("overlay-listing-refresh");
+        .insert(listings(), "overlay-listing-refresh");
 
     // A new real file, so the re-read differs from the cache and the diff lands.
     std::fs::write(dot_git.join("ORIG_HEAD"), b"0000\n").expect("write ORIG_HEAD");
@@ -201,7 +139,7 @@ async fn a_listing_refresh_of_dot_git_keeps_the_portal_rows() {
         );
     }
     assert!(
-        listing.with_listing(|l| l.has_overlay_rows()),
+        listing.has_overlay_rows(),
         "the refreshed listing is still a pane view, not a walker's picture of the directory"
     );
 

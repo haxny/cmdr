@@ -155,7 +155,7 @@ async fn engine_with(index: Arc<ScriptedIndex>, routed: Option<RoutedKind>) -> L
     .build();
     let folder = FileEntry::new("photos".to_string(), FOLDER.to_string(), true, false);
     let listing = CachedListing::new(
-        engine.inner(),
+        &engine.inner,
         "sized".to_string(),
         PathBuf::from(DIR),
         Prepared::for_test(vec![folder], OverlayRows::Recounted(0)),
@@ -165,7 +165,7 @@ async fn engine_with(index: Arc<ScriptedIndex>, routed: Option<RoutedKind>) -> L
         DirectorySortMode::LikeFiles,
     );
     engine
-        .inner()
+        .inner
         .cache
         .write_ignore_poison()
         .insert(LISTING.to_string(), listing);
@@ -173,7 +173,7 @@ async fn engine_with(index: Arc<ScriptedIndex>, routed: Option<RoutedKind>) -> L
 }
 
 fn folder_size(engine: &Listings) -> Option<u64> {
-    let cache = engine.inner().cache.read_ignore_poison();
+    let cache = engine.inner.cache.read_ignore_poison();
     let listing = cache.get(LISTING).expect("the listing is open");
     listing
         .entries()
@@ -191,7 +191,7 @@ fn read_range_returns(engine: &Listings) {
         let engine = engine.clone();
         let done = Arc::clone(&done);
         std::thread::spawn(move || {
-            let _ = engine.inner().get_file_range(LISTING, 0, 10, true);
+            let _ = engine.inner.get_file_range(LISTING, 0, 10, true);
             done.store(true, Ordering::SeqCst);
         })
     };
@@ -211,7 +211,7 @@ async fn an_index_size_refresh_leaves_the_listing_readable_while_the_index_answe
 
     let refresher = {
         let engine = engine.clone();
-        std::thread::spawn(move || engine.inner().refresh_listing_index_sizes(LISTING))
+        std::thread::spawn(move || engine.inner.refresh_listing_index_sizes(LISTING))
     };
     hold.wait_entered();
     read_range_returns(&engine);
@@ -233,7 +233,7 @@ async fn index_sizes_asked_before_a_reread_landed_are_dropped() {
 
     let refresher = {
         let engine = engine.clone();
-        std::thread::spawn(move || engine.inner().refresh_listing_index_sizes(LISTING))
+        std::thread::spawn(move || engine.inner.refresh_listing_index_sizes(LISTING))
     };
     hold.wait_entered();
 
@@ -295,7 +295,7 @@ async fn a_routed_reread_gets_no_index_sizes() {
 /// Re-sorts `engine`'s listing by size, the way a pane's sort change does.
 fn resort_by_size(engine: &Listings) {
     engine
-        .inner()
+        .inner
         .resort_listing(
             LISTING,
             SortColumn::Size,

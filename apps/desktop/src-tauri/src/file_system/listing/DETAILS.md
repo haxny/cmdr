@@ -72,18 +72,22 @@ The record is `cached_listing.rs`, everything that patches one or notifies about
 backstop that reclaims a leaked one is `orphan_reaper.rs`.
 
 - **The engine** (`engine/mod.rs`): `Listings`, a cheap-to-clone `Arc<Inner>`, built by `Listings::builder(volumes,
-  events)` (the other seams optional) or `Listings::detached()`. `Inner` holds the seams the host handed over and every
-  piece of engine state: the cache, the in-flight reads' cancel tokens, the pending diffs, the refresh turnstiles, the
-  hung-read registry, the collator per locale, the epoch `last_accessed_ms` counts from, and the scratch settings. Two
-  engines share nothing. Each module adds its operations as an `impl Inner` block. The app builds one in
-  `listing_host::install` and hands it out as `listing_host::listings()`.
+  events)` (the other seams optional) or `Listings::detached()`. `Inner` (defined in `mod.rs`) holds the seams the host
+  handed over and every piece of engine state: the cache, the in-flight reads' cancel tokens, the pending diffs, the
+  refresh turnstiles, the hung-read registry, the collator per locale, the epoch `last_accessed_ms` counts from, and the
+  scratch settings. Two engines share nothing. Each module adds its operations as an `impl Inner` block. The app builds
+  one in `listing_host::install` and hands it out as `listing_host::listings()`.
+
+  **Decision:** `Inner` lives at the module root, not in `engine/`. **Why:** every module implements its part of
+  `Inner` and `Inner` holds every module's state, so wherever it's defined, that module and the implementers point at
+  each other. At the root, the root is their parent, which `module-cycles` reads as one hub; in `engine/` it was a
+  16-module tangle of siblings.
 - **The public API** is `mod.rs`'s `pub use` list: `Listings`' methods (in `engine/`, one file per caller group:
   `open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`, plus `backends.rs`, the engine's
   own weak `cmdr_fs` `ListingHost`) and the types they take and return. Every submodule but `host` is private, so the
   compiler keeps callers on that list. A listing id crosses it as a `ListingId`; only IPC sees a `String`. Methods
   return owned data; `with_rows` is the one closure the engine runs under its cache lock, and it must never call back
-  into the engine. Tests that still drive the shared engine use `shims/` and the `#[cfg(test)]` root re-exports (both
-  go in M4b). A scratch-visibility or
+  into the engine. A scratch-visibility or
   collator read happens BEFORE the cache lock and travels down as a value; `CachedListing` keeps no reference to its
   engine (it copies the epoch).
 - **The cache** (`Inner::cache`): `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
@@ -154,34 +158,27 @@ listing only once it has landed, so a read racing a navigation (which also answe
 clipboard and drag commands still flatten it into their `String` errors; the pane recovers through its next read or
 heartbeat.
 
-#### Test isolation for the shared engine's cache
+#### Tests own their engine
 
-`cargo test` runs the crate's tests as threads in ONE process, and they share the one engine `listing_host::listings()`
-hands out, so its cache is shared by every listing test at
-once (`cargo nextest` gets isolation free from process-per-test, but the module-run command and CI's lib run don't).
-Three failure modes follow, and `caching_test_support.rs` closes all three:
+Every test in this module builds its own engine (`testing/`): `TestEngine` is a `Listings` over one fake per seam it
+reads back (`FakeVolumes`, `RecordingEvents`, `RecordingLeases`, a fixed `en` locale, plus `FakeMountTable`,
+`StaticOverlay`, and `RecordingObserver` on request), and `TestListing::insert(&engine, tag)` puts a listing straight
+into its cache. Two engines share nothing, so a test asserts on engine-wide state (every listing on a path, an orphan
+sweep, scratch visibility) without seeing anyone else's, and needs no lock to flip a setting. A test reaches engine
+internals through `engine.inner`, which every module under `listing/` can see.
 
-- **Colliding keys.** Two tests picking the same literal listing id clobber each other. `TestListing::insert(tag)` mints
-  a process-unique id (`cmdr_fs::testing::unique_test_id`: tag + pid + counter).
-- **Leaks on a failed assertion.** A hand-rolled `cache.remove(...)` placed after the assertions never runs when one
-  fails, so the entry stays visible to every later test. `TestListingGuard`'s `Drop` tears down through the production
-  `list_directory_end` (entry, watcher, and pending coalesced diff together), and `Drop` runs on unwind.
-- **Cache-wide assertions.** `find_listings_for_path_on_volume`, `find_listings_on_volume`, and the orphan sweep all scan the
-  whole map, so a shared path or volume id makes a count assertion depend on what else is running. Those tests derive a
-  unique path / volume id per test. For the sweep, `reap_orphaned_listings_at_for(now, window, only)` restricts the
-  wired teardown to the ids the test owns; production calls the unrestricted `reap_orphaned_listings`.
-  `TestListing` also stamps `last_accessed_ms` at NOW (a live pane's value) rather than 0, so a fixture isn't
-  orphan-eligible under someone else's sweep in the first place. Pinned by
-  `caching_reaper_test::a_reaper_sweep_leaves_a_sibling_tests_listing_alone`.
+The app's half lives in `listing_host/tests/`: each adapter against the real subsystem it answers from, and the cells
+whose point is an app piece (the FSEvents watch, the volume registry's routing, the events policy's reaction matrix, a
+backend crate). Those share the test binary's ONE engine (`listing_host::listings()`, built with the app's answers, the
+git overlay, and the watch and git observers), so they keep what isolation there needs: `TestListing` derives a
+process-unique id (`cmdr_fs::testing::unique_test_id`), and `TestListingGuard` ends its listing on drop, unwind
+included. `listing_host::engine_reporting_to(events)` builds an app-wired engine of a test's own when a cell reads
+what the engine reported.
 
-The guard mirrors `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`),
-`write_operations::test_support::TestOperationGuard` (over `WRITE_OPERATION_STATE`), and
-`volume::manager::test_support::TestVolumeRegistration` (over the global `VolumeManager`); knowing one is knowing all
-four.
-
-**New subsystem state hangs off a struct, not a `static`.** These guards are the retrofit cost of a process-global; a
-handle threaded through its callers needs none of it.
-
+**Decision:** a test builds the engine it asserts on, rather than isolating tests on one shared cache. **Why:** a shared
+cache needed unique ids, scoped orphan sweeps, a teardown guard, and a process-wide lock serializing every
+scratch-visibility test, and a test asserting a cache-wide count still depended on what else was running. A handle
+threaded through its callers needs none of it.
 
 ## Row numbers (visible_rows.rs)
 
@@ -332,7 +329,7 @@ for row 1).
   would rebuild the map per patch, once per add in a burst. `DiffChange::for_pane` turns the pair into a change or none.
 - Batch re-reads (`publish_replacement`, the watcher's `handle_directory_change`) call `update_listing_entries`,
   which diffs committed projected rows through `CachedListing::replace_entries` under the cache write lock.
-  `compute_diff(old, new, include_hidden, name_filter)` is a test-only helper.
+  `compute_diff(old, new, include_hidden, name_filter, visibility)` is a test-only helper.
 - `CachedListing::shows` combines the filter with captured scratch decisions and hidden visibility, matching its row map.
 - `is_entry_modified` counts `is_hidden`: with hidden files shown the row dims, and a `chflags hidden` reaching a full
   re-read would otherwise leave the cache holding the old flag.
@@ -550,8 +547,8 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   `finished(ListingEnd)`, `diff`, … The app's `listing_host::events::TauriListingEvents` owns every wire payload and
   the policy on them (error classification, the restricted-empty-root hint, analytics, the MCP ring, the TCC set), so
   the engine names no Tauri type. A read reports its own complete or cancel; a refused one is reported by its task
-  (`streaming::report_failure`) after the cancel token is gone. Tests record facts with `host::testing::RecordingEvents`;
-  the app policy's matrix (`streaming_reaction_test.rs`) collects wire events with `WireCollector`.
+  (`streaming::report_failure`) after the cancel token is gone. Tests record facts with `testing::RecordingEvents`;
+  the app policy's matrix (`listing_host/tests/streaming_reaction_test.rs`) collects wire events with `WireCollector`.
   `Arc<dyn ListingEvents>` (not `&dyn`) because it's cloned into the progress callback.
 - **Every other app question is a seam too** (`host/mod.rs`): which volume serves a path (`volumes`, including the
   one `unregistered` question that folds mount adoption and "why is it missing"), what the drive index knows (`index`),
@@ -619,7 +616,7 @@ switcher use, and the inner `/DCIM` its rows carry), but a per-caller fix would 
 match there dropped every Cmdr-made delete on a pane the user had entered with Enter (field reports ERR-QW42X,
 ERR-46A6B, v0.44.0). MTP canonicalizes to the inner spelling because its rows, the drive index, and the walkers already
 use it. ADB, SFTP, and WebDAV rows carry their full app URL, and SMB, archive, and git-portal rows share their root's
-spelling, so they keep the default. Pinned by `mtp_listing_path_test.rs`.
+spelling, so they keep the default. Pinned by `listing_host/tests/mtp_listing_path_test.rs`.
 
 `find_listings_for_path_on_volume(None, parent_path)` has no volume id and compares verbatim across EVERY volume, so a remote pane showing the same path string matches too. Only
 `LocalPosixVolume::listing_watch_coverage` relies on it, because the volume doesn't know its own id. A caller that knows
@@ -711,12 +708,12 @@ goes through the same local mutation patch (`patch_listings_after_create`).
 `FullRefresh`es every open listing at or inside a changed `.zip` (parent drive id + full path) WITHOUT the drive-index
 sync the composer runs, since an archive-inner path isn't a real filesystem path. Rationale and the watch
 that drives it: `crates/cmdr-archive/src/watch/DETAILS.md`. What a refresh DOES to this cache is
-`archive_watch_integration_test.rs`, here: a refresh through `AppListings` reflected in an open listing while an outside
+`listing_host/tests/archive_watch_integration_test.rs`: a refresh through `AppListings` reflected in an open listing while an outside
 listing is untouched, a truncated mid-write keeping the previous listing, and LRU eviction releasing the watch. No
 FSEvents timing lives in it; the backend's half of the seam is `cmdr-archive`'s `watch/host_seam_test.rs`.
 
-`smb_pane_close_watch_integration_test.rs` is the other cell here whose other half is a backend: closing a pane's
-listing (`list_directory_end`) drops a cache entry and its FSEvents `WatchedDirectory`, and must not reach the volume's
+`listing_host/tests/smb_pane_close_watch_integration_test.rs` is the other cell whose other half is a backend: closing
+a pane's listing (`Listings::end`) drops a cache entry and its FSEvents `WatchedDirectory`, and must not reach the volume's
 own watcher, which the index depends on with no pane open. It runs over a real `cmdr-smb` session because that watcher
 is the one at stake, and it takes its fixture from `write_operations::backend_suites::smb_test_support`.
 

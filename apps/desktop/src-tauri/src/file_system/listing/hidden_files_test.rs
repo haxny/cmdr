@@ -3,8 +3,7 @@
 //! These tests verify that the `include_hidden` parameter correctly filters
 //! files starting with "." from directory listings.
 
-use super::caching_test_support::{TestListing, TestListingGuard};
-use super::operations::{find_file_index, find_file_indices, get_file_at, get_file_range, get_total_count};
+use super::testing::{TestEngine, TestListing, TestListingGuard};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
@@ -41,7 +40,11 @@ fn create_test_volume() -> Arc<InMemoryVolume> {
 /// Caches `entries` under a unique listing id, owned by the caller: the guard
 /// tears the entry down on drop, including when an assertion panics first.
 fn insert_test_listing(tag: &str, entries: Vec<FileEntry>) -> TestListingGuard {
-    TestListing::new().volume("test").path("/").entries(entries).insert(tag)
+    TestListing::new()
+        .volume("test")
+        .path("/")
+        .entries(entries)
+        .insert(&TestEngine::new(), tag)
 }
 
 // ============================================================================
@@ -56,7 +59,7 @@ async fn test_get_total_count_with_hidden_includes_all() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-total-count-hidden", entries);
 
-    let count = get_total_count(listing.id(), true).unwrap();
+    let count = listing.engine().inner.get_total_count(listing.id(), true).unwrap();
 
     // All 7 entries should be counted
     assert_eq!(count, 7, "Should count all entries including hidden");
@@ -69,7 +72,7 @@ async fn test_get_total_count_without_hidden_excludes_dot_files() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-total-count-no-hidden", entries);
 
-    let count = get_total_count(listing.id(), false).unwrap();
+    let count = listing.engine().inner.get_total_count(listing.id(), false).unwrap();
 
     // Only 4 visible entries: Documents, Downloads, file.txt, readme.md
     assert_eq!(count, 4, "Should only count non-hidden entries");
@@ -86,7 +89,11 @@ async fn test_get_file_range_with_hidden_returns_all() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-range-hidden", entries);
 
-    let range = get_file_range(listing.id(), 0, 10, true).unwrap();
+    let range = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 10, true)
+        .unwrap();
 
     assert_eq!(range.len(), 7, "Should return all 7 entries");
 
@@ -104,7 +111,11 @@ async fn test_get_file_range_without_hidden_excludes_dot_files() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-range-no-hidden", entries);
 
-    let range = get_file_range(listing.id(), 0, 10, false).unwrap();
+    let range = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 10, false)
+        .unwrap();
 
     assert_eq!(range.len(), 4, "Should return only 4 visible entries");
 
@@ -127,9 +138,17 @@ async fn test_get_file_range_pagination_respects_hidden_filter() {
     let listing = insert_test_listing("test-range-pagination", entries);
 
     // Get first 2 visible entries
-    let page1 = get_file_range(listing.id(), 0, 2, false).unwrap();
+    let page1 = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 2, false)
+        .unwrap();
     // Get next 2 visible entries
-    let page2 = get_file_range(listing.id(), 2, 2, false).unwrap();
+    let page2 = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 2, 2, false)
+        .unwrap();
 
     assert_eq!(page1.len(), 2, "First page should have 2 entries");
     assert_eq!(page2.len(), 2, "Second page should have 2 entries");
@@ -155,7 +174,11 @@ async fn test_find_file_index_hidden_file_with_hidden_enabled() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-find-hidden-enabled", entries);
 
-    let index = find_file_index(listing.id(), ".gitignore", true).unwrap();
+    let index = listing
+        .engine()
+        .inner
+        .find_file_index(listing.id(), ".gitignore", true)
+        .unwrap();
 
     assert!(index.is_some(), "Should find .gitignore with hidden enabled");
 }
@@ -167,7 +190,11 @@ async fn test_find_file_index_hidden_file_with_hidden_disabled() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-find-hidden-disabled", entries);
 
-    let index = find_file_index(listing.id(), ".gitignore", false).unwrap();
+    let index = listing
+        .engine()
+        .inner
+        .find_file_index(listing.id(), ".gitignore", false)
+        .unwrap();
 
     assert!(index.is_none(), "Should NOT find .gitignore with hidden disabled");
 }
@@ -180,9 +207,17 @@ async fn test_find_file_index_visible_file_index_changes_with_hidden_setting() {
     let listing = insert_test_listing("test-find-visible-index-changes", entries);
 
     // Find "Documents" with hidden enabled (should be after hidden dirs)
-    let index_with_hidden = find_file_index(listing.id(), "Documents", true).unwrap();
+    let index_with_hidden = listing
+        .engine()
+        .inner
+        .find_file_index(listing.id(), "Documents", true)
+        .unwrap();
     // Find "Documents" with hidden disabled (should be at the start)
-    let index_without_hidden = find_file_index(listing.id(), "Documents", false).unwrap();
+    let index_without_hidden = listing
+        .engine()
+        .inner
+        .find_file_index(listing.id(), "Documents", false)
+        .unwrap();
 
     // With hidden files, hidden dirs come first, then Documents
     assert!(
@@ -208,7 +243,7 @@ async fn test_get_file_at_index_0_with_hidden_enabled() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-at-0-hidden", entries);
 
-    let entry = get_file_at(listing.id(), 0, true).unwrap();
+    let entry = listing.engine().inner.get_file_at(listing.id(), 0, true).unwrap();
 
     // With hidden enabled, first entry should be a hidden dir (sorted alphabetically)
     let entry = entry.expect("Should have entry at index 0");
@@ -226,7 +261,7 @@ async fn test_get_file_at_index_0_with_hidden_disabled() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-at-0-no-hidden", entries);
 
-    let entry = get_file_at(listing.id(), 0, false).unwrap();
+    let entry = listing.engine().inner.get_file_at(listing.id(), 0, false).unwrap();
 
     // With hidden disabled, first entry should be Documents (first visible dir)
     let entry = entry.expect("Should have entry at index 0");
@@ -260,23 +295,30 @@ async fn test_visible_rows_and_fuzzy_jump_agree_on_a_non_dot_hidden_entry() {
     let listing = insert_test_listing("test-non-dot-hidden-agree", entries);
 
     assert_eq!(
-        get_total_count(listing.id(), false).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), false).unwrap(),
         1,
         "the hidden, dotless entry is excluded from the row count"
     );
     assert_eq!(
-        super::fuzzy_find_first_match_in_listing(listing.id(), "secret", false).unwrap(),
+        listing
+            .engine()
+            .inner
+            .fuzzy_find_first_match_in_listing(listing.id(), "secret", false)
+            .unwrap(),
         None,
         "the hidden, dotless entry is excluded from the fuzzy jump"
     );
 
     assert_eq!(
-        get_total_count(listing.id(), true).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
         2,
         "the entry is counted once hidden files are shown"
     );
     assert!(
-        super::fuzzy_find_first_match_in_listing(listing.id(), "secret", true)
+        listing
+            .engine()
+            .inner
+            .fuzzy_find_first_match_in_listing(listing.id(), "secret", true)
             .unwrap()
             .is_some(),
         "the entry becomes fuzzy-matchable once hidden files are shown"
@@ -299,9 +341,13 @@ async fn test_directory_with_only_hidden_files() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-all-hidden", entries);
 
-    let count_with = get_total_count(listing.id(), true).unwrap();
-    let count_without = get_total_count(listing.id(), false).unwrap();
-    let range_without = get_file_range(listing.id(), 0, 10, false).unwrap();
+    let count_with = listing.engine().inner.get_total_count(listing.id(), true).unwrap();
+    let count_without = listing.engine().inner.get_total_count(listing.id(), false).unwrap();
+    let range_without = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 10, false)
+        .unwrap();
 
     assert_eq!(count_with, 3, "All 3 hidden files should be counted");
     assert_eq!(count_without, 0, "No visible files to count");
@@ -316,8 +362,8 @@ async fn test_directory_with_no_hidden_files() {
     let entries = volume.list_directory(Path::new(""), None).await.unwrap();
     let listing = insert_test_listing("test-no-hidden", entries);
 
-    let count_with = get_total_count(listing.id(), true).unwrap();
-    let count_without = get_total_count(listing.id(), false).unwrap();
+    let count_with = listing.engine().inner.get_total_count(listing.id(), true).unwrap();
+    let count_without = listing.engine().inner.get_total_count(listing.id(), false).unwrap();
 
     assert_eq!(count_with, 2, "Both files should be counted");
     assert_eq!(count_without, 2, "Both files should be counted (none are hidden)");
@@ -334,7 +380,11 @@ async fn test_find_file_indices_basic_lookup() {
     let listing = insert_test_listing("test-find-indices-basic", entries);
 
     let names = vec!["Documents".to_string(), "file.txt".to_string()];
-    let result = find_file_indices(listing.id(), &names, true).unwrap();
+    let result = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, true)
+        .unwrap();
 
     assert_eq!(result.len(), 2);
     assert!(result.contains_key("Documents"));
@@ -355,8 +405,16 @@ async fn test_find_file_indices_hidden_filtering() {
         ".hidden_file".to_string(),
     ];
 
-    let with_hidden = find_file_indices(listing.id(), &names, true).unwrap();
-    let without_hidden = find_file_indices(listing.id(), &names, false).unwrap();
+    let with_hidden = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, true)
+        .unwrap();
+    let without_hidden = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, false)
+        .unwrap();
 
     assert_eq!(with_hidden.len(), 3, "All 3 found when hidden included");
     assert_eq!(without_hidden.len(), 1, "Only Documents found when hidden excluded");
@@ -370,7 +428,11 @@ async fn test_find_file_indices_names_not_in_listing() {
     let listing = insert_test_listing("test-find-indices-missing", entries);
 
     let names = vec!["nonexistent.txt".to_string(), "also_missing".to_string()];
-    let result = find_file_indices(listing.id(), &names, true).unwrap();
+    let result = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, true)
+        .unwrap();
 
     assert!(result.is_empty(), "No names should be found");
 }
@@ -382,7 +444,11 @@ async fn test_find_file_indices_empty_names() {
     let listing = insert_test_listing("test-find-indices-empty", entries);
 
     let names: Vec<String> = vec![];
-    let result = find_file_indices(listing.id(), &names, true).unwrap();
+    let result = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, true)
+        .unwrap();
 
     assert!(result.is_empty(), "Empty input should produce empty output");
 }
@@ -394,7 +460,11 @@ async fn test_find_file_indices_duplicate_names_in_input() {
     let listing = insert_test_listing("test-find-indices-dupes", entries);
 
     let names = vec!["file.txt".to_string(), "file.txt".to_string(), "Documents".to_string()];
-    let result = find_file_indices(listing.id(), &names, true).unwrap();
+    let result = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, true)
+        .unwrap();
 
     // Duplicates in input collapse to one key in output
     assert_eq!(result.len(), 2);
@@ -409,10 +479,18 @@ async fn test_find_file_indices_consistent_with_find_file_index() {
     let listing = insert_test_listing("test-find-indices-consistent", entries);
 
     let names = vec!["Documents".to_string(), "file.txt".to_string(), "readme.md".to_string()];
-    let batch = find_file_indices(listing.id(), &names, false).unwrap();
+    let batch = listing
+        .engine()
+        .inner
+        .find_file_indices(listing.id(), &names, false)
+        .unwrap();
 
     for name in &names {
-        let single = find_file_index(listing.id(), name, false).unwrap();
+        let single = listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), name, false)
+            .unwrap();
         assert_eq!(
             batch.get(name.as_str()).copied(),
             single,

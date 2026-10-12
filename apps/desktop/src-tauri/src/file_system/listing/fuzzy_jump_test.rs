@@ -1,8 +1,7 @@
 //! Fuzzy jump: which row a typed prefix lands on.
 
 use super::fuzzy_jump::*;
-use crate::file_system::listing::caching_test_support::TestListing;
-use crate::file_system::staging::ShowTempsGuard;
+use crate::file_system::listing::testing::{TestEngine, TestListing};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::staging::StagingTemp;
 use std::sync::Arc;
@@ -146,7 +145,6 @@ fn unicode_filename_is_matchable() {
 /// scratch file next to a copy in progress moved the cursor one row down.
 #[test]
 fn the_jump_lands_on_the_row_the_pane_shows() {
-    let _show = ShowTempsGuard::set(false);
     let operation = Arc::new(());
     let temp = StagingTemp::mint(
         std::path::Path::new("/aaa-copying.bin"),
@@ -169,10 +167,14 @@ fn the_jump_lands_on_the_row_the_pane_shows() {
             entry("target.txt"),
             entry("zzz.bin"),
         ])
-        .insert("fuzzy-visible-rows");
+        .insert(&TestEngine::new(), "fuzzy-visible-rows");
 
     assert_eq!(
-        fuzzy_find_first_match_in_listing(listing.id(), "target", false).expect("listing is cached"),
+        listing
+            .engine()
+            .inner
+            .fuzzy_find_first_match_in_listing(listing.id(), "target", false)
+            .expect("listing is cached"),
         Some(0),
         "the target is the pane's first row, whatever sits above it in the listing"
     );

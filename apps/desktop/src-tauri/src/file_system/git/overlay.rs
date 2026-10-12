@@ -24,12 +24,6 @@ pub fn overlay() -> Arc<dyn ListingOverlay> {
     Arc::new(GitPortalOverlay)
 }
 
-/// Adds the overlay to the test binary's shared listing slot. Idempotent.
-#[cfg(test)]
-pub fn register() {
-    crate::file_system::listing::host::testing::register_overlay(overlay());
-}
-
 impl ListingOverlay for GitPortalOverlay {
     fn id(&self) -> &'static str {
         "git-portal"

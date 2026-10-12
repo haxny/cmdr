@@ -21,7 +21,7 @@ fn entry(name: &str) -> FileEntry {
 
 /// Puts a one-row listing under `listing_id` into `engine`'s cache.
 fn insert_listing(engine: &Listings, listing_id: &str) {
-    let inner = engine.inner();
+    let inner = &engine.inner;
     let listing = CachedListing::new(
         inner,
         "root".to_string(),
@@ -44,32 +44,27 @@ fn a_listing_in_one_engine_is_invisible_to_another() {
     let second = Listings::detached();
     insert_listing(&first, "shared-id");
 
-    let rows = first.inner().get_file_range("shared-id", 0, 10, true).unwrap();
+    let rows = first.inner.get_file_range("shared-id", 0, 10, true).unwrap();
     assert_eq!(rows.len(), 1);
     assert!(matches!(
-        second.inner().get_file_range("shared-id", 0, 10, true),
+        second.inner.get_file_range("shared-id", 0, 10, true),
         Err(ListingLookupError::Gone { .. })
     ));
 
     // A patch lands in the engine that holds the listing, and its diff queues
     // there: the other engine has neither. Held, so no flush races the read.
-    first.inner().diffs.hold("shared-id");
-    assert!(first.inner().insert_entry_sorted("shared-id", entry("b.txt")).is_some());
-    assert!(
-        second
-            .inner()
-            .insert_entry_sorted("shared-id", entry("b.txt"))
-            .is_none()
-    );
-    assert_eq!(first.inner().diffs.pending_batches("shared-id").len(), 1);
-    assert!(second.inner().diffs.pending_batches("shared-id").is_empty());
+    first.inner.diffs.hold("shared-id");
+    assert!(first.inner.insert_entry_sorted("shared-id", entry("b.txt")).is_some());
+    assert!(second.inner.insert_entry_sorted("shared-id", entry("b.txt")).is_none());
+    assert_eq!(first.inner.diffs.pending_batches("shared-id").len(), 1);
+    assert!(second.inner.diffs.pending_batches("shared-id").is_empty());
 }
 
 #[test]
 fn a_dropped_engine_is_gone_even_with_its_reaper_running() {
     let engine = Listings::detached();
     engine.start_orphan_reaper();
-    let weak = Arc::downgrade(engine.inner());
+    let weak = Arc::downgrade(&engine.inner);
 
     drop(engine);
 

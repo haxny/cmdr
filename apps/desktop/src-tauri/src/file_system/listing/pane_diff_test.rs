@@ -10,12 +10,10 @@
 //! Every test holds the listing's flush (`hold_for_test`), so "nothing queued"
 //! is an answer, not a race lost to the 50 ms timer.
 
-use super::caching::{apply_tags_to_listing, notify_added, notify_removed, publish_replacement};
-use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::{DiffChange, DiffChangeType};
-use super::diff_emitter::{hold_for_test, pending_changes_for_test};
-use super::operations::{find_file_index, set_listing_include_hidden};
-use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use super::sorting_test_support::sort_entries;
+use super::testing::{TestEngine, TestListing, TestListingGuard, pending_changes, publish_replacement};
 use cmdr_fs::entry::{FileEntry, TagRef};
 
 const DIR: &str = "/test/pane-diff";
@@ -64,20 +62,23 @@ fn pane(tag: &str, include_hidden: bool, entries: Vec<FileEntry>) -> TestListing
         .path(DIR)
         .include_hidden(include_hidden)
         .entries(entries)
-        .insert(tag);
-    hold_for_test(listing.id());
+        .insert(&TestEngine::new(), tag);
+    listing.engine().inner.diffs.hold(listing.id());
     listing
 }
 
 fn queued(listing: &TestListingGuard) -> Vec<(DiffChangeType, String, usize)> {
-    pending_changes_for_test(listing.id())
+    pending_changes(listing.engine(), listing.id())
         .into_iter()
         .map(|c: DiffChange| (c.change_type, c.entry.name, c.index))
         .collect()
 }
 
 fn row(listing: &TestListingGuard, name: &str, include_hidden: bool) -> usize {
-    find_file_index(listing.id(), name, include_hidden)
+    listing
+        .engine()
+        .inner
+        .find_file_index(listing.id(), name, include_hidden)
         .expect("listing is cached")
         .unwrap_or_else(|| panic!("`{name}` is not a row of this pane"))
 }
@@ -105,7 +106,7 @@ fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_it() {
 
     let mut rewritten = home_entries();
     rewritten.iter_mut().find(|e| e.name == ".zshrc").expect("fixture").size = Some(11);
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(queued(&listing), vec![], "nothing the pane shows changed");
     assert_eq!(
@@ -121,7 +122,7 @@ fn a_dotfile_write_reaches_a_pane_showing_hidden_files() {
 
     let mut rewritten = home_entries();
     rewritten.iter_mut().find(|e| e.name == ".zshrc").expect("fixture").size = Some(11);
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(
         queued(&listing),
@@ -145,7 +146,7 @@ fn a_flag_hidden_entry_changing_is_hidden_too() {
         .find(|e| e.name == "Library")
         .expect("fixture")
         .size = Some(99);
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(queued(&listing), vec![]);
     assert_eq!(cached(&listing, "Library").size, Some(99));
@@ -161,7 +162,7 @@ fn a_mixed_change_reaches_the_pane_as_only_its_visible_part_at_the_pane_row() {
     rewritten.iter_mut().find(|e| e.name == ".zshrc").expect("fixture").size = Some(11);
     rewritten.push(entry(".viminfo", 5));
     rewritten.push(entry("bravo.txt", 2));
-    publish_replacement(listing.id(), sorted(rewritten), 0);
+    publish_replacement(listing.engine(), listing.id(), sorted(rewritten), 0);
 
     let bravo_row = row(&listing, "bravo.txt", false);
     assert_ne!(
@@ -180,9 +181,12 @@ fn a_mixed_change_reaches_the_pane_as_only_its_visible_part_at_the_pane_row() {
 fn a_single_add_reports_the_pane_row_and_a_hidden_one_reports_nothing() {
     let listing = pane("pane-diff-single-add", false, home_entries());
 
-    notify_added(listing.id(), entry(".lesshst", 7));
-    notify_removed(listing.id(), std::path::Path::new(&format!("{DIR}/.DS_Store")));
-    notify_added(listing.id(), entry("bravo.txt", 2));
+    listing.engine().inner.notify_added(listing.id(), entry(".lesshst", 7));
+    listing
+        .engine()
+        .inner
+        .notify_removed(listing.id(), std::path::Path::new(&format!("{DIR}/.DS_Store")));
+    listing.engine().inner.notify_added(listing.id(), entry("bravo.txt", 2));
 
     let bravo_row = row(&listing, "bravo.txt", false);
     assert_ne!(bravo_row, entry_index(&listing, "bravo.txt"));
@@ -200,7 +204,10 @@ fn a_removal_reports_the_row_it_left() {
     let listing = pane("pane-diff-remove", false, home_entries());
     let charlie_row = row(&listing, "charlie.txt", false);
 
-    notify_removed(listing.id(), std::path::Path::new(&format!("{DIR}/charlie.txt")));
+    listing
+        .engine()
+        .inner
+        .notify_removed(listing.id(), std::path::Path::new(&format!("{DIR}/charlie.txt")));
 
     assert_eq!(
         queued(&listing),
@@ -221,7 +228,7 @@ fn a_visible_entry_turning_hidden_leaves_a_pane_hiding_hidden_files() {
         .find(|e| e.name == "alpha.txt")
         .expect("fixture")
         .is_hidden = true;
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(
         queued(&listing),
@@ -241,7 +248,7 @@ fn a_visible_entry_turning_hidden_is_a_modify_to_a_pane_showing_hidden_files() {
         .find(|e| e.name == "alpha.txt")
         .expect("fixture")
         .is_hidden = true;
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(
         queued(&listing),
@@ -264,7 +271,7 @@ fn a_hidden_entry_turning_visible_arrives_as_an_add() {
         .find(|e| e.name == "Library")
         .expect("fixture")
         .is_hidden = false;
-    publish_replacement(listing.id(), rewritten, 0);
+    publish_replacement(listing.engine(), listing.id(), rewritten, 0);
 
     assert_eq!(
         queued(&listing),
@@ -284,11 +291,17 @@ fn tags_on_a_hidden_entry_reach_nothing_the_pane_shows() {
         color: 6,
     }];
 
-    apply_tags_to_listing(listing.id(), vec![(format!("{DIR}/.zshrc"), red.clone())]);
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), vec![(format!("{DIR}/.zshrc"), red.clone())]);
     assert_eq!(queued(&listing), vec![]);
     assert_eq!(cached(&listing, ".zshrc").tags, red);
 
-    apply_tags_to_listing(listing.id(), vec![(format!("{DIR}/delta.txt"), red)]);
+    listing
+        .engine()
+        .inner
+        .apply_tags_to_listing(listing.id(), vec![(format!("{DIR}/delta.txt"), red)]);
     assert_eq!(
         queued(&listing),
         vec![(
@@ -305,14 +318,18 @@ fn tags_on_a_hidden_entry_reach_nothing_the_pane_shows() {
 fn toggling_hidden_files_switches_the_row_space_and_drops_what_was_queued() {
     let listing = pane("pane-diff-toggle", false, home_entries());
 
-    notify_added(listing.id(), entry("bravo.txt", 2));
+    listing.engine().inner.notify_added(listing.id(), entry("bravo.txt", 2));
     assert_eq!(queued(&listing).len(), 1);
 
-    set_listing_include_hidden(listing.id(), true, None, None, None, false).expect("listing is cached");
+    listing
+        .engine()
+        .inner
+        .set_listing_include_hidden(listing.id(), true, None, None, None, false)
+        .expect("listing is cached");
     assert_eq!(queued(&listing), vec![], "the old row space's change is dropped");
 
-    hold_for_test(listing.id());
-    notify_added(listing.id(), entry(".lesshst", 7));
+    listing.engine().inner.diffs.hold(listing.id());
+    listing.engine().inner.notify_added(listing.id(), entry(".lesshst", 7));
     assert_eq!(
         queued(&listing),
         vec![(

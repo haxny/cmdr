@@ -22,8 +22,8 @@ use notify_debouncer_full::notify::Event;
 use notify_debouncer_full::notify::event::{DataChange, EventKind, ModifyKind};
 
 use super::listing::DiffChangeType;
-use super::listing::caching_test_support::{TestListing, TestListingGuard};
-use super::listing::{hold_for_test, pending_changes_for_test};
+use super::listing::testing::{TestListing, TestListingGuard};
+use super::listing::testing::{hold_diffs, pending_changes};
 use super::volume::backends::list_directory_core;
 use super::watcher::{handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};
@@ -51,7 +51,7 @@ fn listing_of(dir: &Path, tag: &str) -> TestListingGuard {
         .volume(&unique_test_id(&format!("{tag}-vol")))
         .path(dir.to_path_buf())
         .entries(list_directory_core(dir).expect("the scratch dir lists"))
-        .insert(tag)
+        .insert(crate::listing_host::listings(), tag)
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn a_batch_publishes_removes_then_adds_then_modifies() {
     std::fs::write(&removed, b"r").expect("scratch dir is writable");
     std::fs::write(&modified, b"m").expect("scratch dir is writable");
     let listing = listing_of(&scratch, "watch-batch-order");
-    hold_for_test(listing.id());
+    hold_diffs(listing.engine(), listing.id());
 
     std::fs::remove_file(&removed).expect("scratch dir is writable");
     std::fs::write(&modified, b"modified").expect("scratch dir is writable");
@@ -78,7 +78,7 @@ fn a_batch_publishes_removes_then_adds_then_modifies() {
         ],
     );
 
-    let queued: Vec<(DiffChangeType, String)> = pending_changes_for_test(listing.id())
+    let queued: Vec<(DiffChangeType, String)> = pending_changes(listing.engine(), listing.id())
         .into_iter()
         .map(|c| (c.change_type, c.entry.name))
         .collect();
@@ -106,7 +106,7 @@ fn a_modify_keeps_the_finder_tags_the_cache_holds() {
         .volume(&unique_test_id("watch-modify-tags-vol"))
         .path(scratch.to_path_buf())
         .entries(entries)
-        .insert("watch-modify-tags");
+        .insert(crate::listing_host::listings(), "watch-modify-tags");
 
     std::fs::write(&tagged, b"touched").expect("scratch dir is writable");
     handle_directory_change_incremental(listing.id(), vec![content_change(&tagged)]);

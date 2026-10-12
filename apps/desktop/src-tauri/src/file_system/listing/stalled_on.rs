@@ -218,15 +218,22 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    /// The mount table answers lexically for the symlink-resolved path, and a
+    /// local disk there reads as a drive. The host's real table is the app's
+    /// cell (`listing_host/mounts.rs`).
     #[test]
-    fn a_temp_folder_reads_as_a_drive() {
-        // Holds where the temp dir is a local disk: a dev Mac's APFS, a Linux box's ext4 or tmpfs.
-        let dir = tempfile::tempdir().unwrap();
-        let mounts = &crate::file_system::listing::installed().mounts;
+    fn a_folder_on_a_local_disk_reads_as_a_drive() {
+        let mounts = crate::file_system::listing::testing::FakeMountTable::default()
+            .mount("/", "apfs", "/dev/disk3s1s1")
+            .mount("/Volumes/share", "smbfs", "//ada@nas/share");
         assert_eq!(
-            stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(dir.path())),
+            stalled_on_mount_of(&mounts, Path::new("/Users/ada/Documents")),
             StalledOn::Drive
+        );
+        assert_eq!(
+            stalled_on_mount_of(&mounts, Path::new("/Volumes/share/photos")),
+            StalledOn::Server,
+            "the longest mount point that holds the path answers"
         );
     }
 }

@@ -11,3 +11,24 @@ impl ReadingLocale for AppLocale {
         crate::intl::active_locale()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The engine pulls the language per sort, so it follows the user's
+    /// setting the moment it changes, with nothing pushed. The order a language
+    /// gives is `collation_test`'s, against a fixed locale.
+    #[test]
+    fn the_reading_language_follows_the_users_setting() {
+        let _lock = crate::intl::native_strings::lock_active_locale_for_tests();
+
+        let _ = crate::intl::set_language_preference(Some("sv".to_string()));
+        assert_eq!(AppLocale.locale(), "sv");
+        let _ = crate::intl::set_language_preference(Some("de".to_string()));
+        assert_eq!(AppLocale.locale(), "de");
+
+        // Back to following the OS, so nothing after this sees a pinned language.
+        let _ = crate::intl::set_language_preference(None);
+    }
+}

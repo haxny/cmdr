@@ -1,54 +1,27 @@
 //! The order names themselves come out in (`collation.rs`).
 //!
 //! Separate from the column-ordering suite because it answers a different
-//! question and needs a different fixture: these tests pin the process-wide
-//! reading language, sharing a lock with `intl::native_strings`, since the OS
-//! locale otherwise decides where `ö` sits and a Swedish machine disagrees with
-//! a US runner.
+//! question and needs a different fixture: each test reads in a language of its
+//! own (`FixedLocale` through the engine's `ReadingLocale` seam), since the OS
+//! locale would otherwise decide where `ö` sits and a Swedish machine would
+//! disagree with a US runner. That the app's answer follows the user's language
+//! setting is `listing_host/locale.rs`'s cell.
 //!
 //! Which column and which direction is `sorting_test`; the directory-vs-file
 //! policy is `sorting_dir_mode_test`.
 
 use super::sorting::DirectorySortMode;
-use super::sorting::entry_comparator;
-use super::sorting::sort_entries;
+use std::sync::Arc;
+
+use super::sorting::{entry_comparator, sort_entries};
 use super::sorting_test_support::make_entry;
+use super::testing::collator_for;
 use super::{SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
 
 // ============================================================================
 // Unicode collation
 // ============================================================================
-
-/// Pins the language names collate in, for the test's whole lifetime.
-///
-/// `sort_entries` orders names in the language the user reads, which is
-/// process-wide state: a sibling test in `intl::native_strings` writes it, and
-/// left alone it resolves to the OS locale, where a Swedish machine would seat
-/// `ö` after `z` and fail an assertion that a US runner passes. Both sides hold
-/// the same lock; see `intl::native_strings::lock_active_locale_for_tests`.
-struct PinnedLocale(
-    #[allow(
-        dead_code,
-        reason = "holding the guard IS the effect; dropping it early re-opens the window it closes"
-    )]
-    std::sync::MutexGuard<'static, ()>,
-);
-
-impl PinnedLocale {
-    fn to(tag: &str) -> Self {
-        let guard = crate::intl::native_strings::lock_active_locale_for_tests();
-        let _ = crate::intl::set_language_preference(Some(tag.to_string()));
-        Self(guard)
-    }
-}
-
-impl Drop for PinnedLocale {
-    fn drop(&mut self) {
-        // Back to following the OS, so nothing after this sees a pinned language.
-        let _ = crate::intl::set_language_preference(None);
-    }
-}
 
 /// macOS stores whatever bytes a writer hands it, so one folder routinely holds
 /// both spellings of the same accented name: Cocoa-based writers produce NFD
@@ -57,7 +30,7 @@ impl Drop for PinnedLocale {
 /// put `…Dávid…-signed` above `…Dáviad…-araw` in a real `~/Downloads`.
 #[test]
 fn mixed_unicode_normalization_orders_by_the_visible_name() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let nfd = "Veszelovszki_Da\u{301}vid_She\u{2019}s-signed.pdf";
     let nfc = "Veszelovszki_D\u{e1}viad_She\u{2019}s-araw.pdf";
 
@@ -67,6 +40,7 @@ fn mixed_unicode_normalization_orders_by_the_visible_name() {
     ];
 
     sort_entries(
+        &collator,
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,
@@ -84,7 +58,7 @@ fn mixed_unicode_normalization_orders_by_the_visible_name() {
 /// watcher's re-sort sees a phantom `DiffChangeType::Move`.
 #[test]
 fn the_two_spellings_of_one_name_are_ordered_deterministically() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let nfd = "Da\u{301}vid.txt";
     let nfc = "D\u{e1}vid.txt";
 
@@ -94,6 +68,7 @@ fn the_two_spellings_of_one_name_are_ordered_deterministically() {
             make_entry(second, false, Some(100), None),
         ];
         sort_entries(
+            &collator,
             &mut entries,
             SortColumn::Name,
             SortOrder::Ascending,
@@ -112,7 +87,7 @@ fn the_two_spellings_of_one_name_are_ordered_deterministically() {
 /// Commander, and Explorer all show.
 #[test]
 fn underscore_sorts_before_digits() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let mut entries = vec![
         make_entry("2026-08-27 David pixel pics", true, None, None),
         make_entry("_cameras", true, None, None),
@@ -122,6 +97,7 @@ fn underscore_sorts_before_digits() {
     ];
 
     sort_entries(
+        &collator,
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,
@@ -139,7 +115,7 @@ fn underscore_sorts_before_digits() {
 /// one next to the base letter it belongs to.
 #[test]
 fn accented_letters_sort_beside_their_base_letter() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let mut entries = vec![
         make_entry("zebra.txt", false, Some(1), None),
         make_entry("\u{e1}rv\u{ed}zt\u{171}r\u{151}.txt", false, Some(1), None),
@@ -148,6 +124,7 @@ fn accented_letters_sort_beside_their_base_letter() {
     ];
 
     sort_entries(
+        &collator,
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,
@@ -171,7 +148,7 @@ fn accented_letters_sort_beside_their_base_letter() {
 /// never rank differently depending on which one asked.
 #[test]
 fn the_bulk_sort_and_the_live_comparator_agree_on_unicode_names() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let names = [
         "_cameras",
         "2023",
@@ -189,6 +166,7 @@ fn the_bulk_sort_and_the_live_comparator_agree_on_unicode_names() {
 
     let mut via_sort = entries.clone();
     sort_entries(
+        &collator,
         &mut via_sort,
         SortColumn::Name,
         SortOrder::Ascending,
@@ -197,6 +175,7 @@ fn the_bulk_sort_and_the_live_comparator_agree_on_unicode_names() {
 
     let mut via_cmp = entries.clone();
     via_cmp.sort_by(entry_comparator(
+        Arc::clone(&collator),
         SortColumn::Name,
         SortOrder::Ascending,
         DirectorySortMode::LikeFiles,
@@ -212,7 +191,7 @@ fn the_bulk_sort_and_the_live_comparator_agree_on_unicode_names() {
 /// a reader expects whatever case each name happens to carry.
 #[test]
 fn test_case_insensitive_sort() {
-    let _locale = PinnedLocale::to("en");
+    let collator = collator_for("en");
     let mut entries = vec![
         make_entry("Zebra.txt", false, Some(100), None),
         make_entry("alpha.txt", false, Some(100), None),
@@ -220,6 +199,7 @@ fn test_case_insensitive_sort() {
     ];
 
     sort_entries(
+        &collator,
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,
@@ -264,9 +244,10 @@ fn golden_corpus() -> Vec<FileEntry> {
 }
 
 fn golden_order(locale: &str) -> Vec<String> {
-    let _locale = PinnedLocale::to(locale);
+    let collator = collator_for(locale);
     let mut entries = golden_corpus();
     sort_entries(
+        &collator,
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,

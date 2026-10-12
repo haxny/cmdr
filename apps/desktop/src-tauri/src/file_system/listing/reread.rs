@@ -1,8 +1,13 @@
 //! What a host's change watch asks the engine once it heard something: a full
-//! re-read of one listing ([`Listings::refresh`], or [`Listings::begin_read`] +
-//! [`Listings::refresh_from_entries`] when the host reads the directory itself),
-//! or an incremental patch of the children it re-stat'd
-//! ([`Listings::observe_children`]).
+//! re-read of one listing ([`refresh`], or [`begin_read`] + [`refresh_from_entries`]
+//! when the host reads the directory itself), or an incremental patch of the
+//! children it re-stat'd ([`observe_children`]). The `Listings` methods are in
+//! `engine/reread.rs`.
+//!
+//! [`refresh`]: super::Listings::refresh
+//! [`begin_read`]: super::Listings::begin_read
+//! [`refresh_from_entries`]: super::Listings::refresh_from_entries
+//! [`observe_children`]: super::Listings::observe_children
 //!
 //! The OS half (debouncing, rebasing event paths, the stat, when to fall back to
 //! a full re-read, telling the pane its directory is gone) stays with the host.
@@ -22,10 +27,10 @@ use std::sync::atomic::Ordering;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::VolumeError;
 
-use super::engine::{Inner, Listings};
+use super::Inner;
 use super::listing_id::ListingId;
 use super::pipeline::{OverlayRows, Prepared, ReadBy};
-use super::sorting::sort_entries_with;
+use super::sorting::sort_entries;
 
 /// How a full re-read of one listing ended.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,8 +44,8 @@ pub enum RefreshOutcome {
     /// stops whatever watches it. Carries the listing's path.
     DirectoryGone(PathBuf),
     /// Nothing serves the listing's volume id any more. The host may read the
-    /// directory itself: [`Listings::begin_read`], then
-    /// [`Listings::refresh_from_entries`].
+    /// directory itself: [`begin_read`](super::Listings::begin_read), then
+    /// [`refresh_from_entries`](super::Listings::refresh_from_entries).
     NoVolume,
     /// The listing isn't open (any more).
     ListingGone,
@@ -74,38 +79,6 @@ impl ReadTicket {
     /// The directory to read, in the listing's spelling.
     pub fn path(&self) -> &Path {
         &self.path
-    }
-}
-
-impl Listings {
-    /// Re-reads `id`'s directory through its volume and replaces the listing's
-    /// entries, publishing what changed. Returns once the re-read landed or
-    /// didn't, never earlier: E2E's watcher flush and ⌘R's bounded wait both
-    /// rely on that.
-    pub async fn refresh(&self, id: &ListingId) -> RefreshOutcome {
-        self.inner.refresh(id).await
-    }
-
-    /// Starts a re-read the host does itself (nothing serves the listing's
-    /// volume id), or `None` when the listing is gone and there's nothing to read for.
-    pub fn begin_read(&self, id: &ListingId) -> Option<ReadTicket> {
-        self.inner.begin_read(id)
-    }
-
-    /// Hands over what the host read for `ticket`, replacing the listing's
-    /// entries. The overlays don't run (nothing serves the volume to decorate
-    /// through), so the listing keeps its overlay count.
-    pub async fn refresh_from_entries(&self, ticket: ReadTicket, entries: Vec<FileEntry>) -> RefreshOutcome {
-        self.inner.refresh_from_entries(ticket, entries).await
-    }
-
-    /// Patches `id` with the host's fresh stat of some of its children: `None`
-    /// for a child that's gone. The engine sorts them into removes, adds, and
-    /// modifies against what the listing holds, enriches the adds and modifies
-    /// in one call, carries Finder tags forward on a modify, and publishes in
-    /// that order: removes first, since their rows are the old pane's.
-    pub fn observe_children(&self, id: &ListingId, children: Vec<(PathBuf, Option<FileEntry>)>) {
-        self.inner.observe_children(id, children);
     }
 }
 
@@ -205,7 +178,7 @@ impl Inner {
         listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
         let mut entries = entries;
-        sort_entries_with(
+        sort_entries(
             &collator,
             &mut entries,
             listing.sort_by,

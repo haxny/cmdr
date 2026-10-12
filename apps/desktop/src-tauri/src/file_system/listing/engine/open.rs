@@ -1,7 +1,5 @@
 //! A pane opens and closes a listing.
 
-use std::sync::Arc;
-
 use crate::file_system::listing::ListingRequest;
 use crate::file_system::listing::listing_id::ListingId;
 
@@ -15,8 +13,7 @@ impl Listings {
     pub fn start(&self, request: ListingRequest) {
         cmdr_fs::benchmark::reset_epoch();
         cmdr_fs::benchmark::log_event_value("list_directory_start_streaming CALLED", request.path.display());
-        let events = Arc::clone(&self.inner.events);
-        self.inner.start_streaming_listing(events, request);
+        self.inner.start_streaming_listing(request);
         cmdr_fs::benchmark::log_event("list_directory_start_streaming RETURNING");
     }
 

@@ -8,20 +8,16 @@ use std::time::Instant;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::WatchCoverage;
 
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::cached_listing::CachedListing;
 use crate::file_system::listing::diff::{DiffChange, PaneRows};
-use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::pipeline::{Prepared, ReadBy};
 use crate::file_system::listing::reread::ReadGeneration;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator_with};
+use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator};
 use cmdr_fs::entry::{FileEntry, TagRef};
 pub use cmdr_fs::volume::DirectoryChange;
 use cmdr_fs::volume::RoutedKind;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub use crate::file_system::listing::shims::caching::*;
 
 /// One open listing at a glance ([`Listings::summaries`](super::Listings::summaries)).
 #[derive(Debug, Clone)]
@@ -169,7 +165,7 @@ impl Inner {
         }
 
         listing.admit_entry(&entry, visibility);
-        let cmp = entry_comparator_with(
+        let cmp = entry_comparator(
             Arc::clone(&collator),
             listing.sort_by,
             listing.sort_order,
@@ -325,7 +321,7 @@ impl Inner {
         listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
 
-        let cmp = entry_comparator_with(
+        let cmp = entry_comparator(
             Arc::clone(&collator),
             listing.sort_by,
             listing.sort_order,

@@ -10,7 +10,7 @@ use cmdr_fs::volume::{BatchScanResult, InMemoryVolume, ListingProgress, ScanBoun
 use tokio::sync::Notify;
 
 use super::{cancel, count_resolving, count_with, plan};
-use crate::file_system::listing::caching_test_support::TestListing;
+use crate::file_system::listing::testing::TestListing;
 use cmdr_fs::entry::FileEntry;
 
 #[derive(Default)]
@@ -101,7 +101,7 @@ async fn cancelled_backend_finishes_cooperatively_without_overwriting_a_replacem
     let listing = TestListing::new()
         .path("/data")
         .entries(vec![folder()])
-        .insert("lifecycle-old-new");
+        .insert(crate::listing_host::listings(), "lifecycle-old-new");
     let gate = Arc::new(Gate::default());
     let old: Arc<dyn Volume> = Arc::new(GatedScan {
         inner: InMemoryVolume::new("old"),
@@ -132,7 +132,7 @@ async fn cancellation_during_pending_resolution_completes_the_ui_without_droppin
     let listing = TestListing::new()
         .path("/data")
         .entries(vec![folder()])
-        .insert("lifecycle-resolving");
+        .insert(crate::listing_host::listings(), "lifecycle-resolving");
     let gate = Arc::new(Gate::default());
     let resolving_gate = Arc::clone(&gate);
     let id = listing.id().to_string();
@@ -179,7 +179,7 @@ async fn unreadable_and_quickly_cancelled_retries_preserve_a_manual_partial() {
             true,
             false,
         )])
-        .insert("lifecycle-manual");
+        .insert(crate::listing_host::listings(), "lifecycle-manual");
     let _ = super::publish::publish(
         listing.id(),
         &missing_path,

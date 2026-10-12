@@ -4,12 +4,13 @@
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
-use super::engine::Inner;
+use super::Inner;
 use super::operations::ListingLookupError;
 
 /// The seven `recursive_*` fields the drive index fills in on a folder row: data,
 /// so a writer can't touch a name or a path under the cache lock. Each field
 /// means what the [`FileEntry`] field of the same name means.
+// DEFAULT-OK: every field `None` is "the index knows nothing about this folder".
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[allow(missing_docs, reason = "each field is the FileEntry field of the same name")]
 pub struct IndexSizes {

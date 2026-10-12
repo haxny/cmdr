@@ -156,7 +156,7 @@ fn event_targets_watch_root_rejects_children_and_neighbours() {
 /// since both use the same mechanism: re-read via Volume, compute diff, update cache.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_refreshes_from_volume() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::watcher::handle_directory_change;
@@ -183,7 +183,7 @@ async fn test_handle_directory_change_refreshes_from_volume() {
         .volume(&volume_id)
         .path(&dir_path)
         .entries(vec![make_entry_in("x.txt", "/testdir", Some(100))])
-        .insert("watcher-hdc");
+        .insert(crate::listing_host::listings(), "watcher-hdc");
 
     handle_directory_change(listing.id()).await;
 
@@ -201,7 +201,7 @@ async fn test_handle_directory_change_refreshes_from_volume() {
 /// on a remote volume that the watcher detected).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_detects_new_entries() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::watcher::handle_directory_change;
@@ -224,7 +224,7 @@ async fn test_handle_directory_change_detects_new_entries() {
         .volume(&volume_id)
         .path(&dir_path)
         .entries(vec![make_entry_in("a.txt", "/testdir", Some(100))])
-        .insert("watcher-new-entries");
+        .insert(crate::listing_host::listings(), "watcher-new-entries");
 
     // Add a new file to the volume (simulating external change).
     volume
@@ -260,7 +260,7 @@ async fn test_handle_directory_change_detects_new_entries() {
 #[cfg(target_os = "macos")]
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::start_watching;
     use crate::test_support::{TestDir, wait_until};
@@ -281,7 +281,7 @@ fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
         .volume(&unique_test_id("watch-root-replaced-vol"))
         .path(&watched)
         .entries(list_directory_core(&watched).expect("the fresh dir lists"))
-        .insert("watch-root-replaced");
+        .insert(crate::listing_host::listings(), "watch-root-replaced");
     start_watching(listing.id(), &watched).expect("start_watching should succeed on a real dir");
 
     // Arming an FSEvents stream is asynchronous, so prove the watch is delivering
@@ -328,7 +328,7 @@ fn is_watching(listing_id: &str) -> bool {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_attaches_the_watch() {
-    use crate::file_system::listing::caching_test_support::TestListing;
+    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::watcher::{start_watching_detached, stop_watching};
     use crate::test_support::{TestDir, wait_until};
     use std::time::Duration;
@@ -337,7 +337,9 @@ fn a_detached_arm_attaches_the_watch() {
     let watched = scratch.join("dir");
     std::fs::create_dir(&watched).expect("scratch dir is writable");
 
-    let listing = TestListing::new().path(&watched).insert("detached-arm-attaches");
+    let listing = TestListing::new()
+        .path(&watched)
+        .insert(crate::listing_host::listings(), "detached-arm-attaches");
     assert!(!is_watching(listing.id()), "nothing should be watching before the arm");
 
     start_watching_detached(listing.id(), &watched);
@@ -392,10 +394,10 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     hidden: bool,
 ) -> (
     crate::test_support::TestDir,
-    crate::file_system::listing::caching_test_support::TestListingGuard,
+    crate::file_system::listing::testing::TestListingGuard,
 ) {
-    use crate::file_system::listing::caching_test_support::TestListing;
-    use crate::file_system::listing::hold_for_test;
+    use crate::file_system::listing::testing::TestListing;
+    use crate::file_system::listing::testing::hold_diffs;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
     use cmdr_fs::testing::unique_test_id;
@@ -416,8 +418,8 @@ fn rewrite_a_dotfile_beside_a_visible_file(
         .path(scratch.to_path_buf())
         .include_hidden(hidden)
         .entries(list_directory_core(&scratch).expect("the fresh dir lists"))
-        .insert(tag);
-    hold_for_test(listing.id());
+        .insert(crate::listing_host::listings(), tag);
+    hold_diffs(listing.engine(), listing.id());
 
     std::fs::write(&dotfile, b"ls\ncd ~\n").expect("scratch dir is writable");
     let event = Event {
@@ -434,12 +436,12 @@ fn rewrite_a_dotfile_beside_a_visible_file(
 
 #[test]
 fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
-    use crate::file_system::listing::pending_changes_for_test;
+    use crate::file_system::listing::testing::pending_changes;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-off", false);
 
     assert_eq!(
-        pending_changes_for_test(listing.id()).len(),
+        pending_changes(listing.engine(), listing.id()).len(),
         0,
         "nothing the pane shows changed"
     );
@@ -454,11 +456,11 @@ fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
 #[test]
 fn a_dotfile_write_reaches_a_pane_showing_dotfiles() {
     use crate::file_system::listing::DiffChangeType;
-    use crate::file_system::listing::pending_changes_for_test;
+    use crate::file_system::listing::testing::pending_changes;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-on", true);
 
-    let queued: Vec<_> = pending_changes_for_test(listing.id())
+    let queued: Vec<_> = pending_changes(listing.engine(), listing.id())
         .into_iter()
         .map(|c| (c.change_type, c.entry.name))
         .collect();

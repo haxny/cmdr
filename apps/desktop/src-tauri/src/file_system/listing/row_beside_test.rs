@@ -1,7 +1,7 @@
 //! Tests for `get_file_beside`: reading the row next to a row you know by name.
 
-use super::caching_test_support::{TestListing, TestListingGuard};
-use super::operations::{RowBeside, get_file_beside};
+use super::operations::RowBeside;
+use super::testing::{TestEngine, TestListing, TestListingGuard};
 use cmdr_fs::entry::FileEntry;
 
 fn make_entry(name: &str) -> FileEntry {
@@ -13,11 +13,14 @@ fn listing(tag: &str, names: &[&str]) -> TestListingGuard {
         .volume("test")
         .path("/dir")
         .entries(names.iter().copied().map(make_entry).collect())
-        .insert(tag)
+        .insert(&TestEngine::new(), tag)
 }
 
 fn beside(guard: &TestListingGuard, name: &str, side: RowBeside, include_hidden: bool) -> Option<String> {
-    get_file_beside(guard.id(), name, side, include_hidden)
+    guard
+        .engine()
+        .inner
+        .get_file_beside(guard.id(), name, side, include_hidden)
         .unwrap()
         .map(|entry| entry.name)
 }

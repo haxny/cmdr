@@ -147,30 +147,22 @@ async fn path_exists_on_a_saved_server_nobody_connected_answers_that_it_couldnt_
 /// that's fine, and the frontend reads `NotFound` as "this folder was deleted".
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn listing_a_saved_server_nobody_connected_says_it_is_not_connected() {
-    use crate::file_system::listing::caching_test_support::TestListingGuard;
-    use crate::file_system::listing::host::ListingEvents;
-    use crate::file_system::listing::host::testing::RecordingEvents;
-    use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
-    use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
+    use crate::file_system::listing::testing::{TestListingGuard, read_to_end, request};
+    use crate::listing_host::listings;
     use cmdr_fs::testing::unique_test_id;
 
     let host = "198.51.100.49";
     sftp_known_servers::remember(saved_sftp(host, true));
 
-    let listing = TestListingGuard::adopt(unique_test_id("saved-server-listing"));
-    let events: std::sync::Arc<dyn ListingEvents> = std::sync::Arc::new(RecordingEvents::new());
-    let state = std::sync::Arc::new(StreamingListingState::new());
+    let listing = TestListingGuard::adopt(listings(), unique_test_id("saved-server-listing"));
     let pane_path = format!("sftp://ada@{host}:2222/srv/data/photos");
-    let outcome = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        &cmdr_fs::volume::sftp_volume_id(host, 2222, "ada"),
-        std::path::Path::new(&pane_path),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+    let outcome = read_to_end(
+        listings(),
+        &request(
+            listing.id(),
+            &cmdr_fs::volume::sftp_volume_id(host, 2222, "ada"),
+            std::path::Path::new(&pane_path),
+        ),
     )
     .await;
 

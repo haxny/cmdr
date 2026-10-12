@@ -1,15 +1,10 @@
 //! `DirectoryChange::Replaced` tests: a backend hands over a whole re-read
 //! directory and the host makes it the pane's contents.
 //!
-//! The full `notify_directory_changed(Replaced(…))` path needs a
-//! `tauri::AppHandle` (every arm ends in `enqueue_diff`), which a unit test can't
-//! build, so these drive the per-listing half — `publish_replacement` — directly.
-//! The same split the `FullRefresh` cells in `caching_test.rs` use.
-
-use super::caching::publish_replacement;
-use super::caching_test_support::TestListing;
-use super::diff_emitter::pending_count;
+//! These drive the per-listing half, `publish_replacement`, directly; the arm
+//! that finds the listings is `caching_test.rs`'s.
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use super::testing::{TestEngine, TestListing, pending_changes, publish_replacement};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
 
@@ -36,9 +31,10 @@ fn a_replacement_becomes_the_listings_contents_and_is_published() {
             make_entry("kept.txt", false, Some(1)),
             make_entry("gone.txt", false, Some(2)),
         ])
-        .insert("replaced-basic");
+        .insert(&TestEngine::new(), "replaced-basic");
 
     publish_replacement(
+        listing.engine(),
         listing.id(),
         vec![
             make_entry("kept.txt", false, Some(1)),
@@ -49,7 +45,7 @@ fn a_replacement_becomes_the_listings_contents_and_is_published() {
 
     assert_eq!(listing.entry_names(), ["kept.txt", "new.txt"]);
     assert!(
-        pending_count(listing.id()) > 0,
+        !pending_changes(listing.engine(), listing.id()).is_empty(),
         "the pane has to hear about the swap, not just the cache"
     );
 }
@@ -68,10 +64,11 @@ fn a_replacement_is_sorted_the_listings_way_before_it_is_diffed() {
             make_entry("c.txt", false, Some(1)),
             make_entry("a.txt", false, Some(2)),
         ])
-        .insert("replaced-sorted");
+        .insert(&TestEngine::new(), "replaced-sorted");
 
     // Device order: neither the pane's order nor its reverse.
     publish_replacement(
+        listing.engine(),
         listing.id(),
         vec![
             make_entry("a.txt", false, Some(2)),
@@ -91,19 +88,30 @@ fn an_identical_replacement_publishes_nothing() {
     let listing = TestListing::new()
         .path("/test/replaced-noop")
         .entries(vec![make_entry("same.txt", false, Some(7))])
-        .insert("replaced-noop");
+        .insert(&TestEngine::new(), "replaced-noop");
 
-    publish_replacement(listing.id(), vec![make_entry("same.txt", false, Some(7))], 0);
+    publish_replacement(
+        listing.engine(),
+        listing.id(),
+        vec![make_entry("same.txt", false, Some(7))],
+        0,
+    );
 
     assert_eq!(listing.entry_names(), ["same.txt"]);
-    assert_eq!(pending_count(listing.id()), 0, "no difference means nothing to publish");
+    assert_eq!(
+        pending_changes(listing.engine(), listing.id()).len(),
+        0,
+        "no difference means nothing to publish"
+    );
 }
 
 /// A listing that closed between the re-read and the report is the common race
 /// on a device that unplugs, so it has to be silent rather than a panic.
 #[test]
 fn a_replacement_for_a_listing_that_closed_is_silent() {
+    let engine = TestEngine::new();
     publish_replacement(
+        &engine,
         &unique_test_id("replaced-gone"),
         vec![make_entry("x.txt", false, Some(1))],
         0,

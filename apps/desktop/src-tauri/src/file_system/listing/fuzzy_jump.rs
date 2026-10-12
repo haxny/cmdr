@@ -32,12 +32,8 @@ use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
 };
 
-use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::Inner;
 use cmdr_fs::entry::FileEntry;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-#[cfg(test)]
-pub use crate::file_system::listing::shims::fuzzy_jump::*;
 
 /// Returns the row number of the highest-scoring fuzzy match for `query` among the
 /// rows a pane is showing, or `None` if no entry matches.

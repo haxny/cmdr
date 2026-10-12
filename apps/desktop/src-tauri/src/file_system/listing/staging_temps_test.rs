@@ -6,9 +6,9 @@
 //! won the race against the rename and added the temp to the listing after the
 //! rename event that would have cleared it.
 
-use super::caching_test_support::{TestListing, TestListingGuard};
-use super::operations::{find_file_index, get_file_at, get_file_range, get_total_count};
-use crate::file_system::staging::{ShowTempsGuard, StagingTemp};
+use super::host::ScratchVisibility;
+use super::testing::{TestEngine, TestListing, TestListingGuard};
+use crate::file_system::staging::StagingTemp;
 use cmdr_fs::entry::FileEntry;
 use std::path::Path;
 use std::sync::Arc;
@@ -23,7 +23,7 @@ fn listing_with_temp(tag: &str, temp_name: &str) -> TestListingGuard {
         .volume("test")
         .path("/")
         .entries(vec![entry("photo.jpg"), entry(temp_name)])
-        .insert(tag)
+        .insert(&TestEngine::new(), tag)
 }
 
 /// A temp a running operation is currently writing. The returned `Arc` IS the
@@ -48,18 +48,21 @@ fn name_of(temp: &StagingTemp) -> String {
 /// reach the pane, however it got into the cache.
 #[tokio::test]
 async fn a_temp_a_running_operation_owns_is_left_out_of_the_listing() {
-    let _show = ShowTempsGuard::set(false);
     let op = running_operation();
     let temp = in_flight_temp(&op);
     let name = name_of(&temp);
     let listing = listing_with_temp("listing-temp-hidden", &name);
 
     assert_eq!(
-        get_total_count(listing.id(), true).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
         1,
         "only the real file counts"
     );
-    let range = get_file_range(listing.id(), 0, 10, true).unwrap();
+    let range = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 10, true)
+        .unwrap();
     assert_eq!(range.len(), 1);
     assert_eq!(range[0].name, "photo.jpg");
 }
@@ -68,23 +71,30 @@ async fn a_temp_a_running_operation_owns_is_left_out_of_the_listing() {
 /// behind, we owe the user the truth about what's on disk.
 #[tokio::test]
 async fn a_leftover_from_a_finished_operation_is_shown() {
-    let _show = ShowTempsGuard::set(false);
     let op = running_operation();
     let temp = in_flight_temp(&op);
     let name = name_of(&temp);
     let listing = listing_with_temp("listing-temp-leftover", &name);
 
-    assert_eq!(get_total_count(listing.id(), true).unwrap(), 1, "hidden while running");
+    assert_eq!(
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
+        1,
+        "hidden while running"
+    );
     drop(op);
 
     // The operation is gone. The guard deliberately isn't dropped: it stands in
     // for the wedged task the driver abandoned without winding down.
     assert_eq!(
-        get_total_count(listing.id(), true).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
         2,
         "a leftover nobody owns is a real file and must be visible"
     );
-    let range = get_file_range(listing.id(), 0, 10, true).unwrap();
+    let range = listing
+        .engine()
+        .inner
+        .get_file_range(listing.id(), 0, 10, true)
+        .unwrap();
     assert!(range.iter().any(|e| e.name == name), "the leftover must be listed");
 }
 
@@ -98,21 +108,37 @@ async fn a_leftover_from_a_finished_operation_is_shown() {
 /// bypasses `visible_entries` fails here.
 #[tokio::test]
 async fn every_accessor_agrees_on_whether_a_temp_is_there() {
-    let _show = ShowTempsGuard::set(false);
     let op = running_operation();
     let temp = in_flight_temp(&op);
     let name = name_of(&temp);
     let listing = listing_with_temp("listing-temp-agree", &name);
 
-    assert_eq!(get_total_count(listing.id(), true).unwrap(), 1);
-    assert_eq!(get_file_range(listing.id(), 0, 10, true).unwrap().len(), 1);
+    assert_eq!(listing.engine().inner.get_total_count(listing.id(), true).unwrap(), 1);
     assert_eq!(
-        find_file_index(listing.id(), &name, true).unwrap(),
+        listing
+            .engine()
+            .inner
+            .get_file_range(listing.id(), 0, 10, true)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        listing
+            .engine()
+            .inner
+            .find_file_index(listing.id(), &name, true)
+            .unwrap(),
         None,
         "type-to-jump must not land on an entry the pane isn't showing"
     );
     assert!(
-        get_file_at(listing.id(), 1, true).unwrap().is_none(),
+        listing
+            .engine()
+            .inner
+            .get_file_at(listing.id(), 1, true)
+            .unwrap()
+            .is_none(),
         "index 1 is past the end of what the pane can see"
     );
 }
@@ -121,7 +147,6 @@ async fn every_accessor_agrees_on_whether_a_temp_is_there() {
 /// Cmdr's temporary files, and hiding them isn't a request to hide dotfiles.
 #[tokio::test]
 async fn the_scratch_filter_is_independent_of_the_dotfile_filter() {
-    let _show = ShowTempsGuard::set(false);
     let op = running_operation();
     let temp = in_flight_temp(&op);
     let name = name_of(&temp);
@@ -129,15 +154,15 @@ async fn the_scratch_filter_is_independent_of_the_dotfile_filter() {
         .volume("test")
         .path("/")
         .entries(vec![entry("photo.jpg"), entry(".gitignore"), entry(&name)])
-        .insert("listing-temp-axes");
+        .insert(&TestEngine::new(), "listing-temp-axes");
 
     assert_eq!(
-        get_total_count(listing.id(), true).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
         2,
         "hidden files shown: the dotfile appears, the scratch file still doesn't"
     );
     assert_eq!(
-        get_total_count(listing.id(), false).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), false).unwrap(),
         1,
         "hidden files off: neither appears"
     );
@@ -151,9 +176,12 @@ async fn the_setting_shows_in_flight_temps() {
     let name = name_of(&temp);
     let listing = listing_with_temp("listing-temp-setting", &name);
 
-    let _show = ShowTempsGuard::set(true);
+    listing.engine().set_scratch_visibility(ScratchVisibility {
+        show_staging_temps: true,
+        show_safe_save_files: true,
+    });
     assert_eq!(
-        get_total_count(listing.id(), true).unwrap(),
+        listing.engine().inner.get_total_count(listing.id(), true).unwrap(),
         2,
         "the setting shows Cmdr's scratch files"
     );

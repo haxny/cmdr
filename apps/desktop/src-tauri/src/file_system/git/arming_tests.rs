@@ -14,10 +14,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::{list_directory_end, list_directory_start_with_volume};
+use crate::file_system::listing::ListingId;
+use crate::file_system::listing::testing::{read_to_end, request};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
+use crate::listing_host::listings;
 use crate::test_support::wait_until_async;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 
@@ -33,7 +34,6 @@ struct Repo {
 impl Repo {
     fn build(name: &str) -> Self {
         wiring::set_virtual_portal_enabled(true);
-        arming::register();
 
         let dir = temp_dir("arming", name);
         let mut fixture = Fixture::init(dir.clone());
@@ -56,17 +56,11 @@ impl Repo {
 
     /// Opens `path` the way a pane does, answering the listing id to close with.
     async fn open(&self, path: &Path) -> String {
-        list_directory_start_with_volume(
-            &self.volume_id,
-            path,
-            true,
-            SortColumn::Name,
-            SortOrder::Ascending,
-            DirectorySortMode::LikeFiles,
-        )
-        .await
-        .expect("the pane opens the listing")
-        .listing_id
+        let listing_id = uuid::Uuid::new_v4().to_string();
+        read_to_end(listings(), &request(&listing_id, &self.volume_id, path))
+            .await
+            .expect("the pane opens the listing");
+        listing_id
     }
 
     fn drop_it(self) {
@@ -101,7 +95,7 @@ async fn a_lone_portal_listing_arms_the_repos_watcher() {
         "the repo the pane is standing in has a live watch"
     );
 
-    list_directory_end(&listing);
+    listings().end(&ListingId::new(&listing));
     watched_repos_settle_at(0).await;
     repo.drop_it();
 }
@@ -115,7 +109,7 @@ async fn a_lone_dot_git_listing_arms_the_repos_watcher() {
     let listing = repo.open(&repo.dot_git()).await;
     watched_repos_settle_at(1).await;
 
-    list_directory_end(&listing);
+    listings().end(&ListingId::new(&listing));
     watched_repos_settle_at(0).await;
     repo.drop_it();
 }
@@ -131,14 +125,14 @@ async fn two_listings_on_one_repo_share_a_watch_until_the_last_one_closes() {
     let dot_git = repo.open(&repo.dot_git()).await;
     watched_repos_settle_at(1).await;
 
-    list_directory_end(&branches);
+    listings().end(&ListingId::new(&branches));
     watched_repos_settle_at(1).await;
     assert!(
         wiring::portal().fire_watcher(&repo.root),
         "the `.git/` listing still holds the watch"
     );
 
-    list_directory_end(&dot_git);
+    listings().end(&ListingId::new(&dot_git));
     watched_repos_settle_at(0).await;
     repo.drop_it();
 }

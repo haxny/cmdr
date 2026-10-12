@@ -23,11 +23,9 @@ use cmdr_fs::volume::{
 };
 use tokio::sync::Notify;
 
-use super::caching::notify_full_refresh;
-use super::caching_test_support::TestListing;
+use super::Listings;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::watcher::handle_directory_change;
+use super::testing::{TestEngine, TestListing};
 use crate::test_support::wait_until_async;
 
 fn entry(dir: &Path, name: &str) -> FileEntry {
@@ -153,13 +151,22 @@ impl Volume for GatedListVolume {
     }
 }
 
-/// A fresh volume id and directory, the volume registered under it.
-fn register(tag: &str, script: Vec<Read>) -> (String, PathBuf, Arc<GatedListVolume>) {
+/// An engine with a fresh volume id and directory, the volume registered under it.
+fn register(tag: &str, script: Vec<Read>) -> (TestEngine, String, PathBuf, Arc<GatedListVolume>) {
     let volume_id = unique_test_id(&format!("{tag}-vol"));
     let dir = PathBuf::from(format!("/test/{}", unique_test_id(&format!("{tag}-dir"))));
     let volume = Arc::new(GatedListVolume::new(script));
-    get_volume_manager().register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
-    (volume_id, dir, volume)
+    let engine = TestEngine::builder()
+        .volume(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>)
+        .build();
+    (engine, volume_id, dir, volume)
+}
+
+/// `engine`'s `FullRefresh` of `dir` for `listing_id`, on a task of its own.
+fn spawn_full_refresh(engine: &Listings, volume_id: &str, dir: &Path, listing_id: &str) -> tokio::task::JoinHandle<()> {
+    let inner = Arc::clone(&engine.inner);
+    let (volume_id, dir, listings) = (volume_id.to_string(), dir.to_path_buf(), sort_of(listing_id));
+    tokio::spawn(async move { inner.notify_full_refresh(volume_id, dir, listings).await })
 }
 
 fn names(entries: Vec<FileEntry>) -> Vec<String> {
@@ -176,8 +183,9 @@ fn sort_of(id: &str) -> Vec<(String, SortColumn, SortOrder, DirectorySortMode)> 
 }
 
 /// Whether a `FullRefresh` of `dir` is queued behind the running one.
-fn refresh_queued(volume_id: &str, dir: &Path) -> bool {
-    super::installed()
+fn refresh_queued(engine: &Listings, volume_id: &str, dir: &Path) -> bool {
+    engine
+        .inner
         .refresh_slots
         .read_ignore_poison()
         .get(&(volume_id.to_string(), dir.to_path_buf()))
@@ -192,7 +200,7 @@ async fn a_slow_full_refresh_cannot_land_over_a_newer_refresh() {
     // the pane shows the half-written folder until something else changes it.
     let gate = Arc::new(Notify::new());
     // Scripted below, once the directory's name is known.
-    let (volume_id, dir, volume) = register("gen-slow-first", Vec::new());
+    let (engine, volume_id, dir, volume) = register("gen-slow-first", Vec::new());
     let mid_write = vec![entry(&dir, "alpha")];
     let complete = vec![entry(&dir, "alpha"), entry(&dir, "bravo"), entry(&dir, "charlie")];
     {
@@ -210,19 +218,15 @@ async fn a_slow_full_refresh_cannot_land_over_a_newer_refresh() {
         .volume(&volume_id)
         .path(dir.clone())
         .entries(mid_write)
-        .insert("gen-slow-first");
+        .insert(&engine, "gen-slow-first");
 
-    let slow = tokio::spawn(notify_full_refresh(
-        volume_id.clone(),
-        dir.clone(),
-        sort_of(listing.id()),
-    ));
+    let slow = spawn_full_refresh(&engine, &volume_id, &dir, listing.id());
     wait_until_async(Duration::from_secs(5), "the FullRefresh to start reading", || {
         volume.started() == 1
     })
     .await;
 
-    handle_directory_change(listing.id()).await;
+    engine.refresh(&listing.listing_id()).await;
     assert_eq!(names(listing.entries()), ["alpha", "bravo", "charlie"]);
 
     gate.notify_one();
@@ -240,7 +244,7 @@ async fn a_queued_full_refresh_still_lands_after_a_refresh_that_published_while_
     // The generation is taken when a read STARTS, after its turn, never when it was
     // queued: this `FullRefresh` waits behind a held turn while a ⌘R publishes, and
     // then reads the folder LATER than that ⌘R did, so its read is the newer one.
-    let (volume_id, dir, volume) = register("gen-queued", Vec::new());
+    let (engine, volume_id, dir, volume) = register("gen-queued", Vec::new());
     let read_by_refresh = vec![entry(&dir, "alpha")];
     let read_by_queued = vec![entry(&dir, "alpha"), entry(&dir, "bravo")];
     {
@@ -258,22 +262,18 @@ async fn a_queued_full_refresh_still_lands_after_a_refresh_that_published_while_
         .volume(&volume_id)
         .path(dir.clone())
         .entries(Vec::new())
-        .insert("gen-queued");
+        .insert(&engine, "gen-queued");
 
-    let turn = super::installed().refresh_turn(&volume_id, &dir).await;
-    let queued = tokio::spawn(notify_full_refresh(
-        volume_id.clone(),
-        dir.clone(),
-        sort_of(listing.id()),
-    ));
+    let turn = engine.inner.refresh_turn(&volume_id, &dir).await;
+    let queued = spawn_full_refresh(&engine, &volume_id, &dir, listing.id());
     wait_until_async(
         Duration::from_secs(5),
         "the FullRefresh to queue behind the held turn",
-        || refresh_queued(&volume_id, &dir),
+        || refresh_queued(&engine, &volume_id, &dir),
     )
     .await;
 
-    handle_directory_change(listing.id()).await;
+    engine.refresh(&listing.listing_id()).await;
     assert_eq!(names(listing.entries()), ["alpha"]);
 
     drop(turn);

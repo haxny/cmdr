@@ -20,7 +20,7 @@ use std::path::Path;
 
 use cmdr_fs::volume::Volume;
 
-use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::Inner;
 use crate::file_system::listing::listing_id::ListingId;
 
 /// A listing that just entered the cache, as an observer hears it. The facts an

@@ -1065,6 +1065,36 @@ parts); `TestListingGuard`'s three isolation failure modes have no analogue left
 `desktop-rust-tests-linux`, `nextest-filter-coverage`, `desktop-rust-test-sleep`, `desktop-rust-fixed-temp-dir`,
 `desktop-rust-no-hand-rolled-fixture`, `--include-slow` once at the end.
 
+Executor notes:
+
+- Fixtures are `listing/testing/` (`#[cfg(test)]` until M5 gates it on `testing`): `TestEngine` (derefs to `Listings`;
+  `events` / `volumes` / `leases` are its recorders), `TestListing::insert(&engine, tag)` → `TestListingGuard` (holds
+  the engine, ends its listing on drop), `FakeVolumes`, `RecordingEvents`, `RecordingLeases`, `FixedLocale` (`en` by
+  default), `FakeMountTable`, `RecordingObserver`, `StaticOverlay`, the scripted volumes, and helpers the app's tests
+  use on its one engine (`read_to_end`, `request`, `hold_diffs`, `pending_changes`, `decorate`, `full_refresh`). Crate
+  tests reach internals through `engine.inner`. `host/testing.rs` folded in; no `FakeIndex` (`index_sizes_test`'s
+  scripted index stays local, the only user).
+- `Inner` moved to `listing/mod.rs` and `reread.rs`'s `impl Listings` to `engine/reread.rs`: that's what cleared the
+  `[16]` `module-cycles` tangle (the root is the implementers' parent, so it collapses as a hub). M5: `Inner` goes in
+  `lib.rs`, or the per-concern modules go under the module that defines it; a sibling home re-creates the tangle.
+- `Inner`'s overlay and observer lists lost their `RwLock` (test registration is gone); the test binary's engine
+  (`listing_host::test_listings`) now carries the git overlay and the watch and git-arming observers as `install` does,
+  plus an app-side lifecycle probe (`listing_host/tests/support.rs`). `git::overlay::register` / `arming::register`
+  went.
+- `ShowTempsGuard` and `staging`'s test shims went: scratch visibility is per engine, and `staging.rs`'s own cells test
+  `hidden_with_settings` directly. `compute_diff` / `visible_rows::shows` take a `ScratchVisibility`.
+- App-side (`listing_host/tests/`): the moved cells (archive watch, SMB pane close, MTP path, overlay refresh, the
+  events adapter's reaction matrix, the SMB-upgrade respell), plus app cells for the volumes and index adapters, the
+  lease, the local reader's progress, the watch going with an ended listing, and the watch's disarm order; locale and
+  mount-table cells sit in `listing_host/locale.rs` / `mounts.rs`. `listing_host::engine_reporting_to(events)` builds an
+  app-wired engine for a cell that reads the reports. The observer order is pinned only as far as "the watch before the
+  probe"; git arming's place isn't observable without a repo-level probe.
+- Splits and renames (test count 8,166 → 8,173): `lifecycle_order_test`'s sync-start arming cell became the crate's
+  `a_synchronously_started_listing_tells_its_observers_it_opened`; `inmemory_test`'s two streaming-state cells moved to
+  `operations_test`; `overlay_refresh_test`'s diff-patch cell moved to the crate's `overlay_read_paths_test`; a crate
+  cell for `Unregistered::NotConnected` is new. `streaming_test`, `stall_test`, `collation_test`, the oracle,
+  replacement, and reaper cells run on `FakeVolumes`, `FakeMountTable`, and `FixedLocale`.
+
 ### M5: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/listing crates/cmdr-listing/src` (then the `src/*/` grouping

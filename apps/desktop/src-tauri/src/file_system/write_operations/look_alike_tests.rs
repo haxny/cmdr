@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::*;
-use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard, WatchCoverageVolume};
+use crate::file_system::listing::testing::{TestListing, TestListingGuard, WatchCoverageVolume};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, WatchCoverage};
 use crate::file_system::write_operations::create::create_directory_core;
@@ -85,7 +85,7 @@ async fn share_with_pane_listing(
         .volume(&id)
         .path("/dir")
         .entries(vec![entry(pane_holds)])
-        .insert(tag);
+        .insert(crate::listing_host::listings(), tag);
     (id, volume, listing)
 }
 

@@ -16,11 +16,8 @@ use super::*;
 use crate::adb::test_support::{
     a_fake_phone, a_listed_phone, dial, dials_seen, phone, registry_and_provider_agree, retire_phone,
 };
-use crate::file_system::listing::caching_test_support::TestListingGuard;
 use crate::file_system::listing::host::ListingEvents;
-use crate::file_system::listing::host::testing::RecordingEvents;
-use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
+use crate::file_system::listing::testing::{RecordingEvents, TestListingGuard, read_to_end, request};
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 
@@ -321,23 +318,11 @@ async fn a_pane_on_an_adb_path_lists_the_phone_through_the_listing_pipeline() {
         .await
         .expect("the fake phone dials");
 
-    let listing = TestListingGuard::adopt(unique_test_id("adb-pane-listing"));
     let sink = Arc::new(RecordingEvents::new());
-    let events: Arc<dyn ListingEvents> = Arc::clone(&sink) as Arc<dyn ListingEvents>;
-    let state = Arc::new(StreamingListingState::new());
+    let engine = crate::listing_host::engine_reporting_to(Arc::clone(&sink) as Arc<dyn ListingEvents>);
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("adb-pane-listing"));
     let pane_path = format!("adb://{SERIAL}/sdcard");
-    let outcome = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        &volume_id,
-        Path::new(&pane_path),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    )
-    .await;
+    let outcome = read_to_end(&engine, &request(listing.id(), &volume_id, Path::new(&pane_path))).await;
     assert!(outcome.is_ok(), "the listing pipeline reads the phone; got {outcome:?}");
     assert!(sink.failed.lock().unwrap().is_empty(), "no listing error was emitted");
 
@@ -406,20 +391,16 @@ async fn listing_a_listed_phone_nobody_dialed_says_it_is_not_connected() {
     const SERIAL: &str = "R58M-Undialed-Listing";
     list_undialed_phone(SERIAL);
 
-    let listing = TestListingGuard::adopt(unique_test_id("adb-undialed-listing"));
-    let events: Arc<dyn ListingEvents> = Arc::new(RecordingEvents::new());
-    let state = Arc::new(StreamingListingState::new());
+    let engine = crate::listing_host::listings();
+    let listing = TestListingGuard::adopt(engine, unique_test_id("adb-undialed-listing"));
     let pane_path = format!("adb://{SERIAL}/sdcard");
-    let outcome = read_directory_with_progress(
-        &events,
-        listing.id(),
-        &state,
-        &cmdr_fs::volume::adb_volume_id(SERIAL),
-        Path::new(&pane_path),
-        true,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
+    let outcome = read_to_end(
+        engine,
+        &request(
+            listing.id(),
+            &cmdr_fs::volume::adb_volume_id(SERIAL),
+            Path::new(&pane_path),
+        ),
     )
     .await;
 

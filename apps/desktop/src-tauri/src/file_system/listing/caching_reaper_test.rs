@@ -4,22 +4,26 @@
 //! `list_directory_end` IPC was never delivered. The crux is that the reaper keys on
 //! `last_accessed_ms` (refreshed on every live-pane access), NOT `created_at` (stamped
 //! once), so a long-open-but-still-used listing is never evicted. The positive test
-//! proves a stale listing AND its watcher are torn down together; the negative test
-//! proves a freshly-touched listing survives even when it was created long ago.
+//! proves a stale listing ends the way a pane's close does, observers told after
+//! the cache removal; the negative test proves a freshly-touched listing survives
+//! even when it was created long ago. That the app's change watch goes with an
+//! ended listing is `listing_host/tests/caching_reaper_test.rs`.
 //!
-//! Every wired sweep here goes through `reap_orphaned_listings_at_for`, scoped to
-//! the ids this test owns. An unrestricted sweep would evict concurrently-running
-//! tests' listings out of the process-global cache.
+//! Every sweep here is scoped to the ids the test names, the way the reaper's
+//! own scoped entry point is.
 
-use super::cached_listing::listing_cache;
-use super::caching_test_support::TestListing;
-use super::operations::{ListingLookupError, get_file_at, keep_listings_alive};
-use super::orphan_reaper::{ORPHAN_IDLE_WINDOW, orphan_ids, reap_orphaned_listings_at_for};
-use crate::file_system::watcher::{WATCHER_MANAGER, start_watching};
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use std::sync::Arc;
 
-fn is_watched(id: &str) -> bool {
-    WATCHER_MANAGER.read_ignore_poison().watches.contains_key(id)
+use super::operations::ListingLookupError;
+use super::orphan_reaper::{ORPHAN_IDLE_WINDOW, orphan_ids};
+use super::testing::{Heard, RecordingObserver, TestEngine, TestListing};
+
+/// An engine whose observer records every open and close.
+fn observed_engine() -> (TestEngine, Arc<RecordingObserver>) {
+    let observer = RecordingObserver::new();
+    let engine = TestEngine::builder().observer(observer.clone()).build();
+    observer.attach(&engine);
+    (engine, observer)
 }
 
 // ---- pure helper: orphan_ids ------------------------------------------------
@@ -60,30 +64,34 @@ fn orphan_ids_empty_for_all_fresh() {
 
 #[test]
 fn reaper_evicts_stale_listing_and_its_watcher_together() {
-    // A real directory so `start_watching` can attach an FSEvents watcher. No
-    // AppHandle is needed to STORE the watcher in WATCHER_MANAGER; the handle only
-    // matters for emitting events, which this test doesn't exercise.
-    let dir = tempfile::tempdir().unwrap();
+    let (engine, observer) = observed_engine();
     let window_ms = ORPHAN_IDLE_WINDOW.as_millis() as u64;
 
     // Last access at the epoch (ancient).
-    let listing = TestListing::new().path(dir.path()).last_accessed_ms(0).insert("orphan");
-    start_watching(listing.id(), dir.path()).expect("start_watching should succeed on a real dir");
-
+    let listing = TestListing::new()
+        .path("/orphan")
+        .last_accessed_ms(0)
+        .insert(&engine, "orphan");
     assert!(listing.is_cached(), "precondition: listing is cached");
-    assert!(is_watched(listing.id()), "precondition: watcher is attached");
 
     // now = window → idle == window → orphan.
-    let reaped = reap_orphaned_listings_at_for(window_ms, window_ms, &[listing.id()]);
+    let reaped = engine
+        .inner
+        .reap_orphaned_listings_at_for(window_ms, window_ms, &[listing.id()]);
 
     assert!(
         reaped.contains(&listing.id().to_string()),
         "reaper should report the orphaned listing"
     );
     assert!(!listing.is_cached(), "reaper must remove the cache entry");
-    assert!(
-        !is_watched(listing.id()),
-        "reaper must tear down the watcher too (reusing list_directory_end's stop_watching)"
+    assert_eq!(
+        observer.heard(),
+        [Heard::Closed {
+            id: listing.id().to_string(),
+            cached: false
+        }],
+        "the reaper ends the listing the way a pane's close does, so every observer \
+         (the change watch among them) lets go of it, after the cache removal"
     );
 }
 
@@ -91,7 +99,7 @@ fn reaper_evicts_stale_listing_and_its_watcher_together() {
 
 #[test]
 fn reaper_keeps_recently_touched_listing_even_if_created_long_ago() {
-    let dir = tempfile::tempdir().unwrap();
+    let (engine, observer) = observed_engine();
     let window_ms = ORPHAN_IDLE_WINDOW.as_millis() as u64;
 
     // Touched "just now" relative to the injected clock: last_accessed_ms == now. The
@@ -100,23 +108,31 @@ fn reaper_keeps_recently_touched_listing_even_if_created_long_ago() {
     // the window so the only reason this listing survives is its fresh stamp, not a
     // small absolute clock.
     let now = 50 * window_ms;
-    let listing = TestListing::new().path(dir.path()).last_accessed_ms(now).insert("live");
-    start_watching(listing.id(), dir.path()).expect("start_watching should succeed on a real dir");
+    let listing = TestListing::new()
+        .path("/live")
+        .last_accessed_ms(now)
+        .insert(&engine, "live");
 
-    let reaped = reap_orphaned_listings_at_for(now, window_ms, &[listing.id()]);
+    let reaped = engine
+        .inner
+        .reap_orphaned_listings_at_for(now, window_ms, &[listing.id()]);
 
     assert!(
         !reaped.contains(&listing.id().to_string()),
         "a just-touched listing must NOT be reaped (this is the don't-evict-live guarantee)"
     );
     assert!(listing.is_cached(), "live listing's cache entry must survive");
-    assert!(is_watched(listing.id()), "live listing's watcher must survive");
+    assert!(
+        observer.heard().is_empty(),
+        "live listing's observers (its watcher among them) hear no close"
+    );
 }
 
 // ---- touch() refreshes the stamp so a long-open pane is never reaped ---------
 
 #[test]
 fn touch_rescues_a_listing_that_would_otherwise_be_orphaned() {
+    let engine = TestEngine::new();
     let window_ms = ORPHAN_IDLE_WINDOW.as_millis() as u64;
     let now = 50 * window_ms;
 
@@ -124,7 +140,7 @@ fn touch_rescues_a_listing_that_would_otherwise_be_orphaned() {
     let listing = TestListing::new()
         .path("/no/watcher")
         .last_accessed_ms(0)
-        .insert("touch");
+        .insert(&engine, "touch");
     assert!(
         !orphan_ids(now, window_ms, std::iter::once((listing.id(), 0))).is_empty(),
         "precondition: a stamp of 0 is orphan-eligible at now = 50x window"
@@ -132,15 +148,15 @@ fn touch_rescues_a_listing_that_would_otherwise_be_orphaned() {
 
     // ...then a live-pane access touches it (same path the read accessors take: hold
     // the cache read lock and stamp `last_accessed_ms` via `touch()`). `touch()` uses
-    // the REAL clock (`epoch_millis_now()`), which in-process is a tiny value — far
+    // the engine's REAL clock (`epoch_millis_now()`), which is a tiny value — far
     // below the injected `now` of 50x window. So the touched stamp's idle time at the
     // injected `now` is still ~50x window, which would STILL look orphaned under that
     // synthetic clock. To prove touch() works against the clock it actually uses, run
     // the reaper with the real clock + real window: the just-touched stamp is fresh.
     listing.with_listing(|cached| cached.touch());
 
-    let reaped = reap_orphaned_listings_at_for(
-        super::cached_listing::epoch_millis_now(),
+    let reaped = engine.inner.reap_orphaned_listings_at_for(
+        engine.inner.epoch_millis_now(),
         ORPHAN_IDLE_WINDOW.as_millis() as u64,
         &[listing.id()],
     );
@@ -160,16 +176,17 @@ fn touch_rescues_a_listing_that_would_otherwise_be_orphaned() {
 
 #[test]
 fn keep_listings_alive_rescues_an_idle_listing_from_the_reaper() {
+    let engine = TestEngine::new();
     let listing = TestListing::new()
         .path("/idle/overnight")
         .last_accessed_ms(0)
-        .insert("heartbeat");
+        .insert(&engine, "heartbeat");
 
-    let unknown = keep_listings_alive(&[listing.id().to_string()]);
+    let unknown = engine.inner.keep_listings_alive(&[listing.id().to_string()]);
     assert!(unknown.is_empty(), "a cached listing isn't reported unknown");
 
-    let reaped = reap_orphaned_listings_at_for(
-        super::cached_listing::epoch_millis_now(),
+    let reaped = engine.inner.reap_orphaned_listings_at_for(
+        engine.inner.epoch_millis_now(),
         ORPHAN_IDLE_WINDOW.as_millis() as u64,
         &[listing.id()],
     );
@@ -179,10 +196,11 @@ fn keep_listings_alive_rescues_an_idle_listing_from_the_reaper() {
 
 #[test]
 fn keep_listings_alive_names_the_listings_it_no_longer_holds() {
-    let live = TestListing::new().path("/live").insert("heartbeat-live");
+    let engine = TestEngine::new();
+    let live = TestListing::new().path("/live").insert(&engine, "heartbeat-live");
     let gone = "heartbeat-never-existed".to_string();
 
-    let unknown = keep_listings_alive(&[live.id().to_string(), gone.clone()]);
+    let unknown = engine.inner.keep_listings_alive(&[live.id().to_string(), gone.clone()]);
 
     assert_eq!(
         unknown,
@@ -193,7 +211,11 @@ fn keep_listings_alive_names_the_listings_it_no_longer_holds() {
 
 #[test]
 fn reading_a_missing_listing_is_a_typed_gone_error() {
-    let err = get_file_at("read-never-existed", 0, false).expect_err("no such listing");
+    let engine = TestEngine::new();
+    let err = engine
+        .inner
+        .get_file_at("read-never-existed", 0, false)
+        .expect_err("no such listing");
     assert!(matches!(err, ListingLookupError::Gone { ref listing_id } if listing_id == "read-never-existed"));
 }
 
@@ -201,16 +223,21 @@ fn reading_a_missing_listing_is_a_typed_gone_error() {
 
 #[test]
 fn a_reaper_sweep_leaves_a_sibling_tests_listing_alone() {
-    // Pre-fix this failed: the wired reaper tests swept the WHOLE process-global
-    // cache with an injected clock far past the idle window, so every other listing
-    // test's fixture was evicted (watcher and all) mid-assertion. Two defenses now:
-    // the sweep is scoped to this test's ids, and `TestListing` stamps
-    // `last_accessed_ms` at NOW, so a fixture isn't orphan-eligible to begin with.
+    let engine = TestEngine::new();
+    // A scoped sweep takes only the ids it names, even with an injected clock far
+    // past the idle window that makes every listing look stale. The host's test
+    // binary shares ONE engine, where an unscoped sweep would evict every other
+    // test's fixture mid-assertion.
     let window_ms = ORPHAN_IDLE_WINDOW.as_millis() as u64;
-    let sibling = TestListing::new().path("/sibling").insert("sibling");
-    let mine = TestListing::new().path("/mine").last_accessed_ms(0).insert("mine");
+    let sibling = TestListing::new().path("/sibling").insert(&engine, "sibling");
+    let mine = TestListing::new()
+        .path("/mine")
+        .last_accessed_ms(0)
+        .insert(&engine, "mine");
 
-    let reaped = reap_orphaned_listings_at_for(50 * window_ms, window_ms, &[mine.id()]);
+    let reaped = engine
+        .inner
+        .reap_orphaned_listings_at_for(50 * window_ms, window_ms, &[mine.id()]);
 
     assert!(
         reaped.contains(&mine.id().to_string()),
@@ -223,15 +250,16 @@ fn a_reaper_sweep_leaves_a_sibling_tests_listing_alone() {
 
 #[test]
 fn guard_removes_its_listing_even_when_the_test_body_panics() {
-    // Pins the panic-safety `TestListingGuard` exists for: an assertion that fails
-    // before a hand-rolled `cache.remove(...)` used to leak the entry into every
-    // later test's view of the process-global cache.
-    let id = std::panic::catch_unwind(|| {
-        let listing = TestListing::new().insert("panic-safety");
+    // Pins the panic-safety `TestListingGuard` exists for: on the host's shared
+    // engine, an assertion that fails before a hand-rolled end would leak the
+    // listing into every later test's view of it.
+    let engine = TestEngine::new();
+    let id = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let listing = TestListing::new().insert(&engine, "panic-safety");
         let id = listing.id().to_string();
         assert!(listing.is_cached());
         panic!("simulated assertion failure while the listing is cached: {id}");
-    })
+    }))
     .expect_err("the closure should have panicked");
     let id = id
         .downcast_ref::<String>()
@@ -242,7 +270,7 @@ fn guard_removes_its_listing_even_when_the_test_body_panics() {
         .to_string();
 
     assert!(
-        !listing_cache().read_ignore_poison().contains_key(&id),
+        !engine.inner.contains(&id),
         "Drop must remove the entry on unwind, not only on the happy path"
     );
 }
