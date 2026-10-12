@@ -544,11 +544,9 @@ Pinned by `copy_tree_order_tests.rs` (a reversed-listing source: the merge, both
 
 ## What the drivers report while they run
 
-Every leaf's `LeafProgress` is also its transfer-tree row, and the merge walker finds each child's row through one
-`TreeLevel` per listed folder (`merge_level`'s `folder` argument, observation only); a rename move's tree is its items,
-done as each rename lands (`move_same.rs::landed_whole`). Every driver also reports each top-level source's verdict on
-`write-source-item-done`. Who reports what, and why the tree can never reach back into a transfer:
-`../../transfer_tree/DETAILS.md` § "How drivers report" and `../../DETAILS.md` § "Per-source outcomes". Pinned by
+Every driver reports each file's transfer-tree row and each top-level source's verdict on `write-source-item-done`,
+both observation only. Who reports what: `../../transfer_tree/DETAILS.md` § "How drivers report" and `../../DETAILS.md`
+§ "Per-source outcomes". Pinned by
 `copy_tree_rows_tests.rs` (several files in flight across folders under the concurrent driver, skip-all, a mid-walk
 skip, a failure naming its file, a cancel leaving rows waiting, and each driver's verdicts).
 

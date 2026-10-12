@@ -1,8 +1,8 @@
 # Transfer tree: details
 
 Read this before any non-trivial work here. Must-knows: `CLAUDE.md`. What the tree promises the person watching it,
-and the frontend half: `apps/desktop/src/lib/file-operations/transfer-tree/DETAILS.md`. Designed in
-`docs/specs/transfer-tree-progress.md` (issue #382).
+and the frontend half: `apps/desktop/src/lib/file-operations/transfer-tree/DETAILS.md`. Issue:
+[#382](https://github.com/vdavid/cmdr/issues/382).
 
 **Budget for a million-file job**: ≤ 64 B per node in memory (below), freed when the operation settles; ≤ 200 rows per
 view answer and ≤ 2,000 hand toggles each way per request; O(depth) per file boundary and O(|expansion| + 200) per
@@ -133,8 +133,11 @@ A driver holds a `TreeReporter` (`TransferTreeSlot::reporter`), cloned freely, s
   top-level source's row (`for_source` looks it up by path); a top-level file's leaf is that row.
 - **The merge walker resolves rows per level** (`../transfer/volume/merge.rs`): one `TreeLevel` per listed folder,
   children by name, built once and dropped with the level. A child the scan never saw (an opaque folder's contents, a
-  file that appeared since) joins the tree there (`discover`); a name whose kind changed since the scan gets no row. A
-  level that finished marks its folder in place (only an empty one reads it). The sequential extractor's plan pass
+  file that appeared since) joins the tree there (`discover`), and an opaque folder's totals already count it, so
+  `discover` adds a found file's totals only up to the nearest opaque ancestor. A name whose kind changed since the scan
+  gets no row. The walker asks by the scan's kind (`merges_as_a_directory`): a link the scan counted as one file, which
+  a stat-following backend's walk recurses through, keeps its file row, and that level completes it. A level that
+  finished marks its folder in place (only an empty one reads it). The sequential extractor's plan pass
   records each member's row for its data pass (`PlannedWrite::row`).
 - **The local engine** opens a `TreeLeaf` per `FileInfo::tree_node` around `copy_single_item`, which settles it with
   its verdict in the per-file milestone (before that event goes out, so a view pulled on it already shows the row) and

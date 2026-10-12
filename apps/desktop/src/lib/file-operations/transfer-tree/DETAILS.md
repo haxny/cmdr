@@ -1,13 +1,13 @@
 # Transfer tree (frontend): details
 
 Must-knows: `CLAUDE.md`. The view command's contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view". Designed in
-`docs/specs/transfer-tree-progress.md` (issue #382).
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view". Issue:
+[#382](https://github.com/vdavid/cmdr/issues/382).
 
 ## What it promises
 
-A copy of six folders used to show one bar for the whole job, so nobody could tell which folder was untouched, which
-file was in flight, or whether the first three landed. These are the product calls (David, 2026-10-11) the code holds:
+One bar for a six-folder copy can't say which folder is untouched, which file is in flight, or whether the first three
+landed. These are the product calls (David, 2026-10-11) the code holds:
 
 - **Rows are the selection, as a tree** rooted at the sources' common parent, every label relative to it. A single-child
   folder chain is one row (`a/b`, like VS Code); a file never compacts into its folder.
@@ -93,9 +93,9 @@ The open folders whose rows scrolled away stick to the top, stacked by depth (VS
 row, with its icon, counts, and bar while at work. `pinned-headers.ts` picks them from the viewport's top row: header
 `k` is the level-`k` ancestor of the row that would show right under the stack, if that ancestor's row has scrolled
 under it. Headers that no longer enclose that row drop (a folder's last rows passing under). At most three; the third
-compacts every deeper scrolled-past folder into one header (`apps/desktop/src/lib`), so the row under the stack always
-has its parent in sight. `ancestorsOf` answers a row's chain from the loaded rows, then the view's `ancestors` (whole
-rows from the backend, counts included) for whatever sits above the window.
+compacts every deeper scrolled-past folder into one header (`a/b/c`), so the row under the stack always has its parent
+in sight. `ancestorsOf` answers a row's chain from the loaded rows, then the view's `ancestors` (whole rows from the
+backend, counts included) for whatever sits above the window.
 
 The stack is a zero-height `position: sticky` layer at the scroller's top, so the rows start under it and its headers
 float over the rows they cover. A click on a header moves the cursor to its folder's row (revealed just below the

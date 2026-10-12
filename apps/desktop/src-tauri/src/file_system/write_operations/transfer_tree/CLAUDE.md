@@ -14,7 +14,8 @@ in flight, what landed, and what's next. The backend owns the model; a view asks
 ## Must-knows
 
 - **Observation only.** Every report returns nothing a driver could branch on, is a no-op without a tree or a row, and a
-  panicking one is caught (`TransferTree::guarded`) and turns the tree off. ❌ Never let a transfer read the tree back.
+  panicking one is caught (`TransferTree::guarded`) and turns the tree off. ❌ Never let a transfer read the tree's
+  STATE back; the local engine reads only its scan-time order (`order_by_transfer_tree`).
 - **≤ 64 B per node, names included**, pinned at 1M nodes by `budget_tests.rs`. ❗ `Node` is 16 bytes on purpose; grow
   it or add a per-node side vector and the budget test says by how much. ❌ Never a global path map: the only paths kept
   are the selected sources'.
@@ -27,9 +28,6 @@ in flight, what landed, and what's next. The backend owns the model; a view asks
   focus files ∪ expanded) − collapsed`, computed per request; ❌ no per-view state on the backend.
 - **Compaction happens at flatten time**: a folder whose only child is a folder shares its row, keyed by the deepest
   id. ❌ Never compact in the model: a discovered child breaks a chain.
-- **An opaque folder's totals already count its children**: `discover` adds a found file's totals only up to the
-  nearest opaque ancestor.
-- **A failure marks its row by the error's typed path** (`WriteOperationError::item_path`), ❌ never its message.
 - **Built for copy, move, and compress only**, ❌ never delete or trash (`ScanPreviewPurpose`). A rename move's tree is
   its items alone (`from_sources`).
 - **Every driver STARTS files in tree order** (`../transfer/DETAILS.md` § "Processing order"). A new walk sorts each
