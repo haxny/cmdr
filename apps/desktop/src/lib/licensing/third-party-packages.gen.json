@@ -4259,7 +4259,7 @@
     },
     {
       "name": "zip",
-      "version": "8.6.0",
+      "version": "9.0.1",
       "license": "MIT",
       "url": "https://github.com/zip-rs/zip2"
     },
