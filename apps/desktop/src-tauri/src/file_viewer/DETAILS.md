@@ -102,7 +102,8 @@ back to it, so a live mount still opens and a missing file still answers `NotFou
 Pinned by `volume_source_test.rs` against a synthetic 5 GiB share: the open and three jumps over one reader with
 bounded bytes each, a 10-fetch drag 100 ms apart on a 200 ms-latency share all inside the 2 s deadline, the reopen on
 error, the reopen on growth, and the cache. The smb2 side is
-`cmdr-smb`'s `smb_integration_random_reader_serves_positioned_reads_over_one_handle`.
+`cmdr-smb`'s `smb_integration_random_reader_serves_positioned_reads_over_one_handle`, and
+`smb_integration_viewer_jumps_in_a_big_file_on_a_share` runs the whole path against the Docker Samba share.
 
 ## Raw byte reads
 

@@ -304,3 +304,49 @@ fn a_missing_file_on_the_share_is_not_found() {
         result.err()
     );
 }
+
+/// End to end against a real Samba share (requires Docker SMB containers): a file past
+/// the background-index limit opens through smb2 and serves rows at the start, middle,
+/// and end, with the real `SmbVolume`, the real `block_on` bridge, and the reader closed
+/// on the runtime when the session goes.
+#[test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+fn smb_integration_viewer_jumps_in_a_big_file_on_a_share() {
+    use cmdr_smb::volume::testing::{ensure_clean, make_docker_volume, share_path, test_dir_name};
+
+    let volume = tauri::async_runtime::block_on(make_docker_volume());
+    let dir = test_dir_name();
+    tauri::async_runtime::block_on(async {
+        ensure_clean(&volume, &dir).await;
+        volume.create_directory(Path::new(&dir)).await.unwrap();
+    });
+    let size = 40 * 1024 * 1024;
+    let bytes: Vec<u8> = (0..size).map(synthetic_byte).collect();
+    let relative = format!("{dir}/big.log");
+    tauri::async_runtime::block_on(volume.create_file(Path::new(&relative), &bytes)).unwrap();
+    let volume = Arc::new(volume);
+    let id = format!("viewer-vsrc-smb-{dir}");
+    get_volume_manager().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
+
+    let opened = session::open_session(&share_path(&relative), &id).expect("opens through smb2");
+    assert_eq!(opened.total_bytes, size);
+    let last_row = size / ROW_BYTES - 1;
+    for (fraction, near_row) in [(0.5, last_row / 2), (0.999, last_row * 999 / 1000), (0.0, 0)] {
+        let chunk = session::get_lines(
+            &opened.session_id,
+            SeekTarget::Fraction(fraction),
+            500,
+            &AtomicBool::new(false),
+        )
+        .expect("a jump reads");
+        let first = row_number(&chunk.rows[0].text);
+        assert!(
+            first.abs_diff(near_row) <= 1,
+            "a jump to {fraction} landed on row {first}"
+        );
+    }
+    session::close_session(&opened.session_id).unwrap();
+
+    get_volume_manager().unregister(&id);
+    tauri::async_runtime::block_on(ensure_clean(&volume, &dir));
+}
