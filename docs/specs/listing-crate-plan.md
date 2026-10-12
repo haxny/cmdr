@@ -811,6 +811,38 @@ listing in one is invisible to the other.
 finds nothing (a `const` is fine; `'static` bounds don't match); `lock-poison-allowlist.json` has no `listing/` entry;
 lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-lock-poison`, `desktop-rust-tests-linux`.
 
+Executor notes:
+
+- Each module adds its operations as an `impl Inner` block (`engine.rs` holds `Listings`, `ListingsBuilder`, `Inner`).
+  The old free functions keep their names and signatures as shims over `listing::installed()` (=
+  `listing_host::listings().inner()`), all in `listing/shims/` (one file per engine module, glob re-exported from that
+  module so no caller's path moved; M4b deletes the directory). The statics outside callers still reach are the shims
+  `listing_cache()` and the `#[cfg(test)]` `streaming_state()`. `Listings::inner()` is the temporary door M4a replaces
+  with the public API. Only shims and test code call `installed()`.
+- `operations.rs` crossed `file-length` with the methods' indentation, so the status-line counting (`ListingStats`,
+  `get_listing_stats`) moved to `stats.rs`; `operations` re-exports `ListingStats`.
+- Sorting: `entry_comparator_with(collator, …)` / `sort_entries_with(&collator, …)` take the collator, resolved before
+  any cache lock; `entry_comparator` / `sort_entries` are the shims. When M4b deletes them, rename the `_with` forms to
+  the plan's `entry_comparator(collator, …)`.
+- Scratch visibility (carry-over 1) is read once per operation before the lock and passed as a value into
+  `reconcile_scratch` / `admit_entry` / `replace_entries` / `scratch_has_drift` and `ScratchProjection`.
+  `CachedListing::new` takes `&Inner` (it builds the `ListingPath`, reads the visibility, copies the epoch for `touch`)
+  and keeps no reference. `publish_changes` / `reconcile_scratch` take the engine's `DiffQueue`.
+- `start_streaming_listing` / `read_directory_with_progress` keep their explicit `events` parameter, since tests inject
+  `RecordingEvents` into the one shared engine; per-test engines (M4b) can drop it.
+- `IndexSizeListings` (carry-over 2) reads `OpenedListing::volume_id` / `stored_path`; its liveness check is the new
+  `OpenedListing::still_open()`, which asks the engine that opened the listing, at the same point as before (check, then
+  record). Those two `dead_code` expects went; `ListingEnd`'s stay for M5 (carry-over 3).
+- Deviation: the streaming read's cancel-at-insert reported `finished(Cancelled)` while holding the cache write lock; it
+  now drops the lock first (loud rule: no seam under an engine lock). Nothing observable moves.
+- Lock-poison: every `listing/` site recovers (`*_ignore_poison`); `refresh_listing_index_sizes` keeps its `Result` but
+  no longer errs. The allowlist shrank to no `listing/` entry.
+- The two `#[cfg(test)]` per-thread probes (`scan_probe`, `lookup_probe`) moved to `probe_test_support.rs` and are
+  re-exported where they were, so the DONE grep is clean; they're measurement, not engine state.
+- `reap_orphaned_listings_at` (unscoped, injected clock) had no caller left and went; tests sweep with `_at_for`.
+- `module-cycles` (not run, slow): the shims add a `file_system → listing_host` edge beside
+  `listing_host → file_system`, so expect a `cmdr`-level tangle warning until M4b deletes them.
+
 ### M3b: Rules become types
 
 **Scope.** Three refactors, one commit each, all behavior-preserving except change 4.
