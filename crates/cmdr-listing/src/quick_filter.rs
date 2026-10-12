@@ -109,6 +109,10 @@ impl Inner {
         )
     }
 
+    #[cfg_attr(
+        test,
+        allow(clippy::too_many_arguments, reason = "the test hook is the one argument over")
+    )]
     pub(crate) fn set_listing_name_filter_inner(
         &self,
         listing_id: &str,
