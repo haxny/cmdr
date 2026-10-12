@@ -27,6 +27,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import type { TransferTreeAnswer, TransferTreeViewRequest } from '#lib/tauri-commands/index.js'
+import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
 
 const { commandMocks } = vi.hoisted(() => ({
   commandMocks: {
@@ -35,6 +37,10 @@ const { commandMocks } = vi.hoisted(() => ({
     cancelOperation: vi.fn<(id: string) => Promise<void>>(() => Promise.resolve()),
     cancelWriteOperation: vi.fn<(id: string, rollback: boolean) => Promise<void>>(() => Promise.resolve()),
     resolveWriteConflict: vi.fn(() => Promise.resolve('resolved')),
+    // A running copy's row pulls its live tree, on mount and on every tick.
+    getTransferTreeView: vi.fn<(id: string, request: TransferTreeViewRequest) => Promise<TransferTreeAnswer>>(() =>
+      Promise.resolve(oneCopyingFile),
+    ),
   },
 }))
 
@@ -391,5 +397,25 @@ describe('a scanning row', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('a running row’s tree', () => {
+  // The tree pulls on the session's tick, the same push every other view of the
+  // operation reads, so it never needs a timer of its own.
+  it('pulls a fresh window from its operation on each progress tick', async () => {
+    store._testApplySnapshot([snapshot('op-a')])
+    emitProgress(progress('op-a'))
+    mountRow('op-a')
+    await vi.waitFor(() => {
+      expect(commandMocks.getTransferTreeView).toHaveBeenCalled()
+    })
+    const before = commandMocks.getTransferTreeView.mock.calls.length
+    expect(commandMocks.getTransferTreeView.mock.calls.every(([id]) => id === 'op-a')).toBe(true)
+
+    emitProgress(progress('op-a', { filesDone: 3, bytesDone: 600 }))
+    await vi.waitFor(() => {
+      expect(commandMocks.getTransferTreeView.mock.calls.length).toBeGreaterThan(before)
+    })
   })
 })

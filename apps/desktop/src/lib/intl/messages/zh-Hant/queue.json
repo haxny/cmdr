@@ -87,6 +87,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.treeToggleAria": "這項操作中的檔案",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {隱藏這些檔案} other {顯示這些檔案}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
   "queue.row.retry": "再試一次",
   "@queue.row.retry": {
     "sourceHash": "942087c"

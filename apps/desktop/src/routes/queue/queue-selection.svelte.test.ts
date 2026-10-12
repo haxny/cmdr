@@ -13,7 +13,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, QueueMoveOutcome } from '#lib/ipc/bindings.js'
+import type { OperationSnapshot, QueueMoveOutcome, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import { oneCopyingFile } from '#lib/file-operations/transfer-tree/fixtures/one-copying-file.js'
 
 const cancelOperations = vi.fn((_ids: string[]) => Promise.resolve())
 const cancelOperation = vi.fn((_id: string) => Promise.resolve())
@@ -45,6 +46,8 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),
+  // A running copy's row embeds its live tree.
+  getTransferTreeView: vi.fn(() => Promise.resolve(oneCopyingFile)),
 }))
 
 // The window chrome the page sets up on mount: none of it is under test, and all
@@ -420,5 +423,83 @@ describe('queue window keyboard', () => {
 
     press({ key: 'ArrowLeft', code: 'ArrowLeft' })
     expect(document.activeElement).toBe(rowFor('op-1'))
+  })
+})
+
+// ── The inline tree (`QueueRow`, DETAILS § "The inline tree") ─────────────────
+
+/** A tick past the scan, so a running copy's row shows its live tree. */
+function copying(operationId: string): WriteProgressEvent {
+  return {
+    operationId,
+    operationType: 'copy',
+    phase: 'copying',
+    currentFile: 'holiday.mov',
+    filesDone: 1,
+    filesTotal: 4,
+    bytesDone: 1_000,
+    bytesTotal: 16_000,
+  }
+}
+
+async function renderWithTrees(running: string[], waiting: string[] = []): Promise<void> {
+  await renderPage([
+    ...running.map((operationId) => snapshot({ operationId })),
+    ...waiting.map((operationId) => snapshot({ operationId, status: 'queued' })),
+  ])
+  for (const operationId of running) store?._testApplyProgress(copying(operationId))
+  flushSync()
+  await vi.waitFor(() => {
+    for (const operationId of running) expect(rowFor(operationId)?.querySelector('[role="treeitem"]')).not.toBeNull()
+  })
+}
+
+describe('queue window: a row’s live tree', () => {
+  it('keeps the grid’s keys out of the tree: ⌫ there cancels nothing, and ↓ stays in it', async () => {
+    await renderWithTrees(['op-1'], ['op-2'])
+    press(DOWN)
+    rowFor('op-1')?.querySelector<HTMLElement>('[role="treeitem"]')?.focus()
+
+    press({ key: 'Backspace', code: 'Backspace' })
+    press(DOWN)
+    press({ key: ' ', code: 'Space' })
+
+    expect(cancelOperation).not.toHaveBeenCalled()
+    expect(cursorRowId()).toBe('op-1')
+    expect(selectedCountText()).toBeNull()
+  })
+
+  it('Escape in the tree hands focus back to its row, where the grid keys work again', async () => {
+    await renderWithTrees(['op-1'], ['op-2'])
+    press(DOWN)
+    rowFor('op-1')?.querySelector<HTMLElement>('[role="treeitem"]')?.focus()
+
+    press({ key: 'Escape', code: 'Escape' })
+    expect(document.activeElement).toBe(rowFor('op-1'))
+
+    press(DOWN)
+    expect(cursorRowId()).toBe('op-2')
+  })
+
+  it('a click in another row’s tree moves the cursor to that row', async () => {
+    await renderWithTrees(['op-1', 'op-2'])
+    press(DOWN)
+
+    rowFor('op-2')?.querySelector<HTMLElement>('[role="treeitem"]')?.focus()
+    flushSync()
+
+    expect(cursorRowId()).toBe('op-2')
+    // Only the cursor row's tree is a Tab stop, so the grid stays one stop plus that tree.
+    expect(rowFor('op-2')?.querySelector('[role="treeitem"]')?.getAttribute('tabindex')).toBe('0')
+    expect(rowFor('op-1')?.querySelectorAll('[data-queue-tree] [tabindex="0"]')).toHaveLength(0)
+  })
+
+  it('gives each tree a collapse toggle once two rows show one, and none to a lone tree', async () => {
+    await renderWithTrees(['op-1'], ['op-2'])
+    expect(target.querySelectorAll('[aria-label="Files in this operation"]')).toHaveLength(0)
+    if (instance) void unmount(instance)
+
+    await renderWithTrees(['op-1', 'op-2'])
+    expect(target.querySelectorAll('[aria-label="Files in this operation"]')).toHaveLength(2)
   })
 })

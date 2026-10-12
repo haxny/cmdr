@@ -25,6 +25,9 @@
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
     import { requestForegroundOperation, retryFailedOperation } from '#lib/tauri-commands/index.js'
     import { offersRetry } from '../transfer/transfer-error-messages'
+    import TransferTree from '../transfer-tree/TransferTree.svelte'
+    import { rowTreeOperation } from './row-tree'
+    import { queueKeyAction } from './queue-keys'
     import { getAppLogger } from '#lib/logging/logger.js'
 
     const log = getAppLogger('queue')
@@ -38,6 +41,9 @@
         /** This row is the grid's one Tab stop (roving tabindex): the cursor row, or the
          *  first row before there's a cursor. */
         tabbable?: boolean
+        /** Two or more rows show a tree, so this one's tree gets a collapse toggle. A
+         *  lone tree is always open. The page decides: it's a question about the list. */
+        treeCollapsible?: boolean
         /** Focus landed on the row or one of its buttons, so the cursor follows it there. */
         onFocusRow?: () => void
         onToggleSelect: () => void
@@ -53,6 +59,7 @@
         selected,
         isCursor = false,
         tabbable = false,
+        treeCollapsible = false,
         onFocusRow,
         onToggleSelect,
         onDismiss,
@@ -261,6 +268,18 @@
      *  scan: the session computes it from the same ticks this row renders. */
     const scanRates = $derived(op?.scan ?? null)
 
+    /** How many rows the inline tree takes at most: room for a folder and its work,
+     *  short enough that the waiting rows below stay in view. */
+    const TREE_ROWS = 6
+
+    /** The live tree of what this operation is moving, under its readout, or `null`
+     *  (`row-tree.ts`: running or paused, past the scan, never a reversal). */
+    const treeOperation = $derived(rowTreeOperation(row))
+    /** Shut by hand through the toggle, which only exists while 2+ rows show a tree;
+     *  with one left, its tree is open again whatever this says. */
+    let treeShut = $state(false)
+    const treeOpen = $derived(treeOperation !== null && !(treeCollapsible && treeShut))
+
     const pauseResumeLabel = $derived(
         isPaused ? tString('queue.row.resume') : tString('queue.row.pause'),
     )
@@ -345,6 +364,15 @@
         }
         buttons[next].focus()
         return true
+    }
+
+    /** Escape inside the tree hands focus back to the row, where the grid's keys work
+     *  again; anywhere else it closes the window. Both read the one `queue.close`
+     *  command, so the key can't drift between them. */
+    function leaveTree(event: KeyboardEvent): void {
+        if (queueKeyAction(event)?.kind !== 'close') return
+        event.preventDefault()
+        focusRow()
     }
 
     /** A click anywhere on the row puts the cursor there, the way a click picks a
@@ -535,6 +563,26 @@
                 </span>
             </Button>
         {/if}
+        {#if treeOperation !== null && treeCollapsible}
+            <!-- Last in the row's ← / → walk, like any row button. A constant name with
+                 `aria-expanded`, so a screen reader hears the state, not a new label. -->
+            <Button
+                variant="secondary"
+                size="mini"
+                onclick={() => {
+                    treeShut = !treeShut
+                }}
+                aria-label={tString('queue.row.treeToggleAria')}
+                aria-expanded={treeOpen}
+                aria-controls="{domId}-tree"
+                tooltipContent={tString('queue.row.treeToggleTooltip', { open: treeOpen ? 'yes' : 'no' })}
+                tabindex={-1}
+            >
+                <span class="btn-inner">
+                    <Icon name={treeOpen ? 'chevron-down' : 'chevron-right'} size={13} />
+                </span>
+            </Button>
+        {/if}
         <!-- Gated on `canRollback` as well, so an operation that finishes while
              the question is up takes the question with it: there is nothing
              left to undo, and the row beneath already says so. -->
@@ -608,6 +656,24 @@
             {/if}
         </div>
     {/if}
+
+    <!-- Third line: the live tree, indented under the readout inside this row, so a
+         waiting row below (its own checkbox and icon back at the left edge) reads as
+         the next item. Tab reaches it from this row only while it's the grid's cursor
+         row; inside, the tree owns the keys and Escape returns here. DETAILS § "The
+         inline tree". -->
+    {#if treeOperation !== null && treeOpen}
+        <div class="tree-cell" role="gridcell" id="{domId}-tree" data-queue-tree onkeydown={leaveTree}>
+            <!-- The page keys each row by its operation, so this tree's id never changes. -->
+            <TransferTree
+                operationId={snapshot.operationId}
+                tick={op?.progress ?? null}
+                operation={treeOperation}
+                defaultRows={TREE_ROWS}
+                {tabbable}
+            />
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -675,6 +741,13 @@
     }
 
     .readout-cell {
+        grid-column: 3 / -1;
+        min-width: 0;
+    }
+
+    /* The tree starts where the readout does, so the gutter to its left (empty on
+       this row, the checkbox and icon on the next) says whose files these are. */
+    .tree-cell {
         grid-column: 3 / -1;
         min-width: 0;
     }

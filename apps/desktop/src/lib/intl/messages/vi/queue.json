@@ -87,6 +87,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.treeToggleAria": "Các tệp trong thao tác này",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {Ẩn các tệp} other {Hiển thị các tệp}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
   "queue.row.retry": "Thử lại",
   "@queue.row.retry": {
     "sourceHash": "942087c"

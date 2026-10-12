@@ -4,6 +4,8 @@ import QueueRow from './QueueRow.svelte'
 import { operationTypeIcon } from './operation-icon'
 import type { OperationRow } from './operations-store.svelte'
 import type { OperationSnapshot, WriteOperationError, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import type { TransferTreeAnswer, TransferTreeViewRequest } from '#lib/tauri-commands/index.js'
+import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
 import { requestForegroundOperation, retryFailedOperation } from '#lib/tauri-commands/index.js'
 
 // The component reads reactive settings (file-size format) deep in `<Size>`. The
@@ -15,9 +17,14 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
 
 // Show crosses to the main window over a Tauri event; the row's job is to ask
 // for its own operation and nothing else.
+// A running transfer's row pulls its live tree; one copying file is all it needs here.
+const getTransferTreeView = vi.hoisted(() =>
+  vi.fn<(operationId: string, request: TransferTreeViewRequest) => Promise<TransferTreeAnswer>>(),
+)
 vi.mock('#lib/tauri-commands/index.js', () => ({
   requestForegroundOperation: vi.fn(() => Promise.resolve()),
   retryFailedOperation: vi.fn(() => Promise.resolve({ kind: 'started', operationId: 'op-2' })),
+  getTransferTreeView,
 }))
 
 // The report opens in the main window; the row's job is to say what to report.
@@ -122,6 +129,8 @@ function rollbackButton(): HTMLButtonElement | null {
 beforeEach(() => {
   document.body.innerHTML = ''
   instance = undefined
+  getTransferTreeView.mockReset()
+  getTransferTreeView.mockResolvedValue(oneCopyingFile)
 })
 
 describe('QueueRow', () => {

@@ -355,6 +355,38 @@ the shared `../TransferProgressReadout.svelte` spanning line 2 from the summary 
 full row width rather than a slot beside the buttons because its columns are fixed-width: sharing a line with the status
 and two buttons would have pushed the window's minimum width past 700 px for the bars to survive. A row with no
 `write-progress` to show — a queued op, or an instant `rename` / `create_folder` / `create_file` — renders line 1 only.
+A running transfer adds a third line, its live tree (below).
+
+## The inline tree
+
+A running or paused copy, move, or compress past its scan shows `../transfer-tree/TransferTree.svelte` on a third line,
+in the readout's columns (`3 / -1`), six rows tall at most and as few as it has (a single file is one row). Which rows
+get one is `row-tree.ts` (`rowTreeOperation`), over the progress dialog's own rule (`treeOperationFor`), so the two
+surfaces agree; a queued row has written nothing and a failed one has nothing to watch, so neither gets one. The tree
+binds nothing of its own: it asks `get_transfer_tree_view` for this row's operation and pulls on the session's tick
+(`session.progress`, through the row's `bindOperationSession`).
+
+- **It reads as this row's, and the next row as the next item, by indent alone.** The tree starts under the label, so
+  its gutter (the checkbox and type icon columns) stays empty; a waiting row below brings its checkbox and icon back to
+  the left edge. No card or divider was needed.
+- **Always open with one tree in the list.** Once two rows show one (`treesCollapsible`: the queue runs one operation
+  per lane, so copies on disjoint drives run side by side), each gets a chevron `Button` at the end of its actions
+  (`aria-expanded`, `aria-controls` the tree's cell, one constant name, "Files in this operation"), open by default.
+  Shut is the row's own `$state`; with a lone tree left, it's open again whatever that says. The toggle is last in the
+  row's ← / → walk, with no key work.
+- **The window's size** (`queue-window.ts`) leaves room for one running row with its tree plus a few waiting rows; more
+  scroll.
+
+**Decision: focus reaches the tree by Tab from its row, and Escape hands it back.** **Why**: the tree is a widget of its
+own (arrows, Home / End, Left / Right, F), so it can't share keys with the grid: ⌫ inside it must not cancel the whole
+copy, and ↓ must walk the files, not the rows. So:
+
+- Tab from the grid's cursor row lands in its tree (the tree's own tab-stop row, then its Follow button). Only the
+  cursor row's tree is a Tab stop (`tabbable`), so the grid stays one stop plus that tree; Shift+Tab goes back.
+- Inside, the tree owns every key, and the page's grid hears none (`gridHears` skips `[data-queue-tree]`).
+- Escape (the `queue.close` command, read by the row's `leaveTree`) returns focus to the row instead of closing the
+  window; from the row, Escape closes it as before.
+- A click in a row's tree focuses its treeitem, and the focus bubbling up moves the cursor to that row.
 
 ## Keyboard
 
@@ -374,6 +406,8 @@ next to the buttons that do the same.
     can still be canceled. A settled failure is never selectable.
   - Enter is the row's Show; ⌫ (or ⌦) is the row's own Cancel, or Dismiss on a failure. ← / → walk the row's buttons and
     back out. ⌥↑ / ⌥↓ reorder (below). Escape closes the window.
+  - Tab from the cursor row enters its live tree, where the tree owns the keys and Escape comes back (§ "The inline
+    tree").
 - **⌘A arrives as a menu event, not a keydown.** The Edit > Select all accelerator fires before the webview sees the
   key, and every other secondary window gets the native `selectAll:` (text selection).
   `apps/desktop/src-tauri/src/menu/menu_handlers.rs` routes it to this window as `queue-select-all` instead
@@ -479,7 +513,11 @@ the MAIN window, which already holds those perms — nothing to add there (see `
   registry, so it lives in `queue-row-session.svelte.test.ts`. The readout's own behavior (both bars, percents, rates,
   time left, stall) is covered once, in `../TransferProgressReadout.svelte.test.ts`.
 - `QueueRow.a11y.test.ts`: axe over the row (a grid `row` mounted in a `grid`) in running / paused / queued / selected /
-  cursor states.
+  cursor states, and with its live tree and the tree toggle, open and shut.
+- `QueueRow.tree.test.ts` and `row-tree.test.ts`: which rows show a tree, the toggle (only with two trees, open by
+  default, `aria-expanded` / `aria-controls`), Tab reaching the tree only from the cursor row, and Escape back to the
+  row. `queue-row-session.svelte.test.ts` pins the pull on each tick, and the page test the grid keys staying out of a
+  tree.
 - `queue-keys.test.ts`: which keypress means which action, whole-combo (⌥⇧↑ is neither a reorder nor an extend).
 - `queue-cursor.svelte.test.ts`: the cursor's steps and edges, following its operation through a reorder or a finish,
   Space / ⌘A, and the ⇧-arrow range (shrinking back toward the anchor, keeping what was checked before it, skipping a

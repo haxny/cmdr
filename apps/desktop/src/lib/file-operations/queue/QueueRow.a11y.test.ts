@@ -4,9 +4,16 @@ import QueueRow from './QueueRow.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { OperationRow } from './operations-store.svelte'
 import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
+}))
+
+// A running transfer's row embeds its live tree, which asks the backend for rows.
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
+  getTransferTreeView: vi.fn(() => Promise.resolve(oneCopyingFile)),
 }))
 
 function row(
@@ -49,7 +56,12 @@ beforeEach(() => {
 
 // QueueRow is a grid `row`, so it's mounted into a `grid` the way the page does,
 // to keep the structure valid for axe (a bare `row` is a required-parent violation).
-async function mountRow(r: OperationRow, selected = false, isCursor = false): Promise<HTMLElement> {
+async function mountRow(
+  r: OperationRow,
+  selected = false,
+  isCursor = false,
+  treeCollapsible = false,
+): Promise<HTMLElement> {
   const list = document.createElement('div')
   list.setAttribute('role', 'grid')
   list.setAttribute('aria-label', 'Operations')
@@ -62,6 +74,7 @@ async function mountRow(r: OperationRow, selected = false, isCursor = false): Pr
       selected,
       isCursor,
       tabbable: isCursor,
+      treeCollapsible,
       onToggleSelect: () => {},
       onDismiss: () => {},
     },
@@ -117,6 +130,33 @@ describe('QueueRow a11y', () => {
     const button = list.querySelector('[aria-label="Show this operation in the main window"]')
     expect(button, 'the running row offers Show').not.toBeNull()
     expect(button?.getAttribute('aria-label')).toContain(button?.textContent.trim())
+    await expectNoA11yViolations(list)
+  })
+
+  // The live tree sits inside the row as a gridcell (a `row` owns only cells), and on
+  // the cursor row it's the next Tab stop.
+  it('a cursor row with its live tree has no a11y violations', async () => {
+    const list = await mountRow(row('running', 'copy', runningProgress), false, true)
+    await vi.waitFor(() => {
+      expect(list.querySelector('[role="gridcell"] [role="tree"] [role="treeitem"]')).not.toBeNull()
+    })
+    await expectNoA11yViolations(list)
+  })
+
+  // Two trees in the list: each gets a disclosure button, which must name what it
+  // shows and hides, open and shut.
+  it('the tree toggle has no a11y violations, open or shut', async () => {
+    const list = await mountRow(row('running', 'copy', runningProgress), false, true, true)
+    const toggle = list.querySelector<HTMLButtonElement>('[aria-label="Files in this operation"]')
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true')
+    await vi.waitFor(() => {
+      expect(list.querySelector('[role="treeitem"]')).not.toBeNull()
+    })
+    await expectNoA11yViolations(list)
+
+    toggle?.click()
+    await tick()
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false')
     await expectNoA11yViolations(list)
   })
 

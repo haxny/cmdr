@@ -3013,6 +3013,8 @@ export type MessageKey =
   | 'queue.row.selectAria'
   | 'queue.row.status'
   | 'queue.row.statusAwaitingAnswer'
+  | 'queue.row.treeToggleAria'
+  | 'queue.row.treeToggleTooltip'
   | 'queue.toolbar.cancelSelected'
   | 'queue.toolbar.dismissAll'
   | 'queue.toolbar.pauseAll'

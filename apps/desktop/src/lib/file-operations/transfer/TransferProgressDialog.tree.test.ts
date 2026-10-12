@@ -10,12 +10,12 @@ import { mount, tick, unmount } from 'svelte'
 import type {
   OperationSnapshot,
   TransferTreeAnswer,
-  TransferTreeView,
   TransferTreeViewRequest,
   WriteProgressEvent,
 } from '#lib/tauri-commands/index.js'
 import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
 import {
   destroyOperationSessions,
   initOperationSessions,
@@ -96,36 +96,6 @@ vi.mock('#lib/stores/volume-store.svelte.js', () => ({
 
 vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
-const oneFile: TransferTreeView = {
-  ready: true,
-  revision: 1,
-  totalRows: 1,
-  offset: 0,
-  rows: [
-    {
-      id: 1,
-      depth: 0,
-      label: 'holiday.mov',
-      kind: 'file',
-      state: 'active',
-      expanded: false,
-      hasChildren: false,
-      posInSet: 1,
-      setSize: 1,
-      filesDone: 0,
-      filesTotal: 1,
-      bytesDone: 1_000,
-      bytesTotal: 4_000,
-      skipped: 0,
-      failed: 0,
-      failure: null,
-    },
-  ],
-  ancestors: [],
-  focusRow: 0,
-  axis: 'bytes',
-}
-
 async function flushPromises(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     await new Promise<void>((resolve) => {
@@ -157,7 +127,7 @@ beforeEach(async () => {
   progressCb = null
   operationType = 'copy'
   getTransferTreeView.mockReset()
-  getTransferTreeView.mockResolvedValue(oneFile)
+  getTransferTreeView.mockResolvedValue(oneCopyingFile)
   await initOperationSessions()
 })
 

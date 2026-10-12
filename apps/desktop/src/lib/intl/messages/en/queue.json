@@ -150,6 +150,23 @@
     "screenshot": "queue-failed.png"
   },
 
+  "queue.row.treeToggleAria": "Files in this operation",
+  "@queue.row.treeToggleAria": {
+    "description": "Screen-reader name of an icon-only chevron button on a running copy, move, or compress row in the operation queue. It shows or hides the live list of the files and folders that operation is working through, which sits under the row. The screen reader adds \"expanded\" or \"collapsed\" itself, so this stays the same in both states. Only shown while two or more operations run at once.",
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.treeToggleTooltip": "{open, select, yes {Hide the files} other {Show the files}}",
+  "@queue.row.treeToggleTooltip": {
+    "description": "Tooltip on the chevron button that shows or hides the live list of files and folders under a running operation's row in the operation queue. \"Hide\" while the list is showing, \"Show\" while it's hidden.",
+    "placeholders": {
+      "open": "yes while the list is showing, no while it's hidden"
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
   "queue.row.retry": "Retry",
   "@queue.row.retry": {
     "description": "Button on an operation row that couldn’t finish, starting the same copy or move again as a new operation (same files, same destination, same choice for files that already exist there). The new operation's row takes this one's place. Shown only for reasons worth trying again, such as a network drive that dropped off. Short control label, the same verb as the Retry button in the error dialog.",

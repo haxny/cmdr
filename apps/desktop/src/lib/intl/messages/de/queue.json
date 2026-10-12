@@ -88,6 +88,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.treeToggleAria": "Dateien in diesem Vorgang",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {Dateien ausblenden} other {Dateien einblenden}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
   "queue.row.retry": "Erneut versuchen",
   "@queue.row.retry": {
     "sourceHash": "942087c"

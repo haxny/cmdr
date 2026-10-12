@@ -18,6 +18,13 @@ command's contract: `apps/desktop/src-tauri/src/file_system/write_operations/tra
   root is a `flex: 1 1 auto` column with that height as its basis and `min(rows, 3)` rows as its floor, so a resizable
   dialog's growing child stretches it and a squeezed one keeps three rows.
 
+- `tabbable` (default true): whether Tab reaches the tree (its tab-stop row, then Follow). The queue clears it on every
+  row but its grid's cursor row, so the grid stays one Tab stop plus that row's tree (`../queue/DETAILS.md` § "The
+  inline tree"). Click and code still focus a row.
+
+Which operations and phases show a tree is `tree-operation.ts` (`treeOperationFor`): a copy, move, or compress past its
+scan, never during a reversal. The dialog and the queue rows both ask it, so they can't disagree.
+
 It renders nothing for `not_a_transfer` (delete, trash), "Listing the files…" while `ready: false` (queued, scanning, or
 a tree a bug turned off), and keeps its last rows once the operation has finished.
 
@@ -100,11 +107,14 @@ pauses following.
 SMB with 8 in flight across 3 folders; failed and skipped rows). `scripted-transfer.ts` simulates the transfer and
 answers views with the backend's semantics in plain O(rows) code. `fixture-player.svelte.ts` drives one into a tree:
 `step()` for tests, `play()` at the backend's 200 ms cadence (looping) for Debug → Components → Transfer tree.
+`one-copying-file.ts` is the smallest static view, for tests of a surface that embeds the tree (the dialog, a queue
+row).
 
 ## Tests
 
-`row-format.test.ts`, `pinned-headers.test.ts` (which folders pin, the cap's compaction, dropping a passed folder),
-`transfer-tree-view.svelte.test.ts` (coalescer, follow and its lead under a deep stack, toggles, ancestors),
-`TransferTree.test.ts` (fixtures: posinset / setsize / level, keyboard, Follow, the tab stop, failure rows, the
-content-sized height), and `transfer-tree.a11y.test.ts` (axe over every fixture: preparing, mid-transfer, paused,
-finished). Axe's contrast rule is off in jsdom; `pnpm check a11y-contrast` checks the rows' color pairs in both themes.
+`row-format.test.ts`, `tree-operation.test.ts`, `pinned-headers.test.ts` (which folders pin, the cap's compaction,
+dropping a passed folder), `transfer-tree-view.svelte.test.ts` (coalescer, follow and its lead under a deep stack,
+toggles, ancestors), `TransferTree.test.ts` (fixtures: posinset / setsize / level, keyboard, Follow, the tab stop,
+failure rows, the content-sized height), and `transfer-tree.a11y.test.ts` (axe over every fixture: preparing,
+mid-transfer, paused, finished). Axe's contrast rule is off in jsdom; `pnpm check a11y-contrast` checks the rows' color
+pairs in both themes.

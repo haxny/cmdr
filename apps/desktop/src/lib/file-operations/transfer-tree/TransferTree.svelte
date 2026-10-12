@@ -33,13 +33,16 @@
         /** Rows tall at most before the host gives it more room (the dialog's 8, the queue's 6), never below
          *  three. Fewer rows take less: a single file is one row. */
         defaultRows?: number
+        /** Whether Tab reaches the tree (its cursor row, then Follow). The queue clears it on every
+         *  row but the grid's cursor row, so the grid stays one Tab stop plus that row's tree. */
+        tabbable?: boolean
     }
 
     /** A running operation by id, or a scripted fixture. Either is fixed for the tree's life. */
     type Props = CommonProps &
         ({ operationId: string; source?: never } | { source: TransferTreeSource; operationId?: never })
 
-    const { tick, operation, defaultRows = 8, operationId, source }: Props = $props()
+    const { tick, operation, defaultRows = 8, tabbable = true, operationId, source }: Props = $props()
 
     /** The physical key that resumes following (like the decision prompts' letters, never translated). */
     const FOLLOW_KEY_CODE = 'KeyF'
@@ -405,7 +408,7 @@
                     class="rows"
                     role="tree"
                     aria-label={tString('fileOperations.transferTree.treeLabel')}
-                    tabindex={tabStop === null ? 0 : -1}
+                    tabindex={tabbable && tabStop === null ? 0 : -1}
                     bind:this={treeEl}
                     style:height="calc({total} * var(--spacing-tree-row))"
                     onkeydown={onKeydown}
@@ -426,7 +429,7 @@
                                     axis={view.axis}
                                     {operation}
                                     path={pathFor(index, row)}
-                                    tabStop={index === tabStop}
+                                    tabStop={tabbable && index === tabStop}
                                 />
                             </div>
                         {/if}
@@ -442,6 +445,7 @@
                         tree.resumeFollowing()
                     }}
                     aria-keyshortcuts={FOLLOW_KEY}
+                    tabindex={tabbable ? undefined : -1}
                     tooltipContent={{
                         text: tString('fileOperations.transferTree.followTooltip'),
                         shortcut: FOLLOW_KEY,

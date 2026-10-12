@@ -32,6 +32,12 @@
         /** The key that presses this button, for a screen reader; pair it with an `aria-hidden` visible chip. */
         'aria-keyshortcuts'?: string
         /**
+         * For a button that shows and hides a region (a disclosure): the pair tells a screen
+         * reader the button opens something, which one, and whether it's open now.
+         */
+        'aria-expanded'?: boolean
+        'aria-controls'?: string
+        /**
          * `-1` takes the button out of the Tab order while it stays clickable and focusable from
          * code: for a composite widget (a grid row) whose arrow keys reach its buttons instead.
          */
@@ -56,6 +62,8 @@
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedby,
         'aria-keyshortcuts': ariaKeyshortcuts,
+        'aria-expanded': ariaExpanded,
+        'aria-controls': ariaControls,
         tabindex,
         autoFocus = false,
         children,
@@ -80,6 +88,8 @@
     aria-label={ariaLabel}
     aria-describedby={ariaDescribedby}
     aria-keyshortcuts={ariaKeyshortcuts}
+    aria-expanded={ariaExpanded}
+    aria-controls={ariaControls}
     {tabindex}
     use:tooltip={tooltipContent}
 >

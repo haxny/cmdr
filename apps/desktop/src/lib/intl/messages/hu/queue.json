@@ -87,6 +87,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.treeToggleAria": "Ennek a műveletnek a fájljai",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {Fájlok elrejtése} other {Fájlok megjelenítése}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
   "queue.row.retry": "Újra",
   "@queue.row.retry": {
     "sourceHash": "942087c"

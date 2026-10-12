@@ -9,8 +9,9 @@ over a virtual window. The progress dialog and the queue window embed `TransferT
 - `TransferTree.svelte` (the tree, keyboard, follow, the Follow button), `TransferTreeRow.svelte` (one row),
   `transfer-tree-view.svelte.ts` (per-view state: hand toggles, following, scroll, the coalesced pull),
   `transfer-tree-source.ts` (the `view(request)` interface and its IPC implementation), `row-format.ts` (what a row
-  says), `pinned-headers.ts` (which scrolled-past folders stick to the top). `fixtures/`: scripted transfers for Debug →
-  Components → Transfer tree and the tests.
+  says), `pinned-headers.ts` (which scrolled-past folders stick to the top), `tree-operation.ts` (which operations and
+  phases show a tree, for the dialog and the queue alike). `fixtures/`: scripted transfers for Debug → Components →
+  Transfer tree and the tests.
 
 ## Must-knows
 

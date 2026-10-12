@@ -16,7 +16,7 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2620 / 4167 keys have a screenshot (63%):** 1388 direct (33%) and 1232 representative (30%). 1374 remain
+**Total: 2630 / 4221 keys have a screenshot (62%):** 1388 direct (33%) and 1242 representative (29%). 1418 remain
 uncoupled, and 173 are native surfaces a webview capture cannot reach.
 
 | Area           | Direct | Representative | Uncoupled | Native | Total | Any % |
@@ -25,15 +25,15 @@ uncoupled, and 173 are native surfaces a webview capture cannot reach.
 | ai             |      0 |            123 |         0 |      0 |   123 |  100% |
 | askCmdr        |     65 |              0 |       128 |      0 |   193 |   34% |
 | commandPalette |      3 |              2 |         1 |      0 |     6 |   83% |
-| commands       |    152 |              1 |       109 |      0 |   262 |   58% |
+| commands       |    152 |              1 |       124 |      0 |   277 |   55% |
 | common         |      1 |              1 |        15 |      0 |    17 |   12% |
 | crashReporter  |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads      |     10 |              5 |        21 |      0 |    36 |   42% |
-| errorReporter  |     17 |              0 |        31 |      0 |    48 |   35% |
+| errorReporter  |     17 |              0 |        35 |      0 |    52 |   33% |
 | errors         |     98 |            439 |         0 |      0 |   537 |  100% |
 | feedback       |      7 |              5 |         1 |      0 |    13 |   92% |
 | fileExplorer   |    110 |             66 |       282 |      0 |   458 |   38% |
-| fileOperations |    107 |             68 |        90 |      0 |   265 |   66% |
+| fileOperations |    107 |             70 |       114 |      0 |   291 |   61% |
 | goToPath       |      5 |              6 |         2 |      0 |    13 |   85% |
 | indexing       |     33 |             17 |        21 |      0 |    71 |   70% |
 | licensing      |     49 |             35 |        25 |      0 |   109 |   77% |
@@ -46,16 +46,16 @@ uncoupled, and 173 are native surfaces a webview capture cannot reach.
 | onboarding     |     96 |             39 |        25 |      0 |   160 |   84% |
 | operationLog   |     26 |             29 |         0 |      0 |    55 |  100% |
 | queryUi        |     43 |            127 |         0 |      0 |   170 |  100% |
-| queue          |     25 |             13 |         2 |      0 |    40 |   95% |
+| queue          |     25 |             15 |         5 |      0 |    45 |   89% |
 | search         |      9 |             48 |         0 |      0 |    57 |  100% |
 | selection      |     14 |              0 |         1 |      0 |    15 |   93% |
 | servers        |     54 |             23 |       111 |      0 |   188 |   41% |
-| settings       |    335 |             37 |       281 |      0 |   653 |   57% |
-| shortcuts      |     32 |             29 |         0 |      0 |    61 |  100% |
+| settings       |    335 |             37 |       280 |      0 |   652 |   57% |
+| shortcuts      |     32 |             30 |         0 |      0 |    62 |  100% |
 | suggestedOps   |      0 |              0 |        38 |      0 |    38 |    0% |
-| transfer       |      2 |             12 |         0 |      0 |    14 |  100% |
-| ui             |     13 |              0 |        11 |      0 |    24 |   54% |
-| updates        |      5 |             18 |         0 |      0 |    23 |  100% |
+| transfer       |      2 |             18 |         0 |      0 |    20 |  100% |
+| ui             |     13 |              0 |        10 |      0 |    23 |   57% |
+| updates        |      5 |             17 |         0 |      0 |    22 |  100% |
 | viewer         |     27 |             75 |         0 |      0 |   102 |  100% |
 | whatsNew       |      6 |              1 |         1 |      0 |     8 |   88% |
 

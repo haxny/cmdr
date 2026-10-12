@@ -1332,7 +1332,8 @@
     "placeholders": {
       "countText": "the number of files left, already formatted for display (e.g. 1,312)"
     },
-    "screenshot": "transfer-dialog.png"
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.itemsLeft": "{count, plural, one {{countText} item left} other {{countText} items left}}",
@@ -1341,7 +1342,8 @@
     "placeholders": {
       "countText": "the number of items left, already formatted for display (e.g. 12)"
     },
-    "screenshot": "transfer-dialog.png"
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.smbNativeNote": "This share uses the system connection. Cancel and rollback may be delayed.",

@@ -42,9 +42,14 @@ const log = getAppLogger('queue')
  *  word measures plus one 4 px gap: 36 px in English, 70 px in Dutch
  *  ("Onderdelen", the widest of the ten locales), 71 px in the `en-XA`
  *  pseudo-locale (measured in the queue webview at `--font-size-sm`; macOS
- *  15.5, 2026-08-09). 80 px covers the worst of those with room to spare. */
+ *  15.5, 2026-08-09). 80 px covers the worst of those with room to spare.
+ *
+ *  The height fits one running transfer with its six-row live tree (about 245 px
+ *  with its readout) under the ~105 px header, and still shows five or so waiting
+ *  rows below it, so the line behind the work stays in view (measured in a dev
+ *  build at the default text size, 2026-10-12). */
 const BASE_WIDTH = 740
-const BASE_HEIGHT = 480
+const BASE_HEIGHT = 560
 const MIN_WIDTH = 620
 const MIN_HEIGHT = 280
 

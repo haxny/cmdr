@@ -24,7 +24,7 @@
     import KeyHint from '#lib/ui/KeyHint.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import TransferTree from '../transfer-tree/TransferTree.svelte'
-    import type { TransferTreeOperation } from '../transfer-tree/row-format'
+    import { treeOperationFor } from '../transfer-tree/tree-operation'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
@@ -286,23 +286,13 @@
      *  view with no phase yet knows too little to accuse anything of being stuck. */
     const showStall = $derived(stall !== null && !isIndeterminateProgressPhase(phase) && !phaseUnknown)
 
-    /** The operations that build a live tree of their selection. Delete, trash, and an
-     *  edit inside an existing archive keep the plain readout. */
-    const treeOperation = $derived<TransferTreeOperation | null>(
-        operationType === 'copy' || operationType === 'move' || operationType === 'compress' ? operationType : null,
+    /** The live tree of the selection, by the rule the queue rows share (`treeOperationFor`):
+     *  a copy, move, or compress past its scan, and never during a reversal. */
+    const treeOperation = $derived(
+        treeOperationFor({ operationType, phase, reversing: isRollingBack || reversalVariant !== null }),
     )
-    /** The tree shows once the operation is past its scan and has an id to ask about.
-     *  ❌ Not while a reversal runs: its rows would still say "done" about files that
-     *  are going away. */
-    const treeOperationId = $derived(
-        treeOperation !== null &&
-            !isScanning &&
-            !phaseUnknown &&
-            !isRollingBack &&
-            reversalVariant === null
-            ? progress.operationId
-            : null,
-    )
+    /** The tree also needs an id to ask about. */
+    const treeOperationId = $derived(treeOperation !== null ? progress.operationId : null)
 
     /** With an empty queue you're not queueing behind anything, you're sending
      *  this out of sight, so the button says "Background" instead. It reads the

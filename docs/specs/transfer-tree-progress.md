@@ -201,6 +201,22 @@ Code and docs: `TransferProgressDialog.svelte` and `transfer/DETAILS.md`, `Trans
   pull per tick, axe), the readout's "N left" cases, `pinned-headers.test.ts`, and a `dialog-resize.spec.ts` case that
   drags a live copy's dialog taller and checks the tree takes the height.
 
+## Built in M6 (2026-10-12), and where it differs from the plan below
+
+Code and docs: `QueueRow.svelte`, `row-tree.ts`, and `queue/DETAILS.md` § "The inline tree". Differences:
+
+- **One rule for which operations show a tree** (`transfer-tree/tree-operation.ts`, `treeOperationFor`): the dialog's
+  inline gate moved there, and the queue's `rowTreeOperation` adds only "running or paused".
+- **The toggle appears once two rows show a TREE**, not two running rows: a running delete beside one copy contests no
+  room. It's an icon-only chevron at the end of the row's actions, so it joins the ← / → walk with no key work.
+- **The focus model** (the plan left it open): Tab from the grid's cursor row enters its tree (`TransferTree` gained
+  `tabbable`, so only that row's tree is a Tab stop), the tree owns every key inside (the grid's `gridHears` skips
+  `[data-queue-tree]`, so ⌫ there can't cancel the copy), and Escape returns to the row.
+- **`Button` gained `aria-expanded` / `aria-controls`**, the disclosure pair `LinkButton` already had.
+- **Tests**: `row-tree.test.ts`, `tree-operation.test.ts`, `QueueRow.tree.test.ts`, the a11y tier's tree and toggle
+  cases, the pull-per-tick case in `queue-row-session.svelte.test.ts`, and the page's keyboard cases in
+  `queue-selection.svelte.test.ts`. The shared `fixtures/one-copying-file.ts` replaced the dialog test's own copy.
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +

@@ -8,20 +8,19 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 - `queue-window.ts` opens the window (perms in `src-tauri/capabilities/queue.json`), `operations-store.svelte.ts` is the
   single reactive source it renders from, `QueueRow.svelte` a row, shell (and keyboard) `routes/queue/+page.svelte`.
 - Pure helpers: `failure-reason.ts` (a retained failure's title/explanation/suggestion), `queue-backlog.ts`
-  (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label).
+  (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label), `row-tree.ts` (which rows show the live
+  transfer tree, and when they get a collapse toggle).
 
 ## Must-knows
 
-- **It's a HARD window, not a modal** (a real `WebviewWindow` on `/queue`, sibling to Settings): the main window stays
-  usable while operations run.
-- **Progress is DEFINED with the copy dialog, not here.** Rows render `../TransferProgressReadout.svelte` (its
-  fixed-width columns set `MIN_WIDTH`), and every ESTIMATE comes from the row's session (`bindOperationSession`), ❌
-  never the raw tick. ❌ No smoother in the store: it holds membership and the latest tick, both stateless.
-- **Two streams, never poll**: `operations-changed` is the THIN membership + status snapshot, `write-progress` drives
-  the live bars, keyed by `operationId` and pruned to snapshot membership. ❌ Don't fatten it with per-tick data.
-- **Rows cover copy/move/delete/trash AND the instant ops** (`rename` / `create_folder` / `create_file`), which emit no
-  `write-progress`, so they're a spinner + label with no bars. Icon and label arms (`operation-icon.ts`) take the
-  SNAKE_CASE wire values.
+- **It's a HARD window** (a `WebviewWindow` on `/queue`, sibling to Settings), never a modal.
+- **Progress is DEFINED with the copy dialog.** Rows render `../TransferProgressReadout.svelte` (its fixed columns set
+  `MIN_WIDTH`), every ESTIMATE comes from the row's session (`bindOperationSession`), ❌ never the raw tick, and ❌ no
+  smoother in the store (membership and the latest tick only).
+- **Two streams, never poll**: `operations-changed` is the THIN membership + status snapshot (❌ don't fatten it),
+  `write-progress` drives the bars, pruned to snapshot membership.
+- **Rows cover the instant ops too** (`rename` / `create_folder` / `create_file`): no `write-progress`, so a spinner +
+  label. `operation-icon.ts` takes the SNAKE_CASE wire values.
 - **A row with `snapshot.reverses` is an UNDO: name it from `../reversal-wording.ts`, ❌ never `operationType`**
   (undoing a copy runs as a delete, so it would read "Deleting"). Its status cell keeps the lifecycle word.
 - **The bar-is-moving truth is the SNAPSHOT `status`** (the backend's `LifecycleStatus`), and the status column names
@@ -29,22 +28,22 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   clash (`session.awaitingAnswer`, ❌ never a raw `progress.activity`). DETAILS § "A row parked on a clash".
 - **A running, PAUSED, or queued row can be `phase: 'scanning'`**: compact `ScanPhaseBody`, ❌ no dual bar (totals 0) or
   Rollback; Pause/Resume DO show. DETAILS § "A scanning row".
-- **A failed row STAYS until someone dismisses it**: the page hides only `done` / `cancelled` (`isHiddenSettledStatus`,
-  ❌ not `isTerminalStatus`); only Dismiss / "Dismiss all", a started Retry, or closing the error dialog that owns one
-  remove it. ❌ No timer, no window close.
+- **A failed row STAYS until dismissed**: the page hides only `done` / `cancelled` (`isHiddenSettledStatus`, ❌ not
+  `isTerminalStatus`). ❌ No timer, no window close. DETAILS § "Retained failures".
 - **A failure's reason comes from the error pipeline, ❌ never new prose** (`failure-reason.ts`). Its `message` is
   MARKUP through `{@html}`; the pipeline's title is dropped in the row.
 - **Show hands a row's operation back to the main window's progress dialog**, over `foreground-operation` carrying the
   id alone. ❌ Not a command on the operation, ❌ never offered on a `queued` row. DETAILS § Show.
 - **A row commands its own operation through its session** (`../operation-session/CLAUDE.md`); the page keeps only the
   fleet actions (Pause all / Resume all / Cancel selected, Dismiss).
-- **Cancel keeps partials; Rollback is the separate, opt-in undo.** `session.cancel()` → `cancel_operation`: no
-  rollback, no confirm (why `capabilities/queue.json` DROPS `dialog:allow-ask`/`store:default`). `session.rollback()`
-  shows ONLY where `supportsRollback` and `reversalWindowClosed` allow it, ❌ never inferred from the type.
+- **Cancel keeps partials, no confirm; Rollback is the opt-in undo**, shown ONLY where `supportsRollback` and
+  `reversalWindowClosed` allow it, ❌ never inferred from the type.
 - **Window perms fail SILENTLY**: `await` every Tauri call in try/catch with a `log.warn`, and smoke-test with
-  `pnpm dev` after a perm change. Its own webview, the page inits its own settings (`initWindowSettings()`).
+  `pnpm dev` after a perm change. The page inits its own settings (`initWindowSettings()`).
 - **The list is a one-Tab-stop ARIA grid; its cursor is an operation ID**, ❌ not an index. ⌘A arrives as
   `queue-select-all` from the menu, ❌ never a keydown. DETAILS § Keyboard.
+- **A running row's live tree is its own widget**: Tab from the cursor row enters it, Escape returns. ❌ The grid hears
+  no key inside `[data-queue-tree]` (⌫ there would cancel the whole copy). DETAILS § "The inline tree".
 - **One opener, one store per webview**: `openQueueWindow`, plus the main window's own
   (`main-window-operations.svelte.ts`). ❌ Backgrounding never opens it: `queue-handoff-toast.ts` instead (DETAILS §
   "Backgrounding never opens the window").

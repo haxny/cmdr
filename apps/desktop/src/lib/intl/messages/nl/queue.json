@@ -88,6 +88,14 @@
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
+  "queue.row.treeToggleAria": "Bestanden in deze bewerking",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {Bestanden verbergen} other {Bestanden tonen}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
   "queue.row.retry": "Probeer opnieuw",
   "@queue.row.retry": {
     "sourceHash": "942087c"

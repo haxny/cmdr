@@ -1117,7 +1117,8 @@ normally wins that race, which is why this is a corner rather than a path.
 ## The live file tree (progress dialog)
 
 A copy, move, or compress shows `../transfer-tree/TransferTree.svelte` under the readout once it's past its scan and has
-an id (`treeOperationId`); delete, trash, and an edit inside an existing archive keep the plain readout. It pulls on the
+an id (`treeOperationId`); delete, trash, and an edit inside an existing archive keep the plain readout. Which
+operations and phases get one is `../transfer-tree/tree-operation.ts`, shared with the queue rows. It pulls on the
 session's progress tick (`progress.progressTick`), 8 rows tall at most before a resize, as few as it has.
 
 - **The dialog is fully resizable only while the tree shows** (`resizable={… ? true : 'horizontal'}`): the tree is the

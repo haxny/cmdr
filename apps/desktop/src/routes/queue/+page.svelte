@@ -30,6 +30,7 @@
         isHiddenSettledStatus,
         isTerminalStatus,
     } from '#lib/file-operations/queue/operations-store.svelte.js'
+    import { treesCollapsible } from '#lib/file-operations/queue/row-tree.js'
     import {
         initOperationSessions,
         destroyOperationSessions,
@@ -56,6 +57,8 @@
      *  until someone dismisses it. */
     const rows = $derived(store.operations.filter((row) => !isHiddenSettledStatus(row.snapshot.status)))
     const isEmpty = $derived(rows.length === 0)
+    /** Two or more rows show their live tree, so each gets a collapse toggle. */
+    const treeCollapsible = $derived(treesCollapsible(rows))
 
     // Selection that no longer points at something cancelable gets dropped so the
     // count and "Cancel selected" stay honest. Membership alone isn't the test: a
@@ -197,10 +200,12 @@
     /** Whether the grid answers a key pressed on `target`. Inside the grid, yes;
      *  on the bare page too (nothing focused yet, or focus dropped after a click),
      *  so ↓ works the moment the window opens. ❌ Never inside a dialog (the
-     *  rollback question has its own keys) or on the toolbar. */
+     *  rollback question has its own keys), on the toolbar, or inside a row's
+     *  live tree: that's its own widget, where ⌫ cancelling the whole copy would
+     *  be a trap. Escape there hands focus back to the row (`QueueRow`). */
     function gridHears(target: EventTarget | null): boolean {
         if (!(target instanceof Element)) return true
-        if (target.closest('[role="dialog"], [role="alertdialog"]')) return false
+        if (target.closest('[role="dialog"], [role="alertdialog"], [data-queue-tree]')) return false
         if (gridEl?.contains(target)) return true
         return target === document.body || target.classList.contains('queue-window')
     }
@@ -411,6 +416,7 @@
                         selected={selectedIds.has(id)}
                         isCursor={cursor.cursorId === id}
                         tabbable={tabStopId === id}
+                        {treeCollapsible}
                         onFocusRow={() => {
                             if (cursor.cursorId !== id) cursor.place(id)
                         }}
