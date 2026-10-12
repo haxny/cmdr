@@ -231,6 +231,24 @@ func TestVerifyClarificationsCatchesACrateThatDroppedAFile(t *testing.T) {
 	}
 }
 
+func TestVerifyClarificationsChecksEachVersionOfAPinnedCrateOnItsOwn(t *testing.T) {
+	// A bump can leave two versions of a pinned crate in the graph (`flate2`
+	// 1.1.10 pulled `miniz_oxide` 0.9 beside the 0.8 others still use). Each one
+	// took its text from the pinned file, so the pin held for both.
+	sources := map[string][]string{
+		"miniz_oxide 0.8.9": {"LICENSE"},
+		"miniz_oxide 0.9.1": {"LICENSE"},
+	}
+	if err := verifyClarifications(sources); err != nil {
+		t.Errorf("two versions that each used the pinned file should verify, got: %v", err)
+	}
+
+	sources["miniz_oxide 0.9.1"] = []string{"LICENSE-MIT.md"}
+	if err := verifyClarifications(sources); err == nil {
+		t.Error("expected a failure when one of two versions fell back to scanning")
+	}
+}
+
 func TestVerifyClarificationsSkipsACrateThatDoesNotShip(t *testing.T) {
 	// macOS runs on the system allocator unless built with `mimalloc`, so the
 	// shipped graph has no `libmimalloc-sys`. Its pin stays for the day it ships

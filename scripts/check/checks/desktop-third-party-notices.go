@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -263,6 +264,10 @@ var clarificationChecksums = map[string]string{
 // which is the filesystem-order-dependent behavior the pins exist to remove. So
 // the result is what gets checked, and only a crate bump that rewrites one of
 // these files can trip it.
+//
+// `sourcesByCrate` is keyed by "<name> <version>", so each version of a pinned
+// crate is checked on its own: a bump can leave two in the graph, and pooling
+// them would read as every pinned file contributing twice.
 func verifyClarifications(sourcesByCrate map[string][]string) error {
 	for _, clarification := range licenseClarifications {
 		expected := make([]string, 0, len(clarification.files))
@@ -270,28 +275,32 @@ func verifyClarifications(sourcesByCrate map[string][]string) error {
 			expected = append(expected, file.path)
 		}
 		sort.Strings(expected)
-		sources, ships := sourcesByCrate[clarification.crate]
-		if !ships {
-			// Not in the shipped graph, so there's no text to have come from the
-			// wrong file. The pin stays for the build that ships it again.
-			continue
+		// A crate missing from the shipped graph matches no key, so there's no
+		// text to have come from the wrong file. The pin stays for the build
+		// that ships it again.
+		for _, key := range slices.Sorted(maps.Keys(sourcesByCrate)) {
+			if name, _, _ := strings.Cut(key, " "); name != clarification.crate {
+				continue
+			}
+			actual := slices.Clone(sourcesByCrate[key])
+			sort.Strings(actual)
+			if !slices.Equal(expected, actual) {
+				return clarificationError(clarification.crate, actual, expected)
+			}
 		}
-		actual := slices.Clone(sources)
-		sort.Strings(actual)
-
-		if slices.Equal(expected, actual) {
-			continue
-		}
-		return fmt.Errorf(
-			"the license pin for `%s` didn't take: its notice text came from %v, not the pinned %v.\n"+
-				"cargo-about only warns when a pinned checksum goes stale, then falls back to scanning the crate,\n"+
-				"and that scan follows filesystem order: %s would then generate differently on macOS and in CI.\n"+
-				"A dependency bump probably rewrote the file. Refresh `clarificationChecksums` in\n"+
-				"`scripts/check/checks/desktop-third-party-notices.go` with:\n"+
-				"  shasum -a 256 ~/.cargo/registry/src/*/%s-*/<path>",
-			clarification.crate, actual, expected, NoticesFileName, clarification.crate)
 	}
 	return nil
+}
+
+func clarificationError(crate string, actual, expected []string) error {
+	return fmt.Errorf(
+		"the license pin for `%s` didn't take: its notice text came from %v, not the pinned %v.\n"+
+			"cargo-about only warns when a pinned checksum goes stale, then falls back to scanning the crate,\n"+
+			"and that scan follows filesystem order: %s would then generate differently on macOS and in CI.\n"+
+			"A dependency bump probably rewrote the file. Refresh `clarificationChecksums` in\n"+
+			"`scripts/check/checks/desktop-third-party-notices.go` with:\n"+
+			"  shasum -a 256 ~/.cargo/registry/src/*/%s-*/<path>",
+		crate, actual, expected, NoticesFileName, crate)
 }
 
 type rustCollection struct {
@@ -455,7 +464,8 @@ func collectRustCrates(ctx *CheckContext, cargoAboutDir string) (rustCollection,
 		source := crateRelativeSource(license.SourcePath, ctx.RootDir)
 		for _, used := range license.UsedBy {
 			users = append(users, fmt.Sprintf("%s %s", used.Crate.Name, used.Crate.Version))
-			sourcesByCrate[used.Crate.Name] = append(sourcesByCrate[used.Crate.Name], source)
+			key := used.Crate.Name + " " + used.Crate.Version
+			sourcesByCrate[key] = append(sourcesByCrate[key], source)
 		}
 		sort.Strings(users)
 		collection.texts = append(collection.texts, licenseText{
