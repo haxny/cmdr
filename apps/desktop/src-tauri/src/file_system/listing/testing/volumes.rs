@@ -13,6 +13,97 @@ use cmdr_fs::volume::{
     VolumeReadStream, WatchCoverage,
 };
 
+/// Writes the `Volume` methods a fake passes straight to its `inner`
+/// `InMemoryVolume` (and `as_any`), so each fake spells out only the answers it
+/// scripts. A method a fake doesn't name keeps the trait's default answer.
+macro_rules! forward_to_inner {
+    ($($method:ident),+ $(,)?) => {
+        $(forward_to_inner!(@ $method);)+
+    };
+    (@ name) => {
+        fn name(&self) -> &str {
+            self.inner.name()
+        }
+    };
+    (@ root) => {
+        fn root(&self) -> &Path {
+            self.inner.root()
+        }
+    };
+    (@ as_any) => {
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    };
+    (@ get_metadata) => {
+        fn get_metadata<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+            self.inner.get_metadata(path)
+        }
+    };
+    (@ exists) => {
+        fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
+            self.inner.exists(path)
+        }
+    };
+    (@ is_directory) => {
+        fn is_directory<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
+            self.inner.is_directory(path)
+        }
+    };
+    (@ create_directory) => {
+        fn create_directory<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+            self.inner.create_directory(path)
+        }
+    };
+    (@ get_space_info) => {
+        fn get_space_info<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<SpaceInfo, VolumeError>> + Send + 'a>> {
+            self.inner.get_space_info()
+        }
+    };
+    (@ scan_for_copy) => {
+        fn scan_for_copy<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
+            self.inner.scan_for_copy(path)
+        }
+    };
+    (@ scan_for_copy_batch) => {
+        fn scan_for_copy_batch<'a>(
+            &'a self,
+            paths: &'a [PathBuf],
+        ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
+            self.inner.scan_for_copy_batch(paths)
+        }
+    };
+    (@ scan_for_conflicts) => {
+        fn scan_for_conflicts<'a>(
+            &'a self,
+            source_items: &'a [SourceItemInfo],
+            dest_path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<ScanConflict>, VolumeError>> + Send + 'a>> {
+            self.inner.scan_for_conflicts(source_items, dest_path)
+        }
+    };
+    (@ open_read_stream) => {
+        fn open_read_stream<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
+            self.inner.open_read_stream(path)
+        }
+    };
+}
+
 /// A `Volume` whose `listing_watch_coverage` answer a test pins, delegating every
 /// other method to an `InMemoryVolume`.
 ///
@@ -75,17 +166,19 @@ fn decode_coverage(raw: u8) -> WatchCoverage {
 }
 
 impl Volume for WatchCoverageVolume {
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn root(&self) -> &Path {
-        self.inner.root()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    forward_to_inner!(
+        name,
+        root,
+        as_any,
+        exists,
+        is_directory,
+        create_directory,
+        get_space_info,
+        scan_for_copy,
+        scan_for_copy_batch,
+        scan_for_conflicts,
+        open_read_stream,
+    );
 
     fn list_directory<'a>(
         &'a self,
@@ -104,59 +197,8 @@ impl Volume for WatchCoverageVolume {
         self.inner.get_metadata(path)
     }
 
-    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
-        self.inner.exists(path)
-    }
-
-    fn is_directory<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-        self.inner.is_directory(path)
-    }
-
-    fn create_directory<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        self.inner.create_directory(path)
-    }
-
     fn listing_watch_coverage(&self, _path: &Path) -> WatchCoverage {
         decode_coverage(self.coverage.load(Ordering::Relaxed))
-    }
-
-    fn get_space_info<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<SpaceInfo, VolumeError>> + Send + 'a>> {
-        self.inner.get_space_info()
-    }
-
-    fn scan_for_copy<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_copy(path)
-    }
-
-    fn scan_for_copy_batch<'a>(
-        &'a self,
-        paths: &'a [PathBuf],
-    ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_copy_batch(paths)
-    }
-
-    fn scan_for_conflicts<'a>(
-        &'a self,
-        source_items: &'a [SourceItemInfo],
-        dest_path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ScanConflict>, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_conflicts(source_items, dest_path)
-    }
-
-    fn open_read_stream<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
-        self.inner.open_read_stream(path)
     }
 }
 
@@ -203,17 +245,7 @@ impl SpelledVolume {
 }
 
 impl Volume for SpelledVolume {
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn root(&self) -> &Path {
-        self.inner.root()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    forward_to_inner!(name, root, as_any, get_metadata, exists, is_directory);
 
     fn list_directory<'a>(
         &'a self,
@@ -234,24 +266,6 @@ impl Volume for SpelledVolume {
                 self.inner.list_directory(path, on_progress).await
             }),
         }
-    }
-
-    fn get_metadata<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
-        self.inner.get_metadata(path)
-    }
-
-    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
-        self.inner.exists(path)
-    }
-
-    fn is_directory<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-        self.inner.is_directory(path)
     }
 
     fn find_stored_spelling<'a>(
@@ -295,17 +309,19 @@ impl ScriptedListVolume {
 }
 
 impl Volume for ScriptedListVolume {
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn root(&self) -> &Path {
-        self.inner.root()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    forward_to_inner!(
+        name,
+        root,
+        as_any,
+        get_metadata,
+        exists,
+        is_directory,
+        get_space_info,
+        scan_for_copy,
+        scan_for_copy_batch,
+        scan_for_conflicts,
+        open_read_stream,
+    );
 
     fn list_directory<'a>(
         &'a self,
@@ -324,56 +340,5 @@ impl Volume for ScriptedListVolume {
                 None => Ok(Vec::new()),
             }
         })
-    }
-
-    fn get_metadata<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
-        self.inner.get_metadata(path)
-    }
-
-    fn exists<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
-        self.inner.exists(path)
-    }
-
-    fn is_directory<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<bool, VolumeError>> + Send + 'a>> {
-        self.inner.is_directory(path)
-    }
-
-    fn get_space_info<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<SpaceInfo, VolumeError>> + Send + 'a>> {
-        self.inner.get_space_info()
-    }
-
-    fn scan_for_copy<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<CopyScanResult, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_copy(path)
-    }
-
-    fn scan_for_copy_batch<'a>(
-        &'a self,
-        paths: &'a [PathBuf],
-    ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_copy_batch(paths)
-    }
-
-    fn scan_for_conflicts<'a>(
-        &'a self,
-        source_items: &'a [SourceItemInfo],
-        dest_path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ScanConflict>, VolumeError>> + Send + 'a>> {
-        self.inner.scan_for_conflicts(source_items, dest_path)
-    }
-
-    fn open_read_stream<'a>(
-        &'a self,
-        path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
-        self.inner.open_read_stream(path)
     }
 }
