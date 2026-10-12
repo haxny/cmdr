@@ -10,9 +10,9 @@
 
 use super::super::{CopyScanResult, ScanConflict, SourceItemInfo, VolumeError};
 use super::LocalPosixVolume;
-use crate::file_system::listing::FileEntry;
 use crate::file_system::volume::Volume;
 use cmdr_fs::apple_double::SidecarRule;
+use cmdr_fs::entry::FileEntry;
 use std::ffi::OsStr;
 use std::future::Future;
 use std::path::{Path, PathBuf};
