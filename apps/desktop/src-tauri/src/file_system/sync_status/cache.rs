@@ -7,7 +7,7 @@
 //!
 //! ## Why it's keyed by directory, not by full path
 //!
-//! Invalidation arrives per directory (`notify_directory_changed`, a cloud action
+//! Invalidation arrives per directory (`listing_host::directory_changed`, a cloud action
 //! on one file), and it arrives often during a big copy. A flat path map would make
 //! every one of those a full scan of the cache; a directory map makes it one hash
 //! lookup. Batches are per-directory too, so the grouping costs nothing to build.

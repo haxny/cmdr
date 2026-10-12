@@ -244,7 +244,7 @@ pub fn start_watching_detached(listing_id: &str, path: &Path) {
 ///
 /// the listing cache membership is the liveness signal because `list_directory_end` is
 /// what clears it, and reading it is a plain lookup that doesn't bump `last_accessed_ms`
-/// (this is background work, not user activity — see `listing/CLAUDE.md`).
+/// (this is background work, not user activity — see `crates/cmdr-listing/CLAUDE.md`).
 pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
     if let Err(e) = start_watching(listing_id, path) {
         log::warn!("Failed to start watcher: {}", e);

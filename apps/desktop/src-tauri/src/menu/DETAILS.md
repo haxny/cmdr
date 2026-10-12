@@ -206,7 +206,7 @@ Exceptions that do NOT use `"execute-command"`:
   prefix-routed
   (`on_menu_event` matches `tag-color:`) — NOT in `menu_id_to_command` — and call
   `file_system::tags::toggle_color` on the RIGHT-CLICKED selection (`MenuState.context.paths`),
-  then `apply_tags_to_listing(MenuState.context.tags_listing_id, …)`. Acting on the right-clicked set
+  then `Listings::apply_tags(MenuState.context.tags_listing_id, …)`. Acting on the right-clicked set
   is why they can't route through `execute-command`: a frontend command reads the *focused-pane*
   selection, which differs when the right-click lands on an unselected row. The xattr write runs on
   `spawn_blocking` (off the main/menu thread). The keyboard-assignable `tags.toggle*` commands cover

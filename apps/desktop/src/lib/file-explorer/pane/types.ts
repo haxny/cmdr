@@ -168,7 +168,7 @@ export interface FilePaneAPI {
    * a stable `listingId` for a backend call (for example, the MCP `move_cursor`
    * tool) to avoid the race where the FE has set a fresh `listingId` but
    * `list_directory_start_streaming` hasn't yet inserted the listing into the
-   * backend's `LISTING_CACHE`. Resolves immediately when no load is pending.
+   * backend's listing cache. Resolves immediately when no load is pending.
    */
   whenLoadSettles(): Promise<void>
   getFilenameUnderCursor(): string | undefined

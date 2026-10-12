@@ -2,7 +2,7 @@
 //!
 //! The SMB watcher (`crates/cmdr-smb/src/volume/watcher.rs`) already turns
 //! `CHANGE_NOTIFY` into [`DirectoryChange`]s and feeds them to
-//! `caching::notify_directory_changed` for the open pane. This module is the
+//! the app's `listing_host::directory_changed` for the open pane. This module is the
 //! SECOND consumer: it keeps the volume's persisted index in sync with the same
 //! changes so directory sizes stay correct while the share is Fresh, even when
 //! no pane is showing the affected directory.
@@ -20,7 +20,7 @@
 //!
 //! ## Ordering and coupling (plan Architecture §3)
 //!
-//! `caching::notify_directory_changed` calls [`apply_smb_change`] FIRST (the
+//! the app's composer (`listing_host::directory_changed`) calls [`apply_smb_change`] FIRST (the
 //! index write is sequenced ahead of the pane enrich), then emits
 //! `DirsUpdated` for the affected directory so the existing FE refresh
 //! path (`DirsUpdated` → `refreshIndexSizes` → `getDirStatsBatch`) re-reads
@@ -233,7 +233,7 @@ impl ResolvedWrite {
 /// `parent_path` is the watcher's mount-absolute directory path. Synchronous: all
 /// work is local DB reads off the `ReadPool` plus enqueues on the writer channel,
 /// no network round trip, so it's safe to call inline from the (sync)
-/// `notify_directory_changed`. No-op (cheap early return) when the volume isn't a
+/// composer (the app's `listing_host::directory_changed`). No-op (cheap early return) when the volume isn't a
 /// live non-`root` index, so wiring this in costs one `Arc`-clone check for
 /// non-indexed shares and for every `root` (local-disk) change.
 #[cfg(any(target_os = "macos", target_os = "linux"))]

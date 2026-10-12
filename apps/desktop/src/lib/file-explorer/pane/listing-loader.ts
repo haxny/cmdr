@@ -295,7 +295,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
     if (errorMessage) deps.setError(errorMessage)
     deps.setFriendlyError(friendly ?? null)
     // Tear the abandoned listing down BEFORE dropping our handle on it. Clearing
-    // `listingId` alone strands the backend's `LISTING_CACHE` entry and its armed
+    // `listingId` alone strands the backend's listing-cache entry and its armed
     // OS watcher until the 6 h orphan reaper, because no later `loadDirectory`
     // can see the id to close it. `cancelListing` is NOT a substitute: it only
     // flips a cancel flag, and a listing that already landed in the cache ignores it.
@@ -784,7 +784,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
    * Used by `moveCursor` (and any other callers that need a stable `listingId`)
    * to avoid the race where the FE has set a fresh `listingId` but
    * `list_directory_start_streaming` hasn't yet inserted the listing into the
-   * backend's `LISTING_CACHE`. Wraps the existing `pendingLoadResolve` hook so we
+   * backend's listing cache. Wraps the existing `pendingLoadResolve` hook so we
    * don't introduce a second promise track: if no load is in flight, resolves
    * immediately.
    */

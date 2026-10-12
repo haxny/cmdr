@@ -146,7 +146,7 @@
         onDragInitiate?: () => void
         /**
          * Static, frontend-owned entries to render instead of fetching from the
-         * backend `LISTING_CACHE` by `listingId`. Used by the search-results
+         * backend listing cache by `listingId`. Used by the search-results
          * virtual volume (which has no backing backend listing, just an
          * in-memory snapshot). When set, `listingId` is ignored, no IPC calls
          * are made for cached fetches, soft-refresh / cache-generation are

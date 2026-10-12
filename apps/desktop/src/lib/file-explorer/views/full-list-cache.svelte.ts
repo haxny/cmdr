@@ -2,7 +2,7 @@
  * The prefetch buffer behind `FullList.svelte`: which entries the view currently
  * holds, and every rule for keeping them in step with the backend listing.
  *
- * The rows themselves live in the Rust `LISTING_CACHE`, never in Svelte state, so
+ * The rows themselves live in the Rust listing cache, never in Svelte state, so
  * what this owns is a WINDOW into it (the visible range plus a prefetch margin) and
  * the decision of when that window is stale. Three refresh flavours share it:
  *

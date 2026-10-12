@@ -4,7 +4,7 @@
  * Kept free of Svelte/DOM so Vitest can exercise the overflow/cap/colour-mapping
  * logic and the cluster-width math directly. The width constants here are the
  * single source of truth for the FE render; the Brief-mode backend width calc
- * (`src-tauri/.../listing/brief_columns.rs`) mirrors them so a reserved column
+ * (`src-tauri/src/font_metrics/brief_columns.rs`) mirrors them so a reserved column
  * leaves exactly enough room for the cluster (keep both in sync).
  */
 

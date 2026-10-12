@@ -22,7 +22,7 @@ atomic-no-overwrite, including attached disks and cloud folders registered under
 `renamex_np(RENAME_EXCL)` and Linux uses `renameat2(RENAME_NOREPLACE)`. Root bulk-renames share that primitive directly.
 The dialog's target-exists preflight improves review UX, but only the kernel operation closes the check-to-rename race.
 
-Pre-flight scans reuse cached listings when the source volume reports `WatchCoverage::EveryWriter`, avoiding redundant `list_directory` calls. The freshness contract and per-backend debounce windows are documented in `../volume/CLAUDE.md` and `../listing/caching.rs::try_get_authoritative_listing`.
+Pre-flight scans reuse cached listings when the source volume reports `WatchCoverage::EveryWriter`, avoiding redundant `list_directory` calls. The freshness contract and per-backend debounce windows are documented in `../volume/CLAUDE.md` and `crates/cmdr-listing/src/authoritative.rs::try_get_authoritative_listing`.
 
 ## Files (top level)
 
@@ -567,7 +567,7 @@ identical-looking twin beside the user's entry.
   missed.
 - **A pane's listing stands in for that read where a person is waiting on a name**: new folder, new file, rename (and
   its live validity check), and bulk rename build `ListedFolders::with_pane_listings(volume, volume_id)`, which asks
-  the fresh-listing oracle (`listing::caching::try_get_authoritative_listing`, `EveryWriter` coverage only) before
+  the fresh-listing oracle (`Listings::authoritative_listing`, `EveryWriter` coverage only) before
   listing. **Why:** the folder being named into is almost always the one the pane shows, and on a busy NAS re-reading a
   3,340-entry share folder per new name cost a second or more (ERR-AREUV, v0.50.0). **Why it's safe:** the oracle's
   debounce can lag another client by ~200 ms, which risks only a missed twin: a second, look-alike entry, never an
@@ -1098,7 +1098,7 @@ wrote down.
 
 **The optional source-stat leg gets a sub-budget, never the whole deadline.** When `source_volume_id` +
 `source_paths` are supplied, `stat_source_paths` resolves each item's real `is_directory` + size. A watched pane listing
-answers first (`try_get_authoritative_listing`, one lookup per parent folder), because a paste's sources almost always
+answers first (`Listings::authoritative_listing`, one lookup per parent folder), because a paste's sources almost always
 sit in a folder a pane shows and a stat isn't always cheap: MTP lists the whole parent per stat, so 16 concurrent stats
 of a 101-photo paste queued sixteen 818-entry listings of `/DCIM/Camera` (`ERR-44S2Q`). The rest take one
 `Volume::get_metadata` per top-level path, `SOURCE_STAT_CONCURRENCY` (16) in flight, strictly O(top-level items) and
@@ -1327,7 +1327,7 @@ write-op test at once. `test_support::TestOperationGuard` owns one entry per tes
   by `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`. Keep the guard on the stack: a
   `std::mem::forget` or a clone that outlives the test defeats it.
 
-Same shape as `listing::testing::TestListingGuard` (over the listing cache) and
+Same shape as `cmdr_listing::testing::TestListingGuard` (over the listing cache) and
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
 The operation-log journal slot is the exception to the unique-key pattern: it's a single value, not a keyed map, so

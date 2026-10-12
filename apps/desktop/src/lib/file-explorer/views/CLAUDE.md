@@ -11,8 +11,9 @@ pixel-accurate width measurement via `@chenglou/pretext`, and the `*-utils.ts` t
 
 ## Must-knows
 
-- **Data lives in Rust `LISTING_CACHE`, ❌ never in Svelte `$state`.** The frontend fetches visible ranges on demand
-  (`getFileRange`); only the visible window enters reactivity. Loading 20k+ entries in causes 9+ second freezes.
+- **Data lives in the Rust listing cache (`cmdr-listing`), ❌ never in Svelte `$state`.** The frontend fetches visible
+  ranges on demand (`getFileRange`); only the visible window enters reactivity. Loading 20k+ entries in causes 9+ second
+  freezes.
 - **`hasParent = true` makes UI indices 1-based**: index 0 is the `..` entry (not in backend cache), so
   `cache_index = ui_index - 1`. Forgetting it lands the cursor one row off.
 - **The renderer and the measurer are ONE contract; change both or neither.** `getDirSizeDisplayState` and `wordGitMeta`

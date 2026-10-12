@@ -289,10 +289,10 @@ and ~7,600 lines here, and each is worth defending against a tidy-up pass.
 
 ### 1. `Volume::notify_mutation` has a no-op default
 
-A default that patched the local listing cache would open with `use crate::file_system::listing::caching::…` and
-`use crate::file_system::volume::backends::…` (the local reader) inside the function body, and those two edges alone
-drag the app's listing cache and local I/O into the graph. So the default is a documented no-op, and the local-FS
-behavior lives app-side in `file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`.
+A default that patched the local listing cache would need the listing engine (`cmdr-listing`, which depends on this
+crate, so a cycle) and the app's local reader (`file_system::volume::backends::…`), and those two edges alone drag the
+listing cache and local I/O into the graph. So the default is a documented no-op, and the local-FS behavior lives
+app-side in `file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`.
 
 Why this over the alternatives:
 

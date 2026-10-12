@@ -64,7 +64,7 @@ the crate boundary is what makes that a compile error rather than a habit.
    nothing else: a copy scan, a delete walker, and the indexer all list through `Volume`, and the last time one of them
    could see a row with no inode behind it, deleting a repo folder stopped with `.git/` still on disk. The same rule is
    why a listing an overlay decorated is never authoritative for a walker: `CachedListing::has_overlay_rows` records
-   it, and `try_get_authoritative_listing` declines any listing carrying some, whatever its watch reports.
+   it, and `Listings::authoritative_listing` declines any listing carrying some, whatever its watch reports.
 4. **The registry: `VolumeManager`** (`manager.rs`). Volume id → `Arc<dyn Volume>`, plus the mount-root set per entry,
    archive routing in `resolve`, retirement on removal, and the arrival subscription.
 5. **The consumers.** `write_operations/` (copy, move, delete, the cross-volume engine), `listing/` (panes and the
@@ -147,7 +147,7 @@ verbatim and both are capped by an LRU; `ResolvedVolume.routed` says which one f
   covered beside their own routes.
 - **`resolve_local_only` is the sync sibling that confirms LOCAL archive boundaries only** (git routing is lexical, so
   it's identical there), and its one caller is the write-op fresh-listing oracle
-  (`listing::caching::try_get_authoritative_listing`), which runs on sync recursive scan walkers. That oracle guards
+  (`Listings::authoritative_listing`), which runs on sync recursive scan walkers. That oracle guards
   remote archives separately, so local-only routing is sufficient there.
 - **Separate LRUs, 16 archives and 8 git portals**, sharing `touch_routed_lru`. Separate on purpose: browsing a folder
   full of zips must not evict the portal of the repo the other pane is sitting in. Eviction is harmless either way,
@@ -204,7 +204,7 @@ Optional methods default to `Err(VolumeError::NotSupported)` or `false`, so new 
 - `write_access_at(path)`: whether a write into the folder at `path`, or the nearest existing one above it, would be taken, as a three-state `WriteAccess` (`Writable` / `Unwritable { reason }` / `Unknown`), asked WITHOUT writing. Default `Unknown`. `LocalPosixVolume` reads `statvfs` `ST_RDONLY` and `access(W_OK)`, so it tells `ReadOnlyFilesystem` from `NoPermission`; `MtpVolume` answers `ReadOnlyFilesystem` for a storage the device reports read-only and `Unknown` otherwise; `AdbVolume` runs `test -w`, whose exit 1 is `Unexplained` because the exit code can't say why. The transfer pre-flight asks it before the space check: `write_operations/transfer/volume/DETAILS.md` § "A destination folder that takes no writes".
 - `create_directory_errors_on_existing_dir()`: whether `create_directory` reliably returns `VolumeError::AlreadyExists` for an existing same-name dir. Default `true` (LocalPosix, SMB, InMemory all do). `MtpVolume` overrides to `false` — the MTP protocol allows same-name sibling objects and `create_folder` silently makes a duplicate, so the folder-merge walker (`write_operations/transfer/volume/strategy.rs`) pre-checks existence on MTP instead of trusting the create to error. A blindly-created duplicate would make a merge target the wrong directory.
 - `listing_watch_coverage(path)`: what a live watch on this volume's cached listing for `path` actually observes, as a three-state `WatchCoverage` (`None` / `ThisMachineOnly` / `EveryWriter`). Three consumers today:
-    1. `file_system::listing::caching::try_get_authoritative_listing` (the "fresh-listing oracle") — write-op pre-flight scans, and the look-alike check before a new name (`write_operations/DETAILS.md` § "Look-alike names"), reuse a cached listing instead of re-reading.
+    1. `cmdr_listing::Listings::authoritative_listing` (the "fresh-listing oracle") — write-op pre-flight scans, and the look-alike check before a new name (`write_operations/DETAILS.md` § "Look-alike names"), reuse a cached listing instead of re-reading.
     2. `write_operations::delete::scan_volume_recursive` (the oracle-aware delete walker) — same idea, per-recursion-level.
     3. The `refresh_listing` Tauri command (`commands/file_system/listing.rs`) — short-circuits the post-transfer redundant `list_directory` re-read entirely when the volume is keeping the cache fresh via `notify_mutation`. Without this, a 1k-entry MTP folder paid ~17 s + USB session collision after every transfer outcome, wedging the next user op. Only the unforced callers consult it: a `force: true` refresh (⌘R, the MCP `refresh` tool) re-reads regardless, since `EveryWriter` covers the volume's own writes and a user asking for a re-read is usually asking about someone else's.
   Only `EveryWriter` authorizes any of them to skip a read. Default `None`, so a new backend without a real watcher can't accidentally claim freshness.
@@ -1135,7 +1135,7 @@ Under plain `cargo test` a crate's tests share one process, so those tests are a
   outlives its test, `ensure_root_volume`'s `register_if_absent` then silently no-ops, and every later real-FS
   create/paste assertion fails against an in-memory volume with no hint of who swapped it.
 
-Same guard family as `listing::testing::TestListingGuard` (over the listing cache),
+Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache),
 `write_operations::test_support::TestOperationGuard` (over `WRITE_OPERATION_STATE`), and
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
@@ -1148,7 +1148,7 @@ knows nothing about the listing cache. Every backend that can be mutated overrid
   entry through `std::fs` and turns it into the right `DirectoryChange`. It needs no git exception: a path in a virtual
   `.git` tree never reaches this volume, because `resolve` routed it to the portal.
 - `SmbVolume` and `MtpVolume` build the entry from their own protocol's `get_metadata` (faster than `std::fs` would be,
-  and on MTP `std::fs` isn't an option at all) and call `notify_directory_changed` directly.
+  and on MTP `std::fs` isn't an option at all) and report through their `VolumeHost`'s `ListingHost::directory_changed`, which reaches the same composer.
 - `ArchiveVolume` never calls it, because it implements no mutation: `create_file`, `delete`, `rename`, and
   `write_from_stream` inherit the trait's `NotSupported` default, and `create_directory_all` overrides it only to
   return the same (pinned by `volume_test.rs::every_mutation_is_unsupported`). Zip edits are real, but they go around

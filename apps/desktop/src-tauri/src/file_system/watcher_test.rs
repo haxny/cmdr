@@ -152,7 +152,7 @@ fn event_targets_watch_root_rejects_children_and_neighbours() {
 /// Tests that `handle_directory_change` re-reads a directory via the Volume trait
 /// and updates the listing cache when the volume's contents have changed.
 ///
-/// This also covers the `notify_full_refresh` / `FullRefresh` code path in caching.rs,
+/// This also covers the `notify_full_refresh` / `FullRefresh` code path in `cmdr-listing`'s `refresh.rs`,
 /// since both use the same mechanism: re-read via Volume, compute diff, update cache.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_refreshes_from_volume() {

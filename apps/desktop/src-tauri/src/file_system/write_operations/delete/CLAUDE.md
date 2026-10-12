@@ -9,7 +9,7 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 ## Files
 
 - **`walker.rs`**: local and volume delete, both taking `&dyn OperationEventSink`; `delete_files_start` routes by
-  `volume_id`. The volume walker asks `try_get_authoritative_listing` before every `list_directory`, so a subtree open
+  `volume_id`. The volume walker asks `Listings::authoritative_listing` before every `list_directory`, so a subtree open
   in another pane is cache-fed; files batch per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `commands/rename.rs`), `trash_files_with_progress()` (batch, per-item progress, cancel), and

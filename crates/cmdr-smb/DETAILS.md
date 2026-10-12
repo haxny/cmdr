@@ -325,15 +325,16 @@ The recursive share watcher already refreshes the DIRECTORY listing showing a ch
 top of that, `process_event_batch`'s Modified and RenamedNewName handlers call
 `maybe_refresh_archive_listings(volume_id, entry_path)`: when `entry_path`'s name is a supported archive
 (`archive::has_supported_archive_extension`, the single-source predicate `format_for_name` backs), it fires the same
-`caching::refresh_archive_listings` the local `archive::watch` fires, pushing an out-of-band edit of the `.zip` to any
-open archive-INNER listing.
+`refresh_archive_listings` the local `archive::watch` fires, pushing an out-of-band edit of the `.zip` to any open
+archive-INNER listing.
 
 Why this is the whole fix, cheaply:
 
-- **Same consumer, same key.** `refresh_archive_listings` scans `LISTING_CACHE` for keys at/inside the archive path and
-  re-reads them; `volume_id` here is the parent DRIVE id, which is exactly what archive listings key on, so no rekeying.
-  It's a no-op when the path isn't an archive or no inner listing is open, and the watcher already runs for the whole
-  volume lifetime — so the only added cost is a re-parse when a `.zip` actually changes AND an inner pane is open.
+- **Same consumer, same key.** `refresh_archive_listings` scans the listing cache for keys at/inside the archive path
+  and re-reads them; `volume_id` here is the parent DRIVE id, which is exactly what archive listings key on, so no
+  rekeying. It's a no-op when the path isn't an archive or no inner listing is open, and the watcher already runs for
+  the whole volume lifetime — so the only added cost is a re-parse when a `.zip` actually changes AND an inner pane is
+  open.
 - **`entry_path` is already the cache-facing path.** It's the watcher's `to_display_path` result: the anchor stripped
   and the mount root joined on, in the server's own bytes, like every other cache-facing path in
   `crates/cmdr-smb/src/volume/watcher.rs`. Passing the raw share-relative event filename would miss the cache.
@@ -349,7 +350,7 @@ Why this is the whole fix, cheaply:
 Tests, split along the seam: the ROUTING (which events reach `refresh_archive_listings`, with what path) is
 `crates/cmdr-smb/src/volume/watcher/archive_refresh_test.rs`, a `RecordingListings` assertion with no archive and no
 filesystem in it; what a refresh DOES to the cache is
-`listing/listing_host.rs::the_archive_refresh_re_reads_the_listings_under_its_path`.
+`apps/desktop/src-tauri/src/listing_host/backends.rs::the_archive_refresh_re_reads_the_listings_under_its_path`.
 
 ## SMB names are opaque bytes
 

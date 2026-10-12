@@ -60,7 +60,7 @@ const COALESCE_MS = 50
 /**
  * Backoff before each retry of a transient failure. Two entries = two retries.
  * Short, because the pane is showing provisional widths the whole time; the point
- * is to ride out a `LISTING_CACHE` lock or a listing that hasn't been registered
+ * is to ride out a listing-cache lock or a listing that hasn't been registered
  * yet, not to wait out a real outage.
  */
 const RETRY_BACKOFF_MS = [150, 400]

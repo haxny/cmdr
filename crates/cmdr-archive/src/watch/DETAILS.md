@@ -21,11 +21,12 @@ listing watcher's own parent-directory-non-recursive shape.
 
 The listing cache keys archive listings on the PARENT DRIVE id plus the full `/…/foo.zip/inner` path (see
 `../../DETAILS.md` § "Routing and lifecycle"). On a matching event the callback drops the stale parsed index
-(`cache.clear()`) and calls `caching::refresh_archive_listings(parent_drive_id, archive_path)`, which finds every open
-listing at or inside the archive path (`Path::starts_with`, component-wise — so `/a/foo.zip` matches the root and inner
-listings but not a `/a/foo.zipper` sibling or the containing `/a`) and re-reads each through `notify_full_refresh`. That
-re-resolves `(parent_id, inner_path)` back to this `ArchiveVolume`, so an LRU-evicted archive re-registers lazily. It
-deliberately does NOT go through `notify_directory_changed`: that runs the drive-index sync (`apply_smb_change`) up
+(`cache.clear()`) and calls the host's `refresh_archive_listings(parent_drive_id, archive_path)`
+(`cmdr_listing::Listings::refresh_archive_listings` in Cmdr), which finds every open listing at or inside the archive
+path (`Path::starts_with`, component-wise — so `/a/foo.zip` matches the root and inner listings but not a
+`/a/foo.zipper` sibling or the containing `/a`) and re-reads each through `notify_full_refresh`. That re-resolves
+`(parent_id, inner_path)` back to this `ArchiveVolume`, so an LRU-evicted archive re-registers lazily. It deliberately
+does NOT go through the app's `listing_host::directory_changed`: that runs the drive-index sync (`apply_smb_change`) up
 front, and an archive-inner path isn't a real filesystem path, so feeding it to the index would be meaningless.
 
 ## Cache invalidation
@@ -81,7 +82,7 @@ correct-by-construction rather than a gap to close:
   remote archive always sizes against a fresh parse, never a stale cache.
 - **Push-refresh for an EXTERNAL edit of a remote `.zip`: SMB yes, MTP no.** SMB: the recursive share watcher
   (`crates/cmdr-smb/src/volume/watcher.rs`) already receives a `CHANGE_NOTIFY` for any changed `.zip` on the share, so
-  its Modified/Renamed handlers ALSO call `caching::refresh_archive_listings` for a supported-archive path, pushing an
+  its Modified/Renamed handlers ALSO call `refresh_archive_listings` for a supported-archive path, pushing an
   out-of-band edit to any open inner listing. That refresh is a SEPARATE, visible-listing-only consumer from this
   `listing_watch_coverage` oracle: it stays `WatchCoverage::None` for a remote parent regardless (the SMB watcher is
   lossy under load, so the write-op oracle must keep re-reading pre-flight scans honestly — see

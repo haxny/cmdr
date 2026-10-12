@@ -5,8 +5,8 @@ operations, volumes, or cancellation. For the subsystem map, see `architecture.m
 
 ## Data flow: frontend <> backend
 
-File data lives in Rust (`LISTING_CACHE`). Frontend fetches visible ranges on-demand via IPC (`getFileRange`). This
-avoids serializing 50k+ entries. Virtual scrolling renders only ~50 visible items.
+File data lives in Rust (the listing engine's cache, `crates/cmdr-listing`). Frontend fetches visible ranges on-demand
+via IPC (`getFileRange`). This avoids serializing 50k+ entries. Virtual scrolling renders only ~50 visible items.
 
 ## Navigation lifecycle
 
@@ -29,7 +29,7 @@ pane-owned. See `pane/CLAUDE.md` § "The `navigate()` transaction" for the inten
 
 1. `++loadGeneration`: invalidates all in-flight events
 2. `cancelListing(oldId)` -> sets `AtomicBool` in Rust -> background task stops within ~100ms
-3. `listDirectoryEnd(oldId)` -> stops file watcher, removes from `LISTING_CACHE`
+3. `listDirectoryEnd(oldId)` -> stops file watcher, removes from the listing cache
 4. Unlisten all 6 event listeners
 5. Generate new `listingId` (frontend `crypto.randomUUID()`), subscribe new listeners, call `listDirectoryStart`
 
@@ -57,7 +57,7 @@ Frontend (FilePane)                    Rust backend (streaming.rs)
    |   handleListingComplete()              |
    |   onPathChange -> push history          |
    |                                        |
-   |== ACTIVE: getFileRange on demand =====>|== LISTING_CACHE serves ranges
+   |== ACTIVE: getFileRange on demand =====>|== listing cache serves ranges
    |<= directory-diff events ===============|== file watcher detects changes
    |                                        |
    |== CLEANUP (next nav or destroy) =======|
@@ -65,8 +65,8 @@ Frontend (FilePane)                    Rust backend (streaming.rs)
    |-- listDirectoryEnd(id) -------------->|-- stop watcher, remove from cache
 ```
 
-Multiple listings coexist (two panes, rapid navigation). Each keyed by unique `listingId` in all global state:
-`LISTING_CACHE`, `STREAMING_STATE`, `WATCHER_MANAGER`. Events carry `listingId`; listeners filter by it.
+Multiple listings coexist (two panes, rapid navigation). Each keyed by unique `listingId` in the engine's state (its
+cache and in-flight reads) and the app's `WATCHER_MANAGER`. Events carry `listingId`; listeners filter by it.
 
 ## Concurrency guards
 

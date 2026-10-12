@@ -131,7 +131,7 @@ test.describe('MTP copy pre-flight reuses watcher-backed listing', () => {
     const mtpPath = await getMtpVolumePath(INTERNAL_STORAGE)
 
     // Navigate the left pane into the MTP /DCIM folder. This populates
-    // `LISTING_CACHE` for the parent and marks the MTP volume as watched
+    // listing cache for the parent and marks the MTP volume as watched
     // (the virtual device is connected). The oracle's
     // `try_get_watched_listing(volume_id, path)` should hit on every entry.
     await mcpOpenMtpStorageRoot('left', INTERNAL_STORAGE)

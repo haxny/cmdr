@@ -88,6 +88,6 @@ for lock contention between DB-first reads and the writer during a concurrent sc
 The tempting follow-up: once DB-first is active for a volume, stop starting a per-directory `notify` watcher for
 directories on it, since the volume-level watcher covers them and 300 ms of FSEvents batching is imperceptible.
 
-The per-directory watcher also carries Finder tags forward across a re-stat (`caching::carry_forward_tags`) and drives
-the in-place listing diffs several features read. Anyone picking this up has to inventory what depends on that watcher
-before removing it.
+The per-directory watcher also carries Finder tags forward across a re-stat (`cmdr-listing`'s `carry_forward_tags`) and
+drives the in-place listing diffs several features read. Anyone picking this up has to inventory what depends on that
+watcher before removing it.

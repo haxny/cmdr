@@ -69,10 +69,10 @@ The resumed index loads Stale: we weren't watching while disconnected, so a resc
 ### Live SMB watch → index (`smb/watch.rs`)
 
 The SMB watcher (`crates/cmdr-smb/src/volume/watcher.rs`) already turns `CHANGE_NOTIFY` into `DirectoryChange`s for the
-open pane. This layer is a SECOND consumer so the persisted index stays correct under live mutation.
-`notify_directory_changed` calls `apply_smb_change(volume_id, parent_path, &change)` **first, before any pane-listing
-work** — ahead of the "no listing matches, bail" early-return — because the watcher runs for the whole volume's
-lifetime, not just while a pane shows the share, so the index must update even with zero open listings.
+open pane. This layer is a SECOND consumer so the persisted index stays correct under live mutation. The app's composer
+(`listing_host::directory_changed`) calls `apply_smb_change(volume_id, parent_path, &change)` **first, before any
+pane-listing work** — ahead of the "no listing matches, bail" early-return — because the watcher runs for the whole
+volume's lifetime, not just while a pane shows the share, so the index must update even with zero open listings.
 
 - **Path space.** The SMB index's `ROOT_ID` is the volume's MOUNT ROOT; entries are stored by `name` under their parent.
   The watcher delivers a MOUNT-ABSOLUTE parent path (`/Volumes/share/sub`), so `apply_smb_change` strips the mount root
@@ -112,9 +112,8 @@ lifetime, not just while a pane shows the share, so the index must update even w
   listing layer notifies the indexer, never the reverse.
 - **Single-writer + reads-off-the-lock.** `apply_smb_change` only ENQUEUES on the volume's existing writer thread; it
   never opens a write connection. Id resolution uses the volume's `ReadPool`, never the registry lock. It's synchronous
-  (all local DB reads + channel enqueues, no network round trip), so it's safe inline from the sync
-  `notify_directory_changed`. It no-ops for `root` (local disk feeds its index from FSEvents) and any non-`Running`
-  volume.
+  (all local DB reads + channel enqueues, no network round trip), so it's safe inline from the sync composer. It no-ops
+  for `root` (local disk feeds its index from FSEvents) and any non-`Running` volume.
 - **Watcher lifetime is already volume-index-scoped.** The watcher is spawned in `connect_smb_volume` (on the direct-
   smb2 upgrade) and canceled only by `on_unmount` or `do_attempt_reconnect` (which respawns it). Pane close
   (`list_directory_end`) can't reach it. Pinned by `smb_integration_pane_close_does_not_kill_index_watcher`.
@@ -160,7 +159,7 @@ A persisted MTP index loads Stale on launch (non-journaled). **MTP Fresh is as s
 
 ### Live watch → index (`mtp/watch.rs`)
 
-The mirror of `smb/watch.rs`, fed from the PTP event loop (`watch/event_loop`) instead of `notify_directory_changed`.
+The mirror of `smb/watch.rs`, fed from the PTP event loop (`watch/event_loop`) instead of the app's composer.
 `feed_index_added_or_changed` keeps the index in sync per indexed storage of the device; `feed_index_removed` resolves
 by the stored handle. PTP events are device-wide but storages are separate namespaces, so both fan out over
 `state::registered_mtp_volume_ids_for_device`.

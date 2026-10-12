@@ -279,7 +279,7 @@ An `ArchiveVolume` is never constructed here directly in production — it's min
     code change, the moment the backend's `read_range` works. Only a _successful_ read whose bytes AREN'T a zip
     signature (a genuinely mislabeled remote file) declines the route.
   - **The sync `resolve_local_only`** confirms only LOCAL boundaries (no async I/O) for the one caller that can't
-    `.await`: the write-op fresh-listing oracle (`listing::caching::try_get_authoritative_listing`), which runs on sync
+    `.await`: the write-op fresh-listing oracle (`cmdr_listing::Listings::authoritative_listing`), which runs on sync
     recursive scan walkers. That oracle guards a REMOTE archive-inner path itself (a non-local parent's volume-level
     `listing_watch_coverage` would falsely claim freshness for an archive whose content watch is local-only and never
     established), declining the cache so the pre-op scan reruns honestly.

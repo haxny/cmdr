@@ -152,7 +152,6 @@ above is separate: it ships per-character widths to Rust for backend column sizi
 
 All under `apps/desktop/src-tauri/src/`.
 
-- `crates/cmdr-listing/`: Directory reading, streaming, caching, sorting (serves virtual scroll)
 - `apps/desktop/src-tauri/src/file_system/staging.rs`: Where every Cmdr scratch file (`.cmdr-tmp-*`, `.cmdr-temp-*`) is
   named, and whether a listing shows it. Rules and rationale: the module's own docs
 - `file_system/write_operations/`: Copy/move/delete with safety patterns (temp+rename, staging, rollback). Umbrella +
@@ -207,13 +206,10 @@ All under `apps/desktop/src-tauri/src/`.
 - `unregistered_volumes.rs`: why a volume id has no registered volume, asked by every listing, transfer, delete,
   preview, and new-folder site that finds nothing: a listed device or saved server nobody connected, or a volume that's
   gone. Each caller words the answer in its own error vocabulary. Contract in the module doc
-- `listing_host/`: this app as the listing engine's host (`crates/cmdr-listing/src/host/` declares the seams). `install`
-  hands over the events adapter, the runtime, the overlays (the git portal's `.git/` category rows,
-  `file_system/git/overlay.rs`), and the observers in order. A `ListingOverlay` contributes rows a PANE sees that no
-  volume holds; why it must never move into a `Volume`: `file_system/volume/DETAILS.md` § "Architecture". A
-  `ListingObserver` hears which directories a PANE has open; one keeps a repo's `.git/*` watcher armed while a pane
-  shows one of its virtual listings (`apps/desktop/src-tauri/src/file_system/git/arming.rs`), and why arming is the
-  backend's is `apps/desktop/src-tauri/src/file_system/git/DETAILS.md` § "Who arms the repo watcher"
+- `listing_host/`: this app as the listing engine's host: builds the one engine (`listings()`), answers its seams
+  (events, volumes, index, leases, locale, mount table), registers the git overlay and the observers, and owns the
+  composer every directory change enters through (index, badges, panes). See
+  `apps/desktop/src-tauri/src/listing_host/CLAUDE.md`
 - `listing_index_sizes/`: delivers the drive index's folder-size updates only to the open listings they touch
   (`listing-index-sizes-changed`), through a `ListingObserver` of its own. See
   `apps/desktop/src-tauri/src/listing_index_sizes/CLAUDE.md`
@@ -362,10 +358,11 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, and `cmdr-http` carry no `tauri` dependency and no reach
-into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps the public surface of
-`cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, and `cmdr-git` at the
-numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
+`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, and `cmdr-listing` carry no `tauri`
+dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps
+the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`,
+`cmdr-git`, and `cmdr-listing` at the numbers their audits landed on. The two dev CLIs and the vendored fork are
+ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -378,6 +375,10 @@ numbers their audits landed on. The two dev CLIs and the vendored fork are ordin
     connection events, credentials, index notification, settings, user activity, analytics. What a backend crate is
     written against; the app answers them from `apps/desktop/src-tauri/src/volume_host.rs`. See
     `crates/cmdr-fs/src/volume/host/CLAUDE.md`
+- `crates/cmdr-listing/`: the directory listing engine behind every pane: streaming reads with progress and stall
+  reporting, the listing cache, sorting and Unicode collation, pane row numbers, the quick filter, and the diffs that
+  keep a pane current. One handle (`Listings`) that a host builds with explicit seams; Cmdr's host is `listing_host/`.
+  See `crates/cmdr-listing/CLAUDE.md`
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`

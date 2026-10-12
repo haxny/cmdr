@@ -85,7 +85,7 @@ to exactly one tier:
   on them is a lie the user can see. Short enough to follow the transfer, long enough to collapse a render burst into
   one query.
 - **`settled`, 60 s** — `Synced` / `OnlineOnly`. Every realistic way they change either produces an FSEvent (which
-  invalidates through `notify_directory_changed`) or is a user action that invalidates explicitly (`cloud_actions.rs`),
+  invalidates through `listing_host::directory_changed`) or is a user action that invalidates explicitly (`cloud_actions.rs`),
   so a folder the user is staring at costs one round of provider calls a minute in the worst case and none in the
   normal one.
 - **`structural`, 30 min** — `NotCloudManaged`. The permanent, correct answer for nearly every file on the machine. It
@@ -100,7 +100,7 @@ The type is what enforces this rather than a comment: `Ttls::for_knowledge` is a
 new kind of answer cannot silently inherit somebody else's lifetime.
 
 **What it was worth:** an idle app ran about 43 sync-status batches a minute learning "still not a cloud file", purely
-because the negative expired every 60 s while `notify_directory_changed` was already invalidating on every real change.
+because the negative expired every 60 s while `listing_host::directory_changed` was already invalidating on every real change.
 ⚠️ Sized honestly that is an IO-and-provider-load win; the probe's claim on CPU was refuted by measurement
 (`docs/notes/performance/idle-cpu-attribution-2026-08-03.md`, wrong answer 3: 3.4% of busy CPU but 0.2% of USERSPACE CPU, with
 1,964 of 2,037 samples per thread inside the `stat` itself). Don't quote a CPU number for this anywhere.
@@ -176,7 +176,7 @@ the structural shortcut, one layer above the URL build.
 
 ## Decision: the cache is keyed by directory, not by full path
 
-**Why:** invalidation arrives per directory and it arrives often — `notify_directory_changed` fires for every watcher
+**Why:** invalidation arrives per directory and it arrives often — `listing_host::directory_changed` fires for every watcher
 event, including throughout a big copy. A flat path map would make each of those an O(cache) scan. Keyed by directory,
 it's one hash lookup whether it hits or misses. Eviction gets the same benefit: dropping a whole directory the user
 navigated away from is one removal, and it's exactly the right granularity.

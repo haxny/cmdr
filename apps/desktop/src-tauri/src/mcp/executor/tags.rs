@@ -4,7 +4,7 @@
 //! primitives the context-menu tag toggle uses. It resolves target paths off the
 //! pane state (names / selection / cursor, via `resolve_pane_target_paths`), then
 //! patches the cached listing so the panes re-render the colored dots (reusing
-//! `apply_tags_to_listing`, the enrich path). Gate `Always`: silent metadata
+//! `Listings::apply_tags`, the enrich path). Gate `Always`: silent metadata
 //! mutation on user files, with no confirmation dialog to piggyback on.
 //!
 //! macOS-only: Finder tags don't exist elsewhere, so off macOS it returns a clean
@@ -198,7 +198,7 @@ fn desired_tags_for_set(current: &[cmdr_fs::entry::TagRef], colors: &[u8]) -> Ve
 }
 
 /// Patch the resulting tags into the focused pane's cached listing so the dots
-/// re-render immediately, reusing the same `apply_tags_to_listing` path the
+/// re-render immediately, reusing the same `Listings::apply_tags` path the
 /// context-menu toggle and `enrich_tags` use. No matching listing (a rare
 /// path/volume mismatch) simply skips the in-place refresh — the tags still
 /// landed on disk and the dots update on the next visible-range enrich.

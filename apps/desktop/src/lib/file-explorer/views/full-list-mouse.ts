@@ -112,7 +112,7 @@ export function planRowMouseDown(input: RowMouseDownInput): RowMouseDownPlan {
   const fileInfos = collectFileInfos(selectedIndices, getEntryAt)
 
   // Search-results / static-entries panes have no backend listing, so
-  // `start_selection_drag` (which resolves indices against LISTING_CACHE)
+  // `start_selection_drag` (which resolves indices against the backend listing cache)
   // would fail. The entries already carry absolute paths, so we route
   // through the paths-by-value drag flavour.
   if (input.usingStaticEntries) {

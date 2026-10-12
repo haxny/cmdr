@@ -151,7 +151,7 @@ impl MtpVolume {
     ///
     /// The per-ENTRY paths inside a listing are the inner form
     /// (`/Documents/notes.txt`), so the `Removed` patch matches entries by NAME
-    /// (see `caching::remove_entry_by_name`).
+    /// (see `cmdr-listing`'s `remove_entry_by_name`).
     fn to_url_path(&self, path: &Path) -> PathBuf {
         let path_str = path.to_string_lossy();
         if path_str.starts_with("mtp://") {

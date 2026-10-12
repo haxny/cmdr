@@ -6,7 +6,7 @@
 //! ❌ never `cmdr_adb::volume::testing::connect_fake`. A phone has no watcher, so
 //! the only thing that keeps its index honest after a write is the patch the
 //! volume reports to its listing host, and only the app's host forwards it to the
-//! index (`caching::notify_directory_changed` → `Index::apply_directory_change`).
+//! index (`listing_host::directory_changed` → `Index::apply_directory_change`).
 //! A recording host would pass every cell here without proving that hop.
 
 use std::path::{Path, PathBuf};

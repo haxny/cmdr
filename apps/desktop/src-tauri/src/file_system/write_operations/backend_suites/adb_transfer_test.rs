@@ -342,10 +342,9 @@ async fn a_file_copied_off_a_phone_keeps_its_mode() {
 
 /// A phone registered with a host that records every pane patch.
 ///
-/// ❗ Recorded rather than read back from the app's listing cache: the cache
-/// patch needs a running app (`caching::notify_directory_changed` returns early
-/// without an `AppHandle`), and a phone has no watcher to fall back on, so the
-/// patch the volume reports IS what keeps a pane honest.
+/// ❗ Recorded rather than read back from the app's listing cache: a phone has
+/// no watcher to fall back on, so the patch the volume reports IS what keeps a
+/// pane honest, and recording it pins exactly that report.
 struct RecordedPhone {
     fake: FakeAdbServer,
     volume_id: String,

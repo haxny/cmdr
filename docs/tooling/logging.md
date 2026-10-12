@@ -206,7 +206,7 @@ Copy-paste commands for common debugging scenarios. All include `info` as the ba
   mount rather than a direct smb2 session (it names a rejected password as such, which is the fixable cause);
   `subprocess` says when `smbutil` / `smbclient` was stopped for not answering. Both are already at Debug in the log
   FILE, so a user's bundle answers this without a re-run.
-- **Directory listing**: `RUST_LOG=cmdr_lib::file_system::listing=debug,info pnpm dev`
+- **Directory listing**: `RUST_LOG=cmdr_listing=debug,info pnpm dev`
 - **File viewer**: `RUST_LOG=cmdr_lib::file_viewer=debug,FE:viewer=debug,info pnpm dev`
 - **MTP (Android devices)**: `RUST_LOG=cmdr_lib::mtp=debug,FE:mtp=debug,info pnpm dev`
 - **Volume discovery + broadcast**:

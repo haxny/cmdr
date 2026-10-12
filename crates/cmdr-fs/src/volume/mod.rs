@@ -868,8 +868,8 @@ pub trait Volume: Send + Sync {
     // ========================================
 
     /// Whether a `notify`-based OS watch can be established on this volume's
-    /// paths, which is the one thing this gates: `listing::operations` and
-    /// `listing::streaming` call `start_watching` only when it's true.
+    /// paths, which is the one thing this gates: the listing engine's watch
+    /// observer arms a watch only when it's true.
     ///
     /// ❌ Says NOTHING about what such a watch would see. A backend whose paths
     /// don't exist on the local filesystem (MTP), or that has no watcher yet
@@ -913,7 +913,7 @@ pub trait Volume: Send + Sync {
     }
 
     /// What a live watch on the listing at `path` observes right now. Used by
-    /// `cmdr_listing::caching::try_get_authoritative_listing` to decide
+    /// `cmdr_listing::Listings::authoritative_listing` to decide
     /// whether a cached listing can replace a real read in write-op pre-flight,
     /// which only [`WatchCoverage::EveryWriter`] allows.
     ///
@@ -926,7 +926,7 @@ pub trait Volume: Send + Sync {
     /// `EveryWriter` is a claim about WHICH WRITERS reach us, not about latency:
     /// every backend has a debounce or settling window between a real change and
     /// the cache reflecting it. See the freshness contract on
-    /// `try_get_authoritative_listing` for the per-backend windows callers must
+    /// `Listings::authoritative_listing` for the per-backend windows callers must
     /// tolerate.
     ///
     /// Default `None`: a new backend claims coverage explicitly or gets none.

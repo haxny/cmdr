@@ -203,7 +203,7 @@ the component and its old rows mounted until the replacement range lands, so an 
 zero from the old listing followed quickly by row zero from the new one must remain two single clicks. Otherwise the
 second click can open the new listing's `..` row and immediately navigate back to its parent.
 
-**Key**: Data lives in Rust `LISTING_CACHE`. Frontend fetches visible ranges on-demand via
+**Key**: Data lives in the Rust listing cache (`cmdr-listing`). Frontend fetches visible ranges on-demand via
 `getFileRange(listingId, start, count, includeHidden)`.
 
 Both views expose the window two ways, and a caller that outlives a diff wants the second: `getEntryAt(uiIndex)` reads

@@ -135,8 +135,8 @@ impl MtpConnectionManager {
             // Each branch ALSO feeds the per-volume index (the second consumer):
             // the live pane gets its targeted/blanket refresh, and the persisted
             // index stays in sync so dir sizes are right while the device is Fresh,
-            // even with no pane open (mirrors the SMB `notify_directory_changed`
-            // dual-consumer wiring).
+            // even with no pane open (mirrors the SMB watcher's
+            // dual-consumer wiring through the app's composer).
             DeviceEvent::ObjectAdded { handle } => {
                 debug!("MTP object added: {:?} on {}", handle, device_id);
                 self.emit_change_for_handle(device_id, handle);

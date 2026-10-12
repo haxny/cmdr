@@ -72,7 +72,7 @@ pub(super) use volume::run_volume_scan_preview;
 /// enabling MTP and other non-local volumes to produce scan previews.
 ///
 /// `source_volume_id` identifies the volume the sources live on. It's used by the
-/// fresh-listing oracle (`try_get_authoritative_listing`) to short-circuit re-reading
+/// fresh-listing oracle (`Listings::authoritative_listing`) to short-circuit re-reading
 /// directories that an open pane is already keeping in sync. Pass `"root"` for
 /// local-FS scans.
 /// `sample_for_estimate` turns on the compressed-size sampler for the LOCAL

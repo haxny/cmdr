@@ -80,15 +80,16 @@ most entangled one, with archive, MTP, and local POSIX checked for anything SMB 
 
 ### `ListingHost`
 
-- `directory_changed` ⇐ `listing::caching::notify_directory_changed`. SMB calls it from three arms of
-  `mutation.rs::notify_mutation_impl` and from ten of the watcher's (nine in the event batch, one for an overflow
-  `FullRefresh`); MTP calls it from four. One call covers three host concerns — the panes, the file index, the
-  cloud-badge cache — so a backend never learns which of them exist.
-- `authoritative_listing` ⇐ `listing::caching::try_get_authoritative_listing`. The fresh-listing oracle, consulted per
-  unique parent directory by SMB's and MTP's batch scans.
-- `refresh_archive_listings` ⇐ `listing::caching::refresh_archive_listings`. Two callers, both watching the drive that
-  HOLDS an archive rather than the archive itself: the local archive content watch and the SMB share watcher.
-- `volumes_with_open_listings` ⇐ `listing::volume_ids_with_listings`. For a DEVICE backend, one level above the volumes
+- `directory_changed` ⇐ the app's composer `listing_host::directory_changed` (index, badges, then
+  `Listings::directory_changed`). SMB calls it from three arms of `mutation.rs::notify_mutation_impl` and from ten of
+  the watcher's (nine in the event batch, one for an overflow `FullRefresh`); MTP calls it from four. One call covers
+  three host concerns — the panes, the file index, the cloud-badge cache — so a backend never learns which of them
+  exist.
+- `authoritative_listing` ⇐ `Listings::authoritative_listing`. The fresh-listing oracle, consulted per unique parent
+  directory by SMB's and MTP's batch scans.
+- `refresh_archive_listings` ⇐ `Listings::refresh_archive_listings`. Two callers, both watching the drive that HOLDS an
+  archive rather than the archive itself: the local archive content watch and the SMB share watcher.
+- `volumes_with_open_listings` ⇐ `Listings::volume_ids_with_listings`. For a DEVICE backend, one level above the volumes
   it serves: an MTP phone's event names a bare PTP handle, and resolving it costs a round trip per storage, so the
   backend asks which storages a pane is showing and searches only those.
 
@@ -101,7 +102,7 @@ device event out of a per-entry loop.
 found a pane to land on. That's deliberate: the seam is fire-and-forget in both directions, and a backend that wants a
 safety net reports `FullRefresh` for the volume, which the host fans out to every listing on it.
 
-**Two of the five listing functions the survey listed are NOT seams.** `find_listings_for_path_on_volume` and
+**Two of the five listing functions the survey listed are NOT seams.** `Listings::listings_for_local_path` and
 `patch_listing_after_local_mutation` have exactly one caller between them, `local_posix.rs`, which is permanently
 app-resident. `patch_listing_after_local_mutation` is by definition local: it `std::fs`-stats the changed entry, which a
 backend on a protocol can neither do nor want (it can build the entry from a cheaper protocol reply). And SMB's own
@@ -381,7 +382,8 @@ surfaces at the end of a move: check every `[\`Type::method\`]` link for an app-
 `apps/desktop/src-tauri/src/volume_host.rs` builds the one host and hands it out; each answer is a small adapter next to
 the subsystem that can actually give it.
 
-- `ListingHost` ⇒ `file_system::listing::listing_host::AppListings`
+- `ListingHost` ⇒ `listing_host::backends::AppListings` (a host with no composer of its own can hand backends the
+  engine's `cmdr_listing::Listings::listing_host()` instead)
 - `VolumeEventSink` ⇒ `events::volume_mapping::TauriVolumeEvents`
 - `CredentialStore` ⇒ `network::credential_store::KeychainCredentials`
 - `HostKeys` ⇒ `network::sftp_host_keys::AppHostKeys`
@@ -418,8 +420,9 @@ Three things the adapters found that aren't trait shape, and matter to whoever w
 
 `cmdr-archive`, SMB, and SFTP are all fully on the seams: SMB takes a `VolumeHost` in `connect_smb_volume` and keeps it
 on the share-scoped `SmbVolumeInner`, SFTP takes one in `connect_sftp_volume`, and neither reaches anything in the app
-directly, and MTP is now the same. `local_posix` still calls `listing::caching`, `network::keychain`, and the rest, and
-stays app-resident on purpose. Which backends move and which don't: § "Which backends move" below.
+directly, and MTP is now the same. `local_posix` still calls the listing engine through `listing_host`,
+`network::keychain`, and the rest, and stays app-resident on purpose. Which backends move and which don't: § "Which
+backends move" below.
 
 **Only the event sink needs a running app.** `volume_host::host()` hands out the app's real adapters even before
 `install()`, leaving only the frontend channel (and the app's runtime) unwired, because the listing cache, secret store,
