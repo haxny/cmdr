@@ -174,6 +174,33 @@ Components → Transfer tree. Differences:
 - **`useShortenMiddle` gained `tooltip`** (hover a fuller text than shown), and stopped leaving stale text on a node
   with no width yet.
 
+## Built in M5 (2026-10-12), and where it differs from the plan below
+
+Code and docs: `TransferProgressDialog.svelte` and `transfer/DETAILS.md`, `TransferProgressReadout.svelte`, and
+`transfer-tree/` (`pinned-headers.ts`, `DETAILS.md`). Differences:
+
+- **Pinned headers, which the plan didn't have** (VS Code's sticky scroll): the open folders scrolled past stay at the
+  top with live counts, at most three, the third compacting deeper ones into one `a/b/c` header. They're `aria-hidden`
+  mirrors, never treeitems; a click moves the cursor to the folder, its chevron shuts it. The `deep-nesting` fixture in
+  Debug → Components shows the cap and the compaction.
+- **`ancestors` carry whole rows** (`TransferTreeAncestor { index, row }`), so a header above the loaded window has live
+  counts without a second request. Following asks `Follow { lead: 10 }` (the plan said 2) so the rows under the stack
+  are loaded, and keeps the work one row per pinned level down; `reveal` treats a row under the stack as out of sight.
+- **Content-sized height**: the tree is as tall as `min(totalRows, defaultRows)`, held at its high-water mark so a
+  folder shutting never bounces the layout. A single file is one row, and there's no fixed 8-row box; 8 is the most
+  before a resize, with a three-row floor once resized.
+- **The tree takes the current-file line's place** under the readout (the plan put it below and kept the line). A
+  reversal hides it, since its rows would still say "done" about files going away.
+- **The dialog is `resizable` only while the tree shows**; the non-conflict body is a `.progress-body` column that hands
+  a taller dialog's slack to the tree.
+- **"N left" starts the time-left line in `TransferProgressReadout`**, so the queue rows get it at no extra height. The
+  `time-left` i18n concept now covers counts; translated into all 11 locales.
+- **The stall card moved into `TransferStallNotice.svelte`** to keep the dialog under its length limit (its a11y block
+  is in `transfer-parts.a11y.test.ts`).
+- Tests: `TransferProgressDialog.tree.test.ts` (which operations show the tree, resizability, the current-file swap, a
+  pull per tick, axe), the readout's "N left" cases, `pinned-headers.test.ts`, and a `dialog-resize.spec.ts` case that
+  drags a live copy's dialog taller and checks the tree takes the height.
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +
