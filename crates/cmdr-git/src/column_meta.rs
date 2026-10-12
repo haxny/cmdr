@@ -133,7 +133,7 @@ pub fn files_changed_count(repo: &gix::Repository, commit_id: ObjectId) -> Optio
     let mut platform = parent_tree.changes().ok()?;
     let _ = platform.for_each_to_obtain_tree(&tree, |_change| {
         count = count.saturating_add(1);
-        Ok::<_, std::convert::Infallible>(std::ops::ControlFlow::Continue(()))
+        Ok::<_, gix::Error>(std::ops::ControlFlow::Continue(()))
     });
     Some(count)
 }

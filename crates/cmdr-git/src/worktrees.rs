@@ -43,7 +43,11 @@ pub fn list_worktrees(handle: &RepoHandle, repo_root: &Path) -> Result<Vec<FileE
 
     let mut out = Vec::with_capacity(proxies.len());
     for proxy in proxies {
-        let id = proxy.id().to_string();
+        // The id is the `worktrees/<id>` dir name, which gix refuses only when it
+        // isn't valid Unicode (Windows); skip that one like an orphan below.
+        let Ok(id) = proxy.id().map(ToString::to_string) else {
+            continue;
+        };
         // base() reads `gitdir` and resolves the worktree path. Skip
         // worktrees whose base is missing rather than fail the whole
         // listing – orphaned linked-worktrees are common after manual

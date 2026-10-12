@@ -452,7 +452,7 @@ pub fn get_metadata_for(
                     let repo = handle.to_thread_local();
                     if let Ok(proxies) = repo.worktrees() {
                         for p in proxies {
-                            if p.id().as_bstr() == name.as_bytes().as_bstr()
+                            if p.id().is_ok_and(|id| id == name.as_bytes().as_bstr())
                                 && let Ok(base) = p.base()
                             {
                                 fe.redirect_to_path = Some(base.display().to_string());
@@ -512,10 +512,11 @@ pub fn resolve_ref_commit(handle: &RepoHandle, cat: Cat, name: &str) -> Lookup<g
     };
     let mut reference = match repo.find_reference(&partial) {
         Ok(reference) => reference,
-        // Typed, per gix: the ref simply isn't in this repo (a typo in the path
+        // Classified by gix: the ref simply isn't in this repo (a typo in the path
         // bar, a branch that only exists on a remote). Anything else is the odb
-        // failing to answer, which stays an error.
-        Err(gix::reference::find::existing::Error::NotFound { .. }) => return Ok(None),
+        // failing to answer, which stays an error, and a corruption outranks a
+        // NotFound beneath it.
+        Err(e) if e.dominant_class() == Some(gix::error::Class::NotFound) => return Ok(None),
         Err(e) => {
             return Err(FriendlyGitError::with_source(
                 FriendlyGitErrorKind::CorruptRepo,

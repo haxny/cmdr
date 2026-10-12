@@ -201,15 +201,17 @@ fn without_filter_drivers(repo: gix::ThreadSafeRepository) -> Result<gix::Thread
     Ok(local.into_sync())
 }
 
-fn map_discover_err(err: gix::discover::Error) -> FriendlyGitError {
-    let kind = match &err {
-        gix::discover::Error::Discover(_) => FriendlyGitErrorKind::NotARepo,
-        gix::discover::Error::Open(open_err) => match open_err {
-            // gix::open::Error::NotARepository is the "we found .git but it's not a real repo" case.
-            // Other open errors fall through as Corrupt.
-            gix::open::Error::NotARepository { .. } => FriendlyGitErrorKind::NotARepo,
-            _ => FriendlyGitErrorKind::CorruptRepo,
-        },
+fn map_discover_err(err: gix::Error) -> FriendlyGitError {
+    // The upward search found no repository (or only an untrusted one): its own
+    // typed enum. A `.git` that turned out not to be a real repo is classified
+    // `NotFound` by gix's open. Anything else, including a NotFound buried under
+    // a corruption (which outranks it), is a damaged repo.
+    let not_a_repo = err.downcast_any_ref::<gix::discover::upwards::Error>().is_some()
+        || err.dominant_class() == Some(gix::error::Class::NotFound);
+    let kind = if not_a_repo {
+        FriendlyGitErrorKind::NotARepo
+    } else {
+        FriendlyGitErrorKind::CorruptRepo
     };
     FriendlyGitError::with_source(kind, err.to_string(), err)
 }
@@ -240,7 +242,7 @@ pub(crate) fn count_ahead_behind(
     }
     let cache = repo.commit_graph_if_enabled().ok().flatten();
     let mut graph = repo.revision_graph(cache.as_ref());
-    let merge_base = repo.merge_base_with_graph(local, upstream, &mut graph).ok()?.detach();
+    let merge_base = repo.merge_base_with_graph(local, upstream, &mut graph).ok()??.detach();
     let ahead = count_commits_between(repo, local, merge_base)?;
     let behind = count_commits_between(repo, upstream, merge_base)?;
     Some((ahead, behind))

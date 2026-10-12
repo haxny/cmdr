@@ -258,7 +258,7 @@ fn diff_into_dates(
         // dir prefix to include the trailing slash up front.
         let path_str = match location.to_str() {
             Ok(s) => s,
-            Err(_) => return Ok::<_, std::convert::Infallible>(std::ops::ControlFlow::Continue(())),
+            Err(_) => return Ok::<_, gix::Error>(std::ops::ControlFlow::Continue(())),
         };
 
         if !prefix.is_empty() && !path_str.starts_with(prefix) {

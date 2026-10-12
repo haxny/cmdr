@@ -379,8 +379,9 @@ git-specific repair copy.
 
 Four things resolve to `Ok(None)`: a name `gix`'s tree walk doesn't find (`tree::resolve_tree_at`, `get_tree_entry`,
 `lookup_blob`), a blob asked for as a directory or a directory asked for as a blob, a branch or tag whose ref isn't in
-the repo (typed `gix::reference::find::existing::Error::NotFound`, ❌ never a string match), and any name under
-`worktrees/` or `submodules/` deeper than the leaf, since neither browses a commit tree.
+the repo (gix classifies it `Class::NotFound`, read as the error's `dominant_class()` so a corruption outranks it; ❌
+never a string match), and any name under `worktrees/` or `submodules/` deeper than the leaf, since neither browses a
+commit tree.
 
 `log::resolve_commit_id` and `stash::resolve_stash_commit` still answer `Err` for a revspec they can't parse: an
 unresolvable SHA is not the same shape of miss, and the friendly kinds (`ShallowBoundary`, `MissingObject`) carry repair
