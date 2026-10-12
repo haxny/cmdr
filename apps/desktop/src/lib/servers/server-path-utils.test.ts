@@ -16,6 +16,7 @@ import {
   isUnderServerRoot,
   joinServerPath,
   parseServerPath,
+  serverAddressOf,
   serverAppRoot,
   serverProtocolOfVolumeId,
 } from './server-path-utils'
@@ -198,5 +199,20 @@ describe('walking a server tree', () => {
     expect(getServerDisplayPath('sftp://ada@nas.local:22/srv/data')).toBe('/srv/data')
     expect(getServerDisplayPath('sftp://ada@nas.local:22')).toBe('/')
     expect(getServerDisplayPath('/Volumes/naspi')).toBe('/Volumes/naspi')
+  })
+})
+
+describe('serverAddressOf', () => {
+  it('names the host and port a server path dials, for the pane that waits on it (ERR-VZ4CV)', () => {
+    expect(serverAddressOf('sftp://ada@100.64.0.7:22/srv/data')).toBe('100.64.0.7:22')
+    expect(serverAddressOf('webdav://ada@nas.local:5006')).toBe('nas.local:5006')
+  })
+
+  it('brackets an IPv6 literal so its port reads as a port', () => {
+    expect(serverAddressOf('sftp://ada@fd7a:115c::5:22')).toBe('[fd7a:115c::5]:22')
+  })
+
+  it('answers null off the server schemes', () => {
+    expect(serverAddressOf('/Volumes/naspi')).toBeNull()
   })
 })

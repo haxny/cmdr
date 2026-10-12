@@ -2052,6 +2052,15 @@ without Try now they sit out a delay for a server they can see is back. The payl
 view holds no reference to the reconnect manager and a second backend's loop renders through it unchanged. `waiting` is
 `null` while an attempt is actually in flight — nothing to draw, nothing to skip — and the spinner carries the motion.
 
+❗ **The cycle's Cancel and Disconnect both LEAVE the volume, for home on the root volume, ❌ never a walk-up.** With
+the session down, a walk-up can only land on the same volume (an SFTP path stops at its scheme root), which re-listed
+the failure under the view the person had just dismissed (`ERR-VZ4CV`). Disconnect picks the command by kind: a server
+place (SFTP, WebDAV, S3) drops its session through `disconnectPlace`, and only an SMB share takes `disconnectSmbVolume`,
+which refuses everything else.
+
+Under the place's name, a server place also shows the `host:port` it dials (`serverAddressOf`, passed in as `address`):
+a saved name says nothing about whether it points at a LAN address or a VPN one.
+
 ❗ **There is no `gave_up` state.** A loop that ran out of attempts renders `VolumeUnreachableBanner`'s `gaveUp`
 variant, the app's one "couldn't reach this" surface, which already words the path, the retry, and the disconnect. Two
 renderers for one state is worse than one in the file next door.

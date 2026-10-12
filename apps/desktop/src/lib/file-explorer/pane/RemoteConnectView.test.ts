@@ -32,3 +32,18 @@ describe('a changed host key', () => {
     target.remove()
   })
 })
+
+describe('the address under the name', () => {
+  it('shows what the pane is trying to reach, so a person can tell a LAN address from a VPN one (ERR-VZ4CV)', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(RemoteConnectView, {
+      target,
+      props: { name: 'Naspolya', address: '100.64.0.7:22', state: { kind: 'connecting', cancel: vi.fn() } },
+    })
+    await tick()
+
+    expect(target.textContent).toContain('100.64.0.7:22')
+    target.remove()
+  })
+})

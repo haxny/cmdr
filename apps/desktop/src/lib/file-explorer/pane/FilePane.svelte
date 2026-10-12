@@ -70,6 +70,7 @@
     import { createPaneVolumeState } from '../navigation/pane-volume-state.svelte'
     import { answersNow } from '../navigation/connection-state'
     import { placeRootOf } from '#lib/servers/open-sign-in.js'
+    import { serverAddressOf } from '#lib/servers/server-path-utils.js'
     import { createDeviceConnect } from './device-connect.svelte'
     import AdbHint from '#lib/adb/AdbHint.svelte'
     import { createSelectionState } from './selection-state.svelte'
@@ -638,6 +639,8 @@
     // view and to decide whether subscribing to the SMB reconnect manager is
     // even relevant for this pane).
     const currentVolumeInfo = $derived(getStoreVolumes().find((v) => v.id === volumeId) ?? null)
+    // What a connect view under this pane is dialing, as `host:port` (a server place only).
+    const remoteAddress = $derived(serverAddressOf(currentVolumeInfo?.path ?? volumePath))
     /**
      * True on a mounted disk image (.dmg): a transient, effectively-full mount. Its free space
      * is meaningless, so we skip the space query and hide the bottom disk-usage bar.
@@ -2050,12 +2053,13 @@
                 onOpenHome={() => onOpenHome?.()}
             />
         {:else if placeConnect.state}
-            <RemoteConnectView name={currentVolumeInfo?.name ?? volumeId} state={placeConnect.state} />
+            <RemoteConnectView name={currentVolumeInfo?.name ?? volumeId} address={remoteAddress} state={placeConnect.state} />
         {:else if deviceConnect.state}
             <RemoteConnectView name={currentVolumeInfo?.name ?? volumeId} state={deviceConnect.state} />
         {:else if smbView.remoteConnectState}
             <RemoteConnectView
                 name={currentVolumeInfo?.name ?? volumePath}
+                address={remoteAddress}
                 state={smbView.remoteConnectState}
             />
         {:else if smbView.showGaveUp}

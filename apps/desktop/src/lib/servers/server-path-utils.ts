@@ -146,6 +146,20 @@ export function parseServerPath(path: string): ParsedServerPath | null {
   }
 }
 
+/**
+ * The `host:port` a server path dials, for a person to read, or `null` off the
+ * server schemes. An IPv6 literal is bracketed so its port reads as a port.
+ *
+ * What a pane waiting on a place shows under its name: a saved name says nothing
+ * about whether it points at a LAN address or a VPN one (`ERR-VZ4CV`).
+ */
+export function serverAddressOf(path: string): string | null {
+  const parsed = parseServerPath(path)
+  if (!parsed) return null
+  const host = parsed.host.includes(':') ? `[${parsed.host}]` : parsed.host
+  return `${host}:${String(parsed.port)}`
+}
+
 /** The account's app root: `<protocol>://<user>@<host>:<port>`, with no path. */
 export function serverAppRoot(account: ServerAccount): string {
   return `${account.protocol}://${account.username}@${account.host.toLowerCase()}:${String(account.port)}`

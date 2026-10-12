@@ -20,8 +20,8 @@ import { wordEjectRefusal } from '../navigation/eject-error-messages'
 import { disconnectPlace, disconnectSmbVolume } from '#lib/tauri-commands/index.js'
 import { connectPlace } from '#lib/servers/connect-flow.js'
 import { openSignInForPlace } from '#lib/servers/open-sign-in.js'
+import { isServerVolumeId } from '#lib/servers/server-path-utils.js'
 import { reconnectCycleLines, smbReconnectManager } from '../network/smb-reconnect-manager.svelte'
-import { resolveValidPath } from '../navigation/path-resolution'
 import { hasReconnectLoop } from '../navigation/connection-state'
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
@@ -40,7 +40,7 @@ export interface SmbViewStateDeps {
   getCurrentVolumeInfo: () => VolumeInfo | null
   /** Reload the current directory after a successful reconnect. */
   loadDirectory: (path: string) => void
-  /** Walk up to the nearest reachable folder (or switch to root) after leaving a broken share. */
+  /** Lands the pane somewhere reachable; `null` is home on the root volume. */
   navigateToFallback: (validPath: string | null) => void
   /**
    * Enters a volume the way a switcher pick does. Puts the pane back on a place
@@ -75,9 +75,9 @@ export interface SmbViewState {
   handleDisconnectPlace: () => void
   /** Show the changed host key on the sheet, from the changed-key banner. */
   handleCheckHostKey: () => void
-  /** Cancel the reconnect cycle and walk up to the nearest reachable folder. */
+  /** Cancel the reconnect cycle and leave the volume for home. */
   handleSmbReconnectCancel: () => void
-  /** Cancel the cycle, OS-unmount the share, and navigate away immediately. */
+  /** Cancel the cycle, drop the session (a share's mount, a server place's session), and leave for home. */
   handleSmbReconnectDisconnect: () => void
 }
 
@@ -201,9 +201,20 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
     void disconnectPlace(targetVolumeId).catch((e: unknown) => {
       log.warn('Disconnecting the place {volumeId} broke down: {error}', { volumeId: targetVolumeId, error: String(e) })
     })
-    void resolveValidPath(deps.getCurrentPath(), { volumeRoot: deps.getVolumePath() }).then((validPath) => {
-      deps.navigateToFallback(validPath)
-    })
+    leaveVolume()
+  }
+
+  /**
+   * Home on the root volume, the way out of every button here that stops the cycle.
+   *
+   * ❗ ❌ Never a walk-up. With the session down, every rung on this volume either
+   * can't answer or answers with this volume again (an SFTP path stops at its own
+   * scheme root), so the pane re-listed the failure under the view the person had
+   * just dismissed (`ERR-VZ4CV`). After a Disconnect it was worse: the walk landed
+   * on a place that was now merely saved, and the pane dialed it.
+   */
+  function leaveVolume(): void {
+    deps.navigateToFallback(null)
   }
 
   /**
@@ -249,14 +260,23 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
 
   function handleSmbReconnectCancel(): void {
     smbReconnectManager.cancel(deps.getVolumeId())
-    // Walk up to the nearest reachable folder, same fallback chain we use elsewhere.
-    void resolveValidPath(deps.getCurrentPath(), { volumeRoot: deps.getVolumePath() }).then((validPath) => {
-      deps.navigateToFallback(validPath)
-    })
+    leaveVolume()
   }
 
+  /**
+   * The cycle's Disconnect, and the gave-up banner's.
+   *
+   * ❗ A server place (SFTP, WebDAV, S3) drops its session through
+   * `disconnectPlace`, ❌ never `disconnectSmbVolume`: that one unmounts an SMB
+   * share and refuses everything else, which is what an SFTP place got
+   * (`ERR-VZ4CV`: "This isn't a network share, so there's nothing to disconnect").
+   */
   function handleSmbReconnectDisconnect(): void {
     const targetVolumeId = deps.getVolumeId()
+    if (isServerVolumeId(targetVolumeId)) {
+      handleDisconnectPlace()
+      return
+    }
     smbReconnectManager.cancel(targetVolumeId)
     // Fire the OS-level unmount (macOS: `diskutil unmount`). We don't await here.
     // The FSEvents-driven `volumes-changed` will tear down the SmbVolume and
@@ -269,9 +289,7 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
         level: 'error',
       })
     })
-    void resolveValidPath(deps.getCurrentPath(), { volumeRoot: deps.getVolumePath() }).then((validPath) => {
-      deps.navigateToFallback(validPath)
-    })
+    leaveVolume()
   }
 
   return {

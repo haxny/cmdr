@@ -60,12 +60,14 @@ import { createSmbViewState, type SmbViewStateDeps } from './smb-view-state.svel
 describe('createSmbViewState', () => {
   let dispose: (() => void) | undefined
 
-  function create(opts: { volumeInfo?: VolumeInfo | null; loadDirectory?: Mock; navigateToFallback?: Mock } = {}) {
+  function create(
+    opts: { volumeId?: string; volumeInfo?: VolumeInfo | null; loadDirectory?: Mock; navigateToFallback?: Mock } = {},
+  ) {
     const loadDirectory = opts.loadDirectory ?? vi.fn()
     const navigateToFallback = opts.navigateToFallback ?? vi.fn()
     const enter = vi.fn()
     const deps: SmbViewStateDeps = {
-      getVolumeId: () => 'smb-vol',
+      getVolumeId: () => opts.volumeId ?? 'smb-vol',
       getCurrentPath: () => '/smb-vol/dir',
       getVolumePath: () => '/smb-vol',
       getCurrentVolumeInfo: () => opts.volumeInfo ?? null,
@@ -94,24 +96,36 @@ describe('createSmbViewState', () => {
     dispose = undefined
   })
 
-  it('handleSmbReconnectCancel cancels the cycle and walks up to a valid path', async () => {
-    const { sub, navigateToFallback } = create()
+  it('Cancel stops the cycle and leaves the volume for home, never back onto the dead one (ERR-VZ4CV)', () => {
+    // ❗ A walk-up on a volume whose session is down can only land on that same
+    // volume (an SFTP path stops at its scheme root), which re-listed the failure
+    // under the view the person had just dismissed.
+    const { sub, navigateToFallback } = create({ volumeId: 'sftp-nas' })
     sub.handleSmbReconnectCancel()
-    expect(manager.cancel).toHaveBeenCalledWith('smb-vol')
-    expect(resolveValidPathSpy).toHaveBeenCalledWith('/smb-vol/dir', { volumeRoot: '/smb-vol' })
-    await vi.waitFor(() => {
-      expect(navigateToFallback).toHaveBeenCalledWith('/valid')
-    })
+    expect(manager.cancel).toHaveBeenCalledWith('sftp-nas')
+    expect(resolveValidPathSpy).not.toHaveBeenCalled()
+    expect(navigateToFallback).toHaveBeenCalledWith(null)
   })
 
-  it('handleSmbReconnectDisconnect cancels, OS-unmounts, and navigates away', async () => {
+  it('Disconnect on an SMB share cancels, OS-unmounts, and leaves for home', () => {
     const { sub, navigateToFallback } = create()
     sub.handleSmbReconnectDisconnect()
     expect(manager.cancel).toHaveBeenCalledWith('smb-vol')
     expect(ipc.disconnectSmbVolume).toHaveBeenCalledWith('smb-vol')
-    await vi.waitFor(() => {
-      expect(navigateToFallback).toHaveBeenCalledWith('/valid')
-    })
+    expect(ipc.disconnectPlace).not.toHaveBeenCalled()
+    expect(navigateToFallback).toHaveBeenCalledWith(null)
+  })
+
+  it('Disconnect on a server place drops its session, ❌ never an SMB unmount (ERR-VZ4CV)', () => {
+    // An SFTP place asked `disconnectSmbVolume`, which refused with "This isn't
+    // a network share, so there's nothing to disconnect."
+    const { sub, navigateToFallback } = create({ volumeId: 'sftp-nas' })
+    sub.handleSmbReconnectDisconnect()
+    expect(manager.cancel).toHaveBeenCalledWith('sftp-nas')
+    expect(ipc.disconnectPlace).toHaveBeenCalledWith('sftp-nas')
+    expect(ipc.disconnectSmbVolume).not.toHaveBeenCalled()
+    expect(addToastSpy).not.toHaveBeenCalled()
+    expect(navigateToFallback).toHaveBeenCalledWith(null)
   })
 
   it('renders a waiting cycle as a countdown the user can skip or stop', () => {

@@ -33,12 +33,18 @@
     interface Props {
         /** The place's display name, for the sentence and the aria live region. */
         name: string
+        /**
+         * What the pane is dialing, as `host:port` (`serverAddressOf`), or absent
+         * where there's no address to show (a phone, an SMB share). A saved name
+         * says nothing about whether it points at a LAN address or a VPN one.
+         */
+        address?: string | null
         state: RemoteConnectState
     }
 
     // ❗ Renamed on the way in: a local binding called `state` would make every
     // `$state(...)` in this file read as a store subscription instead of a rune.
-    const { name, state: connectState }: Props = $props()
+    const { name, address = null, state: connectState }: Props = $props()
 
     /** The backoff loop's face, when a loop is what's running. */
     const cycle = $derived(connectState.kind === 'connecting' ? connectState.cycle : undefined)
@@ -81,6 +87,9 @@
 <div class="remote-connect" role="status" aria-live="polite">
     <div class="content">
         <div class="place-name">{name}</div>
+        {#if address}
+            <div class="place-address">{address}</div>
+        {/if}
         {#if connectState.kind === 'connecting'}
             <h2 class="title">
                 {cycle
@@ -232,6 +241,15 @@
     .place-name {
         font-size: var(--font-size-sm);
         color: var(--color-text-tertiary);
+    }
+
+    /* Tucked under the name: it's a detail to check, not a heading. */
+    .place-address {
+        margin-top: calc(-1 * var(--spacing-sm));
+        font-size: var(--font-size-sm);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-tertiary);
+        user-select: text;
     }
 
     .title {
