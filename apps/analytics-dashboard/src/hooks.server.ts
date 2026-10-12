@@ -1,4 +1,4 @@
-import type { Handle, HandleServerError } from '@sveltejs/kit'
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks'
 import { verifyAccessJwt } from './lib/server/access-jwt.js'
 
 /**
@@ -43,8 +43,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 /**
  * Keeps exception details server-side. The client gets a fixed string; the detail goes to the
  * Workers log, which is already the place we read for dashboard failures.
+ *
+ * Only `unknown` errors (thrown by our code) carry exception detail. SvelteKit routes every error
+ * through here, including `error(...)` calls and its own 404s, whose messages are safe by
+ * construction, so those keep their defaults.
  */
-export const handleError: HandleServerError = ({ error }) => {
+export const handleError: HandleServerError = ({ kind, error }) => {
+  if (kind !== 'unknown') return
   console.error(error)
   return { message: 'Internal Error' }
 }

@@ -32,7 +32,7 @@ range on `/product` stays on `/product`. It's hidden on the two ledger pages, li
 "Updated HH:MM" stamp reads `page.data.updatedAt` (set by whichever data page is active; absent on both ledger pages).
 
 `rangeButtons` (the picker's `today/24h/7d/30d` button list) lives as a local const in the layout, NOT in
-`$lib/server/types.ts` — see the boundary gotcha below.
+`#lib/server/types.ts` — see the boundary gotcha below.
 
 ## Data-loading split
 
@@ -75,13 +75,13 @@ worker endpoints apart to "load less" — it would fragment the cache key and th
 The `/links` page manages the `?r=` short codes that the blogs and the website expand into UTM params. It's the admin
 front end for the api-server's `link-codes.ts` (`/admin/r-codes` CRUD over the `LINK_CODES` KV namespace).
 
-- **Token stays server-side.** The page never holds the admin token. `+page.server.ts` resolves it via `resolveEnv` (the
-  same `LICENSE_SERVER_ADMIN_TOKEN` the worker-backed sources use) and is the only code that touches it. The `load`
+- **Token stays server-side.** The page never holds the admin token. `+page.server.ts` resolves it via `dashboardEnv()`
+  (the same `LICENSE_SERVER_ADMIN_TOKEN` the worker-backed sources use) and is the only code that touches it. The `load`
   lists the map; the `save` and `delete` form actions proxy writes. The browser bundle gets only the rows and a load
   error string — `pnpm build` confirms nothing token-bearing leaks past the client/server boundary.
-- **Two modules, by boundary.** `$lib/link-codes.ts` is client-safe: validation (`validateLinkCode`, mirroring the
+- **Two modules, by boundary.** `#lib/link-codes.ts` is client-safe: validation (`validateLinkCode`, mirroring the
   api-server's `isValidCode`/`sanitizeUtmValue` so the form rejects bad input pre-round-trip), `toRows` (flatten +
-  sort), and `exampleLink`. `$lib/server/sources/link-codes.ts` is server-only: `fetchLinkCodes` / `upsertLinkCode` /
+  sort), and `exampleLink`. `#lib/server/sources/link-codes.ts` is server-only: `fetchLinkCodes` / `upsertLinkCode` /
   `deleteLinkCode`, each attaching the bearer token. The server action re-validates before proxying; the api-server is
   the final source of truth and re-validates again.
 - **No caching here.** Unlike the metric sources, the admin list isn't cached: David edits it interactively, so the view
@@ -98,10 +98,10 @@ exists because nothing else can answer "which codes exist and who holds them"; P
 knows only about the one license in front of it. The api-server owns the contract
 (`apps/api-server/src/licensing/DETAILS.md` § The licenses listing): the fields, and what each `state` decides.
 
-- **Two modules, by boundary**, as on `/links`. `$lib/licenses.ts` is client-safe: the response types (mirroring the
+- **Two modules, by boundary**, as on `/links`. `#lib/licenses.ts` is client-safe: the response types (mirroring the
   api-server's by hand, since the two apps ship separately), the badge labels, `filterBySource`, and
   `summarizeLicenses`, plus `validateNote` (length and "a row was named", the only two things this side can judge).
-  `$lib/server/sources/licenses.ts` is server-only: `fetchLicenses` over the shared `fetchWorkerEndpoint`, and
+  `#lib/server/sources/licenses.ts` is server-only: `fetchLicenses` over the shared `fetchWorkerEndpoint`, and
   `updateLicenseNote`, each attaching the bearer token. The page never holds the token.
 - ❌ **No label may imply a Paddle subscription is still running.** `active` on a `paddle` row means we fulfilled the
   purchase, nothing more, so the badge reads "Issued" and the section caveat says to check Paddle before treating it as
@@ -149,21 +149,21 @@ mapping for worker/PostHog sources) is in § "Key decisions" below.
   per-day pie tooltip; `CountryTable` owns its hover tooltip and shares the parent's zoom window via props.
 - Shared presentational pieces: `MetricRow`, `MetricTable`, `SectionDescription` (the "what + how reliable" blurb),
   `Methodology` (the "how this is measured" note), `ErrorState` / `EmptyState` / `BetaEmptyState`, `ExternalLinks`.
-- Pure data shaping lives in `$lib/chart-helpers.ts` (stacking, `aggregateBy`, `buildTimeline`, semver compare, etc.),
-  formatting in `$lib/format.ts`, and color tokens in `$lib/colors.ts`. These are client-safe modules.
+- Pure data shaping lives in `#lib/chart-helpers.ts` (stacking, `aggregateBy`, `buildTimeline`, semver compare, etc.),
+  formatting in `#lib/format.ts`, and color tokens in `#lib/colors.ts`. These are client-safe modules.
 
 ## Client/server boundary gotcha
 
-SvelteKit forbids importing `$lib/server/*` as a runtime value into browser-bundled code (components, route `.svelte`
-files). Type-only imports (`import type { DashboardSelection, SourceResult } from '$lib/server/types.js'`) are fine. A
+SvelteKit forbids importing `#lib/server/*` as a runtime value into browser-bundled code (components, route `.svelte`
+files). Type-only imports (`import type { DashboardSelection, SourceResult } from '#lib/server/types.js'`) are fine. A
 runtime value import (e.g. a `const`) trips `vite-plugin-sveltekit-guard` at BUILD time — and `svelte-check` does NOT
 catch it. So always run `pnpm build`, not just `pnpm check`, after touching imports across that boundary. Client-shared
-runtime values live outside `$lib/server`: `$lib/funnel.ts`, `$lib/feedback-and-errors.ts`, `$lib/format.ts`,
-`$lib/colors.ts`, `$lib/chart-helpers.ts`.
+runtime values live outside `#lib/server`: `#lib/funnel.ts`, `#lib/feedback-and-errors.ts`, `#lib/format.ts`,
+`#lib/colors.ts`, `#lib/chart-helpers.ts`.
 
 ## Key files
 
-- `src/app.css`: Tailwind v4 theme (dark palette matching getcmdr.com). `src/app.d.ts`: CF Pages platform env types.
+- `src/app.css`: Tailwind v4 theme (dark palette matching getcmdr.com). `src/app.d.ts`: the `App.Locals` identity type.
 - `src/routes/+layout.svelte`: shared shell (header, page nav, range/day picker). `src/routes/+layout.server.ts`:
   resolves the shared `DashboardSelection` from `?range=` / `?day=` once for the layout.
 - `src/routes/+page.{svelte,server.ts}`: Acquisition page (funnel/Umami/Cloudflare/GitHub/PostHog subset).
@@ -189,7 +189,8 @@ runtime values live outside `$lib/server`: `$lib/funnel.ts`, `$lib/feedback-and-
   `summarizeLicenses` roll-up, and `validateNote`), shared by the `/licenses` page and tests.
 - `StackedBarChart.svelte`: discrete per-day stacked bars (plain elements, not uPlot) with an exact-numbers hover/focus
   tooltip; used for by-source new-installs and by-version update charts.
-- `svelte.config.js` (adapter-cloudflare), `vitest.config.ts`.
+- `vite.config.ts` (the SvelteKit plugin and its adapter-cloudflare config), `vitest.config.ts`.
+- `src/env.ts`: every env var the dashboard reads, declared with `defineEnvVars` (§ Deployment and env vars).
 
 ## Data sources
 
@@ -210,10 +211,10 @@ Each source under `src/lib/server/sources/` exports a typed fetch returning `Sou
   Uncached and not part of any page composer: the page's `load` calls it directly. See § "The licenses list".
 - `feedback-and-errors.ts` (Bearer via `LICENSE_SERVER_ADMIN_TOKEN`): in-app feedback + error-report bundle metadata
   from `/admin/feedback` and `/admin/error-reports`. Pure helpers + row types in client-safe
-  `$lib/feedback-and-errors.ts`.
+  `#lib/feedback-and-errors.ts`.
 - `funnel.ts` (Bearer + Umami + Paddle): feeds the top "Daily funnel" table (per-UTC-day, last 30 days, always 30 days
   independent of the picker), joining `/admin/funnel` with Umami per-day visitors/clicks and Paddle purchases. Per-day
-  `downloadsByRef` feeds the "Channels" breakdown (rolled up by `aggregateChannels` in `$lib/funnel.ts`).
+  `downloadsByRef` feeds the "Channels" breakdown (rolled up by `aggregateChannels` in `#lib/funnel.ts`).
 - `settings-adoption.ts` (Bearer via `LICENSE_SERVER_ADMIN_TOKEN`): per-setting adoption from `/admin/config-shape`,
   resolved against the per-version defaults manifest before it leaves the server (§ Settings adoption).
 - `worker-endpoint.ts` (shared helper): `fetchWorkerEndpoint(token, path)`, used by the worker-backed sources.
@@ -222,7 +223,7 @@ Each source under `src/lib/server/sources/` exports a typed fetch returning `Sou
 
 The opt-out rate is deliberately unmeasurable: an install that opts out of analytics sends nothing at all, not even an
 "I opted out" bit, and that rule stays. So heartbeat DAU undercounts by an unknown amount, and printing it as one number
-claims a precision we don't have. Two independent signals bracket it instead (`$lib/active-installs.ts`, from data
+claims a precision we don't have. Two independent signals bracket it instead (`#lib/active-installs.ts`, from data
 `cloudflare.ts` already fetches, so no new endpoint):
 
 - **Low end**: distinct install ids on that day's heartbeats (`/admin/heartbeat-dau`). Every one definitely ran the app.
@@ -258,7 +259,7 @@ resolved here instead, joined on the `app_version` every heartbeat already carri
 - **An install on a version older than the manifest's first entry can't be resolved at all.** Those are counted in
   `unresolvedInstalls` and surfaced in the UI, ❌ never folded into a denominator.
 - **Resolution runs server-side** (`src/lib/server/settings-defaults.ts`), so the manifest never reaches the browser
-  bundle; the client gets the aggregate plus the client-safe views in `$lib/settings-adoption.ts`.
+  bundle; the client gets the aggregate plus the client-safe views in `#lib/settings-adoption.ts`.
 - **A value someone set back to the default counts as being on the default.** Persistence is structural, not a value
   compare, so a deliberate choice equal to the default is persisted explicitly; what adoption asks about is what the app
   runs with.
@@ -301,9 +302,13 @@ curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps"
 ```
 
-`resolveEnv` reads from `platform.env` when deployed and falls back to SvelteKit's `$env/dynamic/private` otherwise: CF
-Pages only populates `platform.env` on a real deployment, so local dev would see nothing without the fallback. Copy
-`.env.example` to `.env` and escape a literal `$` as `\$`.
+Every variable is declared once, in `src/env.ts` (`defineEnvVars`), and read through `$app/env/private`, which only
+server code can import. `src/lib/server/env.ts`'s `dashboardEnv()` assembles them into the `DashboardEnv` the sources
+take; the composers in `fetch-all.ts` take that env as a parameter, so tests pass one by hand. SvelteKit fills the
+values when the app starts: from the Pages project's secrets on Cloudflare (the adapter hands the Worker `env` to the
+server), from `.env` under `vite dev`. A missing required var becomes `''` and an empty optional one `undefined`, so a
+dashboard missing one key still renders every other source. Copy `.env.example` to `.env` and escape a literal `$` as
+`\$`.
 
 All env vars are CF Pages secrets, never in code:
 
@@ -357,16 +362,16 @@ deliberately omits live in `scripts/check/checks/DETAILS.md` § "Apps and check 
 What's specific to this app's configs:
 
 - **ESLint** (`eslint.config.js`) mirrors the api-server's `strictTypeChecked` base plus the desktop app's Svelte parser
-  blocks. Type-aware rules need `.svelte-kit/tsconfig.json`, which `tsconfig.json` extends, so `svelte-kit sync` has to
-  run first; the `dashboard-eslint` check hard-fails when it's missing rather than let the rules quietly no-op. It also
-  carries the website's `eslint-plugin-better-tailwindcss` rule set (`src/app.css` as the entry point); the rationale
-  per rule is in `apps/website/DETAILS.md` § Tailwind class hygiene.
-- Config files (`svelte.config.js`, `vite.config.ts`, `vitest.config.ts`) lint with `disableTypeChecked`. They sit
-  outside the generated tsconfig's include list, and adding them to the TS project purely to satisfy the linter would be
-  the tail wagging the dog.
+  blocks. Type-aware rules need `$app/tsconfig` (generated into `node_modules/$app/`), which `tsconfig.json` extends, so
+  `svelte-kit sync` has to run first; the `dashboard-eslint` check hard-fails when it's missing rather than let the
+  rules quietly no-op. It also carries the website's `eslint-plugin-better-tailwindcss` rule set (`src/app.css` as the
+  entry point); the rationale per rule is in `apps/website/DETAILS.md` § Tailwind class hygiene.
+- Config files (`vite.config.ts`, `vitest.config.ts`) lint with `disableTypeChecked`. `vitest.config.ts` sits outside
+  the tsconfig include list, and adding them to the TS project purely to satisfy the linter would be the tail wagging
+  the dog.
 - **Component props are typed, not inferred.** Route pages annotate with `PageProps` / `LayoutProps` from `./$types`;
   reusable components declare an explicit `interface Props`. Cross-boundary type imports (`import type` from
-  `$lib/server/...`) are safe and expected: only a _runtime_ value import would pull server code into the browser
+  `#lib/server/...`) are safe and expected: only a _runtime_ value import would pull server code into the browser
   bundle.
 - **Stylelint** (`.stylelintrc.mjs`) is deliberately lighter than desktop's. Tailwind v4 supplies the utilities, so
   there's no design-token ladder to police here; the config's real job is allowing Tailwind's CSS-first at-rules
@@ -476,7 +481,7 @@ have a happy-path test carrying the real `type: 'app'` stamp, so the discriminat
 - **"Feedback & errors" reads the app's own stores via two worker admin endpoints** (`/admin/feedback` from D1,
   `/admin/error-reports` from R2 `list` with `customMetadata`), not Discord (the `#feedback`/`#error-reports` channels
   are private and denied to the community bot). The row types and pure aggregation helpers live in
-  `$lib/feedback-and-errors.ts` (client-safe) so the page, the report endpoint, and tests share one copy. The
+  `#lib/feedback-and-errors.ts` (client-safe) so the page, the report endpoint, and tests share one copy. The
   agent-facing local digest (`/feedback-and-error-digest-from-app`) reads the same stores; see
   `docs/tooling/feedback-and-error-digest.md`.
 - **PostHog uses the HogQL query API** (`/api/projects/{id}/query/`), not the legacy Trends API (`/insights/trend/`),

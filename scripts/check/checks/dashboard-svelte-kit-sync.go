@@ -7,8 +7,8 @@ import (
 )
 
 // RunDashboardSvelteKitSync runs `svelte-kit sync`, which generates
-// `apps/analytics-dashboard/.svelte-kit/tsconfig.json`. That file is gitignored, and the app's
-// `tsconfig.json` extends it, so neither the type-aware ESLint pass nor svelte-check can build a
+// `apps/analytics-dashboard/node_modules/$app/tsconfig.json`. That file is gitignored, and the app's
+// `tsconfig.json` extends it (as `$app/tsconfig`), so neither the type-aware ESLint pass nor svelte-check can build a
 // TypeScript program without it. The dashboard's type-aware checks depend on this one so it always
 // runs first. Same reasoning as `desktop-svelte-kit-sync`.
 func RunDashboardSvelteKitSync(ctx *CheckContext) (CheckResult, error) {
@@ -19,5 +19,5 @@ func RunDashboardSvelteKitSync(ctx *CheckContext) (CheckResult, error) {
 	if err != nil {
 		return CheckResult{}, fmt.Errorf("svelte-kit sync failed\n%s", indentOutput(output))
 	}
-	return Success("Generated .svelte-kit"), nil
+	return Success("Generated .svelte-kit and $app/tsconfig"), nil
 }

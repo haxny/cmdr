@@ -5,6 +5,7 @@
   "project": ["src/**/*.{ts,svelte,css}"],
   "svelte": {
     "entry": [
+      "src/env.ts",
       "src/routes/**/+page.svelte",
       "src/routes/**/+layout.svelte",
       "src/routes/**/+page.server.ts",

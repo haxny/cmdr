@@ -1,10 +1,11 @@
 import type { RequestHandler } from './$types'
-import { fetchDashboardData } from '$lib/server/fetch-all.js'
+import { fetchDashboardData } from '#lib/server/fetch-all.js'
+import { dashboardEnv } from '#lib/server/env.js'
 import { formatReport } from './format-report.js'
 
-export const GET: RequestHandler = async ({ url, platform }) => {
+export const GET: RequestHandler = async ({ url }) => {
   try {
-    const data = await fetchDashboardData(platform, url.searchParams.get('range'), url.searchParams.get('day'))
+    const data = await fetchDashboardData(dashboardEnv(), url.searchParams.get('range'), url.searchParams.get('day'))
     const report = formatReport(data)
 
     return new Response(report, {

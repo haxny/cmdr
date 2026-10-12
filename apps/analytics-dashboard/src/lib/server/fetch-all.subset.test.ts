@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fetchAcquisitionData, fetchProductData, fetchDashboardData } from './fetch-all.js'
 import { clearMemoryCache } from './cache.js'
+import type { DashboardEnv } from './types.js'
 
 // Each page must load ONLY the sources it renders. These tests pin that contract: the Acquisition page
 // returns the funnel/awareness/interest/download sources, the Product page the active-use/payment/
-// retention/feedback sources, and neither leaks the other's keys. We pass a platform with empty env so
+// retention/feedback sources, and neither leaks the other's keys. We pass an empty env so
 // the guarded sources short-circuit to "not configured" (no network), and stub `fetch` so the two
 // unguarded GitHub sources fail fast offline too. We assert the SHAPE (which sources a page loads),
 // not the data.
 
-const emptyEnv = {
+const emptyEnv: DashboardEnv = {
   UMAMI_API_URL: '',
   UMAMI_USERNAME: '',
   UMAMI_PASSWORD: '',
@@ -25,7 +26,6 @@ const emptyEnv = {
   WORKER_BASE_URL: undefined,
 }
 
-const platform = { env: emptyEnv } as unknown as App.Platform
 const selection = { range: '7d', day: null } as const
 
 /**
@@ -50,7 +50,7 @@ describe('per-page data-loading split', () => {
   })
 
   it('Acquisition loads exactly the funnel, awareness, interest, and download sources', async () => {
-    const data = await fetchAcquisitionData(platform, selection)
+    const data = await fetchAcquisitionData(emptyEnv, selection)
     expect(sourceKeys(data)).toEqual(['cloudflare', 'funnel', 'github', 'githubStars', 'posthog', 'umami'])
     // It must NOT carry the Product-only sources.
     expect(data).not.toHaveProperty('paddle')
@@ -61,7 +61,7 @@ describe('per-page data-loading split', () => {
   })
 
   it('drops a Umami site link when that site has no website ID configured', async () => {
-    const data = await fetchAcquisitionData(platform, selection)
+    const data = await fetchAcquisitionData(emptyEnv, selection)
     // Empty env: every ID is unset, so every link is null and the UI renders none of them.
     expect(data.umamiSiteUrls).toEqual({ website: null, personalSite: null, prvw: null })
   })
@@ -73,7 +73,7 @@ describe('per-page data-loading split', () => {
       UMAMI_WEBSITE_ID: 'aaa',
       UMAMI_PRVW_WEBSITE_ID: 'ccc',
     }
-    const data = await fetchAcquisitionData({ env: configured }, selection)
+    const data = await fetchAcquisitionData(configured, selection)
     expect(data.umamiSiteUrls).toEqual({
       website: 'https://anal.example.com/websites/aaa',
       // Still unset, so still dropped, even though its siblings resolved.
@@ -83,7 +83,7 @@ describe('per-page data-loading split', () => {
   })
 
   it('Product loads exactly the active-use, settings, payment, retention, and feedback sources', async () => {
-    const data = await fetchProductData(platform, selection)
+    const data = await fetchProductData(emptyEnv, selection)
     expect(sourceKeys(data)).toEqual(['cloudflare', 'feedbackAndErrors', 'license', 'paddle', 'settingsAdoption'])
     // It must NOT carry the Acquisition-only sources.
     expect(data).not.toHaveProperty('funnel')
@@ -95,7 +95,7 @@ describe('per-page data-loading split', () => {
   })
 
   it('the report still loads every source (the union of both pages)', async () => {
-    const data = await fetchDashboardData(platform, '7d', null)
+    const data = await fetchDashboardData(emptyEnv, '7d', null)
     expect(sourceKeys(data)).toEqual([
       'cloudflare',
       'feedbackAndErrors',
@@ -111,7 +111,7 @@ describe('per-page data-loading split', () => {
   })
 
   it('every source on a page degrades to a result object (never throws) when unconfigured', async () => {
-    const acq = await fetchAcquisitionData(platform, selection)
+    const acq = await fetchAcquisitionData(emptyEnv, selection)
     for (const key of sourceKeys(acq)) {
       const result = acq[key as keyof typeof acq] as { ok: boolean }
       expect(result).toHaveProperty('ok')

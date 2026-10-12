@@ -99,13 +99,22 @@ describe('handleError', () => {
       headers: { 'cf-access-authenticated-user-email': 'attacker@evil.com' },
     })
     const result = await handleError({
+      kind: 'unknown',
       error,
       event: { ...event, request: spoofed },
-      status: 500,
-      message: 'Internal Error',
     })
 
     expect(result?.message).toBe('Internal Error')
     expect(JSON.stringify(result)).not.toContain('super-secret')
+  })
+
+  it("leaves an expected error's own message alone", async () => {
+    const result = await handleError({
+      kind: 'app',
+      error: { status: 404, message: 'No such page' },
+      event: eventFor(),
+    })
+
+    expect(result).toBeUndefined()
   })
 })

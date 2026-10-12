@@ -1,4 +1,4 @@
-import type { DashboardSelection, SourceResult } from './types.js'
+import type { DashboardEnv, DashboardSelection, SourceResult } from './types.js'
 import { resolveSelection } from './types.js'
 import type { UmamiData } from './sources/umami.js'
 import type { CloudflareData } from './sources/cloudflare.js'
@@ -111,45 +111,6 @@ function guardedFetch<T>(
   return envKey
     ? withTimeout(name, fn())
     : Promise.resolve({ ok: false, error: `${name}: not configured (missing env vars)` })
-}
-
-/** The resolved env object, narrowed to what every source reads. */
-type DashboardEnv = NonNullable<App.Platform['env']>
-
-/** A var the sources always read: a missing one becomes `''`, which their env guards treat as unset. */
-function required(value: string | undefined): string {
-  return value ?? ''
-}
-
-/** A var the sources check for presence: an empty value means "not set", so it collapses to `undefined`. */
-function optional(value: string | undefined): string | undefined {
-  return value || undefined
-}
-
-/** Maps the loose `$env/dynamic/private` bag onto the exact env shape the sources expect. */
-function envFromDotEnv(env: Record<string, string | undefined>): DashboardEnv {
-  return {
-    UMAMI_API_URL: required(env.UMAMI_API_URL),
-    UMAMI_USERNAME: required(env.UMAMI_USERNAME),
-    UMAMI_PASSWORD: required(env.UMAMI_PASSWORD),
-    UMAMI_WEBSITE_ID: required(env.UMAMI_WEBSITE_ID),
-    UMAMI_BLOG_WEBSITE_ID: required(env.UMAMI_BLOG_WEBSITE_ID),
-    UMAMI_PRVW_WEBSITE_ID: required(env.UMAMI_PRVW_WEBSITE_ID),
-    PADDLE_API_KEY_LIVE: required(env.PADDLE_API_KEY_LIVE),
-    POSTHOG_API_KEY: required(env.POSTHOG_API_KEY),
-    POSTHOG_PROJECT_ID: required(env.POSTHOG_PROJECT_ID),
-    POSTHOG_API_URL: required(env.POSTHOG_API_URL),
-    GITHUB_TOKEN: optional(env.GITHUB_TOKEN),
-    LICENSE_SERVER_ADMIN_TOKEN: required(env.LICENSE_SERVER_ADMIN_TOKEN),
-    WORKER_BASE_URL: optional(env.WORKER_BASE_URL),
-  }
-}
-
-/** Returns the env object from CF Pages platform, falling back to $env/dynamic/private for local dev. */
-export async function resolveEnv(platform: App.Platform | undefined): Promise<DashboardEnv> {
-  if (platform?.env) return platform.env
-  const { env } = await import('$env/dynamic/private')
-  return envFromDotEnv(env)
 }
 
 /**
@@ -282,11 +243,7 @@ export function fetchFeedbackAndErrorsSource(
 // --- Per-page composers -----------------------------------------------------------------------
 
 /** Fetches only the sources the Acquisition page (`/`) renders, in parallel. */
-export async function fetchAcquisitionData(
-  platform: App.Platform | undefined,
-  selection: DashboardSelection,
-): Promise<AcquisitionData> {
-  const env = await resolveEnv(platform)
+export async function fetchAcquisitionData(env: DashboardEnv, selection: DashboardSelection): Promise<AcquisitionData> {
   const [funnel, umami, cloudflare, github, githubStars, posthog] = await Promise.all([
     fetchFunnelSource(env),
     fetchUmamiSource(env, selection),
@@ -309,11 +266,7 @@ export async function fetchAcquisitionData(
 }
 
 /** Fetches only the sources the Product page (`/product`) renders, in parallel. */
-export async function fetchProductData(
-  platform: App.Platform | undefined,
-  selection: DashboardSelection,
-): Promise<ProductData> {
-  const env = await resolveEnv(platform)
+export async function fetchProductData(env: DashboardEnv, selection: DashboardSelection): Promise<ProductData> {
   const [cloudflare, paddle, license, feedbackAndErrors, settingsAdoption] = await Promise.all([
     fetchCloudflareSource(env, selection),
     fetchPaddleSource(env, selection),
@@ -334,12 +287,11 @@ export async function fetchProductData(
 
 /** Fetches all dashboard data sources in parallel. Used by the agent-readable report API. */
 export async function fetchDashboardData(
-  platform: App.Platform | undefined,
+  env: DashboardEnv,
   rangeParam: string | null,
   dayParam: string | null = null,
 ): Promise<DashboardData> {
   const selection = resolveSelection(rangeParam, dayParam)
-  const env = await resolveEnv(platform)
 
   const [
     funnel,
