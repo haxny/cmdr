@@ -49,7 +49,7 @@ export const commands = {
   /**
    *  The panes' heartbeat: keeps the named listings safe from the orphan reaper and
    *  returns the ids no longer cached, which the frontend re-lists.
-   *  See `file_system::listing::operations::keep_listings_alive`.
+   *  See `Listings::keep_alive`.
    */
   keepListingsAlive: (listingIds: string[]) => __TAURI_INVOKE<string[]>('keep_listings_alive', { listingIds }),
   /**

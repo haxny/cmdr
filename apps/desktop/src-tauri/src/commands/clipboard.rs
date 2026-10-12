@@ -27,6 +27,21 @@ pub struct ClipboardReadResult {
     is_directory: Vec<Option<bool>>,
 }
 
+/// The paths a copy or cut acts on: the selection, else the cursor's row.
+#[cfg(target_os = "macos")]
+fn selected_paths(
+    listing_id: String,
+    selected_indices: &[usize],
+    cursor_index: usize,
+    has_parent: bool,
+    include_hidden: bool,
+) -> Result<Vec<PathBuf>, String> {
+    let indices = resolve_indices(selected_indices, cursor_index, has_parent);
+    crate::listing_host::listings()
+        .paths_at_indices(&ListingId::new(listing_id), &indices, include_hidden, has_parent)
+        .map_err(|e| e.to_string())
+}
+
 /// Resolves selected file paths and writes them to the system clipboard.
 /// Clears any existing cut state (this is a copy, not a cut).
 #[cfg(target_os = "macos")]
@@ -40,15 +55,7 @@ pub async fn copy_files_to_clipboard(
     has_parent: bool,
     include_hidden: bool,
 ) -> Result<usize, String> {
-    let indices = resolve_indices(&selected_indices, cursor_index, has_parent);
-    let paths = crate::listing_host::listings()
-        .paths_at_indices(
-            &ListingId::new(listing_id.clone()),
-            &indices,
-            include_hidden,
-            has_parent,
-        )
-        .map_err(|e| e.to_string())?;
+    let paths = selected_paths(listing_id, &selected_indices, cursor_index, has_parent, include_hidden)?;
 
     if paths.is_empty() {
         return Err("No files to copy".to_string());
@@ -150,15 +157,7 @@ pub async fn cut_files_to_clipboard(
     has_parent: bool,
     include_hidden: bool,
 ) -> Result<usize, String> {
-    let indices = resolve_indices(&selected_indices, cursor_index, has_parent);
-    let paths = crate::listing_host::listings()
-        .paths_at_indices(
-            &ListingId::new(listing_id.clone()),
-            &indices,
-            include_hidden,
-            has_parent,
-        )
-        .map_err(|e| e.to_string())?;
+    let paths = selected_paths(listing_id, &selected_indices, cursor_index, has_parent, include_hidden)?;
 
     if paths.is_empty() {
         return Err("No files to cut".to_string());
