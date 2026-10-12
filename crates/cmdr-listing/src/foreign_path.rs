@@ -188,16 +188,14 @@ impl Inner {
             routed: is_routed,
         };
         let prepared = self.prepare(read_by, &volume_id, &stored, entries).await;
-        if stored == path {
-            self.publish_replacement(&listing_id, prepared, generation);
-            return;
-        }
         // The diff tells the pane what came and went, but it matches rows by name, so
-        // it can't see every path changing spelling: the entries are written whole on
-        // top, and the pane refetches its rows when it adopts the new spelling.
-        self.publish_replacement(&listing_id, prepared.clone(), generation);
+        // it can't see every path changing spelling. The replace step writes the
+        // entries whole whatever the diff holds, so the new spellings land, and the
+        // pane refetches its rows when it adopts the new spelling.
         self.update_listing_entries(&listing_id, prepared, generation);
-        self.rekey_listing(&listing_id, &volume_id, &stored);
+        if stored != path {
+            self.rekey_listing(&listing_id, &volume_id, &stored);
+        }
     }
 
     /// Moves `listing_id` to `stored`, the same directory in its volume's spelling,
