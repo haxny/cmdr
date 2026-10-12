@@ -185,6 +185,7 @@ impl Inner {
         prepared: Prepared,
         generation: ReadGeneration,
     ) -> RefreshOutcome {
+        let indexed = prepared.indexed();
         let (entries, overlay_rows) = prepared.into_parts();
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
@@ -204,7 +205,6 @@ impl Inner {
         listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
         let mut entries = entries;
-        self.index.enrich(&listing.volume_id, &mut entries);
         sort_entries_with(
             &collator,
             &mut entries,
@@ -217,6 +217,15 @@ impl Inner {
             listing.set_overlay_rows(count);
         }
         listing.publish_changes(&publish, listing_id, changes);
+        drop(cache);
+
+        // The pipeline enriched these rows before the read landed; an index event
+        // that came in between asked about the rows this replaced, and its answer is
+        // now dropped as stale (`index_sizes.rs`). So ask again for the rows that
+        // landed, with no lock held. A routed volume's rows have no index to ask.
+        if indexed {
+            self.enrich_index_sizes(listing_id);
+        }
         RefreshOutcome::Landed
     }
 

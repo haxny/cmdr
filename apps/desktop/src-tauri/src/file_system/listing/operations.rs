@@ -656,18 +656,3 @@ impl Inner {
         ids
     }
 }
-
-impl Inner {
-    /// Re-enriches directory entries in a cached listing with fresh index data.
-    ///
-    /// Called when `DirsUpdated` fires so that subsequent `get_listing_stats`
-    /// reads see up-to-date `recursive_size` values without needing a write lock.
-    pub(crate) fn refresh_listing_index_sizes(&self, listing_id: &str) -> Result<(), String> {
-        let mut cache = self.cache.write_ignore_poison();
-        if let Some(listing) = cache.get_mut(listing_id) {
-            let volume_id = listing.volume_id.clone();
-            self.index.enrich(&volume_id, listing.entries_mut());
-        }
-        Ok(())
-    }
-}

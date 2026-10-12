@@ -525,7 +525,7 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   update, re-sort) enriches first. Index freshness is event-driven: `src-tauri/src/listing_index_sizes/` writes the rows
   an index update moved straight into the cache (`CachedListing::update_index_sizes_by_path`, which keeps both maps)
   before it tells the pane, so `get_listing_stats` stays read-only and sees up-to-date `recursive_size`. A whole-volume
-  update runs the full `refresh_listing_index_sizes` re-enrich instead.
+  update runs the full `refresh_listing_index_sizes` re-enrich instead (§ "Index sizes off the lock").
 - **Hidden-file filtering in Rust, not the frontend**: visible count is unknown until all files are read. APIs accept
   `include_hidden: bool` and read through the listing's row map (§ "Row numbers"); `directory-diff` events use the
   listing's own recorded setting (§ "Diffs speak the pane's rows").
@@ -715,9 +715,9 @@ is the one at stake, and it takes its fixture from `write_operations::backend_su
 
 ## Diff event coalescing (diff_emitter.rs)
 
-Mutation owners (`caching.rs` patch helpers and tag writes, `operations.rs` full replacements) allocate the listing's
+Mutation owners (`caching.rs` patch helpers and tag writes, `reread.rs` full replacements) allocate the listing's
 visible `sequence` and enqueue under ONE cache write lock. Initial revision is zero; hidden-only patches do not
-advance it. Full replacements enrich and sort first, then `diff_rows` compares the committed old projection with the
+advance it. Full replacements arrive enriched (`pipeline.rs`) and sort first, then `diff_rows` compares the committed old projection with the
 pinned replacement projection and stores the final replacement under that lock. An identical raw replacement still
 reconciles visibility drift. Callers never enqueue the same patch again. Lock order is cache then queue, and that is a
 type: the queue's only writer is `diff_emitter::Publish`, which `CacheWrite::get_mut` (`Inner::write_cache`) hands out
@@ -1019,3 +1019,28 @@ is taken, so an awaited ⌘R would return before its read landed and E2E's `flus
 by a read stalled on a dead mount is held forever (a read is never aborted), so ⌘R would queue behind it instead of
 reading through the recovered mount; and the turnstile keys on the notifier's raw path while a listing keys on its
 `ListingPath`, which differ for MTP. Pinned by `read_generation_test.rs`.
+
+## Index sizes off the lock
+
+`index_sizes.rs` refreshes a listing's folder sizes (`refresh_listing_index_sizes`, once per index event per open pane)
+with no engine lock held while the index answers, which is two indexed SQLite queries:
+
+1. Under the READ lock, clone the non-symlink folders (the only rows `ListingIndex::enrich` writes, by the seam's
+   contract) and the listing's PUBLISHED read generation. No folders, nothing to do.
+2. Enrich the clones, no lock held.
+3. Under the WRITE lock, drop the answers if the published generation moved: the re-read that replaced the rows asked
+   the index again once they landed, later than this did. Otherwise write the seven `recursive_*` fields back by path
+   as `IndexSizes` through `update_index_sizes_by_path`, which keeps both maps, doesn't re-sort, and doesn't bump
+   `last_accessed_ms`.
+
+The published generation, never the last one handed out: a re-read in flight that then fails or is superseded must not
+cost these sizes with nothing to replace them. By path is order-independent, so a re-sort in between is harmless; a row
+added in between was enriched by its own insert, and one removed or renamed is skipped. A `Modified` patch in between
+takes no generation, so it can get sizes one index event older written over its own enrich; the next event corrects
+it, the same window two events always had.
+
+The replace step (`update_listing_entries`) runs the same routine once its rows land, for a read the index holds rows
+for, and enriches nothing under its lock. That second ask is what makes "the re-read enriched them later" true: the
+pipeline's own enrich ran BEFORE the replace, so an index event between the two would otherwise lose its sizes to the
+generation check. A routed re-read (an archive, a git snapshot) is never enriched, by the pipeline or by the replace.
+Pinned by `index_sizes_test.rs`.

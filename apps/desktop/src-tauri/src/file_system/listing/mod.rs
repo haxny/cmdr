@@ -10,6 +10,7 @@ pub(crate) mod engine;
 pub(crate) mod foreign_path;
 pub(crate) mod fuzzy_jump;
 pub(crate) mod host;
+pub(crate) mod index_sizes;
 pub(crate) mod listing_id;
 pub(crate) mod name_filter;
 pub(crate) mod operations;
@@ -94,6 +95,8 @@ mod find_file_index_test;
 mod fuzzy_jump_test;
 #[cfg(test)]
 mod hidden_files_test;
+#[cfg(test)]
+mod index_sizes_test;
 #[cfg(test)]
 mod lifecycle_order_test;
 #[cfg(all(test, feature = "virtual-mtp"))]

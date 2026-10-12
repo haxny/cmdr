@@ -42,6 +42,9 @@ pub(crate) enum OverlayRows {
 pub(crate) struct Prepared {
     entries: Vec<FileEntry>,
     overlay_rows: OverlayRows,
+    /// Whether the drive index holds these rows, so the enrich ran. A routed
+    /// volume's (an archive's, a git snapshot's) paths aren't on disk.
+    indexed: bool,
 }
 
 impl Prepared {
@@ -62,6 +65,11 @@ impl Prepared {
         sort_entries_with(collator, &mut self.entries, sort_by, sort_order, dir_sort_mode);
     }
 
+    /// Whether the drive index holds these rows (`false` for a routed volume).
+    pub(crate) fn indexed(&self) -> bool {
+        self.indexed
+    }
+
     /// The entries and what the overlays contributed to them, for the cache
     /// write that stores them.
     pub(crate) fn into_parts(self) -> (Vec<FileEntry>, OverlayRows) {
@@ -71,7 +79,11 @@ impl Prepared {
     /// Entries a test hands the cache as if a read prepared them.
     #[cfg(test)]
     pub(crate) fn for_test(entries: Vec<FileEntry>, overlay_rows: OverlayRows) -> Self {
-        Self { entries, overlay_rows }
+        Self {
+            entries,
+            overlay_rows,
+            indexed: true,
+        }
     }
 }
 
@@ -103,13 +115,18 @@ impl Inner {
                     self.index.enrich(volume_id, &mut entries);
                 }
                 let overlay_rows = OverlayRows::Recounted(self.decorate(volume, path, &mut entries).await);
-                Prepared { entries, overlay_rows }
+                Prepared {
+                    entries,
+                    overlay_rows,
+                    indexed: !routed,
+                }
             }
             ReadBy::StdFs => {
                 self.index.enrich(volume_id, &mut entries);
                 Prepared {
                     entries,
                     overlay_rows: OverlayRows::Unchanged,
+                    indexed: true,
                 }
             }
         }
@@ -141,6 +158,7 @@ impl Inner {
         Some(Prepared {
             entries,
             overlay_rows: OverlayRows::Recounted(0),
+            indexed: true,
         })
     }
 
