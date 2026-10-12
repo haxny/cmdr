@@ -114,7 +114,7 @@ tauri-plugin-global-shortcut = "=2.4.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 notify = "8"
-dirs = "6"
+dirs = "7"
 # Raster decode for icon extraction, `open_with` menu bitmaps, share-sheet images, and
 # header-only dimension reads. The feature list is `default-formats` MINUS `avif`, which is
 # an ENCODER (`ravif` on top of `rav1e`); the AVIF *decoder* is the separate `avif-native`

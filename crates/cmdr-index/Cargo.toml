@@ -63,7 +63,7 @@ futures-util = "0.3"
 # Wall-clock stamps on phase records and churn windows.
 chrono = "0.4"
 # Standard-location resolution for the reconciler's probe and cache paths.
-dirs = "6"
+dirs = "7"
 # `f16` for the media index's on-disk + resident image embeddings (half the bytes
 # of `f32` on disk and in the resident vector cache; widened to `f32` at score
 # time).

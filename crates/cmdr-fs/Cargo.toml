@@ -71,7 +71,7 @@ rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uin
 # Same version the app and the SMB backend pin.
 unicode-normalization = "0.1"
 # Standard-location resolution for the special-system-folder icon classifier.
-dirs = "6"
+dirs = "7"
 # uid/gid → name resolution for `FileEntry`'s owner and group columns.
 uzers = "0.12.2"
 # Reading the private File Provider domain-id extended attribute (`file_provider`),

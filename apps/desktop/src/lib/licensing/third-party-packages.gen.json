@@ -857,12 +857,6 @@
     },
     {
       "name": "dirs",
-      "version": "6.0.0",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/soc/dirs-rs"
-    },
-    {
-      "name": "dirs",
       "version": "7.0.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://codeberg.org/dirs/dirs-rs"
