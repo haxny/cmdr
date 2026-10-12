@@ -933,7 +933,7 @@ chunk loop.
 **Decision**: when a transport failure (`retry::is_retryable`) meets a volume whose session reads
 `ConnectionState::Disconnected`, the transfer WAITS for the volume instead of spending its attempts in a second: it
 reconnects the volume itself on a growing cadence (at once, then 2, 4, 8, 15, and every 30 s), for up to
-`OUTAGE_WAIT_BUDGET` (5 minutes, `outage_slot.rs`), then runs the work again with a fresh set of attempts. A volume
+`OUTAGE_WAIT_BUDGET` (15 minutes, `outage_slot.rs`), then runs the work again with a fresh set of attempts. A volume
 that isn't back by then fails the transfer exactly as before (`#398`).
 
 **Why the attempts above can't do it.** Once SMB marks a session `Disconnected`, every call fails at once
@@ -960,14 +960,14 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   gets a fresh budget from there.
 - **One outage per lane**, shared by every waiter on it (`OUTAGES`): the concurrent window's tasks all meet the drop at
   once, and they share ONE deadline. A job queued BEFORE an outage gave up looks once (the volume may be back, with
-  nothing else dialing it) and then fails promptly, so a queue behind a NAS that's really gone doesn't add five minutes
+  nothing else dialing it) and then fails promptly, so a queue behind a NAS that's really gone doesn't add fifteen minutes
   per job. A job created AFTER the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait. A give-up is
   forgotten one budget later.
 - **Named, not stalled.** The wait sets `state.outage` (`outage_slot.rs`): the activity reads
   `TransferWaitReason::Reconnecting` plus the volume's name on every progress event, `OperationStatus`, and
   `cmdr://state`; the probe heartbeats it to the UI every tick, accrues no stall time, dumps nothing, and restarts every
   task's abort clock (`TaskPhase::WaitingForVolume` is not abortable); and the ETA's working-time clock leaves the
-  outage out (`human_wait.rs`), so the first sample after it doesn't divide one file's bytes by five minutes.
+  outage out (`human_wait.rs`), so the first sample after it doesn't divide one file's bytes by the outage's length.
 
 **Where it's asked, and why only there.** Only where a transfer meets the share, and only for calls that are safe to run
 again:

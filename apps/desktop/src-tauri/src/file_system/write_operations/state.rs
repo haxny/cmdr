@@ -122,7 +122,7 @@ pub struct WriteOperationState {
     /// `with_outage_policy` (test builds only).
     pub(crate) outage_policy: OutagePolicy,
     /// When this operation was created. An operation queued before a volume's
-    /// outage gave up doesn't start a fresh five-minute wait for the same
+    /// outage gave up doesn't start a fresh fifteen-minute wait for the same
     /// outage when it's admitted (`transfer/volume_outage.rs` § the lane's
     /// outage record); one created after (a Retry) does.
     pub(crate) born: Instant,

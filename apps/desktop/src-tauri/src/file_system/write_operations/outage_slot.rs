@@ -21,12 +21,12 @@ use crate::ignore_poison::IgnorePoison;
 /// How long a transfer waits for a volume that went away mid-copy before it
 /// gives up and fails the way it always did.
 ///
-/// Five minutes: long enough to ride out a router restart, a NAS waking its
-/// disks, or a laptop roaming between access points (the outages users report,
+/// Fifteen minutes: long enough to ride out a router restart, a NAS waking its
+/// disks, a Synology reboot or DSM update, or a laptop roaming between access points (the outages users report,
 /// `#398`), and short enough that a person who walked away comes back to an
 /// honest failure rather than a dialog that waits forever. Nobody has to wait it
 /// out: Cancel works throughout.
-pub(crate) const OUTAGE_WAIT_BUDGET: Duration = Duration::from_secs(5 * 60);
+pub(crate) const OUTAGE_WAIT_BUDGET: Duration = Duration::from_secs(15 * 60);
 
 /// How long to wait between two reconnect attempts, in order; the last value
 /// repeats until the budget runs out. The first attempt goes out at once.

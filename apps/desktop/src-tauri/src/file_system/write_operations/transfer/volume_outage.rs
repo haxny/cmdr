@@ -36,7 +36,7 @@
 //! - **Shared per volume.** An outage record per lane ([`OUTAGES`]) gives every
 //!   waiter on that share the same deadline, so a concurrent window's eight
 //!   tasks give up together, and a job queued behind one that gave up doesn't
-//!   start a second five-minute wait for the same outage. A job CREATED after
+//!   start a second fifteen-minute wait for the same outage. A job CREATED after
 //!   the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait.
 //! - **Retries nothing it shouldn't.** Only a failure [`retry::is_retryable`]
 //!   calls transport ever triggers a wait, so a refusal or a cancel is reported

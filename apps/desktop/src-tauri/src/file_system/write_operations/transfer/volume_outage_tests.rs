@@ -208,7 +208,7 @@ async fn a_paused_wait_stops_dialing_and_resumes_with_a_fresh_budget() {
 
 /// Jobs queued behind one that gave up don't each wait out the same outage
 /// again: they're admitted one by one once it fails, and each would otherwise
-/// add another five minutes to a NAS that's already been waited for.
+/// add another fifteen minutes to a NAS that's already been waited for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_job_queued_before_a_give_up_does_not_wait_again() {
     let queued_state = quick_state();
