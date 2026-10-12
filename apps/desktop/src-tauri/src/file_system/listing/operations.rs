@@ -507,9 +507,12 @@ impl Inner {
         all_selected: bool,
         expected_sequence: Option<u64>,
     ) -> Result<ResortResult, ListingLookupError> {
-        // Both resolved before the lock: each asks the host.
+        // All three before the lock, since each asks the host. Sorting by size needs
+        // the index's current folder sizes; they land by path with no engine lock
+        // held while the index answers (`index_sizes.rs`).
         let visibility = self.scratch_visibility();
         let collator = self.collator();
+        self.enrich_index_sizes(listing_id);
         let mut cache = self.write_cache();
 
         let (listing, publish) = cache
@@ -536,10 +539,6 @@ impl Inner {
                     .collect()
             })
         };
-
-        // Refresh index data before re-sorting (cache entries may not have fresh sizes)
-        let volume_id = listing.volume_id.clone();
-        self.index.enrich(&volume_id, listing.entries_mut());
 
         // Re-sort the entries
         sort_entries_with(&collator, listing.entries_mut(), sort_by, sort_order, dir_sort_mode);

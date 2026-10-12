@@ -442,6 +442,9 @@ Each one lands as its own commit with a red test first, and the commit body name
      runs the same off-lock, generation-checked routine, and a routed re-read is never enriched. That second ask is what
      makes "the re-read enriched them at least as recently" true. Red tests: a `file_range` returns while the replace
      step's enrich is held; a routed re-read keeps no index sizes.
+   - **Part of this change (lead's M4a decision):** `resort_listing` also enriched every row under the cache WRITE lock
+     before re-sorting. It now runs the same off-lock, generation-checked routine before taking the lock, then sorts.
+     With that, invariant 24 holds with no exception. Red test: a `file_range` returns while a resort's enrich is held.
 6. **A Cmdr-made create reaches the panes the way every other local mutation does.** `emit_synthetic_entry_diff` (mkdir,
    mkfile, paste-as-file) becomes one call to the local backend's
    `patch_listing_after_local_mutation(volume_id, parent, MutationEvent::Created(name))`, the function
@@ -963,8 +966,7 @@ Executor notes:
   `remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, and `update_listing_entries` shims are now
   `#[cfg(test)]`.
 - Still under the cache write lock, out of this plan's scope: `resort_listing` runs `index.enrich` over every entry (via
-  `entries_mut`) before re-sorting. Invariant 24's "no exception" doesn't hold until that moves too; it needs its own
-  behavior change and David's OK.
+  `entries_mut`) before re-sorting. (M4a moved it off the lock as part of change 5, on the lead's decision.)
 - `caching.rs` sits at 902 of its 903-line `file-length` entry; M5's split retires it.
 
 ### M4a: The app programs against the public API

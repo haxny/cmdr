@@ -1043,4 +1043,6 @@ The replace step (`update_listing_entries`) runs the same routine once its rows 
 for, and enriches nothing under its lock. That second ask is what makes "the re-read enriched them later" true: the
 pipeline's own enrich ran BEFORE the replace, so an index event between the two would otherwise lose its sizes to the
 generation check. A routed re-read (an archive, a git snapshot) is never enriched, by the pipeline or by the replace.
-Pinned by `index_sizes_test.rs`.
+`resort_listing` runs the same routine before it takes the cache lock, so a sort by size sees the index's current
+sizes and no pane read waits behind the index. That makes the rule hold with no exception: no seam runs under an engine
+lock. Pinned by `index_sizes_test.rs`.

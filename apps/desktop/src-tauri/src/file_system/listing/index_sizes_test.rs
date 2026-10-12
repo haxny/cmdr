@@ -291,3 +291,41 @@ async fn a_routed_reread_gets_no_index_sizes() {
     assert_eq!(folder_size(&engine), None);
     assert_eq!(index.calls.load(Ordering::SeqCst), 0);
 }
+
+/// Re-sorts `engine`'s listing by size, the way a pane's sort change does.
+fn resort_by_size(engine: &Listings) {
+    engine
+        .inner()
+        .resort_listing(
+            LISTING,
+            SortColumn::Size,
+            SortOrder::Descending,
+            DirectorySortMode::LikeFiles,
+            None,
+            true,
+            None,
+            false,
+            None,
+        )
+        .expect("the resort answers");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_resort_leaves_the_listing_readable_while_the_index_answers() {
+    // A resort asks the index for fresh folder sizes before it sorts (sorting by
+    // size needs them). Under the cache write lock, every pane read and IPC
+    // accessor waited behind those two SQLite queries.
+    let (index, hold) = scripted_index(42, 1);
+    let engine = engine_with(index, None).await;
+
+    let resorter = {
+        let engine = engine.clone();
+        std::thread::spawn(move || resort_by_size(&engine))
+    };
+    hold.wait_entered();
+    read_range_returns(&engine);
+    hold.release();
+    resorter.join().expect("the resort thread ends");
+
+    assert_eq!(folder_size(&engine), Some(42), "the resort still sorts on fresh sizes");
+}
