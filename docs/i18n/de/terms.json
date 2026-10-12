@@ -850,7 +850,7 @@
     "chosen": "endgültig",
     "confidence": "high",
     "forms": "Endgültig löschen, endgültig gelöscht; permanently in the OTHER sense, a setting kept for good → dauerhaft (die Warnung dauerhaft unterdrücken)",
-    "sources": "catalog (menu.file.deletePermanently, commands.fileDeletePermanently.label, fileExplorer.functionKeyBar.deletePermanentlyAction)"
+    "sources": "catalog (menu.file.deletePermanently, commands.fileDeletePermanently.label)"
   },
   "deny": {
     "accept": ["abgelehnt", "ablehn", "lehnt"],

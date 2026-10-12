@@ -1890,7 +1890,7 @@
     "accept": ["Créer un fichier", "Création du fichier", "Créer le fichier"],
     "chosen": "Nouveau fichier",
     "confidence": "high",
-    "sources": "catalog (fileExplorer.functionKeyBar.newFileAction)"
+    "sources": "catalog (commands.fileNewFile.label)"
   },
   "new-folder": {
     "accept": ["Créer un dossier", "Création du dossier", "Créer le dossier"],

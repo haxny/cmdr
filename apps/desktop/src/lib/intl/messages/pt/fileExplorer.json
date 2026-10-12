@@ -212,11 +212,6 @@
   "@fileExplorer.functionKeyBar.toolbarAriaLabel": {
     "sourceHash": "f69e00d"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action} ({shortcut})",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "sourceHash": "49e258f",
-    "sameAsSourceJustification": "Placeholder-only ICU value '{action} ({shortcut})' assembling two already-translated/literal inserts; no translatable surface text."
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey} (sem ação com Shift)",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "sourceHash": "83b9f17"
@@ -225,72 +220,36 @@
   "@fileExplorer.functionKeyBar.newFileLabel": {
     "sourceHash": "44dedd0"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "Criar novo arquivo",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "sourceHash": "6e70b95"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "Renomear",
   "@fileExplorer.functionKeyBar.renameLabel": {
-    "sourceHash": "3064d79"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "Renomear",
-  "@fileExplorer.functionKeyBar.renameAction": {
     "sourceHash": "3064d79"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "Permanentemente",
   "@fileExplorer.functionKeyBar.permanentlyLabel": {
     "sourceHash": "d06138e"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "Apagar permanentemente",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "sourceHash": "280b10c"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "Visualizar",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "sourceHash": "dcc839a"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "Visualizar arquivo",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "sourceHash": "6ef3f36"
   },
   "fileExplorer.functionKeyBar.editLabel": "Editar",
   "@fileExplorer.functionKeyBar.editLabel": {
     "sourceHash": "464c4ff"
   },
-  "fileExplorer.functionKeyBar.editAction": "Editar arquivo",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "sourceHash": "9608dd1"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "Copiar",
   "@fileExplorer.functionKeyBar.copyLabel": {
-    "sourceHash": "e21f935"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "Copiar",
-  "@fileExplorer.functionKeyBar.copyAction": {
     "sourceHash": "e21f935"
   },
   "fileExplorer.functionKeyBar.moveLabel": "Mover",
   "@fileExplorer.functionKeyBar.moveLabel": {
     "sourceHash": "6ecc3df"
   },
-  "fileExplorer.functionKeyBar.moveAction": "Mover",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "sourceHash": "6ecc3df"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "Nova pasta",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "sourceHash": "cf28f49"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "Nova pasta",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "sourceHash": "cf28f49"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "Apagar",
   "@fileExplorer.functionKeyBar.deleteLabel": {
-    "sourceHash": "e2d0a54"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "Apagar",
-  "@fileExplorer.functionKeyBar.deleteAction": {
     "sourceHash": "e2d0a54"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "A barra de teclas de função agora está oculta. Você pode reativá-la quando quiser em <settingsLink>Ajustes</settingsLink>.",

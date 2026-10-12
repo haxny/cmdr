@@ -212,11 +212,6 @@
   "@fileExplorer.functionKeyBar.toolbarAriaLabel": {
     "sourceHash": "f69e00d"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action} ({shortcut})",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "sourceHash": "49e258f",
-    "sameAsSourceJustification": "Placeholder-only pattern '{action} ({shortcut})': {action} is already-translated text and {shortcut} is key glyphs (do-not-translate). The parentheses are locale-neutral; nothing to translate."
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey} (không có tác vụ shift)",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "sourceHash": "83b9f17"
@@ -225,72 +220,36 @@
   "@fileExplorer.functionKeyBar.newFileLabel": {
     "sourceHash": "44dedd0"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "Tạo tệp mới",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "sourceHash": "6e70b95"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "Đổi tên",
   "@fileExplorer.functionKeyBar.renameLabel": {
-    "sourceHash": "3064d79"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "Đổi tên",
-  "@fileExplorer.functionKeyBar.renameAction": {
     "sourceHash": "3064d79"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "Vĩnh viễn",
   "@fileExplorer.functionKeyBar.permanentlyLabel": {
     "sourceHash": "d06138e"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "Xóa vĩnh viễn",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "sourceHash": "280b10c"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "Xem",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "sourceHash": "dcc839a"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "Xem tệp",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "sourceHash": "6ef3f36"
   },
   "fileExplorer.functionKeyBar.editLabel": "Sửa",
   "@fileExplorer.functionKeyBar.editLabel": {
     "sourceHash": "464c4ff"
   },
-  "fileExplorer.functionKeyBar.editAction": "Sửa tệp",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "sourceHash": "9608dd1"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "Sao chép",
   "@fileExplorer.functionKeyBar.copyLabel": {
-    "sourceHash": "e21f935"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "Sao chép",
-  "@fileExplorer.functionKeyBar.copyAction": {
     "sourceHash": "e21f935"
   },
   "fileExplorer.functionKeyBar.moveLabel": "Di chuyển",
   "@fileExplorer.functionKeyBar.moveLabel": {
     "sourceHash": "6ecc3df"
   },
-  "fileExplorer.functionKeyBar.moveAction": "Di chuyển",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "sourceHash": "6ecc3df"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "Thư mục mới",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "sourceHash": "cf28f49"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "Thư mục mới",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "sourceHash": "cf28f49"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "Xóa",
   "@fileExplorer.functionKeyBar.deleteLabel": {
-    "sourceHash": "e2d0a54"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "Xóa",
-  "@fileExplorer.functionKeyBar.deleteAction": {
     "sourceHash": "e2d0a54"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "Thanh phím chức năng hiện đã ẩn, có thể bật lại bất cứ lúc nào trong <settingsLink>Cài đặt</settingsLink>.",

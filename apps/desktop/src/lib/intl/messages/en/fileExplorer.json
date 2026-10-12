@@ -311,15 +311,6 @@
     "description": "Accessibility label for the bottom toolbar of function-key buttons (the F1-F8 style row of file actions).",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action} ({shortcut})",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "description": "Accessibility label for a function-key button, naming the action and the keyboard shortcut that triggers it, e.g. \"Copy (F5)\". The shortcut updates live if the user rebinds the key.",
-    "placeholders": {
-      "action": "the full action name, e.g. Copy, Rename, Delete permanently",
-      "shortcut": "the keyboard shortcut glyphs, e.g. F5 or ⌘C (do not translate; these are key names)"
-    },
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey} (no shift action)",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "description": "Accessibility label for a disabled function-key slot that has no action while Shift is held. {fnKey} is the key name like F2.",
@@ -333,19 +324,9 @@
     "description": "Short button label on the function-key bar for creating a new file. Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "Create new file",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "description": "The full spoken action name (for screen readers) of the new-file function-key button. Longer form of the short button label.",
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "Rename",
   "@fileExplorer.functionKeyBar.renameLabel": {
     "description": "Button label on the function-key bar for renaming the file under the cursor. Space is tight; keep it short.",
-    "screenshot": "main-window.png"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "Rename",
-  "@fileExplorer.functionKeyBar.renameAction": {
-    "description": "The full spoken action name (for screen readers) of the rename function-key button.",
     "screenshot": "main-window.png"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "Permanently",
@@ -353,19 +334,9 @@
     "description": "Short button label (shown while Shift is held) for permanently deleting the selected files, bypassing the trash. Space is tight; the full action is spoken separately.",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "Delete permanently",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "description": "The full spoken action name (for screen readers) of the permanent-delete function-key button (bypasses the trash).",
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "View",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "description": "Short button label on the function-key bar for viewing the file under the cursor in the built-in viewer. Space is tight; keep it short.",
-    "screenshot": "main-window.png"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "View file",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "description": "The full spoken action name (for screen readers) of the view-file function-key button.",
     "screenshot": "main-window.png"
   },
   "fileExplorer.functionKeyBar.editLabel": "Edit",
@@ -373,19 +344,9 @@
     "description": "Short button label on the function-key bar for editing the file under the cursor. Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.editAction": "Edit file",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "description": "The full spoken action name (for screen readers) of the edit-file function-key button.",
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "Copy",
   "@fileExplorer.functionKeyBar.copyLabel": {
     "description": "Button label on the function-key bar for copying the selected files to the other pane. Space is tight; keep it short.",
-    "screenshot": "main-window.png"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "Copy",
-  "@fileExplorer.functionKeyBar.copyAction": {
-    "description": "The full spoken action name (for screen readers) of the copy function-key button.",
     "screenshot": "main-window.png"
   },
   "fileExplorer.functionKeyBar.moveLabel": "Move",
@@ -393,29 +354,14 @@
     "description": "Button label on the function-key bar for moving the selected files to the other pane. Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.moveAction": "Move",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "description": "The full spoken action name (for screen readers) of the move function-key button.",
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "New folder",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "description": "Button label on the function-key bar for creating a new folder. Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "New folder",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "description": "The full spoken action name (for screen readers) of the new-folder function-key button.",
-    "screenshot": "main-window.png"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "Delete",
   "@fileExplorer.functionKeyBar.deleteLabel": {
     "description": "Button label on the function-key bar for deleting the selected files (to the trash). Space is tight; keep it short.",
-    "screenshot": "main-window.png"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "Delete",
-  "@fileExplorer.functionKeyBar.deleteAction": {
-    "description": "The full spoken action name (for screen readers) of the delete (to trash) function-key button.",
     "screenshot": "main-window.png"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "Function key bar is now hidden. Re-enable it any time later in <settingsLink>Settings</settingsLink>.",

@@ -212,11 +212,6 @@
   "@fileExplorer.functionKeyBar.toolbarAriaLabel": {
     "sourceHash": "f69e00d"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action} ({shortcut})",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "sourceHash": "49e258f",
-    "sameAsSourceJustification": "Placeholder-only template '{action} ({shortcut})'; action is injected pre-translated, shortcut glyphs are kept verbatim. No translatable text."
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey} (keine Umschalt-Aktion)",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "sourceHash": "83b9f17"
@@ -225,72 +220,36 @@
   "@fileExplorer.functionKeyBar.newFileLabel": {
     "sourceHash": "44dedd0"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "Neue Datei erstellen",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "sourceHash": "6e70b95"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "Umbenennen",
   "@fileExplorer.functionKeyBar.renameLabel": {
-    "sourceHash": "3064d79"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "Umbenennen",
-  "@fileExplorer.functionKeyBar.renameAction": {
     "sourceHash": "3064d79"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "Endgültig",
   "@fileExplorer.functionKeyBar.permanentlyLabel": {
     "sourceHash": "d06138e"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "Endgültig löschen",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "sourceHash": "280b10c"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "Ansehen",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "sourceHash": "dcc839a"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "Datei anzeigen",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "sourceHash": "6ef3f36"
   },
   "fileExplorer.functionKeyBar.editLabel": "Bearbeiten",
   "@fileExplorer.functionKeyBar.editLabel": {
     "sourceHash": "464c4ff"
   },
-  "fileExplorer.functionKeyBar.editAction": "Datei bearbeiten",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "sourceHash": "9608dd1"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "Kopieren",
   "@fileExplorer.functionKeyBar.copyLabel": {
-    "sourceHash": "e21f935"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "Kopieren",
-  "@fileExplorer.functionKeyBar.copyAction": {
     "sourceHash": "e21f935"
   },
   "fileExplorer.functionKeyBar.moveLabel": "Bewegen",
   "@fileExplorer.functionKeyBar.moveLabel": {
     "sourceHash": "6ecc3df"
   },
-  "fileExplorer.functionKeyBar.moveAction": "Bewegen",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "sourceHash": "6ecc3df"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "Neuer Ordner",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "sourceHash": "cf28f49"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "Neuer Ordner",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "sourceHash": "cf28f49"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "Löschen",
   "@fileExplorer.functionKeyBar.deleteLabel": {
-    "sourceHash": "e2d0a54"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "Löschen",
-  "@fileExplorer.functionKeyBar.deleteAction": {
     "sourceHash": "e2d0a54"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "Die Funktionstastenleiste ist jetzt ausgeblendet. Du kannst sie jederzeit wieder unter <settingsLink>Einstellungen</settingsLink> einblenden.",

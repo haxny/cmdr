@@ -213,11 +213,6 @@
   "@fileExplorer.functionKeyBar.toolbarAriaLabel": {
     "sourceHash": "f69e00d"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action} ({shortcut})",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "sourceHash": "49e258f",
-    "sameAsSourceJustification": "Placeholder-only structure '{action} ({shortcut})': both inserts are already-translated/literal values; the parentheses are punctuation. Nothing to translate."
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey} (geen Shift-actie)",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "sourceHash": "83b9f17"
@@ -226,72 +221,36 @@
   "@fileExplorer.functionKeyBar.newFileLabel": {
     "sourceHash": "44dedd0"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "Maak nieuw bestand",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "sourceHash": "6e70b95"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "Wijzig naam",
   "@fileExplorer.functionKeyBar.renameLabel": {
-    "sourceHash": "3064d79"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "Wijzig naam",
-  "@fileExplorer.functionKeyBar.renameAction": {
     "sourceHash": "3064d79"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "Definitief",
   "@fileExplorer.functionKeyBar.permanentlyLabel": {
     "sourceHash": "d06138e"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "Verwijder definitief",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "sourceHash": "280b10c"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "Toon",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "sourceHash": "dcc839a"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "Toon bestand",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "sourceHash": "6ef3f36"
   },
   "fileExplorer.functionKeyBar.editLabel": "Bewerk",
   "@fileExplorer.functionKeyBar.editLabel": {
     "sourceHash": "464c4ff"
   },
-  "fileExplorer.functionKeyBar.editAction": "Bewerk bestand",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "sourceHash": "9608dd1"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "Kopieer",
   "@fileExplorer.functionKeyBar.copyLabel": {
-    "sourceHash": "e21f935"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "Kopieer",
-  "@fileExplorer.functionKeyBar.copyAction": {
     "sourceHash": "e21f935"
   },
   "fileExplorer.functionKeyBar.moveLabel": "Verplaats",
   "@fileExplorer.functionKeyBar.moveLabel": {
     "sourceHash": "6ecc3df"
   },
-  "fileExplorer.functionKeyBar.moveAction": "Verplaats",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "sourceHash": "6ecc3df"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "Nieuwe map",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "sourceHash": "cf28f49"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "Nieuwe map",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "sourceHash": "cf28f49"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "Verwijder",
   "@fileExplorer.functionKeyBar.deleteLabel": {
-    "sourceHash": "e2d0a54"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "Verwijder",
-  "@fileExplorer.functionKeyBar.deleteAction": {
     "sourceHash": "e2d0a54"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "De functietoetsbalk is nu verborgen. Zet hem op elk moment weer aan in <settingsLink>Instellingen</settingsLink>.",

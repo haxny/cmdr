@@ -6,7 +6,7 @@
         getFirstShiftShortcutReactive,
         getFirstShortcutReactive,
     } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
-    import { toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
+    import { toAriaKeyShortcut, toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
     import { fnKeyToCommand } from './function-key-commands'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { CommandId } from '#lib/commands/index.js'
@@ -87,10 +87,8 @@
     /** One button. `shortcut` is a display-form chip; `undefined` renders no chip. */
     interface Slot {
         id: CommandId
-        /** The short button text. */
+        /** The button text, and so its accessible name. */
         label: string
-        /** The full spoken action name, for the aria-label. */
-        action: string
         enabled: boolean
         shortcut: string | undefined
     }
@@ -103,55 +101,46 @@
         rename: {
             id: fnKeyToCommand.rename,
             label: tString('fileExplorer.functionKeyBar.renameLabel'),
-            action: tString('fileExplorer.functionKeyBar.renameAction'),
             enabled: canRename,
         },
         view: {
             id: fnKeyToCommand.view,
             label: tString('fileExplorer.functionKeyBar.viewLabel'),
-            action: tString('fileExplorer.functionKeyBar.viewAction'),
             enabled: true,
         },
         edit: {
             id: fnKeyToCommand.edit,
             label: tString('fileExplorer.functionKeyBar.editLabel'),
-            action: tString('fileExplorer.functionKeyBar.editAction'),
             enabled: true,
         },
         copy: {
             id: fnKeyToCommand.copy,
             label: tString('fileExplorer.functionKeyBar.copyLabel'),
-            action: tString('fileExplorer.functionKeyBar.copyAction'),
             enabled: canSourceOps,
         },
         move: {
             id: fnKeyToCommand.move,
             label: tString('fileExplorer.functionKeyBar.moveLabel'),
-            action: tString('fileExplorer.functionKeyBar.moveAction'),
             enabled: canSourceOps,
         },
         newFolder: {
             id: fnKeyToCommand.newFolder,
             label: tString('fileExplorer.functionKeyBar.newFolderLabel'),
-            action: tString('fileExplorer.functionKeyBar.newFolderAction'),
             enabled: canMkdir,
         },
         delete: {
             id: fnKeyToCommand.delete,
             label: tString('fileExplorer.functionKeyBar.deleteLabel'),
-            action: tString('fileExplorer.functionKeyBar.deleteAction'),
             enabled: canSourceOps,
         },
         newFile: {
             id: fnKeyToCommand.newFile,
             label: tString('fileExplorer.functionKeyBar.newFileLabel'),
-            action: tString('fileExplorer.functionKeyBar.newFileAction'),
             enabled: canMkfile,
         },
         deletePermanently: {
             id: fnKeyToCommand.deletePermanently,
             label: tString('fileExplorer.functionKeyBar.permanentlyLabel'),
-            action: tString('fileExplorer.functionKeyBar.deletePermanentlyAction'),
             enabled: canSourceOps,
         },
     })
@@ -194,24 +183,20 @@
 <svelte:document onkeydown={handleKeyDown} onkeyup={handleKeyUp} />
 
 <!--
-  One command button. The aria-label interpolates the same dynamic combo the chip
-  shows, so screen readers hear what actually triggers the action ("Copy (F5)" →
-  "Copy (⌘C)" after a rebind). With no chip, both it and the parenthetical drop —
-  the label alone, still clickable; an empty `<kbd>` would read as broken.
+  One command button. Its accessible name is its visible label (WCAG 2.5.3, label in
+  name): the chip is `aria-hidden`, and the same live combo it shows reaches a screen
+  reader through `aria-keyshortcuts` ("F5", then "Meta+C" after a rebind). With no
+  chip, both drop: the label alone, still clickable; an empty `<kbd>` would read as
+  broken.
 -->
 {#snippet commandButton(slot: Slot)}
     <button
         onclick={() => onCommand?.(slot.id)}
         disabled={!slot.enabled}
         tabindex={-1}
-        aria-label={slot.shortcut
-            ? tString('fileExplorer.functionKeyBar.actionWithShortcut', {
-                  action: slot.action,
-                  shortcut: slot.shortcut,
-              })
-            : slot.action}
+        aria-keyshortcuts={slot.shortcut ? toAriaKeyShortcut(slot.shortcut) : undefined}
     >
-        {#if slot.shortcut}<kbd>{slot.shortcut}</kbd>{/if}<span>{slot.label}</span>
+        {#if slot.shortcut}<kbd aria-hidden="true">{slot.shortcut}</kbd>{/if}<span>{slot.label}</span>
     </button>
 {/snippet}
 

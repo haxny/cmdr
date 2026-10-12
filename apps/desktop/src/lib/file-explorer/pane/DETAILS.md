@@ -756,10 +756,15 @@ mapping lives in a typed `fnKeyToCommand` map (F2/⇧F6 → `file.rename`, F3 �
 
 **The F-bar chips read live effective shortcuts, not hardcoded F-keys.** Each visible button shows its command's
 `getFirstShortcutReactive(id)` value, so rebinding `file.copy` to `⌘C` re-renders the F5 button's chip immediately — the
-bar never lies about what the keys do. The `aria-label` interpolates the same dynamic combo ("Copy (F5)" → "Copy (⌘C)").
-When a command has no binding the chip renders nothing (the button keeps its label and stays clickable; an empty `<kbd>`
-would read as broken). The chips keep the bar's quiet local `<kbd>` styling rather than the boxed `ShortcutChip` pill —
-a boxed pill repeated 8× fights the flat bar; truthfulness is the must, the chip look is the want.
+bar never lies about what the keys do. A command button's accessible name is its visible label, with no `aria-label`
+(WCAG 2.5.3, label in name, which axe-core enforces from 4.14 as `label-content-name-mismatch`): the `<kbd>` is
+`aria-hidden`, and the same live combo reaches a screen reader as `aria-keyshortcuts` via `toAriaKeyShortcut` ("F5" →
+"Meta+C"). axe counts `aria-hidden` text as visible and joins sibling text with no space, so the F2 button reads as the
+one word "F2Rename"; no `aria-label` can contain that, which is why the name comes from the content instead. That also
+keeps the rule satisfied in every language by construction. When a command has no binding the chip renders nothing (the
+button keeps its label and stays clickable; an empty `<kbd>` would read as broken). The chips keep the bar's quiet local
+`<kbd>` styling rather than the boxed `ShortcutChip` pill — a boxed pill repeated 8× fights the flat bar; truthfulness
+is the must, the chip look is the want.
 
 **Each row shows the binding that belongs to IT, and the Shift row's chips all carry Shift.** Both rows are seven fixed
 slots, F2…F8, composed from one `actions` record; `defaultRow` maps each through `getFirstShortcutReactive`, `shiftRow`

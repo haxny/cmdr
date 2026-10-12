@@ -1753,7 +1753,7 @@
     "chosen": "Crear archivo",
     "accept": ["archivo nuevo", "nuevo archivo"],
     "confidence": "high",
-    "sources": "catalog (fileExplorer.functionKeyBar.newFileAction)"
+    "sources": "catalog (commands.fileNewFile.label)"
   },
   "new-folder": {
     "chosen": "Nueva carpeta",

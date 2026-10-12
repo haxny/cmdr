@@ -211,10 +211,6 @@
   "@fileExplorer.functionKeyBar.toolbarAriaLabel": {
     "sourceHash": "f69e00d"
   },
-  "fileExplorer.functionKeyBar.actionWithShortcut": "{action}（{shortcut}）",
-  "@fileExplorer.functionKeyBar.actionWithShortcut": {
-    "sourceHash": "49e258f"
-  },
   "fileExplorer.functionKeyBar.noShiftAction": "{fnKey}（无 Shift 操作）",
   "@fileExplorer.functionKeyBar.noShiftAction": {
     "sourceHash": "83b9f17"
@@ -223,72 +219,36 @@
   "@fileExplorer.functionKeyBar.newFileLabel": {
     "sourceHash": "44dedd0"
   },
-  "fileExplorer.functionKeyBar.newFileAction": "新建文件",
-  "@fileExplorer.functionKeyBar.newFileAction": {
-    "sourceHash": "6e70b95"
-  },
   "fileExplorer.functionKeyBar.renameLabel": "重命名",
   "@fileExplorer.functionKeyBar.renameLabel": {
-    "sourceHash": "3064d79"
-  },
-  "fileExplorer.functionKeyBar.renameAction": "重命名",
-  "@fileExplorer.functionKeyBar.renameAction": {
     "sourceHash": "3064d79"
   },
   "fileExplorer.functionKeyBar.permanentlyLabel": "彻底",
   "@fileExplorer.functionKeyBar.permanentlyLabel": {
     "sourceHash": "d06138e"
   },
-  "fileExplorer.functionKeyBar.deletePermanentlyAction": "彻底删除",
-  "@fileExplorer.functionKeyBar.deletePermanentlyAction": {
-    "sourceHash": "280b10c"
-  },
   "fileExplorer.functionKeyBar.viewLabel": "查看",
   "@fileExplorer.functionKeyBar.viewLabel": {
     "sourceHash": "dcc839a"
-  },
-  "fileExplorer.functionKeyBar.viewAction": "查看文件",
-  "@fileExplorer.functionKeyBar.viewAction": {
-    "sourceHash": "6ef3f36"
   },
   "fileExplorer.functionKeyBar.editLabel": "编辑",
   "@fileExplorer.functionKeyBar.editLabel": {
     "sourceHash": "464c4ff"
   },
-  "fileExplorer.functionKeyBar.editAction": "编辑文件",
-  "@fileExplorer.functionKeyBar.editAction": {
-    "sourceHash": "9608dd1"
-  },
   "fileExplorer.functionKeyBar.copyLabel": "拷贝",
   "@fileExplorer.functionKeyBar.copyLabel": {
-    "sourceHash": "e21f935"
-  },
-  "fileExplorer.functionKeyBar.copyAction": "拷贝",
-  "@fileExplorer.functionKeyBar.copyAction": {
     "sourceHash": "e21f935"
   },
   "fileExplorer.functionKeyBar.moveLabel": "移动",
   "@fileExplorer.functionKeyBar.moveLabel": {
     "sourceHash": "6ecc3df"
   },
-  "fileExplorer.functionKeyBar.moveAction": "移动",
-  "@fileExplorer.functionKeyBar.moveAction": {
-    "sourceHash": "6ecc3df"
-  },
   "fileExplorer.functionKeyBar.newFolderLabel": "新建文件夹",
   "@fileExplorer.functionKeyBar.newFolderLabel": {
     "sourceHash": "cf28f49"
   },
-  "fileExplorer.functionKeyBar.newFolderAction": "新建文件夹",
-  "@fileExplorer.functionKeyBar.newFolderAction": {
-    "sourceHash": "cf28f49"
-  },
   "fileExplorer.functionKeyBar.deleteLabel": "删除",
   "@fileExplorer.functionKeyBar.deleteLabel": {
-    "sourceHash": "e2d0a54"
-  },
-  "fileExplorer.functionKeyBar.deleteAction": "删除",
-  "@fileExplorer.functionKeyBar.deleteAction": {
     "sourceHash": "e2d0a54"
   },
   "fileExplorer.functionKeyBar.hiddenToast": "功能键栏现已隐藏，可随时在<settingsLink>设置</settingsLink>中重新开启。",

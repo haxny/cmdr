@@ -126,6 +126,46 @@ describe('FunctionKeyBar', () => {
     expect(labels).toEqual(['Rename', 'View', 'Edit', 'Copy', 'Move', 'New folder', 'Delete'])
   })
 
+  it('names each button by its visible label and moves the key to aria-keyshortcuts', () => {
+    // WCAG 2.5.3 (label in name): a speech-control user says what they see. The
+    // chip stays visible but out of the name, so the name IS the label, in every
+    // language, and the key reaches a screen reader through `aria-keyshortcuts`.
+    const target = document.createElement('div')
+    mount(FunctionKeyBar, { target, props: { visible: true } })
+
+    const buttons = Array.from(target.querySelectorAll('button'))
+    expect(buttons.map((btn) => btn.getAttribute('aria-label'))).toEqual(Array(7).fill(null))
+    expect(buttons.map((btn) => btn.getAttribute('aria-keyshortcuts'))).toEqual([
+      'F2',
+      'F3',
+      'F4',
+      'F5',
+      'F6',
+      'F7',
+      'F8',
+    ])
+    for (const kbd of target.querySelectorAll('kbd')) {
+      expect(kbd.getAttribute('aria-hidden')).toBe('true')
+    }
+  })
+
+  it('spells a Shift-row key and a rebound key in aria-keyshortcuts syntax', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(FunctionKeyBar, { target, props: { visible: true } })
+
+    setShortcut('file.copy', 0, '⌘K')
+    flushSync()
+    expect(target.querySelectorAll('button')[3].getAttribute('aria-keyshortcuts')).toBe('Meta+K')
+
+    await pressShift()
+    expect(target.querySelectorAll('button')[4].getAttribute('aria-keyshortcuts')).toBe('Shift+F6')
+
+    await releaseShift()
+    resetShortcut('file.copy')
+    document.body.removeChild(target)
+  })
+
   it('shows shift-state buttons when Shift is held', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
