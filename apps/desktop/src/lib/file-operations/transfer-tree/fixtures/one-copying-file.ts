@@ -4,7 +4,7 @@
  * behavior isn't under test, only that it's there and pulls.
  */
 
-import type { TransferTreeView } from '$lib/tauri-commands'
+import type { TransferTreeView } from '#lib/tauri-commands/index.js'
 
 export const oneCopyingFile: TransferTreeView = {
   ready: true,

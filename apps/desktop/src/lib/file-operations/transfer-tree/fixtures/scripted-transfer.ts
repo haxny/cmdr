@@ -17,8 +17,8 @@ import type {
   TransferTreeRow,
   TransferTreeViewRequest,
   TreeRowState,
-} from '$lib/tauri-commands'
-import type { WriteOperationError } from '$lib/ipc/bindings'
+} from '#lib/tauri-commands/index.js'
+import type { WriteOperationError } from '#lib/ipc/bindings.js'
 import type { TransferTreeSource } from '../transfer-tree-source'
 
 /** A file or folder of a fixture. A folder has `children`; a file has a `size`. */

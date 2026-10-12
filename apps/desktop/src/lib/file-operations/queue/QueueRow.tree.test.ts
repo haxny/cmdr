@@ -9,20 +9,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync, tick, type ComponentProps } from 'svelte'
 import QueueRow from './QueueRow.svelte'
 import type { OperationRow } from './operations-store.svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
-import type { TransferTreeAnswer, TransferTreeViewRequest } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import type { TransferTreeAnswer, TransferTreeViewRequest } from '#lib/tauri-commands/index.js'
 import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
 
 const getTransferTreeView = vi.hoisted(() =>
   vi.fn<(operationId: string, request: TransferTreeViewRequest) => Promise<TransferTreeAnswer>>(),
 )
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   requestForegroundOperation: vi.fn(() => Promise.resolve()),
   retryFailedOperation: vi.fn(() => Promise.resolve({ kind: 'started', operationId: 'op-2' })),
   getTransferTreeView,
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({ getFileSizeFormat: () => 'decimal' }))
-vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'decimal' }))
+vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
 function progress(phase: WriteProgressEvent['phase']): WriteProgressEvent {
   return {

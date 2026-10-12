@@ -4,7 +4,7 @@
  * viewport's top row sits. Pure, so it's testable without a layout engine.
  */
 
-import type { TransferTreeAncestor, TransferTreeRow } from '$lib/tauri-commands'
+import type { TransferTreeAncestor, TransferTreeRow } from '#lib/tauri-commands/index.js'
 
 /** The most headers stacked at once; deeper scrolled-past folders compact into the last one. */
 export const MAX_PINNED = 3

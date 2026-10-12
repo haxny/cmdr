@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { OperationSnapshot, WriteOperationPhase } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteOperationPhase } from '#lib/ipc/bindings.js'
 import type { OperationRow } from './operations-store.svelte'
 import { rowTreeOperation, treesCollapsible } from './row-tree'
 

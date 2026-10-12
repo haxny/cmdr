@@ -4,11 +4,11 @@
  * `TransferTreeRow.svelte` renders these; it decides nothing itself.
  */
 
-import type { ProgressAxis, TransferTreeAncestor, TransferTreeRow, TreeRowState } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import { formatUnitList } from '$lib/intl/list-format'
-import { sizeDisplayParts } from '$lib/ui/size-display'
+import type { ProgressAxis, TransferTreeAncestor, TransferTreeRow, TreeRowState } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { formatUnitList } from '#lib/intl/list-format.js'
+import { sizeDisplayParts } from '#lib/ui/size-display.js'
 import { getUserFriendlyMessage } from '../transfer/transfer-error-messages'
 
 /** The operations that build a transfer tree. Words the active state. */

@@ -54,8 +54,8 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
 
 // The stall notice's report link opens the report flow and leaves a
 // breadcrumb on click; neither has a place in a mount-only axe pass.
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor: vi.fn() }))
-vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor: vi.fn() }))
+vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
 import CompressEstimateLine from './CompressEstimateLine.svelte'
 import CompressLevelControl from './CompressLevelControl.svelte'

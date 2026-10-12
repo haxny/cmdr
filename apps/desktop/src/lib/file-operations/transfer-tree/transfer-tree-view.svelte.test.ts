@@ -4,12 +4,12 @@ import {
   type TransferTreeAnswer,
   type TransferTreeView,
   type TransferTreeViewRequest,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { ipcTransferTreeSource, type TransferTreeSource } from './transfer-tree-source'
 import { TRANSFER_TREE_FIXTURES } from './fixtures/catalog'
 import { createFixturePlayer } from './fixtures/fixture-player.svelte'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getTransferTreeView: vi.fn(() => Promise.resolve({ refusal: { type: 'unknown_operation' } })),
 }))
 import { MAX_PINNED } from './pinned-headers'

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { TransferTreeAncestor, TransferTreeRow } from '$lib/tauri-commands'
+import type { TransferTreeAncestor, TransferTreeRow } from '#lib/tauri-commands/index.js'
 import { MAX_PINNED, pinnedHeaders } from './pinned-headers'
 
 /** A flat tree from `'  name'` lines: two spaces per level, a trailing `/` marks a folder. */

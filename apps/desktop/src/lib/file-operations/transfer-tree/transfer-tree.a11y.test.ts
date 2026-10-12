@@ -3,20 +3,20 @@
  * preparing, mid-transfer, with following paused (the Follow button showing),
  * and finished.
  *
- * Contrast is theme-dependent and axe's is off here (`$lib/test-a11y`): the
+ * Contrast is theme-dependent and axe's is off here (`#lib/test-a11y`): the
  * rows' color pairs are checked in both themes by `pnpm check a11y-contrast`,
  * which reads `TransferTreeRow.svelte`'s and `TransferTree.svelte`'s styles.
  */
 
 import { describe, it, vi, afterEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import TransferTree from './TransferTree.svelte'
 import TransferTreeRow from './TransferTreeRow.svelte'
 import { TRANSFER_TREE_FIXTURES } from './fixtures/catalog'
 import { createFixturePlayer } from './fixtures/fixture-player.svelte'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
 }))
 

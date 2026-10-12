@@ -12,12 +12,12 @@
     `aria-hidden`; `DETAILS.md` § "Pinned headers").
 -->
 <script lang="ts">
-    import type { ProgressAxis, TransferTreeRow } from '$lib/tauri-commands'
-    import Icon from '$lib/ui/Icon.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
+    import type { ProgressAxis, TransferTreeRow } from '#lib/tauri-commands/index.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import { accessibleName, barFraction, countSegments, stateWord, type TransferTreeOperation } from './row-format'
 
     interface Props {

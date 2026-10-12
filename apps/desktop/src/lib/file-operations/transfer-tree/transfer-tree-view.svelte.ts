@@ -12,9 +12,9 @@ import type {
   TransferTreeRow,
   TransferTreeView,
   TransferTreeViewRequest,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { createCoalesced } from '$lib/utils/timing'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { createCoalesced } from '#lib/utils/timing.js'
 import type { TransferTreeSource } from './transfer-tree-source'
 import { MAX_PINNED } from './pinned-headers'
 

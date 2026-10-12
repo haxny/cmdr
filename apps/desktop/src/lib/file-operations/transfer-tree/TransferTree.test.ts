@@ -4,7 +4,7 @@ import TransferTree from './TransferTree.svelte'
 import { TRANSFER_TREE_FIXTURES } from './fixtures/catalog'
 import { createFixturePlayer } from './fixtures/fixture-player.svelte'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 

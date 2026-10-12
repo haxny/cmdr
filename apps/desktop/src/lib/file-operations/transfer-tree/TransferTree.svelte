@@ -14,12 +14,12 @@
 -->
 <script lang="ts">
     import { onDestroy, tick as afterRender, untrack } from 'svelte'
-    import type { TransferTreeRow as Row } from '$lib/tauri-commands'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { revealScrollTop, visibleRange } from '$lib/ui/column-list-layout'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import type { TransferTreeRow as Row } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { revealScrollTop, visibleRange } from '#lib/ui/column-list-layout.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import TransferTreeRow from './TransferTreeRow.svelte'
     import { createTransferTreeViewState } from './transfer-tree-view.svelte'
     import { MAX_PINNED, pinnedHeaders } from './pinned-headers'

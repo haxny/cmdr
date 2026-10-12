@@ -5,10 +5,10 @@
      * the tree must look right on; `lib/file-operations/transfer-tree/fixtures/`.
      */
     import { onDestroy } from 'svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import TransferTree from '$lib/file-operations/transfer-tree/TransferTree.svelte'
-    import { TRANSFER_TREE_FIXTURES } from '$lib/file-operations/transfer-tree/fixtures/catalog'
-    import { createFixturePlayer } from '$lib/file-operations/transfer-tree/fixtures/fixture-player.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import TransferTree from '#lib/file-operations/transfer-tree/TransferTree.svelte'
+    import { TRANSFER_TREE_FIXTURES } from '#lib/file-operations/transfer-tree/fixtures/catalog.js'
+    import { createFixturePlayer } from '#lib/file-operations/transfer-tree/fixtures/fixture-player.svelte.js'
 
     const players = TRANSFER_TREE_FIXTURES.map((fixture) => ({ fixture, player: createFixturePlayer(fixture) }))
     for (const { player } of players) player.play()

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { TransferTreeRow } from '$lib/tauri-commands'
+import type { TransferTreeRow } from '#lib/tauri-commands/index.js'
 import { accessibleName, barFraction, countSegments, rowPaths } from './row-format'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 

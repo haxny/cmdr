@@ -3,7 +3,7 @@
  * queue window's rows, so the two can't disagree about which operations have one.
  */
 
-import type { WriteOperationPhase, WriteOperationType } from '$lib/ipc/bindings'
+import type { WriteOperationPhase, WriteOperationType } from '#lib/ipc/bindings.js'
 import type { TransferTreeOperation } from './row-format'
 
 /**

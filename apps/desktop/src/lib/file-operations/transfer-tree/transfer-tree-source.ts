@@ -8,7 +8,11 @@
  * Debug catalog and the tests.
  */
 
-import { getTransferTreeView, type TransferTreeAnswer, type TransferTreeViewRequest } from '$lib/tauri-commands'
+import {
+  getTransferTreeView,
+  type TransferTreeAnswer,
+  type TransferTreeViewRequest,
+} from '#lib/tauri-commands/index.js'
 
 export interface TransferTreeSource {
   /** One window of rows, or the typed reason there's none. Never throws for a refusal. */
