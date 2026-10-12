@@ -3,8 +3,8 @@
  * store, and S3's are the ACCOUNT's (secret) or the PLACE's (edit form).
  */
 import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { SavedServer, ServerTarget } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { SavedServer, ServerTarget } from '#lib/ipc/bindings.js'
 
 const m = vi.hoisted(() => ({
   getKnownSftpServers: vi.fn(),
@@ -17,7 +17,7 @@ const m = vi.hoisted(() => ({
   getWebdavUnattendedReconnect: vi.fn(),
   getS3UnattendedReconnect: vi.fn(),
 }))
-vi.mock('$lib/tauri-commands', () => m)
+vi.mock('#lib/tauri-commands/index.js', () => m)
 
 import { saveTargetSecret, savedEditForm, unattendedReconnectWarning } from './saved-server-io'
 

@@ -11,9 +11,9 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { commands } from '$lib/ipc/bindings'
-import type { SelectionHistoryEntry, SelectionTranslateResult } from '$lib/ipc/bindings'
-import { clearIpcMocks, installIpcMock } from '$lib/ipc/test-helpers'
+import { commands } from '#lib/ipc/bindings.js'
+import type { SelectionHistoryEntry, SelectionTranslateResult } from '#lib/ipc/bindings.js'
+import { clearIpcMocks, installIpcMock } from '#lib/ipc/test-helpers.js'
 
 afterEach(() => {
   clearIpcMocks()

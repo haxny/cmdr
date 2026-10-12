@@ -7,11 +7,11 @@
      * queue is empty. The F2 chip inside it is how a mouse user learns the key.
      * `transfer/DETAILS.md` § "Starting in the background".
      */
-    import Button from '$lib/ui/Button.svelte'
-    import KeyHint from '$lib/ui/KeyHint.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-    import { hasOtherQueuedWork } from '$lib/file-operations/queue/queue-backlog'
+    import Button from '#lib/ui/Button.svelte'
+    import KeyHint from '#lib/ui/KeyHint.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+    import { hasOtherQueuedWork } from '#lib/file-operations/queue/queue-backlog.js'
 
     interface Props {
         onclick: () => void

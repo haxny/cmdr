@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
 
     interface Cell {
         variant: 'primary' | 'secondary' | 'danger'

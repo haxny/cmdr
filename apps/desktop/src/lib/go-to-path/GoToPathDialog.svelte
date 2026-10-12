@@ -16,15 +16,15 @@
      * path reasoning. This dialog only presents state and dispatches.
      */
     import { onMount, onDestroy, tick } from 'svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import { createDebounce, withTimeout } from '$lib/utils/timing'
-    import { readClipboardText, resolveGoToPath } from '$lib/tauri-commands'
-    import type { GoToPathResolution } from '$lib/ipc/bindings'
-    import { getAppLogger } from '$lib/logging/logger'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import { createDebounce, withTimeout } from '#lib/utils/timing.js'
+    import { readClipboardText, resolveGoToPath } from '#lib/tauri-commands/index.js'
+    import type { GoToPathResolution } from '#lib/ipc/bindings.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { digitToRecentIndex, shouldPrefillClipboard } from './go-to-path'
     import { previewSchemeInput, readSchemeInput, type GoToPathOutcome } from './scheme-intercept'
     import {
@@ -32,8 +32,8 @@
         loadRecentPaths,
         removeRecentPath as removeRecentPathFromState,
     } from './recent-paths-state.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The focused pane's current path; relative input resolves against it. */

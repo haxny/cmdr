@@ -1,7 +1,7 @@
 // "Send feedback" command
 
-import { commands } from '$lib/ipc/bindings'
-import type { SendFeedbackResult } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
+import type { SendFeedbackResult } from '#lib/ipc/bindings.js'
 
 export type { SendFeedbackResult }
 

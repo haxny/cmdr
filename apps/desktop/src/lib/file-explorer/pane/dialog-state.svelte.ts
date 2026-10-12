@@ -21,24 +21,24 @@
  * context".
  */
 
-import { onDirectoryDiff, findFileIndex } from '$lib/tauri-commands'
-import { dismissFailedOperation } from '$lib/tauri-commands'
+import { onDirectoryDiff, findFileIndex } from '#lib/tauri-commands/index.js'
+import { dismissFailedOperation } from '#lib/tauri-commands/index.js'
 import {
   getForegroundFailureId,
   getForegroundOperationId,
   setForegroundFailureId,
-} from '$lib/file-operations/foreground-operation.svelte'
-import { addToast, type NonErrorToastLevel } from '$lib/ui/toast'
-import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
-import { tString } from '$lib/intl/messages.svelte'
+} from '#lib/file-operations/foreground-operation.svelte.js'
+import { addToast, type NonErrorToastLevel } from '#lib/ui/toast/index.js'
+import { dismissQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import {
   composeTransferCompleteToast,
   composeTrashRefusedToast,
-} from '$lib/file-operations/transfer/transfer-complete-toast'
-import { getTechnicalDetails } from '$lib/file-operations/transfer/transfer-error-messages'
-import TrashCompleteToastContent from '$lib/file-operations/delete/TrashCompleteToastContent.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { moveCursorToNewFolder } from '$lib/file-operations/mkdir/new-folder-operations'
+} from '#lib/file-operations/transfer/transfer-complete-toast.js'
+import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
+import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import { archiveNameFromPath, pathCrossesArchiveBoundary } from './archive-paths'
 import { transferOpLabel } from './transfer-op-label'
 import { createTransferPaneEffects } from './transfer-pane-effects'
@@ -48,7 +48,7 @@ import { createBackgroundOperations, type ArchiveNeedsPasswordError } from './ba
 import { createWhenDialogsClear } from './when-dialogs-clear.svelte'
 import { createProgrammaticConfirm } from './programmatic-confirm'
 import { skippedDeleteConfirmation, skippedTransferConfirmation } from './confirmation-skip'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 import { openRenameOnDuplicate } from './duplicate-rename'
 import type { TransferDialogPropsData } from './transfer-operations'
 import { renameInSourcePane } from './rename-in-place'
@@ -68,11 +68,11 @@ import type {
   TransferErrorPropsData,
   TransferProgressPropsData,
 } from './dialog-props'
-import type { ProgressAtStop } from '$lib/tauri-commands'
-import { isAnySoftDialogOpen } from '$lib/ui/open-dialogs.svelte'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
+import { isAnySoftDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
 import { announceOperationBlocked } from './operation-start-gate'
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
-import { formatByteSize } from '$lib/units'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
+import { formatByteSize } from '#lib/units/index.js'
 
 const log = getAppLogger('fileExplorer')
 
@@ -130,7 +130,7 @@ export function createDialogState(deps: DialogStateDeps) {
    * Whether anything is on screen. The main window shows one dialog at a time, so
    * this is what an adoption has to find empty.
    *
-   * The INVENTORY is `$lib/ui/open-dialogs.svelte`, which `ModalDialog` maintains
+   * The INVENTORY is `#lib/ui/open-dialogs.svelte`, which `ModalDialog` maintains
    * from its own mount/destroy pair: exhaustive by construction, so a dialog added
    * anywhere in this window counts here without anyone remembering to say so. The
    * local flags below are not a second inventory — they close the same-tick window
@@ -246,7 +246,7 @@ export function createDialogState(deps: DialogStateDeps) {
     // ❌ No search-snapshot purge here. A dialog knows what the operation was
     // ASKED to do, which is the wrong input: it misses a skip, misses a cancel,
     // and isn't available at all to a window watching an operation it never
-    // started. `$lib/search/snapshot-purge.ts` reads the per-path outcome
+    // started. `#lib/search/snapshot-purge.ts` reads the per-path outcome
     // stream instead, for every window and every ending.
     log.info(
       `${transferOpLabel(op)} complete: ${String(filesProcessed)} files (${String(filesSkipped)} skipped, ${String(refused?.itemCount ?? 0)} refused, ${formatByteSize(bytesProcessed)})`,
@@ -441,7 +441,7 @@ export function createDialogState(deps: DialogStateDeps) {
       // delete, and the toast is how it's reversed. Everything else finishing in
       // the background stays quiet, as a job sent off with Queue does.
       // A trash that moved nothing (every item left while it queued) has nothing to undo; the
-      // sources-gone toast already says why (`$lib/file-operations/sources-gone.svelte.ts`).
+      // sources-gone toast already says why (`#lib/file-operations/sources-gone.svelte.ts`).
       if (props.operationType === 'trash' && payload.filesProcessed > 0) announceCompletion(props, payload, operationId)
     },
   })

@@ -8,23 +8,23 @@
         dismissMoveToApplicationsNudge,
         startUpdateChecker,
         updateBlockerNotice,
-    } from '$lib/updates/updater.svelte'
-    import MoveToApplicationsDialog from '$lib/updates/MoveToApplicationsDialog.svelte'
-    import { initSettingsApplier, cleanupSettingsApplier } from '$lib/settings/settings-applier'
-    import { initReactiveSettings, cleanupReactiveSettings } from '$lib/settings/reactive-settings.svelte'
-    import { initVolumeTints, cleanupVolumeTints } from '$lib/file-explorer/pane/volume-tint.svelte'
-    import { initAccentColor, cleanupAccentColor } from '$lib/accent-color'
-    import { initGlassMaterial, cleanupGlassMaterial } from '$lib/glass-material'
-    import { logWebkitCompat } from '$lib/utils/webkit-compat'
-    import { initFocusWatchdog } from '$lib/focus-watchdog'
-    import { initTextSize, cleanupTextSize } from '$lib/text-size.svelte'
-    import { initializeShortcuts, setupMcpShortcutsListener, cleanupMcpShortcutsListener } from '$lib/shortcuts'
+    } from '#lib/updates/updater.svelte.js'
+    import MoveToApplicationsDialog from '#lib/updates/MoveToApplicationsDialog.svelte'
+    import { initSettingsApplier, cleanupSettingsApplier } from '#lib/settings/settings-applier.js'
+    import { initReactiveSettings, cleanupReactiveSettings } from '#lib/settings/reactive-settings.svelte.js'
+    import { initVolumeTints, cleanupVolumeTints } from '#lib/file-explorer/pane/volume-tint.svelte.js'
+    import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
+    import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { logWebkitCompat } from '#lib/utils/webkit-compat.js'
+    import { initFocusWatchdog } from '#lib/focus-watchdog.js'
+    import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
+    import { initializeShortcuts, setupMcpShortcutsListener, cleanupMcpShortcutsListener } from '#lib/shortcuts/index.js'
     import {
         setupMcpMainBridge,
         cleanupMcpMainBridge,
         setupRestrictedSettingsBridge,
         cleanupRestrictedSettingsBridge,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import {
         onMtpExclusiveAccessError,
         onMtpPermissionError,
@@ -33,35 +33,35 @@
         type MtpExclusiveAccessErrorEvent,
         type MtpPermissionErrorEvent,
         type CrashReport,
-    } from '$lib/tauri-commands'
-    import { getSetting } from '$lib/settings'
-    import { pushConfigToBackend } from '$lib/settings/ai-config'
-    import { settleHeldCloudConsentRevoke } from '$lib/ai/cloud-consent.svelte'
-    import { mapLegacyAskCmdrOptIn } from '$lib/ask-cmdr/ask-cmdr-enabled-mapping'
+    } from '#lib/tauri-commands/index.js'
+    import { getSetting } from '#lib/settings/index.js'
+    import { pushConfigToBackend } from '#lib/settings/ai-config.js'
+    import { settleHeldCloudConsentRevoke } from '#lib/ai/cloud-consent.svelte.js'
+    import { mapLegacyAskCmdrOptIn } from '#lib/ask-cmdr/ask-cmdr-enabled-mapping.js'
     import { runInitSteps } from './init-steps'
-    import { initAiState } from '$lib/ai/ai-state.svelte'
-    import { initAiToastSync } from '$lib/ai/ai-toast-sync.svelte'
-    import { addToast } from '$lib/ui/toast'
-    import ToastContainer from '$lib/ui/toast/ToastContainer.svelte'
-    import { MtpPermissionDialog, PtpcameradDialog } from '$lib/mtp'
-    import MtpConnectedToastContent from '$lib/mtp/MtpConnectedToastContent.svelte'
-    import CrashReportDialog from '$lib/crash-reporter/CrashReportDialog.svelte'
-    import { checkForPendingCrashReport } from '$lib/crash-reporter/pending-crash-report'
-    import ErrorReportDialog from '$lib/error-reporter/ErrorReportDialog.svelte'
-    import { errorReportFlow, hostErrorReportDialog } from '$lib/error-reporter/error-report-flow.svelte'
-    import FeedbackDialog from '$lib/feedback/FeedbackDialog.svelte'
-    import { feedbackFlow } from '$lib/feedback/feedback-flow.svelte'
-    import SignInSheet from '$lib/servers/SignInSheet.svelte'
-    import { closeSignInSheet, currentSignInRequest } from '$lib/servers/sign-in-sheet-state.svelte'
-    import { initAutoSendToastListener, cleanupAutoSendToastListener } from '$lib/error-reporter/auto-send-toast.svelte'
+    import { initAiState } from '#lib/ai/ai-state.svelte.js'
+    import { initAiToastSync } from '#lib/ai/ai-toast-sync.svelte.js'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import ToastContainer from '#lib/ui/toast/ToastContainer.svelte'
+    import { MtpPermissionDialog, PtpcameradDialog } from '#lib/mtp/index.js'
+    import MtpConnectedToastContent from '#lib/mtp/MtpConnectedToastContent.svelte'
+    import CrashReportDialog from '#lib/crash-reporter/CrashReportDialog.svelte'
+    import { checkForPendingCrashReport } from '#lib/crash-reporter/pending-crash-report.js'
+    import ErrorReportDialog from '#lib/error-reporter/ErrorReportDialog.svelte'
+    import { errorReportFlow, hostErrorReportDialog } from '#lib/error-reporter/error-report-flow.svelte.js'
+    import FeedbackDialog from '#lib/feedback/FeedbackDialog.svelte'
+    import { feedbackFlow } from '#lib/feedback/feedback-flow.svelte.js'
+    import SignInSheet from '#lib/servers/SignInSheet.svelte'
+    import { closeSignInSheet, currentSignInRequest } from '#lib/servers/sign-in-sheet-state.svelte.js'
+    import { initAutoSendToastListener, cleanupAutoSendToastListener } from '#lib/error-reporter/auto-send-toast.svelte.js'
     // Dialog gallery harness (Debug > Soft dialogs). Gated below on
     // `import.meta.env.DEV || __CMDR_E2E_BUILD__`, both of which Vite inlines to
     // build-time booleans, so the harness and every dialog it imports drop out of
     // production builds. The E2E flag is what lets the i18n screenshot driver and
     // the E2E lane open gallery states on their shared binary; see `dialog-gallery/DETAILS.md`.
-    import DialogGallery from '$lib/dialog-gallery/DialogGallery.svelte'
-    import QuitConfirmationDialog from '$lib/quit/QuitConfirmationDialog.svelte'
-    import { quitPrompt, initQuitPrompt, cleanupQuitPrompt } from '$lib/quit/quit-prompt.svelte'
+    import DialogGallery from '#lib/dialog-gallery/DialogGallery.svelte'
+    import QuitConfirmationDialog from '#lib/quit/QuitConfirmationDialog.svelte'
+    import { quitPrompt, initQuitPrompt, cleanupQuitPrompt } from '#lib/quit/quit-prompt.svelte.js'
     import type { Snippet } from 'svelte'
 
     interface Props {
@@ -145,7 +145,7 @@
         pendingCrashReport = null
     }
 
-    /** The dialog half of the next-launch crash check (`$lib/crash-reporter/pending-crash-report.ts`). */
+    /** The dialog half of the next-launch crash check (`#lib/crash-reporter/pending-crash-report.ts`). */
     function showCrashReport(report: CrashReport) {
         pendingCrashReport = report
         showCrashReportDialog = true
@@ -349,7 +349,7 @@
     <FeedbackDialog />
 {/if}
 <!-- The one sign-in sheet. Every credential ask in the app opens THIS one
-     (`$lib/servers/sign-in-sheet-state.svelte.ts`), so a second protocol never
+     (`#lib/servers/sign-in-sheet-state.svelte.ts`), so a second protocol never
      means a second dialog. Keyed on the request, so a sheet opened while one is
      already up starts from a clean form rather than inheriting the old one's. -->
 {#if signInRequest}

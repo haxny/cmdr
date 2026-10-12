@@ -24,7 +24,7 @@ const tauriState = {
 // a user editing the port or flipping the enabled toggle (the component reacts to these).
 const settingChangeCallbacks = new Map<string, (value: unknown) => void>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'developer.mcpEnabled') return settingsState.enabled
     if (key === 'developer.mcpPort') return settingsState.port
@@ -44,7 +44,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   invoke: vi.fn(() => Promise.resolve()),
   checkPortAvailable: vi.fn(() => Promise.resolve(true)),
   findAvailablePort: vi.fn(() => Promise.resolve(57821)),
@@ -54,14 +54,14 @@ vi.mock('$lib/tauri-commands', () => ({
   getMcpPort: vi.fn(() => Promise.resolve(tauriState.actualPort)),
 }))
 
-import { checkPortAvailable, findAvailablePort, setMcpEnabled, setMcpPort } from '$lib/tauri-commands'
+import { checkPortAvailable, findAvailablePort, setMcpEnabled, setMcpPort } from '#lib/tauri-commands/index.js'
 
 /** Drain the microtask queue so an enqueued operation chain (apply → outcome → sync) settles. */
 async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 10; i++) await Promise.resolve()
 }
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }),
 }))
 

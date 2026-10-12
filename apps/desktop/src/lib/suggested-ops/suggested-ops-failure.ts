@@ -1,6 +1,6 @@
 /** Carrying a typed `SuggestedOpsError` from a suggested-ops command to the dialog that words it. */
-import type { SuggestedOpsError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { SuggestedOpsError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries the backend's typed suggested-ops refusal. */
 export class SuggestedOpsFailure extends TypedFailure<SuggestedOpsError> {

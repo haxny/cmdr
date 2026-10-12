@@ -7,7 +7,7 @@
  * so anything thrown is IPC transport text.
  */
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 const disconnectPlace = vi.fn(() => Promise.resolve(true))
 const forgetServer = vi.fn(() => Promise.resolve(true))
@@ -25,7 +25,7 @@ const confirmDialog = vi.fn(() => Promise.resolve(true))
 const confirmWithCheckbox = vi.fn((_question: unknown) => Promise.resolve({ confirmed: true, checked: true }))
 const openEditServerSheet = vi.fn(() => Promise.resolve({ kind: 'cancelled' as const }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   disconnectPlace: (...args: unknown[]) => disconnectPlace(...(args as [])),
   forgetServer: (...args: unknown[]) => forgetServer(...(args as [])),
   forgetServerSecret: (...args: unknown[]) => forgetServerSecret(...(args as [])),
@@ -34,19 +34,19 @@ vi.mock('$lib/tauri-commands', () => ({
   setPlacePinned: (...args: unknown[]) => setPlacePinned(...(args as [])),
   setPlaceAutoReconnect: (...args: unknown[]) => setPlaceAutoReconnect(...(args as [])),
 }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToast(...(args as []))
   },
 }))
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: (...args: unknown[]) => confirmDialog(...(args as [])),
   confirmWithCheckbox: (question: unknown) => confirmWithCheckbox(question),
 }))
-vi.mock('$lib/servers/open-sign-in', () => ({
+vi.mock('#lib/servers/open-sign-in.js', () => ({
   openEditServerSheet: (...args: unknown[]) => openEditServerSheet(...(args as [])),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

@@ -1,4 +1,4 @@
-import { openExternalUrl, openSystemSettingsUrl } from '$lib/tauri-commands'
+import { openExternalUrl, openSystemSettingsUrl } from '#lib/tauri-commands/index.js'
 
 /**
  * Click delegate for anchors inside `{@html}`-rendered markdown.

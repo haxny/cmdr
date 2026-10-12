@@ -15,12 +15,12 @@ const { store, getSetting, setSetting, setNetworkVolumeEnabled, setAlwaysIndexVo
   }
 })
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => getSetting(id),
   setSetting: (id: string, value: unknown) => setSetting(id, value),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexSetNetworkVolumeEnabled: (v: string, e: boolean) => setNetworkVolumeEnabled(v, e),
   mediaIndexSetAlwaysIndexVolume: (v: string, a: boolean) => setAlwaysIndexVolume(v, a),
 }))

@@ -7,9 +7,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import ForgetMemoryDialog from './ForgetMemoryDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
@@ -47,7 +47,7 @@ describe('ForgetMemoryDialog behaviour', () => {
   it('is an alertdialog reporting the forget-memory id', async () => {
     const { target } = await mountDialog(false)
     expect(target.querySelector('[role="alertdialog"]')).not.toBeNull()
-    const { notifyDialogOpened } = await import('$lib/tauri-commands')
+    const { notifyDialogOpened } = await import('#lib/tauri-commands/index.js')
     expect(vi.mocked(notifyDialogOpened).mock.calls.map(([id]) => id)).toContain('forget-memory')
     target.remove()
   })

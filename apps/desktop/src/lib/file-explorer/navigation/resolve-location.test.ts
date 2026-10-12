@@ -5,10 +5,10 @@
  * A timeout takes precedence over a null location.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { resolveLocation as resolveLocationCommand } from '$lib/tauri-commands'
+import { resolveLocation as resolveLocationCommand } from '#lib/tauri-commands/index.js'
 import { resolveLocation } from './resolve-location'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolveLocation: vi.fn(),
 }))
 

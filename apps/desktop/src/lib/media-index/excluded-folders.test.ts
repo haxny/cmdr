@@ -14,16 +14,16 @@ const { store, getSetting, setSetting, setExcludedFolder } = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => getSetting(id),
   setSetting: (id: string, value: unknown) => setSetting(id, value),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexSetExcludedFolder: (folder: string, excluded: boolean) => setExcludedFolder(folder, excluded),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

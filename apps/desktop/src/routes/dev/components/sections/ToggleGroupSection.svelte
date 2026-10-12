@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ToggleGroup from '$lib/ui/ToggleGroup.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ToggleGroup from '#lib/ui/ToggleGroup.svelte'
 
     let tabsValue = $state('filename')
     let togglesValue = $state('comfortable')

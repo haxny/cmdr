@@ -4,7 +4,7 @@
  * sheet's state module and its tests share it.
  */
 
-import type { MultiRenameSpec } from '$lib/tauri-commands'
+import type { MultiRenameSpec } from '#lib/tauri-commands/index.js'
 
 /** TC's `<Default>`: every name stays as it is. */
 export const DEFAULT_SPEC: MultiRenameSpec = {

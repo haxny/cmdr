@@ -4,8 +4,8 @@
  * what's loaded, and the words; it gets back sections whose rows carry a typed action.
  */
 
-import type { MenuItem, MenuSection } from '$lib/ui/menu-types'
-import type { MultiRenamePreset, MultiRenameSpec } from '$lib/tauri-commands'
+import type { MenuItem, MenuSection } from '#lib/ui/menu-types.js'
+import type { MultiRenamePreset, MultiRenameSpec } from '#lib/tauri-commands/index.js'
 import type { LoadedPreset } from './multi-rename-state.svelte'
 import { specsEqual } from './spec'
 

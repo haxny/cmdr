@@ -20,13 +20,13 @@
 
 import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { VolumeConflictInfo, WriteConflictEvent } from '$lib/tauri-commands'
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { VolumeConflictInfo, WriteConflictEvent } from '#lib/tauri-commands/index.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 
 const stubs = vi.hoisted(() => ({
   getSetting: null as ((id: string) => unknown) | null,
@@ -40,7 +40,7 @@ const stubs = vi.hoisted(() => ({
 // The union of what these five dialogs reach for, over the real module: each
 // source file stubbed a different slice, so a bare union would hand a dialog a
 // missing export it never had.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -77,7 +77,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realGetSetting = actual.getSetting as (id: string) => unknown
   return {
@@ -86,7 +86,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => {
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realFormat = actual.formatFileSize as (n: number) => string
   return {
@@ -97,7 +97,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/stores/volume-store.svelte', async (importOriginal) => {
+vi.mock('#lib/stores/volume-store.svelte.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realVolumes = actual.getVolumes as () => unknown[]
   return {

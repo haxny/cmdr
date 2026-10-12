@@ -19,8 +19,8 @@ import {
   type SearchResultEntry,
   type SearchRunCoverage,
   type UnlistenFn,
-} from '$lib/tauri-commands'
-import type { LiveRunView, QueryStreamPhase } from '$lib/query-ui/query-stream'
+} from '#lib/tauri-commands/index.js'
+import type { LiveRunView, QueryStreamPhase } from '#lib/query-ui/query-stream.js'
 
 /** Where a run has got to, without the batch that carried it. */
 export function liveViewOf(event: LiveRunProgress): LiveRunView {

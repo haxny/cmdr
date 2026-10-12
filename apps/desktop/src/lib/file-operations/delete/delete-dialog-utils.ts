@@ -5,7 +5,7 @@
  * these are snapshots at call time, which is right for a transient dialog.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** Minimal item info needed by DeleteDialog for display.
  *  Group A wire-format: IPC sends `null` for absent FileEntry fields, not `undefined`.

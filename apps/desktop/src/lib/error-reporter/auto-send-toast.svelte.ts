@@ -8,11 +8,11 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
-import { onErrorReportAutoSent } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { onErrorReportAutoSent } from '#lib/tauri-commands/index.js'
 
 import AutoSendToastContent from './AutoSendToastContent.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('errorReporter')
 

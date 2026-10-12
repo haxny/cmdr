@@ -14,12 +14,12 @@
  * dialog that's already opening.
  */
 
-import { getFileRange, getSelectionSnapshot } from '$lib/tauri-commands'
-import { toBackendIndices } from '$lib/file-operations/transfer/transfer-dialog-utils'
+import { getFileRange, getSelectionSnapshot } from '#lib/tauri-commands/index.js'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import { extractFilename } from '../operations/selection-adjustment'
 import type { FileEntry } from '../types'
-import type { CanonicalPath } from '$lib/path/canonical'
-import type { SearchSnapshot } from '$lib/search/snapshot-store.svelte'
+import type { CanonicalPath } from '#lib/path/canonical.js'
+import type { SearchSnapshot } from '#lib/search/snapshot-store.svelte.js'
 import { createParentEntry } from './parent-entry'
 
 export interface EntriesSnapshotInput {

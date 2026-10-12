@@ -6,9 +6,9 @@
  * so they work while a text field has focus.
  */
 
-import type { CommandId } from '$lib/commands'
-import type { MultiRenameSpec } from '$lib/ipc/bindings'
-import { eventMatchesCommand } from '$lib/shortcuts'
+import type { CommandId } from '#lib/commands/index.js'
+import type { MultiRenameSpec } from '#lib/ipc/bindings.js'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 /** The spec's on/off fields that have a key. */
 export type ToggleField = Extract<

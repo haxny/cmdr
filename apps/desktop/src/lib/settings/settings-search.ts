@@ -4,12 +4,12 @@
  */
 
 import uFuzzy from '@leeoniya/ufuzzy'
-import { INTRA_MODE_SINGLE_ERROR } from '$lib/utils/ufuzzy-modes'
+import { INTRA_MODE_SINGLE_ERROR } from '#lib/utils/ufuzzy-modes.js'
 import type { SearchableEntry, SettingSearchResult } from './types'
 import { settingsRegistry } from './settings-registry'
 import { searchableRowEntries } from './sections/searchable-rows'
-import { searchAllCommands } from '$lib/commands/fuzzy-search'
-import { isMacOS } from '$lib/shortcuts/key-capture'
+import { searchAllCommands } from '#lib/commands/fuzzy-search.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 
 // ============================================================================
 // Search Configuration (same as command palette)

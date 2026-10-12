@@ -17,7 +17,7 @@
 // which terminals don't subscribe to.
 
 import { tempDir, join } from '@tauri-apps/api/path'
-import { getCachedIcon } from '$lib/icon-cache'
+import { getCachedIcon } from '#lib/icon-cache.js'
 import {
   startSelectionDrag,
   startDragPaths,
@@ -25,8 +25,8 @@ import {
   clearSelfDragOverlay,
   setSelfDragResolvedOperation,
   getPathsAtIndices,
-} from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings/settings-store'
+} from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/settings-store.js'
 import { cancelClickToRename } from '../rename/rename-activation'
 import { renderDragImage } from './drag-image-renderer'
 

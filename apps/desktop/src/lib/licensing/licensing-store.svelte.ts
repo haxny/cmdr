@@ -8,7 +8,7 @@ import {
   hasLicenseBeenValidated,
   validateLicenseWithServer,
   type LicenseStatus,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 /**
  * Store state - kept in a single object to avoid ESLint unused vars warnings.

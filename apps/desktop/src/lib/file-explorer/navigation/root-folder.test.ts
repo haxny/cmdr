@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { resolvePathVolume } from '$lib/tauri-commands'
+import { resolvePathVolume } from '#lib/tauri-commands/index.js'
 import type { VolumeInfo } from '../types'
 import { goToRootFolder, rootFolderOf } from './root-folder'
 
-vi.mock('$lib/tauri-commands', () => ({ resolvePathVolume: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ resolvePathVolume: vi.fn() }))
 
 const root: VolumeInfo = { id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }
 const usb: VolumeInfo = { id: 'usb', name: 'USB', path: '/Volumes/USB', category: 'attached_volume', isEjectable: true }

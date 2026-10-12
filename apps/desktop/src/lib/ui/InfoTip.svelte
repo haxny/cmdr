@@ -13,7 +13,7 @@
      */
     import type { Snippet } from 'svelte'
     import Icon from './Icon.svelte'
-    import { tooltip, type TooltipParam } from '$lib/tooltip/tooltip'
+    import { tooltip, type TooltipParam } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         /** Accessible name for the glyph. It carries no visible text, so this is required. */

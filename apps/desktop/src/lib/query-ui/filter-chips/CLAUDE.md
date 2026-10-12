@@ -10,7 +10,7 @@ Search and Selection. See `../CLAUDE.md` for the orchestrator and cross-consumer
 - `FilterChips.svelte`: the strip. Leading type `ToggleGroup`, then the four chips. Owns open-chip state and the three
   keyboard routers (popover openers, scope shortcuts, clear keys).
 - `SizeFilterPopover.svelte` / `DateFilterPopover.svelte` / `ScopeFilterPopover.svelte`: the popover bodies, each
-  wrapping `$lib/ui/FilterPopover` (a `$lib/ui/Popover` + labelled header). The chips are `$lib/ui/Chip`
+  wrapping `#lib/ui/FilterPopover` (a `#lib/ui/Popover` + labelled header). The chips are `#lib/ui/Chip`
   (`variant="filter"`), mounted directly. Shared popover CSS in `filter-popover.css`.
 - `filter-chip-state.ts` / `filter-popover-helpers.ts`: pure helpers (chip summaries, size/date presets, comparator
   gating, `buildDatePresets`), testable without mounting Svelte.

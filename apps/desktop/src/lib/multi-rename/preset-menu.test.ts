@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { MultiRenamePreset } from '$lib/tauri-commands'
+import type { MultiRenamePreset } from '#lib/tauri-commands/index.js'
 import { presetMenuSections, presetNameClash, type PresetMenuInput } from './preset-menu'
 import { DEFAULT_SPEC } from './spec'
 

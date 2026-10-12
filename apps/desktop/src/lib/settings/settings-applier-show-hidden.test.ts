@@ -21,7 +21,7 @@ let changeListener: ((change: { id: string; value: unknown }) => void) | undefin
 // Stub every Tauri wrapper to a no-op promise (the applier fires a batch of
 // fire-and-forget backend pushes at startup), keeping a real spy on the one
 // seam under test.
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const noop = () => Promise.resolve()
   const stubbed: Record<string, unknown> = {}
@@ -32,8 +32,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   return stubbed
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/settings')>()
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/settings/index.js')>()
   return {
     ...actual,
     initializeSettings: vi.fn().mockResolvedValue(undefined),

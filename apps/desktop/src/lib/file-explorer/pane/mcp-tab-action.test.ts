@@ -33,7 +33,7 @@ vi.mock('./tab-operations', () => ({
   newTab: tabOpsNewTabSpy,
   reopenLastClosedTabInPane: tabOpsReopenSpy,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

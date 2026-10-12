@@ -10,7 +10,7 @@
  * (`apps/desktop/src-tauri/src/analytics/CLAUDE.md`).
  */
 
-import { itemCountBucket, trackEvent } from '$lib/tauri-commands'
+import { itemCountBucket, trackEvent } from '#lib/tauri-commands/index.js'
 
 /** Where the dragged items came from. */
 export type DropOrigin =

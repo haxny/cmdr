@@ -22,7 +22,7 @@ import {
   forgetServer,
   forgetServerSecret,
   showNetworkHostContextMenu,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import {
   checkCredentialsForHost,
   forgetCredentials,
@@ -44,16 +44,16 @@ import {
   type RowMenuEntry,
   type RowToggleKind,
 } from '../navigation/row-menu'
-import { isVolumeBusy } from '$lib/stores/volume-busy-store.svelte'
-import { confirmDialog, confirmWithCheckbox } from '$lib/utils/confirm-dialog'
-import { openEditServerSheet } from '$lib/servers/open-sign-in'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { isVolumeBusy } from '#lib/stores/volume-busy-store.svelte.js'
+import { confirmDialog, confirmWithCheckbox } from '#lib/utils/confirm-dialog.js'
+import { openEditServerSheet } from '#lib/servers/open-sign-in.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { buildHubRows, type HubRow } from './servers-hub-rows'
 import type { NetworkHost, VolumeInfo } from '../types'
-import type { NetworkHostContextActionKind } from '$lib/ipc/bindings'
-import type { MenuAnchor } from '$lib/tauri-commands/file-actions'
-import { getAppLogger } from '$lib/logging/logger'
+import type { NetworkHostContextActionKind } from '#lib/ipc/bindings.js'
+import type { MenuAnchor } from '#lib/tauri-commands/file-actions.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('servers')
 

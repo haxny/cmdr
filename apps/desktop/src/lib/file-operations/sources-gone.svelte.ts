@@ -13,7 +13,7 @@
  *
  * - **Some gone**: queues the question and asks once nothing else is on screen,
  *   one question at a time. A queued job is a background job by nature, so it
- *   follows the late-dialog rule (`$lib/file-explorer/pane/when-dialogs-clear`):
+ *   follows the late-dialog rule (`#lib/file-explorer/pane/when-dialogs-clear`):
  *   a prompt stacked over the dialog the person is typing in would steal their
  *   keys. While held, a quiet toast says a question is waiting.
  * - **All gone**: an info toast saying so plainly. ❌ No error tone: nothing went
@@ -32,13 +32,13 @@ import {
   onWriteSourcesGone,
   type OperationSnapshot,
   type WriteSourcesGoneEvent,
-} from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import { getAppLogger } from '$lib/logging/logger'
-import { addToast } from '$lib/ui/toast'
-import { isAnySoftDialogOpenBesides } from '$lib/ui/open-dialogs.svelte'
-import { createWhenDialogsClear } from '$lib/file-explorer/pane/when-dialogs-clear.svelte'
+} from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { isAnySoftDialogOpenBesides } from '#lib/ui/open-dialogs.svelte.js'
+import { createWhenDialogsClear } from '#lib/file-explorer/pane/when-dialogs-clear.svelte.js'
 import { getMainWindowOperationRows } from './queue/main-window-operations.svelte'
 import { isTerminalStatus, type OperationRow } from './queue/operations-store.svelte'
 

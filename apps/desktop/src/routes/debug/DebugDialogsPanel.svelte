@@ -4,7 +4,7 @@
      * button per reviewable state.
      *
      * The dialogs themselves open in the MAIN window (see
-     * `$lib/dialog-gallery/DETAILS.md`); this panel only emits the trigger. Same
+     * `#lib/dialog-gallery/DETAILS.md`); this panel only emits the trigger. Same
      * `emitTo('main', …)` transport `DebugErrorPreviewPanel` uses.
      *
      * The fixture-directory IPC is called from HERE, not from the gallery:
@@ -16,10 +16,10 @@
         DIALOG_GALLERY_ENTRIES,
         UNREGISTERED_OVERLAY_ENTRIES,
         type GalleryHostWindow,
-    } from '$lib/dialog-gallery/gallery-registry'
-    import type { FixtureDirPayload } from '$lib/dialog-gallery/disk-fixture'
-    import { commands } from '$lib/ipc/bindings'
-    import type { SoftDialogId } from '$lib/ui/dialog-registry'
+    } from '#lib/dialog-gallery/gallery-registry.js'
+    import type { FixtureDirPayload } from '#lib/dialog-gallery/disk-fixture.js'
+    import { commands } from '#lib/ipc/bindings.js'
+    import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 
     const hostWindowLabels: Record<GalleryHostWindow, string> = {
         main: 'Main window',

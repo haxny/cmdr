@@ -8,12 +8,12 @@
  * module owns the string those two start from, plus the handlers.
  */
 
-import { showBreadcrumbContextMenu } from '$lib/tauri-commands'
+import { showBreadcrumbContextMenu } from '#lib/tauri-commands/index.js'
 import type { VolumeInfo } from '../types'
-import { getMtpDisplayPath } from '$lib/mtp'
-import { volumeScheme } from '$lib/volume-scheme'
-import { getAdbDisplayPath } from '$lib/adb/adb-path-utils'
-import { boundShortcuts } from '$lib/shortcuts'
+import { getMtpDisplayPath } from '#lib/mtp/index.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { getAdbDisplayPath } from '#lib/adb/adb-path-utils.js'
+import { boundShortcuts } from '#lib/shortcuts/index.js'
 import { isVolumeEjectable } from '../navigation/eject-predicate'
 import type { VolumeChangePayload } from './types'
 

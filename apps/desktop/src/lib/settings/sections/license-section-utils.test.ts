@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { getLicenseTypeLabel, formatLicenseDate, getStatusText } from './license-section-utils'
-import type { LicenseInfo, LicenseStatus } from '$lib/tauri-commands'
+import type { LicenseInfo, LicenseStatus } from '#lib/tauri-commands/index.js'
 
 // The type/status labels resolve through the i18n catalog (`tString`); pin the
 // base locale so the asserted en copy is deterministic.

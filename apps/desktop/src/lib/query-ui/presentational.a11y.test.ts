@@ -9,7 +9,7 @@
  * define a different one.
  *
  * `QueryDialog` and `QueryResults` stay in `dialog.a11y.test.ts`: their
- * `$lib/tauri-commands`, `$lib/settings`, and `$lib/icon-cache` stubs would apply
+ * `#lib/tauri-commands`, `#lib/settings`, and `#lib/icon-cache` stubs would apply
  * file-wide, and the components here use all three for real.
  */
 
@@ -20,7 +20,7 @@ import EmptyState from './EmptyState.svelte'
 import SearchModeChips from './ModeChips.svelte'
 import PathPills from './PathPills.svelte'
 import SearchBar from './QueryBar.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // These components share one jsdom document, and axe resolves ARIA id references
 // document-wide. Clearing between tests keeps each audit looking at its own

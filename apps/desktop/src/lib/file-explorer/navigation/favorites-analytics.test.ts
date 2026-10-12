@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const trackEvent = vi.fn()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   trackEvent: (...args: unknown[]) => {
     trackEvent(...(args as []))
     return Promise.resolve()

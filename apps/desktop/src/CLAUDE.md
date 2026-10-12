@@ -23,16 +23,16 @@ it; feature must-knows live in each directory's colocated `CLAUDE.md`, and the m
 - A new user-facing action needs its id in `COMMAND_IDS`, a `command-registry.ts` entry, and a handler in
   `routes/(main)/command-handlers/` (a missing one is a compile error). `cmdr/no-raw-command-dispatch`;
   `lib/commands/CLAUDE.md`.
-- ❌ A keydown handler matches the WHOLE combo — `eventMatchesCommand(e, 'some.command')` from `$lib/shortcuts` — never
+- ❌ A keydown handler matches the WHOLE combo — `eventMatchesCommand(e, 'some.command')` from `#lib/shortcuts` — never
   a hand-rolled `e.key === 'a' && e.metaKey`: that's a modifier SUPERSET, so `⌥⌘A` fires it too. `cmdr/no-raw-key-match`
   flags a required modifier paired with a literal key test leaving another unconstrained; opt out per line, with a
   reason. See `lib/shortcuts/CLAUDE.md`.
-- ❌ Render inline glyphs via `<Icon name size>` and spinners via `<Spinner size>` (`$lib/ui/`), never a
+- ❌ Render inline glyphs via `<Icon name size>` and spinners via `<Spinner size>` (`#lib/ui/`), never a
   `~icons/lucide/*` import in feature code or a hand-rolled spinner ring. New glyphs register in
   `lib/ui/icons/icon-map.ts`, the one place lucide is imported (`cmdr/no-raw-lucide-import`). `Icon` has no `color` prop
   (set it on the wrapping span). Custom glyphs, the Debug "Graphics" catalog, other Iconify sets:
   `docs/guides/icons.md`.
-- ❌ A size or duration becomes text in ONE place: `$lib/units` (`formatByteSize` / `formatDuration`), `<Size bytes>` in
+- ❌ A size or duration becomes text in ONE place: `#lib/units` (`formatByteSize` / `formatDuration`), `<Size bytes>` in
   markup. Never a private `formatBytes` or a `1024` ladder: four copies once drifted and two windows disagreed.
   `cmdr/no-private-unit-format`.
 - Stay aligned to Ark UI's naming: a `lib/ui/` wrapper takes the name of the `@ark-ui/svelte` component it wraps, 1:1.
@@ -45,7 +45,7 @@ it; feature must-knows live in each directory's colocated `CLAUDE.md`, and the m
   primitive: `docs/guides/building-ui.md`.
 - Loading remote content (`fetch`, `iframe`)? Ask whether to disable it in dev, where `withGlobalTauri: true` makes
   remote content a security risk.
-- ❌ No `import.meta.env.DEV` in a `.svelte` script (it blinds knip): `isDevBuild()` from `$lib/app-mode`. `{#if}`
+- ❌ No `import.meta.env.DEV` in a `.svelte` script (it blinds knip): `isDevBuild()` from `#lib/app-mode`. `{#if}`
   markup keeps the literal. `DETAILS.md` § Dev gates.
 - **`app.html`'s boot guard is ES5 on purpose**: one ES6 token kills it silently on old Safari, and `pnpm dev` won't
   hot-reload the shell. `lib/utils/DETAILS.md` § Old-WebKit boot guard.

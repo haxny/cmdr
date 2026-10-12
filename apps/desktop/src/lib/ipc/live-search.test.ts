@@ -13,7 +13,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import type {
   LiveSearchStart,
   SearchCancelledEvent,
@@ -21,8 +21,8 @@ import type {
   SearchErrorEvent,
   SearchProgressEvent,
   SearchQuery,
-} from '$lib/ipc/bindings'
-import { clearIpcMocks, installIpcMock } from '$lib/ipc/test-helpers'
+} from '#lib/ipc/bindings.js'
+import { clearIpcMocks, installIpcMock } from '#lib/ipc/test-helpers.js'
 
 afterEach(() => {
   clearIpcMocks()

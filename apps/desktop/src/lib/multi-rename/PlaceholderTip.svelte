@@ -3,10 +3,10 @@
      * The body of one placeholder button's tooltip: what the placeholder means, an example on a
      * made-up file, a few of its other forms, each with its example, the part a form takes set
      * apart from what the field keeps around it. Rendered into a hidden host and handed to the
-     * tooltip as `contentEl` (`$lib/ui/DETAILS.md` § Live rich content), so it reads as text to
+     * tooltip as `contentEl` (`#lib/ui/DETAILS.md` § Live rich content), so it reads as text to
      * `aria-describedby` too.
      */
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { DATE_LEAD_MASK, FOLDER_LEAD_MASK, hintPieces, type PlaceholderHelp } from './placeholder-help'
     import { SAMPLE_FILE } from './rename-examples'
 

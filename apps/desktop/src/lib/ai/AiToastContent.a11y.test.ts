@@ -13,16 +13,16 @@ import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import AiToastContent from './AiToastContent.svelte'
 import { getAiState, resetForTesting } from './ai-state.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelAiDownload: vi.fn(() => Promise.resolve()),
   getAiModelInfo: vi.fn(() => Promise.resolve({ sizeBytes: 2_000_000_000 })),
   getAiStatus: vi.fn(() => Promise.resolve('available')),
   startAiDownload: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 'local'),
   setSetting: vi.fn(),
 }))

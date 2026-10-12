@@ -9,7 +9,7 @@ import { describe, it, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import ToastContainer from './ToastContainer.svelte'
 import { addToast, clearAllToasts } from './toast-store.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('ToastContainer a11y', () => {
   beforeEach(() => {

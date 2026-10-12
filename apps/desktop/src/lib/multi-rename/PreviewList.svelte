@@ -5,20 +5,20 @@
      * problem). A name the user typed in Results carries a pencil where the arrow is. The
      * rows come a page at a time, and it draws only the ones in view.
      */
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
-    import ColumnList from '$lib/ui/ColumnList.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import ColumnList from '#lib/ui/ColumnList.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
     import {
         columnListProps,
         type ColumnListCellContext,
         type ColumnListColumn,
         type ColumnListWindowedSource,
-    } from '$lib/ui/column-list-types'
-    import { getCachedIcon, iconCacheVersion } from '$lib/icon-cache'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import type { PreviewRow } from '$lib/tauri-commands'
+    } from '#lib/ui/column-list-types.js'
+    import { getCachedIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import type { PreviewRow } from '#lib/tauri-commands/index.js'
     import { rowStatusView, type StatusMessage } from './row-status'
 
     interface Props {

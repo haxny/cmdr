@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeGaugeSegments, type GaugeSegments } from './ram-gauge-utils'
-import type { SystemMemoryInfo } from '$lib/tauri-commands'
+import type { SystemMemoryInfo } from '#lib/tauri-commands/index.js'
 
 const GB = 1024 * 1024 * 1024
 

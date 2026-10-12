@@ -7,7 +7,7 @@ import { flushSync } from 'svelte'
 import type { VolumeInfo } from '../types'
 
 const { resolvePathVolume } = vi.hoisted(() => ({ resolvePathVolume: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ resolvePathVolume }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ resolvePathVolume }))
 
 import { createPaneVolumeState, type PaneVolumeState } from './pane-volume-state.svelte'
 

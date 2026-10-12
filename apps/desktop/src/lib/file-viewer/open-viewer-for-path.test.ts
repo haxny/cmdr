@@ -10,7 +10,7 @@ const { openFileViewer, resolvePathVolume } = vi.hoisted(() => ({
   resolvePathVolume: vi.fn(),
 }))
 vi.mock('./open-viewer', () => ({ openFileViewer }))
-vi.mock('$lib/tauri-commands', () => ({ resolvePathVolume }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ resolvePathVolume }))
 
 import { openFileViewerForPath } from './open-viewer-for-path'
 

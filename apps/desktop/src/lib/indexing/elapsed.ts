@@ -4,7 +4,7 @@
  * count-only phrasing and the clock never flashes a misleading `0:00`).
  *
  * A clock, not a localized number, so it's built here rather than routed
- * through `$lib/intl` number formatting. Shared by the breadcrumb drive-index
+ * through `#lib/intl` number formatting. Shared by the breadcrumb drive-index
  * badge tooltip and the top-right indexing indicator's drive rows, so both
  * surfaces show the same "· M:SS" elapsed clock from one source.
  */

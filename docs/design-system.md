@@ -937,7 +937,7 @@ entries.
 The UI must never flicker or jump due to changing text content. Text should fill its available space, and when it
 doesn't fit, show the most important parts.
 
-**Mid-text truncation**: Use `useShortenMiddle` from `$lib/utils/shorten-middle-action` instead of CSS
+**Mid-text truncation**: Use `useShortenMiddle` from `#lib/utils/shorten-middle-action` instead of CSS
 `text-overflow: ellipsis` (which only clips from the end). The action uses `@chenglou/pretext` for pixel-accurate
 canvas-based measurement, handles async loading with CSS fallback, and re-truncates on resize via `ResizeObserver`.
 
@@ -952,7 +952,7 @@ canvas-based measurement, handles async loading with CSS fallback, and re-trunca
 <span use:useShortenMiddle={{ text: longText }}></span>
 ```
 
-The pure function `shortenMiddle()` from `$lib/utils/shorten-middle` is also available for non-DOM contexts (accepts an
+The pure function `shortenMiddle()` from `#lib/utils/shorten-middle` is also available for non-DOM contexts (accepts an
 injectable `measureWidth` function).
 
 **Stable container widths**: Dialogs and panels that display changing text (progress paths, scan stats) must use fixed
@@ -960,7 +960,7 @@ widths (`width: 500px`, not `min-width/max-width`) to prevent layout jitter.
 
 **Number formatting**: Use `formatNumber()` from `selection-info-utils` for all user-facing counts (file counts, dir
 counts, item counts). Raw numbers like `194667` are hard to read; always display as `194,667`. Byte values use
-`$lib/units`'s `formatByteSize()`, which already handles this. Use `font-variant-numeric: tabular-nums` on numeric
+`#lib/units`'s `formatByteSize()`, which already handles this. Use `font-variant-numeric: tabular-nums` on numeric
 displays so digits don't shift as values update.
 
 ### Notifications/toasts (app)

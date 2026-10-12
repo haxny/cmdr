@@ -9,7 +9,7 @@
  * assertions.
  *
  * The connection and error views stay in their own files: each mocks
- * `$lib/tauri-commands` with a different shape, and `vi.mock` hoists per module,
+ * `#lib/tauri-commands` with a different shape, and `vi.mock` hoists per module,
  * so merging them would change what they exercise.
  */
 
@@ -18,12 +18,12 @@ import { mount, tick } from 'svelte'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // Only the hint toast reaches for these two; nothing else in this file imports
 // either module.
-vi.mock('$lib/settings', () => ({ setSetting: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast: vi.fn(() => undefined) }))
+vi.mock('#lib/settings/index.js', () => ({ setSetting: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: vi.fn(() => undefined) }))
 
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'
 import FunctionKeyBar from './FunctionKeyBar.svelte'

@@ -6,14 +6,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { OperationRow } from '$lib/ipc/bindings'
+import type { OperationRow } from '#lib/ipc/bindings.js'
 
 const getRecentMock = vi.fn<(payload: { limit: number; offset: number }) => Promise<OperationRow[]>>()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getRecentOperationLogEntries: (limit: number, offset: number) => getRecentMock({ limit, offset }),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

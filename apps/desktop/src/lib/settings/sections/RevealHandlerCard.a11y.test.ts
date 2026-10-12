@@ -11,20 +11,20 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { RevealHandlerState, RevealHandlerStatus } from '$lib/ipc/bindings'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { RevealHandlerState, RevealHandlerStatus } from '#lib/ipc/bindings.js'
 
 const getRevealHandlerState = vi.fn<() => Promise<RevealHandlerStatus>>()
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getRevealHandlerState: () => getRevealHandlerState(),
     setRevealHandlerEnabled: () => Promise.resolve(unblocked({ kind: 'registered' })),
   },
 }))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => true,
 }))
 

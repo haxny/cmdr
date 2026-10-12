@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
 import type { VolumeInfo } from '../types'
-import type { ToastContent, ToastOptions } from '$lib/ui/toast/toast-store.svelte'
+import type { ToastContent, ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
 
 const { addToastSpy, buildFromSelectionSpy, buildFromCursorSpy } = vi.hoisted(() => ({
   addToastSpy: vi.fn<(content: ToastContent, options?: ToastOptions) => string>(),
@@ -16,15 +16,15 @@ const { addToastSpy, buildFromSelectionSpy, buildFromCursorSpy } = vi.hoisted(()
   buildFromCursorSpy: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
 
 // The destination guard resolves the pane's kind through the capability table,
 // which reads the volume store; an empty store lets a real id ('root') fall to
 // the listable `local` default. The read-only alert reads `access.getVolumes()`
 // instead, which is the fixture below.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
-vi.mock('$lib/search/capabilities', () => ({
+vi.mock('#lib/search/capabilities.js', () => ({
   SEARCH_RESULTS_NOT_A_FOLDER_TOAST: "Search results aren't a folder. Pick a real destination.",
 }))
 

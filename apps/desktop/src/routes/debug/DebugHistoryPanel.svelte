@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface HistoryEntry {
         volumeId: string

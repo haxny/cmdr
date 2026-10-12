@@ -12,8 +12,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
-import type { ClipModelStatus } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { ClipModelStatus } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const stubs = vi.hoisted(() => ({
   getSetting: (_id: string): unknown => undefined,
@@ -23,20 +23,20 @@ const stubs = vi.hoisted(() => ({
   openPicker: vi.fn<() => Promise<string | string[] | null>>(),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: (id: string) => stubs.getSetting(id),
   setSetting: vi.fn(),
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexClipModelStatus: () => stubs.clipModelStatus(),
   mediaIndexDownloadClipModel: vi.fn(),
   mediaIndexDeleteClipModel: vi.fn(),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatFileSize: (b: number) => `${String(b)}B`,
 }))
@@ -45,13 +45,13 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: () => stubs.openPicker(),
 }))
 
-vi.mock('$lib/media-index/always-index-folders', () => ({
+vi.mock('#lib/media-index/always-index-folders.js', () => ({
   getChosenFolders: () => stubs.chosenFolders,
   isFolderChosen: (folder: string) => stubs.chosenFolders.includes(folder),
   setFolderChosen: (folder: string, on: boolean) => stubs.setFolderChosen(folder, on),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
@@ -163,7 +163,7 @@ describe('MediaIndexChosenFolders', () => {
   }
 
   beforeEach(() => {
-    // The component's own file mocked `$lib/settings` down to
+    // The component's own file mocked `#lib/settings` down to
     // `onSpecificSettingChange` alone, so nothing here reads a setting.
     stubs.getSetting = () => undefined
     stubs.chosenFolders = []

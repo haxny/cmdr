@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { findVolumeIdForPath, isSameVolume, pickDropOperation } from './drop-operation'
 
 const root: VolumeInfo = { id: 'boot', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }

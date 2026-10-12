@@ -1,5 +1,5 @@
 <script lang="ts">
-    import RadioGroup, { type RadioItem } from '$lib/ui/RadioGroup.svelte'
+    import RadioGroup, { type RadioItem } from '#lib/ui/RadioGroup.svelte'
     import {
         getSetting,
         setSetting,
@@ -7,7 +7,7 @@
         onSpecificSettingChange,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import type { Snippet } from 'svelte'
     import { onMount } from 'svelte'
     import { useSettingLock } from './setting-lock.svelte'

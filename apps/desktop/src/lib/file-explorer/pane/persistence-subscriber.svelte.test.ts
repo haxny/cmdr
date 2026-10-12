@@ -16,7 +16,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { ViewMode } from '$lib/app-status-store'
+import type { ViewMode } from '#lib/app-status-store.js'
 import type { SortColumn, SortOrder } from '../types'
 
 const { saveAppStatusSpy, saveLastUsedPathSpy, recordVisitSpy } = vi.hoisted(() => ({
@@ -25,12 +25,12 @@ const { saveAppStatusSpy, saveLastUsedPathSpy, recordVisitSpy } = vi.hoisted(() 
   recordVisitSpy: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   saveAppStatus: saveAppStatusSpy,
   saveLastUsedPathForVolume: saveLastUsedPathSpy,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   recordVisit: recordVisitSpy,
 }))
 

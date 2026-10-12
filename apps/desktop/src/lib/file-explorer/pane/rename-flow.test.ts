@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { ExtensionChangePolicy } from '$lib/settings'
+import type { ExtensionChangePolicy } from '#lib/settings/index.js'
 
 // Capture the extension policy `executeFlow` passes to `executeRenameSave` — the
 // observable of the suppression plumbing (`effectiveExtensionPolicy()`).
@@ -32,13 +32,13 @@ const {
   addToastSpy: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileAt: vi.fn(),
   getFileRange: vi.fn(),
   refreshListing: vi.fn(),
   moveToTrash: vi.fn(),
 }))
-vi.mock('$lib/utils/filename-validation', () => ({
+vi.mock('#lib/utils/filename-validation.js', () => ({
   validateFilename: validateFilenameSpy,
   getExtension: (name: string) => {
     const i = name.lastIndexOf('.')
@@ -51,13 +51,13 @@ vi.mock('../rename/rename-operations', () => ({
   performRename: vi.fn(),
   checkPermission: checkPermissionSpy,
 }))
-vi.mock('$lib/settings', () => ({ getSetting: getSettingSpy }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/settings/index.js', () => ({ getSetting: getSettingSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToastForPane: addToastSpy,
   dismissToast: vi.fn(),
   dismissTransientToastsForPane: vi.fn(),
 }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (k: string) => k }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (k: string) => k }))
 // Spread the real module: `trash-availability.ts` reaches for
 // `pathCrossesArchiveBoundary` through here too, and a mock that answers for only
 // one export throws when the conflict dialog asks for the other.

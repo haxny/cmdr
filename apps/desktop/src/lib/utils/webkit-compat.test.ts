@@ -17,7 +17,7 @@ const logSink = vi.hoisted(() => ({
   error: vi.fn(),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => logSink,
 }))
 

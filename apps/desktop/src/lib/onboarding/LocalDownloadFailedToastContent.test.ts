@@ -3,15 +3,15 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, tick, unmount } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 const { openSettingsWindow, dismissToast } = vi.hoisted(() => ({
   openSettingsWindow: vi.fn<(surface: string, section?: string[]) => Promise<void>>(() => Promise.resolve()),
   dismissToast: vi.fn<(id: string) => void>(),
 }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

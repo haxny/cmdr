@@ -20,7 +20,7 @@ const { warnSpy } = vi.hoisted(() => ({
   warnSpy: vi.fn<(message: string, ctx: { ae: string }) => void>(),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('$lib/logging/logger', () => ({
 // in the Tauri event API or the IPC command surface. Tests that exercise the
 // Quick Look suppression branch flip `quickLookState.isOpen` directly.
 const { quickLookState } = vi.hoisted(() => ({ quickLookState: { isOpen: false } }))
-vi.mock('$lib/file-explorer/quick-look/quick-look-state.svelte', () => ({ quickLookState }))
+vi.mock('#lib/file-explorer/quick-look/quick-look-state.svelte.js', () => ({ quickLookState }))
 
 import { initFocusWatchdog, _resetForTests } from './focus-watchdog'
 

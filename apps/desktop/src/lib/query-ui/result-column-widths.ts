@@ -1,6 +1,6 @@
 /**
  * Width declarations for the Search results table (icon | Name | Path | Size | Modified),
- * fed to `$lib/ui/ColumnList.svelte`, which owns the measuring and the split.
+ * fed to `#lib/ui/ColumnList.svelte`, which owns the measuring and the split.
  *
  * Search: Size and Modified shrink-wrap to their widest cell; Name and Path share the rest by
  * max-min fairness, each measured off the row DATA (Path as its uncollapsed pill strip, so a
@@ -9,10 +9,10 @@
  * measured. DETAILS.md § Column widths.
  */
 
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import type { ColumnListColumn } from '$lib/ui/column-list-types'
-import { sizeDisplayParts } from '$lib/ui/size-display'
-import { formattedDate } from '$lib/settings/reactive-settings.svelte'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import type { ColumnListColumn } from '#lib/ui/column-list-types.js'
+import { sizeDisplayParts } from '#lib/ui/size-display.js'
+import { formattedDate } from '#lib/settings/reactive-settings.svelte.js'
 import { PILL_CHROME_PX, PILL_SEPARATOR_GAP_PX, splitPath, totalWidth } from './path-pills-layout'
 
 /**

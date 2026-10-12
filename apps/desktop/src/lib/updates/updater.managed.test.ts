@@ -29,7 +29,7 @@ const {
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkForUpdate: checkForUpdateMock,
   downloadUpdate: downloadUpdateMock,
   installUpdate: installUpdateMock,
@@ -39,16 +39,16 @@ vi.mock('$lib/tauri-commands', () => ({
   trackEvent: trackEventMock,
 }))
 
-vi.mock('$lib/shortcuts/key-capture', () => ({ isMacOS: () => true }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock, dismissToast: vi.fn() }))
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/shortcuts/key-capture.js', () => ({ isMacOS: () => true }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock, dismissToast: vi.fn() }))
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: getSettingMock,
   setSetting: vi.fn(),
   forceSave: vi.fn(() => Promise.resolve(true)),
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(() => Promise.resolve('0.51.0')) }))
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 
 import {
   UPDATE_WAKE_TICK_MS,

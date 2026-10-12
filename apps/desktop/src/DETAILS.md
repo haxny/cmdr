@@ -12,7 +12,7 @@ deliberately inherit no ratio: their rows size from the density tiers, and a rat
 
 ## Dev gates
 
-A `.svelte` script gates dev-only behavior on `isDevBuild()` (`$lib/app-mode`), never on an inline
+A `.svelte` script gates dev-only behavior on `isDevBuild()` (`#lib/app-mode`), never on an inline
 `import.meta.env.DEV`. knip collects a Svelte file's imports with a regex, and a bare `import.meta` matches its import
 pattern: the match runs on to the next quoted string, the synthetic module knip parses comes out broken, and every
 `await import(...)` in that file disappears from its graph. One `import.meta.env.DEV` in `routes/(main)/+page.svelte`
@@ -27,7 +27,7 @@ minification, so gating markup on `isDevBuild()` would ship the dialog gallery a
 ## Glass material
 
 Every frosted-glass surface (menus, selects, popovers, toasts, tooltips) draws from the tokens in `app.css` §
-Frosted-glass material, and `$lib/glass-material` (inited per window) feeds them the two macOS settings that shape it:
+Frosted-glass material, and `#lib/glass-material` (inited per window) feeds them the two macOS settings that shape it:
 
 - **Reduced transparency.** WKWebView never reflects `@media (prefers-reduced-transparency)`, so the app can't key a
   fallback off it. The backend reads the `NSWorkspace` value and the module toggles an `html.reduce-transparency` CLASS

@@ -20,24 +20,24 @@
  *    independent and can't see each other's emptiness, so the caller passes a
  *    `kind` discriminator (`both` | `filesOnly` | `foldersOnly`) and the message
  *    `select`s on it.
- *  - Counts are embedded as `$lib/intl`-preformatted STRINGS (`formatNumber`)
+ *  - Counts are embedded as `#lib/intl`-preformatted STRINGS (`formatNumber`)
  *    passed as `*Text` params, keeping number formatting single-sourced in
- *    `$lib/intl`. The raw integer is passed alongside ONLY to drive ICU plural
+ *    `#lib/intl`. The raw integer is passed alongside ONLY to drive ICU plural
  *    selection (noun + was/were), never for display.
  */
 
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-import { formatDisjunctionList } from '$lib/intl/list-format'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { formatDisjunctionList } from '#lib/intl/list-format.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import type {
   AppearedDuringMove,
   LostMetadataClass,
   MetadataLeftBehind,
   TopLevelSkipped,
   TrashRefusedItems,
-} from '$lib/ipc/bindings'
-import type { TransferOperationType } from '$lib/file-explorer/types'
+} from '#lib/ipc/bindings.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import { trashRefusedCountSentence } from './transfer-error-messages'
 
 export interface TransferCompleteToastInput {

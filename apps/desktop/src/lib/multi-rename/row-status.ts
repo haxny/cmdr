@@ -5,9 +5,9 @@
  * message keys, and the sheet words them.
  */
 
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { RowStatus } from '$lib/ipc/bindings'
-import type { IconName } from '$lib/ui/icons/icon-map'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { RowStatus } from '#lib/ipc/bindings.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
 
 export interface StatusMessage {
   key: MessageKey

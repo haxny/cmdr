@@ -14,19 +14,19 @@ const { checkRenameValiditySpy, renameFileSpy } = vi.hoisted(() => ({
   renameFileSpy: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkRenameValidity: checkRenameValiditySpy,
   checkRenamePermission: vi.fn(),
   renameFile: renameFileSpy,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
-import { tString } from '$lib/intl/messages.svelte'
-import { MutationFailure } from '$lib/file-operations/mutation-error'
-import { renderMutationError } from '$lib/file-operations/mutation-error-messages'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { MutationFailure } from '#lib/file-operations/mutation-error.js'
+import { renderMutationError } from '#lib/file-operations/mutation-error-messages.js'
 import { executeRenameSave, performRename } from './rename-operations'
 import type { RenameTarget } from './rename-state.svelte'
 

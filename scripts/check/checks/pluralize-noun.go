@@ -158,7 +158,7 @@ func RunPluralizeNoun(ctx *CheckContext) (CheckResult, error) {
 		return CheckResult{}, fmt.Errorf(
 			"found %d %s of `{var} <plural>` patterns that read as `1 files` when the count is 1 "+
 				"(use the shared `pluralize(count, \"thing\")` helper from "+
-				"`crate::pluralize` / `$lib/utils/pluralize`; add `%s <reason>` on the line if a false positive):\n%s",
+				"`crate::pluralize` / `#lib/utils/pluralize`; add `%s <reason>` on the line if a false positive):\n%s",
 			len(allViolations), Pluralize(len(allViolations), "site", "sites"), AllowPluralizeNounComment, sb.String(),
 		)
 	}

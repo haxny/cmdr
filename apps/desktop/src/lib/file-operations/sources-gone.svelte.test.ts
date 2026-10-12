@@ -1,18 +1,18 @@
 /**
  * The main window's host for "sources left while this operation queued"
- * (ERR-962JD). `$lib/tauri-commands` is mocked and the registered
+ * (ERR-962JD). `#lib/tauri-commands` is mocked and the registered
  * `onWriteSourcesGone` callback captured, so each case delivers the backend's
  * event and asserts what the person sees and what the host sends back.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { OperationSnapshot, WriteSourcesGoneEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteSourcesGoneEvent } from '#lib/tauri-commands/index.js'
 import type { OperationRow } from './queue/operations-store.svelte'
 
 let sourcesGoneCb: ((e: WriteSourcesGoneEvent) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onWriteSourcesGone: vi.fn((cb: (e: WriteSourcesGoneEvent) => void) => {
     sourcesGoneCb = cb
     return Promise.resolve(() => {})
@@ -26,17 +26,17 @@ vi.mock('./queue/main-window-operations.svelte', () => ({
   getMainWindowOperationRows: () => rows,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(() => 'toast-id'),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
-import { cancelOperation, continueWithoutGoneSources } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { _resetOpenDialogsForTesting, markDialogClosed, markDialogOpen } from '$lib/ui/open-dialogs.svelte'
+import { cancelOperation, continueWithoutGoneSources } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { _resetOpenDialogsForTesting, markDialogClosed, markDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
 import {
   cancelSourcesGonePrompt,
   continueSourcesGonePrompt,

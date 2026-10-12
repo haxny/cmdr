@@ -9,14 +9,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
-import type { OperationRow } from '$lib/file-operations/queue/operations-store.svelte'
-import { clearAllToasts, getToasts } from '$lib/ui/toast'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
+import type { OperationRow } from '#lib/file-operations/queue/operations-store.svelte.js'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/index.js'
 
 let foregroundOperationId: string | null = null
 let foregroundFailureId: string | null = null
 let claimPending = false
-vi.mock('$lib/file-operations/foreground-operation.svelte', () => ({
+vi.mock('#lib/file-operations/foreground-operation.svelte.js', () => ({
   getForegroundOperationId: () => foregroundOperationId,
   getForegroundFailureId: () => foregroundFailureId,
   isForegroundClaimPending: () => claimPending,
@@ -24,15 +24,15 @@ vi.mock('$lib/file-operations/foreground-operation.svelte', () => ({
 
 // The queue-window opener drags in `@tauri-apps/api/webviewWindow`; the toast
 // content only needs it to exist for a click that these tests don't make.
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: () => Promise.resolve(),
 }))
 
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => [] as OperationRow[],
 }))
 
-import { queueHandoffToastId, showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
+import { queueHandoffToastId, showQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
 import {
   announceFailures,
   FAILURE_SUMMARY_TOAST_ID,

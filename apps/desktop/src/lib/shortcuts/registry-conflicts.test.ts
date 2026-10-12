@@ -23,7 +23,7 @@ vi.hoisted(() => {
   vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)' })
 })
 
-import { commands } from '$lib/commands/command-registry'
+import { commands } from '#lib/commands/command-registry.js'
 import { findConflictsForShortcut, getAllConflicts } from './conflict-detector'
 import { getDefaultShortcuts } from './shortcuts-store'
 

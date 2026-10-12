@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     openMultiRename: vi.fn(),
     previewMultiRename: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands, type MultiRenameSpec } from '$lib/ipc/bindings'
+import { commands, type MultiRenameSpec } from '#lib/ipc/bindings.js'
 import {
   applyMultiRename,
   clearMultiRenameNames,

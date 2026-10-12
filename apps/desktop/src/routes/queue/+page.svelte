@@ -3,12 +3,12 @@
     import { SvelteSet } from 'svelte/reactivity'
     import { getCurrentWindow } from '@tauri-apps/api/window'
     import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-    import { initWindowSettings, initWindowLanguageSync } from '$lib/settings/window-settings'
-    import { initAccentColor, cleanupAccentColor } from '$lib/accent-color'
-    import { initGlassMaterial, cleanupGlassMaterial } from '$lib/glass-material'
-    import { initTextSize, cleanupTextSize } from '$lib/text-size.svelte'
-    import { trackOwnRect } from '$lib/window-positioning'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
+    import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
+    import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
+    import { trackOwnRect } from '#lib/window-positioning.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import {
         cancelOperations,
         dismissAllFailedOperations,
@@ -18,22 +18,22 @@
         pauseAll,
         resumeAll,
         type QueueMoveDirection,
-    } from '$lib/tauri-commands'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import QueueRow from '$lib/file-operations/queue/QueueRow.svelte'
-    import { createQueueCursor } from '$lib/file-operations/queue/queue-cursor.svelte'
-    import { queueKeyAction, type QueueKeyAction, type QueueRowApi } from '$lib/file-operations/queue/queue-keys'
+    } from '#lib/tauri-commands/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import QueueRow from '#lib/file-operations/queue/QueueRow.svelte'
+    import { createQueueCursor } from '#lib/file-operations/queue/queue-cursor.svelte.js'
+    import { queueKeyAction, type QueueKeyAction, type QueueRowApi } from '#lib/file-operations/queue/queue-keys.js'
     import {
         createOperationsStore,
         isHiddenSettledStatus,
         isTerminalStatus,
-    } from '$lib/file-operations/queue/operations-store.svelte'
+    } from '#lib/file-operations/queue/operations-store.svelte.js'
     import {
         initOperationSessions,
         destroyOperationSessions,
-    } from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+    } from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 
     const log = getAppLogger('queue')
 

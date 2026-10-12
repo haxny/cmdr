@@ -6,11 +6,11 @@
  * "an instance is registered", which a search's walk is enough for.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { VolumeIndexStatus } from '$lib/ipc/bindings'
+import type { VolumeIndexStatus } from '#lib/ipc/bindings.js'
 
 const addToast = vi.fn()
 const dismissToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...a: unknown[]) => {
     addToast(...a)
   },
@@ -22,17 +22,17 @@ vi.mock('$lib/ui/toast', () => ({
 }))
 
 const settings: Record<string, unknown> = {}
-vi.mock('$lib/settings', () => ({ getSetting: (id: string) => settings[id] }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: (id: string) => settings[id] }))
 
 let silenced: string[] = []
 vi.mock('./drive-index-prefs', () => ({ isDriveSilenced: (id: string) => silenced.includes(id) }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
 }))
 
 let statusByVolume: Record<string, VolumeIndexStatus> = {}
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getVolumeIndexStatusById: (volumeId: string) =>
       Promise.resolve({

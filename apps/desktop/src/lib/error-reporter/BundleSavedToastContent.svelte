@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { showInFinder } from '$lib/tauri-commands'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { showInFinder } from '#lib/tauri-commands/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

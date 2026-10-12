@@ -9,11 +9,11 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import WhatsNewDialog from './WhatsNewDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { whatsNewState, closeWhatsNew } from './whats-new-trigger.svelte'
 
 const openExternalUrlMock = vi.fn<(url: string) => Promise<void>>(() => Promise.resolve())
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   openExternalUrl: (url: string) => openExternalUrlMock(url),
@@ -23,14 +23,14 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const setSettingMock = vi.fn()
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: (id: string, value: unknown) => {
     setSettingMock(id, value)
   },
 }))
 
 const addToastMock = vi.fn<(...args: unknown[]) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToastMock(...args)
   },

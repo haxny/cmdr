@@ -25,7 +25,7 @@ ruleTester.run('no-raw-ark-import', rule, {
     },
     // Importing a house wrapper is the intended path in feature code.
     {
-      code: `import Switch from '$lib/ui/Switch.svelte'`,
+      code: `import Switch from '#lib/ui/Switch.svelte'`,
       filename: 'src/lib/settings/sections/AdvancedSection.svelte',
     },
     // Unrelated imports are never touched, even from a section file.

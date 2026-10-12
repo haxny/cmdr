@@ -15,8 +15,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { flushSync } from 'svelte'
-import { toCanonical, type CanonicalPath } from '$lib/path/canonical'
-import type { SearchSnapshot } from '$lib/search/snapshot-store.svelte'
+import { toCanonical, type CanonicalPath } from '#lib/path/canonical.js'
+import type { SearchSnapshot } from '#lib/search/snapshot-store.svelte.js'
 
 const { ipc, listUtils } = vi.hoisted<{
   ipc: { getFileAt: Mock; getListingStats: Mock }
@@ -26,7 +26,7 @@ const { ipc, listUtils } = vi.hoisted<{
   listUtils: { updateIndexSizesInPlace: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileAt: ipc.getFileAt,
   getListingStats: ipc.getListingStats,
 }))

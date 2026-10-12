@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { SortColumn, SortOrder } from '../types'
-    import { commands, type CommandId } from '$lib/commands'
-    import { getFirstShortcutReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { commands, type CommandId } from '#lib/commands/index.js'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         column: SortColumn

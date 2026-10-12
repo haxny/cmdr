@@ -15,10 +15,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, flushSync, createRawSnippet } from 'svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
-import type { VolumeIndexActivity } from '$lib/indexing/index-state.svelte'
-import { createOperationsStore } from '$lib/file-operations/queue/operations-store.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import type { VolumeIndexActivity } from '#lib/indexing/index-state.svelte.js'
+import { createOperationsStore } from '#lib/file-operations/queue/operations-store.svelte.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { CHIP_SETTLE_MS } from './operation-chip'
 
 let store: ReturnType<typeof createOperationsStore> | null = null
@@ -41,28 +41,28 @@ function scanActivity(volumeId: string): VolumeIndexActivity {
   }
 }
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: () => Promise.resolve(),
 }))
 
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => store?.operations ?? [],
   getMainWindowOperations: () => store,
 }))
 
-vi.mock('$lib/file-operations/foreground-operation.svelte', () => ({
+vi.mock('#lib/file-operations/foreground-operation.svelte.js', () => ({
   getForegroundOperationId: () => null,
   getForegroundFailureId: () => null,
 }))
 
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   ROOT_VOLUME_ID: 'root',
   getActiveIndexVolumes: () => activeVolumes,
   isAnyVolumeIndexing: () => activeVolumes.length > 0,
@@ -77,17 +77,17 @@ vi.mock('$lib/indexing/index-state.svelte', () => ({
   placeholderActivity: (volumeId: string) => scanActivity(volumeId),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD' }],
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: () => false,
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/media-index/enabled-volumes', () => ({
+vi.mock('#lib/media-index/enabled-volumes.js', () => ({
   getEnabledMediaIndexVolumeIds: () => [],
 }))
 
@@ -280,7 +280,7 @@ describe('OperationFailuresToastContent a11y', () => {
  * hourglass (and, later, the operation chip) inside it introduces no violation
  * of its own: no stray landmark, no unlabelled interactive element. The indexing
  * state and volume store are stubbed exactly as in
- * `$lib/indexing/stateful.a11y.test.ts`.
+ * `#lib/indexing/stateful.a11y.test.ts`.
  */
 describe('StatusCorner a11y', () => {
   it('idle (nothing to report) has no violations', async () => {

@@ -8,20 +8,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
 import { startOpenTerminalMenuGate } from './menu-gate.svelte'
-import { setOpenTerminalHereEnabled } from '$lib/tauri-commands'
-import { explorerState } from '$lib/file-explorer/pane/explorer-state.svelte'
-import { getActiveTab } from '$lib/file-explorer/tabs/tab-state-manager.svelte'
+import { setOpenTerminalHereEnabled } from '#lib/tauri-commands/index.js'
+import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
+import { getActiveTab } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 
 // Partial: `explorer-state.svelte.ts` reaches for `DEFAULT_VOLUME_ID` from the same
 // barrel while building its default tab managers.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/tauri-commands')>()),
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
   setOpenTerminalHereEnabled: vi.fn(() => Promise.resolve()),
 }))
 
 // An empty volume store means every real id falls to the `local` default, which is
 // what makes the two device ids below the interesting cases.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
 let stop: (() => void) | null = null
 

@@ -9,9 +9,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import TransferConflictDialog from './TransferConflictDialog.svelte'
-import type { WriteConflictEvent } from '$lib/tauri-commands'
+import type { WriteConflictEvent } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),

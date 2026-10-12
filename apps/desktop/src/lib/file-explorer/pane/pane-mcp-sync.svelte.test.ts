@@ -26,7 +26,7 @@ const { getFileAt, getFileRange, updateLeftPaneState, updateRightPaneState } = v
   updateLeftPaneState: vi.fn().mockResolvedValue(undefined),
   updateRightPaneState: vi.fn().mockResolvedValue(undefined),
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileAt,
   getFileRange,
   updateLeftPaneState,
@@ -40,10 +40,10 @@ const { getWalkedGround, isVolumeAggregating } = vi.hoisted<{
   getWalkedGround: vi.fn(() => [] as string[]),
   isVolumeAggregating: vi.fn(() => false),
 }))
-vi.mock('$lib/indexing/index-state.svelte', () => ({ getWalkedGround, isVolumeAggregating }))
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({ getWalkedGround, isVolumeAggregating }))
 
-import type { CanonicalPath } from '$lib/path/canonical'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { CanonicalPath } from '#lib/path/canonical.js'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import { createPaneMcpSync, paneListingOf, type PaneMcpSyncDeps } from './pane-mcp-sync.svelte'
 
 const TOTAL_COUNT = 74_144

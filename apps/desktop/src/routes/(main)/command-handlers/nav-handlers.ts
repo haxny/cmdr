@@ -4,7 +4,7 @@
  * `cursor.moveTo` are the two MCP round-trip ids: they stay `async` + `await` so
  * the adapter acks on real completion (the ack-timing contract).
  */
-import type { CommandArgs } from '$lib/commands'
+import type { CommandArgs } from '#lib/commands/index.js'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'
 

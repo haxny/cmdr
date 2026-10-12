@@ -21,12 +21,12 @@ const { getSettingMock, setSettingMock, openSettingsWindowMock } = vi.hoisted(()
   openSettingsWindowMock: vi.fn<(payload: { surface: string; section?: string[]; anchor?: string }) => Promise<void>>(),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: (surface: string, section?: string[], anchor?: string) =>
     openSettingsWindowMock({ surface, section, anchor }),
 }))

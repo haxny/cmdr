@@ -6,7 +6,7 @@ indicator. Rust counterpart: `crates/cmdr-index/src/indexing/`.
 `index-state.svelte.ts` is the reactive core (per-volume `SvelteMap`s fed by the fourteen index events);
 `media-enrich-state.svelte.ts` is the second publisher. Pure helpers: `eta.ts`, `indexing-steps.ts`, `overall-eta.ts`,
 `elapsed.ts`, `media-enrich-queued.ts`, `walked-ground.ts`. The status surface is `IndexingStatusIndicator` →
-`IndexingDriveRow` → presentational `IndexingStatusBody` + `IndexingDriveSummary`, placed by `$lib/status-corner/`.
+`IndexingDriveRow` → presentational `IndexingStatusBody` + `IndexingDriveSummary`, placed by `#lib/status-corner/`.
 Public API barrel: `index.ts`.
 
 ## Must-knows

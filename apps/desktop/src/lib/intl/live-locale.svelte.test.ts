@@ -10,13 +10,13 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OsLocales } from '$lib/ipc/bindings'
+import type { OsLocales } from '#lib/ipc/bindings.js'
 
 /** The handler `watchSystemLocales` registered, so a test can post an event. */
 let onEvent: ((payload: { locales: OsLocales }) => void) | undefined
 const unlisten = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getOsLocales: () => Promise.resolve({ ui: 'en', format: 'en-US' }),
   onOsLocalesChanged: (handler: (payload: { locales: OsLocales }) => void) => {
     onEvent = handler

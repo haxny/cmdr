@@ -1,5 +1,5 @@
 /**
- * Fixtures for `sources-gone` (`$lib/file-operations/SourcesGoneDialog.svelte`).
+ * Fixtures for `sources-gone` (`#lib/file-operations/SourcesGoneDialog.svelte`).
  *
  * A queued operation's question when some of its sources left while it waited.
  * The answers live in the `onContinue` / `onCancel` props, which the gallery
@@ -8,7 +8,7 @@
  * whether the name list ends in "and N more".
  */
 
-import type { OperationSnapshot, WriteSourcesGoneEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteSourcesGoneEvent } from '#lib/tauri-commands/index.js'
 
 export interface SourcesGoneFixture {
   event: WriteSourcesGoneEvent

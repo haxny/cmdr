@@ -6,12 +6,12 @@ import {
   onDirectoryDiff,
   onListingRespelled,
   onWriteSourceItemDone,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { resolveValidPath } from '../navigation/path-resolution'
 import { movesByPreviousIndex, remapIndicesAcrossDiff } from '../operations/adjust-selection-indices'
 import { buildFrontendIndices, extractFilename } from '../operations/selection-adjustment'
-import { getAppLogger } from '$lib/logging/logger'
-import { createThrottle } from '$lib/utils/timing'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { createThrottle } from '#lib/utils/timing.js'
 import type { DiffChange } from '../types'
 import type { createSelectionState } from './selection-state.svelte'
 import type { createRenameState } from '../rename/rename-state.svelte'

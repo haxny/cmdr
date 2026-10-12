@@ -14,7 +14,7 @@ vi.mock('./shortcuts-store', () => ({
 }))
 
 // Mock the command registry with a controlled set of commands
-vi.mock('$lib/commands/command-registry', () => ({
+vi.mock('#lib/commands/command-registry.js', () => ({
   commands: [
     // Tier 1: showInPalette true, has shortcut
     { id: 'app.quit', name: 'Quit', scope: 'App', showInPalette: true, shortcuts: ['⌘Q'] },
@@ -72,7 +72,7 @@ vi.mock('$lib/commands/command-registry', () => ({
 }))
 
 import { getEffectiveShortcuts, onShortcutChange } from './shortcuts-store'
-import { commands } from '$lib/commands/command-registry'
+import { commands } from '#lib/commands/command-registry.js'
 import {
   lookupCommand,
   initShortcutDispatch,

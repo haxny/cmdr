@@ -19,20 +19,20 @@
         onViewerContextMenuAction,
         showViewerContextMenu,
         activateWindowMenu,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     import { createViewerPull } from './viewer-pull.svelte'
     import PullProgressPanel from './PullProgressPanel.svelte'
     import { getCurrentWindow } from '@tauri-apps/api/window'
     import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-    import { getSetting, setSetting } from '$lib/settings'
-    import { initWindowSettings, initWindowLanguageSync } from '$lib/settings/window-settings'
-    import { initAccentColor, cleanupAccentColor } from '$lib/accent-color'
-    import { initGlassMaterial, cleanupGlassMaterial } from '$lib/glass-material'
-    import { initTextSize, cleanupTextSize } from '$lib/text-size.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { pluralize } from '$lib/utils/pluralize'
-    import { closeSelfWindow } from '$lib/child-window-close'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
+    import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
+    import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
+    import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { pluralize } from '#lib/utils/pluralize.js'
+    import { closeSelfWindow } from '#lib/child-window-close.js'
     import { createViewerSearch } from './viewer-search.svelte'
     import { createViewerScroll } from './viewer-scroll.svelte'
     import { createTextWidthTracker } from './viewer-text-width.svelte'
@@ -54,8 +54,8 @@
     import { createViewerPointerDrag } from './viewer-pointer-drag.svelte'
     import { createViewerTextCursor } from './viewer-text-cursor.svelte'
     import ViewerTextCursor from './ViewerTextCursor.svelte'
-    import { getViewerShowTextCursor } from '$lib/settings/reactive-settings.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import { getViewerShowTextCursor } from '#lib/settings/reactive-settings.svelte.js'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import ViewerToolbar from './ViewerToolbar.svelte'
     import ViewerStatusBar from './ViewerStatusBar.svelte'
     import ViewerRow from './ViewerRow.svelte'
@@ -65,16 +65,16 @@
     import ViewerCopyDialogs from './ViewerCopyDialogs.svelte'
     import MediaImageView from './MediaImageView.svelte'
     import MediaPdfView from './MediaPdfView.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import type { EncodingChoice, FileEncoding } from '$lib/ipc/bindings'
-    import { viewerSetEncoding, viewerSetTailMode, viewerGetEncodingOptions } from '$lib/tauri-commands'
-    import { initAppMode, decorateChildWindowTitle } from '$lib/app-mode'
-    import { categorizeForViewerWarning } from '$lib/file-viewer/binary-warning'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import type { EncodingChoice, FileEncoding } from '#lib/ipc/bindings.js'
+    import { viewerSetEncoding, viewerSetTailMode, viewerGetEncodingOptions } from '#lib/tauri-commands/index.js'
+    import { initAppMode, decorateChildWindowTitle } from '#lib/app-mode.js'
+    import { categorizeForViewerWarning } from '#lib/file-viewer/binary-warning.js'
     import { isMediaKind } from './media-view'
     import { createViewerMedia } from './viewer-media.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
 
     const log = getAppLogger('viewer')
 
@@ -508,7 +508,7 @@
         // ❌ Never `getCurrentWindow().close()` here: destroying this webview from inside the
         // handler that asked for it stalls queued IPC on webkit2gtk and can segfault the whole app
         // on macOS WebKit. The backend hides it and destroys it a moment later.
-        // See `$lib/child-window-close`.
+        // See `#lib/child-window-close`.
         void closeSelfWindow().then(() => {
             log.debug('closeWindow: close requested after {elapsed}ms', {
                 elapsed: Math.round(performance.now() - start),

@@ -35,8 +35,8 @@
  * windows following one move agree.
  */
 
-import type { ServerPlaceMoved } from '$lib/ipc/bindings'
-import type { Location } from '$lib/tauri-commands'
+import type { ServerPlaceMoved } from '#lib/ipc/bindings.js'
+import type { Location } from '#lib/tauri-commands/index.js'
 import { getActiveTab, type TabManager } from '../tabs/tab-state-manager.svelte'
 import type { NavigateIntent, NavigateResult } from './navigate'
 

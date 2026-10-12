@@ -66,7 +66,7 @@ export function useMountTarget(): { getTarget: () => HTMLDivElement } {
  * it and it can't live in this shared module):
  *
  *   const events = createListenRecorder()
- *   vi.mock('$lib/tauri-commands', async (orig) => ({
+ *   vi.mock('#lib/tauri-commands/index.js', async (orig) => ({
  *     ...(await orig()),
  *     listen: events.listen,
  *   }))
@@ -74,14 +74,14 @@ export function useMountTarget(): { getTarget: () => HTMLDivElement } {
  *   events.fireListingEvent('listing-complete', { listingId, totalCount: 3, volumeRoot: '/' })
  */
 export interface ListenRecorder {
-  /** Drop-in for the `$lib/tauri-commands` `listen` export. */
+  /** Drop-in for the `#lib/tauri-commands` `listen` export. */
   listen: (eventName: string, callback: (event: { payload: unknown }) => void) => Promise<() => void>
   /**
    * Drop-in for the typed `on<Listing>(payload => …)` wrappers (now that the
    * streaming-listing events flow through the generated `events.*` API instead
    * of raw `listen('listing-…', …)`). Registers under the wire event name so
    * `fireListingEvent('listing-complete', payload)` still reaches the callback.
-   * Spread `recorder.listingWrappers` into the `$lib/tauri-commands` mock.
+   * Spread `recorder.listingWrappers` into the `#lib/tauri-commands` mock.
    */
   listingWrappers: {
     onListingOpening: (cb: (payload: unknown) => void) => Promise<() => void>

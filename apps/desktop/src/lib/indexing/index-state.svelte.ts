@@ -19,7 +19,7 @@
  */
 
 import { SvelteMap } from 'svelte/reactivity'
-import type { ActivityPhase, CoveragePhase } from '$lib/ipc/bindings'
+import type { ActivityPhase, CoveragePhase } from '#lib/ipc/bindings.js'
 import {
   getIndexStatus,
   onIndexAggregationComplete,
@@ -38,13 +38,13 @@ import {
   onIndexScanProgress,
   onIndexScanStarted,
   type UnlistenFn,
-} from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 import { NO_WALKED_GROUND, type WalkedGround } from './walked-ground'
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { ScanRunKind, StepsAheadMs } from '$lib/ipc/bindings'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { ScanRunKind, StepsAheadMs } from '#lib/ipc/bindings.js'
 
 /** The local volume's id (mirrors `DEFAULT_VOLUME_ID` in `tauri-commands/storage`).
  *  Exported so the checklist can tell a local scan (all four steps) from a

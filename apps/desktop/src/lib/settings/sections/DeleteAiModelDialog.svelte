@@ -6,10 +6,10 @@
      * the size warning, and both buttons disabled (Escape and Enter included) so
      * an uninstall in flight can't be cancelled or double-fired.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { t, tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The installed model's size, already formatted (`formatByteSize`). */

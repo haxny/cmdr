@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const trackEvent = vi.fn<(name: string, props: Record<string, unknown>) => void>()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   trackEvent: (name: string, props: Record<string, unknown>) => {
     trackEvent(name, props)
   },
@@ -23,7 +23,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 let languageSetting = 'system'
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: () => languageSetting,
 }))
 

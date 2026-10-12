@@ -8,8 +8,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { getMessage, tString } from '$lib/intl/messages.svelte'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { getMessage, tString } from '#lib/intl/messages.svelte.js'
 
 const { consentState } = vi.hoisted(() => {
   // An annotation, not an `as`: the lint auto-fix strips an assertion it thinks is unnecessary.

@@ -1,4 +1,4 @@
-import type { SystemMemoryInfo } from '$lib/tauri-commands'
+import type { SystemMemoryInfo } from '#lib/tauri-commands/index.js'
 
 export interface GaugeSegments {
   systemPercent: number

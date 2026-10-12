@@ -15,8 +15,8 @@ import {
   type SuggestedOpPage,
   type SuggestedSweepView,
   type SuggestionsChanged,
-} from '$lib/ipc/bindings'
-import { throwSuggestedOpsError } from '$lib/suggested-ops/suggested-ops-failure'
+} from '#lib/ipc/bindings.js'
+import { throwSuggestedOpsError } from '#lib/suggested-ops/suggested-ops-failure.js'
 
 /** Every sweep with at least one group still waiting on the user, newest first. Counts only:
  *  not one op row is read, because a group of 60,000 ops is legitimate. */
@@ -69,4 +69,4 @@ export type {
   SuggestedOpPage,
   SuggestedOpView,
   SuggestedSweepView,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'

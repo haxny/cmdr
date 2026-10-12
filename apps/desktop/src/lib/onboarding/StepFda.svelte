@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { forceSave, setSetting } from '$lib/settings'
+    import { forceSave, setSetting } from '#lib/settings/index.js'
     import { onMount } from 'svelte'
     import {
         checkFullDiskAccess,
@@ -8,17 +8,17 @@
         openExternalUrl,
         openPrivacySettings,
         startIndexingAfterFdaDecision,
-    } from '$lib/tauri-commands'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
+    } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
     import OnboardingStepShell from './OnboardingStepShell.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { LogOnceGate } from '$lib/logging/log-once'
-    import { systemStrings } from '$lib/system-strings.svelte'
-    import { isMacOS } from '$lib/shortcuts/key-capture'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { LogOnceGate } from '#lib/logging/log-once.js'
+    import { systemStrings } from '#lib/system-strings.svelte.js'
+    import { isMacOS } from '#lib/shortcuts/key-capture.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { Snippet } from 'svelte'
     import {
         getOnboardingState,

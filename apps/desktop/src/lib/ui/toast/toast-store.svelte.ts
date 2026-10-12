@@ -1,5 +1,5 @@
 import type { Component } from 'svelte'
-import type { ReportIncident } from '$lib/error-reporter/report-incident'
+import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
 export type ToastLevel = 'default' | 'info' | 'success' | 'warn' | 'error'
 /** Every level a component toast can take without deciding on a report offer. */
@@ -93,7 +93,7 @@ export interface ToastOptions {
   /**
    * Whether this toast offers "Send error report…", and about what. An error-level
    * STRING toast offers it by default, its text as the note; pass an incident to word
-   * the note from typed facts instead (`$lib/error-reporter/report-incident.ts`). Any
+   * the note from typed facts instead (`#lib/error-reporter/report-incident.ts`). Any
    * level may offer one (a slowness notice, say). `false` opts out: a toast that is
    * ITSELF about error reporting (the "Couldn't send error report" toast) mustn't offer
    * to re-run the flow that just didn't work. A component toast at error level must

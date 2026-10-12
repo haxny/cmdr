@@ -4,7 +4,7 @@
  * as `unknown`; these turn it back into the type and say how loud to log it.
  */
 
-import type { LocalAiError } from '$lib/ipc/bindings'
+import type { LocalAiError } from '#lib/ipc/bindings.js'
 
 const KNOWN_TYPES: ReadonlySet<string> = new Set<LocalAiError['type']>([
   'managed',

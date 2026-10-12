@@ -18,7 +18,7 @@ Registry-based user settings: defined once in `settings-registry.ts`, accessed u
   feature page, OR auto-render in Advanced (`section[0] === 'Advanced'` + a `cardKey`), never both.
   [Checklist](../../../../../docs/guides/adding-a-new-setting.md).
 - **Every setting MUST apply immediately without restart.** A backend-affecting one also needs a Tauri command, a
-  `$lib/tauri-commands/settings.ts` wrapper, and an `onSettingChange` case in `settings-applier.ts`.
+  `#lib/tauri-commands/settings.ts` wrapper, and an `onSettingChange` case in `settings-applier.ts`.
 - **Every `tauri-plugin-store` reader goes through `resolveStorePath(storeName)`** (`store-path.ts`): the plugin ignores
   `CMDR_DATA_DIR`, so a bare name makes an isolated instance read production.
 - **The viewer and queue windows have NO store capability by design; never grant one.** Restricted mode seeds from a

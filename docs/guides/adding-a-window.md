@@ -10,7 +10,7 @@ A window is four pieces plus one decision:
 - **An opener**: `<feature>-window.ts` exporting `openXxxWindow()`, which constructs the `WebviewWindow`. Mirror an
   existing one: `lib/settings/settings-window.ts` (singleton, glass, text-size-scaled), `lib/file-viewer/open-viewer.ts`
   (multi-instance, cascading), or `lib/shortcuts/shortcuts-window.ts` (singleton, read-only). Reuse the shared helpers:
-  `resolveChildPosition` (from `$lib/window-positioning`, places + clamps to the monitor), `decorateChildWindowTitle`
+  `resolveChildPosition` (from `#lib/window-positioning`, places + clamps to the monitor), `decorateChildWindowTitle`
   (dev/worktree title suffix), `getEffectiveScale` (size the window to the app-wide text size), and the `focus-self`
   event so a singleton re-focuses instead of spawning a duplicate.
 - **A capability file**: `src-tauri/capabilities/<name>.json`, listing the window label and the minimal Tauri perms the
@@ -37,7 +37,7 @@ The main window has all of these. A focused child window usually should not.
 A read-only or hostile-content window (the viewer renders arbitrary files; the Keyboard shortcuts window is read-only)
 should **not** get window-creation perms just to open Settings. Instead, emit an event the main window already listens
 for, and let it open the target on your behalf. Example: the Keyboard shortcuts window's "Edit shortcuts" link calls
-`requestOpenSettings('Keyboard shortcuts')` (in `$lib/tauri-commands`), which emits the shared `open-settings` event;
+`requestOpenSettings('Keyboard shortcuts')` (in `#lib/tauri-commands`), which emits the shared `open-settings` event;
 the main window's `onOpenSettings` handler calls `openSettingsWindow([...])`. The child window needs only
 `core:event:default`. This keeps the capability split honest (see `capabilities/CLAUDE.md` for why that boundary
 matters).

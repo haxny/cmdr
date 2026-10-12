@@ -23,20 +23,20 @@
      */
     import { onMount } from 'svelte'
     import { SvelteMap } from 'svelte/reactivity'
-    import Switch from '$lib/ui/Switch.svelte'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import type { VolumeInfo } from '$lib/file-explorer/types'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { onSpecificSettingChange } from '$lib/settings'
-    import { mediaIndexVolumeState, type MediaIndexVolumeState } from '$lib/tauri-commands'
+    import Switch from '#lib/ui/Switch.svelte'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import type { VolumeInfo } from '#lib/file-explorer/types.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { onSpecificSettingChange } from '#lib/settings/index.js'
+    import { mediaIndexVolumeState, type MediaIndexVolumeState } from '#lib/tauri-commands/index.js'
     import {
         isNetworkVolumeOptedIn,
         isVolumeAlwaysIndexed,
         setNetworkVolumeOptedIn,
         setVolumeAlwaysIndexed,
-    } from '$lib/media-index/network-volume-prefs'
+    } from '#lib/media-index/network-volume-prefs.js'
 
     // The mounted network (SMB) volumes, reactive off the shared volume store.
     const networkVolumes = $derived(getVolumes().filter((v: VolumeInfo) => v.category === 'network'))

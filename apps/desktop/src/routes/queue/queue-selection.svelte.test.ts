@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, QueueMoveOutcome } from '$lib/ipc/bindings'
+import type { OperationSnapshot, QueueMoveOutcome } from '#lib/ipc/bindings.js'
 
 const cancelOperations = vi.fn((_ids: string[]) => Promise.resolve())
 const cancelOperation = vi.fn((_id: string) => Promise.resolve())
@@ -25,7 +25,7 @@ const moveQueuedOperation = vi.fn((_id: string, _direction: string): Promise<Que
 /** The ⌘A menu road's listener, as the page registers it. */
 let selectAllFromMenu: (() => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelOperation: (id: string) => cancelOperation(id),
   cancelOperations: (ids: string[]) => cancelOperations(ids),
   cancelWriteOperation: vi.fn(() => Promise.resolve()),
@@ -53,35 +53,35 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ setFocus: vi.fn(), close: vi.fn() }),
 }))
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn(() => Promise.resolve(() => {})) }))
-vi.mock('$lib/settings/window-settings', () => ({
+vi.mock('#lib/settings/window-settings.js', () => ({
   initWindowSettings: vi.fn(() => Promise.resolve()),
   initWindowLanguageSync: vi.fn(() => () => {}),
 }))
-vi.mock('$lib/accent-color', () => ({
+vi.mock('#lib/accent-color.js', () => ({
   initAccentColor: vi.fn(() => Promise.resolve()),
   cleanupAccentColor: vi.fn(),
 }))
-vi.mock('$lib/glass-material', () => ({
+vi.mock('#lib/glass-material.js', () => ({
   initGlassMaterial: vi.fn(() => Promise.resolve()),
   cleanupGlassMaterial: vi.fn(),
 }))
-vi.mock('$lib/text-size.svelte', () => ({
+vi.mock('#lib/text-size.svelte.js', () => ({
   initTextSize: vi.fn(() => Promise.resolve()),
   cleanupTextSize: vi.fn(),
 }))
-vi.mock('$lib/window-positioning', () => ({ trackOwnRect: vi.fn(() => Promise.resolve(() => {})) }))
+vi.mock('#lib/window-positioning.js', () => ({ trackOwnRect: vi.fn(() => Promise.resolve(() => {})) }))
 // `<Size>` inside the rows reads the reactive settings layer, which needs a live
 // settings store the unit environment doesn't have.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({ getFileSizeFormat: () => 'decimal' }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getFileSizeFormat: () => 'decimal' }))
 
 /** The page builds its own store, so the module is wrapped to hand the test the
  *  same instance: snapshots then go in through the reducer the live
  *  `operations-changed` listener calls. */
 let store: ReturnType<
-  typeof import('$lib/file-operations/queue/operations-store.svelte').createOperationsStore
+  typeof import('#lib/file-operations/queue/operations-store.svelte.js').createOperationsStore
 > | null = null
-vi.mock('$lib/file-operations/queue/operations-store.svelte', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/file-operations/queue/operations-store.svelte')>()
+vi.mock('#lib/file-operations/queue/operations-store.svelte.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/file-operations/queue/operations-store.svelte.js')>()
   return {
     ...actual,
     createOperationsStore: () => {

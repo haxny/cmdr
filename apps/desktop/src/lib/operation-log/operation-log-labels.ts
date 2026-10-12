@@ -20,10 +20,10 @@ import type {
   ExecutionStatus,
   RollbackRefusal,
   RollbackState,
-} from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
+} from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 function summaryKey(kind: OpKind, subkind: ArchiveSubkind | null): MessageKey {
   switch (kind) {

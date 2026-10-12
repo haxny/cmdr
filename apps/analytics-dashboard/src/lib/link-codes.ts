@@ -1,7 +1,7 @@
 /**
  * Client-safe helpers for the Link codes page (`/links`): the `?r=` short-code shape, validation, and
  * the example-link builder. Pure functions only, so the page (browser bundle), the server source, and
- * the tests can all share one copy. The actual admin CRUD fetch lives in `$lib/server/sources/link-codes.ts`.
+ * the tests can all share one copy. The actual admin CRUD fetch lives in `#lib/server/sources/link-codes.ts`.
  *
  * The validation here mirrors the api-server's `link-codes.ts` (`isValidCode`, `sanitizeUtmValue`) so the
  * form rejects bad input before a round-trip; the server re-validates and is the source of truth.

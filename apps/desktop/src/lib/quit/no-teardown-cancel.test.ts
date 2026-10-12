@@ -23,7 +23,7 @@ import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 // The module that used to expose the footgun; imported so the first assertion
 // below is about real source, not a string.
-import * as writeOperationsIpc from '$lib/tauri-commands/write-operations'
+import * as writeOperationsIpc from '#lib/tauri-commands/write-operations.js'
 
 /** Vitest's root is `apps/desktop` (see `vitest.config.ts`). */
 const SRC = resolve(process.cwd(), 'src') + '/'

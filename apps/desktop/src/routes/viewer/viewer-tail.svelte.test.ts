@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createViewerTail } from './viewer-tail.svelte'
-import { clearAllToasts, getToasts } from '$lib/ui/toast/toast-store.svelte'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/toast-store.svelte.js'
 
 // Mock the Tauri event listener so `init()` doesn't try to reach a backend.
 vi.mock('@tauri-apps/api/event', () => ({
@@ -17,7 +17,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 // Mock the bindings: the toast button mounts but isn't clicked here, so we
 // only need the symbol to resolve.
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     viewerReload: vi.fn(() => Promise.resolve({ status: 'ok', data: null })),
   },

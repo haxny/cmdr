@@ -20,10 +20,10 @@
  * retries the store on every refresh and at launch, and lets go once it lands.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
-import { forceSave, getSetting, setSetting, type AiProvider } from '$lib/settings'
-import { openSettingsWindow, type SettingsSurface } from '$lib/settings/settings-window'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { forceSave, getSetting, setSetting, type AiProvider } from '#lib/settings/index.js'
+import { openSettingsWindow, type SettingsSurface } from '#lib/settings/settings-window.js'
 import {
   acceptCloudAiConsent,
   cloudAiConsentRevokePendingChanged,
@@ -31,7 +31,7 @@ import {
   onCloudAiConsentChanged,
   revokeCloudAiConsent,
   type CloudAiConsentStatus,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('ai')
 

@@ -13,7 +13,7 @@
  * between the two, and both put "Add server…" one past the last item.
  */
 
-import type { NearbyServersGroupChoice } from '$lib/settings'
+import type { NearbyServersGroupChoice } from '#lib/settings/index.js'
 import { isNearbyOnly, type HubRow } from './servers-hub-rows'
 
 /** The header's id. Row ids are server and host ids, or `share:<volume id>`, so it can't meet one. */

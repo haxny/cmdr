@@ -48,7 +48,7 @@ shortcuts:
 ### macOS-native commands are not customizable
 
 The four `nativeShortcut` commands (`app.quit`/`hide`/`hideOthers`/`showAll`, exported as `NATIVE_SHORTCUT_COMMAND_IDS`
-from `$lib/commands/command-registry`) are macOS `PredefinedMenuItem`s: AppKit owns BOTH the behavior and the
+from `#lib/commands/command-registry`) are macOS `PredefinedMenuItem`s: AppKit owns BOTH the behavior and the
 accelerator, so any persisted customization is a pure illusion (it can't disable the OS accelerator and dispatches into
 a void). The store enforces this at its boundary, the real seam for MCP events and any future caller:
 
@@ -64,7 +64,7 @@ a void). The store enforces this at its boundary, the real seam for MCP events a
 
 ### Fixed-key commands are not customizable either
 
-The Family-2/3 dispatch-exempt commands (exported as `FIXED_KEY_COMMAND_IDS` from `$lib/commands/command-registry`,
+The Family-2/3 dispatch-exempt commands (exported as `FIXED_KEY_COMMAND_IDS` from `#lib/commands/command-registry`,
 flagged `fixedKey: true` in the registry) have their keys hardcoded in the owning component's keydown handler (FilePane
 arrows, palette navigation, modal Enter/Escape) — they never consult this store, so a customization would be a no-op
 illusion: the new key wouldn't fire and the built-in key wouldn't release. Same boundary rules as the native commands:

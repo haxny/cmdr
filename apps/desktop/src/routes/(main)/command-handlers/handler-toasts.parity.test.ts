@@ -8,9 +8,9 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/downloads/go-to-latest', () => ({ goToLatestDownload: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/downloads/go-to-latest.js', () => ({ goToLatestDownload: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   addFavorite: vi.fn(() => Promise.resolve()),
   cloudMakeAvailableOffline: vi.fn(),
   cloudRemoveDownload: vi.fn(),
@@ -21,23 +21,23 @@ vi.mock('$lib/tauri-commands', () => ({
   getInfo: vi.fn(),
   openInEditor: vi.fn(),
 }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: vi.fn(() => '/Users/me/Documents'),
   getFocusedPaneVolumeId: vi.fn(() => 'default'),
 }))
-vi.mock('$lib/file-explorer/quick-look/quick-look-state.svelte', () => ({
+vi.mock('#lib/file-explorer/quick-look/quick-look-state.svelte.js', () => ({
   quickLookState: { isOpen: false },
 }))
-vi.mock('$lib/settings', () => ({ getSetting: vi.fn(() => 100), setSetting: vi.fn() }))
-vi.mock('$lib/shortcuts', async () => ({
+vi.mock('#lib/settings/index.js', () => ({ getSetting: vi.fn(() => 100), setSetting: vi.fn() }))
+vi.mock('#lib/shortcuts/index.js', async () => ({
   getEffectiveShortcuts: vi.fn(() => []),
-  toDisplayShortcut: (await import('$lib/shortcuts/key-capture')).toDisplayShortcut,
+  toDisplayShortcut: (await import('#lib/shortcuts/key-capture.js')).toDisplayShortcut,
 }))
 
-import { addToast } from '$lib/ui/toast'
-import { addFavorite } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { getEffectiveShortcuts } from '$lib/shortcuts'
+import { addToast } from '#lib/ui/toast/index.js'
+import { addFavorite } from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { getEffectiveShortcuts } from '#lib/shortcuts/index.js'
 import { miscHandlers } from './misc-handlers'
 import { tabHandlers } from './tab-handlers'
 import { fileHandlers } from './file-handlers'
@@ -90,7 +90,7 @@ describe('command-handler toast copy parity', () => {
   })
 
   it('cloud.makeOffline failure appends the raw error', async () => {
-    const { cloudMakeAvailableOffline } = await import('$lib/tauri-commands')
+    const { cloudMakeAvailableOffline } = await import('#lib/tauri-commands/index.js')
     vi.mocked(cloudMakeAvailableOffline).mockRejectedValueOnce('boom')
     const hctx = ctxWith({ getFileAndPathUnderCursor: () => ({ path: '/p', filename: 'f' }) })
     await (fileHandlers['cloud.makeOffline'] as (h: CommandHandlerContext) => Promise<void>)(hctx)
@@ -98,7 +98,7 @@ describe('command-handler toast copy parity', () => {
   })
 
   it('cloud.removeDownload failure appends the raw error', async () => {
-    const { cloudRemoveDownload } = await import('$lib/tauri-commands')
+    const { cloudRemoveDownload } = await import('#lib/tauri-commands/index.js')
     vi.mocked(cloudRemoveDownload).mockRejectedValueOnce('boom')
     const hctx = ctxWith({ getFileAndPathUnderCursor: () => ({ path: '/p', filename: 'f' }) })
     await (fileHandlers['cloud.removeDownload'] as (h: CommandHandlerContext) => Promise<void>)(hctx)

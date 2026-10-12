@@ -12,13 +12,13 @@
  * `PageDown`, and their handler is `sendKeyToFocusedPane(key)` — so a key left to
  * bubble came straight back here and moved the cursor a second time. That made one
  * PageDown travel two pages (measured: 54 rows with 27 on screen), while Home and
- * End hid it by being idempotent. See `$lib/shortcuts/claim-key.ts`.
+ * End hid it by being idempotent. See `#lib/shortcuts/claim-key.ts`.
  */
 
 import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
-import { comboMatchesCommand, resolveKeyCombo } from '$lib/shortcuts'
-import { claimKey } from '$lib/shortcuts/claim-key'
-import type { CommandId } from '$lib/commands'
+import { comboMatchesCommand, resolveKeyCombo } from '#lib/shortcuts/index.js'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
+import type { CommandId } from '#lib/commands/index.js'
 import type { ListViewAPI } from './types'
 
 /**

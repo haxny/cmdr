@@ -35,9 +35,9 @@ import {
   resumeOperation,
   type ConflictId,
   type ConflictResolutionOutcome,
-} from '$lib/tauri-commands'
-import type { ConflictResolution } from '$lib/file-explorer/types'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('operationSession')
 

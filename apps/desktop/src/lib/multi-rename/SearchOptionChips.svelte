@@ -8,11 +8,11 @@
      * (`search-option-help.ts`).
      */
     import type { Snippet } from 'svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Chip from '$lib/ui/Chip.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import type { MultiRenameSpec } from '$lib/tauri-commands'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Chip from '#lib/ui/Chip.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import type { MultiRenameSpec } from '#lib/tauri-commands/index.js'
     import { TOGGLE_COMMANDS } from './option-keys'
     import { examplePieces } from './rename-examples'
     import { SEARCH_OPTIONS, searchExampleKey, type SearchOptionField } from './search-option-help'

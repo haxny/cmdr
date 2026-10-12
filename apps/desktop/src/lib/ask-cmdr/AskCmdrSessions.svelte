@@ -6,11 +6,11 @@
 -->
 <script lang="ts">
     import { tick } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import {
         chooseThread,
         clearSearch,
@@ -24,7 +24,7 @@
         startNewChat,
         toggleShowArchived,
     } from './ask-cmdr-sessions.svelte'
-    import type { ConversationOrigin } from '$lib/ipc/bindings'
+    import type { ConversationOrigin } from '#lib/ipc/bindings.js'
 
     /** True for a thread the agent opened for itself, which earns the row a glyph. The
      *  reserved quiet-wakes ledger row never reaches either list, so `notification` is the

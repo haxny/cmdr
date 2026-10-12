@@ -9,9 +9,9 @@ import { mount, tick, unmount } from 'svelte'
 import PresetsControl from './PresetsControl.svelte'
 import { createMultiRenameState, type MultiRenameState } from './multi-rename-state.svelte'
 import { DEFAULT_SPEC } from './spec'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   previewMultiRename: vi.fn(() =>
     Promise.resolve({ ok: true, value: { previewId: 1, counts: { ready: 0, unchanged: 0, problems: 0 }, rows: [] } }),
   ),

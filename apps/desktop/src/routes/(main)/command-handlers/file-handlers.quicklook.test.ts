@@ -10,8 +10,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   showInFinder: vi.fn(),
   copyToClipboard: vi.fn(),
   quickLookOpen: vi.fn(() => Promise.resolve(true)),
@@ -23,21 +23,21 @@ vi.mock('$lib/tauri-commands', () => ({
   // Both the open and the archive refusal report `quick_look_used`.
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: vi.fn(() => '/x'),
   getFocusedPaneVolumeId: vi.fn(() => 'root'),
 }))
-vi.mock('$lib/file-explorer/quick-look/quick-look-state.svelte', () => ({
+vi.mock('#lib/file-explorer/quick-look/quick-look-state.svelte.js', () => ({
   quickLookState: { isOpen: false },
 }))
 // `pathInsideArchive` (the gate) stays REAL — that's what we're exercising, and
 // it's a pure string check with no store dependency. `file-handlers.ts` also
 // imports `capabilitiesFor`, which DOES pull in the volume store, so it's stubbed
 // here to keep that import light; it needs no data for this test.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
-import { quickLookOpen, trackEvent } from '$lib/tauri-commands'
-import { quickLookState } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
+import { quickLookOpen, trackEvent } from '#lib/tauri-commands/index.js'
+import { quickLookState } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
 import { fileHandlers } from './file-handlers'
 import type { CommandHandlerContext } from './types'
 

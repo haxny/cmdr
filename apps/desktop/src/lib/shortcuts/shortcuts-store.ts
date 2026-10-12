@@ -4,11 +4,11 @@
 
 import { load, type Store } from '@tauri-apps/plugin-store'
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { updateMenuAccelerator as updateMenuAcceleratorCommand } from '$lib/tauri-commands'
-import { commands, FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '$lib/commands/command-registry'
-import { resolveStorePath } from '$lib/settings/store-path'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
+import { updateMenuAccelerator as updateMenuAcceleratorCommand } from '#lib/tauri-commands/index.js'
+import { commands, FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '#lib/commands/command-registry.js'
+import { resolveStorePath } from '#lib/settings/store-path.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 import { toCanonicalShortcut, toPlatformShortcut } from './key-capture'
 
 const log = getAppLogger('shortcuts')
@@ -31,7 +31,7 @@ let initialized = false
 // ============================================================================
 
 // Event name for cross-window shortcut changes. Mirrors settings-store's
-// `settings:changed` pattern (see `$lib/settings/settings-store.ts`).
+// `settings:changed` pattern (see `#lib/settings/settings-store.ts`).
 const SHORTCUTS_CHANGED_EVENT = 'shortcuts:changed'
 
 // A per-window id stamped on every emit. The receiving listener drops any event

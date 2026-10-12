@@ -1,7 +1,7 @@
 // Beta-tester signup commands
 
-import { commands } from '$lib/ipc/bindings'
-import type { BetaSignupResult } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
+import type { BetaSignupResult } from '#lib/ipc/bindings.js'
 
 export type { BetaSignupResult }
 

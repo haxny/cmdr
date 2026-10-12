@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const addToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors addToast's heterogenous props map
   addToast: (content: unknown, options: any): void => {
     addToast(content, options)
@@ -18,7 +18,7 @@ vi.mock('$lib/ui/toast', () => ({
 }))
 
 const settings = { 'askCmdr.wakeToast': true as boolean }
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: keyof typeof settings): boolean => settings[id],
 }))
 
@@ -28,14 +28,14 @@ const onAgentWakeStaged = vi.fn((callback: (payload: { conversationId: number; p
   staged = callback
   return Promise.resolve(unlisten)
 })
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onAgentWakeStaged: (callback: (payload: { conversationId: number; proposals: number }) => void) =>
     onAgentWakeStaged(callback),
 }))
 
 // The toast's content component reaches the rail and the review surface, and the rail's entry
 // point builds the whole explorer state on import. Neither matters to what is under test here.
-vi.mock('$lib/suggested-ops/suggested-ops-trigger.svelte', () => ({
+vi.mock('#lib/suggested-ops/suggested-ops-trigger.svelte.js', () => ({
   openSuggestedOps: (): Promise<void> => Promise.resolve(),
 }))
 vi.mock('./ask-cmdr-trigger.svelte', () => ({

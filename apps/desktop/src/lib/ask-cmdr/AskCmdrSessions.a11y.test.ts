@@ -6,20 +6,20 @@
 
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { ConversationRow, ConversationSearchHit } from '$lib/tauri-commands'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { ConversationRow, ConversationSearchHit } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   searchAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   renameAskCmdrConversation: vi.fn(() => Promise.resolve()),
   archiveAskCmdrConversation: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/app-status-store', () => ({ saveAppStatus: vi.fn() }))
-vi.mock('$lib/file-explorer/pane/explorer-state.svelte', () => ({
+vi.mock('#lib/app-status-store.js', () => ({ saveAppStatus: vi.fn() }))
+vi.mock('#lib/file-explorer/pane/explorer-state.svelte.js', () => ({
   explorerState: { setRailFocused: vi.fn() },
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

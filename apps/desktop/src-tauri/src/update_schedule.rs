@@ -1,6 +1,6 @@
 //! When the background update check is due, remembered across relaunches.
 //!
-//! The update loop lives in the frontend (`$lib/updates/updater.svelte.ts`), but "when did we last
+//! The update loop lives in the frontend (`#lib/updates/updater.svelte.ts`), but "when did we last
 //! ask?" has to outlive the process, or every relaunch checks again. This keeps that answer in
 //! `update-check.json` in the app data dir and applies the same throttle as the analytics heartbeat
 //! (`crate::send_schedule`): at most one answered check per interval (the user's

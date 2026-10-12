@@ -1,7 +1,7 @@
 <script lang="ts">
     import { tick } from 'svelte'
-    import { cloudProviderPresets } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { cloudProviderPresets } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     /**
      * Scrollable provider picker for the onboarding wizard's step 2.

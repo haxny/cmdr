@@ -7,8 +7,8 @@
      * The dot is the only visual: no inline text in the chip, and no extra line under the
      * disk-space bar, by design.
      */
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { describeUsbSpeed, type UsbSpeed } from '../types'
 
     interface Props {

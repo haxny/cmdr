@@ -49,7 +49,7 @@ guessing.
 current-file line and directly above the button row, at full content width with no inset of its own. It's the reason a
 person reaches for Cancel, so it belongs beside the button they'd reach for rather than wedged into the readout, and it
 gets the card's `--spacing-lg` padding so a warning doesn't read as a cramped aside. The tone comes from the house
-primitive (`$lib/ui/SectionCard.svelte`), the same one `TransferDialog`'s conflict block uses, so the two warning
+primitive (`#lib/ui/SectionCard.svelte`), the same one `TransferDialog`'s conflict block uses, so the two warning
 surfaces in the transfer flow can't drift apart and both themes are handled in one place. Per the tone contract the fill
 and border carry the warning and the text keeps its normal color; the hourglass icon is the one colored mark, in
 `--color-warning-text` (the brand `--color-warning` only clocks ~3.3:1 on the tint). The notice renders outside the
@@ -187,11 +187,11 @@ already supplied a name. Backend landing and safety:
    - Pre-fills destination from the opposite pane, volume-relative via `toVolumeRelativePath`. That derivation is
      load-bearing rather than cosmetic: a prefill that comes out RELATIVE fails the absolute-path check below, and
      `handleConfirm` then refuses to dispatch, so the Copy button does nothing and says nothing. Why a remote volume's
-     root needs trimming before the slice: `$lib/path/DETAILS.md` § "Volume membership is a component match".
+     root needs trimming before the slice: `#lib/path/DETAILS.md` § "Volume membership is a component match".
    - The segmented Copy/Move toggle is always shown so the user can flip the operation regardless of how the dialog was
      triggered (F5/F6, command palette, drag-and-drop).
    - Resolves a complete single-item Copy/Move target as described in § "Single-item destinations", then validates path
-     structure via `validateDirectoryPath()` from `$lib/utils/filename-validation` (empty, absolute, null bytes, length
+     structure via `validateDirectoryPath()` from `#lib/utils/filename-validation` (empty, absolute, null bytes, length
      limits), then checks logical constraints (a folder into its own subfolder). A destination that IS the source's own
      folder is allowed: it duplicates, and the backend resolves that per item
      (`src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Self-collision (duplicating in place)").
@@ -324,7 +324,7 @@ already supplied a name. Backend landing and safety:
      away behind a disclosure. Each reason gets its own explanation and its own way through (permanent delete for the
      two that have one). When this Mac is ALSO missing Full Disk Access and the reason is permission-shaped, one extra
      line offers that — additive, never a replacement, and never on a reason Cmdr couldn't classify. The rule and why
-     it's narrow: `$lib/onboarding/DETAILS.md` § "What an error message may add about it".
+     it's narrow: `#lib/onboarding/DETAILS.md` § "What an error message may add about it".
 
 ## Archive-password prompt
 
@@ -991,7 +991,7 @@ non-empty folder are all Cmdr protecting something, which is `info`. `failed` is
 is `warn` and may be worth retrying. ❌ Never colour a deliberate skip as a warning: the whole point of the copy is that
 the user finishes reading it feeling Cmdr did the careful thing.
 
-**The reason lines are two keys per reason, named and counted**, for the reason `$lib/ask-cmdr/`'s rename-undo rail
+**The reason lines are two keys per reason, named and counted**, for the reason `#lib/ask-cmdr/`'s rename-undo rail
 already found: "name the one file" vs "count them" is a display decision, not a plural category, and a locale with only
 `other` (Chinese, Vietnamese) can't express both from one message. `alreadyGone` maps to `null` — the backend counts it
 as reversed, so it never arrives as a skip — and it stays in the map so a NEW `SkipReason` is a compile error here
@@ -1163,7 +1163,7 @@ Total Commander's "F2 Queue": in the copy / move / compress dialog (`TransferDia
 progress dialog (#381). So F5, F2, F5, F2 queues two copies without a modal in between.
 
 **The key is on the button.** Both Background / Queue buttons (here and the progress dialog's) carry a
-`KeyHint key="F2"` (`$lib/ui/KeyHint.svelte`, the same chip the decision prompts use for their letters), so a mouse user
+`KeyHint key="F2"` (`#lib/ui/KeyHint.svelte`, the same chip the decision prompts use for their letters), so a mouse user
 learns the key. The chip is `aria-hidden` and the button says `aria-keyshortcuts="F2"` (the house menu's pattern),
 keeping the accessible name equal to the word.
 
@@ -1217,7 +1217,7 @@ change, but it holds the slot until the id lands and can flash a frame.
   same gap there. While Show has the job in the progress dialog, that view stays quiet about the stop
   (`background.watches(id)` filters its error dialog), and the prompt follows once that view has closed.
 - **Errors after the start**: the retained failure, the failure toast
-  (`$lib/status-corner/operation-failure-watch.svelte.ts`, which speaks for any failure no foreground slot claims, so a
+  (`#lib/status-corner/operation-failure-watch.svelte.ts`, which speaks for any failure no foreground slot claims, so a
   background start is covered without a second toast), and the corner chip. The two `write-error`s the backend doesn't
   retain are a cancel (the person did it) and the password stop (above).
 - **A trash's completion toast, Undo and "Go to trash" included**: raised when a background trash completes, through the

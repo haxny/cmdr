@@ -20,11 +20,11 @@ import { createDialogState } from './dialog-state.svelte'
 import type { AdoptedOperationData, TransferProgressPropsData } from './dialog-props'
 import type { WriteOperationError } from '../types'
 import type { FilePaneAPI } from './types'
-import { addToast } from '$lib/ui/toast'
-import { removeEntryFromAllSnapshots } from '$lib/search/snapshot-store.svelte'
-import { refreshListing } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { removeEntryFromAllSnapshots } from '#lib/search/snapshot-store.svelte.js'
+import { refreshListing } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -35,9 +35,9 @@ vi.mock('$lib/tauri-commands', () => ({
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 const SOURCE_FOLDER = '/Users/me/photos'
 
@@ -314,7 +314,7 @@ describe("an adopted view's outcomes touch no pane", () => {
   it('purges no search snapshot, and neither does the started family', () => {
     // ❌ Not a gap to fill here. A dialog knows the operation's INTENT, which
     // misses a skip and a cancel and is absent from an adopted view entirely;
-    // `$lib/search/snapshot-purge.ts` reads the per-path outcome stream for the
+    // `#lib/search/snapshot-purge.ts` reads the per-path outcome stream for the
     // whole window instead. This pins that neither family reaches for the store.
     const { dialogs } = makeState()
     dialogs.foregroundOperation({ ...adopted(), operationType: 'move' })

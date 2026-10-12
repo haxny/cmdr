@@ -15,10 +15,10 @@
  * Coverage guard: `routes/window-route-coverage.test.ts`.
  */
 
-import { setLocale } from '$lib/intl/messages.svelte'
-import { loadSystemLocales, pickUiLocale, watchSystemLocales } from '$lib/intl/os-locales'
-import { noteStartupLanguage } from '$lib/intl/language-analytics'
-import { refreshSystemStrings } from '$lib/system-strings.svelte'
+import { setLocale } from '#lib/intl/messages.svelte.js'
+import { loadSystemLocales, pickUiLocale, watchSystemLocales } from '#lib/intl/os-locales.js'
+import { noteStartupLanguage } from '#lib/intl/language-analytics.js'
+import { refreshSystemStrings } from '#lib/system-strings.svelte.js'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { initReactiveSettings } from './reactive-settings.svelte'
 import { getSetting, onSpecificSettingChange } from './settings-store'

@@ -7,9 +7,9 @@
  */
 
 import type { SizeFilter, SizeUnit, DateFilter } from '../query-filter-state.svelte'
-import type { FileSizeFormat } from '$lib/settings/types'
-import { tString } from '$lib/intl/messages.svelte'
-import { bytesLabel, unitLabel } from '$lib/units/byte-size'
+import type { FileSizeFormat } from '#lib/settings/types.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { bytesLabel, unitLabel } from '#lib/units/byte-size.js'
 
 /** Display state of a single filter chip. */
 export interface FilterChipState {
@@ -20,7 +20,7 @@ export interface FilterChipState {
 
 /**
  * Renders a `SizeUnit` for display: the kilobyte, megabyte, and gigabyte go
- * through `$lib/units` (the UI language's symbols, IEC `KiB` or SI `kB` by the
+ * through `#lib/units` (the UI language's symbols, IEC `KiB` or SI `kB` by the
  * user's `appearance.fileSizeFormat`), so the chip and the popover can't
  * disagree. The byte word takes the plural form for `count` ("> 500 bytes").
  */
@@ -153,7 +153,7 @@ export function derivePatternChip(input: {
  * `defaultScopeLabel` names where an EMPTY box searches ("Current folder" / "This volume").
  * That case returns a summary with `configured: false`: the search really is scoped there, so
  * `Chip` tints it like any other live constraint, but the user didn't choose it, so there's no
- * `×` to clear. See `$lib/ui/Chip.svelte`'s TINT note for why the two split.
+ * `×` to clear. See `#lib/ui/Chip.svelte`'s TINT note for why the two split.
  */
 export function deriveScopeChip(scope: string, excludeSystemDirs: boolean, defaultScopeLabel: string): FilterChipState {
   const trimmed = scope.trim()

@@ -15,7 +15,7 @@
      * to zero height. A live region has to exist BEFORE its content changes or screen
      * readers miss the update, same as `CoverageNote.svelte`.
      */
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** Whether there's a wait worth mentioning. The clock lives in `index-load-hint.svelte.ts`. */

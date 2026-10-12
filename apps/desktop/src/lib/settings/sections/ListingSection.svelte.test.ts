@@ -15,11 +15,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import ListingSection from './ListingSection.svelte'
-import { setSetting } from '$lib/settings/settings-store'
+import { setSetting } from '#lib/settings/settings-store.js'
 
 const stubs = vi.hoisted(() => ({ foldersFirst: true }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'listing.foldersFirst') return stubs.foldersFirst
     if (key === 'listing.showHiddenFiles') return true

@@ -13,7 +13,7 @@
  * - going up remembers the folder we came from so it lands selected.
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { toCanonical, type CanonicalPath } from '$lib/path/canonical'
+import { toCanonical, type CanonicalPath } from '#lib/path/canonical.js'
 import type { FileEntry } from '../types'
 
 const { ipc, settings, policy, viewer, navigate } = vi.hoisted<{
@@ -44,8 +44,8 @@ const { ipc, settings, policy, viewer, navigate } = vi.hoisted<{
   navigate: { resolveLocationOrToast: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ openFile: ipc.openFile }))
-vi.mock('$lib/settings', () => ({ getSetting: settings.getSetting }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openFile: ipc.openFile }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: settings.getSetting }))
 vi.mock('./archive-enter-policy', () => ({
   resolveEnterPolicy: policy.resolveEnterPolicy,
   enterBehaviorFromSettings: policy.enterBehaviorFromSettings,
@@ -54,7 +54,7 @@ vi.mock('./archive-paths', () => ({
   pathInsideArchive: policy.pathInsideArchive,
   pathCrossesArchiveBoundary: policy.pathCrossesArchiveBoundary,
 }))
-vi.mock('$lib/file-viewer/open-viewer', () => ({ openFileViewer: viewer.openFileViewer }))
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({ openFileViewer: viewer.openFileViewer }))
 vi.mock('../navigation/navigate-and-select', () => ({ resolveLocationOrToast: navigate.resolveLocationOrToast }))
 
 import { createEntryActivation, type EntryActivationDeps } from './entry-activation'

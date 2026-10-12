@@ -16,13 +16,13 @@
      * re-enable it.
      */
     import { onMount } from 'svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
     import { lowSpaceFigures } from './figures'
-    import { onVolumeSpaceChanged } from '$lib/tauri-commands'
+    import { onVolumeSpaceChanged } from '#lib/tauri-commands/index.js'
     import { setLowDiskSpaceNotificationsMode, openSettingsToLowDiskSpace } from './notifications-mode'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

@@ -33,7 +33,7 @@
      * `onClear`'s `mousedown` handler stops propagation so the chip's own activate doesn't fire.
      */
     import type { Snippet } from 'svelte'
-    import { tooltip, type TooltipParam } from '$lib/tooltip/tooltip'
+    import { tooltip, type TooltipParam } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         /** Bindable ref to the chip button (so the parent can focus it after Esc, etc.). */

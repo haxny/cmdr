@@ -6,7 +6,7 @@
  * `CommandId`, never a magic string. Lives in its own module so the mapping is
  * unit-testable without mounting the Svelte component (`function-key-commands.test.ts`).
  */
-import type { CommandId } from '$lib/commands'
+import type { CommandId } from '#lib/commands/index.js'
 
 export const fnKeyToCommand = {
   view: 'file.view',

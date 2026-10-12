@@ -16,9 +16,9 @@
  * trivial to tune and to test.
  */
 
-import type { TransferActivity, TransferWaitReason } from '$lib/tauri-commands'
-import type { WriteOperationType } from '$lib/ipc/bindings'
-import type { SlowIncident } from '$lib/error-reporter/report-incident'
+import type { TransferActivity, TransferWaitReason } from '#lib/tauri-commands/index.js'
+import type { WriteOperationType } from '#lib/ipc/bindings.js'
+import type { SlowIncident } from '#lib/error-reporter/report-incident.js'
 
 /**
  * How long the byte counter must be still before the dialog stops showing a

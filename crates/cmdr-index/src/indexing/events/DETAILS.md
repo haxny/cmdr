@@ -130,7 +130,7 @@ chain, so a walk below a folder moves that folder's total too, and a downward-on
 walked ground settled while its number is about to change. It's an ASSOCIATED function, not a `&self` method, so a
 caller asking it per row can hold the roots alone; it hangs off the type that owns them so neither can be found without
 the other, and it stays off `lib.rs` (a root promise there is capped by `index-crate-isolation`). Twin of the frontend's
-`isPathAffectedByWalk` (`$lib/indexing/walked-ground.ts`) — the file list's hourglass and an agent's `list_dir` have to
+`isPathAffectedByWalk` (`#lib/indexing/walked-ground.ts`) — the file list's hourglass and an agent's `list_dir` have to
 answer alike about the same folder, so change the two together.
 
 ⚠️ It answers for the WALK only. Aggregation (the window after the walk, when folder totals are computed) has released

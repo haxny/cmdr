@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import NumberInput from '$lib/ui/NumberInput.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import NumberInput from '#lib/ui/NumberInput.svelte'
 
     let plain = $state(5)
     let width = $state(400)

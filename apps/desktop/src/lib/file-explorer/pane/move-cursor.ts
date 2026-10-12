@@ -4,7 +4,7 @@
  * `.ts` helper (not a `*.svelte.ts` factory) — nothing here is `$state` or
  * `$derived`.
  */
-import { pluralize } from '$lib/utils/pluralize'
+import { pluralize } from '#lib/utils/pluralize.js'
 import type { FilePaneAPI } from './types'
 
 export interface MoveCursorDeps {

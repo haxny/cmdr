@@ -22,7 +22,7 @@ const recheckAdbInstall = vi.fn<() => Promise<InstallStatus>>()
 
 const setSetting = vi.fn<(id: string, value: unknown) => void>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'fileOperations.adbEnabled') return true
     if (key === 'fileOperations.adbBinaryPath') return ''
@@ -37,7 +37,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getAdbInstallStatus: () => getAdbInstallStatus(),
   recheckAdbInstall: () => recheckAdbInstall(),
 }))
@@ -52,7 +52,7 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 const ran: string[] = []
 const pushAdbConfigToBackend = vi.fn<() => Promise<void>>()
 
-vi.mock('$lib/adb/adb-settings', () => ({
+vi.mock('#lib/adb/adb-settings.js', () => ({
   pushAdbConfigToBackend: () => pushAdbConfigToBackend(),
   ADB_ENABLED_SETTING_KEY: 'fileOperations.adbEnabled',
   ADB_BINARY_PATH_SETTING_KEY: 'fileOperations.adbBinaryPath',

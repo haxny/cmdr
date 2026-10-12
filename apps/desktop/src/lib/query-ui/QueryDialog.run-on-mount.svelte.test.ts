@@ -12,17 +12,17 @@ import QueryDialog from './QueryDialog.svelte'
 import type { QueryStreamSource } from './query-stream'
 import { makeQueryDialogConfig } from './test-helpers'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => (key === 'search.autoApply' ? true : undefined)),
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return { getCachedIcon: () => undefined, getCachedCustomFolderIcon: () => undefined, iconCacheVersion: writable(0) }
 })

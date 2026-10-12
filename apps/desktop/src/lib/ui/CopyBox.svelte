@@ -3,9 +3,9 @@
      * Copyable monospace text: a terminal command, a filesystem path, anything a
      * user needs verbatim. One-click Copy with "Copied!" feedback.
      */
-    import { copyToClipboard } from '$lib/tauri-commands'
+    import { copyToClipboard } from '#lib/tauri-commands/index.js'
     import Button from './Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The text to display and copy. */

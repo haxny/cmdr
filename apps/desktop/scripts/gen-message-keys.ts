@@ -48,7 +48,7 @@ const MENTION_ONLY_EXTS = new Set(['.rs'])
 /** Directories to skip when walking for key usages. */
 const SKIP_DIRS = new Set(['node_modules', 'target', '.svelte-kit'])
 /**
- * Files to skip in the usage scan. The `$lib/intl` runtime files define and
+ * Files to skip in the usage scan. The `#lib/intl` runtime files define and
  * document the accessors (`t('key')` appears in their JSDoc, not as a call
  * site), and test files deliberately reference unknown keys to exercise the
  * fallback. Counting either would produce phantom "missing key" failures.

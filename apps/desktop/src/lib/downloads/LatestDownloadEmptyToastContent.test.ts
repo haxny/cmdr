@@ -3,7 +3,7 @@ import { mount, tick } from 'svelte'
 
 const { dismissToastMock } = vi.hoisted(() => ({ dismissToastMock: vi.fn() }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: dismissToastMock,
 }))
 

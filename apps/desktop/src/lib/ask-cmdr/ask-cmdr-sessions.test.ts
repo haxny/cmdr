@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { ConversationRow, ConversationSearchHit } from '$lib/tauri-commands'
+import type { ConversationRow, ConversationSearchHit } from '#lib/tauri-commands/index.js'
 
 const listMock =
   vi.fn<(payload: { limit: number; offset: number; includeArchived: boolean }) => Promise<ConversationRow[]>>()
@@ -16,14 +16,14 @@ const archiveMock = vi.fn<(id: number, archived: boolean) => Promise<void>>()
 const switchMock = vi.fn<(id: number) => Promise<void>>()
 const newChatMock = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listAskCmdrConversations: (l: number, o: number, a: boolean) => listMock({ limit: l, offset: o, includeArchived: a }),
   searchAskCmdrConversations: (q: string, l: number, o: number) => searchMock({ query: q, limit: l, offset: o }),
   renameAskCmdrConversation: (id: number, t: string) => renameMock(id, t),
   archiveAskCmdrConversation: (id: number, a: boolean) => archiveMock(id, a),
 }))
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 vi.mock('./ask-cmdr-trigger.svelte', () => ({

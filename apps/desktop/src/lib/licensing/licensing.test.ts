@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getLicenseStatus: vi.fn(),
   needsLicenseValidation: vi.fn(),
   hasLicenseBeenValidated: vi.fn(),
   validateLicenseWithServer: vi.fn(),
 }))
 
-import type { LicenseStatus } from '$lib/tauri-commands'
+import type { LicenseStatus } from '#lib/tauri-commands/index.js'
 import {
   getLicenseStatus,
   hasLicenseBeenValidated,
   needsLicenseValidation,
   validateLicenseWithServer,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import {
   getCachedStatus,
   isPendingVerification,

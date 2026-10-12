@@ -8,11 +8,11 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { trashUndoOutcome, trashUndoMessage, trashUndoLevel, runTrashUndo } from './trash-undo'
-import type { UndoReport, OperationUndoOutcome } from '$lib/tauri-commands'
-import type { RollbackRefusal } from '$lib/ipc/bindings'
-import type { ToastOptions } from '$lib/ui/toast/toast-store.svelte'
+import type { UndoReport, OperationUndoOutcome } from '#lib/tauri-commands/index.js'
+import type { RollbackRefusal } from '#lib/ipc/bindings.js'
+import type { ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
 
 const { undoOperations, addToast, dismissToast } = vi.hoisted(() => ({
   undoOperations: vi.fn<(ids: string[]) => Promise<UndoReport>>(),
@@ -20,8 +20,8 @@ const { undoOperations, addToast, dismissToast } = vi.hoisted(() => ({
   dismissToast: vi.fn<(id: string) => void>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ undoOperations }))
-vi.mock('$lib/ui/toast', () => ({ addToast, dismissToast }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ undoOperations }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast, dismissToast }))
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

@@ -8,7 +8,7 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import EjectIcon from './EjectIcon.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('EjectIcon a11y', () => {
   it('decorative eject glyph has no a11y violations', async () => {

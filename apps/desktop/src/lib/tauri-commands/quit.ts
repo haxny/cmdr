@@ -4,8 +4,8 @@
 // still fires, which is the whole point of the design.
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
-import type { QuitAnswer, QuitRequested } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
+import type { QuitAnswer, QuitRequested } from '#lib/ipc/bindings.js'
 
 export type { QuitAnswer, QuitRequested }
 

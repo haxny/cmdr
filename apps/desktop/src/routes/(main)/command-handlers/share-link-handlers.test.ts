@@ -4,17 +4,17 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ copyShareLink: vi.fn() }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ copyShareLink: vi.fn() }))
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPaneVolumeId: vi.fn(() => 's3-photos'),
 }))
-vi.mock('$lib/file-explorer/pane/volume-capabilities', () => ({
+vi.mock('#lib/file-explorer/pane/volume-capabilities.js', () => ({
   rowCanShareLink: vi.fn((_volumeId: string, row: { isDirectory: boolean }) => !row.isDirectory),
 }))
 
-import { addToast } from '$lib/ui/toast'
-import { copyShareLink } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { copyShareLink } from '#lib/tauri-commands/index.js'
 import { shareLinkHandlers } from './share-link-handlers'
 import type { CommandHandlerContext } from './types'
 

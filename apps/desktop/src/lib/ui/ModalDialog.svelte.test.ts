@@ -10,7 +10,7 @@ import ModalDialog from './ModalDialog.svelte'
 import { closeDialogById } from './dialog-close-registry'
 
 // Avoid Tauri IPC side-effects from notifyDialogOpened / notifyDialogClosed.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

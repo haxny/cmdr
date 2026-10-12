@@ -4,15 +4,15 @@
   of the range picker. Clicking a row filters the rest of the dashboard to that day via `onselectday`.
 -->
 <script lang="ts">
-    import type { SourceResult } from '$lib/server/types.js'
-    import type { FunnelData } from '$lib/server/sources/funnel.js'
-    import { aggregateChannels, aggregateReferers, aggregateUaFamilies } from '$lib/funnel.js'
-    import { formatNumber } from '$lib/format.js'
+    import type { SourceResult } from '#lib/server/types.js'
+    import type { FunnelData } from '#lib/server/sources/funnel.js'
+    import { aggregateChannels, aggregateReferers, aggregateUaFamilies } from '#lib/funnel.js'
+    import { formatNumber } from '#lib/format.js'
     import ErrorState from './ErrorState.svelte'
     import MetricTable from './MetricTable.svelte'
     import Methodology from './Methodology.svelte'
     import SectionDescription from './SectionDescription.svelte'
-    import type { DashboardSelection } from '$lib/server/types.js'
+    import type { DashboardSelection } from '#lib/server/types.js'
 
     const {
         funnel,

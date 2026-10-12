@@ -7,9 +7,9 @@ const { showMainWindow, waitForNextPaint, warn, debug } = vi.hoisted(() => ({
   debug: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ showMainWindow }))
-vi.mock('$lib/utils/timing', () => ({ waitForNextPaint }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ showMainWindow }))
+vi.mock('#lib/utils/timing.js', () => ({ waitForNextPaint }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, debug, info: vi.fn(), error: vi.fn() }),
 }))
 

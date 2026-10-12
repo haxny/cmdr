@@ -5,12 +5,12 @@
     import {
         getFirstShiftShortcutReactive,
         getFirstShortcutReactive,
-    } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import { toPlatformShortcut } from '$lib/shortcuts/key-capture'
+    } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
     import { fnKeyToCommand } from './function-key-commands'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { CommandId } from '$lib/commands'
-    import { showFunctionKeyBarContextMenu } from '$lib/tauri-commands'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { CommandId } from '#lib/commands/index.js'
+    import { showFunctionKeyBarContextMenu } from '#lib/tauri-commands/index.js'
 
     interface Props {
         visible?: boolean

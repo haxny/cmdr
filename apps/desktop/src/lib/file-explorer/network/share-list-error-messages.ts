@@ -12,9 +12,9 @@
  * A `missing_dependency`'s install command renders separately, in the pane's copy
  * box.
  */
-import type { ShareListError } from '$lib/ipc/bindings'
-import { getMessage } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { ShareListError } from '#lib/ipc/bindings.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** Fills `{token}` placeholders in ONE pass, so a server literally named `{server}` stays a name. */
 function raw(key: MessageKey, params: Record<string, string> = {}): string {

@@ -20,8 +20,8 @@
  * (can't be pressed, a spinner stands in for the glyph, "Ejecting {name}…"); a
  * transfer touches the volume (can't be pressed, says why); idle.
  */
-import { tString } from '$lib/intl/messages.svelte'
-import { volumeScheme } from '$lib/volume-scheme'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
 import { showsDisconnect } from './connection-state'
 import { isVolumeEjectable } from './eject-predicate'
 import { isServerPlaceRow } from './server-row-actions'

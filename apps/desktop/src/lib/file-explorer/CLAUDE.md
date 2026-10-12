@@ -30,17 +30,17 @@ Dual-pane file explorer with keyboard-driven navigation, file selection, sorting
   IndexedDB; inlining 50k icon blobs would transmit ~100-200 MB.
 - **Root-layout HMR can trigger a SvelteKit TDZ crash** (`Cannot access 'component' before initialization`,
   sveltejs/kit#15287) when an update propagates through `+layout.svelte` (for example `app.css` edits).
-  `$lib/hmr-recovery.ts`, imported from the stable `+layout.ts`, catches it and forces a clean reload. Don't remove it
+  `#lib/hmr-recovery.ts`, imported from the stable `+layout.ts`, catches it and forces a clean reload. Don't remove it
   until the upstream bug is fixed.
 - **The drop-foreign-listings policy is what keeps navigation state uncorruptible** when a pane flips volume between
   `listing-start` and `listing-complete`: a landed listing whose path isn't on the pane's current volume is dropped. It
   lives in `pane/navigate.ts::commitPathFromListing`; if you add a virtual-volume namespace with a non-filesystem
   prefix, extend the explicit prefix branch there. (The per-pane token is a separate, narrower mechanism — the
   same-token self-re-entry rule.) Full contract in `DETAILS.md` § Gotchas and `pane/CLAUDE.md`.
-- **Error/provider WORDS live on the FE** (`$lib/error-messages/`), error CLASSIFICATION in Rust. Rust ships a typed,
+- **Error/provider WORDS live on the FE** (`#lib/error-messages/`), error CLASSIFICATION in Rust. Rust ships a typed,
   word-free `ListingError` (reason + params + category + provider); the FE factories render the copy. To change wording,
-  edit `$lib/error-messages/` (and keep the parity test green); to add a reason/provider, change both sides. See
-  [`$lib/error-messages/CLAUDE.md`](../error-messages/CLAUDE.md).
+  edit `#lib/error-messages/` (and keep the parity test green); to add a reason/provider, change both sides. See
+  [`#lib/error-messages/CLAUDE.md`](../error-messages/CLAUDE.md).
 
 Architecture, flows, and decision detail: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
 reorganizing, or advising.

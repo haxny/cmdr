@@ -23,10 +23,10 @@ import {
   setServersViewShown,
   listSavedServers,
   type SavedServer,
-} from '$lib/tauri-commands'
-import { getNetworkTimeoutMs, getShareCacheTtlMs } from '$lib/settings/network-settings'
-import { initializeSettings } from '$lib/settings'
-import type { UnlistenFn } from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
+import { getNetworkTimeoutMs, getShareCacheTtlMs } from '#lib/settings/network-settings.js'
+import { initializeSettings } from '#lib/settings/index.js'
+import type { UnlistenFn } from '#lib/tauri-commands/index.js'
 import type { NetworkHost, DiscoveryState, ShareListResult, ShareListError } from '../types'
 import { ShareListFailure, shareListErrorOf } from './share-list-error'
 import type { SignedInAs } from './signed-in-as'

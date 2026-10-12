@@ -7,8 +7,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { getMessage, t, tString } from '$lib/intl/messages.svelte'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { getMessage, t, tString } from '#lib/intl/messages.svelte.js'
 
 /** Render a rich-text message the way `<Trans>` would, flattened back to plain text. */
 function renderFlat(key: 'common.attachEmail', params: Record<string, unknown>): string {

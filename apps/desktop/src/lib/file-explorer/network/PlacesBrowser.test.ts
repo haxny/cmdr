@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vites
 import { mount, unmount, tick } from 'svelte'
 import PlacesBrowser from './PlacesBrowser.svelte'
 import { resolveGlobalKeyAction } from '../../../routes/(main)/global-keydown'
-import { initShortcutDispatch, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
+import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
 import type { NetworkHost, ShareInfo, ShareListError } from '../types'
 import { renderShareListError } from './share-list-error-messages'
 import { ShareListFailure } from './share-list-error'
@@ -37,7 +37,7 @@ const h = vi.hoisted(() => ({
   setSmbAccountPreference: vi.fn(() => Promise.resolve(true)),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listSharesWithCredentials: h.listSharesWithCredentials,
   saveSmbCredentials: h.saveSmbCredentials,
   getSmbCredentials: h.getSmbCredentials,
@@ -68,11 +68,11 @@ vi.mock('./network-store.svelte', async () => {
   }
 })
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(() => 'id') }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(() => 'id') }))
 
-vi.mock('$lib/servers/sign-in-sheet-state.svelte', () => ({ openSignInSheet: h.openSignInSheet }))
+vi.mock('#lib/servers/sign-in-sheet-state.svelte.js', () => ({ openSignInSheet: h.openSignInSheet }))
 
-vi.mock('$lib/settings/network-settings', () => ({
+vi.mock('#lib/settings/network-settings.js', () => ({
   getNetworkTimeoutMs: () => 5000,
   getShareCacheTtlMs: () => 30000,
 }))

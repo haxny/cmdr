@@ -4,11 +4,11 @@
      * an open has pulled its file into a preview temp for more than a second.
      * Presentational: `createViewerPull` decides when it shows and what it draws.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatByteSize } from '$lib/units'
+    import Button from '#lib/ui/Button.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatByteSize } from '#lib/units/index.js'
 
     interface Props {
         fileName: string

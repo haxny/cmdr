@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { mount, tick } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import PasteClipboardToastContent from './PasteClipboardToastContent.svelte'
 
 const { dismissToast, openSettingsWindow } = vi.hoisted(() => ({
@@ -14,18 +14,18 @@ const { dismissToast, openSettingsWindow } = vi.hoisted(() => ({
   openSettingsWindow: vi.fn(() => Promise.resolve()),
 }))
 
-// `$lib/ui/toast` also exports `addToast` (imported transitively by
+// `#lib/ui/toast` also exports `addToast` (imported transitively by
 // paste-clipboard-as-file.ts); provide it so the module graph resolves.
-vi.mock('$lib/ui/toast', () => ({ dismissToast, addToast: vi.fn() }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow }))
-vi.mock('$lib/settings', () => ({ getSetting: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast, addToast: vi.fn() }))
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   pasteClipboardAsFile: vi.fn(),
   findFileIndex: vi.fn(),
   onDirectoryDiff: vi.fn(),
 }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
-// The message itself resolves through the REAL `$lib/intl` (golden output).
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
+// The message itself resolves through the REAL `#lib/intl` (golden output).
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

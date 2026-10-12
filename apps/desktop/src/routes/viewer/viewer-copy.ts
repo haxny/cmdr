@@ -7,7 +7,7 @@
  *
  * Thresholds are fixed DECIMAL bytes, because `viewer.copyDialog.refuseBody` names
  * "100 MB" in its copy and the symbol has to match the base. The sizes shown in
- * dialogs/toasts go through `formatByteSize()` (`$lib/units`), which honours
+ * dialogs/toasts go through `formatByteSize()` (`#lib/units`), which honours
  * `appearance.fileSizeFormat`.
  */
 

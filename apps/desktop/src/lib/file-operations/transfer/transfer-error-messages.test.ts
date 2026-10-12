@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getUserFriendlyMessage, getTechnicalDetails, getErrorDisplayMeta } from './transfer-error-messages'
-import type { DisconnectedSide, WriteOperationError } from '$lib/file-explorer/types'
-import type { ProgressAtStop } from '$lib/tauri-commands'
-import { formatInteger } from '$lib/intl/number-format'
+import type { DisconnectedSide, WriteOperationError } from '#lib/file-explorer/types.js'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 // Mock navigator to control isMacOS() behavior
 const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')

@@ -26,8 +26,8 @@ import {
   clearArchivePassword,
   notifyArchivePasswordPrompt,
   notifyArchivePasswordDismissed,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { archiveNameFromPath } from './archive-paths'
 import { transferOpLabel } from './transfer-op-label'
 import type { TransferOperationType } from '../types'

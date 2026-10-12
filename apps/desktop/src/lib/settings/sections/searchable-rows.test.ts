@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { buildSectionTree, settingsRegistry, type SettingsSection } from '../settings-registry'
 import {
   clearSearchIndex,
@@ -29,8 +29,8 @@ import { searchableRows } from './searchable-rows'
 /** On a Mac by default, so every row, `macOSOnly` ones too, is in the index under test. */
 const isMacOS = vi.hoisted(() => vi.fn(() => true))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
 

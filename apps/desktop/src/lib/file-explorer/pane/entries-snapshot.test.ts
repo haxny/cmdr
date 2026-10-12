@@ -10,14 +10,14 @@
  *   short-circuits to `'all'` when everything is selected.
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { toCanonical, type CanonicalPath } from '$lib/path/canonical'
-import type { SearchSnapshot } from '$lib/search/snapshot-store.svelte'
+import { toCanonical, type CanonicalPath } from '#lib/path/canonical.js'
+import type { SearchSnapshot } from '#lib/search/snapshot-store.svelte.js'
 
 const { ipc } = vi.hoisted<{ ipc: { getFileRange: Mock; getFileAt: Mock; getSelectionSnapshot: Mock } }>(() => ({
   ipc: { getFileRange: vi.fn(), getFileAt: vi.fn(), getSelectionSnapshot: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ipc)
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
 
 import { fetchEntriesSnapshot, fetchSelectedNames } from './entries-snapshot'
 

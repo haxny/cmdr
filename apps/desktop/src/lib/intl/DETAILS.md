@@ -17,7 +17,7 @@ resolves user-facing text from JSON catalogs under `messages/<locale>/`, reading
   `{count, plural, …}`, `{kind, select, …}`, and rich-text `<tag>` sentences (via `Trans.svelte`). Plurals/selects are
   resolved by the engine's `Intl.PluralRules`; we never hand-roll category selection.
 - **`getMessage(key)`** returns the RAW catalog string with NO ICU parsing, for callers that do their own composition
-  and must not hit ICU's brace/apostrophe grammar, specifically the error pipeline (`$lib/error-messages` `compose.ts` +
+  and must not hit ICU's brace/apostrophe grammar, specifically the error pipeline (`#lib/error-messages` `compose.ts` +
   `expandSystemStrings` + snarkdown). Its `{system_settings}` tokens and `esc()` HTML entities would collide with ICU
   placeholders. Same fallback chain as `t()`, just no `format()`.
 
@@ -124,9 +124,9 @@ No SSR/prerender concern: the app is a pure SPA (`+layout.ts` has `ssr = false`)
 server/build-rendered; the catalog merge (a `import.meta.glob` over `messages/*/*.json`) and both locale readers touch
 no `window`.
 
-### The ICU-vs-`$lib/intl` formatting split
+### The ICU-vs-`#lib/intl` formatting split
 
-Numbers/sizes/dates format through `$lib/intl` + `format-utils` (the formatting layer, below), NOT through ICU
+Numbers/sizes/dates format through `#lib/intl` + `format-utils` (the formatting layer, below), NOT through ICU
 `number`/`date` skeletons. `t()` embeds ALREADY-formatted count STRINGS as `*Text` params (e.g. `transfer.movedPhrase`'s
 `filesText`), keeping formatting single-sourced. The raw integer is passed alongside ONLY to drive ICU `plural`
 selection (noun + was/were agreement), never for display. Don't reformat inside messages with ICU `{n, number}`. A
@@ -154,7 +154,7 @@ message-key construction. New English keys require translated catalog entries an
 ## What this layer owns vs. doesn't
 
 Owns: the locale decision (`getUiLocale` / `getFormatLocale`), and number/size grouping + decimals (`number-format.ts`).
-The DATE formatter lives in `$lib/settings/format-utils.ts` (`formatDateForDisplay` + the cached
+The DATE formatter lives in `#lib/settings/format-utils.ts` (`formatDateForDisplay` + the cached
 `getSystemLocaleFormatter`) because dates carry per-component age-tier coloring that belongs with the date-color
 settings; it reads `getFormatLocale()` from here, so the locale source is still single per job.
 
@@ -199,7 +199,7 @@ would have preserved the en-US look but left counts (comma) and byte sizes (thin
 same incoherence German users would get. The commit is isolated and revertible on its own if the always-thin-space look
 is preferred (in which case `formatNumber` arguably should match it).
 
-Human-friendly sizes (`formatFileSizeWithFormat`, in `$lib/units`) use `useGrouping: false`, so en-US stays
+Human-friendly sizes (`formatFileSizeWithFormat`, in `#lib/units`) use `useGrouping: false`, so en-US stays
 byte-identical there: the old `toFixed(2)`/`String(value)` never grouped, and a forced-unit `10000.00 MB` must not
 become `10,000.00 MB`. Only the decimal separator localizes (`1.02 MB` → `1,02 MB`). `en-us-parity.test.ts` pins both
 halves of this split, and is the net if a refactor ever reaches for a shared `useGrouping`.
@@ -355,7 +355,7 @@ which is why `locale-inheritance.ts` exists. Why each half is the way it is:
 main window's answer doesn't reach the Settings or Queue window. The main window awaits the answer inside
 `initSettingsApplier` (the fetch is fired BEFORE the settings store is awaited, so the two IPC round-trips overlap
 rather than stack: ❌ no serialized round-trip, and no paint gate — `routes/(main)/show-main-on-mount.ts` records why we
-removed the last one). Secondary windows use `initWindowLanguageSync()` from `$lib/settings/window-settings`, which
+removed the last one). Secondary windows use `initWindowLanguageSync()` from `#lib/settings/window-settings`, which
 applies the persisted value synchronously and re-applies when the OS answer lands, so nothing gates a first paint.
 
 **`'system'` means the language the user reads NOW, not the one they read at launch.** Rust observes the macOS language

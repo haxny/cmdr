@@ -14,9 +14,9 @@
  * polls, and neither does a `.git` portal snapshot, which never exists on disk.
  */
 
-import { pathExistsChecked } from '$lib/tauri-commands'
+import { pathExistsChecked } from '#lib/tauri-commands/index.js'
 import { resolveValidPath } from '../navigation/path-resolution'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The absolute path that just landed on the clipboard. */

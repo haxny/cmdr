@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { WakeIndicatorMode } from './wake-indicator.svelte'
 import WakeIndicator from './WakeIndicator.svelte'
 

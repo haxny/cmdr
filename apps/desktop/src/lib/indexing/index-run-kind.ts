@@ -3,7 +3,7 @@
 // reads). This is the FE half of the run-kind decision: `deriveSteps` picks the
 // ordered step list off `IndexRunKind`, and this predicate decides local vs network.
 
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { ROOT_VOLUME_ID } from './index-state.svelte'
 
 /**

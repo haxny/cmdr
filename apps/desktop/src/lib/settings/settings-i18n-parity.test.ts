@@ -11,8 +11,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { t, tString } from '$lib/intl/messages.svelte'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { t, tString } from '#lib/intl/messages.svelte.js'
 import { getSettingDefinition } from './settings-registry'
 import type { EnumOption } from './types'
 

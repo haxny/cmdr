@@ -8,8 +8,8 @@
  * in the Search extras module).
  */
 
-import type { SearchQuery } from '$lib/tauri-commands'
-import type { QueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import type { SearchQuery } from '#lib/tauri-commands/index.js'
+import type { QueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 import type { SearchExtrasState } from './search-extras-state.svelte'
 
 /**

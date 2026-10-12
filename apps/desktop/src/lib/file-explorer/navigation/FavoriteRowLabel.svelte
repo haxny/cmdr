@@ -4,7 +4,7 @@
      * favorites section): its name, read quiet when a pick can't open it right away, or the
      * inline rename field while a rename is on. One component, so the two menus can't drift.
      */
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { VolumeInfo } from '../types'
     import type { FavoritesMenuController } from './favorites-menu.svelte'
 

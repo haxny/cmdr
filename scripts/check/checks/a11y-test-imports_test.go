@@ -25,8 +25,8 @@ func TestImportedPathsIn(t *testing.T) {
 			want:   []string{"apps/desktop/src/lib/settings/sections/Alpha.svelte"},
 		},
 		{
-			name:   "$lib alias",
-			source: `import Alpha from '$lib/settings/sections/Alpha.svelte'`,
+			name:   "#lib alias",
+			source: `import Alpha from '#lib/settings/sections/Alpha.svelte'`,
 			want:   []string{"apps/desktop/src/lib/settings/sections/Alpha.svelte"},
 		},
 		{
@@ -91,7 +91,7 @@ func TestImportedPathsIn(t *testing.T) {
 		},
 		{
 			name: "several imports in one file",
-			source: `import { expectNoA11yViolations } from '$lib/test-a11y'
+			source: `import { expectNoA11yViolations } from '#lib/test-a11y'
 import Alpha from './Alpha.svelte'
 import Beta from './Beta.svelte'`,
 			want: []string{

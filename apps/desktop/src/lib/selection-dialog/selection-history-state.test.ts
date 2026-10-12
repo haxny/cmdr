@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { SelectionHistoryEntry } from '$lib/tauri-commands'
+import type { SelectionHistoryEntry } from '#lib/tauri-commands/index.js'
 
-// Module under test imports `$lib/tauri-commands`; stub `getRecentSelections`
+// Module under test imports `#lib/tauri-commands`; stub `getRecentSelections`
 // so the factory's IPC dereference at import time doesn't throw.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getRecentSelections: vi.fn(() => Promise.resolve([])),
 }))
 
 import { applySelectionHistoryEntry } from './selection-history-state.svelte'
-import { createQueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import { createQueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 
 function entry(over: Partial<SelectionHistoryEntry> = {}): SelectionHistoryEntry {
   return {

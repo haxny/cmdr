@@ -13,8 +13,8 @@
  * holds the pane's path, then navigates.
  */
 
-import { isPathOnVolume } from '$lib/path/canonical'
-import { resolvePathVolume } from '$lib/tauri-commands'
+import { isPathOnVolume } from '#lib/path/canonical.js'
+import { resolvePathVolume } from '#lib/tauri-commands/index.js'
 import type { NavigateIntent } from '../pane/navigate'
 import { archiveRootOf } from '../pane/archive-paths'
 import type { VolumeInfo } from '../types'

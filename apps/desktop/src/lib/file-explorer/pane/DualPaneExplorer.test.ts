@@ -4,7 +4,7 @@ import { tick } from 'svelte'
 import DualPaneExplorer from './DualPaneExplorer.svelte'
 
 // Mock the app-status-store to avoid Tauri dependency in tests
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   loadAppStatus: vi.fn().mockResolvedValue({
     leftPath: '~',
     rightPath: '~',
@@ -47,7 +47,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }))
 
 // Mock pathExists
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   pathExists: vi.fn().mockResolvedValue(true),
   listDirectoryStartSession: vi.fn().mockResolvedValue({
     sessionId: 'mock-session-id',
@@ -161,8 +161,8 @@ vi.mock('$lib/tauri-commands', () => ({
 
 // Mock settings-store to avoid Tauri event API dependency in tests
 
-// Mock $lib/settings to avoid @tauri-apps/plugin-store dependency (used by network-store via initializeSettings)
-vi.mock('$lib/settings', () => ({
+// Mock #lib/settings to avoid @tauri-apps/plugin-store dependency (used by network-store via initializeSettings)
+vi.mock('#lib/settings/index.js', () => ({
   initializeSettings: vi.fn().mockResolvedValue(undefined),
   getSetting: vi.fn().mockReturnValue(undefined),
   onSpecificSettingChange: vi.fn(() => () => {}),
@@ -170,11 +170,11 @@ vi.mock('$lib/settings', () => ({
 }))
 
 // A pane mounts its list from the first load on (the header stays while it loads),
-// and the list reads its row height off reactive-settings. The `$lib/settings` mock
+// and the list reads its row height off reactive-settings. The `#lib/settings` mock
 // answers `undefined` for every setting, which crashes `getRowHeight`'s
 // `densityMappings[uiDensity]`, so pin the list's getters to safe defaults.
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings/reactive-settings.svelte')>()),
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/reactive-settings.svelte.js')>()),
   getRowHeight: vi.fn().mockReturnValue(24),
   getIconSize: vi.fn().mockReturnValue(16),
   getIsCompactDensity: vi.fn().mockReturnValue(false),
@@ -226,8 +226,8 @@ describe('DualPaneExplorer', () => {
   })
 
   it('syncs the restored focused pane to the backend at startup', async () => {
-    const { loadAppStatus } = await import('$lib/app-status-store')
-    const { updateFocusedPane } = await import('$lib/tauri-commands')
+    const { loadAppStatus } = await import('#lib/app-status-store.js')
+    const { updateFocusedPane } = await import('#lib/tauri-commands/index.js')
     vi.mocked(loadAppStatus).mockResolvedValue({
       leftPath: '~/Downloads',
       rightPath: '~/_ignored/screenshots',
@@ -257,7 +257,7 @@ describe('DualPaneExplorer', () => {
 
 describe('Sorting integration', () => {
   it('initializes sort state from persisted app status', async () => {
-    const { loadAppStatus } = await import('$lib/app-status-store')
+    const { loadAppStatus } = await import('#lib/app-status-store.js')
     const mockLoadAppStatus = vi.mocked(loadAppStatus)
     mockLoadAppStatus.mockResolvedValue({
       leftPath: '~',

@@ -4,8 +4,8 @@
      * restricts, one line per area. Renders nothing when nothing is managed. Settings › Updates &
      * privacy hosts it, so a help-desk person has one place to check that Cmdr honors the profile.
      */
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { getManagedPolicyView } from './managed-policy.svelte'
     import { managedPolicySummary } from './policy-summary'
 

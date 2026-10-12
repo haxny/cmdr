@@ -13,7 +13,7 @@ const { ipc } = vi.hoisted(() => ({
     hasSmbCredentials: vi.fn(),
   },
 }))
-vi.mock('$lib/tauri-commands', () => ipc)
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
 
 import { getCredentialStatus, noteCachedCredentials } from './network-store.svelte'
 

@@ -22,16 +22,16 @@
  * window, which is the surface that promises completeness.
  */
 
-import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-import type { OperationRow } from '$lib/file-operations/queue/operations-store.svelte'
+import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+import type { OperationRow } from '#lib/file-operations/queue/operations-store.svelte.js'
 import {
   getForegroundFailureId,
   getForegroundOperationId,
   isForegroundClaimPending,
-} from '$lib/file-operations/foreground-operation.svelte'
-import { dismissQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
-import { failureIncidentFor } from '$lib/file-operations/queue/failure-reason'
-import { addToast, dismissToast, getToasts } from '$lib/ui/toast'
+} from '#lib/file-operations/foreground-operation.svelte.js'
+import { dismissQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
+import { failureIncidentFor } from '#lib/file-operations/queue/failure-reason.js'
+import { addToast, dismissToast, getToasts } from '#lib/ui/toast/index.js'
 import OperationFailedToastContent from './OperationFailedToastContent.svelte'
 import OperationFailuresToastContent from './OperationFailuresToastContent.svelte'
 

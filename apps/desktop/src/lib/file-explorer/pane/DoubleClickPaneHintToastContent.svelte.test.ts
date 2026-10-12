@@ -14,8 +14,8 @@ const { setSetting, dismissToast } = vi.hoisted(() => ({
   dismissToast: vi.fn((..._args: unknown[]) => undefined),
 }))
 
-vi.mock('$lib/settings', () => ({ setSetting }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast }))
+vi.mock('#lib/settings/index.js', () => ({ setSetting }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast }))
 
 beforeEach(() => {
   setSetting.mockClear()

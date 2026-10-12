@@ -11,7 +11,7 @@
     },
     "apps/desktop/src/lib/settings/sections/GitSection.svelte ↔ apps/desktop/src/lib/settings/sections/SearchSection.svelte": {
       "lines": 18,
-      "reason": "The `<script>` preamble every settings section repeats: seven imports, `interface Props { searchQuery: string }`, the `$props()` destructure, and `shouldShow = $derived(createShouldShow(searchQuery))`. Svelte offers no way to share an import block or a props declaration, so 15 of the 18 lines are the shape the framework and the section contract force, and the markup below them (which rows, which ids, which `anyVisible` list) is entirely per-section. The one shareable line is `defaultDef`, which would fold into a `settingDef(id)` helper in `$lib/settings` returning the empty-label fallback; worth doing on its own merits, though it moves this count by one line."
+      "reason": "The `<script>` preamble every settings section repeats: seven imports, `interface Props { searchQuery: string }`, the `$props()` destructure, and `shouldShow = $derived(createShouldShow(searchQuery))`. Svelte offers no way to share an import block or a props declaration, so 15 of the 18 lines are the shape the framework and the section contract force, and the markup below them (which rows, which ids, which `anyVisible` list) is entirely per-section. The one shareable line is `defaultDef`, which would fold into a `settingDef(id)` helper in `#lib/settings` returning the empty-label fallback; worth doing on its own merits, though it moves this count by one line."
     }
   }
 }

@@ -10,7 +10,7 @@
  * `DETAILS.md` § "Birth context".
  */
 
-import { refreshListing } from '$lib/tauri-commands'
+import { refreshListing } from '#lib/tauri-commands/index.js'
 import type { TransferOperationType } from '../types'
 import type { FilePaneAPI } from './types'
 import type { TransferProgressPropsData } from './dialog-props'

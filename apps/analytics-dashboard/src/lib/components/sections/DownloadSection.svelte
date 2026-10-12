@@ -5,9 +5,9 @@
   tooltip state; the country breakdown lives in CountryTable and shares the zoom window.
 -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { CloudflareData } from '$lib/server/sources/cloudflare.js'
-    import type { GitHubData } from '$lib/server/sources/github.js'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { CloudflareData } from '#lib/server/sources/cloudflare.js'
+    import type { GitHubData } from '#lib/server/sources/github.js'
     import {
         aggregateBy,
         buildTimeline,
@@ -15,19 +15,19 @@
         downloadSourceSeries,
         getDayAxis,
         maxDailyAcrossGroups,
-    } from '$lib/chart-helpers.js'
-    import { formatNumber, formatCountry } from '$lib/format.js'
-    import { COLOR_GOLD } from '$lib/colors.js'
-    import MiniTimeline from '$lib/components/MiniTimeline.svelte'
-    import PieChart from '$lib/components/PieChart.svelte'
-    import StackedBarChart from '$lib/components/StackedBarChart.svelte'
-    import CountryTable from '$lib/components/CountryTable.svelte'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import MetricTable from '$lib/components/MetricTable.svelte'
-    import Methodology from '$lib/components/Methodology.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    } from '#lib/chart-helpers.js'
+    import { formatNumber, formatCountry } from '#lib/format.js'
+    import { COLOR_GOLD } from '#lib/colors.js'
+    import MiniTimeline from '#lib/components/MiniTimeline.svelte'
+    import PieChart from '#lib/components/PieChart.svelte'
+    import StackedBarChart from '#lib/components/StackedBarChart.svelte'
+    import CountryTable from '#lib/components/CountryTable.svelte'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import MetricTable from '#lib/components/MetricTable.svelte'
+    import Methodology from '#lib/components/Methodology.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const {
         cloudflare,

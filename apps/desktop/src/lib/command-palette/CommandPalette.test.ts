@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount } from 'svelte'
 import { tick, flushSync } from 'svelte'
 import CommandPalette from './CommandPalette.svelte'
-import { pruneRecentCommands, pushRecentCommand } from '$lib/app-status-store'
-import { setShortcut, resetShortcut } from '$lib/shortcuts/shortcuts-store'
+import { pruneRecentCommands, pushRecentCommand } from '#lib/app-status-store.js'
+import { setShortcut, resetShortcut } from '#lib/shortcuts/shortcuts-store.js'
 
 // These ids are real command-registry entries, so the palette's effective-shortcut
-// reads (which hit the real registry + store, not the mocked `$lib/commands`)
+// reads (which hit the real registry + store, not the mocked `#lib/commands`)
 // resolve against known bindings. `app.quit` defaults to ⌘Q, `app.about` is unbound.
 const ALL_COMMANDS = [
   { id: 'app.quit', name: 'Quit Cmdr', displayName: 'Quit Cmdr', scope: 'App', shortcuts: ['⌘Q'], showInPalette: true },
@@ -42,7 +42,7 @@ const ALL_COMMANDS = [
 ]
 
 // Mock the app-status-store to avoid Tauri dependency in tests
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   pruneRecentCommands: vi.fn().mockResolvedValue([]),
   pushRecentCommand: vi.fn().mockResolvedValue(undefined),
 }))
@@ -61,7 +61,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
   ),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
 
@@ -75,7 +75,7 @@ function shortcutTextsFor(target: HTMLElement, commandId: string): string[] {
 }
 
 // Mock the commands module to provide test data
-vi.mock('$lib/commands', () => ({
+vi.mock('#lib/commands/index.js', () => ({
   getPaletteCommands: vi.fn(() => ALL_COMMANDS),
   searchCommands: vi.fn((query: string, recentIds: string[] = []) => {
     const allMatches = ALL_COMMANDS.map((command) => ({ command, matchedIndices: [] }))

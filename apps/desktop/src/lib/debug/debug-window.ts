@@ -17,10 +17,10 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { Effect, EffectState } from '@tauri-apps/api/window'
-import { getShouldReduceTransparency } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { decorateChildWindowTitle } from '$lib/app-mode'
-import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '$lib/window-positioning'
+import { getShouldReduceTransparency } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { decorateChildWindowTitle } from '#lib/app-mode.js'
+import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '#lib/window-positioning.js'
 
 const log = getAppLogger('debug')
 

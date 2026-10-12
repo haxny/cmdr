@@ -27,7 +27,7 @@ const events = vi.hoisted(() => ({
 }))
 const listDirectoryStartMock = vi.hoisted(() => vi.fn().mockResolvedValue({ listingId: '', status: {} }))
 
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   loadAppStatus: vi.fn().mockResolvedValue({
     leftPath: '/Users/me',
     rightPath: '/Users/me',
@@ -65,14 +65,14 @@ vi.mock('$lib/app-status-store', () => ({
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
   const { createListenRecorder } = await import('./integration-test-utils')
   const recorder = createListenRecorder()
   events.recorder = recorder
   // Spread the real module so rarely-hit exports (network/MTP discovery hooks)
   // resolve to their real (invoke-backed) implementations; `@tauri-apps/api/core`
   // `invoke` is itself mocked, so they're inert. Override the I/O we drive.
-  const actual = await importOriginal<typeof import('$lib/tauri-commands')>()
+  const actual = await importOriginal<typeof import('#lib/tauri-commands/index.js')>()
   return {
     ...actual,
     pathExists: vi.fn().mockResolvedValue(true),
@@ -168,7 +168,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   initializeSettings: vi.fn().mockResolvedValue(undefined),
   getSetting: vi.fn().mockReturnValue(undefined),
   onSpecificSettingChange: vi.fn(() => () => {}),
@@ -176,13 +176,13 @@ vi.mock('$lib/settings', () => ({
 }))
 
 // Real FilePane renders BriefList, which reads density/row-height from
-// reactive-settings. The `$lib/settings` mock returns `undefined` for every
+// reactive-settings. The `#lib/settings` mock returns `undefined` for every
 // setting, which would crash `getRowHeight`'s `densityMappings[uiDensity]`
 // lookup. Keep the real module (its date/size formatters are used by
 // SelectionInfo / DateLabel) and override only the settings-backed getters with
 // safe defaults so the list renders without a live settings store.
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings/reactive-settings.svelte')>()),
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/reactive-settings.svelte.js')>()),
   getRowHeight: vi.fn().mockReturnValue(24),
   getIconSize: vi.fn().mockReturnValue(16),
   getIsCompactDensity: vi.fn().mockReturnValue(false),
@@ -204,8 +204,8 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
 import DualPaneExplorer from './DualPaneExplorer.svelte'
 import { explorerState, _resetForTesting } from './explorer-state.svelte'
 import { getActiveTab, pushHistoryEntry } from '../tabs/tab-state-manager.svelte'
-import { saveLastUsedPathForVolume } from '$lib/app-status-store'
-import { findFileIndex } from '$lib/tauri-commands'
+import { saveLastUsedPathForVolume } from '#lib/app-status-store.js'
+import { findFileIndex } from '#lib/tauri-commands/index.js'
 import { NavigationCancelled } from './listing-loader'
 import type { NavigateResult } from './navigate'
 

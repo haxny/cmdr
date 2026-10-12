@@ -5,15 +5,15 @@ Depth for the status-bar / header components. `CLAUDE.md` holds the must-knows.
 ## `selection-info-utils.ts` exports
 
 - `formatSizeTriads(bytes)`: splits a byte count into digit triads, each tagged with a `tierClass`. The inter-triad
-  separator follows the active locale (`getGroupSeparator` from `$lib/intl`), so byte grouping matches localized counts;
-  see [`$lib/intl/DETAILS.md`](../../intl/DETAILS.md) (Decision 4, the en-US comma vs old thin-space change).
+  separator follows the active locale (`getGroupSeparator` from `#lib/intl`), so byte grouping matches localized counts;
+  see [`#lib/intl/DETAILS.md`](../../intl/DETAILS.md) (Decision 4, the en-US comma vs old thin-space change).
 - `formatSizeForDisplay(bytes, { unit, format })`: single entry point used by views and the status bar. `unit: 'bytes'`
   delegates to `formatSizeTriads`; `unit: 'dynamic'` picks the friendliest unit per value ("1.02 MB");
   `unit: 'kB' | 'MB' | 'GB'` forces a fixed unit so a mixed-size directory reads apples-to-apples. Returns one
   tier-tagged span (or one per digit triad in bytes mode). Tier color tracks the underlying byte magnitude in every mode
   via `dynamicTierIndex(bytes, format)` from `format-utils.ts`. The kilobyte label casing (`kB` vs `KB`) follows
   `format`.
-- `colorizeSize(size)`: wraps a `TieredSize` (`formatByteSizeTiered` from `$lib/units`) in its `sizeTierClasses` span,
+- `colorizeSize(size)`: wraps a `TieredSize` (`formatByteSizeTiered` from `#lib/units`) in its `sizeTierClasses` span,
   for HTML strings (tooltips, error copy). The tier comes with the size, never from its unit word, which is translated
   copy (`common.sizeUnit.*`).
 - `formatDate(timestamp)`: Unix seconds → `"YYYY-MM-DD HH:MM:SS"` local time.
@@ -31,8 +31,8 @@ Depth for the status-bar / header components. `CLAUDE.md` holds the must-knows.
   `SelectionInfo.zero-permissions.test.ts`.
 - `isBrokenSymlink(entry)`: `entry.isSymlink && entry.iconId === 'symlink-broken'` (not filesystem flags).
 - `formatNumber`, `calculatePercentage`: selection summary helpers. `formatNumber` delegates to `formatInteger`
-  (`$lib/intl`), so counts group per the active locale. Count + noun formatting goes through
-  [`$lib/utils/pluralize`](../../utils/pluralize.ts).
+  (`#lib/intl`), so counts group per the active locale. Count + noun formatting goes through
+  [`#lib/utils/pluralize`](../../utils/pluralize.ts).
 - `formatSizeText(bytes, { unit, format })`: the same answer as `formatSizeForDisplay`, joined into one plain string,
   for a surface that can't carry the tier spans. Only consumer today is the native context menu's header line (below).
 - `sizeTierClasses`: `['size-bytes', 'size-kb', 'size-mb', 'size-gb', 'size-tb']`. CSS rules for these live in the
@@ -66,8 +66,8 @@ Callers, and what each can answer: `pane/pane-pointer.ts` (this row's size, or t
 **Decision**: every number in the header crosses IPC ALREADY RENDERED — the count as well as the size — and Rust formats
 neither. **Why**: all three things a reader would notice are locale-dependent and all three live on this side. A size
 needs `appearance.fileSizeFormat` (binary vs SI) and `listing.sizeUnit` (dynamic or fixed), which only
-`$lib/units/byte-size.ts` honours. A count needs the active locale's grouping separator (`12,345` against `12.345`) and
-its plural category, which `$lib/intl` has and `crate::intl`'s `menu_t` deliberately does not: it is a table lookup with
+`#lib/units/byte-size.ts` honours. A count needs the active locale's grouping separator (`12,345` against `12.345`) and
+its plural category, which `#lib/intl` has and `crate::intl`'s `menu_t` deliberately does not: it is a table lookup with
 no ICU and no number formatting, and a native label that seems to need a plural is a label to reshape. Composing either
 half in Rust would be a second, worse implementation drifting from the pane's own status bar and size column with both
 on screen at once — and the plural gap is not hypothetical: "two or more needs no distinct form" happens to hold for the
@@ -197,7 +197,7 @@ Renders a `<button>` with a sort-direction triangle (▲/▼). The triangle is `
 doesn't reserve width (`FullList` shrink-wraps column widths; `opacity: 0` would bake ~12px of dead space into every
 unsorted header). Handles `onclick` and `onkeydown` (Enter/Space). The tooltip carries the sort command's name plus its
 current keyboard shortcut as a `<kbd>` chip: the command id derives from `column` via the internal
-`columnToCommandIdMap`, the shortcut from `getFirstShortcutReactive` (`$lib/shortcuts/reactive-shortcuts.svelte`), so a
+`columnToCommandIdMap`, the shortcut from `getFirstShortcutReactive` (`#lib/shortcuts/reactive-shortcuts.svelte`), so a
 rebind updates live. The shortcut shows only when `isFocused` is true (truthfulness rule), and the tooltip action
 live-updates so a focus flip or rebind mid-hover is reflected immediately.
 
@@ -224,10 +224,10 @@ same caret — so `measure-column-widths.ts`'s `HEADER_CHROME_*` constants still
 
 - `../types`: `FileEntry`, `SortColumn`, `SortOrder`.
 - `../views/full-list-utils`: `measureDateColumnWidth`.
-- `$lib/icon-cache`: `getCachedIcon`, `iconCacheVersion`.
-- `$lib/units`: `formatByteSize`, `formatFileSizeWithFormat`, `fixedUnitFor`, `dynamicTierIndex`.
-- `$lib/settings/reactive-settings.svelte`: `formatDateTime`.
-- `$lib/indexing/index-state.svelte`: `isVolumeScanning`, `isVolumeAggregating` (keyed on the pane's `volumeId`).
+- `#lib/icon-cache`: `getCachedIcon`, `iconCacheVersion`.
+- `#lib/units`: `formatByteSize`, `formatFileSizeWithFormat`, `fixedUnitFor`, `dynamicTierIndex`.
+- `#lib/settings/reactive-settings.svelte`: `formatDateTime`.
+- `#lib/indexing/index-state.svelte`: `isVolumeScanning`, `isVolumeAggregating` (keyed on the pane's `volumeId`).
 
 ## Image-index overlay (`FileIcon.svelte`, top-right)
 

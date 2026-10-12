@@ -9,7 +9,7 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { onGitStateChanged } from '$lib/tauri-commands'
+import { onGitStateChanged } from '#lib/tauri-commands/index.js'
 import { fetchStatusMap, type EntryStatusCode } from '../git/status-column'
 import type { FileEntry } from '../types'
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDebugLog } from './open-debug-log'
-import { clearIpcMocks, installIpcMock } from '$lib/ipc/test-helpers'
+import { clearIpcMocks, installIpcMock } from '#lib/ipc/test-helpers.js'
 
 const mocks = vi.hoisted(() => ({
   getDebugLogPath: vi.fn<() => Promise<string | null>>(),
@@ -9,9 +9,9 @@ const mocks = vi.hoisted(() => ({
   logError: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', async () => await import('../tauri-commands/logging'))
-vi.mock('$lib/file-viewer/open-viewer', () => ({ openFileViewer: mocks.openFileViewer }))
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast }))
+vi.mock('#lib/tauri-commands/index.js', async () => await import('../tauri-commands/logging'))
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({ openFileViewer: mocks.openFileViewer }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast }))
 vi.mock('./logger', () => ({ getAppLogger: () => ({ error: mocks.logError }) }))
 
 beforeEach(() => {

@@ -4,7 +4,7 @@
  * locked and what they read as; these only apply that answer.
  */
 
-import type { SettingLock } from '$lib/ipc/bindings'
+import type { SettingLock } from '#lib/ipc/bindings.js'
 
 /** What a setting reads as under `lock`, given the value the store holds (or its default). */
 export function lockedValue(lock: SettingLock | undefined, stored: unknown): unknown {

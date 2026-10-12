@@ -34,9 +34,9 @@
  *      `state.lastDialogEvent`. QueryDialog handles all of those.
  */
 
-import type { BadgeStatus } from '$lib/feature-status'
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
+import type { BadgeStatus } from '#lib/feature-status.js'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import type { QueryFilterState, SearchMode } from './query-filter-state.svelte'
 import type { QueryStreamSource } from './query-stream'
 import type { RecentItemAdapter, RecentItemKey } from './recent-items/recent-items-types'
@@ -81,7 +81,7 @@ export interface AiTranslateResult {
  * The two rungs of the scope ladder the Search-in popover offers. A search covers at
  * most one volume, so there are exactly two: the focused pane's current folder (the
  * default) and the volume it lives on (the maximum). Resolved by
- * `$lib/search/searchable-folder`.
+ * `#lib/search/searchable-folder`.
  */
 export interface ScopePresets {
   /** "Use current folder" (⌥C), or `null` when the focused pane is a snapshot with no real folder behind it. */
@@ -107,7 +107,7 @@ export interface QueryDialogFilterChipsExtras {
   /**
    * The two scope presets the Search-in popover offers ("Use current folder" / "This
    * volume") plus the default an unset scope resolves to. Built by the dialog's host
-   * from the focused pane; see `$lib/search/searchable-folder`.
+   * from the focused pane; see `#lib/search/searchable-folder`.
    */
   scopePresets: ScopePresets
   /**
@@ -209,7 +209,7 @@ export interface QueryDialogConfig<E = unknown> {
   title: string
   /**
    * Optional stability badge rendered next to the title (uppercase ALPHA / BETA
-   * pill). Derive it from `getBadgeStatus(id)` in `$lib/feature-status` so the
+   * pill). Derive it from `getBadgeStatus(id)` in `#lib/feature-status` so the
    * repo-root `feature-status.json` stays the single source of truth.
    */
   badge?: BadgeStatus

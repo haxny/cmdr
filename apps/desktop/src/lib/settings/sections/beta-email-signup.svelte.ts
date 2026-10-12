@@ -1,6 +1,6 @@
 /**
  * The beta contact email field's logic, shared by `UpdatesSection.svelte` (Settings) and
- * `$lib/onboarding/StepBeta.svelte` (first launch), so the two surfaces behave identically.
+ * `#lib/onboarding/StepBeta.svelte` (first launch), so the two surfaces behave identically.
  *
  * The address persists to `analytics.email` on every keystroke (local only). On commit with
  * a valid address, it subscribes to the beta mailing list via `betaSignup`, which sends ONLY
@@ -15,9 +15,9 @@
  * `KeyboardShortcutsSection.controller.svelte.ts`: each surface owns its own in-flight and
  * feedback state. Call it during component init.
  */
-import { getSetting, setSetting } from '$lib/settings'
-import { onSpecificSettingChange } from '$lib/settings/settings-store'
-import { betaSignup } from '$lib/tauri-commands'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { onSpecificSettingChange } from '#lib/settings/settings-store.js'
+import { betaSignup } from '#lib/tauri-commands/index.js'
 
 /**
  * The inline result under the field. A typed kind, not a parsed message.

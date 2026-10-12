@@ -23,7 +23,7 @@ The organization's MDM policy as this window shows it. The backend reads, decide
 - **Pinned vs narrowed.** A `fixed` lock disables the whole row; a `disallowedValues` lock (`ai.provider` under
   `DisableCloudAI`) leaves the row usable and rules out only its values, so the control disables those options.
 - **Restricted windows (viewer, queue) never fetch it**: they render none of these settings.
-- **The barrel is imported lazily** (`await import('$lib/tauri-commands')`): the settings store imports this file, and a
+- **The barrel is imported lazily** (`await import('#lib/tauri-commands')`): the settings store imports this file, and a
   static barrel import would drag the whole IPC surface into every settings consumer.
 
 Flows and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or

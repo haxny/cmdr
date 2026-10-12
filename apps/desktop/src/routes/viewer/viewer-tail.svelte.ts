@@ -13,8 +13,8 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
-import { addToast, dismissToast } from '$lib/ui/toast/toast-store.svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { addToast, dismissToast } from '#lib/ui/toast/toast-store.svelte.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import ViewerReloadToastContent from './ViewerReloadToastContent.svelte'
 
 export type FileChangedKind = 'grew' | 'rotated'

@@ -13,15 +13,15 @@ const { savePaneTabsSpy, trackEventSpy, updatePinTabMenuSpy, addToastSpy } = vi.
   addToastSpy: vi.fn<(message: string, options?: { level?: string }) => void>(),
 }))
 
-vi.mock('$lib/app-status-store', () => ({ savePaneTabs: savePaneTabsSpy }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/app-status-store.js', () => ({ savePaneTabs: savePaneTabsSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   showTabContextMenu: vi.fn(),
   onTabContextAction: vi.fn(() => Promise.resolve(() => {})),
   updatePinTabMenu: updatePinTabMenuSpy,
   trackEvent: trackEventSpy,
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

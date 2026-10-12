@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import ReportOffer from './ReportOffer.svelte'
 import type { ReportIncident } from './report-incident'
 

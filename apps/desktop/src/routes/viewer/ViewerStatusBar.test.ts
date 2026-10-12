@@ -2,11 +2,11 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 
 import ViewerStatusBar from './ViewerStatusBar.svelte'
-import type { MediaDimensions, ViewerContentKind } from '$lib/ipc/bindings'
+import type { MediaDimensions, ViewerContentKind } from '#lib/ipc/bindings.js'
 import type { ViewerDisplayMode } from './viewer-view-mode'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
 }))
 

@@ -21,7 +21,7 @@ const ipc = vi.hoisted(() => ({
   rollbackOperation: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   ...ipc,

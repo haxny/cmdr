@@ -8,8 +8,8 @@
  * shifts between calls, so the rows sort by name.
  */
 
-import type { TextEditorList } from '$lib/ipc/bindings'
-import { SYSTEM_DEFAULT_EDITOR_CHOICE } from '$lib/text-editor/text-editor-choice'
+import type { TextEditorList } from '#lib/ipc/bindings.js'
+import { SYSTEM_DEFAULT_EDITOR_CHOICE } from '#lib/text-editor/text-editor-choice.js'
 import { CHOOSE_APP_VALUE, type AppChoiceOption } from './app-choice-options'
 
 /** The words the rows need, resolved by the caller so this module stays free of the catalog. */

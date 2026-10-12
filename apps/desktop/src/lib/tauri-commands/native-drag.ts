@@ -10,7 +10,7 @@ import {
   type DragModifiers,
   type SessionCompleteEvent,
   type SessionStartedEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /** The OS drag image's pixel dimensions, read on drag enter. */
 export function onDragImageSize(handler: (payload: DragImageSize) => void): Promise<UnlistenFn> {

@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import FilePane from './FilePane.svelte'
 import { waitForUpdates, useMountTarget } from './integration-test-utils'
-import { findFileIndex } from '$lib/tauri-commands'
+import { findFileIndex } from '#lib/tauri-commands/index.js'
 
 // ============================================================================
 // Mock setup (must be in each test file; Vitest hoists vi.mock calls)
@@ -19,7 +19,7 @@ let mockEntry: unknown = null
 /** The pane's live `directory-diff` handler, captured when it subscribes on mount. */
 let emitDirectoryDiff: ((payload: unknown) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listDirectoryStart: vi.fn().mockResolvedValue({ listingId: 'mock-listing', status: { status: 'ready' } }),
   cancelListing: vi.fn().mockResolvedValue(undefined),
   listDirectoryEnd: vi.fn().mockResolvedValue(undefined),
@@ -120,7 +120,7 @@ vi.mock('$lib/tauri-commands', () => ({
   getDirStatsBatch: vi.fn().mockResolvedValue({}),
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: vi.fn().mockReturnValue('/icons/file.png'),
@@ -133,7 +133,7 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getSpaceCalculatesFolderSize: vi.fn(() => false),
   getTypeToJumpMode: vi.fn().mockReturnValue('jump'),
   getRowHeight: vi.fn().mockReturnValue(24),
@@ -174,9 +174,9 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
   getShowVirtualGitPortal: vi.fn().mockReturnValue(true),
 }))
 
-vi.mock('$lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
+vi.mock('#lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: vi
     .fn()
     .mockReturnValue([{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }]),

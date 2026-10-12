@@ -3553,7 +3553,7 @@ export const commands = {
   isE2eMode: () => __TAURI_INVOKE<boolean>('is_e2e_mode'),
   /**
    *  Returns which automated run launched the app: none, a plain E2E run, or the i18n screenshot
-   *  capture. `$lib/app-mode` resolves the window's mode from it once per window. Always compiled
+   *  capture. `#lib/app-mode` resolves the window's mode from it once per window. Always compiled
    *  in; with the env vars unset it answers `None`.
    */
   getAutomatedRun: () => __TAURI_INVOKE<AutomatedRun>('get_automated_run'),
@@ -16632,7 +16632,7 @@ export type UpdatePolicyView =
  *  than a sentence.
  *
  *  Word-free by design: the frontend renders the copy from the message catalog
- *  (`$lib/error-messages/` convention — classification in Rust, words on the frontend).
+ *  (`#lib/error-messages/` convention — classification in Rust, words on the frontend).
  *  A raw `No route to host (os error 65)` has no business reaching a person.
  */
 export type UpgradeFailure =
@@ -18497,7 +18497,7 @@ export type WriteSettledEvent = {
  *
  *  The frontend uses it for gradual deselection during an operation, and
  *  `source_removed` additionally drives the search-snapshot purge
- *  (`$lib/search/snapshot-purge.ts`). Why the outcome rides on this event rather
+ *  (`#lib/search/snapshot-purge.ts`). Why the outcome rides on this event rather
  *  than a sibling one, and where each non-`Done` verdict comes from: `DETAILS.md`
  *  § "Per-source outcomes".
  */

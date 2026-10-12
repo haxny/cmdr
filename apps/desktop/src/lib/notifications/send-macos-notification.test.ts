@@ -14,18 +14,18 @@ const { getNotificationPermissionMock, showNotificationMock, addToastMock, warnM
   warnMock: vi.fn(),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getNotificationPermission: getNotificationPermissionMock,
     showNotification: showNotificationMock,
   },
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: warnMock, error: vi.fn() }),
 }))
 

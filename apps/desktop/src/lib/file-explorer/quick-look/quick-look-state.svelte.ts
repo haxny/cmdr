@@ -30,9 +30,9 @@
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
 
-import { onQuickLookClosed, onQuickLookKey, quickLookClose } from '$lib/tauri-commands'
-import { eventMatchesCommand } from '$lib/shortcuts'
-import { isTextInputFocused } from '$lib/utils/text-input-focus'
+import { onQuickLookClosed, onQuickLookKey, quickLookClose } from '#lib/tauri-commands/index.js'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+import { isTextInputFocused } from '#lib/utils/text-input-focus.js'
 
 import type { ExplorerAPI } from '../../../routes/(main)/explorer-api'
 

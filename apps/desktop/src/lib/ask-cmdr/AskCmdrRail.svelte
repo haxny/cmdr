@@ -6,12 +6,12 @@
 -->
 <script lang="ts">
     import { tick, untrack } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
-    import { getBadgeStatus } from '$lib/feature-status'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { dependOn } from '$lib/utils/reactivity'
+    import Icon from '#lib/ui/Icon.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
+    import { getBadgeStatus } from '#lib/feature-status.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import AskCmdrComposer from './AskCmdrComposer.svelte'
     import AskCmdrMessage from './AskCmdrMessage.svelte'
     import AskCmdrSessions from './AskCmdrSessions.svelte'
@@ -28,8 +28,8 @@
         setRailWidth,
     } from './ask-cmdr-trigger.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
-    import { cloudConsentState } from '$lib/ai/cloud-consent.svelte'
-    import { getSetting, onSpecificSettingChange, type AiProvider } from '$lib/settings'
+    import { cloudConsentState } from '#lib/ai/cloud-consent.svelte.js'
+    import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
     import { openSessions, sessionsState } from './ask-cmdr-sessions.svelte'
 
     const badgeStatus = getBadgeStatus('ask-cmdr')

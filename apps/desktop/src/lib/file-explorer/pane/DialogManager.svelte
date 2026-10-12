@@ -3,10 +3,10 @@
     import TransferProgressDialog from '../../file-operations/transfer/TransferProgressDialog.svelte'
     import TransferErrorDialog from '../../file-operations/transfer/TransferErrorDialog.svelte'
     import ArchivePasswordDialog from '../../file-operations/transfer/ArchivePasswordDialog.svelte'
-    import DeleteDialog from '$lib/file-operations/delete/DeleteDialog.svelte'
-    import NewFolderDialog from '$lib/file-operations/mkdir/NewFolderDialog.svelte'
-    import NewFileDialog from '$lib/file-operations/mkfile/NewFileDialog.svelte'
-    import AlertDialog from '$lib/ui/AlertDialog.svelte'
+    import DeleteDialog from '#lib/file-operations/delete/DeleteDialog.svelte'
+    import NewFolderDialog from '#lib/file-operations/mkdir/NewFolderDialog.svelte'
+    import NewFileDialog from '#lib/file-operations/mkfile/NewFileDialog.svelte'
+    import AlertDialog from '#lib/ui/AlertDialog.svelte'
     import type { TransferDialogPropsData } from './transfer-operations'
     import type {
         AdoptedOperationData,
@@ -24,7 +24,7 @@
         TransferCompletePayload,
     } from './dialog-props'
     import type { FriendlyError, WriteOperationError } from '../types'
-    import type { ProgressAtStop } from '$lib/tauri-commands'
+    import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
 
     const {
         onDialogRenderError,

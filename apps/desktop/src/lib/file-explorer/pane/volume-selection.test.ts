@@ -6,14 +6,14 @@ const { resolvePathVolumeSpy } = vi.hoisted(() => ({
   resolvePathVolumeSpy: vi.fn<() => Promise<{ volume: { id: string } | null }>>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolvePathVolume: resolvePathVolumeSpy,
   // Picking a favorite reports `favorite_opened`; fire-and-forget, so a stub suffices.
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(), addToastForPane: vi.fn() }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(), addToastForPane: vi.fn() }))
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: vi.fn() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
@@ -183,7 +183,7 @@ describe('createVolumeSelection', () => {
   })
 
   it('selectVolumeById reports the surface that picked a favorite (the Dock tile menu)', async () => {
-    const { trackEvent } = await import('$lib/tauri-commands')
+    const { trackEvent } = await import('#lib/tauri-commands/index.js')
     const { ops } = setup([
       vol({
         id: 'fav-3',

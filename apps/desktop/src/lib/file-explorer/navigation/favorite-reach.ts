@@ -8,10 +8,10 @@
  * so a new reach kind is a type error here rather than a silent "ready".
  */
 
-import type { FavoriteReach, FavoriteTarget } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
-import type { IconName } from '$lib/ui/icons/icon-map'
-import { volumeScheme } from '$lib/volume-scheme'
+import type { FavoriteReach, FavoriteTarget } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
 import type { VolumeInfo } from '../types'
 
 /** A reach the pane can't follow: a pick leaves the pane where it is and says why. */

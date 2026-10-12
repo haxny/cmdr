@@ -23,7 +23,7 @@ const { setArchivePassword, clearArchivePassword, notifyArchivePasswordPrompt, n
     notifyArchivePasswordDismissed: vi.fn(() => Promise.resolve()),
   }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -33,9 +33,9 @@ vi.mock('$lib/tauri-commands', () => ({
   notifyArchivePasswordDismissed,
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 /** Minimal `FilePaneAPI` stub plus the spies its transfer-path members expose. */
 function makePaneRef() {

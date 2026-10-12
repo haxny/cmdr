@@ -9,10 +9,10 @@
     // it against `agent/wake/readiness.rs` (which holds that every readiness gap is worth
     // reporting): a gap IS something to say, but only to somebody who opted in. Nothing shows
     // for a user who never consented or who turned the proactive loop off.
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { suggestedOpsBadge } from './suggested-ops-badge.svelte'
     import { openSuggestedOps } from './suggested-ops-trigger.svelte'
 

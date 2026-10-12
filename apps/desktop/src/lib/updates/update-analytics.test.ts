@@ -6,8 +6,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 // Pure vocabulary only: the IPC wrapper is stubbed so importing this module doesn't pull in
-// `$lib/ipc/bindings` and, through it, the whole Tauri surface.
-vi.mock('$lib/tauri-commands', () => ({ trackEvent: vi.fn() }))
+// `#lib/ipc/bindings` and, through it, the whole Tauri surface.
+vi.mock('#lib/tauri-commands/index.js', () => ({ trackEvent: vi.fn() }))
 
 import { blockerFailure, updateCheckProps, type UpdateCheckOutcome, type UpdateCheckTrigger } from './update-analytics'
 

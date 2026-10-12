@@ -10,7 +10,7 @@ import {
   type EnterBehaviorByFormat,
   type EnterCandidate,
 } from './archive-enter-policy'
-import { getSettingDefinition, settingsRegistry } from '$lib/settings/settings-registry'
+import { getSettingDefinition, settingsRegistry } from '#lib/settings/settings-registry.js'
 
 /** A plain file entry with the fields the resolver reads. */
 function file(name: string, isArchive = false): EnterCandidate {

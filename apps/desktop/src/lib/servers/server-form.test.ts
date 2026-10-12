@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { SavedServer, ServerProtocol } from '$lib/ipc/bindings'
+import type { SavedServer, ServerProtocol } from '#lib/ipc/bindings.js'
 import { parseServerAddress } from './address-parser'
 import {
   applyParsedAddress,

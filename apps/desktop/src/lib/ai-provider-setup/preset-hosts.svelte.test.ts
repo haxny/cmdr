@@ -4,13 +4,13 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
-import { cloudProviderPresets } from '$lib/settings/cloud-providers'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { cloudProviderPresets } from '#lib/settings/cloud-providers.js'
 import { PresetHostVerdicts } from './preset-hosts.svelte'
 
 const cloudAiHostVerdicts = vi.fn<(baseUrls: string[]) => Promise<(ManagedAiRefusal | null)[]>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cloudAiHostVerdicts: (baseUrls: string[]) => cloudAiHostVerdicts(baseUrls),
 }))
 

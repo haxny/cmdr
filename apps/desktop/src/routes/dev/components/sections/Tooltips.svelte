@@ -1,8 +1,8 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     const longPath = '/Users/david/Library/CloudStorage/Dropbox/obsidian/40-49 things/veszelovszki.com and other domains.md'
 </script>

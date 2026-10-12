@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Size from '$lib/ui/Size.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import { formatFilesPerSecond } from '$lib/units'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { t, tString } from '$lib/intl/messages.svelte'
+    import Size from '#lib/ui/Size.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import { formatFilesPerSecond } from '#lib/units/index.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
     import type { TransferWaitLine } from './transfer-stall'
 
     interface Props {

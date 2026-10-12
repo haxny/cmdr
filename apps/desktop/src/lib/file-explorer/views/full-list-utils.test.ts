@@ -14,11 +14,11 @@ import {
 } from './full-list-utils'
 import type { SizeDisplayPick } from './full-list-utils'
 import type { FileEntry } from '../types'
-import type { GitCountKind } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { GitCountKind } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 // Mock the settings store
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn().mockReturnValue(20), // Default buffer size
 }))
 

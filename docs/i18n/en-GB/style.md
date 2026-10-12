@@ -151,7 +151,7 @@ Considered and deliberately NOT forked, so nobody re-litigates them:
   Verified in the reference pile, 2026-08-29. So the whole `selection.*` area, the two Select menu items, and the
   selection commands inherit base `en` here. Don't mirror `docs/i18n/en-AU/glossary.md` on this one.
 - **Date and time formats.** `en-GB` day-first, 24-hour is real (`Finder/LocalizableMerged.json:DATE_FORMATTER1`), but
-  Cmdr formats dates through `$lib/intl/number-format.ts` and the OS region, not through catalog strings. Nothing to
+  Cmdr formats dates through `#lib/intl/number-format.ts` and the OS region, not through catalog strings. Nothing to
   fork.
 - **`checkbox` → `tickbox`, `webpages` → `web pages`, `signed into` → `signed in to`, `period` → `full stop`.** All
   genuine `en-GB` forks with no matching string in Cmdr's catalog today. If copy ever introduces one of these words,

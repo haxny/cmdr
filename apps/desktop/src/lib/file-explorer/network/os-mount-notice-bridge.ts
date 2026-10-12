@@ -25,11 +25,11 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { addToast, dismissToast, getToasts } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import { onSmbFellBackToOsMount, onSmbOsMountNoticeWithdrawn, onVolumesChanged } from '$lib/tauri-commands'
-import type { SmbFellBackToOsMount } from '$lib/ipc/bindings'
+import { addToast, dismissToast, getToasts } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { onSmbFellBackToOsMount, onSmbOsMountNoticeWithdrawn, onVolumesChanged } from '#lib/tauri-commands/index.js'
+import type { SmbFellBackToOsMount } from '#lib/ipc/bindings.js'
 import type { VolumeInfo } from '../types'
 import SmbOsMountFallbackToastContent from './SmbOsMountFallbackToastContent.svelte'
 

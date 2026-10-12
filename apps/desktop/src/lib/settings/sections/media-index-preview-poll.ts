@@ -10,7 +10,7 @@
  * Once resolved, polling stops — the pass-completion invalidation keeps
  * later fetches honest.
  */
-import type { CoveredCount } from '$lib/tauri-commands'
+import type { CoveredCount } from '#lib/tauri-commands/index.js'
 
 /** Whether the covered-count preview is unresolved and should be re-polled. */
 export function shouldRepollPreview(covered: CoveredCount | null): boolean {

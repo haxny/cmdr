@@ -23,7 +23,7 @@
  * underlying paths are real.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * The user-facing toast text shown when a keyboard shortcut tries to do something

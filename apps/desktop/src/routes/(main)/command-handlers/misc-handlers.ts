@@ -9,11 +9,11 @@
  * navigation); preserve its `await`. `file.goToTrash` awaits for the same reason:
  * it resolves the volume's trash over IPC before any pane moves.
  */
-import { goToLatestDownload } from '$lib/downloads/go-to-latest'
-import { goToTrash } from '$lib/file-operations/delete/go-to-trash'
-import { addFavoriteFolder } from '$lib/file-explorer/navigation/add-favorite-folder'
-import { getFocusedPanePath } from '$lib/file-explorer/pane/focused-pane-reads'
-import type { CommandArgs } from '$lib/commands'
+import { goToLatestDownload } from '#lib/downloads/go-to-latest.js'
+import { goToTrash } from '#lib/file-operations/delete/go-to-trash.js'
+import { addFavoriteFolder } from '#lib/file-explorer/navigation/add-favorite-folder.js'
+import { getFocusedPanePath } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import type { CommandArgs } from '#lib/commands/index.js'
 import { selectVolumeForMcp } from '../mcp-volume-select'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'

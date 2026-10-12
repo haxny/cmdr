@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest'
 import { adoptedOperationFor } from './foreground-request'
 import type { OperationRow } from './queue/operations-store.svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 
 function row(operationId: string, operationType: OperationSnapshot['operationType'] = 'copy'): OperationRow {
   return {

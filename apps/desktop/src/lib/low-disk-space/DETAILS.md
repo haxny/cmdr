@@ -22,7 +22,7 @@ condition that re-arms the detector emits the dismiss.
 - `'in-app'`: `isLow: true` → `addToast(LowDiskSpaceToastContent, ...)`, level `warn`, `dismissal: 'persistent'`, dedup
   id `low-disk-space:<volumeId>`. `isLow: false` → `dismissToast(low-disk-space:<volumeId>)` (a no-op if the user
   already closed it).
-- `'macos'`: `isLow: true` → `sendMacosNotification(...)` from `$lib/notifications/` (asks macOS per send whether Cmdr's
+- `'macos'`: `isLow: true` → `sendMacosNotification(...)` from `#lib/notifications/` (asks macOS per send whether Cmdr's
   notifications are on, one INFO toast when they're off, setting stays put, never throws). The native notification is
   text-only: the plugin can't carry custom action buttons on desktop, so the disable affordance lives only on the in-app
   toast and in Settings. `isLow: false` → no-op: a delivered notification can't be recalled or live-updated, which is
@@ -59,6 +59,6 @@ toast, and deep-links to the Settings sub-group so the user sees where to re-ena
 
 ## i18n
 
-All user-facing copy here lives in `$lib/intl/messages/en/lowDiskSpace.json` (prefix `lowDiskSpace.*`), resolved via
-`tString()` from `$lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/low-disk-space/`. Don't hardcode
+All user-facing copy here lives in `#lib/intl/messages/en/lowDiskSpace.json` (prefix `lowDiskSpace.*`), resolved via
+`tString()` from `#lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/low-disk-space/`. Don't hardcode
 copy. Base-en output is parity-pinned by `low-disk-space-i18n-parity.test.ts`.

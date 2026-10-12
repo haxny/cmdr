@@ -2,7 +2,7 @@
 //!
 //! The slider writes `NSGlassTintAmount` to the global domain: `0.0` is the clearest glass,
 //! `1.0` the most tinted. The frontend turns it into the `--glass-tint` CSS variable, which
-//! drives the fill and blur of every frosted-glass surface (`$lib/glass-tint.ts`).
+//! drives the fill and blur of every frosted-glass surface (`#lib/glass-tint.ts`).
 //!
 //! ## Risks (knowingly accepted)
 //!

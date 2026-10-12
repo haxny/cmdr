@@ -7,14 +7,19 @@
  * Lives beside `clipboard-operations.ts` (which calls it from `pasteFromClipboard`)
  * so the gating, dispatch, and toast composition are headless-testable.
  */
-import { findFileIndex, onDirectoryDiff, pasteClipboardAsFile, type PastedClipboardFile } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { addToastForPane, dismissToast, type ToastOriginPane } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { asMutationError } from '$lib/file-operations/mutation-error'
-import { renderMutationError } from '$lib/file-operations/mutation-error-messages'
-import { moveCursorToNewFolder } from '$lib/file-operations/mkdir/new-folder-operations'
+import {
+  findFileIndex,
+  onDirectoryDiff,
+  pasteClipboardAsFile,
+  type PastedClipboardFile,
+} from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { addToastForPane, dismissToast, type ToastOriginPane } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { asMutationError } from '#lib/file-operations/mutation-error.js'
+import { renderMutationError } from '#lib/file-operations/mutation-error-messages.js'
+import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import PasteClipboardToastContent from '../PasteClipboardToastContent.svelte'
 import type { FilePaneAPI } from './types'
 

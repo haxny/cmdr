@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { openSettingsWindow } from '$lib/settings/settings-window'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { openSettingsWindow } from '#lib/settings/settings-window.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openErrorReportDialogForAutoSentReport } from './error-report-flow.svelte'
     import SentReportToastBody from './SentReportToastBody.svelte'
 

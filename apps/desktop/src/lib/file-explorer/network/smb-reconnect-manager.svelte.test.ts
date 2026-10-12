@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { SignInShape, VolumeConnection, VolumeConnectionChanged } from '$lib/ipc/bindings'
+import type { SignInShape, VolumeConnection, VolumeConnectionChanged } from '#lib/ipc/bindings.js'
 
 // Hoisted mocks: must run before importing the module under test.
 const mockReconnect = vi.fn<(volumeId: string) => Promise<void>>()
@@ -16,7 +16,7 @@ const mockSignInState = vi.fn<(volumeId: string) => Promise<SignInShape>>()
 const mockListen = vi.fn<(handler: (payload: VolumeConnectionChanged) => void) => Promise<() => void>>()
 let lastEventHandler: ((payload: VolumeConnectionChanged) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   reconnectVolume: (id: string) => mockReconnect(id),
   getVolumeSignInState: (id: string) => mockSignInState(id),
   // The manager subscribes to `volume-connection-changed` through this typed wrapper,
@@ -28,7 +28,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const { warn, error } = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error }),
 }))
 

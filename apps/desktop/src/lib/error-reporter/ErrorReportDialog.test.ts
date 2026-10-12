@@ -10,8 +10,8 @@
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import { tString } from '$lib/intl/messages.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import ErrorReportDialog from './ErrorReportDialog.svelte'
 import {
   closeErrorReportDialog,
@@ -35,25 +35,25 @@ const { api, addToast, logger } = vi.hoisted(() => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands/error-reporter', () => api)
+vi.mock('#lib/tauri-commands/error-reporter.js', () => api)
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   addToast,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: vi.fn(),
   getSetting: vi.fn(() => ''),
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 
 // This suite renders the dialog itself, so it plays the main window that hosts it.
 beforeAll(() => {
@@ -62,8 +62,8 @@ beforeAll(() => {
 
 // Only `reportsDisabled` matters to the dialog; a test flips it before mounting.
 const managedPolicy = vi.hoisted(() => ({ reportsDisabled: false }))
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => {
-  const real = await importOriginal<typeof import('$lib/managed-policy/managed-policy.svelte')>()
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('#lib/managed-policy/managed-policy.svelte.js')>()
   return {
     ...real,
     getManagedPolicyView: () => ({ ...real.UNMANAGED, reportsDisabled: managedPolicy.reportsDisabled }),

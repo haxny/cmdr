@@ -26,7 +26,7 @@ import type {
   ServerTarget,
   SftpHostKeyIdentity,
   SignInShape,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import type { ConnectRefusalKind, RefusalHint } from './connect-refusals'
 
 /** The server a sign-in is FOR, as its read-only header spells it. */

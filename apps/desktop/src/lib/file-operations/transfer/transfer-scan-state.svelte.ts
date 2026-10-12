@@ -38,9 +38,9 @@ import {
   type UnlistenFn,
   type CompressedSizeEstimate,
   type ScanPreviewRefusal,
-} from '$lib/tauri-commands'
-import type { SortColumn, SortOrder } from '$lib/file-explorer/types'
-import { getSetting } from '$lib/settings'
+} from '#lib/tauri-commands/index.js'
+import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
+import { getSetting } from '#lib/settings/index.js'
 
 export interface TransferScanStateDeps {
   /** Source paths to scan (static prop). */

@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { getEffectiveShortcuts } from '$lib/shortcuts/shortcuts-store'
-import { formatKeyCombo } from '$lib/shortcuts/key-capture'
-import { initShortcutDispatch, lookupCommand, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
+import { getEffectiveShortcuts } from '#lib/shortcuts/shortcuts-store.js'
+import { formatKeyCombo } from '#lib/shortcuts/key-capture.js'
+import { initShortcutDispatch, lookupCommand, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
 
 const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')
 beforeAll(() => {

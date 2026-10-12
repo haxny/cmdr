@@ -19,10 +19,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import { writable } from 'svelte/store'
 import SearchDialog from './SearchDialog.svelte'
-import type { SearchResult, SearchResultEntry } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
+import type { SearchResult, SearchResultEntry } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { clearSearchState, setQuery } from './search-state.svelte'
-import { SEARCH_AUTO_APPLY_DEBOUNCE_MS } from '$lib/query-ui/query-filter-state.svelte'
+import { SEARCH_AUTO_APPLY_DEBOUNCE_MS } from '#lib/query-ui/query-filter-state.svelte.js'
 
 const NAS: SearchResultEntry[] = []
 
@@ -71,7 +71,7 @@ const {
   trackEventMock: vi.fn((_event: string, _props?: Record<string, unknown>) => Promise.resolve()),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   prepareSearchIndex: prepareSearchIndexMock,
@@ -117,7 +117,7 @@ vi.mock('../../routes/viewer/media-view', () => ({
   mediaUrl: (token: string) => `cmdr-media://localhost/${token}`,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return 'off'
     // Auto-apply off by default: an explicit Enter is what most of this file drives, so
@@ -133,22 +133,22 @@ vi.mock('$lib/settings', () => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: volumesMock,
 }))
 
-vi.mock('$lib/ui/toast', async (importOriginal) => {
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, addToast: addToastMock }
 })
 
-vi.mock('$lib/indexing', () => ({
+vi.mock('#lib/indexing/index.js', () => ({
   isVolumeScanning: vi.fn(() => false),
   getEntriesScanned: vi.fn(() => 0),
   ROOT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,

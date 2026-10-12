@@ -28,7 +28,7 @@
      * empty cards under search).
      */
     import SettingsSection from '../components/SettingsSection.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
@@ -36,10 +36,10 @@
     import TextEditorSelect from './TextEditorSelect.svelte'
     import TerminalAppSelect from './TerminalAppSelect.svelte'
     import RevealHandlerCard from './RevealHandlerCard.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSettingDefinition } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
-    import { isMacOS } from '$lib/shortcuts/key-capture'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSettingDefinition } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
+    import { isMacOS } from '#lib/shortcuts/key-capture.js'
 
     interface Props {
         searchQuery: string

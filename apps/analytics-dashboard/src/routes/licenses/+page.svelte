@@ -14,8 +14,8 @@
 <script lang="ts">
     import type { PageProps } from './$types'
     import { enhance } from '$app/forms'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import { formatNumber, formatUtcDateTime } from '$lib/format.js'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import { formatNumber, formatUtcDateTime } from '#lib/format.js'
     import {
         expiryPlaceholder,
         filterBySource,
@@ -29,7 +29,7 @@
         type LicenseRow,
         type SourceFilter,
         type StateTone,
-    } from '$lib/licenses.js'
+    } from '#lib/licenses.js'
 
     const { data, form }: PageProps = $props()
 

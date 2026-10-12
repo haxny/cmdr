@@ -1,6 +1,6 @@
 import type { FileEntry, FriendlyError, NetworkHost, ShareInfo } from '../types'
 import type { DragAutoScrollFrameResult, DragAutoScrollPointer } from '../drag/drag-auto-scroll'
-import type { Initiator, ListingIndexSizesChanged, Location } from '$lib/tauri-commands'
+import type { Initiator, ListingIndexSizesChanged, Location } from '#lib/tauri-commands/index.js'
 import type { HubRow } from '../network/servers-hub-rows'
 import type { FavoritesMenuOpenTrigger } from '../navigation/favorites-analytics'
 import type { HistoryCursor } from '../navigation/navigation-history'

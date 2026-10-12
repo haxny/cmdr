@@ -1,7 +1,7 @@
 /**
  * Domain types and pure aggregation helpers for in-app feedback and error reports. Lives outside
- * `$lib/server` so both the page (client bundle) and the report/server code can import the helpers;
- * the server-only fetching lives in `$lib/server/sources/feedback-and-errors.ts`.
+ * `#lib/server` so both the page (client bundle) and the report/server code can import the helpers;
+ * the server-only fetching lives in `#lib/server/sources/feedback-and-errors.ts`.
  */
 
 /** One in-app "Send feedback" submission. `email` is the optional reply-to the sender attached. */

@@ -11,7 +11,7 @@
  * need.
  */
 
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import type { QueryDialogConfig } from './query-dialog-config'
 import { createQueryFilterState } from './query-filter-state.svelte'
 

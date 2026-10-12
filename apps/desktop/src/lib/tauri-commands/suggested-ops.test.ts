@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     suggestedOpsList: vi.fn(),
     suggestedOpsPage: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import {
   approveSuggestedGroup,
   listSuggestedOps,

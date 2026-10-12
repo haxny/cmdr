@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { loadThirdPartyPackages, type AttributedPackage } from './load-third-party-packages'
 
     /** The repo's notices file on GitHub; the full license texts also ship inside the app bundle. */

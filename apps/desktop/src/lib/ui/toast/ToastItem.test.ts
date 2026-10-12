@@ -11,11 +11,11 @@ import { mount, tick, unmount } from 'svelte'
 import ToastItem from './ToastItem.svelte'
 import ToastContainer from './ToastContainer.svelte'
 import ToastIdFixture from './toast-id-fixture.svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { HOVER_LEAVE_GRACE_MS, addToast, clearAllToasts, getToasts } from './toast-store.svelte'
 
 const reportFlow = vi.hoisted(() => ({ openErrorReportFor: vi.fn() }))
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => reportFlow)
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => reportFlow)
 
 function mountItem(props: Record<string, unknown>): HTMLElement {
   const target = document.createElement('div')

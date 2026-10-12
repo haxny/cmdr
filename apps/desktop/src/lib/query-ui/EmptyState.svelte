@@ -17,12 +17,12 @@
      * be refused, so they give way to one line saying why and a button to the switch. The
      * non-AI examples stay, and the AI mode chip stays visible so the feature stays findable.
      */
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { openCloudConsentSettings } from '$lib/ai/cloud-consent.svelte'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
     import type { SearchMode } from './query-filter-state.svelte'
 
     interface ExampleChip {

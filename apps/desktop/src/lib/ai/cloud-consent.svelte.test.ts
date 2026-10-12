@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import type { CloudAiConsentStatus } from '$lib/tauri-commands'
+import type { CloudAiConsentStatus } from '#lib/tauri-commands/index.js'
 
 const { statusMock, acceptMock, revokeMock, pendingChangedMock, listenMock, settingsMock, order } = vi.hoisted(() => {
   const order: string[] = []
@@ -22,7 +22,7 @@ const { statusMock, acceptMock, revokeMock, pendingChangedMock, listenMock, sett
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cloudAiConsentStatus: () => statusMock(),
   acceptCloudAiConsent: () => {
     order.push('accept')
@@ -32,7 +32,7 @@ vi.mock('$lib/tauri-commands', () => ({
   cloudAiConsentRevokePendingChanged: () => pendingChangedMock(),
   onCloudAiConsentChanged: (handler: () => void) => listenMock(handler),
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string): unknown => settingsMock.values[id] ?? false,
   setSetting: (id: string, value: unknown) => {
     order.push(`set ${id}=${String(value)}`)
@@ -43,7 +43,7 @@ vi.mock('$lib/settings', () => ({
     return settingsMock.forceSave()
   },
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

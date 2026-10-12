@@ -13,8 +13,8 @@
  * design), so the gallery holds no open-state for it and has nothing to restore.
  */
 
-import type { CommandDispatchArgs, CommandId } from '$lib/commands'
-import { setCurrentStep } from '$lib/onboarding/onboarding-state.svelte'
+import type { CommandDispatchArgs, CommandId } from '#lib/commands/index.js'
+import { setCurrentStep } from '#lib/onboarding/onboarding-state.svelte.js'
 import { closeGalleryDialog } from './gallery-state.svelte'
 import { onboardingFixtures } from './fixtures/onboarding'
 

@@ -7,9 +7,9 @@
  * The Svelte popup paths in `VolumeBreadcrumb` call `ejectVolume` directly;
  * this only covers the native-menu case.
  */
-import { ejectVolume, type VolumeContextAction } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { addToast } from '$lib/ui/toast'
+import { ejectVolume, type VolumeContextAction } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import { pathForPickedVolume } from '../navigation/picked-volume-path'
 import { runServerRowAction } from '../navigation/server-row-actions'
 import { wordEjectRefusal } from '../navigation/eject-error-messages'

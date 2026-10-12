@@ -3,8 +3,8 @@
  * needs and the prose in `transfer-error-messages.ts` deliberately never states. English only, never translated:
  * it's for the report, not the reader.
  */
-import type { WriteOperationError } from '$lib/file-explorer/types'
-import { formatByteSize } from '$lib/units'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
+import { formatByteSize } from '#lib/units/index.js'
 
 /** Error types where technical details are just the path. */
 const pathOnlyTypes = new Set<WriteOperationError['type']>([

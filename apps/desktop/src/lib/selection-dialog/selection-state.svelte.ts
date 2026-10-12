@@ -14,7 +14,7 @@
  * dialog's clear hook → `clearSelectionState`) is the only reset.
  */
 
-import { createQueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import { createQueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 
 /**
  * The single cross-consumer state instance for the Selection dialog. Exposed so

@@ -86,11 +86,11 @@ function deliver(name: string, payload: unknown): void {
   }
 }
 
-vi.mock('$lib/settings/store-path', () => ({
+vi.mock('#lib/settings/store-path.js', () => ({
   resolveStorePath: (name: string) => Promise.resolve(name),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     updateMenuAccelerator: () => Promise.resolve({ status: 'ok' as const, data: null }),
   },

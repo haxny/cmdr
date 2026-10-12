@@ -9,7 +9,7 @@
  * timing, only at what the backend reported.
  */
 import { describe, it, expect } from 'vitest'
-import type { TransferActivity } from '$lib/tauri-commands'
+import type { TransferActivity } from '#lib/tauri-commands/index.js'
 import { STALL_NOTICE_SECONDS, stallNoticeFor, waitLineFor } from './transfer-stall'
 
 function activity(over: Partial<TransferActivity> = {}): TransferActivity {

@@ -1,6 +1,6 @@
 <!-- A "couldn't load this data" panel with a "Try again" link that re-requests the same selection. -->
 <script lang="ts">
-    import type { DashboardSelection } from '$lib/server/types.js'
+    import type { DashboardSelection } from '#lib/server/types.js'
 
     const { error, selection }: { error: string; selection: DashboardSelection } = $props()
 

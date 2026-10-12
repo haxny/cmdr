@@ -11,21 +11,21 @@
  * reactively; that's also why the file carries the `.svelte.ts` extension.
  */
 
-import { getCloudProvider, getProviderConfigs, setProviderConfig, getSetting, setSetting } from '$lib/settings'
-import type { CloudProviderPreset } from '$lib/settings/cloud-providers'
+import { getCloudProvider, getProviderConfigs, setProviderConfig, getSetting, setSetting } from '#lib/settings/index.js'
+import type { CloudProviderPreset } from '#lib/settings/cloud-providers.js'
 import {
   checkAiConnection,
   cloudAiHostVerdicts,
   deleteAiApiKey,
   getAiApiKeyStatus,
   saveAiApiKey,
-} from '$lib/tauri-commands'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
-import { computeModelCacheKey, getCachedModels, setCachedModels } from '$lib/settings/ai-model-cache'
-import { describeSecretError, type SecretErrorMessage } from '$lib/settings/sections/ai-secret-error'
-import { isE2eRun } from '$lib/app-mode'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
+} from '#lib/tauri-commands/index.js'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { computeModelCacheKey, getCachedModels, setCachedModels } from '#lib/settings/ai-model-cache.js'
+import { describeSecretError, type SecretErrorMessage } from '#lib/settings/sections/ai-secret-error.js'
+import { isE2eRun } from '#lib/app-mode.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { providerHasEditableEndpoint } from './provider-setup-plan'
 
 export type ConnectionStatus =

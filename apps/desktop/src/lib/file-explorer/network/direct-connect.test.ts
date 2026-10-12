@@ -9,7 +9,7 @@
  * it makes and drive the retry through the `attempt` it handed over.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { UpgradeResult } from '$lib/tauri-commands'
+import type { UpgradeResult } from '#lib/tauri-commands/index.js'
 
 const {
   upgradeToSmbVolume,
@@ -22,7 +22,7 @@ const {
   upgradeToSmbVolumeWithCredentials: vi.fn<() => Promise<UpgradeResult>>(),
   systemHasSavedSmbPassword: vi.fn<() => Promise<boolean>>(),
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   upgradeToSmbVolume,
   upgradeToSmbVolumeUsingSavedPassword,
   upgradeToSmbVolumeWithCredentials,
@@ -32,7 +32,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const { openSignInSheet } = vi.hoisted(() => ({ openSignInSheet: vi.fn() }))
-vi.mock('$lib/servers/sign-in-sheet-state.svelte', () => ({ openSignInSheet }))
+vi.mock('#lib/servers/sign-in-sheet-state.svelte.js', () => ({ openSignInSheet }))
 
 const { requestVolumeRefresh } = vi.hoisted(() => ({ requestVolumeRefresh: vi.fn() }))
 
@@ -43,9 +43,9 @@ const { addToast, dismissToast } = vi.hoisted(() => ({
   addToast: vi.fn<(content: unknown, options?: { level?: string }) => string>(),
   dismissToast: vi.fn<(id: string) => void>(),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast, dismissToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast, dismissToast }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ requestVolumeRefresh }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ requestVolumeRefresh }))
 
 vi.mock('./lazy-trigger', () => ({ triggerNetworkDiscovery: vi.fn() }))
 
@@ -179,7 +179,7 @@ describe('connectDirectly', () => {
     // ❗ This runs BEFORE the sheet opens and nothing here can await it, so a
     // rejection would be an unhandled one AND a prompt that never appeared, over
     // a pre-fill nobody would miss.
-    const { getUsernameHint } = await import('$lib/tauri-commands')
+    const { getUsernameHint } = await import('#lib/tauri-commands/index.js')
     vi.mocked(getUsernameHint).mockRejectedValueOnce(new Error('ipc down'))
     upgradeToSmbVolume.mockResolvedValue(credentialsNeeded)
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import RadioGroup, { type RadioItem } from '$lib/ui/RadioGroup.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import RadioGroup, { type RadioItem } from '#lib/ui/RadioGroup.svelte'
 
     let basicValue = $state('iso')
     let describedValue = $state('iso')

@@ -1,7 +1,7 @@
 /** Complete Copy/Move targets and the rename-by-move confirmation. */
 import { describe, it, expect, vi } from 'vitest'
 import { tick } from 'svelte'
-import type { TransferConfirmPayload } from '$lib/file-explorer/pane/dialog-props'
+import type { TransferConfirmPayload } from '#lib/file-explorer/pane/dialog-props.js'
 import {
   flushMicrotasks,
   makeConflict,

@@ -12,7 +12,7 @@ import {
   contextMenuSelectionSizeBytes,
   contextMenuSizeText,
 } from './context-menu-target'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { ListingStats } from '../types'
 
 function statsOf(over: Partial<ListingStats> = {}): ListingStats {

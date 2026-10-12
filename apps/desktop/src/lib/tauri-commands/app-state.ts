@@ -8,10 +8,10 @@ import {
   type PaneState,
   type SelectedRows,
   type ServicesSelection,
-} from '$lib/ipc/bindings'
-import type { SameKindTarget } from '$lib/file-explorer/pane/select-same-kind'
-import type { OperationGate, SoftDialogId } from '$lib/ui/dialog-registry'
-import { isMacOS } from '$lib/shortcuts/key-capture'
+} from '#lib/ipc/bindings.js'
+import type { SameKindTarget } from '#lib/file-explorer/pane/select-same-kind.js'
+import type { OperationGate, SoftDialogId } from '#lib/ui/dialog-registry.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { throwIpcError } from './ipc-types'
 
 export type { PaneFileEntry, PaneState, SelectedRows, ServicesSelection }
@@ -65,7 +65,7 @@ export async function updatePinTabMenu(isPinned: boolean): Promise<void> {
 /**
  * Makes the Select menu's "Select all of the same kind" item say what it would select right now.
  *
- * `target` is the focused pane's cursor row, from `$lib/file-explorer/pane/same-kind-target.svelte`
+ * `target` is the focused pane's cursor row, from `#lib/file-explorer/pane/same-kind-target.svelte`
  * (which is also the only caller: it debounces the pushes). `null` is a row with no kind, and
  * restores the neutral label. Rust renders the words from `menu_t`, so ❌ never pass a composed
  * string here.
@@ -108,7 +108,7 @@ export async function setReopenClosedTabEnabled(enabled: boolean): Promise<void>
  * focused pane's volume.
  *
  * ⚠️ Chrome, never the guard: a disabled item's accelerator still fires. Driven by
- * `$lib/open-terminal/menu-gate.svelte.ts`; the command handler words the refusal.
+ * `#lib/open-terminal/menu-gate.svelte.ts`; the command handler words the refusal.
  */
 export async function setOpenTerminalHereEnabled(enabled: boolean): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic over Runtime; not in typed bindings
@@ -140,7 +140,7 @@ export async function notifyDialogClosed(dialogType: SoftDialogId): Promise<void
  * dialogs" resource and for the gate that refuses an MCP file operation while a
  * dialog is up.
  *
- * `whileOpen` is declared once, per dialog, in `$lib/ui/dialog-registry.ts`; this
+ * `whileOpen` is declared once, per dialog, in `#lib/ui/dialog-registry.ts`; this
  * ships the verdict across so Rust never keeps a second opinion about it. The call
  * also clears the backend's open-dialog list, since startup means nothing is on
  * screen yet.
@@ -269,7 +269,7 @@ export async function setMainWindowVisible(visible: boolean): Promise<void> {
  * E2E-only: orders the labeled window behind everything without focusing it, so
  * a test run's child windows don't pop in front of the developer's work. No-op
  * outside E2E (the backend gates on `CMDR_E2E_MODE`). The caller is
- * `orderChildWindowToBackInE2e` in `$lib/app-mode`, which has the full rationale.
+ * `orderChildWindowToBackInE2e` in `#lib/app-mode`, which has the full rationale.
  */
 export async function orderWindowToBack(label: string): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic <R: Runtime> command, excluded from typed bindings (see the `ipc.rs` manifest)
@@ -288,7 +288,7 @@ export function setChildWindowRect(label: string, rect: ChildWindowRect): Promis
 
 /**
  * Hides a child window, then destroys it a moment later. Call it through `closeSelfWindow`
- * (`$lib/child-window-close`) rather than directly; that module says why the wait is in Rust.
+ * (`#lib/child-window-close`) rather than directly; that module says why the wait is in Rust.
  */
 export function closeChildWindow(label: string): Promise<void> {
   return commands.closeChildWindow(label)

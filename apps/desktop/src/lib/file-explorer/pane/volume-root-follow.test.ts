@@ -8,11 +8,11 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { VolumeRootChanged } from '$lib/ipc/bindings'
+import type { VolumeRootChanged } from '#lib/ipc/bindings.js'
 
 // The subscription wrapper reaches the real store, which carries a Svelte toast
 // component; the cells here inject every dependency instead.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ applyVolumeRootChanged: vi.fn() }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ applyVolumeRootChanged: vi.fn() }))
 import { addTab, createTabManager, getActiveTab, type TabManager } from '../tabs/tab-state-manager.svelte'
 import { createInitialTabState } from './tab-operations'
 import type { NavigateIntent, NavigateResult } from './navigate'

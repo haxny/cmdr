@@ -6,9 +6,9 @@
  * an error tooltip. Kept out of `ServersHub.svelte` so the component stays presentation-only,
  * following the sibling `network-store.svelte.ts` "pure logic → a `*.ts` helper" convention.
  */
-import type { IconName } from '$lib/ui/icons/icon-map'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import type { NetworkHost } from '../types'
 import { getShareState, getCredentialStatus, isHostResolving, isShareDataStale } from './network-store.svelte'
 import { renderShareListError } from './share-list-error-messages'

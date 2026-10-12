@@ -30,13 +30,13 @@
      *   - Esc closes, via the `Popover` wrapper.
      */
     import uFuzzy from '@leeoniya/ufuzzy'
-    import { INTRA_MODE_SINGLE_ERROR } from '$lib/utils/ufuzzy-modes'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import Popover from '$lib/ui/Popover.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import { INTRA_MODE_SINGLE_ERROR } from '#lib/utils/ufuzzy-modes.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import Popover from '#lib/ui/Popover.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import { modeBadge } from './recent-items-utils'
     import type { RecentItemAdapter, RecentItemKey, RecentItemView } from './recent-items-types'
 

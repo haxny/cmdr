@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compoundScale } from '$lib/text-size.svelte'
+import { compoundScale } from '#lib/text-size.svelte.js'
 
 describe('compoundScale', () => {
   it('returns the user fraction at system multiplier 1', () => {

@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SourceItemInput, VolumeConflictInfo } from '$lib/tauri-commands'
+import type { SourceItemInput, VolumeConflictInfo } from '#lib/tauri-commands/index.js'
 import { createTransferConflictCheck } from './transfer-conflict-check.svelte'
 
 /** Stands in for the destination listing: every name the destination holds. */
@@ -48,7 +48,7 @@ const scanVolumeForConflictsMock = vi.fn(
   },
 )
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   scanVolumeForConflicts: (
     volumeId: string,
     sourceItems: SourceItemInput[],

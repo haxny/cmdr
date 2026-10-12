@@ -1,6 +1,6 @@
 import type { SortColumn, SortOrder } from '../types'
 import { defaultSortOrders } from '../types'
-import { toBackendIndices } from '$lib/file-operations/transfer/transfer-dialog-utils'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 export { toBackendIndices }
 import type { FilePaneAPI } from './types'
 

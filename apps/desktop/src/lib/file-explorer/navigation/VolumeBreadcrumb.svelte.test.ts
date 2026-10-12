@@ -53,8 +53,8 @@ vi.mock('../network/direct-connect', () => ({
 }))
 
 // The drive-index badge's own IPC module. `drive-index-manager.svelte.ts` imports this
-// SUB-PATH, not the `$lib/tauri-commands` barrel mocked below, so it needs its own mock.
-vi.mock('$lib/tauri-commands/indexing', () => ({
+// SUB-PATH, not the `#lib/tauri-commands` barrel mocked below, so it needs its own mock.
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   getVolumeIndexStatusById: () =>
     Promise.resolve(stubs.indexStatus ? { status: 'ok', data: stubs.indexStatus } : { status: 'timedOut' }),
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
@@ -66,7 +66,7 @@ vi.mock('$lib/tauri-commands/indexing', () => ({
 // from throwing into a floating promise, and lets a test watch it.
 Element.prototype.scrollIntoView = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolvePathVolume: vi.fn(() => Promise.resolve({ volume: { id: stubs.containingVolumeId, path: '/' } })),
   upgradeToSmbVolume: vi.fn(() => Promise.resolve({ status: 'success' })),
   ejectVolume: (...args: unknown[]) => ejectVolume(...(args as [])),
@@ -88,7 +88,7 @@ vi.mock('$lib/tauri-commands', () => ({
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () =>
     stubs.volumes ?? [
       { id: 'fav-1', name: 'Documents', path: '/Users/test/Documents', category: 'favorite', isEjectable: false },
@@ -102,14 +102,14 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
   requestVolumeRefresh: vi.fn(),
 }))
 
-vi.mock('$lib/stores/volume-busy-store.svelte', () => ({
+vi.mock('#lib/stores/volume-busy-store.svelte.js', () => ({
   isVolumeBusy: () => false,
   isVolumeEjecting: (id: string) => stubs.ejecting.has(id),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(() => 'toast-id'), dismissToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(() => 'toast-id'), dismissToast: vi.fn() }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: (n: number) => `${String(n)} B`,
   getFileSizeFormat: () => 'binary',
   getFileSizeUnit: () => 'bytes',
@@ -124,7 +124,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
   getSwitcherFavoritesExpanded: () => false,
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: vi.fn().mockReturnValue('/icons/dir.png'),
@@ -144,7 +144,7 @@ interface BreadcrumbInstance {
 
 // ============================================================================
 // The switcher is the house `Menu`: it PORTALS to `document.body`, carries the documented
-// `data-*` hooks (`$lib/ui/DETAILS.md` § Menu), and catches keys on its own document capture
+// `data-*` hooks (`#lib/ui/DETAILS.md` § Menu), and catches keys on its own document capture
 // listener. So these look at the document rather than the mount target, select on hooks
 // rather than on classes, and press keys for real.
 // ============================================================================
@@ -1204,7 +1204,7 @@ describe('VolumeBreadcrumb row controls do not activate their row', () => {
 
     // ❗ And it STAYS up while the badge's menu is used. The badge's menu portals to the body,
     // so without the house `Menu`'s nested-menu rule a pointer-down in it reads as "outside"
-    // and closes the list the badge was sitting in ($lib/ui/DETAILS.md § Menu).
+    // and closes the list the badge was sitting in (#lib/ui/DETAILS.md § Menu).
     badgeMenu?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await tick()
     flushSync()

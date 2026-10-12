@@ -22,9 +22,9 @@ import {
   getSystemDirExcludes,
   onSearchIndexReady,
   type UnlistenFn,
-} from '$lib/tauri-commands'
-import { isVolumeScanning, getEntriesScanned, ROOT_VOLUME_ID } from '$lib/indexing'
-import { tString } from '$lib/intl/messages.svelte'
+} from '#lib/tauri-commands/index.js'
+import { isVolumeScanning, getEntriesScanned, ROOT_VOLUME_ID } from '#lib/indexing/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { isTargetIndexReady } from './coverage-note'
 import { loadRecentSearches } from './recent-searches-state.svelte'
 import { buildSystemDirExcludeTooltip } from './system-dir-tooltip'

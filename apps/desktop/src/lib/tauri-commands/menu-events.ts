@@ -15,7 +15,7 @@ import {
   type OpenWithCopyRefused,
   type ShowSearchResultInFolder,
   type ViewModeChanged,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /**
  * The native menu bar was thrown away and rebuilt in a new language, so every

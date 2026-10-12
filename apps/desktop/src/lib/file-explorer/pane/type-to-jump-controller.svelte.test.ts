@@ -16,11 +16,11 @@ const { ipc } = vi.hoisted(() => ({
   ipc: { findFirstFuzzyMatch: vi.fn(), getFileAt: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   findFirstFuzzyMatch: ipc.findFirstFuzzyMatch,
   getFileAt: ipc.getFileAt,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

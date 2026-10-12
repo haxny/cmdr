@@ -8,7 +8,7 @@
  * other's behavior.
  */
 
-import type { Initiator, ProgressAtStop } from '$lib/tauri-commands'
+import type { Initiator, ProgressAtStop } from '#lib/tauri-commands/index.js'
 import type {
   AppearedDuringMove,
   MetadataLeftBehind,
@@ -16,9 +16,9 @@ import type {
   TrashRefusedItems,
   OpKind,
   SpaceShortfall,
-} from '$lib/ipc/bindings'
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
-import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '$lib/file-operations/delete/delete-dialog-utils'
+} from '#lib/ipc/bindings.js'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
+import type { CloudOnlineOnlyExtent, DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
 import type { TransferOperationType, SortColumn, SortOrder, ConflictResolution, WriteOperationError } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import type { FilePaneAPI } from './types'
@@ -206,7 +206,7 @@ export interface AdoptedOperationData {
    *  the operation it reverses, straight off the registry row. The dialog titles
    *  itself by what the reversal will DO rather than by `operationType`, which
    *  for a reversal names the syscall (undoing a copy runs as a delete).
-   *  `$lib/file-operations/reversal-wording.ts`. */
+   *  `#lib/file-operations/reversal-wording.ts`. */
   reverses: OpKind | null
 }
 
@@ -335,7 +335,7 @@ export interface DialogStateDeps {
    * The pane-picking slice of the explorer, for a dialog outcome whose follow-up
    * action navigates (the trash toast's "Go to trash"). Narrow on purpose: a
    * dialog has no business driving the whole coordinator, and this is the subset
-   * `$lib/file-explorer/navigation/navigate-and-select` needs.
+   * `#lib/file-explorer/navigation/navigate-and-select` needs.
    */
   getExplorer: () => PaneRevealAPI | undefined
   /** The "Skip confirmation" setting: copy, move, and trash start without their dialog. */

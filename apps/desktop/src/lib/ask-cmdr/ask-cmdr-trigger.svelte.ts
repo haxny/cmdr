@@ -13,9 +13,9 @@
  * exported functions).
  */
 
-import { saveAppStatus } from '$lib/app-status-store'
-import { explorerState } from '$lib/file-explorer/pane/explorer-state.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { saveAppStatus } from '#lib/app-status-store.js'
+import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
@@ -27,7 +27,7 @@ import {
   listAskCmdrConversations,
   recordAskCmdrSlotChange,
   type AttachmentRef,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
 

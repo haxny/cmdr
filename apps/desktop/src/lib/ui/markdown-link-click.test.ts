@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { openExternalUrl, openSystemSettingsUrl } from '$lib/tauri-commands'
+import { openExternalUrl, openSystemSettingsUrl } from '#lib/tauri-commands/index.js'
 import { handleMarkdownLinkClick } from './markdown-link-click'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openExternalUrl: vi.fn(() => Promise.resolve()),
   openSystemSettingsUrl: vi.fn(() => Promise.resolve()),
 }))

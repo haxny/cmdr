@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import {
   getDiskUsageLevel,
   getUsedPercent,
@@ -10,7 +10,7 @@ import {
   formatBarTooltip,
   type BoundedSpaceInfo,
 } from './disk-space-utils'
-import type { SpaceInfo } from '$lib/ipc/bindings'
+import type { SpaceInfo } from '#lib/ipc/bindings.js'
 
 function createSpace(totalBytes: number, availableBytes: number): BoundedSpaceInfo {
   return { kind: 'bounded', totalBytes, availableBytes, usedBytes: totalBytes - availableBytes }

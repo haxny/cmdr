@@ -9,15 +9,15 @@
     //
     // The file list is virtualized over a WINDOW the store fetches, because a group of 60,000
     // ops is legitimate and neither the list nor the wire may grow with it.
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import Size from '$lib/ui/Size.svelte'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { calculateVirtualWindow } from '$lib/file-explorer/views/virtual-scroll'
-    import type { SuggestedGroupView } from '$lib/tauri-commands'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Size from '#lib/ui/Size.svelte'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { calculateVirtualWindow } from '#lib/file-explorer/views/virtual-scroll.js'
+    import type { SuggestedGroupView } from '#lib/tauri-commands/index.js'
     import {
         approvableCount,
         approveGroup,

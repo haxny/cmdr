@@ -10,8 +10,8 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import AskCmdrProposalDecisions from './AskCmdrProposalDecisions.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { ProposalDecision } from '$lib/tauri-commands'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { ProposalDecision } from '#lib/tauri-commands/index.js'
 
 function mountDecisions(decisions: ProposalDecision[]): HTMLElement {
   const target = document.createElement('div')

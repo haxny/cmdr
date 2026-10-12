@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { isRefusedOverDialog } from './dialog-command-gate'
 import { DISPATCH_SOURCES, type DialogsOnScreen, type DispatchSource } from './command-dispatch-context'
-import type { CommandId } from '$lib/commands'
+import type { CommandId } from '#lib/commands/index.js'
 
 const NOTHING_OPEN: DialogsOnScreen = { dialogOpen: false, paletteOpen: false }
 const DIALOG_OPEN: DialogsOnScreen = { dialogOpen: true, paletteOpen: false }

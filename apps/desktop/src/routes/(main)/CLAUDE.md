@@ -48,7 +48,7 @@ via a typed API. Up: `apps/desktop/CLAUDE.md`, sibling: `../viewer/CLAUDE.md`.
 ## Gotchas
 
 - **❌ Never cancel work from a window-teardown hook**: the quit gate owns that, and its `initQuitPrompt()` must stay
-  SYNCHRONOUS at the top of `onMount`. `$lib/quit/CLAUDE.md`.
+  SYNCHRONOUS at the top of `onMount`. `#lib/quit/CLAUDE.md`.
 - **Don't remove the `{#if settingsReady}` wrapper** in `+layout.svelte`, and don't read settings ahead of the flag: a
   pre-init `getSetting()` returns registry defaults that can get hot-applied to the backend as if chosen.
 - **Native-menu accelerators fire before the webview keydown**, so a focused text input owns `edit.cut` / `edit.copy` /

@@ -7,14 +7,14 @@
  *   - adb://R58M12345 (the device's `/`)
  *   - adb://R58M12345/sdcard/DCIM (a folder on the device)
  *
- * Volume id format: `adb-{slug}-{digest}`; `volumeScheme` (`$lib/volume-scheme`)
+ * Volume id format: `adb-{slug}-{digest}`; `volumeScheme` (`#lib/volume-scheme`)
  * classifies it.
  *
  * Contract: `crates/cmdr-adb/DETAILS.md` § "The `Volume` answers, and why".
  */
 
-import { getMtpDisplayPath } from '$lib/mtp/mtp-path-utils'
-import { volumeScheme } from '$lib/volume-scheme'
+import { getMtpDisplayPath } from '#lib/mtp/mtp-path-utils.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
 
 const ADB_SCHEME = 'adb://'
 const MTP_SCHEME = 'mtp://'

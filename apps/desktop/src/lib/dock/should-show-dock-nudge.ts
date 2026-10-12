@@ -8,11 +8,11 @@
  *
  * Everything this shares with the other offers — the automated-run and macOS
  * gates, "already asked", and the cooldown one nudge puts on the next — lives in
- * `$lib/nudges/nudge-ledger.ts`. Only the two conditions below are the Dock's own.
+ * `#lib/nudges/nudge-ledger.ts`. Only the two conditions below are the Dock's own.
  */
 
-import type { DockPinState } from '$lib/ipc/bindings'
-import { nudgeCouldFire, type NudgeContext } from '$lib/nudges/nudge-ledger'
+import type { DockPinState } from '#lib/ipc/bindings.js'
+import { nudgeCouldFire, type NudgeContext } from '#lib/nudges/nudge-ledger.js'
 
 /**
  * How many distinct launch days make Cmdr worth keeping around.

@@ -11,9 +11,9 @@
  * frontend cursor index adds the `..` offset when the pane has a parent row.
  */
 
-import { findFirstFuzzyMatch, getFileAt } from '$lib/tauri-commands'
+import { findFirstFuzzyMatch, getFileAt } from '#lib/tauri-commands/index.js'
 import { createTypeToJumpState } from './type-to-jump-state.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

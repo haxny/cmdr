@@ -33,7 +33,7 @@ vi.mock('./network-store.svelte', () => ({
 }))
 
 // Identity lookups so tooltip assertions read the resolved message KEY (locale-independent).
-vi.mock('$lib/intl/messages.svelte', () => ({
+vi.mock('#lib/intl/messages.svelte.js', () => ({
   tString: (key: string) => key,
   getMessage: (key: string) => key,
 }))

@@ -22,17 +22,17 @@
  * been shown.
  */
 
-import { getKnownShareByName, getUsernameHint } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getKnownShareByName, getUsernameHint } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { MountError, ShareListError } from '../types'
-import { openSignInSheet } from '$lib/servers/sign-in-sheet-state.svelte'
-import type { ConnectRefusalKind } from '$lib/servers/connect-refusals'
+import { openSignInSheet } from '#lib/servers/sign-in-sheet-state.svelte.js'
+import type { ConnectRefusalKind } from '#lib/servers/connect-refusals.js'
 import type {
   SignInAttemptOutcome,
   SignInEndpoint,
   SignInSheetResult,
   SignInSubmission,
-} from '$lib/servers/sign-in-contract'
+} from '#lib/servers/sign-in-contract.js'
 
 const log = getAppLogger('fileExplorer')
 

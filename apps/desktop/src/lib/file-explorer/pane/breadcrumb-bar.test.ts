@@ -27,11 +27,11 @@ const { ipc, eject, mtp, volumeStore, boundCombos } = vi.hoisted<{
   boundCombos: { 'file.copyCurrentDirectoryPath': '⌘⇧C' },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ showBreadcrumbContextMenu: ipc.showBreadcrumbContextMenu }))
-vi.mock('$lib/shortcuts', () => ({ boundShortcuts: () => boundCombos }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ showBreadcrumbContextMenu: ipc.showBreadcrumbContextMenu }))
+vi.mock('#lib/shortcuts/index.js', () => ({ boundShortcuts: () => boundCombos }))
 vi.mock('../navigation/eject-predicate', () => ({ isVolumeEjectable: eject.isVolumeEjectable }))
-vi.mock('$lib/mtp', () => ({ getMtpDisplayPath: mtp.getMtpDisplayPath }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: volumeStore.getVolumes }))
+vi.mock('#lib/mtp/index.js', () => ({ getMtpDisplayPath: mtp.getMtpDisplayPath }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: volumeStore.getVolumes }))
 
 import { breadcrumbDisplayPath, createBreadcrumbHandlers, type BreadcrumbHandlerDeps } from './breadcrumb-bar'
 

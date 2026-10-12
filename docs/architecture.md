@@ -278,7 +278,7 @@ All under `apps/desktop/src-tauri/src/`.
 - `text_size.rs`: macOS Accessibility text-size watcher (undocumented Apple APIs, risk notes in source). Emits
   `system-text-size-changed`
 - `glass_tint.rs`: macOS 27 Liquid Glass slider reader (undocumented `NSGlassTintAmount`, re-read on app activation;
-  risk notes in source). Emits `glass-tint-changed`; the frontend side is `$lib/glass-material`
+  risk notes in source). Emits `glass-tint-changed`; the frontend side is `#lib/glass-material`
 - `system_strings.rs`: Localized macOS pane labels from `.loctable` system bundles (loctable catalog + risks in source).
   Also the ordered `AppleLanguages` read that `intl/` walks
 - `intl/`: What the OS says about language and region. Walks the user's ordered macOS language preferences against the

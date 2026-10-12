@@ -188,7 +188,7 @@ being named and is reaped as before.
 
 **A lookup on a missing listing is a typed `ListingLookupError::Gone { listing_id }`** (every accessor in
 `operations.rs`, and their commands). It's the accessors' only failure: they take the cache lock with `*_ignore_poison`.
-The frontend funnels every such refusal (`$lib/tauri-commands` `listing-gone.ts`), and every id the heartbeat returns,
+The frontend funnels every such refusal (`#lib/tauri-commands` `listing-gone.ts`), and every id the heartbeat returns,
 to the liveness registry, and the owning pane re-lists the same folder with the cursor on the same entry. A pane
 registers its listing only once it has landed, so a read racing a navigation (which also answers `Gone`) never triggers
 a re-list. The clipboard and drag commands still flatten it into their `String` errors; the pane recovers through its

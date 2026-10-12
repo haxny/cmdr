@@ -20,10 +20,10 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import fileExplorerCatalog from '$lib/intl/messages/en/fileExplorer.json'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import fileExplorerCatalog from '#lib/intl/messages/en/fileExplorer.json'
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

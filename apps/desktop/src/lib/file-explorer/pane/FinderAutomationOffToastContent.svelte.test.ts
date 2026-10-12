@@ -4,12 +4,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 const { openAutomationSettings } = vi.hoisted(() => ({
   openAutomationSettings: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }))
-vi.mock('$lib/tauri-commands', () => ({ openAutomationSettings }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openAutomationSettings }))
 
 import FinderAutomationOffToastContent from './FinderAutomationOffToastContent.svelte'
 

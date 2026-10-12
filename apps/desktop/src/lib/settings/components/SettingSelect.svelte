@@ -6,14 +6,14 @@
         onSpecificSettingChange,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
-    import type { EnumOption } from '$lib/settings/types'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    } from '#lib/settings/index.js'
+    import type { EnumOption } from '#lib/settings/types.js'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { onMount } from 'svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { useSettingLock } from './setting-lock.svelte'
 
     interface Props {

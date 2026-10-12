@@ -15,22 +15,22 @@ const { getSelectionSnapshotSpy, resolveSnapshotPathsSpy } = vi.hoisted(() => ({
   resolveSnapshotPathsSpy: vi.fn<(snapshotId: string, selected: number[], cursor: number) => string[]>(),
 }))
 
-vi.mock('$lib/tauri-commands', async () => {
-  const actual = await vi.importActual<typeof import('$lib/tauri-commands/listing-gone')>(
-    '$lib/tauri-commands/listing-gone',
+vi.mock('#lib/tauri-commands/index.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>(
+    '#lib/tauri-commands/listing-gone.js',
   )
   return { getSelectionSnapshot: getSelectionSnapshotSpy, asListingLookupError: actual.asListingLookupError }
 })
-vi.mock('$lib/search/snapshot-store.svelte', () => ({
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({
   resolveSnapshotPaths: resolveSnapshotPathsSpy,
   snapshotIdFromPanePath: (path: string) =>
     path.startsWith('search-results://') ? path.slice('search-results://'.length) : null,
 }))
 // Empty store: a real id ('root') classifies as the listable `local` kind.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
 import { readSelectedPathsForCopy } from './selected-paths-read'
-import { ListingLookupFailure } from '$lib/tauri-commands/listing-gone'
+import { ListingLookupFailure } from '#lib/tauri-commands/listing-gone.js'
 
 interface PaneStubConfig {
   selectedIndices?: number[]

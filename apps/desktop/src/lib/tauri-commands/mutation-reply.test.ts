@@ -5,8 +5,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MutationError, MutationReply, MutationSettled } from '$lib/ipc/bindings'
-import { asMutationError } from '$lib/file-operations/mutation-error'
+import type { MutationError, MutationReply, MutationSettled } from '#lib/ipc/bindings.js'
+import { asMutationError } from '#lib/file-operations/mutation-error.js'
 import { awaitMutation } from './mutation-reply'
 
 type SettleListener = (event: { payload: MutationSettled }) => void
@@ -14,7 +14,7 @@ type SettleListener = (event: { payload: MutationSettled }) => void
 const listeners = new Set<SettleListener>()
 const unlisten = vi.fn()
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   events: {
     mutationSettled: {
       listen: vi.fn((cb: SettleListener) => {

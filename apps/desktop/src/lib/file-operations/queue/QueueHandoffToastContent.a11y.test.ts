@@ -2,10 +2,10 @@
 
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/file-operations/queue/queue-window', () => ({ openQueueWindow: () => Promise.resolve() }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast: () => {} }))
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({ openQueueWindow: () => Promise.resolve() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: () => {} }))
 
 import QueueHandoffToastContent from './QueueHandoffToastContent.svelte'
 

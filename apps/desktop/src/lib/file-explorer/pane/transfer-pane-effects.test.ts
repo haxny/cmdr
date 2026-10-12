@@ -10,11 +10,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createTransferPaneEffects } from './transfer-pane-effects'
-import { refreshListing } from '$lib/tauri-commands'
+import { refreshListing } from '#lib/tauri-commands/index.js'
 import type { FilePaneAPI } from './types'
 import type { TransferProgressPropsData } from './dialog-props'
 
-vi.mock('$lib/tauri-commands', () => ({ refreshListing: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ refreshListing: vi.fn(() => Promise.resolve()) }))
 
 const BIRTH_FOLDER = '/Users/me/photos'
 

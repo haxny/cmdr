@@ -17,9 +17,9 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick, createRawSnippet, type ComponentProps } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formattedDate: (t: number | undefined) =>
     t
@@ -46,7 +46,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
   ),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
 

@@ -11,10 +11,10 @@ import * as pretext from '@chenglou/pretext'
 
 import { formatSizeForDisplay } from '../selection/selection-info-utils'
 import type { FileEntry, SortColumn } from '../types'
-import type { FileSizeFormat, FileSizeUnit } from '$lib/settings/types'
-import { joinSegments, type FormattedDate } from '$lib/settings/format-utils'
-import { createPretextMeasure } from '$lib/utils/shorten-middle'
-import { getEffectiveScale, onDebouncedScaleChange } from '$lib/text-size.svelte'
+import type { FileSizeFormat, FileSizeUnit } from '#lib/settings/types.js'
+import { joinSegments, type FormattedDate } from '#lib/settings/format-utils.js'
+import { createPretextMeasure } from '#lib/utils/shorten-middle.js'
+import { getEffectiveScale, onDebouncedScaleChange } from '#lib/text-size.svelte.js'
 
 import type { DirStats } from './file-list-utils'
 import {
@@ -25,7 +25,7 @@ import {
   hasSizeMismatch,
   wordGitMeta,
 } from './full-list-utils'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export interface ColumnWidths {
   ext: number

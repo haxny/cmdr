@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createIndexEventHandler } from './index-events'
-import type { ListingIndexSizesChanged } from '$lib/tauri-commands'
+import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
 import type { FilePaneAPI } from './types'
 
 describe('createIndexEventHandler', () => {

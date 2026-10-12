@@ -14,16 +14,16 @@
      * line never proposes a destructive number off a lower bound. Deleting is recoverable
      * (a later pass re-indexes anything still covered), which the confirm dialog says.
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatByteSize } from '$lib/units'
-    import { confirmDialog } from '$lib/utils/confirm-dialog'
-    import { addToast } from '$lib/ui/toast'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { getEnabledMediaIndexVolumeIds } from '$lib/media-index/enabled-volumes'
-    import { mediaIndexReclaimPreview, mediaIndexPruneBelowThreshold, type ReclaimPreview } from '$lib/tauri-commands'
-    import Button from '$lib/ui/Button.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize } from '#lib/units/index.js'
+    import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { getEnabledMediaIndexVolumeIds } from '#lib/media-index/enabled-volumes.js'
+    import { mediaIndexReclaimPreview, mediaIndexPruneBelowThreshold, type ReclaimPreview } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import { shouldOfferReclaim } from './media-index-reclaim'
 
     const log = getAppLogger('media-index')

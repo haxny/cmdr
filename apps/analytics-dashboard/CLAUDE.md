@@ -36,7 +36,7 @@ settings-defaults, `svelte-kit sync`). Don't judge a change by raw `pnpm lint`: 
 - **Write `{#if source.ok}` with the error state in `{:else}`, never the inverse.** Inverted, the Svelte ESLint parser
   loses the narrowing and every read off `source.data` becomes an unsafe-member-access error that looks like missing
   prop types. Flipping the branch is the fix, not an `any`. Why: `DETAILS.md`.
-- **Don't import `$lib/server/*` as a runtime value into browser-bundled code** (components, route `.svelte` files);
+- **Don't import `#lib/server/*` as a runtime value into browser-bundled code** (components, route `.svelte` files);
   type-only imports are fine. It trips `vite-plugin-sveltekit-guard` at BUILD time and **`svelte-check` does NOT catch
   it**, so run `pnpm build` after touching imports across the boundary. `DETAILS.md` lists the client-shared values.
 - **Every data source must go behind the 20s `withTimeout` cap in `fetch-all.ts`.** Workers `fetch` has no timeout, so
@@ -46,7 +46,7 @@ settings-defaults, `svelte-kit sync`). Don't judge a change by raw `pnpm lint`: 
   sources resolve it in `+page.server.ts` only; the browser gets rows and a load-error string. `pnpm build` confirms
   nothing token-bearing leaks past the boundary.
 - **❌ Nothing on `/licenses` may say a Paddle subscription is live.** `active` on a `paddle` row means we fulfilled
-  that purchase; only `/validate` knows whether it still runs. Labels live in `$lib/licenses.ts`; the vocabulary is
+  that purchase; only `/validate` knows whether it still runs. Labels live in `#lib/licenses.ts`; the vocabulary is
   owned by `apps/api-server/src/licensing/DETAILS.md` § The licenses listing.
 - **`caches.default` / `caches.open()` aren't emulated in `wrangler pages dev`.** `cache.ts` falls back to an in-memory
   Map, so don't assume the CF Cache API works locally.

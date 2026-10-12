@@ -1,5 +1,5 @@
 /**
- * Two umbrella-level modules that live off the same `$lib/tauri-commands` event
+ * Two umbrella-level modules that live off the same `#lib/tauri-commands` event
  * stream, so they share this file's one mock of it: `settled-operations` (below)
  * and `NewEntryNameCheck` (at the bottom), the name validation behind the New
  * folder and New file dialogs.
@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { WriteSettledEvent } from '$lib/tauri-commands'
+import type { WriteSettledEvent } from '#lib/tauri-commands/index.js'
 
 const { onWriteSettled, findFileIndex, getFileAt, onDirectoryDiff } = vi.hoisted(() => ({
   onWriteSettled: vi.fn(),
@@ -23,11 +23,11 @@ const { onWriteSettled, findFileIndex, getFileAt, onDirectoryDiff } = vi.hoisted
   getFileAt: vi.fn(),
   onDirectoryDiff: vi.fn(),
 }))
-vi.mock('$lib/tauri-commands', () => ({ onWriteSettled, findFileIndex, getFileAt, onDirectoryDiff }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ onWriteSettled, findFileIndex, getFileAt, onDirectoryDiff }))
 
 import { initSettledOperationsWatch, destroySettledOperationsWatch, whenOperationSettled } from './settled-operations'
 import { NewEntryNameCheck, type NewEntryNameCheckOptions } from './new-entry-name-check.svelte'
-import type { DirectoryDiff } from '$lib/file-explorer/types'
+import type { DirectoryDiff } from '#lib/file-explorer/types.js'
 
 /** Feeds the module a settle event, the way the backend stream would. */
 let emitSettled: (event: WriteSettledEvent) => void = () => {}

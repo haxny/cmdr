@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { checkTransferDestinationGuard, resolveSourceVolumeId } from './transfer-entry'
-import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '$lib/search/capabilities'
+import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '#lib/search/capabilities.js'
 import type { VolumeInfo } from '../types'
-import type { PathVolumeResolution } from '$lib/tauri-commands'
+import type { PathVolumeResolution } from '#lib/tauri-commands/index.js'
 
 const ROOT: VolumeInfo = {
   id: 'root',

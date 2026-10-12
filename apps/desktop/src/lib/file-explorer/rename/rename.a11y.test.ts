@@ -8,7 +8,7 @@
  * assertions.
  *
  * No stub here disagrees between blocks: both dialogs wanted the same
- * `$lib/tauri-commands` pair, and the other two stubs have one consumer each. Every
+ * `#lib/tauri-commands` pair, and the other two stubs have one consumer each. Every
  * stub spreads the real module first, so the inline editor, which never stubbed
  * anything, still sees every un-stubbed export.
  */
@@ -18,20 +18,20 @@ import { mount, tick } from 'svelte'
 import ExtensionChangeDialog from './ExtensionChangeDialog.svelte'
 import InlineRenameEditor from './InlineRenameEditor.svelte'
 import RenameConflictDialog from './RenameConflictDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   setSetting: vi.fn(),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getFileSizeFormat: () => 'binary',
   formatDateTime: vi.fn((d: number | undefined) => (d ? '2025-03-14 10:30' : '')),

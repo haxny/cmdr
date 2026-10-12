@@ -1,4 +1,4 @@
-import type { FilePaneAPI } from '$lib/file-explorer/pane/types'
+import type { FilePaneAPI } from '#lib/file-explorer/pane/types.js'
 
 /** What the pre-fill helpers need to know about the entry under the cursor. */
 export interface CursorEntry {

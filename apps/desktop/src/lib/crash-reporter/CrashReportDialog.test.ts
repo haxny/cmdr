@@ -9,8 +9,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import type { ServerRequestError } from '$lib/ipc/bindings'
-import { ServerRequestFailure } from '$lib/error-messages/server-request'
+import type { ServerRequestError } from '#lib/ipc/bindings.js'
+import { ServerRequestFailure } from '#lib/error-messages/server-request.js'
 import CrashReportDialog from './CrashReportDialog.svelte'
 
 const { sendCrashReport, dismissCrashReport, logger } = vi.hoisted(() => ({
@@ -19,20 +19,20 @@ const { sendCrashReport, dismissCrashReport, logger } = vi.hoisted(() => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   sendCrashReport,
   dismissCrashReport,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: vi.fn(),
   getSetting: vi.fn(() => ''),
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 
 const report = {
   version: 1,

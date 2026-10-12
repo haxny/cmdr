@@ -2,7 +2,7 @@
  * A pane standing on a saved place, and the dial that brings it to life.
  *
  * ❗ **Opening a place that isn't live brings it to life IN THE PANE, with a
- * cancel** (`$lib/servers/DETAILS.md` § "The four rules", rule 2). MTP already
+ * cancel** (`#lib/servers/DETAILS.md` § "The four rules", rule 2). MTP already
  * works this way; this is the same shape for a server, so activating a greyed
  * `saved` row in the switcher costs one keystroke and shows what it is doing.
  *
@@ -11,14 +11,14 @@
  * `$effect`, the attempt id, and the words.
  */
 
-import { connectPlace, cancelPlaceConnect } from '$lib/servers/connect-flow'
-import { openSignInForPlace } from '$lib/servers/open-sign-in'
-import type { ConnectRefusalKind } from '$lib/servers/connect-refusals'
-import { wordPaneRefusal } from '$lib/servers/connect-refusals'
-import { isAtOrUnder, parseServerPath } from '$lib/servers/server-path-utils'
-import { volumeScheme } from '$lib/volume-scheme'
+import { connectPlace, cancelPlaceConnect } from '#lib/servers/connect-flow.js'
+import { openSignInForPlace } from '#lib/servers/open-sign-in.js'
+import type { ConnectRefusalKind } from '#lib/servers/connect-refusals.js'
+import { wordPaneRefusal } from '#lib/servers/connect-refusals.js'
+import { isAtOrUnder, parseServerPath } from '#lib/servers/server-path-utils.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
 import { resolveValidPath } from '../navigation/path-resolution'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { RemoteConnectState } from './remote-connect-state'
 import type { VolumeInfo } from '../types'
 import type { VolumeChangePayload } from './types'

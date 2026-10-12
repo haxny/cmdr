@@ -15,7 +15,7 @@
  * still-running-but-abandoned chunk is cheap.
  */
 
-import { enrichTags, getFileRange } from '$lib/tauri-commands'
+import { enrichTags, getFileRange } from '#lib/tauri-commands/index.js'
 
 /** Low-priority chunk size for the sweep (paths per `enrich_tags` call). */
 export const TAG_SWEEP_CHUNK = 500

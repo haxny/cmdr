@@ -6,8 +6,8 @@
  * address MEANS are testable without mounting anything.
  */
 
-import type { SavedS3Place, SavedServer, ServerProtocol, ServerTarget } from '$lib/ipc/bindings'
-import type { SavedSftpServer, SavedWebdavServer } from '$lib/tauri-commands'
+import type { SavedS3Place, SavedServer, ServerProtocol, ServerTarget } from '#lib/ipc/bindings.js'
+import type { SavedSftpServer, SavedWebdavServer } from '#lib/tauri-commands/index.js'
 import { mountSourceAsSmbUrl, parseServerAddress, uncAsSmbUrl, type ParsedAddress } from './address-parser'
 import {
   emptyS3Fields,

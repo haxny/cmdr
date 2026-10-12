@@ -21,10 +21,10 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
-import { onDragOutSessionComplete, onDragOutSessionStarted } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { onDragOutSessionComplete, onDragOutSessionStarted } from '#lib/tauri-commands/index.js'
 import { composeDragOutCompleteToast, type DragOutSessionComplete } from './drag-out-toast'
 import { reportDragOutCompleted } from './drag-analytics'
 

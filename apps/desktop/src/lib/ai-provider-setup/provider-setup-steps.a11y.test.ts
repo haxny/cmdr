@@ -6,13 +6,13 @@
 
 import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const stubs = vi.hoisted(() => ({
   settingsMap: Object.create(null) as Record<string, unknown>,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -24,7 +24,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   checkAiConnection: vi.fn(() => Promise.resolve({ connected: false, authError: false, models: [], error: null })),
   saveAiApiKey: vi.fn(() => Promise.resolve(null)),

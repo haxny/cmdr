@@ -5,9 +5,9 @@
      * `role="status"` announces it without taking focus from the name field. Its
      * "Taking long? Send a report" link reports the wait, measured from OK.
      */
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The name being created. */

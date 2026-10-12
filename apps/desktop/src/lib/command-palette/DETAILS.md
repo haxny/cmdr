@@ -22,7 +22,7 @@ User presses ⌘⇧P
   highlighted at the same intensity.
 - **Recents on empty query**: when the query is empty, recents lead the result (most-recent first) under a `Recent`
   subheader, with an `All commands` subheader before the rest. The pruned list comes from `pruneRecentCommands` /
-  `pushRecentCommand` in `$lib/app-status-store` (a Tauri store).
+  `pushRecentCommand` in `#lib/app-status-store` (a Tauri store).
 - **Combobox semantics**: the input is a WAI-ARIA combobox (`role="combobox"`, `aria-controls="palette-listbox"`,
   `aria-expanded`, `aria-autocomplete="list"`, `aria-activedescendant`). Each option has a stable id
   (`palette-option-{command.id}`). The listbox isn't rendered when a search yields zero results (a "No commands found"
@@ -34,7 +34,7 @@ User presses ⌘⇧P
   are non-clickable because the row already owns the click. On the accent-subtle cursor row, the chip background lifts
   to `--color-bg-secondary` so it stays legible against the tint (both themes).
 - **Stability badge**: rows whose command carries `status: 'alpha' | 'beta'` render a `StatusBadge` pill between the
-  name and the shortcut chips. The registry derives the field from `getBadgeStatus()` in `$lib/feature-status`
+  name and the shortcut chips. The registry derives the field from `getBadgeStatus()` in `#lib/feature-status`
   (repo-root `feature-status.json` is the single source of truth), so graduating a feature removes the badge with a JSON
   edit.
 
@@ -60,4 +60,4 @@ User presses ⌘⇧P
   has `Backspace` and `⌘↑`); showing all crowds the row. Three is the product-decided cap (power users use the palette
   to discover alternates). Reading effective bindings (not `command.shortcuts`) keeps an open palette in sync with a
   mid-session rebind and avoids showing a rebound combo that no longer works. The full list lives in shortcut settings.
-  Chips render non-clickable here (the row is already the button); see `$lib/ui/DETAILS.md` § ShortcutChip.
+  Chips render non-clickable here (the row is already the button); see `#lib/ui/DETAILS.md` § ShortcutChip.

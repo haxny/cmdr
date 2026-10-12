@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { isSettingManaged } from '$lib/managed-policy/managed-policy.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { isSettingManaged } from '#lib/managed-policy/managed-policy.svelte.js'
     import { provideSectionRows } from './section-rows.svelte'
 
     interface Props {

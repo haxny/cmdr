@@ -21,7 +21,7 @@
  *   folder's subtree isn't part of what the user selected here anyway.
  */
 
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import type { ListingStats } from '../types'
 
 /**

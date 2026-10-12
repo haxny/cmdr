@@ -14,7 +14,7 @@
  * `DETAILS.md` § Chaining.
  */
 
-import { getFileRange } from '$lib/tauri-commands'
+import { getFileRange } from '#lib/tauri-commands/index.js'
 
 /** Rows per IPC round trip while paging a listing. */
 const BATCH_SIZE = 500

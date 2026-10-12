@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { DockPinFailure } from '$lib/ipc/bindings'
+import type { DockPinFailure } from '#lib/ipc/bindings.js'
 
 const mocks = vi.hoisted(() => ({
   addToast: vi.fn(),
@@ -20,11 +20,11 @@ const mocks = vi.hoisted(() => ({
   warn: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
-vi.mock('$lib/settings', () => ({ setSetting: mocks.setSetting, getSetting: vi.fn(() => '') }))
-vi.mock('$lib/tauri-commands', () => ({ trackEvent: mocks.trackEvent, addCmdrToDock: mocks.addCmdrToDock }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
+vi.mock('#lib/settings/index.js', () => ({ setSetting: mocks.setSetting, getSetting: vi.fn(() => '') }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ trackEvent: mocks.trackEvent, addCmdrToDock: mocks.addCmdrToDock }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: mocks.warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

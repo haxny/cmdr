@@ -14,17 +14,17 @@
      * stamp); the empty state is reachable only via the manual Help reopen.
      */
     import { SvelteSet } from 'svelte/reactivity'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { addToast } from '$lib/ui/toast'
-    import { openExternalUrl } from '$lib/tauri-commands'
-    import { handleMarkdownLinkClick } from '$lib/ui/markdown-link-click'
-    import { setSetting } from '$lib/settings'
-    import { getAppLogger } from '$lib/logging/logger'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { handleMarkdownLinkClick } from '#lib/ui/markdown-link-click.js'
+    import { setSetting } from '#lib/settings/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { whatsNewState, closeWhatsNew } from './whats-new-trigger.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     const log = getAppLogger('whatsNewDialog')
 

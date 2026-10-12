@@ -19,8 +19,8 @@ import { getSettingDefinition } from './settings-registry'
  */
 const isMacOS = vi.hoisted(() => vi.fn(() => true))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
 

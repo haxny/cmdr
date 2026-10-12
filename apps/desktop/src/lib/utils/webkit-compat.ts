@@ -25,7 +25,7 @@
  * `docs/notes/system-requirements-and-es2025.md`.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('webkit-compat')
 

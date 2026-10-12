@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   unlisten: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ onGitStateChanged: mocks.onGitStateChanged }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ onGitStateChanged: mocks.onGitStateChanged }))
 vi.mock('../git/status-column', () => ({ fetchStatusMap: mocks.fetchStatusMap }))
 
 import { createGitStatusColumn } from './full-list-git-column.svelte'

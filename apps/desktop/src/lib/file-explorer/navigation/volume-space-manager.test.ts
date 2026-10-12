@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getVolumeSpace: vi.fn(),
 }))
 
-const { getVolumeSpace } = await import('$lib/tauri-commands')
+const { getVolumeSpace } = await import('#lib/tauri-commands/index.js')
 
 import { createVolumeSpaceManager } from './volume-space-manager.svelte'
 import type { VolumeInfo } from '../types'

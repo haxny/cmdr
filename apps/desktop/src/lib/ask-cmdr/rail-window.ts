@@ -21,10 +21,10 @@
 
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi'
-import { isE2eRun } from '$lib/app-mode'
-import { getAppLogger } from '$lib/logging/logger'
-import { readMonitors } from '$lib/window-positioning'
-import { growRectForRail, nearestMonitor, shrinkRectForRail, type Rect } from '$lib/window-positioning-utils'
+import { isE2eRun } from '#lib/app-mode.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { readMonitors } from '#lib/window-positioning.js'
+import { growRectForRail, nearestMonitor, shrinkRectForRail, type Rect } from '#lib/window-positioning-utils.js'
 
 const log = getAppLogger('askCmdr')
 

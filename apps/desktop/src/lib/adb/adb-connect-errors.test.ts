@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { AdbConnectOutcomeError } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { AdbConnectOutcomeError } from '#lib/ipc/bindings.js'
 import { readAdbConnectOutcome } from './adb-connect-errors'
 
 const SERIAL = 'R58M12345'

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Slider from '$lib/ui/Slider.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Slider from '#lib/ui/Slider.svelte'
 
     let plain = $state(50)
     let zoom = $state(100)

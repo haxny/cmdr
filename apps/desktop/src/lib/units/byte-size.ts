@@ -13,9 +13,9 @@
  * (kB, MB, GB, TB, PB), so the symbol always names the divisor behind the digits.
  */
 
-import type { FileSizeFormat, FileSizeUnit } from '$lib/settings/types'
-import { getNumberFormatter } from '$lib/intl/number-format'
-import { tString } from '$lib/intl/messages.svelte'
+import type { FileSizeFormat, FileSizeUnit } from '#lib/settings/types.js'
+import { getNumberFormatter } from '#lib/intl/number-format.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * A count of bytes, distinct from any other number.

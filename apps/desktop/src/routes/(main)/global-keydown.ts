@@ -15,10 +15,10 @@
  *   `preventDefault`s the browser's own action: Tab still moves focus inside a
  *   dialog instead of reaching `pane.switch` behind it.
  */
-import { formatKeyCombo, isTypingKeyCombo } from '$lib/shortcuts/key-capture'
-import { lookupCommand, resolveKeyCombo } from '$lib/shortcuts/shortcut-dispatch'
-import { isTextInputFocused } from '$lib/utils/text-input-focus'
-import type { CommandId } from '$lib/commands'
+import { formatKeyCombo, isTypingKeyCombo } from '#lib/shortcuts/key-capture.js'
+import { lookupCommand, resolveKeyCombo } from '#lib/shortcuts/shortcut-dispatch.js'
+import { isTextInputFocused } from '#lib/utils/text-input-focus.js'
+import type { CommandId } from '#lib/commands/index.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 import { isRefusedOverDialog } from './dialog-command-gate'
 
@@ -145,7 +145,7 @@ export function resolveGlobalKeyAction(event: KeyboardEvent, onScreen: DialogsOn
  *
  * `preventDefault` alone is not a claim: this resolver has no `defaultPrevented`
  * guard, deliberately, because preventing the browser's default and claiming a
- * command are different statements. `claimKey(e)` (`$lib/shortcuts/claim-key.ts`) is
+ * command are different statements. `claimKey(e)` (`#lib/shortcuts/claim-key.ts`) is
  * the claim.
  *
  * Returns the line to log, or null when there's nothing to say. Pure, so the caller

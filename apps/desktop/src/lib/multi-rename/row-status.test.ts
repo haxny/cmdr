@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { RowStatus } from '$lib/ipc/bindings'
+import type { RowStatus } from '#lib/ipc/bindings.js'
 import { rowStatusView } from './row-status'
 
 const PROBLEMS: RowStatus[] = [

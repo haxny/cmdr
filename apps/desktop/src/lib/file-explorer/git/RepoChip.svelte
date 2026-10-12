@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from '$lib/ui/Icon.svelte'
-  import { tooltip } from '$lib/tooltip/tooltip'
+  import Icon from '#lib/ui/Icon.svelte'
+  import { tooltip } from '#lib/tooltip/tooltip.js'
   import type { RepoInfo } from './git-store.svelte'
 
   interface Props {

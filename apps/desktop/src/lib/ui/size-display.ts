@@ -1,5 +1,5 @@
-import { formatSizeForDisplay } from '$lib/file-explorer/selection/selection-info-utils'
-import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+import { formatSizeForDisplay } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
 
 /**
  * The tiered parts `<Size>` renders: the friendly dynamic unit, independent of the user's

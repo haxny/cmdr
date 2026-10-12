@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 
 const { subscribeMocks, unlistenMock } = vi.hoisted(() => {
   const unlistenMock = vi.fn()
@@ -19,7 +19,7 @@ const { subscribeMocks, unlistenMock } = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn<() => Promise<OperationSnapshot[]>>(() => Promise.resolve([])),
   ...subscribeMocks,
 }))

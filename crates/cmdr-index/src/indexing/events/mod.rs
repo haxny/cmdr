@@ -143,7 +143,7 @@ impl IndexStatusResponse {
     /// number is about to change.
     ///
     /// Twin of the frontend's `isPathAffectedByWalk`
-    /// (`$lib/indexing/walked-ground.ts`), which answers the same question for the
+    /// (`#lib/indexing/walked-ground.ts`), which answers the same question for the
     /// file list's per-row hourglass. Both sides read the roots
     /// [`walked_roots`](Self::walked_roots) carries, so a run that takes the
     /// volume whole reaches every row on the drive through the same predicate as a

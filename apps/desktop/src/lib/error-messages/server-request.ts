@@ -14,9 +14,9 @@
  * Copy comes from `errors.serverRequest.*` through `getMessage()`, a raw lookup like the rest of
  * `errors.*`. ❌ The failure's `detail` never reaches a person: it rides the diagnostic, for the log.
  */
-import type { ServerRequestError } from '$lib/ipc/bindings'
-import { getMessage } from '$lib/intl/messages.svelte'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { ServerRequestError } from '#lib/ipc/bindings.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** The log line for a failure: its type, the status for a refusal, and the backend's detail. */
 export function serverRequestDiagnostic(failure: ServerRequestError): string {

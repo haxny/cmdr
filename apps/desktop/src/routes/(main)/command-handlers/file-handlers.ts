@@ -17,23 +17,23 @@ import {
   cloudRemoveDownload,
   googleDriveLinks,
   openExternalUrl,
-} from '$lib/tauri-commands'
-import { quickLookState } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-import { addToast } from '$lib/ui/toast'
-import CopiedPathToastContent from '$lib/file-explorer/CopiedPathToastContent.svelte'
-import { getFocusedPanePath, getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-import { capabilitiesFor } from '$lib/file-explorer/pane/volume-capabilities'
-import { pathInsideArchive } from '$lib/file-explorer/pane/archive-paths'
-import { openInEditorOrExplain } from '$lib/file-explorer/pane/editor-open'
-import { openGetInfoOrExplain } from '$lib/file-explorer/pane/get-info-open'
-import { resolveTerminalFolder } from '$lib/open-terminal/terminal-target'
-import { openTerminalHereForFolder } from '$lib/open-terminal/open-terminal-here'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-import { extractFilename } from '$lib/file-explorer/operations/selection-adjustment'
-import { trackEvent } from '$lib/tauri-commands'
-import { editServerInView } from '$lib/file-explorer/network/servers-hub-actions'
-import type { CommandArgs } from '$lib/commands'
+} from '#lib/tauri-commands/index.js'
+import { quickLookState } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import CopiedPathToastContent from '#lib/file-explorer/CopiedPathToastContent.svelte'
+import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { capabilitiesFor } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { pathInsideArchive } from '#lib/file-explorer/pane/archive-paths.js'
+import { openInEditorOrExplain } from '#lib/file-explorer/pane/editor-open.js'
+import { openGetInfoOrExplain } from '#lib/file-explorer/pane/get-info-open.js'
+import { resolveTerminalFolder } from '#lib/open-terminal/terminal-target.js'
+import { openTerminalHereForFolder } from '#lib/open-terminal/open-terminal-here.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { extractFilename } from '#lib/file-explorer/operations/selection-adjustment.js'
+import { trackEvent } from '#lib/tauri-commands/index.js'
+import { editServerInView } from '#lib/file-explorer/network/servers-hub-actions.js'
+import type { CommandArgs } from '#lib/commands/index.js'
 import { detached } from './detached'
 import { confirmDialogForMcp } from '../mcp-dialog-confirm'
 import type { CommandHandlerContext, CommandHandlerRecord } from './types'
@@ -169,7 +169,7 @@ export const fileHandlers = {
       return
     }
     return withEntryUnderCursor(hctx, async (entry) => {
-      // F4 hands the file to the text editor the user chose (`$lib/text-editor`), or
+      // F4 hands the file to the text editor the user chose (`#lib/text-editor`), or
       // refuses a row with no real file behind it, with a toast (`pane/editor-open.ts`). Nothing
       // downstream of the editor can count an open, so it's counted here, only when
       // an editor was asked. No props: the file's name and extension are exactly

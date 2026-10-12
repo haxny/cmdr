@@ -7,11 +7,11 @@
      * The fix in ERR-XGS9X was a switch in System Settings, so a sentence alone
      * would leave the person hunting for the pane.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
-    import { dismissToast } from '$lib/ui/toast'
-    import { openLocalNetworkSettings } from '$lib/tauri-commands'
+    import Button from '#lib/ui/Button.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { openLocalNetworkSettings } from '#lib/tauri-commands/index.js'
     import { directConnectionUnavailableMessage, openLocalNetworkSettingsLabel } from './upgrade-messages'
 
     interface Props {

@@ -16,8 +16,8 @@
  * "Ask Cmdr" also selected every file.
  */
 
-import { commands } from '$lib/commands/command-registry'
-import type { CommandId } from '$lib/commands'
+import { commands } from '#lib/commands/command-registry.js'
+import type { CommandId } from '#lib/commands/index.js'
 import { getEffectiveShortcuts, onShortcutChange } from './shortcuts-store'
 import { keyComboCandidates } from './key-capture'
 import { getActiveScopes } from './scope-hierarchy'

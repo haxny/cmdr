@@ -9,23 +9,23 @@
         type SettingId,
         type SettingsValues,
         formatDurationSetting,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import SettingsSection from '../components/SettingsSection.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
     import {
         createShouldShow,
         anyVisible,
         getMatchIndicesForLabel,
         highlightMatches,
-    } from '$lib/settings/settings-search'
+    } from '#lib/settings/settings-search.js'
     import { groupAdvancedByCard, type AdvancedCardGroup } from './advanced-grouping'
-    import { confirmDialog } from '$lib/utils/confirm-dialog'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { revealItemInDir } from '@tauri-apps/plugin-opener'
     import { appLogDir } from '@tauri-apps/api/path'
     import { getVersion } from '@tauri-apps/api/app'

@@ -8,7 +8,7 @@
      *
      * Public API is unchanged: `{ id, disabled, labelOverrides }`.
      */
-    import ToggleGroup, { type ToggleGroupOption } from '$lib/ui/ToggleGroup.svelte'
+    import ToggleGroup, { type ToggleGroupOption } from '#lib/ui/ToggleGroup.svelte'
     import {
         getSetting,
         setSetting,
@@ -16,7 +16,7 @@
         onSpecificSettingChange,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import { onMount } from 'svelte'
     import { useSettingLock } from './setting-lock.svelte'
 

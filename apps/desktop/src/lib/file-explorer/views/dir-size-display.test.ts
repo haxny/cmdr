@@ -4,8 +4,8 @@
  * with/without index data and scanning status.
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { TieredSize } from '$lib/units'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { TieredSize } from '#lib/units/index.js'
 import {
   getDirSizeDisplayState,
   isDirSizeUpdating,
@@ -16,7 +16,7 @@ import {
 } from './full-list-utils'
 
 // Mock settings store (required by full-list-utils)
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn(() => 20),
 }))
 

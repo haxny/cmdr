@@ -16,7 +16,7 @@
  * this map is the second half of one contract: keep the two lists together.
  */
 
-import type { ConflictResolution } from '$lib/file-explorer/types'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
 
 /**
  * Every policy the MCP tools accept. `stop` is the one that decides nothing: the

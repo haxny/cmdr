@@ -24,8 +24,8 @@
  */
 import { getEffectiveShortcuts, onShortcutChange } from './shortcuts-store'
 import { comboHasShift, toDisplayShortcut } from './key-capture'
-import type { CommandId } from '$lib/commands/command-ids'
-import { dependOn } from '$lib/utils/reactivity'
+import type { CommandId } from '#lib/commands/command-ids.js'
+import { dependOn } from '#lib/utils/reactivity.js'
 
 let version = $state(0)
 let subscribed = false

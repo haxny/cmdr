@@ -4,9 +4,9 @@
  * section never has to remember which of its settings a policy could lock.
  */
 
-import type { SettingId } from '$lib/settings'
-import { disabledNoteId } from '$lib/settings/settings-window'
-import { isSettingLocked } from '$lib/managed-policy/managed-policy.svelte'
+import type { SettingId } from '#lib/settings/index.js'
+import { disabledNoteId } from '#lib/settings/settings-window.js'
+import { isSettingLocked } from '#lib/managed-policy/managed-policy.svelte.js'
 
 export interface SettingLockState {
   /** The policy pins this setting: the control renders disabled. */

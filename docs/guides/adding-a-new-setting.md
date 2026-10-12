@@ -74,7 +74,7 @@ hand-rendered feature-page row, never both. Every non-Advanced section is bespok
 ## 3. If it changes backend behavior, wire live-apply
 
 Settings apply immediately, never on restart. A setting that changes Rust-side behavior needs all three: (a) a Tauri
-command, (b) a typed wrapper in `$lib/tauri-commands/settings.ts`, (c) an `onSettingChange` case in
+command, (b) a typed wrapper in `#lib/tauri-commands/settings.ts`, (c) an `onSettingChange` case in
 `settings-applier.ts` that calls it. Pure frontend settings (read via `getSetting` where they're used) skip this.
 
 A setting an organization's MDM policy can lock gets its lock in `src-tauri/src/managed_policy/locked.rs`; the store,

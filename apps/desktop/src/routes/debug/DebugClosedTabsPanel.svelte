@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import type { ClosedTab } from '$lib/file-explorer/tabs/tab-state-manager.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import type { ClosedTab } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 
     interface ClosedTabsPayload {
         left: ClosedTab[]

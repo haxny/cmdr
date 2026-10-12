@@ -2,10 +2,10 @@
  * Command types for the command palette and shortcut configuration.
  */
 
-import type { ViewMode } from '$lib/app-status-store'
-import type { BadgeStatus } from '$lib/feature-status'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { Initiator } from '$lib/tauri-commands'
+import type { ViewMode } from '#lib/app-status-store.js'
+import type { BadgeStatus } from '#lib/feature-status.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { Initiator } from '#lib/tauri-commands/index.js'
 import type { CommandId } from './command-ids'
 import type { WhileDialogOpen } from './while-dialog-open'
 
@@ -186,7 +186,7 @@ export interface Command {
   whileDialogOpen: WhileDialogOpen
   /**
    * Stability badge shown in the palette row (uppercase ALPHA / BETA pill).
-   * Derive it from `getBadgeStatus(id)` in `$lib/feature-status` so the
+   * Derive it from `getBadgeStatus(id)` in `#lib/feature-status` so the
    * repo-root `feature-status.json` stays the single source of truth.
    * Omitted (stable features) renders no badge.
    */

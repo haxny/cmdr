@@ -5,7 +5,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { emit } from '@tauri-apps/api/event'
-import type { MoveTabResult } from '$lib/file-explorer/tabs/tab-state-manager.svelte'
+import type { MoveTabResult } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 import type { ExplorerAPI } from './explorer-api'
 import { moveTabForMcp } from './mcp-tab-move'
 import { tabHandlers } from './command-handlers/tab-handlers'

@@ -5,7 +5,7 @@
  * Classification is the backend's (`file_system/volume/eject/mod.rs`); the words are
  * all here, pulled from the `errors.eject.*` catalog so every locale gets its
  * own. Same split as the mutation path
- * (`$lib/file-operations/mutation-error-messages.ts`);
+ * (`#lib/file-operations/mutation-error-messages.ts`);
  * `docs/guides/error-handling.md` is the map.
  *
  * These render as ONE plain-text line inside a toast, so each message is a
@@ -17,12 +17,12 @@
  * ❌ `diskutil`'s own stderr is NEVER the message. {@link ejectTechnicalDetail}
  * returns it separately, for the log.
  */
-import type { EjectError, HolderScan, VolumeHolder } from '$lib/ipc/bindings'
-import { getMessage } from '$lib/intl/messages.svelte'
-import { formatConjunctionList } from '$lib/intl/list-format'
-import { formatInteger } from '$lib/intl/number-format'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { getAppLogger } from '$lib/logging/logger'
+import type { EjectError, HolderScan, VolumeHolder } from '#lib/ipc/bindings.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import { formatConjunctionList } from '#lib/intl/list-format.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { asEjectError } from './eject-error'
 
 const log = getAppLogger('eject')

@@ -4,7 +4,7 @@
  */
 
 import type { EnumOption, SettingDefinitionSource } from '../types'
-import { formatRoundSize } from '$lib/units/byte-size'
+import { formatRoundSize } from '#lib/units/byte-size.js'
 
 /**
  * A preset size option built in base 1024, labelled with its IEC symbol in the UI
@@ -93,7 +93,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
     // Internal (FE-owned): when the one-time "keep Cmdr in your Dock?" offer was
     // made, as an ISO 8601 instant. Stamped when the toast is RAISED, so a crash
     // mid-toast can't make it reappear forever. A date rather than a flag because
-    // it also feeds the shared nudge cooldown (`$lib/nudges/CLAUDE.md`). No UI
+    // it also feeds the shared nudge cooldown (`#lib/nudges/CLAUDE.md`). No UI
     // row; hidden the way the seen-flags above it are.
     id: 'behavior.dockPinNudgeOfferedAt',
     section: ['Behavior', 'Navigation & file ops'],
@@ -219,7 +219,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
   // Text editor, rendered as its own card inside Navigation & file ops, above
   // Terminal.
   //
-  // FE-owned like the terminal below: `$lib/text-editor` reads the choice and
+  // FE-owned like the terminal below: `#lib/text-editor` reads the choice and
   // passes it to `openInEditor` / `listTextEditors`, so there's no applier case
   // and no backend push. The stored value is one string, told apart structurally
   // by Rust's `parse_choice`: `system` for the macOS plain-text default (`open
@@ -235,7 +235,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
     descriptionKey: 'settings.behavior.textEditorApp.description',
     keywords: ['editor', 'text editor', 'edit', 'F4', 'Sublime Text', 'VS Code', 'BBEdit', 'TextEdit'],
     type: 'string',
-    // Mirrors `SYSTEM_DEFAULT_EDITOR_CHOICE` in `$lib/text-editor/text-editor-choice.ts`
+    // Mirrors `SYSTEM_DEFAULT_EDITOR_CHOICE` in `#lib/text-editor/text-editor-choice.ts`
     // and `SYSTEM_DEFAULT_CHOICE` in `src-tauri/src/file_system/text_editor.rs`.
     default: 'system',
     // The options are whatever macOS lists right now, so they can't be registry

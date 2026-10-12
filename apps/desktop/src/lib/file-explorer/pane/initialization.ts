@@ -5,9 +5,9 @@ import {
   resolvePersistedPath,
   saveAppStatusNow,
   savePaneTabs,
-} from '$lib/app-status-store'
-import { hydrateRail } from '$lib/ask-cmdr/ask-cmdr-trigger.svelte'
-import { isE2eRun } from '$lib/app-mode'
+} from '#lib/app-status-store.js'
+import { hydrateRail } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
+import { isE2eRun } from '#lib/app-mode.js'
 import {
   pathExists,
   getDefaultVolumeId,
@@ -15,10 +15,10 @@ import {
   getE2eStartPath,
   checkFullDiskAccessQuiet,
   listSavedServers,
-} from '$lib/tauri-commands'
-import { isAtOrUnder } from '$lib/servers/server-path-utils'
-import { volumeScheme } from '$lib/volume-scheme'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { isAtOrUnder } from '#lib/servers/server-path-utils.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { applyFirstRunLayout, resolveFirstRunLayout } from './first-run-layout'
 import { createTabManagerFromPersisted } from './tab-operations'
 import { getAllTabs, type TabManager } from '../tabs/tab-state-manager.svelte'

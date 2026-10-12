@@ -26,7 +26,7 @@ vi.mock('./go-to-latest', () => ({
   goToLatestDownload: goToLatestDownloadMock,
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     setGlobalGoToLatestShortcut: setGlobalGoToLatestShortcutMock,
   },
@@ -41,12 +41,12 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
   dismissToast: dismissToastMock,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
 }))

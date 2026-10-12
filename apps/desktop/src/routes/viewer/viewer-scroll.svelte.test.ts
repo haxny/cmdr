@@ -21,9 +21,9 @@ import {
 } from './viewer-scroll.svelte'
 import { FETCH_BATCH } from './viewer-row-fetch.svelte'
 import { EOF_ROW } from './selection.svelte'
-import type { LineChunk, ViewerError, ViewerRow } from '$lib/ipc/bindings'
-import { clearIpcMocks, installIpcMock } from '$lib/ipc/test-helpers'
-import { getAppLogger } from '$lib/logging/logger'
+import type { LineChunk, ViewerError, ViewerRow } from '#lib/ipc/bindings.js'
+import { clearIpcMocks, installIpcMock } from '#lib/ipc/test-helpers.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 afterEach(() => {
   clearIpcMocks()

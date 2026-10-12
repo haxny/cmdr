@@ -12,10 +12,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const noteNetworkAction = vi.fn(() => Promise.resolve())
 const settings = new Map<string, unknown>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   noteNetworkAction: () => noteNetworkAction(),
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => settings.get(id),
   setSetting: (id: string, value: unknown) => {
     settings.set(id, value)

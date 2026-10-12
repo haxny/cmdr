@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { createEtaSmoother, ETA_SMOOTHING_FACTOR, progressCountKind } from './progress-readout'
-import { seconds } from '$lib/units'
+import { seconds } from '#lib/units/index.js'
 
 describe('progressCountKind', () => {
   it('counts files through a transfer', () => {

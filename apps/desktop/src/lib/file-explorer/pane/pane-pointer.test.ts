@@ -35,14 +35,14 @@ const { ipc, settings, toast, background, boundCombos } = vi.hoisted<{
   boundCombos: { 'file.copy': 'F5' },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   showFileContextMenu: ipc.showFileContextMenu,
   showParentRowContextMenu: ipc.showParentRowContextMenu,
   getPathsAtIndices: ipc.getPathsAtIndices,
 }))
-vi.mock('$lib/shortcuts', () => ({ boundShortcuts: () => boundCombos }))
-vi.mock('$lib/settings', () => ({ getSetting: settings.getSetting, setSetting: settings.setSetting }))
-vi.mock('$lib/ui/toast', () => ({ addToast: toast.addToast }))
+vi.mock('#lib/shortcuts/index.js', () => ({ boundShortcuts: () => boundCombos }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: settings.getSetting, setSetting: settings.setSetting }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: toast.addToast }))
 vi.mock('./pane-background-dblclick', () => ({ isFileListBackgroundClick: background.isFileListBackgroundClick }))
 vi.mock('./DoubleClickPaneHintToastContent.svelte', () => ({ default: {} }))
 

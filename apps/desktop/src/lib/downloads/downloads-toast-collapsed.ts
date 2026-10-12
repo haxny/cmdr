@@ -4,7 +4,7 @@
  * NEW toast opens in the same state. There's no Settings UI for this flag; it's
  * driven entirely by the toast's collapse/expand button.
  */
-import { getSetting, setSetting } from '$lib/settings'
+import { getSetting, setSetting } from '#lib/settings/index.js'
 
 const COLLAPSED_KEY = 'behavior.fileSystemWatching.downloadsToastCollapsed'
 

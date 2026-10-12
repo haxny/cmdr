@@ -11,13 +11,13 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { tString } from '$lib/intl/messages.svelte'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { deriveSizeChip, deriveDateChip, deriveScopeChip } from './filter-chips/filter-chip-state'
 import { byteUnitLabel, buildDatePresets } from './filter-chips/filter-popover-helpers'
 import { patternRowLabel } from './ai-summary'
 import { chipTooltip, modeName, formatAge } from './recent-items/recent-items-utils'
-import type { HistoryEntry } from '$lib/tauri-commands'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

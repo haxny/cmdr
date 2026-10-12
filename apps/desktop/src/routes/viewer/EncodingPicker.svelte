@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-  import type { EncodingChoice, EncodingGroup, FileEncoding } from '$lib/ipc/bindings'
-  import { tString } from '$lib/intl/messages.svelte'
+  import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+  import type { EncodingChoice, EncodingGroup, FileEncoding } from '#lib/ipc/bindings.js'
+  import { tString } from '#lib/intl/messages.svelte.js'
 
   type Props = {
     /** Currently active encoding (drives the selected value). Empty when there's no text

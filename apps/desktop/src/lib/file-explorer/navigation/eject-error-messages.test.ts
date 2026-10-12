@@ -9,15 +9,15 @@
  * English stderr leaking into the sentence a person reads.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
-import type { EjectError, HolderKind, HolderScan, VolumeHolder } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { EjectError, HolderKind, HolderScan, VolumeHolder } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { renderEjectError, ejectTechnicalDetail, wordEjectRefusal } from './eject-error-messages'
 import { EjectFailure, asEjectError, throwEjectError } from './eject-error'
 
 // One stable spy, so the Cmdr-holder warn can be asserted on.
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

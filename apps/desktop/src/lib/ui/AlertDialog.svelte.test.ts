@@ -10,7 +10,7 @@ import { mount, tick } from 'svelte'
 import type { ComponentProps } from 'svelte'
 
 // Avoid Tauri IPC side-effects from notifyDialogOpened / notifyDialogClosed.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

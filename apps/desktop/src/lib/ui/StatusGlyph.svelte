@@ -21,7 +21,7 @@
      * screen-reader user never hovers, so `tooltip` alone would never reach them.
      */
     import Icon from './Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import type { IconName } from './icons/icon-map'
 
     interface Props {

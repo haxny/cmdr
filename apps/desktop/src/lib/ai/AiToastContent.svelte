@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Button from '$lib/ui/Button.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import { getAiState, handleCancel, handleGotIt } from './ai-state.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     const aiState = getAiState()
 </script>

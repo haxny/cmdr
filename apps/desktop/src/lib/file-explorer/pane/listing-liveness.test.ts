@@ -4,14 +4,14 @@ const h = vi.hoisted(() => ({
   keepListingsAlive: vi.fn(),
   goneListeners: new Set<(listingId: string) => void>(),
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   keepListingsAlive: h.keepListingsAlive,
   onListingGone: (listener: (listingId: string) => void) => {
     h.goneListeners.add(listener)
     return () => h.goneListeners.delete(listener)
   },
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 

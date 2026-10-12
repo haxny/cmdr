@@ -5,7 +5,7 @@
 // (see `onWriteProgress` in `write-operations.ts`).
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type {
   OperationSnapshot,
@@ -15,7 +15,7 @@ import type {
   RetryOutcome,
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 export type {
   OperationSnapshot,

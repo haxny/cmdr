@@ -10,7 +10,7 @@
  * so the identity lock and the secret plumbing are the ones every account uses.
  */
 
-import type { S3ProviderChoice } from '$lib/ipc/bindings'
+import type { S3ProviderChoice } from '#lib/ipc/bindings.js'
 import { parseServerPath } from './server-path-utils'
 
 /** The provider presets, in the order the select lists them. */

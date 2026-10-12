@@ -18,8 +18,8 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-import { getAppLogger } from '$lib/logging/logger'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
   approveSuggestedGroup,
   listSuggestedOps,
@@ -29,7 +29,7 @@ import {
   type ApprovalResultView,
   type SuggestedOpView,
   type SuggestedSweepView,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { asSuggestedOpsError } from './suggested-ops-failure'
 
 const log = getAppLogger('suggestedOps')

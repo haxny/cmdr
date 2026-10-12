@@ -15,13 +15,13 @@ vi.mock('@tauri-apps/plugin-store', () => ({
     }),
   ),
 }))
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
 
 import FunctionKeyBar from './FunctionKeyBar.svelte'
-import { setShortcut, removeShortcut, resetShortcut } from '$lib/shortcuts/shortcuts-store'
-import type { CommandId } from '$lib/commands'
+import { setShortcut, removeShortcut, resetShortcut } from '#lib/shortcuts/shortcuts-store.js'
+import type { CommandId } from '#lib/commands/index.js'
 
 describe('FunctionKeyBar', () => {
   /** Simulates pressing the Shift key, waits for effect and flushes Svelte reactivity. */

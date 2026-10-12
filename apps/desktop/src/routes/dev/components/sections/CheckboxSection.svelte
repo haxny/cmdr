@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
 
     let unchecked = $state(false)
     let checked = $state(true)

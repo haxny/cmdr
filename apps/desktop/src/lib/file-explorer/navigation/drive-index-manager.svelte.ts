@@ -12,13 +12,13 @@
 
 import { SvelteMap } from 'svelte/reactivity'
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import type { VolumeIndexStatus } from '$lib/ipc/bindings'
+import type { VolumeIndexStatus } from '#lib/ipc/bindings.js'
 import {
   getVolumeIndexStatusById,
   onIndexFreshnessChanged,
   onIndexScanStarted,
   onIndexScanComplete,
-} from '$lib/tauri-commands/indexing'
+} from '#lib/tauri-commands/indexing.js'
 import type { VolumeInfo } from '../types'
 import { capabilitiesForInfo } from '../pane/volume-capabilities'
 

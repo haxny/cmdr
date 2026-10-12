@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { scaleCompressedEstimate } from './compress-estimate-scaling'
-import type { CompressedSizeEstimate } from '$lib/tauri-commands'
+import type { CompressedSizeEstimate } from '#lib/tauri-commands/index.js'
 
 const est = (compressibleBytes: number, mediumBytes: number, incompressibleBytes: number): CompressedSizeEstimate => ({
   compressibleBytes,

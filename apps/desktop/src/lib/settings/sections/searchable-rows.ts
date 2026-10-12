@@ -12,8 +12,8 @@
  * Type and rationale: `../types.ts` § Searchable rows.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { isMacOS } from '$lib/shortcuts/key-capture'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import type { SearchableEntry, SearchableRow } from '../types'
 import { adbRows } from './AdbSection.rows'
 import { advancedRows } from './AdvancedSection.rows'

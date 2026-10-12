@@ -13,12 +13,12 @@
      * `region` is the region; for a preset they're the same input, so either
      * sentence lands under it. Other keeps them apart.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import {
         HETZNER_LOCATIONS,
         S3_PROVIDERS,

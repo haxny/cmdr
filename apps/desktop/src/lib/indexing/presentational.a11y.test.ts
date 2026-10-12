@@ -9,7 +9,7 @@
  * a `scanActivity` with different defaults.
  *
  * `IndexingStatusIndicator` and `StaleDriveDialog` stay in `stateful.a11y.test.ts`:
- * they mock `./index-state.svelte` and `$lib/stores/volume-store.svelte`, and both
+ * they mock `./index-state.svelte` and `#lib/stores/volume-store.svelte`, and both
  * modules are read for real by `IndexingDriveSummary` here.
  */
 
@@ -22,8 +22,8 @@ import IndexingEnrichRow from './IndexingEnrichRow.svelte'
 import IndexingStatusBody from './IndexingStatusBody.svelte'
 import type { VolumeIndexActivity, AggregationActivity } from './index-state.svelte'
 import type { VolumeEnrichActivity } from './media-enrich-state.svelte'
-import type { ActivityPhase } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { ActivityPhase } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // These components share one jsdom document, and axe resolves ARIA id references
 // document-wide. Clearing between tests keeps each audit looking at its own

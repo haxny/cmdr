@@ -5,12 +5,12 @@ import {
   getDefaultValue,
   validateSettingValue,
   getSettingsInSection,
-} from '$lib/settings/settings-registry'
-import { SOFT_DIALOG_REGISTRY } from '$lib/ui/dialog-registry'
+} from '#lib/settings/settings-registry.js'
+import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
 import RenameConflictDialog from './RenameConflictDialog.svelte'
 import type { RenameConflictResolution } from './rename-operations'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),

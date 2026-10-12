@@ -20,8 +20,8 @@
  * duplicated: command grouping in `keyboard-shortcuts-grouping`, conflict
  * classification in `keyboard-shortcuts-banner`.
  */
-import { commands } from '$lib/commands/command-registry'
-import { searchAllCommands } from '$lib/commands/fuzzy-search'
+import { commands } from '#lib/commands/command-registry.js'
+import { searchAllCommands } from '#lib/commands/fuzzy-search.js'
 import {
   getEffectiveShortcuts,
   isShortcutModified,
@@ -36,9 +36,9 @@ import {
   findConflictsForShortcut,
   getConflictingCommandIds,
   getConflictCount,
-} from '$lib/shortcuts'
-import { confirmDialog } from '$lib/utils/confirm-dialog'
-import { dependOn } from '$lib/utils/reactivity'
+} from '#lib/shortcuts/index.js'
+import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+import { dependOn } from '#lib/utils/reactivity.js'
 import { groupCommandsByScope } from './keyboard-shortcuts-grouping'
 import { classifyConflict, classifySystemShortcut, type ConflictKind } from './keyboard-shortcuts-banner'
 

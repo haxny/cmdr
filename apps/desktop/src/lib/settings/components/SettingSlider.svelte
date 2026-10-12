@@ -1,7 +1,7 @@
 <script lang="ts">
     /**
      * Registry-driven slider row: reads bounds, stops, and the default from the registry, and
-     * writes through `setSetting`. The control itself is `$lib/ui/Slider`.
+     * writes through `setSetting`. The control itself is `#lib/ui/Slider`.
      *
      * There's no paired number field. The live readout is a label, so the value can only be set
      * by dragging, which keeps the row honest about being a coarse choice. `sliderStops` do
@@ -13,7 +13,7 @@
      * ❌ The index is never stored — reordering the table would then silently change what every
      * user chose.
      */
-    import Slider from '$lib/ui/Slider.svelte'
+    import Slider from '#lib/ui/Slider.svelte'
     import {
         getSetting,
         setSetting,
@@ -22,8 +22,8 @@
         onSpecificSettingChange,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
-    import { formatInteger } from '$lib/intl/number-format'
+    } from '#lib/settings/index.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { nearestStopIndex, stopAt } from './slider-stops'
     import { onMount } from 'svelte'
     import { useSettingLock } from './setting-lock.svelte'
@@ -36,7 +36,7 @@
         /**
          * Renders the stored value for the readout and for screen readers, replacing the
          * grouped-integer default. For a row whose number isn't a plain count (the Ask Cmdr
-         * wake cadence, which reads as `30s` / `5m` / `2h` through `$lib/units`).
+         * wake cadence, which reads as `30s` / `5m` / `2h` through `#lib/units`).
          */
         formatValue?: (value: number) => string
         /**

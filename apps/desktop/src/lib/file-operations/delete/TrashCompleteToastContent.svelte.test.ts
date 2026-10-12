@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import type { PaneRevealAPI } from '$lib/file-explorer/navigation/navigate-and-select'
+import type { PaneRevealAPI } from '#lib/file-explorer/navigation/navigate-and-select.js'
 
 const runTrashUndo = vi.fn<(operationId: string) => Promise<void>>()
 vi.mock('./trash-undo', () => ({
@@ -30,7 +30,7 @@ vi.mock('./go-to-trash', () => ({
 }))
 
 const dismissToast = vi.fn<(id: string) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: (id: string): void => {
     dismissToast(id)
   },

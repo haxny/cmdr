@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Chip from '$lib/ui/Chip.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Chip from '#lib/ui/Chip.svelte'
 
     let sizeOpen = $state(false)
     let sizeConfigured = $state(true)

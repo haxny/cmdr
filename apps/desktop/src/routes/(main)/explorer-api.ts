@@ -3,33 +3,33 @@
  * Used by +page.svelte, command-dispatch.ts, and mcp-listeners.ts.
  */
 
-import type { CompareDirectoriesMode } from '$lib/tauri-commands'
-import type { ViewMode } from '$lib/app-status-store'
-import type { McpSelectMode, McpTabAction, ConfirmDialogType } from '$lib/commands'
-import type { TabMoveRequest } from '$lib/file-explorer/pane/tab-operations'
-import type { MoveTabResult } from '$lib/file-explorer/tabs/tab-state-manager.svelte'
-import type { QuickLookKeyEventPayload } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-import type { FileEntry, FriendlyError, NetworkHost, TransferOperationType } from '$lib/file-explorer/types'
+import type { CompareDirectoriesMode } from '#lib/tauri-commands/index.js'
+import type { ViewMode } from '#lib/app-status-store.js'
+import type { McpSelectMode, McpTabAction, ConfirmDialogType } from '#lib/commands/index.js'
+import type { TabMoveRequest } from '#lib/file-explorer/pane/tab-operations.js'
+import type { MoveTabResult } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
+import type { QuickLookKeyEventPayload } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+import type { FileEntry, FriendlyError, NetworkHost, TransferOperationType } from '#lib/file-explorer/types.js'
 import type {
   AdoptedOperationData,
   ConfirmOptions,
   ForegroundOperationVerdict,
-} from '$lib/file-explorer/pane/dialog-props'
-import type { ProgrammaticConfirmVerdict } from '$lib/file-explorer/pane/programmatic-confirm'
-import type { NavigateIntent, NavigateResult } from '$lib/file-explorer/pane/navigate'
-import type { VolumeSelectOutcome } from '$lib/file-explorer/pane/volume-selection'
-import type { FavoriteOpenedEvent } from '$lib/file-explorer/navigation/favorites-analytics'
-import type { MultiRenameSelection } from '$lib/file-explorer/pane/pane-commands'
-import type { SelectedPathsRead } from '$lib/file-explorer/pane/selected-paths-read'
+} from '#lib/file-explorer/pane/dialog-props.js'
+import type { ProgrammaticConfirmVerdict } from '#lib/file-explorer/pane/programmatic-confirm.js'
+import type { NavigateIntent, NavigateResult } from '#lib/file-explorer/pane/navigate.js'
+import type { VolumeSelectOutcome } from '#lib/file-explorer/pane/volume-selection.js'
+import type { FavoriteOpenedEvent } from '#lib/file-explorer/navigation/favorites-analytics.js'
+import type { MultiRenameSelection } from '#lib/file-explorer/pane/pane-commands.js'
+import type { SelectedPathsRead } from '#lib/file-explorer/pane/selected-paths-read.js'
 import type {
   CopyPathBetweenPanesArgs,
   OpenDeleteDialogArgs,
   OpenTransferDialogArgs,
   StartRenameOptions,
-} from '$lib/file-explorer/pane/types'
-import type { Initiator } from '$lib/tauri-commands'
-import type { HubRow } from '$lib/file-explorer/network/servers-hub-rows'
-import type { SmbHandOff } from '$lib/servers/open-sign-in'
+} from '#lib/file-explorer/pane/types.js'
+import type { Initiator } from '#lib/tauri-commands/index.js'
+import type { HubRow } from '#lib/file-explorer/network/servers-hub-rows.js'
+import type { SmbHandOff } from '#lib/servers/open-sign-in.js'
 
 /**
  * Closed action set for `handleSelectionAction` (the selection sub-dispatcher).
@@ -111,14 +111,14 @@ export interface ExplorerAPI {
    * selected indices synchronously at call time and resolves them against the
    * pane's last-seen listing revision; `changed` when the listing moved on.
    * `noSelection` sends the caller back to its cursor-row read.
-   * `$lib/file-explorer/pane/selected-paths-read.ts`.
+   * `#lib/file-explorer/pane/selected-paths-read.ts`.
    */
   readSelectedPathsForCopy: () => Promise<SelectedPathsRead>
   /**
    * The focused pane's cursor row as "Open terminal here" reads it: name, path, and
    * whether it's a folder. `..` comes back as a real row (the command treats it as
    * "the pane's own folder"), which is why this isn't `getFileAndPathUnderCursor`.
-   * Null when no row is under the cursor. Rules: `$lib/open-terminal/terminal-target.ts`.
+   * Null when no row is under the cursor. Rules: `#lib/open-terminal/terminal-target.ts`.
    *
    * Async because it RE-READS the row: the displayed cursor entry is one IPC behind
    * a cursor move, and a command that acts on the row can't be.
@@ -275,7 +275,7 @@ export interface ExplorerAPI {
   openViewerForCursor: () => Promise<void>
   /**
    * Open a search-results snapshot in the target pane (defaults to focused).
-   * The snapshot must already exist in `$lib/search/snapshot-store.svelte`; the
+   * The snapshot must already exist in `#lib/search/snapshot-store.svelte`; the
    * caller is responsible for `getOrCreate` + `setLastAttemptId` (the
    * SearchDialog's "Open in pane" handler does both). Routes through
    * `navigate({ to: { snapshot } })` so pinned-tab fork, focus, and history push

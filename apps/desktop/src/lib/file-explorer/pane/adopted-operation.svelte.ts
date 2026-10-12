@@ -1,7 +1,7 @@
 /**
  * The progress dialog's ADOPTED arm: an operation this window never started,
  * shown because the user pressed Show on its queue row
- * (`$lib/file-operations/queue/DETAILS.md` § Show).
+ * (`#lib/file-operations/queue/DETAILS.md` § Show).
  *
  * This module owns the adopted slot outright, and it is a different module from
  * the one holding birth context ON PURPOSE. `handleTransferError`'s archive
@@ -22,19 +22,19 @@
  * `DETAILS.md` § "Birth context".
  */
 
-import { getForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { getForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import {
   composeTransferCompleteToast,
   composeTrashRefusedToast,
-} from '$lib/file-operations/transfer/transfer-complete-toast'
-import { getTechnicalDetails } from '$lib/file-operations/transfer/transfer-error-messages'
-import { getAppLogger } from '$lib/logging/logger'
-import { formatByteSize } from '$lib/units'
+} from '#lib/file-operations/transfer/transfer-complete-toast.js'
+import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { formatByteSize } from '#lib/units/index.js'
 import { transferOpLabel } from './transfer-op-label'
 import type { TransferOperationType, WriteOperationError } from '../types'
-import type { ProgressAtStop } from '$lib/tauri-commands'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
 import type { AdoptedOperationData, ForegroundOperationVerdict, TransferCompletePayload } from './dialog-props'
 
 const log = getAppLogger('fileExplorer')

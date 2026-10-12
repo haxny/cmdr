@@ -5,9 +5,9 @@
  * list them. The page acts on the answer (`routes/queue/+page.svelte`).
  */
 
-import type { CommandId } from '$lib/commands'
-import { comboMatchesCommand, resolveKeyCombo } from '$lib/shortcuts'
-import type { QueueMoveDirection } from '$lib/tauri-commands'
+import type { CommandId } from '#lib/commands/index.js'
+import { comboMatchesCommand, resolveKeyCombo } from '#lib/shortcuts/index.js'
+import type { QueueMoveDirection } from '#lib/tauri-commands/index.js'
 import type { CursorStep } from './queue-cursor.svelte'
 
 export type QueueKeyAction =

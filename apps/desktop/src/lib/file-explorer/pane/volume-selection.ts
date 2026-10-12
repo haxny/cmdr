@@ -16,8 +16,8 @@
  * delete sequence (regression guard: mtp.spec.ts).
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { openFavorite } from '../navigation/open-favorite'
 import type { FavoriteRefusal } from '../navigation/favorite-reach'
 import type { FavoriteOpenedEvent } from '../navigation/favorites-analytics'

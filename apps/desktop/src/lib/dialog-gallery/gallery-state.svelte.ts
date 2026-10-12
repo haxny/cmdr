@@ -5,12 +5,12 @@
  * `import.meta.env.DEV || __CMDR_E2E_BUILD__` gate, so the whole module tree
  * tree-shakes out of a plain production build. Nothing in the main window's own
  * graph reads it: a previewed dialog suppresses shortcuts by registering in
- * `$lib/ui/open-dialogs.svelte` like any other soft dialog, since the gallery
+ * `#lib/ui/open-dialogs.svelte` like any other soft dialog, since the gallery
  * renders the SHIPPING component.
  */
 
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
-import type { FileEntry, SortColumn, SortOrder } from '$lib/file-explorer/types'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
+import type { FileEntry, SortColumn, SortOrder } from '#lib/file-explorer/types.js'
 
 /**
  * The real directory the disk-backed dialogs work against, plus the live pane

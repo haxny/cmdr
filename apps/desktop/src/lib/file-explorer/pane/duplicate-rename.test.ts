@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { OperationItemView } from '$lib/tauri-commands'
+import type { OperationItemView } from '#lib/tauri-commands/index.js'
 import type { FilePaneAPI } from './types'
 
 const { getOperationLogDetailSpy, moveCursorSpy, findFileIndexSpy, onDirectoryDiffSpy, whenSettledSpy } = vi.hoisted(
@@ -22,13 +22,13 @@ const { getOperationLogDetailSpy, moveCursorSpy, findFileIndexSpy, onDirectoryDi
   }),
 )
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getOperationLogDetail: getOperationLogDetailSpy,
   findFileIndex: findFileIndexSpy,
   onDirectoryDiff: onDirectoryDiffSpy,
 }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: moveCursorSpy }))
-vi.mock('$lib/file-operations/settled-operations', () => ({ whenOperationSettled: whenSettledSpy }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: moveCursorSpy }))
+vi.mock('#lib/file-operations/settled-operations.js', () => ({ whenOperationSettled: whenSettledSpy }))
 
 import {
   duplicateRenameDestination,

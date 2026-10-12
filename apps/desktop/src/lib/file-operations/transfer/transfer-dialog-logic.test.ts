@@ -4,9 +4,9 @@
  * branches lifted out of `TransferDialog.svelte`.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { getPathValidationError, formatSpaceInfo } from './transfer-dialog-logic'
-import type { SpaceInfo } from '$lib/ipc/bindings'
+import type { SpaceInfo } from '#lib/ipc/bindings.js'
 
 // Pin the base locale so the catalog-resolved validation/space copy is the
 // deterministic en parity net.

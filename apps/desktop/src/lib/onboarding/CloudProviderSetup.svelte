@@ -1,17 +1,17 @@
 <script lang="ts">
     import { onDestroy, untrack } from 'svelte'
-    import ProviderSetupSteps from '$lib/ai-provider-setup/ProviderSetupSteps.svelte'
-    import { ProviderSetupController } from '$lib/ai-provider-setup/provider-setup.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getCloudProvider } from '$lib/settings'
-    import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
+    import ProviderSetupSteps from '#lib/ai-provider-setup/ProviderSetupSteps.svelte'
+    import { ProviderSetupController } from '#lib/ai-provider-setup/provider-setup.svelte.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getCloudProvider } from '#lib/settings/index.js'
+    import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
 
     /**
      * Per-provider tutorial in the onboarding wizard's step 2 right column: a provider
      * header plus the shared numbered steps, with a quiet status line underneath.
      *
      * The steps, the API-key persist, and the connection check all live in
-     * `$lib/ai-provider-setup/`, shared with Settings › AI › Provider. Only the header and
+     * `#lib/ai-provider-setup/`, shared with Settings › AI › Provider. Only the header and
      * the status line are the wizard's own, and the status line is deliberately quieter
      * than Settings': the wizard never blocks advance on a key, so a failed check is
      * feedback, not something to act on right now.

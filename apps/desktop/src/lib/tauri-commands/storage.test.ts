@@ -8,7 +8,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     openPrivacySettings: vi.fn(),
     checkFullDiskAccess: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   events: {},
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { checkFullDiskAccess, checkFullDiskAccessQuiet, getMacosMajorVersion, openPrivacySettings } from './storage'
 
 describe('permission wrappers', () => {

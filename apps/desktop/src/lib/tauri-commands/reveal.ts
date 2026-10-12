@@ -4,9 +4,9 @@
 // missing-command rejection other platforms give and does nothing there.
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
-import type { RevealHandlerStatus } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
+import { commands, events } from '#lib/ipc/bindings.js'
+import type { RevealHandlerStatus } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('reveal')
 

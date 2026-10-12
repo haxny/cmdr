@@ -25,7 +25,7 @@ used, in `../pane/DETAILS.md`. Only the layout facts that none of those carry li
   cycle-free way to reach the resolver. Folding it back into `path-navigation.ts` reintroduces the cycle.
 - **`real-folder-history.ts` answers "where was this pane really", skipping `search-results://` snapshot paths.** One
   backward walk over a history stack, shared by two callers that each need a FOLDER and can't use a snapshot: the Search
-  dialog's "current folder" scope (`$lib/search/searchable-folder.ts`) and tab persistence
+  dialog's "current folder" scope (`#lib/search/searchable-folder.ts`) and tab persistence
   (`../pane/tab-operations.ts`), which must not write a per-session snapshot id to disk. It's generic over the entry
   with a `pathOf` reader, so the persistence side walks whole `HistoryEntry`s and gets the folder's `volumeId` with its
   path, while the scope side walks a bare path list. Why persistence cares: `../pane/DETAILS.md` § "A snapshot never
@@ -124,7 +124,7 @@ in Rust by `server_volumes.rs`; `../pane/navigate.ts` hands it over through `get
 lands at its root, except a phone: an `adb://<serial>` root becomes `adb://<serial>/sdcard`, where the user's own files
 are. ❗ It is a LANDING rule reached only by arm 4, ❌ never a different volume root: the root is unchanged, one
 Backspace away, and shown in the breadcrumb, and a remembered path (arm 3) still wins. Why a phone lands there, and why
-`/data` is never hidden: `$lib/adb/DETAILS.md` § "Where a phone's first navigation lands".
+`/data` is never hidden: `#lib/adb/DETAILS.md` § "Where a phone's first navigation lands".
 
 ### Picking a volume itself (`picked-volume-path.ts`)
 
@@ -171,7 +171,7 @@ It's idempotent, and it reads a root with or without a trailing slash as the sam
 `sftp://ada@nas.local:22/`). Who applies it to panes, tabs, and the remembered path: `../pane/DETAILS.md` § "A place
 whose root moved under the pane".
 
-`withTimeout(promise, ms, fallback)`: imported from `$lib/utils/timing` and re-exported. Races a promise against a
+`withTimeout(promise, ms, fallback)`: imported from `#lib/utils/timing` and re-exported. Races a promise against a
 timeout, returning the fallback on expiry. Used by `determineNavigationPath` and also by `VolumeBreadcrumb.svelte`
 (wraps `getVolumeSpace`). `DualPaneExplorer.svelte` uses `resolvePathVolume` for startup tab restore (backend has its
 own 2s timeout, no frontend wrapper needed).
@@ -302,7 +302,7 @@ landing item in the toggle-and-fill range — see `file-explorer/CLAUDE.md` § S
 Two components, one feature. **`VolumeBreadcrumb.svelte` is the CHIP** at the head of the path bar (the icon, the name,
 the badges, the detach control, and the `os_mount` options popup), and it owns the four commands the pane calls:
 `toggle()`, `open()`, `close()`, `getIsOpen()` — each forwarded to the menu. **`VolumeChooserMenu.svelte` is the LIST**,
-built on the house `Menu` primitive (`$lib/ui/DETAILS.md` § Menu).
+built on the house `Menu` primitive (`#lib/ui/DETAILS.md` § Menu).
 
 ❗ **The primitive owns every interaction**: open and close, anchoring and viewport fitting, the cursor, the whole
 keyboard contract (arrows, Home/End, Enter, Escape, ⌥↑/⌥↓ reorder, the submenu), keyboard-vs-pointer mode, the drag,
@@ -359,7 +359,7 @@ Volumes (including MTP) come from the shared `volume-store` which is pushed by t
 Sidebar entries whose path is in the runtime "TCC-restricted" set carry an italic + opacity-0.6 label plus a Lucide
 `info` icon. The hover tooltip points the user at both Full Disk Access and the per-folder Files & Folders pane in
 System Settings. State is owned by `crate::restricted_paths` in the backend and exposed via
-`$lib/stores/restricted-paths-store.svelte` (`isRestricted(path)`). The backend records a `PermissionDenied` only when
+`#lib/stores/restricted-paths-store.svelte` (`isRestricted(path)`). The backend records a `PermissionDenied` only when
 macOS is plausibly the one withholding the path (`tcc_paths::tcc_denial_is_plausible`): the path must sit under a
 hard-coded TCC gate (Downloads/Documents/Desktop/Pictures/Movies/Music, `~/Library/Safari/Mail/Messages`, iCloud Drive,
 `~/Library/CloudStorage` domains, Containers, network volumes) AND that gate must itself be shut. It re-probes every
@@ -472,13 +472,13 @@ list can't disagree on where the rule goes.
   `Forget saved password` is offered unconditionally, because deciding otherwise costs a Keychain read, and each can
   raise a system prompt; `forgetSavedSecret` words a `false` instead. A SAVED place adds its "Reconnect automatically"
   checkbox in a second group, under a rule, carrying the sign-in sheet's label and its explanation as the row tooltip
-  (`$lib/servers/DETAILS.md`, the "Reconnect automatically" paragraph); an unsaved one-shot connection has nothing to
+  (`#lib/servers/DETAILS.md`, the "Reconnect automatically" paragraph); an unsaved one-shot connection has nothing to
   persist, so no checkbox. "Saved" and the switch's value come from `listSavedPlaces()`, read when the switcher opens
   (the hub has its saved list already, and re-reads it on the `volumes-changed` a flip emits).
 - **A favorite**: `Rename`, `Set shortcut…`, `Remove from favorites` (§ "The favorites menu").
 
 **Both doors, one list.** → (or a hover) opens the submenu, and a right-click on the row opens the same one: the
-primitive does it (`$lib/ui/DETAILS.md` § Menu), so none of these rows raises a native popup. Picks carry the typed
+primitive does it (`#lib/ui/DETAILS.md` § Menu), so none of these rows raises a native popup. Picks carry the typed
 `VolumeContextActionKind` in a `RowMenuPick` payload (a union member of each menu's row data, ❌ never a value prefix),
 and land in the handlers the palette uses: `runVolumeRowAction` sends Eject and Disconnect through `runDetach` (the
 inline button's path, which refuses a busy volume whatever the menu showed) and the rest to `runServerRowAction`. `Open`
@@ -502,7 +502,7 @@ a connected volume's live switch (`apps/desktop/src-tauri/src/network/DETAILS.md
 `runRowFix`'s `Record<RowFixKind, …>`.
 
 **Busy gating.** While a copy / move / delete reads from or writes to a volume, ejecting it is blocked so a disconnect
-can't truncate an in-flight file. `$lib/stores/volume-busy-store.svelte`'s `isVolumeBusy(id)` (fed by the backend
+can't truncate an in-flight file. `#lib/stores/volume-busy-store.svelte`'s `isVolumeBusy(id)` (fed by the backend
 `volumes-busy-changed` event, which is Rust's `busy_volume_ids()`) disables the header eject button, the dropdown-row
 eject button, and the row menu's destructive items (` (busy)` suffix), each surface reading the same store answer;
 `handleEjectClick` and `runDetach` also early-return on a busy volume. The breadcrumb's native Eject is gated
@@ -523,7 +523,7 @@ through one `detachButton` snippet, and its words, glyph, and three states (ejec
 14px box, so the row doesn't shift; `Spinner` itself stops spinning under `prefers-reduced-motion`.
 
 **A refusal speaks the catalog, never `diskutil`.** `ejectVolume` / `disconnectSmbVolume` throw an `EjectFailure`
-(`eject-error.ts`, a subclass of the shared `TypedFailure` in `$lib/ipc/typed-failure.ts`) carrying the backend's typed
+(`eject-error.ts`, a subclass of the shared `TypedFailure` in `#lib/ipc/typed-failure.ts`) carrying the backend's typed
 `EjectError` intact. Three surfaces word one: the dropdown / header button and the row menu's Eject
 (`detach-volume.ts`), the breadcrumb menu's native pick (`DualPaneExplorer`), and the SMB disconnect
 (`../pane/smb-view-state.svelte.ts`). All three go through `wordEjectRefusal(e)` in `eject-error-messages.ts`, which:
@@ -552,7 +552,7 @@ runs most-actionable first over `holders.named`:
    `errors.eject.unmountRefusedByApp` (`{app}`), two or more `errors.eject.unmountRefusedByApps` (`{apps}`). The two
    kinds word the same on purpose: what the person acts on is the name, and both carry one they'd recognize (an app's
    display name, a tool's executable name). `{apps}` spells out at most three names and puts `errors.eject.otherApps`
-   last from the fourth, joined by `formatConjunctionList` (`$lib/intl/list-format.ts`, `Intl.ListFormat` on the UI
+   last from the fourth, joined by `formatConjunctionList` (`#lib/intl/list-format.ts`, `Intl.ListFormat` on the UI
    locale), so the toast stays one line and reads in the reader's own language.
 2. **`DiskImage`** → eject that image first; the drive can't go before it does. Its `name` (the image's mounted volume
    name) is deliberately unused: the approved copy names no image.
@@ -598,7 +598,7 @@ three edits a favorite takes), with a favorite row's label and shortcut field in
 `FavoriteShortcutField.svelte`. The switcher's favorites section reuses all three (§ The switcher's favorites section
 below). Favorites arrive from `volume-store` as `VolumeInfo` with `category: 'favorite'` and `id: 'fav-<favoriteId>'`
 (the backend `favorites/` store is the source of truth; see `src-tauri/src/favorites/CLAUDE.md`). Every mutation goes
-through the typed `commands.*` wrappers in `$lib/tauri-commands/favorites.ts`, each of which re-emits `volumes-changed`,
+through the typed `commands.*` wrappers in `#lib/tauri-commands/favorites.ts`, each of which re-emits `volumes-changed`,
 so the menu re-renders live with no manual refresh. `stripFavoritePrefix(locationId)` recovers the bare favorite id
 (remove / rename / reorder take the bare id, never the `fav-…` switcher id). The optional `favoriteShortcut` arrives on
 the same volume row.
@@ -692,7 +692,7 @@ reads `⌥↑ / ⌥↓` on macOS, `Alt+↑ / Alt+↓` elsewhere, built by the pu
 so a renamed favorite still reveals where it points).
 
 - **The mechanics are the `Menu` primitive's**: the drag threshold, the drop-line cue at the insertion gap, ⌥↑/⌥↓, and
-  carrying the cursor with the moved row all live in `$lib/ui/menu-controller.svelte.ts` and its `menu-reorder.ts`,
+  carrying the cursor with the moved row all live in `#lib/ui/menu-controller.svelte.ts` and its `menu-reorder.ts`,
   switched on by `reorderable: true`. It reports a settled order once, through `onReorder`. ❗ That includes the reason
   it's POINTER-based: under Tauri's `dragDropEnabled` macOS intercepts drag gestures before the WKWebView sees
   `dragstart`/`drop`, so an HTML5-`draggable` reorder looks wired up and silently never fires (the same reason
@@ -733,7 +733,7 @@ opens the section it stays open across restarts, so from then on a favorite is o
 default, so the switcher of someone who never uses favorites stays the drive list it was. The ⌃D menu is unchanged.
 
 - **Where**: on top of the list. Its first row is the `Menu` primitive's DISCLOSURE row (`MenuSection.disclosure`,
-  `$lib/ui/DETAILS.md` § Menu): a star, "Favorites", the count, and a live `ShortcutChip` for `favorites.open`
+  `#lib/ui/DETAILS.md` § Menu): a star, "Favorites", the count, and a live `ShortcutChip` for `favorites.open`
   (`clickable={false}`: a second click target inside a row would double-activate) through the primitive's
   `disclosureTrailing` snippet. ❌ No key handler or highlight here: Enter, Space, a click, →, and ← are the
   primitive's.
@@ -763,7 +763,7 @@ cursor lands there as before.
 ### USB link-speed indicator (MTP)
 
 MTP volumes carry `usbSpeed: UsbSpeed` (`'low' | 'full' | 'high' | 'super' | 'super_plus'`) sourced from `mtp-rs` via
-the shared `crate::usb_speed::UsbSpeed`. `describeUsbSpeed(speed)` in `$lib/file-explorer/types` maps each tier to
+the shared `crate::usb_speed::UsbSpeed`. `describeUsbSpeed(speed)` in `#lib/file-explorer/types` maps each tier to
 `{ tier, label, maxMBps }`; the breadcrumb renders a 5-tier rainbow dot (red → orange → yellow → light green → dark
 green; dark green is `--color-allow`, same shade as SMB direct) on the right of both the closed chip and each dropdown
 row. Tooltip shows `<label> (Max. <N> MB/s)\nNegotiated for this cable, port, and device` (the global tooltip CSS uses
@@ -779,7 +779,7 @@ the dropdown trigger (reflecting the ACTIVE drive), and per-row inside the dropd
 `scanning`, green = `fresh`, yellow = `stale`. The mapping, the menu items per state, and the "N min, S s" duration
 formatter are the pure `drive-index-status.ts` (unit-tested). Blue pulses (gated behind `prefers-reduced-motion`). The
 yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches, is stale while plugged in, so it gets
-`tooltipStalePhone` instead of the disconnect sentence (`$lib/indexing` DETAILS § "The one-time stale dialog").
+`tooltipStalePhone` instead of the disconnect sentence (`#lib/indexing` DETAILS § "The one-time stale dialog").
 
 - **Eligibility is `isDriveRow(volume)`** (in `drive-index-manager.svelte.ts`): every entry except favorites, mounted
   disk images (`isDiskImage`), and any volume whose `canBeIndexed` capability says no (`pane/volume-capabilities.ts`):
@@ -802,7 +802,7 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
   changes; dropdown rows refetch on open.
 - **A scanning badge shows the SHARED live status body**, not a bespoke string — the same `IndexingDriveRow` body the
   corner indicator renders (heading off), so the two surfaces match exactly (count + elapsed for a first scan, or
-  bar+percent+ETA for a calibrated rescan; see `$lib/indexing` DETAILS § Status indicator tooltip content). The badge
+  bar+percent+ETA for a calibrated rescan; see `#lib/indexing` DETAILS § Status indicator tooltip content). The badge
   reads ONLY its own volume's live activity from `index-state` via `getVolumeActivity(volumeId)` (+
   `getVolumeAggregation`) — `index-state` is the single live-activity source; the manager carries no progress map. For
   the `scanning` state the tooltip switches from the text variant to the `contentEl` DOM tooltip: the body lives in a
@@ -824,7 +824,7 @@ yellow tooltip branches on `liveWatch`: a phone over ADB, which nothing watches,
   that order, so the note sits above the separator exactly where it used to. The actions are one section, or NO section
   at all when the master switch is off — the note is then the menu's whole content.
 - **In a switcher row it's a menu opened from INSIDE a menu**, which the primitive handles end to end: the switcher
-  stays open while the badge menu is up and after a pick (`$lib/ui/DETAILS.md` § Menu, "A menu inside a menu"), and only
+  stays open while the badge menu is up and after a pick (`#lib/ui/DETAILS.md` § Menu, "A menu inside a menu"), and only
   the badge's menu takes keys while it's open. ❗ The `restoreFocus` goes back to whatever held focus, ❌ not to the
   badge: in a row that's the switcher's surface, which needs it back to keep owning the keyboard.
 - **The keyboard works the menu**: arrows walk the actions, Enter picks, Escape closes, and every other key is swallowed
@@ -969,7 +969,7 @@ are removed from there, so the switcher's unpin has nothing to say about them.
 - **The decision is pure** (`should-show-pin-hint.ts`: at least five pins, and the seen flag). ❗ "At least five", ❌
   not "the fifth just landed": nothing records last launch's count, and a person whose list was already long is exactly
   who the hint is for. The flag is what keeps it from nagging.
-- **It is raised from `$lib/stores/volume-store`**, where the published list lands, because that is the ONE place every
+- **It is raised from `#lib/stores/volume-store`**, where the published list lands, because that is the ONE place every
   pin reaches whatever moved it: the hub, the row menu, the palette, or a first connect (which auto-pins). ❌ Not from a
   component: the group is rendered by two breadcrumbs, and a hint tied to one of them would fire twice or not at all.
 - **The toast names the palette command through its own catalog key**, ❌ never a second copy of the words: a translated
@@ -1001,10 +1001,10 @@ component to render inline indicators (no toasts):
 
 ## Dependencies
 
-- `$lib/stores/volume-store.svelte`: `getVolumes` (backend-pushed reactive volume list)
-- `$lib/tauri-commands`: `resolvePathVolume`, `pathExists`
-- `$lib/utils/timing`: `withTimeout` (defense-in-depth IPC timeout wrapper)
-- `$lib/app-status-store`: `getLastUsedPathForVolume`
+- `#lib/stores/volume-store.svelte`: `getVolumes` (backend-pushed reactive volume list)
+- `#lib/tauri-commands`: `resolvePathVolume`, `pathExists`
+- `#lib/utils/timing`: `withTimeout` (defense-in-depth IPC timeout wrapper)
+- `#lib/app-status-store`: `getLastUsedPathForVolume`
 - `../types`: `VolumeInfo`, `LocationCategory`, `NetworkHost`
 
 ## `PaneRevealAPI`: the reveal primitives' actual dependency
@@ -1020,4 +1020,4 @@ it has no business reaching. See `../pane/DETAILS.md` § "A dialog outcome that 
 ⚠️ `navigateToFileInPane` (and therefore `revealFileInBestPane`) can THROW: `moveCursor` rejects on a name the visible
 listing doesn't hold, which is what any dotfile is while "show hidden files" is off. The navigation has already happened
 at that point, so a caller revealing a file it doesn't control the name of should catch and carry on rather than let it
-surface as a fault. First case: `$lib/file-operations/delete/go-to-trash.ts`.
+surface as a fault. First case: `#lib/file-operations/delete/go-to-trash.ts`.

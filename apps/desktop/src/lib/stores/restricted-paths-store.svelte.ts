@@ -17,9 +17,9 @@
  */
 
 import { SvelteSet } from 'svelte/reactivity'
-import { getRestrictedPaths, onRestrictedPathsChanged } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
+import { getRestrictedPaths, onRestrictedPathsChanged } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 
 const logger = getAppLogger('restricted-paths-store')
 

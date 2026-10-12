@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { TextEditorApp, TextEditorList } from '$lib/ipc/bindings'
+import type { TextEditorApp, TextEditorList } from '#lib/ipc/bindings.js'
 import { CHOOSE_APP_VALUE } from './app-choice-options'
 import { selectedTextEditorId, textEditorItems, type TextEditorRowLabels } from './text-editor-options'
 

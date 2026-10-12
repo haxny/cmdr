@@ -9,10 +9,10 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { goToTrash, goToTrashedItems } from './go-to-trash'
-import type { Location, OperationLogDetail } from '$lib/tauri-commands'
-import type { ToastOptions } from '$lib/ui/toast/toast-store.svelte'
-import type { PaneRevealAPI } from '$lib/file-explorer/navigation/navigate-and-select'
-import { MutationFailure } from '$lib/file-operations/mutation-error'
+import type { Location, OperationLogDetail } from '#lib/tauri-commands/index.js'
+import type { ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
+import type { PaneRevealAPI } from '#lib/file-explorer/navigation/navigate-and-select.js'
+import { MutationFailure } from '#lib/file-operations/mutation-error.js'
 
 const {
   getTrashDir,
@@ -35,15 +35,15 @@ const {
   addToast: vi.fn<(message: string, options?: ToastOptions) => string>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ getTrashDir, getOperationLogDetail }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ getTrashDir, getOperationLogDetail }))
 vi.mock('../settled-operations', () => ({ whenOperationSettled }))
-vi.mock('$lib/file-explorer/navigation/navigate-and-select', () => ({
+vi.mock('#lib/file-explorer/navigation/navigate-and-select.js', () => ({
   resolveLocationOrToast,
   navigateToDirInBestPane,
   revealFileInBestPane,
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
 
 const TRASH_LOCATION: Location = { volumeId: 'root', path: '/Users/me/.Trash' }
 

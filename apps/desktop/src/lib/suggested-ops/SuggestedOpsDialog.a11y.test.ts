@@ -10,7 +10,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { actions, store } = vi.hoisted(() => ({
   actions: {
@@ -45,7 +45,7 @@ const { actions, store } = vi.hoisted(() => ({
 }))
 
 // `ModalDialog` tells the MCP dialog registry it opened, which is a real Tauri call.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

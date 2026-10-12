@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
 
     const sizeItems: SelectItem[] = [
         { value: 'auto', label: 'Auto', description: 'Pick the unit that reads best' },

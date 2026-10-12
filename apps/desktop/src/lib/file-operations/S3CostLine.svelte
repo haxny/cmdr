@@ -9,10 +9,10 @@
      * that rounds to zero, and renders nothing on a refusal. Never on a rollback
      * or an undo: those just run. `DETAILS.md` § "S3 cost line".
      */
-    import { estimateOperationCost, type CostEstimateRequest } from '$lib/tauri-commands'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
+    import { estimateOperationCost, type CostEstimateRequest } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
     import { visibleCostLines, type CostLine } from './s3-cost-line'
 
     interface Props {

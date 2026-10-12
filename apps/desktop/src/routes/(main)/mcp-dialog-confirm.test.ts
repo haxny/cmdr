@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { emit } from '@tauri-apps/api/event'
 import type { ExplorerAPI } from './explorer-api'
-import type { ProgrammaticConfirmVerdict } from '$lib/file-explorer/pane/programmatic-confirm'
+import type { ProgrammaticConfirmVerdict } from '#lib/file-explorer/pane/programmatic-confirm.js'
 import { confirmDialogForMcp } from './mcp-dialog-confirm'
 
 function explorerAnswering(verdict: ProgrammaticConfirmVerdict) {

@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     const SM_USAGE =
         'Inline and in-field loaders: combobox suggestions, network connect and login, scan phases, license activation, AI status, viewer search, and debug index scans.'

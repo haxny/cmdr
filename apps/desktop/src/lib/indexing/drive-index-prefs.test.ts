@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 let store: Record<string, unknown>
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => store[id],
   setSetting: (id: string, value: unknown) => {
     store[id] = value
@@ -15,7 +15,7 @@ vi.mock('$lib/settings', () => ({
 }))
 
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
 }))
 

@@ -3,30 +3,30 @@ import { mount, unmount, flushSync, type ComponentProps } from 'svelte'
 import QueueRow from './QueueRow.svelte'
 import { operationTypeIcon } from './operation-icon'
 import type { OperationRow } from './operations-store.svelte'
-import type { OperationSnapshot, WriteOperationError, WriteProgressEvent } from '$lib/ipc/bindings'
-import { requestForegroundOperation, retryFailedOperation } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteOperationError, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import { requestForegroundOperation, retryFailedOperation } from '#lib/tauri-commands/index.js'
 
 // The component reads reactive settings (file-size format) deep in `<Size>`. The
 // real path needs the settings store; stub the format getter to keep the unit
 // test isolated.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 
 // Show crosses to the main window over a Tauri event; the row's job is to ask
 // for its own operation and nothing else.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   requestForegroundOperation: vi.fn(() => Promise.resolve()),
   retryFailedOperation: vi.fn(() => Promise.resolve({ kind: 'started', operationId: 'op-2' })),
 }))
 
 // The report opens in the main window; the row's job is to say what to report.
 const openErrorReportFor = vi.hoisted(() => vi.fn())
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
-vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor }))
+vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
 const logWarn = vi.hoisted(() => vi.fn())
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ error: vi.fn(), debug: vi.fn(), warn: logWarn, info: vi.fn() }),
 }))
 

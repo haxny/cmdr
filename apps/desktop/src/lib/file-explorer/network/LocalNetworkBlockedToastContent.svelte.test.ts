@@ -4,12 +4,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import { systemStrings } from '$lib/system-strings.svelte'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
 const { openLocalNetworkSettings } = vi.hoisted(() => ({
   openLocalNetworkSettings: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }))
-vi.mock('$lib/tauri-commands', () => ({ openLocalNetworkSettings }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openLocalNetworkSettings }))
 
 import LocalNetworkBlockedToastContent from './LocalNetworkBlockedToastContent.svelte'
 

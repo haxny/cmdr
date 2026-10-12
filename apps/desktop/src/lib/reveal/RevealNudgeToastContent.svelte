@@ -6,11 +6,11 @@
      * `reveal-nudge.ts` raises it and stamps the nudge ledger, so this component
      * only has to carry the copy and the two answers. The frame's own × is the
      * third answer and is recorded at the raise site, since this component never
-     * sees it. The markup is `$lib/nudges/NudgeToastContent.svelte`, shared with
+     * sees it. The markup is `#lib/nudges/NudgeToastContent.svelte`, shared with
      * the Dock offer.
      */
-    import NudgeToastContent from '$lib/nudges/NudgeToastContent.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import NudgeToastContent from '#lib/nudges/NudgeToastContent.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { acceptRevealNudge, declineRevealNudge } from './reveal-nudge-answer'
 
     interface Props {

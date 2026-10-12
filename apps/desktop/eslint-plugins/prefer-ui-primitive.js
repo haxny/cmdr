@@ -13,7 +13,7 @@
  *   3. It duplicates a11y wiring (labelling, roles, keyboard handling, focus
  *      management) that the matching primitive already owns and tests.
  *
- * The house primitives (`$lib/ui/Checkbox.svelte`, `RadioGroup.svelte`,
+ * The house primitives (`#lib/ui/Checkbox.svelte`, `RadioGroup.svelte`,
  * `Select.svelte`, `ModalDialog.svelte`, `ProgressBar.svelte`) render through
  * Ark UI with our tokens, so every consumer stays consistent by construction.
  * This rule makes new raw controls unable to slip in.
@@ -101,14 +101,14 @@ const MAPPINGS = [
     type: 'checkbox',
     control: '<input type="checkbox">',
     primitive: 'Checkbox',
-    path: '$lib/ui/Checkbox.svelte',
+    path: '#lib/ui/Checkbox.svelte',
   },
   {
     element: 'input',
     type: 'radio',
     control: '<input type="radio">',
     primitive: 'RadioGroup',
-    path: '$lib/ui/RadioGroup.svelte',
+    path: '#lib/ui/RadioGroup.svelte',
   },
   // Text-ish inputs, including a typeless one (HTML defaults it to `text`).
   // `null` is the "no `type` attribute" marker; see `staticAttributeOf`.
@@ -117,12 +117,12 @@ const MAPPINGS = [
     type,
     control: type === null ? '<input>' : `<input type="${type}">`,
     primitive: 'TextInput',
-    path: '$lib/ui/TextInput.svelte',
+    path: '#lib/ui/TextInput.svelte',
   })),
-  { element: 'textarea', control: '<textarea>', primitive: 'TextArea', path: '$lib/ui/TextArea.svelte' },
-  { element: 'select', control: '<select>', primitive: 'Select', path: '$lib/ui/Select.svelte' },
-  { element: 'dialog', control: '<dialog>', primitive: 'ModalDialog', path: '$lib/ui/ModalDialog.svelte' },
-  { element: 'progress', control: '<progress>', primitive: 'ProgressBar', path: '$lib/ui/ProgressBar.svelte' },
+  { element: 'textarea', control: '<textarea>', primitive: 'TextArea', path: '#lib/ui/TextArea.svelte' },
+  { element: 'select', control: '<select>', primitive: 'Select', path: '#lib/ui/Select.svelte' },
+  { element: 'dialog', control: '<dialog>', primitive: 'ModalDialog', path: '#lib/ui/ModalDialog.svelte' },
+  { element: 'progress', control: '<progress>', primitive: 'ProgressBar', path: '#lib/ui/ProgressBar.svelte' },
 ]
 
 // Elements that can host a hand-rolled control role. A role on anything else
@@ -133,14 +133,14 @@ const ROLE_HOSTS = ['button', 'div']
 // roles (`radiogroup`, `tablist`) and roles with no primitive (`tab`, `option`)
 // stay out. Extend by adding a row.
 const ROLE_MAPPINGS = [
-  { role: 'switch', primitive: 'Switch', path: '$lib/ui/Switch.svelte' },
-  { role: 'checkbox', primitive: 'Checkbox', path: '$lib/ui/Checkbox.svelte' },
-  { role: 'radio', primitive: 'RadioGroup', path: '$lib/ui/RadioGroup.svelte' },
+  { role: 'switch', primitive: 'Switch', path: '#lib/ui/Switch.svelte' },
+  { role: 'checkbox', primitive: 'Checkbox', path: '#lib/ui/Checkbox.svelte' },
+  { role: 'radio', primitive: 'RadioGroup', path: '#lib/ui/RadioGroup.svelte' },
 ]
 
 // `<Icon name>` glyph → the primitive that owns a `<button>` wrapping it alone.
 // Extend by adding a row when a new bare-glyph affordance gets a primitive.
-const GLYPH_MAPPINGS = [{ icon: 'info', primitive: 'InfoTip', path: '$lib/ui/InfoTip.svelte' }]
+const GLYPH_MAPPINGS = [{ icon: 'info', primitive: 'InfoTip', path: '#lib/ui/InfoTip.svelte' }]
 
 /**
  * Resolve a Svelte element's named static attribute. Three outcomes, and keeping

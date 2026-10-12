@@ -5,7 +5,7 @@
 // `category: "favorite"` and `id: "fav-<favoriteId>"` (see `volume-store.svelte.ts`). Every mutation
 // re-emits `volumes-changed`, so the switcher refreshes live with no manual refresh.
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 /** The `fav-` prefix the backend puts on a favorite's `LocationInfo.id`. */

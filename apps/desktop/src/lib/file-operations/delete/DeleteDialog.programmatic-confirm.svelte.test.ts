@@ -8,9 +8,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import DeleteDialog from './DeleteDialog.svelte'
-import type { ConfirmOrigin, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import type { ConfirmOrigin, DeleteConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -22,11 +22,11 @@ vi.mock('$lib/tauri-commands', () => ({
   onScanPreviewCancelled: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number | undefined) => (n === undefined ? '' : `${String(n)} B`)),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),

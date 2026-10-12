@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
 
     /**
      * Catalog entries cover every age tier the per-component coloring rules can

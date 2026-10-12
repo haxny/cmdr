@@ -18,7 +18,7 @@
  * it's a unified app shortcut, and the snapshot pane already exposes `selectAll` via `FilePane`.
  */
 
-import { eventMatchesCommand } from '$lib/shortcuts'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 /** Each action the search-pane key dispatch can request from the caller. */
 export type SearchPaneKeyAction =

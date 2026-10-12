@@ -5,9 +5,9 @@
      * the toast id arrive as props, captured at toast-creation time and
      * never re-read. Same shape as `DownloadToastContent`.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** Dedup id of this toast; lets the component self-dismiss on action. */

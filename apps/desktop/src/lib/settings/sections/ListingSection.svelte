@@ -1,15 +1,15 @@
 <script lang="ts">
     import SettingsSection from '../components/SettingsSection.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import SettingRow from '../components/SettingRow.svelte'
-    import { disabledNoteId } from '$lib/settings/settings-window'
+    import { disabledNoteId } from '#lib/settings/settings-window.js'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
     import SettingRadioGroup from '../components/SettingRadioGroup.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSetting, getSettingDefinition, onSpecificSettingChange, type BriefColumnWidthMode } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSetting, getSettingDefinition, onSpecificSettingChange, type BriefColumnWidthMode } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
     import { onMount } from 'svelte'
 
     interface Props {

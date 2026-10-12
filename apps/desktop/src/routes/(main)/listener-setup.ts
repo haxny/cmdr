@@ -39,35 +39,35 @@ import {
   onOpenFavorite,
   favoriteLocationId,
   onMouseNav,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { CommandDispatchers } from './command-dispatch-context'
 import { navCommandForDirection } from './mouse-nav'
-import { setFolderExcluded } from '$lib/media-index/excluded-folders'
-import { setFolderChosen } from '$lib/media-index/always-index-folders'
-import { handleFunctionKeyBarHideRequested } from '$lib/file-explorer/pane/function-key-bar-hide'
-import { isCommandId, type CommandId } from '$lib/commands'
-import type { ViewMode } from '$lib/app-status-store'
-import { adoptedOperationFor } from '$lib/file-operations/foreground-request'
-import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-import { openSettingsWindow } from '$lib/settings/settings-window'
-import { seedSettingForE2E, setSetting } from '$lib/settings'
-import { openFileViewerForPath } from '$lib/file-viewer/open-viewer-for-path'
+import { setFolderExcluded } from '#lib/media-index/excluded-folders.js'
+import { setFolderChosen } from '#lib/media-index/always-index-folders.js'
+import { handleFunctionKeyBarHideRequested } from '#lib/file-explorer/pane/function-key-bar-hide.js'
+import { isCommandId, type CommandId } from '#lib/commands/index.js'
+import type { ViewMode } from '#lib/app-status-store.js'
+import { adoptedOperationFor } from '#lib/file-operations/foreground-request.js'
+import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { seedSettingForE2E, setSetting } from '#lib/settings/index.js'
+import { openFileViewerForPath } from '#lib/file-viewer/open-viewer-for-path.js'
 import {
   navigateToDirInBestPane,
   resolveLocationOrToast,
   revealSearchResultInPane,
-} from '$lib/file-explorer/navigation/navigate-and-select'
-import { closeDialogById } from '$lib/ui/dialog-close-registry'
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
-import { openGalleryDialog } from '$lib/dialog-gallery/gallery-state.svelte'
-import { resolveDiskFixture, type FixtureDirPayload } from '$lib/dialog-gallery/disk-fixture'
-import { openOnboardingPreview } from '$lib/dialog-gallery/onboarding-preview'
-import { openStaleDrivePreview } from '$lib/dialog-gallery/stale-drive-preview'
-import { openOperationConflictPreview } from '$lib/dialog-gallery/operation-conflict-preview'
-import { isE2eRun } from '$lib/app-mode'
+} from '#lib/file-explorer/navigation/navigate-and-select.js'
+import { closeDialogById } from '#lib/ui/dialog-close-registry.js'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
+import { openGalleryDialog } from '#lib/dialog-gallery/gallery-state.svelte.js'
+import { resolveDiskFixture, type FixtureDirPayload } from '#lib/dialog-gallery/disk-fixture.js'
+import { openOnboardingPreview } from '#lib/dialog-gallery/onboarding-preview.js'
+import { openStaleDrivePreview } from '#lib/dialog-gallery/stale-drive-preview.js'
+import { openOperationConflictPreview } from '#lib/dialog-gallery/operation-conflict-preview.js'
+import { isE2eRun } from '#lib/app-mode.js'
 import type { ExplorerAPI } from './explorer-api'
-import type { FriendlyError, TransferOperationType } from '$lib/file-explorer/types'
+import type { FriendlyError, TransferOperationType } from '#lib/file-explorer/types.js'
 
 const log = getAppLogger('mainListeners')
 

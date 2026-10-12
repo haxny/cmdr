@@ -3,14 +3,14 @@
  * Extracted for testability.
  */
 
-import { getSetting } from '$lib/settings/settings-store'
-import { getEffectiveScale, onDebouncedScaleChange } from '$lib/text-size.svelte'
+import { getSetting } from '#lib/settings/settings-store.js'
+import { getEffectiveScale, onDebouncedScaleChange } from '#lib/text-size.svelte.js'
 import type { FileEntry } from '../types'
 import { colorizeSize, formatNumber, formatSizeTriads } from '../selection/selection-info-utils'
-import { bytesLabel, type TieredSize } from '$lib/units/byte-size'
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { GitCountKind, GitEntryMeta } from '$lib/ipc/bindings'
+import { bytesLabel, type TieredSize } from '#lib/units/byte-size.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { GitCountKind, GitEntryMeta } from '#lib/ipc/bindings.js'
 
 /** Layout constants for Full mode */
 export const FULL_LIST_ROW_HEIGHT = 20
@@ -292,7 +292,7 @@ export function wordGitMeta(meta: GitEntryMeta): SizeDisplayPick {
  * rows (the renderer falls through to byte formatting).
  *
  * When `isRestricted` is true, the entry is in the runtime TCC-restricted
- * set (see `$lib/stores/restricted-paths-store`). We override the size
+ * set (see `#lib/stores/restricted-paths-store`). We override the size
  * column with `<no perms>` because the indexer recorded `recursiveSize=0`
  * for the folder (couldn't read its contents), and rendering literal `0`
  * misleads the user into thinking the folder is empty. The override takes

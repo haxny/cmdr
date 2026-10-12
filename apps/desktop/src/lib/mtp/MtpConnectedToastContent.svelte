@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import { setSetting } from '$lib/settings'
-    import { isMacOS } from '$lib/shortcuts/key-capture'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import { setSetting } from '#lib/settings/index.js'
+    import { isMacOS } from '#lib/shortcuts/key-capture.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

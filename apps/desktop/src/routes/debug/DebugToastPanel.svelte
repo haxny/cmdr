@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { addToast, dismissTransientToasts, clearAllToasts, getToasts } from '$lib/ui/toast'
-    import { pluralize } from '$lib/utils/pluralize'
+    import { addToast, dismissTransientToasts, clearAllToasts, getToasts } from '#lib/ui/toast/index.js'
+    import { pluralize } from '#lib/utils/pluralize.js'
 
     let toastCounter = $state(0)
 </script>

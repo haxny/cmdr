@@ -8,8 +8,8 @@ import type { FileEntry } from '../types'
 
 import { _setMeasureForTests, computeFullListColumnWidths, holdSizeColumnWidth } from './measure-column-widths'
 import { isDirSizeUpdating } from './full-list-utils'
-import { NO_WALKED_GROUND, isPathAffectedByWalk, type WalkedGround } from '$lib/indexing/walked-ground'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { NO_WALKED_GROUND, isPathAffectedByWalk, type WalkedGround } from '#lib/indexing/walked-ground.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { formatSizeForDisplay } from '../selection/selection-info-utils'
 
 const fakeMeasure = (text: string): number => text.length * 7

@@ -9,7 +9,7 @@
  * gone listing), so a debug line is all that's left to say, the same one the
  * gesture dispatcher writes for an awaited arm.
  */
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('user-action')
 

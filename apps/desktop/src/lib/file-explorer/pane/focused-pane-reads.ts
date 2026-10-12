@@ -14,10 +14,10 @@
  * `ExplorerAPI` for the write-coupled call sites (navigation) that retire later.
  */
 
-import { resolveSearchScope, volumeRootsFrom } from '$lib/search/searchable-folder'
-import type { ScopePresets } from '$lib/query-ui/query-dialog-config'
-import { resolveSearchTargetVolume, type SearchTargetVolume } from '$lib/search/search-target-volume'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
+import { resolveSearchScope, volumeRootsFrom } from '#lib/search/searchable-folder.js'
+import type { ScopePresets } from '#lib/query-ui/query-dialog-config.js'
+import { resolveSearchTargetVolume, type SearchTargetVolume } from '#lib/search/search-target-volume.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 import { getActiveTab } from '../tabs/tab-state-manager.svelte'
 import { explorerState } from './explorer-state.svelte'
 

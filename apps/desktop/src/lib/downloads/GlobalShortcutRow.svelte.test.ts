@@ -18,13 +18,13 @@ const { getSettingMock, setSettingMock, setGlobalGoToLatestShortcutMock } = vi.h
   setGlobalGoToLatestShortcutMock: vi.fn(),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     setGlobalGoToLatestShortcut: setGlobalGoToLatestShortcutMock,
   },

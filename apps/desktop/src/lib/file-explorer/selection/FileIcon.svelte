@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { FileEntry } from '../types'
-    import { getCachedIcon, getCachedCustomFolderIcon, iconCacheVersion } from '$lib/icon-cache'
-    import { getIsCmdrGold } from '$lib/settings/reactive-settings.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
-    import Icon from '$lib/ui/Icon.svelte'
-    import type { IconName } from '$lib/ui/icons/icon-map'
+    import { getCachedIcon, getCachedCustomFolderIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import { getIsCmdrGold } from '#lib/settings/reactive-settings.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import type { IconName } from '#lib/ui/icons/icon-map.js'
     import type { ImageIndexBadge } from '../views/file-list-utils'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         file: FileEntry

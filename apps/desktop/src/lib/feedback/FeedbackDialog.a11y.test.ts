@@ -9,14 +9,14 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import FeedbackDialog from './FeedbackDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { closeFeedbackDialog, feedbackFlow } from './feedback-flow.svelte'
-import { GITHUB_ISSUES_URL, BOOK_A_CALL_URL } from '$lib/beta-links'
+import { GITHUB_ISSUES_URL, BOOK_A_CALL_URL } from '#lib/beta-links.js'
 
 const sendFeedbackMock = vi.fn<(payload: { feedbackText: string; email?: string }) => Promise<{ kind: string }>>()
 const openExternalUrlMock = vi.fn<(url: string) => Promise<void>>(() => Promise.resolve())
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   sendFeedback: (text: string, email?: string) => sendFeedbackMock({ feedbackText: text, email }),
@@ -30,7 +30,7 @@ let mockAttachDefault = false
 const setSettingMock = vi.fn()
 /** Live listeners on `analytics.email`, so a test can play the Settings window's part. */
 const emailListeners = new Set<(value: string) => void>()
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((id: string) => (id === 'analytics.email' ? mockEmail : mockAttachDefault)),
   setSetting: (id: string, value: unknown) => {
     setSettingMock(id, value)
@@ -50,7 +50,7 @@ async function setContactEmailFromSettings(value: string): Promise<void> {
 }
 
 const addToastMock = vi.fn<(...args: unknown[]) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToastMock(...args)
   },

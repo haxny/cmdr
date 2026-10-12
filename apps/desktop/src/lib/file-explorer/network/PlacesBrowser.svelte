@@ -4,11 +4,11 @@
      * account's buckets later. Raises the sign-in form when the listing needs one.
      */
     import { onMount } from 'svelte'
-    import { dependOn } from '$lib/utils/reactivity'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import CopyBox from '$lib/ui/CopyBox.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import CopyBox from '#lib/ui/CopyBox.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
     import type { AuthMode, PlacesAccount, ShareInfo, ShareListError } from '../types'
     import { renderShareListError } from './share-list-error-messages'
     import { shareListErrorOf } from './share-list-error'
@@ -33,18 +33,18 @@
         isUsingCredentialFileFallback,
         updateKnownShare,
         setSmbAccountPreference,
-    } from '$lib/tauri-commands'
-    import { addToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getNetworkTimeoutMs, getShareCacheTtlMs } from '$lib/settings/network-settings'
+    } from '#lib/tauri-commands/index.js'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getNetworkTimeoutMs, getShareCacheTtlMs } from '#lib/settings/network-settings.js'
     import { isListingAuthError, openSmbSignInSheet, refusalForShareError } from './smb-sign-in'
-    import type { ConnectRefusalKind } from '$lib/servers/connect-refusals'
-    import type { SignInAttemptOutcome } from '$lib/servers/sign-in-contract'
+    import type { ConnectRefusalKind } from '#lib/servers/connect-refusals.js'
+    import type { SignInAttemptOutcome } from '#lib/servers/sign-in-contract.js'
     import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
-    import { eventMatchesCommand } from '$lib/shortcuts'
-    import { claimKey } from '$lib/shortcuts/claim-key'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { cursorAfterArrow } from './list-cursor'
-    import { updateLeftPaneState, updateRightPaneState, type PaneState, type PaneFileEntry } from '$lib/tauri-commands'
+    import { updateLeftPaneState, updateRightPaneState, type PaneState, type PaneFileEntry } from '#lib/tauri-commands/index.js'
 
     async function notifyIfUsingFileFallback(): Promise<void> {
         if (await isUsingCredentialFileFallback()) {

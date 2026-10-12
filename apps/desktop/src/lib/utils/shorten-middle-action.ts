@@ -1,6 +1,6 @@
 import type { ActionReturn } from 'svelte/action'
 import { shortenMiddle, createPretextMeasure } from './shorten-middle'
-import { tooltip } from '$lib/tooltip/tooltip'
+import { tooltip } from '#lib/tooltip/tooltip.js'
 
 export interface ShortenMiddleParams {
   text: string

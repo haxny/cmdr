@@ -1,4 +1,4 @@
-import type { FilePaneAPI } from '$lib/file-explorer/pane/types'
+import type { FilePaneAPI } from '#lib/file-explorer/pane/types.js'
 import { getCursorEntry, type GetFileAtFn } from '../cursor-entry'
 
 /**

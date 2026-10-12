@@ -44,7 +44,7 @@ vi.mock('../git/git-store.svelte', () => ({
   subscribeToRepo: gitStore.subscribeToRepo,
   unsubscribeFromRepo: gitStore.unsubscribeFromRepo,
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => settingsValues[id],
   onSpecificSettingChange: (id: string, cb: (v: boolean) => void) => {
     settingsListeners[id] = cb
@@ -52,8 +52,8 @@ vi.mock('$lib/settings', () => ({
   },
 }))
 // The real predicate, spied on so a test can tell the sync ran.
-vi.mock('$lib/adb/adb-path-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/adb/adb-path-utils')>()
+vi.mock('#lib/adb/adb-path-utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/adb/adb-path-utils.js')>()
   isDeviceVolumeIdSpy.mockImplementation(actual.isDeviceVolumeId)
   return { ...actual, isDeviceVolumeId: isDeviceVolumeIdSpy }
 })

@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // `getAppLogger('user-action')` runs at module top-level in command-dispatch,
 // and the dispatch preamble fires `record_breadcrumb` via `invoke`. Mock both so
 // the import is side-effect-free and the breadcrumb IPC is a no-op.
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(() => Promise.resolve()) }))
@@ -20,23 +20,23 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn(() => Promise.resolve()) 
 // reconfigurable mock so each test picks the kind (`local` keeps dispatch flowing
 // to the handler; `search-results` / `network` exercise the guard).
 const getVolumeId = vi.fn<() => string>(() => 'local')
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPaneVolumeId: () => getVolumeId(),
   getFocusedPanePath: () => '/Users/test',
 }))
 // `capabilitiesFor` resolves a real volumeId's fsType/category from the store;
 // the virtual ids (`search-results` / `network`) short-circuit before this. An
 // empty store makes `local` fall to the listable default (canWrite: true).
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 const addToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToast(...args)
   },
 }))
 
 const openSettingsWindow = vi.fn()
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: (...args: unknown[]) => {
     openSettingsWindow(...args)
     return Promise.resolve()
@@ -45,9 +45,9 @@ vi.mock('$lib/settings/settings-window', () => ({
 
 import { handleCommandExecute, type CommandDispatchContext } from './command-dispatch'
 import { _resetDedupForTests } from './dispatch-dedup'
-import { claimMenuCommand } from '$lib/commands/menu-claims'
+import { claimMenuCommand } from '#lib/commands/menu-claims.js'
 import type { DialogsOnScreen, DispatchSource } from './command-dispatch-context'
-import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '$lib/search/capabilities'
+import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '#lib/search/capabilities.js'
 import type { ExplorerAPI } from './explorer-api'
 
 const NOTHING_OPEN: DialogsOnScreen = { dialogOpen: false, paletteOpen: false }

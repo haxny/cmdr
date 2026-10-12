@@ -5,7 +5,7 @@
  * reads or writes `askCmdrState`, so history rendering is unit-testable on its own.
  */
 
-import type { ConversationDetailView, MessageView } from '$lib/tauri-commands'
+import type { ConversationDetailView, MessageView } from '#lib/tauri-commands/index.js'
 import type { RailMessage, RailToolCall } from './ask-cmdr-messages'
 
 /** Fold a loaded conversation's messages into rail items: tool results are attached to the

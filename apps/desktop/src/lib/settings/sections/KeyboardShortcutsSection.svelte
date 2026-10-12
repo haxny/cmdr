@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount, type Snippet } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import SettingsSection from '../components/SettingsSection.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import {
         getEffectiveShortcuts,
         isShortcutModified,
@@ -12,21 +12,21 @@
         isNativeShortcutCommand,
         isFixedKeyCommand,
         toDisplayShortcut,
-    } from '$lib/shortcuts'
-    import GlobalShortcutRow from '$lib/downloads/GlobalShortcutRow.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
+    } from '#lib/shortcuts/index.js'
+    import GlobalShortcutRow from '#lib/downloads/GlobalShortcutRow.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
     import ShortcutPill from './ShortcutPill.svelte'
     import { fixedKeyMessage, reservedByMacOsMessage, systemShortcutMessage } from './keyboard-shortcuts-banner'
-    import { shortcutAnchorId } from '$lib/settings/settings-window'
+    import { shortcutAnchorId } from '#lib/settings/settings-window.js'
     import {
         getPendingShortcutHighlight,
         clearPendingShortcutHighlight,
         registerShortcutFilterReset,
         unregisterShortcutFilterReset,
-    } from '$lib/settings/pending-shortcut-highlight.svelte'
+    } from '#lib/settings/pending-shortcut-highlight.svelte.js'
     import { createKeyboardShortcutsController } from './KeyboardShortcutsSection.controller.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
 
     interface Props {
         searchQuery: string

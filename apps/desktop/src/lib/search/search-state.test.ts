@@ -30,7 +30,7 @@ import {
   setCountOnly,
   searchQueryState,
 } from './search-state.svelte'
-import type { HistoryEntry } from '$lib/tauri-commands'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 
 describe('parseSizeToBytes', () => {
   it('converts KB to bytes', () => {

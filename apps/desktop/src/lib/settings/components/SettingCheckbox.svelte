@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { SettingId } from '$lib/settings'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
+    import type { SettingId } from '#lib/settings/index.js'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
     import { useBooleanSetting } from './boolean-setting.svelte'
     import { useSettingLock } from './setting-lock.svelte'
 

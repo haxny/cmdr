@@ -16,7 +16,7 @@
  * tool all funnel into its exports), so its exports are where they're called.
  */
 
-import { trackEvent } from '$lib/tauri-commands'
+import { trackEvent } from '#lib/tauri-commands/index.js'
 
 /** How a tab came to exist. */
 export type TabOpenSource = 'new' | 'reopened'

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type { WriteOperationError, TransferOperationType } from '$lib/file-explorer/types'
-    import type { ProgressAtStop } from '$lib/tauri-commands'
+    import type { WriteOperationError, TransferOperationType } from '#lib/file-explorer/types.js'
+    import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
     import { getUserFriendlyMessage } from './transfer-error-messages'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatByteSize } from '$lib/units'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize } from '#lib/units/index.js'
 
     interface Props {
         error: WriteOperationError

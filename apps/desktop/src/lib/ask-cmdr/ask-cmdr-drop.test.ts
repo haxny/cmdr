@@ -6,21 +6,21 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AttachmentRef } from '$lib/tauri-commands'
-import type { SelfDragIdentity } from '$lib/file-explorer/drag/drag-drop'
+import type { AttachmentRef } from '#lib/tauri-commands/index.js'
+import type { SelfDragIdentity } from '#lib/file-explorer/drag/drag-drop.js'
 
 const resolveMock = vi.fn<(paths: string[]) => Promise<AttachmentRef[]>>()
 const state = { isSelf: false, identity: null as SelfDragIdentity | null }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolveAskCmdrAttachments: (paths: string[]) => resolveMock(paths),
 }))
-vi.mock('$lib/file-explorer/drag/drag-drop', () => ({
+vi.mock('#lib/file-explorer/drag/drag-drop.js', () => ({
   getIsDraggingFromSelf: () => state.isSelf,
   getSelfDragIdentity: () => state.identity,
 }))
 // Corrects only a DevTools-docking offset; identity passthrough in tests.
-vi.mock('$lib/file-explorer/drag/drag-position', () => ({
+vi.mock('#lib/file-explorer/drag/drag-position.js', () => ({
   toViewportPosition: (p: { x: number; y: number }) => p,
 }))
 

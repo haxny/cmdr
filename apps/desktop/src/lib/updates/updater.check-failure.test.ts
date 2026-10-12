@@ -8,8 +8,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ServerRequestError } from '$lib/ipc/bindings'
-import { ServerRequestFailure } from '$lib/error-messages/server-request'
+import type { ServerRequestError } from '#lib/ipc/bindings.js'
+import { ServerRequestFailure } from '#lib/error-messages/server-request.js'
 import { UpdateDownloadFailure } from './update-download-failure'
 
 const { checkForUpdateMock, downloadUpdateMock, installUpdateMock, logger } = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ const { checkForUpdateMock, downloadUpdateMock, installUpdateMock, logger } = vi
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkForUpdate: checkForUpdateMock,
   downloadUpdate: downloadUpdateMock,
   installUpdate: installUpdateMock,
@@ -30,11 +30,11 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 // The typed check lives on the macOS branch.
-vi.mock('$lib/shortcuts/key-capture', () => ({ isMacOS: () => true }))
+vi.mock('#lib/shortcuts/key-capture.js', () => ({ isMacOS: () => true }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((id: string) => (id === 'onboarding.completed' ? true : 60 * 60 * 1000)),
   setSetting: vi.fn(),
   forceSave: vi.fn(() => Promise.resolve(true)),
@@ -43,7 +43,7 @@ vi.mock('$lib/settings/settings-store', () => ({
 
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(() => Promise.resolve('0.28.0')) }))
 
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 
 import { _resetUpdaterStateForTest, checkForUpdates, updateState } from './updater.svelte'
 

@@ -17,13 +17,13 @@ import {
   viewerWriteRangeToFile,
   type RangeEnd,
   type ViewerError,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { save as showSavePanel } from '@tauri-apps/plugin-dialog'
-import { addToast } from '$lib/ui/toast/toast-store.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
+import { addToast } from '#lib/ui/toast/toast-store.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { selectCopyAction, type CopyAction } from './viewer-copy'
-import { formatByteSize } from '$lib/units'
+import { formatByteSize } from '#lib/units/index.js'
 
 export type CopyOutcome =
   | { kind: 'silent'; text: string; bytes: number }

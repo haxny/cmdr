@@ -4,7 +4,7 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { setShortcut, removeShortcut, resetShortcut } from './shortcuts-store'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('mcp-shortcuts')
 

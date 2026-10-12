@@ -6,9 +6,9 @@
  * backend decided it, ❌ never from a key name or a setting value.
  */
 
-import type { ManagedPolicyView } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatConjunctionList } from '$lib/intl/list-format'
+import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatConjunctionList } from '#lib/intl/list-format.js'
 
 export interface ManagedSummaryLine {
   label: string

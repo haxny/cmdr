@@ -11,10 +11,10 @@
  * a backend diagnostic ("PROPFIND", "Digest", "rung", "transport").
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { ServerProtocol, UnreachableHint } from '$lib/ipc/bindings'
-import { systemStrings } from '$lib/system-strings.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { ServerProtocol, UnreachableHint } from '#lib/ipc/bindings.js'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
 /**
  * Why a connect stopped, in the vocabulary the app words.

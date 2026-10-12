@@ -11,10 +11,10 @@
  * the switch below in lockstep with the `AiTranslateErrorKind` enum on the Rust side.
  */
 
-import type { AiTranslateErrorKind, ManagedAiRefusal } from '$lib/ipc/bindings'
-import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
-import { addToast, type ToastLevel } from '$lib/ui/toast/toast-store.svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import type { AiTranslateErrorKind, ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
+import { addToast, type ToastLevel } from '#lib/ui/toast/toast-store.svelte.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import CloudAiOffToastContent from './CloudAiOffToastContent.svelte'
 
 /** A thrown AI-translation failure: a real `Error` that also carries the typed `kind`. */

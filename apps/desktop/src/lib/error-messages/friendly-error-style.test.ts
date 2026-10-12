@@ -17,13 +17,13 @@
  */
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { tString } from '$lib/intl/messages.svelte'
-import { wordConnectRefusal, type ConnectRefusalKind } from '$lib/servers/connect-refusals'
-import { readAdbConnectOutcome } from '$lib/adb/adb-connect-errors'
-import type { AdbConnectOutcomeError } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import serversCatalog from '$lib/intl/messages/en/servers.json'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { wordConnectRefusal, type ConnectRefusalKind } from '#lib/servers/connect-refusals.js'
+import { readAdbConnectOutcome } from '#lib/adb/adb-connect-errors.js'
+import type { AdbConnectOutcomeError } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import serversCatalog from '#lib/intl/messages/en/servers.json'
 import { getListingErrorMessage, type ListingErrorReason } from './listing-error-messages'
 import { getGitErrorMessage, type FriendlyGitErrorKind } from './git-error-messages'
 import { getProviderSuggestion, type Provider, type ProviderCategory } from './provider-error-messages'
@@ -253,7 +253,7 @@ const PANE_STATE_PARAMS = {
   name: 'Naspolya',
   duration: '2 minutes',
   // The two duration keys carry an ICU plural: the raw number selects the form,
-  // the `*Text` twin is what the reader sees (`$lib/intl/messages/CLAUDE.md`).
+  // the `*Text` twin is what the reader sees (`#lib/intl/messages/CLAUDE.md`).
   seconds: 60,
   secondsText: '60',
   minutes: 2,

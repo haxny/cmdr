@@ -15,7 +15,7 @@ import type {
   MediaEnrichTerminalEvent,
   MediaEnrichTerminalReason,
   MediaIndexVolumeState,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 let progressCb: ((p: MediaEnrichProgressEvent) => void) | undefined
 let terminalCb: ((p: MediaEnrichTerminalEvent) => void) | undefined
@@ -41,7 +41,7 @@ function notIndexing(): MediaIndexVolumeState {
   }
 }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onMediaEnrichProgress: (cb: (p: MediaEnrichProgressEvent) => void) => {
     progressCb = cb
     return Promise.resolve(noopUnlisten)

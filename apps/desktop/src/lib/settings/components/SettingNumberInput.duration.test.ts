@@ -13,8 +13,8 @@ const setSetting = vi.fn()
 
 // `advanced.mountTimeout`-shaped: stored 20000 ms, edited in seconds. The factory is hoisted
 // above imports, so pull the REAL conversion math from `../types` inside it (not the mocked
-// `$lib/settings`) — a flipped divide/multiply then shows up as a wrong displayed value.
-vi.mock('$lib/settings', async () => {
+// `#lib/settings`) — a flipped divide/multiply then shows up as a wrong displayed value.
+vi.mock('#lib/settings/index.js', async () => {
   const types = await import('../types')
   return {
     getSetting: vi.fn(() => 20_000),

@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { tString } from '$lib/intl/messages.svelte'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from './capabilities'
 import { resolveSearchScope } from './searchable-folder'
 import { buildSnapshotLabel } from './snapshot-label'

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { openSettingsWindow } from '$lib/settings/settings-window'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { openSettingsWindow } from '#lib/settings/settings-window.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { pastedAsFileMessage } from './pane/paste-clipboard-as-file-message'
-    import type { PastedClipboardFile } from '$lib/tauri-commands'
+    import type { PastedClipboardFile } from '#lib/tauri-commands/index.js'
 
     interface Props {
         filename: string

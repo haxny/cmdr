@@ -581,7 +581,7 @@ clippy included) before committing, and updates the `CLAUDE.md` / `DETAILS.md` o
   - MCP: Rust `managed_policy::refuses_write` (one decision over `locked_settings`) answers `set_setting` before the
     round trip; the frontend bridge refuses too (`refusal: 'managedByOrganization'`), as the backstop for a policy
     change racing the round trip. `cmdr://settings` marks managed ids `managed: true` beside the effective `value`.
-  - `managed-policy.svelte.ts` imports the `$lib/tauri-commands` barrel lazily (`await import`): the
+  - `managed-policy.svelte.ts` imports the `#lib/tauri-commands` barrel lazily (`await import`): the
     `desktop-ipc-unused` check only counts barrel imports, and a static one would pull the whole IPC surface into the
     settings store.
 

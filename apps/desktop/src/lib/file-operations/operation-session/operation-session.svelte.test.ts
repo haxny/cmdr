@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { OperationSnapshot, WriteConflictEvent, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteConflictEvent, WriteProgressEvent } from '#lib/ipc/bindings.js'
 
 // Hoisted: `vi.mock`'s factory runs before the module body, so the mock it
 // closes over has to exist by then.
@@ -26,7 +26,7 @@ const { listOperationsMock, commandMocks, resolveWriteConflictMock } = vi.hoiste
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: listOperationsMock,
   ...commandMocks,
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),

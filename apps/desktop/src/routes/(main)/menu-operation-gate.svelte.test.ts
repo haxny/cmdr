@@ -9,14 +9,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
 import { startMenuOperationGate } from './menu-operation-gate.svelte'
-import { setFileOperationsBlocked } from '$lib/tauri-commands'
-import { markDialogOpen, markDialogClosed, _resetOpenDialogsForTesting } from '$lib/ui/open-dialogs.svelte'
-import { explorerState } from '$lib/file-explorer/pane/explorer-state.svelte'
+import { setFileOperationsBlocked } from '#lib/tauri-commands/index.js'
+import { markDialogOpen, markDialogClosed, _resetOpenDialogsForTesting } from '#lib/ui/open-dialogs.svelte.js'
+import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
 
 // Partial: `explorer-state.svelte.ts` reaches for `DEFAULT_VOLUME_ID` from the same
 // barrel while building its default tab managers.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/tauri-commands')>()),
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
   setFileOperationsBlocked: vi.fn(() => Promise.resolve()),
 }))
 

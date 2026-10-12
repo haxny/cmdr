@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { cloudProviderPresets, getCloudProvider, type CloudProviderPreset } from '$lib/settings/cloud-providers'
+import { cloudProviderPresets, getCloudProvider, type CloudProviderPreset } from '#lib/settings/cloud-providers.js'
 import { buildSetupPlan, providerHasEditableEndpoint, type SetupStep } from './provider-setup-plan'
 
 function presetOrThrow(id: string): CloudProviderPreset {

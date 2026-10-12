@@ -15,10 +15,10 @@
  */
 
 import { SvelteSet } from 'svelte/reactivity'
-import { applySizeFromAi, applyDateFromAi, applyTypeFromAi } from '$lib/query-ui/apply-ai-filters'
-import { typeFilterToIsDirectory } from '$lib/query-ui/query-filter-state.svelte'
-import type { AiTranslateResult } from '$lib/query-ui/query-dialog-config'
-import { translateSearchQuery, type TranslateResult } from '$lib/tauri-commands'
+import { applySizeFromAi, applyDateFromAi, applyTypeFromAi } from '#lib/query-ui/apply-ai-filters.js'
+import { typeFilterToIsDirectory } from '#lib/query-ui/query-filter-state.svelte.js'
+import type { AiTranslateResult } from '#lib/query-ui/query-dialog-config.js'
+import { translateSearchQuery, type TranslateResult } from '#lib/tauri-commands/index.js'
 import {
   searchQueryState,
   recordAiTranslation,

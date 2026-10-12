@@ -13,7 +13,7 @@
  *
  * ```svelte
  * <script>
- *   import { systemStrings } from '$lib/system-strings.svelte'
+ *   import { systemStrings } from '#lib/system-strings.svelte.js'
  * </script>
  * <p>Open {systemStrings.systemSettings} &gt; {systemStrings.privacyAndSecurity}.</p>
  * ```
@@ -28,9 +28,9 @@
  * mid-session.
  */
 
-import { getLocalizedSystemStrings } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
+import { getLocalizedSystemStrings } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 const log = getAppLogger('system-strings')
 

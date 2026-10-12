@@ -12,10 +12,10 @@
  * A title list that drifts from the scopes silently hides whole groups of
  * commands from the rebinding UI.
  */
-import type { Command } from '$lib/commands/types'
-import type { CommandScope } from '$lib/commands/types'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
+import type { Command } from '#lib/commands/types.js'
+import type { CommandScope } from '#lib/commands/types.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** A titled group of commands sharing one scope, ready to render. */
 export interface ShortcutGroup {

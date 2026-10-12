@@ -17,9 +17,9 @@
  * tests, SSR) is a no-op.
  */
 
-import { getIsDraggingFromSelf, getSelfDragIdentity } from '$lib/file-explorer/drag/drag-drop'
-import { toViewportPosition } from '$lib/file-explorer/drag/drag-position'
-import { resolveAskCmdrAttachments, type AttachmentRef } from '$lib/tauri-commands'
+import { getIsDraggingFromSelf, getSelfDragIdentity } from '#lib/file-explorer/drag/drag-drop.js'
+import { toViewportPosition } from '#lib/file-explorer/drag/drag-position.js'
+import { resolveAskCmdrAttachments, type AttachmentRef } from '#lib/tauri-commands/index.js'
 
 /** The local volume id; a pane on it round-trips genuine absolute paths. */
 const LOCAL_VOLUME_ID = 'root'

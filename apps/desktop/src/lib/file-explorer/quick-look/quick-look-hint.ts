@@ -26,8 +26,8 @@
  * toast just educates.
  */
 
-import { getSetting } from '$lib/settings'
-import { addToast, getToasts } from '$lib/ui/toast'
+import { getSetting } from '#lib/settings/index.js'
+import { addToast, getToasts } from '#lib/ui/toast/index.js'
 
 import QuickLookHintToastContent from './QuickLookHintToastContent.svelte'
 import { QUICK_LOOK_HINT_TOAST_ID } from './quick-look-hint-id'

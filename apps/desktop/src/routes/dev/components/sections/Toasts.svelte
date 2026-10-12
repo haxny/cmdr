@@ -1,9 +1,9 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { addToast } from '$lib/ui/toast'
-    import type { ToastLevel } from '$lib/ui/toast'
-    import ToastItem from '$lib/ui/toast/ToastItem.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import type { ToastLevel } from '#lib/ui/toast/index.js'
+    import ToastItem from '#lib/ui/toast/ToastItem.svelte'
 
     interface Preview {
         level: ToastLevel

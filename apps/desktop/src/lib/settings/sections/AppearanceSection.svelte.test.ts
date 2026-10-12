@@ -15,7 +15,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import AppearanceSection from './AppearanceSection.svelte'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'theme.mode') return 'system'
     if (key === 'appearance.appColor') return 'system'
@@ -36,7 +36,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openAppearanceSettings: vi.fn(() => Promise.resolve()),
   invoke: vi.fn(() => Promise.resolve()),
 }))

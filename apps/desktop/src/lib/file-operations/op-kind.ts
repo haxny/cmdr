@@ -12,8 +12,8 @@
  * a compile error here rather than a `default` arm quietly wording it as a copy.
  */
 
-import type { OpKind, WriteOperationType } from '$lib/ipc/bindings'
-import type { TransferOperationType } from '$lib/file-explorer/types'
+import type { OpKind, WriteOperationType } from '#lib/ipc/bindings.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
 
 /** Wire type → `OpKind`. A pure spelling change: the two enums have the same arms. */
 const WIRE_TO_OP_KIND: Record<WriteOperationType, OpKind> = {

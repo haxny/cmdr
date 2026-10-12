@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import { computeSnapshotStats } from './snapshot-stats'
 
 function row(overrides: Partial<SearchResultEntry> = {}): SearchResultEntry {

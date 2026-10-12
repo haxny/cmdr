@@ -1,7 +1,7 @@
 // Search IPC commands: typed wrappers for the backend search engine.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import type { ParsedScope, PrepareResult, SearchResult } from './ipc-types'
 import { throwIpcError } from './ipc-types'
 import type {
@@ -17,7 +17,7 @@ import type {
   SortColumn,
   SortOrder,
   TranslateResult,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /**
  * Starts loading a volume's search index in the background.
@@ -46,7 +46,7 @@ export async function searchFiles(query: SearchQuery): Promise<SearchResult> {
  *
  * The one place a snapshot pane's order is decided, and it runs the SAME
  * comparator every directory listing sorts by, so the two can't drift. Callers go
- * through `$lib/search/snapshot-sort.svelte.ts` rather than here directly.
+ * through `#lib/search/snapshot-sort.svelte.ts` rather than here directly.
  */
 export async function sortSearchResults(
   rows: SearchSortRow[],

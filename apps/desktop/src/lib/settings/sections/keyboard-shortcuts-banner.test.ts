@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { Command } from '$lib/commands/types'
-import { BLOCKED_BY_DIALOGS } from '$lib/commands/while-dialog-open'
+import type { Command } from '#lib/commands/types.js'
+import { BLOCKED_BY_DIALOGS } from '#lib/commands/while-dialog-open.js'
 import {
   classifyConflict,
   classifySystemShortcut,

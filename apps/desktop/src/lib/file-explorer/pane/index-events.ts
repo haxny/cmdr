@@ -1,4 +1,4 @@
-import type { ListingIndexSizesChanged } from '$lib/tauri-commands'
+import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
 import type { FilePaneAPI } from './types'
 
 /**

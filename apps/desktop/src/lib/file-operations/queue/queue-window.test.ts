@@ -28,18 +28,18 @@ vi.mock('@tauri-apps/api/dpi', () => ({ LogicalPosition: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ emitTo }))
 vi.mock('@tauri-apps/api/window', () => ({ Effect: {}, EffectState: {} }))
 // Reduce transparency on, so the only `once` the opener registers is the one under test.
-vi.mock('$lib/tauri-commands', () => ({ getShouldReduceTransparency: () => Promise.resolve(true) }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ getShouldReduceTransparency: () => Promise.resolve(true) }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/text-size.svelte', () => ({ getEffectiveScale: () => 1 }))
-vi.mock('$lib/app-mode', () => ({
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/text-size.svelte.js', () => ({ getEffectiveScale: () => 1 }))
+vi.mock('#lib/app-mode.js', () => ({
   decorateChildWindowTitle: (title: string) => title,
   isE2eRun: () => false,
   orderChildWindowToBackInE2e: () => Promise.resolve(),
 }))
-vi.mock('$lib/window-positioning', () => ({
+vi.mock('#lib/window-positioning.js', () => ({
   readMainRect: () => Promise.resolve(null),
   readMonitors: () => Promise.resolve([]),
   readSavedRect: () => Promise.resolve(null),

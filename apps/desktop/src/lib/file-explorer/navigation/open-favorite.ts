@@ -26,12 +26,12 @@
  * passes straight through, and the toast's "Show servers" rides it too.
  */
 
-import { removeFavorite, resolvePathVolume, stripFavoritePrefix } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import { openSettingsWindow } from '$lib/settings/settings-window'
-import { addToast, addToastForPane } from '$lib/ui/toast'
-import type { FavoriteReach } from '$lib/ipc/bindings'
+import { removeFavorite, resolvePathVolume, stripFavoritePrefix } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { addToast, addToastForPane } from '#lib/ui/toast/index.js'
+import type { FavoriteReach } from '#lib/ipc/bindings.js'
 import { NETWORK_VOLUME_PATH } from '../pane/navigate-refusals'
 import type { VolumeChangePayload } from '../pane/types'
 import type { VolumeInfo } from '../types'

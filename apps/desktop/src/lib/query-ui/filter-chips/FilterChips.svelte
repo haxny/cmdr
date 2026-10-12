@@ -25,16 +25,16 @@
      * exposes both as buttons so mouse users have first-class access.
      */
     import { SvelteSet } from 'svelte/reactivity'
-    import Chip from '$lib/ui/Chip.svelte'
+    import Chip from '#lib/ui/Chip.svelte'
     import SizeFilterPopover from './SizeFilterPopover.svelte'
     import DateFilterPopover from './DateFilterPopover.svelte'
     import ScopeFilterPopover from './ScopeFilterPopover.svelte'
-    import ToggleGroup, { type ToggleGroupOption } from '$lib/ui/ToggleGroup.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ToggleGroup, { type ToggleGroupOption } from '#lib/ui/ToggleGroup.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { deriveSizeChip, deriveDateChip, deriveScopeChip, derivePatternChip } from './filter-chip-state'
     import type { QueryFilterState, SizeFilter, SizeUnit, DateFilter, TypeFilter } from '../query-filter-state.svelte'
     import type { ScopePresets } from '../query-dialog-config'
-    import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+    import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
 
     type FilterKey = 'size' | 'date' | 'scope'
 

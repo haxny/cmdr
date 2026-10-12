@@ -14,7 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import TerminalAppSelect from './TerminalAppSelect.svelte'
-import type { TerminalApp, TerminalAppList } from '$lib/ipc/bindings'
+import type { TerminalApp, TerminalAppList } from '#lib/ipc/bindings.js'
 import { CHOOSE_APP_VALUE, TERMINAL_APP_BUNDLE_ID } from './terminal-app-options'
 
 const SETTING_ID = 'behavior.openTerminalHereApp'
@@ -25,7 +25,7 @@ const setSetting = vi.fn((id: string, value: unknown) => {
   return Promise.resolve()
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -36,7 +36,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 })
 
 const listTerminalApps = vi.hoisted(() => vi.fn())
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   listTerminalApps,
 }))

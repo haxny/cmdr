@@ -11,7 +11,7 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import RepoChip from './RepoChip.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { RepoInfo } from './git-store.svelte'
 
 function base(overrides: Partial<RepoInfo> = {}): RepoInfo {

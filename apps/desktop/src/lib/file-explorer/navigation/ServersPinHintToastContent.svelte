@@ -4,16 +4,16 @@
      * holds five pinned servers: how to shorten it, and the promise that
      * unpinning loses nothing.
      *
-     * `$lib/stores/volume-store` raises it and sets
+     * `#lib/stores/volume-store` raises it and sets
      * `behavior.serversPinHintSeen`, so this component only has to say "Got it".
      *
      * ❗ The palette entry is named through its OWN catalog key, ❌ never a second
      * copy of the words: a translated toast pointing at an English command name
      * sends the reader looking for something they can't find.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { getMessage, tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { getMessage, tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** Dedup id of this toast, so "Got it" can retire it. */

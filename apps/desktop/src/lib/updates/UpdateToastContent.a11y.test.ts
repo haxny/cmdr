@@ -10,9 +10,9 @@ import { afterEach, describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import UpdateToastContent from './UpdateToastContent.svelte'
 import { updateState } from './update-state.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
 

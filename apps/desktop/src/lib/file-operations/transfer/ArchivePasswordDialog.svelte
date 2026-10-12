@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount, tick } from 'svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** Display name of the archive being unlocked (e.g. "photos.zip"). */

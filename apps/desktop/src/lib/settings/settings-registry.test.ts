@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { _setSystemLocalesForTests } from '$lib/intl/os-locales'
+import { _setSystemLocalesForTests } from '#lib/intl/os-locales.js'
 import {
   settingsRegistry,
   getSettingDefinition,

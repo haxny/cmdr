@@ -11,7 +11,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 import PtpcameradDialog from './PtpcameradDialog.svelte'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   copyToClipboard: vi.fn(() => Promise.resolve()),

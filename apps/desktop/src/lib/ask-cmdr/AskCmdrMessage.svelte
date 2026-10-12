@@ -7,16 +7,16 @@
   the error copy render through Svelte's auto-escaping interpolation, never {@html}.
 -->
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { errorMessage, undoSkipMessage } from './ask-cmdr-labels'
     import { renderAssistantMarkdown } from './ask-cmdr-markdown'
     import AskCmdrToolLine from './AskCmdrToolLine.svelte'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
     import AskCmdrProposalDecisions from './AskCmdrProposalDecisions.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { undoRename, type RailMessage } from './ask-cmdr-trigger.svelte'
 
     interface Props {

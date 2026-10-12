@@ -23,9 +23,9 @@
  * See `DETAILS.md` § "The snapshot pane's row order".
  */
 
-import { sortSearchResults } from '$lib/tauri-commands'
-import { getDirectorySortMode } from '$lib/settings/reactive-settings.svelte'
-import type { SearchResultEntry, SortColumn } from '$lib/ipc/bindings'
+import { sortSearchResults } from '#lib/tauri-commands/index.js'
+import { getDirectorySortMode } from '#lib/settings/reactive-settings.svelte.js'
+import type { SearchResultEntry, SortColumn } from '#lib/ipc/bindings.js'
 import { applySnapshotSort, getRankedEntries, getSnapshot, type SnapshotSort } from './snapshot-store.svelte'
 
 /**

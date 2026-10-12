@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import type { ManagedPolicyView } from '$lib/ipc/bindings'
-import { setLocale, _setCatalogForTests } from '$lib/intl/messages.svelte'
+import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
+import { setLocale, _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import { UNMANAGED } from './managed-policy.svelte'
 import { managedPolicySummary } from './policy-summary'
 

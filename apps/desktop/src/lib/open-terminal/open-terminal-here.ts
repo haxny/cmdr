@@ -7,10 +7,15 @@
  * in the pure `first-use-pick.ts`; what's left is the IPC and the wording.
  */
 
-import { asOpenTerminalError, listTerminalApps, openTerminalHere, terminalAppDisplayName } from '$lib/tauri-commands'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { TERMINAL_APP_BUNDLE_ID } from '$lib/settings/sections/terminal-app-options'
+import {
+  asOpenTerminalError,
+  listTerminalApps,
+  openTerminalHere,
+  terminalAppDisplayName,
+} from '#lib/tauri-commands/index.js'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { TERMINAL_APP_BUNDLE_ID } from '#lib/settings/sections/terminal-app-options.js'
 import { decideFirstUsePick } from './first-use-pick'
 import {
   getTerminalAppChoice,

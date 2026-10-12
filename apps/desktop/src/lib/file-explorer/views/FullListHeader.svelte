@@ -1,8 +1,8 @@
 <script lang="ts">
     import SortableHeader from '../selection/SortableHeader.svelte'
     import type { SortColumn, SortOrder } from '../types'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         /** The row's grid tracks, mirrored from the data rows so columns line up. */

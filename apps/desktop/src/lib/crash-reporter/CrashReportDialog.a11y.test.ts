@@ -8,9 +8,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import CrashReportDialog from './CrashReportDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   sendCrashReport: vi.fn(() => Promise.resolve()),
@@ -21,7 +21,7 @@ vi.mock('$lib/tauri-commands', () => ({
 const emailListeners = new Set<(value: string) => void>()
 let mockEmail = ''
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: vi.fn(),
   getSetting: vi.fn((id: string) => (id === 'analytics.email' ? mockEmail : false)),
   onSpecificSettingChange: (id: string, listener: (value: string) => void) => {

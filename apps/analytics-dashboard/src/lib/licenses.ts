@@ -2,7 +2,7 @@
  * Client-safe helpers for the Licenses page (`/licenses`): the shape `GET /admin/licenses` returns,
  * the labels the table shows, and the pure summaries the page renders. Pure functions only, so the
  * page (browser bundle), the server source, and the tests share one copy. The fetch itself lives in
- * `$lib/server/sources/licenses.ts`.
+ * `#lib/server/sources/licenses.ts`.
  *
  * The types mirror `apps/api-server/src/licensing/admin-licenses.ts` by hand (the two apps ship
  * separately). The api-server owns the contract: what the fields mean and what each state decides.

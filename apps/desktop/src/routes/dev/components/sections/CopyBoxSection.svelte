@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import CopyBox from '$lib/ui/CopyBox.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import CopyBox from '#lib/ui/CopyBox.svelte'
 
     const shortCommand = 'sudo killall ptpcamerad'
     const longCommand =

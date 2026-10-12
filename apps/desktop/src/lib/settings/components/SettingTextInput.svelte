@@ -2,7 +2,7 @@
     /** Registry-backed single-line text setting. The store follows every edit, so
      * focus changes and window teardown cannot strand a newer value in local UI state. */
     import { onMount, type ComponentProps } from 'svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import {
         getSetting,
         getSettingDefinition,
@@ -10,7 +10,7 @@
         setSetting,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import { useSettingLock } from './setting-lock.svelte'
 
     type StringSettingId = {

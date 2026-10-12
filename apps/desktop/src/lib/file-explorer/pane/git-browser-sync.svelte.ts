@@ -14,9 +14,9 @@
  */
 
 import { lookupRepoInfo, subscribeToRepo, unsubscribeFromRepo, type RepoInfo } from '../git/git-store.svelte'
-import { getSetting, onSpecificSettingChange } from '$lib/settings'
-import { dependOn } from '$lib/utils/reactivity'
-import { isDeviceVolumeId } from '$lib/adb/adb-path-utils'
+import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+import { dependOn } from '#lib/utils/reactivity.js'
+import { isDeviceVolumeId } from '#lib/adb/adb-path-utils.js'
 import { pathCrossesArchiveBoundary } from './archive-paths'
 
 export interface GitBrowserSyncDeps {

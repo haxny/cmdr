@@ -20,10 +20,10 @@
      * afterwards would leave a person watching a spinner they can't stop.
      */
     import { onMount, tick } from 'svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import { focusFirstField } from '$lib/ui/focus-trap'
-    import Button from '$lib/ui/Button.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import { focusFirstField } from '#lib/ui/focus-trap.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
     import HostKeyStep from './HostKeyStep.svelte'
     import ServerFormFields from './ServerFormFields.svelte'
     import SignInCredentialFields from './SignInCredentialFields.svelte'
@@ -52,7 +52,7 @@
         hostWithPort,
     } from './server-form'
     import { readEjectAndSaveOutcome, readSavedServerOutcome, type SaveOutcome } from './server-outcomes'
-    import { ejectTechnicalDetail, renderEjectError } from '$lib/file-explorer/navigation/eject-error-messages'
+    import { ejectTechnicalDetail, renderEjectError } from '#lib/file-explorer/navigation/eject-error-messages.js'
     import { s3FieldProblem, s3HostOf, s3ProviderFrom, s3RequiredFieldOf } from './s3-form'
     import { saveTargetSecret, savedEditForm, unattendedReconnectWarning } from './saved-server-io'
     import type {
@@ -74,11 +74,11 @@
         updateSavedS3Account,
         updateSavedServer,
         updateSavedSmbHost,
-    } from '$lib/tauri-commands'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import { getAppLogger } from '$lib/logging/logger'
-    import type { HostKeyPrompt, SavedServer, ServerTarget } from '$lib/ipc/bindings'
+    } from '#lib/tauri-commands/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import type { HostKeyPrompt, SavedServer, ServerTarget } from '#lib/ipc/bindings.js'
 
     interface Props {
         request: SignInSheetRequest

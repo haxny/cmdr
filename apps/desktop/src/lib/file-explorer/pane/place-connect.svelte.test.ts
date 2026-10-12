@@ -19,13 +19,13 @@ const { connectPlace, cancelPlaceConnect, resolveValidPath } = vi.hoisted(() => 
   resolveValidPath: vi.fn(),
 }))
 
-vi.mock('$lib/servers/connect-flow', () => ({ connectPlace, cancelPlaceConnect }))
+vi.mock('#lib/servers/connect-flow.js', () => ({ connectPlace, cancelPlaceConnect }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath }))
-vi.mock('$lib/servers/connect-refusals', () => ({
+vi.mock('#lib/servers/connect-refusals.js', () => ({
   wordPaneRefusal: (kind: string, subject: { host: string; username: string; name: string }) =>
     `${kind} for ${subject.username} at ${subject.host}, named ${subject.name}`,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

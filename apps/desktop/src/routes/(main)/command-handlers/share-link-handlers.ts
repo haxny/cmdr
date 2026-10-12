@@ -10,14 +10,14 @@
  * clipboard (`copyShareLink`), since its signature is a credential.
  */
 
-import { copyShareLink } from '$lib/tauri-commands'
-import type { ShareLinkExpiry } from '$lib/ipc/bindings'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-import { rowCanShareLink } from '$lib/file-explorer/pane/volume-capabilities'
-import { renderVolumeError } from '$lib/file-operations/mutation-error-messages'
+import { copyShareLink } from '#lib/tauri-commands/index.js'
+import type { ShareLinkExpiry } from '#lib/ipc/bindings.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { rowCanShareLink } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { renderVolumeError } from '#lib/file-operations/mutation-error-messages.js'
 import type { CommandHandlerContext, CommandHandlerRecord } from './types'
 
 const COPIED: Record<ShareLinkExpiry, MessageKey> = {

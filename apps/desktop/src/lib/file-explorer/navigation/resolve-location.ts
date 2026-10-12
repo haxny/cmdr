@@ -5,13 +5,13 @@
  * row activation. Each edge resolves once, here, then routes the `Location`
  * through `navigate()`.
  *
- * Wraps the typed `resolveLocation` IPC command (via `$lib/tauri-commands`),
+ * Wraps the typed `resolveLocation` IPC command (via `#lib/tauri-commands`),
  * which runs the full protocol dispatch (`mtp://` / `smb://` / local `statfs`).
  * Failure is honest: the caller gets a typed `{ ok: false }` to turn into a
  * friendly toast or a typed refusal, never a silent wrong-volume listing.
  */
 
-import { resolveLocation as resolveLocationCommand, type Location } from '$lib/tauri-commands'
+import { resolveLocation as resolveLocationCommand, type Location } from '#lib/tauri-commands/index.js'
 
 /** Why a path couldn't be turned into a `Location`. Both map to the same
  * "couldn't reach that location's drive" UX; the distinction is for diagnostics.

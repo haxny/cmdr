@@ -1,8 +1,8 @@
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { SpaceInfo } from '$lib/ipc/bindings'
-import type { FileSizeFormat } from '$lib/settings/types'
-import { formatDriveFigure, formatFileSizeWithFormat } from '$lib/units'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { SpaceInfo } from '#lib/ipc/bindings.js'
+import type { FileSizeFormat } from '#lib/settings/types.js'
+import { formatDriveFigure, formatFileSizeWithFormat } from '#lib/units/index.js'
 
 /** The bounded half of `SpaceInfo`: the only shape a percentage means anything on. */
 export type BoundedSpaceInfo = Extract<SpaceInfo, { kind: 'bounded' }>

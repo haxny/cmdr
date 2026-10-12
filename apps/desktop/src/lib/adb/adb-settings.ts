@@ -7,9 +7,9 @@
  * one. Either change re-pushes both, the shape the low-disk-space pair takes.
  */
 
-import { getSetting } from '$lib/settings'
-import { setAdbSettings } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting } from '#lib/settings/index.js'
+import { setAdbSettings } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('adb')
 

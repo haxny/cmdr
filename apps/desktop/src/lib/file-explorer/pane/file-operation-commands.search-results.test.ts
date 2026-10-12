@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // backend listing. Stubs and fixtures are shared with
 // `file-operation-commands.test.ts` through `file-operation-commands.test-harness.ts`,
 // which each factory below reaches by a lazy `await import`.
-vi.mock('$lib/tauri-commands', async () => {
+vi.mock('#lib/tauri-commands/index.js', async () => {
   const { spies } = await import('./file-operation-commands.test-harness')
   return {
     DEFAULT_VOLUME_ID: 'root',
@@ -15,11 +15,11 @@ vi.mock('$lib/tauri-commands', async () => {
   }
 })
 
-vi.mock('$lib/ui/toast', async () => ({
+vi.mock('#lib/ui/toast/index.js', async () => ({
   addToast: (await import('./file-operation-commands.test-harness')).spies.addToast,
 }))
 
-vi.mock('$lib/search/snapshot-store.svelte', async () => {
+vi.mock('#lib/search/snapshot-store.svelte.js', async () => {
   const { spies, resolveSnapshotEntriesStub } = await import('./file-operation-commands.test-harness')
   return {
     getSnapshot: spies.getSnapshot,
@@ -31,21 +31,21 @@ vi.mock('$lib/search/snapshot-store.svelte', async () => {
   }
 })
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
-vi.mock('$lib/search/capabilities', () => ({
+vi.mock('#lib/search/capabilities.js', () => ({
   SEARCH_RESULTS_NOT_A_FOLDER_TOAST: "Search results aren't a folder. Pick a real destination.",
 }))
 
-vi.mock('$lib/file-viewer/open-viewer', async () => ({
+vi.mock('#lib/file-viewer/open-viewer.js', async () => ({
   openFileViewer: (await import('./file-operation-commands.test-harness')).spies.openFileViewer,
 }))
 
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', async () => ({
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', async () => ({
   getInitialFolderName: (await import('./file-operation-commands.test-harness')).spies.getInitialFolderName,
 }))
 
-vi.mock('$lib/file-operations/mkfile/new-file-operations', async () => ({
+vi.mock('#lib/file-operations/mkfile/new-file-operations.js', async () => ({
   getInitialFileName: (await import('./file-operation-commands.test-harness')).spies.getInitialFileName,
 }))
 
@@ -60,7 +60,7 @@ vi.mock('./transfer-operations', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/logging/logger', async () => {
+vi.mock('#lib/logging/logger.js', async () => {
   const { spies } = await import('./file-operation-commands.test-harness')
   return { getAppLogger: () => ({ error: vi.fn(), warn: spies.logWarn, info: vi.fn(), debug: spies.logDebug }) }
 })

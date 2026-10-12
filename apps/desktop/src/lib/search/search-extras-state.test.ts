@@ -5,7 +5,7 @@
  * sequence (Search's wrapper does) leaves the two surfaces in sync.
  */
 import { describe, it, expect } from 'vitest'
-import { createQueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import { createQueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 import { createSearchExtrasState } from './search-extras-state.svelte'
 
 describe('createSearchExtrasState: defaults + setters', () => {

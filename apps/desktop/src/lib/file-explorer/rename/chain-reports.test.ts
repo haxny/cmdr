@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { clearAllToasts, getToasts } from '$lib/ui/toast'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/index.js'
 import { createChainReports } from './chain-reports'
 
 beforeAll(() => {

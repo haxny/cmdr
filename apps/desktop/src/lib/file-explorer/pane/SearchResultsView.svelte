@@ -28,17 +28,17 @@
         getMutationTick,
         snapshotIdFromPanePath,
         type SearchSnapshot,
-    } from '$lib/search/snapshot-store.svelte'
-    import { nextSnapshotSort, sortSnapshot } from '$lib/search/snapshot-sort.svelte'
-    import { SEARCH_HIT_MENU_FACTS } from '$lib/search/search-hit-menu'
+    } from '#lib/search/snapshot-store.svelte.js'
+    import { nextSnapshotSort, sortSnapshot } from '#lib/search/snapshot-sort.svelte.js'
+    import { SEARCH_HIT_MENU_FACTS } from '#lib/search/search-hit-menu.js'
     import { capabilitiesForKind } from './volume-capabilities'
-    import { showFileContextMenu } from '$lib/tauri-commands'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { showFileContextMenu } from '#lib/tauri-commands/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { snapshotBasename, snapshotContextMenuPaths, snapshotContextMenuRows } from './snapshot-context-menu'
     import { sameKindTargetFor } from './select-same-kind'
     import { contextMenuCountText, contextMenuSizeBytes, contextMenuSizeText } from '../selection/context-menu-target'
-    import { boundShortcuts } from '$lib/shortcuts'
-    import type { SearchResultEntry } from '$lib/ipc/bindings'
+    import { boundShortcuts } from '#lib/shortcuts/index.js'
+    import type { SearchResultEntry } from '#lib/ipc/bindings.js'
     import type { ListViewAPI } from './types'
 
     interface Props {

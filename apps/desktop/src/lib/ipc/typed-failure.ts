@@ -9,7 +9,7 @@
  *
  * One subclass per wire type, so `instanceof` narrows to the right payload and
  * no family can accidentally read another's. Adding a family is three lines
- * (see `$lib/file-operations/mutation-error.ts` for the shape).
+ * (see `#lib/file-operations/mutation-error.ts` for the shape).
  */
 
 /** An `Error` that still carries the backend's typed refusal. */

@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { flushSync } from 'svelte'
 import type { VolumeInfo } from '../types'
-import type { SignInShape } from '$lib/ipc/bindings'
+import type { SignInShape } from '#lib/ipc/bindings.js'
 
 const { ipc, manager, resolveValidPathSpy, addToastSpy } = vi.hoisted(() => ({
   ipc: {
@@ -35,7 +35,7 @@ const { ipc, manager, resolveValidPathSpy, addToastSpy } = vi.hoisted(() => ({
   addToastSpy: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   disconnectSmbVolume: ipc.disconnectSmbVolume,
   disconnectPlace: ipc.disconnectPlace,
   connectSavedPlace: ipc.connectSavedPlace,
@@ -44,14 +44,14 @@ vi.mock('$lib/tauri-commands', () => ({
   cancelServerConnect: vi.fn(),
 }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath: resolveValidPathSpy }))
-vi.mock('$lib/servers/open-sign-in', () => ({ openSignInForPlace: vi.fn().mockResolvedValue({ signedIn: false }) }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/servers/open-sign-in.js', () => ({ openSignInForPlace: vi.fn().mockResolvedValue({ signedIn: false }) }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
 vi.mock('../network/smb-reconnect-manager.svelte', () => ({
   smbReconnectManager: manager,
   reconnectCycleLines: () => ['keeps trying'],
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
@@ -195,7 +195,7 @@ describe('createSmbViewState', () => {
       kind: 'changed' as const,
     }
     ipc.connectSavedPlace.mockResolvedValue(presented)
-    const { openSignInForPlace } = await import('$lib/servers/open-sign-in')
+    const { openSignInForPlace } = await import('#lib/servers/open-sign-in.js')
     const state = create().sub.remoteConnectState
     if (state?.kind !== 'host_key_changed') throw new Error('expected the changed-key banner')
 
@@ -226,7 +226,7 @@ describe('createSmbViewState', () => {
       fingerprint: 'SHA256:changedkey',
       kind: 'changed',
     })
-    const { openSignInForPlace } = await import('$lib/servers/open-sign-in')
+    const { openSignInForPlace } = await import('#lib/servers/open-sign-in.js')
     vi.mocked(openSignInForPlace).mockResolvedValueOnce({ signedIn: true, volumeId: 'smb-vol' })
     const { sub, enter } = create()
     const state = sub.remoteConnectState
@@ -256,7 +256,7 @@ describe('createSmbViewState', () => {
     // ❗ The banner is up because the backend stopped for a missing credential.
     // Routing through `connectPlace`'s arm 2 is what carries that reason into
     // the sheet's first round, instead of an empty password box.
-    const { openSignInForPlace } = await import('$lib/servers/open-sign-in')
+    const { openSignInForPlace } = await import('#lib/servers/open-sign-in.js')
     const { sub } = create({ volumeInfo: { connectionState: 'needs_sign_in' } as unknown as VolumeInfo })
     sub.handleSignIn()
     await vi.waitFor(() => {

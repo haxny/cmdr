@@ -29,13 +29,13 @@
 import { untrack } from 'svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { reconnectVolume, getVolumeSignInState, onVolumeConnectionChanged } from '$lib/tauri-commands'
-import type { SignInShape } from '$lib/tauri-commands'
+import { reconnectVolume, getVolumeSignInState, onVolumeConnectionChanged } from '#lib/tauri-commands/index.js'
+import type { SignInShape } from '#lib/tauri-commands/index.js'
 import { asReconnectError, describeReconnectRefusal } from './reconnect-error'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 const log = getAppLogger('smbReconnect')
 

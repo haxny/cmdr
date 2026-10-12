@@ -1,6 +1,6 @@
 /** Client-side filename validation for instant keystroke feedback. */
 
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** Defaults match macOS. Call initPathLimits() at startup to get platform-specific values from the backend. */
 let maxNameBytes = 255
@@ -8,7 +8,7 @@ let maxPathBytes = 1024
 
 /** Fetches platform-specific limits from the backend. Call once at app startup. */
 export async function initPathLimits(): Promise<void> {
-  const { getPathLimits } = await import('$lib/tauri-commands')
+  const { getPathLimits } = await import('#lib/tauri-commands/index.js')
   const limits = await getPathLimits()
   maxNameBytes = limits.maxNameBytes
   maxPathBytes = limits.maxPathBytes

@@ -36,10 +36,10 @@
      */
     import { Combobox, createListCollection } from '@ark-ui/svelte/combobox'
     import { Portal } from '@ark-ui/svelte/portal'
-    import { usePortalTarget } from '$lib/ui/portal-target'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { usePortalTarget } from '#lib/ui/portal-target.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         items: ComboboxItem[]

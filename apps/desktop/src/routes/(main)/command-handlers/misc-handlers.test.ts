@@ -4,18 +4,18 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/downloads/go-to-latest', () => ({ goToLatestDownload: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ addFavorite: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/downloads/go-to-latest.js', () => ({ goToLatestDownload: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ addFavorite: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: vi.fn(() => '/Users/me/Documents'),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
 
 import { miscHandlers } from './misc-handlers'
 import type { CommandHandlerContext } from './types'
-import { addFavorite } from '$lib/tauri-commands'
-import { getFocusedPanePath } from '$lib/file-explorer/pane/focused-pane-reads'
-import { addToast } from '$lib/ui/toast'
+import { addFavorite } from '#lib/tauri-commands/index.js'
+import { getFocusedPanePath } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { addToast } from '#lib/ui/toast/index.js'
 
 // The handler ignores its context (it reads the focused-pane path directly), but the
 // `CommandHandler` type still passes one; supply a stub so the call typechecks.

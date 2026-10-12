@@ -27,7 +27,7 @@ vi.mock('./notifications-mode', () => ({
   openSettingsToDownloadsNotifications: openSettingsToDownloadsNotificationsMock,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: dismissToastMock,
 }))
 

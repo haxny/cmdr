@@ -1,5 +1,5 @@
 // eslint-disable-next-line cmdr/no-raw-bindings-import -- logging/store bootstrap infra: the tauri-commands barrel imports the logger (storage.ts), so wrapping here would create an import cycle
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 
 /**
  * Resolve the path `tauri-plugin-store` should load for a given store file
@@ -19,7 +19,7 @@ import { commands } from '$lib/ipc/bindings'
  * production path rather than escaping the data dir.
  *
  * `onError` lets callers log in their own style (the logger initializes before
- * its own app logger exists, so it can't depend on `$lib/logging`).
+ * its own app logger exists, so it can't depend on `#lib/logging`).
  */
 export async function resolveStorePath(storeName: string, onError?: (error: unknown) => void): Promise<string> {
   try {

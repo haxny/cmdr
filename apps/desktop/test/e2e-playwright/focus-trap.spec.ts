@@ -1,5 +1,5 @@
 /**
- * E2E tests for dialog focus trapping (`$lib/ui/focus-trap.ts`).
+ * E2E tests for dialog focus trapping (`#lib/ui/focus-trap.ts`).
  *
  * Tier-2 flow coverage jsdom can't model: real focus movement across the
  * dialog/background boundary. Regression anchor: pressing Tab twice in the

@@ -1,6 +1,6 @@
 /**
  * ESLint rule: no hardcoded user-facing strings in migrated feature areas.
- * Route them through the i18n catalog (`t()` / `<Trans>` from `$lib/intl`)
+ * Route them through the i18n catalog (`t()` / `<Trans>` from `#lib/intl`)
  * instead, so the app is translation-ready and copy lives in one place.
  *
  * ## Scope: a CLOSED set of sink positions, not "any string literal"
@@ -131,7 +131,7 @@ export default {
     messages: {
       rawUserFacingString:
         "Don't hardcode a user-facing string here. Move the copy into a `messages/en/<area>.json` catalog key and " +
-        'resolve it with `t()` (or `<Trans>` for inline components) from `$lib/intl`. ' +
+        'resolve it with `t()` (or `<Trans>` for inline components) from `#lib/intl`. ' +
         'See `src/lib/intl/CLAUDE.md`.',
     },
     schema: [],

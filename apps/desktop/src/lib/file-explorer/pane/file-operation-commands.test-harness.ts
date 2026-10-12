@@ -1,10 +1,10 @@
 import { vi } from 'vitest'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
-import type { SearchSnapshot } from '$lib/search/snapshot-store.svelte'
+import type { SearchSnapshot } from '#lib/search/snapshot-store.svelte.js'
 import type { FileEntry, VolumeInfo } from '../types'
-import type { ToastContent, ToastOptions } from '$lib/ui/toast/toast-store.svelte'
-import type { TrashRoutingAnswer } from '$lib/ipc/bindings'
+import type { ToastContent, ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
+import type { TrashRoutingAnswer } from '#lib/ipc/bindings.js'
 
 /**
  * Shared stubs and fixtures for the `file-operation-commands` specs

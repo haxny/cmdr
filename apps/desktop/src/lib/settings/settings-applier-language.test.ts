@@ -9,7 +9,7 @@
  * from the OS preference list, a real tag → `setLocale(tag)`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { _setSystemLocalesForTests } from '$lib/intl/os-locales'
+import { _setSystemLocalesForTests } from '#lib/intl/os-locales.js'
 
 const setLocale = vi.fn()
 
@@ -20,8 +20,8 @@ let startupLanguage = 'system'
 // The OS-locale-change handler the applier subscribes with.
 let osLocalesChanged: ((payload: { locales: { ui: string | null; format: string | null } }) => void) | undefined
 
-vi.mock('$lib/intl/messages.svelte', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/intl/messages.svelte')>()
+vi.mock('#lib/intl/messages.svelte.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/intl/messages.svelte.js')>()
   return {
     ...actual,
     // Spy on the locale-switch seam; keep `availableLocales` (the registry needs
@@ -37,7 +37,7 @@ vi.mock('$lib/intl/messages.svelte', async (importOriginal) => {
 // debounce, error reports, etc.) through the typed Tauri wrappers. In the test
 // env those hit an unmocked `invoke`, so stub the module's functions to no-op
 // promises: this test only cares about the language path, not the backend sync.
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const noop = () => Promise.resolve()
   const stubbed: Record<string, unknown> = {}
@@ -54,8 +54,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   return stubbed
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/settings')>()
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/settings/index.js')>()
   return {
     ...actual,
     initializeSettings: vi.fn().mockResolvedValue(undefined),

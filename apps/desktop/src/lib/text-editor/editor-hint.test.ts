@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { EditorOpenReport } from '$lib/ipc/bindings'
+import type { EditorOpenReport } from '#lib/ipc/bindings.js'
 import { decideEditorHint } from './editor-hint'
 
 const SYSTEM = 'system'

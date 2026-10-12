@@ -14,21 +14,21 @@
  *
  *     import { fileEntry, mountBriefList } from './test-brief-list'
  *
- *     vi.mock('$lib/tauri-commands', async () =>
+ *     vi.mock('#lib/tauri-commands/index.js', async () =>
  *       (await import('./test-file-list-mocks')).tauriCommandsMock({
  *         getBriefColumnTextWidths: () =>
  *           Promise.resolve({ status: 'ok', data: { widths: [], missingCodePoints: [] } }),
  *       }),
  *     )
- *     vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
- *     vi.mock('$lib/indexing/index-state.svelte', async () =>
+ *     vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+ *     vi.mock('#lib/indexing/index-state.svelte.js', async () =>
  *       (await import('./test-file-list-mocks')).indexStateMock())
- *     vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+ *     vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
  *       (await import('./test-file-list-mocks')).reactiveSettingsMock({
  *         getBriefColumnWidthMode: () => 'paneWidth',
  *         getBriefColumnWidthMaxPx: () => 400,
  *       }))
- *     vi.mock('$lib/settings/settings-store', async () =>
+ *     vi.mock('#lib/settings/settings-store.js', async () =>
  *       (await import('./test-file-list-mocks')).settingsStoreMock({
  *         'advanced.virtualizationBufferColumns': 2,
  *       }))
@@ -42,7 +42,7 @@
 
 import { mount, tick, type ComponentProps } from 'svelte'
 import { vi } from 'vitest'
-import { installLayoutMock, type LayoutBox, type LayoutMock } from '$lib/test-layout'
+import { installLayoutMock, type LayoutBox, type LayoutMock } from '#lib/test-layout.js'
 import BriefList from './BriefList.svelte'
 import type { FileEntry } from '../types'
 
@@ -94,7 +94,7 @@ async function settleUntil(until: () => boolean, reason: string): Promise<void> 
 /** Mounts a `BriefList` over a measured surface and waits for its first fetch. */
 export async function mountBriefList(options: MountBriefListOptions = {}): Promise<MountedBriefList> {
   const entries = options.entries ?? []
-  const { getFileRange } = await import('$lib/tauri-commands')
+  const { getFileRange } = await import('#lib/tauri-commands/index.js')
   vi.mocked(getFileRange).mockImplementation((_listingId, start: number, count: number) =>
     Promise.resolve(entries.slice(start, start + count)),
   )

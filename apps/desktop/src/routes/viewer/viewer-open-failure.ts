@@ -4,9 +4,9 @@
  * so they render one consistent, per-variant message.
  */
 
-import { asViewerError, type ViewerError } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import type { Logger } from '$lib/logging/logger'
+import { asViewerError, type ViewerError } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { Logger } from '#lib/logging/logger.js'
 
 export interface OpenFailure {
   message: string

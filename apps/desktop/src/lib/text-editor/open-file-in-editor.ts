@@ -8,10 +8,10 @@
  * choice and every word shown.
  */
 
-import { asOpenInEditorError, openInEditor } from '$lib/tauri-commands'
-import type { EditorOpenReport } from '$lib/ipc/bindings'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { asOpenInEditorError, openInEditor } from '#lib/tauri-commands/index.js'
+import type { EditorOpenReport } from '#lib/ipc/bindings.js'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { decideEditorHint } from './editor-hint'
 import { SYSTEM_DEFAULT_EDITOR_CHOICE } from './text-editor-choice'
 import {

@@ -14,10 +14,10 @@
      * Presentational: each host owns the pending-rollback state and calls its own
      * rollback in `onConfirm`.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { RollbackConfirmVariant } from './reversal-wording'
 
     interface Props {

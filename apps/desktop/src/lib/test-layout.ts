@@ -15,7 +15,7 @@
  * five rows the real app renders, and a scroll to 200 px lands on the same row.
  *
  * Usage (from any `*.test.ts`):
- *     import { installLayoutMock } from '$lib/test-layout'
+ *     import { installLayoutMock } from '#lib/test-layout.js'
  *
  *     const layout = installLayoutMock({
  *         '[data-file-list-surface]': { clientHeight: 400, clientWidth: 785, offsetWidth: 800 },

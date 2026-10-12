@@ -17,8 +17,8 @@ import DateFilterPopover from './DateFilterPopover.svelte'
 import SearchFilterChips from './FilterChips.svelte'
 import ScopeFilterPopover from './ScopeFilterPopover.svelte'
 import SizeFilterPopover from './SizeFilterPopover.svelte'
-import { searchQueryState } from '$lib/search/search-state.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { searchQueryState } from '#lib/search/search-state.svelte.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // Several blocks audit the whole `document.body` (popovers portal out of their
 // container), and axe resolves ARIA id references document-wide. Clearing between

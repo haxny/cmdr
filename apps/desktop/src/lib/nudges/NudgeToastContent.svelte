@@ -7,7 +7,7 @@
      * each offer keeps its own `tString` calls in its own component and the
      * strings still re-render on a live language switch.
      */
-    import Button from '$lib/ui/Button.svelte'
+    import Button from '#lib/ui/Button.svelte'
 
     interface Props {
         /** The question, one line. */

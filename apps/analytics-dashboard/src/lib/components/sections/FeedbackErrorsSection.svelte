@@ -3,18 +3,18 @@
   reports per day, by kind, and by version, plus recent feedback and a recent-error-reports table.
 -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { FeedbackAndErrorsData } from '$lib/server/sources/feedback-and-errors.js'
-    import { countFeedbackWithReplyTo, tallyErrorReportsByField, errorReportsByDay } from '$lib/feedback-and-errors.js'
-    import { formatNumber } from '$lib/format.js'
-    import { COLOR_GOLD } from '$lib/colors.js'
-    import Chart from '$lib/components/Chart.svelte'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import MetricTable from '$lib/components/MetricTable.svelte'
-    import EmptyState from '$lib/components/EmptyState.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { FeedbackAndErrorsData } from '#lib/server/sources/feedback-and-errors.js'
+    import { countFeedbackWithReplyTo, tallyErrorReportsByField, errorReportsByDay } from '#lib/feedback-and-errors.js'
+    import { formatNumber } from '#lib/format.js'
+    import { COLOR_GOLD } from '#lib/colors.js'
+    import Chart from '#lib/components/Chart.svelte'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import MetricTable from '#lib/components/MetricTable.svelte'
+    import EmptyState from '#lib/components/EmptyState.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const {
         feedbackAndErrors,

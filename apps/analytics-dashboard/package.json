@@ -48,5 +48,8 @@
     "vite": "^8.1.5",
     "vitest": "^5.0.3",
     "wrangler": "^4.107.1"
+  },
+  "imports": {
+    "#lib/*": "./src/lib/*"
   }
 }

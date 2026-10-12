@@ -4,7 +4,7 @@
  * live in `window-positioning.ts`.
  */
 
-import type { ChildWindowRect } from '$lib/ipc/bindings'
+import type { ChildWindowRect } from '#lib/ipc/bindings.js'
 
 /** Logical-pixel rectangle. Same shape as the Rust-side `ChildWindowRect`. */
 export type Rect = ChildWindowRect

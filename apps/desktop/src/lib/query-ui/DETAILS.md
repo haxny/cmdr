@@ -5,13 +5,13 @@ in `CLAUDE.md`.
 
 ## i18n
 
-All user-facing copy in this area lives in the `queryUi.*` message catalog (`$lib/intl/messages/en/queryUi.json`),
+All user-facing copy in this area lives in the `queryUi.*` message catalog (`#lib/intl/messages/en/queryUi.json`),
 resolved through `tString()` / `t()` (and `<Trans>` for the keyboard-tip, recent-popover-hint, and scope-hint sentences
 that interleave key-cap chips / `<code>` glyphs). `cmdr/no-raw-user-facing-string` is enforced on `/lib/query-ui/`, so
 add new copy as a catalog key, not a literal. Pure helpers that compose chip/tooltip strings (`filter-chip-state.ts`,
 `filter-popover-helpers.ts`, `recent-items/recent-items-utils.ts`, `ai-summary.ts`) call `tString()` directly; counts
 are passed in as preformatted `*Text` params (with a raw integer alongside only to drive plural selection). Symbol-like
-mode badges (`AI` / `.*` / `Aa` in `modeBadge`), unit-ID tokens (`KB` / `MB` / `GB`, rendered through `$lib/units`), and
+mode badges (`AI` / `.*` / `Aa` in `modeBadge`), unit-ID tokens (`KB` / `MB` / `GB`, rendered through `#lib/units`), and
 the regex slash-wrap are typography, not copy, and stay literal. Parity net: `queryui-i18n-parity.test.ts`.
 
 **Consumer-supplied copy overrides the `queryUi.*` default, and the fallback lives at the call site.** A few strings
@@ -44,7 +44,7 @@ prompt strip, the results table, the recent-items dropdown, the empty state, and
 wire everything Search-or-Selection-specific through a single [`QueryDialogConfig`](query-dialog-config.ts) prop.
 
 The config carries the title + max width (+ an optional stability `badge` rendered as a `StatusBadge` next to the title;
-both consumers derive it from `getBadgeStatus()` in `$lib/feature-status`), the cross-consumer state instance (the
+both consumers derive it from `getBadgeStatus()` in `#lib/feature-status`), the cross-consumer state instance (the
 factory output), an `aiEnabled` flag and an optional `aiBlocked` one (Cloud without "Allow cloud AI": the chip stays,
 and `EmptyState` trades its AI prompts for `queryUi.ai.cloudOff.body` plus a button to the switch), the per-chip
 visibility set, a `showPathColumn` flag, the run-hint copy, the history store + adapter + key, the empty-state hints,
@@ -107,21 +107,21 @@ the next non-AI run, etc.) without each consumer re-implementing the rule.
 
 `runAiSearch` invokes `config.translateAi` inside a `try/catch`. The consumer's `translateAi` does NOT swallow the IPC
 error — it lets the typed `AiTranslateError` throw. QueryDialog catches it and calls `showAiTranslateErrorToast(err)`
-(`$lib/ai/translate-error-toast`), which maps the error's `kind` to a specific, friendly toast (out of quota, key
+(`#lib/ai/translate-error-toast`), which maps the error's `kind` to a specific, friendly toast (out of quota, key
 rejected, timed out, empty answer, …). Both Search and Selection get the same error UX from this one place; don't re-add
 a per-consumer `catch` that returns `null` silently. A consumer's `translateAi` returning `null` still means a benign
 empty translation (nothing to apply, no toast) — distinct from a throw.
 
 ### Chrome: it's a `ModalDialog`
 
-Every bit of dialog chrome comes from `$lib/ui/ModalDialog`: the 27 px `--radius-dialog` corner, the two-hairline macOS
+Every bit of dialog chrome comes from `#lib/ui/ModalDialog`: the 27 px `--radius-dialog` corner, the two-hairline macOS
 panel edge, `--shadow-dialog`, the standard `<h2>` title bar with its × button and drag handle, `use:trapFocus`, the MCP
 `notifyDialogOpened` / `notifyDialogClosed` pair, the close registry entry, and focus restore on unmount. QueryDialog
 must NOT re-implement any of them; `config.dialogType` is already a `SoftDialogId`, so it maps straight onto `dialogId`.
 The title snippet renders `config.title` in its own `<span>` (the optional `StatusBadge` is a sibling), so a consumer
 test can address the words alone.
 
-Five opt-ins carry the shape this dialog needs (each documented in `$lib/ui/DETAILS.md` § ModalDialog):
+Five opt-ins carry the shape this dialog needs (each documented in `#lib/ui/DETAILS.md` § ModalDialog):
 
 - `align="top"` — the Spotlight placement, 10vh from the top.
 - `fillBody` + `containerStyle="… max-height: 80vh"` — a fixed-height frame whose body is a flex column, so
@@ -160,7 +160,7 @@ window).
 
 The Count-only switch is a QueryDialog-level sibling of `ModeChips`, not a `ModeChips` or `FilterChips` child: it
 changes what the search RETURNS rather than what it matches, and `ModeChips` is a pure `ToggleGroup` wrapper. It's the
-house `$lib/ui/Switch`; a hand-rolled `role="switch"` is rejected by `cmdr/prefer-ui-primitive`. Flipping it re-runs via
+house `#lib/ui/Switch`; a hand-rolled `role="switch"` is rejected by `cmdr/prefer-ui-primitive`. Flipping it re-runs via
 `scheduleSearch()` (debounced, and a no-op in AI mode, which keeps the explicit-trigger contract).
 
 Every strip sits at `ModalDialog`'s `--spacing-dialog` (20 px) side inset, the same as its title bar, so the title, the
@@ -395,7 +395,7 @@ map. What the pieces DO is in the sections below: the orchestrator and its owner
 orchestrator", the ToggleGroup wrapper in § "Mode chips", the pill fitting algorithm in § "PathPills measurement", the
 state factory in § "State shape contract", the ⏎ swap in § "Keyboard shortcuts", and the orchestrator's test split in §
 "Test coverage". `filter-chips/` documents itself (`filter-chips/CLAUDE.md`), and the chip + popover primitives it
-builds on live in `$lib/ui/`. Only the layout facts that none of those carry live here:
+builds on live in `#lib/ui/`. Only the layout facts that none of those carry live here:
 
 - **The two consumers render different subsets from the same components.** Search shows all four mode chips; Selection
   drops Content. Search gets the path column (`showPathColumn` defaults `true`); Selection passes `false`. Selection's
@@ -416,7 +416,7 @@ builds on live in `$lib/ui/`. Only the layout facts that none of those carry liv
   dialog's scope state into a name for the bullet (`scopeSummaryFor`) and the path a widen compares against
   (`effectiveScopePath`); `QueryDialog` gates both on `visibleChips.scope`, so Selection renders neither. The widen
   button MUST re-run, for the same reason `showResultsFromCount` does: setting the scope alone leaves the user looking
-  at the empty list that prompted the click. Why the bullet earns its place: `$lib/search/DETAILS.md` § "The empty box
+  at the empty list that prompted the click. Why the bullet earns its place: `#lib/search/DETAILS.md` § "The empty box
   means the current folder".
 - **The rows are `ColumnList`'s, the cells are `QueryResults`'** (snippets, styled in its own scope). It keeps its hook
   classes through the list's `headerClass` / `rowClass` / column `class` (`.column-header`, `.result-row`,
@@ -427,14 +427,14 @@ builds on live in `$lib/ui/`. Only the layout facts that none of those carry liv
 Component tests (`*.svelte.test.ts`) colocate with what they pin; `codegraph_files` lists them. The tier-3 a11y audits
 are directory-level, because `svelte-tests` charges per test FILE (`docs/testing.md` § "What a test actually costs"):
 `presentational.a11y.test.ts` covers the five components that mock nothing, and `dialog.a11y.test.ts` covers
-`QueryDialog` + `QueryResults`, whose `$lib/tauri-commands` / `$lib/settings` / `$lib/icon-cache` stubs would otherwise
+`QueryDialog` + `QueryResults`, whose `#lib/tauri-commands` / `#lib/settings` / `#lib/icon-cache` stubs would otherwise
 apply to the mock-free five too. The one non-colocated suite is `queryui-i18n-parity.test.ts`, the en-locale golden net
 described in § i18n: a copy edit lands in the catalog AND in its goldens, together.
 
 ## Column widths
 
-The results rows are `$lib/ui/ColumnList.svelte`, which owns the width contract: measured tracks, ONE inline template
-for header and rows, max-min fairness among `share` columns, and the no-oscillation rule. `$lib/ui/DETAILS.md` §
+The results rows are `#lib/ui/ColumnList.svelte`, which owns the width contract: measured tracks, ONE inline template
+for header and rows, max-min fairness among `share` columns, and the no-oscillation rule. `#lib/ui/DETAILS.md` §
 ColumnList. What's Search's own, declared in `result-column-widths.ts` (`resultColumnWidths`):
 
 - **Search: Size and Modified `fit`** their widest cell (or header), falling back to `10ch` / `16ch` until measured.
@@ -590,7 +590,7 @@ The bar's run button reads `Search ⏎` only when `enterAction === 'run-search'`
 The policy: footer actions render unconditionally; when there are no results (or the index isn't ready) they render
 disabled instead of hidden, so the layout stays still while the user types. `QueryDialog.svelte` renders the
 primary/secondary footer actions itself, from `config.primaryAction` / `config.secondaryAction`, as standard
-`$lib/ui/Button`s (`variant="primary" | "secondary"`, `size="regular"`) with the shortcut hint on a `ShortcutChip`.
+`#lib/ui/Button`s (`variant="primary" | "secondary"`, `size="regular"`) with the shortcut hint on a `ShortcutChip`.
 Search wires "Show all in main window" (primary, ⌥⏎) + "Go to file" (secondary, ⏎) through that config; Selection wires
 "Select these files" (primary, ⏎). There's no separate per-consumer footer component.
 
@@ -698,7 +698,7 @@ has one meaning ("run this"), so the click IS the explicit AI trigger. A recent 
 reaching for a past search to adjust it, so picking one loads it and stops, leaving `⏎` to run. That also keeps an AI
 entry from re-billing the user for what they meant as navigation. See § Recent-items dropdown.
 
-**Decision**: `RecentItemsPopover` reuses `$lib/ui/Popover` for positioning + focus trap + Esc-scoped close. **Why**:
+**Decision**: `RecentItemsPopover` reuses `#lib/ui/Popover` for positioning + focus trap + Esc-scoped close. **Why**:
 it's a sub-overlay-of-an-overlay with the same auto-flip, focus-trap, and "Esc closes only the popover" semantics as the
 filter chips. Reimplementing those risks drift; reusing the primitive guarantees the contract covers both popover kinds
 via the single `.ui-popover` DOM selector (the same selector the filter popovers render through `FilterPopover`).
@@ -788,10 +788,10 @@ both are out of redesign scope.
 
 ## Dependencies
 
-- `$lib/ui/ToggleGroup.svelte` — segmented-control primitive used by `ModeChips`
-- `$lib/tauri-commands` — `getRecentSearches` (Search) / future `getRecentSelections` (Selection) via the recent-items
+- `#lib/ui/ToggleGroup.svelte` — segmented-control primitive used by `ModeChips`
+- `#lib/tauri-commands` — `getRecentSearches` (Search) / future `getRecentSelections` (Selection) via the recent-items
   factory; `showFileContextMenu` (row context menu)
 - `@leeoniya/ufuzzy` — fuzzy filtering inside `RecentItemsPopover`
-- `$lib/settings` — `getSetting('ai.provider')` (AI chip visibility, ⌘ shortcut numbering)
-- `$lib/tooltip/tooltip` — chip tooltips (Content chip's "Coming soon" copy, recent-items chip tooltips)
+- `#lib/settings` — `getSetting('ai.provider')` (AI chip visibility, ⌘ shortcut numbering)
+- `#lib/tooltip/tooltip` — chip tooltips (Content chip's "Coming soon" copy, recent-items chip tooltips)
 - CSS variables from `app.css` (`--z-modal`, `--color-accent-subtle`, `--color-bg-secondary`, etc.)

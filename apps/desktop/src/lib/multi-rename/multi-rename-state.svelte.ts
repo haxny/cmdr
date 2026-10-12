@@ -38,8 +38,8 @@ import {
   type PreviewCounts,
   type PreviewFilter,
   type PreviewRow,
-} from '$lib/tauri-commands'
-import type { ColumnListWindowedSource } from '$lib/ui/column-list-types'
+} from '#lib/tauri-commands/index.js'
+import type { ColumnListWindowedSource } from '#lib/ui/column-list-types.js'
 import { SvelteMap } from 'svelte/reactivity'
 import { BUILT_IN_PRESETS, DEFAULT_SPEC, specsEqual } from './spec'
 

@@ -3,24 +3,24 @@
  * app for a file inside an archive and nothing opened.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource } from '$lib/ipc/bindings'
+import type { OpenWithCopyRefusal, OpenWithCopyRefused, OpenWithCopySource } from '#lib/ipc/bindings.js'
 
 /** Only the fields these cells assert on; the real options type is wider. */
 type ToastOptions = { level: string; timeoutMs: number; id: string }
 
 const addToast = vi.hoisted(() => vi.fn<(message: string, options: ToastOptions) => string>())
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 
 let emitRefused: (payload: OpenWithCopyRefused) => void
 const unlisten = vi.fn()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onOpenWithCopyRefused: (handler: (payload: OpenWithCopyRefused) => void) => {
     emitRefused = handler
     return Promise.resolve(unlisten)
   },
 }))
 
-import { formatByteSize } from '$lib/units'
+import { formatByteSize } from '#lib/units/index.js'
 import { startOpenWithRefusedBridge } from './open-with-refused-bridge'
 
 const TWO_GIB = 2 * 1024 * 1024 * 1024

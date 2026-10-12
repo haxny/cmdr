@@ -14,7 +14,7 @@ import type {
   IndexScanCompleteEvent,
   IndexFreshnessChangedEvent,
   VolumeIndexStatus,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 // Captured callbacks, one per event kind. The manager registers exactly one
 // listener per kind in its constructor.
@@ -24,7 +24,7 @@ let onFreshness: ((p: IndexFreshnessChangedEvent) => void) | undefined
 
 const noopUnlisten = vi.fn()
 
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexScanStarted: (cb: (p: IndexScanStartedEvent) => void) => {
     onStarted = cb
     return Promise.resolve(noopUnlisten)
@@ -44,8 +44,8 @@ vi.mock('$lib/tauri-commands/indexing', () => ({
 // the refetch populates `statusMap`. `vi.hoisted` so the mock factory (hoisted to
 // the top of the file) can reference the spy.
 const { getVolumeIndexStatusById } = vi.hoisted(() => ({ getVolumeIndexStatusById: vi.fn() }))
-vi.mock('$lib/ipc/bindings', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/ipc/bindings')>()
+vi.mock('#lib/ipc/bindings.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/ipc/bindings.js')>()
   return {
     ...actual,
     commands: { ...actual.commands, getVolumeIndexStatusById },

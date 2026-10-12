@@ -12,11 +12,11 @@
  * ```ts
  * import SearchDialog from './SearchDialog.svelte'
  *
- * vi.mock('$lib/tauri-commands', async () => (await import('./test-search-dialog-harness')).tauriCommandsMock())
+ * vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-search-dialog-harness')).tauriCommandsMock())
  * vi.mock('../../routes/viewer/media-view', async () => (await import('./test-search-dialog-harness')).mediaViewMock())
- * vi.mock('$lib/settings', async () => (await import('./test-search-dialog-harness')).settingsMock())
- * vi.mock('$lib/indexing', async () => (await import('./test-search-dialog-harness')).indexingMock())
- * vi.mock('$lib/icon-cache', async () => (await import('./test-search-dialog-harness')).iconCacheMock())
+ * vi.mock('#lib/settings/index.js', async () => (await import('./test-search-dialog-harness')).settingsMock())
+ * vi.mock('#lib/indexing/index.js', async () => (await import('./test-search-dialog-harness')).indexingMock())
+ * vi.mock('#lib/icon-cache.js', async () => (await import('./test-search-dialog-harness')).iconCacheMock())
  *
  * useSearchDialog(SearchDialog)
  * ```
@@ -29,8 +29,8 @@
  * instead bills that ~12 s transform to whichever test mounts first, and under load the
  * first two or three tests of every file time out at 5 s while the rest run in ~50 ms.
  *
- * ❌ Nothing here may import a mocked module at module scope (`$lib/tauri-commands`,
- * `$lib/settings`, `$lib/indexing`, `$lib/icon-cache`, the viewer's `media-view`, or
+ * ❌ Nothing here may import a mocked module at module scope (`#lib/tauri-commands`,
+ * `#lib/settings`, `#lib/indexing`, `#lib/icon-cache`, the viewer's `media-view`, or
  * anything that reaches them, `SearchDialog.svelte` and `search-state.svelte` included):
  * this module is what the mock factories load, so such an import would ask for the module
  * whose factory is still running. The mount + seed helpers below dynamically import them
@@ -43,7 +43,7 @@
 import { vi } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import { writable } from 'svelte/store'
-import type { SearchResultEntry, TranslateResult } from '$lib/ipc/bindings'
+import type { SearchResultEntry, TranslateResult } from '#lib/ipc/bindings.js'
 
 /** Type-only, so naming the component here still imports nothing at runtime. */
 type SearchDialogComponent = typeof import('./SearchDialog.svelte').default

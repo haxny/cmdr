@@ -18,11 +18,11 @@
  * works and one that always times out.
  *
  * One subscription per window, started from the main page's init, the same shape
- * as `$lib/search/snapshot-purge.ts`.
+ * as `#lib/search/snapshot-purge.ts`.
  */
 
-import { onWriteSettled } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { onWriteSettled } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
 const log = getAppLogger('fileOperations')

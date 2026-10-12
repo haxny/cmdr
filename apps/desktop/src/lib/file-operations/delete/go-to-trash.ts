@@ -16,17 +16,17 @@
  *   journal holds the OS's own answer, de-duplicated name and all.
  */
 
-import { getTrashDir, getOperationLogDetail } from '$lib/tauri-commands'
+import { getTrashDir, getOperationLogDetail } from '#lib/tauri-commands/index.js'
 import { whenOperationSettled } from '../settled-operations'
 import {
   resolveLocationOrToast,
   navigateToDirInBestPane,
   revealFileInBestPane,
   type PaneRevealAPI,
-} from '$lib/file-explorer/navigation/navigate-and-select'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/file-explorer/navigation/navigate-and-select.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { asMutationError } from '../mutation-error'
 
 const log = getAppLogger('fileOperations')

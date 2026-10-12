@@ -8,7 +8,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 
 const { eventMatchesCommandSpy } = vi.hoisted(() => ({ eventMatchesCommandSpy: vi.fn() }))
-vi.mock('$lib/shortcuts', () => ({ eventMatchesCommand: eventMatchesCommandSpy }))
+vi.mock('#lib/shortcuts/index.js', () => ({ eventMatchesCommand: eventMatchesCommandSpy }))
 
 import { computeSearchPaneKeyAction, type SearchPaneKeyAction } from './search-results-keys'
 

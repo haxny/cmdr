@@ -52,7 +52,7 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
   removeAttachment: spies.removeAttachment,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: settings.getSetting,
   onSpecificSettingChange: settings.onSpecificSettingChange,
 }))

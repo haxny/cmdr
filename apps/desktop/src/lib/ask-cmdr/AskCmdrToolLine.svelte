@@ -5,9 +5,9 @@
   attacker-controlled).
 -->
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { toolLabel, toolRefusedLabel } from './ask-cmdr-labels'
     import type { RailToolCall } from './ask-cmdr-trigger.svelte'
 

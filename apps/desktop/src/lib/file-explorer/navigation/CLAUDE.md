@@ -38,12 +38,12 @@ Back/forward history, path resolution, paged keyboard shortcuts, and the pane's 
   No `listSavedServers()` fetch in `volume-grouping.ts`; the row carries `pinned` already.
 - **Favorites show in TWO places from ONE controller**: ⌃D and the switcher's section both build rows with
   `createFavoritesMenu` + `FavoriteRowLabel` and open via `open-favorite.ts`; ❌ no second row builder. Mutate ONLY via
-  `$lib/tauri-commands/favorites.ts` (bare ids: `stripFavoritePrefix`).
+  `#lib/tauri-commands/favorites.ts` (bare ids: `stripFavoritePrefix`).
 - **❗ The chip holds ONE `openMenu`**, so its two can't both be up: each reports through `onOpenChange`, and
   `isHeaderMenuOpen()` is the single answer the panes suppress keys on. ❌ No second source of truth.
 - **Favorite inline editors own keystrokes**: preserve `isEditing()` and input `stopPropagation()` or pane shortcuts
   fire. The rename `<input>` holds four guards against leaking keystrokes to the panes; drop any one and it leaks again.
-- **❗ EVERY menu here is the house `Menu`** (`$lib/ui/DETAILS.md` § Menu), row actions included: it owns keys, cursor,
+- **❗ EVERY menu here is the house `Menu`** (`#lib/ui/DETAILS.md` § Menu), row actions included: it owns keys, cursor,
   pointer, submenus, reorder, placement, and focus. ❌ Never a key handler, highlight index, or `getBoundingClientRect`
   here; a chip menu's `onKey` claims only the SWAP keys.
 

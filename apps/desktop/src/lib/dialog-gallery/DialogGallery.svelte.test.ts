@@ -21,10 +21,10 @@ import {
 } from './gallery-state.svelte'
 import { DIALOG_GALLERY_ENTRIES } from './gallery-registry'
 import { buildStoreSeed, type StoreSeededDialogId } from './fixtures/store-seeded'
-import { closeWhatsNew, whatsNewState } from '$lib/whats-new/whats-new-trigger.svelte'
-import { operationLogState } from '$lib/operation-log/operation-log-trigger.svelte'
-import { feedbackFlow } from '$lib/feedback/feedback-flow.svelte'
-import { notifyDialogOpened } from '$lib/tauri-commands'
+import { closeWhatsNew, whatsNewState } from '#lib/whats-new/whats-new-trigger.svelte.js'
+import { operationLogState } from '#lib/operation-log/operation-log-trigger.svelte.js'
+import { feedbackFlow } from '#lib/feedback/feedback-flow.svelte.js'
+import { notifyDialogOpened } from '#lib/tauri-commands/index.js'
 
 // The gallery pulls in 21 shipping dialogs, so this mock covers every IPC any of
 // them touches on mount (or would touch from a button). Resolved values only
@@ -32,7 +32,7 @@ import { notifyDialogOpened } from '$lib/tauri-commands'
 // The sign-in sheet's key-file Browse button reaches for the system picker.
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(() => Promise.resolve(null)) }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   DEFAULT_VOLUME_ID: 'root',
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   // The disk-backed dialogs: scan preview, space, conflict lookups, suggestions.
@@ -87,14 +87,14 @@ vi.mock('$lib/tauri-commands', () => ({
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,
 }))
 
 const debug = vi.fn()
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     warn: vi.fn(),
     info: vi.fn(),

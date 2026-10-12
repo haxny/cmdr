@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { deriveOverallEta } from './overall-eta'
-import type { StepsAheadMs } from '$lib/ipc/bindings'
+import type { StepsAheadMs } from '#lib/ipc/bindings.js'
 
 const remembered: StepsAheadMs = {
   findFiles: 61_000,

@@ -12,19 +12,19 @@ import { mount, tick } from 'svelte'
 import ErrorPane from './ErrorPane.svelte'
 import type { FriendlyError } from '../types'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openPrivacySettings: vi.fn(() => Promise.resolve()),
   openExternalUrl: vi.fn(() => Promise.resolve()),
   openSystemSettingsUrl: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: vi.fn(() => true),
 }))
 
 const openErrorReportFor = vi.hoisted(() => vi.fn())
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor }))
 
 const base = {
   title: 'Something went wrong',

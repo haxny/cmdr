@@ -1,8 +1,8 @@
 <script lang="ts">
     import { untrack, type Snippet } from 'svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
-    import type { FileIndexState, FolderCoverage } from '$lib/tauri-commands'
+    import type { FileIndexState, FolderCoverage } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindowVariable, getScrollToPositionVariable } from './virtual-scroll'
     import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
     import { startSelectionDragTracking, type DragFileInfo } from '../drag/drag-drop'
@@ -13,7 +13,7 @@
     } from '../drag/drag-auto-scroll'
     import { startClickToRename, cancelClickToRename } from '../rename/rename-activation'
     import SortableHeader from '../selection/SortableHeader.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import FileIcon from '../selection/FileIcon.svelte'
     import TagDots from '../selection/TagDots.svelte'
     import InlineRenameEditor from '../rename/InlineRenameEditor.svelte'
@@ -34,13 +34,13 @@
         applyFolderSizes,
         type DirStats,
     } from './file-list-utils'
-    import type { ListingIndexSizesChanged } from '$lib/tauri-commands'
+    import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import {
         createBriefColumnWidths,
         clampColumnWidths,
         provisionalColumnWidth,
     } from './brief-column-widths.svelte'
-    import { getDirStatsBatch } from '$lib/tauri-commands'
+    import { getDirStatsBatch } from '#lib/tauri-commands/index.js'
     import { buildDirSizeTooltip, hasSizeMismatch, isDirSizeUpdating, isHiddenRowDimmed } from './full-list-utils'
     import {
         getRowHeight,
@@ -49,16 +49,16 @@
         getBriefColumnWidthMode,
         getBriefColumnWidthMaxPx,
         getShowTags,
-    } from '$lib/settings/reactive-settings.svelte'
-    import { onDebouncedScaleChange } from '$lib/text-size.svelte'
-    import { getSetting } from '$lib/settings/settings-store'
+    } from '#lib/settings/reactive-settings.svelte.js'
+    import { onDebouncedScaleChange } from '#lib/text-size.svelte.js'
+    import { getSetting } from '#lib/settings/settings-store.js'
     import { formatNumber } from '../selection/selection-info-utils'
-    import { isVolumeAggregating, getWalkedGround } from '$lib/indexing/index-state.svelte'
-    import { isPathAffectedByWalk } from '$lib/indexing/walked-ground'
-    import { noteRenderedFolderSizes } from '$lib/indexing/first-size-timing'
-    import { isRestricted } from '$lib/stores/restricted-paths-store.svelte'
-    import { restrictedFolderTooltip } from '$lib/system-strings.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
+    import { isVolumeAggregating, getWalkedGround } from '#lib/indexing/index-state.svelte.js'
+    import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
+    import { noteRenderedFolderSizes } from '#lib/indexing/first-size-timing.js'
+    import { isRestricted } from '#lib/stores/restricted-paths-store.svelte.js'
+    import { restrictedFolderTooltip } from '#lib/system-strings.svelte.js'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
 
     const RESTRICTED_FOLDER_TOOLTIP = $derived(restrictedFolderTooltip())
     /* Short, because a screen reader reads it on every restricted row; the instruction above
@@ -68,11 +68,11 @@
        the explanation on hover. */
     const ARCHIVED_FILE_LABEL = $derived(tString('fileExplorer.archivedFile.label'))
     const ARCHIVED_FILE_TOOLTIP = $derived(tString('fileExplorer.archivedFile.tooltip'))
-    import { iconCacheCleared } from '$lib/icon-cache'
-    import { escapeHtml, tooltip } from '$lib/tooltip/tooltip'
+    import { iconCacheCleared } from '#lib/icon-cache.js'
+    import { escapeHtml, tooltip } from '#lib/tooltip/tooltip.js'
     import type { RenameState, RenameSessionId } from '../rename/rename-state.svelte'
     import type { RenameStepDirection } from '../rename/rename-step'
-    import { formatByteSizeTiered } from '$lib/units'
+    import { formatByteSizeTiered } from '#lib/units/index.js'
     import { isDoubleClick, type BriefListClick } from './brief-list-utils'
 
     interface Props {
@@ -1194,7 +1194,7 @@
 
     /* The stripe / selection / cursor fills and the selected-row hairline are
        identical in `FullList`, so they live in `src/app-file-list.css`. The
-       restricted marker's own chrome is `$lib/ui/StatusGlyph.svelte`'s. */
+       restricted marker's own chrome is `#lib/ui/StatusGlyph.svelte`'s. */
 
     /* Hidden-entry name dim: see `FullList.svelte`'s twin rule for the full
        rationale (the same quiet token restricted rows use above; color only,

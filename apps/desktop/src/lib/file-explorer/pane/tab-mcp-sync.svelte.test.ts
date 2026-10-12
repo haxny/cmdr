@@ -21,7 +21,7 @@ import { createTabManager, type TabManager } from '../tabs/tab-state-manager.sve
 const { updatePaneTabs } = vi.hoisted<{ updatePaneTabs: Mock }>(() => ({
   updatePaneTabs: vi.fn().mockResolvedValue(undefined),
 }))
-vi.mock('$lib/tauri-commands', () => ({ updatePaneTabs }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ updatePaneTabs }))
 
 import { initTabMcpSync, type TabMcpSyncDeps } from './tab-mcp-sync.svelte'
 

@@ -4,11 +4,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import type { ErrorReportSendError } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { formatInteger } from '$lib/intl/number-format'
-import { tString } from '$lib/intl/messages.svelte'
-import { describeServerRequestFailure } from '$lib/error-messages/server-request'
+import type { ErrorReportSendError } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { describeServerRequestFailure } from '#lib/error-messages/server-request.js'
 import {
   ErrorReportSendFailure,
   errorReportSendFailureOf,

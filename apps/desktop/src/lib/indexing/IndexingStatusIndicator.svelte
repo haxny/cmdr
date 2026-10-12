@@ -3,7 +3,7 @@
     // replay, or aggregation), local or SMB or MTP. Its tooltip lists every
     // active drive as a live block (name + status + progress where meaningful);
     // each block is an IndexingDriveRow that owns its own ETA window.
-    import Icon from '$lib/ui/Icon.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
     import {
         getActiveIndexVolumes,
         isAnyVolumeIndexing,
@@ -20,11 +20,11 @@
     import IndexingDriveRow from './IndexingDriveRow.svelte'
     import IndexingDriveSummary from './IndexingDriveSummary.svelte'
     import IndexingEnrichRow from './IndexingEnrichRow.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { getEnabledMediaIndexVolumeIds } from '$lib/media-index/enabled-volumes'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { getEnabledMediaIndexVolumeIds } from '#lib/media-index/enabled-volumes.js'
 
     // The hourglass shows whenever a drive is indexing OR any volume is actively
     // enriching images (the second publisher ORs into the gate). A paused-only
@@ -156,7 +156,7 @@
 
 <style>
     /* Placement (the corner offsets and the stacking level) belongs to
-       `$lib/status-corner/StatusCorner.svelte`, which hosts this indicator; the
+       `#lib/status-corner/StatusCorner.svelte`, which hosts this indicator; the
        icon only describes itself. */
     .indexing-status {
         display: inline-flex;

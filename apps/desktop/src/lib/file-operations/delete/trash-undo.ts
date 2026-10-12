@@ -14,11 +14,11 @@
  * tenth is still in the trash and only the user can decide that's fine.
  */
 
-import { undoOperations, type UndoReport } from '$lib/tauri-commands'
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-import { tString } from '$lib/intl/messages.svelte'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
+import { undoOperations, type UndoReport } from '#lib/tauri-commands/index.js'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileOperations')
 

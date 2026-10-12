@@ -1,7 +1,7 @@
 // Icon fetching and cache management
 
 import type { TimedOut } from './ipc-types'
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 
 /**
  * Gets icon data URLs for the requested icon IDs.

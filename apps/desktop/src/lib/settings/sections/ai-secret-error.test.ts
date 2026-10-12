@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { AiSecretFailure, describeSecretError } from './ai-secret-error'
 
 function setUserAgent(value: string): void {

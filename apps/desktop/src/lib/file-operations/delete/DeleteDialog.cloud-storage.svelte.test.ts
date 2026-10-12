@@ -15,8 +15,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import DeleteDialog from './DeleteDialog.svelte'
-import type { ScanPreviewCompleteEvent, ScanPreviewProgressEvent } from '$lib/ipc/bindings'
-import type { DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import type { ScanPreviewCompleteEvent, ScanPreviewProgressEvent } from '#lib/ipc/bindings.js'
+import type { DeleteConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
 
 /** Scan-event listeners the mounted dialog registered, so a test can drive the walk. */
 const listeners = {
@@ -24,7 +24,7 @@ const listeners = {
   complete: [] as ((event: ScanPreviewCompleteEvent) => void)[],
 }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -51,11 +51,11 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number | undefined) => (n === undefined ? '' : `${String(n)} B`)),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),

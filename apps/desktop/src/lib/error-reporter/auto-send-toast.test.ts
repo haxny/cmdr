@@ -8,14 +8,14 @@
 
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { listen } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
+import { addToast } from '#lib/ui/toast/index.js'
 
 import { initAutoSendToastListener, cleanupAutoSendToastListener } from './auto-send-toast.svelte'
 
 vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(),
 }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(),
 }))
 

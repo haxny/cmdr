@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelSearch: vi.fn(),
   searchFilesStreaming: vi.fn(),
 }))

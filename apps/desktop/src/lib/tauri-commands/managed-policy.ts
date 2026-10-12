@@ -2,7 +2,7 @@
 // these only fetch what the UI shows. `src-tauri/src/managed_policy/CLAUDE.md`.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events, type ManagedPolicyView } from '$lib/ipc/bindings'
+import { commands, events, type ManagedPolicyView } from '#lib/ipc/bindings.js'
 
 /** The policy now: per-setting locks plus the feature-level states. Reads the backend's cache. */
 export function getManagedPolicy(): Promise<ManagedPolicyView> {

@@ -16,7 +16,7 @@
  * boundary).
  */
 
-import type { MediaDimensions, ViewerContentKind, ViewerOpenResult } from '$lib/ipc/bindings'
+import type { MediaDimensions, ViewerContentKind, ViewerOpenResult } from '#lib/ipc/bindings.js'
 import { isMediaKind, mediaUrl } from './media-view'
 
 interface ViewerMediaDeps {

@@ -1,6 +1,6 @@
 /** Carrying a typed `KeychainError` from a server's secret write to the sheet that words it. */
-import type { KeychainError } from '$lib/ipc/bindings'
-import { TypedFailure } from '$lib/ipc/typed-failure'
+import type { KeychainError } from '#lib/ipc/bindings.js'
+import { TypedFailure } from '#lib/ipc/typed-failure.js'
 
 /**
  * An `Error` that still carries the secret store's typed refusal.

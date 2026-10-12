@@ -9,14 +9,14 @@
  * carrying the reach.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FavoriteReach } from '$lib/ipc/bindings'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { FavoriteReach } from '#lib/ipc/bindings.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 const resolvePathVolume = vi.fn<(path: string) => Promise<{ volume: VolumeInfo | null; timedOut: boolean }>>()
 const trackEvent = vi.fn()
 const removeFavorite = vi.fn<(id: string) => Promise<void>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolvePathVolume: (path: string) => resolvePathVolume(path),
   removeFavorite: (id: string) => removeFavorite(id),
   stripFavoritePrefix: (id: string) => id.replace(/^fav-/, ''),
@@ -28,7 +28,7 @@ vi.mock('$lib/tauri-commands', () => ({
 
 const addToastForPane = vi.fn()
 const addToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToastForPane: (...args: unknown[]) => {
     addToastForPane(...(args as []))
     return 'toast-id'
@@ -40,11 +40,11 @@ vi.mock('$lib/ui/toast', () => ({
 }))
 
 const openSettingsWindow = vi.fn<(surface: string, section?: string[]) => Promise<void>>()
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: (surface: string, section?: string[]) => openSettingsWindow(surface, section),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn() }),
 }))
 

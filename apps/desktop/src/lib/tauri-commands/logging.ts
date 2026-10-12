@@ -1,4 +1,4 @@
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 
 /** Uses the running app’s resolved log directory, including dev/worktree overrides. */
 export function getDebugLogPath(): Promise<string | null> {

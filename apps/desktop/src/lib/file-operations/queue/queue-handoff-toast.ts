@@ -8,7 +8,7 @@
  * one keypress, one toast. A job that ends quietly (a copy) keeps it.
  */
 
-import { addToast, dismissToast } from '$lib/ui/toast'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
 import { getMainWindowOperationRows } from './main-window-operations.svelte'
 import QueueHandoffToastContent from './QueueHandoffToastContent.svelte'
 

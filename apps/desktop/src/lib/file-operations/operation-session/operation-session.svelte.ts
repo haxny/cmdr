@@ -26,17 +26,22 @@
  * own `$derived`, in their own scope, where the ownership is correct.
  */
 
-import { listOperations, type OperationSnapshot, type WriteProgressEvent } from '$lib/tauri-commands'
-import type { WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent } from '$lib/tauri-commands'
-import type { WriteOperationPhase } from '$lib/file-explorer/types'
-import { getAppLogger } from '$lib/logging/logger'
+import { listOperations, type OperationSnapshot, type WriteProgressEvent } from '#lib/tauri-commands/index.js'
+import type {
+  WriteCancelledEvent,
+  WriteCompleteEvent,
+  WriteConflictEvent,
+  WriteErrorEvent,
+} from '#lib/tauri-commands/index.js'
+import type { WriteOperationPhase } from '#lib/file-explorer/types.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { createEtaSmoother, transferReadout, type TransferReadout } from '../progress-readout'
 import { ScanThroughput } from '../scan-throughput'
-import type { BytesPerSecond, Seconds } from '$lib/units'
-import type { ConflictResolution } from '$lib/file-explorer/types'
+import type { BytesPerSecond, Seconds } from '#lib/units/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
 import type { OperationDelivery, OperationEventFanout } from './operation-event-fanout'
 import { createOperationSessionCommands, type OperationSessionCommands } from './operation-session-commands.svelte'
-import type { ConflictId, ConflictResolutionOutcome } from '$lib/tauri-commands'
+import type { ConflictId, ConflictResolutionOutcome } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('operationSession')
 

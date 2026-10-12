@@ -14,7 +14,7 @@ import {
   type SystemTextSizeChanged,
   type OsLocales,
   type OsLocalesChanged,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /** Reads the current OS accent color as `#rrggbb`. */
 export function getAccentColor(): Promise<string> {
@@ -91,7 +91,7 @@ export function onOsLocalesChanged(handler: (payload: OsLocalesChanged) => void)
 /**
  * Subscribes to macOS "reduce transparency" (Accessibility > Display) changes.
  * The payload's `reduce` is the new value. Drives the `reduce-transparency`
- * class on `<html>` (see `$lib/glass-material`).
+ * class on `<html>` (see `#lib/glass-material`).
  */
 export function onReduceTransparencyChanged(
   handler: (payload: ReduceTransparencyChanged) => void,
@@ -104,7 +104,7 @@ export function onReduceTransparencyChanged(
 /**
  * Subscribes to macOS 27 Liquid Glass slider moves, re-read each time the app becomes
  * active. The payload's `amount` is the new value, or `null` when macOS reports none.
- * Drives `--glass-tint` on `<html>` (see `$lib/glass-material`).
+ * Drives `--glass-tint` on `<html>` (see `#lib/glass-material`).
  */
 export function onGlassTintChanged(handler: (payload: GlassTintChanged) => void): Promise<UnlistenFn> {
   return events.glassTintChanged.listen((event) => {

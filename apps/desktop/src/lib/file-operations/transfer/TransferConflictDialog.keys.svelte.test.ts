@@ -10,11 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync, mount, unmount } from 'svelte'
 import TransferConflictDialog from './TransferConflictDialog.svelte'
 import { CONFLICT_KEYS, DECISION_KEYS_ARM_MS } from '../decision-keys'
-import type { WriteConflictEvent } from '$lib/tauri-commands'
-import type { ConflictResolution } from '$lib/file-explorer/types'
+import type { WriteConflictEvent } from '#lib/tauri-commands/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
 import { buttonLabel } from '../test-button-label'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),

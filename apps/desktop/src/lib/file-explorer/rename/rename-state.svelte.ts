@@ -1,6 +1,6 @@
 /** Reactive state for inline rename. Must be .svelte.ts for $state(). */
 
-import type { ValidationResult, ValidationSeverity } from '$lib/utils/filename-validation'
+import type { ValidationResult, ValidationSeverity } from '#lib/utils/filename-validation.js'
 
 /**
  * Identifies one rename session: one activation of the inline editor, from the

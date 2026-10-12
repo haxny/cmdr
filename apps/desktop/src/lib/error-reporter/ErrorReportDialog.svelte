@@ -17,14 +17,14 @@
      * store, whose `mode` picks the branch.
      */
     import { onMount, tick } from 'svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import AttachEmailCheckbox from '$lib/attach-email/AttachEmailCheckbox.svelte'
-    import { createAttachEmail } from '$lib/attach-email/attach-email.svelte'
-    import TextArea from '$lib/ui/TextArea.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import Size from '$lib/ui/Size.svelte'
-    import { addToast } from '$lib/ui/toast'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import AttachEmailCheckbox from '#lib/attach-email/AttachEmailCheckbox.svelte'
+    import { createAttachEmail } from '#lib/attach-email/attach-email.svelte.js'
+    import TextArea from '#lib/ui/TextArea.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import Size from '#lib/ui/Size.svelte'
+    import { addToast } from '#lib/ui/toast/index.js'
     import {
         amendErrorReport,
         getAutoSentReportPreview,
@@ -32,15 +32,15 @@
         sendErrorReport,
         saveErrorReportToDisk,
         type PreviewPayload,
-    } from '$lib/tauri-commands/error-reporter'
+    } from '#lib/tauri-commands/error-reporter.js'
 
     import ErrorReportToastContent from './ErrorReportToastContent.svelte'
     import BundleSavedToastContent from './BundleSavedToastContent.svelte'
     import { closeErrorReportDialog, errorReportFlow } from './error-report-flow.svelte'
     import { errorReportSendFailureOf, errorReportSendReason } from './error-report-send-error'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { t, tString } from '$lib/intl/messages.svelte'
-    import { getManagedPolicyView } from '$lib/managed-policy/managed-policy.svelte'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
+    import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
 
     const log = getAppLogger('errorReportDialog')
 

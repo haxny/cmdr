@@ -19,7 +19,10 @@ vi.mock('@tauri-apps/api/webviewWindow', () => ({ WebviewWindow: Object.assign(v
 vi.mock('@tauri-apps/api/dpi', () => ({ LogicalPosition: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ emitTo: () => Promise.resolve() }))
 vi.mock('@tauri-apps/api/window', () => ({ Effect: {}, EffectState: {} }))
-vi.mock('$lib/tauri-commands', () => ({ getShouldReduceTransparency: () => Promise.resolve(false), trackEvent }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
+  getShouldReduceTransparency: () => Promise.resolve(false),
+  trackEvent,
+}))
 
 import { shortcutAnchorId, commandIdFromShortcutAnchor, openSettingsWindow } from './settings-window'
 

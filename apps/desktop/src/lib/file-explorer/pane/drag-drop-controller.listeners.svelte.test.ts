@@ -73,7 +73,7 @@ const {
   dragDropHandlerRef: { current: null as ((event: { payload: DragDropPayload }) => void) | null },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   DEFAULT_VOLUME_ID: 'root',
   // The drop path reports one PII-free event per drop; the emitter is fire-and-forget
   // so a stub is all it needs (`drag/drag-analytics.ts`).
@@ -108,7 +108,7 @@ vi.mock('$lib/tauri-commands', () => ({
   }),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
 
 // Nothing is on screen in this suite, so the gate always lets a drop through.
 // Its verdict is driven in `drag-drop-controller.svelte.test.ts`.
@@ -146,7 +146,7 @@ vi.mock('../drag/drag-overlay.svelte.js', () => ({
   hideOverlay: hideOverlaySpy,
 }))
 
-vi.mock('$lib/icon-cache', () => ({ getCachedIcon: getCachedIconSpy, getCachedCustomFolderIcon: () => undefined }))
+vi.mock('#lib/icon-cache.js', () => ({ getCachedIcon: getCachedIconSpy, getCachedCustomFolderIcon: () => undefined }))
 
 vi.mock('../modifier-key-tracker.svelte', () => ({
   startModifierTracking: startModifierTrackingSpy,

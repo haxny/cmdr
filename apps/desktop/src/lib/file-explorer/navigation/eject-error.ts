@@ -1,6 +1,6 @@
 /** Carrying a typed `EjectError` from `ejectVolume` / `disconnectSmbVolume` to the toast that words it. */
-import type { EjectError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { EjectError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries the backend's typed eject refusal. */
 export class EjectFailure extends TypedFailure<EjectError> {

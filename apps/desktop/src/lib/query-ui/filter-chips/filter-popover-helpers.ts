@@ -10,9 +10,9 @@
  * straight list rendering. Tested in isolation.
  */
 
-import { getFormatLocale, getUiLocale } from '$lib/intl/locale'
-import { tString } from '$lib/intl/messages.svelte'
-import { bytesLabel } from '$lib/units'
+import { getFormatLocale, getUiLocale } from '#lib/intl/locale.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { bytesLabel } from '#lib/units/index.js'
 
 // ── Size column 2: numeric presets ────────────────────────────────────────────────────────
 //
@@ -28,7 +28,7 @@ export const CUSTOM_VALUE = '__custom__'
 /**
  * The byte cell of the unit column, worded for the selected numeric preset in the
  * UI language ("1 byte", "5 bytes"). An empty or custom value takes the general
- * plural form. The kilobyte and larger cells use `unitLabel` from `$lib/units`,
+ * plural form. The kilobyte and larger cells use `unitLabel` from `#lib/units`,
  * so the popover, the chips, and the file list can't disagree on a unit.
  */
 export function byteUnitLabel(value: string): string {

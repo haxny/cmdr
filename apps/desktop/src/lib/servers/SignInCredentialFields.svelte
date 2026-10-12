@@ -15,11 +15,11 @@
      * ❗ `nothing` never reaches here: a shape with nothing to ask means the sheet
      * never opens (`SignInSheet.svelte`).
      */
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import RadioGroup, { type RadioItem } from '$lib/ui/RadioGroup.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { SignInShape } from '$lib/ipc/bindings'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import RadioGroup, { type RadioItem } from '#lib/ui/RadioGroup.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { SignInShape } from '#lib/ipc/bindings.js'
 
     interface Props {
         shape: SignInShape

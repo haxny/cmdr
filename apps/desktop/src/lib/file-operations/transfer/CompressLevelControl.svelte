@@ -10,8 +10,8 @@
      *
      * Kept out of `TransferDialog.svelte` so that file's line budget stays put.
      */
-    import SettingSlider from '$lib/settings/components/SettingSlider.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import SettingSlider from '#lib/settings/components/SettingSlider.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     const SETTING_ID = 'behavior.archiveCompressionLevel'
 </script>

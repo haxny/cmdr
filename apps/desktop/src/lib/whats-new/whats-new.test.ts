@@ -2,7 +2,7 @@
  * Unit tests for the pure `decideWhatsNew` trigger helper. No IPC, no `$state`: this
  * module is deliberately pure so the full decision truth table is fast and deterministic
  * to cover. The `compareVersions` comparator it leans on is covered in
- * `$lib/utils/version.test.ts`.
+ * `#lib/utils/version.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest'

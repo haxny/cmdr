@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { FilePaneAPI } from './types'
-import type { ToastContent, ToastOptions, ToastOriginPane } from '$lib/ui/toast/toast-store.svelte'
+import type { ToastContent, ToastOptions, ToastOriginPane } from '#lib/ui/toast/toast-store.svelte.js'
 
 // Spies for every dependency the gating helper touches. `pastedAsFileMessage`
-// deliberately uses the REAL `$lib/intl` (golden output), so intl is NOT mocked.
+// deliberately uses the REAL `#lib/intl` (golden output), so intl is NOT mocked.
 const {
   getSettingSpy,
   pasteClipboardAsFileSpy,
@@ -23,19 +23,19 @@ const {
   moveCursorSpy: vi.fn<() => Promise<void>>(),
 }))
 
-vi.mock('$lib/settings', () => ({ getSetting: getSettingSpy }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/settings/index.js', () => ({ getSetting: getSettingSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   pasteClipboardAsFile: pasteClipboardAsFileSpy,
   findFileIndex: findFileIndexSpy,
   onDirectoryDiff: onDirectoryDiffSpy,
 }))
-vi.mock('$lib/ui/toast', () => ({ addToastForPane: addToastSpy, dismissToast: dismissToastSpy }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: moveCursorSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToastForPane: addToastSpy, dismissToast: dismissToastSpy }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: moveCursorSpy }))
 // The toast body is passed to addToast (mocked) as an opaque component; never rendered here.
 vi.mock('../PasteClipboardToastContent.svelte', () => ({ default: {} }))
 
-import type { MutationWaitOptions } from '$lib/tauri-commands'
-import { MutationFailure } from '$lib/file-operations/mutation-error'
+import type { MutationWaitOptions } from '#lib/tauri-commands/index.js'
+import { MutationFailure } from '#lib/file-operations/mutation-error.js'
 import { pasteClipboardContentAsFile } from './paste-clipboard-as-file'
 import { pastedAsFileMessage } from './paste-clipboard-as-file-message'
 

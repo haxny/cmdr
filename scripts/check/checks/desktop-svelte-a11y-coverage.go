@@ -23,8 +23,8 @@ import (
 //   - Scope: files under `apps/desktop/src/lib/` that git tracks (no untracked
 //     / gitignored files).
 //   - For each .svelte, one of: Foo.a11y.test.ts exists alongside AND imports
-//     from `$lib/test-a11y`; OR some *.a11y.test.ts in the SAME directory
-//     imports from `$lib/test-a11y` and imports Foo.svelte itself; OR the
+//     from `#lib/test-a11y`; OR some *.a11y.test.ts in the SAME directory
+//     imports from `#lib/test-a11y` and imports Foo.svelte itself; OR the
 //     component's relative path is in the allowlist.
 //   - The directory-level form is what lets one file cover a whole directory.
 //     The frontend lane's cost is per test FILE, not per test (`docs/testing.md`
@@ -39,7 +39,7 @@ const a11yCoverageScope = "apps/desktop/src/lib"
 // a11yCoverageTestImportMarker is what we look for inside a *.a11y.test.ts file
 // to confirm it actually exercises the helper (catches empty files that only
 // exist to silence the check).
-const a11yCoverageTestImportMarker = "$lib/test-a11y"
+const a11yCoverageTestImportMarker = "#lib/test-a11y"
 
 type a11yCoverageAllowlist struct {
 	// Exempt maps a relative path (from repo root) to a human-readable reason.

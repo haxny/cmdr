@@ -8,12 +8,12 @@
  * the split is the interesting half of the question.
  */
 
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { addCmdrToDock, trackEvent } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import type { DockPinFailure } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { addCmdrToDock, trackEvent } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { DockPinFailure } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 const log = getAppLogger('dock')
 

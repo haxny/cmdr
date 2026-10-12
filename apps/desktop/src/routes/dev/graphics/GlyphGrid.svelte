@@ -6,7 +6,7 @@
      * sits in.
      */
     import type { Snippet } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         items: readonly T[]

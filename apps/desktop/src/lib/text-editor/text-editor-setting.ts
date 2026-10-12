@@ -3,12 +3,12 @@
  *
  * An ordinary registry entry; this module exists so the launch, its toasts, and
  * the tests all name it once. The deep link mirrors "Open terminal here"
- * (`$lib/open-terminal/terminal-app-setting.ts`).
+ * (`#lib/open-terminal/terminal-app-setting.ts`).
  */
 
-import { getSetting, setSetting } from '$lib/settings'
-import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { SYSTEM_DEFAULT_EDITOR_CHOICE } from './text-editor-choice'
 
 const log = getAppLogger('fileExplorer')

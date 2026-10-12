@@ -1,7 +1,7 @@
 /**
  * What's left of the switcher's hand-rolled machinery: the breadcrumb chip's own inline
  * popup (the one behind the yellow `os_mount` dot). The dropdown's keyboard mode, submenu,
- * and key handling belong to the house `Menu` primitive (`$lib/ui/menu-controller.svelte.ts`),
+ * and key handling belong to the house `Menu` primitive (`#lib/ui/menu-controller.svelte.ts`),
  * and the chooser reaches them through `VolumeChooserMenu.svelte`.
  */
 

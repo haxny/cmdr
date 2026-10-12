@@ -13,7 +13,7 @@ const ipc = vi.hoisted(() => ({
   getTotalCount: vi.fn(),
   onDirectoryDiff: vi.fn(),
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   ...ipc,
   onDirectoryDeleted: () => Promise.resolve(() => {}),
   onListingRespelled: () => Promise.resolve(() => {}),

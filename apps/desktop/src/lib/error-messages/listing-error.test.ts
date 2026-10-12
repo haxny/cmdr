@@ -13,7 +13,7 @@ import { renderListingError } from './listing-error'
 import { getListingErrorMessage } from './listing-error-messages'
 import { getGitErrorMessage } from './git-error-messages'
 import { getProviderSuggestion } from './provider-error-messages'
-import type { ListingError } from '$lib/ipc/bindings'
+import type { ListingError } from '#lib/ipc/bindings.js'
 
 describe('renderListingError', () => {
   it('renders a plain listing reason from the listing factory', () => {

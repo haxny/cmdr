@@ -3,17 +3,17 @@
   which): `off` when Ask Cmdr's switch is off, with a button that turns it on; `cloudOff` when
   the AI mode is Cloud and "Allow cloud AI" isn't on, with a button that opens that switch in
   Settings. ❌ Neither grants cloud consent: only the switch itself does
-  (`$lib/ai/AiCloudConsentToggle.svelte`).
+  (`#lib/ai/AiCloudConsentToggle.svelte`).
 
   Turning Ask Cmdr on here writes the same `askCmdr.enabled` setting as Settings > AI > Ask Cmdr;
   the rail turns into the chat by itself once the setting reads on, and loads the last thread.
 -->
 <script lang="ts">
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { setSetting } from '$lib/settings'
-    import { openCloudConsentSettings } from '$lib/ai/cloud-consent.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { setSetting } from '#lib/settings/index.js'
+    import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
 
     interface Props {
         kind: 'off' | 'cloudOff'

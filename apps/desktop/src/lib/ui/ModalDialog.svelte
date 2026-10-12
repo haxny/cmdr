@@ -1,14 +1,14 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte'
     import type { Snippet } from 'svelte'
-    import { notifyDialogOpened, notifyDialogClosed } from '$lib/tauri-commands'
+    import { notifyDialogOpened, notifyDialogClosed } from '#lib/tauri-commands/index.js'
     import { focusFirstField, trapFocus } from './focus-trap'
     import { anchoredTopFor } from './modal-anchor'
     import type { SoftDialogId } from './dialog-registry'
     import { registerDialogClose, unregisterDialogClose } from './dialog-close-registry'
     import { markDialogOpen, markDialogClosed } from './open-dialogs.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import { providePortalTarget } from './portal-target'
 
     interface Props {

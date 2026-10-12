@@ -5,7 +5,7 @@
 // bracket a server boot on a returning launch.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events, type CloudAiConsentStatus, type DownloadProgress } from '$lib/ipc/bindings'
+import { commands, events, type CloudAiConsentStatus, type DownloadProgress } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 export type { CloudAiConsentStatus }
@@ -62,7 +62,7 @@ export function onAiExtracting(handler: () => void): Promise<UnlistenFn> {
 // ── Cloud AI consent ────────────────────────────────────────────────────────────
 // The "Allow cloud AI" record lives in `main.db`, behind these commands. The backend enforces it
 // in `ai::manager::resolve_backend` for every cloud call; the frontend only reads it to render the
-// switch and the gates. State and the held "no" live in `$lib/ai/cloud-consent.svelte.ts`.
+// switch and the gates. State and the held "no" live in `#lib/ai/cloud-consent.svelte.ts`.
 
 /** Whether the user allowed cloud AI. A missing or unreadable store reads as not accepted. */
 export async function cloudAiConsentStatus(): Promise<CloudAiConsentStatus> {
@@ -72,7 +72,7 @@ export async function cloudAiConsentStatus(): Promise<CloudAiConsentStatus> {
 /**
  * Record "Allow cloud AI". Throws when the store didn't take it (unavailable or refused).
  *
- * ❌ Only the switch's own click may reach this, through `$lib/ai/cloud-consent.svelte.ts`,
+ * ❌ Only the switch's own click may reach this, through `#lib/ai/cloud-consent.svelte.ts`,
  * whose accept only `AiCloudConsentToggle.svelte` imports (`cloud-consent-call-sites.test.ts`).
  */
 export async function acceptCloudAiConsent(): Promise<void> {

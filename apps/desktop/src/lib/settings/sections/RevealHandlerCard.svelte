@@ -37,17 +37,17 @@
      * non-production build never holds the key, so it has nothing to hand back.)
      */
     import { onMount, type Snippet } from 'svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { isMacOS } from '$lib/shortcuts/key-capture'
-    import { getRevealHandlerState, setRevealHandlerEnabled } from '$lib/tauri-commands'
-    import { REVEAL_HANDLER_ANCHOR_ID } from '$lib/reveal/reveal-settings-link'
-    import { createShouldShow } from '$lib/settings/settings-search'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import type { RevealHandlerBlocker, RevealHandlerStatus } from '$lib/ipc/bindings'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { isMacOS } from '#lib/shortcuts/key-capture.js'
+    import { getRevealHandlerState, setRevealHandlerEnabled } from '#lib/tauri-commands/index.js'
+    import { REVEAL_HANDLER_ANCHOR_ID } from '#lib/reveal/reveal-settings-link.js'
+    import { createShouldShow } from '#lib/settings/settings-search.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import type { RevealHandlerBlocker, RevealHandlerStatus } from '#lib/ipc/bindings.js'
 
     interface Props {
         searchQuery: string

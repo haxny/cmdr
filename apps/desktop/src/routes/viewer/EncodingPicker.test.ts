@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 
 import EncodingPicker from './EncodingPicker.svelte'
-import type { EncodingChoice, FileEncoding } from '$lib/ipc/bindings'
+import type { EncodingChoice, FileEncoding } from '#lib/ipc/bindings.js'
 
 const allChoices: EncodingChoice[] = [
   { encoding: 'utf8', label: 'UTF-8', group: 'unicode' },

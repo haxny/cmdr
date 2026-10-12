@@ -21,9 +21,9 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { getSetting } from '$lib/settings'
-import { onAgentWakeStaged } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
+import { getSetting } from '#lib/settings/index.js'
+import { onAgentWakeStaged } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import WakeStagedToastContent from './WakeStagedToastContent.svelte'
 
 /** Keeps a run of wakes from pushing unrelated toasts off the screen. */

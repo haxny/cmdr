@@ -15,12 +15,12 @@ Depth behind `CLAUDE.md`. The durable journal, its schema, and the rollback engi
   and renders per-row refusal notices.
 - `operation-log-labels.ts`: pure, no I/O. Summary formatting (ICU plural over `kind` + `itemCount`), the four enum
   label mappings, and `rollbackRefusalNotice`. `rollbackConfirmVariant` is NOT here: it lives in
-  `$lib/file-operations/reversal-wording.ts` with the type it returns, so `queue/` and `$lib/status-corner/` (which name
+  `#lib/file-operations/reversal-wording.ts` with the type it returns, so `queue/` and `#lib/status-corner/` (which name
   the running reversal off the same variant) can reach it without depending on this module, which depends on that one.
 - `RollbackControls.svelte`: the Pause / Resume and Cancel a row carries while its reversal runs. One per rolling-back
   row, binding a session to the ROW'S `inverseOpId`, and reporting the reversal's end (`onEnded`) so the row re-reads.
 - `rollback-refusal.ts`: `RollbackRefusalFailure` / `throwRollbackRefusal` / `asRollbackRefusal`, the three-line
-  `TypedFailure` family (`$lib/ipc/typed-failure.ts` is the pattern).
+  `TypedFailure` family (`#lib/ipc/typed-failure.ts` is the pattern).
 - `operation-log-shortcut.test.ts` pins the ⌥⌘L route; `operation-log-trigger.test.ts` owns the paging assertions, so
   the component tests don't repeat them.
 
@@ -126,10 +126,10 @@ rest will come back.
 
 ### Decision: the confirmation is worded by the inverse, not by the operation
 
-`RollbackConfirmDialog` takes a `RollbackConfirmVariant` (`$lib/file-operations/reversal-wording.ts`), and
+`RollbackConfirmDialog` takes a `RollbackConfirmVariant` (`#lib/file-operations/reversal-wording.ts`), and
 `rollbackConfirmVariant` maps `OpKind` to it with an exhaustive switch that mirrors the backend's `inverse_kind` arm for
 arm. The SAME variant names the reversal while it runs, on the queue row, the corner chip, and the progress dialog:
-`$lib/file-operations/DETAILS.md` § "The running reversal is named from the SAME variant".
+`#lib/file-operations/DETAILS.md` § "The running reversal is named from the SAME variant".
 
 The arms:
 
@@ -238,6 +238,6 @@ badge already carries the state.
 
 ## Where the copy lives
 
-The dialog's own strings are `operationLog.*` (`$lib/intl/messages/en/operationLog.json`). The confirmation's strings
-are `fileOperations.rollbackConfirm.*`, because the dialog belongs to `$lib/file-operations/` and its copy travels with
-it (`$lib/file-operations/DETAILS.md` § "Rollback asks first").
+The dialog's own strings are `operationLog.*` (`#lib/intl/messages/en/operationLog.json`). The confirmation's strings
+are `fileOperations.rollbackConfirm.*`, because the dialog belongs to `#lib/file-operations/` and its copy travels with
+it (`#lib/file-operations/DETAILS.md` § "Rollback asks first").

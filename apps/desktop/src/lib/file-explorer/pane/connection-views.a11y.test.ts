@@ -15,7 +15,7 @@
 
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { RECONNECT_DELAYS_MS } from '../network/smb-reconnect-manager.svelte'
 
 // `null` means "use the real `isMacOS`". Only `ErrorPane` forces it, because
@@ -26,7 +26,7 @@ const stubs = vi.hoisted(() => ({ isMacOS: null as (() => boolean) | null }))
 // The union of what these four views reach for, over the real module: each
 // source file mocked a disjoint slice of it, so a bare union would hand a view
 // a missing export it never had.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   openPrivacySettings: vi.fn(() => Promise.resolve()),
   reconnectVolume: vi.fn(),
@@ -38,8 +38,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
 
 // Partial mock: `ShortcutChip` (rendered inside the Go back / Go home buttons and
 // the Technical details summary) needs the real `toDisplayShortcut`.
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/shortcuts/key-capture')>()
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()
   return {
     ...actual,
     isMacOS: () => (stubs.isMacOS ? stubs.isMacOS() : actual.isMacOS()),

@@ -11,9 +11,9 @@
  * three call sites.
  */
 
-import { isServerPlaceRow } from '$lib/file-explorer/navigation/server-row-actions'
-import type { HubRow } from '$lib/file-explorer/network/servers-hub-rows'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import { isServerPlaceRow } from '#lib/file-explorer/navigation/server-row-actions.js'
+import type { HubRow } from '#lib/file-explorer/network/servers-hub-rows.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 /** The place a server command will act on. */
 export interface ServerCommandTarget {

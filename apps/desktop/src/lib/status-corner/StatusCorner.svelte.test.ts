@@ -4,15 +4,15 @@
  * not the hourglass — carries the corner placement.
  *
  * The indexing state and the volume store are stubbed the same way
- * the `IndexingStatusIndicator` block of `$lib/indexing/stateful.a11y.test.ts` stubs them, so the
+ * the `IndexingStatusIndicator` block of `#lib/indexing/stateful.a11y.test.ts` stubs them, so the
  * hourglass can be driven between idle and scanning without a real indexer.
  */
 
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick, flushSync, createRawSnippet } from 'svelte'
 import StatusCorner from './StatusCorner.svelte'
-import type { VolumeIndexActivity } from '$lib/indexing/index-state.svelte'
-import type { OperationRow } from '$lib/file-operations/queue/operations-store.svelte'
+import type { VolumeIndexActivity } from '#lib/indexing/index-state.svelte.js'
+import type { OperationRow } from '#lib/file-operations/queue/operations-store.svelte.js'
 import { CHIP_SETTLE_MS } from './operation-chip'
 
 let activeVolumes: VolumeIndexActivity[] = []
@@ -34,7 +34,7 @@ function scanActivity(volumeId: string): VolumeIndexActivity {
   }
 }
 
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   ROOT_VOLUME_ID: 'root',
   getActiveIndexVolumes: () => activeVolumes,
   isAnyVolumeIndexing: () => activeVolumes.length > 0,
@@ -49,23 +49,23 @@ vi.mock('$lib/indexing/index-state.svelte', () => ({
   placeholderActivity: (volumeId: string) => scanActivity(volumeId),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD' }],
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: () => false,
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/media-index/enabled-volumes', () => ({
+vi.mock('#lib/media-index/enabled-volumes.js', () => ({
   getEnabledMediaIndexVolumeIds: () => [],
 }))
 
 // The FDA badge is a corner member too, and its one render condition is this fact.
 let fdaMissing = false
 
-vi.mock('$lib/onboarding/fda-status.svelte', () => ({
+vi.mock('#lib/onboarding/fda-status.svelte.js', () => ({
   fdaIsMissing: () => fdaMissing,
 }))
 
@@ -73,17 +73,17 @@ vi.mock('$lib/onboarding/fda-status.svelte', () => ({
 // here too: a plain row list the test sets, and no foreground modal.
 let operationRows: OperationRow[] = []
 
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => operationRows,
   getMainWindowOperations: () => null,
 }))
 
-vi.mock('$lib/file-operations/foreground-operation.svelte', () => ({
+vi.mock('#lib/file-operations/foreground-operation.svelte.js', () => ({
   getForegroundOperationId: () => null,
   getForegroundFailureId: () => null,
 }))
 
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: () => Promise.resolve(),
 }))
 

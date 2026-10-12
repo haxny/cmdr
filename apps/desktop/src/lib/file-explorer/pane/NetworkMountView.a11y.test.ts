@@ -13,9 +13,9 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import NetworkMountView from './NetworkMountView.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mountNetworkShare: vi.fn(() => Promise.resolve({ mountPath: '/Volumes/Public' })),
   resolvePathVolume: vi.fn(() => Promise.resolve({ volume: null })),
   updateLeftPaneState: vi.fn(() => Promise.resolve()),
@@ -35,13 +35,13 @@ vi.mock('$lib/tauri-commands', () => ({
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings/network-settings', () => ({
+vi.mock('#lib/settings/network-settings.js', () => ({
   getMountTimeoutMs: () => 15000,
   getNetworkTimeoutMs: () => 5000,
   getShareCacheTtlMs: () => 300000,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),
@@ -69,11 +69,11 @@ vi.mock('../network/network-store.svelte', () => ({
   forgetCredentials: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: vi.fn(() => Promise.resolve(false)),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(() => 'id'),
 }))
 

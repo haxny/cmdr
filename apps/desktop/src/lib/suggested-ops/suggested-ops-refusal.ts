@@ -8,10 +8,10 @@
  * for suggestions alone carry their own copy.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { TransferOperationType } from '$lib/file-explorer/types'
-import type { SuggestedGroupView } from '$lib/tauri-commands'
-import { getUserFriendlyMessage } from '$lib/file-operations/transfer/transfer-error-messages'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
+import type { SuggestedGroupView } from '#lib/tauri-commands/index.js'
+import { getUserFriendlyMessage } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import type { GroupRefusal } from './suggested-ops-trigger.svelte'
 
 /** What sits under the group. `message` is HTML (the pipeline escapes every name and path), so

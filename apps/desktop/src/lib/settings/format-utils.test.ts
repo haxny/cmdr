@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect } from 'vitest'
 import { formatDateForDisplay, joinSegments, type DateSegment } from './format-utils'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 // Fixed timestamp: March 15, 2024 14:30:45 local (local date to avoid timezone flakiness).
 const fixedDate = new Date(2024, 2, 15, 14, 30, 45)

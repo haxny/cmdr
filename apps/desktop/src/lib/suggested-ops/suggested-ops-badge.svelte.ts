@@ -12,8 +12,8 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { getAppLogger } from '$lib/logging/logger'
-import { listSuggestedOps, onSuggestionsChanged } from '$lib/tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { listSuggestedOps, onSuggestionsChanged } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('suggestedOps')
 

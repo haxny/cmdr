@@ -3,9 +3,9 @@
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSetting, getSettingDefinition, setSetting, onSpecificSettingChange } from '$lib/settings'
+    import Button from '#lib/ui/Button.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSetting, getSettingDefinition, setSetting, onSpecificSettingChange } from '#lib/settings/index.js'
     import {
         checkPortAvailable,
         findAvailablePort,
@@ -14,11 +14,11 @@
         getMcpRunning,
         getMcpPort,
         type McpServerOutcome,
-    } from '$lib/tauri-commands'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
-    import { getAppLogger } from '$lib/logging/logger'
+    } from '#lib/tauri-commands/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { onMount } from 'svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         searchQuery: string

@@ -24,7 +24,7 @@ import (
 //   - Primitives: git-tracked `apps/desktop/src/lib/ui/*.svelte` (top level
 //     only; subdir files like `toast/`, `icons/` are sub-parts, out of scope).
 //   - Covered: some tracked file under `routes/dev/components/sections/` imports
-//     the primitive via `$lib/ui/<Name>.svelte`.
+//     the primitive via `#lib/ui/<Name>.svelte`.
 //   - Allowlist: primitives that don't belong in the Components catalog (e.g.
 //     pure-visual atoms demoed in the sibling Graphics catalog). Each entry
 //     carries a reason.
@@ -36,9 +36,9 @@ const uiPrimitiveScope = "apps/desktop/src/lib/ui"
 const uiPrimitiveCatalogSectionsDir = "apps/desktop/src/routes/dev/components/sections"
 
 // uiPrimitiveImportPattern matches an import of a top-level ui primitive, e.g.
-// `import Button from '$lib/ui/Button.svelte'`. The name has no slash, so
-// subpath imports (`$lib/ui/toast/...`) don't match — those aren't primitives.
-var uiPrimitiveImportPattern = regexp.MustCompile(`\$lib/ui/([A-Za-z0-9_]+)\.svelte`)
+// `import Button from '#lib/ui/Button.svelte'`. The name has no slash, so
+// subpath imports (`#lib/ui/toast/...`) don't match — those aren't primitives.
+var uiPrimitiveImportPattern = regexp.MustCompile(`#lib/ui/([A-Za-z0-9_]+)\.svelte`)
 
 type uiPrimitiveCoverageAllowlist struct {
 	// Exempt maps a primitive's relative path (from repo root) to a
@@ -186,7 +186,7 @@ func formatUiPrimitiveCoverageFailure(r uiPrimitiveCoverageResult) string {
 		for _, f := range r.uncovered {
 			name := primitiveName(f)
 			sb.WriteString(fmt.Sprintf("    - %s\n", f))
-			sb.WriteString(fmt.Sprintf("        Add apps/desktop/src/routes/dev/components/sections/%sSection.svelte that imports %q,\n", name, "$lib/ui/"+name+".svelte"))
+			sb.WriteString(fmt.Sprintf("        Add apps/desktop/src/routes/dev/components/sections/%sSection.svelte that imports %q,\n", name, "#lib/ui/"+name+".svelte"))
 			sb.WriteString("        then wire it into routes/dev/components/+page.svelte and the Debug sidebar (routes/debug/+page.svelte).\n")
 		}
 	}

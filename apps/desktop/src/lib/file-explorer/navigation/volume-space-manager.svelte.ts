@@ -1,6 +1,6 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-import { getVolumeSpace, type SpaceInfo } from '$lib/tauri-commands'
-import { withTimeout } from '$lib/utils/timing'
+import { getVolumeSpace, type SpaceInfo } from '#lib/tauri-commands/index.js'
+import { withTimeout } from '#lib/utils/timing.js'
 import type { VolumeInfo } from '../types'
 
 const volumeSpaceTimeoutMs = 3000

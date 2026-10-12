@@ -17,14 +17,14 @@
  * everywhere; only the jump calls [`actOnSchemeInput`].
  */
 
-import { isSnapshotPath } from '$lib/file-explorer/navigation/real-folder-history'
-import { parseServerAddress } from '$lib/servers/address-parser'
-import { isServerPath, isUnderServerRoot, parseServerPath } from '$lib/servers/server-path-utils'
-import { openAddServerSheet, type ConnectedPlace, type SmbHandOff } from '$lib/servers/open-sign-in'
-import { listSavedServers } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import type { GoToPathResolution } from '$lib/ipc/bindings'
+import { isSnapshotPath } from '#lib/file-explorer/navigation/real-folder-history.js'
+import { parseServerAddress } from '#lib/servers/address-parser.js'
+import { isServerPath, isUnderServerRoot, parseServerPath } from '#lib/servers/server-path-utils.js'
+import { openAddServerSheet, type ConnectedPlace, type SmbHandOff } from '#lib/servers/open-sign-in.js'
+import { listSavedServers } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { GoToPathResolution } from '#lib/ipc/bindings.js'
 
 const log = getAppLogger('go-to-path')
 

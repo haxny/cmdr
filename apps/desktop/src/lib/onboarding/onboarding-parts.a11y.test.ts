@@ -14,8 +14,8 @@
 
 import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync, createRawSnippet } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { _setSystemLocalesForTests } from '$lib/intl/os-locales'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { _setSystemLocalesForTests } from '#lib/intl/os-locales.js'
 
 // The two blocks that stub settings keep disjoint keys, so one map serves both;
 // each resets its own in `beforeEach`. `getSetting` is per-block because the
@@ -31,7 +31,7 @@ vi.mock('./fda-status.svelte', () => ({
   fdaIsMissing: () => stubs.fdaMissing,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realGetSetting = actual.getSetting as (id: string) => unknown
   return {
@@ -44,7 +44,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   checkAiConnection: vi.fn(() => Promise.resolve({ connected: false, authError: false, models: [], error: null })),
   saveAiApiKey: vi.fn(() => Promise.resolve(null)),
@@ -58,7 +58,7 @@ import OnboardingLanguagePicker from './OnboardingLanguagePicker.svelte'
 import OnboardingStepShell from './OnboardingStepShell.svelte'
 import FdaBadge from './FdaBadge.svelte'
 import LocalDownloadFailedToastContent from './LocalDownloadFailedToastContent.svelte'
-import { cloudProviderPresets } from '$lib/settings'
+import { cloudProviderPresets } from '#lib/settings/index.js'
 
 let mounted: { target: HTMLElement; instance: ReturnType<typeof mount> } | undefined
 

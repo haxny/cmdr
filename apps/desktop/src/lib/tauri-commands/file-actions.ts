@@ -15,9 +15,9 @@ import {
   type TerminalAppList,
   type TextEditorList,
   type TimedOut,
-} from '$lib/ipc/bindings'
-import { TypedFailure } from '$lib/ipc/typed-failure'
-import type { SameKindTarget } from '$lib/file-explorer/pane/select-same-kind'
+} from '#lib/ipc/bindings.js'
+import { TypedFailure } from '#lib/ipc/typed-failure.js'
+import type { SameKindTarget } from '#lib/file-explorer/pane/select-same-kind.js'
 import { throwIpcError } from './ipc-types'
 
 export type {
@@ -32,7 +32,7 @@ export type {
   TerminalAppList,
   TextEditorApp,
   TextEditorList,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /**
  * Opens a file with the system's default application.
@@ -117,7 +117,7 @@ export interface PaneContextMenuFacts {
  *
  * Every field is rendered on this side because every one of them needs locale-aware
  * number formatting, which `crate::intl` deliberately doesn't have. Build them with
- * `$lib/file-explorer/selection/context-menu-target`, never by hand.
+ * `#lib/file-explorer/selection/context-menu-target`, never by hand.
  */
 export interface ContextMenuTarget {
   /**
@@ -147,7 +147,7 @@ export interface ContextMenuTarget {
  *
  * The viewport and the native window share an origin here (the webview fills the whole
  * window, title bar included), so no offset is applied. Measurement and the caveat that
- * would change it: `$lib/file-explorer/pane/DETAILS.md` § Keyboard context menu.
+ * would change it: `#lib/file-explorer/pane/DETAILS.md` § Keyboard context menu.
  */
 export interface MenuAnchor {
   x: number
@@ -179,7 +179,7 @@ function paneFactsForIpc(pane: PaneContextMenuFacts): Required<PaneContextMenuFa
  * @param pane - What the surface the click landed in contributes. See {@link PaneContextMenuFacts}.
  * @param target - What the right-clicked rows contribute. See {@link ContextMenuTarget}.
  * @param shortcuts - Every combo bound right now, from `boundShortcuts()` in
- *                    `$lib/shortcuts`. It's what each item's accelerator LABEL is drawn from, so
+ *                    `#lib/shortcuts`. It's what each item's accelerator LABEL is drawn from, so
  *                    the menu tells the truth after a rebind. ❌ Never hand-build it, and ❌ never
  *                    pass display spellings: `boundShortcuts` explains both.
  * @param anchor - Where to open it ({@link MenuAnchor}). Omit for a right-click, so macOS

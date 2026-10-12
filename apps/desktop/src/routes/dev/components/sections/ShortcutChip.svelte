@@ -1,8 +1,8 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import KeyHint from '$lib/ui/KeyHint.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import KeyHint from '#lib/ui/KeyHint.svelte'
 </script>
 
 <SectionCard id="components-shortcut-chip" label="Shortcut chip">

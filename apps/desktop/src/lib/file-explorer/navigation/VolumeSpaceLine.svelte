@@ -4,10 +4,10 @@
      * the space query is slow, a retrying spinner or a click-to-retry placeholder. The
      * fetching and retry state are `volume-space-manager.svelte.ts`'s; this only shows them.
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Spinner from '$lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Spinner from '#lib/ui/Spinner.svelte'
     import { getUsageBar, formatDiskSpaceShort } from '../disk-space-utils'
     import type { VolumeInfo } from '../types'
     import type { VolumeSpaceManager } from './volume-space-manager.svelte'

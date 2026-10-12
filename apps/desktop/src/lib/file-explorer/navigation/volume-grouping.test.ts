@@ -12,7 +12,7 @@
  * source of truth, and the last cell is what catches it.
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { groupByCategory } from './volume-grouping'
 import type { VolumeInfo } from '../types'
 

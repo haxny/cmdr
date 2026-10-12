@@ -22,12 +22,12 @@ ruleTester.run('no-raw-lucide-import', rule, {
     },
     // Feature code importing the shared Icon component is the intended path.
     {
-      code: `import Icon from '$lib/ui/Icon.svelte'`,
+      code: `import Icon from '#lib/ui/Icon.svelte'`,
       filename: 'src/lib/file-explorer/selection/FileIcon.svelte',
     },
     // Importing from the registry module (not `~icons/*`) is fine anywhere.
     {
-      code: `import { ICON_COMPONENTS } from '$lib/ui/icons/icon-map'`,
+      code: `import { ICON_COMPONENTS } from '#lib/ui/icons/icon-map'`,
       filename: 'src/lib/file-explorer/selection/FileIcon.svelte',
     },
     // Unrelated imports are never touched.

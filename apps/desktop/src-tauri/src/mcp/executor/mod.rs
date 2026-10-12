@@ -101,7 +101,7 @@ impl From<tauri::Error> for ToolError {
 ///
 /// ONE list, shared by `copy` / `move` (`file_ops.rs`) and `dialog confirm`
 /// (`dialogs.rs`), and mirrored once on the frontend
-/// (`$lib/file-operations/transfer/conflict-policy.ts`). ❌ Don't grow a second
+/// (`#lib/file-operations/transfer/conflict-policy.ts`). ❌ Don't grow a second
 /// copy: the two frontend maps that predated this one had drifted on the
 /// conditional names, and a policy the backend accepts but the map doesn't know
 /// silently becomes `skip` — "ask me about each file" turning into "skip every

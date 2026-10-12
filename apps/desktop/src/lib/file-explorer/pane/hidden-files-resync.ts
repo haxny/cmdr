@@ -1,4 +1,4 @@
-import { setListingIncludeHidden } from '$lib/tauri-commands'
+import { setListingIncludeHidden } from '#lib/tauri-commands/index.js'
 import type { ResortResult } from '../types'
 import type { PaneRowState } from './pane-row-state'
 import type { collectSortState } from './sorting-handlers'

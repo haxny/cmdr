@@ -13,16 +13,16 @@ import { describe, it, vi, expect, beforeAll, beforeEach, afterAll } from 'vites
 import { mount, unmount, tick } from 'svelte'
 import AttachEmailFixture from './attach-email-fixture.svelte'
 import type { AttachEmail } from './attach-email.svelte'
-import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 let mockEmail = ''
 
 /** Live listeners on `analytics.email`, so a test can play the Settings window's part. */
 const emailListeners = new Set<(value: string) => void>()
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((id: string) => (id === 'analytics.email' ? mockEmail : false)),
   setSetting: vi.fn(),
   onSpecificSettingChange: (id: string, listener: (value: string) => void) => {
@@ -32,7 +32,7 @@ vi.mock('$lib/settings', () => ({
   },
 }))
 
-vi.mock('$lib/settings/settings-window', async (importOriginal) => ({
+vi.mock('#lib/settings/settings-window.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   openSettingsWindow: vi.fn(() => Promise.resolve()),
 }))

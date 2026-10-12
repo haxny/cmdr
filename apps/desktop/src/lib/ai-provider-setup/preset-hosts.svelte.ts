@@ -9,10 +9,10 @@
  */
 
 import { untrack } from 'svelte'
-import { cloudProviderPresets } from '$lib/settings/cloud-providers'
-import { cloudAiHostVerdicts } from '$lib/tauri-commands'
-import { getManagedPolicyView } from '$lib/managed-policy/managed-policy.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { cloudProviderPresets } from '#lib/settings/cloud-providers.js'
+import { cloudAiHostVerdicts } from '#lib/tauri-commands/index.js'
+import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { providerHasEditableEndpoint } from './provider-setup-plan'
 
 const log = getAppLogger('ai-provider-setup')

@@ -1,6 +1,6 @@
-import { getAppLogger } from '$lib/logging/logger'
-import { showMainWindow } from '$lib/tauri-commands'
-import { waitForNextPaint } from '$lib/utils/timing'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { showMainWindow } from '#lib/tauri-commands/index.js'
+import { waitForNextPaint } from '#lib/utils/timing.js'
 
 const log = getAppLogger('startup')
 

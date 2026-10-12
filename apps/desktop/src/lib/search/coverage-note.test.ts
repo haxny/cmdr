@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { SearchResult, SearchRunCoverage } from '$lib/tauri-commands'
+import type { SearchResult, SearchRunCoverage } from '#lib/tauri-commands/index.js'
 import type { CoverageNote } from './coverage-note'
 import { coverageNoteFrom, coverageNoteFromRun, isTargetIndexReady, offersFullDiskAccess } from './coverage-note'
 

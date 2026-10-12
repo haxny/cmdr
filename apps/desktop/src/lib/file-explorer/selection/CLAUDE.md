@@ -20,8 +20,8 @@ lives in `FilePane.svelte` as a `Set<number>`).
   as `"0.00 MB"` (forced-MB) still tiers as `size-bytes` (green), via `dynamicTierIndex(bytes, format)`. Don't tier off
   the displayed unit.
 - **Age-tier mapping and the `appearance.dateColors` palette live with the setting**, in
-  `$lib/settings/age-tier-utils.ts`, ❌ not here; the renderer is `$lib/ui/DateLabel.svelte`. See
-  `$lib/settings/CLAUDE.md` § "Date display".
+  `#lib/settings/age-tier-utils.ts`, ❌ not here; the renderer is `#lib/ui/DateLabel.svelte`. See
+  `#lib/settings/CLAUDE.md` § "Date display".
 - **`isBrokenSymlink` checks `iconId === 'symlink-broken'`, NOT filesystem flags.** The backend already resolves broken-
   symlink status when computing the icon ID; re-checking via stat would be redundant and possibly stale.
 - **❌ Never infer "no access" from entry metadata** (`permissions === 0`, missing `size`): every non-local backend
@@ -33,9 +33,9 @@ lives in `FilePane.svelte` as a `Set<number>`).
 - **`SelectionInfo` derives its display mode from props** (`viewMode`, `selectedCount`, `stats`), never an explicit
   `mode` prop. The four modes: `empty`, `selection-summary`, `no-selection` (Full, no selection), `file-info` (Brief, no
   selection).
-- **Middle truncation in `file-info` mode uses the `useShortenMiddle` action** (`$lib/utils/`) with `preferBreakAt: '.'`
+- **Middle truncation in `file-info` mode uses the `useShortenMiddle` action** (`#lib/utils/`) with `preferBreakAt: '.'`
   and `startRatio: 0.7`, NOT CSS `text-overflow: ellipsis`: CSS truncates from the right and loses the file extension.
-- **Counts, size decimals, and triad separators follow the active locale via `$lib/intl`**; ❌ never a hardcoded locale
+- **Counts, size decimals, and triad separators follow the active locale via `#lib/intl`**; ❌ never a hardcoded locale
   or separator. Size tiers come from `TieredSize`, never the (translated) unit text.
 - **`SortableHeader`'s shortcut shows only when `isFocused` is true** (the `sort.by*` commands act on the focused pane).
   Hovering the unfocused pane's header shows the command name only; clicking still sorts that pane. Pinned by

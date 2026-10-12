@@ -7,8 +7,8 @@
  * `getLastUsedPathForVolume`.
  */
 
-import { pathExists, pathExistsChecked } from '$lib/tauri-commands'
-import { withTimeout } from '$lib/utils/timing'
+import { pathExists, pathExistsChecked } from '#lib/tauri-commands/index.js'
+import { withTimeout } from '#lib/utils/timing.js'
 import type { ConnectionState } from '../types'
 import { probeTimeoutMs } from './connection-state'
 

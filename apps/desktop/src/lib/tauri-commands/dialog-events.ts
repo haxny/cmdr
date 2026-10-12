@@ -23,7 +23,7 @@ import {
   type RevealPath,
   type ViewerContextMenuAction,
   type ViewerEditAction,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /**
  * The unified menu / cross-window command relay. Rust's `on_menu_event` and the

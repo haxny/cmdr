@@ -17,15 +17,15 @@
  * calls only the core directly and never reaches this file.
  */
 
-import type { SearchResultEntry, SearchQuery, HistoryEntry, HistoryFilters } from '$lib/tauri-commands'
-import { createQueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import type { SearchResultEntry, SearchQuery, HistoryEntry, HistoryFilters } from '#lib/tauri-commands/index.js'
+import { createQueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 import { createSearchExtrasState } from './search-extras-state.svelte'
 import type { CoverageNote } from './coverage-note'
 import { buildSearchQuery as buildSearchQueryImpl } from './build-search-query'
 
 // Re-export the core's pure helpers + types so the call sites stay stable.
-export { parseSizeToBytes, parseDateToTimestamp } from '$lib/query-ui/query-filter-state.svelte'
-export type { SearchMode } from '$lib/query-ui/query-filter-state.svelte'
+export { parseSizeToBytes, parseDateToTimestamp } from '#lib/query-ui/query-filter-state.svelte.js'
+export type { SearchMode } from '#lib/query-ui/query-filter-state.svelte.js'
 
 const core = createQueryFilterState({ defaultMode: 'filename' })
 const extras = createSearchExtrasState()

@@ -7,9 +7,9 @@
      * The WORDS, the glyph, the three states, and what pressing it runs are all decided in
      * `detach-control.ts`; this renders the look half of that answer.
      */
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import type { DetachButtonLook } from './detach-control'
 
     interface Props extends DetachButtonLook {

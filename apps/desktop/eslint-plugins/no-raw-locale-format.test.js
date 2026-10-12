@@ -9,7 +9,7 @@ ruleTester.run('no-raw-locale-format', rule, {
   valid: [
     // Routing through the central helpers is the intended path.
     {
-      code: `import { formatInteger } from '$lib/intl/number-format'; const s = formatInteger(n)`,
+      code: `import { formatInteger } from '#lib/intl/number-format'; const s = formatInteger(n)`,
       filename: 'src/lib/ui/LoadingIcon.svelte',
     },
     // The intl layer itself is exempt: it's where the formatters live.

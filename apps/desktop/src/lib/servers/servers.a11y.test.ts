@@ -21,10 +21,10 @@ import SignInCredentialFields from './SignInCredentialFields.svelte'
 import S3EndpointFields from './S3EndpointFields.svelte'
 import { emptyServerForm } from './server-form'
 import { emptyS3Fields } from './s3-form'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { SignInAttemptOutcome, SignInSheetRequest } from './sign-in-contract'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),

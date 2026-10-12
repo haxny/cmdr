@@ -14,7 +14,7 @@ import {
   visibleIndexOf,
 } from './servers-hub-items'
 import type { HubRow } from './servers-hub-rows'
-import type { SavedServer } from '$lib/tauri-commands'
+import type { SavedServer } from '#lib/tauri-commands/index.js'
 
 function row(id: string, saved: boolean): HubRow {
   return {

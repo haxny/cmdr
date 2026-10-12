@@ -19,8 +19,8 @@
  * a forked MATCHING rule would (`src-tauri/src/search/CLAUDE.md`).
  */
 
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import type { SearchMode } from '$lib/query-ui/query-filter-state.svelte'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import type { SearchMode } from '#lib/query-ui/query-filter-state.svelte.js'
 
 /** How well a name answers the query. Bands are compared before anything else. */
 const enum MatchQuality {

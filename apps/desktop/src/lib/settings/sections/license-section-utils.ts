@@ -1,5 +1,5 @@
-import type { LicenseInfo, LicenseStatus } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
+import type { LicenseInfo, LicenseStatus } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export function getLicenseTypeLabel(licenseInfo: LicenseInfo | null): string {
   if (!licenseInfo) return tString('licensing.section.typePersonal')

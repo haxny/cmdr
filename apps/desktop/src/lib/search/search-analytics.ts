@@ -11,8 +11,8 @@
  * reports once, when it ENDS, and says how it ended.
  */
 
-import type { SearchRunCoverage } from '$lib/tauri-commands'
-import type { SearchMode } from '$lib/query-ui/query-filter-state.svelte'
+import type { SearchRunCoverage } from '#lib/tauri-commands/index.js'
+import type { SearchMode } from '#lib/query-ui/query-filter-state.svelte.js'
 
 /** What started the run. The two have different costs and different endings. */
 export type SearchTrigger =

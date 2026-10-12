@@ -18,7 +18,7 @@
 import type { Command, CommandSource, PaletteCondition } from './types'
 import type { CommandId } from './command-ids'
 import { BLOCKED_BY_DIALOGS, type WhileDialogOpen } from './while-dialog-open'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { appCommands } from './sources/app'
 import { mainWindowCommands } from './sources/main-window'
 import { fileListCommands } from './sources/file-list'

@@ -11,8 +11,8 @@
  * fingerprint to show, and a refusal sentence has nowhere to put one.
  */
 
-import type { EjectError, SavedServerOutcome } from '$lib/ipc/bindings'
-import type { EjectAndSaveOutcome, ServerConnectOutcome } from '$lib/tauri-commands'
+import type { EjectError, SavedServerOutcome } from '#lib/ipc/bindings.js'
+import type { EjectAndSaveOutcome, ServerConnectOutcome } from '#lib/tauri-commands/index.js'
 import type { ConnectRefusalKind } from './connect-refusals'
 import type { SignInAttemptOutcome } from './sign-in-contract'
 

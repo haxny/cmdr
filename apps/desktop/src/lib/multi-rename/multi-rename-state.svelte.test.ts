@@ -21,11 +21,11 @@ const { ipc } = vi.hoisted(() => ({
     saveMultiRenameLastSettings: vi.fn(),
   },
 }))
-vi.mock('$lib/tauri-commands', () => ipc)
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
 
 import { PREVIEW_DELAY_MS, createMultiRenameState } from './multi-rename-state.svelte'
 import { DEFAULT_SPEC } from './spec'
-import type { MultiRenamePreset } from '$lib/tauri-commands'
+import type { MultiRenamePreset } from '#lib/tauri-commands/index.js'
 
 const row = (index: number, oldName: string, newName: string, type = 'ready') => ({
   row: index,

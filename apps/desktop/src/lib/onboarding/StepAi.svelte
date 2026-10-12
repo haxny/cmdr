@@ -3,7 +3,7 @@
     import OnboardingStepShell from './OnboardingStepShell.svelte'
     import CloudProviderPicker from './CloudProviderPicker.svelte'
     import CloudProviderSetup from './CloudProviderSetup.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
     import {
         getOnboardingState,
         setFooterOverride,
@@ -18,8 +18,8 @@
         startAiDownload,
         cancelAiDownload,
         openPrivacySettings,
-    } from '$lib/tauri-commands'
-    import { systemStrings } from '$lib/system-strings.svelte'
+    } from '#lib/tauri-commands/index.js'
+    import { systemStrings } from '#lib/system-strings.svelte.js'
     import {
         getCloudProvider,
         getSetting,
@@ -27,24 +27,24 @@
         isOverriddenByPolicy,
         setSetting,
         type AiProvider,
-    } from '$lib/settings'
-    import { pushConfigToBackend } from '$lib/settings/ai-config'
+    } from '#lib/settings/index.js'
+    import { pushConfigToBackend } from '#lib/settings/ai-config.js'
     import { clearLocalDownloadFailure, noteLocalDownloadFailed } from './local-download-notice'
-    import { cloudAiBlocked, declineCloudConsent } from '$lib/ai/cloud-consent.svelte'
-    import AiCloudConsentToggle from '$lib/ai/AiCloudConsentToggle.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
-    import RadioGroup from '$lib/ui/RadioGroup.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import { getFirstShortcutReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
-    import { getSettingLock } from '$lib/managed-policy/managed-policy.svelte'
-    import { lockAllowsWrite } from '$lib/managed-policy/overlay'
-    import { followPresetHostVerdicts } from '$lib/ai-provider-setup/preset-hosts.svelte'
-    import { localAiErrorLogLevel, toLocalAiError } from '$lib/ai/local-ai-error'
+    import { cloudAiBlocked, declineCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
+    import AiCloudConsentToggle from '#lib/ai/AiCloudConsentToggle.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
+    import RadioGroup from '#lib/ui/RadioGroup.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import { getSettingLock } from '#lib/managed-policy/managed-policy.svelte.js'
+    import { lockAllowsWrite } from '#lib/managed-policy/overlay.js'
+    import { followPresetHostVerdicts } from '#lib/ai-provider-setup/preset-hosts.svelte.js'
+    import { localAiErrorLogLevel, toLocalAiError } from '#lib/ai/local-ai-error.js'
     import type { Snippet } from 'svelte'
 
     /**

@@ -24,8 +24,8 @@
  */
 import type { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
-import { getAppLogger } from '$lib/logging/logger'
-import { getAutomatedRun, orderWindowToBack } from '$lib/tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getAutomatedRun, orderWindowToBack } from '#lib/tauri-commands/index.js'
 
 export type AppMode = 'prod' | 'dev' | 'e2e' | 'capture'
 

@@ -8,9 +8,9 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import FavoriteRefusalToastContent from './FavoriteRefusalToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
 

@@ -14,12 +14,12 @@ const { getAutomatedRunSpy, orderWindowToBackSpy, debugSpy } = vi.hoisted(() => 
   debugSpy: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getAutomatedRun: getAutomatedRunSpy,
   orderWindowToBack: orderWindowToBackSpy,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: debugSpy, info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 

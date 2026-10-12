@@ -31,13 +31,13 @@
      * result set changes or it unmounts, so the backend token map never leaks.
      */
     import { onDestroy } from 'svelte'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import {
         mediaIndexSearchOcr,
         mediaIndexSearchSemantic,
@@ -47,7 +47,7 @@
         mediaIndexFindSimilar,
         type MediaIndexVolumeState,
         type OcrHit,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     // The `cmdr-media://` URL is built ONLY via the viewer's `mediaUrl` (single source;
     // see `routes/viewer/CLAUDE.md`), so the grid reuses the exact preview origin.
     import { mediaUrl } from '../../routes/viewer/media-view'

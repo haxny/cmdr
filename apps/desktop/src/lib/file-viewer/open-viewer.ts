@@ -1,7 +1,7 @@
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 
-import { cascadeFromMain, clampToMonitor, nearestMonitor, readMainRect, readMonitors } from '$lib/window-positioning'
-import { getMessage } from '$lib/intl/messages.svelte'
+import { cascadeFromMain, clampToMonitor, nearestMonitor, readMainRect, readMonitors } from '#lib/window-positioning.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
 
 const VIEWER_WIDTH = 800
 const VIEWER_HEIGHT = 600
@@ -26,7 +26,7 @@ export async function openFileViewer(
   { tail = false }: { tail?: boolean } = {},
 ): Promise<void> {
   const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
-  const { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } = await import('$lib/app-mode')
+  const { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } = await import('#lib/app-mode.js')
 
   // Use a unique label per viewer instance (timestamp-based)
   const label = `viewer-${String(Date.now())}`

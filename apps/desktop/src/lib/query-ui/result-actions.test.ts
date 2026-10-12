@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import {
   activatePrimary,
   activatePrimaryOnResults,

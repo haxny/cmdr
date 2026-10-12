@@ -9,11 +9,11 @@ import {
   type TransferContext,
 } from './transfer-operations'
 import type { VolumeInfo } from '../types'
-import { ListingLookupFailure } from '$lib/tauri-commands/listing-gone'
+import { ListingLookupFailure } from '#lib/tauri-commands/listing-gone.js'
 
-vi.mock('$lib/tauri-commands', async () => {
-  const actual = await vi.importActual<typeof import('$lib/tauri-commands/listing-gone')>(
-    '$lib/tauri-commands/listing-gone',
+vi.mock('#lib/tauri-commands/index.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/tauri-commands/listing-gone.js')>(
+    '#lib/tauri-commands/listing-gone.js',
   )
   return {
     getListingStats: vi.fn(),
@@ -22,10 +22,10 @@ vi.mock('$lib/tauri-commands', async () => {
     asListingLookupError: actual.asListingLookupError,
   }
 })
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
 
-const { getListingStats, getPathsAtIndices, getSelectionSnapshot } = await import('$lib/tauri-commands')
+const { getListingStats, getPathsAtIndices, getSelectionSnapshot } = await import('#lib/tauri-commands/index.js')
 
 describe('getDestinationVolumeInfo', () => {
   const volumes: VolumeInfo[] = [

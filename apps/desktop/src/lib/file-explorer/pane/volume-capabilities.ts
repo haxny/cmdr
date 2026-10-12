@@ -57,12 +57,12 @@
  * module never feeds its `'local'` default back into tinting.
  */
 
-import type { LocationCategory, VolumeBackendCapabilities, VolumeInfo } from '$lib/file-explorer/types'
+import type { LocationCategory, VolumeBackendCapabilities, VolumeInfo } from '#lib/file-explorer/types.js'
 import { volumeKindFor } from './volume-tint.svelte'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 import { isVirtualGitPath } from '../git/path-detection'
-import { getShowVirtualGitPortal } from '$lib/settings/reactive-settings.svelte'
-import { isPlainFilesystemPath } from '$lib/path/canonical'
+import { getShowVirtualGitPortal } from '#lib/settings/reactive-settings.svelte.js'
+import { isPlainFilesystemPath } from '#lib/path/canonical.js'
 import { hasSupportedArchiveExtension, isWritableArchiveName, pathInsideArchive } from './archive-paths'
 
 /**

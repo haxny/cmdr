@@ -25,11 +25,11 @@
  * WALK, because that's the only one where the work has lost its last consumer.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { LiveRunView, QueryStreamResumption } from '$lib/query-ui/query-stream'
-import type { SearchQuery, SearchResultEntry, SearchRunCoverage } from '$lib/tauri-commands'
-import { addToast, dismissToast } from '$lib/ui/toast/toast-store.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { LiveRunView, QueryStreamResumption } from '#lib/query-ui/query-stream.js'
+import type { SearchQuery, SearchResultEntry, SearchRunCoverage } from '#lib/tauri-commands/index.js'
+import { addToast, dismissToast } from '#lib/ui/toast/toast-store.svelte.js'
 import { observeSearchRun, type LiveRunHandlers, type LiveRunProgress } from './live-run-events'
 import { appendSnapshotEntries } from './snapshot-store.svelte'
 import { fillSnapshotFromIndex } from './snapshot-fill'

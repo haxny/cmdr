@@ -694,7 +694,7 @@ on screen flings the view to the line top on every Enter.
 ## User-facing copy (i18n)
 
 Every user-facing viewer string lives in the `viewer.*` message catalog
-(`apps/desktop/src/lib/intl/messages/en/viewer.json`), resolved through `$lib/intl` (`t()` / `tString()` /
+(`apps/desktop/src/lib/intl/messages/en/viewer.json`), resolved through `#lib/intl` (`t()` / `tString()` /
 `getMessage()`, and `<Trans>` for the inline-component binary-warning banner). The base-en output is a parity-protected
 MOVE of the original copy; `viewer-i18n-parity.test.ts` asserts byte-identical en rendering.
 `cmdr/no-raw-user-facing-string` is enforced for `lib/file-viewer/` and `routes/viewer/`, so a new hardcoded string in a

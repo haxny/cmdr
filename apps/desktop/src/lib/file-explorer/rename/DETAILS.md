@@ -33,7 +33,7 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
    `{ type: 'error' }`. `hasConflict: true, isCaseOnlyRename: false` → `{ type: 'conflict', validity }`.
    `hasConflict: true, isCaseOnlyRename: true` → proceed (same inode, just case). `hasConflict: false` → proceed.
 3. **Perform rename**: `renameFile(from, to, force)`. Success → `{ type: 'success', newName }`. A slow volume (the
-   backend answers `stillRunning` past its 2 s reply deadline, `$lib/tauri-commands/mutation-reply.ts`) →
+   backend answers `stillRunning` past its 2 s reply deadline, `#lib/tauri-commands/mutation-reply.ts`) →
    `{ type: 'still-renaming', settled }`, wordless: `settled` resolves to the `success` or `error` the rename really
    ended with. The editor lets go at once rather than hold the person on the volume; the flow counts the rename in a
    running toast and reports its end the way a superseded save does (it may toast, never steer: no cursor move, no

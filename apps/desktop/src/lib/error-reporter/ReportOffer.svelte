@@ -12,9 +12,9 @@
      * still carries it.
      */
     import { onMount } from 'svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openErrorReportFor } from './error-report-flow.svelte'
     import { recordBreadcrumb } from './breadcrumbs'
     import { slowBreadcrumbFor, type ReportIncident } from './report-incident'

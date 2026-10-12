@@ -13,12 +13,12 @@
 -->
 
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import EncodingPicker from './EncodingPicker.svelte'
     import ViewModePicker from './ViewModePicker.svelte'
-    import type { EncodingChoice, FileEncoding, ViewerContentKind } from '$lib/ipc/bindings'
+    import type { EncodingChoice, FileEncoding, ViewerContentKind } from '#lib/ipc/bindings.js'
     import type { ViewerDisplayMode } from './viewer-view-mode'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** File name shown in the flexible middle of the bar. */

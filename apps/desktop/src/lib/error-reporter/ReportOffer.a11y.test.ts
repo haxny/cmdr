@@ -5,7 +5,7 @@
 
 import { afterEach, describe, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import ReportOffer from './ReportOffer.svelte'
 import type { ReportIncident } from './report-incident'
 

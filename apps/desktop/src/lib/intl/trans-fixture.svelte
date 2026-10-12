@@ -7,7 +7,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
     import Trans from './Trans.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
     import type { MessageKey } from './keys.gen'
 
     interface Props {

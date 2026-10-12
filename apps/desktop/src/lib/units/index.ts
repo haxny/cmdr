@@ -5,11 +5,11 @@
  * Start here. `formatByteSize` honors the user's `appearance.fileSizeFormat`
  * (binary KiB, MiB / SI kB, MB) automatically; `formatFileSizeWithFormat` takes the base
  * explicitly for pure code and tests. The component form of a size is
- * `<Size bytes>` (`$lib/ui/Size.svelte`), which also carries the size-tier
+ * `<Size bytes>` (`#lib/ui/Size.svelte`), which also carries the size-tier
  * colors.
  *
  * ```ts
- * import { formatByteSize, formatDuration, seconds } from '$lib/units'
+ * import { formatByteSize, formatDuration, seconds } from '#lib/units/index.js'
  *
  * formatByteSize(87_654_321)   // "83.59 MiB" (binary) or "87.65 MB" (SI)
  * formatDuration(seconds(492)) // "8m 12s"
@@ -28,13 +28,13 @@
  * same transfer. `cmdr/no-private-unit-format` rejects new ones.
  *
  * Size-tier COLORING (the `size-bytes` … `size-tb` spans) is a separate layer
- * in `$lib/file-explorer/selection/selection-info-utils.ts`
+ * in `#lib/file-explorer/selection/selection-info-utils.ts`
  * (`formatSizeForDisplay`, `colorizeSize`), because the classes belong to
  * the list views' stylesheet. Dates have their own single source of truth in
- * `$lib/settings/format-utils.ts` + `<DateLabel>`.
+ * `#lib/settings/format-utils.ts` + `<DateLabel>`.
  */
 
-import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
 import { formatDriveFigure, formatFileSizeWithFormat, formatTieredSize, type TieredSize } from './byte-size'
 
 export {
@@ -79,7 +79,7 @@ export function formatDriveSize(byteCount: number, driveBytes: number): string {
 /**
  * {@link formatByteSize}, plus the size tier to color it by, for HTML that
  * wraps the size in a tier span (`colorizeSize` in
- * `$lib/file-explorer/selection/selection-info-utils`).
+ * `#lib/file-explorer/selection/selection-info-utils`).
  */
 export function formatByteSizeTiered(byteCount: number): TieredSize {
   return formatTieredSize(byteCount, getFileSizeFormat())

@@ -17,9 +17,9 @@
  * a real path) is never clickable.
  */
 
-import { parseMtpPath, constructMtpPath } from '$lib/mtp'
-import { volumeScheme } from '$lib/volume-scheme'
-import { constructAdbPath, parseAdbPath } from '$lib/adb/adb-path-utils'
+import { parseMtpPath, constructMtpPath } from '#lib/mtp/index.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { constructAdbPath, parseAdbPath } from '#lib/adb/adb-path-utils.js'
 import type { PathSegment } from './path-segments'
 
 export interface BreadcrumbNavContext {

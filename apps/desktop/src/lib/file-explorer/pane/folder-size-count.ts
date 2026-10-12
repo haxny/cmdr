@@ -10,10 +10,10 @@
  * volume is gone or some folders couldn't be read.
  */
 
-import { cancelFolderSizeCount, countFolderSizes, getFileAt } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { cancelFolderSizeCount, countFolderSizes, getFileAt } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { FileEntry } from '../types'
 
 const log = getAppLogger('fileExplorer')

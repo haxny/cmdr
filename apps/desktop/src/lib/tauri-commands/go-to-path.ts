@@ -1,7 +1,7 @@
 // "Go to path" (⌘G) commands: resolving typed input against a pane's base dir,
 // and the persisted recent-paths list the dialog renders.
 
-import { commands, type RecentPathEntry } from '$lib/ipc/bindings'
+import { commands, type RecentPathEntry } from '#lib/ipc/bindings.js'
 
 /**
  * Resolves a typed input against the focused pane's `baseDir`. Serves the live

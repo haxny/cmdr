@@ -3,11 +3,11 @@
  * and the six zoom ids (the four presets share one body; in/out clamp). The
  * `showZoomToast` helper is view-only, so it lives here.
  */
-import { addToast } from '$lib/ui/toast'
-import { getEffectiveShortcuts, toDisplayShortcut } from '$lib/shortcuts'
-import { getSetting, setSetting } from '$lib/settings'
-import { tString } from '$lib/intl/messages.svelte'
-import type { CommandArgs } from '$lib/commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { CommandArgs } from '#lib/commands/index.js'
 import type { CommandHandlerRecord } from './types'
 
 /**

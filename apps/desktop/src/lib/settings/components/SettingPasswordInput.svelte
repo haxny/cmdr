@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { getSetting, setSetting, onSpecificSettingChange, type SettingId, type SettingsValues } from '$lib/settings'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import { getSetting, setSetting, onSpecificSettingChange, type SettingId, type SettingsValues } from '#lib/settings/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import { onMount } from 'svelte'
     import { useSettingLock } from './setting-lock.svelte'
 

@@ -1,6 +1,6 @@
 /**
  * Reactive stand-in for the two media-index reads of
- * `$lib/settings/reactive-settings.svelte`, so a test can flip a toggle and have
+ * `#lib/settings/reactive-settings.svelte`, so a test can flip a toggle and have
  * the reader's `$derived` gates re-run exactly as they do at runtime. Lives in a
  * module of its own because a `vi.mock` factory can't close over `$state`
  * declared in the test file (the factory runs while the test's imports are still

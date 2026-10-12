@@ -17,7 +17,7 @@ import type { MeasureResult } from './worker-client'
 
 /** `storeFontMetrics` and `extendFontMetrics`'s real signatures (`file-listing.ts`) are
  *  positional all the way down to the raw IPC `invoke`, so the exposed mocks below (in the
- *  `$lib/tauri-commands` factory) stay positional too; these inner mocks are what tests
+ *  `#lib/tauri-commands` factory) stay positional too; these inner mocks are what tests
  *  actually assert against, as a named payload so a future edit can't silently swap
  *  `codePoints` and `widths`. */
 interface FontMetricsWritePayload {
@@ -31,7 +31,7 @@ const storeFontMetrics = vi.fn<(payload: FontMetricsWritePayload) => Promise<voi
 const extendFontMetrics = vi.fn<(payload: FontMetricsWritePayload) => Promise<void>>()
 const measureOffMainThread = vi.fn<(spec: FontSpec, codePoints: Uint32Array) => Promise<MeasureResult>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   hasFontMetrics: (fontId: string) => hasFontMetrics(fontId),
   storeFontMetrics: (fontId: string, codePoints: number[], widths: number[]) =>
     storeFontMetrics({ fontId, codePoints, widths }),
@@ -43,7 +43,7 @@ vi.mock('./worker-client', () => ({
   measureOffMainThread: (spec: FontSpec, codePoints: Uint32Array) => measureOffMainThread(spec, codePoints),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 

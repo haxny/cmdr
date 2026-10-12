@@ -14,9 +14,9 @@
  * `chunk.endByteOffset`), ❌ never what its row count implies.
  */
 
-import { viewerGetLines, asViewerError, type LineChunk, type ViewerRow } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
+import { viewerGetLines, asViewerError, type LineChunk, type ViewerRow } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 
 const log = getAppLogger('viewer')
 

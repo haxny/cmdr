@@ -13,7 +13,7 @@ const { findFileIndexSpy, findFileIndicesSpy, refreshListingSpy, addToastSpy } =
   ),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   findFileIndex: findFileIndexSpy,
   findFileIndices: findFileIndicesSpy,
   refreshListing: refreshListingSpy,
@@ -23,11 +23,11 @@ vi.mock('$lib/tauri-commands', () => ({
 // volume store for real ids; the two virtual ids short-circuit before the lookup.
 // Empty store ⇒ a real id ('root', 'mtp-…') falls to the listable `local`/`mtp`
 // rows (hasBackendListing: true ⇒ not a snapshot pane).
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }))
 

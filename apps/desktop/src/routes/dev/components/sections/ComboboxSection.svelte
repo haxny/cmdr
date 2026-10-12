@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Combobox, { type ComboboxItem } from '$lib/ui/Combobox.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Combobox, { type ComboboxItem } from '#lib/ui/Combobox.svelte'
 
     const modelItems: ComboboxItem[] = [
         { value: 'gpt-4o', label: 'gpt-4o' },

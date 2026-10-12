@@ -10,8 +10,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { tick } from 'svelte'
-import type { VolumeConflictInfo } from '$lib/tauri-commands'
-import type { ConflictResolution } from '$lib/file-explorer/types'
+import type { VolumeConflictInfo } from '#lib/tauri-commands/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
 import {
   estimateOperationCostMock,
   startScanPreviewMock,

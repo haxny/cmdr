@@ -1,6 +1,6 @@
 /**
  * The network vocabulary: discovered hosts, SMB shares, known shares, and why a
- * mount didn't go through. Re-exported from `$lib/file-explorer/types`, which
+ * mount didn't go through. Re-exported from `#lib/file-explorer/types`, which
  * stays the one import seam for consumers.
  */
 
@@ -71,7 +71,7 @@ export interface ShareListResult {
  * log; `share-list-error-messages.ts` words the type. Re-exported from the
  * generated bindings rather than restated, so it can't drift from the Rust enum.
  */
-export type { ShareListError } from '$lib/ipc/bindings'
+export type { ShareListError } from '#lib/ipc/bindings.js'
 
 // ============================================================================
 // Known shares store types
@@ -116,4 +116,4 @@ export interface KnownNetworkShare {
  * Re-exported from the generated bindings rather than restated, so it can't drift
  * from the Rust enum.
  */
-export type { MountError } from '$lib/ipc/bindings'
+export type { MountError } from '#lib/ipc/bindings.js'

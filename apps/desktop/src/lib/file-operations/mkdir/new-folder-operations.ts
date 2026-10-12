@@ -1,5 +1,5 @@
-import type { FilePaneAPI } from '$lib/file-explorer/pane/types'
-import type { DirectoryDiff } from '$lib/file-explorer/types'
+import type { FilePaneAPI } from '#lib/file-explorer/pane/types.js'
+import type { DirectoryDiff } from '#lib/file-explorer/types.js'
 import { getCursorEntry, type GetFileAtFn } from '../cursor-entry'
 import { removeExtension } from './new-folder-utils'
 
@@ -8,7 +8,7 @@ type OnDirectoryDiffFn = (handler: (payload: DirectoryDiff) => void) => Promise<
 /**
  * Args for `FindFileIndexFn`: `listingId` and `filename` are both `string`, a
  * pair a caller could swap. The real backend function this type stands in for
- * (`findFileIndex` in `$lib/tauri-commands`) is a Tauri IPC command with a fixed
+ * (`findFileIndex` in `#lib/tauri-commands`) is a Tauri IPC command with a fixed
  * `(listingId, filename, showHiddenFiles)` signature we can't reshape, so every
  * call site adapts into this object at the boundary instead.
  */

@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import AskCmdrProposalDecisions from './AskCmdrProposalDecisions.svelte'
-import type { ProposalDecision } from '$lib/tauri-commands'
+import type { ProposalDecision } from '#lib/tauri-commands/index.js'
 
 function decision(overrides: Partial<ProposalDecision> = {}): ProposalDecision {
   return {

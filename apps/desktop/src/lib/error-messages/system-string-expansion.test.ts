@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest'
 import { getGitErrorMessage, type FriendlyGitErrorKind } from './git-error-messages'
 import { getProviderSuggestion, type Provider, type ProviderCategory } from './provider-error-messages'
 import { getListingErrorMessage } from './listing-error-messages'
-import { systemStrings } from '$lib/system-strings.svelte'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
 /** The tokens `expandSystemStrings` owns. None may survive into rendered copy. */
 const TOKENS = [

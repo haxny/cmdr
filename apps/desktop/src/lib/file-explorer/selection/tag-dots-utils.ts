@@ -8,7 +8,7 @@
  * leaves exactly enough room for the cluster (keep both in sync).
  */
 
-import type { TagRef } from '$lib/ipc/bindings'
+import type { TagRef } from '#lib/ipc/bindings.js'
 
 /** Diameter of a single dot (border included), in CSS px. */
 export const TAG_DOT_SIZE = 10

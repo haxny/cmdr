@@ -9,9 +9,9 @@
  * carrying backend prose.
  */
 import { describe, it, expect } from 'vitest'
-import type { ReconnectError } from '$lib/ipc/bindings'
+import type { ReconnectError } from '#lib/ipc/bindings.js'
 import { ReconnectFailure, throwReconnectError, asReconnectError, describeReconnectRefusal } from './reconnect-error'
-import { MutationFailure } from '$lib/file-operations/mutation-error'
+import { MutationFailure } from '#lib/file-operations/mutation-error.js'
 
 const volumeGone: ReconnectError = { type: 'volumeNotFound', volumeId: 'smb-nas-backup' }
 const volumeRefused: ReconnectError = {

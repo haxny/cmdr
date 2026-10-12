@@ -9,7 +9,7 @@
  * `cmdr_fs::volume::remote_paths::RemoteRoot::to_remote_path`.
  */
 
-import type { VolumeRootChanged } from '$lib/ipc/bindings'
+import type { VolumeRootChanged } from '#lib/ipc/bindings.js'
 
 /**
  * The path `path` becomes after `change`.

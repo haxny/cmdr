@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { indexUncoveredDrive } from './coverage-actions'
 
 const { enableDriveIndexMock, addToastMock } = vi.hoisted(() => ({
@@ -14,8 +14,8 @@ const { enableDriveIndexMock, addToastMock } = vi.hoisted(() => ({
   addToastMock: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ enableDriveIndex: enableDriveIndexMock }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ enableDriveIndex: enableDriveIndexMock }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock }))
 
 beforeEach(() => {
   enableDriveIndexMock.mockReset()

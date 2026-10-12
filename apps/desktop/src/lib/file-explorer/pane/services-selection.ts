@@ -6,7 +6,7 @@
  * `apps/desktop/src-tauri/src/services_menu/`.
  */
 
-import type { ServicesSelection } from '$lib/tauri-commands'
+import type { ServicesSelection } from '#lib/tauri-commands/index.js'
 
 /** Where the pane keeps its rows, which decides how a selection can travel. */
 export type PaneRowSource =

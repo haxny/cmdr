@@ -10,7 +10,7 @@
  * Pure: no state, no IPC. `SearchDialog.svelte` owns the state and the actions.
  */
 
-import type { SearchResult, SearchRunCoverage, WalkEnding } from '$lib/tauri-commands'
+import type { SearchResult, SearchRunCoverage, WalkEnding } from '#lib/tauri-commands/index.js'
 
 /**
  * What a LIVE run couldn't cover: the extra half of the answer, once a search walks

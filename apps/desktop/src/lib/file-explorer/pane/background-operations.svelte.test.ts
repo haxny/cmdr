@@ -14,39 +14,39 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { WriteOperationError } from '$lib/file-explorer/types'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
 
-vi.mock('$lib/tauri-commands', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).tauriCommandsMock(),
+vi.mock('#lib/tauri-commands/index.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).tauriCommandsMock(),
 )
-vi.mock('$lib/file-operations/queue/queue-window', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).queueWindowMock(),
+vi.mock('#lib/file-operations/queue/queue-window.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).queueWindowMock(),
 )
-vi.mock('$lib/ui/toast', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).toastMock(),
+vi.mock('#lib/ui/toast/index.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).toastMock(),
 )
-vi.mock('$lib/settings', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).settingsMock(),
+vi.mock('#lib/settings/index.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).settingsMock(),
 )
-vi.mock('$lib/intl/messages.svelte', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).messagesMock(),
+vi.mock('#lib/intl/messages.svelte.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).messagesMock(),
 )
-vi.mock('$lib/logging/logger', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).loggerMock(),
+vi.mock('#lib/logging/logger.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).loggerMock(),
 )
 
 import { createBackgroundOperations, type BackgroundOperationsDeps } from './background-operations.svelte'
-import { listeners, settle, snapshot } from '$lib/file-operations/transfer/test-transfer-progress-harness.svelte'
-import { copyBetweenVolumes, listOperations, trashFiles, deleteFiles } from '$lib/tauri-commands'
-import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
-import QueueHandoffToastContent from '$lib/file-operations/queue/QueueHandoffToastContent.svelte'
-import { addToast } from '$lib/ui/toast'
-import { getForegroundOperationId, isForegroundClaimPending } from '$lib/file-operations/foreground-operation.svelte'
+import { listeners, settle, snapshot } from '#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js'
+import { copyBetweenVolumes, listOperations, trashFiles, deleteFiles } from '#lib/tauri-commands/index.js'
+import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
+import QueueHandoffToastContent from '#lib/file-operations/queue/QueueHandoffToastContent.svelte'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getForegroundOperationId, isForegroundClaimPending } from '#lib/file-operations/foreground-operation.svelte.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
-import { conflictOwner } from '$lib/file-operations/operation-conflict-rules'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
+import { conflictOwner } from '#lib/file-operations/operation-conflict-rules.js'
 import type { TransferProgressPropsData } from './dialog-props'
 import type { FilePaneAPI } from './types'
 

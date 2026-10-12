@@ -9,7 +9,7 @@
  * Fresh→Stale edge the backend emits.
  */
 
-import type { IndexFreshnessChangedEvent } from '$lib/ipc/bindings'
+import type { IndexFreshnessChangedEvent } from '#lib/ipc/bindings.js'
 
 export const staleDriveFixtures: Record<string, ((volumeId: string) => IndexFreshnessChangedEvent) | undefined> = {
   default: (volumeId) => ({ volumeId, freshness: 'stale' }),

@@ -19,9 +19,9 @@
  * Pattern chip to surface a pattern through).
  */
 
-import type { SearchResultEntry, PatternType, SearchQuery, HistoryFilters } from '$lib/tauri-commands'
-import { baseFor } from '$lib/units'
-import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+import type { SearchResultEntry, PatternType, SearchQuery, HistoryFilters } from '#lib/tauri-commands/index.js'
+import { baseFor } from '#lib/units/index.js'
+import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
 
 /**
  * `eq` is a UI/chip-summary concern only: it round-trips through the matcher and history as
@@ -55,7 +55,7 @@ export function typeFilterToIsDirectory(typeFilter: TypeFilter): boolean | null 
  * Size unit. `B` (bytes) was added in round 2 (D10) so the list-style popover can let the
  * user pick a byte-level filter without leaving the popover. The byte unit's label varies
  * between `byte` / `bytes` depending on the selected count (see `byteUnitLabel`); the KB/MB/GB IDs
- * render as KiB/MiB/GiB or kB/MB/GB by the user's binary-vs-SI setting (`unitLabel` in `$lib/units`).
+ * render as KiB/MiB/GiB or kB/MB/GB by the user's binary-vs-SI setting (`unitLabel` in `#lib/units`).
  */
 export type SizeUnit = 'B' | 'KB' | 'MB' | 'GB'
 

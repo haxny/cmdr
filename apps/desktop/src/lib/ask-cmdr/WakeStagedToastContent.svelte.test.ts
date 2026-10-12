@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
 
 const openSuggestedOps = vi.fn(() => Promise.resolve())
-vi.mock('$lib/suggested-ops/suggested-ops-trigger.svelte', () => ({
+vi.mock('#lib/suggested-ops/suggested-ops-trigger.svelte.js', () => ({
   openSuggestedOps: (): Promise<void> => openSuggestedOps(),
 }))
 
@@ -21,7 +21,7 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
 }))
 
 const dismissToast = vi.fn<(id: string) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: (id: string): void => {
     dismissToast(id)
   },

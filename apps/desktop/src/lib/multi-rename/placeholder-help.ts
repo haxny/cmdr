@@ -5,8 +5,8 @@
  * keeps around it too, with the part it takes between the marks, so the tooltip can set that
  * part apart. Counters need no file: their numbers come from the token. Pure.
  */
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { RenameExample } from '$lib/tauri-commands'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { RenameExample } from '#lib/tauri-commands/index.js'
 import { counterKind, counterSamples } from './counter-token'
 import { SAMPLE_FILE, example, examplePieces, marked, type ExamplePiece } from './rename-examples'
 

@@ -1,11 +1,11 @@
 /**
- * Fixtures for the updater's move-to-Applications nudge (`$lib/updates/`).
+ * Fixtures for the updater's move-to-Applications nudge (`#lib/updates/`).
  *
  * The dialog's only content prop is which arrangement is keeping the update out of the bundle,
  * and each value renders a different first paragraph, so both get a state.
  */
 
-import type { BundleWriteBlocker } from '$lib/tauri-commands'
+import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
 
 /** Props of `MoveToApplicationsDialog.svelte`, minus its callback. */
 export interface MoveToApplicationsFixture {

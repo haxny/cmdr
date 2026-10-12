@@ -11,9 +11,9 @@
  * through the frontend.
  */
 
-import { addFavorite } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { addFavorite } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** The last path segment, for a friendly toast label (`/Users/me/Docs` → `Docs`). */
 export function lastPathSegment(path: string): string {

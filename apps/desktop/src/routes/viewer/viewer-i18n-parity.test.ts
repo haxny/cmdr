@@ -16,8 +16,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { t, tString, getMessage } from '$lib/intl/messages.svelte'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { t, tString, getMessage } from '#lib/intl/messages.svelte.js'
 import { mediaKindLabel, viewAsMediaLabel, formatMediaDimensions } from './media-view'
 
 beforeAll(() => {

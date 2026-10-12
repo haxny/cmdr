@@ -5,9 +5,9 @@ const { getVolumesMock, getOptInMock } = vi.hoisted(() => ({
   getOptInMock: vi.fn(),
 }))
 
-vi.mock('$lib/indexing', () => ({ ROOT_VOLUME_ID: 'root' }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: getVolumesMock }))
-vi.mock('$lib/media-index/network-volume-prefs', () => ({ getNetworkOptInVolumes: getOptInMock }))
+vi.mock('#lib/indexing/index.js', () => ({ ROOT_VOLUME_ID: 'root' }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: getVolumesMock }))
+vi.mock('#lib/media-index/network-volume-prefs.js', () => ({ getNetworkOptInVolumes: getOptInMock }))
 
 import { getEnabledMediaIndexVolumeIds } from './enabled-volumes'
 

@@ -57,10 +57,10 @@ import {
   type OperationSnapshot,
   type WriteConflictEvent,
   type WriteConflictResolvedEvent,
-} from '$lib/tauri-commands'
-import type { ConflictResolution } from '$lib/file-explorer/types'
-import { getAppLogger } from '$lib/logging/logger'
-import { isE2eRun } from '$lib/app-mode'
+} from '#lib/tauri-commands/index.js'
+import type { ConflictResolution } from '#lib/file-explorer/types.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { isE2eRun } from '#lib/app-mode.js'
 import { getMainWindowOperationRows } from './queue/main-window-operations.svelte'
 import { isTerminalStatus, type OperationRow } from './queue/operations-store.svelte'
 import { getForegroundOperationId, isForegroundClaimPending } from './foreground-operation.svelte'

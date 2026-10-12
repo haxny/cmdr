@@ -4,9 +4,9 @@ import { closeSelfWindow } from './child-window-close'
 const closeChildWindow = vi.hoisted(() => vi.fn<(label: string) => Promise<void>>())
 const logError = vi.hoisted(() => vi.fn())
 
-vi.mock('$lib/tauri-commands', () => ({ closeChildWindow }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ closeChildWindow }))
 vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ label: 'settings' }) }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ error: logError, debug: vi.fn(), warn: vi.fn(), info: vi.fn() }),
 }))
 

@@ -20,7 +20,7 @@
  * on the "Faster" (levels 1..4) half.
  */
 
-import type { CompressedSizeEstimate } from '$lib/ipc/bindings'
+import type { CompressedSizeEstimate } from '#lib/ipc/bindings.js'
 
 /** Multiplier applied to a class's level-6 bytes, indexed by `level - 1`. */
 const LEVEL_CURVE: Record<'compressible' | 'medium' | 'incompressible', readonly number[]> = {

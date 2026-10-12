@@ -8,7 +8,7 @@
  * the toast surface are all mocked.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { TerminalApp } from '$lib/ipc/bindings'
+import type { TerminalApp } from '#lib/ipc/bindings.js'
 
 // Untyped `vi.fn()`s on purpose: a typed stub of `openTerminalHere` would declare
 // three same-typed positional parameters, which `cmdr/no-confusable-callback-params`
@@ -35,28 +35,28 @@ class FakeOpenTerminalFailure extends Error {
   }
 }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listTerminalApps: m.listTerminalApps,
   openTerminalHere: m.openTerminalHere,
   terminalAppDisplayName: m.terminalAppDisplayName,
   asOpenTerminalError: (error: unknown) => (error instanceof FakeOpenTerminalFailure ? error.failure : null),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: m.addToast, dismissToast: m.dismissToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: m.addToast, dismissToast: m.dismissToast }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => m.settings.get(id),
   setSetting: (id: string, value: unknown) => {
     m.settings.set(id, value)
   },
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: vi.fn(),
   settingAnchorId: (id: string) => `setting-${id}`,
 }))
 
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
 
 import { openTerminalHereForFolder } from './open-terminal-here'
 

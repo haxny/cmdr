@@ -34,7 +34,7 @@ vi.stubGlobal('navigator', {
   },
 })
 
-vi.mock('$lib/shortcuts', async () => ({
+vi.mock('#lib/shortcuts/index.js', async () => ({
   getEffectiveShortcuts: (id: string) => effectiveShortcuts.get(id) ?? [],
   isShortcutModified: (id: string) => modifiedIds.has(id),
   setShortcut: (commandId: string, index: number, shortcut: string) => {
@@ -55,22 +55,23 @@ vi.mock('$lib/shortcuts', async () => ({
   // The REAL capture helper: what the field records is the vocabulary contract
   // itself (typed symbols by character, retyped ⌥ keys by position), and a
   // hand-copied fake here would drift from it. `navigator` follows `macOS` below.
-  capturedKeyCombo: (await vi.importActual<typeof import('$lib/shortcuts/key-capture')>('$lib/shortcuts/key-capture'))
-    .capturedKeyCombo,
+  capturedKeyCombo: (
+    await vi.importActual<typeof import('#lib/shortcuts/key-capture.js')>('#lib/shortcuts/key-capture.js')
+  ).capturedKeyCombo,
   findConflictsForShortcut: (shortcut: string, scope: string, excludeCommandId: string) =>
     findConflictsForShortcut({ shortcut, scope, excludeCommandId }),
   getConflictingCommandIds: () => new Set<string>(),
   getConflictCount: () => 0,
 }))
 
-vi.mock('$lib/commands/command-registry', () => ({
+vi.mock('#lib/commands/command-registry.js', () => ({
   commands: [
     { id: 'app.about', name: 'About Cmdr', scope: 'App' },
     { id: 'file.copy', name: 'Copy', scope: 'Main window/File list' },
   ],
 }))
 
-vi.mock('$lib/commands/fuzzy-search', () => ({
+vi.mock('#lib/commands/fuzzy-search.js', () => ({
   searchAllCommands: (q: string) =>
     [
       { id: 'app.about', name: 'About Cmdr' },
@@ -80,7 +81,7 @@ vi.mock('$lib/commands/fuzzy-search', () => ({
       .map((command) => ({ command })),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: (message: string, title: string) => confirmDialog({ message, title }),
 }))
 

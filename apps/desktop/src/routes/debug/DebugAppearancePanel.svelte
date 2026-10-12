@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
 
     let isDarkMode = $state(true)
 

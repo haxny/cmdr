@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { ExtensionChangePolicy } from '$lib/settings'
+import type { ExtensionChangePolicy } from '#lib/settings/index.js'
 
 const {
   executeRenameSaveSpy,
@@ -39,7 +39,7 @@ const {
   tStringSpy: vi.fn((key: string, _params?: Record<string, string>) => key),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileBeside: vi.fn(),
   getFileRange: vi.fn(),
   refreshListing: vi.fn(),
@@ -48,8 +48,8 @@ vi.mock('$lib/tauri-commands', () => ({
 // Only `validateFilename` is stubbed; the extension-policy tests below hand the
 // spy the real implementation back, because what they're checking IS how the
 // real validator grades an extension change under each policy.
-vi.mock('$lib/utils/filename-validation', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/filename-validation')>()),
+vi.mock('#lib/utils/filename-validation.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/filename-validation.js')>()),
   validateFilename: validateFilenameSpy,
 }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))
@@ -58,9 +58,9 @@ vi.mock('../rename/rename-operations', () => ({
   performRename: vi.fn(),
   checkPermission: checkPermissionSpy,
 }))
-vi.mock('$lib/settings', () => ({ getSetting: getSettingSpy }))
-vi.mock('$lib/ui/toast', () => ({ addToastForPane: vi.fn(), dismissTransientToastsForPane: vi.fn() }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: tStringSpy }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: getSettingSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToastForPane: vi.fn(), dismissTransientToastsForPane: vi.fn() }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: tStringSpy }))
 // Spread the real module: `trash-availability.ts` reaches for
 // `pathCrossesArchiveBoundary` through here too, and a mock that answers for only
 // one export throws when the conflict dialog asks for the other.
@@ -69,13 +69,13 @@ vi.mock('./archive-paths', async (importOriginal) => ({
   pathInsideArchive: pathInsideArchiveSpy,
 }))
 
-import { getFileBeside, getFileRange } from '$lib/tauri-commands'
-import { addToastForPane } from '$lib/ui/toast'
+import { getFileBeside, getFileRange } from '#lib/tauri-commands/index.js'
+import { addToastForPane } from '#lib/ui/toast/index.js'
 import { buildFlow, chainListing, deferred } from './test-rename-flow'
 
 /** The real validator, for the tests that are about how it grades a name. */
-const { validateFilename: gradeName } = await vi.importActual<typeof import('$lib/utils/filename-validation')>(
-  '$lib/utils/filename-validation',
+const { validateFilename: gradeName } = await vi.importActual<typeof import('#lib/utils/filename-validation.js')>(
+  '#lib/utils/filename-validation.js',
 )
 
 /** `[file being renamed, name it is being given]` for every save the flow sent. */

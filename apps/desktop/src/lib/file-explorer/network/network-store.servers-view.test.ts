@@ -10,7 +10,7 @@ const { ipc } = vi.hoisted(() => ({
     setServersViewShown: vi.fn(() => Promise.resolve()),
   },
 }))
-vi.mock('$lib/tauri-commands', () => ipc)
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
 
 import { holdDiscoveryForServersView } from './network-store.svelte'
 

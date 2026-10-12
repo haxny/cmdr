@@ -9,10 +9,10 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { OpKind } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { OpKind } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
   type RollbackConfirmVariant,
   rollbackConfirmVariant,

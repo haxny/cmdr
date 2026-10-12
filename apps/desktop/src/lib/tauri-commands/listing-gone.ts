@@ -6,8 +6,8 @@
  * that listing can re-list instead of serving stale rows to every later command.
  * The listener that acts on it is `file-explorer/pane/listing-liveness.ts`.
  */
-import type { ListingLookupError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { ListingLookupError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** A typed listing refusal, preserved across the throw for revision-aware callers. */
 export class ListingLookupFailure extends TypedFailure<ListingLookupError> {

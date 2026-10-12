@@ -25,8 +25,8 @@
  * results in a `$derived` at the call site.
  */
 
-import type { SearchResultEntry, SortColumn, SortOrder } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
+import type { SearchResultEntry, SortColumn, SortOrder } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** Maximum entries we keep in a single snapshot. Excess matches are truncated. */
 export const SNAPSHOT_ENTRIES_CAP = 10_000

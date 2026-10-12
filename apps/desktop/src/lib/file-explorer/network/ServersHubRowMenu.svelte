@@ -6,12 +6,12 @@
      * pick does are `servers-hub-actions.ts`'s; this is the surface.
      */
     import { onDestroy } from 'svelte'
-    import Menu from '$lib/ui/Menu.svelte'
-    import { createMenu } from '$lib/ui/menu-controller.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
+    import { createMenu } from '#lib/ui/menu-controller.svelte.js'
     import { rowMenuSections, type RowMenuEntry } from '../navigation/row-menu'
     import type { HubActions } from './servers-hub-actions'
     import type { HubRow } from './servers-hub-rows'
-    import type { MenuAnchor } from '$lib/tauri-commands/file-actions'
+    import type { MenuAnchor } from '#lib/tauri-commands/file-actions.js'
 
     interface Props {
         actions: HubActions

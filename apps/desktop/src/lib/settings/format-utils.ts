@@ -3,12 +3,12 @@
  * Pure: the reactive wrappers live in `reactive-settings.svelte.ts`.
  *
  * Sizes, transfer rates, and durations are NOT here — they live in
- * `$lib/units`, the one place a byte count becomes text.
+ * `#lib/units`, the one place a byte count becomes text.
  */
 
 import type { DateTimeFormat } from './types'
 import { tierForYear, tierForMonth, tierForDay, tierForTime, type AgeTierClass } from './age-tier-utils'
-import { getFormatLocale } from '$lib/intl/locale'
+import { getFormatLocale } from '#lib/intl/locale.js'
 
 /**
  * One rendered fragment of a formatted date. Components carry the age-tier

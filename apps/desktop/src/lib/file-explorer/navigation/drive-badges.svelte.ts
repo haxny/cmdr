@@ -18,11 +18,11 @@ import {
   mediaIndexVolumeState,
   rescanDriveIndex,
   type MediaIndexVolumeState,
-} from '$lib/tauri-commands'
-import type { DriveIndexRefusal, VolumeIndexStatus } from '$lib/ipc/bindings'
-import { getEnrichingVolumes } from '$lib/indexing/media-enrich-state.svelte'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+} from '#lib/tauri-commands/index.js'
+import type { DriveIndexRefusal, VolumeIndexStatus } from '#lib/ipc/bindings.js'
+import { getEnrichingVolumes } from '#lib/indexing/media-enrich-state.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { createDriveIndexManager, isDriveRow } from './drive-index-manager.svelte'
 import { driveIndexActionFeedback, driveIndexRefusalMessageKey, type DriveIndexMenuAction } from './drive-index-status'
 import { connectDirectlyToRow } from './connect-directly-row'

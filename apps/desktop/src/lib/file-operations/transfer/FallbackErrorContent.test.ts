@@ -5,13 +5,13 @@
  * `WriteOperationError`, and for the `files_too_large_for_filesystem` (FAT32
  * 4 GiB cap) variant it additionally lists the offending files and an "and N
  * more" line when the backend capped the list. These tests render the real
- * component (real i18n catalog + `$lib/units`) across those branches.
+ * component (real i18n catalog + `#lib/units`) across those branches.
  */
 
 import { describe, expect, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import FallbackErrorContent from './FallbackErrorContent.svelte'
-import type { WriteOperationError } from '$lib/file-explorer/types'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
 
 function mountFallback(error: WriteOperationError, operationType: 'copy' | 'move' | 'delete' | 'trash' = 'copy') {
   const target = document.createElement('div')

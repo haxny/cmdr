@@ -6,8 +6,8 @@
 -->
 <script lang="ts">
     import { dismissToast } from './toast-store.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
     interface Props {
         toastId: string

@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { DeviceReadiness } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { DeviceReadiness } from '#lib/ipc/bindings.js'
 import { deviceRowState } from './device-readiness'
 
 describe('deviceRowState', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { describeVolume, resolveSearchTargetVolume } from './search-target-volume'
 
 function vol(overrides: Partial<VolumeInfo> & Pick<VolumeInfo, 'id' | 'path' | 'category'>): VolumeInfo {

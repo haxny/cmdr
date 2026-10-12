@@ -10,15 +10,15 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import BriefList from './BriefList.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { FileEntry } from '../types'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(() => Promise.resolve([] as FileEntry[])),
   getDirStatsBatch: vi.fn(() => Promise.resolve({})),
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => undefined,
@@ -29,13 +29,13 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   isVolumeScanning: () => false,
   isVolumeAggregating: () => false,
   getWalkedGround: () => [],
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getRowHeight: () => 20,
   getIsCompactDensity: () => false,
   getIsCmdrGold: () => false,
@@ -52,7 +52,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
   getBriefColumnWidthMaxPx: () => 400,
 }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: (key: string) => {
     if (key === 'advanced.virtualizationBufferColumns') return 2
     return undefined
@@ -128,7 +128,7 @@ describe('BriefList a11y', () => {
         extendedMetadataLoaded: false,
       },
     ]
-    const { getFileRange } = await import('$lib/tauri-commands')
+    const { getFileRange } = await import('#lib/tauri-commands/index.js')
     vi.mocked(getFileRange).mockResolvedValue(mockEntries)
 
     const target = document.createElement('div')

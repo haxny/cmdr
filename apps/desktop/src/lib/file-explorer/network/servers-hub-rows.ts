@@ -21,10 +21,10 @@
  * save (cmdr-reports#7). The server row itself has no place to act on.
  */
 
-import type { ServerProtocol } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
-import { parseServerPath } from '$lib/servers/server-path-utils'
-import type { SavedPlace, SavedServer } from '$lib/tauri-commands'
+import type { ServerProtocol } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { parseServerPath } from '#lib/servers/server-path-utils.js'
+import type { SavedPlace, SavedServer } from '#lib/tauri-commands/index.js'
 import type { ConnectionState, NetworkHost, VolumeInfo } from '../types'
 import { signedInAsOfMount, signedInAsUser, type SignedInAs } from './signed-in-as'
 

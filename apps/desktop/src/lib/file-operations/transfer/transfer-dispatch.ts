@@ -22,7 +22,7 @@ import {
   trashFiles,
   DEFAULT_VOLUME_ID,
   type Initiator,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { emit } from '@tauri-apps/api/event'
 import type {
   ConflictResolution,
@@ -30,12 +30,12 @@ import type {
   SortOrder,
   TransferOperationType,
   WriteOperationError,
-} from '$lib/file-explorer/types'
-import { getSetting } from '$lib/settings'
-import { pathCrossesArchiveBoundary, pathInsideArchive } from '$lib/file-explorer/pane/archive-paths'
-import type { SpaceShortfall } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
+} from '#lib/file-explorer/types.js'
+import { getSetting } from '#lib/settings/index.js'
+import { pathCrossesArchiveBoundary, pathInsideArchive } from '#lib/file-explorer/pane/archive-paths.js'
+import type { SpaceShortfall } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 
 const log = getAppLogger('transferProgress')
 

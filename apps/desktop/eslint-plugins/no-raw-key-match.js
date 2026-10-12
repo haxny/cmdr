@@ -9,7 +9,7 @@
  *   eventMatchesCommand(e, 'selection.selectAll')   // exact, and follows a rebind
  *   comboMatchesCommand(combo, 'nav.down')          // same, for a pre-formatted combo
  *
- * Both live in `$lib/shortcuts`. In a window with no command registry (the viewer),
+ * Both live in `#lib/shortcuts`. In a window with no command registry (the viewer),
  * match locally but split on "carries ⌘/⌃/⌥" up front so a bare key can never be
  * reached by a modified one.
  *
@@ -236,7 +236,7 @@ export default {
         'Hand-rolled key combo: `{{ modifier }}` is required alongside a literal key test. That is a modifier ' +
         'SUPERSET, so a longer combo (⌥⌘A vs ⌘A) also matches and fires this handler on its way elsewhere. Match ' +
         'the whole combo with `eventMatchesCommand(event, commandId)` (or `comboMatchesCommand`) from ' +
-        '`$lib/shortcuts`, which is exact and follows a rebind. See `src/lib/shortcuts/CLAUDE.md`.',
+        '`#lib/shortcuts`, which is exact and follows a rebind. See `src/lib/shortcuts/CLAUDE.md`.',
       missingReason:
         'Explain the opt-out: write `// eslint-disable-next-line ' +
         RULE_NAME +

@@ -32,8 +32,8 @@
     } from './index-state.svelte'
     import { isNetworkIndexRun } from './index-run-kind'
     import IndexingStatusBody from './IndexingStatusBody.svelte'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         activity: VolumeIndexActivity

@@ -1,12 +1,17 @@
 // macOS custom-updater commands: check / download / install, preserving TCC /
 // Full Disk Access by syncing files into the existing `.app` bundle (see
-// `$lib/updates/updater.svelte.ts` for the full flow, including the non-macOS
+// `#lib/updates/updater.svelte.ts` for the full flow, including the non-macOS
 // Tauri-plugin fallback). Plus the cross-platform background-check schedule.
 
-import { commands, type BundleWriteBlocker, type UpdateCheckOutcome, type UpdateCheckTrigger } from '$lib/ipc/bindings'
-import { throwServerRequestError } from '$lib/error-messages/server-request'
-import { UpdateDownloadFailure } from '$lib/updates/update-download-failure'
-import { UpdateInstallFailure } from '$lib/updates/update-install-failure'
+import {
+  commands,
+  type BundleWriteBlocker,
+  type UpdateCheckOutcome,
+  type UpdateCheckTrigger,
+} from '#lib/ipc/bindings.js'
+import { throwServerRequestError } from '#lib/error-messages/server-request.js'
+import { UpdateDownloadFailure } from '#lib/updates/update-download-failure.js'
+import { UpdateInstallFailure } from '#lib/updates/update-install-failure.js'
 import { throwIpcError } from './ipc-types'
 
 export type { BundleWriteBlocker, UpdateCheckOutcome, UpdateCheckTrigger }

@@ -4,7 +4,7 @@ import {
   decrementRef as decrementSnapshotRef,
   incrementRef as incrementSnapshotRef,
   snapshotIdFromPanePath,
-} from '$lib/search/snapshot-store.svelte'
+} from '#lib/search/snapshot-store.svelte.js'
 
 export const MAX_TABS_PER_PANE = 10
 

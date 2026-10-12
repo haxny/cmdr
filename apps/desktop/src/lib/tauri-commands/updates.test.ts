@@ -5,12 +5,12 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { checkForUpdate: vi.fn() },
 }))
 
-import { commands } from '$lib/ipc/bindings'
-import { serverRequestFailureOf } from '$lib/error-messages/server-request'
+import { commands } from '#lib/ipc/bindings.js'
+import { serverRequestFailureOf } from '#lib/error-messages/server-request.js'
 import { checkForUpdate } from './updates'
 
 describe('checkForUpdate', () => {

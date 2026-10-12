@@ -8,7 +8,7 @@
  *   in `src-tauri/src/file_system/write_operations/eta.rs`), rendered through
  *   the `fileOperations.shared.byteRate` catalog phrasing over a `<Size>`
  *   (the per-second marker is user-facing copy, so it lives in the catalog;
- *   `$lib/units` owns the number). The frontend does NOT compute a second,
+ *   `#lib/units` owns the number). The frontend does NOT compute a second,
  *   instantaneous rate for the active phase. The one frontend-computed rate is
  *   `ScanThroughput`, which covers the SCAN phase only, where the backend emits
  *   no rate at all; its readout is labelled as counting progress, never as
@@ -25,9 +25,9 @@
  * `queue/operations-store.svelte.ts` (the operation queue window).
  */
 
-import { bytes, bytesPerSecond, seconds, type ByteCount, type BytesPerSecond, type Seconds } from '$lib/units'
-import type { OpKind, ProgressStep, WriteOperationPhase } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { bytes, bytesPerSecond, seconds, type ByteCount, type BytesPerSecond, type Seconds } from '#lib/units/index.js'
+import type { OpKind, ProgressStep, WriteOperationPhase } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** Phases with active work but no honest denominator. Every progress surface
  * uses this one classifier so none falls back to a stale 100% bar. */

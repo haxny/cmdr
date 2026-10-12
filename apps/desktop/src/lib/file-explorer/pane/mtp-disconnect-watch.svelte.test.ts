@@ -17,7 +17,7 @@ const { ipc } = vi.hoisted<{ ipc: { onMtpDeviceDisconnected: Mock } }>(() => ({
   ipc: { onMtpDeviceDisconnected: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ onMtpDeviceDisconnected: ipc.onMtpDeviceDisconnected }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ onMtpDeviceDisconnected: ipc.onMtpDeviceDisconnected }))
 
 import { createMtpDisconnectWatch } from './mtp-disconnect-watch.svelte'
 

@@ -5,10 +5,10 @@
   mini-charts zoom together.
 -->
 <script lang="ts">
-    import type { DownloadRow } from '$lib/server/sources/cloudflare.js'
-    import { aggregateBy, buildTimeline, maxDailyAcrossGroups } from '$lib/chart-helpers.js'
-    import { formatNumber, formatCountry } from '$lib/format.js'
-    import MiniTimeline from '$lib/components/MiniTimeline.svelte'
+    import type { DownloadRow } from '#lib/server/sources/cloudflare.js'
+    import { aggregateBy, buildTimeline, maxDailyAcrossGroups } from '#lib/chart-helpers.js'
+    import { formatNumber, formatCountry } from '#lib/format.js'
+    import MiniTimeline from '#lib/components/MiniTimeline.svelte'
 
     const {
         downloads,

@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     addFavorite: vi.fn(),
     removeFavorite: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { addFavorite, removeFavorite, renameFavorite, reorderFavorites, stripFavoritePrefix } from './favorites'
 
 const ok = { status: 'ok' as const, data: null }

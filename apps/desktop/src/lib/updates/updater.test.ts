@@ -31,12 +31,12 @@ const {
   pluginCheckMock: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
   dismissToast: dismissToastMock,
 }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
   forceSave: forceSaveMock,
@@ -58,7 +58,7 @@ vi.mock('@tauri-apps/plugin-updater', () => ({
   check: pluginCheckMock,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     debug: () => {},
     info: () => {},

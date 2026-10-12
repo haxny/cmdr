@@ -13,7 +13,7 @@
  * `FilePane`. Sibling of `selection-dialog-keys.ts` (the `+` / `-` classifier).
  */
 
-import { eventMatchesCommand } from '$lib/shortcuts'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 export type SelectionKeyCommand =
   | 'selection.toggle'

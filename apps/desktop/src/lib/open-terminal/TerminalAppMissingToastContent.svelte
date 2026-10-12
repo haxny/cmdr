@@ -9,9 +9,9 @@
      * bundle id this version doesn't know). The unnamed wording covers that; ❌
      * never show the bundle id, which reads like a name and isn't one.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToTerminalApp } from './terminal-app-setting'
 
     interface Props {

@@ -1,7 +1,7 @@
 /**
- * Client-safe pure helpers for the "Daily funnel" section. Lives outside `$lib/server` so both the
+ * Client-safe pure helpers for the "Daily funnel" section. Lives outside `#lib/server` so both the
  * page (client bundle) and the server source/report code can import them; the server-only fetching
- * lives in `$lib/server/sources/funnel.ts`, which re-exports these.
+ * lives in `#lib/server/sources/funnel.ts`, which re-exports these.
  */
 
 /** One entry in a ranked breakdown: a key (ref or referer host) and its total download count. */

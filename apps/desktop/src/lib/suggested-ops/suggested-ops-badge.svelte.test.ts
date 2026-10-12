@@ -8,7 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SuggestedSweepView, SuggestionsChanged } from '$lib/tauri-commands'
+import type { SuggestedSweepView, SuggestionsChanged } from '#lib/tauri-commands/index.js'
 
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const listenMock = vi.fn<(cb: (p: SuggestionsChanged) => void) => Promise<() => void>>()
@@ -17,11 +17,11 @@ const unlistenMock = vi.fn()
 /** The subscriber the module handed us, so a test can push an event at it. */
 let emit: ((payload: SuggestionsChanged) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listSuggestedOps: () => listMock(),
   onSuggestionsChanged: (cb: (p: SuggestionsChanged) => void) => listenMock(cb),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

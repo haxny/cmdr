@@ -47,7 +47,7 @@
  * Writers are enumerated in this module's colocated `pane/CLAUDE.md` (A2).
  */
 
-import { DEFAULT_VOLUME_ID } from '$lib/tauri-commands'
+import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
 import { createTabManager, type TabManager } from '../tabs/tab-state-manager.svelte'
 import { createInitialTabState } from './tab-operations'
 

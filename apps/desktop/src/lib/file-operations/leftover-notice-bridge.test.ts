@@ -3,17 +3,17 @@
  * drive comes back holding the working folder of a move that never finished.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { MoveLeftoversKeptEvent } from '$lib/ipc/bindings'
+import type { MoveLeftoversKeptEvent } from '#lib/ipc/bindings.js'
 
 /** Only the fields these cells assert on; the real options type is wider. */
 type ToastOptions = { level: string; timeoutMs: number; id: string }
 
 const addToast = vi.hoisted(() => vi.fn<(message: string, options: ToastOptions) => string>())
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 
 let emitKept: (payload: MoveLeftoversKeptEvent) => void
 const unlisten = vi.fn()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onMoveLeftoversKept: (handler: (payload: MoveLeftoversKeptEvent) => void) => {
     emitKept = handler
     return Promise.resolve(unlisten)

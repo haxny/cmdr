@@ -1,23 +1,23 @@
 <script lang="ts">
     import { onDestroy, untrack } from 'svelte'
     import SettingRow from '../components/SettingRow.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ProviderSetupSteps from '$lib/ai-provider-setup/ProviderSetupSteps.svelte'
-    import { ProviderSetupController } from '$lib/ai-provider-setup/provider-setup.svelte'
-    import { followPresetHostVerdicts } from '$lib/ai-provider-setup/preset-hosts.svelte'
-    import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
-    import { getSetting, setSetting, onSpecificSettingChange, cloudProviderPresets } from '$lib/settings'
-    import { pushConfigToBackend } from '$lib/settings/ai-config'
+    import Button from '#lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ProviderSetupSteps from '#lib/ai-provider-setup/ProviderSetupSteps.svelte'
+    import { ProviderSetupController } from '#lib/ai-provider-setup/provider-setup.svelte.js'
+    import { followPresetHostVerdicts } from '#lib/ai-provider-setup/preset-hosts.svelte.js'
+    import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
+    import { getSetting, setSetting, onSpecificSettingChange, cloudProviderPresets } from '#lib/settings/index.js'
+    import { pushConfigToBackend } from '#lib/settings/ai-config.js'
     import type { SecretErrorMessage } from './ai-secret-error'
-    import { addToast, dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     /**
      * Settings › AI › Provider. The service picker, then the SAME numbered setup steps the
-     * onboarding wizard shows (`$lib/ai-provider-setup/`), then the connection status.
+     * onboarding wizard shows (`#lib/ai-provider-setup/`), then the connection status.
      *
      * Everything stateful (key persist, connection check, model cache, provider-switch race
      * guards) lives in the shared controller; this file owns the settings chrome: the

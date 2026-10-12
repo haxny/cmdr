@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { getOnboardingState, resetForTesting, setCurrentStep } from '$lib/onboarding/onboarding-state.svelte'
+import { getOnboardingState, resetForTesting, setCurrentStep } from '#lib/onboarding/onboarding-state.svelte.js'
 import { openOnboardingPreview } from './onboarding-preview'
 import { onboardingFixtures } from './fixtures/onboarding'
 import { getOpenGalleryDialog, openGalleryDialog } from './gallery-state.svelte'

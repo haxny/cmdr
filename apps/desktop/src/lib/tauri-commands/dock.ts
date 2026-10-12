@@ -1,8 +1,8 @@
 // macOS Dock (whether Cmdr may be offered a tile, and putting it there)
 
-import { commands } from '$lib/ipc/bindings'
-import type { DockPinFailure, DockPinState } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
+import { commands } from '#lib/ipc/bindings.js'
+import type { DockPinFailure, DockPinState } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('dock')
 

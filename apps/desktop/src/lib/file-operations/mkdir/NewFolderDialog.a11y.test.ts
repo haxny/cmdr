@@ -9,9 +9,9 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import NewFolderDialog from './NewFolderDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   createDirectory: vi.fn(() => Promise.resolve()),

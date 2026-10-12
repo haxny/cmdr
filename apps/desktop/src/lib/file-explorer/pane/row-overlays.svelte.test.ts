@@ -36,7 +36,7 @@ const { ipc } = vi.hoisted<{
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getSyncStatus: ipc.getSyncStatus,
   mediaIndexFileStatus: ipc.mediaIndexFileStatus,
   mediaIndexFolderCoverage: ipc.mediaIndexFolderCoverage,
@@ -46,7 +46,7 @@ vi.mock('$lib/tauri-commands', () => ({
 
 // The two reactive settings getters are backed by module-level `$state` so a
 // test can flip a toggle and see the factory's `$derived` gates re-run.
-vi.mock('$lib/settings/reactive-settings.svelte', async () => await import('./test-media-index-settings.svelte'))
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () => await import('./test-media-index-settings.svelte'))
 
 import { createRowOverlays, type RowOverlays } from './row-overlays.svelte'
 import {

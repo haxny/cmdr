@@ -1,10 +1,10 @@
 <script lang="ts">
     import { tick, type Snippet } from 'svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { AttachEmail } from './attach-email.svelte'
 
     /**
@@ -66,7 +66,7 @@
         // Imported lazily for the reason `ShortcutChip` does it: this control renders in the
         // crash-report dialog, and a static import would drag the settings window's Tauri
         // surface into all three dialogs' module graphs at eval time.
-        const { openSettingsWindow, settingAnchorId } = await import('$lib/settings/settings-window')
+        const { openSettingsWindow, settingAnchorId } = await import('#lib/settings/settings-window.js')
         // The section path is `analytics.email`'s registered home, asserted in
         // `settings-registry.test.ts`.
         await openSettingsWindow('attach-email', ['Updates & privacy'], settingAnchorId('analytics.email'))

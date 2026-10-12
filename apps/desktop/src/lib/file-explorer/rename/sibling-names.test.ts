@@ -8,9 +8,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({ getFileRange: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ getFileRange: vi.fn() }))
 
-import { getFileRange } from '$lib/tauri-commands'
+import { getFileRange } from '#lib/tauri-commands/index.js'
 import { createSiblingNames, type ListingScope } from './sibling-names'
 
 const DIR: ListingScope = { listingId: 'lst-1', includeHidden: false, parentPath: '/dir', totalCount: 3 }

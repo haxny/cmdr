@@ -24,18 +24,18 @@
      * has to be the root or under it. Empty means the root.
      */
     import { open as openFilePicker } from '@tauri-apps/plugin-dialog'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import ToggleGroup, { type ToggleGroupOption } from '$lib/ui/ToggleGroup.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import type { ServerProtocol } from '$lib/ipc/bindings'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import ToggleGroup, { type ToggleGroupOption } from '#lib/ui/ToggleGroup.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import type { ServerProtocol } from '#lib/ipc/bindings.js'
     import type { ServerForm } from './server-form'
     import type { S3FormFields } from './s3-form'
-    import type { MessageKey } from '$lib/intl/keys.gen'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import S3EndpointFields from './S3EndpointFields.svelte'
 
     /** A made-up access key ID in AWS's shape, for the placeholder. AWS's own documentation example. */

@@ -7,7 +7,7 @@
 // buckets plus the account root) and every connect outcome:
 // `crates/cmdr-s3/DETAILS.md`.
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import type {
   ClashPlan,
   CostEstimate,
@@ -16,8 +16,8 @@ import type {
   S3ProviderChoice,
   S3UnattendedReconnect,
   SavedS3Place,
-} from '$lib/ipc/bindings'
-import { throwKeychainError } from '$lib/servers/keychain-failure'
+} from '#lib/ipc/bindings.js'
+import { throwKeychainError } from '#lib/servers/keychain-failure.js'
 
 export type {
   ClashPlan,

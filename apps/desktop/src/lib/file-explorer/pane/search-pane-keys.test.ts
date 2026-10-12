@@ -11,20 +11,20 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 const { computeSpy, openFileViewerSpy, openInEditorSpy, addToastSpy } = vi.hoisted(() => ({
   computeSpy: vi.fn(),
   openFileViewerSpy: vi.fn(),
-  // `$lib/text-editor` reads the report, so a plain open has to come back as one.
+  // `#lib/text-editor` reads the report, so a plain open has to come back as one.
   openInEditorSpy: vi.fn(() => Promise.resolve({ outcome: 'opened', openedInName: null, otherEditorsInstalled: null })),
   addToastSpy: vi.fn(),
 }))
 
 vi.mock('./search-results-keys', () => ({ computeSearchPaneKeyAction: computeSpy }))
-vi.mock('$lib/file-viewer/open-viewer', () => ({ openFileViewer: openFileViewerSpy }))
-vi.mock('$lib/tauri-commands', () => ({ openInEditor: openInEditorSpy }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({ openFileViewer: openFileViewerSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openInEditor: openInEditorSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
 // An empty volume list: the edit gate classifies the ids below off their shape alone.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 // The system default editor, with the one-time hint already spent, so F4 launches
-// plainly and the hint's own rules stay `$lib/text-editor`'s to test.
-vi.mock('$lib/settings', () => ({
+// plainly and the hint's own rules stay `#lib/text-editor`'s to test.
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => (id === 'behavior.textEditorHintSeen' ? true : undefined),
   setSetting: vi.fn(),
 }))

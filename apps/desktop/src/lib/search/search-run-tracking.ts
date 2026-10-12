@@ -17,7 +17,7 @@
  *     for it is coming, so the next run starting is the one moment it can be counted.
  */
 
-import { trackEvent, type SearchResult, type SearchRunCoverage } from '$lib/tauri-commands'
+import { trackEvent, type SearchResult, type SearchRunCoverage } from '#lib/tauri-commands/index.js'
 import { endingOf, searchUsedProps, type SearchCta, type SearchRunFacts } from './search-analytics'
 import { getMode } from './search-state.svelte'
 

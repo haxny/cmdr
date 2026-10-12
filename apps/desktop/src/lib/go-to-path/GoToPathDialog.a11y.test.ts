@@ -5,20 +5,20 @@
 
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { getRecentPathsListMock, resolveGoToPathMock } = vi.hoisted(() => ({
   getRecentPathsListMock: vi.fn(() => [] as { id: string; path: string; timestamp: number }[]),
   resolveGoToPathMock: vi.fn(() => Promise.resolve({ status: 'ok', data: { kind: 'invalid', reason: 'empty' } })),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   readClipboardText: vi.fn(() => Promise.resolve(null)),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { resolveGoToPath: resolveGoToPathMock },
 }))
 

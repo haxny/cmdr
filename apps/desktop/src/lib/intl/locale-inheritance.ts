@@ -27,7 +27,7 @@
  * knows that `zh` alone is Simplified, `zh-Hant` is Traditional, and so is
  * `zh-TW` even though it names no script.
  *
- * ❌ Keep this module dependency-free (no `$lib` alias, no DOM, no Svelte runes):
+ * ❌ Keep this module dependency-free (no `#lib` alias, no DOM, no Svelte runes):
  * the build scripts import it directly under bare Node, which resolves neither
  * the alias nor anything the bundler would normally hand us.
  */

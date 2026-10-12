@@ -12,18 +12,18 @@ import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 
 import QuickLookHintToastContent from './QuickLookHintToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { dismissToast } from '$lib/ui/toast'
-import { setSetting } from '$lib/settings'
-import { openShortcutCustomization } from '$lib/settings/settings-window'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { dismissToast } from '#lib/ui/toast/index.js'
+import { setSetting } from '#lib/settings/index.js'
+import { openShortcutCustomization } from '#lib/settings/settings-window.js'
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: vi.fn(),
 }))
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openShortcutCustomization: vi.fn(() => Promise.resolve()),
 }))
 

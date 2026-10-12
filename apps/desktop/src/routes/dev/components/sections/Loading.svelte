@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import LoadingIcon from '$lib/ui/LoadingIcon.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import LoadingIcon from '#lib/ui/LoadingIcon.svelte'
 </script>
 
 <SectionCard id="components-loading" label="Loading">

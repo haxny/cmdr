@@ -32,7 +32,7 @@ for the real-folder ids (`special:*` / `pkg:*` / `path:*`), keyed by folder mtim
 `clear_directory_icon_cache` drops the keys macOS appearance-tints (`dir`, `symlink-dir`, `path:*`, `pkg:*`,
 `special:*`) plus the whole disk cache, on a theme/accent change.
 
-**Gotcha: changing how a BOUNDED icon is produced needs a `CACHE_SCHEMA` bump** (`$lib/icon-cache`). Those keys persist
+**Gotcha: changing how a BOUNDED icon is produced needs a `CACHE_SCHEMA` bump** (`#lib/icon-cache`). Those keys persist
 to localStorage and are refetched only on a miss, so an install that already ran the old build keeps serving the old
 pixels forever — the fix ships, nothing moves on screen, and it reads as the fix not working. It bit the `dir`-sampling
 fix below: the backend was correct, every machine still drew the house. The stamp lives in the persisted envelope

@@ -31,7 +31,7 @@ Which app F4 opens a file in, and everything said around that launch. Backend co
 - **One toast id, `text-editor`, dismissed before every add**, ❌ never a one-slot `toastGroup`: a group full of
   persistent toasts drops the incoming one (`open-terminal/DETAILS.md` § The toasts).
 - **Keep `text-editor-choice.ts` import-free**, so `settings/sections/` can import it without a cycle through
-  `$lib/settings` (`import-cycles`).
+  `#lib/settings` (`import-cycles`).
 - **Read both settings before the first `await`** in `openFileInEditor`: two dispatch tests assert the `openInEditor`
   call synchronously after the key press.
 

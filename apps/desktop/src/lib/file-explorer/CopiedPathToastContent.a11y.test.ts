@@ -7,9 +7,9 @@
 
 import { describe, it, beforeAll, afterAll } from 'vitest'
 import { mount, tick } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import CopiedPathToastContent from './CopiedPathToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

@@ -113,7 +113,7 @@ few seconds one directory buys. Measure the directory in isolation and read the 
   `apps/desktop/src/lib/ipc/test-helpers.ts`
 - **Frontend component logic**: vitest + svelte-testing-library in `*.test.ts`
 - **A component that sizes itself from its container** (either file-list view, `PlacesBrowser`, `ServersHub`):
-  `installLayoutMock()` from `$lib/test-layout`, and for `FullList` the ready-made `mountFullList()`. **Never** assert
+  `installLayoutMock()` from `#lib/test-layout`, and for `FullList` the ready-made `mountFullList()`. **Never** assert
   on rows without one — see § "A component that measures itself, rendering nothing"
 - **Component-level a11y (ARIA, labels, focus order)**: tier-3 a11y test in `*.a11y.test.ts`
 - **Keyboard shortcut opens a dialog**: E2E spec, use `dispatchMenuCommand(tauriPage, 'file.copy')`. **Never** synthetic
@@ -641,7 +641,7 @@ proves nothing. Pair every "writes nothing" assertion with a "visited everything
 ### ❌ A component that measures itself, rendering nothing
 
 **The rule:** a component that sizes itself from its container needs a viewport before any assertion about its contents
-means anything. Give it one with `installLayoutMock()` (`$lib/test-layout`), and assert the rows you expect are ON
+means anything. Give it one with `installLayoutMock()` (`#lib/test-layout`), and assert the rows you expect are ON
 SCREEN before asserting something isn't on them.
 
 **Why:** happy-dom has no layout engine, so `clientHeight` is `0` for every element. `FullList` and `BriefList` feed

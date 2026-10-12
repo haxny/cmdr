@@ -1,14 +1,14 @@
 <script lang="ts">
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { isInstantOperation, type OperationRow } from './operations-store.svelte'
     import { operationTypeIcon } from './operation-icon'
     import { failureIncidentFor, failureReasonFor } from './failure-reason'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import ScanPhaseBody from '../transfer/ScanPhaseBody.svelte'
@@ -23,9 +23,9 @@
     } from '../reversal-wording'
     import { opKindForWireType } from '../op-kind'
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
-    import { requestForegroundOperation, retryFailedOperation } from '$lib/tauri-commands'
+    import { requestForegroundOperation, retryFailedOperation } from '#lib/tauri-commands/index.js'
     import { offersRetry } from '../transfer/transfer-error-messages'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { getAppLogger } from '#lib/logging/logger.js'
 
     const log = getAppLogger('queue')
 

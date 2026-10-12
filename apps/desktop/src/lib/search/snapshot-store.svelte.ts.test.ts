@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import {
   _resetForTesting,
   decrementRef,

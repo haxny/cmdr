@@ -4,8 +4,8 @@
  * except for the actual backend calls which are awaited.
  */
 
-import { extensionChangeNeedsConfirmation, getExtension } from '$lib/utils/filename-validation'
-import { tString } from '$lib/intl/messages.svelte'
+import { extensionChangeNeedsConfirmation, getExtension } from '#lib/utils/filename-validation.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export interface ConflictFileInfo {
   name: string
@@ -15,12 +15,17 @@ export interface ConflictFileInfo {
 }
 
 export type RenameConflictResolution = 'overwrite-trash' | 'overwrite-delete' | 'cancel' | 'continue'
-import { checkRenamePermission, checkRenameValidity, renameFile, type RenameValidityResult } from '$lib/tauri-commands'
-import { asMutationError } from '$lib/file-operations/mutation-error'
-import { renderMutationError } from '$lib/file-operations/mutation-error-messages'
-import { getAppLogger } from '$lib/logging/logger'
+import {
+  checkRenamePermission,
+  checkRenameValidity,
+  renameFile,
+  type RenameValidityResult,
+} from '#lib/tauri-commands/index.js'
+import { asMutationError } from '#lib/file-operations/mutation-error.js'
+import { renderMutationError } from '#lib/file-operations/mutation-error-messages.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { RenameTarget } from './rename-state.svelte'
-import type { ExtensionChangePolicy } from '$lib/settings'
+import type { ExtensionChangePolicy } from '#lib/settings/index.js'
 
 const log = getAppLogger('rename')
 

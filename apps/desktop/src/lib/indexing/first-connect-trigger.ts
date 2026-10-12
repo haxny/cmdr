@@ -13,11 +13,11 @@
 // drops every volume no drive index can serve (a server, a view inside a drive)
 // on the typed `canBeIndexed` capability.
 
-import { addToast, dismissToast, getToasts } from '$lib/ui/toast'
-import { getVolumeIndexStatusById } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { getAppLogger } from '$lib/logging/logger'
-import { answersNow, type VolumePresence } from '$lib/file-explorer/navigation/connection-state'
+import { addToast, dismissToast, getToasts } from '#lib/ui/toast/index.js'
+import { getVolumeIndexStatusById } from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { answersNow, type VolumePresence } from '#lib/file-explorer/navigation/connection-state.js'
 import { isDriveSilenced } from './drive-index-prefs'
 import FirstConnectIndexToastContent from './FirstConnectIndexToastContent.svelte'
 

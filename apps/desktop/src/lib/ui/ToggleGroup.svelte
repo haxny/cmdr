@@ -47,7 +47,7 @@
      * way in both modes.
      */
     import { ToggleGroup as ArkToggleGroup } from '@ark-ui/svelte/toggle-group'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import Icon from './Icon.svelte'
 
     interface Props {

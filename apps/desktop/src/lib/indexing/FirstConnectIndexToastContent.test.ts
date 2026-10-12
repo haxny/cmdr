@@ -7,7 +7,7 @@ import { mount, flushSync } from 'svelte'
 import FirstConnectIndexToastContent from './FirstConnectIndexToastContent.svelte'
 
 const dismissToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: (id: string) => {
     dismissToast(id)
   },

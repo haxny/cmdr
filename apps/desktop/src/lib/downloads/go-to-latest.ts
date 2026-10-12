@@ -10,14 +10,14 @@
  * stable dedup id so spamming ⌘J doesn't stack copies.
  */
 
-import { downloadsWatcherStatus, goToLatestDownload as goToLatestDownloadCommand } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
+import { downloadsWatcherStatus, goToLatestDownload as goToLatestDownloadCommand } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import {
   revealFileInBestPane,
   navigateToDirInBestPane,
   resolveLocationOrToast,
-} from '$lib/file-explorer/navigation/navigate-and-select'
+} from '#lib/file-explorer/navigation/navigate-and-select.js'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 
 import LatestDownloadEmptyToastContent from './LatestDownloadEmptyToastContent.svelte'

@@ -17,7 +17,7 @@
  */
 
 import { cancelCountInPane } from './folder-size-count'
-import { isTextInputTarget } from '$lib/utils/text-input-focus'
+import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
 import { routeTypingKey } from './type-to-jump-keys'
 import type { FilePaneAPI } from './types'
 

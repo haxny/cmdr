@@ -9,7 +9,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import AskCmdrMessage from './AskCmdrMessage.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { RailMessage, RenameUndoState } from './ask-cmdr-messages'
 
 const undoRenameMock = vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve())

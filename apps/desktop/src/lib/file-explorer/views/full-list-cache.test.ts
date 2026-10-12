@@ -18,7 +18,7 @@ const utils = vi.hoisted(() => ({
   getDirStatsBatch: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ getDirStatsBatch: utils.getDirStatsBatch }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ getDirStatsBatch: utils.getDirStatsBatch }))
 vi.mock('./file-list-utils', async () => {
   const actual = await vi.importActual<typeof import('./file-list-utils')>('./file-list-utils')
   return {

@@ -12,8 +12,8 @@
  * placeholders.
  */
 
-import type { OpKind, WriteOperationPhase } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { OpKind, WriteOperationPhase } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * What rolling back will DO to the user's files.

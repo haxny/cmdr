@@ -9,7 +9,7 @@ a feature that's missing its UI.
 ## Method
 
 - **Wrappers (A)**: an exported function with no import from a production file outside `tauri-commands/` (test files and
-  `vi.fn()` harnesses excluded), dynamic `import('$lib/tauri-commands')` included.
+  `vi.fn()` harnesses excluded), dynamic `import('#lib/tauri-commands')` included.
 - **Commands (B)**: a `commands.*` entry whose only frontend users are dead wrappers, or none. Each was then searched by
   its snake_case name for raw `invoke('…')` strings, E2E (`__TAURI_INTERNALS__.invoke`), the MCP executor, and Rust
   callers.

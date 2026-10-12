@@ -8,9 +8,9 @@
  * disconnect or firing on the wrong one.
  */
 
-import { onMtpDeviceDisconnected } from '$lib/tauri-commands'
-import { volumeScheme } from '$lib/volume-scheme'
-import { getAppLogger } from '$lib/logging/logger'
+import { onMtpDeviceDisconnected } from '#lib/tauri-commands/index.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy } from 'svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
 
     const staticValue = 0.6
     const staticPercent = Math.round(staticValue * 100)

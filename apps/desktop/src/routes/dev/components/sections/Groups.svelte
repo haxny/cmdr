@@ -1,5 +1,5 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
 </script>
 
 <SectionCard id="components-groups" label="Groups">

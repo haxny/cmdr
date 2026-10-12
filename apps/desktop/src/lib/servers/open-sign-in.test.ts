@@ -13,16 +13,16 @@
  * the DOM.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { clearIpcMocks, installIpcMock, type IpcRecorder } from '$lib/ipc/test-helpers'
+import { clearIpcMocks, installIpcMock, type IpcRecorder } from '#lib/ipc/test-helpers.js'
 
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
 /** The volume list as the store holds it: empty unless a cell says a place was already live. */
 let liveVolumes: { id: string; connectionState: string }[] = []
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => liveVolumes }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => liveVolumes }))
 
 import { openAddServerSheet, openSignInForPlace } from './open-sign-in'
 import { closeSignInSheet, currentSignInRequest, dismissSignInForPlaces } from './sign-in-sheet-state.svelte'

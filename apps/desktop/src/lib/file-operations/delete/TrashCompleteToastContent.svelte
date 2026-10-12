@@ -14,12 +14,12 @@
      * is a misclick away from the one thing the journal can never reverse. The
      * delete dialog is where permanent is chosen (Shift flips it in place).
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { runTrashUndo } from './trash-undo'
     import { goToTrashedItems } from './go-to-trash'
-    import type { PaneRevealAPI } from '$lib/file-explorer/navigation/navigate-and-select'
+    import type { PaneRevealAPI } from '#lib/file-explorer/navigation/navigate-and-select.js'
 
     interface Props {
         /** Dedup id of this toast; lets the component get out of its own way. */

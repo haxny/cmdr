@@ -11,12 +11,12 @@
   escaped plain text (a folder name is attacker-controlled), never {@html}.
 -->
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import type { ProposalDecision } from '$lib/tauri-commands'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import type { ProposalDecision } from '#lib/tauri-commands/index.js'
 
     interface Props {
         decisions: ProposalDecision[]

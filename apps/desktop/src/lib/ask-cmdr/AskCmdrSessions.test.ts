@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { ConversationRow } from '$lib/tauri-commands'
+import type { ConversationRow } from '#lib/tauri-commands/index.js'
 
 const spies = vi.hoisted(() => ({
   chooseThread: vi.fn(),

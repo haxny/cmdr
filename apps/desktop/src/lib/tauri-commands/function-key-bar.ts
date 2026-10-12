@@ -1,5 +1,5 @@
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 /** Shows the function key bar's context menu (fire-and-forget). */

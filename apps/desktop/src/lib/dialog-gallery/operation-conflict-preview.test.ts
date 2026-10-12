@@ -11,28 +11,28 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TransferDispatchConfig } from '$lib/file-operations/transfer/transfer-dispatch'
+import type { TransferDispatchConfig } from '#lib/file-operations/transfer/transfer-dispatch.js'
 import type { FixtureDirPayload } from './disk-fixture'
 
 const dispatched: TransferDispatchConfig[] = []
 let refuse = false
 const toasts: string[] = []
 
-vi.mock('$lib/file-operations/transfer/transfer-dispatch', () => ({
+vi.mock('#lib/file-operations/transfer/transfer-dispatch.js', () => ({
   dispatchTransferOperation: (config: TransferDispatchConfig) => {
     dispatched.push(config)
     return refuse ? Promise.reject(new Error('refused')) : Promise.resolve({ operationId: 'op-preview' })
   },
 }))
 
-vi.mock('$lib/ui/toast/toast-store.svelte', () => ({
+vi.mock('#lib/ui/toast/toast-store.svelte.js', () => ({
   addToast: (content: string) => {
     toasts.push(content)
     return 'toast-id'
   },
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

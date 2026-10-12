@@ -11,9 +11,9 @@
  */
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { getEffectiveShortcuts } from '$lib/shortcuts/shortcuts-store'
-import { formatKeyCombo } from '$lib/shortcuts/key-capture'
-import { initShortcutDispatch, lookupCommand, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
+import { getEffectiveShortcuts } from '#lib/shortcuts/shortcuts-store.js'
+import { formatKeyCombo } from '#lib/shortcuts/key-capture.js'
+import { initShortcutDispatch, lookupCommand, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
 
 // These modules read the platform (`isMacOS()`, userAgent-based) only at call time, never
 // at module load, so a static import is safe: the mock below is active before any of them run.

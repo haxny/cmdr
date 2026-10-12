@@ -7,7 +7,7 @@
  * regress scroll/measure performance on large directories, so we cache each
  * `Intl.NumberFormat` by (locale, options) and rebuild only when the active
  * locale changes. Mirrors the lazy-singleton shape of
- * `getSystemLocaleFormatter()` in `$lib/settings/format-utils`.
+ * `getSystemLocaleFormatter()` in `#lib/settings/format-utils`.
  *
  * The locale always comes from {@link getFormatLocale}, which follows the OS
  * rather than the UI-language setting; this module never resolves a locale

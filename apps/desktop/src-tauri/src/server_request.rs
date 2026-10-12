@@ -6,7 +6,7 @@
 //! moment), or did Cmdr's own server turn it down (a 4xx, a body this client can't read)? The first
 //! is the person's network and logs at warn; the second means Cmdr and its server disagree, which is
 //! worth an error report. The frontend reads that split off the variant
-//! (`$lib/error-messages/server-request.ts`) and words each variant from the catalog.
+//! (`#lib/error-messages/server-request.ts`) and words each variant from the catalog.
 //!
 //! ❌ `detail` is for logs only: reqwest's cause chain or the server's own explanation, never a
 //! sentence a person reads.

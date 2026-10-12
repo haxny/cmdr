@@ -13,25 +13,25 @@
  * file keeps the COMPOSITION (escaping, size colorizing, platform branches)
  * and selects per-operation message variants by key suffix
  * (`<field>.${operationType}`), so each language phrases each operation
- * naturally. See `$lib/intl`'s docs.
+ * naturally. See `#lib/intl`'s docs.
  */
 import type {
   WriteOperationError,
   TransferOperationType,
   FriendlyError,
   PermissionRefusal,
-} from '$lib/file-explorer/types'
-import type { TrashRefusalKind } from '$lib/ipc/bindings'
-import { fdaIsMissing } from '$lib/onboarding/fda-status.svelte'
-import type { ProgressAtStop } from '$lib/tauri-commands'
-import { formatInteger } from '$lib/intl/number-format'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { getEffectiveShortcuts, toDisplayShortcut } from '$lib/shortcuts'
-import { colorizeSize } from '$lib/file-explorer/selection/selection-info-utils'
-import { escapeHtml } from '$lib/tooltip/tooltip'
-import { getMessage } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { formatByteSizeTiered } from '$lib/units'
+} from '#lib/file-explorer/types.js'
+import type { TrashRefusalKind } from '#lib/ipc/bindings.js'
+import { fdaIsMissing } from '#lib/onboarding/fda-status.svelte.js'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
+import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { escapeHtml } from '#lib/tooltip/tooltip.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { formatByteSizeTiered } from '#lib/units/index.js'
 
 /** Substitutes `{token}` placeholders in a catalog value with runtime strings. */
 function interpolate(template: string, params: Record<string, string> = {}): string {

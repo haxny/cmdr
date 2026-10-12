@@ -4,7 +4,7 @@ The one place a byte count, a transfer rate, or a duration becomes text a person
 size, speed, or ETA to the DOM.
 
 ```ts
-import { formatByteSize, formatDuration, seconds } from '$lib/units'
+import { formatByteSize, formatDuration, seconds } from '#lib/units'
 
 formatByteSize(87_654_321) // "83.59 MiB" (binary) or "87.65 MB" (SI)
 formatDuration(seconds(492)) // "8m 12s"
@@ -21,7 +21,7 @@ code-side rate formatter that bakes in the noun: `'files/s'` once shipped Englis
 - `byte-size.ts`: the unit math with the base passed in (`formatFileSizeWithFormat`, `formatTieredSize`,
   `formatDriveFigure`, `formatRoundSize`, `unitLabel`, `bytesLabel`, `fixedUnitFor`, `dynamicTierIndex`, `baseFor`),
   plus the `ByteCount` / `BytesPerSecond` brands.
-- `duration.ts`: `formatDuration` (seconds, worded by `$lib/intl/duration-format` in the UI language),
+- `duration.ts`: `formatDuration` (seconds, worded by `#lib/intl/duration-format` in the UI language),
   `formatMilliseconds` (sub-second precision), `formatFilesPerSecond` (the rounding policy plus a locale-formatted
   `text` and the `value` the catalog pluralizes on), and the `Seconds` brand.
 
@@ -31,7 +31,7 @@ code-side rate formatter that bakes in the noun: `'files/s'` once shipped Englis
   hardcoding base 1024 while labelling the result "KB"/"MB"/"GB", which is how two windows came to show different
   numbers for the same transfer. `cmdr/no-private-unit-format` rejects new ones (binary ladder literals in arithmetic,
   and formatter-shaped names whose body does unit work). Opt out per-line, with a reason.
-- **`<Size bytes>`** (`$lib/ui/Size.svelte`) is the COMPONENT form: same numbers plus the size-tier colors. Prefer it in
+- **`<Size bytes>`** (`#lib/ui/Size.svelte`) is the COMPONENT form: same numbers plus the size-tier colors. Prefer it in
   markup; use `formatByteSize` for tooltips, toasts, and anything composing a string. `<Size bytes rounded>` is the LIVE
   form — a tenth below ten, whole units above ("1.7 GB", "24 GB") — for the transfer bars only, where the number changes
   several times a second. ❌ Not whole units at every scale: that printed "2 GB / 2 GB (70%)". A size someone compares
@@ -50,7 +50,7 @@ code-side rate formatter that bakes in the noun: `'files/s'` once shipped Englis
   `file-explorer/selection/selection-info-utils.ts`, because the classes belong to the list views' stylesheet. It
   consumes this module's ladder; don't re-derive tiers from a threshold cascade.
 - **Dates are NOT here.** `settings/format-utils.ts` (pure) → `formattedDate()` (reactive) → `<DateLabel>`.
-- **Decimals and separators follow the active locale** via `$lib/intl`'s `getNumberFormatter`, in EVERY unit. ❌ Never
+- **Decimals and separators follow the active locale** via `#lib/intl`'s `getNumberFormatter`, in EVERY unit. ❌ Never
   `toFixed`, which always emits an ASCII dot and once put "2.3 files/s" beside a pane reading "250,00 MB". The
   value↔unit ASCII space is added by us, never by Intl.
 - **`settings/types.ts::formatDurationSetting(ms)` is a deliberate second duration formatter** for a duration SETTING's

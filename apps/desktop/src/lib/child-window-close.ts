@@ -21,8 +21,8 @@
  * directly from a keydown handler. See `docs/notes/child-window-close-webkit-crash.md`.
  */
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { closeChildWindow } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { closeChildWindow } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('windowClose')
 

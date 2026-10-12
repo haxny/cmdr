@@ -1,7 +1,7 @@
 /**
  * The thin i18n runtime: resolve user-facing text from JSON message catalogs,
  * format it through `intl-messageformat` (ICU MessageFormat 1), reading the
- * UI language from `$lib/intl`'s `getUiLocale()` source.
+ * UI language from `#lib/intl`'s `getUiLocale()` source.
  *
  * Two entry points:
  *  - `t(key, params?)`: resolve + ICU-format. The path for ordinary copy,
@@ -266,7 +266,7 @@ interface I18nCaptureApi {
    * the exact production path the Language/zoom UI uses: `setSetting` updates the
    * store, which cross-window-syncs and re-runs `text-size.svelte`'s
    * `computeAndApply` (the `--font-scale` root var + the reactive scale). Lazily
-   * imports `$lib/settings` so the intl runtime stays decoupled from settings
+   * imports `#lib/settings` so the intl runtime stays decoupled from settings
    * outside an E2E build. Returns a promise the driver awaits before the
    * shot so the new scale has applied.
    */
@@ -302,7 +302,7 @@ if (__CMDR_E2E_BUILD__ && typeof window !== 'undefined') {
     async setTextSize(percent: number | string) {
       // Lazy import: keeps the always-loaded intl runtime free of a settings
       // dependency; this method only ever runs in a capture run.
-      const { setSetting } = await import('$lib/settings')
+      const { setSetting } = await import('#lib/settings/index.js')
       // Coerce: the E2E driver reaches this through `captureCall`, which
       // JSON-stringifies every arg, so `percent` arrives as a string ("100").
       // `appearance.textSize` is a typed number setting and rejects a string, so

@@ -5,7 +5,7 @@
 
 import type { EnumOption, SettingDefinitionSource } from '../types'
 import { cloudProviderPresets } from '../cloud-providers'
-import { formatInteger } from '$lib/intl/number-format'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 /**
  * A token-count option whose label is the number itself, grouped for the reader's locale
@@ -115,7 +115,7 @@ export const aiSettings: SettingDefinitionSource[] = [
   // (`load_ask_cmdr_interactive_model`), so it applies with no restart and needs no
   // `settings-applier` case (same pattern as the operation-log retention limits). The
   // on/off switch above it is a plain setting; consent to send anything to a cloud
-  // service is NOT, it lives in `main.db` (`$lib/ai/cloud-consent.svelte.ts`).
+  // service is NOT, it lives in `main.db` (`#lib/ai/cloud-consent.svelte.ts`).
   // ========================================================================
   {
     // Ask Cmdr's plain on/off. It grants no data flow: on Cloud, "Allow cloud AI" still

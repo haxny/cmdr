@@ -4,8 +4,8 @@
 // so they survive restarts and sync across windows. Pure-ish wrappers over the
 // settings store keep the JSON-array plumbing in one place.
 
-import { getSetting, setSetting } from '$lib/settings'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('indexing')
 

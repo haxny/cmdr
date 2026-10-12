@@ -6,7 +6,7 @@
 import { afterEach, describe, it } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import MaskInputFixture from './mask-input-fixture.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 4; i++) {

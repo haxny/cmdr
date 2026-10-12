@@ -13,8 +13,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { ipc } = vi.hoisted(() => ({ ipc: { setListingNameFilter: vi.fn() } }))
 
-vi.mock('$lib/tauri-commands', () => ({ setListingNameFilter: ipc.setListingNameFilter }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ setListingNameFilter: ipc.setListingNameFilter }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

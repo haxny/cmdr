@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { undoStateFromReport } from './rename-undo'
-import type { OperationUndoOutcome, SkipBreakdown, UndoReport } from '$lib/tauri-commands'
+import type { OperationUndoOutcome, SkipBreakdown, UndoReport } from '#lib/tauri-commands/index.js'
 
 function outcome(overrides: Partial<OperationUndoOutcome> = {}): OperationUndoOutcome {
   return {

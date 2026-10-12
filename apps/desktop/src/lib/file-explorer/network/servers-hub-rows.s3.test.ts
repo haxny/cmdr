@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { buildHubRows, hubRowIcon, openMoveFor } from './servers-hub-rows'
-import type { SavedPlace, SavedServer } from '$lib/tauri-commands'
+import type { SavedPlace, SavedServer } from '#lib/tauri-commands/index.js'
 import type { VolumeInfo } from '../types'
 
 const ACCOUNT_ID = 's3-127-0-0-1-14480-akiaexample-0000'

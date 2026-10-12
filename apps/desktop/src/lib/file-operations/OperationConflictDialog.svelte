@@ -10,9 +10,9 @@
      * Decisions and the whole flow: `operation-conflict.svelte.ts` and
      * `DETAILS.md`.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { ConflictResolution } from '$lib/file-explorer/types'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { ConflictResolution } from '#lib/file-explorer/types.js'
     import TransferConflictDialog from './transfer/TransferConflictDialog.svelte'
     import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
     import { getFolderName } from './transfer/transfer-dialog-utils'
@@ -116,7 +116,7 @@
 
     <!-- Stacked over the prompt that raised it: same subtree, so DOM order puts
          it on top and its focus trap takes over until it goes
-         (`$lib/ui/DETAILS.md` § ModalDialog). -->
+         (`#lib/ui/DETAILS.md` § ModalDialog). -->
     {#if rollbackAsked && inFlightVariant !== null}
         <RollbackConfirmDialog
             variant={inFlightVariant}

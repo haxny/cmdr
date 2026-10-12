@@ -70,7 +70,7 @@ const NUMBER_PART_TYPES = new Set(['integer', 'group', 'decimal', 'fraction', 'm
  * style, with `fractionDigits` digits after the decimal mark.
  *
  * The unit and its placement come from the UI language, the digits from the
- * formatting locale (`$lib/intl/number-format`), the same split a size makes:
+ * formatting locale (`#lib/intl/number-format`), the same split a size makes:
  * a French speaker on a US-formatted Mac reads "1.4 s".
  */
 export function formatNarrowMeasure(unit: MeasureUnit, value: number, fractionDigits: number): string {

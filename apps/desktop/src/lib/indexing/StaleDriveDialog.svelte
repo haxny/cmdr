@@ -11,14 +11,14 @@
      * is stale while it's still plugged in, so it gets the phone copy, which
      * doesn't blame a disconnect.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import { onDestroy, onMount } from 'svelte'
     import type { UnlistenFn } from '@tauri-apps/api/event'
-    import { getVolumeIndexStatusById, onIndexFreshnessChanged } from '$lib/tauri-commands/indexing'
-    import { getSetting, setSetting } from '$lib/settings'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { t, tString } from '$lib/intl/messages.svelte'
+    import { getVolumeIndexStatusById, onIndexFreshnessChanged } from '#lib/tauri-commands/indexing.js'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
     import { hasShownFirstStaleDialog, markFirstStaleDialogShown } from './drive-index-prefs'
 
     let open = $state(false)

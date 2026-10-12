@@ -6,7 +6,7 @@
  * and the key step get design-reviewed. What it does not do is open a socket.
  */
 
-import type { SignInAttemptOutcome, SignInSheetRequest } from '$lib/servers/sign-in-contract'
+import type { SignInAttemptOutcome, SignInSheetRequest } from '#lib/servers/sign-in-contract.js'
 
 export interface SignInSheetFixture {
   request: SignInSheetRequest

@@ -16,20 +16,20 @@ const { previewMock, pruneMock, confirmMock, addToastMock } = vi.hoisted(() => (
   addToastMock: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexReclaimPreview: previewMock,
   mediaIndexPruneBelowThreshold: pruneMock,
 }))
-vi.mock('$lib/media-index/enabled-volumes', () => ({ getEnabledMediaIndexVolumeIds: () => ['root'] }))
-vi.mock('$lib/utils/confirm-dialog', () => ({ confirmDialog: confirmMock }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock }))
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => ({ warn: vi.fn(), info: vi.fn() }) }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/intl/number-format', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/intl/number-format')>()),
+vi.mock('#lib/media-index/enabled-volumes.js', () => ({ getEnabledMediaIndexVolumeIds: () => ['root'] }))
+vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: confirmMock }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => ({ warn: vi.fn(), info: vi.fn() }) }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/intl/number-format.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/intl/number-format.js')>()),
   formatInteger: (n: number) => String(n),
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatFileSize: (b: number) => `${String(b)}B`,
 }))

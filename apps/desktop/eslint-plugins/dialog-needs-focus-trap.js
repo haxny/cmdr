@@ -6,7 +6,7 @@
  * focus trap lets Tab walk into the (inert-looking) background, where the app's
  * global shortcut dispatch is suppressed while the dialog flag is up, locking
  * the user out of the keyboard entirely (the command-palette Tab-Tab lockout).
- * The shared `use:trapFocus` action (`$lib/ui/focus-trap.ts`) wraps Tab, pulls
+ * The shared `use:trapFocus` action (`#lib/ui/focus-trap.ts`) wraps Tab, pulls
  * leaked focus back, and keeps Escape working; this rule makes new dialogs
  * unable to forget it.
  *
@@ -39,7 +39,7 @@ export default {
     messages: {
       missingTrap:
         'This `role="{{ role }}"` element has no `use:trapFocus`, so Tab can walk focus out into the ' +
-        'background and lock the user out of the keyboard. Add `use:trapFocus` from `$lib/ui/focus-trap`, ' +
+        'background and lock the user out of the keyboard. Add `use:trapFocus` from `#lib/ui/focus-trap`, ' +
         'passing your close callback as `onEscape` (omit it only for dialogs that must swallow Escape, like ' +
         'the onboarding wizard). See `lib/ui/CLAUDE.md` § "Focus trapping".',
     },

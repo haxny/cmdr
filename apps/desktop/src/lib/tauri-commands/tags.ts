@@ -1,7 +1,7 @@
 // macOS Finder color-tag commands: toggling a tag across paths and enriching a
 // cached listing's entries with fresh tag data.
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import type { TimedOut } from './ipc-types'
 
 /**

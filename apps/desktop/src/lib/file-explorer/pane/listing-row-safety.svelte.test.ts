@@ -11,7 +11,7 @@ const ipc = vi.hoisted(() => ({
   findFileIndices: vi.fn(),
   getSelectionSnapshot: vi.fn(() => Promise.resolve({ paths: [], fileCount: 0, folderCount: 0 })),
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onDirectoryDiff: (callback: (diff: DirectoryDiff) => void) => {
     ipc.diff = callback
     return Promise.resolve(() => {})
@@ -24,7 +24,7 @@ vi.mock('$lib/tauri-commands', () => ({
   findFileIndices: ipc.findFileIndices,
   getSelectionSnapshot: ipc.getSelectionSnapshot,
 }))
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => ({ info: vi.fn() }) }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => ({ info: vi.fn() }) }))
 
 let dispose = () => {}
 afterEach(() => {

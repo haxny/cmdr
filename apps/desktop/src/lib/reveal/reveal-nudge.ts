@@ -10,9 +10,9 @@
  * do is `reveal-nudge-answer.ts`.
  */
 
-import { addToast } from '$lib/ui/toast'
-import { markNudgeOffered } from '$lib/nudges/nudge-store'
-import { trackEvent } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { markNudgeOffered } from '#lib/nudges/nudge-store.js'
+import { trackEvent } from '#lib/tauri-commands/index.js'
 import { recordRevealNudgeAnswer } from './reveal-nudge-answer'
 import RevealNudgeToastContent from './RevealNudgeToastContent.svelte'
 

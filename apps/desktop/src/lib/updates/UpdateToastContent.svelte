@@ -1,8 +1,8 @@
 <script lang="ts">
     import { relaunch } from '@tauri-apps/plugin-process'
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { updateState } from './update-state.svelte'
 
     /**

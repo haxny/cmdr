@@ -1,13 +1,13 @@
 <!-- Product § Payment: completed Paddle purchases, revenue, and a recent-transactions table. -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { PaddleData } from '$lib/server/sources/paddle.js'
-    import { formatNumber, formatCurrency } from '$lib/format.js'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import EmptyState from '$lib/components/EmptyState.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { PaddleData } from '#lib/server/sources/paddle.js'
+    import { formatNumber, formatCurrency } from '#lib/format.js'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import EmptyState from '#lib/components/EmptyState.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const { paddle, selection }: { paddle: SourceResult<PaddleData>; selection: DashboardSelection } = $props()
 </script>

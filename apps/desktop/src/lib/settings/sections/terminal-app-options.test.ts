@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { TerminalApp } from '$lib/ipc/bindings'
+import type { TerminalApp } from '#lib/ipc/bindings.js'
 import {
   CHOOSE_APP_VALUE,
   TERMINAL_APP_BUNDLE_ID,

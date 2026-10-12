@@ -15,7 +15,7 @@ const VOLUMES: VolumeInfo[] = [
   { id: 's3-bucket', name: 'Bucket', path: 's3://bucket', category: 'network', fsType: 's3', isEjectable: false },
 ] as VolumeInfo[]
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => VOLUMES }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => VOLUMES }))
 
 function transferProps(overrides: Partial<TransferDialogPropsData> = {}): TransferDialogPropsData {
   return {

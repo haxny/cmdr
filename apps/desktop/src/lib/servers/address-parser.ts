@@ -20,7 +20,7 @@
  * `not a server!!` is how a password reaches the wrong port.
  */
 
-import type { ServerProtocol } from '$lib/ipc/bindings'
+import type { ServerProtocol } from '#lib/ipc/bindings.js'
 
 /** What one address string turned out to name. Tagged, so `unparsed` is a case rather than a `null`. */
 export type ParsedAddress =

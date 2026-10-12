@@ -1,6 +1,6 @@
 /**
  * Search's transport for a query that answers over time: the four live-search events,
- * mapped onto the shared `QueryStreamSource` contract (`$lib/query-ui/query-stream`).
+ * mapped onto the shared `QueryStreamSource` contract (`#lib/query-ui/query-stream`).
  *
  * Everything Search-flavoured stops here. The runner is handed phases, batches, and one
  * "the run ended, here's whether it covered everything"; `WalkEnding`, coverage lists,
@@ -23,13 +23,13 @@ import {
   type SearchQuery,
   type SearchRunCoverage,
   type SearchResultEntry,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import type {
   LiveRunView,
   QueryStreamCallbacks,
   QueryStreamResumption,
   QueryStreamSource,
-} from '$lib/query-ui/query-stream'
+} from '#lib/query-ui/query-stream.js'
 import { liveViewOf, observeSearchRun } from './live-run-events'
 import { resumeHandedOffWalk, supersedeHandedOffWalk } from './walk-handoff.svelte'
 

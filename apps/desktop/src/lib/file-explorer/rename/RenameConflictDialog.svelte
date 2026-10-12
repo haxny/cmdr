@@ -1,9 +1,9 @@
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { formatByteSize } from '$lib/units'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { formatByteSize } from '#lib/units/index.js'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { ConflictFileInfo, RenameConflictResolution } from './rename-operations'
 
     interface Props {

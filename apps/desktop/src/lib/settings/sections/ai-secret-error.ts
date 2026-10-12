@@ -1,7 +1,7 @@
-import { tString } from '$lib/intl/messages.svelte'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import type { AiApiKeyError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import type { AiApiKeyError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /**
  * An `Error` that still carries the secret store's typed refusal.

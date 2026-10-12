@@ -19,7 +19,7 @@ const {
   ),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   readClipboardText: readClipboardTextMock,
@@ -29,7 +29,7 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { resolveGoToPath: resolveGoToPathMock },
 }))
 
@@ -47,7 +47,7 @@ vi.mock('./recent-paths-state.svelte', () => ({
 }))
 
 import GoToPathDialog from './GoToPathDialog.svelte'
-import type { GoToPathResolution } from '$lib/ipc/bindings'
+import type { GoToPathResolution } from '#lib/ipc/bindings.js'
 
 type DialogProps = ComponentProps<typeof GoToPathDialog>
 type GoFn = (input: string) => Promise<GoToPathResolution | undefined>

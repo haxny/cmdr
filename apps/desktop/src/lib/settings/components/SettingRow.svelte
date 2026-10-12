@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
-    import { isModified, resetSetting, onSpecificSettingChange, type SettingId } from '$lib/settings'
-    import { getMatchIndicesForLabel, highlightMatches } from '$lib/settings/settings-search'
-    import { disabledNoteId, settingAnchorId } from '$lib/settings/settings-window'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Icon from '$lib/ui/Icon.svelte'
+    import { isModified, resetSetting, onSpecificSettingChange, type SettingId } from '#lib/settings/index.js'
+    import { getMatchIndicesForLabel, highlightMatches } from '#lib/settings/settings-search.js'
+    import { disabledNoteId, settingAnchorId } from '#lib/settings/settings-window.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Icon from '#lib/ui/Icon.svelte'
     import { onMount } from 'svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { isSettingLocked } from '$lib/managed-policy/managed-policy.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { isSettingLocked } from '#lib/managed-policy/managed-policy.svelte.js'
     import { registerSectionRow } from './section-rows.svelte'
 
     interface Props {

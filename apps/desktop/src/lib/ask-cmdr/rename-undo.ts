@@ -6,7 +6,7 @@
  */
 
 import type { RenameUndoState } from './ask-cmdr-messages'
-import type { SkipBreakdown, UndoReport } from '$lib/tauri-commands'
+import type { SkipBreakdown, UndoReport } from '#lib/tauri-commands/index.js'
 
 /**
  * Read a finished undo as a display state.

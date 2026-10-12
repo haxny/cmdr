@@ -5,8 +5,8 @@
  * one-way.
  */
 
-import type { BundleWriteBlocker } from '$lib/tauri-commands'
-import type { ServerRequestError, UpdateCheckOutcome } from '$lib/ipc/bindings'
+import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
+import type { ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
 
 /** The update the last check found and staged. The backend keeps where it came from; the frontend needs the version. */
 export interface UpdateInfo {

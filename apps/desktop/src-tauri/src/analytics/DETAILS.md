@@ -160,7 +160,7 @@ Open set, no enum, no schema:
 
 - **Backend event**: at the success chokepoint,
   `crate::analytics::events::capture("my_event", serde_json::json!({ "kind": some_enum }))`.
-- **Frontend event**: `import { trackEvent } from '$lib/tauri-commands'`, then `void trackEvent('my_event', { kind: someEnum })`.
+- **Frontend event**: `import { trackEvent } from '#lib/tauri-commands'`, then `void trackEvent('my_event', { kind: someEnum })`.
 - Name internals after the UI; keep props categorical.
 
 ## Reading a zero (before calling it a bug)
@@ -201,7 +201,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   event can NEVER carry either: `FilePane.svelte` skips `loader.loadDirectory` for both, so a virtual pane never
   reaches the emit. They're live kinds elsewhere (they drive capabilities), just not reachable here. If a virtual pane
   ever gains a real listing pipeline, this line is the one to revisit.
-- `search_used` (frontend, `$lib/search/search-run-tracking.ts`, once per run when the run ENDS): `mode`
+- `search_used` (frontend, `#lib/search/search-run-tracking.ts`, once per run when the run ENDS): `mode`
   (`filename` / `regex` / `ai`, the `SearchMode` union), `trigger`, `ending`, `coverage`, `duration_bucket`,
   `abandoned_ground`, `capped`; never the query. See below.
 - `search_cta_offered` / `search_cta_used` (frontend, same file): `cta` enum. See below.
@@ -249,7 +249,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   count: an extension list fingerprints a person's work in a population of a few hundred installs. Every open passes
   `open_session_inner` (F3, the "View as text" override, preview-inside-a-zip), and it's wrapped rather than emitted
   inline because the media path is an early return and the text path has a dozen `?`s.
-- `update_check` (frontend, `$lib/updates/update-analytics.ts`, once per finished check, from every exit of
+- `update_check` (frontend, `#lib/updates/update-analytics.ts`, once per finished check, from every exit of
   `checkForUpdates()`): `trigger` (what set it going: `startup` / `poll` / `auto_check_on` / `command` / `settings`),
   `outcome` (`up_to_date` / `staged` / `already_staged` / `blocked` / `failed`, plus the organization's answers
   `updates_disabled_by_policy` / `held_by_policy` / `automatic_checks_disabled_by_policy` / `blocked_by_policy`, none of
@@ -264,7 +264,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   restart into", and "the install fails on every one of them" all read the same. `already_staged` is the one that
   answers the middle case directly: a rising count of it against a flat `staged` IS the stuck population.
   `failure: install` never separates from `download` on the fused non-macOS plugin path, which is fine (macOS is what
-  ships). `$lib/updates/DETAILS.md` § What a check reports.
+  ships). `#lib/updates/DETAILS.md` § What a check reports.
 - `session_reached` (backend, `analytics/session.rs`): `milestone` (`1m` / `5m` / `15m` / `1h` / `4h` / `12h` / `24h`).
   The session-length signal, and the reason there is no `app_quit`. See below.
 - `ask_cmdr_turn` (backend, `agent/chat/runtime/analytics.rs`, at `run_turn`'s single exit AND on the pre-turn
@@ -339,7 +339,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
 - `favorites_menu_opened` (frontend, same module): `trigger` (`command`). The denominator `favorite_opened` reads
   against. A menu-bar accelerator, a palette pick, and ⌃D typed inside the open switcher all arrive as `command`, so
   that arm doesn't split further.
-- `settings_opened` (frontend, `$lib/settings/settings-window.ts` `openSettingsWindow`): `surface` enum (the
+- `settings_opened` (frontend, `#lib/settings/settings-window.ts` `openSettingsWindow`): `surface` enum (the
   `SettingsSurface` union in that file, one member per entry point); never the section. It sits in the
   window helper every entry point funnels through, so it counts all dozen of them and covers a new one for free. Why
   `surface` is a required first param and why `section` stays out: `apps/desktop/src/lib/settings/DETAILS.md` § "Every
@@ -348,13 +348,13 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   ListingError); never the path/message/provider.
 - `first_index_started` / `first_index_home_covered` / `first_index_completed` (backend, `first_index.rs`): no props on
   the first, a `duration_bucket` on the other two. See below.
-- `first_folder_size_shown` (frontend, `$lib/indexing/first-size-timing.ts`, once per launch): `seconds_bucket` +
+- `first_folder_size_shown` (frontend, `#lib/indexing/first-size-timing.ts`, once per launch): `seconds_bucket` +
   `covering` bool. See below for its population.
-- `language_resolved` / `language_changed` (frontend, `$lib/intl/language-analytics.ts`): shipped catalog tags only.
+- `language_resolved` / `language_changed` (frontend, `#lib/intl/language-analytics.ts`): shipped catalog tags only.
   See below.
-- `dock_pin_offered` (frontend, `$lib/dock/dock-nudge.ts` `offerDockPin`): no props. Fires once per install at most, as
+- `dock_pin_offered` (frontend, `#lib/dock/dock-nudge.ts` `offerDockPin`): no props. Fires once per install at most, as
   the "keep Cmdr in your Dock?" toast goes up, so it's the denominator of the pin funnel. macOS-only.
-- `dock_pin_answered` (frontend, `$lib/dock/dock-pin-answer.ts`): `answer` (`yes` / `no` / `dismissed`). Every way out
+- `dock_pin_answered` (frontend, `#lib/dock/dock-pin-answer.ts`): `answer` (`yes` / `no` / `dismissed`). Every way out
   of the toast lands
   here, and the toast frame's × reports `dismissed` rather than `no`: "read it and declined" and "swept it away" are
   different answers, and the split is the interesting half of the question. `yes` is recorded when the person presses
@@ -365,10 +365,10 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   `preferencesUnreadable` / `writeRejected` / `dockNotRestarted` / `timedOut`). ❌ Never a message string
   (`error-string-match`). `dockNotRestarted` counts here even though the tile IS stored: the person didn't get what
   they asked for on the spot.
-- `reveal_handler_offered` (frontend, `$lib/reveal/reveal-nudge.ts` `offerRevealHandler`): no props. Fires once per
+- `reveal_handler_offered` (frontend, `#lib/reveal/reveal-nudge.ts` `offerRevealHandler`): no props. Fires once per
   install at most, as the "open Show in Finder in Cmdr?" toast goes up, so it's the denominator of the reveal funnel.
   macOS-only.
-- `reveal_handler_answered` (frontend, `$lib/reveal/reveal-nudge-answer.ts`): `answer` (`yes` / `no` / `dismissed`).
+- `reveal_handler_answered` (frontend, `#lib/reveal/reveal-nudge-answer.ts`): `answer` (`yes` / `no` / `dismissed`).
   Same three-way split, and for the same reason, as `dock_pin_answered`; `yes` records the press, ❌ never the outcome.
 - `reveal_handler_not_taken` (frontend, same file): `reason`, the `RevealHandlerState` variant the OS was LEFT in
   (`notRegistered` / `heldByOtherApp`) after an accepted offer, or `unavailable` when the command gave no answer at all. ❌ Never a message string. Read it
@@ -401,7 +401,7 @@ in the survival curve rather than a schema one. Say so here if it happens.
 ## The language events, in detail
 
 Two questions: which language does an install run in, and does auto-selection land somewhere the user wants to stay?
-Both events live in `$lib/intl/language-analytics.ts`.
+Both events live in `#lib/intl/language-analytics.ts`.
 
 - `language_resolved` fires once per launch, from `settings-applier.ts::initSettingsApplier` right after the settings
   apply, so `active` is what the user is actually looking at rather than the webview's guess while the OS answers were

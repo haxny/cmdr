@@ -1,4 +1,4 @@
-import { resolvePathVolume } from '$lib/tauri-commands'
+import { resolvePathVolume } from '#lib/tauri-commands/index.js'
 import { openFileViewer } from './open-viewer'
 
 /**

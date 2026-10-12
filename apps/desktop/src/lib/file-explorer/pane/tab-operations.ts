@@ -1,6 +1,6 @@
-import { confirmDialog } from '$lib/utils/confirm-dialog'
-import { showTabContextMenu, onTabContextAction, updatePinTabMenu } from '$lib/tauri-commands'
-import { savePaneTabs, type ViewMode } from '$lib/app-status-store'
+import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+import { showTabContextMenu, onTabContextAction, updatePinTabMenu } from '#lib/tauri-commands/index.js'
+import { savePaneTabs, type ViewMode } from '#lib/app-status-store.js'
 import {
   createTabManager,
   getActiveTab,
@@ -33,10 +33,10 @@ import type { TabState, TabId, PersistedTab, PersistedPaneTabs } from '../tabs/t
 import { createHistory } from '../navigation/navigation-history'
 import { isSnapshotPath, latestRealFolder } from '../navigation/real-folder-history'
 import { DEFAULT_SORT_BY, defaultSortOrders, type SortColumn } from '../types'
-import type { Location } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import type { Location } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import type { FilePaneAPI } from './types'
 
 const log = getAppLogger('fileExplorer')
@@ -88,7 +88,7 @@ export function createTabManagerFromPersisted(paneTabs: PersistedPaneTabs): TabM
  *
  * The tab's live `path` is untouched: navigating Back into a snapshot within the session
  * is what the in-memory store is for. A tab whose history holds no real folder persists
- * as it stands, and `$lib/app-status-store.ts` rescues it at load.
+ * as it stands, and `#lib/app-status-store.ts` rescues it at load.
  */
 function persistedLocation(tab: TabState): Location {
   if (!isSnapshotPath(tab.path)) return { path: tab.path, volumeId: tab.volumeId }

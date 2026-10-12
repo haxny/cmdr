@@ -4,9 +4,9 @@
   test asserts where each open menu mounts.
 -->
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Select from '$lib/ui/Select.svelte'
-    import Combobox from '$lib/ui/Combobox.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Select from '#lib/ui/Select.svelte'
+    import Combobox from '#lib/ui/Combobox.svelte'
 </script>
 
 <ModalDialog titleId="portal-target-fixture-title">

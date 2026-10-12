@@ -20,16 +20,16 @@ import {
   listSavedServers,
   setPlaceAutoReconnect,
   setPlacePinned,
-} from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { confirmDialog, confirmWithCheckbox } from '$lib/utils/confirm-dialog'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { isServerVolumeId, serverProtocolOfVolumeId } from '$lib/servers/server-path-utils'
-import { openEditServerSheet } from '$lib/servers/open-sign-in'
-import type { VolumeContextActionKind } from '$lib/ipc/bindings'
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { confirmDialog, confirmWithCheckbox } from '#lib/utils/confirm-dialog.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { isServerVolumeId, serverProtocolOfVolumeId } from '#lib/servers/server-path-utils.js'
+import { openEditServerSheet } from '#lib/servers/open-sign-in.js'
+import type { VolumeContextActionKind } from '#lib/ipc/bindings.js'
 import type { VolumeInfo } from '../types'
-import type { CheckboxQuestion } from '$lib/utils/confirm-dialog'
+import type { CheckboxQuestion } from '#lib/utils/confirm-dialog.js'
 
 const log = getAppLogger('fileExplorer')
 

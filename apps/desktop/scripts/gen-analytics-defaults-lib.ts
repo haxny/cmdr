@@ -17,7 +17,7 @@
  * absent by construction: they're not in the registry, they have no default, and they're always
  * present anyway, so resolution never asks about them.
  *
- * The registry is parsed, not imported. `definitions/appearance.ts` pulls in `$lib/intl`, whose
+ * The registry is parsed, not imported. `definitions/appearance.ts` pulls in `#lib/intl`, whose
  * `messages.svelte.ts` is rune-compiled, so a bare `node` import of the registry can't evaluate.
  * Parsing the definition objects out of the TypeScript AST gets the same data with no Svelte
  * toolchain, and it works against a `git show` of an old tag, which is what makes the historical

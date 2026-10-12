@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { nameProvenance } from './rename-name-provenance'
-import type { RenameEvidenceSource } from '$lib/tauri-commands'
+import type { RenameEvidenceSource } from '#lib/tauri-commands/index.js'
 
 function row(source: RenameEvidenceSource, sourceName = 'IMG_4021.png', destinationName = 'Receipt.png') {
   return { evidence: { source, detail: 'whatever' }, sourceName, destinationName }

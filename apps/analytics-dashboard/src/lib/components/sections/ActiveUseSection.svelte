@@ -4,21 +4,21 @@
   activation counts.
 -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { CloudflareData } from '$lib/server/sources/cloudflare.js'
-    import type { LicenseData } from '$lib/server/sources/license.js'
-    import { uniqueDays, updateVersionSeries } from '$lib/chart-helpers.js'
-    import { formatNumber } from '$lib/format.js'
-    import { boundsByDay, formatBound, largestUnseenShare, latestBound } from '$lib/active-installs.js'
-    import { COLOR_GOLD, COLOR_PURPLE } from '$lib/colors.js'
-    import Chart from '$lib/components/Chart.svelte'
-    import StackedBarChart from '$lib/components/StackedBarChart.svelte'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import Methodology from '$lib/components/Methodology.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import BetaEmptyState from '$lib/components/BetaEmptyState.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { CloudflareData } from '#lib/server/sources/cloudflare.js'
+    import type { LicenseData } from '#lib/server/sources/license.js'
+    import { uniqueDays, updateVersionSeries } from '#lib/chart-helpers.js'
+    import { formatNumber } from '#lib/format.js'
+    import { boundsByDay, formatBound, largestUnseenShare, latestBound } from '#lib/active-installs.js'
+    import { COLOR_GOLD, COLOR_PURPLE } from '#lib/colors.js'
+    import Chart from '#lib/components/Chart.svelte'
+    import StackedBarChart from '#lib/components/StackedBarChart.svelte'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import Methodology from '#lib/components/Methodology.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import BetaEmptyState from '#lib/components/BetaEmptyState.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const {
         cloudflare,

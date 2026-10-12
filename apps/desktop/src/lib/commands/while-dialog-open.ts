@@ -6,7 +6,7 @@
  * every road a command comes in by (keyboard, native menu, mouse, palette, the explorer's
  * own controls), so no single road can forget it: `routes/(main)/dialog-command-gate.ts`.
  *
- * Same shape as `$lib/ui/dialog-registry.ts`, which asks the question from the dialog's side
+ * Same shape as `#lib/ui/dialog-registry.ts`, which asks the question from the dialog's side
  * (may a file operation START behind me?).
  */
 

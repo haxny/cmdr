@@ -46,15 +46,15 @@
      * and `result-actions.ts` (what ⏎ / clicks / footer buttons do with the results).
      */
     import { onMount, onDestroy, tick } from 'svelte'
-    import type { SearchResultEntry } from '$lib/tauri-commands'
-    import { iconCacheVersion } from '$lib/icon-cache'
+    import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+    import { iconCacheVersion } from '#lib/icon-cache.js'
     import QueryBar from './QueryBar.svelte'
     import ModeChips from './ModeChips.svelte'
     import FilterChips from './filter-chips/FilterChips.svelte'
     import QueryResults from './QueryResults.svelte'
     import AiPromptStrip from './AiPromptStrip.svelte'
     import { buildAiSummary, resolveAiPattern } from './ai-summary'
-    import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+    import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
     import RecentItemsPopover from './recent-items/RecentItemsPopover.svelte'
     import { deriveEnterAction, type SearchMode } from './query-filter-state.svelte'
     import type { QueryDialogConfig } from './query-dialog-config'
@@ -69,14 +69,14 @@
         activateSecondaryAtCursor,
         dispatchEnterAction,
     } from './result-actions'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-arguments -- E is the Svelte component generic; the explicit <E> binds the inference for callers like SearchDialog/SelectionDialog

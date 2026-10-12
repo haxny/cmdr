@@ -11,10 +11,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { emit } from '@tauri-apps/api/event'
 import { operationStartIsBlocked, mcpOperationBlockedMessage } from './operation-start-gate'
-import { markDialogOpen, _resetOpenDialogsForTesting } from '$lib/ui/open-dialogs.svelte'
-import { addToast } from '$lib/ui/toast'
+import { markDialogOpen, _resetOpenDialogsForTesting } from '#lib/ui/open-dialogs.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
 
 beforeEach(() => {
   vi.clearAllMocks()

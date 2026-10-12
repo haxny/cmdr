@@ -1,4 +1,4 @@
-import { setMainWindowVisible } from '$lib/tauri-commands'
+import { setMainWindowVisible } from '#lib/tauri-commands/index.js'
 
 /**
  * Reports the main window's visibility to the backend: once now, then on every `visibilitychange`.

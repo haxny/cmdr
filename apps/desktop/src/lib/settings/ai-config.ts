@@ -17,10 +17,10 @@
  * settings UI all reach for. `sections/` is reserved for UI subcomponents.
  */
 
-import { getSetting, resolveCloudConfig, getCloudProvider } from '$lib/settings'
-import { configureAi } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { addToast } from '$lib/ui/toast'
+import { getSetting, resolveCloudConfig, getCloudProvider } from '#lib/settings/index.js'
+import { configureAi } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import { describeSecretError } from './sections/ai-secret-error'
 
 const logger = getAppLogger('ai-settings')

@@ -406,7 +406,7 @@ volume-id string. The record has two halves, and which half answers is the whole
   context menu's `Share` (see § "Sharing a row" below). ❌ It is NOT `capabilitiesForPane`: that one uses the WIDE
   archive check, so it would call a `.zip` FILE unshareable, and sharing a freshly-made archive is the point.
 - **F4 (edit) goes through `editor-open.ts`**: `openInEditorOrExplain(volumeId, rowPath)` hands a file to
-  `$lib/text-editor`'s `openFileInEditor` only when its path is a plain filesystem path AND `rowIsOsVisible` holds, and
+  `#lib/text-editor`'s `openFileInEditor` only when its path is a plain filesystem path AND `rowIsOsVisible` holds, and
   otherwise shows `fileExplorer.edit.notOnThisMac` (a phone, a server, an archive's insides, the `.git` portal),
   pointing at F3. The guard lives here because it's a pane question; WHICH app opens the file, the missing-app fallback,
   and every toast around the launch belong to `apps/desktop/src/lib/text-editor/DETAILS.md`, and the setting never
@@ -458,7 +458,7 @@ There's no Search-specific capabilities shim — `lib/search/capabilities.ts` ke
   its default, the same contract `transfer-error-messages.ts` uses for `file.deletePermanently`.
 
   **The snapshot-clip branch gates TWICE, in this order** (`snapshotClipboardIsRefused`). First the PATH SCHEME:
-  `$lib/path/canonical.ts::isPlainFilesystemPath` refuses any row that isn't a plain absolute filesystem path, from the
+  `#lib/path/canonical.ts::isPlainFilesystemPath` refuses any row that isn't a plain absolute filesystem path, from the
   path alone. Then the VOLUME the snapshot's search covered (`SearchSnapshot.volumeId` →
   `isSchemePathClipboardRefusal`), because the pane's own volume id is the virtual `search-results` and a search covers
   any volume with a persisted index, MTP storages and ADB phones included. Either gate refuses the WHOLE set if any row
@@ -527,7 +527,7 @@ no session behind it, so every listing on it would refuse until something dials.
 - **One dial per landing.** The effect re-runs on every `volumes-changed` refresh, so a `dialed` guard keyed on the
   volume id is what stops a dial per refresh against a server the user opened once.
 - **The attempt id is held outside `$state`**: nothing renders it, and it exists so Cancel has something to aim at
-  before the dial returns (`$lib/servers/CLAUDE.md`).
+  before the dial returns (`#lib/servers/CLAUDE.md`).
 - **It dials where the pane already stands.** Picking a `saved` place sends the pane straight to its start folder
   (`../navigation/picked-volume-path.ts`), so `connected` reloads the landing rather than navigating after the fact: no
   second history entry, and no pinned-tab fork on arrival. A restored tab or a favorite keeps its own deeper path.
@@ -584,7 +584,7 @@ renamed (`apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "A rename
 
 Each window's `DualPaneExplorer` subscribes on its own (`createVolumeRootFollow`). The rule is idempotent, so two
 windows rewriting the one shared remembered path agree. ❗ A test that mounts `DualPaneExplorer` with a mocked
-`$lib/tauri-commands` needs `onVolumeRootChanged` and `onServerPlaceMoved` stubs, or `onMount` throws and the run fails
+`#lib/tauri-commands` needs `onVolumeRootChanged` and `onServerPlaceMoved` stubs, or `onMount` throws and the run fails
 with no failing test.
 
 ### A place whose server moved to a new address
@@ -608,7 +608,7 @@ already listed): a row re-keyed as `saved` would make the pane dial a share that
 
 `device-connect.svelte.ts` is the device twin of the section above: same seam, same typed `RemoteConnectState`, same
 one-per-landing rule. Its gate is `deviceReadiness` rather than `connectionState`, because a phone waiting for its
-"Allow USB debugging?" tap has no session to be in any state about (`$lib/adb/DETAILS.md` § "Two fields, two
+"Allow USB debugging?" tap has no session to be in any state about (`#lib/adb/DETAILS.md` § "Two fields, two
 questions").
 
 - **A `waiting_for_authorization` row is NOT dialed.** The answer is known in advance (`unauthorized`), so the factory
@@ -764,7 +764,7 @@ a boxed pill repeated 8× fights the flat bar; truthfulness is the must, the chi
 **Each row shows the binding that belongs to IT, and the Shift row's chips all carry Shift.** Both rows are seven fixed
 slots, F2…F8, composed from one `actions` record; `defaultRow` maps each through `getFirstShortcutReactive`, `shiftRow`
 through `getFirstShiftShortcutReactive` (first effective binding matching `comboHasShift`,
-`$lib/shortcuts/key-capture`). `file.rename` carries two bindings, `F2` and `⇧F6`, so plain-first put a dead `F2` in the
+`#lib/shortcuts/key-capture`). `file.rename` carries two bindings, `F2` and `⇧F6`, so plain-first put a dead `F2` in the
 Shift row's F6 slot — a key that does nothing while Shift is down, printed twice in one row and out of F-key order (a
 user reported it). ❌ There's deliberately no fallback to the unshifted binding when a command has no shifted one: in
 that row a chip is a claim about Shift+<key>, and no chip beats a wrong one. Which slots carry a command on Shift is
@@ -784,7 +784,7 @@ capability guard never fires for an F-click (the guard's blocked set — `file.r
 **Keydown handlers read their keys from the command registry.** `FilePane.handleKeyDown` runs before the document-level
 dispatcher (it's a descendant, and dispatch is registered in the bubble phase), so a loose local match silently shadows
 or doubles a real shortcut. Every handler here therefore resolves through `eventMatchesCommand` / `comboMatchesCommand`
-(`$lib/shortcuts`) instead of testing `e.key` plus a modifier flag:
+(`#lib/shortcuts`) instead of testing `e.key` plus a modifier flag:
 
 - `selection-keys.ts` — the pure `classifySelectionKey`, mapping a keypress to `selection.toggle` / `toggleAndDown` /
   `selectAll` / `deselectAll` / `invert`. Its arms all `stopPropagation()`, so each command runs exactly once (`⌘A` used
@@ -800,7 +800,7 @@ or doubles a real shortcut. Every handler here therefore resolves through `event
   `⌘←`/`⌘→` bail, so no modifier superset moves the cursor any more.
 
 `type-to-jump-keys.ts` deliberately stays hand-rolled: it matches a key CLASS (any printable character) rather than a
-combo, and rejects ⌘/⌃/⌥, which is the property that matters. Full contract and the why: `$lib/shortcuts/DETAILS.md` §
+combo, and rejects ⌘/⌃/⌥, which is the property that matters. Full contract and the why: `#lib/shortcuts/DETAILS.md` §
 "Local handlers resolve through the registry too".
 
 **Selection-dialog keys dispatch onto the bus.** The `+` / `-` keypresses are classified by `selection-dialog-keys.ts`
@@ -808,7 +808,7 @@ and reach the bus through a typed `onCommand?: (commandId: CommandId) => void` p
 `FilePane.svelte` emits `'selection.selectFiles'` / `'selection.deselectFiles'`) → `DualPaneExplorer` (same typed prop)
 → `+page.svelte`, wired to `handleCommandExecute`. The prop is `CommandId`-typed end to end, so
 `cmdr/no-raw-command-dispatch` stays satisfied and a registry rename breaks compilation along the chain. See
-`$lib/file-explorer/CLAUDE.md` § Selection for the dialog itself.
+`#lib/file-explorer/CLAUDE.md` § Selection for the dialog itself.
 
 **Focused-pane reads for externals (`focused-pane-reads.ts`).** Consumers outside `DualPaneExplorer` that need the
 focused pane's directory path, active-tab volume id, or "searchable folder" read them from the explorer store via
@@ -844,7 +844,7 @@ Servers hub has no file selection and falls back to the cursor.
 **"Open terminal here" reads the cursor through a third getter**, `getCursorRowForTerminal()`, which returns the row's
 name, path, and `isDirectory`. It needs `..` as a real answer (like copy-path) AND the folder flag (unlike either
 existing getter), because it chooses between the folder under the cursor and the pane's own. The rules themselves are
-pure and live in `$lib/open-terminal/terminal-target.ts`; this is only the read.
+pure and live in `#lib/open-terminal/terminal-target.ts`; this is only the read.
 
 **A command that ACTS on the cursor row calls `refreshCursorEntry()`, ❌ never the plain `getCursorEntry()`.** The
 displayed entry is fed by an `$effect` firing one `get_file_at` per cursor move, so for a round trip after a move it
@@ -946,7 +946,7 @@ the folder that pane is already showing, and the backend gives each copy a free 
 - **It sets `direction` and `sourcePaneSide` to the FOCUSED pane**, not to the props the builders return: those name the
   other pane, which is right for a transfer across the panes and wrong for one that lands where it came from. The
   settled tail then refreshes the pane the copy appeared in and clears the selection it consumed.
-- **`duplicateFollowUp: 'nothing'`** — no rename editor. `$lib/file-operations/transfer/DETAILS.md` § "Only paste and F5
+- **`duplicateFollowUp: 'nothing'`** — no rename editor. `#lib/file-operations/transfer/DETAILS.md` § "Only paste and F5
   end a duplicate in the rename editor".
 - **The shared destination guard runs against the pane's own folder**, so a read-only volume gets the same alert F5
   gives it. A search-results pane gets the same "not a folder" refusal, and the native context menu omits Duplicate
@@ -969,7 +969,7 @@ Three things hold it together:
 
 - **The trigger decides, and has to say so.** `duplicateFollowUp` is a required field on the dispatch config, because
   every gesture that duplicates dispatches the same operation. Who answers what, and why paste and F5 differ from drag
-  and the Duplicate command: `$lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a duplicate in the
+  and the Duplicate command: `#lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a duplicate in the
   rename editor".
 - **The operation id is read while the progress dialog still owns it.** The dialog releases the foreground slot as it
   unmounts, a few lines further down `handleTransferComplete`, and the journal read needs that id. Same handover shape
@@ -977,7 +977,7 @@ Three things hold it together:
 - **The journal read waits for `write-settled`, and reading it on the terminal event does not work.** Every single-item
   duplicate has an EMPTY journal page at complete time; the mechanism is `src-tauri/src/operation_log/DETAILS.md` § "Why
   a reader waits for `write-settled`". The tail waits through `whenOperationSettled(id)`
-  (`$lib/file-operations/settled-operations.ts`), which answers immediately for the common case where the settle already
+  (`#lib/file-operations/settled-operations.ts`), which answers immediately for the common case where the settle already
   landed. `duplicate-rename.test.ts` pins the ordering so a move back to the terminal event fails loudly instead of
   silently never opening an editor.
 - **The new name is read out of the operation journal, never recomputed.** No terminal event carries it:
@@ -994,7 +994,7 @@ Activation itself is the `paste-clipboard-as-file` pattern: `moveCursorToNewFold
 ### Birth context
 
 The progress dialog can show an operation this window never started (Show, on a queue row:
-`$lib/file-operations/queue/DETAILS.md` § Show). That splits what used to be one thing into three: **what the operation
+`#lib/file-operations/queue/DETAILS.md` § Show). That splits what used to be one thing into three: **what the operation
 did** belongs to its session, **what a pane should do about it** belongs to the view and is bound to the moment the
 operation was born, and **what the dialog draws** is chrome either can supply.
 
@@ -1002,7 +1002,7 @@ operation was born, and **what the dialog draws** is chrome either can supply.
 birth context: the paths, the pane side, the per-type counts, the dispatch input. `adopted-operation.svelte.ts` owns its
 own `$state` for an operation this window is only watching: an id, a type, two paths, and `reverses` off the registry
 row (set only when the adopted operation IS a reversal, and the one thing that lets the dialog title itself by what the
-undo DOES rather than by the `move` / `delete` it runs as: `$lib/file-operations/DETAILS.md` § "The running reversal is
+undo DOES rather than by the `move` / `delete` it runs as: `#lib/file-operations/DETAILS.md` § "The running reversal is
 named from the SAME variant"). That factory is handed a read-only `hasBirthContext()` and nothing else, so an adoption
 cannot overwrite a live birth context — not by convention, but for want of a binding to write it with. That is the one
 hazard in this feature: `handleTransferError`'s archive branch takes the progress dialog down while keeping
@@ -1036,7 +1036,7 @@ The slot is BORROWED only for that job's archive-password prompt (the submit re-
 background because `startInBackground` rides on the props), and only when it's free: a slot held by a foreground
 operation is never overwritten, which is the same wrong-write hazard as above. The prompt waits for that
 (`when-dialogs-clear.svelte.ts`), as it waits for any other dialog on screen. Whole flow:
-`$lib/file-operations/transfer/DETAILS.md` § "Starting in the background".
+`#lib/file-operations/transfer/DETAILS.md` § "Starting in the background".
 
 **A refusal is the honest answer to an occupied slot**, and it is a toast in the main window rather than silence: the
 listener focuses this window whatever the verdict, because a refusal behind the queue window reads as a dead button.
@@ -1078,9 +1078,9 @@ array instead, `snapshot-selection-sync.svelte.ts` above. Two consequences, both
 
 **❌ No dialog handler purges a search snapshot, in either family.** A dialog holds what the operation was ASKED to do,
 and the purge needs what it DID; a snapshot also outlives every pane and dialog, in every window. So it is a
-window-level subscription to the per-path `write-source-item-done` stream, `$lib/search/snapshot-purge.ts`, and an
+window-level subscription to the per-path `write-source-item-done` stream, `#lib/search/snapshot-purge.ts`, and an
 adopted view's snapshots stay correct without the view knowing anything. Why that stream and not `directory-diff` or a
-fatter completion event: `$lib/search/DETAILS.md` § "Cross-snapshot purge". Both families are pinned against reaching
+fatter completion event: `#lib/search/DETAILS.md` § "Cross-snapshot purge". Both families are pinned against reaching
 for the store in `dialog-state.foreground.svelte.test.ts`.
 
 **A dialog that throws during render must never wedge input.** Every dialog renders inside one `<svelte:boundary>` in
@@ -1169,7 +1169,7 @@ return-point bookkeeping. `navigate.ts` re-exports the names callers use, so the
   arriving any other way would leave a pane holding an id nothing keeps alive. The refusal is the frontend's own answer
   rather than a platform accident — macOS's `resolve_location` already fails the shape (`statfs` on a non-path), but
   Linux's longest-prefix mount match hands it back as the ROOT volume, which a pane would then try to list. Go to path
-  refuses the same shape one layer earlier (`$lib/go-to-path/DETAILS.md` § The scheme intercept).
+  refuses the same shape one layer earlier (`#lib/go-to-path/DETAILS.md` § The scheme intercept).
 - **A switch TO the `network` volume resets the pane's open host** (`commitVolumeSwitch` calls
   `paneRef.setNetworkHost(options.networkHost ?? null)`, mirroring what `commitHistoryWalk` does for a history entry).
   The pane's own effect only clears the host when it LEAVES the network volume, so without this a re-select from inside
@@ -1241,7 +1241,7 @@ area. Pinned in `file-pane-loading-header.svelte.test.ts`. The timer and snapsho
 `../views/full-list-cache.test.ts`.
 
 **No pane hosts a credential form.** Every credential ask in the app is the one modal sign-in sheet
-(`$lib/servers/sign-in-sheet-state.svelte.ts`), raised for SMB through `../network/smb-sign-in.ts`. A pane that could
+(`#lib/servers/sign-in-sheet-state.svelte.ts`), raised for SMB through `../network/smb-sign-in.ts`. A pane that could
 render one made "which pane hosts it right now" a question the app had to answer for anything app-global (the OS-mount
 fallback notice's retry button had no surface of its own), and Tab meant two different things inside a form that was
 also a pane. ❌ Don't reintroduce an in-pane form: `smb-view-state.svelte.ts` owns waiting states only.
@@ -1310,13 +1310,13 @@ single module — A5 is per concern, not per call shape):
 - **The MCP backend mirror** (`syncTabsToBackend` / `updatePaneTabs` / `updateFocusedPane`, L8): the Rust state store
   for MCP, a different target and debounce (100 ms), NOT disk persistence. Untouched.
 - **Dotfile visibility**: the `listing.showHiddenFiles` SETTING, not pane state and not `app-status`. Both panes read
-  the one reactive value (`getShowHiddenFiles()` from `$lib/settings/reactive-settings.svelte`), the settings store
+  the one reactive value (`getShowHiddenFiles()` from `#lib/settings/reactive-settings.svelte`), the settings store
   persists it, and `settings-applier.ts` mirrors it onto the View menu's CheckMenuItem.
 
 ### A snapshot never comes back
 
 A `search-results://<id>` path means something only inside the session that minted it: its rows live in the frontend's
-in-memory snapshot store (`$lib/search/DETAILS.md` § "Snapshot store"). Two layers keep one off the next launch. The
+in-memory snapshot store (`#lib/search/DETAILS.md` § "Snapshot store"). Two layers keep one off the next launch. The
 tab's live `path` is untouched by both, because navigating Back into a snapshot within the session is the whole point of
 that store; this is only about what reaches disk and what comes off it.
 
@@ -1361,7 +1361,7 @@ build that introduced this rule has Full Disk Access and no marker, so steps 1, 
 to the layout. **An applied layout is persisted immediately, exactly as a navigation would be, so a layout applied over
 somebody's real one silently BECOMES their layout, with nothing to undo it.** That is the one unrecoverable failure in
 this feature, and step 3 is what prevents it by backfilling the marker for those installs instead.
-`hasPersistedPaneState()` (`$lib/app-status-store`) asks whether any of the four pane KEYS is present (`leftTabs` /
+`hasPersistedPaneState()` (`#lib/app-status-store`) asks whether any of the four pane KEYS is present (`leftTabs` /
 `rightTabs` plus the pre-tabs scalars `leftPath` / `rightPath`), never what the tabs contain: a user who left an empty
 tab list still has a layout of their own. Both sides are checked because nav-state persists per pane
 (`persistence-subscriber.svelte.ts` runs one effect per side, and the first post-init run only seeds), so someone who
@@ -1381,7 +1381,7 @@ Two guardrails that are easy to undo by accident:
   rather than a comment. If the folder is missing, the right pane falls back to `~` and the marker is still recorded.
 - **`isE2eRun()`, never `getAppMode() === 'e2e'`**, and it is only trustworthy because `DualPaneExplorer` renders behind
   `showApp`, which `routes/(main)/+page.svelte` sets after `await initAppMode()`. Both E2E and capture runs need that
-  resolved cache. Mount the explorer any earlier and the gate silently reads `dev`. See `$lib/app-mode.ts`.
+  resolved cache. Mount the explorer any earlier and the gate silently reads `dev`. See `#lib/app-mode.ts`.
 
 **What gets written, and in what order.** `loadPersistedState` does it all in one block, after volume resolution (so the
 stored `volumeId`s are the resolved ones) and before the `CMDR_E2E_START_PATH` override (so fixture paths can never
@@ -1539,14 +1539,14 @@ passing through any of the others.
   can never be the guard; it only stops the app offering what it would then turn down.
 
 **Which dialogs block is DECLARED, not listed here.** Every `SOFT_DIALOG_REGISTRY` entry carries a required `whileOpen`
-verdict (`$lib/ui/dialog-registry.ts`), so a new dialog fails to compile until its author answers the question. The
+verdict (`#lib/ui/dialog-registry.ts`), so a new dialog fails to compile until its author answers the question. The
 default is `BLOCKS_OPERATIONS`; `allowsOperations(reason)` is the opt-out and its reason is mandatory. Today exactly
 three opt out, all for one reason: they're hosted outside the main window (`delete-ai-model` in Settings, the two viewer
 copy sheets), so the main window has no modal up and no decision to lose. Every main-window dialog blocks, `about` and
 `acknowledgements` included, because the window shows one modal at a time. **Search counts as a dialog** and blocks the
 menu operations, which is a deliberate product call rather than a side effect.
 
-**What's on screen comes from `$lib/ui/open-dialogs.svelte`**, which `ModalDialog` maintains from the same mount/destroy
+**What's on screen comes from `#lib/ui/open-dialogs.svelte`**, which `ModalDialog` maintains from the same mount/destroy
 pair that already tells the Rust `SoftDialogTracker`. Exhaustive by construction: rendering a soft dialog means
 rendering a `ModalDialog` with a `SoftDialogId`. ❌ Don't replace it with a hand-written open/close pair — one missed
 close would block every file operation for the rest of the session, which is why the pairing is left to Svelte.
@@ -1607,7 +1607,7 @@ survive the rebuild on the Rust side, so they aren't in that list.
 - **Volume tint old-WebKit branch.** On Safari < 16.2 (macOS 12), `color-mix()` doesn't parse, so `volume-tint` reads
   live CSS vars via `getComputedStyle` and mixes in sRGB. A reactive `mediaTick` re-fires `$derived` callers when
   `prefers-color-scheme` / `prefers-contrast` flips; without it, dark-mode swaps wouldn't repaint the tint. The branch
-  is picked once at module load via `hasColorMix` from `$lib/utils/webkit-compat.ts`.
+  is picked once at module load via `hasColorMix` from `#lib/utils/webkit-compat.ts`.
 - **`DualPaneExplorer.svelte` (~1450 lines) and `FilePane.svelte` (~2815) are flagged by `file-length`.** Don't add to
   them without extracting first. New cross-cutting state goes into a `*.svelte.ts` factory; new pure logic goes into a
   `*.ts` helper with a colocated test. `DualPaneExplorer` has been drained to mostly its `ExplorerAPI` delegate facade +
@@ -1713,7 +1713,7 @@ is derived from the PATH while all I/O routing happens in `VolumeManager::resolv
   routes on: a `.git/<category>/` segment for one of the six categories (`branches`, `tags`, `commits`, `stash`,
   `worktrees`, `submodules`). Keep the two in sync with `Cat` in `crates/cmdr-git/src/path.rs`.
 - **The toggle is part of the predicate.** `capabilitiesForPane` reads `getShowVirtualGitPortal()`
-  (`$lib/settings/reactive-settings.svelte`, mirroring `fileExplorer.git.showVirtualGitPortal`) before asking the path,
+  (`#lib/settings/reactive-settings.svelte`, mirroring `fileExplorer.git.showVirtualGitPortal`) before asking the path,
   because with the portal off `resolve` routes nothing and `.git/branches/` is whatever sits on disk. It's a reactive
   `$state` slot rather than a `getSetting` read: the pane's `caps` is a `$derived`, and a plain Map read would never
   recompute when the user flips the toggle with a portal pane open.
@@ -1819,7 +1819,7 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
   every extension-less file. The `..` row has no kind, so the command no-ops there and the label falls back to its
   neutral form.
 - **The extension rule is `getDisplayExtension`** (`../views/full-list-utils.ts`), what the **Ext column the user is
-  looking at** renders and what Rust sorts by. ❌ Never `getExtension` (`$lib/utils/filename-validation`): it returns
+  looking at** renders and what Rust sorts by. ❌ Never `getExtension` (`#lib/utils/filename-validation`): it returns
   the last dot segment WITH its dot and calls `file.` an extension of `"."`, where the column says "no extension". They
   agree on everything else that matters here (`archive.tar.gz` → `gz`, `.gitignore` → none). What the command groups has
   to be what the column shows.
@@ -1950,7 +1950,7 @@ archive-inner pane answers yes (the terminal opens the folder holding the `.zip`
 them. Folding them into one flag would be wrong for both panes.
 
 The two surfaces that show search hits, the snapshot pane and the Search dialog, pass `canShare` and `canTag` as `true`
-from one place, `$lib/search/search-hit-menu.ts`: every hit is a real file the index walked, so there's no per-row
+from one place, `#lib/search/search-hit-menu.ts`: every hit is a real file the index walked, so there's no per-row
 question to ask. Any other surface leaves both at their `false` default, the "a surface that can't answer says nothing"
 default the whole `PaneContextMenuFacts` object takes.
 
@@ -2020,7 +2020,7 @@ touching.
 **Snapshot it at raise time.** The trash toast holds the handle for as long as it's on screen (the same shape as the
 downloads toast). The object is a snapshot; the methods inside it read live state, so a pane that moves under the toast
 still resolves correctly when the button is finally pressed. First consumer:
-`$lib/file-operations/delete/go-to-trash.ts`.
+`#lib/file-operations/delete/go-to-trash.ts`.
 
 ## The connect views
 
@@ -2038,7 +2038,7 @@ Two producers:
   `host_key_changed`, in ONE exhaustive `switch`. ❗ Exhaustive, ❌ not a list of per-status booleans: a status without
   its own arm used to render a plain listing over a dead session.
 - `device-connect.svelte.ts` owns `waiting_for_device` and a phone's `connecting` / `refused`. Its sentences come from
-  `$lib/adb/adb-connect-errors.ts`, so the view stays generic and the words stay Android's.
+  `#lib/adb/adb-connect-errors.ts`, so the view stays generic and the words stay Android's.
 
 **A backoff loop wears the `connecting` state, with a `cycle` payload.** It says how long the loop keeps going and which
 attempt it is on, drains a bar toward the next attempt, and offers Try now beside Cancel and Disconnect. ❗ The

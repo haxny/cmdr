@@ -1,5 +1,5 @@
 /**
- * Fixtures for `delete-ai-model` (`$lib/settings/sections/DeleteAiModelDialog.svelte`).
+ * Fixtures for `delete-ai-model` (`#lib/settings/sections/DeleteAiModelDialog.svelte`).
  *
  * In the shipping app this one lives in the SETTINGS window, where its props
  * come from the live AI runtime status. Both of its states are prop-driven, so
@@ -22,7 +22,7 @@ export const deleteAiModelFixtures: Record<string, DeleteAiModelFixture | undefi
 }
 
 /**
- * Fixtures for `forget-memory` (`$lib/settings/sections/ForgetMemoryDialog.svelte`),
+ * Fixtures for `forget-memory` (`#lib/settings/sections/ForgetMemoryDialog.svelte`),
  * the settings-window confirmation over the agent's notes folder. Prop-driven like its
  * neighbour above, so the gallery renders the same component the settings window does.
  */

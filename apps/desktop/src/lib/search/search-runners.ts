@@ -12,8 +12,8 @@
  * (`search-run-tracking.ts`).
  */
 
-import { searchFiles, parseSearchScope, type SearchQuery, type SearchResultEntry } from '$lib/tauri-commands'
-import type { LiveRunView, QueryStreamSource } from '$lib/query-ui/query-stream'
+import { searchFiles, parseSearchScope, type SearchQuery, type SearchResultEntry } from '#lib/tauri-commands/index.js'
+import type { LiveRunView, QueryStreamSource } from '#lib/query-ui/query-stream.js'
 import { coverageNoteFrom, coverageNoteFromRun } from './coverage-note'
 import { createLiveSearchSource } from './live-search-source'
 import { fullRowQuery } from './snapshot-fill'

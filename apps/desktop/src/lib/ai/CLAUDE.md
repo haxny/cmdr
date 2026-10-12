@@ -33,7 +33,7 @@ No circular dependency: `ai-state.svelte.ts` never imports from the sync or cont
   reactive context. Calling it after an `await` throws `effect_orphan`. The initial `$effect` fires with `hidden` state
   (no-op), then re-fires when `initAiState()` updates the notification state.
 - **The onboarding wizard owns first-launch AI consent**, not this module: `OnboardingWizard.svelte` step 2
-  (`$lib/onboarding/`) is the only path that flips `ai.provider` from `'off'` (the default) to `'cloud'` / `'local'` on
+  (`#lib/onboarding/`) is the only path that flips `ai.provider` from `'off'` (the default) to `'cloud'` / `'local'` on
   a fresh install. There is no `offer` toast. `ai-state.svelte.ts` tracks runtime states only (`downloading`,
   `installing`, `ready`, `starting`).
 - **Keep `translate-error-toast.ts`'s switch in lockstep with the Rust `AiTranslateErrorKind`**

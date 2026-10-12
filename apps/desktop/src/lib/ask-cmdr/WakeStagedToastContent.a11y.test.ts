@@ -7,16 +7,16 @@
 
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/suggested-ops/suggested-ops-trigger.svelte', () => ({
+vi.mock('#lib/suggested-ops/suggested-ops-trigger.svelte.js', () => ({
   openSuggestedOps: (): Promise<void> => Promise.resolve(),
 }))
 vi.mock('./ask-cmdr-trigger.svelte', () => ({
   switchToThread: (): Promise<void> => Promise.resolve(),
   openRail: (): Promise<void> => Promise.resolve(),
 }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast: (): void => {} }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: (): void => {} }))
 
 import WakeStagedToastContent from './WakeStagedToastContent.svelte'
 

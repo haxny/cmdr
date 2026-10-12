@@ -19,11 +19,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import ServersHub from './ServersHub.svelte'
 import { resolveGlobalKeyAction } from '../../../routes/(main)/global-keydown'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { initShortcutDispatch, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
 import type { HubRow } from './servers-hub-rows'
 import type { NetworkHost } from '../types'
-import type { SavedServer } from '$lib/tauri-commands'
+import type { SavedServer } from '#lib/tauri-commands/index.js'
 
 const h = vi.hoisted(() => ({
   clearShareState: vi.fn(),
@@ -103,8 +103,8 @@ vi.mock('./network-store.svelte', () => ({
 }))
 
 vi.mock('./lazy-trigger', () => ({ triggerNetworkDiscovery: vi.fn() }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
-vi.mock('$lib/settings/reactive-settings.svelte', async () => {
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () => {
   const { SvelteMap } = await import('svelte/reactivity')
   h.settings = new SvelteMap<string, string>()
   return {
@@ -113,14 +113,14 @@ vi.mock('$lib/settings/reactive-settings.svelte', async () => {
     getNearbyServersGroupChoice: () => h.settings.get('network.nearbyServersGroup') ?? 'auto',
   }
 })
-vi.mock('$lib/settings', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings')>()),
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/index.js')>()),
   setSetting: (id: string, value: string) => {
     h.setSetting(id, value)
     h.settings.set(id, value)
   },
 }))
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: vi.fn(() => Promise.resolve()),
   settingAnchorId: (id: string) => `setting-${id}`,
 }))
@@ -128,9 +128,9 @@ vi.mock('../navigation/server-row-actions', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../navigation/server-row-actions')>()),
   forgetSavedServer: h.forgetSavedServer,
 }))
-vi.mock('$lib/stores/volume-busy-store.svelte', () => ({ isVolumeBusy: () => false, isVolumeEjecting: () => false }))
+vi.mock('#lib/stores/volume-busy-store.svelte.js', () => ({ isVolumeBusy: () => false, isVolumeEjecting: () => false }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   updateLeftPaneState: vi.fn(() => Promise.resolve()),
   updateRightPaneState: vi.fn(() => Promise.resolve()),
   showNetworkHostContextMenu: h.showNetworkHostContextMenu,
@@ -139,8 +139,8 @@ vi.mock('$lib/tauri-commands', () => ({
   listSavedServers: h.listSavedServers,
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({ confirmDialog: vi.fn(() => Promise.resolve(false)) }))
-vi.mock('$lib/ui/toast', () => ({ addToast: h.addToast }))
+vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: vi.fn(() => Promise.resolve(false)) }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: h.addToast }))
 
 /**
  * A `pane.refresh` keypress for the platform the test runs on: the default binding

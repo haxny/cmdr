@@ -24,8 +24,8 @@
      * The "Refine…" button is intentionally visible-disabled with a tooltip: it signals a coming
      * chat-back feature without overpromising. No keyboard shortcut is wired.
      */
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { patternRowLabel, type AiSummary } from './ai-summary'
 
     interface Props {

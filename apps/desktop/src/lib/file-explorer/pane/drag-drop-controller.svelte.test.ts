@@ -83,7 +83,7 @@ const {
   dragDropHandlerRef: { current: null as ((event: { payload: DragDropPayload }) => void) | null },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   DEFAULT_VOLUME_ID: 'root',
   // The drop path reports one PII-free event per drop (`drag/drag-analytics.ts`).
   trackEvent: trackEventSpy,
@@ -114,7 +114,7 @@ vi.mock('$lib/tauri-commands', () => ({
   }),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastSpy }))
 
 // The shared operation-start gate. Mocked so this suite can drive the verdict;
 // the gate's own behavior (which dialogs block, the toast, the MCP reply) is
@@ -153,7 +153,7 @@ vi.mock('../drag/drag-overlay.svelte.js', () => ({
   hideOverlay: hideOverlaySpy,
 }))
 
-vi.mock('$lib/icon-cache', () => ({ getCachedIcon: getCachedIconSpy, getCachedCustomFolderIcon: () => undefined }))
+vi.mock('#lib/icon-cache.js', () => ({ getCachedIcon: getCachedIconSpy, getCachedCustomFolderIcon: () => undefined }))
 
 vi.mock('../modifier-key-tracker.svelte', () => ({
   startModifierTracking: startModifierTrackingSpy,

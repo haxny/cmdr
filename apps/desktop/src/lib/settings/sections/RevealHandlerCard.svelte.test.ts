@@ -6,7 +6,7 @@
  * mount. So what's pinned here is the state → rendering map, and that the row
  * renders the state the OS was LEFT in rather than the one the click asked for.
  *
- * `$lib/ipc/bindings` is mocked rather than `$lib/tauri-commands`, so the real
+ * `#lib/ipc/bindings` is mocked rather than `#lib/tauri-commands`, so the real
  * `getRevealHandlerState` / `setRevealHandlerEnabled` wrappers run: their
  * swallow-and-report-`unavailable` fallback is half of why a non-macOS build
  * renders nothing, and mocking above them would skip it.
@@ -18,7 +18,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { RevealHandlerState, RevealHandlerStatus } from '$lib/ipc/bindings'
+import type { RevealHandlerState, RevealHandlerStatus } from '#lib/ipc/bindings.js'
 
 const getRevealHandlerState = vi.fn<() => Promise<RevealHandlerStatus>>()
 const setRevealHandlerEnabled = vi.fn<(enabled: boolean) => Promise<RevealHandlerStatus>>()
@@ -26,15 +26,15 @@ const setRevealHandlerEnabled = vi.fn<(enabled: boolean) => Promise<RevealHandle
 // while modules load, before a plain `const` here would exist.
 const isMacOS = vi.hoisted(() => vi.fn<() => boolean>(() => true))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getRevealHandlerState: () => getRevealHandlerState(),
     setRevealHandlerEnabled: (enabled: boolean) => setRevealHandlerEnabled(enabled),
   },
 }))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
 
@@ -271,7 +271,7 @@ describe('a copy of Cmdr outside an Applications folder', () => {
     const target = await mountCard()
 
     expect(toggle(target)?.disabled).toBe(true)
-    // The real catalog resolves here (nothing mocks `$lib/intl`), so this pins the one
+    // The real catalog resolves here (nothing mocks `#lib/intl`), so this pins the one
     // thing the sentence has to carry: what to do about it.
     expect(blockedReason(target)?.textContent).toContain('Applications folder')
   })

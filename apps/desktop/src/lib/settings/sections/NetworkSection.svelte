@@ -5,12 +5,12 @@
     import SettingSelect from '../components/SettingSelect.svelte'
     import SettingRadioGroup from '../components/SettingRadioGroup.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSettingDefinition } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
-    import { openLocalNetworkSettings } from '$lib/tauri-commands'
-    import { systemStrings } from '$lib/system-strings.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSettingDefinition } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
+    import { openLocalNetworkSettings } from '#lib/tauri-commands/index.js'
+    import { systemStrings } from '#lib/system-strings.svelte.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         searchQuery: string

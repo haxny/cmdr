@@ -11,13 +11,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import SelectionInfo from './SelectionInfo.svelte'
 
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   isVolumeScanning: () => false,
   isVolumeAggregating: () => false,
   getWalkedGround: () => [],
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: (n: number) => `${String(n)} B`,
   formatDateTime: (t: number | undefined) => (t ? '2025-03-14 10:30' : ''),
   formattedDate: (t: number | undefined) =>

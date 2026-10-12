@@ -2,16 +2,16 @@
 
 The alpha "Operation log" dialog (View > Operation log, ⌥⌘L): your file operations newest first, each expandable to its
 per-item rows, and each reversible one carrying a Roll back button. Reads the journal through
-`$lib/tauri-commands/operation-log.ts`; the durable journal itself is
+`#lib/tauri-commands/operation-log.ts`; the durable journal itself is
 `apps/desktop/src-tauri/src/operation_log/CLAUDE.md`.
 
 ## Module map
 
 - `operation-log-trigger.svelte.ts`: `operationLogState` plus open / close / page-more, and `markOperationRollingBack`.
 - `OperationLogDialog.svelte`: the soft dialog. Owns the pending rollback question and stacks
-  `$lib/file-operations/RollbackConfirmDialog.svelte` over itself.
+  `#lib/file-operations/RollbackConfirmDialog.svelte` over itself.
 - `operation-log-labels.ts`: the pure typed-enum → UI mappings (labels, the refusal notice). The confirmation variant is
-  `$lib/file-operations/reversal-wording.ts`, which words the RUNNING reversal off the same map.
+  `#lib/file-operations/reversal-wording.ts`, which words the RUNNING reversal off the same map.
 - `RollbackControls.svelte`: Pause / Resume and Cancel on a row whose reversal is running.
 - `rollback-refusal.ts`: the `TypedFailure` that carries a `RollbackRefusal` from the command wrapper to the row.
 

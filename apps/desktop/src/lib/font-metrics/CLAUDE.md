@@ -41,8 +41,8 @@ consumer is a sibling subsystem at `src-tauri/src/font_metrics/mod.rs` (not nest
 
 ## Dependencies
 
-- `$lib/tauri-commands`: `storeFontMetrics`, `extendFontMetrics`, `hasFontMetrics`.
-- `$lib/logging/logger`: `getAppLogger` (main thread only; a worker has no bridge to post to).
+- `#lib/tauri-commands`: `storeFontMetrics`, `extendFontMetrics`, `hasFontMetrics`.
+- `#lib/logging/logger`: `getAppLogger` (main thread only; a worker has no bridge to post to).
 - Rust counterpart: `apps/desktop/src-tauri/src/font_metrics/mod.rs`.
 
 Architecture, flows, and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,

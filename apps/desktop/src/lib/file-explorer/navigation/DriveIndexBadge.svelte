@@ -12,19 +12,19 @@
      * dot, the tooltip, and what the menu says. The state→color/copy mapping is
      * the pure `drive-index-status.ts` (unit-tested).
      *
-     * The menu is the house `Menu` (`$lib/ui/DETAILS.md` § Menu), which owns keys,
+     * The menu is the house `Menu` (`#lib/ui/DETAILS.md` § Menu), which owns keys,
      * cursor, placement, focus, and closing. In the dropdown placement it's a menu
      * opened from inside another one, a case the primitive handles for both.
      */
     import { onDestroy } from 'svelte'
-    import type { VolumeIndexStatus } from '$lib/ipc/bindings'
-    import Menu from '$lib/ui/Menu.svelte'
-    import { createMenu } from '$lib/ui/menu-controller.svelte'
-    import type { MenuSection } from '$lib/ui/menu-types'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatDateForDisplay } from '$lib/settings/format-utils'
+    import type { VolumeIndexStatus } from '#lib/ipc/bindings.js'
+    import Menu from '#lib/ui/Menu.svelte'
+    import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import type { MenuSection } from '#lib/ui/menu-types.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatDateForDisplay } from '#lib/settings/format-utils.js'
     import {
         driveIndexState,
         driveIndexMenuActions,
@@ -36,9 +36,9 @@
         type DriveIndexMenuAction,
         type DriveIndexState,
     } from './drive-index-status'
-    import { getVolumeActivity, getVolumeAggregation, getVolumePhase, placeholderActivity } from '$lib/indexing'
-    import IndexingDriveRow from '$lib/indexing/IndexingDriveRow.svelte'
-    import { getDriveIndexingEnabled } from '$lib/settings/reactive-settings.svelte'
+    import { getVolumeActivity, getVolumeAggregation, getVolumePhase, placeholderActivity } from '#lib/indexing/index.js'
+    import IndexingDriveRow from '#lib/indexing/IndexingDriveRow.svelte'
+    import { getDriveIndexingEnabled } from '#lib/settings/reactive-settings.svelte.js'
 
     interface Props {
         /** The drive this badge describes. */
@@ -117,7 +117,7 @@
     const coalescedText = $derived.by(() => {
         if (!coalescedNote) return ''
         // Counts ride as preformatted `*Text` params (formatting is single-sourced
-        // in `$lib/intl`); the raw integers only drive the plural branches.
+        // in `#lib/intl`); the raw integers only drive the plural branches.
         const params: Record<string, string | number> = {
             count: coalescedNote.count,
             countText: formatInteger(coalescedNote.count),

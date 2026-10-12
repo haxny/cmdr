@@ -1,5 +1,5 @@
 /**
- * Fixtures for the `quit-confirmation` dialog (`$lib/quit/QuitConfirmationDialog.svelte`).
+ * Fixtures for the `quit-confirmation` dialog (`#lib/quit/QuitConfirmationDialog.svelte`).
  *
  * Raw copy on purpose: this module is dev-only and sits outside the i18n-enforced
  * areas, so fixture strings never reach the message catalog.
@@ -9,7 +9,7 @@
  * the last second of the countdown (where the sentence goes singular).
  */
 
-import type { OperationSnapshot } from '$lib/tauri-commands'
+import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
 
 export interface QuitFixture {
   operations: OperationSnapshot[]

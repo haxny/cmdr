@@ -6,8 +6,8 @@
 import { describe, it, expect } from 'vitest'
 import { mount, tick } from 'svelte'
 import PreviewList from './PreviewList.svelte'
-import type { PreviewRow } from '$lib/tauri-commands'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { PreviewRow } from '#lib/tauri-commands/index.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const ROWS: PreviewRow[] = [
   {

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     cancelAdbConnect: vi.fn(),
     connectAdbDevice: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import {
   AdbConnectFailure,
   asAdbConnectError,

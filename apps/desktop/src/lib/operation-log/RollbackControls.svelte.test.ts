@@ -14,8 +14,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync, tick } from 'svelte'
-import type { OperationRow as JournalRow, OperationSnapshot } from '$lib/ipc/bindings'
-import type { OperationLogDetail } from '$lib/tauri-commands'
+import type { OperationRow as JournalRow, OperationSnapshot } from '#lib/ipc/bindings.js'
+import type { OperationLogDetail } from '#lib/tauri-commands/index.js'
 
 const { commandMocks } = vi.hoisted(() => ({
   commandMocks: {
@@ -31,7 +31,7 @@ const { commandMocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   // The honest double for `list_operations`: a session seeds from the live
   // registry, and an id it can't find there is one that has already ended.
   listOperations: vi.fn(() => Promise.resolve(liveOperations)),
@@ -49,12 +49,12 @@ vi.mock('$lib/tauri-commands', () => ({
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatDateTime: () => '2026-07-09 12:00',
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
@@ -63,12 +63,12 @@ import OperationLogDialog from './OperationLogDialog.svelte'
 // evaluate (no CSS in happy-dom).
 import rollbackControlsSource from './RollbackControls.svelte?raw'
 import { operationLogState, closeOperationLog } from './operation-log-trigger.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import {
   destroyOperationSessions,
   getOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 
 /** A finished copy in the history feed, mid-reversal unless a test says otherwise. */
 function journalRow(over: Partial<JournalRow> = {}): JournalRow {

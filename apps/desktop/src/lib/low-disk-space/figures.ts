@@ -1,5 +1,5 @@
-import { getNumberFormatter } from '$lib/intl/number-format'
-import { formatDriveSize } from '$lib/units'
+import { getNumberFormatter } from '#lib/intl/number-format.js'
+import { formatDriveSize } from '#lib/units/index.js'
 
 /**
  * The low-space warning's two figures, shared by the in-app toast and the macOS notification: the

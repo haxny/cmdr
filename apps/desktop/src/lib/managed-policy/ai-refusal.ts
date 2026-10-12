@@ -5,8 +5,8 @@
  * decides the refusal; this only names it.
  */
 
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export function managedAiRefusalMessage(refusal: ManagedAiRefusal): string {
   switch (refusal) {

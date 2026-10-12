@@ -15,7 +15,7 @@
  * real clipboard.
  */
 
-import { isE2eMode } from '$lib/tauri-commands'
+import { isE2eMode } from '#lib/tauri-commands/index.js'
 
 let installed = false
 

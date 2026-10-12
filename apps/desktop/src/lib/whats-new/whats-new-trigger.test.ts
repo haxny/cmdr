@@ -20,7 +20,7 @@ interface MockRelease {
 }
 const getWhatsNewMock = vi.fn<(since: string | null, max: number) => Promise<MockRelease[]>>()
 const whatsNewDevOverrideMock = vi.fn<() => Promise<string | null>>(() => Promise.resolve(null))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getWhatsNew: (since: string | null, max: number) => getWhatsNewMock(since, max),
   whatsNewDevOverride: () => whatsNewDevOverrideMock(),
 }))
@@ -28,7 +28,7 @@ vi.mock('$lib/tauri-commands', () => ({
 let mockLastSeen = ''
 let mockEnabled = true
 const setSettingMock = vi.fn()
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((id: string) => {
     if (id === 'whatsNew.lastSeenVersion') return mockLastSeen
     if (id === 'whatsNew.showOnUpdate') return mockEnabled

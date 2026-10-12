@@ -14,9 +14,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { _setFormatLocaleForTests, _setLocaleForTests, getFormatLocale, getUiLocale, setOsFormatLocale } from './locale'
 import { setLocale, tString } from './messages.svelte'
-import { formatDateForDisplay } from '$lib/settings/format-utils'
-import { formatFileSizeWithFormat } from '$lib/units'
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
+import { formatDateForDisplay } from '#lib/settings/format-utils.js'
+import { formatFileSizeWithFormat } from '#lib/units/index.js'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
 
 describe('a Hungarian speaker on a Swedish Mac', () => {
   beforeEach(() => {

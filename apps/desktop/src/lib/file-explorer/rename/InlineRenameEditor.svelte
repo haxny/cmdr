@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount, tick } from 'svelte'
-    import { getExtension } from '$lib/utils/filename-validation'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { getExtension } from '#lib/utils/filename-validation.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { RenameSessionId } from './rename-state.svelte'
     import { renameStepDirection, type RenameStepDirection } from './rename-step'
 

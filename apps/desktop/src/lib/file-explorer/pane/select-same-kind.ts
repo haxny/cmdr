@@ -10,7 +10,7 @@
  *
  * The extension rule is `getDisplayExtension`, the same one the **Ext column the
  * user is looking at** renders and Rust sorts by — ❌ never `getExtension` from
- * `$lib/utils/filename-validation`, which returns the last dot segment WITH its
+ * `#lib/utils/filename-validation`, which returns the last dot segment WITH its
  * dot and calls a trailing-dot name (`file.`) an extension of `"."`. What the
  * command groups has to be what the column shows.
  */

@@ -1,12 +1,12 @@
 /**
- * Fixtures for the rename dialogs (`$lib/file-explorer/rename/`):
+ * Fixtures for the rename dialogs (`#lib/file-explorer/rename/`):
  * `extension-change` and `rename-conflict`.
  *
  * Raw copy on purpose: this module is dev-only and sits outside the i18n-enforced
  * areas, so fixture strings never reach the message catalog.
  */
 
-import type { ConflictFileInfo } from '$lib/file-explorer/rename/rename-operations'
+import type { ConflictFileInfo } from '#lib/file-explorer/rename/rename-operations.js'
 import { daysAgo, hoursAgo } from './relative-time'
 
 /** Props of `ExtensionChangeDialog.svelte`, minus its callbacks. */

@@ -5,8 +5,8 @@
      * decision behind it, and the confirmation it raises, live in
      * `transfer-rollback.svelte.ts`.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { TransferRollback } from './transfer-rollback.svelte'
 
     interface Props {

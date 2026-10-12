@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onDestroy, onMount, tick } from 'svelte'
-    import ToastContainer from '$lib/ui/toast/ToastContainer.svelte'
-    import { trackOwnRect } from '$lib/window-positioning'
-    import { closeSelfWindow } from '$lib/child-window-close'
-    import { initWindowSettings, initWindowLanguageSync } from '$lib/settings/window-settings'
-    import { initAccentColor, cleanupAccentColor } from '$lib/accent-color'
-    import { initGlassMaterial, cleanupGlassMaterial } from '$lib/glass-material'
-    import { getAppLogger } from '$lib/logging/logger'
+    import ToastContainer from '#lib/ui/toast/ToastContainer.svelte'
+    import { trackOwnRect } from '#lib/window-positioning.js'
+    import { closeSelfWindow } from '#lib/child-window-close.js'
+    import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
+    import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
+    import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import DebugAppearancePanel from './DebugAppearancePanel.svelte'
     import DebugClosedTabsPanel from './DebugClosedTabsPanel.svelte'
     import DebugDialogsPanel from './DebugDialogsPanel.svelte'
@@ -215,7 +215,7 @@
     async function closeWindow() {
         // Like every other self-closing webview: the backend hides the window and destroys it a
         // moment later, so this one never destroys itself from inside the Escape handler.
-        // See `$lib/child-window-close`.
+        // See `#lib/child-window-close`.
         await closeSelfWindow()
     }
 </script>

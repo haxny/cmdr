@@ -14,15 +14,15 @@
      */
 
     import type { Snippet } from 'svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { setSetting } from '$lib/settings'
-    import { getEffectiveShortcuts, toDisplayShortcut } from '$lib/shortcuts'
-    import { openShortcutCustomization } from '$lib/settings/settings-window'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { setSetting } from '#lib/settings/index.js'
+    import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
+    import { openShortcutCustomization } from '#lib/settings/settings-window.js'
 
     import { QUICK_LOOK_HINT_TOAST_ID } from './quick-look-hint-id'
 

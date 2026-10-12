@@ -14,9 +14,9 @@
  * explicit — a cast would resolve a missing catalog key at runtime.
  */
 
-import type { OperationSnapshot } from '$lib/tauri-commands'
-import type { OperationFailedIncident } from '$lib/error-reporter/report-incident'
-import type { TransferOperationType } from '$lib/file-explorer/types'
+import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
+import type { OperationFailedIncident } from '#lib/error-reporter/report-incident.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import { getUserFriendlyMessage, type FriendlyErrorMessage } from '../transfer/transfer-error-messages'
 
 /**

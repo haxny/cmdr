@@ -21,19 +21,19 @@ vi.mock('@tauri-apps/plugin-store', () => ({
   ),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
 
 const openShortcutCustomization = vi.fn(() => Promise.resolve())
 // The component imports this lazily via dynamic `import()` (keeps the Tauri
 // window-creation surface out of the viewer bundle). Mock the same specifier.
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openShortcutCustomization,
 }))
 
 import ShortcutChip from './ShortcutChip.svelte'
-import { setShortcut, resetShortcut } from '$lib/shortcuts/shortcuts-store'
+import { setShortcut, resetShortcut } from '#lib/shortcuts/shortcuts-store.js'
 
 function setup(props: Record<string, unknown>) {
   const target = document.createElement('div')

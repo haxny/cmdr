@@ -5,8 +5,8 @@
      * the one way out when there is one. `navigation/open-favorite.ts` raises it and
      * decides both the words and the action (`favorite-reach.ts`); this only renders them.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
 
     interface Props {
         /** Dedup id of this toast, so the action can retire it. */

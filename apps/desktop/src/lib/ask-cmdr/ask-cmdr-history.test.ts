@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { buildRailMessages, pathFromArguments } from './ask-cmdr-history'
-import type { ConversationDetailView } from '$lib/tauri-commands'
+import type { ConversationDetailView } from '#lib/tauri-commands/index.js'
 
 function detail(messages: ConversationDetailView['messages']): ConversationDetailView {
   return {

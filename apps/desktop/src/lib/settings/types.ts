@@ -2,9 +2,9 @@
  * Settings system type definitions.
  */
 
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { IconName } from '$lib/ui/icons/icon-map'
-import type { EnterAction } from '$lib/file-explorer/pane/archive-enter-policy'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
+import type { EnterAction } from '#lib/file-explorer/pane/archive-enter-policy.js'
 
 // ============================================================================
 // Core Types
@@ -390,7 +390,7 @@ export interface SettingsValues {
   'behavior.doubleClickOnPaneNotificationSeen': boolean
   /**
    * Whether the once-ever toast about a long Network group has fired. Raised by
-   * `$lib/stores/volume-store` the first time five server places are pinned.
+   * `#lib/stores/volume-store` the first time five server places are pinned.
    */
   'behavior.serversPinHintSeen': boolean
   /**
@@ -401,18 +401,18 @@ export interface SettingsValues {
 
   /**
    * When the once-ever "keep Cmdr in your Dock?" offer was made, as an ISO 8601
-   * instant, or `''` when it never was. Stamped by `$lib/dock/dock-nudge` as the
+   * instant, or `''` when it never was. Stamped by `#lib/dock/dock-nudge` as the
    * toast is raised, never when it's answered. macOS-only.
    *
    * A date rather than a flag because it's half of the shared nudge cooldown:
-   * one offer keeps every other offer quiet for a few days (`$lib/nudges/`).
+   * one offer keeps every other offer quiet for a few days (`#lib/nudges/`).
    */
   'behavior.dockPinNudgeOfferedAt': string
 
   /**
    * When the once-ever "open Show in Finder in Cmdr?" offer was made, as an ISO
    * 8601 instant, or `''` when it never was. The other half of the same
-   * cooldown, stamped by `$lib/reveal/reveal-nudge`. macOS-only.
+   * cooldown, stamped by `#lib/reveal/reveal-nudge`. macOS-only.
    */
   'behavior.revealNudgeOfferedAt': string
 
@@ -701,7 +701,7 @@ export interface SettingsValues {
   'onboarding.completed': boolean
   'onboarding.fullDiskAccessChoice': FullDiskAccessChoice
   /**
-   * Which terms the user accepted (`TERMS_VERSION` from `$lib/legal/terms`), or `''` if they
+   * Which terms the user accepted (`TERMS_VERSION` from `#lib/legal/terms`), or `''` if they
    * never have. The version, not a boolean: consent to a superseded document isn't consent to
    * the current one, so a terms change makes every stored acceptance stale and the onboarding
    * beta step asks again.
@@ -786,9 +786,9 @@ export function durationValueToMs(value: number, unit: DurationUnit | undefined)
 /**
  * Render a duration SETTING's stored milliseconds for the settings UI
  * ("500ms", "20s", "5min"). Not the display formatter for ETAs and elapsed
- * time — that's `formatDuration(seconds)` in `$lib/units`.
+ * time — that's `formatDuration(seconds)` in `#lib/units`.
  */
-// eslint-disable-next-line cmdr/no-private-unit-format -- renders a duration SETTING's stored ms in the settings UI ("500ms"/"5min"); the display formatter is `formatDuration` in `$lib/units`
+// eslint-disable-next-line cmdr/no-private-unit-format -- renders a duration SETTING's stored ms in the settings UI ("500ms"/"5min"); the display formatter is `formatDuration` in `#lib/units`
 export function formatDurationSetting(ms: number): string {
   if (ms < 1000) return ms.toString() + 'ms'
   if (ms < 60000) return (ms / 1000).toString() + 's'

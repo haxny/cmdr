@@ -36,7 +36,7 @@ export default {
     },
     messages: {
       rawArk:
-        "Don't import `{{ source }}` in feature code. Use the house wrapper in `$lib/ui/` (each Ark " +
+        "Don't import `{{ source }}` in feature code. Use the house wrapper in `#lib/ui/` (each Ark " +
         'primitive is wrapped there exactly once, named 1:1 after Ark). If no wrapper exists yet, add one in ' +
         '`lib/ui/` rather than reaching for Ark directly. See `src/lib/ui/CLAUDE.md`.',
     },

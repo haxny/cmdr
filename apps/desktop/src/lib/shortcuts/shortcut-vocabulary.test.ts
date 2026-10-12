@@ -15,8 +15,8 @@
  */
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { commands } from '$lib/commands/command-registry'
-import { classifySystemShortcut } from '$lib/settings/sections/keyboard-shortcuts-banner'
+import { commands } from '#lib/commands/command-registry.js'
+import { classifySystemShortcut } from '#lib/settings/sections/keyboard-shortcuts-banner.js'
 import { formatKeyCombo } from './key-capture'
 
 const navigatorSpy = vi.spyOn(globalThis, 'navigator', 'get')

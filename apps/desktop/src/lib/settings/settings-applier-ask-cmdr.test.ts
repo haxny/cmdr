@@ -18,7 +18,7 @@ const { order, pushAdbConfigToBackend, scheduleAdbConfigPush, cancelScheduledAdb
 /** The change listener the applier registers, captured so the test can fire it. */
 let changeListener: ((change: { id: string; value: unknown }) => void) | undefined
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const noop = () => Promise.resolve()
   const stubbed: Record<string, unknown> = {}
@@ -32,8 +32,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   return stubbed
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/settings')>()
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/settings/index.js')>()
   return {
     ...actual,
     initializeSettings: vi.fn().mockResolvedValue(undefined),
@@ -50,7 +50,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/adb/adb-settings', () => ({
+vi.mock('#lib/adb/adb-settings.js', () => ({
   cancelScheduledAdbConfigPush,
   pushAdbConfigToBackend,
   scheduleAdbConfigPush,

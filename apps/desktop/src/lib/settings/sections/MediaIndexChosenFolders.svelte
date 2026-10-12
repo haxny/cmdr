@@ -22,16 +22,16 @@
      */
     import { onMount } from 'svelte'
     import { open as openFolderPicker } from '@tauri-apps/plugin-dialog'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { onSpecificSettingChange } from '$lib/settings'
-    import { getChosenFolders, isFolderChosen, setFolderChosen } from '$lib/media-index/always-index-folders'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { ROOT_VOLUME_ID } from '$lib/indexing'
-    import { mediaIndexFolderCoverage, type FolderCoverage } from '$lib/tauri-commands'
-    import { getFolderCoverageBadge } from '$lib/file-explorer/views/file-list-utils'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { onSpecificSettingChange } from '#lib/settings/index.js'
+    import { getChosenFolders, isFolderChosen, setFolderChosen } from '#lib/media-index/always-index-folders.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { ROOT_VOLUME_ID } from '#lib/indexing/index.js'
+    import { mediaIndexFolderCoverage, type FolderCoverage } from '#lib/tauri-commands/index.js'
+    import { getFolderCoverageBadge } from '#lib/file-explorer/views/file-list-utils.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     const log = getAppLogger('media-index')
 

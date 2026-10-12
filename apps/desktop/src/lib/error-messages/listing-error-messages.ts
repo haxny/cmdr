@@ -13,13 +13,13 @@
  * brace/apostrophe grammar. Each catalog value may carry `{path}` / `{osMessage}`
  * param tokens; `interpolate(...)` substitutes the escaped runtime value, and
  * `expandSystemStrings(...)` swaps the localized macOS pane labels. See
- * `compose.ts` and `$lib/intl`'s docs.
+ * `compose.ts` and `#lib/intl`'s docs.
  */
 
 import type { FriendlyErrorMessage } from './friendly-error-message'
 import { esc, expandSystemStrings } from './compose'
-import { getMessage } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * Substitutes `{path}` / `{osMessage}` param tokens in a catalog value with the

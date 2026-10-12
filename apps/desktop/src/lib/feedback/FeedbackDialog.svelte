@@ -7,20 +7,20 @@
      * IPC command; no log bundle rides along (that's the error reporter's job).
      */
     import { onMount, tick } from 'svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import AttachEmailCheckbox from '$lib/attach-email/AttachEmailCheckbox.svelte'
-    import { createAttachEmail } from '$lib/attach-email/attach-email.svelte'
-    import TextArea from '$lib/ui/TextArea.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import { addToast } from '$lib/ui/toast'
-    import { sendFeedback, openExternalUrl } from '$lib/tauri-commands'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { t, tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import AttachEmailCheckbox from '#lib/attach-email/AttachEmailCheckbox.svelte'
+    import { createAttachEmail } from '#lib/attach-email/attach-email.svelte.js'
+    import TextArea from '#lib/ui/TextArea.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import { sendFeedback, openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import { closeFeedbackDialog } from './feedback-flow.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { GITHUB_ISSUES_URL, BOOK_A_CALL_URL } from '$lib/beta-links'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { GITHUB_ISSUES_URL, BOOK_A_CALL_URL } from '#lib/beta-links.js'
 
     const log = getAppLogger('feedbackDialog')
 

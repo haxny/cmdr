@@ -4,10 +4,10 @@
  * them without importing itself back.
  */
 
-import { dismissToast } from '$lib/ui/toast'
-import { setSetting } from '$lib/settings'
-import { settingAnchorId } from '$lib/settings/settings-window'
-import { getAppLogger } from '$lib/logging/logger'
+import { dismissToast } from '#lib/ui/toast/index.js'
+import { setSetting } from '#lib/settings/index.js'
+import { settingAnchorId } from '#lib/settings/settings-window.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 
@@ -24,7 +24,7 @@ export function switchToJumpMode(): void {
 export async function openTypingModeSettings(): Promise<void> {
   dismissToast(QUICK_FILTER_INTRO_TOAST_ID)
   try {
-    const { openSettingsWindow } = await import('$lib/settings/settings-window')
+    const { openSettingsWindow } = await import('#lib/settings/settings-window.js')
     await openSettingsWindow(
       'quick-filter-toast',
       ['Appearance', 'Listing'],

@@ -7,9 +7,9 @@
  * gap, a nameable drive, not silenced); this owns what pressing it means.
  */
 
-import { enableDriveIndex } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { addToast } from '$lib/ui/toast'
+import { enableDriveIndex } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
 
 /**
  * Turn on indexing for `volumeId` and report the outcome as a toast.

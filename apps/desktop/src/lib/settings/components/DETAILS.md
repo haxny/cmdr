@@ -82,7 +82,7 @@ Practical fallout worth knowing:
   CPU count). The registry keeps a static fallback so search and off-runtime rendering still work.
 - A slider's readout joins the value and `unit` with NO space (`125%`), and `ariaValueText` carries the same string so
   screen readers hear the unit too. A row whose number isn't a plain count passes `formatValue` instead (the Ask Cmdr
-  wake cadence renders `30s` / `5m` / `2h` through `$lib/units`), and that also turns the spoken value on.
+  wake cadence renders `30s` / `5m` / `2h` through `#lib/units`), and that also turns the spoken value on.
 
 ## Index-mapped stops
 

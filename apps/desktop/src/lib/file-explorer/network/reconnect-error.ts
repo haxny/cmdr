@@ -1,6 +1,6 @@
 /** Carrying a typed `ReconnectError` from the SMB reconnect commands to the log that records it. */
-import type { ReconnectError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { ReconnectError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /**
  * An `Error` that still carries the backend's typed reconnect refusal.

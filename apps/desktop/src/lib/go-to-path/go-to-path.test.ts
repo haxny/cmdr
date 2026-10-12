@@ -34,22 +34,22 @@ function okLocation(path: string) {
   return { volumeId: 'root', path }
 }
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     resolveGoToPath: resolveGoToPathMock,
   },
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
 }))
 
-vi.mock('$lib/shortcuts', async () => ({
+vi.mock('#lib/shortcuts/index.js', async () => ({
   getEffectiveShortcuts: getEffectiveShortcutsMock,
-  toDisplayShortcut: (await import('$lib/shortcuts/key-capture')).toDisplayShortcut,
+  toDisplayShortcut: (await import('#lib/shortcuts/key-capture.js')).toDisplayShortcut,
 }))
 
-vi.mock('$lib/file-explorer/navigation/navigate-and-select', () => ({
+vi.mock('#lib/file-explorer/navigation/navigate-and-select.js', () => ({
   navigateToDirInPane: navigateToDirMock,
   navigateToFileInPane: navigateToFileMock,
   resolveLocationOrToast: resolveLocationOrToastMock,
@@ -68,7 +68,7 @@ vi.mock('./scheme-intercept', () => ({
 
 // `goToPath` reads the focused pane's path from the explorer store, not the
 // `explorerRef` getter, so the base dir comes through this module.
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: getFocusedPanePathMock,
 }))
 
@@ -80,7 +80,7 @@ vi.mock('./GoToPathAncestorToastContent.svelte', () => ({
 
 import { goToPath, digitToRecentIndex, shouldPrefillClipboard } from './go-to-path'
 import GoToPathAncestorToastContent from './GoToPathAncestorToastContent.svelte'
-import type { GoToPathResolution } from '$lib/ipc/bindings'
+import type { GoToPathResolution } from '#lib/ipc/bindings.js'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 
 function makeExplorerStub(): ExplorerAPI {

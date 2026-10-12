@@ -411,7 +411,7 @@ Four independent reasons a wedge leaves no trace:
   (`crash_reporter/mod.rs`). Force Quit sends `SIGKILL`, which cannot be caught. **A wedge that ends in a force quit
   produces nothing, by construction.**
 - **There is no hang detector.** `rg` over `apps/desktop` and `crates` finds no main-thread stall watchdog. The two
-  watchdogs that exist are for something else: the index memory watchdog, and `$lib/focus-watchdog.ts`, which warns when
+  watchdogs that exist are for something else: the index memory watchdog, and `#lib/focus-watchdog.ts`, which warns when
   keyboard focus has no home.
 - **Analytics would have shown a healthy install.** The `/heartbeat` loop is a background Rust task, so it keeps
   reporting hourly while the main thread is saturated. Frontend events ride the `track_event` IPC and would stop, so the

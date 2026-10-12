@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import QueueRow from './QueueRow.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { OperationRow } from './operations-store.svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 

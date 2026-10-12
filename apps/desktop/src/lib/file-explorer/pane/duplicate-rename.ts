@@ -12,7 +12,7 @@
  *   is a REQUIRED field on the transfer config, so a gesture that dispatches the
  *   same backend copy has to state its answer rather than inherit one. Which
  *   gestures opt in, and why the others must not:
- *   `$lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a duplicate in the rename editor".
+ *   `#lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a duplicate in the rename editor".
  * - **The new name is READ, never recomputed.** No terminal event carries it, so
  *   it comes out of the operation journal. A frontend reimplementation of the
  *   backend's ` (N)` picker would rot the moment the sequence rule changes. An
@@ -22,13 +22,18 @@
  *   barrier, which runs after the handler emitted the terminal event, so a
  *   single-item duplicate has NO readable row at complete time. Reading there
  *   returns an empty page and the editor silently never opens.
- *   `$lib/file-operations/settled-operations.ts`.
+ *   `#lib/file-operations/settled-operations.ts`.
  */
 
-import { findFileIndex, getOperationLogDetail, onDirectoryDiff, type OperationItemView } from '$lib/tauri-commands'
-import { moveCursorToNewFolder } from '$lib/file-operations/mkdir/new-folder-operations'
-import { whenOperationSettled } from '$lib/file-operations/settled-operations'
-import { getAppLogger } from '$lib/logging/logger'
+import {
+  findFileIndex,
+  getOperationLogDetail,
+  onDirectoryDiff,
+  type OperationItemView,
+} from '#lib/tauri-commands/index.js'
+import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
+import { whenOperationSettled } from '#lib/file-operations/settled-operations.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { TransferOperationType } from '../types'
 import type { FilePaneAPI } from './types'
 

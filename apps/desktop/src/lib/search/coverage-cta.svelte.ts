@@ -23,12 +23,12 @@
  * search (`lib/onboarding/CLAUDE.md`).
  */
 
-import { checkFullDiskAccessQuiet } from '$lib/tauri-commands'
-import { capabilitiesFor } from '$lib/file-explorer/pane/volume-capabilities'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
-import { isDriveSilenced, silenceDrive as silenceDrivePref } from '$lib/indexing/drive-index-prefs'
-import { isVolumeCoveredInPhases } from '$lib/indexing/index-state.svelte'
+import { checkFullDiskAccessQuiet } from '#lib/tauri-commands/index.js'
+import { capabilitiesFor } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+import { isDriveSilenced, silenceDrive as silenceDrivePref } from '#lib/indexing/drive-index-prefs.js'
+import { isVolumeCoveredInPhases } from '#lib/indexing/index-state.svelte.js'
 import { offersFullDiskAccess, type CoverageNote } from './coverage-note'
 import { indexUncoveredDrive } from './coverage-actions'
 import { describeVolume } from './search-target-volume'

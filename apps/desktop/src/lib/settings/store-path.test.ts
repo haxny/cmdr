@@ -10,13 +10,13 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getIsolatedStorePath: vi.fn(),
   },
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { resolveStorePath } from './store-path'
 
 describe('resolveStorePath', () => {

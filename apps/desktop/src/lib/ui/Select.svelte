@@ -51,10 +51,10 @@
      */
     import { Select, createListCollection, type SelectValueChangeDetails } from '@ark-ui/svelte/select'
     import { Portal } from '@ark-ui/svelte/portal'
-    import { usePortalTarget } from '$lib/ui/portal-target'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { computeOverlapShift } from '$lib/ui/select-positioning'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { usePortalTarget } from '#lib/ui/portal-target.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { computeOverlapShift } from '#lib/ui/select-positioning.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         items: SelectItem[]

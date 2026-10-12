@@ -32,9 +32,9 @@ const { rail } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => commands)
+vi.mock('#lib/tauri-commands/index.js', () => commands)
 vi.mock('./ask-cmdr-trigger.svelte', () => rail)
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: () => true,
   onSpecificSettingChange: () => () => {},
 }))

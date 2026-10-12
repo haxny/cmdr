@@ -5,7 +5,7 @@
  * rather than testing key flags.
  */
 
-import { eventMatchesCommand } from '$lib/shortcuts'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 /** What a keypress in the sheet means for its presets, if anything. */
 export type PresetKey = 'openMenu' | 'save'

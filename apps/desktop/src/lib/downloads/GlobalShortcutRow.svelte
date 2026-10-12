@@ -25,11 +25,11 @@
      * translates it for the plugin at the IPC boundary.
      */
     import { onMount } from 'svelte'
-    import { setGlobalGoToLatestShortcut } from '$lib/tauri-commands'
-    import type { RegistrationError } from '$lib/ipc/bindings'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import { formatKeyCombo, isModifierKey, toDisplayShortcut } from '$lib/shortcuts'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { setGlobalGoToLatestShortcut } from '#lib/tauri-commands/index.js'
+    import type { RegistrationError } from '#lib/ipc/bindings.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { formatKeyCombo, isModifierKey, toDisplayShortcut } from '#lib/shortcuts/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import {
         getGlobalGoToLatestBinding,
         setGlobalGoToLatestBinding,
@@ -37,10 +37,10 @@
         GLOBAL_GO_TO_LATEST_ENABLED_KEY,
     } from './global-shortcut-setting'
     import { toAccelerator, DEFAULT_GLOBAL_GO_TO_LATEST_BINDING } from './global-shortcut-binding'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import ShortcutPill from '$lib/settings/sections/ShortcutPill.svelte'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import ShortcutPill from '#lib/settings/sections/ShortcutPill.svelte'
 
     let binding = $state(getGlobalGoToLatestBinding())
     let editing = $state(false)

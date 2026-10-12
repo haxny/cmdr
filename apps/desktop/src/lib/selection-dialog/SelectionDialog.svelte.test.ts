@@ -12,9 +12,9 @@ import { mount, unmount, tick } from 'svelte'
 import { writable } from 'svelte/store'
 import SelectionDialog from './SelectionDialog.svelte'
 import { clearSelectionState, selectionQueryState } from './selection-state.svelte'
-import type { FileEntry } from '$lib/file-explorer/types'
-import type { SelectionHistoryEntry, SelectionTranslateResult } from '$lib/ipc/bindings'
-import { setLocale, _setCatalogForTests } from '$lib/intl/messages.svelte'
+import type { FileEntry } from '#lib/file-explorer/types.js'
+import type { SelectionHistoryEntry, SelectionTranslateResult } from '#lib/ipc/bindings.js'
+import { setLocale, _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 
 let aiProvider: 'off' | 'local' | 'cloud' = 'off'
 let autoApplySetting = true
@@ -42,7 +42,7 @@ const { translateSelectionMock, addRecentMock, getRecentMock } = vi.hoisted(() =
   getRecentMock: vi.fn(() => Promise.resolve([] as SelectionHistoryEntry[])),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   translateSelectionQuery: translateSelectionMock,
@@ -53,7 +53,7 @@ vi.mock('$lib/tauri-commands', () => ({
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return aiProvider
     if (key === 'search.autoApply') return autoApplySetting
@@ -72,7 +72,7 @@ vi.mock('$lib/settings', () => ({
   }),
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,

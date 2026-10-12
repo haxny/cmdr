@@ -2,11 +2,11 @@
     import { onMount, onDestroy } from 'svelte'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSelect from '../components/SettingSelect.svelte'
-    import Button from '$lib/ui/Button.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import DeleteAiModelDialog from './DeleteAiModelDialog.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
     import { getAiRuntimeStatus,
     stopAiServer,
     startAiServer,
@@ -23,13 +23,13 @@
     onAiStarting,
     type AiRuntimeStatus,
     type AiDownloadProgress,
-    type SystemMemoryInfo } from '$lib/tauri-commands'
+    type SystemMemoryInfo } from '#lib/tauri-commands/index.js'
     import { computeGaugeSegments } from './ram-gauge-utils'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { localAiErrorLogLevel, toLocalAiError } from '$lib/ai/local-ai-error'
-    import { colorizeSize } from '$lib/file-explorer/selection/selection-info-utils'
-    import { t, tString } from '$lib/intl/messages.svelte'
-    import { formatByteSize, formatByteSizeTiered } from '$lib/units'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { localAiErrorLogLevel, toLocalAiError } from '#lib/ai/local-ai-error.js'
+    import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
+    import { formatByteSize, formatByteSizeTiered } from '#lib/units/index.js'
 
     interface Props {
         searchQuery: string

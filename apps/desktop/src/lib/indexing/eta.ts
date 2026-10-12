@@ -6,7 +6,7 @@
  * thresholds and blending without mounting a component.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** A point sample of replay progress, used by the sliding-window rate estimate. */
 export interface EtaSnapshot {

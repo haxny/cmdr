@@ -7,18 +7,18 @@
      * narrow and stack-shaped, which is why `updates.crashReports` is on by default; an error
      * report is an unbounded log bundle, which is why `updates.errorReports` is off. This button
      * is per-report consent at the one moment it means something, and it changes neither setting.
-     * ❌ Never send the log without the press. `$lib/crash-reporter/DETAILS.md` § The three report
+     * ❌ Never send the log without the press. `#lib/crash-reporter/DETAILS.md` § The three report
      * consents.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { openSettingsWindow } from '$lib/settings/settings-window'
-    import { t, tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { openSettingsWindow } from '#lib/settings/settings-window.js'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
     import { crashSentToastKey } from './crash-copy'
-    import { sendCrashLogReport } from '$lib/tauri-commands/error-reporter'
-    import { errorReportSendFailureOf, errorReportSendReason } from '$lib/error-reporter/error-report-send-error'
-    import { getAppLogger } from '$lib/logging/logger'
-    import type { CrashReport } from '$lib/tauri-commands'
+    import { sendCrashLogReport } from '#lib/tauri-commands/error-reporter.js'
+    import { errorReportSendFailureOf, errorReportSendReason } from '#lib/error-reporter/error-report-send-error.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import type { CrashReport } from '#lib/tauri-commands/index.js'
 
     const log = getAppLogger('crashReporter')
 

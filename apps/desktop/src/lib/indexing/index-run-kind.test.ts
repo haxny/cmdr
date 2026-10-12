@@ -7,8 +7,8 @@
  * would have handed it.
  */
 import { describe, it, expect } from 'vitest'
-import type { LocationCategory } from '$lib/ipc/bindings'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { LocationCategory } from '#lib/ipc/bindings.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { ROOT_VOLUME_ID } from './index-state.svelte'
 import { isNetworkIndexRun } from './index-run-kind'
 import { deriveSteps } from './indexing-steps'

@@ -13,15 +13,15 @@
      */
     import { onMount } from 'svelte'
     import SettingsSection from '../components/SettingsSection.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { createShouldShow } from '$lib/settings/settings-search'
-    import { listTrustedSftpHostKeys, forgetSftpHostKey } from '$lib/tauri-commands'
-    import type { TrustedHostKey } from '$lib/ipc/bindings'
-    import { confirmDialog } from '$lib/utils/confirm-dialog'
-    import { getAppLogger } from '$lib/logging/logger'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { createShouldShow } from '#lib/settings/settings-search.js'
+    import { listTrustedSftpHostKeys, forgetSftpHostKey } from '#lib/tauri-commands/index.js'
+    import type { TrustedHostKey } from '#lib/ipc/bindings.js'
+    import { confirmDialog } from '#lib/utils/confirm-dialog.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
 
     interface Props {
         searchQuery: string

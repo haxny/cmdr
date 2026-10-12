@@ -15,9 +15,9 @@
  */
 
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import type { ErrorReportEntry } from '$lib/ipc/bindings'
-import { onErrorReportRequested, requestErrorReportInMainWindow } from '$lib/tauri-commands/error-reporter'
-import { getAppLogger } from '$lib/logging/logger'
+import type { ErrorReportEntry } from '#lib/ipc/bindings.js'
+import { onErrorReportRequested, requestErrorReportInMainWindow } from '#lib/tauri-commands/error-reporter.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { recordBreadcrumb } from './breadcrumbs'
 import { reportEntryFor, reportNoteFor, slowBreadcrumbFor, type ReportIncident } from './report-incident'
 

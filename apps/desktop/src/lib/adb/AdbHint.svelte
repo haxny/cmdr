@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getSetting, setSetting } from '$lib/settings'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
-    import { volumeScheme } from '$lib/volume-scheme'
-    import { getAppLogger } from '$lib/logging/logger'
+    import Icon from '#lib/ui/Icon.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { volumeScheme } from '#lib/volume-scheme.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { shouldShowAdbHint } from './should-show-adb-hint'
 
     /**

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, type Snippet } from 'svelte'
-    import { tooltip, type TooltipParam } from '$lib/tooltip/tooltip'
+    import { tooltip, type TooltipParam } from '#lib/tooltip/tooltip.js'
 
     type Variant = 'primary' | 'secondary' | 'danger'
     type Size = 'regular' | 'mini'

@@ -4,8 +4,8 @@
  */
 
 import { ask } from '@tauri-apps/plugin-dialog'
-import { confirmWithCheckbox as askNativeWithCheckbox } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
+import { confirmWithCheckbox as askNativeWithCheckbox } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * Show a confirmation dialog with OK/Cancel buttons.

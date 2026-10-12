@@ -710,7 +710,7 @@ The wiring with a foot on this side:
   accelerator. ⌥⌘O is already `file.showInFinder`, so `L` (for "log") is the mnemonic; a collision test in
   `command-registry.test.ts` guards it.
 - **The two read commands are the whole backend surface** (§ "Query API + search").
-  `$lib/tauri-commands/operation-log.ts` unwraps them for the dialog; the Debug panel calls the raw bindings instead
+  `#lib/tauri-commands/operation-log.ts` unwraps them for the dialog; the Debug panel calls the raw bindings instead
   (dev-only, bindings-import-exempt).
 
 **Convergence with the agent log.** The dialog is the mutation half of a future unified timeline:

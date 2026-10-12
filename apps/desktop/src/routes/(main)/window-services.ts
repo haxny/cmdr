@@ -24,39 +24,47 @@
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { startMainWindowVisibilityReport } from './main-window-visibility'
-import { startAskCmdrTurnStream, stopAskCmdrTurnStream } from '$lib/ask-cmdr/ask-cmdr-turn-stream.svelte'
-import { startWakeIndicator, stopWakeIndicator } from '$lib/ask-cmdr/wake-indicator.svelte'
-import { startWakeToast, stopWakeToast } from '$lib/ask-cmdr/wake-toast.svelte'
-import { startDragOutEventBridge } from '$lib/file-explorer/drag/drag-out-event-bridge'
-import { startOsMountNoticeBridge } from '$lib/file-explorer/network/os-mount-notice-bridge'
-import { startLeftoverNoticeBridge } from '$lib/file-operations/leftover-notice-bridge'
-import { startOpenWithRefusedBridge } from '$lib/file-explorer/open-with-refused-bridge'
-import { initQuickLookListeners } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-import { startOperationConflictHost, stopOperationConflictHost } from '$lib/file-operations/operation-conflict.svelte'
-import { startSourcesGoneHost, stopSourcesGoneHost } from '$lib/file-operations/sources-gone.svelte'
+import { startAskCmdrTurnStream, stopAskCmdrTurnStream } from '#lib/ask-cmdr/ask-cmdr-turn-stream.svelte.js'
+import { startWakeIndicator, stopWakeIndicator } from '#lib/ask-cmdr/wake-indicator.svelte.js'
+import { startWakeToast, stopWakeToast } from '#lib/ask-cmdr/wake-toast.svelte.js'
+import { startDragOutEventBridge } from '#lib/file-explorer/drag/drag-out-event-bridge.js'
+import { startOsMountNoticeBridge } from '#lib/file-explorer/network/os-mount-notice-bridge.js'
+import { startLeftoverNoticeBridge } from '#lib/file-operations/leftover-notice-bridge.js'
+import { startOpenWithRefusedBridge } from '#lib/file-explorer/open-with-refused-bridge.js'
+import { initQuickLookListeners } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+import {
+  startOperationConflictHost,
+  stopOperationConflictHost,
+} from '#lib/file-operations/operation-conflict.svelte.js'
+import { startSourcesGoneHost, stopSourcesGoneHost } from '#lib/file-operations/sources-gone.svelte.js'
 import {
   initOperationSessions,
   destroyOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import {
   initMainWindowOperations,
   destroyMainWindowOperations,
-} from '$lib/file-operations/queue/main-window-operations.svelte'
-import { initSettledOperationsWatch, destroySettledOperationsWatch } from '$lib/file-operations/settled-operations'
-import { startDownloadsEventBridge } from '$lib/downloads/event-bridge.svelte'
-import { startGlobalShortcutBridge } from '$lib/downloads/global-shortcut-bridge.svelte'
-import { initIndexState, destroyIndexState, initMediaEnrichState, destroyMediaEnrichState } from '$lib/indexing/index'
-import { startLowDiskSpaceEventBridge } from '$lib/low-disk-space/event-bridge.svelte'
-import { startOpenTerminalMenuGate } from '$lib/open-terminal/menu-gate.svelte'
-import { initSnapshotPurge, destroySnapshotPurge } from '$lib/search/snapshot-purge'
-import { getSetting } from '$lib/settings'
-import { drainPendingReveals } from '$lib/tauri-commands'
-import { startRevealActivationNotice } from '$lib/reveal/reveal-activation-notice'
+} from '#lib/file-operations/queue/main-window-operations.svelte.js'
+import { initSettledOperationsWatch, destroySettledOperationsWatch } from '#lib/file-operations/settled-operations.js'
+import { startDownloadsEventBridge } from '#lib/downloads/event-bridge.svelte.js'
+import { startGlobalShortcutBridge } from '#lib/downloads/global-shortcut-bridge.svelte.js'
+import {
+  initIndexState,
+  destroyIndexState,
+  initMediaEnrichState,
+  destroyMediaEnrichState,
+} from '#lib/indexing/index.js'
+import { startLowDiskSpaceEventBridge } from '#lib/low-disk-space/event-bridge.svelte.js'
+import { startOpenTerminalMenuGate } from '#lib/open-terminal/menu-gate.svelte.js'
+import { initSnapshotPurge, destroySnapshotPurge } from '#lib/search/snapshot-purge.js'
+import { getSetting } from '#lib/settings/index.js'
+import { drainPendingReveals } from '#lib/tauri-commands/index.js'
+import { startRevealActivationNotice } from '#lib/reveal/reveal-activation-notice.js'
 import {
   startOperationFailureWatch,
   stopOperationFailureWatch,
-} from '$lib/status-corner/operation-failure-watch.svelte'
-import { startSuggestedOpsBadge, stopSuggestedOpsBadge } from '$lib/suggested-ops/suggested-ops-badge.svelte'
+} from '#lib/status-corner/operation-failure-watch.svelte.js'
+import { startSuggestedOpsBadge, stopSuggestedOpsBadge } from '#lib/suggested-ops/suggested-ops-badge.svelte.js'
 import type { CommandDispatchers, DialogsOnScreen } from './command-dispatch-context'
 import type { ExplorerAPI } from './explorer-api'
 import {
@@ -243,7 +251,7 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   unlistenFns.push(await startDragOutEventBridge())
   // The once-ever notice for the first reveal that actually lands here. ⚠️ Must be
   // subscribed BEFORE the drain below, or a cold-launch reveal — the very first one many
-  // people ever see — delivers with nobody listening. See `$lib/reveal/CLAUDE.md`.
+  // people ever see — delivers with nobody listening. See `#lib/reveal/CLAUDE.md`.
   unlistenFns.push(await startRevealActivationNotice())
   // A "Show in Cmdr" that arrived before this window existed: a cold launch delivers the OS
   // event long before we mount, so the backend parks it and this drains it. ⚠️ Must stay AFTER

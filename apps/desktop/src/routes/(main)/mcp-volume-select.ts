@@ -19,9 +19,9 @@
  * log line and breadcrumb every command gets.
  */
 
-import { capabilitiesFor } from '$lib/file-explorer/pane/volume-capabilities'
-import type { VolumeSelectOutcome } from '$lib/file-explorer/pane/volume-selection'
-import { getAppLogger } from '$lib/logging/logger'
+import { capabilitiesFor } from '#lib/file-explorer/pane/volume-capabilities.js'
+import type { VolumeSelectOutcome } from '#lib/file-explorer/pane/volume-selection.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { ExplorerAPI } from './explorer-api'
 import {
   classifyVolumeLanding,

@@ -11,8 +11,8 @@
  * refusal crosses as the typed `refusal` field, ❌ never as text.
  */
 
-import type { ConfirmDialogType } from '$lib/commands'
-import { getAppLogger } from '$lib/logging/logger'
+import type { ConfirmDialogType } from '#lib/commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { ExplorerAPI } from './explorer-api'
 
 const log = getAppLogger('mcpListeners')

@@ -19,23 +19,23 @@ import {
   getDockPinState,
   getRevealHandlerState,
   startIndexingAfterFdaDecision,
-} from '$lib/tauri-commands'
-import { openWizard as openOnboardingWizard } from '$lib/onboarding/onboarding-state.svelte'
-import { runWhatsNewStartupTrigger } from '$lib/whats-new/whats-new-trigger.svelte'
-import { forceSave, getSetting, setSetting } from '$lib/settings'
-import { isE2eRun } from '$lib/app-mode'
-import { notifyOnboardingComplete } from '$lib/updates/updater.svelte'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { isBelowSupportedMacOs, macosVersionLabel } from '$lib/utils/webkit-compat'
-import { shouldShowDockNudge } from '$lib/dock/should-show-dock-nudge'
-import { offerDockPin } from '$lib/dock/dock-nudge'
-import { nudgeCouldFire, type NudgeContext } from '$lib/nudges/nudge-ledger'
-import { readNudgeLedger } from '$lib/nudges/nudge-store'
-import { shouldShowRevealNudge } from '$lib/reveal/should-show-reveal-nudge'
-import { offerRevealHandler } from '$lib/reveal/reveal-nudge'
+} from '#lib/tauri-commands/index.js'
+import { openWizard as openOnboardingWizard } from '#lib/onboarding/onboarding-state.svelte.js'
+import { runWhatsNewStartupTrigger } from '#lib/whats-new/whats-new-trigger.svelte.js'
+import { forceSave, getSetting, setSetting } from '#lib/settings/index.js'
+import { isE2eRun } from '#lib/app-mode.js'
+import { notifyOnboardingComplete } from '#lib/updates/updater.svelte.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { isBelowSupportedMacOs, macosVersionLabel } from '#lib/utils/webkit-compat.js'
+import { shouldShowDockNudge } from '#lib/dock/should-show-dock-nudge.js'
+import { offerDockPin } from '#lib/dock/dock-nudge.js'
+import { nudgeCouldFire, type NudgeContext } from '#lib/nudges/nudge-ledger.js'
+import { readNudgeLedger } from '#lib/nudges/nudge-store.js'
+import { shouldShowRevealNudge } from '#lib/reveal/should-show-reveal-nudge.js'
+import { offerRevealHandler } from '#lib/reveal/reveal-nudge.js'
 
 // Same category as the rest of the app shell's logging: these gates read as
 // `+page.svelte`'s startup in a log file, wherever the code sits.
@@ -256,7 +256,7 @@ export async function maybeOfferNudges(ctx: StartupGatesContext): Promise<void> 
  * Offers to catch "Show in Finder", once, a couple of days into using it.
  *
  * The first of the two offers, because it's the more valuable one; the shared
- * cooldown in `$lib/nudges/` then holds the Dock offer back for three days.
+ * cooldown in `#lib/nudges/` then holds the Dock offer back for three days.
  *
  * Async because the decision needs two backend answers: how many days the
  * launch-day ledger holds, and who holds the `NSFileViewer` key. `nudgeCouldFire`

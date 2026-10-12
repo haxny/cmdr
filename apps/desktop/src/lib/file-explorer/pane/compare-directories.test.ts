@@ -14,12 +14,12 @@ const { ipc, addToast } = vi.hoisted(() => ({
   addToast: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ compareDirectories: ipc.compareDirectories }))
-vi.mock('$lib/ui/toast', () => ({ addToast }))
-vi.mock('$lib/intl/messages.svelte', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ compareDirectories: ipc.compareDirectories }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({
   tString: (key: string, args?: Record<string, unknown>) => (args ? `${key} ${JSON.stringify(args)}` : key),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

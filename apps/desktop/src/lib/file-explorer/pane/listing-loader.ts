@@ -28,7 +28,7 @@
  */
 import { tick } from 'svelte'
 import type { ConnectionState, FriendlyError } from '../types'
-import type { StalledOn } from '$lib/ipc/bindings'
+import type { StalledOn } from '#lib/ipc/bindings.js'
 import type { CancelLoadingPayload, ListingLoad, LoadDirectoryArgs, SwapState, VolumeChangePayload } from './types'
 import {
   type Location,
@@ -48,23 +48,23 @@ import {
   trackEvent,
   type ListingCompleteEvent,
   type UnlistenFn,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { sweepListingTags } from './tag-sweep'
 import { resolveValidPath } from '../navigation/path-resolution'
 import { restoredCursorIndex } from '../navigation/history-cursor'
 import type { HistoryCursor } from '../navigation/navigation-history'
-import { renderListingError } from '$lib/error-messages/listing-error'
-import { evictPerPathIconsForDir } from '$lib/icon-cache'
+import { renderListingError } from '#lib/error-messages/listing-error.js'
+import { evictPerPathIconsForDir } from '#lib/icon-cache.js'
 import { cancelClickToRename } from '../rename/rename-activation'
-import { dismissTransientToastsForPane } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { getSetting } from '$lib/settings'
-import type { ListingDirectorySortMode } from '$lib/settings'
+import { dismissTransientToastsForPane } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getSetting } from '#lib/settings/index.js'
+import type { ListingDirectorySortMode } from '#lib/settings/index.js'
 import type { SortColumn, SortOrder } from '../types'
-import { basenameOf, type CanonicalPath, parentOf } from '$lib/path/canonical'
+import { basenameOf, type CanonicalPath, parentOf } from '#lib/path/canonical.js'
 import type { ListViewAPI } from './types'
 import type { VolumeCapabilities } from './volume-capabilities'
-import * as benchmark from '$lib/benchmark'
+import * as benchmark from '#lib/benchmark.js'
 import { isEventForCurrentLoad } from './listing-token'
 import { trackLiveListing, untrackLiveListing } from './listing-liveness'
 

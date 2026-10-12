@@ -3,7 +3,7 @@
  *
  * NOT a pass/fail test: a harness that drives the real app to a set of surfaces
  * and, for each, records which catalog keys render there (via the runtime's
- * capture mode in `$lib/intl/messages.svelte.ts`) and saves a native screenshot.
+ * capture mode in `#lib/intl/messages.svelte.ts`) and saves a native screenshot.
  * The output is a single JSON map (surface → keys + screenshot file) that
  * `scripts/couple-screenshots.ts` turns into `@key.screenshot` couplings.
  *

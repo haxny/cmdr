@@ -20,9 +20,9 @@
  */
 
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { getSetting, setSetting } from '$lib/settings'
-import { addToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import EscapeFullScreenToastContent from './EscapeFullScreenToastContent.svelte'
 import { ESCAPE_FULL_SCREEN_TOAST_ID } from './escape-full-screen-toast-id'
 

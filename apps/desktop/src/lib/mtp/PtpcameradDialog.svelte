@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { getPtpcameradWorkaroundCommand } from '$lib/tauri-commands'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import CopyBox from '$lib/ui/CopyBox.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { getPtpcameradWorkaroundCommand } from '#lib/tauri-commands/index.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import CopyBox from '#lib/ui/CopyBox.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { Snippet } from 'svelte'
 
     interface Props {

@@ -12,10 +12,10 @@
 
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
 import { mount, unmount, tick, flushSync } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve(liveOperations)),
   pauseOperation: vi.fn(() => Promise.resolve()),
   resumeOperation: vi.fn(() => Promise.resolve()),
@@ -32,7 +32,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onWriteConflictResolved: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
@@ -41,7 +41,7 @@ import {
   destroyOperationSessions,
   getOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 
 let liveOperations: OperationSnapshot[] = []
 /** Torn down between cases: a live component keeps an effect that re-acquires

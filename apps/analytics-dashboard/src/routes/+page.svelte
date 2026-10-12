@@ -1,15 +1,15 @@
 <!--
   Acquisition page (`/`): the daily funnel plus the awareness, interest, and download sections. The
   shared range/day picker and nav live in the layout; this page renders the sections and handles the
-  funnel's row-click "filter to this day". Each section is its own component under `$lib/components`.
+  funnel's row-click "filter to this day". Each section is its own component under `#lib/components`.
 -->
 <script lang="ts">
     import type { PageProps } from './$types'
-    import type { TimeRange } from '$lib/server/types.js'
-    import FunnelTable from '$lib/components/FunnelTable.svelte'
-    import AwarenessSection from '$lib/components/sections/AwarenessSection.svelte'
-    import InterestSection from '$lib/components/sections/InterestSection.svelte'
-    import DownloadSection from '$lib/components/sections/DownloadSection.svelte'
+    import type { TimeRange } from '#lib/server/types.js'
+    import FunnelTable from '#lib/components/FunnelTable.svelte'
+    import AwarenessSection from '#lib/components/sections/AwarenessSection.svelte'
+    import InterestSection from '#lib/components/sections/InterestSection.svelte'
+    import DownloadSection from '#lib/components/sections/DownloadSection.svelte'
 
     const { data }: PageProps = $props()
 

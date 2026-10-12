@@ -8,16 +8,16 @@
  * last cell in each block is what catches a scheme leaking through.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { clearIpcMocks, installIpcMock, type IpcRecorder } from '$lib/ipc/test-helpers'
+import { clearIpcMocks, installIpcMock, type IpcRecorder } from '#lib/ipc/test-helpers.js'
 
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { actOnSchemeInput, previewSchemeInput, readSchemeInput } from './scheme-intercept'
-import { closeSignInSheet, currentSignInRequest } from '$lib/servers/sign-in-sheet-state.svelte'
+import { closeSignInSheet, currentSignInRequest } from '#lib/servers/sign-in-sheet-state.svelte.js'
 
 const APP_ROOT = 'sftp://ada@nas.local:22/srv/data'
 

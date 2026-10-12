@@ -1,9 +1,9 @@
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import { setSetting } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import { setSetting } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         oldExtension: string

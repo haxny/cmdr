@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { LockedSetting, ManagedPolicyView } from '$lib/ipc/bindings'
+import type { LockedSetting, ManagedPolicyView } from '#lib/ipc/bindings.js'
 import { lockAllowsWrite, lockedValue } from './overlay'
 
 const ipc = vi.hoisted(() => ({
@@ -7,7 +7,7 @@ const ipc = vi.hoisted(() => ({
   onChanged: null as ((view: unknown) => void) | null,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getManagedPolicy: () => ipc.fetch(),
   onManagedPolicyChanged: (handler: (view: unknown) => void) => {
     ipc.onChanged = handler

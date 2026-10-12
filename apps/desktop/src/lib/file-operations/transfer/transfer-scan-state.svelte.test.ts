@@ -18,10 +18,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
-import * as commands from '$lib/tauri-commands'
+import * as commands from '#lib/tauri-commands/index.js'
 import { createTransferScanState } from './transfer-scan-state.svelte'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   startScanPreview: vi.fn(),
   cancelScanPreview: vi.fn(() => Promise.resolve()),
   checkScanPreviewStatus: vi.fn(() => Promise.resolve(null)),
@@ -31,7 +31,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onScanPreviewCancelled: vi.fn(),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 

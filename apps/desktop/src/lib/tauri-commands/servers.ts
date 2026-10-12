@@ -10,7 +10,7 @@
 // `src-tauri/src/commands/DETAILS.md` § `servers.rs`, over
 // `src-tauri/src/commands/servers.rs`.
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import type {
   EjectAndSaveOutcome,
   S3ProviderChoice,
@@ -22,9 +22,9 @@ import type {
   ServerConnectOutcome,
   ServerProtocol,
   ServerTarget,
-} from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
-import { throwKeychainError } from '$lib/servers/keychain-failure'
+} from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
+import { throwKeychainError } from '#lib/servers/keychain-failure.js'
 
 export type {
   EjectAndSaveOutcome,

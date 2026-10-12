@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { BreadcrumbEvent } from '$lib/ipc/bindings'
-import type { CommandId } from '$lib/commands'
+import type { BreadcrumbEvent } from '#lib/ipc/bindings.js'
+import type { CommandId } from '#lib/commands/index.js'
 
 type DiagnosticBreadcrumbEvent =
   | Exclude<BreadcrumbEvent, { type: 'command' }>

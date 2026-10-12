@@ -5,7 +5,7 @@ Pull-tier docs for `lib/search/`: architecture, flows, and decision rationale. M
 
 ## i18n
 
-User-facing copy born in this area lives in the `search.*` catalog (`$lib/intl/messages/en/search.json`), resolved via
+User-facing copy born in this area lives in the `search.*` catalog (`#lib/intl/messages/en/search.json`), resolved via
 `tString()` (the `SearchDialogConfig` title/actions/tooltips, the recent-search aria label, the system-dir-exclude
 tooltip, snapshot labels). `cmdr/no-raw-user-facing-string` is enforced on `/lib/search/`. Most of the dialog's
 on-screen copy is owned by the shared `lib/query-ui/` primitives (the `queryUi.*` catalog), not here.
@@ -32,7 +32,7 @@ each piece DOES is in the sections below: the wrapper in § "Search wrapper", th
 "Where the state actually lives", the snapshot store and its refcounting in § "Snapshot store", `searchable-folder` in §
 "'Use current folder' smart fallback", and the capability flags in § "Capability flags". Everything shared with the
 Selection dialog (the query bar, mode chips, AI strip, filter chips, path pills, row menu, results table, empty state,
-and the `recent-items/` family) lives in `../query-ui/CLAUDE.md`, over the app-wide `$lib/ui/Chip` / `Popover` /
+and the `recent-items/` family) lives in `../query-ui/CLAUDE.md`, over the app-wide `#lib/ui/Chip` / `Popover` /
 `FilterPopover` primitives. Only the layout facts that none of those carry live here:
 
 - **`SearchResultsView.svelte` does NOT live in this directory.** It sits in `lib/file-explorer/pane/` with the other
@@ -61,7 +61,7 @@ and the `recent-items/` family) lives in `../query-ui/CLAUDE.md`, over the app-w
 - **The mounted-dialog tests share one fixture, `test-search-dialog-harness.ts`.** Mounting SearchDialog means standing
   up its whole IPC surface plus the settings and stores it reads, so the spies, the live-run fake, and the
   mount/teardown helpers live there and each `SearchDialog.<concern>.svelte.test.ts` reaches them with
-  `vi.mock('$lib/…', async () => (await import('./test-search-dialog-harness')).xMock())`. The dynamic import inside the
+  `vi.mock('#lib/…', async () => (await import('./test-search-dialog-harness')).xMock())`. The dynamic import inside the
   factory is what keeps import order and hoisting out of it. ❌ Nothing in the harness may import a mocked module (or
   `SearchDialog.svelte` / `search-state.svelte`) at module scope: the factories load the harness, so such an import
   would ask for the module whose factory is still running. `SearchDialog.coverage.*` and `SearchDialog.handoff.*` keep
@@ -543,7 +543,7 @@ by the first one's walk (`cover/live/mod.rs`), walked nothing, and is the one th
 
 **Footer right-edge actions**: the shared `QueryDialog` renders the two footer buttons at the right of the dialog
 footer, opposite the recent-searches strip, from Search's `config.secondaryAction` / `config.primaryAction`. They're
-standard `$lib/ui/Button`s (`size="regular"`) with the keyboard shortcut on a `ShortcutChip`, disabled (not hidden) when
+standard `#lib/ui/Button`s (`size="regular"`) with the keyboard shortcut on a `ShortcutChip`, disabled (not hidden) when
 there are no results:
 
 - **"Go to file"** (⏎): closes the dialog and navigates the active pane to the cursor row's parent folder, focusing the
@@ -915,12 +915,12 @@ state.
 
 ## Dependencies
 
-- `$lib/tauri-commands` -- `prepareSearchIndex`, `searchFiles`, `releaseSearchIndex`, `translateSearchQuery`,
+- `#lib/tauri-commands` -- `prepareSearchIndex`, `searchFiles`, `releaseSearchIndex`, `translateSearchQuery`,
   `parseSearchScope`, `getRecentSearches`, `addRecentSearch`, `removeRecentSearch`, `clearRecentSearches`,
   `applyRecentSearchesMaxCount`, `showFileContextMenu`, `showInFinder`
-- `$lib/shortcuts/key-capture` -- `isMacOS()` for the footer action's macOS/Linux label fork
-- `$lib/indexing` -- `isVolumeScanning(ROOT_VOLUME_ID)`, `getEntriesScanned` (LOCAL index-build progress for the
+- `#lib/shortcuts/key-capture` -- `isMacOS()` for the footer action's macOS/Linux label fork
+- `#lib/indexing` -- `isVolumeScanning(ROOT_VOLUME_ID)`, `getEntriesScanned` (LOCAL index-build progress for the
   unavailable state; keyed to `root` so a network scan doesn't flip the label while root's count stays 0)
-- `$lib/settings` -- `getSetting('ai.provider')` (AI chip visibility, ⌘ shortcut numbering)
+- `#lib/settings` -- `getSetting('ai.provider')` (AI chip visibility, ⌘ shortcut numbering)
 - Shared primitives from `../query-ui/CLAUDE.md`
 - CSS variables from `app.css`

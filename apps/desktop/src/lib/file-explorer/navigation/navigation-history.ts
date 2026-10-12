@@ -12,7 +12,7 @@
  */
 
 import type { NetworkHost } from '../types'
-import type { Location } from '$lib/tauri-commands'
+import type { Location } from '#lib/tauri-commands/index.js'
 
 /**
  * Per-tab cap on the navigation stack. When `push()` would grow the stack past this

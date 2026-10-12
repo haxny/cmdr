@@ -25,7 +25,7 @@ const { getSettingMock, setSettingMock } = vi.hoisted(() => ({
   setSettingMock: vi.fn(),
 }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
   resetSetting: vi.fn(),

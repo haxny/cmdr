@@ -13,14 +13,14 @@ const { getDefaultVolumeIdSpy, resolvePathVolumeSpy, pathExistsSpy, requestVolum
     resolveValidPathSpy: vi.fn<() => Promise<string | null>>(),
   }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getDefaultVolumeId: getDefaultVolumeIdSpy,
   resolvePathVolume: resolvePathVolumeSpy,
   pathExists: pathExistsSpy,
 }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ requestVolumeRefresh: requestVolumeRefreshSpy }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ requestVolumeRefresh: requestVolumeRefreshSpy }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath: resolveValidPathSpy }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

@@ -4,11 +4,11 @@
     import { HOVER_LEAVE_GRACE_MS } from './toast-store.svelte'
     import { formatToastAge, msUntilToastAgeChanges } from './toast-age'
     import ToastLevelIcon from './ToastLevelIcon.svelte'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         id: string

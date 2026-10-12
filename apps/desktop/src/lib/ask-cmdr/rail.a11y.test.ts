@@ -18,9 +18,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync, mount, tick } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { AttachmentRef, ConversationCost } from '$lib/tauri-commands'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { AttachmentRef, ConversationCost } from '#lib/tauri-commands/index.js'
 import type { RailMessage, RailToolCall } from './ask-cmdr-trigger.svelte'
 import type { ContextUsage } from './ask-cmdr-context-usage'
 
@@ -68,12 +68,12 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
 }))
 
 // Ask Cmdr on, with no cloud involved, so the rail renders the chat unless a block moves it.
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   cloudConsentState: consentState,
   refreshCloudConsent: vi.fn(() => Promise.resolve()),
   openCloudConsentSettings: vi.fn(),
 }))
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: (id: string): unknown => railSettings[id],
   setSetting: vi.fn((id: string, value: unknown) => {
@@ -87,12 +87,12 @@ vi.mock('./ask-cmdr-sessions.svelte', () => ({
   openSessions: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   askCmdrConversationCost: (id: number) => costMock(id),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
@@ -104,8 +104,8 @@ import AskCmdrCostFooter from './AskCmdrCostFooter.svelte'
 import AskCmdrMessage from './AskCmdrMessage.svelte'
 import AskCmdrRail from './AskCmdrRail.svelte'
 import AskCmdrToolLine from './AskCmdrToolLine.svelte'
-import { openCloudConsentSettings } from '$lib/ai/cloud-consent.svelte'
-import { setSetting } from '$lib/settings'
+import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
+import { setSetting } from '#lib/settings/index.js'
 
 /** A fresh container, appended to the document and ready to mount into. */
 function container(): HTMLDivElement {

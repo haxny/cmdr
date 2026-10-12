@@ -21,7 +21,7 @@ rationale: `DETAILS.md`.
   cursor entry through `getCursorEntry()` (`../cursor-entry.ts`), which applies the `..` + `hasParent` arithmetic once.
   Don't re-derive the index here, or the pre-fill reads the wrong entry.
 - **The name field and its validation are shared with `NewFolderDialog`** (`../NewEntryNameField.svelte` +
-  `../new-entry-name-check.svelte.ts`): the `$lib/utils/filename-validation` validators, then the async conflict check
+  `../new-entry-name-check.svelte.ts`): the `#lib/utils/filename-validation` validators, then the async conflict check
   via `findFileIndex` + `getFileAt`. A validation change lands there, once.
 - **Extension is preserved on pre-fill** (unlike the folder dialog, which strips it): a cursor item `report.pdf` opens
   the dialog with `report.pdf` selected. Directories and `..` pre-fill empty.

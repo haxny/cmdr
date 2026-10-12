@@ -8,8 +8,8 @@
  * `NSWorkspace`; the caller does the launching, the persisting, and the toast.
  */
 
-import { TERMINAL_APP_BUNDLE_ID } from '$lib/settings/sections/terminal-app-options'
-import type { TerminalApp } from '$lib/ipc/bindings'
+import { TERMINAL_APP_BUNDLE_ID } from '#lib/settings/sections/terminal-app-options.js'
+import type { TerminalApp } from '#lib/ipc/bindings.js'
 
 /** What the decision reads. */
 export interface FirstUsePickInput {

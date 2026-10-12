@@ -14,7 +14,7 @@ const { relaunchMock, dismissToastMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: relaunchMock }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast: dismissToastMock }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: dismissToastMock }))
 
 import UpdateToastContent from './UpdateToastContent.svelte'
 import { updateState } from './update-state.svelte'

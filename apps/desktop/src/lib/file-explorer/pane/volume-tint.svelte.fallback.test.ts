@@ -16,7 +16,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 const subscribers = new Map<string, (value: unknown) => void>()
 const settings = new Map<string, string>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((id: string) => settings.get(id) ?? 'none'),
   setSetting: vi.fn(),
   resetSetting: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/utils/webkit-compat', () => ({
+vi.mock('#lib/utils/webkit-compat.js', () => ({
   hasColorMix: false,
   logWebkitCompat: vi.fn(),
 }))

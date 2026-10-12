@@ -11,12 +11,12 @@
      * The `FilterPopover` shell (positioning, focus trap, Esc-scoped close, labelled header) is
      * wrapped here so the parent only threads `anchor` / `open` / `onClose`.
      */
-    import FilterPopover from '$lib/ui/FilterPopover.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import FilterPopover from '#lib/ui/FilterPopover.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { SizeFilter, SizeUnit } from '../query-filter-state.svelte'
     import { SIZE_PRESETS, byteUnitLabel, isSizeRangeDisabled, showsUpperBound } from './filter-popover-helpers'
-    import { unitLabel } from '$lib/units'
-    import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
+    import { unitLabel } from '#lib/units/index.js'
+    import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
     import './filter-popover.css'
 
     /** The unit cells after the kilobyte, in the order the column lists them. */

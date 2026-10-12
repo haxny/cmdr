@@ -7,7 +7,7 @@
  * costs"). Each block below keeps its component's own doc comment, fixtures, props,
  * and assertions.
  *
- * `$lib/settings` is the one genuine disagreement: the image grid answers on
+ * `#lib/settings` is the one genuine disagreement: the image grid answers on
  * `mediaIndex.enabled`, the dialog on `ai.provider` and `search.autoApply`. It's a
  * mutable stub each of those two blocks installs in its own `beforeEach`, and
  * `null` means "use the real export" — which is what the coverage-note and
@@ -27,8 +27,8 @@ import WalkHandoffToastContent from './WalkHandoffToastContent.svelte'
 import { _resetWalkHandoffForTesting } from './walk-handoff.svelte'
 import { setWalkHandoff } from './walk-handoff-state.svelte'
 import type { CoverageNote as Note } from './coverage-note'
-import type { MediaIndexVolumeState, OcrHit, SimilarImage } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { MediaIndexVolumeState, OcrHit, SimilarImage } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const searchOcr = vi.fn<(payload: { volumeId: string; query: string; limit: number | null }) => Promise<OcrHit[]>>()
 const searchSemantic =
@@ -49,7 +49,7 @@ let settingsStub: ((key: string) => unknown) | null = null
 // The union of the IPC the image grid and the dialog reach for; the two sets are
 // disjoint, so neither block's stub changes what the other sees. The real module is
 // spread first so a call outside the union behaves as it does un-merged.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   mediaIndexSearchOcr: (volumeId: string, query: string, limit: number | null) => searchOcr({ volumeId, query, limit }),
   mediaIndexSearchSemantic: (volumeId: string, query: string, limit: number | null) =>
@@ -75,7 +75,7 @@ vi.mock('../../routes/viewer/media-view', () => ({
   mediaUrl: (token: string) => `cmdr-media://localhost/${token}`,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<{
     getSetting: (key: string) => unknown
     onSpecificSettingChange: (...args: unknown[]) => () => void
@@ -91,14 +91,14 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/indexing', async (importOriginal) => ({
+vi.mock('#lib/indexing/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isVolumeScanning: vi.fn(() => false),
   getEntriesScanned: vi.fn(() => 0),
   ROOT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/icon-cache', async (importOriginal) => ({
+vi.mock('#lib/icon-cache.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   iconCacheVersion: writable(0),
 }))

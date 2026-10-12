@@ -1,7 +1,7 @@
 # Nudges
 
 The shared rule behind every unsolicited once-ever offer: what Cmdr has already asked for, and how long one offer keeps
-the next one quiet. Two offers use it today, `$lib/dock/` and `$lib/reveal/`; each keeps its own thresholds and its own
+the next one quiet. Two offers use it today, `#lib/dock/` and `#lib/reveal/`; each keeps its own thresholds and its own
 paid-for conditions.
 
 ## Module map

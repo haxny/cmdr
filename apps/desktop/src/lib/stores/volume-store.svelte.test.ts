@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 type VolumesPayload = { data: VolumeInfo[]; timedOut: boolean; discoveryPending?: boolean }
 
@@ -20,7 +20,7 @@ const mockRefreshVolumes = vi.fn<() => Promise<void>>(() => Promise.resolve())
 let lastVolumesHandler: ((payload: VolumesPayload) => void) | null = null
 const mockUnlisten = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listVolumes: () => mockListVolumes(),
   refreshVolumes: () => mockRefreshVolumes(),
   onVolumesChanged: (handler: (payload: VolumesPayload) => void) => {
@@ -30,14 +30,14 @@ vi.mock('$lib/tauri-commands', () => ({
   onVolumeConnectionChanged: () => Promise.resolve(mockUnlisten),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => seenFlag[id] ?? false,
   setSetting: (id: string, value: boolean) => {
     seenFlag[id] = value
   },
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (content: unknown, options: { props?: Record<string, unknown> }) => {
     raisedToasts.push(options.props ?? {})
     return 'toast-id'
@@ -45,7 +45,7 @@ vi.mock('$lib/ui/toast', () => ({
 }))
 
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

@@ -1,6 +1,6 @@
 /**
  * Fixtures for `selection-add` / `selection-remove`
- * (`$lib/selection-dialog/SelectionDialog.svelte`).
+ * (`#lib/selection-dialog/SelectionDialog.svelte`).
  *
  * The dialog filters a SNAPSHOT of the focused pane's entries taken at open time
  * and passed in as a prop, so a fixture list is exactly what production hands it:
@@ -13,7 +13,7 @@
  * areas, so fixture strings never reach the message catalog.
  */
 
-import type { FileEntry } from '$lib/file-explorer/types'
+import type { FileEntry } from '#lib/file-explorer/types.js'
 import { daysAgo, hoursAgo } from './relative-time'
 
 const FIXTURE_DIR = '/Volumes/Naspolya/media/photos/2026/07-summer-archive'

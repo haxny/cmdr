@@ -3,9 +3,9 @@ import { mount, tick, unmount } from 'svelte'
 
 import ViewerCopyDialogs from './ViewerCopyDialogs.svelte'
 
-// Let the real `$lib/units` formatter run (the dialog titles use it) while stubbing the
+// Let the real `#lib/units` formatter run (the dialog titles use it) while stubbing the
 // IPC side-effects ModalDialog fires on mount/destroy.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

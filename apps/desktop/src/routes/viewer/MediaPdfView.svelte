@@ -4,8 +4,8 @@
    * `<embed>` supplies its own scroll / zoom / page UI, so we only fill the content
    * area and surface a brief loading spinner.
    */
-  import Spinner from '$lib/ui/Spinner.svelte'
-  import { tString } from '$lib/intl/messages.svelte'
+  import Spinner from '#lib/ui/Spinner.svelte'
+  import { tString } from '#lib/intl/messages.svelte.js'
 
   type Props = {
     /** `cmdr-media://localhost/<token>` URL for the PDF bytes. */

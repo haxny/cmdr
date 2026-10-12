@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
 import { ProviderSetupController } from './provider-setup.svelte'
-import { clearModelCache } from '$lib/settings/ai-model-cache'
+import { clearModelCache } from '#lib/settings/ai-model-cache.js'
 
 interface CheckResult {
   connected: boolean
@@ -27,7 +27,7 @@ const getAiApiKeyStatus = vi.fn<(id: string) => Promise<{ isSet: boolean; finger
 const deleteAiApiKey = vi.fn<(id: string) => Promise<void>>()
 const cloudAiHostVerdicts = vi.fn<(baseUrls: string[]) => Promise<(ManagedAiRefusal | null)[]>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkAiConnection: (baseUrl: string, providerId: string) => checkAiConnection({ baseUrl, providerId }),
   saveAiApiKey: (providerId: string, apiKey: string) => saveAiApiKey({ providerId, apiKey }),
   getAiApiKeyStatus: (id: string) => getAiApiKeyStatus(id),
@@ -36,7 +36,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const settingsMap: Record<string, unknown> = {}
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -51,7 +51,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 // The real `isE2eRun()` reads a mode resolved over IPC, which a unit test never has. This mock
 // puts it under the test's control instead.
 const e2e = { on: false }
-vi.mock('$lib/app-mode', async (importOriginal) => ({
+vi.mock('#lib/app-mode.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isE2eRun: () => e2e.on,
 }))

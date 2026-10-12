@@ -3,7 +3,7 @@
  * how to shorten it.
  *
  * Pure, because the decision is the part worth pinning down: the seam that
- * observes the counts and raises the toast is `$lib/stores/volume-store`.
+ * observes the counts and raises the toast is `#lib/stores/volume-store`.
  */
 
 /** How many pinned places make the group long enough to be worth a word. */

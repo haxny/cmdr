@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { createEnterMenu, type EnterMenuController } from './enter-menu.svelte'
-import type { FileEntry } from '$lib/file-explorer/types'
+import type { FileEntry } from '#lib/file-explorer/types.js'
 
 const { openSettingsWindowMock } = vi.hoisted(() => ({
   openSettingsWindowMock: vi.fn<(surface: string, section?: string[]) => Promise<void>>(),
 }))
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: openSettingsWindowMock,
 }))
 

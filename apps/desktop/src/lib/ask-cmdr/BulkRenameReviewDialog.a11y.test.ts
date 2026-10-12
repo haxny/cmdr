@@ -9,7 +9,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, tick, unmount } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { BulkRenameReview, BulkRenameReviewProposal, BulkRenameReviewRow } from './ask-cmdr-trigger.svelte'
 
 const { actions, watcher, media, viewer } = vi.hoisted(() => ({
@@ -66,7 +66,7 @@ vi.mock('./ask-cmdr-trigger.svelte', async () => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn((handler: (diff: { batches: { changes: unknown[] }[] }) => void) => {
@@ -82,7 +82,7 @@ vi.mock('../../routes/viewer/media-view', () => ({
   mediaUrl: (token: string) => `cmdr-media://localhost/${token}`,
 }))
 
-vi.mock('$lib/file-viewer/open-viewer', () => ({
+vi.mock('#lib/file-viewer/open-viewer.js', () => ({
   openFileViewer: (path: string, volumeId: string) => viewer.open({ filePath: path, volumeId }),
 }))
 

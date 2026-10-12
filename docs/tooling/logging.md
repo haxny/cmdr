@@ -10,7 +10,7 @@ Uses [LogTape](https://logtape.org/) with a batching bridge to the Rust backend.
 ### Usage
 
 ```typescript
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger'
 
 const log = getAppLogger('fileExplorer')
 log.debug('Loading directory {path}', { path })

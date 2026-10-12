@@ -11,13 +11,13 @@
  * diagnostic ("adb server", "sync service", "transport"): the backend's own
  * string goes to the log, and this is what a person reads.
  *
- * The refusal twin for servers is `$lib/servers/connect-refusals.ts`; the two
+ * The refusal twin for servers is `#lib/servers/connect-refusals.ts`; the two
  * stay apart because a phone's reasons and a server's share nothing but shape.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { AdbConnectOutcomeError } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { AdbConnectOutcomeError } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** What a stopped dial leaves the pane to do. */
 export type AdbConnectRecovery =

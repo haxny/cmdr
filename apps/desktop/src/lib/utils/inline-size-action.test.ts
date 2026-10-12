@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useInlineSize } from './inline-size-action'
-import { installLayoutMock } from '$lib/test-layout'
+import { installLayoutMock } from '#lib/test-layout.js'
 
 /**
  * The action is the house stand-in for a CSS container query, so what these

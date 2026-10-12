@@ -7,7 +7,7 @@
  * unknown", and only a fully-priced thread shows an estimated amount — never a silent $0.
  */
 
-import { getNumberFormatter } from '$lib/intl/number-format'
+import { getNumberFormatter } from '#lib/intl/number-format.js'
 
 /** Total tokens (prompt + completion) for a metered record. */
 export function totalTokens(cost: { promptTokens: number; completionTokens: number }): number {

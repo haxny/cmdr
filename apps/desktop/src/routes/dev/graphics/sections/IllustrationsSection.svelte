@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import GlobalShortcutAnimation from '$lib/downloads/GlobalShortcutAnimation.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import GlobalShortcutAnimation from '#lib/downloads/GlobalShortcutAnimation.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     const KEYBOARD_USAGE = 'Plays in the download toast to teach the global go-to-latest-download shortcut (⌃⌥⌘J).'
     const NETWORK_USAGE = 'Empty state when no SMB hosts are found on the network.'

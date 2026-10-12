@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({ ejectVolume: vi.fn() }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ ejectVolume: vi.fn() }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
 vi.mock('../navigation/server-row-actions', () => ({ runServerRowAction: vi.fn() }))
 vi.mock('../navigation/picked-volume-path', () => ({ pathForPickedVolume: (v: { path: string }) => v.path }))
 vi.mock('../navigation/eject-error-messages', () => ({ wordEjectRefusal: (e: unknown) => String(e) }))
 
-import { ejectVolume } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
+import { ejectVolume } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import { runServerRowAction } from '../navigation/server-row-actions'
 import { handleVolumeContextAction, type VolumeContextActionDeps } from './volume-context-action'
 import type { VolumeInfo } from '../types'

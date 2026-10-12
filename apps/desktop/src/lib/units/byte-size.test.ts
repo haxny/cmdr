@@ -12,10 +12,10 @@ import {
   dynamicTierIndex,
   unitLabel,
 } from './byte-size'
-import { _setCatalogForTests } from '$lib/intl/messages.svelte'
+import { _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import driveFigureCases from './drive-figure-cases.json'
-import type { FileSizeFormat } from '$lib/settings/types'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { FileSizeFormat } from '#lib/settings/types.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 describe('formatFileSizeWithFormat', () => {
   describe('binary (base 1024)', () => {

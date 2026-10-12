@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 import type { OperationRow } from './operations-store.svelte'
 import { hasOtherQueuedWork } from './queue-backlog'
 

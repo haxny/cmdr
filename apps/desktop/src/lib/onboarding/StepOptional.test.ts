@@ -31,7 +31,7 @@ const setSetting = vi.fn((id: string, value: unknown) => {
   settingsMap[id] = value
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,

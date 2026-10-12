@@ -25,10 +25,10 @@
  * ❌ Each dep is its own GETTER, matching `full-list-cache.svelte.ts`; see the note there.
  */
 
-import { getBriefColumnTextWidths } from '$lib/tauri-commands'
-import { ensureFontMetricsLoaded, fillMissingFontMetrics, getCurrentFontId } from '$lib/font-metrics'
-import { getAppLogger } from '$lib/logging/logger'
-import type { BriefColumnsErrorKind } from '$lib/ipc/bindings'
+import { getBriefColumnTextWidths } from '#lib/tauri-commands/index.js'
+import { ensureFontMetricsLoaded, fillMissingFontMetrics, getCurrentFontId } from '#lib/font-metrics/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { BriefColumnsErrorKind } from '#lib/ipc/bindings.js'
 
 const log = getAppLogger('fileExplorer')
 

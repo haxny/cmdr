@@ -1,8 +1,8 @@
 /**
  * End-to-end wiring for the results table's column widths in `QueryResults.svelte` over
- * `$lib/ui/ColumnList.svelte`.
+ * `#lib/ui/ColumnList.svelte`.
  *
- * The math itself is pinned in `$lib/ui/column-list-layout.test.ts` and the declarations in
+ * The math itself is pinned in `#lib/ui/column-list-layout.test.ts` and the declarations in
  * `result-column-widths.test.ts`; this file pins that the
  * component actually reaches it and writes ONE template onto both grid containers. jsdom
  * has no Canvas 2D, so `@chenglou/pretext` is stubbed with a 10px-per-character font, and
@@ -12,9 +12,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import SearchResults from './QueryResults.svelte'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => undefined,
@@ -23,7 +23,7 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({}))
+vi.mock('#lib/tauri-commands/index.js', () => ({}))
 
 const CHAR_PX = 10
 const CONTAINER_PX = 600

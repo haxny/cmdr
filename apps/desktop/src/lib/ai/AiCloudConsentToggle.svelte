@@ -14,10 +14,10 @@
 -->
 <script lang="ts">
     import type { Snippet } from 'svelte'
-    import Switch from '$lib/ui/Switch.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
+    import Switch from '#lib/ui/Switch.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
     import {
         acceptCloudConsent,
         cloudConsentState,

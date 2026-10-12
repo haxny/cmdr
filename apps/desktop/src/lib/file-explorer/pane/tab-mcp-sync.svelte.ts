@@ -18,8 +18,8 @@
  */
 
 import { untrack } from 'svelte'
-import { dependOn } from '$lib/utils/reactivity'
-import { updatePaneTabs } from '$lib/tauri-commands'
+import { dependOn } from '#lib/utils/reactivity.js'
+import { updatePaneTabs } from '#lib/tauri-commands/index.js'
 import { getAllTabs, type TabManager } from '../tabs/tab-state-manager.svelte'
 
 const TAB_SYNC_DEBOUNCE_MS = 100

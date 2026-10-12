@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 const { renderMultiRenameExamples } = vi.hoisted(() => ({ renderMultiRenameExamples: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ renderMultiRenameExamples }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ renderMultiRenameExamples }))
 
 import { DEFAULT_SPEC } from './spec'
 import { MARK_END, MARK_START, example, examplePieces, marked, renderExamples } from './rename-examples'

@@ -7,10 +7,10 @@
         VOLUME_TINT_COLORS,
         type SettingId,
         type VolumeTintColor,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import { nextSwatchIndex } from './swatch-keyboard'
-    import { trapFocus } from '$lib/ui/focus-trap'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         id: SettingId

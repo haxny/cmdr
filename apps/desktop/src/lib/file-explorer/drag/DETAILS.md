@@ -216,7 +216,7 @@ Key files:
     through a background no-op, because scrolling is how the user reveals that subfolder target.
   - A drop never opens the rename editor a paste or an F5 duplicate ends in (`DROP_DUPLICATE_FOLLOW_UP`); a drag ends
     with the mouse. The split between the gestures that ask for a name and the ones that don't lives in
-    `$lib/file-operations/transfer/DETAILS.md`.
+    `#lib/file-operations/transfer/DETAILS.md`.
   - No E2E covers the verdict, and the adjacent infrastructure only looks like it does: `triggerFileDrop` /
     `triggerSelfFileDrop` enter at `handleFileDrop`, downstream of the hit test, the modifier read, and this gate.
 - **Decision**: Native drag auto-scroll is controller-driven and list-executed

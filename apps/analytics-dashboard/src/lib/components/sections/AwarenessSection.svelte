@@ -1,17 +1,17 @@
 <!-- Acquisition § Awareness: top-of-funnel reach across the three sites, top referrers, and GitHub stars. -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { UmamiSiteUrls } from '$lib/server/fetch-all.js'
-    import type { UmamiData } from '$lib/server/sources/umami.js'
-    import type { GitHubStarsData } from '$lib/server/sources/github.js'
-    import { formatNumber, formatDelta } from '$lib/format.js'
-    import { COLOR_GOLD, COLOR_PURPLE, COLOR_GREEN, COLOR_CYAN } from '$lib/colors.js'
-    import Chart from '$lib/components/Chart.svelte'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import MetricTable from '$lib/components/MetricTable.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { UmamiSiteUrls } from '#lib/server/fetch-all.js'
+    import type { UmamiData } from '#lib/server/sources/umami.js'
+    import type { GitHubStarsData } from '#lib/server/sources/github.js'
+    import { formatNumber, formatDelta } from '#lib/format.js'
+    import { COLOR_GOLD, COLOR_PURPLE, COLOR_GREEN, COLOR_CYAN } from '#lib/colors.js'
+    import Chart from '#lib/components/Chart.svelte'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import MetricTable from '#lib/components/MetricTable.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const {
         umami,

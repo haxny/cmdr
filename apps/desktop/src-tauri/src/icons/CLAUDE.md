@@ -39,7 +39,7 @@ Full details: `DETAILS.md`.
   clears.
 - **Bounded vs unbounded key lifecycle**: `dir` / `ext:*` / `file` / `symlink*` / `special:*` are bounded (uncapped
   in-memory, persisted to localStorage), so changing how one is PRODUCED needs a `CACHE_SCHEMA` bump in
-  `$lib/icon-cache`, or every existing install serves the old pixels forever. `path:*` / `pkg:*` are unbounded
+  `#lib/icon-cache`, or every existing install serves the old pixels forever. `path:*` / `pkg:*` are unbounded
   (`PATH_KEY_CAP` LRU, never persisted), one lifecycle via `is_per_path_key`.
 - **A theme/accent change must drop the appearance-tinted keys AND the disk cache**: macOS tints folder glyphs by
   appearance, and the mtime token can't catch a system-only change. `clear_directory_icon_cache` handles both.

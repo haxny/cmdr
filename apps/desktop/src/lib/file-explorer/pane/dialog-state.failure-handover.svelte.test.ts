@@ -22,7 +22,7 @@ import {
   getForegroundFailureId,
   setForegroundFailureId,
   setForegroundOperationId,
-} from '$lib/file-operations/foreground-operation.svelte'
+} from '#lib/file-operations/foreground-operation.svelte.js'
 import type { WriteOperationError } from '../types'
 import type { FilePaneAPI } from './types'
 
@@ -30,7 +30,7 @@ const { dismissFailedOperation } = vi.hoisted(() => ({
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -41,9 +41,9 @@ vi.mock('$lib/tauri-commands', () => ({
   dismissFailedOperation,
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 /** Minimal `FilePaneAPI` stub: the transfer paths call into it on every route. */
 function makePaneRef(): FilePaneAPI {

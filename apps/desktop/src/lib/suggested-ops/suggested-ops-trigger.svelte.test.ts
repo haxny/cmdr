@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '$lib/tauri-commands'
+import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '#lib/tauri-commands/index.js'
 
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const pageMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<SuggestedOpPage>>()
@@ -16,7 +16,7 @@ const approveMock = vi.fn<(g: number, deselected: number[]) => Promise<{ kind: s
 /** The subscriber the store installs while the dialog is open. */
 let emit: ((payload: SuggestionsChanged) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listSuggestedOps: () => listMock(),
   pageSuggestedOps: (g: number, o: number, l: number) => pageMock({ groupId: g, offset: o, limit: l }),
   rejectSuggestedGroup: (g: number) => rejectMock(g),
@@ -28,7 +28,7 @@ vi.mock('$lib/tauri-commands', () => ({
     })
   },
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

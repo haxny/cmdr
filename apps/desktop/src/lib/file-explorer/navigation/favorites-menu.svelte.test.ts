@@ -10,8 +10,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import type { MenuActivationSource, MenuItem } from '$lib/ui/menu-types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import type { MenuActivationSource, MenuItem } from '#lib/ui/menu-types.js'
 
 const addFavorite = vi.fn(() => Promise.resolve())
 const removeFavorite = vi.fn(() => Promise.resolve())
@@ -28,7 +28,7 @@ const stubs = vi.hoisted(() => ({
   showVirtualGitPortal: false,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   addFavorite: (...args: unknown[]) => addFavorite(...(args as [])),
   removeFavorite: (...args: unknown[]) => removeFavorite(...(args as [])),
   renameFavorite: (...args: unknown[]) => renameFavorite(...(args as [])),
@@ -43,7 +43,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const addToastForPane = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (message: string, options: { level: string }) => {
     addToast(message, options)
   },
@@ -52,17 +52,17 @@ vi.mock('$lib/ui/toast', () => ({
   },
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => stubs.volumes }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => stubs.volumes }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   // Read by `volume-capabilities.ts` to classify a `.git`-portal path, which is one of
   // the two reasons the `0` row greys out.
   getShowVirtualGitPortal: () => stubs.showVirtualGitPortal,
 }))
 
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => ({ warn: vi.fn(), info: vi.fn() }) }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => ({ warn: vi.fn(), info: vi.fn() }) }))
 
 import { createFavoritesMenu, ADD_ROW_VALUE, FAVORITES_SECTION_ID } from './favorites-menu.svelte'
 

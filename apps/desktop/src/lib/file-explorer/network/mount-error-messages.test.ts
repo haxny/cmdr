@@ -8,8 +8,8 @@
  * `docs/guides/error-handling.md`. Both fail silently at runtime.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { MountError } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { MountError } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { renderMountError } from './mount-error-messages'
 import { MountFailure, asMountError } from './mount-error'
 

@@ -19,7 +19,7 @@ import {
   onMediaEnrichProgress,
   onMediaEnrichTerminal,
   type UnlistenFn,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { ROOT_VOLUME_ID } from './index-state.svelte'
 
 /** A paused enrichment's reason, or `null` while it's actively working. `waitingForIdle`

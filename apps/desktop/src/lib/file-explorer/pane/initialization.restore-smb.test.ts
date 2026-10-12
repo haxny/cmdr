@@ -29,10 +29,10 @@ const commands = vi.hoisted(() => ({
   listSavedServers: vi.fn(),
 }))
 
-vi.mock('$lib/app-status-store', () => appStatus)
-vi.mock('$lib/tauri-commands', () => commands)
-vi.mock('$lib/app-mode', () => ({ isE2eRun: () => false }))
-vi.mock('$lib/ask-cmdr/ask-cmdr-trigger.svelte', () => ({ hydrateRail: vi.fn() }))
+vi.mock('#lib/app-status-store.js', () => appStatus)
+vi.mock('#lib/tauri-commands/index.js', () => commands)
+vi.mock('#lib/app-mode.js', () => ({ isE2eRun: () => false }))
+vi.mock('#lib/ask-cmdr/ask-cmdr-trigger.svelte.js', () => ({ hydrateRail: vi.fn() }))
 
 const shareId = 'smb-naspolya-445-naspi'
 const existing = new Set(['/', '/Volumes', '~'])

@@ -7,13 +7,13 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('$lib/app-status-store', () => ({ savePaneTabs: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/app-status-store.js', () => ({ savePaneTabs: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   showTabContextMenu: vi.fn(),
   onTabContextAction: vi.fn(() => Promise.resolve(() => {})),
   updatePinTabMenu: vi.fn(),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

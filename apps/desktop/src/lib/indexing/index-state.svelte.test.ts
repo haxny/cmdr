@@ -28,7 +28,7 @@ import type {
   CoveragePhase,
   ScanRunKind,
   StepsAheadMs,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 // Captured callbacks the module registers via the wrappers below.
 let aggProgressCb: ((p: AggregationProgressEvent) => void) | undefined
@@ -52,12 +52,12 @@ const noopUnlisten = () => {}
 // before `initIndexState`.
 // The memory-stop notice is a toast; capture it rather than mount the toast store.
 const addToast = vi.hoisted(() => vi.fn())
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 
 const backfill = vi.hoisted((): { status: Partial<IndexStatusResponse> } => ({ status: { scanning: false } }))
 
 // Mock the typed event wrappers: capture the ones the tests drive, no-op the rest.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getIndexStatus: () => Promise.resolve({ status: 'ok', data: backfill.status }),
   onIndexScanStarted: (cb: (p: IndexScanStartedEvent) => void) => {
     scanStartedCb = cb
@@ -112,7 +112,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onIndexReplayComplete: () => Promise.resolve(noopUnlisten),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getIndexStatus: () => Promise.resolve({ status: 'ok', data: backfill.status }),
   },

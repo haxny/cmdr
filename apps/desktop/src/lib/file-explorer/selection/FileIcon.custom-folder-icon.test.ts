@@ -15,7 +15,7 @@ const GENERIC_URL = '/icons/generic-folder.svg'
 const CUSTOM_URL = '/icons/custom-artwork.svg'
 const CUSTOM_PATH = '/Users/test/Projects'
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => GENERIC_URL,
@@ -27,7 +27,7 @@ vi.mock('$lib/icon-cache', async () => {
 
 // Gold is ON throughout, so the custom-icon cases also prove the recolor filter
 // keeps its hands off the user's own artwork.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getIsCmdrGold: () => true,
 }))

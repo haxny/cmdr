@@ -8,18 +8,18 @@
  * costs"). Each block below keeps its component's own props and assertions.
  *
  * Two stubs disagree between blocks and are therefore mutable, installed by each
- * `describe` in its own `beforeEach`: `$lib/settings`' `getSetting` (the row wants
+ * `describe` in its own `beforeEach`: `#lib/settings`' `getSetting` (the row wants
  * `true`, the warn toast wants the binding string) and the bindings command
  * `setGlobalGoToLatestShortcut` (the row's returns nothing, the warn toast's
- * resolves an ok result). Every `$lib/*` stub spreads the real module first, so a
+ * resolves an ok result). Every `#lib/*` stub spreads the real module first, so a
  * block that never stubbed one still sees its un-stubbed exports: the shortcut row
- * and the warn toast both call the REAL `$lib/tauri-commands` wrapper, which lands
+ * and the warn toast both call the REAL `#lib/tauri-commands` wrapper, which lands
  * on the stubbed `commands` below exactly as it does un-merged.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { getGlobalGoToLatestBindingMock } = vi.hoisted(() => ({
   getGlobalGoToLatestBindingMock: vi.fn<() => string>(),
@@ -51,29 +51,29 @@ vi.mock('./global-shortcut-setting', async (importOriginal) => ({
   GLOBAL_GO_TO_LATEST_ENABLED_KEY: 'behavior.fileSystemWatching.globalGoToLatestShortcut.enabled',
 }))
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: vi.fn(() => settingValue),
   setSetting: vi.fn(),
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/ipc/bindings', async (importOriginal) => ({
+vi.mock('#lib/ipc/bindings.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   commands: { setGlobalGoToLatestShortcut: vi.fn(() => setGlobalShortcutResult) },
 }))
 
-vi.mock('$lib/logging/logger', async (importOriginal) => ({
+vi.mock('#lib/logging/logger.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getAppLogger: () => ({ warn: vi.fn(), debug: vi.fn(), info: vi.fn(), error: vi.fn() }),
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   openPrivacySettings: vi.fn(() => Promise.resolve()),
 }))

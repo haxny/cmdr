@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Switch from '$lib/ui/Switch.svelte'
-    import type { SettingId } from '$lib/settings'
+    import Switch from '#lib/ui/Switch.svelte'
+    import type { SettingId } from '#lib/settings/index.js'
     import { useBooleanSetting } from './boolean-setting.svelte'
     import { useSettingLock } from './setting-lock.svelte'
 

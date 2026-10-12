@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, WriteConflictEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteConflictEvent } from '#lib/tauri-commands/index.js'
 import type { ConflictPrompt } from './operation-conflict.svelte'
 
 let prompt: ConflictPrompt | null = null
@@ -24,12 +24,12 @@ vi.mock('./operation-conflict.svelte', () => ({
   cancelConflictPrompt: (...args: unknown[]) => cancelConflictPrompt(...(args as [])),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),

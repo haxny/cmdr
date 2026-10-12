@@ -1,8 +1,8 @@
 /**
  * ESLint rule: ban importing the generated `commands` / `events` runtime bindings
- * from `$lib/ipc/bindings` outside the wrapper layer.
+ * from `#lib/ipc/bindings` outside the wrapper layer.
  *
- * Rationale: `$lib/tauri-commands/` is the canonical, typed seam for backend
+ * Rationale: `#lib/tauri-commands/` is the canonical, typed seam for backend
  * communication. Each wrapper delegates to `commands.commandName(...)` /
  * `events.*`, unwrapping `Result<T, E>` via `throwIpcError`, handling the
  * `TimedOut<T>` vs `IpcError` split, and keeping macOS-only fallbacks in one
@@ -14,10 +14,10 @@
  * ## What this rule catches
  *
  * A VALUE import of the `commands` or `events` specifier from the bindings module:
- *   - `import { commands } from '$lib/ipc/bindings'`
- *   - `import { commands, type RepoInfo } from '$lib/ipc/bindings'`
- *   - `import { commands as ipcCommands } from '$lib/ipc/bindings'`
- *   - `import { events } from '$lib/ipc/bindings'`
+ *   - `import { commands } from '#lib/ipc/bindings'`
+ *   - `import { commands, type RepoInfo } from '#lib/ipc/bindings'`
+ *   - `import { commands as ipcCommands } from '#lib/ipc/bindings'`
+ *   - `import { events } from '#lib/ipc/bindings'`
  *
  * ## What it deliberately does NOT catch
  *
@@ -51,13 +51,13 @@ export default {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Import typed wrappers from `$lib/tauri-commands` instead of the raw `commands`/`events` bindings.',
+      description: 'Import typed wrappers from `#lib/tauri-commands` instead of the raw `commands`/`events` bindings.',
       recommended: true,
     },
     messages: {
       rawBindingsImport:
-        "Don't import `{{ name }}` from `$lib/ipc/bindings` directly. Use the typed wrapper from " +
-        "`$lib/tauri-commands` (add a thin one if it's missing) so IPC stays on one seam with consistent " +
+        "Don't import `{{ name }}` from `#lib/ipc/bindings` directly. Use the typed wrapper from " +
+        "`#lib/tauri-commands` (add a thin one if it's missing) so IPC stays on one seam with consistent " +
         'error/timeout unwrapping. See `lib/tauri-commands/CLAUDE.md`. Type imports from bindings are fine.',
     },
     schema: [],
@@ -70,11 +70,11 @@ export default {
 
     return {
       ImportDeclaration(node) {
-        // Only the bindings module. Matches the `$lib` alias and any relative
-        // path resolving to `ipc/bindings`.
+        // Only the bindings module: `#lib/ipc/bindings.js` or any relative path
+        // resolving to `ipc/bindings`, with or without its extension.
         const source = node.source.value
         if (typeof source !== 'string') return
-        const isBindings = source === '$lib/ipc/bindings' || /(^|\/)ipc\/bindings$/.test(source)
+        const isBindings = /(^|\/)ipc\/bindings(\.[jt]s)?$/.test(source)
         if (!isBindings) return
 
         // `import type { … }` is a whole-declaration type import — always fine.

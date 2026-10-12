@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Size from '$lib/ui/Size.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Size from '#lib/ui/Size.svelte'
     import LabeledRow from '../LabeledRow.svelte'
 
     // Values picked to land in each rainbow tier: bytes, kB, MB, GB, TB.

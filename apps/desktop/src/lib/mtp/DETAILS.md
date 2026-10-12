@@ -60,9 +60,9 @@ because pinpointing the changed directory would need extra MTP round-trips.
 
 ## i18n
 
-MTP copy lives in the `mtp.*` catalog (`$lib/intl/messages/en/mtp.json`), resolved via `tString()` / `t()` / `<Trans>`;
+MTP copy lives in the `mtp.*` catalog (`#lib/intl/messages/en/mtp.json`), resolved via `tString()` / `t()` / `<Trans>`;
 `cmdr/no-raw-user-facing-string` is enforced on `lib/mtp/`. The two manual-fix dialogs use `<Trans>` for sentences with
 inline components: `PtpcameradDialog` wraps the blocking-process name (`<process>`), the `ptpcamerad` token (`<code>`),
 and a `<ShortcutChip key="Ctrl+C">` (`<key>`); the chip/`<code>` snippets are declared at markup top level (NOT inside
 `<ModalDialog>`, or Svelte treats them as the dialog's named props). Runtime rules:
-[`$lib/intl/CLAUDE.md`](../intl/CLAUDE.md).
+[`#lib/intl/CLAUDE.md`](../intl/CLAUDE.md).

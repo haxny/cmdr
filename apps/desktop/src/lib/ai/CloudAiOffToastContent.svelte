@@ -5,8 +5,8 @@
      * way out: a button to the switch in Settings > AI > Provider. ❌ It never grants consent
      * itself; only the switch does (`AiCloudConsentToggle.svelte`).
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openCloudConsentSettings } from './cloud-consent.svelte'
 </script>
 

@@ -8,7 +8,7 @@
  * the main window while operations run in the background and still manage them.
  *
  * Cloned from `lib/settings/settings-window.ts`: open-or-focus a singleton
- * `queue` window, position via the shared `$lib/window-positioning` helpers,
+ * `queue` window, position via the shared `#lib/window-positioning` helpers,
  * apply `NSVisualEffectView` vibrancy (with the reduce-transparency opaque
  * fallback), and use an overlay title bar with the traffic lights inset into
  * our own header. The opener runs on the MAIN window, which already holds the
@@ -20,12 +20,12 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { emitTo } from '@tauri-apps/api/event'
 import { Effect, EffectState } from '@tauri-apps/api/window'
-import { getShouldReduceTransparency } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import { getEffectiveScale } from '$lib/text-size.svelte'
-import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '$lib/app-mode'
-import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '$lib/window-positioning'
+import { getShouldReduceTransparency } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
+import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '#lib/window-positioning.js'
 
 const log = getAppLogger('queue')
 

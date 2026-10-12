@@ -8,7 +8,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     sendErrorReport: vi.fn(),
     amendErrorReport: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('$lib/ipc/bindings', () => ({
 }))
 
 import { invoke } from '@tauri-apps/api/core'
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import {
   amendErrorReport,
   getAutoSentReportPreview,

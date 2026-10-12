@@ -18,12 +18,12 @@ import {
   compareDirectories as compareDirectoriesIpc,
   type CompareDirectoriesMode,
   type CompareDirectoriesResult,
-} from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
 import type { FilePaneAPI } from './types'
 
 const log = getAppLogger('fileExplorer')

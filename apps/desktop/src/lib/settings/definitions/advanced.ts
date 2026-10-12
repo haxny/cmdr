@@ -377,7 +377,7 @@ export const advancedSettings: SettingDefinitionSource[] = [
   },
   {
     // One-shot for the best-effort notice a Mac below `SUPPORTED_MACOS_MAJOR`
-    // gets (`$lib/utils/webkit-compat.ts`). Hidden for the same reason the
+    // gets (`#lib/utils/webkit-compat.ts`). Hidden for the same reason the
     // onboarding flags are: it records what the user has already been told, so
     // re-telling them is the bug, and a Settings row would only invite that.
     id: 'advanced.oldMacosNoticeShown',

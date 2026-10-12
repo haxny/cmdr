@@ -67,7 +67,7 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 
 ## Not part of this module: soft sheets
 
-`OnboardingWizard.svelte` (in `$lib/onboarding/`) is the canonical soft-sheet implementation: ~90% viewport coverage,
+`OnboardingWizard.svelte` (in `#lib/onboarding/`) is the canonical soft-sheet implementation: ~90% viewport coverage,
 frosted backdrop, no drag / Escape / × button, body owns the close gesture. It's NOT a `ModalDialog` variant — sheets
 break almost every `ModalDialog` constraint (full-bleed sizing, no title bar, no Escape, no draggable). Adding sheet
 variants to `ModalDialog` would dilute its contract; sheets get their own shell and their own `--sheet-*` design tokens
@@ -349,7 +349,7 @@ rows are display-only; the frontend returns opaque proposal and row ids to the b
 The same paired announcement feeds a reactive `SvelteSet` that anything can ask: `isAnySoftDialogOpen()`,
 `blockingSoftDialog()` (the topmost one that blocks a file operation), and `isDialogOpen(id)` for one named dialog. The
 last one is how an ambient affordance steps aside for the dialog it points at, without the hosting component threading
-its own visibility flag down: `$lib/onboarding/`'s FDA badge hides while the onboarding wizard's own FDA step is up.
+its own visibility flag down: `#lib/onboarding/`'s FDA badge hides while the onboarding wizard's own FDA step is up.
 Reads only. ❌ Marking a dialog open from anywhere but `ModalDialog` (or `OnboardingWizard`, the one hand-registrar)
 breaks the set's exhaustiveness.
 
@@ -402,7 +402,7 @@ Exempt inside the rule: `iframe` / `embed` / `object`, whose accessible name IS 
 Usage:
 
 ```svelte
-import { tooltip } from '$lib/tooltip/tooltip'
+import { tooltip } from '#lib/tooltip/tooltip'
 
 <!-- Plain text -->
 <span use:tooltip="Simple tooltip">...</span>
@@ -529,7 +529,7 @@ classes.
 `StatusGlyph.svelte` marks a condition on the thing beside it: a TCC-restricted folder in a `FullList` / `BriefList` row
 and in `VolumeBreadcrumb`'s volume rows, a symlinked subtree in `SelectionInfo`'s status bar. Those four are its
 callers. One `label` serves as both the accessible name and the tooltip, because a marker's meaning and its explanation
-are the same sentence; the restricted one comes from `restrictedFolderTooltip()` in `$lib/system-strings.svelte`, which
+are the same sentence; the restricted one comes from `restrictedFolderTooltip()` in `#lib/system-strings.svelte`, which
 stays the single definition of that string.
 
 **It is a `<span>`, never a `<button>`, and that's why it's a separate component from `InfoTip`.** These sit in recycled
@@ -1212,7 +1212,7 @@ inside `@media (prefers-reduced-motion: no-preference)`, and it only attaches to
 contradicts itself.
 
 Consumers: `IndexingStatusIndicator` (size `sm`, in the indexing tooltip), `TransferProgressDialog` (size `md`, dual
-bars for size + file count), `$lib/status-corner/OperationChip` (size `sm`, `animated` off while paused).
+bars for size + file count), `#lib/status-corner/OperationChip` (size `sm`, `animated` off while paused).
 
 ## Toast system (`toast/`)
 
@@ -1374,7 +1374,7 @@ FIRST toast's `originPane` (consistent with its partial replace of other fields)
   (`align-items: flex-end`) and its own `max-width` (440) caps the widest opt-in, so a wider toast just extends leftward
   while default-width toasts keep hugging the screen edge. Plumbed `ToastOptions` → `Toast` → `ToastContainer` →
   `ToastItem` (inline `max-width`).
-- `report?: ReportIncident | false`: what the toast's "Send error report…" reports (`$lib/error-reporter/DETAILS.md` §
+- `report?: ReportIncident | false`: what the toast's "Send error report…" reports (`#lib/error-reporter/DETAILS.md` §
   Report offers). The store resolves it into `Toast.report`: an explicit incident wins (any level, so a slowness toast
   can offer one too); `false` means none; left out, an `error` STRING toast offers one with its own text as the note,
   and every other toast offers none. The frame renders `ReportOffer` under string content and hands a component the
@@ -1425,11 +1425,11 @@ decimal) and follows palette swaps via the `data-size-colors` attribute on `<htm
 
 Use this in Svelte templates: `<Size bytes={entry.size} />`. For HTML string contexts (tooltips, error messages, prose
 that goes through `{@html}`), use `colorizeSize(formatByteSizeTiered(bytes))`: `colorizeSize` lives in
-`$lib/file-explorer/selection/selection-info-utils.ts` and wraps the size in the tier span its `TieredSize` names.
+`#lib/file-explorer/selection/selection-info-utils.ts` and wraps the size in the tier span its `TieredSize` names.
 
 Free-space displays (volume picker, status bar, usage-bar tooltip, transfer-dialog destination info) intentionally DON'T
 tier-color the numbers — for "free space" big-is-good, and red GB would falsely signal "low space". They use the plain
-formatters from `disk-space-utils.ts` with `$lib/units`'s `formatByteSize` for the inner formatter. The usage-bar itself
+formatters from `disk-space-utils.ts` with `#lib/units`'s `formatByteSize` for the inner formatter. The usage-bar itself
 stays color-coded (driven by `getDiskUsageLevel`, which is the right signal for free space).
 
 The `<Size>` component always renders the friendly dynamic form regardless of the user's `listing.sizeUnit` choice
@@ -1489,7 +1489,7 @@ itself, which is exactly what this leaves to the parent.
   `minmax(<min>px, 1fr)` tracks. When every column fits, the LAST `share` column turns flexible so the spare width lands
   there. Why: the column you're reading is the one that's cut off, so spare width goes wherever text is still hidden. A
   `share` column without a `demand` always wants more (a plain even split). Search's two-column case and its history:
-  `$lib/query-ui/DETAILS.md` § Column widths.
+  `#lib/query-ui/DETAILS.md` § Column widths.
 - **The flexible column is a `minmax(<floor>px, 1fr)` track, never a computed pixel width.** Only the branch decision
   reads the container width; CSS resolves the remainder, so the right edge stays flush on every frame of a resize. `ch`
   tracks count against the shared width at one `ch` = the regular measurer's `'0'`.
@@ -1658,15 +1658,15 @@ letters (`../file-operations/decision-keys.ts`).
 ## StatusBadge
 
 `StatusBadge.svelte`: the small uppercase stability pill (ALPHA / BETA) rendered next to a feature's title. One prop:
-`status: 'alpha' | 'beta'` (the `BadgeStatus` type from `$lib/feature-status`). Don't hardcode the status at call sites:
-derive it via `getBadgeStatus(featureId)` from `$lib/feature-status`, which reads the repo-root `feature-status.json`
+`status: 'alpha' | 'beta'` (the `BadgeStatus` type from `#lib/feature-status`). Don't hardcode the status at call sites:
+derive it via `getBadgeStatus(featureId)` from `#lib/feature-status`, which reads the repo-root `feature-status.json`
 (single source of truth shared with the website; see `docs/feature-status.md`). Stable features return no badge from
 that helper, so a graduated feature loses its pill with a one-line JSON edit.
 
 Visual: same token recipe as `ToggleGroup.svelte`'s `.tg-badge` (the "AI" chip): `--font-size-xs` mono, weight 600,
 `--color-accent-subtle` background, `--radius-xs`, uppercase via CSS. The class is `feature-status-badge` (NOT
 `status-badge`: the Debug window has a `:global(.status-badge)` for the drive-index panel that would leak onto it). The
-tooltip text is the canonical definition from the JSON's `statusDefinitions` (exported by `$lib/feature-status`), shared
+tooltip text is the canonical definition from the JSON's `statusDefinitions` (exported by `#lib/feature-status`), shared
 with the website's pills so the two surfaces can't drift.
 
 Consumers: `QueryDialog`'s title strip (via `QueryDialogConfig.badge`, set by the Search + Selection wrappers) and the
@@ -1935,7 +1935,7 @@ Cmdr runs a three-tier a11y strategy; see `docs/design-system.md` § "Automated 
 mounted in Vitest/jsdom, covering structural a11y (ARIA, labels, focusable-when-enabled) in milliseconds. Contrast is
 tier 1's job; focus traps and Escape-return-focus are tier 2's.
 
-Helper: `$lib/test-a11y` exports `expectNoA11yViolations(container)`. Same axe ruleset as E2E, minus `color-contrast`
+Helper: `#lib/test-a11y` exports `expectNoA11yViolations(container)`. Same axe ruleset as E2E, minus `color-contrast`
 and `region` (both misfire in jsdom; see the helper's comments).
 
 Two file layouts satisfy `a11y-coverage`, and both are equally enforced:
@@ -1959,7 +1959,7 @@ Template (the colocated shape; a directory-level file is the same with one `desc
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import MyComponent from './MyComponent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y'
 
 describe('MyComponent a11y', () => {
   it('default state has no a11y violations', async () => {
@@ -1976,7 +1976,7 @@ describe('MyComponent a11y', () => {
 ```
 
 Write one test per meaningful state (default, disabled, error, open/closed, etc.). For components that hit Tauri IPC,
-mock `$lib/tauri-commands` at the top of the file. Set `CMDR_A11Y_DEBUG=1` to log pass/violation counts per call when
+mock `#lib/tauri-commands` at the top of the file. Set `CMDR_A11Y_DEBUG=1` to log pass/violation counts per call when
 investigating why a test passes silently.
 
 Current coverage: 73 `.a11y.test.ts` files, most of them directory-level, covering dialogs, file explorer panes,
@@ -2037,14 +2037,14 @@ transient completion toast). `ToastItem` restarts the transient clock on every r
 
 ## Dependencies
 
-- `$lib/tauri-commands`: `notifyDialogOpened`, `notifyDialogClosed`
+- `#lib/tauri-commands`: `notifyDialogOpened`, `notifyDialogClosed`
 - `apps/desktop/src/app.css`: all CSS variables used here must be defined there
 
 ## i18n
 
-User-facing copy in these primitives lives in the `ui.*` catalog (`$lib/intl/messages/en/ui.json`), resolved through
+User-facing copy in these primitives lives in the `ui.*` catalog (`#lib/intl/messages/en/ui.json`), resolved through
 `tString()` / `<Trans>`; `cmdr/no-raw-user-facing-string` is enforced on `lib/ui/`. Defaulted copy props (`AlertDialog`
 `buttonText`, `Select` `placeholder`, `Popover` `ariaLabel`, `Combobox` `emptyText`) keep the prop optional and fall
 back to the catalog value via a `$derived`, so a consumer can still override. `LoadingIcon`'s cancel hint is a `<Trans>`
 with an empty `<key></key>` tag: the snippet renders `<ShortcutChip key="Esc" />` and ignores (renders) its children.
-Runtime + key rules: [`$lib/intl/CLAUDE.md`](../intl/CLAUDE.md).
+Runtime + key rules: [`#lib/intl/CLAUDE.md`](../intl/CLAUDE.md).

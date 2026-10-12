@@ -14,13 +14,13 @@
      * so it isn't focusable — it would otherwise be a confusing keyboard
      * second copy of the Jump action.
      */
-    import Size from '$lib/ui/Size.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Icon from '$lib/ui/Icon.svelte'
+    import Size from '#lib/ui/Size.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Icon from '#lib/ui/Icon.svelte'
     import { goToDownload } from './go-to-latest'
     import {
         setDownloadsNotificationsMode,
@@ -30,8 +30,8 @@
     import { setDownloadsToastCollapsed } from './downloads-toast-collapsed'
     import { buildShortcutSummary } from './download-toast-shortcuts'
     import GlobalShortcutAnimation from './GlobalShortcutAnimation.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { Snippet } from 'svelte'
     import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 

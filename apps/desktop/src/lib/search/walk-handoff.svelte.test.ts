@@ -11,9 +11,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { SearchQuery, SearchResultEntry, SearchRunCoverage } from '$lib/tauri-commands'
-import { clearAllToasts, getToasts } from '$lib/ui/toast/toast-store.svelte'
-import type { LiveRunView } from '$lib/query-ui/query-stream'
+import type { SearchQuery, SearchResultEntry, SearchRunCoverage } from '#lib/tauri-commands/index.js'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/toast-store.svelte.js'
+import type { LiveRunView } from '#lib/query-ui/query-stream.js'
 import type { LiveRunHandlers } from './live-run-events'
 import { WALK_HANDOFF_TOAST_ID, getWalkHandoff } from './walk-handoff-state.svelte'
 import {
@@ -50,7 +50,7 @@ let indexAnswer: { entries: SearchResultEntry[]; totalCount: number; targetVolum
 }
 const indexAsks: unknown[] = []
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelSearch: (runId: string) => {
     cancelled.push(runId)
     return Promise.resolve(true)

@@ -12,9 +12,9 @@
 //   - and whether it's a network volume, which switches the coverage-honesty copy
 //     to the network voice.
 
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import { volumeKindOf } from '$lib/file-explorer/pane/volume-capabilities'
-import { ROOT_VOLUME_ID } from '$lib/indexing'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import { volumeKindOf } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { ROOT_VOLUME_ID } from '#lib/indexing/index.js'
 
 /**
  * Whether a volume is a network share or a server, by its TYPED kind rather than

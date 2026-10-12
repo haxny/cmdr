@@ -1,4 +1,4 @@
-import { getFileBeside } from '$lib/tauri-commands'
+import { getFileBeside } from '#lib/tauri-commands/index.js'
 import type { FileEntry } from '../types'
 import type { RenameTarget } from '../rename/rename-state.svelte'
 import type { RenameStepDirection } from '../rename/rename-step'

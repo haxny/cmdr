@@ -1,8 +1,8 @@
 // Crash reporter commands
 
-import { commands } from '$lib/ipc/bindings'
-import type { CrashReport } from '$lib/ipc/bindings'
-import { throwServerRequestError } from '$lib/error-messages/server-request'
+import { commands } from '#lib/ipc/bindings.js'
+import type { CrashReport } from '#lib/ipc/bindings.js'
+import { throwServerRequestError } from '#lib/error-messages/server-request.js'
 
 export type { CrashReport }
 

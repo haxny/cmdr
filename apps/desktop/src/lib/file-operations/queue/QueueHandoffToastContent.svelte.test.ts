@@ -7,12 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
 
 const openQueueWindow = vi.fn(() => Promise.resolve())
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: (): Promise<void> => openQueueWindow(),
 }))
 
 const dismissToast = vi.fn<(id: string) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: (id: string): void => {
     dismissToast(id)
   },

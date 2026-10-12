@@ -16,7 +16,7 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { onAskCmdrTurn, type AskCmdrTurn } from '$lib/tauri-commands'
+import { onAskCmdrTurn, type AskCmdrTurn } from '#lib/tauri-commands/index.js'
 import { noteThreadDiscarded, noteThreadStarted } from './ask-cmdr-sessions.svelte'
 import { handleTurnEvent } from './ask-cmdr-stream.svelte'
 

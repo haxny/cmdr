@@ -7,9 +7,9 @@
      * buttons still go dead once the confirm has fired, so a double Enter can't
      * send a second delete at a folder the first one is walking.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** True while the delete is running. */

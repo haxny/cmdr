@@ -13,11 +13,11 @@ import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getSettingDefinition, settingsRegistry } from './settings-registry'
 import { getSetting, setSetting, isModified } from './settings-store'
 import type { SettingDefinition, SettingId, SettingsValues } from './types'
-import { getEffectiveShortcuts, getDefaultShortcuts, isShortcutModified } from '$lib/shortcuts'
-import { commands } from '$lib/commands/command-registry'
-import { getAppLogger } from '$lib/logging/logger'
-import { getSettingLock, isSettingManaged } from '$lib/managed-policy/managed-policy.svelte'
-import { lockAllowsWrite } from '$lib/managed-policy/overlay'
+import { getEffectiveShortcuts, getDefaultShortcuts, isShortcutModified } from '#lib/shortcuts/index.js'
+import { commands } from '#lib/commands/command-registry.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getSettingLock, isSettingManaged } from '#lib/managed-policy/managed-policy.svelte.js'
+import { lockAllowsWrite } from '#lib/managed-policy/overlay.js'
 
 const log = getAppLogger('mcp-main-bridge')
 

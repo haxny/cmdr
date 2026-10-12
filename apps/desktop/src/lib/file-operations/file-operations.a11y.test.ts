@@ -15,11 +15,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick, flushSync, type ComponentProps } from 'svelte'
-import type { OperationSnapshot, WriteConflictEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteConflictEvent } from '#lib/tauri-commands/index.js'
 import type { ConflictPrompt } from './operation-conflict.svelte'
 import type { SourcesGonePrompt as SourcesGonePromptState } from './sources-gone.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { seconds } from '$lib/units'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { seconds } from '#lib/units/index.js'
 
 let prompt: ConflictPrompt | null = null
 
@@ -44,7 +44,7 @@ vi.mock('./sources-gone.svelte', () => ({
   cancelSourcesGonePrompt: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -56,7 +56,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([{ amount: 0.02, currency: 'USD', providerLabel: 'AWS' }])),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => fileSizeFormat),

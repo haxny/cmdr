@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types'
-import { resolveSelection } from '$lib/server/types.js'
+import { resolveSelection } from '#lib/server/types.js'
 
 /**
  * Resolves the shared time selection (range + optional specific day) from the URL once, in the layout,

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { MonitorRect } from '$lib/window-positioning-utils'
+import type { MonitorRect } from '#lib/window-positioning-utils.js'
 import { growMainWindowForRail, shrinkMainWindowForRail } from './rail-window'
 
 const win = {
@@ -22,7 +22,7 @@ const readMonitorsMock = vi.fn<() => Promise<MonitorRect[]>>()
 const getAppModeMock = vi.fn<() => 'prod' | 'dev' | 'e2e' | 'capture'>()
 
 // `isE2eRun` mirrors the real helper: a capture run counts as an E2E run.
-vi.mock('$lib/app-mode', () => ({
+vi.mock('#lib/app-mode.js', () => ({
   getAppMode: () => getAppModeMock(),
   isE2eRun: () => getAppModeMock() === 'e2e' || getAppModeMock() === 'capture',
 }))
@@ -41,8 +41,8 @@ vi.mock('@tauri-apps/api/dpi', () => ({
     ) {}
   },
 }))
-vi.mock('$lib/window-positioning', () => ({ readMonitors: () => readMonitorsMock() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/window-positioning.js', () => ({ readMonitors: () => readMonitorsMock() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

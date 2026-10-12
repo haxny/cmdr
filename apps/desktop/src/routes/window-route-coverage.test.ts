@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { windowSettingsAccess } from '$lib/settings/window-settings'
+import { windowSettingsAccess } from '#lib/settings/window-settings.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 // here = apps/desktop/src/routes → the frontend source root is one up.
@@ -45,10 +45,10 @@ const LANGUAGE_SYNC_CALL = 'initWindowLanguageSync('
 /** Static `import`/`export … from '…'` plus dynamic `import('…')`. */
 const IMPORT_RE = /(?:import|export)\s+(?:[\s\S]*?)\s*from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)/g
 
-/** Resolve a `$lib/…` or relative specifier to a file on disk, or `null` for a bare package. */
+/** Resolve a `#lib/…` or relative specifier to a file on disk, or `null` for a bare package. */
 function resolveSpecifier(specifier: string, fromFile: string): string | null {
   let base: string
-  if (specifier.startsWith('$lib/')) base = path.join(srcRoot, 'lib', specifier.slice('$lib/'.length))
+  if (specifier.startsWith('#lib/')) base = path.join(srcRoot, 'lib', specifier.slice('#lib/'.length))
   else if (specifier.startsWith('./') || specifier.startsWith('../'))
     base = path.resolve(path.dirname(fromFile), specifier)
   else return null
@@ -186,7 +186,7 @@ describe('window route coverage', () => {
       `These windows gate on settings but never sync their language, so they stay on the webview's ` +
         `own locale forever. Call \`${LANGUAGE_SYNC_CALL})\` right after \`${WINDOW_GATE_CALL})\` in ` +
         `\`onMount\`, keep the returned teardown, and call it from \`onDestroy\`. See ` +
-        `\`$lib/settings/window-settings.ts\`.`,
+        `\`#lib/settings/window-settings.ts\`.`,
     ).toEqual([])
   })
 

@@ -6,8 +6,8 @@
      * and stays apart from the small ▾ markers under `[C…]` tokens. Disabled while the field has
      * no history. Out of the Tab order: in the field, ↓ opens the same list.
      */
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The field has no history yet. */

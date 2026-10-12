@@ -8,23 +8,23 @@
 
 import { afterEach, beforeEach, describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({
   openErrorReportFor: vi.fn(),
 }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(),
   dismissToast: vi.fn(),
 }))
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn(() => 60 * 60 * 1000),
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(() => Promise.resolve('1.2.3')) }))
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }),
 }))
 

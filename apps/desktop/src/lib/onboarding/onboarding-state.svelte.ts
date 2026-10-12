@@ -18,11 +18,11 @@
  * the right copy.
  */
 
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { isDialogOpen } from '$lib/ui/open-dialogs.svelte'
-import type { FullDiskAccessChoice } from '$lib/settings'
-import type { SettingLock } from '$lib/ipc/bindings'
-import { lockAllowsWrite } from '$lib/managed-policy/overlay'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { isDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
+import type { FullDiskAccessChoice } from '#lib/settings/index.js'
+import type { SettingLock } from '#lib/ipc/bindings.js'
+import { lockAllowsWrite } from '#lib/managed-policy/overlay.js'
 
 /** Where the wizard was opened from. */
 export type OnboardingSource = 'force' | 'first-launch' | 'menu' | 'palette'

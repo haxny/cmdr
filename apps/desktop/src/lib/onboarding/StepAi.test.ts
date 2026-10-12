@@ -31,9 +31,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import type { ConsentOutcome } from '$lib/ai/cloud-consent.svelte'
-import type { SettingLock } from '$lib/ipc/bindings'
-import { lockAllowsWrite, lockedValue } from '$lib/managed-policy/overlay'
+import type { ConsentOutcome } from '#lib/ai/cloud-consent.svelte.js'
+import type { SettingLock } from '#lib/ipc/bindings.js'
+import { lockAllowsWrite, lockedValue } from '#lib/managed-policy/overlay.js'
 import StepAi from './StepAi.svelte'
 import {
   closeWizard,
@@ -82,7 +82,7 @@ const getAiRuntimeStatus = vi.fn(() =>
   }),
 )
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkFullDiskAccess: () => checkFullDiskAccess(),
   startAiDownload: () => startAiDownload(),
   cancelAiDownload: () => cancelAiDownload(),
@@ -98,12 +98,12 @@ vi.mock('$lib/tauri-commands', () => ({
 
 // The organization's lock on `ai.provider`, as the backend's `locked_settings` would name it.
 const policyLocks = vi.hoisted(() => new Map<string, unknown>())
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => ({
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSettingLock: (id: string) => policyLocks.get(id),
 }))
 
-// Settings store mock: in-memory key-value, mirroring what `$lib/settings` exposes.
+// Settings store mock: in-memory key-value, mirroring what `#lib/settings` exposes.
 // We reset it per test so previous picks don't leak.
 const settingsMap: Record<string, unknown> = {}
 /** Ids "explicitly set", as the real store's sparse-persistence ledger tracks them. */
@@ -122,7 +122,7 @@ function resetSettings(): void {
   settingsMap['askCmdr.proactive'] = true
 }
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -141,7 +141,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 })
 
 const pushConfigToBackend = vi.fn(() => Promise.resolve())
-vi.mock('$lib/settings/ai-config', () => ({
+vi.mock('#lib/settings/ai-config.js', () => ({
   pushConfigToBackend: () => pushConfigToBackend(),
 }))
 
@@ -158,7 +158,7 @@ const cloudConsent = vi.hoisted(() => {
   const state: { accepted: boolean | null; acceptedAt: number | null } = { accepted: true, acceptedAt: null }
   return state
 })
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   cloudConsentState: cloudConsent,
   refreshCloudConsent: () => Promise.resolve(),
   cloudAiBlocked: (provider: string) => provider === 'cloud' && cloudConsent.accepted !== true,
@@ -171,7 +171,7 @@ vi.mock('$lib/ai/cloud-consent.svelte', () => ({
 // wrappers: the step calls `getAppLogger` while its module loads, before these exist.
 const logWarn = vi.fn<(...args: unknown[]) => void>()
 const logInfo = vi.fn<(...args: unknown[]) => void>()
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     warn: (...args: unknown[]) => {
       logWarn(...args)

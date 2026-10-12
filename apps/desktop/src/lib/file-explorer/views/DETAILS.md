@@ -15,7 +15,7 @@ Three things live here because nothing else carries them:
 
 **The size column's content state (`full-list-utils.ts::getDirSizeDisplayState`).** One pure function of
 `{recursiveSize, complete, stale, updating}` returns `'dir' | 'scanning' | 'lower-bound' | 'size' | 'size-stale'` (the
-"honest sizes" model; see `$lib/indexing/DETAILS.md` § Honest size rendering). `FullList.svelte`'s size cell,
+"honest sizes" model; see `#lib/indexing/DETAILS.md` § Honest size rendering). `FullList.svelte`'s size cell,
 `SelectionInfo.svelte`'s Brief status bar, and `measure-column-widths.ts` ALL consume it, so rendered text and
 pre-measured column width agree: don't re-inline the decision in any of them.
 
@@ -36,13 +36,13 @@ pre-measured column width agree: don't re-inline the decision in any of them.
   that dir) and whether THIS row's ground is being walked. The `'scanning'` tooltip is "Sizes appear as the scan
   progresses", so a fresh install reads as quietly working rather than `Scanning...` on every row. Freshness-stale
   (`'size-stale'`) renders exactly like `'size'`: no glyph, no muting, with the staleness voiced by the per-drive
-  freshness badge and the tooltip's stale line (see `$lib/indexing/DETAILS.md` § Honest size rendering). The per-dir
+  freshness badge and the tooltip's stale line (see `#lib/indexing/DETAILS.md` § Honest size rendering). The per-dir
   flag rides `DirStats.recursiveSizePending`, copied onto entries by `updateIndexSizesInPlace` / `applyFolderSizes` /
   `createParentEntry` (backend: `indexing/read/pending_sizes.rs`). The backend already debounces it (on after 2 s of
   continuous updating, up for at least 1 s), so ❌ don't add a frontend delay on top.
 
 **The walked-ground input is PER ROW, and the measurer contract follows from it.** `getWalkedGround(volumeId)` +
-`isPathAffectedByWalk` (`$lib/indexing/walked-ground.ts`) answer whether one row's folder size can move: the volume is
+`isPathAffectedByWalk` (`#lib/indexing/walked-ground.ts`) answer whether one row's folder size can move: the volume is
 being walked whole (a full rebuild, every SMB/MTP scan), or an announced branch is at, under, or ABOVE this row. Above,
 because the roll-up repairs the ancestor chain, so walking `~/Downloads/big` moves the size shown for `~/Downloads` and
 `~`. ❌ Reading "the volume is scanning" here is the bug the per-row answer replaced: a drive covered in phases reports
@@ -112,7 +112,7 @@ refs, and the row template). Four siblings hold the rest, each with its own suit
 The row chrome that is IDENTICAL in both views lives in `src/app-file-list.css`: the `.is-striped` fill, the
 `.is-selected` fill, the `--color-selection-fg` swap for a cursor-on-selected row, the hairline between consecutive
 selected rows, and the `.is-under-cursor` fill + outline + radius. One copy, so the two views can't drift apart on how a
-selected or cursor row looks. The restricted marker beside a row's name is `$lib/ui/StatusGlyph.svelte`, which carries
+selected or cursor row looks. The restricted marker beside a row's name is `#lib/ui/StatusGlyph.svelte`, which carries
 its own chrome and inherits the row's color, so it brightens along with a selected or cursor row.
 
 Every selector there is prefixed with `.full-list-container` / `.brief-list-container`. That's mandatory, not stylistic:
@@ -238,7 +238,7 @@ what renders. `createBriefColumnWidths(deps)` returns `{ rawWidths, status, requ
 `clampColumnWidths(rawWidths, capPx)` / `provisionalColumnWidth(capPx)` turn raw numbers into rendered ones.
 `get_brief_column_text_widths` answers with `{ widths, missingCodePoints }`; a non-empty `missingCodePoints` means some
 characters were costed at the font's average width, so the store calls `fillMissingFontMetrics` (which measures them off
-the main thread) and re-fetches once for exact widths. The full fill-in contract lives in `$lib/font-metrics/DETAILS.md`
+the main thread) and re-fetches once for exact widths. The full fill-in contract lives in `#lib/font-metrics/DETAILS.md`
 § On-demand fill-in.
 
 **`WidthFetchAttempt` carries one flag per recovery step (`afterFontLoad`, `afterFill`, `retries`), and each bounds only
@@ -545,7 +545,7 @@ holds widths while `cachedEntries` is empty so the brief post-nav gap doesn't co
 nav = snap; within-dir scroll/resize/stream-in = animated.
 
 **Gotcha**: CJK / complex-script filenames may be slightly mis-measured **Why**: The frontend canvas measurer
-(`$lib/font-metrics/measure.ts`) iterates explicit Unicode ranges covering Latin, BMP-printable characters, and common
+(`#lib/font-metrics/measure.ts`) iterates explicit Unicode ranges covering Latin, BMP-printable characters, and common
 emoji (U+1F300–U+1FAFF). The backend stores those widths per code point and falls back to the cached `average_width` for
 anything outside the measured set, so column widths for CJK, Arabic, and rare-symbol filenames are approximate. Emoji is
 fine (measured). Latin is fine (measured). Expanding the measured set is a follow-up.
@@ -572,7 +572,7 @@ at all — no error, no warning, and the data path can't complain either, becaus
 throw. A spec written without a viewport therefore asserts against an empty DOM and passes.
 
 `mountFullList()` (`test-full-list.ts`) closes that. It installs a measured surface through `installLayoutMock()`
-(`$lib/test-layout`, the generic mechanism), points `getFileRange` at an in-memory entry array serving the exact
+(`#lib/test-layout`, the generic mechanism), points `getFileRange` at an in-memory entry array serving the exact
 `(start, count)` range asked for, fills in the twelve required props, and returns `rowNames()` / `hourglassRowNames()` /
 `settle()` plus the `layout` handle for resizing and scrolling mid-test.
 

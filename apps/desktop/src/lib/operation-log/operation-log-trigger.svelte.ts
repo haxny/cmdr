@@ -9,8 +9,8 @@
  * (one source of truth), so an append can't desync from what's shown.
  */
 
-import { getOperationLogDetail, getRecentOperationLogEntries, type OperationRow } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getOperationLogDetail, getRecentOperationLogEntries, type OperationRow } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('operationLog')
 

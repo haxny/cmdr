@@ -1,5 +1,5 @@
 /**
- * Fixtures for the licensing dialogs (`$lib/licensing/`).
+ * Fixtures for the licensing dialogs (`#lib/licensing/`).
  *
  * Only `expiration` takes content props. `about`, `license`, and
  * `commercial-reminder` take callbacks only and read everything else from the

@@ -32,7 +32,7 @@ import {
   getSnapshot,
   incrementRef,
   type SearchSnapshot,
-} from '$lib/search/snapshot-store.svelte'
+} from '#lib/search/snapshot-store.svelte.js'
 
 function makeTab(overrides: Partial<TabState> = {}): TabState {
   return {

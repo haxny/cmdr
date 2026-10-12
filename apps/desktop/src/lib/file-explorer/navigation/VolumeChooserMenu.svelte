@@ -1,7 +1,7 @@
 <script lang="ts">
     /**
      * The volume switcher's list: every place the pane can go, grouped, on the house `Menu`
-     * primitive (`$lib/ui/Menu.svelte`). The chip that opens it is `VolumeBreadcrumb.svelte`.
+     * primitive (`#lib/ui/Menu.svelte`). The chip that opens it is `VolumeBreadcrumb.svelte`.
      *
      * ❗ The primitive owns every interaction: open and close, anchoring, the cursor, the
      * keyboard (including ⌥↑/⌥↓ reorder and the submenu), keyboard-vs-pointer mode, drag,
@@ -16,33 +16,33 @@
      * shortcut fields, reorder, and the one open path, `open-favorite.ts`.
      */
     import { onDestroy, untrack } from 'svelte'
-    import { getVolumes, getVolumesTimedOut, isVolumesRefreshing, isVolumeRetryFailed, requestVolumeRefresh } from '$lib/stores/volume-store.svelte'
-    import { isVolumeBusy, isVolumeEjecting } from '$lib/stores/volume-busy-store.svelte'
-    import { isRestricted } from '$lib/stores/restricted-paths-store.svelte'
-    import { getCachedIcon, iconCacheVersion } from '$lib/icon-cache'
-    import { dependOn } from '$lib/utils/reactivity'
-    import { eventMatchesCommand } from '$lib/shortcuts'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { restrictedFolderTooltip } from '$lib/system-strings.svelte'
-    import { getSwitcherFavoritesExpanded } from '$lib/settings/reactive-settings.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Menu from '$lib/ui/Menu.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
-    import { createMenu } from '$lib/ui/menu-controller.svelte'
-    import type { MenuActivationSource, MenuIcon, MenuItem, MenuRowContext, MenuSection } from '$lib/ui/menu-types'
-    import type { PaneId } from '$lib/commands/types'
+    import { getVolumes, getVolumesTimedOut, isVolumesRefreshing, isVolumeRetryFailed, requestVolumeRefresh } from '#lib/stores/volume-store.svelte.js'
+    import { isVolumeBusy, isVolumeEjecting } from '#lib/stores/volume-busy-store.svelte.js'
+    import { isRestricted } from '#lib/stores/restricted-paths-store.svelte.js'
+    import { getCachedIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { restrictedFolderTooltip } from '#lib/system-strings.svelte.js'
+    import { getSwitcherFavoritesExpanded } from '#lib/settings/reactive-settings.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import type { MenuActivationSource, MenuIcon, MenuItem, MenuRowContext, MenuSection } from '#lib/ui/menu-types.js'
+    import type { PaneId } from '#lib/commands/types.js'
     import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
-    import { deviceVolumeLabel } from '$lib/adb/adb-volume-label'
-    import { deviceRowState } from '$lib/adb/device-readiness'
+    import { deviceVolumeLabel } from '#lib/adb/adb-volume-label.js'
+    import { deviceRowState } from '#lib/adb/device-readiness.js'
     import {
         isReadyForFirstConnectPrompt,
         maybePromptFirstConnect,
         withdrawGonePrompts,
-    } from '$lib/indexing/first-connect-trigger'
-    import { silenceDrive } from '$lib/indexing/drive-index-prefs'
-    import { setSetting } from '$lib/settings'
+    } from '#lib/indexing/first-connect-trigger.js'
+    import { silenceDrive } from '#lib/indexing/drive-index-prefs.js'
+    import { setSetting } from '#lib/settings/index.js'
     import type { VolumeInfo } from '../types'
     import type { VolumeChangePayload } from '../pane/types'
     import ConnectionDot from './ConnectionDot.svelte'

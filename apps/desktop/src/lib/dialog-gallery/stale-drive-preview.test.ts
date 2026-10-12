@@ -12,28 +12,28 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 let settings: Record<string, unknown>
 let volumes: VolumeInfo[]
 const emitted: { volumeId: string; freshness: string }[] = []
 const toasts: string[] = []
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => settings[id],
   setSetting: (id: string, value: unknown) => {
     settings[id] = value
   },
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => volumes,
 }))
 
 // The real wrapper would round-trip through the Tauri backend; what matters
 // here is the payload it's handed. The listeners are for `drive-index-manager`,
 // which this module pulls in for `isDriveRow`.
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   emitIndexFreshnessChanged: (payload: { volumeId: string; freshness: string }) => {
     emitted.push(payload)
     return Promise.resolve()
@@ -44,20 +44,20 @@ vi.mock('$lib/tauri-commands/indexing', () => ({
   onIndexScanComplete: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/ui/toast/toast-store.svelte', () => ({
+vi.mock('#lib/ui/toast/toast-store.svelte.js', () => ({
   addToast: (content: string) => {
     toasts.push(content)
     return 'toast-id'
   },
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
 // Deliberately NOT mocked: `drive-index-prefs` (over the mocked settings store,
 // so the reset provably clears what the dialog reads) and `gallery-state`.
-import { hasShownFirstStaleDialog, markFirstStaleDialogShown } from '$lib/indexing/drive-index-prefs'
+import { hasShownFirstStaleDialog, markFirstStaleDialogShown } from '#lib/indexing/drive-index-prefs.js'
 import { getOpenGalleryDialog, openGalleryDialog, closeGalleryDialog } from './gallery-state.svelte'
 import { openStaleDrivePreview } from './stale-drive-preview'
 

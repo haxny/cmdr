@@ -5,7 +5,7 @@
  * description, enum-option labels), not English. `resolveDefinition` turns each
  * authored `SettingDefinitionSource` into a `SettingDefinition` whose `label` /
  * `description` / option labels are getter-backed: reading them resolves the
- * current catalog string through `t()` (`$lib/intl`). This keeps the whole
+ * current catalog string through `t()` (`#lib/intl`). This keeps the whole
  * `getSettingDefinition(...).label` consumer surface unchanged while making the
  * copy translation-ready and single-sourced in `messages/en/settings.json`.
  * Section identity (`section: string[]`) stays English on purpose — it's a
@@ -24,7 +24,7 @@ import type {
   SettingsValues,
 } from './types'
 import { SettingValidationError } from './types'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { appearanceSettings } from './definitions/appearance'
 import { behaviorSettings } from './definitions/behavior'
 import { indexingSettings } from './definitions/indexing'

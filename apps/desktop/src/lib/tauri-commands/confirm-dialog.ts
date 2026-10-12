@@ -1,8 +1,8 @@
-// The native confirmation with one checkbox (`commands/confirm_dialog.rs`). `$lib/utils/confirm-dialog.ts`'s
+// The native confirmation with one checkbox (`commands/confirm_dialog.rs`). `#lib/utils/confirm-dialog.ts`'s
 // `confirmWithCheckbox` is what callers use; this is the IPC seam under it.
 
-import { commands, type CheckboxConfirm, type CheckboxConfirmRequest } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
+import { commands, type CheckboxConfirm, type CheckboxConfirmRequest } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('ui')
 

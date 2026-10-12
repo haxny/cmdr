@@ -7,9 +7,9 @@
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { BetaSignupResult } from '$lib/tauri-commands'
-import type { ManagedPolicyView } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { BetaSignupResult } from '#lib/tauri-commands/index.js'
+import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { openErrorReportForMock, checkForUpdatesMock, betaSignupMock } = vi.hoisted(() => ({
   openErrorReportForMock: vi.fn(),
@@ -17,24 +17,24 @@ const { openErrorReportForMock, checkForUpdatesMock, betaSignupMock } = vi.hoist
   betaSignupMock: vi.fn((): Promise<BetaSignupResult> => Promise.resolve({ kind: 'subscribed' })),
 }))
 
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({
   openErrorReportFor: openErrorReportForMock,
 }))
 
-// Spread the real barrel and override only `betaSignup`, so other `$lib/tauri-commands` exports the
+// Spread the real barrel and override only `betaSignup`, so other `#lib/tauri-commands` exports the
 // mounted tree might reach stay intact (a barrel mock that drops them silently corrupts the Svelte
 // 5 reactive graph; see `lib/ipc/CLAUDE.md` § Test-mock upkeep).
-vi.mock('$lib/tauri-commands', async () => {
-  const real = await vi.importActual<typeof import('$lib/tauri-commands')>('$lib/tauri-commands')
+vi.mock('#lib/tauri-commands/index.js', async () => {
+  const real = await vi.importActual<typeof import('#lib/tauri-commands/index.js')>('#lib/tauri-commands/index.js')
   return { ...real, betaSignup: betaSignupMock }
 })
 
 // Stubs the updater module so this test isolates the section's UI logic. We use the real
 // updater's reactive `updateState` so the section's `$derived`s react correctly to mutations.
-import { updateState as realUpdateState, _resetUpdaterStateForTest } from '$lib/updates/updater.svelte'
+import { updateState as realUpdateState, _resetUpdaterStateForTest } from '#lib/updates/updater.svelte.js'
 
-vi.mock('$lib/updates/updater.svelte', async () => {
-  const real = await vi.importActual<typeof import('$lib/updates/updater.svelte')>('$lib/updates/updater.svelte')
+vi.mock('#lib/updates/updater.svelte.js', async () => {
+  const real = await vi.importActual<typeof import('#lib/updates/updater.svelte.js')>('#lib/updates/updater.svelte')
   return {
     ...real,
     checkForUpdates: checkForUpdatesMock,
@@ -44,9 +44,9 @@ vi.mock('$lib/updates/updater.svelte', async () => {
 // The organization's policy as this window shows it. Starts unmanaged; a test swaps in a view before mounting.
 const managedPolicy = vi.hoisted(() => ({ view: null as ManagedPolicyView | null }))
 
-vi.mock('$lib/managed-policy/managed-policy.svelte', async () => {
-  const real = await vi.importActual<typeof import('$lib/managed-policy/managed-policy.svelte')>(
-    '$lib/managed-policy/managed-policy.svelte',
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async () => {
+  const real = await vi.importActual<typeof import('#lib/managed-policy/managed-policy.svelte.js')>(
+    '#lib/managed-policy/managed-policy.svelte.js',
   )
   const view = () => managedPolicy.view ?? real.UNMANAGED
   const lockOf = (id: string) => real.settingLockIn(view(), id)
@@ -61,7 +61,7 @@ vi.mock('$lib/managed-policy/managed-policy.svelte', async () => {
 /** Live listeners on `analytics.email`, so a test can play another window's write. */
 const emailListeners = new Set<(value: string) => void>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   // The email field reads a string; everything else in this section reads booleans.
   getSetting: vi.fn((id: string) => (id === 'analytics.email' ? '' : true)),
   setSetting: vi.fn(() => Promise.resolve()),
@@ -78,11 +78,11 @@ vi.mock('$lib/settings/settings-store', () => ({
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(() => Promise.resolve('1.2.3')) }))
 vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn() }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(),
   dismissToast: vi.fn(),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }),
 }))
 

@@ -9,13 +9,13 @@
 -->
 <script lang="ts">
     import { onMount } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextArea from '$lib/ui/TextArea.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getSetting, onSpecificSettingChange, type AiProvider } from '$lib/settings'
-    import { askCmdrSelectionAttachments, askCmdrFakeActive } from '$lib/tauri-commands'
-    import { getAppLogger } from '$lib/logging/logger'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextArea from '#lib/ui/TextArea.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
+    import { askCmdrSelectionAttachments, askCmdrFakeActive } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import { installComposerDrop } from './ask-cmdr-drop'
     import {

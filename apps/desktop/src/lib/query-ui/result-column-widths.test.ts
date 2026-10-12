@@ -1,15 +1,15 @@
 /**
  * Unit tests for the results table's column declarations (`result-column-widths.ts`): which
  * width policy each column takes, and what each measured column's demand reads off a row.
- * The generic split and demand math is pinned in `$lib/ui/column-list-layout.test.ts`.
+ * The generic split and demand math is pinned in `#lib/ui/column-list-layout.test.ts`.
  *
  * Widths are mocked (10 px per character). The real measurement is pretext's job; mocking it
  * keeps the declarations testable without a canvas.
  */
 
 import { describe, expect, it } from 'vitest'
-import type { ColumnListMeasurers } from '$lib/ui/column-list-types'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { ColumnListMeasurers } from '#lib/ui/column-list-types.js'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import { NAME_COL_MIN_PX, PATH_COL_MIN_PX, resultColumnWidths, type ResultRowTexts } from './result-column-widths'
 import { PILL_CHROME_PX, PILL_SEPARATOR_GAP_PX } from './path-pills-layout'
 

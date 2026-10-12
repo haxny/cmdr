@@ -33,9 +33,9 @@
  *   auto-confirm confirms it, a plain call waits for `dialog confirm`).
  */
 
-import { getPathValidationError } from '$lib/file-operations/transfer/transfer-dialog-logic'
-import { toVolumeRelativePath } from '$lib/file-operations/transfer/transfer-dialog-utils'
-import { validateDirectoryPath } from '$lib/utils/filename-validation'
+import { getPathValidationError } from '#lib/file-operations/transfer/transfer-dialog-logic.js'
+import { toVolumeRelativePath } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { validateDirectoryPath } from '#lib/utils/filename-validation.js'
 import { capabilitiesFor, capabilitiesForInfo } from './volume-capabilities'
 import type { DeleteDialogPropsData, TransferConfirmPayload } from './dialog-props'
 import type { TransferDialogPropsData } from './transfer-operations'

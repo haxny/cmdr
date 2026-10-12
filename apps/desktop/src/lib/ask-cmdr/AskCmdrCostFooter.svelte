@@ -12,10 +12,10 @@
   out "N of M tokens used"). Each half hides independently until it has something true to say.
 -->
 <script lang="ts">
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { askCmdrConversationCost, type ConversationCost } from '$lib/tauri-commands'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { askCmdrConversationCost, type ConversationCost } from '#lib/tauri-commands/index.js'
     import AskCmdrContextGauge from './AskCmdrContextGauge.svelte'
     import { contextUsageState } from './ask-cmdr-context-usage'
     import { formatUsdMicros, isLocalOnly, totalTokens } from './ask-cmdr-cost'

@@ -4,7 +4,7 @@
  *
  * The other `tab` actions are fire-and-forget behind a generation ack. A move isn't,
  * because it can be REFUSED (a pinned tab, a pane's only tab, a full pane), and the
- * frontend owns those rules: `moveTab` in `$lib/file-explorer/tabs/tab-state-manager.svelte`
+ * frontend owns those rules: `moveTab` in `#lib/file-explorer/tabs/tab-state-manager.svelte`
  * is the one place they live, shared with the mouse. So the reply is a round-trip on the
  * request id carrying a typed `outcome`, which `parse_tab_move_response`
  * (`src-tauri/src/mcp/executor/app.rs`) reads. ❌ Never a sentence the backend would have
@@ -15,7 +15,7 @@
  * says it is.
  */
 
-import type { McpTabMoveArgs } from '$lib/commands'
+import type { McpTabMoveArgs } from '#lib/commands/index.js'
 import type { ExplorerAPI } from './explorer-api'
 
 export async function moveTabForMcp(request: {

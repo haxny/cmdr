@@ -1,7 +1,7 @@
-import { getAppLogger } from '$lib/logging/logger'
-import { getEffectiveScale } from '$lib/text-size.svelte'
-import { pluralize } from '$lib/utils/pluralize'
-import { dependOn } from '$lib/utils/reactivity'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { dependOn } from '#lib/utils/reactivity.js'
 
 const log = getAppLogger('viewer')
 

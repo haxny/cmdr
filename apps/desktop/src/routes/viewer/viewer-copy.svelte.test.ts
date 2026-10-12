@@ -10,13 +10,13 @@
 import { describe, expect, it, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 
 import { createViewerCopyOrchestrator } from './viewer-copy.svelte'
-import { formatByteSize } from '$lib/units'
-import { tString } from '$lib/intl/messages.svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { formatByteSize } from '#lib/units/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { CopyOutcome } from './viewer-copy.svelte'
 
 const { addToast } = vi.hoisted(() => ({ addToast: vi.fn<(message: string) => string>() }))
-vi.mock('$lib/ui/toast/toast-store.svelte', () => ({ addToast }))
+vi.mock('#lib/ui/toast/toast-store.svelte.js', () => ({ addToast }))
 
 const writeText = vi.fn<(text: string) => Promise<void>>()
 

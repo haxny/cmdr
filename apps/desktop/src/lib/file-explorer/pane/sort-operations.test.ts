@@ -10,21 +10,21 @@ const { resortListingSpy, getDirectorySortModeSpy, sortSnapshotSpy, getSnapshotS
   getSnapshotSpy: vi.fn<() => { sort: { column: SortColumn; order: SortOrder } | null } | undefined>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ resortListing: resortListingSpy }))
-vi.mock('$lib/search/snapshot-sort.svelte', async () => {
+vi.mock('#lib/tauri-commands/index.js', () => ({ resortListing: resortListingSpy }))
+vi.mock('#lib/search/snapshot-sort.svelte.js', async () => {
   // The tri-state cycle itself is pinned in `snapshot-sort.svelte.test.ts`; here
   // we only assert the ROUTING, so the real cycle is kept and the mutator spied.
-  const real = await vi.importActual<typeof import('$lib/search/snapshot-sort.svelte')>(
-    '$lib/search/snapshot-sort.svelte',
+  const real = await vi.importActual<typeof import('#lib/search/snapshot-sort.svelte.js')>(
+    '#lib/search/snapshot-sort.svelte.js',
   )
   return { nextSnapshotSort: real.nextSnapshotSort, sortSnapshot: sortSnapshotSpy }
 })
-vi.mock('$lib/search/snapshot-store.svelte', () => ({
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({
   getSnapshot: getSnapshotSpy,
   snapshotIdFromPanePath: (path: string) =>
     path.startsWith('search-results://') ? path.slice('search-results://'.length) : null,
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getDirectorySortMode: getDirectorySortModeSpy,
 }))

@@ -8,13 +8,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { TranslateResult } from '$lib/ipc/bindings'
+import type { TranslateResult } from '#lib/ipc/bindings.js'
 
 const { translateSearchQueryMock } = vi.hoisted(() => ({
   translateSearchQueryMock: vi.fn(() => Promise.resolve({ display: {}, query: {} } as TranslateResult)),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ translateSearchQuery: translateSearchQueryMock }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ translateSearchQuery: translateSearchQueryMock }))
 
 import { applyAiTranslationToState, applyScopeFromAi, patternKindFromDisplay, translateAi } from './ai-translate'
 import {

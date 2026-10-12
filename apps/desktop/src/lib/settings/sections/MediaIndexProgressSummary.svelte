@@ -11,10 +11,10 @@
      * Renders nothing when no volume is enriching (actively working or paused), so the card
      * stays quiet until there's real progress to show.
      */
-    import { getEnrichingVolumes } from '$lib/indexing'
-    import IndexingEnrichRow from '$lib/indexing/IndexingEnrichRow.svelte'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getEnrichingVolumes } from '#lib/indexing/index.js'
+    import IndexingEnrichRow from '#lib/indexing/IndexingEnrichRow.svelte'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     const enrichVolumes = $derived(getEnrichingVolumes())
     const volumes = $derived(getVolumes())

@@ -4,11 +4,11 @@
 -->
 <script lang="ts">
     import type { PageProps } from './$types'
-    import ActiveUseSection from '$lib/components/sections/ActiveUseSection.svelte'
-    import SettingsAdoptionSection from '$lib/components/sections/SettingsAdoptionSection.svelte'
-    import PaymentSection from '$lib/components/sections/PaymentSection.svelte'
-    import RetentionSection from '$lib/components/sections/RetentionSection.svelte'
-    import FeedbackErrorsSection from '$lib/components/sections/FeedbackErrorsSection.svelte'
+    import ActiveUseSection from '#lib/components/sections/ActiveUseSection.svelte'
+    import SettingsAdoptionSection from '#lib/components/sections/SettingsAdoptionSection.svelte'
+    import PaymentSection from '#lib/components/sections/PaymentSection.svelte'
+    import RetentionSection from '#lib/components/sections/RetentionSection.svelte'
+    import FeedbackErrorsSection from '#lib/components/sections/FeedbackErrorsSection.svelte'
 
     const { data }: PageProps = $props()
 </script>

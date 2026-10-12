@@ -12,9 +12,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import SignInSheet from './SignInSheet.svelte'
 import type { SignInAttemptOutcome, SignInSheetRequest, SignInSubmission } from './sign-in-contract'
-import { systemStrings } from '$lib/system-strings.svelte'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -261,7 +261,7 @@ describe('SignInSheet: a refusal', () => {
 
 describe('SignInSheet: the host-key step', () => {
   it('starts over on the key the server really presents when the approval is superseded', async () => {
-    const { approveSftpHostKey } = await import('$lib/tauri-commands')
+    const { approveSftpHostKey } = await import('#lib/tauri-commands/index.js')
     const approve = vi.mocked(approveSftpHostKey)
     approve.mockResolvedValueOnce({
       outcome: 'superseded',
@@ -774,7 +774,7 @@ describe('SignInSheet: edit mode', () => {
   }
 
   beforeEach(async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.getKnownSftpServers).mockResolvedValue([KNOWN_SFTP])
     vi.mocked(commands.saveSftpCredentials).mockClear()
     vi.mocked(commands.forgetServerSecret).mockClear()
@@ -782,7 +782,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('opens an unnamed server with an empty name, its label as the placeholder, and the label in the title', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.getKnownSftpServers).mockResolvedValue([{ ...KNOWN_SFTP, displayName: '' }])
     await renderSheet({ mode: 'edit', server: { ...SAVED, displayName: 'ada@nas.local', nameSource: 'fallback' } })
 
@@ -796,7 +796,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('shows the saved root folder and start folder', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.getKnownSftpServers).mockResolvedValue([{ ...KNOWN_SFTP, startFolder: '/srv/data/photos' }])
     await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -824,7 +824,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('keeps the sheet open on a root the server lacks, under the root folder, and writes no password', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedServer).mockResolvedValueOnce({ outcome: 'root_not_found' })
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -844,7 +844,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('puts a start folder the server lacks under the start folder', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedServer).mockResolvedValueOnce({ outcome: 'start_folder_not_found' })
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -859,7 +859,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('refuses a start folder outside the root before asking the backend', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
     const startFolder = document.body.querySelector<HTMLInputElement>('#server-start-folder') as HTMLInputElement
@@ -875,7 +875,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('stays open and says so when the connected server did not answer in time', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedServer).mockResolvedValueOnce({ outcome: 'unreachable' })
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -907,7 +907,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('saves as the place it was raised on, so the backend decides whether the address moved', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     await renderSheet({ mode: 'edit', server: SAVED })
 
     typeInto(document.body.querySelector<HTMLInputElement>('#server-address') as HTMLInputElement, '10.0.0.5')
@@ -922,7 +922,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('puts an address another saved server holds under the address, naming that server', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedServer).mockResolvedValueOnce({ outcome: 'address_taken', name: 'Old NAS' })
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -938,7 +938,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('forgets the password at the NEW address when Remember went off in the same save that moved it', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.hasServerSecret).mockResolvedValueOnce(true)
     vi.mocked(commands.savedServerId).mockResolvedValueOnce('sftp-10-0-0-5-22-ada')
     await renderSheet({ mode: 'edit', server: SAVED })
@@ -958,7 +958,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('writes a typed password through the Keychain, so the field does what it shows', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     await renderSheet({ mode: 'edit', server: SAVED })
 
     typeInto(document.body.querySelector<HTMLInputElement>('#server-secret') as HTMLInputElement, 'hunter2')
@@ -973,7 +973,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('says the edit landed but the password did not when the Keychain refuses it', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.saveSftpCredentials).mockRejectedValueOnce(new Error('keychain refused: access_denied'))
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -993,7 +993,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('leaves the store alone when the password field is left empty', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     await renderSheet({ mode: 'edit', server: SAVED })
 
     buttonSaying('Save').click()
@@ -1006,7 +1006,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('says a stored password is kept when its field stays empty, and keeps it on Save', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.hasServerSecret).mockResolvedValueOnce(true)
     const { done } = await renderSheet({ mode: 'edit', server: SAVED })
 
@@ -1024,7 +1024,7 @@ describe('SignInSheet: edit mode', () => {
   })
 
   it('drops the "saved" placeholder once Remember goes off, since Save then forgets the password', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.hasServerSecret).mockResolvedValueOnce(true)
     await renderSheet({ mode: 'edit', server: SAVED })
     expect(document.body.querySelector<HTMLInputElement>('#server-secret')?.placeholder).not.toBe('')

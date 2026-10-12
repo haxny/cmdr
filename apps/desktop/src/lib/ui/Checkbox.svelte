@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Checkbox } from '@ark-ui/svelte/checkbox'
     import type { Snippet } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
 
     /**
      * The house checkbox. A thin, presentational wrapper over Ark UI's `Checkbox` so the macOS-y

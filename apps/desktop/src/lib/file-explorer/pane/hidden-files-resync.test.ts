@@ -4,7 +4,7 @@ import { createPaneRowState } from './pane-row-state'
 import type { ResortResult } from '../types'
 
 const ipc = vi.hoisted(() => ({ setListingIncludeHidden: vi.fn(), getTotalCount: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ipc)
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
 
 function harness() {
   let listingId = 'listing-1'

@@ -36,7 +36,7 @@ export type RemoteConnectState =
    * lie about how the pane finds out.
    *
    * `reason` and `hint` are finished sentences from the provider that owns the
-   * device (`$lib/adb/adb-connect-errors.ts`), ❌ never keys: the view is generic
+   * device (`#lib/adb/adb-connect-errors.ts`), ❌ never keys: the view is generic
    * and the words are Android's.
    */
   | { kind: 'waiting_for_device'; reason: string; hint: string; cancel: () => void }

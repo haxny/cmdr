@@ -7,7 +7,7 @@
  * the one call.
  */
 
-import { renderMultiRenameExamples, type MultiRenameSpec, type RenameExample } from '$lib/tauri-commands'
+import { renderMultiRenameExamples, type MultiRenameSpec, type RenameExample } from '#lib/tauri-commands/index.js'
 import { DEFAULT_SPEC } from './spec'
 
 /** Opens and closes the marked part. Private-use characters: no real name or mask has them. */

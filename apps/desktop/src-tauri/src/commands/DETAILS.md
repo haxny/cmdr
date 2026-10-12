@@ -41,7 +41,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   "no", and any other error (EIO, ETIMEDOUT, EACCES from a struggling FUSE daemon like pCloud's) is `timedOut: true`,
   ❌ never a `false` that walks a pane off the drive. `Volume::exists` keeps folding errors into `false` for the copy/move
   conflict checks. `TimedOut<T>`'s TS twin lives in
-  `$lib/tauri-commands/ipc-types.ts`; every typed error enum's twin is generated into `$lib/ipc/bindings.ts`.
+  `#lib/tauri-commands/ipc-types.ts`; every typed error enum's twin is generated into `#lib/ipc/bindings.ts`.
 - **`volumes.rs`** (macOS): `list_volumes`, `get_default_volume_id`, `get_volume_space`, `resolve_path_volume`
   (statfs-based, no volume enumeration), `resolve_location`. The latter two share one `resolve_path_to_volume` body
   (protocol dispatch for `mtp://` / `smb://` plus the local `statfs` branch), so a virtual path resolves the same way
@@ -49,7 +49,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   the input path). `resolve_location` is the canonical path→volume resolver for navigation edges: the `Location` type
   lives in `crate::location` (shared across all three platform backends) and is the specta-export vehicle that lands
   `Location` + `ResolveLocationResult` in `bindings.ts`. The frontend wraps it as `resolveLocation`
-  (`$lib/tauri-commands/storage.ts`, with the outer FE timeout layer) and
+  (`#lib/tauri-commands/storage.ts`, with the outer FE timeout layer) and
   `lib/file-explorer/navigation/resolve-location.ts` maps it to a typed `{ ok }` outcome. Calling
   `resolve_path_volume_fast` alone would return `None` for `smb://` / `mtp://` paths, so don't bypass the shared body.
 - **`volumes_linux.rs`** (Linux): same interface as `volumes.rs` (including `resolve_location`), delegates to the

@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { durationBucket, endingOf, searchUsedProps, type SearchRunFacts } from './search-analytics'
-import type { SearchRunCoverage } from '$lib/tauri-commands'
+import type { SearchRunCoverage } from '#lib/tauri-commands/index.js'
 
 function coverage(overrides: Partial<SearchRunCoverage> = {}): SearchRunCoverage {
   return {

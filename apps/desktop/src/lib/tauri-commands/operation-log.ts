@@ -12,8 +12,8 @@ import {
   type SkipBreakdown,
   type SkipReason,
   type UndoReport,
-} from '$lib/ipc/bindings'
-import { throwRollbackRefusal } from '$lib/operation-log/rollback-refusal'
+} from '#lib/ipc/bindings.js'
+import { throwRollbackRefusal } from '#lib/operation-log/rollback-refusal.js'
 import { throwIpcError } from './ipc-types'
 
 export type {

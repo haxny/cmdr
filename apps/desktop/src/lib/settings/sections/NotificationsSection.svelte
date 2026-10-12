@@ -33,42 +33,42 @@
      * prop and carries the single FDA hint, per the "Locked copy" decision.
      */
     import { onMount } from 'svelte'
-    import Switch from '$lib/ui/Switch.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
     import SettingsSection from '../components/SettingsSection.svelte'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getSettingDefinition, onSpecificSettingChange } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
-    import { getAppLogger } from '$lib/logging/logger'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getSettingDefinition, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import {
         downloadsWatcherStatus,
         openPrivacySettings,
         recheckDownloadsWatcherGate,
         setGlobalGoToLatestShortcut,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     import {
         getGlobalGoToLatestEnabled,
         getGlobalGoToLatestBinding,
         setGlobalGoToLatestEnabled,
         GLOBAL_GO_TO_LATEST_ENABLED_KEY,
         GLOBAL_GO_TO_LATEST_BINDING_KEY,
-    } from '$lib/downloads/global-shortcut-setting'
-    import { globalGoToLatestDescription } from '$lib/downloads/global-shortcut-description'
+    } from '#lib/downloads/global-shortcut-setting.js'
+    import { globalGoToLatestDescription } from '#lib/downloads/global-shortcut-description.js'
     import {
         DOWNLOADS_NOTIFICATIONS_SETTING_KEY,
         DOWNLOADS_NOTIFICATIONS_ANCHOR_ID,
-    } from '$lib/downloads/notifications-mode'
+    } from '#lib/downloads/notifications-mode.js'
     import {
         LOW_DISK_SPACE_NOTIFICATIONS_SETTING_KEY,
         LOW_DISK_SPACE_THRESHOLD_SETTING_KEY,
         LOW_DISK_SPACE_ANCHOR_ID,
         getLowDiskSpaceNotificationsMode,
-    } from '$lib/low-disk-space/notifications-mode'
+    } from '#lib/low-disk-space/notifications-mode.js'
 
     interface Props {
         searchQuery: string

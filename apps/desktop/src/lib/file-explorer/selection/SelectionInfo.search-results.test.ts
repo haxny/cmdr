@@ -12,13 +12,13 @@ import { mount } from 'svelte'
 import type { ListingStats } from '../types'
 import SelectionInfo from './SelectionInfo.svelte'
 
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   isVolumeScanning: () => false,
   isVolumeAggregating: () => false,
   getWalkedGround: () => [],
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: (n: number) => `${String(n)} B`,
   formatDateTime: () => '2026-03-14 10:30',
   formattedDate: () => ({ text: '', segments: [] }),

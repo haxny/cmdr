@@ -1,7 +1,7 @@
 // Copy/move/delete operations + event handlers
 
 import { type Event, listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type {
   ConflictResolution,
@@ -41,7 +41,7 @@ import type {
   WriteProgressEvent,
   WriteSettledEvent,
   WriteSourceItemDoneEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 export type { Event, UnlistenFn }
 export { listen }

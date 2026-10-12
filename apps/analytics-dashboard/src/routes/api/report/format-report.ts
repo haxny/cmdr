@@ -3,7 +3,7 @@
  * `GET /api/report`. Pure formatting, no fetching, so `format-report.test.ts` can pin the exact
  * output byte for byte.
  *
- * The imports are relative rather than `$lib/...` on purpose: the vitest config doesn't load the
+ * The imports are relative rather than `#lib/...` on purpose: the vitest config doesn't load the
  * SvelteKit plugin, so the alias isn't resolvable from a plain unit test.
  */
 import type { DashboardData } from '../../../lib/server/fetch-all.js'

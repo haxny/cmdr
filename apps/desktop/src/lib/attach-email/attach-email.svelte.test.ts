@@ -13,12 +13,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { flushSync } from 'svelte'
 import { createAttachEmail, type AttachEmail } from './attach-email.svelte'
-import { getSetting, setSetting } from '$lib/settings'
+import { getSetting, setSetting } from '#lib/settings/index.js'
 
 /** Live listeners on `analytics.email`, so a test can play the Settings window's part. */
 const emailListeners = new Set<(value: string) => void>()
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(),
   setSetting: vi.fn(),
   onSpecificSettingChange: vi.fn((id: string, listener: (value: string) => void) => {

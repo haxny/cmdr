@@ -6,7 +6,7 @@ commands, and notable non-obvious placements.
 ## Per-file inventory
 
 - **`ipc-types.ts`**: `TimedOut<T>` and `throwIpcError()`. ❌ No generic IPC error type: each command family ships its
-  own typed enum, and a refusal a person reads crosses the throw as a `TypedFailure` (`$lib/ipc/typed-failure.ts`).
+  own typed enum, and a refusal a person reads crosses the throw as a `TypedFailure` (`#lib/ipc/typed-failure.ts`).
 - **`index.ts`**: barrel re-export of everything below.
 - **`file-listing.ts`**: virtual-scroll listing API, batch accessors (`getPathsAtIndices`, `getFilesAtIndices`),
   revision-checked `getSelectionSnapshot` (atomic selected paths and counts; pane protocol in
@@ -33,9 +33,9 @@ commands, and notable non-obvious placements.
   two fact objects: `PaneContextMenuFacts` (what the SURFACE contributes) then `ContextMenuTarget`, the TEXT the menu's
   header line shows about the right-clicked rows (`countText`, `sizeText`). Both are rendered on this side because both
   need locale-aware number formatting, which Rust's `menu_t` deliberately lacks; build them with
-  `$lib/file-explorer/selection/context-menu-target`, ❌ never by hand. Rust still derives the target COUNT from `paths`
+  `#lib/file-explorer/selection/context-menu-target`, ❌ never by hand. Rust still derives the target COUNT from `paths`
   and uses it to pick the header's shape. Omit `sizeText` for "no honest size"; ❌ never a zero. Full rationale:
-  `$lib/file-explorer/selection/DETAILS.md` § Context-menu header. It also sends a `shortcuts` map the caller never
+  `#lib/file-explorer/selection/DETAILS.md` § Context-menu header. It also sends a `shortcuts` map the caller never
   passes: the private `boundShortcuts()` reads every bound combo out of the registry per popup, so the native menu
   labels its items from what the user has actually bound rather than from literals that go stale on a rebind.
   `PaneContextMenuFacts.canShowInFolder` is the explicit search-results-only menu fact; it is not inferred from
@@ -55,7 +55,7 @@ commands, and notable non-obvious placements.
   the prompt is ASKING so `cmdr://state` can name the archive and the MCP `unlock_archive` tool can answer it. ❌ The
   password is never part of that mirror.
 - **`write-operations.ts`**: copy/move/delete, conflict resolution, scan preview. (Size/duration formatting moved to
-  `$lib/units`.)
+  `#lib/units`.)
 - **`rename.ts`**: `checkRenamePermission`, `checkRenameValidity`, `renameFile`, `moveToTrash`.
 - **`mutation-reply.ts`**: `awaitMutation` (behind `renameFile`, `createDirectory`, `createFile`) and
   `awaitClipboardPaste` (behind `pasteClipboardAsFile`, which also carries the created file). Those commands answer
@@ -105,7 +105,7 @@ commands, and notable non-obvious placements.
 - **`settings.ts`**: port checking, file watcher debounce, indexing toggle, MCP server control, AI subsystem commands.
   `cloudAiHostVerdicts(baseUrls)` answers each URL with the policy's own `ManagedAiRefusal | null` (local, no request).
   `startAiServer` and `startAiDownload` are raw invokes (generic commands specta skips), so their typed `LocalAiError`
-  rejection arrives as `unknown`: `$lib/ai/local-ai-error.ts` restores it.
+  rejection arrives as `unknown`: `#lib/ai/local-ai-error.ts` restores it.
 - **`logging.ts`**: `getDebugLogPath`, the log file this session writes (Help > View debug log).
 - **`tab.ts`**: tab context menu: `showTabContextMenu`, `onTabContextAction`.
 - **`function-key-bar.ts`**: the function key bar's one-item context menu: `showFunctionKeyBarContextMenu`,
@@ -164,7 +164,7 @@ commands, and notable non-obvious placements.
   data into a cached listing).
 - **`updates.ts`**: macOS custom updater: `checkForUpdate(trigger)` (a typed `UpdateCheckOutcome`, managed policy
   applied) / `updateWriteBlocker` / `downloadUpdate()` (no URL: the backend fetches what it offered) / `installUpdate`
-  (throws `UpdateInstallFailure`) (see `$lib/updates/updater.svelte.ts` for the full flow and the non-macOS Tauri-plugin
+  (throws `UpdateInstallFailure`) (see `#lib/updates/updater.svelte.ts` for the full flow and the non-macOS Tauri-plugin
   fallback).
 - **`debug.ts`**: dev/benchmark IPC: `benchmarkLog` (join a frontend timing into the Rust benchmark timeline).
 - **`usage.ts`**: `getLaunchDayCount`, the gate for usage-gated hints ("you've used Cmdr for a few days now"). Reads the
@@ -177,7 +177,7 @@ commands, and notable non-obvious placements.
   `../../../src-tauri/src/dock/CLAUDE.md`.
 - **`notifications.ts`**: `getNotificationPermission` (whether macOS will show Cmdr's banners; an unreachable backend
   reads as `unknown`) and `showNotification` (passes the typed `Result` through). Feature code calls
-  `sendMacosNotification` in `$lib/notifications/` instead, which combines the two and never throws. Why the permission
+  `sendMacosNotification` in `#lib/notifications/` instead, which combines the two and never throws. Why the permission
   goes to `UNUserNotificationCenter`: the module doc of `../../../src-tauri/src/notifications.rs`.
 - **`crash-reporter.ts`**: next-launch crash preview, dismiss, and send. Send crosses IPC with the preview's report id
   and separately consented optional email only; the backend-owned pending file remains the payload authority.
@@ -218,12 +218,12 @@ commands, and notable non-obvious placements.
 ## Unused wrappers and commands
 
 Every exported function or const in a sub-file needs a production caller outside this folder, and every `commands.*`
-entry in `$lib/ipc/bindings` needs a live caller; otherwise it's deleted, wired up, or allowlisted with a reason in
+entry in `#lib/ipc/bindings` needs a live caller; otherwise it's deleted, wired up, or allowlisted with a reason in
 `scripts/check/checks/desktop-ipc-unused-allowlist.json`. The `desktop-ipc-unused` check (fast lane) enforces both,
 because nothing else can: knip counts the barrel's re-exports as uses, and rustc never calls a registered command
 unused. Before it existed, 37 dead commands and 28 dead wrappers piled up (`docs/notes/ipc-dead-code-audit.md`).
 
-- **Counts as a caller**: an import from `$lib/tauri-commands` (static, `await import(…)` with destructuring, or a
+- **Counts as a caller**: an import from `#lib/tauri-commands` (static, `await import(…)` with destructuring, or a
   re-export) in a non-test file; `commands.<name>` outside this folder or inside a live wrapper; a raw `invoke('name')`
   in production code or E2E (`test/e2e-*`). An export a sibling sub-file imports (`throwIpcError`) is folder plumbing
   and counts too.
@@ -242,7 +242,7 @@ destinations, or fingerprints. Each row also carries `RenameEvidence` (`RenameEv
 backend-verified reason for the name, mirroring Rust `RenameEvidence`. `detail` is model-authored, so render it as plain
 text only (`../ask-cmdr/DETAILS.md` § The "Why this name" column).
 
-- Size, rate, and duration formatting lives in `$lib/units`, not here: this module is IPC wrappers only.
+- Size, rate, and duration formatting lives in `#lib/units`, not here: this module is IPC wrappers only.
 - `listen` and `UnlistenFn` from `@tauri-apps/api/event` are re-exported through `write-operations.ts`.
 - `getSyncStatus` and font metrics (`storeFontMetrics`, `hasFontMetrics`) live in `file-listing.ts` because they
   directly support file list rendering.

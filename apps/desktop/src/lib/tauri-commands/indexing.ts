@@ -24,7 +24,7 @@ import {
   type IndexScanCompleteEvent,
   type IndexScanProgressEvent,
   type IndexScanStartedEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 /** Fires when a full scan starts, carrying the per-scan calibration. */
 export function onIndexScanStarted(callback: (payload: IndexScanStartedEvent) => void): Promise<UnlistenFn> {

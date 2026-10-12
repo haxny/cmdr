@@ -7,7 +7,7 @@ analytics disclosure and the terms (3) → Optional settings (4). Linux starts a
 
 `OnboardingWizard` (shell) + `OnboardingStepShell` (per-step frame), `StepFda` / `StepAi` / `StepBeta` / `StepOptional`,
 `CloudProviderPicker` / `CloudProviderSetup`, `OnboardingLanguagePicker`, `onboarding-state.svelte.ts` (state machine),
-`fda-status.svelte.ts` (the reactive FDA fact) + `FdaBadge.svelte` (rendered by `$lib/status-corner/`),
+`fda-status.svelte.ts` (the reactive FDA fact) + `FdaBadge.svelte` (rendered by `#lib/status-corner/`),
 `local-download-notice.ts` (failed model download → post-wizard toast).
 
 ## Must-knows
@@ -15,7 +15,7 @@ analytics disclosure and the terms (3) → Optional settings (4). Linux starts a
 - **The frame is the FOOTER**, a `1fr auto 1fr` grid: Back, the language picker, the centred dots, the forward buttons.
   The picker is frame too, ❌ never a step: a first launch can land in a language the user can't read with every way out
   labeled in it. DETAILS § "The frame lives in the footer".
-- **The per-provider setup steps live in `$lib/ai-provider-setup/`**, shared with Settings › AI › Provider: a provider
+- **The per-provider setup steps live in `#lib/ai-provider-setup/`**, shared with Settings › AI › Provider: a provider
   or copy change goes there, ❌ never here.
 - **Step 3 is non-skippable, and its checklist ticks report FACTS**: an opt-out analytics default is fair consent only
   if everyone saw it, so ❌ no skip-to-finish, and the first row's tip must keep covering crash reports. DETAILS § "The

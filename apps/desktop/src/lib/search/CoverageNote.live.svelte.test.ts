@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount, flushSync } from 'svelte'
 import CoverageNote from './CoverageNote.svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 import type { CoverageNote as Note, LiveCoverage } from './coverage-note'
 
 function liveNote(live: Partial<LiveCoverage>): Note {

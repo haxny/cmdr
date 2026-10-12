@@ -31,7 +31,7 @@ const configureAi = vi.fn<
   }) => Promise<ConfigureOutcome>
 >(() => Promise.resolve({ secretStoreError: null }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getAiApiKeyStatus: (id: string) => getAiApiKeyStatus(id),
   configureAi: (
     provider: string,
@@ -44,7 +44,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const settingsMap: Record<string, string> = {}
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -53,7 +53,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 })
 
 const addToast = vi.fn<(...args: unknown[]) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToast(...args)
   },
@@ -62,7 +62,7 @@ vi.mock('$lib/ui/toast', () => ({
 const loggerWarn = vi.fn<(...args: unknown[]) => void>()
 const loggerInfo = vi.fn<(...args: unknown[]) => void>()
 const loggerError = vi.fn<(...args: unknown[]) => void>()
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({
     warn: (...args: unknown[]) => {
       loggerWarn(...args)

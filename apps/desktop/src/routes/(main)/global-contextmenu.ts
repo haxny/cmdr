@@ -13,7 +13,7 @@
  * a text field should have, and it acts on the field directly, so it can't
  * double up with the `edit.*` command handlers the way ⌘V once did.
  */
-import { isTextInputTarget } from '$lib/utils/text-input-focus'
+import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
 
 /** What `+page.svelte` should do with the right-click. */
 export type GlobalContextMenuAction =

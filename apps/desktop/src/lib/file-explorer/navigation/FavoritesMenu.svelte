@@ -4,7 +4,7 @@
      * at the bottom. It hangs off the same chip as the volume switcher, and the chip
      * (`VolumeBreadcrumb.svelte`) keeps the two from ever being open at once.
      *
-     * ❗ The house `Menu` primitive (`$lib/ui/Menu.svelte`) owns every interaction: open
+     * ❗ The house `Menu` primitive (`#lib/ui/Menu.svelte`) owns every interaction: open
      * and close, anchoring, the cursor, the keyboard (including the digit accelerators
      * and ⌥↑/⌥↓ reorder), keyboard-vs-pointer mode, drag, focus, and placement. This
      * component owns the two keys that swap menus; the rows come from
@@ -12,15 +12,15 @@
      * `FavoriteRowLabel` / `FavoriteShortcutField`, which the switcher shares.
      */
     import { onDestroy } from 'svelte'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { getCachedIcon, iconCacheVersion } from '$lib/icon-cache'
-    import { dependOn } from '$lib/utils/reactivity'
-    import { eventMatchesCommand } from '$lib/shortcuts'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Menu from '$lib/ui/Menu.svelte'
-    import { createMenu } from '$lib/ui/menu-controller.svelte'
-    import type { MenuRowContext } from '$lib/ui/menu-types'
-    import type { PaneId } from '$lib/commands/types'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { getCachedIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Menu from '#lib/ui/Menu.svelte'
+    import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import type { MenuRowContext } from '#lib/ui/menu-types.js'
+    import type { PaneId } from '#lib/commands/types.js'
     import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
     import type { VolumeChangePayload } from '../pane/types'
     import FavoriteRowLabel from './FavoriteRowLabel.svelte'

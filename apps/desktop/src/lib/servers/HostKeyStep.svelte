@@ -12,10 +12,10 @@
      * else it can mean, and puts its trust button behind a disclosure the user
      * has to open. Same component, two very different faces.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { HostKeyPrompt } from '$lib/ipc/bindings'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { HostKeyPrompt } from '#lib/ipc/bindings.js'
 
     interface Props {
         prompt: HostKeyPrompt

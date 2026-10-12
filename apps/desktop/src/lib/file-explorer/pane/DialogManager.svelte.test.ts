@@ -16,7 +16,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync, type ComponentProps } from 'svelte'
 
-vi.mock('$lib/ui/AlertDialog.svelte', async () => ({
+vi.mock('#lib/ui/AlertDialog.svelte', async () => ({
   default: (await import('../../../../test/fixtures/dialog-throw-fixture.svelte')).default,
 }))
 
@@ -28,15 +28,15 @@ vi.mock('../../file-operations/transfer/TransferProgressDialog.svelte', async ()
 
 // The error dialog is REAL in the Retry suite below, and its `ModalDialog` tells
 // the backend it opened. There's no backend here.
-vi.mock('$lib/tauri-commands', async (orig) => ({
-  ...(await orig<typeof import('$lib/tauri-commands')>()),
+vi.mock('#lib/tauri-commands/index.js', async (orig) => ({
+  ...(await orig<typeof import('#lib/tauri-commands/index.js')>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
 import DialogManager from './DialogManager.svelte'
 import type { AdoptedOperationData, TransferProgressPropsData } from './dialog-props'
-import { buttonLabel } from '$lib/file-operations/test-button-label'
+import { buttonLabel } from '#lib/file-operations/test-button-label.js'
 
 type DialogManagerProps = ComponentProps<typeof DialogManager>
 

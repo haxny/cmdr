@@ -12,8 +12,8 @@
  * view's own `findItemIndex` all match on basenames.
  */
 
-import type { SearchResultEntry } from '$lib/ipc/bindings'
-import type { PaneFileEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
+import type { PaneFileEntry } from '#lib/tauri-commands/index.js'
 
 /**
  * The snapshot's rows over `[start, end)`, capped at `maxRows`.

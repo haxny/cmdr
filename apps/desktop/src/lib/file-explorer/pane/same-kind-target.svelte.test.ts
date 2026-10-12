@@ -7,7 +7,7 @@
  * is invisible: the row silently falls back to the static name and still works.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { commands } from '$lib/commands/command-registry'
+import { commands } from '#lib/commands/command-registry.js'
 import {
   _resetForTesting,
   getSameKindTarget,
@@ -17,7 +17,7 @@ import {
 } from './same-kind-target.svelte'
 
 const updateSelectSameKindMenu = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
-vi.mock('$lib/tauri-commands', () => ({ updateSelectSameKindMenu }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ updateSelectSameKindMenu }))
 
 /** The registry entry the palette renders. */
 function selectSameKind() {

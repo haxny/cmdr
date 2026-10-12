@@ -27,15 +27,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte'
 import { homeDir } from '@tauri-apps/api/path'
-import * as commands from '$lib/tauri-commands'
+import * as commands from '#lib/tauri-commands/index.js'
 import DialogManager from './DialogManager.svelte'
 import { createDialogState } from './dialog-state.svelte'
 import type { TransferConfirmPayload, TransferConfirmer } from './dialog-props'
 import type { TransferDialogPropsData } from './transfer-operations'
 import type { FilePaneAPI } from './types'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/tauri-commands')>()),
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   getVolumeSpace: vi.fn(() => Promise.resolve({ data: null, timedOut: false })),
@@ -54,18 +54,18 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'copy' })),
 }))
 
-vi.mock('$lib/file-operations/queue/queue-window', () => ({ openQueueWindow: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({ openQueueWindow: vi.fn(() => Promise.resolve()) }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings')>()),
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/index.js')>()),
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
 
 // A marker stands in for the progress dialog: the real one dispatches a backend
 // operation on mount, and what's under test is the confirmation dialog going away.

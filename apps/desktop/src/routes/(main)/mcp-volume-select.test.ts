@@ -10,8 +10,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { emit } from '@tauri-apps/api/event'
 import type { ExplorerAPI } from './explorer-api'
-import type { NavigateResult } from '$lib/file-explorer/pane/navigate'
-import type { VolumeSelectOutcome } from '$lib/file-explorer/pane/volume-selection'
+import type { NavigateResult } from '#lib/file-explorer/pane/navigate.js'
+import type { VolumeSelectOutcome } from '#lib/file-explorer/pane/volume-selection.js'
 import { NAV_QUIET_WAIT } from './mcp-nav-landing'
 import { selectVolumeForMcp } from './mcp-volume-select'
 

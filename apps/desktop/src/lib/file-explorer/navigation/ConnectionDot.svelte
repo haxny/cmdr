@@ -8,7 +8,7 @@
      * session, amber = the OS-mount fallback or a waiting sign-in, red = a changed host key,
      * grey = the backoff loop owns it, hollow = `saved`.
      */
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { getConnectionTooltip } from './connection-tooltips'
     import type { ConnectionState } from '../types'
 

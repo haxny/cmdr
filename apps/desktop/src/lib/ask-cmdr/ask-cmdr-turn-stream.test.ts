@@ -15,7 +15,7 @@ import type {
   ConversationRow,
   MessageView,
   ProposalDecision,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
 const listMock =
@@ -25,7 +25,7 @@ const getMock = vi.fn<(id: number) => Promise<ConversationDetailView | null>>()
 const unlistenMock = vi.fn()
 const listenMock = vi.fn<(cb: (payload: AskCmdrTurn) => void) => Promise<() => void>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   onAskCmdrTurn: (cb: (payload: AskCmdrTurn) => void) => listenMock(cb),
   cancelAskCmdr: vi.fn(() => Promise.resolve()),
@@ -40,11 +40,11 @@ vi.mock('$lib/tauri-commands', () => ({
   applyBulkRename: vi.fn(() => Promise.resolve({ operationId: 'op-1' })),
   reviseBulkRenameRow: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/app-status-store', () => ({ saveAppStatus: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/app-status-store.js', () => ({ saveAppStatus: vi.fn() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
-vi.mock('$lib/file-explorer/pane/explorer-state.svelte', () => ({
+vi.mock('#lib/file-explorer/pane/explorer-state.svelte.js', () => ({
   explorerState: { setRailFocused: vi.fn() },
 }))
 vi.mock('./rail-window', () => ({

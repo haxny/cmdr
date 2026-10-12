@@ -23,10 +23,10 @@
     // missing until someone goes and gives it), so it takes the one slot left of
     // the hourglass and everything that comes and goes renders further left.
     import type { Snippet } from 'svelte'
-    import WakeIndicator from '$lib/ask-cmdr/WakeIndicator.svelte'
-    import IndexingStatusIndicator from '$lib/indexing/IndexingStatusIndicator.svelte'
-    import FdaBadge from '$lib/onboarding/FdaBadge.svelte'
-    import SuggestedOpsIndicator from '$lib/suggested-ops/SuggestedOpsIndicator.svelte'
+    import WakeIndicator from '#lib/ask-cmdr/WakeIndicator.svelte'
+    import IndexingStatusIndicator from '#lib/indexing/IndexingStatusIndicator.svelte'
+    import FdaBadge from '#lib/onboarding/FdaBadge.svelte'
+    import SuggestedOpsIndicator from '#lib/suggested-ops/SuggestedOpsIndicator.svelte'
     import OperationChip from './OperationChip.svelte'
 
     interface Props {

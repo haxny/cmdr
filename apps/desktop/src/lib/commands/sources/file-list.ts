@@ -4,9 +4,9 @@
  * registry and resolved into `Command`s.
  */
 import type { CommandSource } from '../types'
-import { getBadgeStatus } from '$lib/feature-status'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { sameKindCommandLabel } from '$lib/file-explorer/pane/same-kind-target.svelte'
+import { getBadgeStatus } from '#lib/feature-status.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { sameKindCommandLabel } from '#lib/file-explorer/pane/same-kind-target.svelte.js'
 import { BLOCKED_BY_DIALOGS, IN_TEXT_INPUTS_ONLY } from '../while-dialog-open'
 
 export const fileListCommands: CommandSource[] = [

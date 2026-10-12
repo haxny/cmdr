@@ -35,7 +35,7 @@ export default {
     messages: {
       rawLucide:
         'Don\'t import `{{ source }}` in feature code. Render glyphs via `<Icon name="…" />` ' +
-        '(`$lib/ui/Icon.svelte`) and add the glyph to the registry `lib/ui/icons/icon-map.ts` (the one ' +
+        '(`#lib/ui/Icon.svelte`) and add the glyph to the registry `lib/ui/icons/icon-map.ts` (the one ' +
         'place `~icons/*` is imported). See `docs/guides/icons.md`.',
     },
     schema: [],

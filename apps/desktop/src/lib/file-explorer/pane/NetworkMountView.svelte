@@ -1,6 +1,6 @@
 <script lang="ts">
     import { tick } from 'svelte'
-    import { openAddServerSheet } from '$lib/servers/open-sign-in'
+    import { openAddServerSheet } from '#lib/servers/open-sign-in.js'
     import type { MountError, NetworkHost, PlacesAccount, ShareInfo } from '../types'
     import {
         mountNetworkShare,
@@ -8,11 +8,11 @@
         saveSmbCredentials,
         updateLeftPaneState,
         updateRightPaneState,
-    } from '$lib/tauri-commands'
-    import { getMountTimeoutMs } from '$lib/settings/network-settings'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
+    } from '#lib/tauri-commands/index.js'
+    import { getMountTimeoutMs } from '#lib/settings/network-settings.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
     import { pathForPickedVolume } from '../navigation/picked-volume-path'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import type { ServersHubAPI, PlacesBrowserAPI, NetworkCursorEntry } from './types'
     import ServersHub from '../network/ServersHub.svelte'
     import type { HubRow } from '../network/servers-hub-rows'
@@ -21,13 +21,13 @@
     import { isMountSignInQuestion, openSmbSignInSheet, refusalForMountError } from '../network/smb-sign-in'
     import { asMountError } from '../network/mount-error'
     import { renderMountError } from '../network/mount-error-messages'
-    import type { SignInAttemptOutcome } from '$lib/servers/sign-in-contract'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { eventMatchesCommand } from '$lib/shortcuts'
-    import { claimKey } from '$lib/shortcuts/claim-key'
+    import type { SignInAttemptOutcome } from '#lib/servers/sign-in-contract.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
     import type { VolumeChangePayload } from './types'
 
     const log = getAppLogger('fileExplorer')

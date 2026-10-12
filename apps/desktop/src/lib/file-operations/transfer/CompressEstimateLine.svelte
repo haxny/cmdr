@@ -14,12 +14,12 @@
      * `TransferDialog.svelte` so that file's line budget stays put.
      */
     import { onMount } from 'svelte'
-    import Size from '$lib/ui/Size.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import type { CompressedSizeEstimate } from '$lib/tauri-commands'
+    import Size from '#lib/ui/Size.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import type { CompressedSizeEstimate } from '#lib/tauri-commands/index.js'
     import { scaleCompressedEstimate } from './compress-estimate-scaling'
 
     interface Props {

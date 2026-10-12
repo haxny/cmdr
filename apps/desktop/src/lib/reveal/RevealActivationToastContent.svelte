@@ -8,8 +8,8 @@
      * lives, so nobody undoes their own choice by reflex from a toast.
      * `reveal-activation-notice.ts` decides whether it appears at all.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToRevealHandler } from './reveal-settings-link'
 </script>
 

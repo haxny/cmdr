@@ -34,8 +34,8 @@ const { listenMock, addToastMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@tauri-apps/api/event', () => ({ listen: listenMock }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 

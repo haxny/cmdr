@@ -10,25 +10,25 @@ const runServerRowAction = vi.fn((_payload: unknown) => Promise.resolve())
 const openInEditorOrExplain = vi.fn(() => Promise.resolve('opened'))
 let volumeId = 'root'
 
-vi.mock('$lib/file-explorer/network/servers-hub-actions', () => ({
+vi.mock('#lib/file-explorer/network/servers-hub-actions.js', () => ({
   editServerInView: (view: unknown) => editServerInView(view),
 }))
-vi.mock('$lib/file-explorer/navigation/server-row-actions', () => ({
+vi.mock('#lib/file-explorer/navigation/server-row-actions.js', () => ({
   runServerRowAction: (payload: unknown) => runServerRowAction(payload),
 }))
-vi.mock('$lib/file-explorer/pane/editor-open', () => ({ openInEditorOrExplain: () => openInEditorOrExplain() }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/editor-open.js', () => ({ openInEditorOrExplain: () => openInEditorOrExplain() }))
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: () => '/Users/me',
   getFocusedPaneVolumeId: () => volumeId,
 }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
-vi.mock('$lib/tauri-commands', () => ({ listSavedServers: () => Promise.resolve([]), trackEvent: vi.fn() }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ listSavedServers: () => Promise.resolve([]), trackEvent: vi.fn() }))
 
 import { fileHandlers } from './file-handlers'
 import { serversHandlers } from './servers-handlers'
 import type { CommandHandlerContext } from './types'
-import type { HubRow } from '$lib/file-explorer/network/servers-hub-rows'
-import type { NetworkHost } from '$lib/file-explorer/types'
+import type { HubRow } from '#lib/file-explorer/network/servers-hub-rows.js'
+import type { NetworkHost } from '#lib/file-explorer/types.js'
 
 const hubRow = { id: 'manual-nas', kind: 'server', name: 'Naspolya' } as unknown as HubRow
 const host: NetworkHost = { id: 'h1', name: 'Naspolya', port: 445, source: 'discovered' }

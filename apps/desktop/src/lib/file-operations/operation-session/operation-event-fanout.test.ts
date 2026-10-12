@@ -5,7 +5,7 @@ import type {
   WriteCompleteEvent,
   WriteProgressEvent,
   WriteSettledEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 // The fan-out is the only thing in the window that subscribes to the write
 // streams, so every one of them is mocked here and driven through `_testEmit`.
@@ -26,7 +26,7 @@ const { listOperationsMock } = vi.hoisted(() => ({
   listOperationsMock: vi.fn<() => Promise<OperationSnapshot[]>>(() => Promise.resolve([])),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: listOperationsMock,
   onWriteProgress: vi.fn(() => Promise.resolve(unlisteners.progress)),
   onWriteComplete: vi.fn(() => Promise.resolve(unlisteners.complete)),
@@ -46,7 +46,7 @@ import {
   onWriteSettled,
   onWriteConflict,
   onOperationsChanged,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { createOperationEventFanout, UNCLAIMED_BUFFER_TTL_MS, type OperationDelivery } from './operation-event-fanout'
 
 function progress(id: string, over: Partial<WriteProgressEvent> = {}): WriteProgressEvent {

@@ -19,8 +19,8 @@
      * Keyboard motion (arrow keys skipping disabled options, active option as the tab-stop)
      * lives in `ToggleGroup`; this component just declares the option set.
      */
-    import ToggleGroup, { type ToggleGroupOption } from '$lib/ui/ToggleGroup.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ToggleGroup, { type ToggleGroupOption } from '#lib/ui/ToggleGroup.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { SearchMode } from './query-filter-state.svelte'
 
     interface Props {

@@ -1,14 +1,14 @@
 <script lang="ts">
     import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ColumnList from '$lib/ui/ColumnList.svelte'
-    import Size from '$lib/ui/Size.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ColumnList from '#lib/ui/ColumnList.svelte'
+    import Size from '#lib/ui/Size.svelte'
     import {
         columnListProps,
         type ColumnListApi,
         type ColumnListColumn,
         type ColumnListWindowedSource,
-    } from '$lib/ui/column-list-types'
+    } from '#lib/ui/column-list-types.js'
 
     /**
      * Two lists: a short measured listbox (hover moves the cursor; click the list, then the

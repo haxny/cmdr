@@ -278,7 +278,7 @@ fn a_whole_volume_walk_leaves_its_end_to_the_run_that_owns_it() {
 // ── `IndexStatusResponse::walk_affects` ───────────────────────────────────────
 //
 // The Rust twin of the frontend's `isPathAffectedByWalk`
-// (`$lib/indexing/walked-ground.ts`); the two have to answer alike, or the file
+// (`#lib/indexing/walked-ground.ts`); the two have to answer alike, or the file
 // list's hourglass and an agent's `list_dir` disagree about the same folder.
 
 /// Whether a walk on `roots` moves `path`'s total, in the shape

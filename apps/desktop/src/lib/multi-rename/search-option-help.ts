@@ -5,8 +5,8 @@
  * between the marks, so the tooltip sets apart exactly what the replace put in. Pure.
  */
 
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { RenameExample } from '$lib/tauri-commands'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { RenameExample } from '#lib/tauri-commands/index.js'
 import type { ToggleField, WholeNameField } from './option-keys'
 import { example, marked } from './rename-examples'
 

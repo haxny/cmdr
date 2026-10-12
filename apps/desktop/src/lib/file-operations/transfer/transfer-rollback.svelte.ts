@@ -9,8 +9,8 @@
  * body too, which replaces that row. `../DETAILS.md` § "Rollback asks first".
  */
 
-import type { OpKind, WriteOperationPhase } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
+import type { OpKind, WriteOperationPhase } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import {
   inFlightRollbackTooltipKey,
   inFlightRollbackVariant,

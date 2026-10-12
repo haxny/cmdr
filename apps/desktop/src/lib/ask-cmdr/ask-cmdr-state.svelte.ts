@@ -15,7 +15,7 @@
 
 import type { ContextUsage } from './ask-cmdr-context-usage'
 import type { RailMessage } from './ask-cmdr-messages'
-import type { AttachmentRef, RenameEvidence, RenameEvidenceCoverage } from '$lib/tauri-commands'
+import type { AttachmentRef, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 
 /** Past this many thread messages the rail nudges "start a fresh one?" (mirrors the Rust
  * `THREAD_SOFT_CAP_MESSAGES`; no hard cut). */

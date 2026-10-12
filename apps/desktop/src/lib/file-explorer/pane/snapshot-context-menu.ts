@@ -63,7 +63,7 @@ export function snapshotContextMenuRows<Row extends SnapshotRow>(
  * need this instead of the displayed name.
  *
  * Snapshot rows are absolute paths from the search backend, which is why this
- * doesn't go through `$lib/path/canonical`: that brand exists to keep `~`-rooted
+ * doesn't go through `#lib/path/canonical`: that brand exists to keep `~`-rooted
  * and relative input out of exactly this arithmetic, and there is none here.
  */
 export function snapshotBasename(path: string): string {

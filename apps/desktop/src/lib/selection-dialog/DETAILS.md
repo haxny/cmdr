@@ -144,7 +144,7 @@ special-casing at the pane API layer.
 - **Recent-selection entries are added on commit, not on auto-apply.** Same gate as Search's "Open in pane" rule:
   history stays signal-rich (results worth acting on) instead of keystroke-noisy.
 - **Select and Deselect are SEPARATE catalog keys, never one ICU `select` on `mode`.** The dialog's copy lives in
-  `$lib/intl/messages/en/selection.json`, and each mode-dependent string is two keys (`selection.dialog.title.add` /
+  `#lib/intl/messages/en/selection.json`, and each mode-dependent string is two keys (`selection.dialog.title.add` /
   `.remove`, `selection.action.select.*` / `.deselect.*`). Three reasons, in order of weight: (1) `en-AU` is an overlay
   that forks ONLY `Deselect` → `Unselect` (Australian Finder's Edit menu), and a single `select` message would force the
   overlay to carry the untouched `Select` branch too, where it silently rots on the next English copy edit; (2)
@@ -164,13 +164,13 @@ special-casing at the pane API layer.
 
 ## Dependencies
 
-- `$lib/query-ui/QueryDialog.svelte`: the shared orchestrator the wrapper mounts.
-- `$lib/query-ui/query-filter-state.svelte`: the cross-consumer state factory. Selection's instance is the module
+- `#lib/query-ui/QueryDialog.svelte`: the shared orchestrator the wrapper mounts.
+- `#lib/query-ui/query-filter-state.svelte`: the cross-consumer state factory. Selection's instance is the module
   singleton in `selection-state.svelte.ts`, not a per-mount `const`.
-- `$lib/query-ui/apply-ai-filters`: the shared `applySizeFromAi` / `applyDateFromAi` filter-write helpers (Search uses
+- `#lib/query-ui/apply-ai-filters`: the shared `applySizeFromAi` / `applyDateFromAi` filter-write helpers (Search uses
   the same ones).
-- `$lib/query-ui/recent-items/recent-items-state.svelte`: the recent-items factory.
-- `$lib/tauri-commands`: `translateSelectionQuery`, `getRecentSelections`, `addRecentSelection`,
+- `#lib/query-ui/recent-items/recent-items-state.svelte`: the recent-items factory.
+- `#lib/tauri-commands`: `translateSelectionQuery`, `getRecentSelections`, `addRecentSelection`,
   `removeRecentSelection`.
-- `$lib/file-explorer/types`: `FileEntry`, the pane snapshot shape.
-- `$lib/settings`: `getSetting('ai.provider')`, `onSpecificSettingChange`.
+- `#lib/file-explorer/types`: `FileEntry`, the pane snapshot shape.
+- `#lib/settings`: `getSetting('ai.provider')`, `onSpecificSettingChange`.

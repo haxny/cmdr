@@ -11,13 +11,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 
-vi.mock('$lib/tauri-commands', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
-vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
-vi.mock('$lib/indexing/index-state.svelte', async () => (await import('./test-file-list-mocks')).indexStateMock())
-vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
+vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+vi.mock('#lib/indexing/index-state.svelte.js', async () => (await import('./test-file-list-mocks')).indexStateMock())
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
   (await import('./test-file-list-mocks')).reactiveSettingsMock(),
 )
-vi.mock('$lib/settings/settings-store', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
+vi.mock('#lib/settings/settings-store.js', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
 
 function nameCellFor(rows: HTMLElement[], filename: string): HTMLElement {
   const row = rows.find((r) => r.dataset.filename === filename)

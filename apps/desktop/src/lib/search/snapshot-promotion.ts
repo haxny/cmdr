@@ -9,8 +9,13 @@
  * routes the pane; everything above the wire stops here.
  */
 
-import { addRecentSearch, type HistoryEntry, type SearchQuery, type SearchResultEntry } from '$lib/tauri-commands'
-import type { LiveRunView } from '$lib/query-ui/query-stream'
+import {
+  addRecentSearch,
+  type HistoryEntry,
+  type SearchQuery,
+  type SearchResultEntry,
+} from '#lib/tauri-commands/index.js'
+import type { LiveRunView } from '#lib/query-ui/query-stream.js'
 import { fetchAllRows } from './snapshot-fill'
 import {
   buildHistoryFilters,

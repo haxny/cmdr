@@ -17,9 +17,9 @@
         type EtaSnapshot,
     } from './eta'
     import type { VolumeEnrichActivity } from './media-enrich-state.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
 
     interface Props {
         activity: VolumeEnrichActivity

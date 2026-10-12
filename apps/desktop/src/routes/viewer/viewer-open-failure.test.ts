@@ -8,9 +8,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { handleOpenFailure } from './viewer-open-failure'
-import { tString } from '$lib/intl/messages.svelte'
-import type { Logger } from '$lib/logging/logger'
-import type { ViewerError } from '$lib/ipc/bindings'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { Logger } from '#lib/logging/logger.js'
+import type { ViewerError } from '#lib/ipc/bindings.js'
 
 function fakeLog() {
   const log = { trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }

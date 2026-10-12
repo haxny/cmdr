@@ -9,7 +9,7 @@ interface MockState {
 }
 const state = vi.hoisted((): MockState => ({ listeners: {}, tintAmount: 0.27, reduce: false }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getShouldReduceTransparency: () => Promise.resolve(state.reduce),
   onReduceTransparencyChanged: (handler: (p: { reduce: boolean }) => void) => {
     state.listeners.reduce = handler

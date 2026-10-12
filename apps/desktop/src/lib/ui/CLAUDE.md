@@ -23,7 +23,7 @@ Reusable components; only silent-breakage rules live here. Ark UI backs the comp
   `ModalDialog` owns it.
 - **Adding a dialog** (soft sheets too): register its id in `SOFT_DIALOG_REGISTRY`, pass it as `dialogId`, add a gallery
   row (`dialog-gallery-coverage`). Its `whileOpen` verdict won't compile until answered: it decides whether a file
-  operation may start behind the dialog. `$lib/file-explorer/pane/DETAILS.md` § "The operation-start gate".
+  operation may start behind the dialog. `#lib/file-explorer/pane/DETAILS.md` § "The operation-start gate".
 - **`ModalDialog` registers what it renders in `open-dialogs.svelte.ts`**, keeping that set exhaustive;
   `OnboardingWizard` alone hand-registers. ❌ An unpaired close blocks file operations until restart.
 - **`ModalDialog`'s overlay starts at `inset: var(--titlebar-height) 0 0 0`**, keeping the macOS window-drag region

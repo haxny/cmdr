@@ -3,10 +3,10 @@
  * them directly.
  */
 
-import type { HistoryEntry, HistoryMode } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import { formatByteSize } from '$lib/units'
+import type { HistoryEntry, HistoryMode } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { formatByteSize } from '#lib/units/index.js'
 
 /** Short badge shown on each chip to signal the search mode. */
 export function modeBadge(mode: HistoryMode): string {

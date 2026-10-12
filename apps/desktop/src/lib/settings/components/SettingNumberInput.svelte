@@ -1,9 +1,9 @@
 <script lang="ts">
     /**
      * Registry-driven number row: reads bounds from the registry and writes through
-     * `setSetting`. The control itself is `$lib/ui/NumberInput`.
+     * `setSetting`. The control itself is `#lib/ui/NumberInput`.
      */
-    import NumberInput from '$lib/ui/NumberInput.svelte'
+    import NumberInput from '#lib/ui/NumberInput.svelte'
     import {
         getSetting,
         setSetting,
@@ -13,7 +13,7 @@
         durationValueToMs,
         type SettingId,
         type SettingsValues,
-    } from '$lib/settings'
+    } from '#lib/settings/index.js'
     import { onMount } from 'svelte'
     import { useSettingLock } from './setting-lock.svelte'
 

@@ -6,15 +6,15 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { disabledNoteId } from '$lib/settings/settings-window'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { disabledNoteId } from '#lib/settings/settings-window.js'
 
 const policy = vi.hoisted(() => ({
   locked: new Set<string>(),
   narrowed: new Set<string>(),
 }))
 
-vi.mock('$lib/managed-policy/managed-policy.svelte', () => ({
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', () => ({
   isSettingLocked: (id: string) => policy.locked.has(id),
   isSettingManaged: (id: string) => policy.locked.has(id) || policy.narrowed.has(id),
 }))
@@ -29,11 +29,11 @@ const settingsApi = vi.hoisted(() => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ...settingsApi,
 }))
-vi.mock('$lib/settings/settings-store', () => settingsApi)
+vi.mock('#lib/settings/settings-store.js', () => settingsApi)
 
 import ManagedLockFixture from '../../../../test/fixtures/managed-setting-section-fixture.svelte'
 

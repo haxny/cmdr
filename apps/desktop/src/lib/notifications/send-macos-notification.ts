@@ -10,9 +10,9 @@
  * and surfaces as an unhandled rejection, which auto-sends an error report.
  */
 
-import { showNotification } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
+import { showNotification } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
 import { ensureMacosNotificationPermission, __resetPermissionStateForTests } from './macos-notification-permission'
 
 const log = getAppLogger('notifications')

@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { RevealHandlerState, RevealHandlerStatus } from '$lib/ipc/bindings'
+import type { RevealHandlerState, RevealHandlerStatus } from '#lib/ipc/bindings.js'
 
 /**
  * What the command answers on a machine where nothing stands in the way. The
@@ -29,16 +29,16 @@ const mocks = vi.hoisted(() => ({
   warn: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
-vi.mock('$lib/settings', () => ({ setSetting: mocks.setSetting, getSetting: vi.fn(() => '') }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
+vi.mock('#lib/settings/index.js', () => ({ setSetting: mocks.setSetting, getSetting: vi.fn(() => '') }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   trackEvent: mocks.trackEvent,
   setRevealHandlerEnabled: mocks.setRevealHandlerEnabled,
 }))
-vi.mock('$lib/intl/messages.svelte', () => ({
+vi.mock('#lib/intl/messages.svelte.js', () => ({
   tString: (key: string, params?: Record<string, string>) => (params ? `${key}:${JSON.stringify(params)}` : key),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: mocks.warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

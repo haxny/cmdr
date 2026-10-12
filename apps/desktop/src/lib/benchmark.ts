@@ -10,7 +10,7 @@
  * @module benchmark
  */
 
-import { benchmarkLog } from '$lib/tauri-commands'
+import { benchmarkLog } from '#lib/tauri-commands/index.js'
 
 /* eslint-disable no-console */
 

@@ -10,7 +10,7 @@ import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import ToastItem from './ToastItem.svelte'
 import ToastIdFixture from './toast-id-fixture.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('ToastItem a11y', () => {
   it('info level (string content, transient) has no violations', async () => {

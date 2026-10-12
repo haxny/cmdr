@@ -11,8 +11,8 @@
  * the rail draws.
  */
 
-import { cloudConsentState, refreshCloudConsent } from '$lib/ai/cloud-consent.svelte'
-import { getSetting, type AiProvider } from '$lib/settings'
+import { cloudConsentState, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
+import { getSetting, type AiProvider } from '#lib/settings/index.js'
 
 export type RailGate = 'loading' | 'off' | 'cloudOff' | 'chat'
 

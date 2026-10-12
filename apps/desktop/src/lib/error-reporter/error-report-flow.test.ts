@@ -28,7 +28,7 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ setFocus: vi.fn(() => Promise.resolve()) }),
 }))
 
-vi.mock('$lib/tauri-commands/error-reporter', () => ({
+vi.mock('#lib/tauri-commands/error-reporter.js', () => ({
   requestErrorReportInMainWindow: vi.fn((request: unknown) => {
     emitted.requests.push(request)
     return Promise.resolve()

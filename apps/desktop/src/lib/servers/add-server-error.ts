@@ -1,6 +1,6 @@
 /** Carrying a typed `AddServerError` from `connectToServer` to the add sheet's attempt. */
-import type { AddServerError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { AddServerError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries why adding an SMB host didn't go through. */
 export class AddServerFailure extends TypedFailure<AddServerError> {

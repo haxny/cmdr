@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { DeviceReadiness } from '$lib/ipc/bindings'
+import type { DeviceReadiness } from '#lib/ipc/bindings.js'
 import type { VolumeBackendCapabilities, VolumeInfo } from '../types'
 
 const { ipc } = vi.hoisted(() => ({
@@ -23,16 +23,16 @@ const { ipc } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   connectAdbDevice: ipc.connectAdbDevice,
   cancelAdbConnect: ipc.cancelAdbConnect,
   newAdbAttemptId: () => 'adb-attempt-1',
   // The thrown value is `AdbConnectFailure`; the real reader unwraps it.
   asAdbConnectError: (e: unknown) => (e as { failure?: unknown }).failure ?? null,
 }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: ipc.openSettingsWindow }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: ipc.openSettingsWindow }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

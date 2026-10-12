@@ -8,13 +8,13 @@
 
 import { describe, it, vi, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { TextEditorList } from '$lib/ipc/bindings'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { TextEditorList } from '#lib/ipc/bindings.js'
 import AppChoiceSelect from './AppChoiceSelect.svelte'
 import TextEditorSelect from './TextEditorSelect.svelte'
 import { CHOOSE_APP_VALUE } from './app-choice-options'
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: () => 'system',
   setSetting: vi.fn(),
@@ -28,7 +28,7 @@ const EDITORS: TextEditorList = {
   chosenId: 'system',
 }
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   listTextEditors: vi.fn(() => Promise.resolve({ data: EDITORS, timedOut: false })),
 }))

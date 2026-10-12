@@ -4,7 +4,7 @@
 //
 // Search wires the adapter to its `HistoryEntry`; Selection wires its own.
 
-import type { HistoryMode } from '$lib/tauri-commands'
+import type { HistoryMode } from '#lib/tauri-commands/index.js'
 
 /**
  * Shape produced by the consumer's adapter and consumed by the row UI. Kept narrow on

@@ -9,7 +9,7 @@
  * until the user commits to Allow or Deny for real.
  */
 
-import type { OnboardingStep } from '$lib/onboarding/onboarding-state.svelte'
+import type { OnboardingStep } from '#lib/onboarding/onboarding-state.svelte.js'
 
 export const onboardingFixtures: Record<string, OnboardingStep | undefined> = {
   'step-1-fda': 1,

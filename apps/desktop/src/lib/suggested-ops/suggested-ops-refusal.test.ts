@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { WriteOperationError } from '$lib/ipc/bindings'
-import { getUserFriendlyMessage } from '$lib/file-operations/transfer/transfer-error-messages'
+import type { WriteOperationError } from '#lib/ipc/bindings.js'
+import { getUserFriendlyMessage } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import { refusalReason } from './suggested-ops-refusal'
 
 const sourceGone: WriteOperationError = { type: 'source_not_found', path: '/Users/someone/Downloads/one.dmg' }

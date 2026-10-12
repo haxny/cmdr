@@ -32,7 +32,7 @@ const { getSettingMock, setSettingMock, downloadsWatcherStatusMock, recheckGateM
     setGlobalGoToLatestShortcutMock: vi.fn(),
   }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
   resetSetting: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     downloadsWatcherStatus: downloadsWatcherStatusMock,
     recheckDownloadsWatcherGate: recheckGateMock,

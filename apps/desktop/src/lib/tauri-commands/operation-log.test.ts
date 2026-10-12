@@ -19,7 +19,7 @@ const getDetailMock =
   vi.fn<(payload: { operationId: string; itemLimit: number; itemOffset: number }) => Promise<Res<unknown>>>()
 const undoMock = vi.fn<(ids: string[]) => Promise<Res<unknown>>>()
 const rollbackMock = vi.fn<(id: string) => Promise<Res<unknown, { kind: string }>>>()
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getRecentOperationLogEntries: (limit: number, offset: number) => getRecentMock({ limit, offset }),
     getOperationLogDetail: (id: string, l: number, o: number) =>
@@ -30,7 +30,7 @@ vi.mock('$lib/ipc/bindings', () => ({
 }))
 
 import { getRecentOperationLogEntries, getOperationLogDetail, undoOperations, rollbackOperation } from './operation-log'
-import { asRollbackRefusal } from '$lib/operation-log/rollback-refusal'
+import { asRollbackRefusal } from '#lib/operation-log/rollback-refusal.js'
 
 describe('getRecentOperationLogEntries', () => {
   beforeEach(() => getRecentMock.mockReset())

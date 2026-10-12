@@ -38,9 +38,9 @@ import {
   type OperationSnapshot,
   type UnlistenFn,
   type WriteProgressEvent,
-} from '$lib/tauri-commands'
-import { onWriteProgress } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { onWriteProgress } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('queue')
 

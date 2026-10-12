@@ -4,7 +4,7 @@
  *
  * `svelte-tests` charges per test FILE, not per test (`docs/testing.md` § "What a
  * test actually costs"), so these two share a file. They disagree on
- * `$lib/settings` (`getSetting` false vs true) and on `$lib/stores/volume-store`
+ * `#lib/settings` (`getSetting` false vs true) and on `#lib/stores/volume-store`
  * (two volumes vs one), so both are mutable stubs each block installs in its own
  * `beforeEach`.
  *
@@ -18,8 +18,8 @@ import { mount, tick, flushSync } from 'svelte'
 import IndexingStatusIndicator from './IndexingStatusIndicator.svelte'
 import StaleDriveDialog from './StaleDriveDialog.svelte'
 import type { VolumeIndexActivity, AggregationActivity } from './index-state.svelte'
-import type { ActivityPhase, IndexFreshnessChangedEvent } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { ActivityPhase, IndexFreshnessChangedEvent } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let activeVolumes: VolumeIndexActivity[] = []
 // Per-volume aggregation, keyed by volumeId (mirrors the real `aggregation` map).
@@ -64,24 +64,24 @@ vi.mock('./index-state.svelte', () => ({
   }),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => volumes,
 }))
 
 // The union of the settings surface both components reach for. The real module is
 // spread first so anything outside the union behaves as it does un-merged.
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: () => settingValue,
   setSetting: () => {},
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/media-index/enabled-volumes', () => ({
+vi.mock('#lib/media-index/enabled-volumes.js', () => ({
   getEnabledMediaIndexVolumeIds: () => [],
 }))
 
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: (cb: (p: IndexFreshnessChangedEvent) => void) => {
     freshnessCb = cb
     return Promise.resolve(() => {})
@@ -94,7 +94,7 @@ vi.mock('./drive-index-prefs', () => ({
 }))
 
 // ModalDialog notifies the backend on open/close; stub those IPC calls.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),

@@ -4,7 +4,7 @@
  *
  * A slow volume can hold a create for seconds. The backend answers "still
  * running" past its reply deadline and reports the real end later
- * (`$lib/tauri-commands/mutation-reply.ts`), so this never says the create
+ * (`#lib/tauri-commands/mutation-reply.ts`), so this never says the create
  * didn't happen when it may still land (ERR-AREUV). The phases:
  *
  * - `editing`: the person is naming it.
@@ -17,13 +17,13 @@
  * toast, since nothing else would tell them.
  */
 
-import type { MutationWaitOptions } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import type { MutationWaitOptions } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { asMutationError } from './mutation-error'
 import { renderMutationError } from './mutation-error-messages'
-import type { ReportIncident } from '$lib/error-reporter/report-incident'
+import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
 const log = getAppLogger('fileOperations')
 

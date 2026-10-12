@@ -29,10 +29,10 @@ import {
   connectSavedPlace,
   newServerAttemptId,
   type ServerConnectOutcome,
-} from '$lib/tauri-commands'
-import { smbReconnectManager } from '$lib/file-explorer/network/smb-reconnect-manager.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import type { ConnectionState } from '$lib/file-explorer/types'
+} from '#lib/tauri-commands/index.js'
+import { smbReconnectManager } from '#lib/file-explorer/network/smb-reconnect-manager.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { ConnectionState } from '#lib/file-explorer/types.js'
 import type { ConnectRefusalKind } from './connect-refusals'
 import { needsAHuman, readConnectOutcome, type ServerDialOutcome } from './server-outcomes'
 

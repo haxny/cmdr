@@ -8,8 +8,8 @@
 
 import { describe, it, expect } from 'vitest'
 import { serverCommandTarget } from './server-command-target'
-import type { HubRow } from '$lib/file-explorer/network/servers-hub-rows'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { HubRow } from '#lib/file-explorer/network/servers-hub-rows.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 function row(overrides: Partial<HubRow> = {}): HubRow {
   return {

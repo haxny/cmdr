@@ -9,17 +9,17 @@
  * target into recents, never the raw typed input.
  */
 
-import type { GoToPathResolution, RecentPathEntry } from '$lib/ipc/bindings'
-import { resolveGoToPath } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { getEffectiveShortcuts, toDisplayShortcut } from '$lib/shortcuts'
-import { getAppLogger } from '$lib/logging/logger'
+import type { GoToPathResolution, RecentPathEntry } from '#lib/ipc/bindings.js'
+import { resolveGoToPath } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import {
   navigateToDirInPane,
   navigateToFileInPane,
   resolveLocationOrToast,
-} from '$lib/file-explorer/navigation/navigate-and-select'
-import { getFocusedPanePath } from '$lib/file-explorer/pane/focused-pane-reads'
+} from '#lib/file-explorer/navigation/navigate-and-select.js'
+import { getFocusedPanePath } from '#lib/file-explorer/pane/focused-pane-reads.js'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 
 import GoToPathAncestorToastContent from './GoToPathAncestorToastContent.svelte'

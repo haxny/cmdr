@@ -11,17 +11,17 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { flushSync } from 'svelte'
-import type { OperationSnapshot, WriteOperationStartResult } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteOperationStartResult } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', async () =>
+vi.mock('#lib/tauri-commands/index.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).tauriCommandsMock(),
 )
-vi.mock('$lib/file-operations/queue/queue-window', async () =>
+vi.mock('#lib/file-operations/queue/queue-window.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).queueWindowMock(),
 )
-vi.mock('$lib/ui/toast', async () => (await import('./test-transfer-progress-harness.svelte')).toastMock())
-vi.mock('$lib/settings', async () => (await import('./test-transfer-progress-harness.svelte')).settingsMock())
-vi.mock('$lib/intl/messages.svelte', async () =>
+vi.mock('#lib/ui/toast/index.js', async () => (await import('./test-transfer-progress-harness.svelte')).toastMock())
+vi.mock('#lib/settings/index.js', async () => (await import('./test-transfer-progress-harness.svelte')).settingsMock())
+vi.mock('#lib/intl/messages.svelte.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).messagesMock(),
 )
 vi.mock('../progress-readout', async (importOriginal) =>
@@ -29,12 +29,12 @@ vi.mock('../progress-readout', async (importOriginal) =>
     await importOriginal<typeof import('../progress-readout')>(),
   ),
 )
-vi.mock('$lib/logging/logger', async () => (await import('./test-transfer-progress-harness.svelte')).loggerMock())
+vi.mock('#lib/logging/logger.js', async () => (await import('./test-transfer-progress-harness.svelte')).loggerMock())
 
 import { createTransferProgressState } from './transfer-progress-state.svelte'
-import { copyBetweenVolumes, cancelOperation, cancelWriteOperation, listOperations } from '$lib/tauri-commands'
-import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
-import { addToast } from '$lib/ui/toast'
+import { copyBetweenVolumes, cancelOperation, cancelWriteOperation, listOperations } from '#lib/tauri-commands/index.js'
+import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import { createEtaSmoother } from '../progress-readout'
 import { getOperationSessions } from '../operation-session/window-operation-sessions.svelte'
 import {

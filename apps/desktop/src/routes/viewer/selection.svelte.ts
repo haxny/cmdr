@@ -22,8 +22,8 @@
  * `focus = { row: N - 1, offset: lastRowLength }` so the last character is included.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { RangeEnd } from '$lib/tauri-commands'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { RangeEnd } from '#lib/tauri-commands/index.js'
 
 export interface RowOffset {
   /** Zero-based ROW index. A row, never a physical line number. */

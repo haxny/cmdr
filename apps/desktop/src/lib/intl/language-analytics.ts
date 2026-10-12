@@ -14,8 +14,8 @@
  * § The language events).
  */
 
-import { trackEvent } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
+import { trackEvent } from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
 import { getUiLocale } from './locale'
 import { resolvedCatalogLocale } from './messages.svelte'
 import { pickUiLocale } from './os-locales'

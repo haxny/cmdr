@@ -5,7 +5,7 @@
  * pointing at the PARENT of the current directory.
  */
 import { describe, it, expect } from 'vitest'
-import { toCanonical } from '$lib/path/canonical'
+import { toCanonical } from '#lib/path/canonical.js'
 import { createParentEntry } from './parent-entry'
 
 const canonical = (path: string) => toCanonical(path, '/Users/test')

@@ -3,8 +3,8 @@
  * menu can tell this pane's chooser key from the other pane's. Both header menus answer
  * these themselves: central dispatch is suppressed while one is open.
  */
-import type { CommandId } from '$lib/commands'
-import type { PaneId } from '$lib/commands/types'
+import type { CommandId } from '#lib/commands/index.js'
+import type { PaneId } from '#lib/commands/types.js'
 
 export function chooserCommandFor(pane: PaneId): CommandId {
   return pane === 'left' ? 'pane.leftVolumeChooser' : 'pane.rightVolumeChooser'

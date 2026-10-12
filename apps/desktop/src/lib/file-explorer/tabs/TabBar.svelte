@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { TabState, TabId } from './tab-types'
     import type { TabBarDrag } from './tab-drag-controller.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { deriveTabLabel } from './tab-label'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { getFirstShortcutReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import { useInlineSize } from '$lib/utils/inline-size-action'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { useInlineSize } from '#lib/utils/inline-size-action.js'
     import { SvelteSet } from 'svelte/reactivity'
 
     interface Props {

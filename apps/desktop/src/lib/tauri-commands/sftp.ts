@@ -5,18 +5,18 @@
 // The whole flow, end to end, plus what every outcome means:
 // `crates/cmdr-sftp/DETAILS.md` § "Connecting from the frontend".
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import type {
   HostKeyPrompt,
   KnownSftpServer,
   SftpHostKeyApprovalResult,
   SftpUnattendedReconnect,
   TrustedHostKey,
-} from '$lib/ipc/bindings'
-import { throwKeychainError } from '$lib/servers/keychain-failure'
+} from '#lib/ipc/bindings.js'
+import { throwKeychainError } from '#lib/servers/keychain-failure.js'
 
 export type { HostKeyPrompt, KnownSftpServer, SftpHostKeyApprovalResult, TrustedHostKey }
-export type { SftpHostKeyIdentity, SftpUnattendedReconnect } from '$lib/ipc/bindings'
+export type { SftpHostKeyIdentity, SftpUnattendedReconnect } from '#lib/ipc/bindings.js'
 
 /**
  * Records a host key the user approved, and only if the server still presents it.

@@ -18,7 +18,7 @@ import {
   type PreviewFilter,
   type PreviewRow,
   type RenameExample,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 export type {
   FieldHistoryEntry,

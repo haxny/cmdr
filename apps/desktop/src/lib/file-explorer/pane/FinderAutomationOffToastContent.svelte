@@ -6,9 +6,9 @@
      * Without this, every later Get info press did nothing at all, since macOS drops
      * the ask without a word (`src-tauri/src/file_system/get_info.rs`).
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { openAutomationSettings } from '$lib/tauri-commands'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { openAutomationSettings } from '#lib/tauri-commands/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 </script>
 
 <div class="content">

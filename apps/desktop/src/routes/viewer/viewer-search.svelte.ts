@@ -7,7 +7,7 @@ import {
   type ViewerSearchMatch,
   type ViewerSearchMode,
   type ViewerSearchStatus,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { segmentLine, type LineSegment, type SegmentMatchInput, type SelectionBoundsInput } from './line-segments'
 import { recenterOffset } from './viewer-search-scroll'
 

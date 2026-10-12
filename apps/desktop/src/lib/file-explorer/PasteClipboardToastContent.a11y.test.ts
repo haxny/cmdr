@@ -7,19 +7,19 @@
 
 import { describe, it, vi, beforeAll, afterAll } from 'vitest'
 import { mount, tick } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import PasteClipboardToastContent from './PasteClipboardToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/ui/toast', () => ({ dismissToast: vi.fn(), addToast: vi.fn() }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/settings', () => ({ getSetting: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: vi.fn(), addToast: vi.fn() }))
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({
   pasteClipboardAsFile: vi.fn(),
   findFileIndex: vi.fn(),
   onDirectoryDiff: vi.fn(),
 }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

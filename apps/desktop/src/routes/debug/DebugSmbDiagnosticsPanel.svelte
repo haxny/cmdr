@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte'
-    import { commands, type SmbDiagnosticsDto, type SmbVolumeRef } from '$lib/ipc/bindings'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { dependOn } from '$lib/utils/reactivity'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatByteSize } from '$lib/units'
+    import { commands, type SmbDiagnosticsDto, type SmbVolumeRef } from '#lib/ipc/bindings.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize } from '#lib/units/index.js'
 
     type Loadable = 'idle' | 'loading' | 'ready' | 'error'
 

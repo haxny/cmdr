@@ -23,9 +23,9 @@ import { createDialogState } from './dialog-state.svelte'
 import type { TransferProgressPropsData } from './dialog-props'
 import type { TransferDialogPropsData } from './transfer-operations'
 import type { FilePaneAPI } from './types'
-import { addToast } from '$lib/ui/toast'
+import { addToast } from '#lib/ui/toast/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -36,9 +36,9 @@ vi.mock('$lib/tauri-commands', () => ({
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 const SOURCE_FOLDER = '/Users/me/photos'
 

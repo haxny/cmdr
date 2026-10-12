@@ -12,7 +12,7 @@ import { mount, tick, unmount } from 'svelte'
 import ViewerRow from './ViewerRow.svelte'
 // The component's own source, for the one assertion the DOM cannot make (see below).
 import rowSource from './ViewerRow.svelte?raw'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { LineSegment } from './line-segments'
 
 beforeEach(() => {

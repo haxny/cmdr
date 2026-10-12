@@ -37,13 +37,13 @@ import {
   type SecretOffer,
   type ServerConnectOutcome,
   type ServerTarget,
-} from '$lib/tauri-commands'
-import { asReconnectError } from '$lib/file-explorer/network/reconnect-error'
-import { forgetShareListsOfMachine } from '$lib/file-explorer/network/network-store.svelte'
-import { isLiveSession } from '$lib/file-explorer/navigation/connection-state'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
-import type { NetworkHost } from '$lib/file-explorer/types'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { asReconnectError } from '#lib/file-explorer/network/reconnect-error.js'
+import { forgetShareListsOfMachine } from '#lib/file-explorer/network/network-store.svelte.js'
+import { isLiveSession } from '#lib/file-explorer/navigation/connection-state.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+import type { NetworkHost } from '#lib/file-explorer/types.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { SignInSeamRequest, SignInSeamResult } from './connect-flow'
 import type { ConnectRefusalKind } from './connect-refusals'
 import { parseServerAddress } from './address-parser'
@@ -59,8 +59,8 @@ import { readConnectOutcome, readSavedServerOutcome } from './server-outcomes'
 import { openSignInSheet } from './sign-in-sheet-state.svelte'
 import { saveTargetSecret } from './saved-server-io'
 import { asAddServerError } from './add-server-error'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 const log = getAppLogger('servers')
 

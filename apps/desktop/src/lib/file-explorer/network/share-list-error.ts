@@ -1,6 +1,6 @@
 /** Carrying a typed `ShareListError` from a share listing to the pane that words it. */
-import type { ShareListError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { ShareListError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries the backend's typed listing refusal. */
 export class ShareListFailure extends TypedFailure<ShareListError> {

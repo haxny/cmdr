@@ -9,13 +9,13 @@
      * which is WHAT it wants to do. The thread link opens the chat it reasoned in, which is
      * WHY — and that half matters, because nobody asked for any of this.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { openSuggestedOps } from '$lib/suggested-ops/suggested-ops-trigger.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { openSuggestedOps } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
     import { openRail, switchToThread } from './ask-cmdr-trigger.svelte'
 
     interface Props {

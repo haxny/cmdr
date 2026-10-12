@@ -9,12 +9,12 @@
      * level icon, so the title carries none.
      */
     import type { Snippet } from 'svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
     interface Props {
         /** Dedup id of this toast; lets the notice get out of its own way. */

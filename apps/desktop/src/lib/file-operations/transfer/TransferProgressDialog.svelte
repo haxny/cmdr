@@ -1,44 +1,44 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
     import { DEFAULT_VOLUME_ID,
-    type Initiator, type ProgressAtStop } from '$lib/tauri-commands'
+    type Initiator, type ProgressAtStop } from '#lib/tauri-commands/index.js'
     import type {
         TransferOperationType,
         WriteOperationError,
         SortColumn,
         SortOrder,
         ConflictResolution,
-    } from '$lib/file-explorer/types'
-    import type { OpKind, SpaceShortfall } from '$lib/ipc/bindings'
-    import type { TransferCompletePayload } from '$lib/file-explorer/pane/dialog-props'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
+    } from '#lib/file-explorer/types.js'
+    import type { OpKind, SpaceShortfall } from '#lib/ipc/bindings.js'
+    import type { TransferCompletePayload } from '#lib/file-explorer/pane/dialog-props.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
     import DirectionIndicator from './DirectionIndicator.svelte'
     import { deriveTransferLabel } from './transfer-dialog-utils'
     import ScanPhaseBody from './ScanPhaseBody.svelte'
     import TransferConflictDialog from './TransferConflictDialog.svelte'
     import { createTransferProgressState } from './transfer-progress-state.svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import KeyHint from '$lib/ui/KeyHint.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import KeyHint from '#lib/ui/KeyHint.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import type { MessageKey } from '$lib/intl/keys.gen'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { stallIncidentFor, stallNoticeFor, waitLineFor } from './transfer-stall'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import { archivePhaseLabel, isIndeterminateProgressPhase, progressCountKind } from '../progress-readout'
     import { rollbackConfirmVariant, reversalTitleKey } from '../reversal-wording'
     import TransferRollbackControls from './TransferRollbackControls.svelte'
     import { createTransferRollback } from './transfer-rollback.svelte'
     import { opKindForTransferType } from '../op-kind'
-    import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-    import { hasOtherQueuedWork } from '$lib/file-operations/queue/queue-backlog'
+    import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+    import { hasOtherQueuedWork } from '#lib/file-operations/queue/queue-backlog.js'
 
     interface Props {
         /** An operation already running that this dialog WATCHES instead of
@@ -647,7 +647,7 @@
 
 <!-- Stacked over the progress dialog, which is the dialog that raised it: same
      subtree, so DOM order puts it on top and the focus trap it mounts takes
-     over until it goes (`$lib/ui/DETAILS.md` § ModalDialog). Withdrawn once the
+     over until it goes (`#lib/ui/DETAILS.md` § ModalDialog). Withdrawn once the
      operation settles, because there is nothing left to undo — and the moment
      Rollback is blocked, since a move that reaches its source-deletion phase with
      the question up would otherwise still be promising a journey home. -->
@@ -698,7 +698,7 @@
     }
 
     /* The one colored mark on the card. A tone colors the SURFACE and text keeps
-       its own color (`$lib/ui/DETAILS.md` § SectionCard), so the icon is where
+       its own color (`#lib/ui/DETAILS.md` § SectionCard), so the icon is where
        the warning reads as a warning. `--color-warning-text`, not
        `--color-warning`: the brand orange clocks ~3.3:1 on this tint. */
     .stall-icon {

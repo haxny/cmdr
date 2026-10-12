@@ -6,14 +6,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { HistoryEntry } from '$lib/ipc/bindings'
+import type { HistoryEntry } from '#lib/ipc/bindings.js'
 
 const { removeRecentSearchMock, getRecentSearchesMock } = vi.hoisted(() => ({
   removeRecentSearchMock: vi.fn(() => Promise.resolve()),
   getRecentSearchesMock: vi.fn(() => Promise.resolve([] as HistoryEntry[])),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   removeRecentSearch: removeRecentSearchMock,
   getRecentSearches: getRecentSearchesMock,
 }))

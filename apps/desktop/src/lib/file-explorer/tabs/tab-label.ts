@@ -1,7 +1,7 @@
-import { getFolderName } from '$lib/file-operations/transfer/transfer-dialog-utils'
-import { getDeviceDisplayPath, isDeviceScheme } from '$lib/adb/adb-path-utils'
+import { getFolderName } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { getDeviceDisplayPath, isDeviceScheme } from '#lib/adb/adb-path-utils.js'
 import { NETWORK_VOLUME_PATH } from '../pane/navigate-refusals'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * Derives the user-facing label for a tab from its path.

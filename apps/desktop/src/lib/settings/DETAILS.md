@@ -9,7 +9,7 @@ and gotchas live in `CLAUDE.md`.
 `settings-applier.ts`: every setting that the backend (or a global JS module) reads must have a matching `case` in the
 `handleSettingChange` switch that calls the right Tauri command or module helper. When adding a new setting that changes
 backend behavior, you MUST add: (a) a Tauri command on the Rust side (see the mirrored rule in
-`src-tauri/src/settings/CLAUDE.md`), (b) a typed wrapper in `$lib/tauri-commands/settings.ts`, and (c) an
+`src-tauri/src/settings/CLAUDE.md`), (b) a typed wrapper in `#lib/tauri-commands/settings.ts`, and (c) an
 `onSettingChange` case in `settings-applier.ts` that invokes it. Restart-required is a bug, not a design choice. If the
 setting looks "structural" (like re-opening a TCP connection, rebinding a port, swapping a thread pool), still
 live-apply. Reconnect, rebind, restart the worker, whatever it takes. **MUST.** No exceptions.
@@ -84,7 +84,7 @@ section titles and summary blurbs, `settings.control.*` for shared row microcopy
 decrease/increase aria-labels), and `settings.<feature>.*` for section-component-specific copy. The downloads FDA hint
 reuses the shared `<Trans>` message `common.downloadsFdaHint` (an inline `<settingsLink>`), so don't duplicate it.
 English apostrophes in catalog values are `’`; a straight one would need doubling (`''`, the ICU rule). Full i18n
-runtime design: [`$lib/intl/DETAILS.md`](../intl/DETAILS.md).
+runtime design: [`#lib/intl/DETAILS.md`](../intl/DETAILS.md).
 
 **Lint scope.** The registry-driven settings core and the section chrome are i18n-migrated and
 `cmdr/no-raw-user-facing-string` is enforced on `lib/settings/`. Four files render copy owned by ADJACENT subsystems
@@ -219,7 +219,7 @@ typography; `applyDensity()` in `settings-applier.ts` multiplies row-height/icon
 `--font-scale` so layout grows with text. After each scale change, `text-size.ts` re-triggers
 `ensureFontMetricsLoaded()` on a 1 s debounce so Rust gets fresh Brief-mode width data for the new font ID — but only in
 a window that passed `initTextSize({ measuresFontMetrics: true })`, which is the main one alone
-(`$lib/font-metrics/CLAUDE.md`).
+(`#lib/font-metrics/CLAUDE.md`).
 
 ### Date display (one source of truth)
 
@@ -238,7 +238,7 @@ Every site that shows a modified date in the UI flows through one entry point:
   renderer leaves them in default text color.
 - **`formattedDate(ts)`** in `reactive-settings.svelte.ts`: reactive wrapper that reads the current setting values. This
   is the canonical entry point for the rest of the app.
-- **`<DateLabel modifiedAt={ts} />`** in `$lib/ui/DateLabel.svelte`: the render-side equivalent. Use it anywhere a
+- **`<DateLabel modifiedAt={ts} />`** in `#lib/ui/DateLabel.svelte`: the render-side equivalent. Use it anywhere a
   modified date appears in the UI and you don't have special layout needs (status bar, dialogs, search results, etc.).
   It walks `segments` and wraps each one with a non-null `ageClass` in `<span class={ageClass}>`.
 - `FullList.svelte` is the one consumer that opts out of `<DateLabel>` because it renders the segments straight into its
@@ -585,7 +585,7 @@ Three consequences fall out of that shape, all accepted deliberately:
 - **It can't use `SettingRow`.** That component's `id` is a `SettingId`, and its reset pip, modified dot, and change
   subscription are all registry reads. An OS-backed row hand-builds the same frame.
 - **It carries its own DOM anchor.** With no `SettingId`, `settingAnchorId` has nothing to derive one from, so the card
-  takes an `id` that lives beside its only deep-linker: `$lib/reveal/reveal-settings-link.ts`. Same shape as the
+  takes an `id` that lives beside its only deep-linker: `#lib/reveal/reveal-settings-link.ts`. Same shape as the
   sub-group anchors (`settings-downloads-notifications`).
 - **It's a `SearchableRow` like any other** (`sections/RevealHandlerCard.rows.ts`, `macOSOnly`), gated on `shouldShow`
   inside the card, since the card owns its frame. Its keywords carry how people look for it ("Finder", "Find in Finder",
@@ -738,7 +738,7 @@ to recover from mistakes.
 
 ### Escape closing the settings window goes through `closeSelfWindow()`
 
-`routes/settings/+page.svelte`'s `handleKeydown` calls `closeSelfWindow()` from `$lib/child-window-close`, which asks
+`routes/settings/+page.svelte`'s `handleKeydown` calls `closeSelfWindow()` from `#lib/child-window-close`, which asks
 the backend to hide this window and destroy it a moment later (`commands/child_window_state.rs`). ❌ Never
 `getCurrentWindow().close()` from a handler. Two separate problems force the wait, and the delay is set by the stricter
 one:

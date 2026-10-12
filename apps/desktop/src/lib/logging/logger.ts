@@ -2,7 +2,7 @@
  * Logging configuration using LogTape.
  *
  * Usage:
- *   import { getAppLogger } from '$lib/logging/logger'
+ *   import { getAppLogger } from '#lib/logging/logger.js'
  *   const log = getAppLogger('myFeature')
  *   log.debug('Loading data for {userId}', { userId })
  *   log.info('Loaded {count} {itemsNoun}', { count, itemsNoun: pluralize(count, 'item') })
@@ -27,9 +27,9 @@
 import { configure, getConsoleSink, getLogger as getLogTapeLogger, withFilter } from '@logtape/logtape'
 import type { Logger, Sink } from '@logtape/logtape'
 // eslint-disable-next-line cmdr/no-raw-bindings-import -- logging/store bootstrap infra: the tauri-commands barrel imports the logger (storage.ts), so wrapping here would create an import cycle
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { load, type Store } from '@tauri-apps/plugin-store'
-import { resolveStorePath } from '$lib/settings/store-path'
+import { resolveStorePath } from '#lib/settings/store-path.js'
 import { getTauriBridgeSink, startBridge } from './log-bridge'
 
 export type { Logger } from '@logtape/logtape'

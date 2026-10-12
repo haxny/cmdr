@@ -19,10 +19,10 @@
      */
     import { onMount } from 'svelte'
     import { open as openAppPicker } from '@tauri-apps/plugin-dialog'
-    import Select from '$lib/ui/Select.svelte'
-    import { getSetting, setSetting, onSpecificSettingChange } from '$lib/settings'
-    import { getAppLogger } from '$lib/logging/logger'
-    import type { TimedOut } from '$lib/ipc/bindings'
+    import Select from '#lib/ui/Select.svelte'
+    import { getSetting, setSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import type { TimedOut } from '#lib/ipc/bindings.js'
     import { CHOOSE_APP_VALUE, type AppChoiceOption } from './app-choice-options'
 
     interface Props {

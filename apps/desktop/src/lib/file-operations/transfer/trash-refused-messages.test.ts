@@ -6,8 +6,8 @@
  * gets "try again" under a folded disclosure, which is the report that started this.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { TrashRefusalKind } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { TrashRefusalKind } from '#lib/ipc/bindings.js'
 
 // `vi.hoisted`, because the mock factories below are hoisted above this file's imports
 // and run while another module is still loading: a plain `const` is still in its TDZ then.
@@ -16,11 +16,11 @@ const { isMacOS, fdaIsMissing } = vi.hoisted(() => ({
   fdaIsMissing: vi.fn<() => boolean>(() => false),
 }))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
-vi.mock('$lib/onboarding/fda-status.svelte', () => ({
+vi.mock('#lib/onboarding/fda-status.svelte.js', () => ({
   fdaIsMissing: () => fdaIsMissing(),
 }))
 

@@ -17,16 +17,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/tauri-commands/index.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import TransferProgressDialogStatic from './TransferProgressDialog.svelte'
 
 let progressCb: ((e: WriteProgressEvent) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1' })),
@@ -80,17 +80,17 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 

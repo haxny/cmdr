@@ -1,19 +1,19 @@
 <script lang="ts">
     import { onDestroy } from 'svelte'
-    import { dependOn } from '$lib/utils/reactivity'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { RemoteConnectState } from './remote-connect-state'
 
     /**
      * The pane, while a remote place is on its way in or has stopped short.
      *
      * Panes are for waiting; dialogs are for entering data
-     * (`$lib/servers/DETAILS.md` § "The four rules", rule 3). This view is the
+     * (`#lib/servers/DETAILS.md` § "The four rules", rule 3). This view is the
      * waiting half, and it holds no state of its own: the caller hands it a
      * typed `state` and the callbacks that go with it.
      *

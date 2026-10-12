@@ -7,7 +7,7 @@
  * the colocated `CLAUDE.md`.
  */
 
-import { compareVersions } from '$lib/utils/version'
+import { compareVersions } from '#lib/utils/version.js'
 
 /** What the startup effect should do with this launch. */
 export type WhatsNewDecision =

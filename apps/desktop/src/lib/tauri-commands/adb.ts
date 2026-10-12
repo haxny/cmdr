@@ -1,10 +1,10 @@
 // Android devices over ADB: the device list and connecting one as a volume.
 // Contract: `docs/specs/android-adb-backend.md` § "App wiring".
 
-import { commands, type AdbConnectOutcomeError, type AdbInstallStatus } from '$lib/ipc/bindings'
-import { TypedFailure } from '$lib/ipc/typed-failure'
+import { commands, type AdbConnectOutcomeError, type AdbInstallStatus } from '#lib/ipc/bindings.js'
+import { TypedFailure } from '#lib/ipc/typed-failure.js'
 
-export type { AdbConnectOutcomeError, AdbInstallStatus } from '$lib/ipc/bindings'
+export type { AdbConnectOutcomeError, AdbInstallStatus } from '#lib/ipc/bindings.js'
 
 /** A connect refusal, still carrying the backend's typed reason. */
 export class AdbConnectFailure extends TypedFailure<AdbConnectOutcomeError> {

@@ -24,10 +24,10 @@
  * effects re-run, and only one of them writes, whatever order they run in).
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { updateSelectSameKindMenu } from '$lib/tauri-commands'
-import { createDebounce } from '$lib/utils/timing'
-import { getAppLogger } from '$lib/logging/logger'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { updateSelectSameKindMenu } from '#lib/tauri-commands/index.js'
+import { createDebounce } from '#lib/utils/timing.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { SameKindTarget } from './select-same-kind'
 
 /**

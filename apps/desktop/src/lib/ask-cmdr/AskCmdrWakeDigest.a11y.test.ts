@@ -9,8 +9,8 @@
 import { describe, expect, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { WakeDigestFolderView, WakeDigestRollupView } from '$lib/tauri-commands'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { WakeDigestFolderView, WakeDigestRollupView } from '#lib/tauri-commands/index.js'
 
 function mountDigest(folders: WakeDigestFolderView[], rollups: WakeDigestRollupView[] = []): HTMLElement {
   const target = document.createElement('div')

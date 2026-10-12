@@ -1,7 +1,7 @@
 # Message catalogs
 
 JSON message catalogs, one file per feature area, under `en/` plus one dir per translated locale. The runtime
-(`$lib/intl/messages.svelte.ts`) merges every `en/*.json` into one map at load. Runtime design and the error-pipeline
+(`#lib/intl/messages.svelte.ts`) merges every `en/*.json` into one map at load. Runtime design and the error-pipeline
 boundary: `../CLAUDE.md`.
 
 ## Layout
@@ -36,7 +36,7 @@ boundary: `../CLAUDE.md`.
   Enforced by `i18n-tag-param-collision` (ERROR): nothing else catches it, since the message is valid ICU and renders
   without throwing.
 - **Embed counts as preformatted `*Text` STRING params, not ICU `{n, number}`** (formatting is single-sourced in
-  `$lib/intl`). Pass the raw integer alongside ONLY to drive `plural` selection. See `transfer.json`.
+  `#lib/intl`). Pass the raw integer alongside ONLY to drive `plural` selection. See `transfer.json`.
 - **`@key` metadata is ARB-style sibling entries** (`@transfer.trash`), holding `description` + a `placeholders` map +
   optional `screenshot`. Codegen and runtime strip every `@` entry, so it never reaches `format()`; keep the twin in
   sync on a rename. **Write the `description` to set a translator up for excellence** (surface + trigger + constraints +

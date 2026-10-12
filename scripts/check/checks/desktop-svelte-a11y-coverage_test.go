@@ -47,9 +47,9 @@ func setupGitRepo(t *testing.T, files map[string]string) string {
 func TestA11yCoverage_Success(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
 		"apps/desktop/src/lib/ui/Button.svelte":             "<button>Click</button>",
-		"apps/desktop/src/lib/ui/Button.a11y.test.ts":       `import { expectNoA11yViolations } from '$lib/test-a11y'`,
+		"apps/desktop/src/lib/ui/Button.a11y.test.ts":       `import { expectNoA11yViolations } from '#lib/test-a11y'`,
 		"apps/desktop/src/lib/ui/Dialog.svelte":             "<dialog>hi</dialog>",
-		"apps/desktop/src/lib/ui/Dialog.a11y.test.ts":       `import { expectNoA11yViolations } from '$lib/test-a11y'`,
+		"apps/desktop/src/lib/ui/Dialog.a11y.test.ts":       `import { expectNoA11yViolations } from '#lib/test-a11y'`,
 		"scripts/check/checks/a11y-coverage-allowlist.json": `{"exempt":{}}`,
 	})
 
@@ -127,7 +127,7 @@ func TestA11yCoverage_DeadAllowlistEntry(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
 		// No component at the allowlisted path (it was deleted/moved).
 		"apps/desktop/src/lib/ui/Other.svelte":              "<div />",
-		"apps/desktop/src/lib/ui/Other.a11y.test.ts":        `import { expectNoA11yViolations } from '$lib/test-a11y'`,
+		"apps/desktop/src/lib/ui/Other.a11y.test.ts":        `import { expectNoA11yViolations } from '#lib/test-a11y'`,
 		"scripts/check/checks/a11y-coverage-allowlist.json": `{"exempt":{"apps/desktop/src/lib/deleted/Gone.svelte":"stale entry"}}`,
 	})
 
@@ -149,7 +149,7 @@ func TestA11yCoverage_RedundantAllowlistEntry(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
 		// Component is exempt, yet a valid a11y test exists → the entry is redundant.
 		"apps/desktop/src/lib/ui/Tested.svelte":             "<div />",
-		"apps/desktop/src/lib/ui/Tested.a11y.test.ts":       `import { expectNoA11yViolations } from '$lib/test-a11y'`,
+		"apps/desktop/src/lib/ui/Tested.a11y.test.ts":       `import { expectNoA11yViolations } from '#lib/test-a11y'`,
 		"scripts/check/checks/a11y-coverage-allowlist.json": `{"exempt":{"apps/desktop/src/lib/ui/Tested.svelte":"can't be tested (no longer true)"}}`,
 	})
 
@@ -170,7 +170,7 @@ func TestA11yCoverage_RedundantAllowlistEntry(t *testing.T) {
 func TestA11yCoverage_IgnoresUntrackedFiles(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
 		"apps/desktop/src/lib/ui/Button.svelte":             "<button>Click</button>",
-		"apps/desktop/src/lib/ui/Button.a11y.test.ts":       `import { expectNoA11yViolations } from '$lib/test-a11y'`,
+		"apps/desktop/src/lib/ui/Button.a11y.test.ts":       `import { expectNoA11yViolations } from '#lib/test-a11y'`,
 		"scripts/check/checks/a11y-coverage-allowlist.json": `{"exempt":{}}`,
 	})
 
@@ -230,7 +230,7 @@ func TestA11yCoverage_MissingAllowlistIsOkWhenNoScope(t *testing.T) {
 // import statement resolving to that exact file, never a name that merely
 // appears in the text.
 
-const a11yHelperImport = `import { expectNoA11yViolations } from '$lib/test-a11y'` + "\n"
+const a11yHelperImport = `import { expectNoA11yViolations } from '#lib/test-a11y'` + "\n"
 
 func TestA11yCoverage_DirectoryFileCoversImportedComponent(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
@@ -346,12 +346,12 @@ func TestA11yCoverage_ImportFromAnotherDirectoryIsNotAMatch(t *testing.T) {
 	}
 }
 
-// A $lib-absolute specifier resolving to this directory counts, same as './'.
+// A #lib-absolute specifier resolving to this directory counts, same as './'.
 func TestA11yCoverage_LibAliasSpecifierCounts(t *testing.T) {
 	tmp := setupGitRepo(t, map[string]string{
 		"apps/desktop/src/lib/settings/Alpha.svelte": "<div />",
 		"apps/desktop/src/lib/settings/all.a11y.test.ts": a11yHelperImport +
-			`import Alpha from '$lib/settings/Alpha.svelte'` + "\n",
+			`import Alpha from '#lib/settings/Alpha.svelte'` + "\n",
 		"scripts/check/checks/a11y-coverage-allowlist.json": `{"exempt":{}}`,
 	})
 
@@ -377,7 +377,7 @@ func TestA11yCoverage_DirectoryFileWithoutHelperImportDoesNotCount(t *testing.T)
 	ctx := &CheckContext{RootDir: tmp}
 	_, err := RunA11yCoverage(ctx)
 	if err == nil {
-		t.Fatal("expected error: the directory test file never imports $lib/test-a11y")
+		t.Fatal("expected error: the directory test file never imports #lib/test-a11y")
 	}
 	if !strings.Contains(err.Error(), "Alpha.svelte") {
 		t.Errorf("expected failure to name Alpha.svelte, got: %s", err.Error())

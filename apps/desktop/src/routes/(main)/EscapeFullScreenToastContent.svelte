@@ -6,13 +6,13 @@
      */
 
     import type { Snippet } from 'svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { useBooleanSetting } from '$lib/settings/components/boolean-setting.svelte'
-    import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { useBooleanSetting } from '#lib/settings/components/boolean-setting.svelte.js'
+    import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
 
     import { ESCAPE_FULL_SCREEN_TOAST_ID } from './escape-full-screen-toast-id'
 

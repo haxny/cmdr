@@ -1,12 +1,12 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick, type Component } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('./text-editor-setting', () => ({
   openSettingsToTextEditor: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
 

@@ -14,13 +14,13 @@
  * add/remove mutators instead of the generic recent-items factory.
  */
 
-import type { RecentPathEntry } from '$lib/ipc/bindings'
+import type { RecentPathEntry } from '#lib/ipc/bindings.js'
 import {
   addRecentPath as addRecentPathCommand,
   getRecentPaths,
   removeRecentPath as removeRecentPathCommand,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('go-to-path')
 

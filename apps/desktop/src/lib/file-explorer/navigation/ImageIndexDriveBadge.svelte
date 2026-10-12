@@ -13,12 +13,12 @@
      * dimensions and pulse mirror the sibling `DriveIndexBadge`. Hides itself entirely on
      * drives with nothing to index, so unrelated drives stay clean.
      */
-    import type { MediaIndexVolumeState } from '$lib/tauri-commands'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getMediaIndexEnabled } from '$lib/settings/reactive-settings.svelte'
-    import { getVolumeEnrichActivity } from '$lib/indexing/media-enrich-state.svelte'
+    import type { MediaIndexVolumeState } from '#lib/tauri-commands/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getMediaIndexEnabled } from '#lib/settings/reactive-settings.svelte.js'
+    import { getVolumeEnrichActivity } from '#lib/indexing/media-enrich-state.svelte.js'
     import { imageIndexDriveState, imageIndexDriveCoverage } from './image-index-drive-state'
 
     interface Props {

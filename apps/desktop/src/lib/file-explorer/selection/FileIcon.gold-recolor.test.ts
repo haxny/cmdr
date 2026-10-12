@@ -14,7 +14,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
 
 // Every id resolves to a data URL so the live `<img>` (not the fallback) renders.
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => '/icons/stub.svg',
@@ -27,7 +27,7 @@ vi.mock('$lib/icon-cache', async () => {
 })
 
 // Force the "Cmdr gold" app color on, so the recolor gate depends solely on iconId.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getIsCmdrGold: () => true,
 }))

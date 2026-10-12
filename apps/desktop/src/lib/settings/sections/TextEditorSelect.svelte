@@ -12,10 +12,10 @@
      *
      * Rationale: `DETAILS.md` § "Edit files in".
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getUiLocale } from '$lib/intl/locale'
-    import { listTextEditors } from '$lib/tauri-commands'
-    import type { TextEditorList } from '$lib/ipc/bindings'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getUiLocale } from '#lib/intl/locale.js'
+    import { listTextEditors } from '#lib/tauri-commands/index.js'
+    import type { TextEditorList } from '#lib/ipc/bindings.js'
     import AppChoiceSelect from './AppChoiceSelect.svelte'
     import type { AppChoiceOption } from './app-choice-options'
     import { selectedTextEditorId, textEditorItems } from './text-editor-options'

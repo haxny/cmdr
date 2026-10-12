@@ -8,10 +8,10 @@
   colored tags, two dots plus a faint `+N` chip.
 -->
 <script lang="ts">
-    import type { TagRef } from '$lib/ipc/bindings'
-    import { formatInteger } from '$lib/intl/number-format'
+    import type { TagRef } from '#lib/ipc/bindings.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { tagDotsModel, tagColorVar } from './tag-dots-utils'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         tags: TagRef[] | undefined

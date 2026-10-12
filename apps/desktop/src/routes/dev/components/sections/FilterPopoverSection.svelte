@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import FilterPopover from '$lib/ui/FilterPopover.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import FilterPopover from '#lib/ui/FilterPopover.svelte'
     import DemoAnchor from '../DemoAnchor.svelte'
 
     let anchorEl: HTMLButtonElement | undefined = $state()

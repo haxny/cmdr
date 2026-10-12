@@ -47,10 +47,10 @@ import {
   type FileIndexState,
   type FolderCoverage,
   type UnlistenFn,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import type { SyncStatus } from '../types'
-import { getMediaIndexEnabled, getMediaIndexShowFileStatusIcons } from '$lib/settings/reactive-settings.svelte'
-import { createCoalesced, createDebounce } from '$lib/utils/timing'
+import { getMediaIndexEnabled, getMediaIndexShowFileStatusIcons } from '#lib/settings/reactive-settings.svelte.js'
+import { createCoalesced, createDebounce } from '#lib/utils/timing.js'
 
 /** How often the idle poll re-reads the sync status of the visible paths. */
 const SYNC_POLL_INTERVAL_MS = 3000

@@ -6,11 +6,11 @@
     // needed. Each state has a stable anchor id so the i18n screenshot-capture
     // driver can target it; the fixed `NOW` keeps every elapsed clock and ETA
     // deterministic across captures.
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import IndexingStatusBody from '$lib/indexing/IndexingStatusBody.svelte'
-    import IndexingDriveSummary from '$lib/indexing/IndexingDriveSummary.svelte'
-    import type { VolumeIndexActivity, AggregationActivity } from '$lib/indexing/index-state.svelte'
-    import type { ActivityPhase, ScanRunKind, StepsAheadMs } from '$lib/ipc/bindings'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import IndexingStatusBody from '#lib/indexing/IndexingStatusBody.svelte'
+    import IndexingDriveSummary from '#lib/indexing/IndexingDriveSummary.svelte'
+    import type { VolumeIndexActivity, AggregationActivity } from '#lib/indexing/index-state.svelte.js'
+    import type { ActivityPhase, ScanRunKind, StepsAheadMs } from '#lib/ipc/bindings.js'
 
     // A fixed "now" so elapsed clocks ("· 5:23") and ETAs render identically every
     // capture. All `scanStartedAt` / `startedAt` fixtures are offsets from this.

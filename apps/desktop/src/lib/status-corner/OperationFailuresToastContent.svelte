@@ -9,10 +9,10 @@
      * it honest while the user clears rows in the queue window.
      */
     import OperationFailureToastBody from './OperationFailureToastBody.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
     interface Props {
         /** Dedup id of this toast; lets the component get out of its own way. */

@@ -15,9 +15,9 @@ import CrashReportToastContent from './CrashReportToastContent.svelte'
 // a callback type with two bare `string`s, and the assertions below check the pair as a whole.
 const sendCrashLogReport = vi.hoisted(() => vi.fn<(...args: [string, string]) => Promise<{ id: string }>>())
 
-vi.mock('$lib/ui/toast', () => ({ dismissToast: vi.fn() }))
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/tauri-commands/error-reporter', () => ({ sendCrashLogReport }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: vi.fn() }))
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/tauri-commands/error-reporter.js', () => ({ sendCrashLogReport }))
 
 const sentReport = {
   version: 1,

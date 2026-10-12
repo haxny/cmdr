@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AskCmdrSendOutcome, AskCmdrStreamEvent } from '$lib/tauri-commands'
+import type { AskCmdrSendOutcome, AskCmdrStreamEvent } from '#lib/tauri-commands/index.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
 const cancelMock = vi.fn<(id: number) => Promise<void>>()
@@ -20,7 +20,7 @@ const preflightRenameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const reviseRenameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const applyRenameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   cancelAskCmdr: (id: number) => cancelMock(id),
   listAskCmdrConversations: (...a: unknown[]) => listMock(...a),
@@ -31,16 +31,16 @@ vi.mock('$lib/tauri-commands', () => ({
   applyBulkRename: (...args: unknown[]) => applyRenameMock(...args),
   reviseBulkRenameRow: (...args: unknown[]) => reviseRenameMock(...args),
 }))
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   saveAppStatus: (s: unknown) => {
     saveMock(s)
   },
 }))
 const logMocks = vi.hoisted(() => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => logMocks,
 }))
-vi.mock('$lib/file-explorer/pane/explorer-state.svelte', () => ({
+vi.mock('#lib/file-explorer/pane/explorer-state.svelte.js', () => ({
   explorerState: { setRailFocused: vi.fn() },
 }))
 vi.mock('./rail-window', () => ({

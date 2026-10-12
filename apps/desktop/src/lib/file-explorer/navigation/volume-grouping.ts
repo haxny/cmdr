@@ -1,5 +1,5 @@
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { VolumeInfo, LocationCategory } from '../types'
 import { hasReconnectLoop, isLiveSession } from './connection-state'
 

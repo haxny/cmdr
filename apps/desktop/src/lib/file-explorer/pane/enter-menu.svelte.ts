@@ -5,13 +5,13 @@
  * and calls `openFor` from its navigate fork.
  *
  * Everything about the menu itself (open state, anchoring, the cursor, the document-capture
- * key routing, focus) belongs to `$lib/ui/menu-controller.svelte.ts`. Pure decision logic stays
+ * key routing, focus) belongs to `#lib/ui/menu-controller.svelte.ts`. Pure decision logic stays
  * in `archive-enter-policy.ts`; section building and anchoring in `enter-menu.ts`.
  */
 
-import type { FileEntry } from '$lib/file-explorer/types'
-import { createMenu, type MenuController } from '$lib/ui/menu-controller.svelte'
-import { openSettingsWindow } from '$lib/settings/settings-window'
+import type { FileEntry } from '#lib/file-explorer/types.js'
+import { createMenu, type MenuController } from '#lib/ui/menu-controller.svelte.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
 import type { EnterAction } from './archive-enter-policy'
 import { buildEnterMenuSections, enterMenuAnchor, enterMenuHighlight } from './enter-menu'
 

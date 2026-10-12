@@ -3,10 +3,10 @@
      * The Servers list's status bar: how many servers, and the refresh hint. The whole bar
      * is the refresh button.
      */
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
 
     interface Props {
         /** Servers, ❌ not rows: a share row is a place under one. */

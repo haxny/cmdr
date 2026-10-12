@@ -8,20 +8,20 @@ import { describe, expect, it, vi } from 'vitest'
 import { fileEntry, mountFullList } from './test-full-list'
 import { mountBriefList } from './test-brief-list'
 
-vi.mock('$lib/tauri-commands', async () =>
+vi.mock('#lib/tauri-commands/index.js', async () =>
   (await import('./test-file-list-mocks')).tauriCommandsMock({
     getBriefColumnTextWidths: () => Promise.resolve({ status: 'ok', data: { widths: [], missingCodePoints: [] } }),
   }),
 )
-vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
-vi.mock('$lib/indexing/index-state.svelte', async () => (await import('./test-file-list-mocks')).indexStateMock())
-vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+vi.mock('#lib/indexing/index-state.svelte.js', async () => (await import('./test-file-list-mocks')).indexStateMock())
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
   (await import('./test-file-list-mocks')).reactiveSettingsMock({
     getBriefColumnWidthMode: () => 'paneWidth',
     getBriefColumnWidthMaxPx: () => 400,
   }),
 )
-vi.mock('$lib/settings/settings-store', async () =>
+vi.mock('#lib/settings/settings-store.js', async () =>
   (await import('./test-file-list-mocks')).settingsStoreMock({
     'advanced.virtualizationBufferColumns': 2,
   }),

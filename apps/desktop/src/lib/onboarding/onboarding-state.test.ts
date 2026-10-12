@@ -7,12 +7,12 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { SettingLock } from '$lib/ipc/bindings'
+import type { SettingLock } from '#lib/ipc/bindings.js'
 
 // Pretend we're on macOS so `previousStep` / `isAtFirstStep` / `openWizard(... null)`
 // resolve to the macOS branches. Linux behaviour is exercised via the explicit `isMac`
 // override on `ResumeContext`, not via the jsdom userAgent.
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, isMacOS: () => true }
 })

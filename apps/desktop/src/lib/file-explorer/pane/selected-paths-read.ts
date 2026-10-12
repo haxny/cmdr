@@ -14,9 +14,9 @@
  * single-entry `getPathToCopyUnderCursor` reads off the cursor row, so archive,
  * S3, SFTP, and phone panes copy the same kind of path for N rows as for one.
  */
-import { asListingLookupError, getSelectionSnapshot } from '$lib/tauri-commands'
-import { resolveSnapshotPaths, snapshotIdFromPanePath } from '$lib/search/snapshot-store.svelte'
-import { toBackendIndices } from '$lib/file-operations/transfer/transfer-dialog-utils'
+import { asListingLookupError, getSelectionSnapshot } from '#lib/tauri-commands/index.js'
+import { resolveSnapshotPaths, snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import { capabilitiesFor } from './volume-capabilities'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'

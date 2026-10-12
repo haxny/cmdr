@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { markExpirationModalShown, openExternalUrl } from '$lib/tauri-commands'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { markExpirationModalShown, openExternalUrl } from '#lib/tauri-commands/index.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         organizationName: string | null

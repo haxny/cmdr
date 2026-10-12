@@ -27,8 +27,8 @@ import {
   setStep1Variant,
   setStepTwoBanner,
 } from './onboarding-state.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { TERMS_VERSION } from '$lib/legal/terms'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { TERMS_VERSION } from '#lib/legal/terms.js'
 
 const stubs = vi.hoisted(() => ({
   settingsMap: Object.create(null) as Record<string, unknown>,
@@ -40,7 +40,7 @@ const stubs = vi.hoisted(() => ({
 // The union of what these five blocks reach for, over the real module: each
 // source file stubbed a different slice, so a bare union would hand a step a
 // missing export it never had.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -76,7 +76,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   betaSignup: vi.fn(() => Promise.resolve({ kind: 'subscribed' as const })),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realGetSetting = actual.getSetting as (id: string) => unknown
   return {
@@ -91,12 +91,12 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings/settings-store', async (importOriginal) => ({
+vi.mock('#lib/settings/settings-store.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   onSpecificSettingChange: () => () => {},
 }))
 
-vi.mock('$lib/settings/ai-config', () => ({
+vi.mock('#lib/settings/ai-config.js', () => ({
   pushConfigToBackend: vi.fn(() => Promise.resolve()),
 }))
 
@@ -106,7 +106,7 @@ vi.mock('@tauri-apps/plugin-process', () => ({
 
 // jsdom isn't macOS, so the safety-net guard would short-circuit the FDA render.
 // Resume-rule platform logic is unit-tested separately.
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realIsMacOS = actual.isMacOS as () => boolean
   return { ...actual, isMacOS: () => (stubs.isMacOS ? stubs.isMacOS() : realIsMacOS()) }
@@ -272,7 +272,7 @@ describe('StepFda a11y', () => {
  * Tier 3 axe a11y tests for `StepAi.svelte`.
  *
  * One test per meaningful state: each FDA banner branch + each radio choice. Axe
- * runs in jsdom (no contrast, no region; see `$lib/test-a11y`).
+ * runs in jsdom (no contrast, no region; see `#lib/test-a11y`).
  */
 describe('StepAi a11y', () => {
   beforeEach(() => {

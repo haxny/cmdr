@@ -5,20 +5,20 @@
     // lives in its tooltip, and the whole queue is one click away.
     //
     // Which operation, and every rule about when to stay quiet: `operation-chip.ts`.
-    import Icon from '$lib/ui/Icon.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatDuration } from '$lib/units'
-    import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
-    import { getForegroundFailureId, getForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
-    import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
-    import { bindOperationSession } from '$lib/file-operations/operation-session/bind-operation-session.svelte'
-    import { rollbackConfirmVariant, reversalLabelKey } from '$lib/file-operations/reversal-wording'
+    import Icon from '#lib/ui/Icon.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatDuration } from '#lib/units/index.js'
+    import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
+    import { getForegroundFailureId, getForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
+    import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
+    import { bindOperationSession } from '#lib/file-operations/operation-session/bind-operation-session.svelte.js'
+    import { rollbackConfirmVariant, reversalLabelKey } from '#lib/file-operations/reversal-wording.js'
     import { CHIP_SETTLE_MS, destinationName, pickChipState } from './operation-chip'
-    import { archivePhaseLabel } from '$lib/file-operations/progress-readout'
+    import { archivePhaseLabel } from '#lib/file-operations/progress-readout.js'
 
     const chipState = $derived(
         pickChipState(getMainWindowOperationRows(), getForegroundOperationId(), getForegroundFailureId()),

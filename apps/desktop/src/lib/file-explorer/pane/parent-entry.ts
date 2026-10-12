@@ -9,7 +9,7 @@
  */
 
 import type { FileEntry } from '../types'
-import { parentOf, type CanonicalPath } from '$lib/path/canonical'
+import { parentOf, type CanonicalPath } from '#lib/path/canonical.js'
 
 /** Returns `null` at the filesystem root, where there's nothing above to show. */
 export function createParentEntry(path: CanonicalPath): FileEntry | null {

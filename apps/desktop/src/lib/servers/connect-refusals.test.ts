@@ -8,7 +8,7 @@
  * one is the exact case the outcome enum was split to prevent.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { refusalField, wordConnectRefusal, wordPaneRefusal } from './connect-refusals'
 import type { ConnectRefusalKind } from './connect-refusals'
 

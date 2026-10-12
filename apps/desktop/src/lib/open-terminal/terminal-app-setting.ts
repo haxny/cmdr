@@ -4,13 +4,13 @@
  *
  * Both are ordinary registry entries; this module exists so the action, its two
  * toasts, and the tests all name them once. The deep link mirrors the downloads
- * and low-disk-space toasts (`$lib/downloads/notifications-mode.ts`).
+ * and low-disk-space toasts (`#lib/downloads/notifications-mode.ts`).
  */
 
-import { getSetting, setSetting } from '$lib/settings'
-import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
-import { TERMINAL_APP_BUNDLE_ID } from '$lib/settings/sections/terminal-app-options'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
+import { TERMINAL_APP_BUNDLE_ID } from '#lib/settings/sections/terminal-app-options.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

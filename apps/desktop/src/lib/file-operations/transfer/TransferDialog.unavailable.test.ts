@@ -13,8 +13,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import TransferDialog from './TransferDialog.svelte'
-import * as commands from '$lib/tauri-commands'
-import type { TransferConfirmPayload } from '$lib/file-explorer/pane/dialog-props'
+import * as commands from '#lib/tauri-commands/index.js'
+import type { TransferConfirmPayload } from '#lib/file-explorer/pane/dialog-props.js'
 
 const startScanPreviewMock = vi.mocked(commands.startScanPreview)
 
@@ -27,7 +27,7 @@ vi.mock('@tauri-apps/api/path', () => ({
   homeDir: () => Promise.resolve('/Users/test'),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -54,7 +54,7 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
   setSetting: vi.fn(),
   getDefaultValue: vi.fn(() => 6),
@@ -62,7 +62,7 @@ vi.mock('$lib/settings', () => ({
   getSettingDefinition: vi.fn(() => ({ label: '', constraints: {} })),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [
     { id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false },
     { id: 'nas', name: 'NAS share', path: '/Volumes/nas', category: 'attached_volume', isEjectable: false },

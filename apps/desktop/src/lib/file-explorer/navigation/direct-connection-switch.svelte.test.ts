@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { DirectConnectionSwitch } from '$lib/ipc/bindings'
+import type { DirectConnectionSwitch } from '#lib/ipc/bindings.js'
 
 const getSmbDirectConnectionEnabled = vi.fn<(volumeId: string) => Promise<boolean | null>>()
 const setSmbDirectConnectionEnabled = vi.fn<(volumeId: string, enabled: boolean) => Promise<DirectConnectionSwitch>>()
@@ -13,7 +13,7 @@ const connectDirectly = vi.fn((_args: { volumeId: string; shareName: string }) =
   Promise.resolve({ kind: 'connected' }),
 )
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getSmbDirectConnectionEnabled: (volumeId: string) => getSmbDirectConnectionEnabled(volumeId),
   setSmbDirectConnectionEnabled: (volumeId: string, enabled: boolean) =>
     setSmbDirectConnectionEnabled(volumeId, enabled),

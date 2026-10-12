@@ -6,7 +6,7 @@
  * (`list_terminal_apps`); everything here is presentation of that answer.
  */
 
-import type { TerminalApp, TerminalAppList } from '$lib/ipc/bindings'
+import type { TerminalApp, TerminalAppList } from '#lib/ipc/bindings.js'
 import { CHOOSE_APP_VALUE, type AppChoiceOption } from './app-choice-options'
 
 export { CHOOSE_APP_VALUE }

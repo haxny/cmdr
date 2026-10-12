@@ -7,8 +7,8 @@
 <script lang="ts">
     import type { PageProps } from './$types'
     import { enhance } from '$app/forms'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import { exampleLink, isValidCode, type LinkCodeRow } from '$lib/link-codes.js'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import { exampleLink, isValidCode, type LinkCodeRow } from '#lib/link-codes.js'
 
     const { data, form }: PageProps = $props()
 

@@ -8,8 +8,8 @@
  * diagnostic `message` leaking into what a person reads.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { ShareListError } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { ShareListError } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { renderShareListError } from './share-list-error-messages'
 
 beforeAll(() => {

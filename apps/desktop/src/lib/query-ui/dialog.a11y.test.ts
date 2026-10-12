@@ -3,9 +3,9 @@
  *
  * `svelte-tests` charges per test FILE, not per test (`docs/testing.md` § "What a
  * test actually costs"), so the two share a file. Their stubs reconcile without a
- * mutable value: `$lib/icon-cache` was already the same shape in both, and
- * `QueryDialog` renders `QueryResults` under the very `$lib/tauri-commands` and
- * `$lib/settings` stubs below, so the results block sees what it always did.
+ * mutable value: `#lib/icon-cache` was already the same shape in both, and
+ * `QueryDialog` renders `QueryResults` under the very `#lib/tauri-commands` and
+ * `#lib/settings` stubs below, so the results block sees what it always did.
  *
  * The mock-free query-ui components live in `presentational.a11y.test.ts`: these
  * three stubs would apply file-wide, and those components use all three for real.
@@ -19,15 +19,15 @@ import SearchResults from './QueryResults.svelte'
 import { createQueryFilterState, type QueryFilterState } from './query-filter-state.svelte'
 import { createRecentItemsState } from './recent-items/recent-items-state.svelte'
 import type { QueryDialogConfig } from './query-dialog-config'
-import type { HistoryEntry, SearchResultEntry } from '$lib/tauri-commands'
-import { axe, expectNoA11yViolations } from '$lib/test-a11y'
+import type { HistoryEntry, SearchResultEntry } from '#lib/tauri-commands/index.js'
+import { axe, expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'search.autoApply') return true
     return undefined
@@ -35,7 +35,7 @@ vi.mock('$lib/settings', () => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,

@@ -38,7 +38,7 @@ func ipcFixture() map[string]string {
 			[2]string{"getToken", "get_token"},
 			[2]string{"orphan", "orphan"},
 		),
-		"apps/desktop/src/lib/tauri-commands/files.ts": `import { commands } from '$lib/ipc/bindings'
+		"apps/desktop/src/lib/tauri-commands/files.ts": `import { commands } from '#lib/ipc/bindings'
 
 /** Lists files. */
 export async function listFiles(path: string) {
@@ -57,27 +57,27 @@ export const getStats = async (path: string) => commands.getStats(path)
 		"apps/desktop/src/lib/tauri-commands/index.ts": `export { listFiles, deleteThing, getStats } from './files'
 `,
 		"apps/desktop/src/routes/Page.svelte": `<script lang="ts">
-  import { listFiles } from '$lib/tauri-commands'
+  import { listFiles } from '#lib/tauri-commands'
   // deleteThing is mentioned in a comment, which doesn't count
   void listFiles('/')
 </script>
 `,
 		"apps/desktop/src/lib/stats.ts": `export async function load() {
-  const { getStats } = await import('$lib/tauri-commands')
+  const { getStats } = await import('#lib/tauri-commands')
   return getStats('/')
 }
 `,
-		"apps/desktop/src/lib/direct.ts": `import { commands } from '$lib/ipc/bindings'
+		"apps/desktop/src/lib/direct.ts": `import { commands } from '#lib/ipc/bindings'
 export const run = () => commands.directUse('/')
 `,
 		"apps/desktop/src/lib/crumbs.ts": `import { invoke } from '@tauri-apps/api/core'
 export const crumb = () => invoke<void>('record_crumb', { event: 'x' })
 `,
-		"apps/desktop/src/lib/files.test.ts": `import { deleteThing } from '$lib/tauri-commands'
-vi.mock('$lib/tauri-commands', () => ({ deleteThing: vi.fn() }))
+		"apps/desktop/src/lib/files.test.ts": `import { deleteThing } from '#lib/tauri-commands'
+vi.mock('#lib/tauri-commands', () => ({ deleteThing: vi.fn() }))
 await invoke('orphan')
 `,
-		"apps/desktop/src/lib/test-harness.ts": `import { deleteThing } from '$lib/tauri-commands'
+		"apps/desktop/src/lib/test-harness.ts": `import { deleteThing } from '#lib/tauri-commands'
 export const h = () => deleteThing('/')
 `,
 		"apps/desktop/test/e2e-shared/client.ts":                 "export const tok = (p) => p.evaluate(`window.__TAURI_INTERNALS__.invoke('get_token')`)\n",
@@ -112,11 +112,11 @@ func TestIpcUnused_ReportsDeadWrapperAndTheCommandsBehindIt(t *testing.T) {
 func TestIpcUnused_PassesWhenEverythingHasACaller(t *testing.T) {
 	files := ipcFixture()
 	files["apps/desktop/src/lib/more.svelte"] = `<script lang="ts">
-  import { commands } from '$lib/ipc/bindings'
+  import { commands } from '#lib/ipc/bindings'
   import {
     type Foo,
     deleteThing as removeIt,
-  } from '$lib/tauri-commands'
+  } from '#lib/tauri-commands'
   void removeIt
   void commands.orphan('/')
 </script>

@@ -8,10 +8,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AiTranslateErrorKind } from '$lib/ipc/bindings'
+import type { AiTranslateErrorKind } from '#lib/ipc/bindings.js'
 
 const addToastMock = vi.fn()
-vi.mock('$lib/ui/toast/toast-store.svelte', () => ({
+vi.mock('#lib/ui/toast/toast-store.svelte.js', () => ({
   addToast: (...args: unknown[]): string => {
     addToastMock(...args)
     return 'toast-id'

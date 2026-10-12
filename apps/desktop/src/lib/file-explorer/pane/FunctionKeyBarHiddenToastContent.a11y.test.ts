@@ -10,10 +10,10 @@ import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 
 import FunctionKeyBarHiddenToastContent from './FunctionKeyBarHiddenToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: vi.fn(() => Promise.resolve()),
   settingAnchorId: vi.fn((id: string) => `setting-${id}`),
 }))

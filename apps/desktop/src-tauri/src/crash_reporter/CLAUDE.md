@@ -17,7 +17,7 @@ Both paths write `crash-report.json` in the app data dir: the hook with full std
 
 - **On by default.** `updates.crashReports` is `true`. ❌ Never extend that default
   to `updates.errorReports` (an unbounded log bundle) or `updates.attachEmailToReports` (an identity).
-  `$lib/crash-reporter/DETAILS.md` § The three report consents.
+  `#lib/crash-reporter/DETAILS.md` § The three report consents.
 - **The pending file is authoritative at send.** Send takes only the preview's `short_id` plus optional email, reloads
   the file, checks the id, and reapplies `prepare_for_delivery` (typed-field validation, report-scoped redaction and
   caps on every string, panic message and thread name included).

@@ -5,10 +5,10 @@
      * this toast points back to the row that turns the bar on again.
      */
     import type { Snippet } from 'svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { openSettingsWindow, settingAnchorId } from '$lib/settings/settings-window'
-    import { getAppLogger } from '$lib/logging/logger'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { openSettingsWindow, settingAnchorId } from '#lib/settings/settings-window.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
 
     const log = getAppLogger('fileExplorer')
 

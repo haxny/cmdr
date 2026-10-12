@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 const { warnByCategory } = vi.hoisted(() => ({ warnByCategory: new Map<string, ReturnType<typeof vi.fn>>() }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: (feature: string) => {
     const warn = vi.fn()
     warnByCategory.set(feature, warn)

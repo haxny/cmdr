@@ -29,7 +29,7 @@ const hoisted = vi.hoisted(() => {
   return { state, ai }
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const getSetting = actual.getSetting as (id: string) => unknown
   return {
@@ -37,12 +37,12 @@ vi.mock('$lib/settings', async (importOriginal) => {
     getSetting: (id: string): unknown => (id === 'ai.provider' ? hoisted.ai.provider : getSetting(id)),
   }
 })
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   refreshCloudConsent: vi.fn(() => Promise.resolve()),
   cloudAiBlocked: (provider: string) => provider === 'cloud' && hoisted.ai.cloudBlocked,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   createDirectory: vi.fn(() => Promise.resolve()),
@@ -180,7 +180,7 @@ describe('NewFolderDialog streaming', () => {
 
 describe('NewFolderDialog without cloud AI consent', () => {
   it('sends nothing and shows no suggestions on Cloud until the user allows cloud AI', async () => {
-    const { streamFolderSuggestions } = await import('$lib/tauri-commands')
+    const { streamFolderSuggestions } = await import('#lib/tauri-commands/index.js')
     vi.mocked(streamFolderSuggestions).mockClear()
     hoisted.ai.provider = 'cloud'
     hoisted.ai.cloudBlocked = true

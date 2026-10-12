@@ -13,14 +13,19 @@
  * anchor. Which rows the menu acts on is a rule nobody should own twice.
  */
 
-import { getPathsAtIndices, showFileContextMenu, showParentRowContextMenu, type MenuAnchor } from '$lib/tauri-commands'
+import {
+  getPathsAtIndices,
+  showFileContextMenu,
+  showParentRowContextMenu,
+  type MenuAnchor,
+} from '#lib/tauri-commands/index.js'
 import { contextMenuCountText, contextMenuSizeBytes, contextMenuSizeText } from '../selection/context-menu-target'
-import { boundShortcuts } from '$lib/shortcuts'
+import { boundShortcuts } from '#lib/shortcuts/index.js'
 import type { FileEntry, SelectPayload } from '../types'
-import { getSetting, setSetting } from '$lib/settings'
-import { addToast } from '$lib/ui/toast'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import { capabilitiesFor, paneFolderCanBeFavorited, rowCanShareLink, rowIsOsVisible } from './volume-capabilities'
-import { canOpenTerminalIn } from '$lib/open-terminal/terminal-target'
+import { canOpenTerminalIn } from '#lib/open-terminal/terminal-target.js'
 import { isFileListBackgroundClick } from './pane-background-dblclick'
 import { sameKindTargetFor } from './select-same-kind'
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'

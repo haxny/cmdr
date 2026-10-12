@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount, onDestroy, tick, untrack } from 'svelte'
     import { relaunch } from '@tauri-apps/plugin-process'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { getAiRuntimeStatus, notifyDialogOpened, notifyDialogClosed } from '$lib/tauri-commands'
-    import { getSettingLock } from '$lib/managed-policy/managed-policy.svelte'
-    import { markDialogOpen, markDialogClosed } from '$lib/ui/open-dialogs.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { trapFocus } from '$lib/ui/focus-trap'
-    import { providePortalTarget } from '$lib/ui/portal-target'
-    import { tooltip, showTooltipNow, hideTooltipFor } from '$lib/tooltip/tooltip'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { getAiRuntimeStatus, notifyDialogOpened, notifyDialogClosed } from '#lib/tauri-commands/index.js'
+    import { getSettingLock } from '#lib/managed-policy/managed-policy.svelte.js'
+    import { markDialogOpen, markDialogClosed } from '#lib/ui/open-dialogs.svelte.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { providePortalTarget } from '#lib/ui/portal-target.js'
+    import { tooltip, showTooltipNow, hideTooltipFor } from '#lib/tooltip/tooltip.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import {
         getOnboardingState,
         ONBOARDING_STEP_COUNT,

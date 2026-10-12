@@ -7,8 +7,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { RevealHandlerState, RevealHandlerStatus } from '$lib/ipc/bindings'
-import { emptyNudgeLedger } from '$lib/nudges/nudge-ledger'
+import type { RevealHandlerState, RevealHandlerStatus } from '#lib/ipc/bindings.js'
+import { emptyNudgeLedger } from '#lib/nudges/nudge-ledger.js'
 import { REVEAL_NUDGE_AFTER_DAYS, shouldShowRevealNudge, type RevealNudgeInputs } from './should-show-reveal-nudge'
 
 const NOW = new Date('2026-09-09T12:00:00Z')
@@ -129,7 +129,7 @@ describe('the two thresholds together', () => {
    * daily user's second launch day, only the reveal offer is eligible.
    */
   it('reaches the reveal offer a launch day before the Dock offer could fire', async () => {
-    const { DOCK_NUDGE_AFTER_DAYS } = await import('$lib/dock/should-show-dock-nudge')
+    const { DOCK_NUDGE_AFTER_DAYS } = await import('#lib/dock/should-show-dock-nudge.js')
     expect(REVEAL_NUDGE_AFTER_DAYS).toBeLessThan(DOCK_NUDGE_AFTER_DAYS)
   })
 })

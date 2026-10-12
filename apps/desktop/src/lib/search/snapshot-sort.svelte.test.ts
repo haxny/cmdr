@@ -9,15 +9,15 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 
 const { sortSearchResultsSpy, directorySortModeSpy } = vi.hoisted(() => ({
   sortSearchResultsSpy: vi.fn<() => Promise<number[]>>(),
   directorySortModeSpy: vi.fn<() => string>(() => 'likeFiles'),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ sortSearchResults: sortSearchResultsSpy }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({ getDirectorySortMode: directorySortModeSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ sortSearchResults: sortSearchResultsSpy }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({ getDirectorySortMode: directorySortModeSpy }))
 
 import {
   _resetForTesting,

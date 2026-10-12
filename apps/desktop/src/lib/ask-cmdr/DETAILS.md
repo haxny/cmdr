@@ -590,7 +590,7 @@ fake path — which never sets a real provider — needs the gate to treat the f
   `loading` (the rail renders nothing, so nothing flashes); Cloud without consent → `cloudOff` (an "Open AI settings"
   button to the Allow cloud AI switch, `openCloudConsentSettings('ask-cmdr-cloud-gate')`); otherwise `chat`. Local and
   "off" need no consent (nothing leaves the Mac; the composer says when no provider is set up). The rail reads both
-  settings reactively and `cloudConsentState` from `$lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` § Cloud AI
+  settings reactively and `cloudConsentState` from `#lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` § Cloud AI
   consent owns consent itself).
   - `openRail` awaits `refreshRailGate()` and bootstraps history only when the gate reads `chat`; when a gate opens
     later with the rail up, the rail calls `ensureThreadLoaded()` on the transition.

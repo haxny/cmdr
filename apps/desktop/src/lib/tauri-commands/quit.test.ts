@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { QuitRequested } from '$lib/ipc/bindings'
+import type { QuitRequested } from '#lib/ipc/bindings.js'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     quitConfirm: vi.fn(),
     quitCancel: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands, events } from '$lib/ipc/bindings'
+import { commands, events } from '#lib/ipc/bindings.js'
 import { quitConfirm, quitCancel, onQuitRequested, onQuitCalledOff } from './quit'
 
 beforeEach(() => {

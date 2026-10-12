@@ -25,14 +25,14 @@ const ipc = vi.hoisted(() => ({
   rollbackOperation: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   ...ipc,
 }))
 
 const editor = vi.hoisted(() => ({ openFileInEditor: vi.fn() }))
-vi.mock('$lib/text-editor/open-file-in-editor', () => editor)
+vi.mock('#lib/text-editor/open-file-in-editor.js', () => editor)
 
 function row(oldName: string, newName: string, edited = false) {
   return { row: 0, oldName, newName, status: { type: 'ready' }, iconId: null, isDirectory: false, edited }

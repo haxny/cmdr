@@ -7,8 +7,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type {
   ArchiveSubkind,
   ExecutionStatus,
@@ -18,7 +18,7 @@ import type {
   OpKind,
   RollbackRefusal,
   RollbackState,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import {
   operationSummary,
   initiatorLabel,

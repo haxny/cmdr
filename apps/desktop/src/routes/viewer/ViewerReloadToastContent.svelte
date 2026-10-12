@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { viewerReload } from '$lib/tauri-commands'
-    import { dismissToast } from '$lib/ui/toast/toast-store.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { viewerReload } from '#lib/tauri-commands/index.js'
+    import { dismissToast } from '#lib/ui/toast/toast-store.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

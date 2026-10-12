@@ -23,17 +23,17 @@ const { getSettingMock, setSettingMock, openSettingsWindowMock, setLowDiskSpaceC
   setLowDiskSpaceConfigMock: vi.fn<(enabled: boolean, thresholdPercent: number) => Promise<void>>(),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: (surface: string, section?: string[], anchor?: string) =>
     openSettingsWindowMock({ surface, section, anchor }),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   setLowDiskSpaceConfig: setLowDiskSpaceConfigMock,
 }))
 

@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
-    import { commands, type IndexDebugStatusResponse } from '$lib/ipc/bindings'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatByteSize, formatMilliseconds } from '$lib/units'
+    import { commands, type IndexDebugStatusResponse } from '#lib/ipc/bindings.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize, formatMilliseconds } from '#lib/units/index.js'
 
     let debugStatus = $state<IndexDebugStatusResponse | null>(null)
     let indexMessage = $state('')

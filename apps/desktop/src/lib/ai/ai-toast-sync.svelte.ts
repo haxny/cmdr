@@ -1,7 +1,7 @@
 import AiToastContent from './AiToastContent.svelte'
 import { getAiState, markDownloadToastDismissed } from './ai-state.svelte'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export function initAiToastSync(): void {
   $effect(() => {

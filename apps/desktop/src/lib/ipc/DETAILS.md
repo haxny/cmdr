@@ -28,14 +28,14 @@ fails on drift with a "Run `pnpm bindings:regen`" hint. CI never modifies the wo
 ## Usage
 
 ```typescript
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings'
 
 const hasMetrics = await commands.hasFontMetrics(fontId)
 ```
 
 For commands that return `Result<T, E>` on the Rust side, the TS wrapper returns
 `{ status: 'ok', data: T } | { status: 'error', error: E }`. Most call sites unwrap via `throwIpcError` from
-`$lib/tauri-commands/ipc-types`.
+`#lib/tauri-commands/ipc-types`.
 
 Every Ask Cmdr command follows this generated-binding path, streaming included: a turn's progress is a typed event keyed
 by conversation (`AskCmdrTurn`), not a reply channel, so nothing about the rail is hand-mirrored.
@@ -149,10 +149,10 @@ and the diff proves it.
 
 Converting a consumer to an `on*` wrapper routes through `events.<name>.listen`, so the mocks must follow:
 
-- A test mocking `$lib/ipc/bindings` (only `commands`) throws `No "events" export`; add a minimal
+- A test mocking `#lib/ipc/bindings` (only `commands`) throws `No "events" export`; add a minimal
   `events: { <name>: { listen } }` routing into the existing `@tauri-apps/api/event` `listen` mock under the wire name.
   Make the re-wrap null-safe (`event?.payload`) so it serves both payload and unit-struct (null-payload) events.
-- A test mocking the whole `$lib/tauri-commands` barrel must export every new `on*` wrapper the mounted component tree
+- A test mocking the whole `#lib/tauri-commands` barrel must export every new `on*` wrapper the mounted component tree
   reaches, or vitest throws `No "onX" export` as an unhandled rejection that fails the gate even though assertions pass.
 - A new thin `tauri-commands/*.ts` listener file (pure `events.x.listen` plumbing) gets a `coverage-allowlist.json`
   entry with the "thin typed-event listener wrapper, exercised via integration" reason.
@@ -205,7 +205,7 @@ problem to the helper instead of solving it. Just rename the locals at the call 
    `R: Runtime`, streaming over a `Channel<T>`, or carrying a `serde_json::Value`) goes in the group's `dispatch_only:`
    list instead, with a comment saying which, and stays on raw invoke on the frontend.
 4. `pnpm bindings:regen`. Commit `bindings.ts` alongside the Rust change.
-5. Use it on the FE: `import { commands } from '$lib/ipc/bindings'; await commands.doThing(volumeId, force)`. If it
+5. Use it on the FE: `import { commands } from '#lib/ipc/bindings'; await commands.doThing(volumeId, force)`. If it
    returns `Result`, unwrap it: throw a `TypedFailure` subclass (`typed-failure.ts`) when the refusal reaches a person,
    `throwIpcError` when it only ever reaches a log.
 
@@ -251,7 +251,7 @@ These commands stay on raw `invoke()` for now. Each call site has:
 The table names the representative cases; the complete list is `ipc_command_manifest!` in `src-tauri/src/ipc.rs`. Many
 more commands are generic over `<R: Runtime>` like `store_font_metrics` (the menu-sync commands, `configure_ai`,
 `start_ai_server`, `start_ai_download`, …). A generic command that rejects with a typed error still crosses as
-`unknown`, so its caller restores the type (`$lib/ai/local-ai-error.ts` for the two local-AI ones).
+`unknown`, so its caller restores the type (`#lib/ai/local-ai-error.ts` for the two local-AI ones).
 
 When specta gets a fix that closes one of these, drop the opt-out comment, add the command to `collect_*_types()`,
 regenerate, migrate the call site to `commands.foo(...)`.

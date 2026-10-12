@@ -14,10 +14,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { resolveGlobalKeyAction, unclaimedDispatchWarning } from './global-keydown'
-import { claimKey } from '$lib/shortcuts/claim-key'
-import { commands } from '$lib/commands/command-registry'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
+import { commands } from '#lib/commands/command-registry.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
-import { initShortcutDispatch, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
+import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
 
 // The resolver speaks the macOS combo vocabulary (⌘V, not Ctrl+V), and this is a
 // macOS-only bug; `isMacOS()` reads the user agent.

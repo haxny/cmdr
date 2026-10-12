@@ -8,7 +8,7 @@
  * the entry for the active step and adds the one estimate the row already shows.
  * ❌ Don't fill a `null` in from anything else: no figure beats a made-up one.
  */
-import type { StepsAheadMs } from '$lib/ipc/bindings'
+import type { StepsAheadMs } from '#lib/ipc/bindings.js'
 import type { IndexStepKind } from './indexing-steps'
 
 /** What the overall line shows: nothing, a placeholder, or a figure in seconds. */

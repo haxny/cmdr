@@ -11,7 +11,7 @@
     import type { LayoutProps } from './$types'
     import { page } from '$app/state'
     import { resolve } from '$app/paths'
-    import { formatTime } from '$lib/format.js'
+    import { formatTime } from '#lib/format.js'
 
     const { children, data }: LayoutProps = $props()
 

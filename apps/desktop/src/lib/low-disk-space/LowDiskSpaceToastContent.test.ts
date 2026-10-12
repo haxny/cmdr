@@ -4,7 +4,7 @@ import { mount, tick, type ComponentProps } from 'svelte'
 // Hoisted mocks: the component delegates to the settings writer + deep-link
 // helper and the toast dismisser. We assert the exact wire calls without
 // rendering the rest of the app.
-import type { VolumeSpaceChanged } from '$lib/ipc/bindings'
+import type { VolumeSpaceChanged } from '#lib/ipc/bindings.js'
 
 type VolumeSpaceListener = (payload: VolumeSpaceChanged) => void
 
@@ -25,15 +25,15 @@ vi.mock('./notifications-mode', () => ({
   openSettingsToLowDiskSpace: openSettingsToLowDiskSpaceMock,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: dismissToastMock,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onVolumeSpaceChanged: onVolumeSpaceChangedMock,
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
 }))
 

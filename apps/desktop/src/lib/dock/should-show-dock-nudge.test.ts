@@ -4,12 +4,12 @@
  * The once-ever stamp makes every row here a one-shot: a decision that fires on
  * the wrong launch can't be taken back, and one that never fires is a feature
  * nobody is offered. The gates this shares with the reveal offer are covered in
- * `$lib/nudges/nudge-ledger.test.ts`; these rows are the Dock's own.
+ * `#lib/nudges/nudge-ledger.test.ts`; these rows are the Dock's own.
  */
 
 import { describe, it, expect } from 'vitest'
-import type { DockPinState } from '$lib/ipc/bindings'
-import { emptyNudgeLedger } from '$lib/nudges/nudge-ledger'
+import type { DockPinState } from '#lib/ipc/bindings.js'
+import { emptyNudgeLedger } from '#lib/nudges/nudge-ledger.js'
 import { shouldShowDockNudge, DOCK_NUDGE_AFTER_DAYS, type DockNudgeInputs } from './should-show-dock-nudge'
 
 const NOW = new Date('2026-09-09T12:00:00Z')

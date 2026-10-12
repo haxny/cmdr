@@ -3,10 +3,10 @@
  * resolves through the i18n catalog (`fileOperations.transferDialog.*`).
  */
 
-import type { TransferOperationType } from '$lib/file-explorer/types'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
-import { isPathOnVolume, isPlainFilesystemPath, parentOf, toCanonical } from '$lib/path/canonical'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { isPathOnVolume, isPlainFilesystemPath, parentOf, toCanonical } from '#lib/path/canonical.js'
 import { suggestCompressArchiveName } from './transfer-compress-name'
 
 /**

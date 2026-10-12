@@ -21,39 +21,39 @@
      * mutate the focused pane's selection while the user is previewing — apply happens
      * only on commit, matching Total Commander's "+" / "-" behaviour.
      */
-    import { cloudConsentState, refreshCloudConsent } from '$lib/ai/cloud-consent.svelte'
+    import { cloudConsentState, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
     import { onMount, onDestroy } from 'svelte'
     import { SvelteSet } from 'svelte/reactivity'
-    import type { FileEntry } from '$lib/file-explorer/types'
-    import type { SearchResultEntry, SelectionHistoryEntry } from '$lib/tauri-commands'
+    import type { FileEntry } from '#lib/file-explorer/types.js'
+    import type { SearchResultEntry, SelectionHistoryEntry } from '#lib/tauri-commands/index.js'
     import {
         translateSelectionQuery,
         addRecentSelection as addRecentSelectionIpc,
         removeRecentSelection as removeRecentSelectionIpc,
         getRecentSelections as fetchRecentSelections,
         trackEvent,
-    } from '$lib/tauri-commands'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import QueryDialog from '$lib/query-ui/QueryDialog.svelte'
-    import { getBadgeStatus } from '$lib/feature-status'
+    } from '#lib/tauri-commands/index.js'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import QueryDialog from '#lib/query-ui/QueryDialog.svelte'
+    import { getBadgeStatus } from '#lib/feature-status.js'
     import type {
         QueryDialogConfig,
         QueryDialogFilterChipsExtras,
         AiTranslateResult,
-    } from '$lib/query-ui/query-dialog-config'
-    import { applySizeFromAi, applyDateFromAi, applyTypeFromAi } from '$lib/query-ui/apply-ai-filters'
-    import { typeFilterToIsDirectory } from '$lib/query-ui/query-filter-state.svelte'
+    } from '#lib/query-ui/query-dialog-config.js'
+    import { applySizeFromAi, applyDateFromAi, applyTypeFromAi } from '#lib/query-ui/apply-ai-filters.js'
+    import { typeFilterToIsDirectory } from '#lib/query-ui/query-filter-state.svelte.js'
     import {
         chipTooltip,
         modeName,
         formatAge,
         rowMeta,
-    } from '$lib/query-ui/recent-items/recent-items-utils'
+    } from '#lib/query-ui/recent-items/recent-items-utils.js'
     import type {
         RecentItemAdapter,
         RecentItemKey,
-    } from '$lib/query-ui/recent-items/recent-items-types'
+    } from '#lib/query-ui/recent-items/recent-items-types.js'
     import { sampleFolderNames } from './folder-sampler'
     import {
         matchEntries,

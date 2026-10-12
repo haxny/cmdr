@@ -1,21 +1,21 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('./notifications-mode', () => ({
   setLowDiskSpaceNotificationsMode: vi.fn(),
   openSettingsToLowDiskSpace: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onVolumeSpaceChanged: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
 }))
 

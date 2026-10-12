@@ -16,9 +16,9 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { getAppLogger } from '$lib/logging/logger'
-import { getSetting, onSpecificSettingChange } from '$lib/settings'
-import { agentWakeStatus, cancelAskCmdr, onAgentWakeStatus, type WakeReadinessView } from '$lib/tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+import { agentWakeStatus, cancelAskCmdr, onAgentWakeStatus, type WakeReadinessView } from '#lib/tauri-commands/index.js'
 import { openRail, switchToThread } from './ask-cmdr-trigger.svelte'
 
 const log = getAppLogger('askCmdr')

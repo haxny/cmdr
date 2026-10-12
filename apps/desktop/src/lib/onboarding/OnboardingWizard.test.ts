@@ -29,9 +29,9 @@ import {
   setStep1Restart,
   setCurrentStep,
 } from './onboarding-state.svelte'
-import { blockingSoftDialog, isAnySoftDialogOpen, _resetOpenDialogsForTesting } from '$lib/ui/open-dialogs.svelte'
+import { blockingSoftDialog, isAnySoftDialogOpen, _resetOpenDialogsForTesting } from '#lib/ui/open-dialogs.svelte.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   checkFullDiskAccess: vi.fn(() => Promise.resolve(false)),
@@ -69,12 +69,12 @@ vi.mock('$lib/tauri-commands', () => ({
 
 // The organization's lock on `ai.provider`, as the backend's `locked_settings` would name it.
 const policyLocks = vi.hoisted(() => new Map<string, unknown>())
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => ({
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSettingLock: (id: string) => policyLocks.get(id),
 }))
 
-vi.mock('$lib/settings/ai-config', () => ({
+vi.mock('#lib/settings/ai-config.js', () => ({
   pushConfigToBackend: vi.fn(() => Promise.resolve()),
 }))
 
@@ -82,7 +82,7 @@ vi.mock('$lib/settings/ai-config', () => ({
 // module's commands are missing from the mock above, so every revoke reads as refused and the
 // retry outlasts the ticks this test waits. Consent behaviour lives in `StepAi.test.ts` and
 // `cloud-consent.svelte.test.ts`.
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   cloudConsentState: { accepted: false, acceptedAt: null },
   refreshCloudConsent: vi.fn(() => Promise.resolve()),
   cloudAiBlocked: (provider: string) => provider === 'cloud',
@@ -97,7 +97,7 @@ vi.mock('@tauri-apps/plugin-process', () => ({
 
 // Force macOS in jsdom so the wizard renders step 1 (StepFda) instead of skipping it.
 // Resume-rule behaviour on Linux is unit-tested in onboarding-state.test.ts.
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, isMacOS: () => true }
 })

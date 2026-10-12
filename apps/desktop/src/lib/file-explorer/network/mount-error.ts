@@ -1,6 +1,6 @@
 /** Carrying a typed `MountError` from `mountNetworkShare` to the pane that words it. */
-import type { MountError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { MountError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries the backend's typed mount refusal. */
 export class MountFailure extends TypedFailure<MountError> {

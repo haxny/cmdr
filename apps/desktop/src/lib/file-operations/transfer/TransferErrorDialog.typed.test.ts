@@ -12,10 +12,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import TransferErrorDialog from './TransferErrorDialog.svelte'
-import type { WriteOperationError } from '$lib/file-explorer/types'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
 import { buttonLabel } from '../test-button-label'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   openExternalUrl: vi.fn(() => Promise.resolve()),
@@ -23,7 +23,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const openErrorReportFor = vi.hoisted(() => vi.fn())
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor }))
 
 function mountDialog(props: {
   error: WriteOperationError

@@ -18,7 +18,7 @@ const STOPS = [5, 15, 30, 60, 120, 300, 900, 1800, 3600, 7200]
 const setSetting = vi.fn()
 let stored = 300
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => stored),
   setSetting: (...args: unknown[]) => {
     setSetting(...args)

@@ -8,10 +8,10 @@
      * freeze at the values they had when the pane opened. Reading the module means
      * the numbers move.
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import Button from '$lib/ui/Button.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import Button from '#lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
     import { getWalkHandoff, reopenHandedOffSearch, stopHandedOffWalk } from './walk-handoff-state.svelte'
 
     const handoff = $derived(getWalkHandoff())

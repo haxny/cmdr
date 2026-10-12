@@ -9,7 +9,7 @@ import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import ToastLevelIcon from './ToastLevelIcon.svelte'
 import type { ToastLevel } from './toast-store.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const levels: ToastLevel[] = ['default', 'info', 'success', 'warn', 'error']
 

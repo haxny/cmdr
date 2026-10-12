@@ -26,7 +26,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 
 const { commandMocks } = vi.hoisted(() => ({
   commandMocks: {
@@ -38,7 +38,7 @@ const { commandMocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
   ...commandMocks,
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
@@ -57,7 +57,7 @@ vi.mock('$lib/tauri-commands', () => ({
 
 // `<Size>` deep in the readout reads reactive settings; the real path needs the
 // settings store.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 

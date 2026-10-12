@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 const subscribers = new Map<string, (value: unknown) => void>()
 const settings = new Map<string, string>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((id: string) => settings.get(id) ?? 'none'),
   setSetting: vi.fn((id: string, value: string) => {
     settings.set(id, value)
@@ -32,13 +32,13 @@ vi.mock('$lib/settings/settings-store', () => ({
 // string shape. The JS-mix fallback path (old WebKit) reads live CSS vars via
 // `getComputedStyle`, which jsdom doesn't resolve for custom properties — that
 // path is exercised end-to-end on real WebKit instead.
-vi.mock('$lib/utils/webkit-compat', () => ({
+vi.mock('#lib/utils/webkit-compat.js', () => ({
   hasColorMix: true,
   logWebkitCompat: vi.fn(),
 }))
 
 import { initVolumeTints, cleanupVolumeTints, getPaneTintBg } from './volume-tint.svelte'
-import { setSetting } from '$lib/settings/settings-store'
+import { setSetting } from '#lib/settings/settings-store.js'
 
 beforeEach(() => {
   settings.clear()

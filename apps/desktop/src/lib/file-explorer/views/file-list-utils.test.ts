@@ -19,33 +19,33 @@ import {
   getFolderCoverageBadge,
 } from './file-list-utils'
 import type { FileEntry } from '../types'
-import type { FileIndexState, FolderCoverage } from '$lib/tauri-commands'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { TranslationParams } from '$lib/intl/messages.svelte'
+import type { FileIndexState, FolderCoverage } from '#lib/tauri-commands/index.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { TranslationParams } from '#lib/intl/messages.svelte.js'
 
 // Mock dependencies
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(),
   getDirStatsBatch: vi.fn(),
   enrichTags: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
 }))
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   prefetchIcons: vi.fn(),
   prefetchCustomFolderIcons: vi.fn().mockResolvedValue(undefined),
 }))
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { enrichTags: vi.fn().mockResolvedValue({ status: 'ok', data: null }) },
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getUseAppIconsForDocuments: vi.fn().mockReturnValue(true),
 }))
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn().mockReturnValue(200),
 }))
 
-import { getFileRange, getDirStatsBatch } from '$lib/tauri-commands'
-import { prefetchIcons } from '$lib/icon-cache'
+import { getFileRange, getDirStatsBatch } from '#lib/tauri-commands/index.js'
+import { prefetchIcons } from '#lib/icon-cache.js'
 
 describe('getSyncIconPath', () => {
   it('returns undefined for undefined status', () => {

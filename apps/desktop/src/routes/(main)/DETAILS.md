@@ -166,7 +166,7 @@ files selected behind it.
 ## The dialog gate
 
 Every command declares what it does while a dialog, an explorer overlay, or the palette is up: `whileDialogOpen` in
-`$lib/commands/while-dialog-open.ts`, required on every registry entry. It's refused, runs from a text input only, or
+`#lib/commands/while-dialog-open.ts`, required on every registry entry. It's refused, runs from a text input only, or
 runs anyway with a stated reason. `dialog-command-gate.ts` applies the rule, and the core asks it on EVERY dispatch, so
 the answer is the same whichever road a command came in by.
 
@@ -176,7 +176,7 @@ the answer is the same whichever road a command came in by.
   windows' `execute-command` emits, `view-mode-changed`, and `menu-sort`.
 - **MCP is exempt**, so every MCP pane command (`select_volume`, `select`, `move_cursor`, `sort`, and the rest) runs
   behind an open dialog. Only the tools that start a file operation refuse, in Rust before they dispatch, with a typed
-  `data.blockingDialog` (`$lib/file-explorer/pane/DETAILS.md` § "The operation-start gate"), and `dialog.confirm` acts
+  `data.blockingDialog` (`#lib/file-explorer/pane/DETAILS.md` § "The operation-start gate"), and `dialog.confirm` acts
   on the open dialog itself. A refusal from this gate would be silent, so the agent would wait out its round-trip budget
   or read it as success. Pane changes behind a copy, move, or delete confirmation can't change what it acts on: the
   dialog confirms the `sourcePaths` it opened with (`dialog-state.svelte.ts`).
@@ -184,7 +184,7 @@ the answer is the same whichever road a command came in by.
   way.
 - **The keydown resolver asks the gate too**, before claiming a key. A key the core would refuse stays unclaimed, so Tab
   still moves focus inside a dialog instead of being `preventDefault`ed on its way to `pane.switch`.
-- **A dialog can claim a menu command whose accelerator is its own key** (`$lib/commands/menu-claims.ts`): the
+- **A dialog can claim a menu command whose accelerator is its own key** (`#lib/commands/menu-claims.ts`): the
   Multi-rename sheet's F2 (its Presets menu) is File > Rename's accelerator. While the sheet is mounted, the MENU road's
   `file.rename` runs the sheet's claim, ahead of the gate that would refuse it; every other road, and the menu road with
   no claim, is unchanged. The sheet answers the keydown too and drops the second half of a double fire itself
@@ -192,7 +192,7 @@ the answer is the same whichever road a command came in by.
 - **Why it lives in the core.** When only the keyboard resolver knew about dialogs, a native-menu accelerator (⌘W, ⌘T,
   ⌘K) reached its handler behind an open dialog: the `execute-command` listener had no gate. Refusing that listener
   wholesale isn't the fix either (§ Native-menu and input-focus interactions); the per-command rule is.
-- **What runs over a dialog** is pinned in `$lib/commands/command-registry.test.ts`: the windows of their own (Settings,
+- **What runs over a dialog** is pinned in `#lib/commands/command-registry.test.ts`: the windows of their own (Settings,
   keyboard shortcuts help, the queue), zoom, the four macOS-native commands, and MCP's `dialog.confirm`.
 - **The native menu shows the same answer.** `menu-dialog-gate.svelte.ts` pushes every `BLOCKED_BY_DIALOGS` command to
   Rust while something is open, which greys those items out, and makes the two check items (show hidden files, the view
@@ -334,8 +334,8 @@ A `mcp-key` GoBack/GoForward routes through the bus (`nav.back`/`nav.forward`), 
 
 The operation-queue window's Show button asks THIS window to put one already-running operation into its progress dialog.
 It's one of two INBOUND channels whose sender is another window rather than a menu, a key, or MCP; the other,
-`open-error-report`, is the error-report dialog's own (`$lib/error-reporter/DETAILS.md` § Report offers). Which rows
-offer the button, and why only the id travels: `$lib/file-operations/queue/DETAILS.md` § Show.
+`open-error-report`, is the error-report dialog's own (`#lib/error-reporter/DETAILS.md` § Report offers). Which rows
+offer the button, and why only the id travels: `#lib/file-operations/queue/DETAILS.md` § Show.
 
 `setupDialogListeners` owns the receiving half (`onForegroundOperationRequested`):
 
@@ -346,7 +346,7 @@ offer the button, and why only the id travels: `$lib/file-operations/queue/DETAI
   means the operation ended between the click and the delivery, which also took its queue row: log it and stop, since
   there's nothing left to show and nothing to say about it.
 - **`ExplorerAPI.foregroundOperation` returns the verdict synchronously**, passing through to `dialog-state`'s
-  single-occupancy progress slot (`$lib/file-explorer/pane/DETAILS.md` § "Birth context") and taking `busy` back to the
+  single-occupancy progress slot (`#lib/file-explorer/pane/DETAILS.md` § "Birth context") and taking `busy` back to the
   toast. ❌ Don't route it through the command bus: a bus dispatch is fire-and-forget and would drop the verdict, and
   the queue window would have no way to learn its button did nothing.
 
@@ -418,9 +418,9 @@ reported as two flags (the palette apart, because it never blocks its own rows),
 { dialogOpen: isAnySoftDialogOpen() || isExplorerOverlayOpen(), paletteOpen: showCommandPalette }
 ```
 
-**`isAnySoftDialogOpen()` (`$lib/ui/open-dialogs.svelte`) covers every registered soft dialog**, roughly 35 of them in
+**`isAnySoftDialogOpen()` (`#lib/ui/open-dialogs.svelte`) covers every registered soft dialog**, roughly 35 of them in
 the main window, and it is exhaustive by construction because each one registers from its own mount/destroy pair.
-`$lib/file-explorer/pane/DETAILS.md` § "The operation-start gate" owns that mechanism.
+`#lib/file-explorer/pane/DETAILS.md` § "The operation-start gate" owns that mechanism.
 
 **❌ Never name a dialog here again.** A hand-written list of `show*` booleans stood in this spot and named about a
 dozen, so every dialog nobody remembered leaked the bare-key Tier 1 bindings: `Tab` → `pane.switch`, `Space` →
@@ -431,10 +431,10 @@ to `ignore`, and walks backwards normally, which is the asymmetry that gives thi
 
 **The other two arms are the things that are not soft dialogs**, so they register nowhere and have to be asked directly:
 the command palette (its own overlay, never a `ModalDialog`) and the explorer's own overlays (inline rename, the volume
-chooser, a confirmation). `$lib/dialog-gallery/gallery-registry.ts`'s `UNREGISTERED_OVERLAY_ENTRIES` is the standing
+chooser, a confirmation). `#lib/dialog-gallery/gallery-registry.ts`'s `UNREGISTERED_OVERLAY_ENTRIES` is the standing
 list of modal-looking things outside the registry, and it holds exactly those two.
 
-**No same-tick guard is needed**, unlike `anyDialogOpen()` in `$lib/file-explorer/pane/dialog-state.svelte.ts`, which
+**No same-tick guard is needed**, unlike `anyDialogOpen()` in `#lib/file-explorer/pane/dialog-state.svelte.ts`, which
 keeps local flags for the window between `show* = true` and the mount that registers it. Every dispatch starts in an
 event handler (a keydown, a menu event, a click), so any flip that opened a dialog happened in an earlier turn and has
 long since mounted.
@@ -454,7 +454,7 @@ commands rather than through the command bus, so it can't double up with the `ed
 Native-menu and input-focus interactions).
 
 - **The predicate is the event TARGET, not focus.** `isTextInputTarget(event.target)` from
-  `$lib/utils/text-input-focus`. A right-click can land on a field that isn't focused yet, so the focus-based
+  `#lib/utils/text-input-focus`. A right-click can land on a field that isn't focused yet, so the focus-based
   `isTextInputFocused()` twin would deny the menu on that first click.
 - **The listener runs in the CAPTURE phase.** On an editable target it `stopPropagation()`s, so an ancestor's handler
   can't open a Cmdr menu over the field: the inline rename editor sits inside a file row, and the volume switcher's

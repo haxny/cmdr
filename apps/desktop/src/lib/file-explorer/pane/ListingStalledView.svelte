@@ -1,10 +1,10 @@
 <script lang="ts">
-    import Button from '$lib/ui/Button.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import type { StalledOn } from '$lib/ipc/bindings'
+    import Button from '#lib/ui/Button.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import type { StalledOn } from '#lib/ipc/bindings.js'
 
     /**
      * What a pane shows while its listing is stalled: the folder's volume has gone

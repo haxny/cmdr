@@ -8,15 +8,15 @@
  * notice is once-ever.
  *
  * ❌ Not a nudge: it explains something the person set up themselves, so it takes
- * no part in the shared nudge cooldown (`$lib/nudges/`) and answers to its own
+ * no part in the shared nudge cooldown (`#lib/nudges/`) and answers to its own
  * `behavior.revealActivationNoticeSeen` flag.
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
-import { getSetting, setSetting } from '$lib/settings'
-import { onRevealDelivered } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { onRevealDelivered } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import RevealActivationToastContent from './RevealActivationToastContent.svelte'
 
 const log = getAppLogger('reveal')

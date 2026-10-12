@@ -1,14 +1,14 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte'
     import OnboardingStepShell from './OnboardingStepShell.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import {
         setFooterOverride,
         nextStep,
@@ -17,17 +17,17 @@
         setBetaChecklistItem,
         type BetaChecklistItem,
     } from './onboarding-state.svelte'
-    import { forceSave, getSetting, getSettingDefinition, setSetting } from '$lib/settings'
-    import { useBooleanSetting } from '$lib/settings/components/boolean-setting.svelte'
-    import { createBetaEmailSignup } from '$lib/settings/sections/beta-email-signup.svelte'
-    import { isSettingLocked } from '$lib/managed-policy/managed-policy.svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
-    import { GITHUB_REPO_URL, ABOUT_DAVID_URL, ALTERNATIVE_TO_URL } from '$lib/beta-links'
-    import { TERMS_URL, TERMS_VERSION } from '$lib/legal/terms'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { forceSave, getSetting, getSettingDefinition, setSetting } from '#lib/settings/index.js'
+    import { useBooleanSetting } from '#lib/settings/components/boolean-setting.svelte.js'
+    import { createBetaEmailSignup } from '#lib/settings/sections/beta-email-signup.svelte.js'
+    import { isSettingLocked } from '#lib/managed-policy/managed-policy.svelte.js'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { GITHUB_REPO_URL, ABOUT_DAVID_URL, ALTERNATIVE_TO_URL } from '#lib/beta-links.js'
+    import { TERMS_URL, TERMS_VERSION } from '#lib/legal/terms.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { Snippet } from 'svelte'
 
     /**
@@ -139,7 +139,7 @@
 
     // Terms acceptance: the one required control on this page. The checkbox is the user's
     // deliberate act of assent, and we record WHICH terms it applied to (see
-    // `$lib/legal/terms`), so a later terms change can ask again instead of coasting on a
+    // `#lib/legal/terms`), so a later terms change can ask again instead of coasting on a
     // consent that was given to a different document.
     let termsAccepted = $state(false)
     /** The terms card's anchor, so a blocked click can bring it back on screen. */

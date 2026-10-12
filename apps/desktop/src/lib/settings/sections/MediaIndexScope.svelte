@@ -22,8 +22,8 @@
      */
     import { onMount } from 'svelte'
     import SettingRadioGroup from '../components/SettingRadioGroup.svelte'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import MediaIndexImportanceSlider from './MediaIndexImportanceSlider.svelte'
     import MediaIndexReclaim from './MediaIndexReclaim.svelte'
 

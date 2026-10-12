@@ -5,11 +5,11 @@
 // We export the named functions the rest of `lib/search/` imports
 // (`getRecentSearchesList`, `loadRecentSearches`, …) so call sites stay shallow.
 
-import { getRecentSearches, type HistoryEntry } from '$lib/tauri-commands'
-import { createRecentItemsState } from '$lib/query-ui/recent-items/recent-items-state.svelte'
+import { getRecentSearches, type HistoryEntry } from '#lib/tauri-commands/index.js'
+import { createRecentItemsState } from '#lib/query-ui/recent-items/recent-items-state.svelte.js'
 
 // Wrap the IPC binding in a thunk so the factory doesn't deref the binding at module-init
-// time. Test mocks (`vi.mock('$lib/tauri-commands', ...)`) that omit `getRecentSearches`
+// time. Test mocks (`vi.mock('#lib/tauri-commands/index.js', ...)`) that omit `getRecentSearches`
 // would otherwise throw at import time; the thunk pushes the lookup to first call.
 //
 // Exported as `recentSearchesStore` so `SearchDialog.svelte` can hand the underlying

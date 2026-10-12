@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { decideFirstUsePick } from './first-use-pick'
-import { TERMINAL_APP_BUNDLE_ID } from '$lib/settings/sections/terminal-app-options'
-import type { TerminalApp } from '$lib/ipc/bindings'
+import { TERMINAL_APP_BUNDLE_ID } from '#lib/settings/sections/terminal-app-options.js'
+import type { TerminalApp } from '#lib/ipc/bindings.js'
 
 function app(id: string, isRunning = false): TerminalApp {
   return { id, displayName: id, icon: null, isRunning }

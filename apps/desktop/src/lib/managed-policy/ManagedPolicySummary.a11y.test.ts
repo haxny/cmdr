@@ -5,8 +5,8 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { ManagedPolicyView } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const managed: ManagedPolicyView = {
   managed: true,

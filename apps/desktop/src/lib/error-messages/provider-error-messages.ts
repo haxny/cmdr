@@ -23,8 +23,8 @@
  */
 
 import { expandSystemStrings } from './compose'
-import { getMessage } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** Serialized camelCase from Rust `Provider`. */
 export type Provider =

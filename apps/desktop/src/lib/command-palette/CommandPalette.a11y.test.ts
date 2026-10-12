@@ -9,14 +9,14 @@
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import CommandPalette from './CommandPalette.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   pruneRecentCommands: vi.fn(() => Promise.resolve([])),
   pushRecentCommand: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/commands', () => {
+vi.mock('#lib/commands/index.js', () => {
   // `displayName` is what the rows render; the registry resolves it to `name`
   // for every command that declares no override, as these do.
   const all = [

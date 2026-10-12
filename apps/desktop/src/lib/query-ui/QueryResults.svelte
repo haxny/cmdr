@@ -14,30 +14,30 @@
      * top<->bottom. Column widths: `result-column-widths.ts` and DETAILS.md § Column widths.
      */
     import { tick } from 'svelte'
-    import { getCachedIcon, iconCacheVersion } from '$lib/icon-cache'
-    import { dependOn } from '$lib/utils/reactivity'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import type { SearchResultEntry } from '$lib/tauri-commands'
-    import Size from '$lib/ui/Size.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import ColumnList from '$lib/ui/ColumnList.svelte'
+    import { getCachedIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+    import Size from '#lib/ui/Size.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import ColumnList from '#lib/ui/ColumnList.svelte'
     import {
         columnListProps,
         type ColumnListApi,
         type ColumnListCellContext,
         type ColumnListColumn,
-    } from '$lib/ui/column-list-types'
+    } from '#lib/ui/column-list-types.js'
     import { resultColumnWidths } from './result-column-widths'
     import EmptyState from './EmptyState.svelte'
     import PathPills from './PathPills.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import {
         createAnnouncementThrottle,
         livePhaseLabel,

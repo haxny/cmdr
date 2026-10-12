@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
 
     const supportEmail = 'support@getcmdr.com'
     const supportHref = `mailto:${supportEmail}`

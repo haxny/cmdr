@@ -29,20 +29,20 @@ vi.mock('./settings-store', () => ({
   },
   isModified: vi.fn(() => false),
 }))
-vi.mock('$lib/shortcuts', () => ({
+vi.mock('#lib/shortcuts/index.js', () => ({
   getEffectiveShortcuts: () => [],
   getDefaultShortcuts: () => [],
   isShortcutModified: () => false,
 }))
-vi.mock('$lib/commands/command-registry', () => ({ commands: [] }))
+vi.mock('#lib/commands/command-registry.js', () => ({ commands: [] }))
 
 // The organization's policy, as `locked_settings` would name it.
 const managedLocks = vi.hoisted(() => new Map<string, unknown>())
-vi.mock('$lib/managed-policy/managed-policy.svelte', () => ({
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', () => ({
   getSettingLock: (id: string) => managedLocks.get(id),
   isSettingManaged: (id: string) => managedLocks.has(id),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

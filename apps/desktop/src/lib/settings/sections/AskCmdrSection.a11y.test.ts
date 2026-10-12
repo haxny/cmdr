@@ -9,9 +9,9 @@
 
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return 'cloud'
     if (key === 'askCmdr.enabled') return true
@@ -27,13 +27,13 @@ vi.mock('$lib/settings/settings-store', () => ({
 }))
 
 const { consentState } = vi.hoisted(() => ({ consentState: { accepted: false } }))
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   cloudConsentState: consentState,
   refreshCloudConsent: vi.fn(() => Promise.resolve()),
   cloudAiBlocked: (provider: string) => provider === 'cloud' && !consentState.accepted,
   openCloudConsentSettings: vi.fn(),
 }))
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   askCmdrCostSummary: vi.fn(() => Promise.resolve({ days: [] })),
   // A 200,000-token pick against a 128,000-token window, so the over-window warning is part

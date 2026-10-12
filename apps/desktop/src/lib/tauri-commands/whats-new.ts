@@ -1,7 +1,7 @@
 // "What's new" popup: fetch the changelog slice and read the dev simulate-update override.
 
-import { commands } from '$lib/ipc/bindings'
-import type { WhatsNewRelease, WhatsNewSection } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
+import type { WhatsNewRelease, WhatsNewSection } from '#lib/ipc/bindings.js'
 
 export type { WhatsNewRelease, WhatsNewSection }
 

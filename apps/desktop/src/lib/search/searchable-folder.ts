@@ -11,10 +11,10 @@
  * pane's navigation history backward for the most recent real folder, and if there's none
  * we fall back to the volume — a search still runs, one rung wider.
  */
-import { tString } from '$lib/intl/messages.svelte'
-import type { ScopePresets } from '$lib/query-ui/query-dialog-config'
-import type { LocationCategory, VolumeInfo } from '$lib/file-explorer/types'
-import { isSnapshotPath, latestRealFolder } from '$lib/file-explorer/navigation/real-folder-history'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { ScopePresets } from '#lib/query-ui/query-dialog-config.js'
+import type { LocationCategory, VolumeInfo } from '#lib/file-explorer/types.js'
+import { isSnapshotPath, latestRealFolder } from '#lib/file-explorer/navigation/real-folder-history.js'
 
 /** The boot volume: every path is under it, so it's the last-resort scope. */
 const BOOT_VOLUME_ROOT = '/'

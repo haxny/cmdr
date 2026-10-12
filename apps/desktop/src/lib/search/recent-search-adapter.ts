@@ -7,10 +7,10 @@
  * Selection's wrapper passes its own against its narrower entry shape.
  */
 
-import { removeRecentSearch, getRecentSearches, type HistoryEntry } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { chipTooltip, modeName, formatAge, rowMeta } from '$lib/query-ui/recent-items/recent-items-utils'
-import type { RecentItemAdapter, RecentItemKey } from '$lib/query-ui/recent-items/recent-items-types'
+import { removeRecentSearch, getRecentSearches, type HistoryEntry } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { chipTooltip, modeName, formatAge, rowMeta } from '#lib/query-ui/recent-items/recent-items-utils.js'
+import type { RecentItemAdapter, RecentItemKey } from '#lib/query-ui/recent-items/recent-items-types.js'
 import { getRecentSearchesList, setRecentSearchesList } from './recent-searches-state.svelte'
 import { applyHistoryEntry } from './search-state.svelte'
 

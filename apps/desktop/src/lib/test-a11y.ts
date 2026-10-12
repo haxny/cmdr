@@ -8,7 +8,7 @@
  * (focus traps, Escape return-focus) live in the Playwright suite (tier 2).
  *
  * Usage (from any `*.a11y.test.ts` file):
- *     import { expectNoA11yViolations } from '$lib/test-a11y'
+ *     import { expectNoA11yViolations } from '#lib/test-a11y.js'
  *
  *     it('has no a11y violations when disabled', async () => {
  *         const target = document.createElement('div')

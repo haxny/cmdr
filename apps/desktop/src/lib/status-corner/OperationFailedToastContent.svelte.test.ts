@@ -4,29 +4,29 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 
 const openQueueWindow = vi.fn(() => Promise.resolve())
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: (): Promise<void> => openQueueWindow(),
 }))
 
 const dismissToast = vi.fn<(id: string) => void>()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: (id: string): void => {
     dismissToast(id)
   },
 }))
 
 const openErrorReportFor = vi.fn()
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({
   openErrorReportFor: (incident: unknown): void => {
     openErrorReportFor(incident)
   },
 }))
 
 import OperationFailedToastContent from './OperationFailedToastContent.svelte'
-import type { ReportIncident } from '$lib/error-reporter/report-incident'
+import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
 function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
   return {

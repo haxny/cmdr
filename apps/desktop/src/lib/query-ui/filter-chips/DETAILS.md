@@ -20,21 +20,21 @@ cross-consumer state factory.
   custom-input flags, and the `pickSize*` auto-promote handlers
 - **`DateFilterPopover.svelte`**: Modified popover body: the comparator + dynamic-preset grid, the
   `buildDatePresets`-derived list + first-match selection keys, custom-input flags, `pickDate*` handlers
-- **`ScopeFilterPopover.svelte`**: Search-in popover body: the scope field (the house `$lib/ui/TextArea`, `radius="sm"`
+- **`ScopeFilterPopover.svelte`**: Search-in popover body: the scope field (the house `#lib/ui/TextArea`, `radius="sm"`
   to sit in a dense popover, placeholder = `defaultScopePath`, the path an empty box actually searches), "Hide boring
   folders" / "Case-sensitive" toggles, and the ⌥C "Use current folder" / ⌥V "This volume" footer buttons
 - **`filter-popover.css`**: Shared global styles for the popover bodies: `.popover-section`, `.popover-label`, the
   `.list-grid` / `.list-cell` / `.list-col` grid, `.popover-input`, plus the `.size-grid-section` / `.scope-popover`
   section widths (`FilterPopover` renders those wrapper elements). Imported by all three popover bodies and
   `FilterPopover` (Svelte `<style>` is component-scoped, so shared classes need a global stylesheet)
-- **_the chips themselves_**: `$lib/ui/Chip.svelte` (`variant="filter"`). `FilterChips.svelte` mounts it directly;
+- **_the chips themselves_**: `#lib/ui/Chip.svelte` (`variant="filter"`). `FilterChips.svelte` mounts it directly;
   there's no local chip component
-- **_the popover shell_**: `$lib/ui/FilterPopover.svelte` (a `$lib/ui/Popover` + labelled header). Each `*FilterPopover`
+- **_the popover shell_**: `#lib/ui/FilterPopover.svelte` (a `#lib/ui/Popover` + labelled header). Each `*FilterPopover`
   body wraps it, threading `anchor` / `open` / `onClose` / `label`
 - **`filter-chip-state.ts`**: Pure helpers: `deriveSizeChip`, `deriveDateChip`, `deriveScopeChip`, `derivePatternChip`
   (testable in isolation)
 - **`filter-popover-helpers.ts`**: Pure: `SIZE_PRESETS`, `byteUnitLabel`, `isSizeRangeDisabled`, `showsUpperBound`,
-  `isDateRangeDisabled`, `showsDateUpperBound`, `buildDatePresets`. Unit words come from `$lib/units` (`bytesLabel`,
+  `isDateRangeDisabled`, `showsDateUpperBound`, `buildDatePresets`. Unit words come from `#lib/units` (`bytesLabel`,
   `unitLabel`), so the popover, the chips, and the file list read the same in every language
 
 Companion tests (colocated):
@@ -64,7 +64,7 @@ configured) from the derived state. Keeping the rules pure (no `$state` reads in
 
 ## Popover anatomy
 
-The popover is a frosted-glass surface anchored to the chip. `$lib/ui/Popover.svelte` (wrapped by `FilterPopover`) owns
+The popover is a frosted-glass surface anchored to the chip. `#lib/ui/Popover.svelte` (wrapped by `FilterPopover`) owns
 positioning, the focus trap, and the close-on-Escape contract. The same `Popover` backs `RecentItemsPopover.svelte` (see
 `../recent-items/`) for the auto-flip + focus-trap + Esc-scoped close.
 
@@ -79,7 +79,7 @@ positioning, the focus trap, and the close-on-Escape contract. The same `Popover
 **Positioning**: `Popover` measures its anchor (the chip) and the popover element, then auto-flips above the chip if
 there's not enough room below. The flip decision runs once per open and on window resize.
 
-**Focus trap**: the shared `use:trapFocus` action (`$lib/ui/focus-trap`) cycles Tab and Shift+Tab within the popover;
+**Focus trap**: the shared `use:trapFocus` action (`#lib/ui/focus-trap`) cycles Tab and Shift+Tab within the popover;
 focus returns to the chip on close. The popover's trap mounts above the host dialog's in the trap stack, so enforcement
 is scoped to the popover while it's open (see `lib/ui/DETAILS.md` § "Focus trapping").
 
@@ -167,5 +167,5 @@ Clicking × clears the pattern only; the AI transparency strip stays put.
 ## Dependencies
 
 - `../query-filter-state.svelte.ts` — `QueryFilterState`, `SizeFilter`, `SizeUnit`, `DateFilter` types and setters
-- `$lib/settings/reactive-settings.svelte` — `getFileSizeFormat()` for the unit cell labels
-- `$lib/tooltip/tooltip` — chip tooltips
+- `#lib/settings/reactive-settings.svelte` — `getFileSizeFormat()` for the unit cell labels
+- `#lib/tooltip/tooltip` — chip tooltips

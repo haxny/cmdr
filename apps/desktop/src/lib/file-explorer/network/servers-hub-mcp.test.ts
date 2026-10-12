@@ -18,7 +18,7 @@ import {
 } from './servers-hub-mcp'
 import { hubItems } from './servers-hub-items'
 import type { HubRow } from './servers-hub-rows'
-import type { SavedServer } from '$lib/tauri-commands'
+import type { SavedServer } from '#lib/tauri-commands/index.js'
 
 /** Saved rows only, so no group: what each entry says is these tests' subject. */
 function hubMcpEntries(rows: HubRow[], lookups: HubMcpLookups) {

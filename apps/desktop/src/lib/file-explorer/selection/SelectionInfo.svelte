@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
     import type { FileEntry, ListingStats } from '../types'
     import {
         buildDateTooltip,
@@ -10,7 +10,7 @@
         formatNumber,
         calculatePercentage,
     } from './selection-info-utils'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { measureDateColumnWidth } from '../views/full-list-utils'
     import {
         formatDateTime,
@@ -18,8 +18,8 @@
         getSizeDisplayMode,
         getFileSizeUnit,
         getFileSizeFormat,
-    } from '$lib/settings/reactive-settings.svelte'
-    import DateLabel from '$lib/ui/DateLabel.svelte'
+    } from '#lib/settings/reactive-settings.svelte.js'
+    import DateLabel from '#lib/ui/DateLabel.svelte'
     import {
         getDisplaySize,
         getDirSizeDisplayState,
@@ -29,14 +29,14 @@
         buildDirSizeTooltip,
         buildSelectionSizeTooltip,
     } from '../views/full-list-utils'
-    import { isVolumeScanning, isVolumeAggregating, getWalkedGround } from '$lib/indexing/index-state.svelte'
-    import { isPathAffectedByWalk } from '$lib/indexing/walked-ground'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import type { SpaceInfo } from '$lib/ipc/bindings'
+    import { isVolumeScanning, isVolumeAggregating, getWalkedGround } from '#lib/indexing/index-state.svelte.js'
+    import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import type { SpaceInfo } from '#lib/ipc/bindings.js'
     import { formatDiskSpaceStatus, formatSpaceNotes } from '../disk-space-utils'
-    import { formatByteSizeTiered } from '$lib/units'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
+    import { formatByteSizeTiered } from '#lib/units/index.js'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
 
     // Free-space text is intentionally uncolored: red GB would falsely signal "low space".
     function diskSpaceStatusText(space: SpaceInfo): string {

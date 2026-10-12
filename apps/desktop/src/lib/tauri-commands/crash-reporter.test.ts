@@ -2,13 +2,13 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     sendCrashReport: vi.fn(),
   },
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { sendCrashReport } from './crash-reporter'
 
 describe('sendCrashReport wrapper', () => {

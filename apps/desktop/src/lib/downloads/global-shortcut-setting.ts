@@ -12,7 +12,7 @@
  * we reset `acknowledged` whenever the binding changes. Centralizing this in
  * one place keeps the Settings UI and tests from drifting.
  */
-import { getSetting, setSetting } from '$lib/settings'
+import { getSetting, setSetting } from '#lib/settings/index.js'
 
 const ENABLED_KEY = 'behavior.fileSystemWatching.globalGoToLatestShortcut.enabled'
 const BINDING_KEY = 'behavior.fileSystemWatching.globalGoToLatestShortcut.binding'

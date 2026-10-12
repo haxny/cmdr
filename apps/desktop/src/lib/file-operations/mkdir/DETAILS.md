@@ -7,7 +7,7 @@ Depth for the F7 new-folder dialog. `CLAUDE.md` holds the must-knows; the flows 
 1. F7 (or the `file.newFolder` command) opens `NewFolderDialog` pre-filled with the cursor item name. For files the
    extension is stripped via `removeExtension()`; for directories the full name is used; for ".." the field is empty.
 2. As the user types, validation runs on a 100 ms debounce:
-   - Sync validators from `$lib/utils/filename-validation`: `validateDisallowedChars`, `validateNameLength`,
+   - Sync validators from `#lib/utils/filename-validation`: `validateDisallowedChars`, `validateNameLength`,
      `validatePathLength`.
    - Async conflict check via `findFileIndex(listingId, name, showHiddenFiles)` + `getFileAt`, reporting "There is
      already a folder/file by this name in this folder."
@@ -31,7 +31,7 @@ backend refuses the call anyway (an empty `done`); `lib/ai/DETAILS.md` § Cloud 
 ### The name box is typeable the instant F7 opens
 
 `../NewEntryNameField.svelte` focuses and selects the box in its own `onMount`, and `ModalDialog` skips its scrim focus
-when something inside already owns it (why, and the ordering that made this a bug: `$lib/ui/DETAILS.md` § ModalDialog).
+when something inside already owns it (why, and the ordering that made this a bug: `#lib/ui/DETAILS.md` § ModalDialog).
 Guarded by `NewFolderDialog.focus.test.ts` and the F7 round-trip in `file-operations.spec.ts`.
 
 ### A slow volume is "still creating", never a failure

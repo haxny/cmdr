@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount, tick, untrack } from 'svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type {
         FileEntry,
         FriendlyError,
@@ -17,15 +17,15 @@
         type Location,
         updateMenuContext,
         updateServicesSelection,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     import { createTypeToJumpController } from './type-to-jump-controller.svelte'
     import TypeToJumpIndicator from './TypeToJumpIndicator.svelte'
     import { createQuickFilterController } from './quick-filter-controller.svelte'
     import { createListingUpdateQueue } from './listing-update-queue'
     import { maybeShowQuickFilterIntro } from './quick-filter-intro'
-    import type { ViewMode } from '$lib/app-status-store'
-    import type { CommandId } from '$lib/commands'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import type { ViewMode } from '#lib/app-status-store.js'
+    import type { CommandId } from '#lib/commands/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     /** State snapshot for swapping panes without backend calls. */
     export interface SwapState {
@@ -39,7 +39,7 @@
     import FullList from '../views/FullList.svelte'
     import BriefList from '../views/BriefList.svelte'
     import SelectionInfo from '../selection/SelectionInfo.svelte'
-    import LoadingIcon from '$lib/ui/LoadingIcon.svelte'
+    import LoadingIcon from '#lib/ui/LoadingIcon.svelte'
     import VolumeBreadcrumb from '../navigation/VolumeBreadcrumb.svelte'
     import { splitPathSegments } from '../navigation/path-segments'
     import { enrichBreadcrumbSegments } from '../navigation/breadcrumb-navigation'
@@ -51,7 +51,7 @@
     import { createVolumeSpace } from './volume-space.svelte'
     import ErrorPane from './ErrorPane.svelte'
     import ListingStalledView from './ListingStalledView.svelte'
-    import type { StalledOn } from '$lib/ipc/bindings'
+    import type { StalledOn } from '#lib/ipc/bindings.js'
     import VolumeUnreachableBanner from './VolumeUnreachableBanner.svelte'
     import NetworkMountView from './NetworkMountView.svelte'
     import SearchResultsView from './SearchResultsView.svelte'
@@ -63,32 +63,32 @@
         VolumeChangePayload,
     } from './types'
     import { paneFooterVisibility } from './pane-footer'
-    import { getMutationTick, getSnapshot, snapshotIdFromPanePath } from '$lib/search/snapshot-store.svelte'
+    import { getMutationTick, getSnapshot, snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
     import RemoteConnectView from './RemoteConnectView.svelte'
     import { createPlaceConnect } from './place-connect.svelte'
     import { createLiveRetry } from './live-retry.svelte'
     import { createPaneVolumeState } from '../navigation/pane-volume-state.svelte'
     import { answersNow } from '../navigation/connection-state'
-    import { placeRootOf } from '$lib/servers/open-sign-in'
+    import { placeRootOf } from '#lib/servers/open-sign-in.js'
     import { createDeviceConnect } from './device-connect.svelte'
-    import AdbHint from '$lib/adb/AdbHint.svelte'
+    import AdbHint from '#lib/adb/AdbHint.svelte'
     import { createSelectionState } from './selection-state.svelte'
     import { createPaneMcpSync, paneListingOf } from './pane-mcp-sync.svelte'
     import { initListingDiffSync } from './listing-diff-sync.svelte'
     import { createPaneRowState } from './pane-row-state'
     import { toBackendIndices, toFrontendIndices } from './sorting-handlers'
     import { createRenameState } from '../rename/rename-state.svelte'
-    import { type ListingDirectorySortMode } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { type ListingDirectorySortMode } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { createRenameFlow, type RenameAsMoveRequest } from './rename-flow.svelte'
     import ExtensionChangeDialog from '../rename/ExtensionChangeDialog.svelte'
     import RenameConflictDialog from '../rename/RenameConflictDialog.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { createDebounce, createThrottle } from '$lib/utils/timing'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { createDebounce, createThrottle } from '#lib/utils/timing.js'
     import { servicesSelectionForPane } from './services-selection'
 
     const log = getAppLogger('fileExplorer')
-    import { volumeScheme } from '$lib/volume-scheme'
+    import { volumeScheme } from '#lib/volume-scheme.js'
     import { getPaneTintBg, getPaneTintName } from './volume-tint.svelte'
     import { createCursorNavKeys } from './cursor-nav-keys'
     import { createSearchPaneKeys } from './search-pane-keys'
@@ -99,10 +99,10 @@
     import { publishSameKindTarget } from './same-kind-target.svelte'
     import { capabilitiesForPane, paneFolderIsPolledForDeletion, paneRowsAreOsVisible } from './volume-capabilities'
     import { createEnterMenu } from './enter-menu.svelte'
-    import Menu from '$lib/ui/Menu.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
     import { homeDir } from '@tauri-apps/api/path'
-    import { type CanonicalPath, parentOf, toCanonical } from '$lib/path/canonical'
-    import { getVolumes as getStoreVolumes } from '$lib/stores/volume-store.svelte'
+    import { type CanonicalPath, parentOf, toCanonical } from '#lib/path/canonical.js'
+    import { getVolumes as getStoreVolumes } from '#lib/stores/volume-store.svelte.js'
     import type { UnreachableState } from '../tabs/tab-types'
     import { getUsageBar, formatBarTooltip } from '../disk-space-utils'
     import {
@@ -110,7 +110,7 @@
         getSpaceCalculatesFolderSize,
         getTypeToJumpMode,
         getTypeToJumpResetDelay,
-    } from '$lib/settings/reactive-settings.svelte'
+    } from '#lib/settings/reactive-settings.svelte.js'
     import { createRowOverlays } from './row-overlays.svelte'
     import { createSelectionInfoFeed } from './selection-info-feed.svelte'
     import { createPaneKeyRouter } from './pane-key-router'
@@ -128,7 +128,7 @@
     import { createSnapshotSelectionSync } from './snapshot-selection-sync.svelte'
     import { createHistoryCursorSync } from './history-cursor-sync.svelte'
     import type { CursorReading } from '../navigation/history-cursor'
-    import { getFirstShortcutReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
 
     interface Props {
         initialPath: string

@@ -18,13 +18,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 import { CHIP_SETTLE_MS } from './operation-chip'
 
 // The store and the session fan-out both subscribe to Tauri events. The store's
 // `init()` is never called here; the fan-out's is, so every stream it listens to
 // has to be mockable.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),
@@ -37,29 +37,29 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const openQueueWindow = vi.fn(() => Promise.resolve())
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: (): Promise<void> => openQueueWindow(),
 }))
 
 let store: ReturnType<typeof createOperationsStore> | null = null
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => store?.operations ?? [],
   getMainWindowOperations: () => store,
 }))
 
 let foregroundOperationId: string | null = null
 let foregroundFailureId: string | null = null
-vi.mock('$lib/file-operations/foreground-operation.svelte', () => ({
+vi.mock('#lib/file-operations/foreground-operation.svelte.js', () => ({
   getForegroundOperationId: () => foregroundOperationId,
   getForegroundFailureId: () => foregroundFailureId,
 }))
 
-import { createOperationsStore } from '$lib/file-operations/queue/operations-store.svelte'
+import { createOperationsStore } from '#lib/file-operations/queue/operations-store.svelte.js'
 import {
   destroyOperationSessions,
   getOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import OperationChip from './OperationChip.svelte'
 
 function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {

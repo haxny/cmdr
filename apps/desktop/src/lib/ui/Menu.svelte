@@ -22,12 +22,12 @@
      * driven programmatically, which every caller here needs.
      */
     import { tick, untrack, type Snippet } from 'svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import { Portal } from '@ark-ui/svelte/portal'
     import Icon from './Icon.svelte'
     import ShortcutChip from './ShortcutChip.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { formatInteger } from '$lib/intl/number-format'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
     import { usePortalTarget } from './portal-target'
     import { placeBesideRow, placeOffAnchor, type PlacementRect } from './anchored-placement'
     import type { MenuController } from './menu-controller.svelte'

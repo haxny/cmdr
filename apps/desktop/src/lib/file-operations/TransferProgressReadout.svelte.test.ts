@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync, type ComponentProps } from 'svelte'
 import TransferProgressReadout from './TransferProgressReadout.svelte'
-import { seconds } from '$lib/units'
+import { seconds } from '#lib/units/index.js'
 
 // The component reads reactive settings (file-size format) deep in `<Size>`. The
 // real path needs the settings store; stub the format getter to keep the unit
 // test isolated.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 

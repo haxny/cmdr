@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import { clearAllToasts, getToasts } from '$lib/ui/toast/toast-store.svelte'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/toast-store.svelte.js'
 import type { AiTranslateResult, QueryDialogConfig } from './query-dialog-config'
 import { SEARCH_AUTO_APPLY_DEBOUNCE_MS } from './query-filter-state.svelte'
 import {

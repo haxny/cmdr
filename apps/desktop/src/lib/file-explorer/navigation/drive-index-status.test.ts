@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { VolumeIndexStatus } from '$lib/ipc/bindings'
+import type { VolumeIndexStatus } from '#lib/ipc/bindings.js'
 import {
   driveIndexState,
   driveIndexColorClass,

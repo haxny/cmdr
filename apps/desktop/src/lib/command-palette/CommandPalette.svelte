@@ -9,19 +9,19 @@
      * - Blocks keyboard events from propagating to file explorer
      */
     import { onDestroy, onMount, tick } from 'svelte'
-    import { searchCommands, getPaletteCommands, type CommandMatch, type CommandId } from '$lib/commands'
-    import { pruneRecentCommands, pushRecentCommand } from '$lib/app-status-store'
-    import { getEffectiveShortcutsReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
-    import { trapFocus } from '$lib/ui/focus-trap'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
-    import type { PaletteCondition } from '$lib/commands'
-    import { getFocusedPanePath, getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-    import { capabilitiesForPane } from '$lib/file-explorer/pane/volume-capabilities'
+    import { searchCommands, getPaletteCommands, type CommandMatch, type CommandId } from '#lib/commands/index.js'
+    import { pruneRecentCommands, pushRecentCommand } from '#lib/app-status-store.js'
+    import { getEffectiveShortcutsReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
+    import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import type { PaletteCondition } from '#lib/commands/index.js'
+    import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+    import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
 
     /**
      * Whether each conditional row belongs in the palette right now. A record, so a

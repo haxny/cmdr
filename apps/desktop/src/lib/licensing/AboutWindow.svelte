@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { getCachedStatus } from './licensing-store.svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { GITHUB_ISSUES_URL } from '$lib/beta-links'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { GITHUB_ISSUES_URL } from '#lib/beta-links.js'
 
     interface Props {
         onClose: () => void

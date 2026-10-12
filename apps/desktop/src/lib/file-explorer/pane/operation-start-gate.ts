@@ -7,7 +7,7 @@
  * - **The entry points** (`file-operation-commands.ts`, `clipboard-operations.ts`,
  *   and `drag-drop-controller.svelte.ts`): a dialog is on screen, so a
  *   confirmation would stack over what the user is reading. Which dialogs count
- *   is declared per dialog in `$lib/ui/dialog-registry.ts`. A DROP counts as an
+ *   is declared per dialog in `#lib/ui/dialog-registry.ts`. A DROP counts as an
  *   entry point: the mouse starts an operation like any other actor does.
  * - **The start itself** (`dialog-state.svelte.ts`): the progress slot is taken.
  *   That one has to stand alone whatever the entry points do — the native menu is
@@ -23,11 +23,11 @@
  */
 
 import { emit } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { blockingSoftDialog } from '$lib/ui/open-dialogs.svelte'
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { blockingSoftDialog } from '#lib/ui/open-dialogs.svelte.js'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 
 const log = getAppLogger('fileExplorer')
 

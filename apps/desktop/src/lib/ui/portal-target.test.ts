@@ -16,7 +16,7 @@ import Combobox from './Combobox.svelte'
 import PortalTargetFixture from '../../../test/fixtures/portal-target-fixture.svelte'
 
 // Avoid Tauri IPC side-effects from `ModalDialog`'s notifyDialogOpened / notifyDialogClosed.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

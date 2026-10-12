@@ -2,7 +2,7 @@
  * The registry as one flat map, for the native popup menus to label their items with.
  */
 
-import { COMMAND_IDS } from '$lib/commands/command-ids'
+import { COMMAND_IDS } from '#lib/commands/command-ids.js'
 import { getEffectiveShortcuts } from './shortcuts-store'
 
 /**
@@ -22,7 +22,7 @@ import { getEffectiveShortcuts } from './shortcuts-store'
  * against a right-click that already spends a LaunchServices query on "Open with".
  *
  * ❗ It lives HERE rather than inside the `showFileContextMenu` wrapper, which is where
- * it belongs by rights: `shortcuts-store` imports `$lib/tauri-commands` to push menu-bar
+ * it belongs by rights: `shortcuts-store` imports `#lib/tauri-commands` to push menu-bar
  * accelerators, so reading the registry from inside that barrel closes a cycle the
  * `import-cycles` check rejects. The callers pass it instead.
  */

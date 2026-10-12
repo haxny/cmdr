@@ -1,5 +1,5 @@
-import { tString } from '$lib/intl/messages.svelte'
-import type { PastedClipboardFile } from '$lib/tauri-commands'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { PastedClipboardFile } from '#lib/tauri-commands/index.js'
 
 /**
  * Composes the paste-as-file info toast message (e.g. "Pasted clipboard text as

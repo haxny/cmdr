@@ -15,7 +15,7 @@ F6 (move), F7 (new folder), F8 / Shift+F8 (trash / delete).
 
 - **Dialog copy lives in the i18n catalog, not the components**: `messages/en/fileOperations.json` via `t()` /
   `tString()` / `<Trans>`; hardcoding one fails `cmdr/no-raw-user-facing-string`. ⚠️ The transfer ERROR prose
-  (`transfer-error-messages.ts`) is NOT ICU: it's the `errors.write.*` pipeline (`$lib/error-messages/CLAUDE.md`), keyed
+  (`transfer-error-messages.ts`) is NOT ICU: it's the `errors.write.*` pipeline (`#lib/error-messages/CLAUDE.md`), keyed
   per operation type, its en output parity-pinned, so a copy edit lands in the catalog AND the test.
 - **One dual-bar readout, two surfaces.** The progress dialog and queue rows both render
   `TransferProgressReadout.svelte`; its fixed-width cells are why the queue's `MIN_WIDTH` and the dialog's 580 px exist.

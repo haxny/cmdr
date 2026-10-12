@@ -14,33 +14,33 @@ import { resolveDiskFixture, type FixtureDirPayload } from './disk-fixture'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
 
 const getFilesAtIndices = vi.fn(() => Promise.resolve([{ name: 'Photos', path: '/fixtures/Photos' }]))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFilesAtIndices: (...args: unknown[]) => getFilesAtIndices(...(args as [])),
 }))
 
 const navigateToDirInPane = vi.fn(() => Promise.resolve(true))
 const resolveLocationOrToast = vi.fn(() => Promise.resolve<{ volumeId: string; path: string } | null>(null))
-vi.mock('$lib/file-explorer/navigation/navigate-and-select', () => ({
+vi.mock('#lib/file-explorer/navigation/navigate-and-select.js', () => ({
   navigateToDirInPane: (...args: unknown[]) => navigateToDirInPane(...(args as [])),
   resolveLocationOrToast: (...args: unknown[]) => resolveLocationOrToast(...(args as [])),
 }))
 
-vi.mock('$lib/file-explorer/pane/explorer-state.svelte', () => ({
+vi.mock('#lib/file-explorer/pane/explorer-state.svelte.js', () => ({
   explorerState: { getTabMgr: () => 'tab-manager' },
 }))
 
 // Dotfile visibility comes from the live setting, not from the pane. Pinned to the
 // non-default value here so the assertions below prove the fixture carries what the
 // user has set, rather than accidentally matching the registry default.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getShowHiddenFiles: () => true,
 }))
 
-vi.mock('$lib/file-explorer/tabs/tab-state-manager.svelte', () => ({
+vi.mock('#lib/file-explorer/tabs/tab-state-manager.svelte.js', () => ({
   getActiveTab: () => ({ volumeId: 'root', sortBy: 'modified', sortOrder: 'descending' }),
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

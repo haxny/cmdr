@@ -25,9 +25,9 @@
  * {@link watchSystemLocales}.
  */
 
-import { getOsLocales, onOsLocalesChanged } from '$lib/tauri-commands'
-import type { OsLocales } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
+import { getOsLocales, onOsLocalesChanged } from '#lib/tauri-commands/index.js'
+import type { OsLocales } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { setOsFormatLocale } from './locale'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(),
   enrichTags: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
 }))
 
-import { getFileRange, enrichTags } from '$lib/tauri-commands'
+import { getFileRange, enrichTags } from '#lib/tauri-commands/index.js'
 import type { FileEntry } from '../types'
 import { sweepListingTags, TAG_SWEEP_CHUNK } from './tag-sweep'
 

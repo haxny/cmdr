@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { canOpenTerminalIn, resolveTerminalFolder, type TerminalTargetPane } from './terminal-target'
-import type { VolumeKind } from '$lib/file-explorer/pane/volume-capabilities'
+import type { VolumeKind } from '#lib/file-explorer/pane/volume-capabilities.js'
 
 function pane(overrides: Partial<TerminalTargetPane> = {}): TerminalTargetPane {
   return {

@@ -6,7 +6,7 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import FieldHistoryChevron from './FieldHistoryChevron.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('FieldHistoryChevron a11y', () => {
   it.each([false, true])('with disabled %s has no violations', async (disabled) => {

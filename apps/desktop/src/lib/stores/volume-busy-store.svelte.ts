@@ -21,8 +21,8 @@ import {
   getEjectingVolumeIds,
   onVolumesBusyChanged,
   onVolumesEjectingChanged,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const logger = getAppLogger('volume-busy-store')
 
@@ -76,7 +76,7 @@ function createVolumeIdSet(source: VolumeIdSetSource) {
 }
 
 // The commands are reached through arrows, never read at module load: a test that
-// mocks `$lib/tauri-commands` with only the exports IT needs still imports this module.
+// mocks `#lib/tauri-commands` with only the exports IT needs still imports this module.
 const busyVolumes = createVolumeIdSet({
   eventName: 'volumes-busy-changed',
   subscribe: (handler) => onVolumesBusyChanged(handler),

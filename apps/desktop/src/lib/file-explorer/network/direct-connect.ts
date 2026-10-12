@@ -23,17 +23,17 @@ import {
   upgradeToSmbVolumeWithCredentials,
   systemHasSavedSmbPassword,
   type UpgradeResult,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { ask } from '@tauri-apps/plugin-dialog'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { requestVolumeRefresh } from '$lib/stores/volume-store.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { requestVolumeRefresh } from '#lib/stores/volume-store.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { triggerNetworkDiscovery } from './lazy-trigger'
 import { openSmbSignInSheet, type SmbCredentialAnswer } from './smb-sign-in'
-import type { SignInAttemptOutcome } from '$lib/servers/sign-in-contract'
-import type { ConnectRefusalKind } from '$lib/servers/connect-refusals'
-import type { CredentialsNeededReason } from '$lib/ipc/bindings'
+import type { SignInAttemptOutcome } from '#lib/servers/sign-in-contract.js'
+import type { ConnectRefusalKind } from '#lib/servers/connect-refusals.js'
+import type { CredentialsNeededReason } from '#lib/ipc/bindings.js'
 import {
   directConnectionUnavailableMessage,
   mountNotRespondingMessage,

@@ -11,8 +11,8 @@
 // arrives as the `media-index-folder-exclusion` event (wired in the main route's
 // `setupMenuListeners`).
 
-import { mediaIndexSetExcludedFolder } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { mediaIndexSetExcludedFolder } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { persistThenApply } from './network-volume-prefs'
 
 const log = getAppLogger('media-index')

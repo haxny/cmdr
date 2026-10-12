@@ -15,9 +15,9 @@
  *
  * ❌ `Unexpected.detail` is never the message: it's diagnostic text for the log.
  */
-import type { MountError } from '$lib/ipc/bindings'
-import { getMessage } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { MountError } from '#lib/ipc/bindings.js'
+import { getMessage } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * Fills `{token}` placeholders in ONE pass, so a share literally named

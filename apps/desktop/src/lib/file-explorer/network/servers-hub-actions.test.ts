@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { NetworkHost, VolumeInfo } from '../types'
 
 const forgetSavedSmbHost = vi.fn((_id: string) => Promise.resolve(true))
@@ -33,7 +33,7 @@ let credentialStatus = 'has_creds'
 const openEditServerSheet = vi.fn((_server: unknown) => Promise.resolve({ kind: 'saved' }))
 const runServerRowAction = vi.fn((_payload: unknown) => Promise.resolve())
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   forgetSavedSmbHost: (id: string) => forgetSavedSmbHost(id),
   forgetSavedSmbHostPassword: (id: string) => forgetSavedSmbHostPassword(id),
   listSavedServers: () => listSavedServers(),
@@ -56,27 +56,27 @@ vi.mock('../navigation/server-row-actions', async (importOriginal) => ({
   setServerAutoReconnect: (volumeId: string, on: boolean) => setServerAutoReconnect(volumeId, on),
   runServerRowAction: (payload: unknown) => runServerRowAction(payload),
 }))
-vi.mock('$lib/stores/volume-busy-store.svelte', () => ({ isVolumeBusy: () => false, isVolumeEjecting: () => false }))
+vi.mock('#lib/stores/volume-busy-store.svelte.js', () => ({ isVolumeBusy: () => false, isVolumeEjecting: () => false }))
 vi.mock('../navigation/row-menu', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../navigation/row-menu')>()),
   runVolumeRowAction: (payload: unknown) => runVolumeRowAction(payload),
 }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToast(...(args as []))
   },
 }))
-vi.mock('$lib/servers/open-sign-in', () => ({
+vi.mock('#lib/servers/open-sign-in.js', () => ({
   openEditServerSheet: (server: unknown) => openEditServerSheet(server),
 }))
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: (...args: unknown[]) => confirmDialog(...(args as [])),
   confirmWithCheckbox: (question: unknown) => confirmWithCheckbox(question),
 }))
 
 import { createHubActions, editHubRow, editServerInView } from './servers-hub-actions'
 import type { HubRow } from './servers-hub-rows'
-import type { NetworkHostContextActionKind, VolumeContextActionKind } from '$lib/ipc/bindings'
+import type { NetworkHostContextActionKind, VolumeContextActionKind } from '#lib/ipc/bindings.js'
 
 const host: NetworkHost = { id: 'h1', name: 'Attic NAS', ipAddress: '10.0.0.4', port: 445, source: 'manual' }
 

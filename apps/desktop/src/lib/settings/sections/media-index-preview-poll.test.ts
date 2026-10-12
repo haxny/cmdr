@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CoveredCount } from '$lib/tauri-commands'
+import type { CoveredCount } from '#lib/tauri-commands/index.js'
 import { shouldRepollPreview } from './media-index-preview-poll'
 
 function covered(partial: Partial<CoveredCount>): CoveredCount {

@@ -6,8 +6,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CrashReport } from '$lib/tauri-commands'
-import { ServerRequestFailure } from '$lib/error-messages/server-request'
+import type { CrashReport } from '#lib/tauri-commands/index.js'
+import { ServerRequestFailure } from '#lib/error-messages/server-request.js'
 
 const { api, getSetting, addToast, logger } = vi.hoisted(() => ({
   api: {
@@ -19,10 +19,10 @@ const { api, getSetting, addToast, logger } = vi.hoisted(() => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => api)
-vi.mock('$lib/settings', () => ({ getSetting }))
-vi.mock('$lib/ui/toast', () => ({ addToast }))
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/tauri-commands/index.js', () => api)
+vi.mock('#lib/settings/index.js', () => ({ getSetting }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 vi.mock('./CrashReportToastContent.svelte', () => ({ default: {} }))
 
 import { checkForPendingCrashReport } from './pending-crash-report'

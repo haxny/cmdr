@@ -7,7 +7,7 @@
  * The binding arrives in the user-facing macOS-symbol form (`'⌃⌥⌘J'`), which
  * is also what we want to show — no translation needed.
  */
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export function globalGoToLatestDescription(binding: string): string {
   if (!binding) {

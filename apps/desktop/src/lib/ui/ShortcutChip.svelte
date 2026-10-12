@@ -21,11 +21,11 @@
   click handler only. Don't turn this into a static import.
 -->
 <script lang="ts">
-    import { commands, type CommandId } from '$lib/commands'
-    import { getFirstShortcutReactive } from '$lib/shortcuts/reactive-shortcuts.svelte'
-    import { toDisplayShortcut } from '$lib/shortcuts/key-capture'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { commands, type CommandId } from '#lib/commands/index.js'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { toDisplayShortcut } from '#lib/shortcuts/key-capture.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /**
@@ -68,7 +68,7 @@
     async function handleClick(): Promise<void> {
         if (commandId === undefined) return
         // Lazy import keeps the Tauri window-creation surface out of the viewer bundle.
-        const { openShortcutCustomization } = await import('$lib/settings/settings-window')
+        const { openShortcutCustomization } = await import('#lib/settings/settings-window.js')
         await openShortcutCustomization('shortcut-chip', commandId)
     }
 </script>

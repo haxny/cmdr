@@ -1,6 +1,6 @@
 /**
  * Fixtures for `rollback-confirmation`
- * (`$lib/file-operations/RollbackConfirmDialog.svelte`).
+ * (`#lib/file-operations/RollbackConfirmDialog.svelte`).
  *
  * The rollback itself lives in the `onConfirm` prop, which the gallery leaves empty,
  * so `variant` is the whole of this dialog's state: it decides the body, the cancel
@@ -9,7 +9,7 @@
  * reading them side by side.
  */
 
-import type { RollbackConfirmVariant } from '$lib/file-operations/reversal-wording'
+import type { RollbackConfirmVariant } from '#lib/file-operations/reversal-wording.js'
 
 export interface RollbackConfirmFixture {
   variant: RollbackConfirmVariant

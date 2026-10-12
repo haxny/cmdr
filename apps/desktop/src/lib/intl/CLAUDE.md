@@ -51,7 +51,7 @@ for numbers, sizes, dates.
 - **UI copy reads `getUiLocale()`, formatters read `getFormatLocale()`, nothing else resolves a locale.** `setLocale()`
   writes the UI half only: a `hu` pick must NOT move dates or grouping off the OS. Month NAMES are UI language, the
   first-day-of-week beside them formatting.
-- **Format ONLY through this layer + `$lib/settings/format-utils`** (`formatInteger`/`formatNumber`,
+- **Format ONLY through this layer + `#lib/settings/format-utils`** (`formatInteger`/`formatNumber`,
   `formatSizeForDisplay`, `formatDateForDisplay`). ❌ Never hardcode a locale or build an `Intl` formatter in feature
   code (`cmdr/no-raw-locale-format`).
 - **Both readers stay SSR-safe and uncached** (a cache here would hide a switch), but **keep `Intl` formatters memoized

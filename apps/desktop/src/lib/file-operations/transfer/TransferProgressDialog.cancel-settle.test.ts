@@ -14,11 +14,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import type { OperationSnapshot, WriteCancelledEvent, WriteSettledEvent, WriteCompleteEvent } from '$lib/tauri-commands'
+import type {
+  OperationSnapshot,
+  WriteCancelledEvent,
+  WriteSettledEvent,
+  WriteCompleteEvent,
+} from '#lib/tauri-commands/index.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 // Import the SUT statically so the linter sees a real source dependency.
 // The dynamic import inside `mountDialog` is kept for the per-test reset
 // pattern that vitest's module mocking expects.
@@ -31,7 +36,7 @@ let completeCb: ((e: WriteCompleteEvent) => void) | null = null
 let cancelledCb: ((e: WriteCancelledEvent) => void) | null = null
 let settledCb: ((e: WriteSettledEvent) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1' })),
@@ -94,17 +99,17 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [
     { id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false },
     { id: 'mtp-1', name: 'Pixel', path: 'mtp://pixel/', category: 'mtp', isEjectable: true },

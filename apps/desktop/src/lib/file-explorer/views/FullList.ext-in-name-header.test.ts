@@ -16,13 +16,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fileEntry, mountFullList } from './test-full-list'
 
-vi.mock('$lib/tauri-commands', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
-vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
-vi.mock('$lib/indexing/index-state.svelte', async () => (await import('./test-file-list-mocks')).indexStateMock())
-vi.mock('$lib/settings/settings-store', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
+vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
+vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+vi.mock('#lib/indexing/index-state.svelte.js', async () => (await import('./test-file-list-mocks')).indexStateMock())
+vi.mock('#lib/settings/settings-store.js', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
 
 // The flag under test.
-vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
   (await import('./test-file-list-mocks')).reactiveSettingsMock({ getShowExtensionInName: () => true }),
 )
 

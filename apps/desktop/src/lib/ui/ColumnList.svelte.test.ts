@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRawSnippet, flushSync, mount, tick, unmount } from 'svelte'
 import ColumnList from './ColumnList.svelte'
 import type { ColumnListApi, ColumnListColumn, ColumnListWindowedSource } from './column-list-types'
-import { installLayoutMock, type LayoutMock } from '$lib/test-layout'
+import { installLayoutMock, type LayoutMock } from '#lib/test-layout.js'
 
 vi.mock('@chenglou/pretext', () => ({
   prepareWithSegments: (text: string) => ({ text }),

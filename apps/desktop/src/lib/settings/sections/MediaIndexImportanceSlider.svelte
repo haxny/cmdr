@@ -23,20 +23,20 @@
      * 12,000 images"), which folds into the baseline once the value settles.
      */
     import { onMount } from 'svelte'
-    import Slider from '$lib/ui/Slider.svelte'
-    import { getSetting, setSetting, onSpecificSettingChange } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getEnabledMediaIndexVolumeIds } from '$lib/media-index/enabled-volumes'
-    import { ROOT_VOLUME_ID } from '$lib/indexing'
+    import Slider from '#lib/ui/Slider.svelte'
+    import { getSetting, setSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getEnabledMediaIndexVolumeIds } from '#lib/media-index/enabled-volumes.js'
+    import { ROOT_VOLUME_ID } from '#lib/indexing/index.js'
     import {
         mediaIndexCoveredCount,
         mediaIndexVolumeState,
         type CoveredCount,
         type MediaIndexVolumeState,
-    } from '$lib/tauri-commands'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { LogOnceGate } from '$lib/logging/log-once'
+    } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { LogOnceGate } from '#lib/logging/log-once.js'
     import { shouldRepollPreview } from './media-index-preview-poll'
     import { shouldOfferReclaim } from './media-index-reclaim'
     import MediaIndexReclaim from './MediaIndexReclaim.svelte'

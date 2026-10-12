@@ -1,7 +1,13 @@
-import { findFileIndex, findFileIndices, getPathsAtIndices, refreshListing, toggleTags } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import type { McpSelectMode, ConfirmDialogType } from '$lib/commands'
+import {
+  findFileIndex,
+  findFileIndices,
+  getPathsAtIndices,
+  refreshListing,
+  toggleTags,
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { McpSelectMode, ConfirmDialogType } from '#lib/commands/index.js'
 import { routeTypingKey } from './type-to-jump-keys'
 import { capabilitiesFor } from './volume-capabilities'
 import { readSelectedPathsForCopy as readSelectedPathsForCopyFrom, type SelectedPathsRead } from './selected-paths-read'
@@ -12,7 +18,7 @@ import type { createDialogState } from './dialog-state.svelte'
 import type { ConfirmOptions } from './dialog-props'
 import type { ProgrammaticConfirmVerdict } from './programmatic-confirm'
 import type { PaneAccess } from './pane-access'
-import { toBackendIndices } from '$lib/file-operations/transfer/transfer-dialog-utils'
+import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 
 type DialogState = ReturnType<typeof createDialogState>
 
@@ -135,7 +141,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
    * folder flag. That arm's callers act on a FILE; this one has to decide between
    * the folder under the cursor and the pane's own, and `..` is a real answer
    * there rather than "no entry". The rules themselves live in the pure
-   * `$lib/open-terminal/terminal-target.ts`; this is only the read.
+   * `#lib/open-terminal/terminal-target.ts`; this is only the read.
    *
    * ❗ `refreshCursorEntry()`, ❌ never the plain `getCursorEntry()`: that one is
    * one `get_file_at` round trip behind the cursor, so arrow-down then ⌥⌘T would

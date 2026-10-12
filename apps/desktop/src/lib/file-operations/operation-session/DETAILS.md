@@ -274,7 +274,7 @@ alone cannot tell you.
   write-once, so a cancel racing a completion cannot flip an answer a view already rendered. A `cancelled` outcome
   carries the whole `write-cancelled` event, so the reversal's report (`event.rollback`: the three-state outcome, how
   many items came back, and what it left behind by reason) rides along with it. The session doesn't word any of that;
-  `$lib/file-operations/transfer/cancel-rollback-toast.ts` does, off this one event, which is why both the started and
+  `#lib/file-operations/transfer/cancel-rollback-toast.ts` does, off this one event, which is why both the started and
   the adopted progress views get the summary without either owning it.
 
 **"A person is deciding" is `awaitingHuman()`**, and it takes TWO signals because the two waits report differently: a

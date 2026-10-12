@@ -16,11 +16,11 @@
      * it, because the switch works at once (ERR-XGS9X).
      */
     import type { Snippet } from 'svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { openLocalNetworkSettings } from '$lib/tauri-commands'
+    import Button from '#lib/ui/Button.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { openLocalNetworkSettings } from '#lib/tauri-commands/index.js'
     import { connectDirectly } from './direct-connect'
     import { directConnectionUnavailableMessage, openLocalNetworkSettingsLabel } from './upgrade-messages'
 

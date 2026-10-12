@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import TextArea from '$lib/ui/TextArea.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import TextArea from '#lib/ui/TextArea.svelte'
 
     let plain = $state('Documents')
     let search = $state('')

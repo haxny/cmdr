@@ -7,11 +7,11 @@ many saw it, how many said yes". Every decision that has to look at the machine 
 ## Module map
 
 - **`should-show-dock-nudge.ts`**: pure. `shouldShowDockNudge` plus `DOCK_NUDGE_AFTER_DAYS`. The half every offer shares
-  — automated run, macOS, onboarding, "already asked", the cooldown — is `$lib/nudges/`.
+  — automated run, macOS, onboarding, "already asked", the cooldown — is `#lib/nudges/`.
 - **`dock-nudge.ts`**: raises the toast, stamps the nudge ledger, sends `dock_pin_offered`.
 - **`dock-pin-answer.ts`**: the three exits, `dock_pin_answered` / `dock_pin_failed`, and the failure copy. Separate so
   the toast body can reach it without an import cycle.
-- **`DockPinNudgeToastContent.svelte`**: this offer's copy over the shared `$lib/nudges/NudgeToastContent.svelte`. The
+- **`DockPinNudgeToastContent.svelte`**: this offer's copy over the shared `#lib/nudges/NudgeToastContent.svelte`. The
   gate that calls in is `routes/(main)/startup-gates.ts::maybeOfferDockPin`.
 
 ## Must-knows
@@ -20,7 +20,7 @@ many saw it, how many said yes". Every decision that has to look at the machine 
   the other order risks repeating it forever. Same rule as `maybeFireUpgradeNudge`.
 - **Four launch days, and the offer can still land later than that.** The shared three-day nudge cooldown outranks the
   threshold, so a daily user who met the reveal offer on day 2 hears about the Dock on day 5. ❌ Don't exempt this offer
-  from the floor; `$lib/nudges/CLAUDE.md`.
+  from the floor; `#lib/nudges/CLAUDE.md`.
 - **`get_dock_pin_state` already answers "already pinned" and "installed where a tile may point".** ❌ Don't re-derive
   either here: one call, one `DockPinState`, and only `offerable` speaks up.
 - **`nudgeCouldFire(ctx, 'dockPin')` runs before either IPC**, so the ordinary launch (the offer already made) costs

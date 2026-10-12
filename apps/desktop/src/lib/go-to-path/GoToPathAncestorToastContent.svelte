@@ -10,8 +10,8 @@
      */
 
     import type { Snippet } from 'svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
 
     interface Props {
         /** The path the user typed, which doesn't exist. */

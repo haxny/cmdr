@@ -8,12 +8,12 @@
         emitExecuteCommand,
         type LicenseInfo,
         type LicenseStatus,
-    } from '$lib/tauri-commands'
-    import Button from '$lib/ui/Button.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    } from '#lib/tauri-commands/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { getLicenseTypeLabel, getStatusText } from './license-section-utils'
-    import { closeSelfWindow } from '$lib/child-window-close'
+    import { closeSelfWindow } from '#lib/child-window-close.js'
 
     let licenseInfo = $state<LicenseInfo | null>(null)
     let licenseStatus = $state<LicenseStatus | null>(null)
@@ -41,7 +41,7 @@
         // dispatch). The `rust-command-id-drift.test.ts` test pins it to the registry.
         await emitExecuteCommand('app.licenseKey')
         // Like every other settings-window self-close: the backend hides the window and destroys
-        // it a moment later. See `$lib/child-window-close`.
+        // it a moment later. See `#lib/child-window-close`.
         void closeSelfWindow()
     }
 

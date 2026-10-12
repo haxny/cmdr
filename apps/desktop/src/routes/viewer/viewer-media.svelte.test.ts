@@ -10,7 +10,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createViewerMedia } from './viewer-media.svelte'
-import type { ViewerOpenResult } from '$lib/ipc/bindings'
+import type { ViewerOpenResult } from '#lib/ipc/bindings.js'
 
 function openResult(overrides: Partial<ViewerOpenResult>): ViewerOpenResult {
   return {

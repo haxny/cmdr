@@ -11,14 +11,14 @@
  * finds neither says nothing — the palette lists every command whatever the pane
  * is on, and a toast for "you weren't pointing at a server" is noise.
  */
-import { runServerRowAction } from '$lib/file-explorer/navigation/server-row-actions'
-import { openAddServerSheet } from '$lib/servers/open-sign-in'
-import { editServerInView } from '$lib/file-explorer/network/servers-hub-actions'
-import { serverCommandTarget, type ServerCommandTarget } from '$lib/servers/server-command-target'
-import { getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
-import { listSavedServers } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { runServerRowAction } from '#lib/file-explorer/navigation/server-row-actions.js'
+import { openAddServerSheet } from '#lib/servers/open-sign-in.js'
+import { editServerInView } from '#lib/file-explorer/network/servers-hub-actions.js'
+import { serverCommandTarget, type ServerCommandTarget } from '#lib/servers/server-command-target.js'
+import { getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+import { listSavedServers } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { ExplorerAPI } from '../explorer-api'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'

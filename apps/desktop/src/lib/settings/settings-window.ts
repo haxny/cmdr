@@ -21,11 +21,11 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { emitTo } from '@tauri-apps/api/event'
 import { Effect, EffectState } from '@tauri-apps/api/window'
-import { getShouldReduceTransparency, trackEvent } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { getEffectiveScale } from '$lib/text-size.svelte'
-import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '$lib/app-mode'
-import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '$lib/window-positioning'
+import { getShouldReduceTransparency, trackEvent } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
+import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '#lib/window-positioning.js'
 import type { SettingId } from './types'
 
 const log = getAppLogger('settings')
@@ -187,7 +187,7 @@ export async function openSettingsWindow(surface: SettingsSurface, section?: str
   // (`NSWorkspace`), NOT a media query: WKWebView doesn't reflect
   // `prefers-reduced-transparency`. The window's opacity is fixed at creation
   // for the current setting; the page content still re-themes live via the
-  // `reduce-transparency` class (see `$lib/glass-material`).
+  // `reduce-transparency` class (see `#lib/glass-material`).
   // `prefers-color-scheme` IS reflected, so dark detection stays a media query.
   const reduceTransparency = await getShouldReduceTransparency()
   const darkAppearance = window.matchMedia('(prefers-color-scheme: dark)').matches

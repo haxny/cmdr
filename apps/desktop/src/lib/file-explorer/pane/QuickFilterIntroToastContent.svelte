@@ -4,9 +4,9 @@
      * what happened, how to see every file again, and the two ways to choose
      * otherwise. The frame's own × dismisses it, so the third button is "Got it".
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dismissToast } from '$lib/ui/toast'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dismissToast } from '#lib/ui/toast/index.js'
     import { QUICK_FILTER_INTRO_TOAST_ID, openTypingModeSettings, switchToJumpMode } from './quick-filter-intro-actions'
 </script>
 

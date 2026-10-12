@@ -10,7 +10,7 @@ import { mount, tick } from 'svelte'
 import TabBar from './TabBar.svelte'
 import TabDragOverlay from './TabDragOverlay.svelte'
 import { createTabDragController, type TabDragView } from './tab-drag-controller.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { TabState } from './tab-types'
 
 const noop = () => {}

@@ -7,8 +7,8 @@ import {
   getOrCreate,
   getSnapshot,
   type SearchSnapshot,
-} from '$lib/search/snapshot-store.svelte'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+} from '#lib/search/snapshot-store.svelte.js'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import type { FileEntry, SelectPayload } from '../types'
 
 // FullList depends on a lot of platform-y machinery (canvas measurer, tauri commands).
@@ -28,7 +28,7 @@ function tooltipTexts(): string[] {
   return [...tooltipTextByNode.entries()].filter(([node]) => node.isConnected).map(([, text]) => text)
 }
 
-vi.mock('$lib/tooltip/tooltip', () => ({
+vi.mock('#lib/tooltip/tooltip.js', () => ({
   tooltip: (node: Element, params: unknown) => {
     const read = (p: unknown): string => (typeof p === 'string' ? p : ((p as { text?: string } | null)?.text ?? ''))
     tooltipTextByNode.set(node, read(params))
@@ -42,10 +42,10 @@ vi.mock('$lib/tooltip/tooltip', () => ({
     }
   },
 }))
-vi.mock('$lib/utils/shorten-middle-action', () => ({
+vi.mock('#lib/utils/shorten-middle-action.js', () => ({
   useShortenMiddle: () => ({ destroy() {} }),
 }))
-vi.mock('$lib/text-size.svelte', () => ({
+vi.mock('#lib/text-size.svelte.js', () => ({
   getEffectiveScale: () => 1,
   onDebouncedScaleChange: () => () => {},
 }))
@@ -59,14 +59,14 @@ const showFileContextMenuSpy =
 /** The backend comparator behind a header click; each test says what it answers. */
 const sortSearchResultsSpy = vi.fn<() => Promise<number[]>>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getDirStatsBatch: () => Promise.resolve([]),
   listen: () => Promise.resolve(() => {}),
   showFileContextMenu: (...args: [string, string, boolean, string[], unknown?, unknown?, unknown?]) =>
     showFileContextMenuSpy(...args),
   sortSearchResults: () => sortSearchResultsSpy(),
 }))
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheCleared: {
     subscribe: (fn: (v: number) => void) => {
       fn(0)
@@ -82,13 +82,13 @@ vi.mock('$lib/icon-cache', () => ({
   getCachedIcon: () => null,
   prefetchIcons: () => Promise.resolve(),
 }))
-vi.mock('$lib/stores/restricted-paths-store.svelte', () => ({
+vi.mock('#lib/stores/restricted-paths-store.svelte.js', () => ({
   isRestricted: () => false,
 }))
-vi.mock('$lib/system-strings.svelte', () => ({
+vi.mock('#lib/system-strings.svelte.js', () => ({
   restrictedFolderTooltip: () => 'restricted',
 }))
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   isVolumeScanning: () => false,
   isVolumeAggregating: () => false,
   getWalkedGround: () => [],
@@ -98,7 +98,7 @@ vi.mock('../git/status-column', () => ({
   glyphFor: () => '',
   labelFor: () => '',
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getRowHeight: () => 24,
   getIconSize: () => 16,
   getIsCompactDensity: () => false,

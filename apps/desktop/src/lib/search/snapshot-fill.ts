@@ -22,8 +22,8 @@
  * refuses to open a pane because a second query failed.
  */
 
-import { searchFiles, type SearchQuery, type SearchResultEntry } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { searchFiles, type SearchQuery, type SearchResultEntry } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { replaceSnapshotEntries, getSnapshot, SNAPSHOT_ENTRIES_CAP } from './snapshot-store.svelte'
 import { resortSnapshotIfSorted } from './snapshot-sort.svelte'
 

@@ -13,8 +13,8 @@
      *   Cmdr's, not one the file contains. It is drawn identically with word wrap on and
      *   off, so the mark always means exactly one thing.
      */
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { LineSegment } from './line-segments'
 
     interface Props {

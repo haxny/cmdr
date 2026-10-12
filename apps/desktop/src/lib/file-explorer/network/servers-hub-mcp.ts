@@ -12,8 +12,8 @@
  * silently. The words a person reads come from `servers.hub.status.*`.
  */
 
-import type { PaneFileEntry, PaneState } from '$lib/tauri-commands'
-import { parseServerPath, serverAppRoot } from '$lib/servers/server-path-utils'
+import type { PaneFileEntry, PaneState } from '#lib/tauri-commands/index.js'
+import { parseServerPath, serverAppRoot } from '#lib/servers/server-path-utils.js'
 import type { HubRow } from './servers-hub-rows'
 import { fullIndexOf, type HubItem } from './servers-hub-items'
 

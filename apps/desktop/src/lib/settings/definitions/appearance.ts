@@ -5,13 +5,13 @@
 
 import type { EnumOption, EnumOptionSource, SettingDefinitionSource } from '../types'
 import { VOLUME_TINT_COLORS } from '../types'
-import { availableLocales, tString } from '$lib/intl/messages.svelte'
-import { localeDisplayName } from '$lib/intl/locale-display-names'
-import { pickUiLocale } from '$lib/intl/os-locales'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { unitLabel } from '$lib/units/byte-size'
+import { availableLocales, tString } from '#lib/intl/messages.svelte.js'
+import { localeDisplayName } from '#lib/intl/locale-display-names.js'
+import { pickUiLocale } from '#lib/intl/os-locales.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { unitLabel } from '#lib/units/byte-size.js'
 
-/** A fixed size-unit option, labelled with the unit symbol `$lib/units` renders. */
+/** A fixed size-unit option, labelled with the unit symbol `#lib/units` renders. */
 function sizeUnitOption(unit: 'kB' | 'MB' | 'GB'): EnumOption {
   return {
     value: unit,
@@ -375,7 +375,7 @@ export const appearanceSettings: SettingDefinitionSource[] = [
       options: [
         { value: 'dynamic', labelKey: 'settings.listing.sizeUnit.opt.dynamic' },
         { value: 'bytes', labelKey: 'settings.listing.sizeUnit.opt.bytes' },
-        // The fixed units read as the sizes they produce ($lib/units, UI language). The live IEC/SI symbol follows
+        // The fixed units read as the sizes they produce (#lib/units, UI language). The live IEC/SI symbol follows
         // `appearance.fileSizeFormat` through `AppearanceSizesSection`'s override; the SI symbol stands in here.
         sizeUnitOption('kB'),
         sizeUnitOption('MB'),

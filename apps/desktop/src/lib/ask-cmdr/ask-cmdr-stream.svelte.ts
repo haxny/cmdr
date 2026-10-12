@@ -19,10 +19,10 @@
  * goes on the stopped list so a late chunk can't resurrect the "working…" state.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import type { RailMessage } from './ask-cmdr-messages'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
@@ -36,7 +36,7 @@ import {
   type AskCmdrStreamEvent,
   type AskCmdrTurn,
   type ProposalDecision,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
 

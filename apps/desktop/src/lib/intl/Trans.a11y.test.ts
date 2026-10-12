@@ -2,7 +2,7 @@ import { describe, it, beforeAll, afterAll } from 'vitest'
 import { mount, tick } from 'svelte'
 import TransFixture from './trans-fixture.svelte'
 import { _setLocaleForTests } from './locale'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // `<Trans>` renders a sentence with an inline interactive component (the FDA
 // hint's `<settingsLink>` → a `LinkButton`). It carries no a11y surface of its

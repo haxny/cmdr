@@ -16,10 +16,10 @@ const mocks = vi.hoisted(() => ({
   info: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast }))
-vi.mock('$lib/settings', () => ({ getSetting: mocks.getSetting, setSetting: mocks.setSetting }))
-vi.mock('$lib/tauri-commands', () => ({ onRevealDelivered: mocks.onRevealDelivered }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: mocks.getSetting, setSetting: mocks.setSetting }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ onRevealDelivered: mocks.onRevealDelivered }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ info: mocks.info, warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

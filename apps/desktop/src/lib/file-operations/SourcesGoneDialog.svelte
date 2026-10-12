@@ -9,12 +9,12 @@
      * Escape: both ways out decide something about the operation, and a reflex
      * Escape on a prompt that appeared on its own shouldn't pick one.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import type { OperationSnapshot, WriteSourcesGoneEvent } from '$lib/tauri-commands'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import type { OperationSnapshot, WriteSourcesGoneEvent } from '#lib/tauri-commands/index.js'
     import { getFolderName } from './transfer/transfer-dialog-utils'
 
     interface Props {

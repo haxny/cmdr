@@ -4,10 +4,10 @@
   the section render a setting the organization manages.
 -->
 <script lang="ts">
-    import SettingsSection from '$lib/settings/components/SettingsSection.svelte'
-    import SettingRow from '$lib/settings/components/SettingRow.svelte'
-    import SettingSwitch from '$lib/settings/components/SettingSwitch.svelte'
-    import type { SettingId } from '$lib/settings'
+    import SettingsSection from '#lib/settings/components/SettingsSection.svelte'
+    import SettingRow from '#lib/settings/components/SettingRow.svelte'
+    import SettingSwitch from '#lib/settings/components/SettingSwitch.svelte'
+    import type { SettingId } from '#lib/settings/index.js'
 
     interface Props {
         id: SettingId

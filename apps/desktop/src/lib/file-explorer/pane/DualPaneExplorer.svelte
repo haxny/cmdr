@@ -1,6 +1,6 @@
 <script lang="ts">
     import { compareDirectories as runCompareDirectories } from './compare-directories'
-    import type { CompareDirectoriesMode } from '$lib/tauri-commands'
+    import type { CompareDirectoriesMode } from '#lib/tauri-commands/index.js'
     import { countFoldersInPane } from './folder-size-count'
     import { onMount, onDestroy, untrack } from 'svelte'
     import FilePane from './FilePane.svelte'
@@ -14,11 +14,11 @@
         VolumeChangePayload,
     } from './types'
     import PaneResizer from './PaneResizer.svelte'
-    import LoadingIcon from '$lib/ui/LoadingIcon.svelte'
+    import LoadingIcon from '#lib/ui/LoadingIcon.svelte'
     import DialogManager from './DialogManager.svelte'
     import { openInEditorOrExplain } from './editor-open'
-    import { type ViewMode } from '$lib/app-status-store'
-    import type { CommandId, McpSelectMode, McpTabAction, ConfirmDialogType } from '$lib/commands'
+    import { type ViewMode } from '#lib/app-status-store.js'
+    import type { CommandId, McpSelectMode, McpTabAction, ConfirmDialogType } from '#lib/commands/index.js'
     import type { SelectionActionArgs } from '../../../routes/(main)/explorer-api'
     import {
         listen,
@@ -27,9 +27,9 @@
         updateFocusedPane,
         onVolumeContextAction,
         onVolumeUnmounted,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     import type { SortColumn, NetworkHost, WriteOperationError, FriendlyError, FileEntry } from '../types'
-    import { ensureFontMetricsLoaded } from '$lib/font-metrics'
+    import { ensureFontMetricsLoaded } from '#lib/font-metrics/index.js'
     import { determineNavigationPath } from '../navigation/path-navigation'
     import { createVolumeRootFollow } from './volume-root-follow'
 
@@ -69,13 +69,13 @@
     } from './tab-operations'
     import { initNetworkDiscovery, cleanupNetworkDiscovery } from '../network/network-store.svelte'
     import type { HubRow } from '../network/servers-hub-rows'
-    import { initVolumeStore, getVolumes as getStoreVolumes, cleanupVolumeStore } from '$lib/stores/volume-store.svelte'
-    import { initVolumeBusyStore, cleanupVolumeBusyStore } from '$lib/stores/volume-busy-store.svelte'
-    import { initRestrictedPathsStore } from '$lib/stores/restricted-paths-store.svelte'
-    import { initSystemStrings } from '$lib/system-strings.svelte'
+    import { initVolumeStore, getVolumes as getStoreVolumes, cleanupVolumeStore } from '#lib/stores/volume-store.svelte.js'
+    import { initVolumeBusyStore, cleanupVolumeBusyStore } from '#lib/stores/volume-busy-store.svelte.js'
+    import { initRestrictedPathsStore } from '#lib/stores/restricted-paths-store.svelte.js'
+    import { initSystemStrings } from '#lib/system-strings.svelte.js'
     import { smbReconnectManager } from '../network/smb-reconnect-manager.svelte'
     import type { TransferOperationType } from '../types'
-    import type { Initiator, ProgressAtStop } from '$lib/tauri-commands'
+    import type { Initiator, ProgressAtStop } from '#lib/tauri-commands/index.js'
     import { createDialogState } from './dialog-state.svelte'
     import type {
         AdoptedOperationData,
@@ -101,7 +101,7 @@
     import { goToRootFolder } from '../navigation/root-folder'
     import { createEdgeFlowHandlers } from './edge-flow-handlers'
     import { createPaneMirror } from './pane-mirror'
-    import type { SmbHandOff } from '$lib/servers/open-sign-in'
+    import type { SmbHandOff } from '#lib/servers/open-sign-in.js'
     import { createKeyDispatch } from './key-dispatch'
     import { createMcpTabAction } from './mcp-tab-action'
     import {
@@ -126,14 +126,14 @@
     import { recalculateWebviewOffset } from '../drag/drag-position'
     import { createIndexEventHandler } from './index-events'
     import { loadPersistedState } from './initialization'
-    import { getDirectorySortMode, getShowHiddenFiles } from '$lib/settings/reactive-settings.svelte'
-    import { getSetting, onSettingChange } from '$lib/settings'
-    import { onMenuBarRebuilt, activateWindowMenu, onListingIndexSizesChanged } from '$lib/tauri-commands'
+    import { getDirectorySortMode, getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
+    import { getSetting, onSettingChange } from '#lib/settings/index.js'
+    import { onMenuBarRebuilt, activateWindowMenu, onListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import { resyncSameKindMenu } from './same-kind-target.svelte'
-    import { resyncMenuAccelerators } from '$lib/shortcuts'
+    import { resyncMenuAccelerators } from '#lib/shortcuts/index.js'
     import DragOverlay from '../drag/DragOverlay.svelte'
-    import { addToastForPane } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { addToastForPane } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { revealSearchResultInPane } from '../navigation/navigate-and-select'
 
     function saveTabsForPaneSide(pane: 'left' | 'right') {

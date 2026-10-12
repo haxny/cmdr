@@ -6,10 +6,10 @@ export const ssr = false
 
 // Register HMR crash recovery (must be outside the Svelte component so the
 // listener survives layout re-evaluation during HMR)
-import '$lib/hmr-recovery'
+import '#lib/hmr-recovery.js'
 
 // Same reason, same place: an uncaught throw or unhandled rejection is otherwise
 // invisible in the Rust log, in error-report bundles, and in CI.
-import { registerUncaughtErrorLogging } from '$lib/logging/uncaught-errors'
+import { registerUncaughtErrorLogging } from '#lib/logging/uncaught-errors.js'
 
 registerUncaughtErrorLogging()

@@ -36,7 +36,7 @@ function register(bucket: ((p: unknown) => void)[]) {
   }
 }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onListingOpening: register(h.listeners.opening),
   onListingStalled: register(h.listeners.stalled),
   onListingProgress: register(h.listeners.progress),
@@ -58,13 +58,13 @@ vi.mock('./listing-liveness', () => ({
 }))
 vi.mock('./tag-sweep', () => ({ sweepListingTags: vi.fn() }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath: h.resolveValidPath }))
-vi.mock('$lib/error-messages/listing-error', () => ({ renderListingError: (e: unknown) => ({ rendered: e }) }))
-vi.mock('$lib/icon-cache', () => ({ evictPerPathIconsForDir: vi.fn() }))
+vi.mock('#lib/error-messages/listing-error.js', () => ({ renderListingError: (e: unknown) => ({ rendered: e }) }))
+vi.mock('#lib/icon-cache.js', () => ({ evictPerPathIconsForDir: vi.fn() }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))
-vi.mock('$lib/ui/toast', () => ({ dismissTransientToastsForPane: vi.fn() }))
-vi.mock('$lib/settings', () => ({ getSetting: h.getSetting }))
-vi.mock('$lib/benchmark', () => ({ resetEpoch: vi.fn(), logEvent: vi.fn(), logEventValue: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissTransientToastsForPane: vi.fn() }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: h.getSetting }))
+vi.mock('#lib/benchmark.js', () => ({ resetEpoch: vi.fn(), logEvent: vi.fn(), logEventValue: vi.fn() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 

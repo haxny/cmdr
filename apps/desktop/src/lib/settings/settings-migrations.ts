@@ -4,9 +4,9 @@
 import type { Store } from '@tauri-apps/plugin-store'
 import type { SettingId } from './types'
 import { getDefaultValue } from './settings-registry'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
-import { ARCHIVE_ENTER_FORMATS, isEnterAction } from '$lib/file-explorer/pane/archive-enter-policy'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { ARCHIVE_ENTER_FORMATS, isEnterAction } from '#lib/file-explorer/pane/archive-enter-policy.js'
 
 const log = getAppLogger('settings')
 

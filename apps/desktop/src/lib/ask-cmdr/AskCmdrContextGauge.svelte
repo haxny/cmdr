@@ -9,9 +9,9 @@
   for a thread nobody measured yet.
 -->
 <script lang="ts">
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { contextUsagePercent, contextUsageState, type ContextUsage } from './ask-cmdr-context-usage'
 
     type Props = { usage: ContextUsage | null }

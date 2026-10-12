@@ -29,7 +29,7 @@ translators.
   `routes/(main)/`.
 - **The harness, its fixtures, and the dialogs they pull in tree-shake out of prod**; `gallery-registry.ts` doesn't (it
   rides the Debug route's chunk). The main window's own graph imports nothing from here: a preview suppresses global
-  shortcuts by registering in `$lib/ui/open-dialogs.svelte`, like the shipping dialog it is.
+  shortcuts by registering in `#lib/ui/open-dialogs.svelte`, like the shipping dialog it is.
 - **The gate is `import.meta.env.DEV || __CMDR_E2E_BUILD__`** (`+layout.svelte`, `listener-setup.ts`), the define every
   E2E build sets, and the i18n capture runs on that same binary. ❌ Never narrow a site to `DEV`: E2E binaries are prod
   Vite builds, so the dialog screenshots go silently to zero and `dialog-inset.spec.ts` stops measuring.

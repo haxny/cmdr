@@ -1,11 +1,11 @@
 // Network hosts, SMB shares, keychain, and mounting
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events } from '$lib/ipc/bindings'
-import { throwEjectError } from '$lib/file-explorer/navigation/eject-error'
-import { throwMountError } from '$lib/file-explorer/network/mount-error'
-import { throwShareListError } from '$lib/file-explorer/network/share-list-error'
-import { throwReconnectError } from '$lib/file-explorer/network/reconnect-error'
+import { commands, events } from '#lib/ipc/bindings.js'
+import { throwEjectError } from '#lib/file-explorer/navigation/eject-error.js'
+import { throwMountError } from '#lib/file-explorer/network/mount-error.js'
+import { throwShareListError } from '#lib/file-explorer/network/share-list-error.js'
+import { throwReconnectError } from '#lib/file-explorer/network/reconnect-error.js'
 import type {
   CredentialSource,
   DirectConnectionSwitch,
@@ -16,10 +16,10 @@ import type {
   SmbFellBackToOsMount,
   SmbOsMountNoticeWithdrawn,
   UpgradeResult,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type { MenuAnchor } from './file-actions'
-import { throwAddServerError } from '$lib/servers/add-server-error'
+import { throwAddServerError } from '#lib/servers/add-server-error.js'
 import type {
   AuthOptions,
   ConnectionMode,

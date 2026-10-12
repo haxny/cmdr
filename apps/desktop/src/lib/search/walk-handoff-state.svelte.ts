@@ -8,8 +8,8 @@
  * orchestration — subscribing, feeding the snapshot, swapping toasts — lives there.
  */
 
-import { cancelSearch } from '$lib/tauri-commands'
-import type { LiveRunView } from '$lib/query-ui/query-stream'
+import { cancelSearch } from '#lib/tauri-commands/index.js'
+import type { LiveRunView } from '#lib/query-ui/query-stream.js'
 
 /** The one running toast, replaced in place as the counters move. */
 export const WALK_HANDOFF_TOAST_ID = 'search-walk-handoff'

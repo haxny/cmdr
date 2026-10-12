@@ -68,7 +68,7 @@ alongside the other always-mounted dialogs (`crash-report`, `error-report`, `fee
 Not `+page.svelte`: it's already over its `file-length` allowlist entry.
 
 The main-window graph imports nothing from this directory. A previewed dialog suppresses global shortcuts the same way a
-real one does: `+page.svelte`'s `isModalDialogOpen()` asks `$lib/ui/open-dialogs.svelte`, and the gallery renders the
+real one does: `+page.svelte`'s `isModalDialogOpen()` asks `#lib/ui/open-dialogs.svelte`, and the gallery renders the
 SHIPPING component, which registers there on mount. The one case that falls through is a request whose fixture is
 missing, where the harness renders nothing and logs it at debug; nothing is on screen to shadow, so nothing should be
 suppressed.
@@ -384,7 +384,7 @@ Its rollback lives in the `onConfirm` prop, which the gallery leaves empty, so i
 four values get a row state and a fixture. That's deliberate rather than tidy. Undoing a copy deletes and undoing a move
 doesn't, so the four confirmations have to be read SIDE BY SIDE to catch one that over-warns or under-warns; a single
 `idle` state would hide exactly the mistake the split exists to prevent. Reasoning behind the wording:
-`$lib/file-operations/DETAILS.md` § "Rollback asks first".
+`#lib/file-operations/DETAILS.md` § "Rollback asks first".
 
 ## Rows that can't be fixtures
 

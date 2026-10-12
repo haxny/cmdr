@@ -22,7 +22,7 @@ than abstracting into "operations".
 A copy/move/delete today shows only a modal progress dialog: it blocks the main window and there's no single place to
 manage several operations at once. The queue is the "stop blocking me, let me keep working" surface, so it must be a
 real OS window you can leave open in the background — not a sheet, not a panel inside the main window. It's built on the
-exact Settings-window pattern (singleton, vibrancy, overlay title bar, position via `$lib/window-positioning`) so it
+exact Settings-window pattern (singleton, vibrancy, overlay title bar, position via `#lib/window-positioning`) so it
 reads as a first-class macOS utility window, consistent with Settings and Keyboard shortcuts.
 
 ## The two-stream model
@@ -136,7 +136,7 @@ smoothed ETA, and the same Pause / Cancel / Rollback the row has. Closing the di
 here, still running, exactly as Background does. It is not a command on the operation: nothing about it changes, only
 where it is shown.
 
-- **Only the id crosses.** The row emits `foreground-operation` (`$lib/tauri-commands/dialog-events.ts`), and the main
+- **Only the id crosses.** The row emits `foreground-operation` (`#lib/tauri-commands/dialog-events.ts`), and the main
   window resolves that id against ITS OWN `operations-changed` snapshot
   (`../foreground-request.ts::adoptedOperationFor`). The registry row is the single source of truth about an operation,
   and both webviews already receive it, so nothing about the operation travels on the wire. Fold this window into the
@@ -248,7 +248,7 @@ reopen.
 - **The row.** No pause, cancel, rollback, or select checkbox — there's nothing live left to act on. A `triangle-alert`
   glyph and "Couldn't finish" in `--color-error-text`, Retry (below), "Send error report…", and Dismiss, and the reason
   on line 2 where the readout would be. The report (`failureIncidentFor`) opens in the MAIN window, which hosts the
-  dialog (`$lib/error-reporter/DETAILS.md` § Report offers); a stalled row's readout line gets the slow-report link the
+  dialog (`#lib/error-reporter/DETAILS.md` § Report offers); a stalled row's readout line gets the slow-report link the
   same way.
 - **Retry starts it again, from this window.** Shown when the snapshot says the backend kept a way to start the
   operation again (`canRetry`: every cross-volume copy and move) AND the failure is one the error dialog would offer
@@ -441,7 +441,7 @@ for a transfer/activity manager — and follows the window's active state.
 
 Under macOS "Reduce transparency" the window opens opaque (no material, `backgroundColor` mirroring the theme) and the
 page surface uses the shared `--color-bg-glass` / `--color-border-glass` tokens, which flip to opaque under
-`html.reduce-transparency` (toggled from the backend `NSWorkspace` value via `$lib/glass-material`, since WKWebView
+`html.reduce-transparency` (toggled from the backend `NSWorkspace` value via `#lib/glass-material`, since WKWebView
 doesn't reflect `prefers-reduced-transparency`). `prefers-color-scheme` IS reflected, so dark detection stays a media
 query. Reduced motion is honored by the shared `ProgressBar` and `Spinner`: the bar's shimmer lives inside
 `@media (prefers-reduced-motion: no-preference)` and the spinner's spin freezes through `app-utilities.css`.

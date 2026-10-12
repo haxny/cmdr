@@ -3,7 +3,7 @@
 // macOS TCC currently blocks Cmdr from reading.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { events, type RestrictedPathsChangedPayload } from '$lib/ipc/bindings'
+import { events, type RestrictedPathsChangedPayload } from '#lib/ipc/bindings.js'
 
 /** The TCC-restricted path set changed; `paths` is the full sorted set. */
 export function onRestrictedPathsChanged(

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { readCancelRollback } from './cancel-rollback-toast'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { CancelRollback, SkipBreakdown, SkipReason } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { CancelRollback, SkipBreakdown, SkipReason } from '#lib/ipc/bindings.js'
 
 // The readout resolves its wording through `t()` (catalog + ICU), which reads the
 // active locale. Pin en-US so these are golden assertions on the shipped English.

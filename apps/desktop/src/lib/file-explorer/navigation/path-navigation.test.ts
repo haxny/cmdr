@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => {
+vi.mock('#lib/tauri-commands/index.js', () => {
   const pathExists = vi.fn()
   return {
     pathExists,
@@ -12,12 +12,12 @@ vi.mock('$lib/tauri-commands', () => {
   }
 })
 
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   getLastUsedPathForVolume: vi.fn(),
 }))
 
-const { pathExists } = await import('$lib/tauri-commands')
-const { getLastUsedPathForVolume } = await import('$lib/app-status-store')
+const { pathExists } = await import('#lib/tauri-commands/index.js')
+const { getLastUsedPathForVolume } = await import('#lib/app-status-store.js')
 
 import { withTimeout, determineNavigationPath } from './path-navigation'
 import type { OtherPaneState } from './path-navigation'

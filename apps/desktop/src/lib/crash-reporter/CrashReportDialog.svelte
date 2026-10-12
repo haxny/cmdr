@@ -1,19 +1,19 @@
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import AttachEmailCheckbox from '$lib/attach-email/AttachEmailCheckbox.svelte'
-    import { createAttachEmail } from '$lib/attach-email/attach-email.svelte'
-    import type { CrashReport } from '$lib/tauri-commands'
-    import { sendCrashReport, dismissCrashReport } from '$lib/tauri-commands'
-    import { setSetting } from '$lib/settings'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import AttachEmailCheckbox from '#lib/attach-email/AttachEmailCheckbox.svelte'
+    import { createAttachEmail } from '#lib/attach-email/attach-email.svelte.js'
+    import type { CrashReport } from '#lib/tauri-commands/index.js'
+    import { sendCrashReport, dismissCrashReport } from '#lib/tauri-commands/index.js'
+    import { setSetting } from '#lib/settings/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import {
         describeServerRequestFailure,
         serverRequestFailureOf,
         serverRequestLogLevel,
-    } from '$lib/error-messages/server-request'
+    } from '#lib/error-messages/server-request.js'
     import { crashDialogBodyKey, crashDialogTitleKey } from './crash-copy'
 
     const log = getAppLogger('crashReportDialog')

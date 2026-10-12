@@ -27,7 +27,7 @@ finishes onboarding.
 - **`CloudProviderPicker.svelte`**: Step 2 left column: scrollable listbox of all 15 cloud providers. Single tab stop
   via `aria-activedescendant` (no roving focus); Arrow / Home / End / type-to-jump move the active option.
 - **`CloudProviderSetup.svelte`**: Step 2 right column: the provider header and status line around the shared
-  `$lib/ai-provider-setup/ProviderSetupSteps`. Providers with editable OpenAI-compatible endpoints, including Custom,
+  `#lib/ai-provider-setup/ProviderSetupSteps`. Providers with editable OpenAI-compatible endpoints, including Custom,
   still require a stored API key before the endpoint check runs.
 - **`StepBeta.svelte`**: Step 3 (Open beta, non-skippable): personal open-beta intro + the checklist (usage stats
   carrying the whole disclosure behind its info tip, a GitHub star, an AlternativeTo like, an `analytics.email` address
@@ -304,7 +304,7 @@ Three pieces stacked top to bottom:
   nothing (no `ai.provider`, no Ask Cmdr switches, no consent decline), so removing the profile brings their cloud AI
   back. A reopened wizard (FDA revoked later, a crash-resume) hits exactly this. A pick of their own persists as usual.
 - **A host list**: `CloudProviderPicker` disables refused services (`isRefused`, from `followPresetHostVerdicts`), and
-  the shared controller says a refused endpoint is refused (`$lib/ai-provider-setup/DETAILS.md` § The organization's
+  the shared controller says a refused endpoint is refused (`#lib/ai-provider-setup/DETAILS.md` § The organization's
   policy).
 
 ### Forward footer (single "Next" button)
@@ -324,7 +324,7 @@ key later. The user can re-enter via `Cmdr > Onboarding…` or fix it in Setting
 that says AI is on, not just the one radio it came from. Four of them exist, in two different stores:
 
 1. **`ai.provider = 'off'`** (registry setting).
-2. **Cloud AI consent, declined** via `$lib/ai/cloud-consent.svelte::declineCloudConsent()`. NOT a setting: a record in
+2. **Cloud AI consent, declined** via `#lib/ai/cloud-consent.svelte::declineCloudConsent()`. NOT a setting: a record in
    `main.db` behind the consent commands, the one the Allow cloud AI switch reads. So a later switch back to Cloud asks
    again (David's call: "no AI" is the clearest "no" there is).
 3. **`askCmdr.proactive = false`**. The registry ships it `default: true` on purpose (the other gates keep it harmless
@@ -337,7 +337,7 @@ The end state is `AskCmdrOff` for `WakeReadiness`, so the status corner's wake i
 wizard can't re-arm a switch the user turned off. On Cloud it still waits for cloud consent, so it grants no data flow.
 
 **❌ Picking cloud or local never grants cloud consent.** Only the `'off'` branch touches consent, and only in the
-declining direction. Consent is the Allow cloud AI switch's own click (`$lib/ai/AiCloudConsentToggle.svelte`, shown at
+declining direction. Consent is the Allow cloud AI switch's own click (`#lib/ai/AiCloudConsentToggle.svelte`, shown at
 the top of the Cloud setup column), and the backend enforces it in `ai::manager::resolve_backend`; granting it as a side
 effect of choosing a provider would be a consent bypass. `StepAi.test.ts` asserts the absence for both branches, and
 `lib/ai/cloud-consent-call-sites.test.ts` pins that nothing but the switch can grant.
@@ -376,7 +376,7 @@ A failed keychain read logs and returns `false`: a wizard the user can't leave i
 
 ### Connection-check pipeline
 
-The steps, the key persist, and the connection check all belong to `$lib/ai-provider-setup/`, shared with Settings › AI
+The steps, the key persist, and the connection check all belong to `#lib/ai-provider-setup/`, shared with Settings › AI
 › Provider; `apps/desktop/src/lib/ai-provider-setup/DETAILS.md` owns the mechanism. `CloudProviderSetup.svelte` is the
 wizard's frame around it: the provider header, and a quiet status line reading `controller.status` / `controller.error`
 (Settings renders the same states as a row with recheck buttons).
@@ -470,7 +470,7 @@ so: never pre-tick it, never add a path that reaches the app around it, and keep
 first-person statement of agreement (the parity test pins it word for word for exactly that reason).
 
 **Why the version, not a boolean.** Consent to a superseded document isn't consent to the current one. `TERMS_VERSION`
-(`$lib/legal/terms`, the terms page's `lastUpdated` date) is stored with the acceptance as
+(`#lib/legal/terms`, the terms page's `lastUpdated` date) is stored with the acceptance as
 `onboarding.termsAcceptedVersion` + `onboarding.termsAcceptedAt` (an ISO instant). On mount the step ticks the box only
 when the stored version EQUALS the current one, so bumping the constant after a terms change re-asks everyone. Unticking
 clears both fields (to `''`) rather than leaving a stale record we couldn't stand behind. The write doesn't wait out the
@@ -644,16 +644,16 @@ contradict each other. Three rules it exists to enforce:
 
 The badge hides while the wizard is on step 1, because that page is where the badge sends people. Everywhere else it
 stays, including behind the other steps: the choice is still unanswered there. `isWizardOnFdaStep()` in
-`onboarding-state.svelte.ts` is the one answer to that, and it asks the `$lib/ui/open-dialogs.svelte` inventory whether
+`onboarding-state.svelte.ts` is the one answer to that, and it asks the `#lib/ui/open-dialogs.svelte` inventory whether
 the wizard is on screen at all. ⚠️ `currentStep` alone can't say it: the wizard closes by being unmounted, so the step
 cursor keeps its last value and a badge reading the cursor would stay hidden for the rest of the session.
 
 ### Where the badge lives
 
-`$lib/status-corner/StatusCorner.svelte` renders it, in the slot right before the indexing hourglass. ❌ Never move it
+`#lib/status-corner/StatusCorner.svelte` renders it, in the slot right before the indexing hourglass. ❌ Never move it
 into the `.title-bar` header: the corner is absolutely positioned over that same strip, so a header-placed badge lands
 on top of the hourglass. The badge is a plain inline box with no `position` of its own (the corner's member contract,
-`$lib/status-corner/DETAILS.md`), and the corner forwards it one prop, `onOpenOnboarding`, because only
+`#lib/status-corner/DETAILS.md`), and the corner forwards it one prop, `onOpenOnboarding`, because only
 `routes/(main)/+page.svelte` can mount the wizard.
 
 The corner lives inside the app shell (`showApp`), which `resolveOnboardingMount` reveals on every branch including the
@@ -685,18 +685,18 @@ its sibling `startup-gates.test.ts`):
 - Anything else → mount wizard.
 
 The onboarded flag is the hidden `onboarding.completed` setting. It flips to `true` on full wizard completion via
-`notifyOnboardingComplete()` (from `$lib/updates/updater.svelte`), so the auto-update "restart to apply" toast doesn't
+`notifyOnboardingComplete()` (from `#lib/updates/updater.svelte`), so the auto-update "restart to apply" toast doesn't
 fire during first-launch onboarding.
 
 While the wizard is up, the updater's mirror flag is set too, so it suppresses the deferred toast. Both writes go
 through `+page.svelte`'s `setOnboardingVisible()`, the single seam for opening and closing the wizard (see
-`routes/(main)/DETAILS.md` § Startup gates), and `handleWizardComplete` flips it back. See `$lib/updates/CLAUDE.md` §
+`routes/(main)/DETAILS.md` § Startup gates), and `handleWizardComplete` flips it back. See `#lib/updates/CLAUDE.md` §
 "Onboarding gating".
 
 ### The wizard announces itself twice, by hand
 
 `OnboardingWizard`'s `onMount` calls both `markDialogOpen('onboarding')` (the frontend inventory,
-`$lib/ui/open-dialogs.svelte`) and `notifyDialogOpened('onboarding')` (the Rust `SoftDialogTracker`), and `onDestroy`
+`#lib/ui/open-dialogs.svelte`) and `notifyDialogOpened('onboarding')` (the Rust `SoftDialogTracker`), and `onDestroy`
 the two closes. Every other soft dialog gets both for free from `ModalDialog`; the wizard wears that component's chrome
 without being it (a bespoke sheet with no Escape, its own portal target for the language picker), so it makes the pair
 itself. ❌ Never drop one half: an unpaired close blocks every file operation until restart, and an unpaired open makes
@@ -721,8 +721,8 @@ Run with both: `CMDR_FORCE_ONBOARDING=1 CMDR_MOCK_FDA=notgranted pnpm dev`.
 
 ## i18n (message catalog)
 
-All user-facing onboarding copy lives in `$lib/intl/messages/en/onboarding.json` (keys `onboarding.<step>.<leaf>`),
-resolved through the `$lib/intl` runtime: `tString()` for static and `{var}`-interpolated strings, `<Trans>` for the
+All user-facing onboarding copy lives in `#lib/intl/messages/en/onboarding.json` (keys `onboarding.<step>.<leaf>`),
+resolved through the `#lib/intl` runtime: `tString()` for static and `{var}`-interpolated strings, `<Trans>` for the
 many inline-component sentences (David's warm beta copy is dense with `<strong>`/`<em>`/`<LinkButton>` runs). The
 base-en output is byte-identical to the pre-migration copy (a behavior-preserving MOVE), pinned by
 `onboarding-i18n-parity.test.ts`.
@@ -762,7 +762,7 @@ resolves to ("System default (Svenska)").
 **Wiring is `SettingSelect` on `appearance.language`**, the same control the Settings picker uses, so a pick goes
 through `setSetting()` → `settings-applier.ts` → `setLocale()` and the open wizard re-renders in place. No restart, no
 special case. An explicit pick retires `'system'` permanently, which is the point: an implicit choice stays implicit and
-an explicit one is permanent, so a resolved tag is never written back (`$lib/intl/DETAILS.md` § What `'system'` resolves
+an explicit one is permanent, so a resolved tag is never written back (`#lib/intl/DETAILS.md` § What `'system'` resolves
 to).
 
 **The menu portals into the wizard OVERLAY, not into `document.body`.** Body would put it under the scrim
@@ -827,16 +827,16 @@ wizard's footer remains consistent for the other steps (Back + Next / Finish / R
 
 ## Dependencies
 
-- `$lib/tauri-commands`: `checkFullDiskAccess`, `checkFullDiskAccessQuiet` (Step 1's 500 ms grant-detection poller),
+- `#lib/tauri-commands`: `checkFullDiskAccess`, `checkFullDiskAccessQuiet` (Step 1's 500 ms grant-detection poller),
   `getMacosMajorVersion`, `openPrivacySettings`, `startIndexingAfterFdaDecision`, `openExternalUrl`,
   `notifyDialogOpened`, `notifyDialogClosed`, `isForceOnboarding`, `betaSignup` (Step 3's email signup)
-- `$lib/settings`: `getSetting`, `setSetting`, `forceSave` (the `onboarding.*` keys: the FDA choice, the completed flag,
+- `#lib/settings`: `getSetting`, `setSetting`, `forceSave` (the `onboarding.*` keys: the FDA choice, the completed flag,
   and Step 3's terms acceptance)
-- `$lib/legal/terms`: `TERMS_VERSION`, `TERMS_URL` (Step 3's terms checkbox)
-- `$lib/shortcuts/key-capture`: `isMacOS`
-- `$lib/system-strings.svelte`: localized system pane names
-- `$lib/ui`: `Button`, `LinkButton`
-- `$lib/beta-links`: `GITHUB_REPO_URL`, `ALTERNATIVE_TO_URL`, `ABOUT_DAVID_URL` (Step 3's two checklist links and
+- `#lib/legal/terms`: `TERMS_VERSION`, `TERMS_URL` (Step 3's terms checkbox)
+- `#lib/shortcuts/key-capture`: `isMacOS`
+- `#lib/system-strings.svelte`: localized system pane names
+- `#lib/ui`: `Button`, `LinkButton`
+- `#lib/beta-links`: `GITHUB_REPO_URL`, `ALTERNATIVE_TO_URL`, `ABOUT_DAVID_URL` (Step 3's two checklist links and
   David's own page). `GITHUB_ISSUES_URL` and `BOOK_A_CALL_URL` live in the same module but belong to
   `FeedbackDialog.svelte` and `AboutWindow.svelte` now, ❌ not here.
 - `@tauri-apps/plugin-process`: `relaunch` (Allow-path footer button)

@@ -7,8 +7,8 @@
  * error-copy writing rules. Both fail silently at runtime.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { MutationError, VolumeError } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { MutationError, VolumeError } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { renderMutationError, renderVolumeError, technicalDetail } from './mutation-error-messages'
 import { asMutationError, throwMutationError } from './mutation-error'
 

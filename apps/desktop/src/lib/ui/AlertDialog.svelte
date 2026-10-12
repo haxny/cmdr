@@ -1,8 +1,8 @@
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import CopyBox from '$lib/ui/CopyBox.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import CopyBox from '#lib/ui/CopyBox.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         title: string

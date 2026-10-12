@@ -3,23 +3,23 @@
  * any other refusal gets a plain one, and a normal press says nothing.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { GetInfoError } from '$lib/tauri-commands'
+import type { GetInfoError } from '#lib/tauri-commands/index.js'
 
 const m = vi.hoisted(() => ({
   getInfo: vi.fn<(path: string) => Promise<void>>(),
   addToast: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: m.addToast }))
-vi.mock('$lib/tauri-commands', async () => {
-  const actual = await vi.importActual<typeof import('$lib/tauri-commands/file-actions')>(
-    '$lib/tauri-commands/file-actions',
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: m.addToast }))
+vi.mock('#lib/tauri-commands/index.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/tauri-commands/file-actions.js')>(
+    '#lib/tauri-commands/file-actions.js',
   )
   return { getInfo: m.getInfo, asGetInfoError: actual.asGetInfoError, GetInfoFailure: actual.GetInfoFailure }
 })
 vi.mock('./FinderAutomationOffToastContent.svelte', () => ({ default: 'FinderAutomationOffToastContent' }))
 
-import { GetInfoFailure } from '$lib/tauri-commands/file-actions'
+import { GetInfoFailure } from '#lib/tauri-commands/file-actions.js'
 import { openGetInfoOrExplain } from './get-info-open'
 
 const { getInfo, addToast } = m

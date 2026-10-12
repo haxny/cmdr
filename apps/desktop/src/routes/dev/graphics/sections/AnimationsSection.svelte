@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     const PULSE_USAGE =
         'Opacity fades about 1 to 0.3 on a loop. Used for the AI suggestion chip while thinking, the drive-indexing hourglass, and a reduced-motion fallback.'

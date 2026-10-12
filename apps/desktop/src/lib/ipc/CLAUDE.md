@@ -8,7 +8,7 @@ The Rust side lives in `apps/desktop/src-tauri/src/ipc.rs`.
 - `bindings.ts`: generated `commands.*` + `events.*` (don't hand-edit). Rust source of truth: `ipc.rs::builder()`.
 - `typed-failure.ts`: `TypedFailure<T>` + `failureOf`, so a command family's typed refusal survives a `throw` instead of
   being flattened into a string. One subclass per wire type; `docs/guides/error-handling.md` is the map.
-- Call sites import typed wrappers from `$lib/tauri-commands/` (the canonical path), not `bindings.ts` directly.
+- Call sites import typed wrappers from `#lib/tauri-commands/` (the canonical path), not `bindings.ts` directly.
 
 ## Must-knows
 
@@ -19,7 +19,7 @@ The Rust side lives in `apps/desktop/src-tauri/src/ipc.rs`.
   feature has to be held back from its specta collector in test builds, the way the `ipc.rs` manifest's
   `typed unless cfg(test)` group does. E2E reaches those commands by raw `__TAURI_INTERNALS__.invoke`.
   `scripts/check/checks/DETAILS.md` § "One feature set across the cargo lanes".
-- **Never call `commands.*` / `events.*` raw in components.** Wrap each in `$lib/tauri-commands/` (an `on<Event>(cb)`
+- **Never call `commands.*` / `events.*` raw in components.** Wrap each in `#lib/tauri-commands/` (an `on<Event>(cb)`
   for events). Enforced by `cmdr/no-raw-tauri-invoke`.
 - **Name your positional args.** Specta wrappers take positional args, not an object. With >2 primitive args (bool /
   number / null), extract named locals at the call site; don't bury meaning in a thin helper.

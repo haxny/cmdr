@@ -1,4 +1,9 @@
-import { onDragImageSize, onDragModifiers, setSelfDragResolvedOperation, type UnlistenFn } from '$lib/tauri-commands'
+import {
+  onDragImageSize,
+  onDragModifiers,
+  setSelfDragResolvedOperation,
+  type UnlistenFn,
+} from '#lib/tauri-commands/index.js'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { toViewportPosition } from '../drag/drag-position'
 import {
@@ -18,21 +23,21 @@ import { isInvalidSelfDescendantDrop } from '../drag/drop-target-validation'
 import { isForcedCopyDrag, pickDropOperation, type ModifierState } from '../drag/drop-operation'
 import { reportDropReceived, type DropOutcome } from '../drag/drag-analytics'
 import { showOverlay, updateOverlay, hideOverlay, type OverlayFileInfo } from '../drag/drag-overlay.svelte.js'
-import { getCachedIcon } from '$lib/icon-cache'
+import { getCachedIcon } from '#lib/icon-cache.js'
 import {
   startModifierTracking,
   stopModifierTracking,
   getModifierState,
   setModifiers,
 } from '../modifier-key-tracker.svelte'
-import { addToast } from '$lib/ui/toast'
-import { statPathsKinds, storedSpellings, resolvePathVolume } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { statPathsKinds, storedSpellings, resolvePathVolume } from '#lib/tauri-commands/index.js'
 import { buildTransferPropsFromDroppedPaths } from './transfer-operations'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import { checkTransferDestinationGuard, resolveSourceVolumeId } from './transfer-entry'
 import { operationStartIsBlocked } from './operation-start-gate'
 import type { SelfDragIdentity } from '../drag/drag-drop'
-import type { PathVolumeResolution } from '$lib/tauri-commands'
+import type { PathVolumeResolution } from '#lib/tauri-commands/index.js'
 import type { TransferOperationType } from '../types'
 import type { PaneAccess } from './pane-access'
 import type { createDialogState } from './dialog-state.svelte'

@@ -41,7 +41,7 @@ close keys.
 - **Cmd+A / Cmd+Shift+A**: select all / deselect all
 - **`+` / `-`**: open the Selection dialog ("Select files…" / "Deselect files…", Total Commander parity). Whichever key
   types the character on the user's layout, main row or numpad: a Shift-typed symbol is named by its character
-  (`$lib/shortcuts/DETAILS.md` § Key capture). See [`$lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md)
+  (`#lib/shortcuts/DETAILS.md` § Key capture). See [`#lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md)
   for the dialog itself; the pane-side classifier lives in `pane/selection-dialog-keys.ts`.
 - **".." entry can't be selected**: keyboard fills from `..` default to "select" (so Shift+End from `..` selects).
 - **Cleared on navigation**: selection is per-directory
@@ -52,7 +52,7 @@ A modal that lets the user select by a glob, regex, or natural-language prompt a
 Mounts via `+page.svelte`. Snapshot of entries + cursor is captured ONCE at open via
 `explorerRef.getFocusedPaneEntries()`; mid-dialog focused-pane changes do NOT re-snapshot. The dialog hands matched
 indices to `explorerRef.applyIndicesToFocusedPane(indices, mode)` on commit (`mode === 'add'` for select, `'remove'` for
-deselect). See [`$lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md) for the wiring, match semantics, AI
+deselect). See [`#lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md) for the wiring, match semantics, AI
 fallback contract, and the snapshot-pane note.
 
 ### Implementation
@@ -66,7 +66,7 @@ fallback contract, and the snapshot-pane note.
 - **`applyIndices(idxs, mode, hasParent)`**: bulk add/remove without disturbing the range anchor/end state. Skips `..`
   per `hasParent`, same rule as `selectAll`. Fires `onChanged?.()` exactly once per call. Exposed on `FilePane` as
   `applyIndices(idxs, mode)` and on `DualPaneExplorer` as `applyIndicesToFocusedPane(idxs, mode)`, which the Selection
-  dialog (see [`$lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md)) calls at commit time.
+  dialog (see [`#lib/selection-dialog/CLAUDE.md`](../selection-dialog/CLAUDE.md)) calls at commit time.
 - **Visual**: three-tier `--color-selection-fg` cascade (red, Total-Commander-style):
   - `--color-selection-fg-primary` (strong red — `#cc0000` light, `#ff4040` dark) applies on the selection bg.
   - `--color-selection-fg-cursor` (`#b80808` / `#ff8c8c`) takes over when the row is also under the cursor
@@ -181,7 +181,7 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
 - **Low-level nav commands hidden**: `showInPalette: false` for arrow keys, Page Up/Down
 - **Typed dispatch**: every entry path routes through `handleCommandExecute` (a `CommandId`-typed switch in
   `routes/(main)/command-dispatch.ts`), which turns the id into an `ExplorerAPI` call or a dialog toggle. See
-  `$lib/commands/CLAUDE.md`.
+  `#lib/commands/CLAUDE.md`.
 
 ## Git (`git/`)
 
@@ -205,11 +205,11 @@ For the full module map, decisions, and gotchas, see `git/CLAUDE.md`.
 
 - **ServersHub.svelte**: Top-level network view; lists discovered servers
 - **PlacesBrowser.svelte**: Lists shares on a selected server
-- **smb-sign-in.ts**: SMB's side of the one sign-in sheet (`$lib/servers`), shared by its three credential sites
+- **smb-sign-in.ts**: SMB's side of the one sign-in sheet (`#lib/servers`), shared by its three credential sites
 - **network-store.svelte.ts**: Reactive state for discovered servers, selected server/share, and auth mode
 - **`network/types.ts`** (the network vocabulary: hosts, shares, known shares, mount refusals) is re-exported from
   `types.ts`, which stays the one import seam. It re-exports the wire refusals (`MountError`, `ShareListError`) from
-  `$lib/ipc/bindings` rather than restating them: a hand-written copy had drifted to a `message` field the backend no
+  `#lib/ipc/bindings` rather than restating them: a hand-written copy had drifted to a `message` field the backend no
   longer sends
 
 ## Search-results virtual volume (`pane/SearchResultsView.svelte`)
@@ -222,7 +222,7 @@ dir-exists poll) read `!caps.hasBackendListing` — the same gate that skips a `
 MCP, off its snapshot rather than a listing; only `network` opts out of that (`caps.syncsToMcp`). See `pane/DETAILS.md`
 § "Volume capabilities" for the per-site breakdown (capabilities, not a `volumeId === 'search-results'` string compare).
 
-`SearchResultsView` reads the snapshot from `$lib/search/snapshot-store.svelte` and feeds its entries into `FullList`
+`SearchResultsView` reads the snapshot from `#lib/search/snapshot-store.svelte` and feeds its entries into `FullList`
 via `staticEntries`. No backend listing exists, no IPC traffic. Each adapted entry's `name` field is the friendly full
 path (home folder shown as `~`); the col-name cell mid-truncates via `useShortenMiddle` and surfaces the full path on
 hover. There's no separate Path column anymore. The view exports a small API (`setCursorIndex` / `findItemIndex` /
@@ -336,7 +336,7 @@ file-list Size column shows `<no perms>` for these rows instead of the misleadin
 denied scan. `pickSizeDisplay(entry, isRestricted)` in `views/full-list-utils.ts` is the single source of truth for that
 override; `measure-column-widths.ts::computeFullListColumnWidths` accepts an optional `isRestricted` fn so the Size
 column tracks the `<no perms>` text width during pre-DOM measurement. The state lives in
-`$lib/stores/restricted-paths-store.svelte` (`isRestricted(path)`); see `navigation/DETAILS.md` § "Restricted-folder
+`#lib/stores/restricted-paths-store.svelte` (`isRestricted(path)`); see `navigation/DETAILS.md` § "Restricted-folder
 indicator (TCC)" and `apps/desktop/src-tauri/src/restricted_paths/` for the backend.
 
 ## Rename (`rename/`)
@@ -484,12 +484,12 @@ pipeline and both sides' recipes: `docs/guides/error-handling.md`.
 
 ### For future agents
 
-The error messages and provider suggestions live on the **frontend** (`$lib/error-messages/`); Rust ships only a typed,
+The error messages and provider suggestions live on the **frontend** (`#lib/error-messages/`); Rust ships only a typed,
 word-free `ListingError` (reason + params + category + detected provider). `ErrorPane` resolves the copy via
-`renderListingError` (`$lib/error-messages/listing-error.ts`), which picks the base message from the listing/git factory
+`renderListingError` (`#lib/error-messages/listing-error.ts`), which picks the base message from the listing/git factory
 and applies the provider-suggestion override. To change wording, add an error state, or add a provider: edit
-`$lib/error-messages/` (and keep the frozen parity test green). See
-[`$lib/error-messages/CLAUDE.md`](../error-messages/CLAUDE.md) for the recipes, the writing rules, and the
+`#lib/error-messages/` (and keep the frozen parity test green). See
+[`#lib/error-messages/CLAUDE.md`](../error-messages/CLAUDE.md) for the recipes, the writing rules, and the
 markdown-escaping XSS boundary.
 
 The `ErrorPane` component should rarely need changes unless you're adding new UI elements (like illustrations, new
@@ -525,7 +525,7 @@ to O(visible). See [benchmarks](../../../../../docs/notes/non-reactive-file-stor
 **Root-layout HMR can trigger a SvelteKit TDZ crash.** When an HMR update propagates through the root `+layout.svelte`
 (for example, `app.css` changes), SvelteKit's client router can crash with
 `ReferenceError: Cannot access 'component' before initialization`, a TDZ error from a route component module not yet
-finished importing during the rebuild. This is a SvelteKit bug (sveltejs/kit#15287). `$lib/hmr-recovery.ts` catches the
+finished importing during the rebuild. This is a SvelteKit bug (sveltejs/kit#15287). `#lib/hmr-recovery.ts` catches the
 crash and forces a clean page reload. The recovery listener is imported from `+layout.ts` (a stable module that survives
 layout component re-evaluation). If sveltejs/kit#15287 gets fixed, the workaround can be removed.
 

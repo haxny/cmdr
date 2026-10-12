@@ -20,10 +20,10 @@
  */
 
 import { getActiveTab, type TabManager } from '../tabs/tab-state-manager.svelte'
-import { getDefaultVolumeId, resolvePathVolume, pathExists, type Location } from '$lib/tauri-commands'
-import { requestVolumeRefresh } from '$lib/stores/volume-store.svelte'
+import { getDefaultVolumeId, resolvePathVolume, pathExists, type Location } from '#lib/tauri-commands/index.js'
+import { requestVolumeRefresh } from '#lib/stores/volume-store.svelte.js'
 import { resolveValidPath } from '../navigation/path-resolution'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { VolumeInfo } from '../types'
 import type { NavigateIntent, NavigateResult, NavigateTo } from './navigate'
 import type { ReturnPoint } from './return-point'

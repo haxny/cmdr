@@ -19,11 +19,11 @@
      *   a click elsewhere closes it and leaves focus where the click put it.
      */
     import { flushSync, onDestroy, onMount, tick, type Snippet } from 'svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Popover from '$lib/ui/Popover.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { claimKey } from '$lib/shortcuts/claim-key'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Popover from '#lib/ui/Popover.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { MASK_TOKEN_KINDS } from './mask-token-kinds'
     import { findTokens, replaceToken, tokenAtCaret, type MaskToken } from './mask-tokens'
     import { nextEditor, tokenInside, type EditorEvent, type EditorOpen } from './token-editor-rules'

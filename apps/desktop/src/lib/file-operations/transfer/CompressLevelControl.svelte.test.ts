@@ -22,8 +22,8 @@ const { getSettingMock, setSettingMock } = vi.hoisted(() => ({
 }))
 
 // Full barrel mock: `SettingSlider` reads its metadata (definition, default) and
-// value through `$lib/settings`, and writes back through `setSetting`.
-vi.mock('$lib/settings', () => ({
+// value through `#lib/settings`, and writes back through `setSetting`.
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
   setSetting: setSettingMock,
   resetSetting: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('@tauri-apps/api/path', () => ({
   homeDir: () => Promise.resolve('/Users/test'),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   getVolumeSpace: vi.fn(() =>
@@ -63,7 +63,7 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 

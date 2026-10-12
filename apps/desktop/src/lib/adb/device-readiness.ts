@@ -17,9 +17,9 @@
  * them behind a per-provider lookup rather than bending Android's onto it.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { DeviceReadiness, DeviceUnavailableReason } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { DeviceReadiness, DeviceUnavailableReason } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** How the switcher draws one row, once readiness has had its say. */
 export interface DeviceRowState {

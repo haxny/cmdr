@@ -3,7 +3,7 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import KeyHint from './KeyHint.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('KeyHint a11y', () => {
   it('has no violations', async () => {

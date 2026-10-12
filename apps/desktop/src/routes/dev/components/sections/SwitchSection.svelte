@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
 
     let off = $state(false)
     let on = $state(true)

@@ -4,7 +4,7 @@
 //   - Otherwise, same volume  → Move
 //   - Otherwise               → Copy
 
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 export interface ModifierState {
   altHeld: boolean

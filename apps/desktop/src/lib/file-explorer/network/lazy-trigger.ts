@@ -16,8 +16,8 @@
  * single chokepoint.
  */
 
-import { noteNetworkAction } from '$lib/tauri-commands'
-import { getSetting, setSetting } from '$lib/settings'
+import { noteNetworkAction } from '#lib/tauri-commands/index.js'
+import { getSetting, setSetting } from '#lib/settings/index.js'
 
 export function triggerNetworkDiscovery(): void {
   if (!getSetting('network.enabled')) return

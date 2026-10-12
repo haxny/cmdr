@@ -1,7 +1,7 @@
 // Git browser commands and event listeners
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events, type EntryStatus, type GitStateChangedPayload, type RepoInfo } from '$lib/ipc/bindings'
+import { commands, events, type EntryStatus, type GitStateChangedPayload, type RepoInfo } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type { TimedOut } from './ipc-types'
 

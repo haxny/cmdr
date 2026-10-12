@@ -9,7 +9,7 @@
  * ❌ Editing those files in place (pull, edit, write back) isn't built.
  *
  * Which app opens the file, and everything said around that launch, belongs to
- * `$lib/text-editor`. The guard stays here because it's a pane question: is there
+ * `#lib/text-editor`. The guard stays here because it's a pane question: is there
  * a real file behind this row. The setting never widens what it accepts.
  *
  * Two gates, in this order, the same pair the snapshot clipboard uses:
@@ -21,15 +21,15 @@
  *    archive's insides and the `.git` portal look like plain paths.
  */
 
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { isPlainFilesystemPath } from '$lib/path/canonical'
-import { openFileInEditor } from '$lib/text-editor/open-file-in-editor'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { isPlainFilesystemPath } from '#lib/path/canonical.js'
+import { openFileInEditor } from '#lib/text-editor/open-file-in-editor.js'
 import { rowIsOsVisible } from './volume-capabilities'
 
 /**
  * What an F4 press did: asked an app to open the file, refused the row on screen,
- * or tried and couldn't start the launch (which `$lib/text-editor` has already
+ * or tried and couldn't start the launch (which `#lib/text-editor` has already
  * said). Named for the PRESS, apart from the wire type `EditorOpenOutcome`, which
  * says what Rust's launch did.
  */

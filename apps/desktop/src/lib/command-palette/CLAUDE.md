@@ -5,8 +5,8 @@ VS Code/Spotlight-style modal for searching and executing app commands via fuzzy
 ## Module map
 
 - **`CommandPalette.svelte`**: modal UI (keyboard nav, mouse hover, fuzzy-highlighted results, recents on empty query).
-- **`CommandPalette.test.ts`** / **`CommandPalette.a11y.test.ts`**: Vitest tests with mocked `$lib/commands` and
-  `$lib/app-status-store`.
+- **`CommandPalette.test.ts`** / **`CommandPalette.a11y.test.ts`**: Vitest tests with mocked `#lib/commands` and
+  `#lib/app-status-store`.
 
 `+page.svelte` sets `showCommandPalette = true` on ⌘⇧P; the palette mounts, prunes recents, searches reactively, and
 calls `onExecute(commandId)` → `handleCommandExecute()` on Enter / click.
@@ -18,7 +18,7 @@ calls `onExecute(commandId)` → `handleCommandExecute()` on Enter / click.
 - **Focus containment has two layers; don't remove either.** (1) `handleKeyDown` swallows Tab (`preventDefault`): the
   palette is a combobox, so DOM focus must stay on the input. Without the swallow, two Tab presses walk focus into the
   blurred background where the suppressed global dispatch leaves Esc / ⌘⇧P / Tab all dead (a full keyboard lockout,
-  mouse-only recovery). (2) The overlay carries `use:trapFocus={{ onEscape: onClose }}` (`$lib/ui/focus-trap`), pulling
+  mouse-only recovery). (2) The overlay carries `use:trapFocus={{ onEscape: onClose }}` (`#lib/ui/focus-trap`), pulling
   back programmatic focus leaks and keeping Escape working. Regression coverage: `e2e-playwright/focus-trap.spec.ts`.
 - **Two independent cursors.** `cursorIndex` (keyboard) and `hoveredIndex` (mouse) are separate. Arrow keys clear
   `hoveredIndex`; mouse enter/leave updates `hoveredIndex` without touching `cursorIndex`. Both reset on every query
@@ -46,15 +46,15 @@ calls `onExecute(commandId)` → `handleCommandExecute()` on Enter / click.
 
 ## Adding a new command
 
-Add it to `$lib/commands/command-registry.ts` and handle the id in `routes/(main)/command-dispatch.ts` (see
+Add it to `#lib/commands/command-registry.ts` and handle the id in `routes/(main)/command-dispatch.ts` (see
 `commands/CLAUDE.md`). The palette itself needs no changes.
 
 ## Dependencies
 
-- `$lib/commands`: `searchCommands`, `getPaletteCommands`, `CommandMatch`.
-- `$lib/app-status-store`: `pruneRecentCommands`, `pushRecentCommand`.
-- `$lib/shortcuts/reactive-shortcuts.svelte`: `getEffectiveShortcutsReactive`.
-- `$lib/ui/ShortcutChip.svelte` and `$lib/ui/StatusBadge.svelte`.
+- `#lib/commands`: `searchCommands`, `getPaletteCommands`, `CommandMatch`.
+- `#lib/app-status-store`: `pruneRecentCommands`, `pushRecentCommand`.
+- `#lib/shortcuts/reactive-shortcuts.svelte`: `getEffectiveShortcutsReactive`.
+- `#lib/ui/ShortcutChip.svelte` and `#lib/ui/StatusBadge.svelte`.
 
 Full details (data flow, the stability-badge derivation, fuzzy-highlight rendering, and decision rationale):
 `DETAILS.md`.

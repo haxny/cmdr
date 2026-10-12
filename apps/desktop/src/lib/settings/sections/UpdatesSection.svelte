@@ -2,22 +2,22 @@
     import SettingsSection from '../components/SettingsSection.svelte'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
-    import { getSettingDefinition } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { updateState, checkForUpdates } from '$lib/updates/updater.svelte'
+    import { getSettingDefinition } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { updateState, checkForUpdates } from '#lib/updates/updater.svelte.js'
     import {
         describeUpdateFailure,
         formatUpdateStatus,
         updateFailureOffersReport,
-    } from '$lib/updates/update-status-text'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    } from '#lib/updates/update-status-text.js'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import { createBetaEmailSignup } from './beta-email-signup.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getManagedPolicyView } from '$lib/managed-policy/managed-policy.svelte'
-    import ManagedPolicySummary from '$lib/managed-policy/ManagedPolicySummary.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
+    import ManagedPolicySummary from '#lib/managed-policy/ManagedPolicySummary.svelte'
 
     interface Props {
         searchQuery: string

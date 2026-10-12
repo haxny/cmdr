@@ -11,7 +11,7 @@
  * backend says what the name is based on, never whether the name is right.
  */
 
-import type { RenameEvidenceSource } from '$lib/tauri-commands'
+import type { RenameEvidenceSource } from '#lib/tauri-commands/index.js'
 
 export type NameProvenance =
   /** Cmdr read what's inside the file (the backend verified the quote or the tags). */

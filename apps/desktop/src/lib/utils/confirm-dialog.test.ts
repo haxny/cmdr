@@ -10,7 +10,7 @@ const confirmWithCheckboxCommand = vi.fn((_request: unknown): Promise<{ kind: st
 )
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ ask: (...args: unknown[]) => ask(...(args as [])) }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   confirmWithCheckbox: (request: unknown) => confirmWithCheckboxCommand(request),
 }))
 

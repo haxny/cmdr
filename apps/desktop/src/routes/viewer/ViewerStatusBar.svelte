@@ -8,11 +8,11 @@
 -->
 
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import Size from '$lib/ui/Size.svelte'
-    import type { MediaDimensions, ViewerContentKind } from '$lib/ipc/bindings'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import Size from '#lib/ui/Size.svelte'
+    import type { MediaDimensions, ViewerContentKind } from '#lib/ipc/bindings.js'
     import { isMediaKind, mediaKindLabel, formatMediaDimensions } from './media-view'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { ViewerDisplayMode } from './viewer-view-mode'
 
     interface Props {

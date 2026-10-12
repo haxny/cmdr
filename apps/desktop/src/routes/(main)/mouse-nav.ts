@@ -17,8 +17,8 @@
  *   typed `mouse-nav` event. What each device delivers, measured:
  *   `docs/notes/mx-side-buttons-swipe-2026-09-04.md`.
  */
-import type { CommandId } from '$lib/commands'
-import type { MouseNavDirection } from '$lib/ipc/bindings'
+import type { CommandId } from '#lib/commands/index.js'
+import type { MouseNavDirection } from '#lib/ipc/bindings.js'
 
 /** Fourth mouse button (X1), conventionally "back". */
 const MOUSE_BUTTON_BACK = 3

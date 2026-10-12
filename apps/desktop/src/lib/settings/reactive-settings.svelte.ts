@@ -19,11 +19,11 @@ import {
   type AppColor,
   type NearbyServersGroupChoice,
   densityMappings,
-} from '$lib/settings'
+} from '#lib/settings/index.js'
 import { formatDateForDisplay, type FormattedDate } from './format-utils'
-import { getAppLogger } from '$lib/logging/logger'
-import { clearExtensionIconCache } from '$lib/icon-cache'
-import { getEffectiveScale } from '$lib/text-size.svelte'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { clearExtensionIconCache } from '#lib/icon-cache.js'
+import { getEffectiveScale } from '#lib/text-size.svelte.js'
 
 const log = getAppLogger('reactive-settings')
 

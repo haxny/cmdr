@@ -46,15 +46,15 @@ const { betaSignupMock, openExternalUrlMock, settingsMap, setSetting, forceSaveM
   }
 })
 
-// Spread the real barrel and override only `betaSignup`, so other `$lib/tauri-commands`
+// Spread the real barrel and override only `betaSignup`, so other `#lib/tauri-commands`
 // exports the mounted tree might reach stay intact (a barrel mock that drops them silently
 // corrupts the Svelte 5 reactive graph; see `lib/ipc/CLAUDE.md` § Test-mock upkeep).
-vi.mock('$lib/tauri-commands', async () => {
-  const real = await vi.importActual<typeof import('$lib/tauri-commands')>('$lib/tauri-commands')
+vi.mock('#lib/tauri-commands/index.js', async () => {
+  const real = await vi.importActual<typeof import('#lib/tauri-commands/index.js')>('#lib/tauri-commands/index.js')
   return { ...real, betaSignup: betaSignupMock, openExternalUrl: openExternalUrlMock }
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -69,7 +69,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 
 // The barrel re-exports these three, and `SettingRow` reads all of them: a store mock that
 // only answers `onSpecificSettingChange` leaves the other two `undefined` on the barrel.
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   onSpecificSettingChange: () => () => {},
   isModified: () => false,
   resetSetting: () => {},
@@ -77,16 +77,16 @@ vi.mock('$lib/settings/settings-store', () => ({
 
 // The ids the organization's policy pins. Empty unless a test adds one before mounting.
 const lockedIds = vi.hoisted(() => new Set<string>())
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/managed-policy/managed-policy.svelte')>()),
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/managed-policy/managed-policy.svelte.js')>()),
   isSettingLocked: (id: string) => lockedIds.has(id),
   isSettingManaged: (id: string) => lockedIds.has(id),
 }))
 
 import StepBeta from './StepBeta.svelte'
 import { closeWizard, resetForTesting, openWizard, setCurrentStep, getOnboardingState } from './onboarding-state.svelte'
-import { TERMS_VERSION, TERMS_URL } from '$lib/legal/terms'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { TERMS_VERSION, TERMS_URL } from '#lib/legal/terms.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 function mountStep(): { target: HTMLElement; instance: ReturnType<typeof mount> } {
   const target = document.createElement('div')

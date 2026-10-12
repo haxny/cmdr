@@ -41,8 +41,8 @@
  * and an answer for a listing the pane has left is dropped.
  */
 
-import { setListingNameFilter } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { setListingNameFilter } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { ListingUpdateQueue } from './listing-update-queue'
 import type { PaneRowState } from './pane-row-state'
 

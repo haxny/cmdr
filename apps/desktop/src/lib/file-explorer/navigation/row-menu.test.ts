@@ -5,20 +5,20 @@
  * than per surface.
  */
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 const ejectVolume = vi.fn(() => Promise.resolve())
 const disconnectPlace = vi.fn(() => Promise.resolve(true))
 const setPlacePinned = vi.fn(() => Promise.resolve(true))
 const busy = new Set<string>()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   ejectVolume: (...args: unknown[]) => ejectVolume(...(args as [])),
   disconnectPlace: (...args: unknown[]) => disconnectPlace(...(args as [])),
   setPlacePinned: (...args: unknown[]) => setPlacePinned(...(args as [])),
   listSavedServers: () => Promise.resolve([]),
 }))
-vi.mock('$lib/stores/volume-busy-store.svelte', () => ({
+vi.mock('#lib/stores/volume-busy-store.svelte.js', () => ({
   isVolumeBusy: (id: string) => busy.has(id),
   isVolumeEjecting: () => false,
 }))
@@ -26,8 +26,8 @@ const connectDirectly = vi.fn(() => Promise.resolve('connected'))
 vi.mock('../network/direct-connect', () => ({
   connectDirectly: (...args: unknown[]) => connectDirectly(...(args as [])),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

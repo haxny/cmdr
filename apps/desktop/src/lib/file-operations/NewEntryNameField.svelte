@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onDestroy, onMount, tick } from 'svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { NamedKind } from './mutation-error-messages'
     import type { NewEntryNameCheck } from './new-entry-name-check.svelte'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
-    import { deriveTabLabel } from '$lib/file-explorer/tabs/tab-label'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
+    import { deriveTabLabel } from '#lib/file-explorer/tabs/tab-label.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
 
     /**
      * The "Create <kind> in <dir>" subtitle plus the name field the New folder and

@@ -1,7 +1,7 @@
 // Rename-related Tauri command wrappers
 
-import { commands, type Initiator, type RenameByMove, type ValidationError } from '$lib/ipc/bindings'
-import { throwMutationError } from '$lib/file-operations/mutation-error'
+import { commands, type Initiator, type RenameByMove, type ValidationError } from '#lib/ipc/bindings.js'
+import { throwMutationError } from '#lib/file-operations/mutation-error.js'
 import { awaitMutation, type MutationWaitOptions } from './mutation-reply'
 
 export interface RenameConflictFileInfo {

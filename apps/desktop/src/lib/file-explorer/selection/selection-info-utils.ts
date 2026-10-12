@@ -4,11 +4,11 @@
  */
 
 import type { FileEntry } from '../types'
-import type { FileSizeFormat, FileSizeUnit } from '$lib/settings/types'
-import { formatTieredSize, fixedUnitFor, type TieredSize } from '$lib/units/byte-size'
-import type { DateSegment, FormattedDate } from '$lib/settings/format-utils'
-import { formatInteger, getGroupSeparator } from '$lib/intl/number-format'
-import { tString } from '$lib/intl/messages.svelte'
+import type { FileSizeFormat, FileSizeUnit } from '#lib/settings/types.js'
+import { formatTieredSize, fixedUnitFor, type TieredSize } from '#lib/units/byte-size.js'
+import type { DateSegment, FormattedDate } from '#lib/settings/format-utils.js'
+import { formatInteger, getGroupSeparator } from '#lib/intl/number-format.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 // Size tier colors for digit triads (indexed: 0=bytes, 1=kB, 2=MB, 3=GB, 4=TB+)
 export const sizeTierClasses = ['size-bytes', 'size-kb', 'size-mb', 'size-gb', 'size-tb']
@@ -97,7 +97,7 @@ export function formatSizeText(bytes: number, opts: { unit: FileSizeUnit; format
 /**
  * Wraps a formatted size in its tier-colored span, for HTML that carries a size
  * inside a sentence (tooltips, error copy). Takes the size WITH its tier
- * (`formatByteSizeTiered` from `$lib/units`): the unit word is translated copy,
+ * (`formatByteSizeTiered` from `#lib/units`): the unit word is translated copy,
  * so the tier can never be read back out of the text.
  */
 export function colorizeSize(size: TieredSize): string {

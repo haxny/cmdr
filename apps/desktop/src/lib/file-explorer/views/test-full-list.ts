@@ -13,15 +13,15 @@
  *
  *     import { dirEntry, mountFullList } from './test-full-list'
  *
- *     vi.mock('$lib/tauri-commands', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
- *     vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
- *     vi.mock('$lib/indexing/index-state.svelte', async () =>
+ *     vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
+ *     vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+ *     vi.mock('#lib/indexing/index-state.svelte.js', async () =>
  *       (await import('./test-file-list-mocks')).indexStateMock({ getWalkedGround: () => ['/root/a'] }),
  *     )
- *     vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+ *     vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
  *       (await import('./test-file-list-mocks')).reactiveSettingsMock(),
  *     )
- *     vi.mock('$lib/settings/settings-store', async () =>
+ *     vi.mock('#lib/settings/settings-store.js', async () =>
  *       (await import('./test-file-list-mocks')).settingsStoreMock())
  *
  *     const list = await mountFullList({ entries: [dirEntry({ name: 'src' })] })
@@ -31,12 +31,12 @@
  * something isn't on them. A negative assertion over an empty list passes for the
  * wrong reason, which is the failure mode this harness exists to close.
  *
- * The viewport mechanics are generic and live in `$lib/test-layout`.
+ * The viewport mechanics are generic and live in `#lib/test-layout`.
  */
 
 import { mount, tick, type ComponentProps } from 'svelte'
 import { vi } from 'vitest'
-import { installLayoutMock, type LayoutBox, type LayoutMock } from '$lib/test-layout'
+import { installLayoutMock, type LayoutBox, type LayoutMock } from '#lib/test-layout.js'
 import FullList from './FullList.svelte'
 import type { FileEntry } from '../types'
 
@@ -145,7 +145,7 @@ async function settleUntil(until: () => boolean, reason: string): Promise<void> 
 /** Mounts a `FullList` over a measured surface and waits for its first fetch. */
 export async function mountFullList(options: MountFullListOptions = {}): Promise<MountedFullList> {
   const entries = options.entries ?? []
-  const { getFileRange } = await import('$lib/tauri-commands')
+  const { getFileRange } = await import('#lib/tauri-commands/index.js')
   vi.mocked(getFileRange).mockImplementation((_listingId, start: number, count: number) =>
     Promise.resolve(entries.slice(start, start + count)),
   )

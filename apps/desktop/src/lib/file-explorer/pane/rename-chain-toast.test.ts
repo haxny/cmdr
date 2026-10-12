@@ -27,14 +27,14 @@ const {
   tStringSpy: vi.fn((key: string, _params?: Record<string, unknown>) => key),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileAt: vi.fn(),
   getFileRange: vi.fn().mockResolvedValue([]),
   refreshListing: vi.fn(),
   moveToTrash: vi.fn(),
 }))
-vi.mock('$lib/utils/filename-validation', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/filename-validation')>()),
+vi.mock('#lib/utils/filename-validation.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/filename-validation.js')>()),
   validateFilename: validateFilenameSpy,
 }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))
@@ -43,8 +43,8 @@ vi.mock('../rename/rename-operations', () => ({
   performRename: vi.fn(),
   checkPermission: checkPermissionSpy,
 }))
-vi.mock('$lib/settings', () => ({ getSetting: getSettingSpy }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: tStringSpy }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: getSettingSpy }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: tStringSpy }))
 // Spread the real module: `trash-availability.ts` reaches for
 // `pathCrossesArchiveBoundary` through here too, and a mock that answers for only
 // one export throws when the conflict dialog asks for the other.
@@ -53,8 +53,8 @@ vi.mock('./archive-paths', async (importOriginal) => ({
   pathInsideArchive: pathInsideArchiveSpy,
 }))
 
-import { refreshListing } from '$lib/tauri-commands'
-import { clearAllToasts, dismissToast, getToasts } from '$lib/ui/toast'
+import { refreshListing } from '#lib/tauri-commands/index.js'
+import { clearAllToasts, dismissToast, getToasts } from '#lib/ui/toast/index.js'
 import type { RenameSettled } from '../rename/rename-operations'
 import { buildFlow, chainListing } from './test-rename-flow'
 

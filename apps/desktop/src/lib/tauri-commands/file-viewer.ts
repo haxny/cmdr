@@ -21,7 +21,7 @@ import {
   type ViewerError,
   type ViewerPullProgress,
   type ViewerRow,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 export type {

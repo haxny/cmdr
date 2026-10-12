@@ -23,13 +23,13 @@ const idx = vi.hoisted(() => ({
   walkingVolume: null as string | null,
   walkedRoots: [] as string[],
 }))
-vi.mock('$lib/indexing/index-state.svelte', () => ({
+vi.mock('#lib/indexing/index-state.svelte.js', () => ({
   isVolumeScanning: (volumeId: string) => idx.scanningVolume === volumeId,
   isVolumeAggregating: (volumeId: string) => idx.aggregatingVolume === volumeId,
   getWalkedGround: (volumeId: string) => (idx.walkingVolume === volumeId ? idx.walkedRoots : []),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: (n: number) => `${String(n)} B`,
   formatDateTime: (t: number | undefined) => (t ? '2025-03-14 10:30' : ''),
   formattedDate: (t: number | undefined) =>

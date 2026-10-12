@@ -13,7 +13,7 @@
  * (`crates/cmdr-fs/src/volume/connection.rs`).
  */
 
-import { volumeScheme } from '$lib/volume-scheme'
+import { volumeScheme } from '#lib/volume-scheme.js'
 import type { ConnectionState, VolumeBackendCapabilities } from '../types'
 
 /** `null` and `undefined` both arrive: Rust's `Option::None` serializes to `null`. */

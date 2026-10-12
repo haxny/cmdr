@@ -139,21 +139,21 @@ describe('initWindowLanguageSync', () => {
     }))
     // Partial: the settings registry (pulled in transitively) calls
     // `availableLocales()` to build the Language picker's options.
-    vi.doMock('$lib/intl/messages.svelte', async (importOriginal) => ({
-      ...(await importOriginal<typeof import('$lib/intl/messages.svelte')>()),
+    vi.doMock('#lib/intl/messages.svelte.js', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('#lib/intl/messages.svelte.js')>()),
       setLocale,
     }))
   })
 
   afterEach(() => {
     vi.doUnmock('./settings-store')
-    vi.doUnmock('$lib/intl/messages.svelte')
-    vi.doUnmock('$lib/intl/os-locales')
+    vi.doUnmock('#lib/intl/messages.svelte.js')
+    vi.doUnmock('#lib/intl/os-locales.js')
   })
 
   /** Loads the module with a controllable OS answer behind `loadSystemLocales`. */
   async function loadWith(systemLocale: string | null) {
-    vi.doMock('$lib/intl/os-locales', () => ({
+    vi.doMock('#lib/intl/os-locales.js', () => ({
       loadSystemLocales: () => Promise.resolve({ ui: systemLocale, format: null }),
       pickUiLocale: (setting: string) => (setting === 'system' ? systemLocale : setting),
       watchSystemLocales: (onMoved: () => void) => {
@@ -228,7 +228,7 @@ describe('initWindowLanguageSync and the document language', () => {
 
   afterEach(() => {
     vi.doUnmock('./settings-store')
-    vi.doUnmock('$lib/intl/os-locales')
+    vi.doUnmock('#lib/intl/os-locales.js')
     document.documentElement.lang = 'en'
   })
 
@@ -237,7 +237,7 @@ describe('initWindowLanguageSync and the document language', () => {
       getSetting: () => language,
       onSpecificSettingChange: () => () => {},
     }))
-    vi.doMock('$lib/intl/os-locales', () => ({
+    vi.doMock('#lib/intl/os-locales.js', () => ({
       loadSystemLocales: () => Promise.resolve({ ui: null, format: null }),
       pickUiLocale: (setting: string) => (setting === 'system' ? null : setting),
       watchSystemLocales: () => Promise.resolve(() => {}),

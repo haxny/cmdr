@@ -80,7 +80,7 @@ vi.mock('./FilePane.svelte', () => ({
   },
 }))
 
-vi.mock('$lib/app-status-store', () => ({
+vi.mock('#lib/app-status-store.js', () => ({
   loadAppStatus: vi.fn().mockResolvedValue({
     leftPath: '/Users/me',
     rightPath: '/Users/me',
@@ -126,8 +126,8 @@ const resolvePathVolumeMock = vi.hoisted(() =>
 )
 const getDefaultVolumeIdMock = vi.hoisted(() => vi.fn().mockResolvedValue('root'))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/tauri-commands')>()
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/tauri-commands/index.js')>()
   return {
     ...actual,
     pathExists: vi.fn().mockResolvedValue(true),
@@ -173,7 +173,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   initializeSettings: vi.fn().mockResolvedValue(undefined),
   getSetting: vi.fn().mockReturnValue(undefined),
   onSpecificSettingChange: vi.fn(() => () => {}),
@@ -187,7 +187,7 @@ vi.mock('../navigation/path-resolution', () => ({
 // Spy on the toast surface so the MAX_TABS_PER_PANE branch's "Tab limit reached"
 // warn toast is assertable. FilePane is mocked, so the coordinator is the only
 // consumer here (`addToast`).
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(),
   addToastForPane: vi.fn(),
   dismissTransientToastsForPane: vi.fn(),
@@ -292,7 +292,7 @@ describe('scenario 3: pinned-tab fork (L7)', () => {
   })
 
   it('at MAX_TABS_PER_PANE a pinned path-change navigates in-place and toasts "Tab limit reached"', async () => {
-    const { addToastForPane } = await import('$lib/ui/toast')
+    const { addToastForPane } = await import('#lib/ui/toast/index.js')
     const addToastSpy = vi.mocked(addToastForPane)
     addToastSpy.mockClear()
 

@@ -13,9 +13,9 @@
 // scope they're the escape hatch for a folder importance ranks too low to reach. Adding
 // one kicks an immediate indexing pass backend-side.
 
-import { getSetting } from '$lib/settings'
-import { mediaIndexSetAlwaysIndexFolder } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting } from '#lib/settings/index.js'
+import { mediaIndexSetAlwaysIndexFolder } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { persistThenApply } from './network-volume-prefs'
 
 const log = getAppLogger('media-index')

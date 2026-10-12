@@ -24,7 +24,7 @@ import {
   onVolumeSpaceChanged,
   type SpaceInfo,
   type UnlistenFn,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { untrack } from 'svelte'
 
 /** The volume a pane's space is read for: what `paneVolumeOf` answered. */

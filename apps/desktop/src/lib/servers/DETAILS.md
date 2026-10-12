@@ -416,9 +416,9 @@ the host: an edit retires the refusal, since its sentence reads the live form.
 falling back to the host when the name is empty. Every other kind reads as in the sheet. The sheet and the Add form keep
 `servers.refusal.unreachable` with the host, since there the address is what the person typed and can fix.
 
-Keys live in `$lib/intl/messages/en/servers.json` under `servers.refusal.*`, reached through a `Record` in
+Keys live in `#lib/intl/messages/en/servers.json` under `servers.refusal.*`, reached through a `Record` in
 `connect-refusals.ts` rather than a built string, which is what keeps `desktop-message-keys-unused` honest without a
-dynamic-prefix entry. `$lib/error-messages/friendly-error-style.test.ts` renders all of them and holds them to the same
+dynamic-prefix entry. `#lib/error-messages/friendly-error-style.test.ts` renders all of them and holds them to the same
 writing rules the friendly-error copy obeys: they are error copy however they are filed.
 
 **A second `Record` says WHICH FIELD each sentence goes under** (`refusalField`): the secret for the ones about a
@@ -571,7 +571,7 @@ share is the typed `RemoteConnectState`, the pane-not-dialog rule, and the attem
 
 ❗ The attempt-id prefixes are separate on purpose (`server-connect-…` vs `adb-connect-…`): ADB files attempts in its
 own table (`src-tauri/src/adb/volume_wiring.rs`), so a cancel aimed across the two answers a silent `false`. The words
-are separate too (`$lib/adb/adb-connect-errors.ts` vs `connect-refusals.ts`): a phone's reasons and a server's share
+are separate too (`#lib/adb/adb-connect-errors.ts` vs `connect-refusals.ts`): a phone's reasons and a server's share
 nothing but shape.
 
 ## Which server a command acts on

@@ -1,7 +1,7 @@
-import { composeTransferCompleteToast } from '$lib/file-operations/transfer/transfer-complete-toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { ToastLevel } from '$lib/ui/toast'
+import { composeTransferCompleteToast } from '#lib/file-operations/transfer/transfer-complete-toast.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { ToastLevel } from '#lib/ui/toast/index.js'
 
 /**
  * The completion payload the backend emits once a drag-out SESSION drains

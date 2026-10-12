@@ -8,12 +8,12 @@
  * assertions, including the three `it.skip`s parked on a real, unfixed
  * `aria-required-parent` violation. Adding a server and signing in to one both
  * live in the sign-in sheet now; its own blocks are
- * `$lib/servers/servers.a11y.test.ts`.
+ * `#lib/servers/servers.a11y.test.ts`.
  *
  * One stub genuinely disagrees between blocks: `getShareState` is `undefined` for
  * the host list and a loaded result for the share list, so it reads a mutable each
- * block installs in its own `beforeEach`. The four `$lib/tauri-commands` sets are
- * disjoint, so their union is what each block always saw, and every `$lib/*` stub
+ * block installs in its own `beforeEach`. The four `#lib/tauri-commands` sets are
+ * disjoint, so their union is what each block always saw, and every `#lib/*` stub
  * spreads the real module first.
  */
 
@@ -28,7 +28,7 @@ import PlacesHeader from './PlacesHeader.svelte'
 import ServersHubStatusBar from './ServersHubStatusBar.svelte'
 import type { HubActions, HubRowMenuAPI } from './servers-hub-actions'
 import type { HubRow } from './servers-hub-rows'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let mockHosts: Array<{
   id: string
@@ -63,7 +63,7 @@ vi.mock('./network-store.svelte', () => ({
 
 // The union of the network IPC the five components reach for. The real module is
 // spread first so a call outside the union behaves as it does un-merged.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -83,17 +83,17 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   updateKnownShare: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: vi.fn(() => Promise.resolve(false)),
 }))
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   addToast: vi.fn(() => 'id'),
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings/network-settings', async (importOriginal) => ({
+vi.mock('#lib/settings/network-settings.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getNetworkTimeoutMs: () => 5000,
   getShareCacheTtlMs: () => 300000,
@@ -162,7 +162,7 @@ describe('ServersHub a11y', () => {
  *
  * Share listing for a host. Covers the loaded-with-shares state and the
  * auth-required one. The sign-in itself is the modal sheet, audited in
- * `$lib/servers/servers.a11y.test.ts`. Auto-mount and autoMountAttempted paths
+ * `#lib/servers/servers.a11y.test.ts`. Auto-mount and autoMountAttempted paths
  * are not exercised; those flow through the network-store into async mount IPC
  * which we just stub.
  */

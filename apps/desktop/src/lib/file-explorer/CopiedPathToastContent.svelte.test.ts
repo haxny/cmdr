@@ -6,10 +6,10 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { mount, tick } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import CopiedPathToastContent from './CopiedPathToastContent.svelte'
 
-// The message resolves through the REAL `$lib/intl` (golden output).
+// The message resolves through the REAL `#lib/intl` (golden output).
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

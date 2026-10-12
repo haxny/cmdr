@@ -14,11 +14,11 @@
  * success, and it must name the reason rather than a reason class.
  */
 
-import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-import { tString } from '$lib/intl/messages.svelte'
-import { addToast } from '$lib/ui/toast'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { NonErrorToastLevel } from '$lib/ui/toast'
+import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { NonErrorToastLevel } from '#lib/ui/toast/index.js'
 import type {
   CancelRollback,
   RecoveredOriginal,
@@ -26,7 +26,7 @@ import type {
   SkipReason,
   StagedLeftovers,
   WriteOperationType,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import CancelRollbackToastContent from './CancelRollbackToastContent.svelte'
 
 /** What the toast says, already localized, in the order the lines are read. */

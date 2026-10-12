@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
 import CloudProviderPicker from './CloudProviderPicker.svelte'
-import { cloudProviderPresets } from '$lib/settings'
+import { cloudProviderPresets } from '#lib/settings/index.js'
 
 let mounted: { target: HTMLElement; instance: ReturnType<typeof mount>; selected: string } | undefined
 

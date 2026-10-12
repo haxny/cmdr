@@ -5,11 +5,11 @@
      * in Settings, and the user thinks the local model is ready. The button goes to where that
      * Download button lives.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { openSettingsWindow } from '$lib/settings/settings-window'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { openSettingsWindow } from '#lib/settings/settings-window.js'
 
     const { toastId }: { toastId: string } = $props()
 

@@ -3,10 +3,10 @@
   resolved against the defaults that shipped in that install's app version.
 -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { SettingsAdoption } from '$lib/server/settings-defaults.js'
-    import { formatNumber } from '$lib/format.js'
-    import { COLOR_GOLD, COLOR_GREEN, COLOR_CYAN } from '$lib/colors.js'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { SettingsAdoption } from '#lib/server/settings-defaults.js'
+    import { formatNumber } from '#lib/format.js'
+    import { COLOR_GOLD, COLOR_GREEN, COLOR_CYAN } from '#lib/colors.js'
     import {
         formatShare,
         formatShareUnlike,
@@ -16,12 +16,12 @@
         shareOnDefault,
         topOverride,
         unchangedNote,
-    } from '$lib/settings-adoption.js'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import Methodology from '$lib/components/Methodology.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import BetaEmptyState from '$lib/components/BetaEmptyState.svelte'
+    } from '#lib/settings-adoption.js'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import Methodology from '#lib/components/Methodology.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import BetaEmptyState from '#lib/components/BetaEmptyState.svelte'
 
     const {
         settingsAdoption,

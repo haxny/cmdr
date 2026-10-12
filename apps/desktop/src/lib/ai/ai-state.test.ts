@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { listen } from '@tauri-apps/api/event'
 
-vi.mock('$lib/tauri-commands', async () => {
+vi.mock('#lib/tauri-commands/index.js', async () => {
   const { listen: listenMock } = await import('@tauri-apps/api/event')
   // The typed `onAi*` wrappers route through `@tauri-apps/api/event`'s `listen`
   // under each event's wire name; mirror that here so the test's `listen`
@@ -28,14 +28,14 @@ vi.mock('$lib/tauri-commands', async () => {
   }
 })
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return 'local'
     return undefined
   }),
 }))
 
-import { getAiStatus, getAiModelInfo, cancelAiDownload } from '$lib/tauri-commands'
+import { getAiStatus, getAiModelInfo, cancelAiDownload } from '#lib/tauri-commands/index.js'
 import { getAiState, initAiState, handleCancel, handleGotIt, resetForTesting } from './ai-state.svelte'
 
 const mockModelInfo = {

@@ -1,8 +1,8 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({ openAutomationSettings: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openAutomationSettings: vi.fn(() => Promise.resolve()) }))
 
 import FinderAutomationOffToastContent from './FinderAutomationOffToastContent.svelte'
 

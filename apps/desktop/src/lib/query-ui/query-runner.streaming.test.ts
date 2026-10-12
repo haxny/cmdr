@@ -11,8 +11,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import { clearAllToasts, getToasts } from '$lib/ui/toast/toast-store.svelte'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/toast-store.svelte.js'
 import type { QueryDialogConfig } from './query-dialog-config'
 import { createQueryRunner, type QueryRunner } from './query-runner.svelte'
 import type { QueryStreamCallbacks, QueryStreamEnd, QueryStreamProgress, QueryStreamSource } from './query-stream'

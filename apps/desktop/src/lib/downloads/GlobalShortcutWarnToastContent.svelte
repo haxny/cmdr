@@ -13,12 +13,12 @@
      * mid-flight remap doesn't mutate the visible copy — the toast describes
      * THIS one combo the user just pressed.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { setGlobalGoToLatestShortcut } from '$lib/tauri-commands'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { setGlobalGoToLatestShortcut } from '#lib/tauri-commands/index.js'
     import { setGlobalGoToLatestEnabled } from './global-shortcut-setting'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

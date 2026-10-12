@@ -18,14 +18,14 @@
  * no longer available".
  */
 
-import { openFile } from '$lib/tauri-commands'
+import { openFile } from '#lib/tauri-commands/index.js'
 import type { FileEntry } from '../types'
-import type { Location } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { basenameOf, type CanonicalPath } from '$lib/path/canonical'
+import type { Location } from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { basenameOf, type CanonicalPath } from '#lib/path/canonical.js'
 import { pathCrossesArchiveBoundary, pathInsideArchive } from './archive-paths'
 import { resolveEnterPolicy, enterBehaviorFromSettings } from './archive-enter-policy'
-import { openFileViewer } from '$lib/file-viewer/open-viewer'
+import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 import { resolveLocationOrToast } from '../navigation/navigate-and-select'
 import type { LoadDirectoryArgs } from './types'
 

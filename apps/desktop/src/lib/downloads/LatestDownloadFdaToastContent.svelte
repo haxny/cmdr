@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { openPrivacySettings } from '$lib/tauri-commands'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { openPrivacySettings } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { LATEST_DOWNLOAD_FDA_TOAST_ID } from './go-to-latest-ids'
 
     const log = getAppLogger('downloads')

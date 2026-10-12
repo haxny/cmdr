@@ -14,9 +14,9 @@
  * Full rationale: `DETAILS.md` § "Saying so, in one toast that grows".
  */
 
-import { addToastForPane, dismissToast, type ToastOriginPane } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
+import { addToastForPane, dismissToast, type ToastOriginPane } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 /** A rename the slow volume is still working on (a rename target fits as is). */
 export interface StillRenamingEntry {

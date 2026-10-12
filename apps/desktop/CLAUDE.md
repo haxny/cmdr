@@ -24,7 +24,7 @@ in `DETAILS.md`. Feature must-knows in the colocated `CLAUDE.md`s.
 - **Run Playwright E2E via `pnpm check desktop-e2e-playwright`** (full lifecycle: build, launch, run, teardown). Raw
   `npx playwright test` fails with `ECONNREFUSED` — the suite connects to a running app over a socket, it doesn't launch
   one. Single-spec iteration and the manual launch + kill-the-recorded-pid recipe: `test/e2e-playwright/CLAUDE.md`.
-- **Gating behavior on an automated run? Call `isE2eRun()` from `$lib/app-mode`, ❌ never `getAppMode() === 'e2e'`.**
+- **Gating behavior on an automated run? Call `isE2eRun()` from `#lib/app-mode`, ❌ never `getAppMode() === 'e2e'`.**
   There are four app modes (`prod` / `dev` / `e2e` / `capture`, driving the plain / pink `DEV MODE` / blue `E2E MODE` /
   yellow `SCREENSHOT` title bars), and `capture` is a REFINEMENT of `e2e`, not an alternative: the i18n screenshot run
   is an E2E run that also photographs each surface, driven by the same harness events. Comparing to `'e2e'` alone
@@ -38,7 +38,7 @@ in `DETAILS.md`. Feature must-knows in the colocated `CLAUDE.md`s.
   frontend for a backend leak. `memory_diagnostics` names it (`rustHeap.allocator`). Start any CPU or RAM investigation
   at `docs/notes/performance/README.md`.
 - **The frontend is i18n-ized: user-facing strings live in the message catalog, not in components.** Resolve copy via
-  `t()` / `getMessage()` / `<Trans>` from `$lib/intl`, with keys in `src/lib/intl/messages/en/<area>.json` carrying a
+  `t()` / `getMessage()` / `<Trans>` from `#lib/intl`, with keys in `src/lib/intl/messages/en/<area>.json` carrying a
   translator `@key` description. Hardcoding a string in a known sink fails `cmdr/no-raw-user-facing-string`. 15 catalogs
   ship today: source `en`, 11 full translations, and the `en-GB` / `en-AU` / `es-419` overlays. How it all works +
   adding strings/locales + leading translator agents: `docs/guides/i18n.md`; runtime must-knows:

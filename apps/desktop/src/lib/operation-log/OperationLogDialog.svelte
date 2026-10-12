@@ -9,28 +9,28 @@
      * Every label comes from a typed enum via `operation-log-labels` (never a
      * backend-rendered string); the summary is an ICU plural formatted per viewer.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getBadgeStatus } from '$lib/feature-status'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatDateTime } from '$lib/settings/reactive-settings.svelte'
-    import RollbackConfirmDialog from '$lib/file-operations/RollbackConfirmDialog.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getBadgeStatus } from '#lib/feature-status.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatDateTime } from '#lib/settings/reactive-settings.svelte.js'
+    import RollbackConfirmDialog from '#lib/file-operations/RollbackConfirmDialog.svelte'
     import RollbackControls from './RollbackControls.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import {
         getOperationLogDetail,
         rollbackOperation,
         type OperationItemView,
         type OperationRow,
-    } from '$lib/tauri-commands'
-    import { getAppLogger } from '$lib/logging/logger'
+    } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { SvelteMap, SvelteSet } from 'svelte/reactivity'
     import type { Snippet } from 'svelte'
     import { asRollbackRefusal } from './rollback-refusal'
@@ -52,7 +52,7 @@
         rowRollbackActionLabel,
         rowStandingNotice,
     } from './operation-log-labels'
-    import { rollbackConfirmVariant } from '$lib/file-operations/reversal-wording'
+    import { rollbackConfirmVariant } from '#lib/file-operations/reversal-wording.js'
 
     const log = getAppLogger('operationLogDialog')
 
@@ -419,7 +419,7 @@
 </ModalDialog>
 
 <!-- Stacked over the log: same subtree, so DOM order puts it on top and its focus
-     trap takes over until it goes (`$lib/ui/DETAILS.md` § ModalDialog). -->
+     trap takes over until it goes (`#lib/ui/DETAILS.md` § ModalDialog). -->
 {#if rollbackAsked !== null}
     <RollbackConfirmDialog
         variant={rollbackConfirmVariant(rollbackAsked.op.kind)}

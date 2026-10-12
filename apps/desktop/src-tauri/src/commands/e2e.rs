@@ -20,7 +20,7 @@ pub fn is_e2e_mode() -> bool {
 }
 
 /// Returns which automated run launched the app: none, a plain E2E run, or the i18n screenshot
-/// capture. `$lib/app-mode` resolves the window's mode from it once per window. Always compiled
+/// capture. `#lib/app-mode` resolves the window's mode from it once per window. Always compiled
 /// in; with the env vars unset it answers `None`.
 #[tauri::command]
 #[specta::specta]

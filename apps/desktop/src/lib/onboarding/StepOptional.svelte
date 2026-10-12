@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte'
     import OnboardingStepShell from './OnboardingStepShell.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import InfoTip from '$lib/ui/InfoTip.svelte'
-    import SettingRow from '$lib/settings/components/SettingRow.svelte'
-    import SettingSwitch from '$lib/settings/components/SettingSwitch.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import InfoTip from '#lib/ui/InfoTip.svelte'
+    import SettingRow from '#lib/settings/components/SettingRow.svelte'
+    import SettingSwitch from '#lib/settings/components/SettingSwitch.svelte'
     import { setFooterOverride, requestWizardComplete } from './onboarding-state.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { Snippet } from 'svelte'
 
     /**

@@ -8,7 +8,7 @@
  * F5 uses and dispatches it straight to the progress dialog.
  */
 
-import { addToast } from '$lib/ui/toast'
+import { addToast } from '#lib/ui/toast/index.js'
 import {
   buildTransferPropsFromSelection,
   buildTransferPropsFromCursor,
@@ -34,7 +34,7 @@ type DialogState = ReturnType<typeof createDialogState>
  * - **No rename editor**, hence `duplicateFollowUp: 'nothing'`. ⌘D is Finder's
  *   Duplicate and the familiarity that justifies the key rests on it asking
  *   nothing; it would also break stamping out copies in a row.
- *   `$lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a
+ *   `#lib/file-operations/transfer/DETAILS.md` § "Only paste and F5 end a
  *   duplicate in the rename editor".
  *
  * The shared destination guard runs against the pane's OWN folder, since source

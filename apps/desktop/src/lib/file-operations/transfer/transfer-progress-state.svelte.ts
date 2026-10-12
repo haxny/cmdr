@@ -50,28 +50,28 @@
  * need no reactivity. Don't convert them to `$state`.
  */
 
-import { cancelOperation, type TransferActivity, type WriteCancelledEvent } from '$lib/tauri-commands'
-import { showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
+import { cancelOperation, type TransferActivity, type WriteCancelledEvent } from '#lib/tauri-commands/index.js'
+import { showQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
 import {
   beginForegroundClaim,
   clearForegroundOperation,
   endForegroundClaim,
   setForegroundOperationId,
 } from '../foreground-operation.svelte'
-import { getMainWindowOperationRows } from '$lib/file-operations/queue/main-window-operations.svelte'
+import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
 import type {
   TransferOperationType,
   ConflictResolution,
   WriteOperationPhase,
   WriteOperationError,
-} from '$lib/file-explorer/types'
-import type { TransferCompletePayload } from '$lib/file-explorer/pane/dialog-props'
-import type { ProgressAtStop } from '$lib/tauri-commands'
-import type { ProgressStep } from '$lib/ipc/bindings'
-import { pluralize } from '$lib/utils/pluralize'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import type { BytesPerSecond, Seconds } from '$lib/units'
+} from '#lib/file-explorer/types.js'
+import type { TransferCompletePayload } from '#lib/file-explorer/pane/dialog-props.js'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
+import type { ProgressStep } from '#lib/ipc/bindings.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { BytesPerSecond, Seconds } from '#lib/units/index.js'
 import { bindOperationSession } from '../operation-session/bind-operation-session.svelte'
 import type { OperationOutcome, ScanReadout } from '../operation-session/operation-session.svelte'
 import { startTransferOperation, type TransferStartConfig, type TransferStartResult } from './transfer-dispatch'

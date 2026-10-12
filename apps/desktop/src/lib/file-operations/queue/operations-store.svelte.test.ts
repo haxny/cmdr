@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { flushSync } from 'svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 
-// The store subscribes to Tauri events through `$lib/tauri-commands`. Mock those
+// The store subscribes to Tauri events through `#lib/tauri-commands`. Mock those
 // so `init()` doesn't reach a backend; the reducer tests drive the store through
 // its `_test*` seams instead.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),

@@ -7,7 +7,7 @@
  * `DETAILS.md` § The hint.
  */
 
-import type { EditorOpenReport } from '$lib/ipc/bindings'
+import type { EditorOpenReport } from '#lib/ipc/bindings.js'
 import { SYSTEM_DEFAULT_EDITOR_CHOICE } from './text-editor-choice'
 
 /** What the decision reads. */

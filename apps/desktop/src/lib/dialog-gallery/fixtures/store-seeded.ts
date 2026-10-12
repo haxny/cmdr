@@ -13,12 +13,12 @@
  * i18n-enforced areas, so fixture strings never reach the message catalog.
  */
 
-import { askCmdrState } from '$lib/ask-cmdr/ask-cmdr-trigger.svelte'
-import { errorReportFlow } from '$lib/error-reporter/error-report-flow.svelte'
-import { feedbackFlow } from '$lib/feedback/feedback-flow.svelte'
-import { operationLogState } from '$lib/operation-log/operation-log-trigger.svelte'
-import { whatsNewState } from '$lib/whats-new/whats-new-trigger.svelte'
-import type { OperationRow, RenameEvidence, RenameEvidenceCoverage } from '$lib/tauri-commands'
+import { askCmdrState } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
+import { errorReportFlow } from '#lib/error-reporter/error-report-flow.svelte.js'
+import { feedbackFlow } from '#lib/feedback/feedback-flow.svelte.js'
+import { operationLogState } from '#lib/operation-log/operation-log-trigger.svelte.js'
+import { whatsNewState } from '#lib/whats-new/whats-new-trigger.svelte.js'
+import type { OperationRow, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 import { storeSeed, type StoreSeed } from '../store-seeding'
 import { daysAgo, hoursAgo } from './relative-time'
 

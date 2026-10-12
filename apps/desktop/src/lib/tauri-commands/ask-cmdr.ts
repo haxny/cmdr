@@ -36,7 +36,7 @@ import {
   type WakeDigestFolderView,
   type WakeDigestRollupView,
   type ProposalDecision,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 export type {

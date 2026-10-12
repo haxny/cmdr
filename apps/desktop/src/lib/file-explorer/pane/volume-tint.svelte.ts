@@ -25,12 +25,12 @@
  * light-contrast → 25% dark-contrast) without touching the call sites.
  */
 
-import { getSetting, onSpecificSettingChange, type VolumeTintColor } from '$lib/settings'
-import { volumeScheme } from '$lib/volume-scheme'
-import type { LocationCategory } from '$lib/file-explorer/types'
-import { hasColorMix } from '$lib/utils/webkit-compat'
-import { dependOn } from '$lib/utils/reactivity'
-import { mixSrgb } from '$lib/utils/srgb-mix'
+import { getSetting, onSpecificSettingChange, type VolumeTintColor } from '#lib/settings/index.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import type { LocationCategory } from '#lib/file-explorer/types.js'
+import { hasColorMix } from '#lib/utils/webkit-compat.js'
+import { dependOn } from '#lib/utils/reactivity.js'
+import { mixSrgb } from '#lib/utils/srgb-mix.js'
 
 let tintLocal = $state<VolumeTintColor>('none')
 let tintSmb = $state<VolumeTintColor>('none')

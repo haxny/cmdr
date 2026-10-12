@@ -6,12 +6,12 @@
  * and rude. The seam that gathers the inputs and raises the toast is
  * `routes/(main)/startup-gates.ts`.
  *
- * The sibling of `$lib/dock/should-show-dock-nudge.ts`; everything the two
- * share is in `$lib/nudges/nudge-ledger.ts`.
+ * The sibling of `#lib/dock/should-show-dock-nudge.ts`; everything the two
+ * share is in `#lib/nudges/nudge-ledger.ts`.
  */
 
-import type { RevealHandlerStatus } from '$lib/ipc/bindings'
-import { nudgeCouldFire, type NudgeContext } from '$lib/nudges/nudge-ledger'
+import type { RevealHandlerStatus } from '#lib/ipc/bindings.js'
+import { nudgeCouldFire, type NudgeContext } from '#lib/nudges/nudge-ledger.js'
 
 /**
  * How many distinct launch days make the offer worth making.

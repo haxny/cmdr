@@ -12,10 +12,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import SearchResults from './QueryResults.svelte'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import type { LiveRunView } from './query-stream'
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => undefined,
@@ -24,7 +24,7 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({}))
+vi.mock('#lib/tauri-commands/index.js', () => ({}))
 
 function rows(n: number): SearchResultEntry[] {
   return Array.from({ length: n }, (_, i) => ({

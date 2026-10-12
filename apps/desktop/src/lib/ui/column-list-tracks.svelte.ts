@@ -12,7 +12,7 @@
  * Call it during component init: it registers `$effect`s.
  */
 
-import { createPretextMeasure } from '$lib/utils/shorten-middle'
+import { createPretextMeasure } from '#lib/utils/shorten-middle.js'
 import { buildGridTemplate, columnDemand, createTabularMeasure, type LayoutColumn } from './column-list-layout'
 import type { ColumnListColumn, ColumnListMeasurers } from './column-list-types'
 

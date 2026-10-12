@@ -10,8 +10,8 @@
   now-null snapshot.
 -->
 <script lang="ts">
-    import SelectionDialog from '$lib/selection-dialog/SelectionDialog.svelte'
-    import type { FileEntry } from '$lib/file-explorer/types'
+    import SelectionDialog from '#lib/selection-dialog/SelectionDialog.svelte'
+    import type { FileEntry } from '#lib/file-explorer/types.js'
 
     interface Props {
         entries: FileEntry[]

@@ -13,7 +13,7 @@ const { stored, listeners } = vi.hoisted(() => ({
   listeners: [] as ((change: { id: string; value: unknown }) => void)[],
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => stored.get(id),
   onSettingChange: (listener: (change: { id: string; value: unknown }) => void) => {
     listeners.push(listener)
@@ -22,7 +22,7 @@ vi.mock('$lib/settings', () => ({
   initializeSettings: () => Promise.resolve(),
   densityMappings: {},
 }))
-vi.mock('$lib/icon-cache', () => ({ clearExtensionIconCache: () => Promise.resolve() }))
+vi.mock('#lib/icon-cache.js', () => ({ clearExtensionIconCache: () => Promise.resolve() }))
 
 import { cleanupReactiveSettings, getDirectorySortMode, initReactiveSettings } from './reactive-settings.svelte'
 

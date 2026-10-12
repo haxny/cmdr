@@ -18,12 +18,12 @@
  */
 
 import type { FileEntry } from '../types'
-import type { ViewMode } from '$lib/app-status-store'
-import type { CommandId } from '$lib/commands'
+import type { ViewMode } from '#lib/app-status-store.js'
+import type { CommandId } from '#lib/commands/index.js'
 import { classifySelectionDialogKey } from './selection-dialog-keys'
 import { classifySelectionKey } from './selection-keys'
-import { eventMatchesCommand } from '$lib/shortcuts'
-import { claimKey } from '$lib/shortcuts/claim-key'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
 import { maybeShowQuickLookHint } from '../quick-look/quick-look-hint'
 import { cancelClickToRename } from '../rename/rename-activation'
 
@@ -138,7 +138,7 @@ export function createPaneKeyRouter(deps: PaneKeyRouterDeps): PaneKeyRouter {
    * it WINS the combo globally, and `nav.open`'s handler re-sends Enter into this
    * pane, so one Enter on a Google Drive file opened two browser tabs. A second OS
    * open is invisible for a file whose app reuses its window, which is why this hid
-   * for so long. See `$lib/shortcuts/claim-key.ts`.
+   * for so long. See `#lib/shortcuts/claim-key.ts`.
    */
   function handleOpenOrParentKey(e: KeyboardEvent): boolean {
     if (eventMatchesCommand(e, 'nav.open')) {

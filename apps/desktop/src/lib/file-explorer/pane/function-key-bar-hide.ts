@@ -3,8 +3,8 @@
  * the bar off and raises a self-dismissing toast pointing back at the row
  * that turns it on again.
  */
-import { setSetting } from '$lib/settings'
-import { addToast } from '$lib/ui/toast'
+import { setSetting } from '#lib/settings/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import FunctionKeyBarHiddenToastContent from './FunctionKeyBarHiddenToastContent.svelte'
 
 /** Dedup id for the "function key bar hidden" INFO toast. */

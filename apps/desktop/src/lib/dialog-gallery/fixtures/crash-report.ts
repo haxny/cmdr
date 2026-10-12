@@ -1,8 +1,8 @@
 /**
- * Fixtures for `crash-report` (`$lib/crash-reporter/CrashReportDialog.svelte`).
+ * Fixtures for `crash-report` (`#lib/crash-reporter/CrashReportDialog.svelte`).
  *
  * The dialog branches on the report id line, the expandable JSON, and `appFate`,
- * which picks the opening sentence ($lib/crash-reporter/crash-copy.ts) — hence one
+ * which picks the opening sentence (#lib/crash-reporter/crash-copy.ts) — hence one
  * state per fate the frontend can see. The JSON is deliberately long: the details
  * block has to stay readable and scrollable inside a 440px dialog.
  *
@@ -10,7 +10,7 @@
  * areas, so fixture strings never reach the message catalog.
  */
 
-import type { CrashReport } from '$lib/tauri-commands'
+import type { CrashReport } from '#lib/tauri-commands/index.js'
 
 const BACKTRACE_FRAMES = [
   'core::panicking::panic_fmt::h4f2a1c9e8b3d7a10',

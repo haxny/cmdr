@@ -20,7 +20,7 @@
  * `shortcut` / `overflowOnly` / rich-content payload when it's a native title.
  *
  *   <span use:tooltip={tString('...')}>       // instead of title={...}
- *   import { tooltip } from '$lib/tooltip/tooltip'
+ *   import { tooltip } from '#lib/tooltip/tooltip'
  *
  * ## What this rule catches
  *
@@ -79,7 +79,7 @@ export default {
     messages: {
       noTitleAttribute:
         'Use the house tooltip action instead of a native `title` on `<{{ element }}>`: ' +
-        "`import { tooltip } from '$lib/tooltip/tooltip'`, then `use:tooltip={...}`. A native title never shows on " +
+        "`import { tooltip } from '#lib/tooltip/tooltip'`, then `use:tooltip={...}`. A native title never shows on " +
         'keyboard focus, lands about a second after ours, ignores our theme tokens, and is announced inconsistently ' +
         'by screen readers. Keep any `aria-label` the element already has: the action wires `aria-describedby`, so ' +
         'it describes the element rather than naming it. See `lib/ui/CLAUDE.md`. If a native title is genuinely ' +

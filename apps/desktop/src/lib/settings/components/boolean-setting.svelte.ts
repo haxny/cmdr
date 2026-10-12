@@ -13,7 +13,7 @@ import {
   onSpecificSettingChange,
   type SettingId,
   type SettingsValues,
-} from '$lib/settings'
+} from '#lib/settings/index.js'
 
 export interface BooleanSetting {
   /** The registry label, falling back to the id for an unregistered setting. */

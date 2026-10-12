@@ -11,8 +11,11 @@ const { ipc } = vi.hoisted(() => ({
     getSmbCredentials: vi.fn(),
   },
 }))
-vi.mock('$lib/tauri-commands', () => ipc)
-vi.mock('$lib/settings/network-settings', () => ({ getNetworkTimeoutMs: () => 1000, getShareCacheTtlMs: () => 1000 }))
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
+vi.mock('#lib/settings/network-settings.js', () => ({
+  getNetworkTimeoutMs: () => 1000,
+  getShareCacheTtlMs: () => 1000,
+}))
 
 import {
   fetchShares,

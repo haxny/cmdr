@@ -23,20 +23,20 @@ import ViewerStatusBar from './ViewerStatusBar.svelte'
 import ViewerToolbar from './ViewerToolbar.svelte'
 import ViewerTextCursor from './ViewerTextCursor.svelte'
 import PullProgressPanel from './PullProgressPanel.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { EncodingChoice } from '$lib/ipc/bindings'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { EncodingChoice } from '#lib/ipc/bindings.js'
 import type { TextCursorBox } from './viewer-text-cursor.svelte'
 
 // `ModalDialog` notifies the backend on open/close; stub those IPC calls for the
 // copy-dialogs block.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
 // The status bar formats its byte count through the reactive settings.
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getFileSizeFormat: () => 'binary',
 }))

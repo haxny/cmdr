@@ -6,12 +6,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import type { OperationRow } from '$lib/file-operations/queue/operations-store.svelte'
-import type { OperationSnapshot, WriteProgressEvent } from '$lib/ipc/bindings'
+import type { OperationRow } from '#lib/file-operations/queue/operations-store.svelte.js'
+import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 
 // The rows' type comes from the operations store, which subscribes to Tauri
 // events at import time. Mock the transport so this pure test needs no backend.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),

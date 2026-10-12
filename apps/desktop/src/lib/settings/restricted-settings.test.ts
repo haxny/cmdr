@@ -13,8 +13,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearIpcMocks, installIpcMock, type IpcRecorder } from '$lib/ipc/test-helpers'
-import type { RestrictedWindowSettings } from '$lib/ipc/bindings'
+import { clearIpcMocks, installIpcMock, type IpcRecorder } from '#lib/ipc/test-helpers.js'
+import type { RestrictedWindowSettings } from '#lib/ipc/bindings.js'
 // Warms Vite's transform cache for the modules each test dynamically re-imports.
 // `settings-store` transitively pulls the whole intl catalog (the eager
 // `messages/*/*.json` glob in `messages.svelte.ts`) plus `intl-messageformat`, so a cold

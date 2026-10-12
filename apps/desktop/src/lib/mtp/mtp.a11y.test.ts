@@ -18,24 +18,24 @@ import { mount, tick } from 'svelte'
 import MtpConnectedToastContent from './MtpConnectedToastContent.svelte'
 import MtpPermissionDialog from './MtpPermissionDialog.svelte'
 import PtpcameradDialog from './PtpcameradDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-// `vi.hoisted`, not a plain `let`: spreading the real `$lib/settings` pulls in the
+// `vi.hoisted`, not a plain `let`: spreading the real `#lib/settings` pulls in the
 // command registry, which calls `isMacOS()` while the mocks are still being wired,
 // and a module-level `let` is still in its temporal dead zone at that point.
 const macState: { value: boolean | null } = vi.hoisted(() => ({ value: null }))
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   setSetting: vi.fn(),
 }))
 
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<{ isMacOS: () => boolean }>()
   return {
     ...actual,
@@ -43,7 +43,7 @@ vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),

@@ -7,9 +7,9 @@
      * The message arrives resolved because each toast words a different report (the
      * app the file opened in, or nothing to name), while the buttons stay the same.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToTextEditor } from './text-editor-setting'
 
     interface Props {

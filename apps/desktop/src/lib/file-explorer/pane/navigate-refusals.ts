@@ -4,8 +4,8 @@
  * checks of the in-place arm. Split out of `navigate.ts` for length; the strings are
  * contract (L12), byte-pinned by `navigate.refusals.test.ts`.
  */
-import { volumeScheme } from '$lib/volume-scheme'
-import { isServerPath, isServerVolumeId, isUnderServerRoot } from '$lib/servers/server-path-utils'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { isServerPath, isServerVolumeId, isUnderServerRoot } from '#lib/servers/server-path-utils.js'
 
 /** Why a synchronous navigation refused. `message` is the exact current string — contract (L12). */
 export interface NavigateRefusal {

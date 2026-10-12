@@ -11,7 +11,7 @@
  * refuse must stay unclaimed, so the browser's default still happens (Tab moves focus inside the
  * dialog).
  */
-import { whileDialogOpenFor, type CommandId } from '$lib/commands'
+import { whileDialogOpenFor, type CommandId } from '#lib/commands/index.js'
 import type { DialogsOnScreen, DispatchSource } from './command-dispatch-context'
 
 export interface DialogGateQuestion {

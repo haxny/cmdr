@@ -14,12 +14,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(),
   dismissToast: vi.fn(),
 }))
 
-import { addToast, dismissToast } from '$lib/ui/toast'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
 import { initAiToastSync } from './ai-toast-sync.svelte'
 import { getAiState, markDownloadToastDismissed, resetForTesting } from './ai-state.svelte'
 

@@ -82,7 +82,7 @@ interface WorkerFunnelDay {
 }
 
 // The ranked-channel helper and its type are client-safe (the page renders them), so they live in
-// `$lib/funnel.ts` outside `$lib/server`. Re-exported here so server-side callers and the existing
+// `#lib/funnel.ts` outside `#lib/server`. Re-exported here so server-side callers and the existing
 // tests can keep importing from this module.
 export { aggregateChannels, aggregateReferers, aggregateUaFamilies, type UaFamilyCounts } from '../../funnel.js'
 

@@ -10,7 +10,7 @@
  * this module is `.svelte.ts`.
  *
  * Mocking approach (mirrors `queue-row-session.svelte.test.ts`):
- * `$lib/tauri-commands` is fully mocked, and the window's session registry is
+ * `#lib/tauri-commands` is fully mocked, and the window's session registry is
  * inited per test so the event fan-out subscribes through those mocks. The
  * `on<Event>` subscriber mocks capture the fan-out's callback into `listeners`;
  * calling one delivers an event down exactly the path a live one takes — fan-out,
@@ -26,7 +26,7 @@
  * callbacks, so import order and hoisting can't bite):
  *
  * ```ts
- * vi.mock('$lib/tauri-commands', async () => (await import('./test-transfer-progress-harness.svelte')).tauriCommandsMock())
+ * vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-transfer-progress-harness.svelte')).tauriCommandsMock())
  * // …one line per mock factory below…
  * import { createTransferProgressState } from './transfer-progress-state.svelte'
  * const { makeState, startedState } = useTransferProgressState(createTransferProgressState)
@@ -35,7 +35,7 @@
  * ⚠️ **The view factory comes IN, statically imported by the spec.** This module
  * imports only types, `vitest`, and `svelte` at the top level: the mock factories
  * import it while the view's module graph is still loading, so a static import of
- * anything that reaches `$lib/tauri-commands` would read these exports from their
+ * anything that reaches `#lib/tauri-commands` would read these exports from their
  * temporal dead zone. The hooks reach the session modules through `await import`,
  * which by then resolves from the cache the spec's own imports filled.
  */
@@ -50,8 +50,8 @@ import type {
   WriteSettledEvent,
   WriteConflictEvent,
   OperationSnapshot,
-} from '$lib/tauri-commands'
-import type { WriteOperationType } from '$lib/file-explorer/types'
+} from '#lib/tauri-commands/index.js'
+import type { WriteOperationType } from '#lib/file-explorer/types.js'
 import type * as ProgressReadout from '../progress-readout'
 import type { createTransferProgressState, TransferProgressStateConfig } from './transfer-progress-state.svelte'
 
@@ -264,7 +264,7 @@ export function useTransferProgressState(create: typeof createTransferProgressSt
     listeners.conflict = null
     listeners.opsChanged = null
     vi.clearAllMocks()
-    const { listOperations } = await import('$lib/tauri-commands')
+    const { listOperations } = await import('#lib/tauri-commands/index.js')
     vi.mocked(listOperations).mockResolvedValue([snapshot('op-1', 'running')])
     vi.useFakeTimers()
     // The slot is module-scoped, so a test that leaves an owner behind would poison

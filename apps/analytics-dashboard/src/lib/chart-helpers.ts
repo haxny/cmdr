@@ -4,7 +4,7 @@
  * the section components stay focused on markup. `DownloadRow`/`UpdateActivityRow` are server types
  * but the shapes are plain data, safe to import into client code.
  */
-import type { DownloadRow, UpdateActivityRow } from '$lib/server/sources/cloudflare.js'
+import type { DownloadRow, UpdateActivityRow } from '#lib/server/sources/cloudflare.js'
 
 export interface StackSeries {
   key: string

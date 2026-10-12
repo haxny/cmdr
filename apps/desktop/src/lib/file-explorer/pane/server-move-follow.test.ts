@@ -8,11 +8,11 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { ServerPlaceMoved } from '$lib/ipc/bindings'
+import type { ServerPlaceMoved } from '#lib/ipc/bindings.js'
 
 // The subscription wrapper reaches the real store, which carries a Svelte toast
 // component; the cells here inject every dependency instead.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ applyServerPlaceMoved: vi.fn() }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ applyServerPlaceMoved: vi.fn() }))
 import { addTab, createTabManager, getActiveTab, type TabManager } from '../tabs/tab-state-manager.svelte'
 import { push } from '../navigation/navigation-history'
 import { createInitialTabState } from './tab-operations'

@@ -12,8 +12,8 @@
  * a failure.
  */
 
-import { trackEvent } from '$lib/tauri-commands'
-import type { BundleWriteBlocker, UpdateCheckTrigger } from '$lib/tauri-commands'
+import { trackEvent } from '#lib/tauri-commands/index.js'
+import type { BundleWriteBlocker, UpdateCheckTrigger } from '#lib/tauri-commands/index.js'
 
 /**
  * What became of one check.

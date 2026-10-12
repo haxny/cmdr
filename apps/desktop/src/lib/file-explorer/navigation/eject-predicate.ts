@@ -1,6 +1,6 @@
 import type { VolumeInfo } from '../types'
 import { isLiveSession, showsDisconnect } from './connection-state'
-import { volumeScheme } from '$lib/volume-scheme'
+import { volumeScheme } from '#lib/volume-scheme.js'
 
 /**
  * Whether the volume picker offers this row an eject-or-disconnect control at all.

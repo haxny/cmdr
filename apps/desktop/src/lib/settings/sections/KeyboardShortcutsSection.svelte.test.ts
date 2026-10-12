@@ -9,7 +9,7 @@
  * a key is actually captured and confirmed.
  *
  * The Tauri boundaries (plugin-store, the cross-window event bus, the IPC
- * bindings, the settings store) are mocked so the real `$lib/shortcuts` store
+ * bindings, the settings store) are mocked so the real `#lib/shortcuts` store
  * runs end-to-end against an in-memory disk, exactly like `shortcuts-store.test`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -41,11 +41,11 @@ vi.mock('@tauri-apps/api/event', () => ({
   emit: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings/store-path', () => ({
+vi.mock('#lib/settings/store-path.js', () => ({
   resolveStorePath: (name: string) => Promise.resolve(name),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     updateMenuAccelerator: () => Promise.resolve({ status: 'ok' as const, data: null }),
     // GlobalShortcutRow reads the global binding on mount.
@@ -54,18 +54,23 @@ vi.mock('$lib/ipc/bindings', () => ({
 }))
 
 // GlobalShortcutRow (rendered at the bottom of the section) reads settings.
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => undefined),
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: vi.fn(() => Promise.resolve(false)),
 }))
 
 import KeyboardShortcutsSection from './KeyboardShortcutsSection.svelte'
 import ShortcutPill from './ShortcutPill.svelte'
-import { initializeShortcuts, getEffectiveShortcuts, isShortcutModified, resetAllShortcuts } from '$lib/shortcuts'
+import {
+  initializeShortcuts,
+  getEffectiveShortcuts,
+  isShortcutModified,
+  resetAllShortcuts,
+} from '#lib/shortcuts/index.js'
 
 // `app.about` (About Cmdr): scope App, default [] — David's original repro row.
 const ABOUT = 'app.about'
@@ -112,7 +117,7 @@ function pressKey(init: KeyboardEventInit): void {
 
 beforeEach(async () => {
   disk.clear()
-  // `$lib/shortcuts` is a static import, so its module-scoped `customShortcuts`
+  // `#lib/shortcuts` is a static import, so its module-scoped `customShortcuts`
   // map is shared across tests in this file. `initializeShortcuts` is a one-shot
   // (guarded by an `initialized` flag), so reset the map explicitly between tests
   // rather than re-importing — clear any customization a prior test persisted.

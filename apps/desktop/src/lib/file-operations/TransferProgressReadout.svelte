@@ -6,7 +6,7 @@
     copy/move/delete progress dialog and the operation queue's rows — so the two
     can't drift apart in what they show or how it reads. The numbers themselves
     are single-sourced elsewhere (`progress-readout.ts` for speed and ETA,
-    `$lib/units` for the text); this file owns the layout only.
+    `#lib/units` for the text); this file owns the layout only.
 
     Every readout cell is a FIXED-width column sized for its own worst case, so
     the bars' width follows the window and nothing shifts as digits come and go
@@ -18,12 +18,12 @@
     the bar, the gaps, and the bar's floor.
 -->
 <script lang="ts">
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import Size from '$lib/ui/Size.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { calculatePercentage, formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import { formatDuration, formatFilesPerSecond, seconds, type Seconds } from '$lib/units'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import Size from '#lib/ui/Size.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { calculatePercentage, formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import { formatDuration, formatFilesPerSecond, seconds, type Seconds } from '#lib/units/index.js'
     import type { StallNotice, TransferWaitLine } from './transfer/transfer-stall'
 
     interface Props {

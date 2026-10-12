@@ -5,12 +5,12 @@ const { resolveLocationMock, addToastMock } = vi.hoisted(() => ({
   addToastMock: vi.fn(() => 'toast-id'),
 }))
 vi.mock('./resolve-location', () => ({ resolveLocation: resolveLocationMock }))
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock }))
 
 import { navigateToDirInPane, navigateToFileInPane, revealSearchResultInPane } from './navigate-and-select'
 import type { ExplorerAPI } from '../../../routes/(main)/explorer-api'
 import type { NavigateResult } from '../pane/navigate'
-import type { Location } from '$lib/tauri-commands'
+import type { Location } from '#lib/tauri-commands/index.js'
 
 /** A `Location` (volume id + path) — the resolved input these helpers now take. */
 function loc(path: string, volumeId = 'root'): Location {

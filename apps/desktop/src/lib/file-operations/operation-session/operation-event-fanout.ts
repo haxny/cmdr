@@ -41,8 +41,8 @@ import {
   type WriteErrorEvent,
   type WriteProgressEvent,
   type WriteSettledEvent,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('operationSession')
 

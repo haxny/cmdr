@@ -5,7 +5,7 @@ Depth for `CLAUDE.md`. Up: `apps/desktop/src/CLAUDE.md`.
 ## What's here
 
 - `StatusCorner.svelte`: the row. One optional `children` snippet, then `OperationChip`, then `WakeIndicator`, then
-  `SuggestedOpsIndicator`, then `$lib/onboarding/FdaBadge.svelte`, then `IndexingStatusIndicator`.
+  `SuggestedOpsIndicator`, then `#lib/onboarding/FdaBadge.svelte`, then `IndexingStatusIndicator`.
 - `OperationChip.svelte`: the corner chip (markup, copy, and the settle timer), in either of its two states.
 - `operation-chip.ts`: pure — what the corner has to say (`pickChipState`), which operation it previews, how full its
   bar is, and the destination name its tooltip uses.
@@ -69,14 +69,14 @@ order in this one file already says all of it, and a second way to express the s
 `onOpenOnboarding` is the only thing the corner forwards to a member, and it's required so a corner mounted without it
 is a compile error rather than a badge that quietly does nothing when clicked. It exists because the onboarding wizard's
 visibility is `routes/(main)/+page.svelte` `$state`, so only the page can mount the wizard. The badge's other input
-needs no prop: it asks `isWizardOnFdaStep()` in `$lib/onboarding/onboarding-state.svelte` whether its own destination is
+needs no prop: it asks `isWizardOnFdaStep()` in `#lib/onboarding/onboarding-state.svelte` whether its own destination is
 already on screen.
 
 ⚠️ **A member must open no subscription at mount.** `StatusCorner.svelte.test.ts` and `StatusCorner.a11y.test.ts` mount
 the real corner with the AI members unstubbed, so a listener in a member's `onMount` breaks both. Each member reads
 module `$state` that a `*.svelte.ts` populates, started from `routes/(main)/window-services.ts`. The AI members and the
 FDA badge are also silent in their default state, which is what lets those suites mount them without any setup at all;
-the badge's fact lives in `$lib/onboarding/fda-status.svelte`, refreshed from `routes/(main)/`, and it reads it without
+the badge's fact lives in `#lib/onboarding/fda-status.svelte`, refreshed from `routes/(main)/`, and it reads it without
 ever probing itself.
 
 ## The operation chip
@@ -96,7 +96,7 @@ without a modal in front of it, and clicking it opens (or raises) the queue wind
   bytes bar would sit at 0% for the whole operation. With neither metric it reads 0% rather than dividing by zero.
 - **The label**: the verb from `queue.row.label` (the queue rows' own vocabulary), except twice. While PAUSED it becomes
   the status word "Paused" — a frozen bar under "Copying" is ambiguous. On an operation that IS a REVERSAL
-  (`snapshot.reverses` set) it comes from `$lib/file-operations/reversal-wording.ts` instead, the same string the queue
+  (`snapshot.reverses` set) it comes from `#lib/file-operations/reversal-wording.ts` instead, the same string the queue
   row shows, because the wire `operationType` names the syscall: undoing a copy runs as a delete, and a corner reading
   "Deleting" over an undo the person just asked for is the one thing this label must never say. It's capped at `12em`
   and ellipsized, because a localized verb runs to twice English's longest ("Wird in den Papierkorb bewegt"), and the
@@ -198,7 +198,7 @@ own `hidden` attribute, so the INNER div is bound, never the `<div hidden>` wrap
 
 The ETA is the SMOOTHED `session.etaSecondsDisplay`, never `progress.etaSeconds`: the queue window renders that same
 number for that same operation, and the raw value once had the two surfaces disagreeing. The chip binds to the session
-with `bindOperationSession` (`$lib/file-operations/operation-session/CLAUDE.md`), following its own candidate, so the
+with `bindOperationSession` (`#lib/file-operations/operation-session/CLAUDE.md`), following its own candidate, so the
 smoother belongs to the operation rather than to whichever surface is watching. It's the chip's only session read: what
 to show and how full the bar is stay pure, in `operation-chip.ts`.
 

@@ -13,8 +13,8 @@ import type {
   SkipBreakdown,
   WakeDigestFolderView,
   WakeDigestRollupView,
-} from '$lib/tauri-commands'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
+} from '#lib/tauri-commands/index.js'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
 
 /** One tool call the assistant made, as the collapsible "looked at X" line shows it. */
 export interface RailToolCall {

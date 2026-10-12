@@ -9,7 +9,7 @@
  * prove the name is right. A thin match is flagged for the human, never refused.
  */
 
-import type { RenameEvidenceCoverage } from '$lib/tauri-commands'
+import type { RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 
 /**
  * Under this share of the delivered text, a quote is a sliver rather than the gist: it proves

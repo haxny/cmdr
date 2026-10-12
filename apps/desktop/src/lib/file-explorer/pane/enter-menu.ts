@@ -5,8 +5,8 @@
  * anchor it, and picks the row highlighted on open.
  */
 
-import type { MenuSection } from '$lib/ui/menu-types'
-import { tString } from '$lib/intl/messages.svelte'
+import type { MenuSection } from '#lib/ui/menu-types.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import type { EnterAction } from './archive-enter-policy'
 
 /** The menu's item values (also what a pick resolves to). */

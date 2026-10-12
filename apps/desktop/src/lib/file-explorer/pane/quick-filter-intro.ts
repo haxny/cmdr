@@ -12,8 +12,8 @@
  * mid-toast costs one explanation, where the other order risks repeating it.
  */
 
-import { addToast } from '$lib/ui/toast'
-import { getSetting, setSetting } from '$lib/settings'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getSetting, setSetting } from '#lib/settings/index.js'
 import { QUICK_FILTER_INTRO_TOAST_ID } from './quick-filter-intro-actions'
 import QuickFilterIntroToastContent from './QuickFilterIntroToastContent.svelte'
 

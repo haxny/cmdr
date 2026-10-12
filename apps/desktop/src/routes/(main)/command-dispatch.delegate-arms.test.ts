@@ -58,7 +58,7 @@ const { getVolumeId, getPanePath, getSetting, getEffectiveShortcuts, readClipboa
 
 // `getAppLogger('user-action')` runs at module top-level; `m.logInfo` captures
 // the logged `id` so the preamble-order + exempt tests can assert on it.
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ info: m.logInfo, debug: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
@@ -66,22 +66,22 @@ vi.mock('$lib/logging/logger', () => ({
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => m.invoke(...args) }))
 
 // The capability guard reads the focused pane's volume id + path.
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPaneVolumeId: () => m.getVolumeId(),
   getFocusedPanePath: () => m.getPanePath(),
 }))
 
 // Empty store ⇒ `local` falls to the listable default (canWrite: true).
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     m.addToast(...args)
   },
 }))
 
 // Zoom arms: getSetting/setSetting back the text-size read/write.
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (key: string) => m.getSetting(key),
   setSetting: (...args: unknown[]) => {
     m.setSetting(...args)
@@ -89,34 +89,34 @@ vi.mock('$lib/settings', () => ({
 }))
 
 // `showZoomToast` reads the reset shortcut. Default: no shortcut bound (menu hint).
-vi.mock('$lib/shortcuts', () => ({
+vi.mock('#lib/shortcuts/index.js', () => ({
   getEffectiveShortcuts: (id: string) => m.getEffectiveShortcuts(id),
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: () => m.openSettingsWindow(),
 }))
 
-vi.mock('$lib/shortcuts/shortcuts-window', () => ({
+vi.mock('#lib/shortcuts/shortcuts-window.js', () => ({
   openShortcutsWindow: () => m.openShortcutsWindow(),
 }))
 
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({
   openErrorReportDialog: () => {
     m.openErrorReportDialog()
   },
 }))
 
-vi.mock('$lib/updates/updater.svelte', () => ({
+vi.mock('#lib/updates/updater.svelte.js', () => ({
   runMenuTriggeredCheck: () => m.runMenuTriggeredCheck(),
 }))
 
-vi.mock('$lib/downloads/go-to-latest', () => ({
+vi.mock('#lib/downloads/go-to-latest.js', () => ({
   goToLatestDownload: (...args: unknown[]) => m.goToLatestDownload(...args),
 }))
 
-// The whole `$lib/tauri-commands` barrel the arms call.
-vi.mock('$lib/tauri-commands', () => ({
+// The whole `#lib/tauri-commands` barrel the arms call.
+vi.mock('#lib/tauri-commands/index.js', () => ({
   // Pulled in transitively via the Ask Cmdr toggle handler → explorer-state module init.
   DEFAULT_VOLUME_ID: 'root',
   openExternalUrl: (...a: unknown[]) => m.openExternalUrl(...a),
@@ -133,7 +133,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 // QuickLook's `$state` singleton (reconfigurable per branch).
-vi.mock('$lib/file-explorer/quick-look/quick-look-state.svelte', () => ({
+vi.mock('#lib/file-explorer/quick-look/quick-look-state.svelte.js', () => ({
   quickLookState: m.quickLookState,
 }))
 

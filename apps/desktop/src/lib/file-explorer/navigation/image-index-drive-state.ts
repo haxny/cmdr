@@ -5,8 +5,8 @@
 // the live `getVolumeEnrichActivity(volumeId)` activity. No new backend command; this reuses
 // data the settings screen and the corner hourglass already read.
 
-import type { MediaIndexVolumeState } from '$lib/tauri-commands'
-import type { VolumeEnrichActivity } from '$lib/indexing/media-enrich-state.svelte'
+import type { MediaIndexVolumeState } from '#lib/tauri-commands/index.js'
+import type { VolumeEnrichActivity } from '#lib/indexing/media-enrich-state.svelte.js'
 
 /** The three visible dot states: gray `off`, pulsing-yellow `indexing`, green `done`. */
 export type ImageIndexDriveState = 'off' | 'indexing' | 'done'

@@ -8,13 +8,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createMockDirectoryListing, filterHiddenFiles, createFileEntry } from '../test-helpers'
 
 // Mock tauri-commands
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getFileRange: vi.fn(),
   getSyncStatusBatch: vi.fn().mockResolvedValue([]),
 }))
 
 // Mock icon-cache
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   getCachedIcon: vi.fn().mockReturnValue(undefined),
   getCachedCustomFolderIcon: () => undefined,
   iconCacheVersion: { subscribe: vi.fn() },
@@ -24,7 +24,7 @@ vi.mock('$lib/icon-cache', () => ({
 }))
 
 // Mock reactive-settings
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getRowHeight: vi.fn().mockReturnValue(24),
   formatDateTime: vi.fn().mockReturnValue('2025-01-01 00:00'),
   formattedDate: vi.fn().mockReturnValue({
@@ -48,7 +48,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
 }))
 
 // Mock drag-and-drop
-vi.mock('$lib/drag-and-drop', () => ({
+vi.mock('#lib/drag-and-drop', () => ({
   startDragTracking: vi.fn(),
 }))
 

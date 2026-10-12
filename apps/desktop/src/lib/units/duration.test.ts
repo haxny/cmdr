@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, it, expect } from 'vitest'
 import { formatDuration, formatFilesPerSecond, formatMilliseconds, seconds } from './duration'
-import { _setFormatLocaleForTests, _setLocaleForTests } from '$lib/intl/locale'
+import { _setFormatLocaleForTests, _setLocaleForTests } from '#lib/intl/locale.js'
 
 describe('formatDuration', () => {
   it('renders sub-minute durations in whole seconds', () => {

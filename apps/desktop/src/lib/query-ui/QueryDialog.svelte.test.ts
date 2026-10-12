@@ -15,16 +15,16 @@ import QueryDialog from './QueryDialog.svelte'
 import { createQueryFilterState, type QueryFilterState } from './query-filter-state.svelte'
 import { createRecentItemsState } from './recent-items/recent-items-state.svelte'
 import type { QueryDialogConfig, AiTranslateResult } from './query-dialog-config'
-import { getToasts, clearAllToasts } from '$lib/ui/toast/toast-store.svelte'
-import type { SearchResultEntry } from '$lib/tauri-commands'
-import type { HistoryEntry } from '$lib/tauri-commands'
+import { getToasts, clearAllToasts } from '#lib/ui/toast/toast-store.svelte.js'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'search.autoApply') return true
     return undefined
@@ -32,7 +32,7 @@ vi.mock('$lib/settings', () => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,

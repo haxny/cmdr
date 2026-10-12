@@ -7,10 +7,10 @@
 
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { NotRollbackableReason, OperationRow } from '$lib/ipc/bindings'
-import type { OperationLogDetail } from '$lib/tauri-commands'
+import type { NotRollbackableReason, OperationRow } from '#lib/ipc/bindings.js'
+import type { OperationLogDetail } from '#lib/tauri-commands/index.js'
 import OperationLogDialog from './OperationLogDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { operationLogState, closeOperationLog } from './operation-log-trigger.svelte'
 import { RollbackRefusalFailure } from './rollback-refusal'
 
@@ -19,7 +19,7 @@ const getOperationLogDetailMock =
     (payload: { operationId: string; itemLimit: number; itemOffset: number }) => Promise<OperationLogDetail | null>
   >()
 const rollbackOperationMock = vi.fn<(operationId: string) => Promise<{ inverseOpId: string }>>()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   getRecentOperationLogEntries: vi.fn(() => Promise.resolve([])),
@@ -29,12 +29,12 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 // Avoid pulling the reactive-settings chain; a stable stamp is all the row needs.
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatDateTime: () => '2026-07-09 12:00',
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

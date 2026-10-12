@@ -7,7 +7,7 @@
  * import is a webview reload.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import type { LockedSetting, ManagedPolicyView } from '$lib/ipc/bindings'
+import type { LockedSetting, ManagedPolicyView } from '#lib/ipc/bindings.js'
 import { getDefaultValue } from './settings-registry'
 
 const disk = vi.hoisted(() => new Map<string, unknown>())
@@ -36,13 +36,13 @@ vi.mock('./store-path', () => ({
   resolveStorePath: (name: string) => Promise.resolve(name),
 }))
 
-vi.mock('$lib/tauri-commands/settings', () => ({
+vi.mock('#lib/tauri-commands/settings.js', () => ({
   recordSettingsDefaults: vi.fn(() => Promise.resolve()),
   getRestrictedWindowSettings: vi.fn(() => Promise.resolve({})),
   persistRestrictedWindowSetting: vi.fn(() => Promise.resolve({ status: 'ok' })),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getManagedPolicy: vi.fn(() => Promise.resolve(policyState.initial)),
   onManagedPolicyChanged: vi.fn((handler: (view: unknown) => void) => {
     policyState.onChanged = handler

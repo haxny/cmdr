@@ -8,8 +8,8 @@
  * used to live in both).
  */
 
-import type { SavedServer, ServerTarget } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
+import type { SavedServer, ServerTarget } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import {
   getKnownSftpServers,
   getKnownWebdavServers,
@@ -20,7 +20,7 @@ import {
   saveS3Credentials,
   saveSftpCredentials,
   saveWebdavCredentials,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { formFromS3Place, formFromSftpServer, formFromWebdavServer, type ServerForm } from './server-form'
 
 /**

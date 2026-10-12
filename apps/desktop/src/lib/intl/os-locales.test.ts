@@ -10,7 +10,7 @@
  * read leaves a working webview default standing.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { OsLocales } from '$lib/ipc/bindings'
+import type { OsLocales } from '#lib/ipc/bindings.js'
 
 const getOsLocales = vi.fn<() => Promise<OsLocales>>()
 
@@ -18,7 +18,7 @@ const getOsLocales = vi.fn<() => Promise<OsLocales>>()
 let onEvent: ((payload: { locales: OsLocales }) => void) | undefined
 const unlisten = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getOsLocales: () => getOsLocales(),
   onOsLocalesChanged: (handler: (payload: { locales: OsLocales }) => void) => {
     onEvent = handler

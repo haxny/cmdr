@@ -1,8 +1,8 @@
 // Selection dialog IPC commands: typed wrappers around the Rust backend.
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
-import type { SelectionHistoryEntry, SelectionTranslateResult } from '$lib/ipc/bindings'
+import type { SelectionHistoryEntry, SelectionTranslateResult } from '#lib/ipc/bindings.js'
 
 /**
  * Translates a natural-language selection request into a glob/regex plus optional

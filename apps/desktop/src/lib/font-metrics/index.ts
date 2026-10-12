@@ -4,11 +4,11 @@
 // how the backend's fill-in requests are served, and the IPC to Rust. The
 // measuring itself happens in `worker-client.ts`, off the main thread.
 
-import { storeFontMetrics, extendFontMetrics, hasFontMetrics } from '$lib/tauri-commands'
+import { storeFontMetrics, extendFontMetrics, hasFontMetrics } from '#lib/tauri-commands/index.js'
 import { parseFontId } from './measure'
 import { eagerCodePoints, isMeasurable } from './ranges'
 import { measureOffMainThread } from './worker-client'
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fontMetrics')
 

@@ -8,13 +8,13 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ trackEvent: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/file-explorer/pane/focused-pane-reads', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ trackEvent: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/file-explorer/pane/focused-pane-reads.js', () => ({
   getFocusedPanePath: vi.fn(() => '/x'),
   getFocusedPaneVolumeId: vi.fn(() => 'root'),
 }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
 import { fileHandlers } from './file-handlers'
 import type { CommandHandlerContext } from './types'

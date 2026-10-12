@@ -6,7 +6,7 @@
 //
 // Backend: `apps/desktop/src-tauri/src/commands/file_system/archive.rs`.
 
-import { commands, type ArchivePasswordPrompt } from '$lib/ipc/bindings'
+import { commands, type ArchivePasswordPrompt } from '#lib/ipc/bindings.js'
 
 export type { ArchivePasswordPrompt }
 

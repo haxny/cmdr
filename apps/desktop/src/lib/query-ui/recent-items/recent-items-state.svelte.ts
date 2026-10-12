@@ -5,7 +5,7 @@
 // Two consumers (Search + Selection) each construct their own instance with their own set
 // of IPC functions, so one dialog's history can't leak into the other.
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 /**
  * What a consumer must provide to construct a recent-items store: its IPC and its log category. The shapes mirror

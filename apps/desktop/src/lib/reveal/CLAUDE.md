@@ -2,12 +2,12 @@
 
 The two moments a user meets this feature: the once-ever offer to catch "Show in Finder", and the once-ever notice the
 first time a reveal actually lands. Everything that touches the `NSFileViewer` key lives in Rust
-(`src-tauri/src/reveal/CLAUDE.md`); the Settings switch is `$lib/settings/sections/RevealHandlerCard.svelte`.
+(`src-tauri/src/reveal/CLAUDE.md`); the Settings switch is `#lib/settings/sections/RevealHandlerCard.svelte`.
 
 ## Module map
 
 - **`should-show-reveal-nudge.ts`**: pure. `shouldShowRevealNudge` plus `REVEAL_NUDGE_AFTER_DAYS`. The shared half of
-  the rule is `$lib/nudges/`.
+  the rule is `#lib/nudges/`.
 - **`reveal-nudge.ts`** raises the offer toast and stamps the nudge ledger; **`reveal-nudge-answer.ts`** holds the three
   exits and the refusal copy, separate so the toast body can reach it without an import cycle.
 - **`reveal-activation-notice.ts`** + **`RevealActivationToastContent.svelte`**: the first-landing notice.

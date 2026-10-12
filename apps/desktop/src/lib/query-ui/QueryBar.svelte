@@ -26,12 +26,12 @@
      *   - ArrowDown with no results opens the recent-items dropdown.
      *   - ⌘1/⌘2/⌘3 switch modes (numbering changes when AI is off).
      */
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import type { SearchMode } from './query-filter-state.svelte'
 
     interface Props {

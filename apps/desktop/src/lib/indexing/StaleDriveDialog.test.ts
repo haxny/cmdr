@@ -6,11 +6,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
-import type { IndexFreshnessChangedEvent } from '$lib/ipc/bindings'
+import type { IndexFreshnessChangedEvent } from '#lib/ipc/bindings.js'
 
 // Capture the freshness-event callback the dialog registers so the test can fire it.
 let freshnessCb: ((p: IndexFreshnessChangedEvent) => void) | undefined
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   onIndexFreshnessChanged: (cb: (p: IndexFreshnessChangedEvent) => void) => {
     freshnessCb = cb
     return Promise.resolve(() => {})
@@ -24,7 +24,7 @@ const settings: Record<string, unknown> = {}
 const setSetting = vi.fn((id: string, value: unknown) => {
   settings[id] = value
 })
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => settings[id],
   setSetting: (id: string, value: unknown) => {
     setSetting(id, value)
@@ -42,7 +42,7 @@ vi.mock('./drive-index-prefs', () => ({
   },
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [
     { id: 'smb-backups', name: 'Backups', path: 'smb://x', category: 'network', isEjectable: false },
     { id: 'adb-pixel', name: 'Pixel', path: 'adb://pixel', category: 'mobile_device', isEjectable: true },
@@ -50,7 +50,7 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
 }))
 
 // ModalDialog notifies the backend on open/close; stub those IPC calls.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

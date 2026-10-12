@@ -7,9 +7,9 @@
 // one-line tweak after a live check), kind classification, and the
 // image fit/zoom math.
 
-import type { MediaDimensions, ViewerContentKind } from '$lib/ipc/bindings'
-import { formatInteger } from '$lib/intl/number-format'
-import { getMessage, tString } from '$lib/intl/messages.svelte'
+import type { MediaDimensions, ViewerContentKind } from '#lib/ipc/bindings.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { getMessage, tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * Builds the URL the `<img>` / `<embed>` loads for a media session.

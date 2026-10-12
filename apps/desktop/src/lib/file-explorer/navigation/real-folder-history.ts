@@ -4,11 +4,11 @@
  *
  * A snapshot path names an in-memory, per-session result set rather than a folder, so
  * anything that needs a folder has to look past it: the Search dialog's "current folder"
- * scope can't search inside one (`$lib/search/searchable-folder.ts`), and tab persistence
+ * scope can't search inside one (`#lib/search/searchable-folder.ts`), and tab persistence
  * must not write one to disk, since the id names nothing once the session ends
  * (`../pane/tab-operations.ts`).
  */
-import { snapshotIdFromPanePath } from '$lib/search/snapshot-store.svelte'
+import { snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
 
 /** Whether `path` belongs to a search-results snapshot pane rather than a folder. */
 export function isSnapshotPath(path: string): boolean {

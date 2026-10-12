@@ -15,8 +15,8 @@
  * focus episode"; resets when a pane regains focus.
  */
 
-import { quickLookState } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { quickLookState } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('focus-watchdog')
 

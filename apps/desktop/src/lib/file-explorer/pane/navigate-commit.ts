@@ -15,7 +15,7 @@ import {
   type HistoryEntry,
 } from '../navigation/navigation-history'
 import type { DetermineNavigationPathArgs } from '../navigation/path-navigation'
-import type { Location } from '$lib/tauri-commands'
+import type { Location } from '#lib/tauri-commands/index.js'
 import type { ReturnPoint } from './return-point'
 import type { NavigateRefusal } from './navigate-refusals'
 

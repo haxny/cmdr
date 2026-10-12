@@ -13,8 +13,8 @@
  * rendered through the single `renderErrorMarkdown` → `snarkdown` site.
  */
 
-import type { ListingError, ListingErrorReason, ErrorCategory } from '$lib/ipc/bindings'
-import type { FriendlyError } from '$lib/file-explorer/types'
+import type { ListingError, ListingErrorReason, ErrorCategory } from '#lib/ipc/bindings.js'
+import type { FriendlyError } from '#lib/file-explorer/types.js'
 import { getListingErrorMessage } from './listing-error-messages'
 import { getGitErrorMessage } from './git-error-messages'
 import { getProviderSuggestion, type ProviderCategory } from './provider-error-messages'

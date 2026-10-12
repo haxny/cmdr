@@ -18,7 +18,7 @@ const settings: Record<string, unknown> = {
   'askCmdr.chatMemorySize': 'auto',
 }
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => settings[key]),
   setSetting: vi.fn((key: string, value: unknown) => {
     settings[key] = value
@@ -31,7 +31,7 @@ vi.mock('$lib/settings/settings-store', () => ({
 }))
 
 const { cloudConsent } = vi.hoisted(() => ({ cloudConsent: { accepted: true } }))
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({
   cloudConsentState: cloudConsent,
   refreshCloudConsent: vi.fn(() => Promise.resolve()),
   cloudAiBlocked: (provider: string) => provider === 'cloud' && !cloudConsent.accepted,
@@ -39,8 +39,8 @@ vi.mock('$lib/ai/cloud-consent.svelte', () => ({
 }))
 
 const { aiPolicy } = vi.hoisted(() => ({ aiPolicy: { mode: 'allowed' } }))
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/managed-policy/managed-policy.svelte')>()
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/managed-policy/managed-policy.svelte.js')>()
   return {
     ...actual,
     getManagedPolicyView: () => ({ ...actual.UNMANAGED, ai: { mode: aiPolicy.mode, allowedCloudHosts: null } }),
@@ -50,7 +50,7 @@ vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => {
 const { modelWindow } = vi.hoisted(() => ({
   modelWindow: { model: 'gpt-4o', knownWindowTokens: null as number | null },
 }))
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   askCmdrCostSummary: vi.fn(() => Promise.resolve({ days: [] })),
   askCmdrModelWindow: vi.fn(() => Promise.resolve(modelWindow)),
@@ -61,8 +61,8 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
 }))
 
 import AskCmdrSection from './AskCmdrSection.svelte'
-import { openCloudConsentSettings } from '$lib/ai/cloud-consent.svelte'
-import { askCmdrForgetMemory } from '$lib/tauri-commands'
+import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
+import { askCmdrForgetMemory } from '#lib/tauri-commands/index.js'
 
 /** Lets a click's awaited IPC settle and the section re-render. */
 async function settle(): Promise<void> {

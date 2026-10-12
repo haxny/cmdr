@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { coverageStrength } from './rename-evidence-coverage'
-import type { RenameEvidenceCoverage } from '$lib/tauri-commands'
+import type { RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 
 function coverage(matchedChars: number, deliveredChars: number): RenameEvidenceCoverage {
   return {

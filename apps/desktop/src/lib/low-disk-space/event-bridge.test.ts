@@ -32,12 +32,12 @@ const {
   dismissToastMock: vi.fn<(id: string) => void>(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onLowDiskSpace: onLowDiskSpaceMock,
 }))
 
-// Permission and send failures are `sendMacosNotification`'s (tested in `$lib/notifications`).
-vi.mock('$lib/notifications/send-macos-notification', () => ({
+// Permission and send failures are `sendMacosNotification`'s (tested in `#lib/notifications`).
+vi.mock('#lib/notifications/send-macos-notification.js', () => ({
   sendMacosNotification: sendNotificationMock,
 }))
 
@@ -45,12 +45,12 @@ vi.mock('./notifications-mode', () => ({
   getLowDiskSpaceNotificationsMode: getLowDiskSpaceNotificationsModeMock,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
   dismissToast: dismissToastMock,
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
 }))
 

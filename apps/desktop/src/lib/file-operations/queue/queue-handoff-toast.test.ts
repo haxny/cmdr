@@ -5,14 +5,14 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { OperationRow } from './operations-store.svelte'
-import { clearAllToasts, getToasts } from '$lib/ui/toast'
+import { clearAllToasts, getToasts } from '#lib/ui/toast/index.js'
 
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: () => Promise.resolve(),
 }))
 
 let rows: OperationRow[] = []
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => rows,
 }))
 

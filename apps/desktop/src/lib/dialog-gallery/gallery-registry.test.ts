@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { DIALOG_GALLERY_ENTRIES, UNREGISTERED_OVERLAY_ENTRIES } from './gallery-registry'
-import { SOFT_DIALOG_REGISTRY } from '$lib/ui/dialog-registry'
+import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
 
 describe('dialog gallery registry', () => {
   it('gives every non-ready entry a non-empty reason', () => {

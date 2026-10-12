@@ -5,7 +5,7 @@
  * They share one file because `svelte-tests` charges per test FILE, not per test
  * (`docs/testing.md` § "What a test actually costs"), and this family pulls the
  * heaviest import graph in the directory. They also share one mock surface: the
- * same `$lib/settings`, `$lib/tauri-commands`, volume-store, media-index prefs,
+ * same `#lib/settings`, `#lib/tauri-commands`, volume-store, media-index prefs,
  * and logger stubs, with the per-component differences routed through mutable
  * implementations that each block installs in its own `beforeEach`. Nothing is
  * merged into a single shared value: every block gets exactly the stubs it was
@@ -18,10 +18,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
-import type { CoveredCount, MediaIndexVolumeState, ReclaimPreview } from '$lib/ipc/bindings'
-import type { VolumeEnrichActivity } from '$lib/indexing/media-enrich-state.svelte'
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { CoveredCount, MediaIndexVolumeState, ReclaimPreview } from '#lib/ipc/bindings.js'
+import type { VolumeEnrichActivity } from '#lib/indexing/media-enrich-state.svelte.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 /**
  * Every stub a block may need to re-point. Each `describe` sets what it cares
@@ -29,7 +29,7 @@ import { expectNoA11yViolations } from '$lib/test-a11y'
  * defaults first, so no block can inherit another's setup.
  */
 const stubs = vi.hoisted(() => ({
-  // `null` means "use the real `$lib/settings` export": `MediaIndexProgressSummary`
+  // `null` means "use the real `#lib/settings` export": `MediaIndexProgressSummary`
   // reads settings for real, and only the blocks whose own file stubbed these
   // install a replacement.
   getSetting: null as ((id: string) => unknown) | null,
@@ -51,7 +51,7 @@ const stubs = vi.hoisted(() => ({
   setVolumeAlwaysIndexed: vi.fn<(id: string, on: boolean) => Promise<void>>(),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realGetSetting = actual.getSetting as (id: string) => unknown
   const realGetSettingDefinition = actual.getSettingDefinition as (id: string) => unknown
@@ -67,7 +67,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexCoveredCount: (t: number, ids: string[]) => stubs.coveredCount(t, ids),
   mediaIndexVolumeState: (v: string) => stubs.volumeState(v),
   mediaIndexReclaimPreview: (t: number, ids: string[]) => stubs.reclaimPreview(t, ids),
@@ -76,11 +76,11 @@ vi.mock('$lib/tauri-commands', () => ({
   getMediaIndexMaxParallelism: () => stubs.maxParallelism(),
 }))
 
-vi.mock('$lib/media-index/enabled-volumes', () => ({
+vi.mock('#lib/media-index/enabled-volumes.js', () => ({
   getEnabledMediaIndexVolumeIds: () => stubs.enabledVolumeIds,
 }))
 
-vi.mock('$lib/media-index/network-volume-prefs', () => ({
+vi.mock('#lib/media-index/network-volume-prefs.js', () => ({
   isNetworkVolumeOptedIn: () => stubs.networkOptedIn,
   isVolumeAlwaysIndexed: () => stubs.volumeAlwaysIndexed,
   setNetworkVolumeOptedIn: (id: string, on: boolean) => stubs.setNetworkVolumeOptedIn(id, on),
@@ -88,18 +88,18 @@ vi.mock('$lib/media-index/network-volume-prefs', () => ({
   getNetworkOptInVolumes: () => stubs.networkOptInVolumes,
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', async (importOriginal) => ({
+vi.mock('#lib/stores/volume-store.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getVolumes: () => stubs.volumes,
 }))
 
-vi.mock('$lib/indexing', async (importOriginal) => ({
+vi.mock('#lib/indexing/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ROOT_VOLUME_ID: 'root',
   getEnrichingVolumes: () => stubs.enrichingVolumes,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
@@ -400,7 +400,7 @@ describe('MediaIndexNetworkVolumes', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
-    // Same as `MediaIndexChosenFolders`: its own file left `$lib/settings` with
+    // Same as `MediaIndexChosenFolders`: its own file left `#lib/settings` with
     // `onSpecificSettingChange` alone, so nothing here reads a setting.
     stubs.getSetting = () => undefined
     stubs.volumes = [

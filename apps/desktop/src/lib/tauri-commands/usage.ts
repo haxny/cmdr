@@ -1,6 +1,6 @@
 // Launch-day ledger (read-only; Rust appends today's day at startup)
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 
 /**
  * How many distinct local calendar days Cmdr has been launched on, per the on-device ledger.

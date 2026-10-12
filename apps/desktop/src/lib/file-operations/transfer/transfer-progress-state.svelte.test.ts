@@ -12,18 +12,18 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { flushSync } from 'svelte'
-import type { WriteConflictEvent, WriteOperationStartResult } from '$lib/tauri-commands'
-import type { WriteOperationError } from '$lib/file-explorer/types'
+import type { WriteConflictEvent, WriteOperationStartResult } from '#lib/tauri-commands/index.js'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
 
-vi.mock('$lib/tauri-commands', async () =>
+vi.mock('#lib/tauri-commands/index.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).tauriCommandsMock(),
 )
-vi.mock('$lib/file-operations/queue/queue-window', async () =>
+vi.mock('#lib/file-operations/queue/queue-window.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).queueWindowMock(),
 )
-vi.mock('$lib/ui/toast', async () => (await import('./test-transfer-progress-harness.svelte')).toastMock())
-vi.mock('$lib/settings', async () => (await import('./test-transfer-progress-harness.svelte')).settingsMock())
-vi.mock('$lib/intl/messages.svelte', async () =>
+vi.mock('#lib/ui/toast/index.js', async () => (await import('./test-transfer-progress-harness.svelte')).toastMock())
+vi.mock('#lib/settings/index.js', async () => (await import('./test-transfer-progress-harness.svelte')).settingsMock())
+vi.mock('#lib/intl/messages.svelte.js', async () =>
   (await import('./test-transfer-progress-harness.svelte')).messagesMock(),
 )
 vi.mock('../progress-readout', async (importOriginal) =>
@@ -31,7 +31,7 @@ vi.mock('../progress-readout', async (importOriginal) =>
     await importOriginal<typeof import('../progress-readout')>(),
   ),
 )
-vi.mock('$lib/logging/logger', async () => (await import('./test-transfer-progress-harness.svelte')).loggerMock())
+vi.mock('#lib/logging/logger.js', async () => (await import('./test-transfer-progress-harness.svelte')).loggerMock())
 
 import { createTransferProgressState } from './transfer-progress-state.svelte'
 import {
@@ -43,9 +43,9 @@ import {
   pauseOperation,
   resumeOperation,
   listOperations,
-} from '$lib/tauri-commands'
-import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
-import { addToast } from '$lib/ui/toast'
+} from '#lib/tauri-commands/index.js'
+import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
+import { addToast } from '#lib/ui/toast/index.js'
 import type { CancelRollbackReadout } from './cancel-rollback-toast'
 import { createEtaSmoother } from '../progress-readout'
 import {
@@ -169,7 +169,7 @@ describe('createTransferProgressState: progress + complete', () => {
       refusedFolder: null,
       side: 'source' as const,
     }
-    const { copyBetweenVolumes } = await import('$lib/tauri-commands')
+    const { copyBetweenVolumes } = await import('#lib/tauri-commands/index.js')
     vi.mocked(copyBetweenVolumes).mockImplementationOnce(() => {
       listeners.error?.({ operationId: 'op-1', operationType: 'copy', error, progressAtStop: null })
       return Promise.resolve({ operationId: 'op-1', operationType: 'copy' })

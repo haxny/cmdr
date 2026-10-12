@@ -8,8 +8,8 @@
  * and reads values through `getSetting` as always.
  */
 
-import type { ManagedPolicyView, SettingLock } from '$lib/ipc/bindings'
-import { getAppLogger } from '$lib/logging/logger'
+import type { ManagedPolicyView, SettingLock } from '#lib/ipc/bindings.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('managed-policy')
 
@@ -76,7 +76,8 @@ export async function initManagedPolicy(onChange: (change: ManagedPolicyChange) 
   try {
     // Loaded on first use: the settings store imports this file, and a static import of the
     // barrel would drag the whole IPC surface into every settings consumer (`settings-store.ts`).
-    const { getManagedPolicy: fetchManagedPolicy, onManagedPolicyChanged } = await import('$lib/tauri-commands')
+    const { getManagedPolicy: fetchManagedPolicy, onManagedPolicyChanged } =
+      await import('#lib/tauri-commands/index.js')
     await onManagedPolicyChanged((next) => {
       firstRead.superseded = true
       const previous = policy

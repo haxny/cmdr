@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 
-vi.mock('$lib/ai/cloud-consent.svelte', () => ({ openCloudConsentSettings: vi.fn() }))
+vi.mock('#lib/ai/cloud-consent.svelte.js', () => ({ openCloudConsentSettings: vi.fn() }))
 
 import EmptyState from './EmptyState.svelte'
-import { openCloudConsentSettings } from '$lib/ai/cloud-consent.svelte'
+import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
 
 describe('EmptyState', () => {
   it('shows three AI prompts when AI is enabled', async () => {

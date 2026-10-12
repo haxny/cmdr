@@ -10,8 +10,8 @@
      * and the ⌥M opener; this component owns the popover surface, the dynamic preset list, and its
      * local custom-input flags.
      */
-    import FilterPopover from '$lib/ui/FilterPopover.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import FilterPopover from '#lib/ui/FilterPopover.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { DateFilter } from '../query-filter-state.svelte'
     import { isDateRangeDisabled, showsDateUpperBound, buildDatePresets, type DynamicDatePreset } from './filter-popover-helpers'
     import './filter-popover.css'

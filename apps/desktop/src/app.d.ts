@@ -6,7 +6,7 @@
  * Linux Docker build); FALSE (and dead-code-eliminated) in production and `pnpm dev`. Gates the
  * harness-only instruments: the i18n capture sink in `src/lib/intl/messages.svelte.ts` on its own,
  * and together with `import.meta.env.DEV` the dialog gallery and the dev Graphics catalog. It says
- * what a bundle CARRIES, never which run is in flight: that's `getAppMode()` in `$lib/app-mode`.
+ * what a bundle CARRIES, never which run is in flight: that's `getAppMode()` in `#lib/app-mode`.
  */
 declare const __CMDR_E2E_BUILD__: boolean
 

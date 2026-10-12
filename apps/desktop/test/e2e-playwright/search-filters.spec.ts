@@ -23,7 +23,7 @@ const SIZE_CHIP_DEFAULT = '.search-overlay .chip-filter[aria-label="Size"]'
 // A configured chip is identified by its own aria-label ("Size: > 100 MB"), NOT by the shared
 // `.is-filled` tint class: that one follows `value`, so the Search-in chip wears it from the
 // moment the dialog opens (an empty scope box still means the pane's current folder). See
-// `$lib/ui/DETAILS.md` § Chip.
+// `#lib/ui/DETAILS.md` § Chip.
 const SIZE_CHIP_CONFIGURED = '.search-overlay .chip-filter[aria-label^="Size: "]'
 const SIZE_CHIP_CLEAR = '.search-overlay .chip-filter[aria-label^="Size: "] .chip-clear'
 const FILTER_POPOVER = '.search-overlay .ui-popover'

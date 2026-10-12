@@ -18,10 +18,10 @@
  * startup, and nowhere else.
  */
 
-import { setFileOperationsBlocked } from '$lib/tauri-commands'
-import { blockingSoftDialog } from '$lib/ui/open-dialogs.svelte'
-import { explorerState } from '$lib/file-explorer/pane/explorer-state.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { setFileOperationsBlocked } from '#lib/tauri-commands/index.js'
+import { blockingSoftDialog } from '#lib/ui/open-dialogs.svelte.js'
+import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

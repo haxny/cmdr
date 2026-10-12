@@ -1,8 +1,8 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import AlertDialog from '$lib/ui/AlertDialog.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import AlertDialog from '#lib/ui/AlertDialog.svelte'
 
     let modalOpen = $state(false)
     let modalBlurOpen = $state(false)

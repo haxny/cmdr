@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { VolumeRootChanged } from '$lib/ipc/bindings'
+import type { VolumeRootChanged } from '#lib/ipc/bindings.js'
 import { pathAfterRootChange } from './root-change-follow'
 
 const NASPI = 'sftp://david@192.168.1.111:22/share/ZFS18_DATA/naspi'

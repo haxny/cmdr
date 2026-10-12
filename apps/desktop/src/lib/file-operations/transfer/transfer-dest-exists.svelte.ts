@@ -30,12 +30,12 @@
  * creates this synchronously at component init.
  */
 
-import { destinationExists, destinationRootEcho, destinationWriteAccess } from '$lib/tauri-commands'
-import type { DestinationRootEcho } from '$lib/ipc/bindings'
-import type { UnwritableReason } from '$lib/file-explorer/types'
-import { validateDirectoryPath } from '$lib/utils/filename-validation'
-import { createDebounce } from '$lib/utils/timing'
-import type { Logger } from '$lib/logging/logger'
+import { destinationExists, destinationRootEcho, destinationWriteAccess } from '#lib/tauri-commands/index.js'
+import type { DestinationRootEcho } from '#lib/ipc/bindings.js'
+import type { UnwritableReason } from '#lib/file-explorer/types.js'
+import { validateDirectoryPath } from '#lib/utils/filename-validation.js'
+import { createDebounce } from '#lib/utils/timing.js'
+import type { Logger } from '#lib/logging/logger.js'
 
 export interface TransferDestExistsCheckDeps {
   /** Current destination path (volume-relative, or `~`-rooted for the home volume). */

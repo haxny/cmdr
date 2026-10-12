@@ -15,7 +15,7 @@
  */
 
 import type { SearchSnapshotMode } from './snapshot-store.svelte'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** Soft cap on AI prompt labels. Long natural-language prompts get truncated with an ellipsis. */
 const AI_LABEL_MAX_CHARS = 40

@@ -18,7 +18,7 @@ import { PLACEHOLDER_HELP, hintMask } from './placeholder-help'
 import { MARK_END, MARK_START } from './rename-examples'
 import { searchExampleKey } from './search-option-help'
 import { setLastMultiRenameRun } from './last-run.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { previewMultiRename, getMultiRenameLastSettings, getMultiRenameHistory } = vi.hoisted(() => ({
   getMultiRenameHistory: vi.fn(() => Promise.resolve([] as unknown[])),
@@ -26,7 +26,7 @@ const { previewMultiRename, getMultiRenameLastSettings, getMultiRenameHistory } 
   getMultiRenameLastSettings: vi.fn(() => Promise.resolve(null as unknown)),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   previewMultiRename,
@@ -44,7 +44,7 @@ vi.mock('$lib/tauri-commands', () => ({
   readMultiRenameNames: vi.fn(() => Promise.resolve({ ok: true, value: 1 })),
 }))
 
-vi.mock('$lib/text-editor/open-file-in-editor', () => ({ openFileInEditor: vi.fn(() => Promise.resolve(true)) }))
+vi.mock('#lib/text-editor/open-file-in-editor.js', () => ({ openFileInEditor: vi.fn(() => Promise.resolve(true)) }))
 
 const ROWS = [
   { row: 0, oldName: 'Žádost o přezkum.pdf', newName: 'Zadost o prezkum.pdf', status: { type: 'ready' } },

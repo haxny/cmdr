@@ -5,12 +5,12 @@
  * `CommandId`.
  *
  * Import topology: this leaf imports only the `CommandId` / `CommandArgs` types
- * from `$lib/commands` and the `ExplorerAPI` interface from `../explorer-api`.
+ * from `#lib/commands` and the `ExplorerAPI` interface from `../explorer-api`.
  * The family handler modules and the dispatch core both import it; it imports
  * neither, so the graph stays acyclic for the `import-cycles` check.
  */
-import type { CommandId, CommandArgs } from '$lib/commands'
-import { FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '$lib/commands/command-registry'
+import type { CommandId, CommandArgs } from '#lib/commands/index.js'
+import { FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '#lib/commands/command-registry.js'
 import type { CommandDispatchContext } from '../command-dispatch-context'
 import type { ExplorerAPI } from '../explorer-api'
 

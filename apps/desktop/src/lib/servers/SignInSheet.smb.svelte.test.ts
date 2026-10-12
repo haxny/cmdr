@@ -9,7 +9,7 @@ import { mount, tick } from 'svelte'
 import SignInSheet from './SignInSheet.svelte'
 import type { SignInSheetRequest } from './sign-in-contract'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -83,7 +83,7 @@ const SMB_HOST = {
 
 describe('SignInSheet: editing an SMB host', () => {
   beforeEach(async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedSmbHost).mockClear()
     vi.mocked(commands.updateSavedServer).mockClear()
     vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockClear()
@@ -119,7 +119,7 @@ describe('SignInSheet: editing an SMB host', () => {
   })
 
   it('sends a new address to the SMB host writer, which moves the host', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     const { done } = await renderSheet({ mode: 'edit', server: SMB_HOST })
     typeInto(field('server-address'), 'nas.tail1234.ts.net')
     await tick()
@@ -138,7 +138,7 @@ describe('SignInSheet: editing an SMB host', () => {
 
   /** ❗ A share still mounted from the old address refuses the move, naming the share, and nothing closes. */
   it('names the share to eject when one is still mounted from the old address', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedSmbHost).mockResolvedValueOnce({ outcome: 'share_mounted', name: 'Photos' })
     const { done } = await renderSheet({ mode: 'edit', server: SMB_HOST })
     typeInto(field('server-address'), '192.168.0.200')
@@ -155,7 +155,7 @@ describe('SignInSheet: editing an SMB host', () => {
 
   /** Opens the sheet, types a new address, and presses Save onto the `share_mounted` refusal. */
   async function refusedOverAMountedShare() {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedSmbHost).mockResolvedValueOnce({ outcome: 'share_mounted', name: 'Photos' })
     const sheet = await renderSheet({ mode: 'edit', server: SMB_HOST })
     typeInto(field('server-address'), '192.168.0.200')
@@ -170,7 +170,7 @@ describe('SignInSheet: editing an SMB host', () => {
    * refusal offers the way past it, and the person's click is what ejects.
    */
   it('offers Eject and save on a share still mounted from the old address, which ejects and saves', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     const { done } = await refusedOverAMountedShare()
     expect(commands.ejectAndUpdateSavedSmbHost).not.toHaveBeenCalled()
     expect(document.body.querySelector('#server-eject-and-save-help')?.textContent.trim()).toBe(
@@ -192,7 +192,7 @@ describe('SignInSheet: editing an SMB host', () => {
 
   /** ❗ A refused eject is a live mount someone is using: it says who, saves nothing, and offers the button again. */
   it('says who is holding a share whose eject was refused, and saves nothing', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockResolvedValueOnce({
       outcome: 'eject_refused',
       name: 'Photos',
@@ -216,7 +216,7 @@ describe('SignInSheet: editing an SMB host', () => {
 
   /** Cancel while it runs calls the run off, so a closed sheet never saves the edit. */
   it('calls a running Eject and save off when the sheet is canceled', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.ejectAndUpdateSavedSmbHost).mockReturnValueOnce(new Promise(() => {}))
     const { done } = await refusedOverAMountedShare()
 
@@ -233,7 +233,7 @@ describe('SignInSheet: editing an SMB host', () => {
   })
 
   it('offers no Eject and save on a refusal that no eject fixes', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     vi.mocked(commands.updateSavedSmbHost).mockResolvedValueOnce({ outcome: 'address_taken', name: 'Office NAS' })
     await renderSheet({ mode: 'edit', server: SMB_HOST })
     typeInto(field('server-address'), '192.168.0.200')
@@ -253,7 +253,7 @@ describe('SignInSheet: editing an SMB host', () => {
   })
 
   it('saves a rename and a changed account through the SMB host writer and closes', async () => {
-    const commands = await import('$lib/tauri-commands')
+    const commands = await import('#lib/tauri-commands/index.js')
     const { done } = await renderSheet({ mode: 'edit', server: { ...SMB_HOST, username: 'sven' } })
     const username = field('server-username')
     // ❗ Editable: for SMB the account is a preference, not the server's identity.

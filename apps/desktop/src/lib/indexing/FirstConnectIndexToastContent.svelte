@@ -6,9 +6,9 @@
      * trigger) gates whether this even shows; this component just renders the
      * choice and runs the picked action, then self-dismisses.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** Dedup id of this toast; lets the component self-dismiss on a choice. */

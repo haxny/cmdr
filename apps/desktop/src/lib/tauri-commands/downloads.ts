@@ -4,7 +4,7 @@
 // go-to-latest hotkey fires `global-shortcut-fired` from any app.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events, type DownloadDetectedEvent } from '$lib/ipc/bindings'
+import { commands, events, type DownloadDetectedEvent } from '#lib/ipc/bindings.js'
 
 /** An eligible final-form download landed in the Downloads tree (FDA-gated). */
 export function onDownloadDetected(handler: (payload: DownloadDetectedEvent) => void): Promise<UnlistenFn> {

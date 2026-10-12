@@ -13,14 +13,14 @@ const { connectDirectly } = vi.hoisted(() => ({
 vi.mock('./direct-connect', () => ({ connectDirectly }))
 
 const { dismissToast } = vi.hoisted(() => ({ dismissToast: vi.fn() }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast }))
 
 const { openLocalNetworkSettings } = vi.hoisted(() => ({
   openLocalNetworkSettings: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }))
-vi.mock('$lib/tauri-commands', () => ({ openLocalNetworkSettings }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openLocalNetworkSettings }))
 
-import { systemStrings } from '$lib/system-strings.svelte'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
 import SmbOsMountFallbackToastContent from './SmbOsMountFallbackToastContent.svelte'
 

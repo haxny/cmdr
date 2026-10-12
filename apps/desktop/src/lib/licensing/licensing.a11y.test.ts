@@ -7,10 +7,10 @@
  * costs"). Each block below keeps its component's own doc comment, props, and
  * assertions.
  *
- * No stub here disagrees between blocks: the five `$lib/tauri-commands` sets are
+ * No stub here disagrees between blocks: the five `#lib/tauri-commands` sets are
  * disjoint, so their union is what each block always saw, and `getCachedStatus`
  * was already a module-level mutable both the About and license-key blocks reset
- * in their own `beforeEach`. Every `$lib/*` stub spreads the real module first, so
+ * in their own `beforeEach`. Every `#lib/*` stub spreads the real module first, so
  * a block that never stubbed one still sees its un-stubbed exports.
  */
 
@@ -21,14 +21,14 @@ import AcknowledgementsDialog from './AcknowledgementsDialog.svelte'
 import CommercialReminderModal from './CommercialReminderModal.svelte'
 import ExpirationModal from './ExpirationModal.svelte'
 import LicenseKeyDialog from './LicenseKeyDialog.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let mockCachedStatus: unknown = null
 let mockLicenseInfo: unknown = null
 
 // The union of the licensing IPC the five dialogs reach for. The real module is
 // spread first so a call outside the union behaves as it does un-merged.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -79,7 +79,7 @@ vi.mock('./load-third-party-packages', () => ({
   ),
 }))
 
-vi.mock('$lib/ui/toast/toast-store.svelte', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/toast-store.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   addToast: vi.fn(() => 'id'),
 }))

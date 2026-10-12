@@ -2,7 +2,7 @@
  * The F4 guard: a row with no real file behind it is refused on screen before any
  * launch, and a real row reports whether an app was asked to open it.
  *
- * Which app, and everything said around the launch, is `$lib/text-editor`'s job and
+ * Which app, and everything said around the launch, is `#lib/text-editor`'s job and
  * is pinned in `open-file-in-editor.test.ts`; here it's a mock.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -12,10 +12,10 @@ const m = vi.hoisted(() => ({
   addToast: vi.fn(),
 }))
 
-vi.mock('$lib/text-editor/open-file-in-editor', () => ({ openFileInEditor: m.openFileInEditor }))
-vi.mock('$lib/ui/toast', () => ({ addToast: m.addToast }))
+vi.mock('#lib/text-editor/open-file-in-editor.js', () => ({ openFileInEditor: m.openFileInEditor }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: m.addToast }))
 // An empty volume list: the guard classifies the ids below off their shape alone.
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => [] }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => [] }))
 
 import { openInEditorOrExplain } from './editor-open'
 

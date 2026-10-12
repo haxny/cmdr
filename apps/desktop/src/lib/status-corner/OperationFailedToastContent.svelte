@@ -9,10 +9,10 @@
      * queue window carries the full reason, the suggestion, and the Dismiss.
      */
     import OperationFailureToastBody from './OperationFailureToastBody.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { failureReasonFor } from '$lib/file-operations/queue/failure-reason'
-    import type { OperationSnapshot } from '$lib/tauri-commands'
-    import type { ReportIncident } from '$lib/error-reporter/report-incident'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { failureReasonFor } from '#lib/file-operations/queue/failure-reason.js'
+    import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
+    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 
     interface Props {
         /** Dedup id of this toast; lets the component get out of its own way. */

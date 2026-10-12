@@ -1,9 +1,9 @@
 <script lang="ts">
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { Snippet } from 'svelte'
 
     interface Props {

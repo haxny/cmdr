@@ -7,8 +7,8 @@
  * its scan settles. Rationale and the surfaces: `DETAILS.md` § "S3 cost line".
  */
 
-import type { ClashPlan, CostEstimate, CostEstimateRequest } from '$lib/tauri-commands'
-import { formatMoney, getNumberFormatter } from '$lib/intl/number-format'
+import type { ClashPlan, CostEstimate, CostEstimateRequest } from '#lib/tauri-commands/index.js'
+import { formatMoney, getNumberFormatter } from '#lib/intl/number-format.js'
 import type { TransferOperationType } from './write-operation-types'
 
 /** One shown line: the provider and its formatted, rounded amount. */

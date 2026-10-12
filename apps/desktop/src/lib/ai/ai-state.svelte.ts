@@ -11,11 +11,11 @@ import {
   type AiDownloadProgress,
   type AiModelInfo,
   type AiStatus,
-} from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { colorizeSize } from '$lib/file-explorer/selection/selection-info-utils'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatByteSizeTiered, formatDuration, seconds } from '$lib/units'
+} from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatByteSizeTiered, formatDuration, seconds } from '#lib/units/index.js'
 
 /**
  * The AI toast's lifecycle now only tracks the runtime install pipeline: download → install →

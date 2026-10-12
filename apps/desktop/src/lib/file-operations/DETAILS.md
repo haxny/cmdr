@@ -21,8 +21,8 @@ Subdirs, each with its own docs:
 Umbrella-level files:
 
 - `write-operation-types.ts`: the hand-written write-op vocabulary (operation types and phases, conflict policy, start
-  config, the `WriteOperationError` union), re-exported from `$lib/file-explorer/types`, which stays the one import
-  seam. It imports only from `$lib/ipc/bindings`, so that re-export can't close an import cycle. `type-drift` reads it
+  config, the `WriteOperationError` union), re-exported from `#lib/file-explorer/types`, which stays the one import
+  seam. It imports only from `#lib/ipc/bindings`, so that re-export can't close an import cycle. `type-drift` reads it
   alongside the barrel.
 - `TransferProgressReadout.svelte`: the dual-bar readout shared by the progress dialog and the queue rows (§ below).
 - `scan-throughput.ts`: the rolling-window scan-rate estimator (§ below).
@@ -62,7 +62,7 @@ Umbrella-level files:
 - `S3CostLine.svelte` + `s3-cost-line.ts`: the list-price cost estimate under the Copy, Move, and Delete dialogs' scan
   tallies (§ below).
 - `decision-keys.ts`: the fixed letter keys that answer the clash prompt and the transfer error dialog (each button
-  shows its letter in a `$lib/ui/KeyHint.svelte` chip) (§ "Letter keys on decision prompts"). `test-button-label.ts` is
+  shows its letter in a `#lib/ui/KeyHint.svelte` chip) (§ "Letter keys on decision prompts"). `test-button-label.ts` is
   the tests' way to read such a button's label without its chip.
 
 ## S3 cost line
@@ -84,7 +84,7 @@ side only asks and shows.
 - **Hide rule**: an estimate that rounds to zero in its currency's minor unit (`roundsToZero`, read off the formatter's
   own `maximumFractionDigits`) gets no line; when none is left, nothing renders. A refusal renders nothing and logs at
   debug.
-- **Money goes through `formatMoney`** (`$lib/intl/number-format.ts`), so it follows the OS formatting locale.
+- **Money goes through `formatMoney`** (`#lib/intl/number-format.ts`), so it follows the OS formatting locale.
 - ❌ **No estimate on a rollback or an undo**: those just run. `RollbackConfirmDialog` never mounts the line, pinned by
   `S3CostLine.svelte.test.ts`.
 
@@ -100,7 +100,7 @@ technical detail beside it there.)
   `new Error(JSON.stringify(...))`, which would put the wire JSON in front of the user. `throwMutationError` throws a
   `MutationFailure` that keeps the typed value on the error object, and `asMutationError` reads it back, so nobody
   parses a sentence to tell refusals apart.
-- **`MutationFailure` is a `TypedFailure<MutationError>`** (`$lib/ipc/typed-failure.ts`), the shared base every family's
+- **`MutationFailure` is a `TypedFailure<MutationError>`** (`#lib/ipc/typed-failure.ts`), the shared base every family's
   carrier extends, so `asMutationError` is a thin `failureOf(MutationFailure, …)` and one `instanceof` can't hand back
   another family's payload. Adding a family is the same three lines `mutation-error.ts` shows; the map is
   `docs/guides/error-handling.md`.
@@ -112,13 +112,13 @@ technical detail beside it there.)
   `alreadyExists` → `fileOperations.validation.*`, via ICU `tString()`), so a name the backend turns down reads exactly
   the way the red border read a moment earlier. That's why `kind` is threaded through: the folder and file branches
   differ grammatically in most languages.
-- **A `VolumeError::FriendlyGit` keeps speaking git**, routed to `$lib/error-messages/git-error-messages.ts` rather than
+- **A `VolumeError::FriendlyGit` keeps speaking git**, routed to `#lib/error-messages/git-error-messages.ts` rather than
   flattened into a generic "the volume refused".
 - **`technicalDetail(error)` is the ONLY way the backend's own words reach a surface**, and it's for a details
   disclosure or a log. ❌ Never render it as the message; it's untranslated diagnostic text.
 - **`timedOut` is not a failure.** The backend's deadline detaches rather than cancels, so the work may still land; the
   copy says so. Rename, new folder, and new file never answer it: past their deadline they're `stillRunning` and
-  `awaitMutation` waits for the real end (`$lib/tauri-commands/mutation-reply.ts`), so only the reads and the trash
+  `awaitMutation` waits for the real end (`#lib/tauri-commands/mutation-reply.ts`), so only the reads and the trash
   calls can still produce it.
 - **The create dialogs' submit is `create-submission.svelte.ts`** (`editing` → `creating` → `stillCreating`), shared by
   both dialogs. OK goes busy at once; past the deadline `StillCreatingNotice.svelte` says the volume is slow and Cancel
@@ -170,7 +170,7 @@ temp+rename rewrite), surfaced through the same transfer/queue UI as any write:
 The dual-bar readout — a bytes bar and a count bar, each with its amount, percent, and rate, over one shared time-left
 line — is ONE component rendered by both surfaces that show a running write op: `TransferProgressDialog`
 (copy/move/delete/trash) and the operation queue's `QueueRow`. It owns layout only; the numbers are single-sourced by
-`progress-readout.ts` (speed, ETA) and `$lib/units` (text), and the strings by the `fileOperations.transferProgress.*`
+`progress-readout.ts` (speed, ETA) and `#lib/units` (text), and the strings by the `fileOperations.transferProgress.*`
 catalog keys.
 
 - **Two densities, one layout.** Both label each bar "Bytes" / "Files" (or "Items" for trash); `compact` (a list row)
@@ -187,7 +187,7 @@ catalog keys.
   that rate; a size column, where people compare and copy values, still gets them. ❌ Not whole units at every scale,
   tempting as it looks: that printed "2 GB / 2 GB (80%)" for a 1.7-of-2.4 GB copy, and every transfer in the 1-10 GB
   range stepped a whole gigabyte at a time. Where the tenth comes from and why it costs no column width:
-  `$lib/units/byte-size.ts::formatSizeLive`.
+  `#lib/units/byte-size.ts::formatSizeLive`.
 - **No denominator, no fraction.** A `filesTotal` of 0 is the backend saying it hasn't decided the number yet (what a
   scanning operation reports on both axes), ❌ never "nothing to do", so the count row keeps its tally and drops the bar
   and the percentage until a real total lands — the same answer `hasBytesRow` gives the size axis, and the same one the
@@ -358,7 +358,7 @@ half (who checks, how, and what the operation does with the answer):
 - **All gone (`nothing_left`)**: an info toast saying there was nothing left to do and why. The operation already
   completed; ❌ no error tone, nothing is retained as a failure.
 - **It waits for the window to be free**, the late-dialog rule a background job's password prompt follows
-  (`$lib/file-explorer/pane/when-dialogs-clear.svelte.ts`): a queued job is a background job by nature, and a prompt
+  (`#lib/file-explorer/pane/when-dialogs-clear.svelte.ts`): a queued job is a background job by nature, and a prompt
   stacked over the dialog the person is typing in steals their keys. Busy means any OTHER soft dialog is open
   (`isAnySoftDialogOpenBesides('sources-gone')`), so the next question replaces the answered one without a toast. While
   held, a quiet toast says a question is waiting.
@@ -418,7 +418,7 @@ button unmounts and focus falls to `<body>`, where no dialog hears a key (the fo
 outside it, and nothing fires one). On each clash, if focus is on `<body>`, the body focuses its own section
 (`tabindex="-1"`). Focus anywhere else (a stacked dialog, a field) is left alone.
 
-**The chip.** Each button shows its letter in a `KeyHint` (`$lib/ui/KeyHint.svelte`, the same chip as the F2 on
+**The chip.** Each button shows its letter in a `KeyHint` (`#lib/ui/KeyHint.svelte`, the same chip as the F2 on
 Background), which is `aria-hidden`, with `aria-keyshortcuts` on the button carrying it to a screen reader instead (Skip
 and Close also name `Enter`). The chip is inside the button's text, so a test reads a label through `buttonLabel` and
 the E2E `clickButtonByText` drops `aria-hidden` text the same way.
@@ -451,7 +451,7 @@ the button reads the same on every surface.
 - `undoByDeleting` / `undoByMovingBack` / `undoByRenamingBack`, for undoing a FINISHED operation from the history
   dialog. Each names the inverse action, then admits the reversal may come out partial. They mirror the backend's
   `inverse_kind`; the picker is `rollbackConfirmVariant` in `reversal-wording.ts`, and the reasoning behind the wording
-  is `$lib/operation-log/DETAILS.md` § "Decision: the confirmation is worded by the inverse".
+  is `#lib/operation-log/DETAILS.md` § "Decision: the confirmation is worded by the inverse".
 
 **Two pickers, one vocabulary.** `inFlightRollbackVariant(kind)` answers for an operation still running and
 `rollbackConfirmVariant(kind)` for undoing a finished one; both live in `reversal-wording.ts` and the tests pin them to
@@ -467,7 +467,7 @@ its reversal back up rather than to start one, so the dialog swaps its title
 files is the same either way, and its second sentence already says Cmdr skips what it isn't sure about, which is exactly
 what a second pass does again. So `variant` keeps answering "what does this do to my files" and `finishing` answers "is
 this a fresh reversal or the rest of one", and neither has to know about the other. Which rows offer which:
-`$lib/operation-log/DETAILS.md` § "The rollback flow".
+`#lib/operation-log/DETAILS.md` § "The rollback flow".
 
 **What it deliberately doesn't say.** ❌ No file count, tempting as one is: the running counter includes files the
 operation SKIPPED, so any number here would be wrong on exactly the operation that had clashes — which is most of the
@@ -478,10 +478,10 @@ this app spends that colour on operations that take something away. The safe ans
 reflex Enter never reverses anything.
 
 **Raised by the surface, not the session.** Four hosts hold the pending question in their own `$state`
-(`TransferProgressDialog`, `OperationConflictDialog`, `QueueRow`, and `$lib/operation-log/OperationLogDialog.svelte`),
+(`TransferProgressDialog`, `OperationConflictDialog`, `QueueRow`, and `#lib/operation-log/OperationLogDialog.svelte`),
 each stacking the dialog over itself; the session stays a command surface with no view in it. In the first two the
 question stacks over a dialog from the same subtree, which is what DOM order and the trap stack already handle
-(`$lib/ui/DETAILS.md` § ModalDialog). The queue window raises its own copy — a soft dialog, ❌ never a native `ask`,
+(`#lib/ui/DETAILS.md` § ModalDialog). The queue window raises its own copy — a soft dialog, ❌ never a native `ask`,
 which would need a capability the queue window deliberately drops and would be undriveable from the E2E suite.
 
 **All four variants sit in the dialog gallery** (Debug > Soft dialogs), one state each, because getting one of four
@@ -498,7 +498,7 @@ hadn't, so the two could contradict each other two seconds apart.
 **How they're kept in agreement.** `reversal-wording.ts` owns one classifier and every surface's key for it:
 
 - `rollbackConfirmVariant(kind)`: `OpKind` → `RollbackConfirmVariant`, mirroring `inverse_kind`. Moved here from
-  `$lib/operation-log/operation-log-labels.ts` so `queue/` and `$lib/status-corner/` can reach it without depending on
+  `#lib/operation-log/operation-log-labels.ts` so `queue/` and `#lib/status-corner/` can reach it without depending on
   the operation-log module (which depends on this one).
 - `reversalLabelKey(variant)`: the count-free name, for the queue row's label and the corner chip's action word. Both
   sit next to a readout or tooltip that already carries the numbers, so a count here would only repeat them.

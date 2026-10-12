@@ -7,9 +7,9 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('no-private-unit-format', rule, {
   valid: [
-    // Routing through `$lib/units` is the intended path.
+    // Routing through `#lib/units` is the intended path.
     {
-      code: `import { formatByteSize } from '$lib/units'; const s = formatByteSize(n)`,
+      code: `import { formatByteSize } from '#lib/units'; const s = formatByteSize(n)`,
       filename: 'src/lib/file-operations/queue/QueueRow.svelte',
     },
     // The units module itself is exempt: it's where the ladder lives.
@@ -17,7 +17,7 @@ ruleTester.run('no-private-unit-format', rule, {
       code: `const base = format === 'binary' ? 1024 : 1000; const v = n / base ** 2`,
       filename: 'src/lib/units/byte-size.ts',
     },
-    // The size-tier layer is exempt (it consumes the ladder from `$lib/units`).
+    // The size-tier layer is exempt (it consumes the ladder from `#lib/units`).
     {
       code: `const tier = bytes / 1024`,
       filename: 'src/lib/file-explorer/selection/selection-info-utils.ts',
@@ -42,7 +42,7 @@ ruleTester.run('no-private-unit-format', rule, {
       code: `function formatPath(p) { return p.replace(/\\/+$/, '') }`,
       filename: 'src/lib/file-operations/queue/QueueRow.svelte',
     },
-    // A formatter-shaped NAME that just delegates to `$lib/units` keeps its name.
+    // A formatter-shaped NAME that just delegates to `#lib/units` keeps its name.
     {
       code: `function formatDbSize(b) { return b === null ? 'N/A' : formatByteSize(b) }`,
       filename: 'src/routes/debug/DebugDriveIndexPanel.svelte',

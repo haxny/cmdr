@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { trackEventSpy } = vi.hoisted(() => ({
   trackEventSpy: vi.fn<(name: string, props: Record<string, unknown>) => Promise<void>>(() => Promise.resolve()),
 }))
-vi.mock('$lib/tauri-commands', () => ({ trackEvent: trackEventSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ trackEvent: trackEventSpy }))
 
 import {
   reportTabClosed,

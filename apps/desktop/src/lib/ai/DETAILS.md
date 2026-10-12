@@ -40,7 +40,7 @@ render the switch and say why a feature is quiet.
 
 The backend refuses every LLM request, model download, and server start the MDM policy rules out
 (`src-tauri/src/ai/DETAILS.md`); this module renders the typed refusal, and every sentence comes from
-`managedAiRefusalMessage` (`$lib/managed-policy/ai-refusal.ts`).
+`managedAiRefusalMessage` (`#lib/managed-policy/ai-refusal.ts`).
 
 - **Consent**: `cloudConsentState.managed` mirrors `CloudAiConsentStatus.managed`. While it's set, the switch is
   disabled and reads off, with the refusal as a visible note its `aria-describedby` points at.
@@ -86,10 +86,10 @@ reconfigure is ordered ahead of the wizard's `onComplete()`. The wizard's step 2
 
 ## i18n
 
-AI copy lives in the `ai.*` catalog (`$lib/intl/messages/en/ai.json`), resolved via `tString()` / `t()`;
+AI copy lives in the `ai.*` catalog (`#lib/intl/messages/en/ai.json`), resolved via `tString()` / `t()`;
 `cmdr/no-raw-user-facing-string` is enforced on `lib/ai/`. The cloud/local AI settings sections
 (`settings/sections/Ai{Cloud,Local}Section.svelte`) own their section-specific copy in `ai.cloud.*` / `ai.local.*`, and
 reuse the registry settings keys (`settings.ai.*`) for rows that ARE registry settings (Service, Context window). The
 download progress line is one ICU message (`ai.toast.progress`) with a `select` on `eta` (`'none'` discriminator when no
 estimate) and preformatted size/speed STRING params. `translate-error-toast.ts` maps each `kind` to a `title`/`body`
-pair of catalog keys, kept in lockstep with the Rust enum. Runtime rules: [`$lib/intl/CLAUDE.md`](../intl/CLAUDE.md).
+pair of catalog keys, kept in lockstep with the Rust enum. Runtime rules: [`#lib/intl/CLAUDE.md`](../intl/CLAUDE.md).

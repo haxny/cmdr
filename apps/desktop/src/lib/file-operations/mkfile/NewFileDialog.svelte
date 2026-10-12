@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onDestroy } from 'svelte'
-    import { createFile, type Initiator } from '$lib/tauri-commands'
-    import { CreateSubmission } from '$lib/file-operations/create-submission.svelte'
-    import { NewEntryNameCheck } from '$lib/file-operations/new-entry-name-check.svelte'
-    import NewEntryNameField from '$lib/file-operations/NewEntryNameField.svelte'
-    import StillCreatingNotice from '$lib/file-operations/StillCreatingNotice.svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { createFile, type Initiator } from '#lib/tauri-commands/index.js'
+    import { CreateSubmission } from '#lib/file-operations/create-submission.svelte.js'
+    import { NewEntryNameCheck } from '#lib/file-operations/new-entry-name-check.svelte.js'
+    import NewEntryNameField from '#lib/file-operations/NewEntryNameField.svelte'
+    import StillCreatingNotice from '#lib/file-operations/StillCreatingNotice.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         /** The directory in which to create the new file */

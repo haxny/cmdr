@@ -4,7 +4,7 @@
  * platform-forked reorder hint are unit-testable without a DOM.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /**
  * Tooltip for a favorite row. Leads with the PATH so a renamed favorite

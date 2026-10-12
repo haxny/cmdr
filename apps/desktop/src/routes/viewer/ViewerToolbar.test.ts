@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 
 import ViewerToolbar from './ViewerToolbar.svelte'
-import type { EncodingChoice, FileEncoding, ViewerContentKind } from '$lib/ipc/bindings'
+import type { EncodingChoice, FileEncoding, ViewerContentKind } from '#lib/ipc/bindings.js'
 import type { ViewerDisplayMode } from './viewer-view-mode'
 
 const choices: EncodingChoice[] = [

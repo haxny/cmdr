@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { commands, type OperationRow } from '$lib/ipc/bindings'
-    import { formatInteger } from '$lib/intl/number-format'
+    import { commands, type OperationRow } from '#lib/ipc/bindings.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
 
     // Dev-only inspector for the operation log's read side (the Debug panel, requirement 6a).
     // Reads through the same typed `get_recent_operation_log_entries` IPC the alpha

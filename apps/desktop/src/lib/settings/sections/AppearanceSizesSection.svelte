@@ -1,14 +1,14 @@
 <script lang="ts">
     import SettingsSection from '../components/SettingsSection.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSettingDefinition } from '$lib/settings'
-    import { getFileSizeFormat } from '$lib/settings/reactive-settings.svelte'
-    import { unitLabel } from '$lib/units'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSettingDefinition } from '#lib/settings/index.js'
+    import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
+    import { unitLabel } from '#lib/units/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
 
     interface Props {
         searchQuery: string
@@ -28,7 +28,7 @@
     // its primary section). `shouldShow` still gates this row when a query is active.
     const sizeColorsDef = getSettingDefinition('appearance.sizeColors') ?? { label: '', description: '' }
 
-    // The unit tiles read in the UI language's symbols (`$lib/units`) and follow the
+    // The unit tiles read in the UI language's symbols (`#lib/units`) and follow the
     // active binary/SI base live (`KiB` / `MiB` / `GiB` for 1024-based, `kB` / `MB` /
     // `GB` for 1000-based), which the registry can't know.
     const sizeUnitLabelOverrides = $derived({

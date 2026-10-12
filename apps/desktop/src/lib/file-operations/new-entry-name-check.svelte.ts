@@ -9,10 +9,10 @@
  * when the create itself comes back refused.
  */
 
-import { findFileIndex, getFileAt, onDirectoryDiff, type UnlistenFn } from '$lib/tauri-commands'
-import { validateDisallowedChars, validateNameLength, validatePathLength } from '$lib/utils/filename-validation'
-import { tString } from '$lib/intl/messages.svelte'
-import type { ReportIncident } from '$lib/error-reporter/report-incident'
+import { findFileIndex, getFileAt, onDirectoryDiff, type UnlistenFn } from '#lib/tauri-commands/index.js'
+import { validateDisallowedChars, validateNameLength, validatePathLength } from '#lib/utils/filename-validation.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
 import type { CreateRefusal } from './create-submission.svelte'
 
 /** Where the entry would land, and how to read the name being typed. */

@@ -4,7 +4,7 @@
  * range (`[N2-5]`) or a date kind slots in as one more entry here.
  */
 import type { Component } from 'svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import CounterTokenEditor from './CounterTokenEditor.svelte'
 import { counterKind, type Counter } from './counter-token'
 import type { MaskTokenGrammar } from './mask-tokens'

@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const { openMock, badge } = vi.hoisted(() => ({
   openMock: vi.fn<() => Promise<void>>(),

@@ -8,7 +8,7 @@
  */
 
 // eslint-disable-next-line cmdr/no-raw-bindings-import -- logging/store bootstrap infra: the tauri-commands barrel imports the logger (storage.ts), so wrapping here would create an import cycle
-import { commands, type FrontendLogEntry } from '$lib/ipc/bindings'
+import { commands, type FrontendLogEntry } from '#lib/ipc/bindings.js'
 import type { LogRecord, Sink } from '@logtape/logtape'
 
 interface PendingEntry {

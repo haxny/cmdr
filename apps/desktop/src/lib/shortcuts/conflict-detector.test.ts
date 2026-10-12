@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { Command } from '$lib/commands/types'
+import type { Command } from '#lib/commands/types.js'
 import type { CommandScope } from './scope-hierarchy'
 
 // Shared test state: mock factory closures capture these references
@@ -11,7 +11,7 @@ const customOverrides = new Map<string, string[]>()
 
 const testCommands: Command[] = []
 
-vi.mock('$lib/commands/command-registry', () => ({
+vi.mock('#lib/commands/command-registry.js', () => ({
   get commands() {
     return testCommands
   },

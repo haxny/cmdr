@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { resolveSearchScope, resolveDefaultScope, volumeRootFor, volumeRootsFrom } from './searchable-folder'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 const LOCAL_ONLY = ['/']
 const WITH_NAS = ['/', '/Volumes/naspi']

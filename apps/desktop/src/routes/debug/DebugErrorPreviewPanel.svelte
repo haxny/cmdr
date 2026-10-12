@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import type { ListingError } from '$lib/ipc/bindings'
-    import { renderListingError } from '$lib/error-messages/listing-error'
-    import Select, { type SelectItem } from '$lib/ui/Select.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import type { ListingError } from '#lib/ipc/bindings.js'
+    import { renderListingError } from '#lib/error-messages/listing-error.js'
+    import Select, { type SelectItem } from '#lib/ui/Select.svelte'
 
     type ErrorCategory = 'transient' | 'needs_action' | 'serious'
 

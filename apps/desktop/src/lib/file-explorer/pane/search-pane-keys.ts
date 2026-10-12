@@ -10,8 +10,8 @@
  * throughout (FilePane bakes that into the injected selection callbacks).
  */
 
-import { openFileViewer } from '$lib/file-viewer/open-viewer'
-import { claimKey } from '$lib/shortcuts/claim-key'
+import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
 import { openInEditorOrExplain } from './editor-open'
 import { computeSearchPaneKeyAction } from './search-results-keys'
 

@@ -136,9 +136,9 @@ import {
   type HistoryEntry,
 } from '../navigation/navigation-history'
 import { isSnapshotPath } from '../navigation/real-folder-history'
-import { isPathOnVolume } from '$lib/path/canonical'
-import { tString } from '$lib/intl/messages.svelte'
-import type { Location } from '$lib/tauri-commands'
+import { isPathOnVolume } from '#lib/path/canonical.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { Location } from '#lib/tauri-commands/index.js'
 import {
   NETWORK_VOLUME_PATH,
   PANE_UNAVAILABLE_REFUSAL,

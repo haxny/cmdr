@@ -39,7 +39,7 @@ const PIXEL_TOLERANCE = 2
 
 /**
  * `DEFAULT_BRIEF_COLUMN_WIDTH` from `src/lib/file-explorer/views/brief-column-widths.svelte.ts`.
- * Duplicated rather than imported (the specs don't resolve `$lib`), so keep the two in step:
+ * Duplicated rather than imported (the specs don't resolve `#lib`), so keep the two in step:
  * this is what an unmeasured Brief column renders at.
  */
 const PROVISIONAL_COLUMN_WIDTH = 260

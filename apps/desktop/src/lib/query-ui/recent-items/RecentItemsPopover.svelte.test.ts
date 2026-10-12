@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick, unmount, type Component } from 'svelte'
 import RecentSearchesPopoverRaw from './RecentItemsPopover.svelte'
-import type { HistoryEntry } from '$lib/tauri-commands'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 import type { RecentItemAdapter, RecentItemKey } from './recent-items-types'
 import { chipTooltip, modeName, formatAge, rowMeta } from './recent-items-utils'
 

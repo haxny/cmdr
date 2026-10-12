@@ -69,7 +69,7 @@ vi.mock('./store-path', () => ({
 // The backend-facing settings commands are irrelevant to on-disk persistence;
 // stub them so init's fire-and-forget `record_settings_defaults` push and the
 // restricted-window snapshot don't hit a real IPC layer.
-vi.mock('$lib/tauri-commands/settings', () => ({
+vi.mock('#lib/tauri-commands/settings.js', () => ({
   recordSettingsDefaults: vi.fn(() => Promise.resolve()),
   getRestrictedWindowSettings: vi.fn(() => Promise.resolve({})),
   persistRestrictedWindowSetting: vi.fn(() => Promise.resolve({ status: 'ok' })),

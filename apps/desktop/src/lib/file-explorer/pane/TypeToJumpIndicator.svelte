@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { tString } from '$lib/intl/messages.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Icon from '#lib/ui/Icon.svelte'
 
     /**
      * Tooltip-like overlay that surfaces the user's in-flight type-to-jump buffer

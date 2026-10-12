@@ -22,7 +22,7 @@
  * keystroke is transport, not a command, so it never rides the bus (invariant P2).
  */
 
-import type { ViewMode } from '$lib/app-status-store'
+import type { ViewMode } from '#lib/app-status-store.js'
 import type {
   CommandDispatchArgs,
   CommandId,
@@ -30,13 +30,13 @@ import type {
   McpSelectMode,
   McpTabAction,
   SortColumn,
-} from '$lib/commands'
-import { applySearchPrefill, type SearchPrefill, type SearchMode } from '$lib/search/search-state.svelte'
-import type { Initiator } from '$lib/tauri-commands'
-import { resolveLocation } from '$lib/file-explorer/navigation/resolve-location'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
+} from '#lib/commands/index.js'
+import { applySearchPrefill, type SearchPrefill, type SearchMode } from '#lib/search/search-state.svelte.js'
+import type { Initiator } from '#lib/tauri-commands/index.js'
+import { resolveLocation } from '#lib/file-explorer/navigation/resolve-location.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
 import type { ExplorerAPI } from './explorer-api'
 import {
   classifyLanding,

@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { SpaceInfo, VolumeSpaceChanged } from '$lib/ipc/bindings'
+import type { SpaceInfo, VolumeSpaceChanged } from '#lib/ipc/bindings.js'
 
 const { ipc } = vi.hoisted(() => ({
   ipc: {
@@ -22,7 +22,7 @@ const { ipc } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getVolumeSpace: ipc.getVolumeSpace,
   watchVolumeSpace: ipc.watchVolumeSpace,
   unwatchVolumeSpace: ipc.unwatchVolumeSpace,

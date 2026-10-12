@@ -1,18 +1,18 @@
 /**
  * Duration and file-rate formatting. No settings to honor: unlike sizes, these
- * have no binary/SI choice. The numbers still go through `$lib/intl`'s locale
+ * have no binary/SI choice. The numbers still go through `#lib/intl`'s locale
  * formatter, because a decimal mark is the locale's business: a rate built with
  * `toFixed` puts an ASCII dot beside a pane reading "250,00 MB".
  *
- * `$lib/settings/types.ts` has a same-named `formatDuration(ms)` for rendering
+ * `#lib/settings/types.ts` has a same-named `formatDuration(ms)` for rendering
  * a duration SETTING's value in the settings UI (milliseconds in, "500ms" /
  * "2m" out). This one takes SECONDS and is the display formatter for elapsed
  * time and ETAs. Don't merge them; they format different things for different
  * surfaces.
  */
 
-import { formatNarrowDuration, formatNarrowMeasure, type DurationPart } from '$lib/intl/duration-format'
-import { formatInteger, getNumberFormatter } from '$lib/intl/number-format'
+import { formatNarrowDuration, formatNarrowMeasure, type DurationPart } from '#lib/intl/duration-format.js'
+import { formatInteger, getNumberFormatter } from '#lib/intl/number-format.js'
 
 /**
  * A duration in seconds, distinct from a byte count or a plain tally. Same
@@ -30,7 +30,7 @@ export function seconds(count: number): Seconds {
 /**
  * Format seconds as a human-readable duration ("45s", "2m 30s", "1h 5m"), in
  * the UI language's narrow style ("8min 12s" in French) through
- * `$lib/intl/duration-format`.
+ * `#lib/intl/duration-format`.
  *
  * The canonical duration formatter for every ETA and elapsed-time readout, so
  * the copy dialog and the operation queue can't phrase the same number two

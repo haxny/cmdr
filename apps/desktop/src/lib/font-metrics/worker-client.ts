@@ -10,7 +10,7 @@
 // The fallback exists because a stalled measurement is not an option: every
 // unmeasured code point renders at the average width until it's filled in.
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { measureCodePointsChunked, type FontSpec } from './measure'
 import type { MeasureRequest, MeasureResponse } from './measure-worker'
 

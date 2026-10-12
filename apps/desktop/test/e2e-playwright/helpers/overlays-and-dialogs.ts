@@ -282,7 +282,7 @@ const PRESS_FAILURE_REASON: Record<ButtonPressOutcome, string> = {
  * `buttonText`, waiting until it is genuinely ACTIONABLE and failing loudly if
  * it never gets there. The label is the text minus any `aria-hidden` part, the
  * way a screen reader names it: a decision prompt's button carries its answer
- * letter in a hidden chip (`$lib/ui/KeyHint.svelte`), so its text reads "SkipS".
+ * letter in a hidden chip (`#lib/ui/KeyHint.svelte`), so its text reads "SkipS".
  *
  * This is the sanctioned way for a spec to press a button, because the obvious
  * hand-rolled version is a trap: `element.click()` on a `disabled` button

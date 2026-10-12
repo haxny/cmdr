@@ -5,7 +5,7 @@
  * (`pane/rename-flow.svelte.ts`) is the only place with moving parts.
  */
 
-import { eventMatchesCommand } from '$lib/shortcuts'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 /** Which way a chained rename step moves through the listing. */
 export type RenameStepDirection = 'up' | 'down'

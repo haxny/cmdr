@@ -10,8 +10,8 @@
 import { describe, it } from 'vitest'
 import { mount, tick, type Component } from 'svelte'
 import RecentSearchesPopoverRaw from './RecentItemsPopover.svelte'
-import type { HistoryEntry } from '$lib/tauri-commands'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { RecentItemAdapter, RecentItemKey } from './recent-items-types'
 import { chipTooltip, modeName, formatAge, rowMeta } from './recent-items-utils'
 

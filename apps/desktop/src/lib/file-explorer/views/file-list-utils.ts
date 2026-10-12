@@ -11,16 +11,16 @@ import {
   type FileIndexState,
   type FolderSizes,
   type FolderCoverage,
-} from '$lib/tauri-commands'
-import { prefetchIcons, prefetchCustomFolderIcons } from '$lib/icon-cache'
-import { getUseAppIconsForDocuments } from '$lib/settings/reactive-settings.svelte'
-import { getSetting } from '$lib/settings/settings-store'
-import { formatInteger } from '$lib/intl/number-format'
-import type { IconName } from '$lib/ui/icons/icon-map'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { TranslationParams } from '$lib/intl/messages.svelte'
+} from '#lib/tauri-commands/index.js'
+import { prefetchIcons, prefetchCustomFolderIcons } from '#lib/icon-cache.js'
+import { getUseAppIconsForDocuments } from '#lib/settings/reactive-settings.svelte.js'
+import { getSetting } from '#lib/settings/settings-store.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { TranslationParams } from '#lib/intl/messages.svelte.js'
 
-export type { DirStats } from '$lib/tauri-commands'
+export type { DirStats } from '#lib/tauri-commands/index.js'
 
 /** Gets the prefetch buffer size from settings (items to load around visible range) */
 export function getPrefetchBufferSize(): number {
@@ -87,7 +87,7 @@ export function getImageIndexBadge(state: FileIndexState | undefined): ImageInde
  *
  * The tooltip carries the subtree fraction, so it can't be a static i18n key: `t` is
  * passed in (kept pure/testable), and counts ride as preformatted `*Text` params with the
- * raw integers alongside for plural selection (the `$lib/intl` count convention).
+ * raw integers alongside for plural selection (the `#lib/intl` count convention).
  */
 export function getFolderCoverageBadge(
   coverage: FolderCoverage | undefined,

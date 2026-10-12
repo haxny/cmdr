@@ -12,7 +12,7 @@
 
 import { availableMonitors, getCurrentWindow } from '@tauri-apps/api/window'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { getChildWindowRect, setChildWindowRect } from '$lib/tauri-commands'
+import { getChildWindowRect, setChildWindowRect } from '#lib/tauri-commands/index.js'
 import type { MonitorRect, Rect } from './window-positioning-utils'
 
 export type { MonitorRect, Rect } from './window-positioning-utils'

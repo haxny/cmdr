@@ -19,10 +19,10 @@ import FileIcon from './FileIcon.svelte'
 import SelectionInfo from './SelectionInfo.svelte'
 import SortableHeader from './SortableHeader.svelte'
 import TagDots from './TagDots.svelte'
-import type { TagRef } from '$lib/ipc/bindings'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { TagRef } from '#lib/ipc/bindings.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/icon-cache', async (importOriginal) => {
+vi.mock('#lib/icon-cache.js', async (importOriginal) => {
   const { writable } = await import('svelte/store')
   return {
     ...(await importOriginal<Record<string, unknown>>()),
@@ -31,7 +31,7 @@ vi.mock('$lib/icon-cache', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getIsCmdrGold: () => false,
   formatFileSize: (n: number) => `${String(n)} B`,
@@ -58,7 +58,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
   getFileSizeFormat: () => 'binary',
 }))
 
-vi.mock('$lib/indexing/index-state.svelte', async (importOriginal) => ({
+vi.mock('#lib/indexing/index-state.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isVolumeScanning: () => false,
   isVolumeAggregating: () => false,
@@ -90,8 +90,8 @@ const fileEntry = {
  * Tier 3 a11y tests for `FileIcon.svelte`.
  *
  * 16x16 icon with emoji fallback and symlink/sync overlay badges. The
- * component relies on `$lib/icon-cache` (cache writable) and
- * `$lib/settings/reactive-settings.svelte` (gold folder toggle), which
+ * component relies on `#lib/icon-cache` (cache writable) and
+ * `#lib/settings/reactive-settings.svelte` (gold folder toggle), which
  * both need to be stubbed so the icon resolves deterministically.
  */
 describe('FileIcon a11y', () => {

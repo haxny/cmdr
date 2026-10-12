@@ -5,19 +5,19 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, tick, type ComponentProps } from 'svelte'
-import type { CostEstimate, CostEstimateRequest } from '$lib/tauri-commands'
+import type { CostEstimate, CostEstimateRequest } from '#lib/tauri-commands/index.js'
 
 const { estimateOperationCost } = vi.hoisted(() => ({
   estimateOperationCost: vi.fn<(request: CostEstimateRequest) => Promise<CostEstimate[]>>(),
 }))
 // `ModalDialog` (the rollback guard) reports its open state through the same module.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost,
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import S3CostLine from './S3CostLine.svelte'
 import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
 

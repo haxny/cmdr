@@ -7,7 +7,7 @@
  * costs"). Each block below keeps its component's own doc comment, props, and
  * assertions.
  *
- * Two stubs needed care. `$lib/settings` is stubbed only for the dialog (its
+ * Two stubs needed care. `#lib/settings` is stubbed only for the dialog (its
  * `getSetting` answers every non-email key with the attach-default flag, which
  * would quietly answer for the toasts too), so it's a mutable the dialog's block
  * installs in its own `beforeEach`, with `null` meaning "use the real export".
@@ -27,24 +27,24 @@ import ErrorReportDialog from './ErrorReportDialog.svelte'
 import ErrorReportToastContent from './ErrorReportToastContent.svelte'
 import SentReportToastBody from './SentReportToastBody.svelte'
 import { closeErrorReportDialog, errorReportFlow, openErrorReportDialog } from './error-report-flow.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { showInFinder } from '$lib/tauri-commands'
-import { amendErrorReport, prepareErrorReportPreview, sendErrorReport } from '$lib/tauri-commands/error-reporter'
-import { openSettingsWindow } from '$lib/settings/settings-window'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { showInFinder } from '#lib/tauri-commands/index.js'
+import { amendErrorReport, prepareErrorReportPreview, sendErrorReport } from '#lib/tauri-commands/error-reporter.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
 
 // What `getSetting` answers. `null` means "use the real export", which is what the
 // three toast blocks, which never stubbed settings, always saw.
 let settingsStub: ((id: string) => unknown) | null = null
 const setSettingMock = vi.fn()
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   dismissToast: vi.fn(),
   addToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings/settings-window', async (importOriginal) => ({
+vi.mock('#lib/settings/settings-window.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   openSettingsWindow: vi.fn(() => Promise.resolve()),
 }))
@@ -54,7 +54,7 @@ vi.mock('./error-report-flow.svelte', async (importOriginal) => ({
   openErrorReportDialog: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   showInFinder: vi.fn(() => Promise.resolve()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -64,7 +64,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
 /** Live listeners on `analytics.email`, so a test can play the Settings window's part. */
 const emailListeners = new Set<(value: string) => void>()
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<{ getSetting: (id: string) => unknown }>()
   return {
     ...actual,
@@ -129,7 +129,7 @@ let autoSentStash: typeof autoSentPayload | null = autoSentPayload
 let autoSentCanAmend = true
 let autoSentThrows = false
 
-vi.mock('$lib/tauri-commands/error-reporter', () => ({
+vi.mock('#lib/tauri-commands/error-reporter.js', () => ({
   prepareErrorReportPreview: vi.fn(() => Promise.resolve(previewPayload)),
   sendErrorReport: vi.fn(() => Promise.resolve({ id: 'ERR-AB23X' })),
   amendErrorReport: vi.fn(() => Promise.resolve({ id: 'ERR-AUTO9' })),

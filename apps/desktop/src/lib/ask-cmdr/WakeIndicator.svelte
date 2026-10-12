@@ -9,10 +9,10 @@
     // Which states render, and which stay silent, is `wakeIndicatorMode`'s decision — the one
     // place the "a gap is worth reporting" and "a control with nothing to say is noise" rules are
     // reconciled.
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { getAppLogger } from '$lib/logging/logger'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { openWakeThread, stopWake, wakeIndicator, wakeIndicatorMode } from './wake-indicator.svelte'
 
     const log = getAppLogger('askCmdr')
@@ -29,11 +29,11 @@
         // Imported lazily so the status corner doesn't drag the settings window and the privacy
         // shim into every test that mounts it.
         if (mode === 'needsFullDiskAccess') {
-            const { openPrivacySettings } = await import('$lib/tauri-commands')
+            const { openPrivacySettings } = await import('#lib/tauri-commands/index.js')
             await openPrivacySettings()
             return
         }
-        const { openSettingsWindow } = await import('$lib/settings/settings-window')
+        const { openSettingsWindow } = await import('#lib/settings/settings-window.js')
         await openSettingsWindow('wake-indicator', ['AI', 'Provider'])
     }
 

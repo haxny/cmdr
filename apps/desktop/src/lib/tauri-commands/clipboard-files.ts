@@ -1,8 +1,8 @@
-import { commands, type PastedClipboardFile } from '$lib/ipc/bindings'
+import { commands, type PastedClipboardFile } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import { awaitClipboardPaste, type MutationWaitOptions } from './mutation-reply'
 
-export type { PastedClipboardFile } from '$lib/ipc/bindings'
+export type { PastedClipboardFile } from '#lib/ipc/bindings.js'
 
 export interface ClipboardReadResult {
   paths: string[]

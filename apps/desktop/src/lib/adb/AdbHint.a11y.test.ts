@@ -7,7 +7,7 @@
  */
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import AdbHint from './AdbHint.svelte'
 
 const { stubs } = vi.hoisted(() => ({
@@ -17,13 +17,13 @@ const { stubs } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => stubs.volumes }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => stubs.volumes }))
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => stubs.settings.get(id),
   setSetting: vi.fn(),
 }))
-vi.mock('$lib/tauri-commands', () => ({ openExternalUrl: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ openExternalUrl: vi.fn() }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

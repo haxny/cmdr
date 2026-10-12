@@ -19,17 +19,17 @@ const ipc = vi.hoisted(() => ({
   debug: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ getBriefColumnTextWidths: ipc.getBriefColumnTextWidths }))
-vi.mock('$lib/font-metrics', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ getBriefColumnTextWidths: ipc.getBriefColumnTextWidths }))
+vi.mock('#lib/font-metrics/index.js', () => ({
   ensureFontMetricsLoaded: ipc.ensureFontMetricsLoaded,
   fillMissingFontMetrics: ipc.fillMissingFontMetrics,
   getCurrentFontId: ipc.getCurrentFontId,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: ipc.warn, debug: ipc.debug, info: vi.fn(), error: vi.fn() }),
 }))
 
-import type { BriefColumnsErrorKind } from '$lib/ipc/bindings'
+import type { BriefColumnsErrorKind } from '#lib/ipc/bindings.js'
 import {
   createBriefColumnWidths,
   clampColumnWidths,

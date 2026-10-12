@@ -157,7 +157,7 @@ mod tests {
     }
 
     /// The frontend sends the reason as a bare kebab-case string, so the wire spellings are part
-    /// of the contract with `showMainWindow` (`$lib/tauri-commands/app-state.ts`).
+    /// of the contract with `showMainWindow` (`#lib/tauri-commands/app-state.ts`).
     #[test]
     fn a_reason_arrives_as_a_kebab_case_string() {
         assert_eq!(

@@ -17,11 +17,11 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { addToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { tString } from '$lib/intl/messages.svelte'
-import { onMoveLeftoversKept } from '$lib/tauri-commands'
-import type { MoveLeftoversKeptEvent } from '$lib/ipc/bindings'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { onMoveLeftoversKept } from '#lib/tauri-commands/index.js'
+import type { MoveLeftoversKeptEvent } from '#lib/ipc/bindings.js'
 
 const log = getAppLogger('fileOperations')
 

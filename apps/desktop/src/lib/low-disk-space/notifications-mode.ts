@@ -10,10 +10,10 @@
  * `settings.json` could land here).
  */
 
-import { getSetting, setSetting } from '$lib/settings'
-import { openSettingsWindow } from '$lib/settings/settings-window'
-import { setLowDiskSpaceConfig } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { setLowDiskSpaceConfig } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('low-disk-space')
 

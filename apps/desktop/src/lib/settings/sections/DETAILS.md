@@ -105,13 +105,13 @@ sections compose).
   narrowed lock disables only the options `lockAllowsWrite` rules out, with a visible line under the row
   (`settings-ai-provider-managed`; `../../managed-policy/DETAILS.md` § The UI).
 - **`AiCloudSection.svelte`**: Cloud provider config: the preset dropdown, then the SAME numbered setup steps the
-  onboarding wizard shows (`$lib/ai-provider-setup/`), then the connection-status block, all in one unlabeled
+  onboarding wizard shows (`#lib/ai-provider-setup/`), then the connection-status block, all in one unlabeled
   `SectionCard` (no `anyVisible` gate: the section mounts only when `provider === 'cloud'`). Endpoint, key, and model
   are controls inside those steps now, not three `SettingRow`s; they were all one setting (`ai.cloudProviderConfigs`)
   before, so the block's single `shouldShow('ai.cloudProviderConfigs')` gate is the same search visibility the rows had.
   See § "The setup steps are shared with onboarding". The provider row is the one hand-rolled `Select` in settings;
   every other dropdown here goes through `SettingSelect`. A preset the organization refuses stays listed as a `disabled`
-  item with the reason as its description (`followPresetHostVerdicts`, `$lib/ai-provider-setup/DETAILS.md` § The
+  item with the reason as its description (`followPresetHostVerdicts`, `#lib/ai-provider-setup/DETAILS.md` § The
   organization's policy).
 - **`AiLocalSection.svelte`**: Local llama-server lifecycle, model install with multi-step tracking, context window
   "Apply" (server restart), RAM gauge, delete confirmation. Only the context-window registry-row cluster (`SettingRow`
@@ -156,7 +156,7 @@ sections compose).
   way to free it. Exactly one `MediaIndexReclaim` renders in either scope. Backend contract (what each scope covers, why
   narrowing deletes nothing): `crates/cmdr-index/src/media_index/DETAILS.md` § The indexing scope.
 - **`MediaIndexChosenFolders.svelte`**: the add/remove list bound to `mediaIndex.alwaysIndexFolders`, via
-  `$lib/media-index/always-index-folders.ts` (persist + IPC together, like the other media-index prefs). Adding uses the
+  `#lib/media-index/always-index-folders.ts` (persist + IPC together, like the other media-index prefs). Adding uses the
   native folder picker (`@tauri-apps/plugin-dialog`'s `open({ directory: true })`, which needs `dialog:allow-open` in
   the settings window's capability) — an absolute path is the only thing the backend matches on, so there's no free-text
   field. Deliberately shows NO per-folder progress: there's no cheap per-folder count backend-side (it would mean a
@@ -195,7 +195,7 @@ sections compose).
   `adb start-server`. Mount reads `getAdbInstallStatus`, which looks nothing up. A Browse pick re-checks too, ❌ not
   reads: the path only takes effect once the tracker restarts under it, so a status read there would answer about the
   OLD binary, and choosing a file is exactly the human action the re-check budget is per. Both settings live-apply
-  together through `$lib/adb/adb-settings.ts`; this section only writes them.
+  together through `#lib/adb/adb-settings.ts`; this section only writes them.
 - **`GitSection.svelte`**: `File systems > Git`: one unlabeled `SectionCard`, gated via `anyVisible(shouldShow, ...)`
 - **`ViewerSection.svelte`**: `Viewer`: one unlabeled `SectionCard`, gated via `anyVisible(shouldShow, ...)`
 - **`KeyboardShortcutsSection.svelte`**: `Keyboard shortcuts`: special (non-registry) section, renders the shortcut
@@ -252,19 +252,19 @@ sections compose).
   resolved `card` title, registry order; trailing untitled "Other" bucket for any with no `cardKey`). Tested by a
   set-equality regression guard (union of grouped === all Advanced settings)
 - **`ai-secret-error.ts`**: the typed carrier AND the words for an OS secret-store refusal. `AiSecretFailure` (a
-  `TypedFailure` over `$lib/ipc/typed-failure.ts`) keeps the backend's `AiApiKeyError` intact across the throw: the
+  `TypedFailure` over `#lib/ipc/typed-failure.ts`) keeps the backend's `AiApiKeyError` intact across the throw: the
   `saveAiApiKey` / `getAiApiKeyStatus` / `deleteAiApiKey` wrappers raise it with `throwAiSecretError`, and
   `describeSecretError(e, 'save' | 'read')` reads it back with `asAiSecretError`, then branches on the VARIANT:
   `access_denied` gets the OS-specific guidance (a Keychain ACL on macOS, a locked keyring on Linux), everything else
   the generic notice. Nothing inspects the store's own message; it rides in `detail` for a details affordance only.
   `configure_ai` hands its `secretStoreError` back as a bare wire value rather than a throw, so `asAiSecretError`
-  accepts that shape too. Used by `AiCloudSection`, `$lib/onboarding/CloudProviderSetup.svelte`, and `../ai-config.ts`
+  accepts that shape too. Used by `AiCloudSection`, `#lib/onboarding/CloudProviderSetup.svelte`, and `../ai-config.ts`
 - **`license-section-utils.ts`**: Pure label/status formatters extracted from `LicenseSection` for testability
 - **`ram-gauge-utils.ts`**: Pure stacked-bar segment math for `AiLocalSection`'s memory gauge (used → projected → free,
   plus warning thresholds)
 - **`beta-email-signup.svelte.ts`**: `createBetaEmailSignup()`, the beta contact email field's per-mount state and
   handlers (persist on keystroke, `betaSignup` on commit of a valid address, typed feedback), shared by `UpdatesSection`
-  and `$lib/onboarding/StepBeta.svelte`. What counts as a commit differs by surface, which is what `commitOnBlur` is
+  and `#lib/onboarding/StepBeta.svelte`. What counts as a commit differs by surface, which is what `commitOnBlur` is
   for: Settings submits on blur like every other row there, onboarding's checklist has an explicit Save (a row that
   ticked itself as the user tabbed past would claim they asked for something). `onSubscribed` fires only on an accepted
   signup, which is what onboarding ticks its row on. A failure carries a `reason` (`invalidEmail` = fix the typo,
@@ -286,7 +286,7 @@ Every section is axe-audited (tier-3) from one of the four directory-level `*.a1
 have functional `*.test.ts` / `*.svelte.test.ts` files; the pure-helper `.ts` files have unit tests next to them.
 `NotificationsSection.svelte.test.ts` and `DriveIndexingSection.svelte.test.ts` each pin their section's render contract
 under the same heavy IPC mock setup their a11y siblings use. `KeyboardShortcutsSection.svelte.test.ts` runs the real
-`$lib/shortcuts` store against an in-memory disk (mocks only the Tauri boundaries, like `shortcuts-store.test.ts`) and
+`#lib/shortcuts` store against an in-memory disk (mocks only the Tauri boundaries, like `shortcuts-store.test.ts`) and
 drives the add/edit/conflict flows through the DOM. `KeyboardShortcutsSection.controller.svelte.test.ts` instantiates
 the controller factory directly via `$effect.root` (store + registry mocked) to cover the units the DOM test doesn't
 reach: the key-filter field helpers (platform-aware combo splitting and subset matching) and the search/filter
@@ -351,7 +351,7 @@ under "file sizes" just as often.
 
 `AiSection.svelte` is a thin wrapper that loads `getAiRuntimeStatus()`, listens to backend events, and renders the
 provider toggle, then conditionally mounts `AiCloudSection` or `AiLocalSection`. On Cloud it first renders the Allow
-cloud AI switch (`$lib/ai/AiCloudConsentToggle.svelte`, a `row:ai.cloudConsent` searchable row in `AiSection.rows.ts`)
+cloud AI switch (`#lib/ai/AiCloudConsentToggle.svelte`, a `row:ai.cloudConsent` searchable row in `AiSection.rows.ts`)
 and passes `locked` to `AiCloudSection` until consent reads accepted (`lib/ai/DETAILS.md` § Cloud AI consent). Cloud and
 local are independent feature areas with their own state machines (`connectionStatus` for cloud, `installStep` for
 local); they share only the `provider` toggle and `shouldShow` callback, passed in as props. `LicenseSection` follows
@@ -396,7 +396,7 @@ Settings AI changes hot-apply because `settings-applier.ts` routes `ai.provider`
 ### The setup steps are shared with onboarding
 
 The service picker, the recheck buttons, the Ask Cmdr model-override note, the secret-error toast, and the
-settings-search gating are this section's. Everything else belongs to `$lib/ai-provider-setup/`: the numbered steps with
+settings-search gating are this section's. Everything else belongs to `#lib/ai-provider-setup/`: the numbered steps with
 their per-provider links, the endpoint / key / model controls, the API-key debounce and persist, the connection check
 and its model-list cache, and the provider-switch race guards. That module's `DETAILS.md` owns the mechanism, including
 the model picker's cache and the "never zero `availableModels` mid-refetch" rule; ❌ don't restate it here.
@@ -464,7 +464,7 @@ The four `nativeShortcut` commands (`app.quit`/`hide`/`hideOthers`/`showAll`) re
 plain read-only `ShortcutPill`s (`.shortcut-pill.static` spans) (no click-to-edit), with no `+` add, no `×` remove, no
 reset button, and never the add slot. Each native row also carries a small "macOS" badge (`.readonly-badge`) with a
 tooltip: "macOS handles this shortcut. Cmdr can't change it." (`Show all` has no default binding, so it renders its
-`(none)` unframed plus the badge.) The branch is keyed off `isNativeShortcutCommand(command.id)` from `$lib/shortcuts`.
+`(none)` unframed plus the badge.) The branch is keyed off `isNativeShortcutCommand(command.id)` from `#lib/shortcuts`.
 This is honest: AppKit owns both the behavior and the accelerator (see `lib/shortcuts/DETAILS.md` § "macOS-native
 commands are not customizable"), so an editable control here would be a double illusion. The store also refuses these
 writes as defense in depth, so the UI and the store agree.
@@ -692,7 +692,7 @@ registry entries all live at `section: ['AI', 'Ask Cmdr']`. Its parts:
     Mechanics and the three a11y traps: `../components/DETAILS.md` § Index-mapped stops.
   - **Its description names both waits the setting produces**, which `descriptionKey` can't do (it resolves to a static
     string). The section passes a computed `tString('settings.askCmdr.wakeDelay.summary', { hot, warm })` as
-    `SettingRow`'s `description`, with both durations preformatted by `formatDuration` from `$lib/units`; the registry
+    `SettingRow`'s `description`, with both durations preformatted by `formatDuration` from `#lib/units`; the registry
     keeps its static text for the search index. ⚠️ The warm derivation here mirrors `agent::wake::interest`, which is
     what actually schedules the wake — change the two together or the row describes a cadence the loop doesn't run.
 - **Spend** is the per-day rollup from `ask_cmdr_cost_summary`, formatted with the same honest miss-path as the rail

@@ -1,15 +1,15 @@
 <!-- Acquisition § Interest: getcmdr.com engagement (Umami + PostHog), download clicks, and top pages. -->
 <script lang="ts">
-    import type { SourceResult, DashboardSelection } from '$lib/server/types.js'
-    import type { UmamiData } from '$lib/server/sources/umami.js'
-    import type { PostHogData } from '$lib/server/sources/posthog.js'
-    import { formatNumber, formatDelta, toChartData } from '$lib/format.js'
-    import Chart from '$lib/components/Chart.svelte'
-    import ErrorState from '$lib/components/ErrorState.svelte'
-    import MetricRow from '$lib/components/MetricRow.svelte'
-    import MetricTable from '$lib/components/MetricTable.svelte'
-    import SectionDescription from '$lib/components/SectionDescription.svelte'
-    import ExternalLinks from '$lib/components/ExternalLinks.svelte'
+    import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
+    import type { UmamiData } from '#lib/server/sources/umami.js'
+    import type { PostHogData } from '#lib/server/sources/posthog.js'
+    import { formatNumber, formatDelta, toChartData } from '#lib/format.js'
+    import Chart from '#lib/components/Chart.svelte'
+    import ErrorState from '#lib/components/ErrorState.svelte'
+    import MetricRow from '#lib/components/MetricRow.svelte'
+    import MetricTable from '#lib/components/MetricTable.svelte'
+    import SectionDescription from '#lib/components/SectionDescription.svelte'
+    import ExternalLinks from '#lib/components/ExternalLinks.svelte'
 
     const {
         umami,

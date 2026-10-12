@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import { deviceVolumeLabel } from './adb-volume-label'
 
 // The suffixed label resolves through the i18n catalog (`tString`); pin the

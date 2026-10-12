@@ -9,10 +9,10 @@
      * The pane sets `behavior.doubleClickOnPaneNotificationSeen` to true when it
      * raises this toast, so it only ever appears once.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { setSetting } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { setSetting } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         toastId: string

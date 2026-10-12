@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { viewerGetBytes } from '$lib/tauri-commands'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { viewerGetBytes } from '#lib/tauri-commands/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import {
         bytesPerRawRow,
         clampRawTopRow,

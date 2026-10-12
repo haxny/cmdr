@@ -1,6 +1,6 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import LabeledRow from '../LabeledRow.svelte'
 
     const statuses = ['alpha', 'beta'] as const

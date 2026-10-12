@@ -2,7 +2,7 @@
  * The main window's conflict host: the part that decides, pauses, and resumes.
  *
  * Driven the way the rest of the file-operations state machines are tested —
- * `$lib/tauri-commands` fully mocked, the registered `onWriteConflict` callback
+ * `#lib/tauri-commands` fully mocked, the registered `onWriteConflict` callback
  * captured into a module-level `let`, and events delivered by calling it. That
  * keeps every assertion here about behaviour (what got paused, what got asked,
  * what got resumed) rather than about wiring.
@@ -13,14 +13,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { OperationSnapshot, WriteConflictEvent, WriteConflictResolvedEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteConflictEvent, WriteConflictResolvedEvent } from '#lib/tauri-commands/index.js'
 import type { OperationRow } from './queue/operations-store.svelte'
 
 let conflictCb: ((e: WriteConflictEvent) => void) | null = null
 let conflictResolvedCb: ((e: WriteConflictResolvedEvent) => void) | null = null
 const noopUnlisten = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onWriteConflict: vi.fn((cb: (e: WriteConflictEvent) => void) => {
     conflictCb = cb
     return Promise.resolve(noopUnlisten)
@@ -55,11 +55,11 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ setFocus }),
 }))
 
-vi.mock('$lib/app-mode', () => ({
+vi.mock('#lib/app-mode.js', () => ({
   isE2eRun: () => false,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
@@ -70,7 +70,7 @@ import {
   cancelWriteOperation,
   pauseOperation,
   resumeOperation,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import {
   destroyOperationSessions,
   getOperationSessions,

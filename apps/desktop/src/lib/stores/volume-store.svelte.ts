@@ -9,16 +9,16 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { listVolumes, refreshVolumes, onVolumesChanged, onVolumeConnectionChanged } from '$lib/tauri-commands'
-import type { ServerPlaceMoved, VolumeConnection, VolumeRootChanged } from '$lib/ipc/bindings'
-import type { ConnectionState, VolumeInfo } from '$lib/file-explorer/types'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
-import { pluralize } from '$lib/utils/pluralize'
-import { getSetting, setSetting } from '$lib/settings'
-import { addToast } from '$lib/ui/toast'
-import { shouldShowPinHint } from '$lib/file-explorer/navigation/should-show-pin-hint'
-import ServersPinHintToastContent from '$lib/file-explorer/navigation/ServersPinHintToastContent.svelte'
+import { listVolumes, refreshVolumes, onVolumesChanged, onVolumeConnectionChanged } from '#lib/tauri-commands/index.js'
+import type { ServerPlaceMoved, VolumeConnection, VolumeRootChanged } from '#lib/ipc/bindings.js'
+import type { ConnectionState, VolumeInfo } from '#lib/file-explorer/types.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { shouldShowPinHint } from '#lib/file-explorer/navigation/should-show-pin-hint.js'
+import ServersPinHintToastContent from '#lib/file-explorer/navigation/ServersPinHintToastContent.svelte'
 
 const logger = getAppLogger('volume-store')
 /** Keyed by the repeated IDs: which duplicates the log already named. */

@@ -7,10 +7,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import NewFolderDialog from './NewFolderDialog.svelte'
-import { createDirectory, type MutationWaitOptions } from '$lib/tauri-commands'
-import { MutationFailure } from '$lib/file-operations/mutation-error'
+import { createDirectory, type MutationWaitOptions } from '#lib/tauri-commands/index.js'
+import { MutationFailure } from '#lib/file-operations/mutation-error.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   createDirectory: vi.fn(() => Promise.resolve()),
@@ -22,8 +22,8 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 const openErrorReportFor = vi.hoisted(() => vi.fn())
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
-vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor }))
+vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
 /** Mounts the dialog with a name already typed in, so OK is enabled on first render. */
 function mountDialog(onCreated: (name: string) => void): HTMLElement {

@@ -12,13 +12,13 @@
      * footer buttons here expose ⌥C / ⌥V as first-class mouse affordances; the keyboard wiring
      * stays in the parent so the dialog-level keymap lives next to the popovers it targets.
      */
-    import Checkbox from '$lib/ui/Checkbox.svelte'
-    import TextArea from '$lib/ui/TextArea.svelte'
-    import FilterPopover from '$lib/ui/FilterPopover.svelte'
-    import ShortcutChip from '$lib/ui/ShortcutChip.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
+    import Checkbox from '#lib/ui/Checkbox.svelte'
+    import TextArea from '#lib/ui/TextArea.svelte'
+    import FilterPopover from '#lib/ui/FilterPopover.svelte'
+    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import Trans from '#lib/intl/Trans.svelte'
     import type { ScopePresets } from '../query-dialog-config'
     import './filter-popover.css'
 

@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import ListingStalledView from './ListingStalledView.svelte'
-import type { StalledOn } from '$lib/ipc/bindings'
+import type { StalledOn } from '#lib/ipc/bindings.js'
 
 function mountView(stalledOn: StalledOn = 'server') {
   const onRetry = vi.fn()

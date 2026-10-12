@@ -15,8 +15,8 @@
 
 import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { WriteOperationError } from '$lib/file-explorer/types'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // `null` means "use the real export": `DirectionIndicator` and `ScanPhaseBody`
 // never stubbed the settings barrel, and handing them one would change what
@@ -27,7 +27,7 @@ const stubs = vi.hoisted(() => ({
   defaultValue: null as ((id: string) => unknown) | null,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   const realGetSetting = actual.getSetting as (id: string) => unknown
   const realDefinition = actual.getSettingDefinition as (id: string) => unknown
@@ -48,7 +48,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 // `FallbackErrorContent` stubbed this module to an empty object purely to keep
 // IPC out of the mount; spreading the real one is the same for it and leaves
 // the other blocks with the module they already had.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
 }))
 

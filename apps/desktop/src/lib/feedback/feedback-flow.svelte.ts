@@ -9,7 +9,7 @@
  * (same pattern), which keeps focus/Escape handling consistent.
  */
 
-import { recordBreadcrumb } from '$lib/error-reporter/breadcrumbs'
+import { recordBreadcrumb } from '#lib/error-reporter/breadcrumbs.js'
 
 interface FlowState {
   open: boolean

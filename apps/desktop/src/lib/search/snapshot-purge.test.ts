@@ -14,15 +14,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { initSnapshotPurge, destroySnapshotPurge } from './snapshot-purge'
 import { getOrCreate, getSnapshot, getMutationTick, _resetForTesting } from './snapshot-store.svelte'
-import type { WriteSourceItemDoneEvent } from '$lib/ipc/bindings'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { WriteSourceItemDoneEvent } from '#lib/ipc/bindings.js'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 
 const { onWriteSourceItemDone, unlisten } = vi.hoisted(() => ({
   onWriteSourceItemDone: vi.fn(),
   unlisten: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ onWriteSourceItemDone }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ onWriteSourceItemDone }))
 
 const FOLDER = '/Users/me/photos'
 const A = `${FOLDER}/a.jpg`

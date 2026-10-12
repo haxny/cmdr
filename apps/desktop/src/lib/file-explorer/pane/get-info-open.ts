@@ -6,9 +6,9 @@
  * The first-ever press needs nothing from here: macOS shows its own prompt.
  */
 
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { asGetInfoError, getInfo } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { asGetInfoError, getInfo } from '#lib/tauri-commands/index.js'
 import FinderAutomationOffToastContent from './FinderAutomationOffToastContent.svelte'
 
 /** One id, so pressing Get info again replaces the toast rather than stacking it. */

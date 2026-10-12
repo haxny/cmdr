@@ -8,14 +8,14 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync, tick } from 'svelte'
-import type { ActivityPhase, VolumeIndexStatus } from '$lib/ipc/bindings'
-import type { VolumeIndexActivity } from '$lib/indexing'
+import type { ActivityPhase, VolumeIndexStatus } from '#lib/ipc/bindings.js'
+import type { VolumeIndexActivity } from '#lib/indexing/index.js'
 
 // The badge reads its own volume's live activity + phase from `index-state` (the
 // single live-activity source). Mock it so we can drive the scanning tooltip body.
 let badgeActivity: VolumeIndexActivity | undefined
 let badgePhase: ActivityPhase | undefined
-vi.mock('$lib/indexing', () => ({
+vi.mock('#lib/indexing/index.js', () => ({
   getVolumeActivity: () => badgeActivity,
   getVolumeAggregation: () => undefined,
   getVolumePhase: () => badgePhase,
@@ -38,7 +38,7 @@ vi.mock('$lib/indexing', () => ({
 // The badge reads the MASTER drive-indexing switch to decide whether this drive's
 // own controls are overridden. Mock it so both sides of the gate are testable.
 let masterIndexingEnabled = true
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   getDriveIndexingEnabled: () => masterIndexingEnabled,
 }))
@@ -336,7 +336,7 @@ describe('DriveIndexBadge menu shell', () => {
 
   /**
    * In a switcher row the badge opens a menu from inside one. The house `Menu` keeps the
-   * outer one open for it, off the host it names here (`$lib/ui/DETAILS.md` § Menu); the
+   * outer one open for it, off the host it names here (`#lib/ui/DETAILS.md` § Menu); the
    * primitive's own suite pins the outer half. Before the port this held because the menu
    * was a CHILD of the row, which is also what the switcher's scroller clipped.
    */

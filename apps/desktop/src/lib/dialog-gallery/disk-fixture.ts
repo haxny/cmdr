@@ -18,14 +18,14 @@
  * says so.
  */
 
-import { getFilesAtIndices } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
-import { navigateToDirInPane, resolveLocationOrToast } from '$lib/file-explorer/navigation/navigate-and-select'
-import { explorerState } from '$lib/file-explorer/pane/explorer-state.svelte'
-import { getShowHiddenFiles } from '$lib/settings/reactive-settings.svelte'
-import { getActiveTab } from '$lib/file-explorer/tabs/tab-state-manager.svelte'
+import { getFilesAtIndices } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { navigateToDirInPane, resolveLocationOrToast } from '#lib/file-explorer/navigation/navigate-and-select.js'
+import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
+import { getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
+import { getActiveTab } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
-import type { ConflictPreviewFixtures } from '$lib/ipc/bindings'
+import type { ConflictPreviewFixtures } from '#lib/ipc/bindings.js'
 import type { GalleryDiskFixture } from './gallery-state.svelte'
 
 const log = getAppLogger('dialogGallery')

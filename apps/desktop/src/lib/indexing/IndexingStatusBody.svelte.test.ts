@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest'
 import { mount, flushSync } from 'svelte'
 import IndexingStatusBody from './IndexingStatusBody.svelte'
 import type { VolumeIndexActivity, AggregationActivity } from './index-state.svelte'
-import type { ActivityPhase, CoveragePhase, ScanRunKind, StepsAheadMs } from '$lib/ipc/bindings'
+import type { ActivityPhase, CoveragePhase, ScanRunKind, StepsAheadMs } from '#lib/ipc/bindings.js'
 
 function scanActivity(overrides: Partial<VolumeIndexActivity> = {}): VolumeIndexActivity {
   return {

@@ -4,7 +4,7 @@
      * shown (the ⌃D menu, the switcher's favorites section). Renders nothing unless this
      * favorite's shortcut is being set.
      */
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import type { VolumeInfo } from '../types'
     import type { FavoritesMenuController } from './favorites-menu.svelte'
 

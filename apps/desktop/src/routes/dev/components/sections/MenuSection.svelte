@@ -1,8 +1,8 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Menu from '$lib/ui/Menu.svelte'
-    import type { MenuRowContext, MenuSection } from '$lib/ui/menu-types'
-    import { createMenu } from '$lib/ui/menu-controller.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
+    import type { MenuRowContext, MenuSection } from '#lib/ui/menu-types.js'
+    import { createMenu } from '#lib/ui/menu-controller.svelte.js'
     import DemoAnchor from '../DemoAnchor.svelte'
 
     /** The demo's own copy of the reorderable section, so a drag or ⌥↑/⌥↓ visibly moves a row. */

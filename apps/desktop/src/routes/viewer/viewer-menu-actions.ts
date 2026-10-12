@@ -14,7 +14,7 @@
  * functions. That's deliberate: whether a ⌘-chord reaches the webview before the menu's key
  * equivalent is unsettled here, and with one destination it stops mattering.
  */
-import type { ViewerEditActionKind } from '$lib/ipc/bindings'
+import type { ViewerEditActionKind } from '#lib/ipc/bindings.js'
 import { inputHasSelection, isSearchInputFocused, type SearchFocusState } from './viewer-keyboard'
 
 export interface ViewerEditActionDeps {

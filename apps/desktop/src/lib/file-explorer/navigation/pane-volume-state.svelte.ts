@@ -9,8 +9,8 @@
  * boot disk that way (QA round 5, R4-1).
  */
 
-import { resolvePathVolume } from '$lib/tauri-commands'
-import { dependOn } from '$lib/utils/reactivity'
+import { resolvePathVolume } from '#lib/tauri-commands/index.js'
+import { dependOn } from '#lib/utils/reactivity.js'
 import type { VolumeInfo } from '../types'
 import { paneVolumeOf } from './pane-volume'
 

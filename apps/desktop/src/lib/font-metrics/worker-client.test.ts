@@ -13,7 +13,7 @@ const { logger } = vi.hoisted(() => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/logging/logger', () => ({ getAppLogger: () => logger }))
+vi.mock('#lib/logging/logger.js', () => ({ getAppLogger: () => logger }))
 
 /** How the fake worker should behave for a case. */
 type WorkerBehavior = 'answer' | 'error-response' | 'silent' | 'throw-on-construct'

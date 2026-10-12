@@ -16,7 +16,7 @@ const { checkForUpdateMock, downloadUpdateMock, updateCheckDueInMock, recordUpda
   recordUpdateCheckMock: vi.fn<(answered: boolean) => Promise<void>>(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkForUpdate: checkForUpdateMock,
   downloadUpdate: downloadUpdateMock,
   installUpdate: vi.fn(() => Promise.resolve()),
@@ -26,13 +26,13 @@ vi.mock('$lib/tauri-commands', () => ({
   trackEvent: vi.fn(),
 }))
 
-vi.mock('$lib/shortcuts/key-capture', () => ({ isMacOS: () => true }))
+vi.mock('#lib/shortcuts/key-capture.js', () => ({ isMacOS: () => true }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((id: string) => {
     if (id === 'onboarding.completed') return true
     if (id === 'updates.autoCheck') return true
@@ -45,7 +45,7 @@ vi.mock('$lib/settings/settings-store', () => ({
 
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: vi.fn(() => Promise.resolve('0.28.0')) }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }),
 }))
 

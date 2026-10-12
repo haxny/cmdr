@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi, afterEach, beforeEach, beforeAll } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { ConversationCost } from '$lib/tauri-commands'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { ConversationCost } from '#lib/tauri-commands/index.js'
 
 const { costMock } = vi.hoisted(() => ({
   costMock: vi.fn<(id: number) => Promise<ConversationCost>>(),
@@ -15,8 +15,8 @@ const { costMock } = vi.hoisted(() => ({
 vi.mock('./ask-cmdr-trigger.svelte', async () => ({
   askCmdrState: (await import('./ask-cmdr-state.svelte')).askCmdrState,
 }))
-vi.mock('$lib/tauri-commands', () => ({ askCmdrConversationCost: (id: number) => costMock(id) }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({ askCmdrConversationCost: (id: number) => costMock(id) }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

@@ -27,8 +27,8 @@
  * Kept pure and component-free so the risky state logic is unit-tested without
  * mounting (see `indexing-steps.test.ts`).
  */
-import type { ActivityPhase, CoveragePhase, ScanRunKind } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { ActivityPhase, CoveragePhase, ScanRunKind } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /** A checklist step's stable identity. Each maps to one user-facing label. */
 export type IndexStepKind =

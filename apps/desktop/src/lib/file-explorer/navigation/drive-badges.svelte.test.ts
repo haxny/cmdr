@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { EnableIndexingOutcome } from '$lib/ipc/bindings'
+import type { EnableIndexingOutcome } from '#lib/ipc/bindings.js'
 
 /** What `enableDriveIndex` / `rescanDriveIndex` answer: the typed outcome, or a transport break. */
 type IndexingAnswer = Promise<{ status: 'ok'; data: EnableIndexingOutcome } | { status: 'error'; error: string }>
@@ -24,7 +24,7 @@ const connectDirectly = vi.fn((_args: { volumeId: string; shareName: string }) =
   Promise.resolve({ kind: 'connected' }),
 )
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   enableDriveIndex: (volumeId: string) => enableDriveIndex(volumeId),
   rescanDriveIndex: (volumeId: string) => rescanDriveIndex(volumeId),
   disableDriveIndex: (volumeId: string) => disableDriveIndex(volumeId),
@@ -32,14 +32,14 @@ vi.mock('$lib/tauri-commands', () => ({
   mediaIndexVolumeState: (volumeId: string) => mediaIndexVolumeState(volumeId),
 }))
 
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   getVolumeIndexStatusById: () => Promise.resolve({ status: 'ok', data: { volumeId: 'volumes-backup' } }),
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
   onIndexScanComplete: () => Promise.resolve(() => {}),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (message: string, options: { level: string }) => addToast(message, options),
 }))
 

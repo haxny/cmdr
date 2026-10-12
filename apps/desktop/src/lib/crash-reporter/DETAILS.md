@@ -22,7 +22,7 @@ A failed auto-send never adds a second error surface on top of the crash the use
 file stays until a send lands, so the report comes back next launch. It logs at warn for network trouble, a timeout, or
 a server having a bad moment, at info for `blockedByPolicy` (the organization's policy turned reports off, so nothing
 left the Mac), and at error for a refusal from Cmdr's own server, which means the contract broke
-(`$lib/error-messages/server-request.ts`). A check that breaks logs at error too: `check_pending_crash_report` can't
+(`#lib/error-messages/server-request.ts`). A check that breaks logs at error too: `check_pending_crash_report` can't
 refuse, so only a broken IPC bridge lands there. `pending-crash-report.test.ts` pins both.
 
 ## The three report consents
@@ -36,8 +36,8 @@ unbounded log bundle and the email attaches a person's identity. `settings-regis
 Where each population hears about the ON default:
 
 - **A new install**: the open-beta onboarding step, in the caption under the usage-stats disclosure
-  (`$lib/onboarding/StepBeta.svelte`). That's the only place a first launch is told anything ships by default, so the
-  caption is load-bearing rather than decorative; `$lib/onboarding/DETAILS.md` § Step 3.
+  (`#lib/onboarding/StepBeta.svelte`). That's the only place a first launch is told anything ships by default, so the
+  caption is load-bearing rather than decorative; `#lib/onboarding/DETAILS.md` § Step 3.
 - **An existing install**: the CHANGELOG entry for the release that flips it. The settings store persists only what
   someone explicitly set, so an install that never touched the switch carries no key and picks the new default up on
   update. There is deliberately no in-app notice for that: one was built and dropped as too heavy for a beta population
@@ -84,7 +84,7 @@ the crash and saying that private info is anonymized first. That press calls `se
 
 `CrashReportDialog` renders one report and calls the IPC itself with its `shortId` and optional email, never with the
 preview payload. A send that lands closes it through `onClose()`. One that doesn't keeps it open with a `role="alert"`
-line (`crashReporter.dialog.notSent` plus the typed reason from `$lib/error-messages/server-request.ts`), Send stays the
+line (`crashReporter.dialog.notSent` plus the typed reason from `#lib/error-messages/server-request.ts`), Send stays the
 retry, and the log level follows the same split as the auto-send. `CrashReportDialog.test.ts` pins both.
 
 - **Opening sentence**: `crashDialogBodyKey(report)` picks one of `crashReporter.dialog.body.ended` / `.keptRunning` /
@@ -111,7 +111,7 @@ retry, and the log level follows the same split as the auto-send. `CrashReportDi
   set so a user can grab part of it.
 - **Always send**: on send, writes `updates.crashReports = true`. Only ever flips the setting ON, and only from an
   explicit tick; there's no path here that turns it off (that's Settings > Updates).
-- **Attach my email**: `$lib/attach-email`. Always shown, never pre-ticked, sticky across the error-report and feedback
+- **Attach my email**: `#lib/attach-email`. Always shown, never pre-ticked, sticky across the error-report and feedback
   dialogs, and able to collect an address when none is on file. Rules and rationale:
   `apps/desktop/src/lib/attach-email/DETAILS.md`.
 - **Enter** sends (the dialog has no text input to swallow it). **Dismiss**, Escape, and the × all route through
@@ -125,12 +125,12 @@ retry, and the log level follows the same split as the auto-send. `CrashReportDi
 - `crash-reporter-i18n-parity.test.ts` freezes every en string the dialog and toast render. An intended copy edit lands
   in `intl/messages/en/crashReporter.json` and here together. The three body goldens carry a second assertion: the
   `keptRunning` and `unknown` strings must not contain "quit", so a copy edit can't reintroduce the claim they exist to
-  avoid. The shared attach-email label is frozen once in `$lib/attach-email/attach-email-i18n-parity.test.ts`, not per
+  avoid. The shared attach-email label is frozen once in `#lib/attach-email/attach-email-i18n-parity.test.ts`, not per
   dialog.
 - `CrashReportDialog.a11y.test.ts` / `CrashReportToastContent.a11y.test.ts` run axe over the default renders. The
   toast's report only picks which sentence it renders, so one state covers its markup. The dialog test starts from the
   collect shape and also covers the address being cleared out from under a ticked box; the attach-email control's own
-  behavior is covered by `$lib/attach-email/attach-email.svelte.test.ts` and by the error reporter's a11y coverage,
+  behavior is covered by `#lib/attach-email/attach-email.svelte.test.ts` and by the error reporter's a11y coverage,
   which renders it with an email on file and asserts the sticky write. An a11y test doesn't have to sit beside its
   component: a DIRECTORY-LEVEL `<area>.a11y.test.ts` importing several of them satisfies `a11y-coverage` just as well,
   and much of the frontend is consolidated that way. Don't assume a colocated file when looking for a component's

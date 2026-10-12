@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { getFolderName } from './transfer-dialog-utils'
 
     interface Props {

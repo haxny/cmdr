@@ -11,11 +11,11 @@
  * `$state`, bound directly in the template via `bind:this`, so it's handed in by
  * reference rather than re-derived.
  */
-import type { ViewMode } from '$lib/app-status-store'
-import { tString } from '$lib/intl/messages.svelte'
-import { getSetting } from '$lib/settings'
-import { getVolumes as getStoreVolumes } from '$lib/stores/volume-store.svelte'
-import { setReopenClosedTabEnabled, updateViewModeMenu } from '$lib/tauri-commands'
+import type { ViewMode } from '#lib/app-status-store.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getSetting } from '#lib/settings/index.js'
+import { getVolumes as getStoreVolumes } from '#lib/stores/volume-store.svelte.js'
+import { setReopenClosedTabEnabled, updateViewModeMenu } from '#lib/tauri-commands/index.js'
 import type { NavigationHistory } from '../navigation/navigation-history'
 import type { SortColumn, SortOrder } from '../types'
 import { explorerState } from './explorer-state.svelte'

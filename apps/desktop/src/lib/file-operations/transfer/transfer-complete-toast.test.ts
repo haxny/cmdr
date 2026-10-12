@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { composeTransferCompleteToast, composeTrashRefusedToast } from './transfer-complete-toast'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import type { LostMetadata } from '$lib/ipc/bindings'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import type { LostMetadata } from '#lib/ipc/bindings.js'
 
 // The composer resolves its wording through `t()` (catalog + ICU), which reads
 // the active locale. Pin en-US so these golden assertions are the parity net:

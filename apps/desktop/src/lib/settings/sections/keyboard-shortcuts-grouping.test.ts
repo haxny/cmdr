@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { commands } from '$lib/commands/command-registry'
+import { commands } from '#lib/commands/command-registry.js'
 import { groupCommandsByScope, groupedScopes } from './keyboard-shortcuts-grouping'
 
 describe('groupCommandsByScope', () => {

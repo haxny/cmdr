@@ -6,9 +6,9 @@
  * this file is the "math" half.
  */
 
-import type { TransferOperationType } from '$lib/file-explorer/types'
-import type { SpaceInfo } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
+import type { SpaceInfo } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { anchorOnVolume } from './transfer-dialog-utils'
 
 /** The roots of the volumes either side lives on (`VolumeInfo.path`). */

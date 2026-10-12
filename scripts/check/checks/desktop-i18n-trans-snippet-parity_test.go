@@ -7,7 +7,7 @@ import (
 
 func TestParseTransUsagesReadsTheShapesTheAppActuallyUses(t *testing.T) {
 	source := `<script lang="ts">
-    import Trans from '$lib/intl/Trans.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
 </script>
 
 <p><Trans key="a.simple" snippets={{ dir }} /></p>

@@ -2,9 +2,9 @@
 import { vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import TransferDialog from './TransferDialog.svelte'
-import * as commands from '$lib/tauri-commands'
-import type { VolumeConflictInfo } from '$lib/tauri-commands'
-import type { TransferConfirmPayload, TransferConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import * as commands from '#lib/tauri-commands/index.js'
+import type { VolumeConflictInfo } from '#lib/tauri-commands/index.js'
+import type { TransferConfirmPayload, TransferConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
 
 export const startScanPreviewMock = vi.mocked(commands.startScanPreview)
 export const cancelScanPreviewMock = vi.mocked(commands.cancelScanPreview)
@@ -23,7 +23,7 @@ interface ScanCompleteEvent {
 }
 
 // `scanVolumeForConflicts`'s real signature (`mtp.ts`) is positional all the way down to
-// the raw IPC binding, so the exposed mock (below, in the `$lib/tauri-commands` factory)
+// the raw IPC binding, so the exposed mock (below, in the `#lib/tauri-commands` factory)
 // stays positional too; this inner mock is what tests actually assert against, as a named
 // payload so a future edit can't silently swap `volumeId` and `destPath`.
 export const scanVolumeForConflictsMock = vi.fn<
@@ -71,7 +71,7 @@ vi.mock('@tauri-apps/api/path', () => ({
   homeDir: () => Promise.resolve('/Users/test'),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   estimateOperationCost: vi.fn(() => Promise.resolve([])),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -104,7 +104,7 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => (key === 'behavior.archiveCompressionLevel' ? 6 : 500)),
   // Compress mode renders `CompressLevelControl` → `SettingSlider`, which reads
   // its metadata and default through the barrel and writes via `setSetting`.
@@ -117,7 +117,7 @@ vi.mock('$lib/settings', () => ({
   })),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [
     { id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false },
     { id: 'ext', name: 'External', path: '/Volumes/External', category: 'attached_volume', isEjectable: true },

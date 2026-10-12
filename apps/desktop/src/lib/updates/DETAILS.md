@@ -59,7 +59,7 @@ frontend holds picks what gets installed. The non-macOS path uses the plugin's f
 `src-tauri/src/updater/` syncs files into the existing `.app` bundle, preserving the inode and TCC/Full Disk Access
 permissions, and isn't compiled off macOS.
 
-The branch is `isMacOS()` from `$lib/shortcuts/key-capture`, ❌ never `navigator.platform`, which is deprecated and lies
+The branch is `isMacOS()` from `#lib/shortcuts/key-capture`, ❌ never `navigator.platform`, which is deprecated and lies
 under WKWebView. Both UIs treat `downloading` and `installing` identically, so the split costs the frontend nothing.
 
 ## Re-checking while staged
@@ -254,18 +254,18 @@ When a gate opens, the helper re-attempts the toast; if the download finished du
   and `setOnboardingShowing` triggers, and the staged re-check matrix through the mocked plugin flow (same build, newer
   build, failed check, failed download, in-flight statuses, the nudge cadence under fake timers). The macOS
   download-and-install path stays untested (hard Tauri/network deps).
-- Version ordering comes from `compareVersions` (`$lib/utils/version.ts`), shared with `$lib/whats-new`. Don't re-roll
+- Version ordering comes from `compareVersions` (`#lib/utils/version.ts`), shared with `#lib/whats-new`. Don't re-roll
   it here: two comparators that disagree would let the updater call a release newer while What's New calls it older.
 - **A failed check logs at the level its typed failure earns, once per condition.** A background poll runs on whatever
   network the user happens to be on, so no network, a timeout, or a server having a bad moment stay at `warn`: at
   `error` they would trip the automatic error reporter (Flow B) on something nobody needs a report about. Only a
-  manifest Cmdr's own server refused or served unreadable logs at `error` (`$lib/error-messages/server-request.ts`), and
+  manifest Cmdr's own server refused or served unreadable logs at `error` (`#lib/error-messages/server-request.ts`), and
   the plugin's untyped check on other platforms stays at `warn`. `checkFailureLog` holds each condition until a check
   gets an answer, so an offline laptop writes one line, not one per tick, and a broken manifest can't auto-report every
   hour. `updater.check-failure.test.ts` pins both. Settings and the toast read the failure from `updateState.failure`.
   The convention itself is documented in `src-tauri/src/error_reporter/DETAILS.md` § convention.
 - **A failed download or install follows the same rule where it's typed.** The macOS download throws an
-  `UpdateDownloadFailure` (`update-download-failure.ts`, outside the `$lib/tauri-commands` barrel so tests that mock the
+  `UpdateDownloadFailure` (`update-download-failure.ts`, outside the `#lib/tauri-commands` barrel so tests that mock the
   barrel still get the real class). Its `request` variant goes through `serverRequestLogLevel`, so a download the
   network or the host's 5xx stopped stays at `warn`; a 404 for the tarball, a signature mismatch, a disk failure, any
   install failure, and the plugin's untyped `downloadAndInstall` failures stay at `error`, since they mean something is
@@ -281,13 +281,13 @@ When a gate opens, the helper re-attempts the toast; if the download finished du
 - `@tauri-apps/api/core` `invoke()` (macOS custom commands).
 - `@tauri-apps/plugin-updater` `check()` / `downloadAndInstall()` (non-macOS, dynamically imported).
 - `@tauri-apps/plugin-process` `relaunch()`; `@tauri-apps/api/app` `getVersion()`.
-- `$lib/settings/settings-store` (`getSetting`, `setSetting`, `forceSave`, `onSpecificSettingChange`; `forceSave` is
-  what makes the `onboarding.completed` write survive an immediate quit); `$lib/logging/logger` (`getAppLogger`).
+- `#lib/settings/settings-store` (`getSetting`, `setSetting`, `forceSave`, `onSpecificSettingChange`; `forceSave` is
+  what makes the `onboarding.completed` write survive an immediate quit); `#lib/logging/logger` (`getAppLogger`).
 
 ## i18n
 
-Updates copy lives in the `updates.*` catalog (`$lib/intl/messages/en/updates.json`), resolved via `tString()` / `t()`;
+Updates copy lives in the `updates.*` catalog (`#lib/intl/messages/en/updates.json`), resolved via `tString()` / `t()`;
 `cmdr/no-raw-user-facing-string` is enforced on `lib/updates/`. `formatUpdateStatus()` (`update-status-text.ts`) returns
 catalog-resolved strings with `{next}` / `{prev}` / `{version}` interpolation per status; it's a plain `.ts` so the
 `t()` calls are snapshots (the component re-derives reactively, which is correct for this transient status). Runtime
-rules: [`$lib/intl/CLAUDE.md`](../intl/CLAUDE.md).
+rules: [`#lib/intl/CLAUDE.md`](../intl/CLAUDE.md).

@@ -368,7 +368,7 @@ export type { ManualConnectResult } from './networking'
 export type { StreamingListingStartResult } from '../file-explorer/types'
 
 /** Which side of a named row `getFileBeside` reads. */
-export type { RowBeside } from '$lib/ipc/bindings'
+export type { RowBeside } from '#lib/ipc/bindings.js'
 
 // Write + scan-preview event payload types, from typed events via `write-operations.ts`.
 export type {
@@ -822,7 +822,7 @@ export type {
   SearchErrorEvent,
   SearchRunCoverage,
   WalkEnding,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 export {
   translateSelectionQuery,
   getRecentSelections,
@@ -831,7 +831,7 @@ export {
   clearRecentSelections,
   applyRecentSelectionsMaxCount,
 } from './selection'
-export type { SelectionHistoryEntry, SelectionTranslateResult } from '$lib/ipc/bindings'
+export type { SelectionHistoryEntry, SelectionTranslateResult } from '#lib/ipc/bindings.js'
 
 // Drive-indexing commands
 export {
@@ -922,7 +922,7 @@ export type {
   ListingIndexSizesChanged,
   FolderSizes,
   IndexMemoryWarningEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 
 // "Go to path" (⌘G): resolving typed input, and the persisted recents list
 export { resolveGoToPath, getRecentPaths, addRecentPath, removeRecentPath } from './go-to-path'

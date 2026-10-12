@@ -4,11 +4,11 @@
  * backend's (`src-tauri/src/multi_rename/history.rs`), recorded when a rename starts.
  */
 
-import { getMultiRenameHistory, type FieldHistoryEntry, type HistoryField } from '$lib/tauri-commands'
-import { createMenu, type MenuController } from '$lib/ui/menu-controller.svelte'
-import { eventMatchesCommand } from '$lib/shortcuts'
-import { claimKey } from '$lib/shortcuts/claim-key'
-import { getAppLogger } from '$lib/logging/logger'
+import { getMultiRenameHistory, type FieldHistoryEntry, type HistoryField } from '#lib/tauri-commands/index.js'
+import { createMenu, type MenuController } from '#lib/ui/menu-controller.svelte.js'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('multiRename')
 

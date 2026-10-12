@@ -17,7 +17,7 @@
 //!    being measured.
 //!
 //! The fourth, time from launch to the first honest folder size on a folder the
-//! user opened, is the frontend's (`$lib/indexing/first-size-timing.ts`): only it
+//! user opened, is the frontend's (`#lib/indexing/first-size-timing.ts`): only it
 //! knows what is on screen.
 //!
 //! ❌ Nothing here carries a path, a folder name, or a volume id: buckets and the

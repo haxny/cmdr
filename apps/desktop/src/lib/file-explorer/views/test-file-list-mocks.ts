@@ -23,7 +23,7 @@ import { writable } from 'svelte/store'
 import type { FileEntry } from '../types'
 
 /**
- * `$lib/tauri-commands`. `getFileRange` starts empty; `mountFullList` replaces it
+ * `#lib/tauri-commands`. `getFileRange` starts empty; `mountFullList` replaces it
  * with one that serves the requested `(start, count)` slice.
  */
 export function tauriCommandsMock(overrides: Record<string, unknown> = {}) {
@@ -37,7 +37,7 @@ export function tauriCommandsMock(overrides: Record<string, unknown> = {}) {
   }
 }
 
-/** `$lib/icon-cache`. Every export the listing path touches, all inert. */
+/** `#lib/icon-cache`. Every export the listing path touches, all inert. */
 export function iconCacheMock(overrides: Record<string, unknown> = {}) {
   return {
     getCachedIcon: () => undefined,
@@ -51,7 +51,7 @@ export function iconCacheMock(overrides: Record<string, unknown> = {}) {
 }
 
 /**
- * `$lib/indexing/index-state.svelte`: nothing is moving on any volume. Override
+ * `#lib/indexing/index-state.svelte`: nothing is moving on any volume. Override
  * `getWalkedGround` / `isVolumeAggregating` to put a drive under a walker.
  */
 export function indexStateMock(overrides: Record<string, unknown> = {}) {
@@ -63,7 +63,7 @@ export function indexStateMock(overrides: Record<string, unknown> = {}) {
   }
 }
 
-/** `$lib/settings/reactive-settings.svelte` at its shipped defaults. */
+/** `#lib/settings/reactive-settings.svelte` at its shipped defaults. */
 export function reactiveSettingsMock(overrides: Record<string, unknown> = {}) {
   return {
     getRowHeight: () => 20,
@@ -89,7 +89,7 @@ export function reactiveSettingsMock(overrides: Record<string, unknown> = {}) {
 }
 
 /**
- * `$lib/settings/settings-store`. Both buffer sizes MUST be numbers: the fetch
+ * `#lib/settings/settings-store`. Both buffer sizes MUST be numbers: the fetch
  * range is arithmetic on them, and an absent one makes it `NaN`, which fetches
  * nothing and leaves the list empty with no complaint.
  */

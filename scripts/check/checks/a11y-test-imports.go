@@ -17,8 +17,8 @@ import (
 // statements, and resolve each specifier to a repo-relative path that must equal
 // the component's path.
 
-// svelteLibPrefix is what the `$lib` alias resolves to (SvelteKit's default,
-// and `apps/desktop/svelte.config.js` doesn't override it).
+// svelteLibPrefix is what the `#lib` subpath import resolves to (the `imports`
+// map in `apps/desktop/package.json`).
 const svelteLibPrefix = "apps/desktop/src/lib"
 
 // quotedSpecifier matches a single- or double-quoted module specifier. RE2 has
@@ -35,7 +35,7 @@ var staticImportRe = regexp.MustCompile(`\bimport\b(?:[^'"();]*\bfrom\s*)?\s*` +
 var dynamicImportRe = regexp.MustCompile(`\bimport\s*\(\s*` + quotedSpecifier)
 
 // importedPathsIn returns the repo-relative paths that `source` imports, for the
-// specifiers it can resolve: relative (`./`, `../`) and `$lib`-rooted ones.
+// specifiers it can resolve: relative (`./`, `../`) and `#lib`-rooted ones.
 // Anything else (a bare package, an unknown alias) resolves to nothing, which
 // keeps an unresolvable specifier a coverage gap rather than a free pass.
 //
@@ -61,8 +61,8 @@ func resolveSpecifier(fromDir, spec string) (string, bool) {
 	switch {
 	case strings.HasPrefix(spec, "./"), strings.HasPrefix(spec, "../"):
 		return path.Clean(path.Join(fromDir, spec)), true
-	case spec == "$lib" || strings.HasPrefix(spec, "$lib/"):
-		return path.Clean(svelteLibPrefix + strings.TrimPrefix(spec, "$lib")), true
+	case spec == "#lib" || strings.HasPrefix(spec, "#lib/"):
+		return path.Clean(svelteLibPrefix + strings.TrimPrefix(spec, "#lib")), true
 	default:
 		return "", false
 	}

@@ -11,7 +11,7 @@
  * reaching this catch means Cmdr broke.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('startup')
 

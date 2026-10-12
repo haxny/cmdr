@@ -39,7 +39,7 @@ Each is break-if-ignored; the named `DETAILS.md` section has the why.
 - **"Caret" is a text POSITION, "text cursor" the optional rendered bar.** Mount the cursor in `.scroll-spacer`, ❌
   never in `.lines-container`, whose child count derives the wrapped-line height. (§ "Text cursor")
 - **`closeWindow()` goes through `closeSelfWindow()` (backend hide + 100 ms), and `canClose` / `windowReady` flip via
-  `setTimeout(0)`, ❌ never rAF.** Each dodges a different hang or crash. (§ Gotchas; `$lib/child-window-close`)
+  `setTimeout(0)`, ❌ never rAF.** Each dodges a different hang or crash. (§ Gotchas; `#lib/child-window-close`)
 - **The right-click menu is native**; its pick acts on the file, ❌ never via `runViewerEditAction`. (§ Gotchas)
 - **The render window, its prefetch, and eviction are sized in pixels or distance, ❌ never in rows** (a wrapped row is
   hundreds of pixels tall); eviction skips `fullLoad`, whose height map needs every row. A short answer is normal: walk

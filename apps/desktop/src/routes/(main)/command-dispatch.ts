@@ -11,15 +11,15 @@
  * `DispatchExemptId` families (native-menu-owned, per-keystroke P2, and
  * component-scoped); they silently no-op after the preamble.
  */
-import { recordBreadcrumb } from '$lib/error-reporter/breadcrumbs'
-import { addToast } from '$lib/ui/toast'
-import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '$lib/search/capabilities'
-import { getAppLogger } from '$lib/logging/logger'
-import { getFocusedPanePath, getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-import { capabilitiesForPane } from '$lib/file-explorer/pane/volume-capabilities'
-import { isTextInputFocused } from '$lib/utils/text-input-focus'
-import { runMenuClaim } from '$lib/commands/menu-claims'
-import type { CommandId, CommandArgs, CommandDispatchArgs } from '$lib/commands'
+import { recordBreadcrumb } from '#lib/error-reporter/breadcrumbs.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '#lib/search/capabilities.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { isTextInputFocused } from '#lib/utils/text-input-focus.js'
+import { runMenuClaim } from '#lib/commands/menu-claims.js'
+import type { CommandId, CommandArgs, CommandDispatchArgs } from '#lib/commands/index.js'
 import type { ExplorerAPI } from './explorer-api'
 import { commandHandlers } from './command-handlers'
 import type { CommandHandler } from './command-handlers'
@@ -165,7 +165,7 @@ export async function handleCommandExecute<K extends CommandId>(
 
   // An open dialog that answers this command's accelerator itself (the Multi-rename sheet's
   // F2 is File > Rename's) takes the menu road's fire, ahead of the dialog gate that would
-  // refuse it. `$lib/commands/menu-claims.ts`.
+  // refuse it. `#lib/commands/menu-claims.ts`.
   if (ctx.source === 'menu' && runMenuClaim(id)) {
     log.debug('Handed {id} from the menu to the open dialog that claims it', { id })
     return

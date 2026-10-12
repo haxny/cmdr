@@ -11,8 +11,8 @@
  */
 
 import { SvelteMap } from 'svelte/reactivity'
-import { getSmbDirectConnectionEnabled, setSmbDirectConnectionEnabled } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSmbDirectConnectionEnabled, setSmbDirectConnectionEnabled } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { volumeKindOf } from '../pane/volume-capabilities'
 import { connectDirectlyToRow } from './connect-directly-row'
 import type { VolumeInfo } from '../types'

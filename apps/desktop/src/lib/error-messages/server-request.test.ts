@@ -5,8 +5,8 @@
  */
 
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
-import type { ServerRequestError } from '$lib/ipc/bindings'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import type { ServerRequestError } from '#lib/ipc/bindings.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import {
   ServerRequestFailure,
   describeServerRequestFailure,

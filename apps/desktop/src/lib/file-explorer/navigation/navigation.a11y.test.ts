@@ -8,17 +8,17 @@
  * and assertions.
  *
  * No stub here disagrees between blocks: the two `reactive-settings` sets overlap
- * only on `getFileSizeFormat`, and agree on it. Every `$lib/*` stub spreads the real
+ * only on `getFileSizeFormat`, and agree on it. Every `#lib/*` stub spreads the real
  * module first, so a block that never stubbed one still sees its un-stubbed exports.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
-import type { Freshness, VolumeIndexStatus } from '$lib/ipc/bindings'
-import type { MediaIndexVolumeState } from '$lib/tauri-commands'
-import type { VolumeIndexActivity } from '$lib/indexing'
-import type { VolumeEnrichActivity } from '$lib/indexing/media-enrich-state.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { Freshness, VolumeIndexStatus } from '#lib/ipc/bindings.js'
+import type { MediaIndexVolumeState } from '#lib/tauri-commands/index.js'
+import type { VolumeIndexActivity } from '#lib/indexing/index.js'
+import type { VolumeEnrichActivity } from '#lib/indexing/media-enrich-state.svelte.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import ServersPinHintToastContent from './ServersPinHintToastContent.svelte'
 
 // The drive badge reads its own volume's live activity + phase from `index-state`;
@@ -30,7 +30,7 @@ let masterEnabled = true
 let switcherFavoritesExpanded = false
 let enrichActivity: VolumeEnrichActivity | undefined
 
-vi.mock('$lib/indexing', async (importOriginal) => ({
+vi.mock('#lib/indexing/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getVolumeActivity: () => badgeActivity,
   getVolumeAggregation: () => undefined,
@@ -51,12 +51,12 @@ vi.mock('$lib/indexing', async (importOriginal) => ({
   }),
 }))
 
-vi.mock('$lib/indexing/media-enrich-state.svelte', async (importOriginal) => ({
+vi.mock('#lib/indexing/media-enrich-state.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getVolumeEnrichActivity: () => enrichActivity,
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getFileSizeFormat: () => 'binary',
   getMediaIndexEnabled: () => masterEnabled,
@@ -71,7 +71,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
   getSwitcherFavoritesExpanded: () => switcherFavoritesExpanded,
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   resolvePathVolume: vi.fn(() => Promise.resolve({ volume: { id: 'root', path: '/' } })),
   upgradeToSmbVolume: vi.fn(() => Promise.resolve({ status: 'success' })),
@@ -86,7 +86,7 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   trackEvent: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [
     // Two favorites, so the menu renders its number column and its reorderable section.
     { id: 'fav-1', name: 'Documents', path: '/Users/test/Documents', category: 'favorite', isEjectable: false },
@@ -100,15 +100,15 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
   requestVolumeRefresh: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', async (importOriginal) => ({
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   addToast: vi.fn(() => 'toast-id'),
   dismissToast: vi.fn(),
 }))
 
-// Stub the icon cache so the `onMount` prefetch doesn't reach into `$lib/tauri-commands`
+// Stub the icon cache so the `onMount` prefetch doesn't reach into `#lib/tauri-commands`
 // for a `getIcons` call. Same shape as `pane/volume-breadcrumb.test.ts`.
-vi.mock('$lib/icon-cache', async (importOriginal) => {
+vi.mock('#lib/icon-cache.js', async (importOriginal) => {
   const { writable } = await import('svelte/store')
   return {
     ...(await importOriginal<Record<string, unknown>>()),
@@ -130,7 +130,7 @@ import FavoriteRowLabel from './FavoriteRowLabel.svelte'
 import FavoriteShortcutField from './FavoriteShortcutField.svelte'
 import VolumeSpaceLine from './VolumeSpaceLine.svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-import type { SpaceInfo } from '$lib/tauri-commands'
+import type { SpaceInfo } from '#lib/tauri-commands/index.js'
 import type { VolumeInfo } from '../types'
 import type { FavoritesMenuController } from './favorites-menu.svelte'
 import type { VolumeSpaceManager } from './volume-space-manager.svelte'
@@ -146,7 +146,7 @@ afterEach(() => {
 /**
  * Tier 3 a11y tests for `DriveIndexBadge.svelte`: the focusable, labeled status
  * dot and its open menu must have no axe violations, in each freshness state.
- * Mirrors the `IndexingStatusIndicator` block of `$lib/indexing/stateful.a11y.test.ts`.
+ * Mirrors the `IndexingStatusIndicator` block of `#lib/indexing/stateful.a11y.test.ts`.
  */
 describe('DriveIndexBadge a11y', () => {
   function makeStatus(freshness: Freshness | null, enabled = freshness != null): VolumeIndexStatus {
@@ -361,7 +361,7 @@ describe('ServersPinHintToastContent a11y', () => {
 /**
  * Tier 3 a11y for the three row/chip pieces the chip and the switcher share, and for the
  * switcher's list itself. The list is the house `Menu`, so its surface rules are audited in
- * `$lib/ui/overlays.a11y.test.ts`; what's audited here is what THIS consumer puts in a row.
+ * `#lib/ui/overlays.a11y.test.ts`; what's audited here is what THIS consumer puts in a row.
  */
 describe('switcher row pieces a11y', () => {
   /** A container in the document, since axe resolves ARIA references document-wide. */

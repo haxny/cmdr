@@ -32,17 +32,17 @@
  * already sends a `fix` pick to `runRowFix`.
  */
 
-import type { VolumeContextActionKind } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
-import type { IconName } from '$lib/ui/icons/icon-map'
-import type { MenuItem, MenuSection } from '$lib/ui/menu-types'
+import type { VolumeContextActionKind } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
+import type { MenuItem, MenuSection } from '#lib/ui/menu-types.js'
 import { connectDirectly } from '../network/direct-connect'
 import { showsDisconnect } from './connection-state'
 import { detachControlFor } from './detach-control'
 import { runDetach } from './detach-volume'
 import { isServerPlaceRow, runServerRowAction } from './server-row-actions'
-import { volumeScheme } from '$lib/volume-scheme'
+import { volumeScheme } from '#lib/volume-scheme.js'
 import type { VolumeInfo } from '../types'
 
 /** A per-row switch the submenu carries as a checkbox row. */
@@ -234,7 +234,7 @@ function rowToggles(facts: VolumeRowFacts): RowToggleEntry[] {
   }
   if (facts.autoReconnect !== undefined) {
     // The sign-in sheet's words, label and explanation both, so the two doors to the one
-    // setting can't drift apart in meaning (`$lib/servers/DETAILS.md`).
+    // setting can't drift apart in meaning (`#lib/servers/DETAILS.md`).
     toggles.push({
       type: 'toggle',
       toggle: 'auto-reconnect',

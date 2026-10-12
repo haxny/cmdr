@@ -11,9 +11,9 @@
 // so they don't fit the applier's key→value passthrough table. This mirrors the
 // global-go-to-latest shortcut, which likewise persists then calls its own IPC.
 
-import { getSetting, setSetting } from '$lib/settings'
-import { mediaIndexSetNetworkVolumeEnabled, mediaIndexSetAlwaysIndexVolume } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { mediaIndexSetNetworkVolumeEnabled, mediaIndexSetAlwaysIndexVolume } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('media-index')
 

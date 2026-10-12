@@ -3,9 +3,9 @@
  * MCP tab action. `tab.close` awaits the close (and, on the last-tab branch,
  * awaits the window close after a lazy `@tauri-apps/api/window` import).
  */
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import type { CommandArgs } from '$lib/commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { CommandArgs } from '#lib/commands/index.js'
 import type { CommandHandlerRecord } from './types'
 import { moveTabForMcp } from '../mcp-tab-move'
 

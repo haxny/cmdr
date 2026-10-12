@@ -23,13 +23,13 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { sendMacosNotification } from '$lib/notifications/send-macos-notification'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { sendMacosNotification } from '#lib/notifications/send-macos-notification.js'
 import { lowSpaceFigures } from './figures'
-import { onLowDiskSpace } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import type { LowDiskSpacePayload } from '$lib/ipc/bindings'
+import { onLowDiskSpace } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { LowDiskSpacePayload } from '#lib/ipc/bindings.js'
 import { getLowDiskSpaceNotificationsMode } from './notifications-mode'
 import LowDiskSpaceToastContent from './LowDiskSpaceToastContent.svelte'
 

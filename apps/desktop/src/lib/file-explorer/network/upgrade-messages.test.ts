@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { UpgradeFailure } from '$lib/ipc/bindings'
-import { systemStrings } from '$lib/system-strings.svelte'
+import type { UpgradeFailure } from '#lib/ipc/bindings.js'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 import {
   directConnectionUnavailableMessage,
   mountNotRespondingMessage,

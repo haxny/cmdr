@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { HistoryEntry } from '$lib/tauri-commands'
+import type { HistoryEntry } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', async (orig) => {
+vi.mock('#lib/tauri-commands/index.js', async (orig) => {
   const actual = await orig<Record<string, unknown>>()
   return {
     ...actual,
@@ -16,7 +16,7 @@ import {
   getRecentSearchesLoaded,
   resetRecentSearchesForTests,
 } from './recent-searches-state.svelte'
-import { getRecentSearches } from '$lib/tauri-commands'
+import { getRecentSearches } from '#lib/tauri-commands/index.js'
 
 const mockGetRecent = vi.mocked(getRecentSearches)
 

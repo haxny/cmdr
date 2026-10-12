@@ -1,10 +1,10 @@
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { buildSectionTree, type SettingsSection } from '$lib/settings'
-    import { sectionHasMatches } from '$lib/settings/settings-search'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { sectionTitle } from '$lib/settings/section-i18n'
+    import Icon from '#lib/ui/Icon.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { buildSectionTree, type SettingsSection } from '#lib/settings/index.js'
+    import { sectionHasMatches } from '#lib/settings/settings-search.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { sectionTitle } from '#lib/settings/section-i18n.js'
 
     interface Props {
         searchQuery: string

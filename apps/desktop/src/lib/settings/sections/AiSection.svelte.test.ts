@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import type { ManagedAiRefusal, SettingLock } from '$lib/ipc/bindings'
+import type { ManagedAiRefusal, SettingLock } from '#lib/ipc/bindings.js'
 
 const stubs = vi.hoisted(() => ({
   settings: Object.create(null) as Record<string, unknown>,
@@ -20,7 +20,7 @@ const stubs = vi.hoisted(() => ({
   localAiSupported: true,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -38,16 +38,16 @@ vi.mock('$lib/settings', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/managed-policy/managed-policy.svelte', async (importOriginal) => ({
+vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSettingLock: (id: string) => stubs.locks.get(id),
   isSettingLocked: (id: string) => stubs.locks.get(id)?.kind === 'fixed',
   isSettingManaged: (id: string) => stubs.locks.has(id),
 }))
 
-vi.mock('$lib/settings/ai-config', () => ({ pushConfigToBackend: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/settings/ai-config.js', () => ({ pushConfigToBackend: vi.fn(() => Promise.resolve()) }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getAiRuntimeStatus: vi.fn(() => Promise.resolve({ localAiSupported: stubs.localAiSupported })),
   cloudAiHostVerdicts: vi.fn((urls: string[]) =>
@@ -93,9 +93,9 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
 }))
 
 import AiSection from './AiSection.svelte'
-import { acceptCloudAiConsent, checkAiConnection, revokeCloudAiConsent } from '$lib/tauri-commands'
-import { setSetting } from '$lib/settings'
-import { _resetCloudConsentForTests } from '$lib/ai/cloud-consent.svelte'
+import { acceptCloudAiConsent, checkAiConnection, revokeCloudAiConsent } from '#lib/tauri-commands/index.js'
+import { setSetting } from '#lib/settings/index.js'
+import { _resetCloudConsentForTests } from '#lib/ai/cloud-consent.svelte.js'
 
 let mounted: { target: HTMLElement; instance: ReturnType<typeof mount> } | undefined
 

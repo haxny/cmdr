@@ -16,7 +16,7 @@
      */
     import type { Snippet } from 'svelte'
     import Popover from './Popover.svelte'
-    import '$lib/query-ui/filter-chips/filter-popover.css'
+    import '#lib/query-ui/filter-chips/filter-popover.css'
 
     interface Props {
         /** The chip element, used by the popover shell for positioning + focus return. */

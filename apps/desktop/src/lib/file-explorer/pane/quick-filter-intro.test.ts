@@ -14,13 +14,13 @@ const mocks = vi.hoisted(() => ({
   openSettingsWindow: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
-vi.mock('$lib/settings', () => ({ getSetting: mocks.getSetting, setSetting: mocks.setSetting }))
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast, dismissToast: mocks.dismissToast }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: mocks.getSetting, setSetting: mocks.setSetting }))
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: mocks.openSettingsWindow,
   settingAnchorId: (id: string) => `anchor-${id}`,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 vi.mock('./QuickFilterIntroToastContent.svelte', () => ({ default: {} }))

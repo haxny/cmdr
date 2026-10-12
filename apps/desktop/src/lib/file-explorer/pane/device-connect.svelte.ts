@@ -5,7 +5,7 @@
  * `RemoteConnectState`, same one-per-landing rule. What differs is the gate — a
  * server's is its CONNECTION STATE, a phone's is its `deviceReadiness`, because
  * a phone waiting for its "Allow USB debugging?" tap has no session to be in any
- * state about (`$lib/adb/device-readiness.ts` carries that split).
+ * state about (`#lib/adb/device-readiness.ts` carries that split).
  *
  * ❗ **This factory is the ONE dialer, and it holds the pane's listing while it
  * works** (`holdsListing`). Path resolution never dials, and a phone nobody has
@@ -27,13 +27,13 @@
  */
 
 import { untrack } from 'svelte'
-import { asAdbConnectError, cancelAdbConnect, connectAdbDevice, newAdbAttemptId } from '$lib/tauri-commands'
-import { openSettingsWindow } from '$lib/settings/settings-window'
-import { parseAdbPath } from '$lib/adb/adb-path-utils'
-import { volumeScheme } from '$lib/volume-scheme'
-import { readAdbConnectOutcome, waitingForTheAllowTap } from '$lib/adb/adb-connect-errors'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { asAdbConnectError, cancelAdbConnect, connectAdbDevice, newAdbAttemptId } from '#lib/tauri-commands/index.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { parseAdbPath } from '#lib/adb/adb-path-utils.js'
+import { volumeScheme } from '#lib/volume-scheme.js'
+import { readAdbConnectOutcome, waitingForTheAllowTap } from '#lib/adb/adb-connect-errors.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { RemoteConnectState } from './remote-connect-state'
 import type { VolumeInfo } from '../types'
 

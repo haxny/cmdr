@@ -2,14 +2,14 @@
  * Naming the ground a run covered, for the no-results state.
  *
  * A search is ALWAYS scoped: an empty scope box means the focused pane's current folder, never
- * "everywhere" (`$lib/search/search-runners.ts`). The chip says so in the strip, but the
+ * "everywhere" (`#lib/search/search-runners.ts`). The chip says so in the strip, but the
  * no-results state used to list only the query, size, and date criteria, so "nothing in this
  * folder" and "nothing on this drive" read identically. A user reported search as broken
  * because of it (`ERR-FCAXU`: "linear" found nothing in the pane's folder while Finder,
  * searching This Mac, found five files).
  *
  * Pure and consumer-agnostic on purpose: Selection has no scope row, and `query-ui` must not
- * reach into `$lib/search`.
+ * reach into `#lib/search`.
  */
 
 /** Everything the two helpers need, as the dialog already holds it. */

@@ -6,9 +6,9 @@ import (
 )
 
 // A catalog section that imports the given primitive. The check only looks for
-// the `$lib/ui/<Name>.svelte` import token, so the surrounding markup is minimal.
+// the `#lib/ui/<Name>.svelte` import token, so the surrounding markup is minimal.
 func sectionImporting(name string) string {
-	return "<script lang=\"ts\">\n  import " + name + " from '$lib/ui/" + name + ".svelte'\n</script>\n<" + name + " />\n"
+	return "<script lang=\"ts\">\n  import " + name + " from '#lib/ui/" + name + ".svelte'\n</script>\n<" + name + " />\n"
 }
 
 func TestUiPrimitiveCoverage_Success(t *testing.T) {

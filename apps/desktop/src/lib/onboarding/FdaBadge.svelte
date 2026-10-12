@@ -7,7 +7,7 @@
      * step on every launch for days, never answer it, and then meet an unexplained permission
      * refusal deep inside a copy or a delete with nothing connecting the two.
      *
-     * A plain inline box: `$lib/status-corner/StatusCorner.svelte` owns placement and order, and
+     * A plain inline box: `#lib/status-corner/StatusCorner.svelte` owns placement and order, and
      * it renders this immediately left of the indexing hourglass. ❗ Never give it a position of
      * its own: the corner is the one thing allowed to claim that strip, and a second claimant
      * lands on top of the hourglass.
@@ -15,9 +15,9 @@
      * ❗ Hidden while the wizard is showing step 1. That page IS this badge's destination, so
      * pointing at it from behind the sheet is noise.
      */
-    import Icon from '$lib/ui/Icon.svelte'
-    import { t, tString } from '$lib/intl/messages.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import { isWizardOnFdaStep } from './onboarding-state.svelte'
     import { fdaIsMissing } from './fda-status.svelte'
 

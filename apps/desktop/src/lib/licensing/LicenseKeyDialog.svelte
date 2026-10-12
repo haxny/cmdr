@@ -10,7 +10,7 @@
         parseActivationError,
         type LicenseInfo,
         type LicenseStatus,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
     import {
         loadLicenseStatus,
         getCachedStatus,
@@ -18,14 +18,14 @@
         isPendingVerification,
         setPendingVerification,
     } from './licensing-store.svelte'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import LinkButton from '$lib/ui/LinkButton.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { addToast } from '$lib/ui/toast/toast-store.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { addToast } from '#lib/ui/toast/toast-store.svelte.js'
 
     interface Props {
         onClose: () => void

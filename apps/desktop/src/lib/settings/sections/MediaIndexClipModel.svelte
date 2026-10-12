@@ -19,22 +19,22 @@
 -->
 <script lang="ts">
     import { onMount } from 'svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Button from '$lib/ui/Button.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { formatByteSize } from '$lib/units'
-    import { getSetting, getSettingDefinition, onSpecificSettingChange } from '$lib/settings'
-    import { confirmDialog } from '$lib/utils/confirm-dialog'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { formatByteSize } from '#lib/units/index.js'
+    import { getSetting, getSettingDefinition, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { confirmDialog } from '#lib/utils/confirm-dialog.js'
     import {
         mediaIndexClipModelStatus,
         mediaIndexDownloadClipModel,
         mediaIndexDeleteClipModel,
         type ClipModelStatus,
-    } from '$lib/tauri-commands'
+    } from '#lib/tauri-commands/index.js'
 
     interface Props {
         searchQuery?: string

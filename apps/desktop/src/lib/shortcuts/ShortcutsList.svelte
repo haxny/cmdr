@@ -13,13 +13,13 @@
   the rows so their `{@const}` diffs recompute.
 -->
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { commands } from '$lib/commands/command-registry'
-    import { getDefaultShortcuts, getEffectiveShortcuts, onShortcutChange, toDisplayShortcut } from '$lib/shortcuts'
-    import { groupCommandsByScope } from '$lib/settings/sections/keyboard-shortcuts-grouping'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { commands } from '#lib/commands/command-registry.js'
+    import { getDefaultShortcuts, getEffectiveShortcuts, onShortcutChange, toDisplayShortcut } from '#lib/shortcuts/index.js'
+    import { groupCommandsByScope } from '#lib/settings/sections/keyboard-shortcuts-grouping.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import { diffShortcuts } from './shortcut-diff'
 
     interface Props {

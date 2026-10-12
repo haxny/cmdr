@@ -13,7 +13,7 @@ import {
   type MtpStorageInfo as MtpStorageInfoBinding,
   type SpaceShortfall,
   type WriteAccess,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import type { ConflictResolution, WriteOperationStartResult } from '../file-explorer/types'
 import { throwIpcError } from './ipc-types'
 

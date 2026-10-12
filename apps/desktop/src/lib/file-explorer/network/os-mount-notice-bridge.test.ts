@@ -4,7 +4,7 @@
  * list, or the backend withdraws it (the share's direct connection switched off).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn } from '$lib/ipc/bindings'
+import type { SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn } from '#lib/ipc/bindings.js'
 import type { VolumeInfo } from '../types'
 
 /**
@@ -31,7 +31,7 @@ const toastStore = vi.hoisted(() => {
   }
 })
 const { addToast, dismissToast } = toastStore
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: toastStore.addToast,
   dismissToast: toastStore.dismissToast,
   getToasts: toastStore.getToasts,
@@ -44,7 +44,7 @@ const unlistenVolumes = vi.fn()
 let emitWithdrawn: (payload: SmbOsMountNoticeWithdrawn) => void
 const unlistenWithdrawn = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onSmbFellBackToOsMount: (handler: (payload: SmbFellBackToOsMount) => void) => {
     emitFallback = handler
     return Promise.resolve(unlistenFallback)

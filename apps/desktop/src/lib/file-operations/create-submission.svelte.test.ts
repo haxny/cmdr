@@ -5,12 +5,12 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MutationWaitOptions } from '$lib/tauri-commands'
+import type { MutationWaitOptions } from '#lib/tauri-commands/index.js'
 import { MutationFailure } from './mutation-error'
 import { CreateSubmission } from './create-submission.svelte'
 
 const addToast = vi.fn()
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: (...args: unknown[]) => {
     addToast(...args)
   },

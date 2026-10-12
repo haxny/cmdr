@@ -21,11 +21,11 @@ import {
   onScanPreviewError,
   onScanPreviewCancelled,
   type UnlistenFn,
-} from '$lib/tauri-commands'
-import type { SortColumn, SortOrder } from '$lib/file-explorer/types'
-import { getSetting } from '$lib/settings'
-import { formatFilesPerSecond } from '$lib/units'
-import { withTimeout } from '$lib/utils/timing'
+} from '#lib/tauri-commands/index.js'
+import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
+import { getSetting } from '#lib/settings/index.js'
+import { formatFilesPerSecond } from '#lib/units/index.js'
+import { withTimeout } from '#lib/utils/timing.js'
 import { ScanThroughput } from '../scan-throughput'
 import { holdOperationStartReply } from '../transfer/transfer-dispatch'
 import type { CloudOnlineOnlyExtent } from './delete-dialog-utils'

@@ -11,11 +11,11 @@
   name is attacker-controlled), never {@html}.
 -->
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import type { WakeDigestFolderView, WakeDigestRollupView } from '$lib/tauri-commands'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import type { WakeDigestFolderView, WakeDigestRollupView } from '#lib/tauri-commands/index.js'
 
     interface Props {
         folders: WakeDigestFolderView[]

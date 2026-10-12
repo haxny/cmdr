@@ -1,6 +1,6 @@
 <!-- A simple two-column "label / value" table for ranked breakdowns (referrers, pages, channels, etc.). -->
 <script lang="ts">
-    import { formatNumber } from '$lib/format.js'
+    import { formatNumber } from '#lib/format.js'
 
     const {
         items,

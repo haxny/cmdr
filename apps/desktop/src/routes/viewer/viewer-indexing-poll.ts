@@ -1,5 +1,5 @@
-import { viewerGetStatus, type TotalRows } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { viewerGetStatus, type TotalRows } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('viewer')
 const INDEXING_POLL_INTERVAL = 500

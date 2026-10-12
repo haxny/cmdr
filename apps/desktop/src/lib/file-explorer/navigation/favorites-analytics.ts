@@ -10,8 +10,8 @@
  * crosses. Only which surface it was picked from and how.
  */
 
-import { trackEvent } from '$lib/tauri-commands'
-import type { FavoriteReach } from '$lib/ipc/bindings'
+import { trackEvent } from '#lib/tauri-commands/index.js'
+import type { FavoriteReach } from '#lib/ipc/bindings.js'
 
 /** How a favorite ROW was picked: its digit, its letter, Enter, or a click. */
 export type FavoriteRowVia = 'digit' | 'letter' | 'keyboard' | 'pointer'

@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { NetworkHost } from '../types'
-import type { SavedServer } from '$lib/tauri-commands'
+import type { SavedServer } from '#lib/tauri-commands/index.js'
 
 const { ipc, events } = vi.hoisted(() => {
   const events = {
@@ -40,9 +40,9 @@ const { ipc, events } = vi.hoisted(() => {
     },
   }
 })
-vi.mock('$lib/tauri-commands', () => ipc)
-vi.mock('$lib/settings', () => ({ initializeSettings: vi.fn(() => Promise.resolve()) }))
-vi.mock('$lib/settings/network-settings', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ipc)
+vi.mock('#lib/settings/index.js', () => ({ initializeSettings: vi.fn(() => Promise.resolve()) }))
+vi.mock('#lib/settings/network-settings.js', () => ({
   getNetworkTimeoutMs: () => 15000,
   getShareCacheTtlMs: () => 30000,
 }))

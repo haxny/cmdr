@@ -14,9 +14,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import SearchResults from './QueryResults.svelte'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: () => undefined,
@@ -25,7 +25,7 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({}))
+vi.mock('#lib/tauri-commands/index.js', () => ({}))
 
 const baseProps = {
   results: [] as SearchResultEntry[],

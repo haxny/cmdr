@@ -21,9 +21,9 @@
      *     `--font-size-xs`, hover background = `--color-bg-tertiary`.
      */
     import { onDestroy, tick } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { createPretextMeasure } from '$lib/utils/shorten-middle'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { createPretextMeasure } from '#lib/utils/shorten-middle.js'
     import {
         computePathPillsLayout,
         PILL_CHROME_PX,

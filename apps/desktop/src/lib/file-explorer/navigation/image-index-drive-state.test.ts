@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { imageIndexDriveState, imageIndexDriveCoverage } from './image-index-drive-state'
-import type { MediaIndexVolumeState } from '$lib/tauri-commands'
-import type { VolumeEnrichActivity } from '$lib/indexing/media-enrich-state.svelte'
+import type { MediaIndexVolumeState } from '#lib/tauri-commands/index.js'
+import type { VolumeEnrichActivity } from '#lib/indexing/media-enrich-state.svelte.js'
 
 function volumeState(overrides: Partial<MediaIndexVolumeState> = {}): MediaIndexVolumeState {
   return {

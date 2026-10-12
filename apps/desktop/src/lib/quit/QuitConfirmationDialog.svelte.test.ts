@@ -8,9 +8,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import QuitConfirmationDialog from './QuitConfirmationDialog.svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

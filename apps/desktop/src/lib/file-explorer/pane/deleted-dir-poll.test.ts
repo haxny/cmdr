@@ -20,7 +20,7 @@ const { ipc, resolution } = vi.hoisted<{
   resolution: { resolveValidPath: vi.fn() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({ pathExistsChecked: ipc.pathExistsChecked }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ pathExistsChecked: ipc.pathExistsChecked }))
 vi.mock('../navigation/path-resolution', () => ({ resolveValidPath: resolution.resolveValidPath }))
 
 import { createDeletedDirPoll, type DeletedDirPollDeps } from './deleted-dir-poll'

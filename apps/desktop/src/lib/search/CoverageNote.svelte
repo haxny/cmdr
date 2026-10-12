@@ -16,9 +16,9 @@
      * or screen readers miss the update, which is the same reason `QueryResults` keeps
      * its status bar mounted.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
     import type { CoverageNote } from './coverage-note'
 
     interface Props {

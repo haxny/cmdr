@@ -5,8 +5,8 @@
  * clipboard runs). This is a SEPARATE focus layer from the pre-dispatch
  * text-region intercept in the core (`handleTextRegionShortcut`).
  */
-import { readClipboardText } from '$lib/tauri-commands'
-import { isTextInputFocused } from '$lib/utils/text-input-focus'
+import { readClipboardText } from '#lib/tauri-commands/index.js'
+import { isTextInputFocused } from '#lib/utils/text-input-focus.js'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'
 

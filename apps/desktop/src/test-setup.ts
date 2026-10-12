@@ -4,11 +4,11 @@
  */
 
 import { vi } from 'vitest'
-import { TestResizeObserver } from '$lib/test-layout'
+import { TestResizeObserver } from '#lib/test-layout.js'
 
 // ResizeObserver is not available in the test DOM. This one lets components
 // that use it mount, and stays silent until a test drives a resize through
-// `installLayoutMock().resize()` (`$lib/test-layout`) — there is no layout
+// `installLayoutMock().resize()` (`#lib/test-layout`) — there is no layout
 // engine here, so nothing else could ever make it fire.
 vi.stubGlobal('ResizeObserver', TestResizeObserver)
 

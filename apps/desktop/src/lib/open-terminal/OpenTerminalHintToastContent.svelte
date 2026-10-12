@@ -9,9 +9,9 @@
      * `behavior.openTerminalHereToastSeen` when it raises this). A four-second
      * transient toast would be a coin flip on whether anyone read it.
      */
-    import { dismissToast } from '$lib/ui/toast'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { openSettingsToTerminalApp } from './terminal-app-setting'
 
     interface Props {

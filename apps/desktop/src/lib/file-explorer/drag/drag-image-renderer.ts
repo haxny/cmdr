@@ -3,7 +3,7 @@
 // middle-truncation, asymmetric edge fading, and count badge.
 
 import type { DragFileInfo } from './drag-drop'
-import { getCachedIcon } from '$lib/icon-cache'
+import { getCachedIcon } from '#lib/icon-cache.js'
 
 /** Configuration for the drag image renderer */
 const cardBg = 'rgba(20, 20, 20, 0.75)'

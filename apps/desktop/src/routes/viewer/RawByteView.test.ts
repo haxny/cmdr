@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import RawByteView from './RawByteView.svelte'
-import { viewerGetBytes } from '$lib/tauri-commands'
+import { viewerGetBytes } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   viewerGetBytes: vi.fn(() => Promise.resolve([0, 0x41, 0x0a, 0xff])),
 }))
 

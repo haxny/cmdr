@@ -27,7 +27,7 @@ const openExternalUrl = vi.fn<(url: string) => Promise<void>>(() => Promise.reso
 const setSetting = vi.fn<(id: string, value: unknown) => void>()
 const forceSave = vi.fn<() => Promise<boolean>>(() => Promise.resolve(true))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkFullDiskAccess: () => checkFullDiskAccess(),
   checkFullDiskAccessQuiet: () => checkFullDiskAccessQuiet(),
   getMacosMajorVersion: () => getMacosMajorVersion(),
@@ -36,7 +36,7 @@ vi.mock('$lib/tauri-commands', () => ({
   openExternalUrl: (url: string) => openExternalUrl(url),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,
@@ -52,7 +52,7 @@ vi.mock('$lib/settings', async (importOriginal) => {
 // `StepFda.svelte` would return null and leave us nothing to assert against. Pretend
 // we're on macOS for these tests; Linux flow is enforced by the wizard's resume rule,
 // not by the step body, and the resume-rule unit tests live in onboarding-state.test.ts.
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => {
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return { ...actual, isMacOS: () => true }
 })
@@ -287,12 +287,12 @@ describe('StepFda', () => {
 describe('StepFda on Linux', () => {
   it('renders nothing and never polls', async () => {
     vi.resetModules()
-    vi.doMock('$lib/shortcuts/key-capture', async (importOriginal) => {
+    vi.doMock('#lib/shortcuts/key-capture.js', async (importOriginal) => {
       const actual = await importOriginal<Record<string, unknown>>()
       return { ...actual, isMacOS: () => false }
     })
     const linuxQuietProbe = vi.fn<() => Promise<boolean>>(() => Promise.resolve(true))
-    vi.doMock('$lib/tauri-commands', () => ({
+    vi.doMock('#lib/tauri-commands/index.js', () => ({
       checkFullDiskAccess: () => Promise.resolve(false),
       checkFullDiskAccessQuiet: () => linuxQuietProbe(),
       getMacosMajorVersion: () => Promise.resolve(0),
@@ -320,8 +320,8 @@ describe('StepFda on Linux', () => {
 
     await unmountFresh(instance)
     target.remove()
-    vi.doUnmock('$lib/shortcuts/key-capture')
-    vi.doUnmock('$lib/tauri-commands')
+    vi.doUnmock('#lib/shortcuts/key-capture.js')
+    vi.doUnmock('#lib/tauri-commands/index.js')
     vi.resetModules()
   })
 })

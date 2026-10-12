@@ -23,8 +23,8 @@ import {
   getShouldReduceTransparency,
   onGlassTintChanged,
   onReduceTransparencyChanged,
-} from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('glass-material')
 

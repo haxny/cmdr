@@ -13,7 +13,7 @@
  * Adding or wiring an entry: [DETAILS.md](DETAILS.md) § Adding an entry.
  */
 
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 
 /** The window a dialog actually lives in when the app opens it for real. */
 export type GalleryHostWindow = 'main' | 'settings' | 'viewer'

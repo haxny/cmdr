@@ -4,9 +4,9 @@
  * `Intl` formatter in feature code.
  *
  * Rationale: the app resolves the FORMATTING locale in ONE place
- * (`getFormatLocale()` in `$lib/intl/locale.ts`) feeding ONE formatting layer
- * (`$lib/intl/number-format.ts` for numbers/sizes, and the
- * `$lib/settings/format-utils.ts` date formatter). Counts go through
+ * (`getFormatLocale()` in `#lib/intl/locale.ts`) feeding ONE formatting layer
+ * (`#lib/intl/number-format.ts` for numbers/sizes, and the
+ * `#lib/settings/format-utils.ts` date formatter). Counts go through
  * `formatInteger`/`formatNumber`, sizes through `formatFileSizeWithFormat`/
  * `formatSizeForDisplay`, dates through `formatDateForDisplay`. A stray
  * `n.toLocaleString('en-US')` or `new Intl.NumberFormat(...)` in feature code
@@ -38,17 +38,17 @@ export default {
     type: 'problem',
     docs: {
       description:
-        'Format user-facing numbers/sizes/dates through `$lib/intl` and the central format utils, not raw `toLocaleString` / `Intl` formatters.',
+        'Format user-facing numbers/sizes/dates through `#lib/intl` and the central format utils, not raw `toLocaleString` / `Intl` formatters.',
       recommended: true,
     },
     messages: {
       rawToLocaleString:
         "Don't call `.toLocaleString(...)` in feature code. Route counts through `formatInteger`/`formatNumber` " +
-        '(`$lib/intl/number-format`), sizes through `formatSizeForDisplay`, and dates through `formatDateForDisplay`. ' +
+        '(`#lib/intl/number-format`), sizes through `formatSizeForDisplay`, and dates through `formatDateForDisplay`. ' +
         'See `docs/specs/i18n-formatter-layer-plan.md`.',
       rawIntlFormatter:
-        "Don't construct `new Intl.{{ ctor }}(...)` in feature code. Use the memoized factory in `$lib/intl/number-format` " +
-        'or the date formatter in `$lib/settings/format-utils`, both keyed on the single `getFormatLocale()` source.',
+        "Don't construct `new Intl.{{ ctor }}(...)` in feature code. Use the memoized factory in `#lib/intl/number-format` " +
+        'or the date formatter in `#lib/settings/format-utils`, both keyed on the single `getFormatLocale()` source.',
     },
     schema: [],
   },

@@ -15,7 +15,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import NetworkSection from './NetworkSection.svelte'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'network.enabled') return true
     if (key === 'network.directSmbConnection') return true
@@ -31,7 +31,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   invoke: vi.fn(() => Promise.resolve()),
   openLocalNetworkSettings: vi.fn(() => Promise.resolve()),
 }))

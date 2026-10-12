@@ -21,7 +21,7 @@ const { commandMocks, resolveWriteConflictMock } = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => commandMocks)
+vi.mock('#lib/tauri-commands/index.js', () => commandMocks)
 
 import { createOperationSessionCommands } from './operation-session-commands.svelte'
 

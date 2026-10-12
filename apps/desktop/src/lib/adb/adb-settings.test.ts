@@ -5,11 +5,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('$lib/settings', () => ({ getSetting: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ setAdbSettings: vi.fn() }))
+vi.mock('#lib/settings/index.js', () => ({ getSetting: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ setAdbSettings: vi.fn() }))
 
-import { getSetting } from '$lib/settings'
-import { setAdbSettings } from '$lib/tauri-commands'
+import { getSetting } from '#lib/settings/index.js'
+import { setAdbSettings } from '#lib/tauri-commands/index.js'
 import {
   ADB_BINARY_PATH_SETTING_KEY,
   ADB_ENABLED_SETTING_KEY,

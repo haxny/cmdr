@@ -136,7 +136,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="text">', primitive: 'TextInput', path: '$lib/ui/TextInput.svelte' },
+          data: { control: '<input type="text">', primitive: 'TextInput', path: '#lib/ui/TextInput.svelte' },
         },
       ],
     },
@@ -148,7 +148,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input>', primitive: 'TextInput', path: '$lib/ui/TextInput.svelte' },
+          data: { control: '<input>', primitive: 'TextInput', path: '#lib/ui/TextInput.svelte' },
         },
       ],
     },
@@ -159,7 +159,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="password">', primitive: 'TextInput', path: '$lib/ui/TextInput.svelte' },
+          data: { control: '<input type="password">', primitive: 'TextInput', path: '#lib/ui/TextInput.svelte' },
         },
       ],
     },
@@ -169,7 +169,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="search">', primitive: 'TextInput', path: '$lib/ui/TextInput.svelte' },
+          data: { control: '<input type="search">', primitive: 'TextInput', path: '#lib/ui/TextInput.svelte' },
         },
       ],
     },
@@ -180,7 +180,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<textarea>', primitive: 'TextArea', path: '$lib/ui/TextArea.svelte' },
+          data: { control: '<textarea>', primitive: 'TextArea', path: '#lib/ui/TextArea.svelte' },
         },
       ],
     },
@@ -191,7 +191,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '$lib/ui/Checkbox.svelte' },
+          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '#lib/ui/Checkbox.svelte' },
         },
       ],
     },
@@ -202,7 +202,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="radio">', primitive: 'RadioGroup', path: '$lib/ui/RadioGroup.svelte' },
+          data: { control: '<input type="radio">', primitive: 'RadioGroup', path: '#lib/ui/RadioGroup.svelte' },
         },
       ],
     },
@@ -213,7 +213,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '$lib/ui/Checkbox.svelte' },
+          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '#lib/ui/Checkbox.svelte' },
         },
       ],
     },
@@ -224,7 +224,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<select>', primitive: 'Select', path: '$lib/ui/Select.svelte' },
+          data: { control: '<select>', primitive: 'Select', path: '#lib/ui/Select.svelte' },
         },
       ],
     },
@@ -235,7 +235,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<dialog>', primitive: 'ModalDialog', path: '$lib/ui/ModalDialog.svelte' },
+          data: { control: '<dialog>', primitive: 'ModalDialog', path: '#lib/ui/ModalDialog.svelte' },
         },
       ],
     },
@@ -246,7 +246,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitive',
-          data: { control: '<progress>', primitive: 'ProgressBar', path: '$lib/ui/ProgressBar.svelte' },
+          data: { control: '<progress>', primitive: 'ProgressBar', path: '#lib/ui/ProgressBar.svelte' },
         },
       ],
     },
@@ -258,7 +258,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForRole',
-          data: { element: 'button', role: 'switch', primitive: 'Switch', path: '$lib/ui/Switch.svelte' },
+          data: { element: 'button', role: 'switch', primitive: 'Switch', path: '#lib/ui/Switch.svelte' },
         },
       ],
     },
@@ -269,7 +269,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForRole',
-          data: { element: 'div', role: 'checkbox', primitive: 'Checkbox', path: '$lib/ui/Checkbox.svelte' },
+          data: { element: 'div', role: 'checkbox', primitive: 'Checkbox', path: '#lib/ui/Checkbox.svelte' },
         },
       ],
     },
@@ -280,7 +280,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForRole',
-          data: { element: 'button', role: 'radio', primitive: 'RadioGroup', path: '$lib/ui/RadioGroup.svelte' },
+          data: { element: 'button', role: 'radio', primitive: 'RadioGroup', path: '#lib/ui/RadioGroup.svelte' },
         },
       ],
     },
@@ -291,7 +291,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForRole',
-          data: { element: 'button', role: 'switch', primitive: 'Switch', path: '$lib/ui/Switch.svelte' },
+          data: { element: 'button', role: 'switch', primitive: 'Switch', path: '#lib/ui/Switch.svelte' },
         },
       ],
     },
@@ -303,11 +303,11 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForRole',
-          data: { element: 'div', role: 'radio', primitive: 'RadioGroup', path: '$lib/ui/RadioGroup.svelte' },
+          data: { element: 'div', role: 'radio', primitive: 'RadioGroup', path: '#lib/ui/RadioGroup.svelte' },
         },
         {
           messageId: 'preferPrimitive',
-          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '$lib/ui/Checkbox.svelte' },
+          data: { control: '<input type="checkbox">', primitive: 'Checkbox', path: '#lib/ui/Checkbox.svelte' },
         },
       ],
     },
@@ -319,7 +319,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForGlyph',
-          data: { icon: 'info', primitive: 'InfoTip', path: '$lib/ui/InfoTip.svelte' },
+          data: { icon: 'info', primitive: 'InfoTip', path: '#lib/ui/InfoTip.svelte' },
         },
       ],
     },
@@ -330,7 +330,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForGlyph',
-          data: { icon: 'info', primitive: 'InfoTip', path: '$lib/ui/InfoTip.svelte' },
+          data: { icon: 'info', primitive: 'InfoTip', path: '#lib/ui/InfoTip.svelte' },
         },
       ],
     },
@@ -341,7 +341,7 @@ ruleTester.run('prefer-ui-primitive', rule, {
       errors: [
         {
           messageId: 'preferPrimitiveForGlyph',
-          data: { icon: 'info', primitive: 'InfoTip', path: '$lib/ui/InfoTip.svelte' },
+          data: { icon: 'info', primitive: 'InfoTip', path: '#lib/ui/InfoTip.svelte' },
         },
       ],
     },

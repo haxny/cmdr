@@ -4,7 +4,7 @@ The frontend half of Android-over-ADB: what a phone's row says, what the pane sh
 navigation lands, and the one line that makes the feature findable. Read this before any non-trivial work here. The
 app-side backend contract (the provider, the dial, eject, the settings) is `apps/desktop/src-tauri/src/adb/DETAILS.md`;
 the wire is `crates/cmdr-adb/DETAILS.md`. Neither is restated here, and neither is why a phone's dial skips
-`connect-flow.ts`: that is `$lib/servers/DETAILS.md` § The device dial.
+`connect-flow.ts`: that is `#lib/servers/DETAILS.md` § The device dial.
 
 ## Two fields, two questions
 

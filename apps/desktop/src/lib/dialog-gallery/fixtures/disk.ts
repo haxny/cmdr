@@ -14,8 +14,8 @@
  * areas, so fixture strings never reach the message catalog.
  */
 
-import type { DeleteSourceItem } from '$lib/file-operations/delete/delete-dialog-utils'
-import type { SortColumn, SortOrder, TransferOperationType } from '$lib/file-explorer/types'
+import type { DeleteSourceItem } from '#lib/file-operations/delete/delete-dialog-utils.js'
+import type { SortColumn, SortOrder, TransferOperationType } from '#lib/file-explorer/types.js'
 import type { GalleryDiskFixture } from '../gallery-state.svelte'
 
 /** Props of `DeleteDialog.svelte`, minus its callbacks. */

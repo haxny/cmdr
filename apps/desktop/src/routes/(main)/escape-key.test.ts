@@ -13,13 +13,13 @@ const settingValues = vi.hoisted(() => new Map<string, unknown>())
 const addToast = vi.hoisted(() => vi.fn())
 
 vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => windowMock }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => settingValues.get(id),
   setSetting: (id: string, value: unknown) => {
     settingValues.set(id, value)
   },
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 vi.mock('./EscapeFullScreenToastContent.svelte', () => ({ default: {} }))
 
 import { exitFullScreenOnEscape, installEscapeStopClaims } from './escape-key'

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getNetworkTimeoutMs, getMountTimeoutMs, getShareCacheTtlMs } from './network-settings'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn(),
 }))
 

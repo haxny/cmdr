@@ -16,8 +16,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createDialogState } from './dialog-state.svelte'
-import { setForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
-import { initSettledOperationsWatch, destroySettledOperationsWatch } from '$lib/file-operations/settled-operations'
+import { setForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
+import { initSettledOperationsWatch, destroySettledOperationsWatch } from '#lib/file-operations/settled-operations.js'
 import type { TransferProgressPropsData } from './dialog-props'
 import type { FilePaneAPI } from './types'
 
@@ -27,7 +27,7 @@ const { getOperationLogDetail, moveCursorToNewFolder, onWriteSettled } = vi.hois
   onWriteSettled: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -40,9 +40,9 @@ vi.mock('$lib/tauri-commands', () => ({
   onWriteSettled,
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(), dismissToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder }))
 
 const FOLDER = '/Users/me/photos'
 

@@ -23,8 +23,8 @@ import {
 } from '../tabs/tab-state-manager.svelte'
 import type { NavigationHistory } from '../navigation/navigation-history'
 import { newTab as tabOpsNewTab, reopenLastClosedTabInPane as tabOpsReopenLastClosedTab } from './tab-operations'
-import { getAppLogger } from '$lib/logging/logger'
-import type { McpTabAction } from '$lib/commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { McpTabAction } from '#lib/commands/index.js'
 
 const log = getAppLogger('fileExplorer')
 

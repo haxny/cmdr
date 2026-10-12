@@ -15,9 +15,9 @@
  * Main window only, for the same reason as `menu-operation-gate.svelte.ts`: one writer.
  */
 
-import { commands } from '$lib/commands'
-import { setCommandsRefusedOverDialog } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { commands } from '#lib/commands/index.js'
+import { setCommandsRefusedOverDialog } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 
 const log = getAppLogger('mainListeners')

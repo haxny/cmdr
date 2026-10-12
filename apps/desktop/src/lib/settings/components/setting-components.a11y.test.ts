@@ -12,14 +12,14 @@
  * own implementation in its own `beforeEach`. `null` means "use the real
  * export", which is what the blocks that never stubbed a given module had.
  *
- * `$lib/settings` re-exports from `$lib/settings/settings-store`, and the source
+ * `#lib/settings` re-exports from `#lib/settings/settings-store`, and the source
  * files were split over which of the two they stubbed. Both route to the same
  * stubs here, so a component sees the same value whichever import path it uses.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, createRawSnippet } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 const stubs = vi.hoisted(() => ({
   getSetting: (_id: string): unknown => undefined,
@@ -48,14 +48,14 @@ const settingsApi = vi.hoisted(() => ({
   durationValueToMs: vi.fn((value: number) => value),
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ...settingsApi,
 }))
 
-vi.mock('$lib/settings/settings-store', () => settingsApi)
+vi.mock('#lib/settings/settings-store.js', () => settingsApi)
 
-vi.mock('$lib/settings/settings-search', async (importOriginal) => {
+vi.mock('#lib/settings/settings-search.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   // eslint-disable-next-line cmdr/no-confusable-callback-params -- mirrors the real (unconverted) production signature, `(query, settingId) => number[]` in `settings-search.ts`, consumed positionally by `SettingRow.svelte` and `AdvancedSection.svelte`
   const realIndices = actual.getMatchIndicesForLabel as (query: string, settingId: string) => number[]
@@ -69,7 +69,7 @@ vi.mock('$lib/settings/settings-search', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   openAppearanceSettings: vi.fn(() => Promise.resolve()),
   invoke: vi.fn(() => Promise.resolve(null)),

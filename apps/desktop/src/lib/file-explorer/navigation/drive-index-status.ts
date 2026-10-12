@@ -6,8 +6,8 @@
 // items, and footer copy — kept pure (no Svelte, no DOM) so the state→color and
 // state→copy contracts are unit-testable without mounting a component.
 
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { EnableIndexingOutcome, Freshness, DriveIndexRefusal, VolumeIndexStatus } from '$lib/ipc/bindings'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { EnableIndexingOutcome, Freshness, DriveIndexRefusal, VolumeIndexStatus } from '#lib/ipc/bindings.js'
 
 /**
  * The five visible badge states. `disabled` is gray (no live index); `failed` is

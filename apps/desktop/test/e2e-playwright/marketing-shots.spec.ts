@@ -215,7 +215,7 @@ async function stageMainWindow(page: TauriPage): Promise<Awaited<ReturnType<type
  * Two conditions, because `indexStatus` alone isn't the whole truth: a volume reads
  * `fresh` while a replay or an aggregation pass is still running, and that pass paints
  * the status corner's hourglass into the top-right of every master. So the pixels get a
- * vote — the corner must be empty too (`$lib/indexing/IndexingStatusIndicator.svelte`).
+ * vote — the corner must be empty too (`#lib/indexing/IndexingStatusIndicator.svelte`).
  */
 async function waitForIndexedSizes(page: TauriPage): Promise<void> {
   await ensureMcpClient(page)

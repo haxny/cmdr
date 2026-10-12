@@ -7,7 +7,7 @@
  * them on disk, and `operation-conflict-preview.ts` starts the copy.
  */
 
-import type { ConflictPreviewFixtures } from '$lib/ipc/bindings'
+import type { ConflictPreviewFixtures } from '#lib/ipc/bindings.js'
 
 /** What one state copies, and where to. */
 export interface ConflictPreviewCopy {

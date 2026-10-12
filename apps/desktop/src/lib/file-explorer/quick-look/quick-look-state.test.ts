@@ -42,7 +42,7 @@ vi.mock('@tauri-apps/api/event', () => ({
   }),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   quickLookClose: quickLookCloseMock,
   // The typed `onQuickLook*` wrappers hand a bare payload; route them into the
   // `handlers` map under their wire names, re-wrapping into the `{ payload }`

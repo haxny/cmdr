@@ -5,7 +5,7 @@
  */
 
 /**
- * One dropdown row. Structurally a `SelectItem` (`$lib/ui/Select.svelte`), spelled
+ * One dropdown row. Structurally a `SelectItem` (`#lib/ui/Select.svelte`), spelled
  * out here rather than imported: this module is plain TypeScript, and a type
  * reaching out of a `.svelte` module block doesn't resolve for the TS-aware lint
  * pass over `.ts` files.

@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { ICON_COMPONENTS, type IconName } from '$lib/ui/icons/icon-map'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { ICON_COMPONENTS, type IconName } from '#lib/ui/icons/icon-map.js'
     import GlyphGrid from '../GlyphGrid.svelte'
 
     /** Where each glyph shows up in the app. Derived by grepping `name="<icon>"` call sites. */

@@ -1,5 +1,5 @@
-import type { WriteOperationType } from '$lib/ipc/bindings'
-import type { IconName } from '$lib/ui/icons/icon-map'
+import type { WriteOperationType } from '#lib/ipc/bindings.js'
+import type { IconName } from '#lib/ui/icons/icon-map.js'
 
 /**
  * The glyph for a queue row, by operation type. Explicit arms for every type:

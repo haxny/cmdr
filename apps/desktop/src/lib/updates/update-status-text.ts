@@ -5,8 +5,8 @@
  * `formatUpdateStatus` returns `null` while a failure stands; callers render `describeUpdateFailure`
  * instead, with a follow-up "Send error report" link where `updateFailureOffersReport` says one is worth it.
  */
-import { tString } from '$lib/intl/messages.svelte'
-import { describeServerRequestFailure, serverRequestLogLevel } from '$lib/error-messages/server-request'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { describeServerRequestFailure, serverRequestLogLevel } from '#lib/error-messages/server-request.js'
 import type { ManagedUpdateOutcome, UpdateFailure } from './update-state.svelte'
 
 export interface UpdateStatusReadable {

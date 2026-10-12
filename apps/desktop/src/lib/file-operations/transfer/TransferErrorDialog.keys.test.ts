@@ -7,11 +7,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, mount, unmount } from 'svelte'
 import TransferErrorDialog from './TransferErrorDialog.svelte'
-import type { WriteOperationError } from '$lib/file-explorer/types'
+import type { WriteOperationError } from '#lib/file-explorer/types.js'
 import { DECISION_KEYS_ARM_MS, ERROR_KEYS } from '../decision-keys'
 import { buttonLabel } from '../test-button-label'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   openExternalUrl: vi.fn(() => Promise.resolve()),

@@ -1,8 +1,8 @@
 /** Resolve the complete single-item Copy/Move target before preflight or dispatch. */
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import { capabilitiesForPane } from '$lib/file-explorer/pane/volume-capabilities'
-import { isPathOnVolume } from '$lib/path/canonical'
-import { DEFAULT_VOLUME_ID } from '$lib/tauri-commands'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { isPathOnVolume } from '#lib/path/canonical.js'
+import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
 import { containingFolder, getFolderName, resolveTransferFilename, toVolumeRelativePath } from './transfer-dialog-utils'
 
 function volumeRoot(volumes: VolumeInfo[], id: string): string {

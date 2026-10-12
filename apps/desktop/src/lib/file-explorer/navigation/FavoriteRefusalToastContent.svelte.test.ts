@@ -8,7 +8,7 @@ import { mount, tick, unmount } from 'svelte'
 import FavoriteRefusalToastContent from './FavoriteRefusalToastContent.svelte'
 
 const { dismissToast } = vi.hoisted(() => ({ dismissToast: vi.fn() }))
-vi.mock('$lib/ui/toast', () => ({ dismissToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast }))
 
 let mounted: ReturnType<typeof mount> | null = null
 

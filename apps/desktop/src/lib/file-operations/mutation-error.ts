@@ -1,6 +1,6 @@
 /** Carrying a typed `MutationError` from an IPC call to the surface that words it. */
-import type { MutationError } from '$lib/ipc/bindings'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
+import type { MutationError } from '#lib/ipc/bindings.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 /** An `Error` that still carries the backend's typed refusal. */
 export class MutationFailure extends TypedFailure<MutationError> {

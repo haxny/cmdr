@@ -8,14 +8,14 @@
      * `topmost` puts it over any dialog already open — including a modal
      * conflict prompt, which is exactly the state a user reaches for ⌘Q from.
      */
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { operationTypeIcon } from '$lib/file-operations/queue/operation-icon'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { OperationSnapshot } from '$lib/tauri-commands'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { operationTypeIcon } from '#lib/file-operations/queue/operation-icon.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
 
     interface Props {
         /** The operations holding the quit, in the backend's registration order. */

@@ -14,13 +14,13 @@
  * Both functions are pure (the resolver takes `resolvePathVolume` as a dep), so
  * they're unit-testable without a running app.
  */
-import { DEFAULT_VOLUME_ID } from '$lib/tauri-commands'
-import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '$lib/search/capabilities'
+import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
+import { SEARCH_RESULTS_NOT_A_FOLDER_TOAST } from '#lib/search/capabilities.js'
 import { findVolumeIdForPath } from '../drag/drop-operation'
 import { getCommonParentPath, getDestinationVolumeInfo } from './transfer-operations'
 import { capabilitiesForPane } from './volume-capabilities'
-import { tString } from '$lib/intl/messages.svelte'
-import type { PathVolumeResolution } from '$lib/tauri-commands'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { PathVolumeResolution } from '#lib/tauri-commands/index.js'
 import type { VolumeInfo } from '../types'
 
 /** A blocking alert (read-only destination). */

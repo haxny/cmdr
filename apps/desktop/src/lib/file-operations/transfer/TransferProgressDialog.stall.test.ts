@@ -16,17 +16,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import type { OperationSnapshot, TransferActivity, WriteProgressEvent } from '$lib/tauri-commands'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { OperationSnapshot, TransferActivity, WriteProgressEvent } from '#lib/tauri-commands/index.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import TransferProgressDialog from './TransferProgressDialog.svelte'
 
 let progressCb: ((e: WriteProgressEvent) => void) | null = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1' })),
@@ -79,23 +79,23 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 
 const openErrorReportFor = vi.hoisted(() => vi.fn())
-vi.mock('$lib/error-reporter/error-report-flow.svelte', () => ({ openErrorReportFor }))
-vi.mock('$lib/error-reporter/breadcrumbs', () => ({ recordBreadcrumb: vi.fn() }))
+vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({ openErrorReportFor }))
+vi.mock('#lib/error-reporter/breadcrumbs.js', () => ({ recordBreadcrumb: vi.fn() }))
 
 async function flushPromises(): Promise<void> {
   for (let i = 0; i < 10; i++) {

@@ -166,7 +166,7 @@ unit-tested:
   acting through it would dial or pin the root behind the person's back. Each S3 place row connects, pins, edits, and
   forgets through its own volume id with the regular server-place menu (`servers-hub-actions.ts`); the account row's
   Enter answers a toast pointing at its places (`openMoveFor`'s `account` move), its Edit opens the account's editor
-  (rename it, change its secret: `$lib/servers/DETAILS.md` § "An S3 edit is the ACCOUNT's or a PLACE's"), it has no
+  (rename it, change its secret: `#lib/servers/DETAILS.md` § "An S3 edit is the ACCOUNT's or a PLACE's"), it has no
   right-click menu, and F8 forgets every place plus, box checked, the secret they share (written FIRST, while a place
   still names the entry). The account's status is its most urgent place's. Forgetting one place offers that shared
   secret UNCHECKED (`server-row-actions.ts::forgetSavedServer`), since the account's other places sign in with it.
@@ -215,9 +215,9 @@ unit-tested:
   at every branch, which is why they live in one unit: a one-place row is a PLACE the servers family speaks for, an SMB
   host is a manual-server entry whose "disconnect" unmounts shares rather than dropping a session.
 - **`../navigation/servers-hub-rows` consumers**: `../pane/types.ts`'s `NetworkCursorEntry` gains a `server` arm, which
-  is how the palette's server commands reach the row under the cursor (`$lib/servers/server-command-target.ts` owns the
+  is how the palette's server commands reach the row under the cursor (`#lib/servers/server-command-target.ts` owns the
   rule: the hub IS a pane, so "the focused pane's volume" would answer the synthetic hub row). The `host` arm carries
-  its row too, so Edit and Rename reach an SMB host (`editHubRow`, `$lib/servers/DETAILS.md` § "Which server a command
+  its row too, so Edit and Rename reach an SMB host (`editHubRow`, `#lib/servers/DETAILS.md` § "Which server a command
   acts on").
 
 ### Discovery off
@@ -444,7 +444,7 @@ Which reasons are which, and the two look-alikes that never arrive as this one: 
 `src-tauri/src/network/DETAILS.md` § "This Mac refusing the route") the bridge also passes `blockedServer` (the event's
 `displayName`), and the notice swaps its sentence for `directConnectionBlockedByThisMacToast` (names the server and the
 OS-localized `systemStrings.localNetwork`), leads with an "Open {localNetwork} settings" button
-(`openLocalNetworkSettings` in `$lib/tauri-commands`, the same opener Settings > Network uses), and keeps the retry
+(`openLocalNetworkSettings` in `#lib/tauri-commands`, the same opener Settings > Network uses), and keeps the retry
 beside it as the secondary button: the switch works at once, so pressing the retry right after is the whole fix.
 "Connect directly" words the same answer through `LocalNetworkBlockedToastContent.svelte` (sentence plus the settings
 button), raised by `announceNoUpgrade` instead of a plain string toast, so the sign-in sheet's rounds get it too.
@@ -573,7 +573,7 @@ connect views says why, and why never "Trust it"). `crates/cmdr-sftp/DETAILS.md`
 
 Lazy-nav path: opening a share that's already `Disconnected` (no fresh event in flight), the `smb-view-state.svelte.ts`
 subscription `$effect` notices `currentVolumeInfo?.connectionState === 'disconnected'` and calls
-`connectPlace({ volumeId, connectionState: 'disconnected' })`. ❗ Through `$lib/servers/connect-flow.ts`'s arm 1 rather
+`connectPlace({ volumeId, connectionState: 'disconnected' })`. ❗ Through `#lib/servers/connect-flow.ts`'s arm 1 rather
 than `manager.startCycle` directly, because that module documents itself as the ONE caller of the manager's lazy start
 and a second caller makes the guardrail a lie. Arm 1 is that call and nothing else, and the manager is idempotent, so
 landing on the same share twice still costs nothing. The signed-out banner's Sign in goes through the same flow's arm 2,
@@ -637,7 +637,7 @@ the hosts it found, so a view opens on them at once and the fresh browse adds an
   dispatcher runs after this handler and has no `defaultPrevented` guard, so `pane.refresh` would ALSO dispatch into
   `refreshPane` → `refreshNetworkHosts()` → `ServersHub.refresh()`, the same `handleRefreshClick()` the local branch
   just ran, giving every host two `clearShareState` + `fetchShares` rounds per keypress. Pinned by `ServersHub.test.ts`;
-  the general rule is in `$lib/shortcuts/DETAILS.md` § "Local handlers resolve through the registry too".
+  the general rule is in `#lib/shortcuts/DETAILS.md` § "Local handlers resolve through the registry too".
 - **Neither browser's `handleKeyDown` returns a "handled" boolean** (`BrowserAPI` in `../pane/types.ts`). Nothing above
   them branches on one: `NetworkMountView` and `pane-key-router` hand the network view every key and return either way,
   so the claim is `preventDefault()` + `stopPropagation()` on the event.
@@ -653,11 +653,11 @@ the hosts it found, so a view opens on them at once and the fresh browse adds an
 
 ## Dependencies
 
-- `$lib/tauri-commands`: `listNetworkHosts`, `resolveNetworkHost`, `listSharesOnHost`, `listSharesWithCredentials`,
+- `#lib/tauri-commands`: `listNetworkHosts`, `resolveNetworkHost`, `listSharesOnHost`, `listSharesWithCredentials`,
   `prefetchShares`, `getSmbCredentials`, `saveSmbCredentials`, `deleteSmbCredentials`, `getUsernameHint`,
   `getKnownShareByName`, `updateKnownShare`, `updateLeftPaneState`, `updateRightPaneState`, `connectToServer`
-- `$lib/settings/network-settings`: `getNetworkTimeoutMs`, `getShareCacheTtlMs`
-- `$lib/utils/confirm-dialog`: `confirmDialog`
-- `$lib/ui/toast`: `addToast`
+- `#lib/settings/network-settings`: `getNetworkTimeoutMs`, `getShareCacheTtlMs`
+- `#lib/utils/confirm-dialog`: `confirmDialog`
+- `#lib/ui/toast`: `addToast`
 - `../navigation/keyboard-shortcuts`: `handleNavigationShortcut`
 - `../types`: `NetworkHost`, `DiscoveryState`, `ShareInfo`, `ShareListResult`, `ShareListError`, `AuthMode`

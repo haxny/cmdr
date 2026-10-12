@@ -1,5 +1,5 @@
 /**
- * Fixtures for `archive-password` (`$lib/file-operations/transfer/ArchivePasswordDialog.svelte`).
+ * Fixtures for `archive-password` (`#lib/file-operations/transfer/ArchivePasswordDialog.svelte`).
  *
  * Raw copy on purpose: this module is dev-only and sits outside the i18n-enforced
  * areas, so fixture strings never reach the message catalog.

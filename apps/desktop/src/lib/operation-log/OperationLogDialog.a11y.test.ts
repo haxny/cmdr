@@ -14,8 +14,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import OperationLogDialog from './OperationLogDialog.svelte'
 import { operationLogState } from './operation-log-trigger.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import type { OperationRow, OperationItemView } from '$lib/ipc/bindings'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import type { OperationRow, OperationItemView } from '#lib/ipc/bindings.js'
 import { RollbackRefusalFailure } from './rollback-refusal'
 
 const getDetailMock = vi.fn((_id: string, _limit: number, _offset: number) =>
@@ -23,7 +23,7 @@ const getDetailMock = vi.fn((_id: string, _limit: number, _offset: number) =>
 )
 const rollbackMock = vi.fn((_id: string) => Promise.resolve({ inverseOpId: 'op-inverse' }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   getRecentOperationLogEntries: vi.fn(() => Promise.resolve([])),

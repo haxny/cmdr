@@ -8,8 +8,8 @@
  * replaces the list while a query is active; clearing it restores the list.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
 import {
   archiveAskCmdrConversation,
   listAskCmdrConversations,
@@ -17,7 +17,7 @@ import {
   searchAskCmdrConversations,
   type ConversationRow,
   type ConversationSearchHit,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 import { newChat, switchToThread } from './ask-cmdr-trigger.svelte'
 
 const log = getAppLogger('askCmdr')

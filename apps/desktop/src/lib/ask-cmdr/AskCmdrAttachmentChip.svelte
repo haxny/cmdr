@@ -6,11 +6,11 @@
   as plain {text} (Svelte auto-escapes), NEVER {@html}.
 -->
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { attachmentBasename } from './ask-cmdr-attachments'
-    import type { AttachmentRef } from '$lib/tauri-commands'
+    import type { AttachmentRef } from '#lib/tauri-commands/index.js'
 
     interface Props {
         attachment: AttachmentRef

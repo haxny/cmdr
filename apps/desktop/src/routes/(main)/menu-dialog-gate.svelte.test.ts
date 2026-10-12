@@ -9,11 +9,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
 import { SvelteSet } from 'svelte/reactivity'
 import { startMenuDialogGate } from './menu-dialog-gate.svelte'
-import { setCommandsRefusedOverDialog } from '$lib/tauri-commands'
+import { setCommandsRefusedOverDialog } from '#lib/tauri-commands/index.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/tauri-commands')>()),
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
   setCommandsRefusedOverDialog: vi.fn(() => Promise.resolve()),
 }))
 

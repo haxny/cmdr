@@ -3,8 +3,8 @@
 import { type UnlistenFn } from '@tauri-apps/api/event'
 import type { VolumeInfo } from '../file-explorer/types'
 import type { TimedOut } from './ipc-types'
-import { getAppLogger } from '$lib/logging/logger'
-import { throwEjectError } from '$lib/file-explorer/navigation/eject-error'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { throwEjectError } from '#lib/file-explorer/navigation/eject-error.js'
 import {
   commands,
   events,
@@ -21,9 +21,9 @@ import {
   type VolumesEjectingChanged,
   type VolumeSpaceChanged,
   type VolumeUnmounted,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
-import { withTimeout } from '$lib/utils/timing'
+import { withTimeout } from '#lib/utils/timing.js'
 
 export type { Location, ResolveLocationResult, VolumeContextAction }
 
@@ -120,7 +120,7 @@ export async function resolveLocation(path: string): Promise<ResolveLocationResu
 }
 
 /** Space information for a volume: `SpaceInfo` from the generated bindings. */
-export type { SpaceInfo } from '$lib/ipc/bindings'
+export type { SpaceInfo } from '#lib/ipc/bindings.js'
 
 /**
  * Gets space information (total and available bytes) for a volume at the given path.
@@ -381,7 +381,7 @@ export async function checkFullDiskAccessQuiet(): Promise<boolean> {
 
 /**
  * Returns the current set of TCC-restricted paths (sorted, absolute). Used by
- * `$lib/stores/restricted-paths-store.svelte.ts` to hydrate the in-memory set
+ * `#lib/stores/restricted-paths-store.svelte.ts` to hydrate the in-memory set
  * before the first `restricted-paths-changed` event arrives.
  */
 export async function getRestrictedPaths(): Promise<string[]> {

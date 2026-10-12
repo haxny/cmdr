@@ -12,9 +12,9 @@
      * Rationale, and why the app list lives in Rust: `DETAILS.md` § "Open terminal
      * here", and `src-tauri/src/file_system/DETAILS.md`.
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import { listTerminalApps } from '$lib/tauri-commands'
-    import type { TerminalAppList } from '$lib/ipc/bindings'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { listTerminalApps } from '#lib/tauri-commands/index.js'
+    import type { TerminalAppList } from '#lib/ipc/bindings.js'
     import AppChoiceSelect from './AppChoiceSelect.svelte'
     import type { AppChoiceOption } from './app-choice-options'
     import { selectedTerminalAppId, terminalAppItems } from './terminal-app-options'

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { buildSectionTree, type SettingsSection } from '$lib/settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { sectionTitle } from '$lib/settings/section-i18n'
-    import type { MessageKey } from '$lib/intl/keys.gen'
+    import { buildSectionTree, type SettingsSection } from '#lib/settings/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { sectionTitle } from '#lib/settings/section-i18n.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
 
     interface Props {
         sectionName: string

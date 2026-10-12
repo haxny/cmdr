@@ -7,7 +7,7 @@
 
 import { flushSync, mount } from 'svelte'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import AskCmdrContextGauge from './AskCmdrContextGauge.svelte'
 import type { ContextUsage } from './ask-cmdr-context-usage'
 

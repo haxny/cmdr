@@ -27,13 +27,13 @@ import {
 } from './mcp-listeners'
 import type { ExplorerAPI } from './explorer-api'
 import { NAV_QUIET_WAIT } from './mcp-nav-landing'
-import type { NavigateResult } from '$lib/file-explorer/pane/navigate'
+import type { NavigateResult } from '#lib/file-explorer/pane/navigate.js'
 
 const { resolveLocationMock } = vi.hoisted(() => ({ resolveLocationMock: vi.fn() }))
-vi.mock('$lib/file-explorer/navigation/resolve-location', () => ({ resolveLocation: resolveLocationMock }))
+vi.mock('#lib/file-explorer/navigation/resolve-location.js', () => ({ resolveLocation: resolveLocationMock }))
 
 const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

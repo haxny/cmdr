@@ -15,7 +15,7 @@
  * write time all still run per row, inside the proposal that row belongs to.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { SvelteSet } from 'svelte/reactivity'
 import type { RailMessage } from './ask-cmdr-messages'
 import { askCmdrState, type BulkRenameReviewProposal, type BulkRenameReviewRow } from './ask-cmdr-state.svelte'
@@ -27,7 +27,7 @@ import {
   reviseBulkRenameRow,
   undoOperations,
   type AskCmdrStreamEvent,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
 

@@ -5,7 +5,7 @@
  * Classification is the backend's (`write_operations/mutation_error.rs`); the
  * words are all here, pulled from the `errors.mutation.*` and `errors.volume.*`
  * catalogs so every locale gets its own. Same split as the listing path
- * (`$lib/error-messages/`) and the transfer path
+ * (`#lib/error-messages/`) and the transfer path
  * (`./transfer/transfer-error-messages.ts`); `docs/guides/error-handling.md` is
  * the map.
  *
@@ -23,10 +23,10 @@
  * NEVER the message: `technicalDetail()` returns them separately, for a details
  * disclosure or the log.
  */
-import type { MutationError, VolumeError } from '$lib/ipc/bindings'
-import { getMessage, tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { getGitErrorMessage } from '$lib/error-messages/git-error-messages'
+import type { MutationError, VolumeError } from '#lib/ipc/bindings.js'
+import { getMessage, tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { getGitErrorMessage } from '#lib/error-messages/git-error-messages.js'
 
 /** What is being named, so the reused validation copy agrees grammatically. */
 export type NamedKind = 'file' | 'folder'

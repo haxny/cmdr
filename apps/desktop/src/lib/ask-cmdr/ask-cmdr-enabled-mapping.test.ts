@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { LegacyAskCmdrOptIn } from '$lib/tauri-commands'
+import type { LegacyAskCmdrOptIn } from '#lib/tauri-commands/index.js'
 
 const { legacyMock, settings, explicit } = vi.hoisted(() => {
   // An annotation, not an `as`: the lint auto-fix strips an assertion it thinks is unnecessary.
@@ -13,10 +13,10 @@ const { legacyMock, settings, explicit } = vi.hoisted(() => {
   return { legacyMock: vi.fn<() => Promise<LegacyAskCmdrOptIn>>(), settings, explicit: new Set<string>() }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   askCmdrLegacyOptIn: () => legacyMock(),
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string): unknown => settings[id],
   setSetting: vi.fn((id: string, value: unknown) => {
     settings[id] = value
@@ -24,12 +24,12 @@ vi.mock('$lib/settings', () => ({
   }),
   isExplicitlySet: (id: string) => explicit.has(id),
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
 import { mapLegacyAskCmdrOptIn } from './ask-cmdr-enabled-mapping'
-import { setSetting } from '$lib/settings'
+import { setSetting } from '#lib/settings/index.js'
 
 beforeEach(() => {
   vi.clearAllMocks()

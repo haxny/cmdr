@@ -6,7 +6,7 @@
      * and keep the value a `number` at the boundary (Ark speaks strings internally).
      */
     import { NumberInput, type NumberInputValueChangeDetails } from '@ark-ui/svelte/number-input'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         value: number

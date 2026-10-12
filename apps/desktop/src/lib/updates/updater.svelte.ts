@@ -5,23 +5,23 @@ import {
   recordUpdateCheck,
   updateCheckDueIn,
   updateWriteBlocker,
-} from '$lib/tauri-commands'
-import type { BundleWriteBlocker } from '$lib/tauri-commands'
-import { failureOf } from '$lib/ipc/typed-failure'
+} from '#lib/tauri-commands/index.js'
+import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
+import { failureOf } from '#lib/ipc/typed-failure.js'
 import { UpdateDownloadFailure } from './update-download-failure'
 import { UpdateInstallFailure } from './update-install-failure'
-import type { ServerRequestError, UpdateCheckOutcome } from '$lib/ipc/bindings'
+import type { ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
 import { getVersion } from '@tauri-apps/api/app'
-import { forceSave, getSetting, setSetting } from '$lib/settings/settings-store'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
-import { serverRequestFailureOf, serverRequestLogLevel } from '$lib/error-messages/server-request'
-import { compareVersions } from '$lib/utils/version'
+import { forceSave, getSetting, setSetting } from '#lib/settings/settings-store.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
+import { serverRequestFailureOf, serverRequestLogLevel } from '#lib/error-messages/server-request.js'
+import { compareVersions } from '#lib/utils/version.js'
 import { blockerFailure, reportUpdateCheck, type UpdateCheckFailure, type UpdateCheckTrigger } from './update-analytics'
 import UpdateToastContent from './UpdateToastContent.svelte'
 import UpdateCheckToastContent from './UpdateCheckToastContent.svelte'
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { isMacOS } from '$lib/shortcuts/key-capture'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 // `updateState` lives in its own module to avoid an import cycle: toast components read it directly,
 // and this module also imports those toast components. Re-exported here so existing consumers
 // (Settings section, command-dispatch, tests) keep using the old import path.

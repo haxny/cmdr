@@ -15,22 +15,22 @@ ruleTester.run('no-raw-bindings-import', rule, {
   valid: [
     // Type imports from bindings are the source of truth — never reported.
     {
-      code: `import type { RepoInfo } from '$lib/ipc/bindings'`,
+      code: `import type { RepoInfo } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/file-explorer/git/git-store.svelte.ts',
     },
     // Inline type specifier alongside nothing runtime — fine.
     {
-      code: `import { type RepoInfo, type TagRef } from '$lib/ipc/bindings'`,
+      code: `import { type RepoInfo, type TagRef } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/file-explorer/types.ts',
     },
     // Importing the typed wrapper is the whole point.
     {
-      code: `import { getRepoInfo } from '$lib/tauri-commands'`,
+      code: `import { getRepoInfo } from '#lib/tauri-commands/index.js'`,
       filename: 'src/lib/file-explorer/git/git-store.svelte.ts',
     },
     // The wrapper layer itself legitimately imports the raw bindings.
     {
-      code: `import { commands } from '$lib/ipc/bindings'`,
+      code: `import { commands } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/tauri-commands/git.ts',
     },
     // The bindings module + typed-events plumbing may import `./bindings`.
@@ -40,48 +40,48 @@ ruleTester.run('no-raw-bindings-import', rule, {
     },
     // Tests mock the bindings on purpose — exempt by path.
     {
-      code: `import { commands } from '$lib/ipc/bindings'`,
+      code: `import { commands } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/file-explorer/git/git-store.test.ts',
     },
     // Dev-only debug routes are exempt (same stance as no-raw-tauri-invoke).
     {
-      code: `import { commands } from '$lib/ipc/bindings'`,
+      code: `import { commands } from '#lib/ipc/bindings.js'`,
       filename: 'src/routes/debug/DebugSmbDiagnosticsPanel.svelte',
     },
     // A same-named import from an unrelated module is not our concern.
     {
-      code: `import { commands } from '$lib/command-palette/registry'`,
+      code: `import { commands } from '#lib/command-palette/registry.js'`,
       filename: 'src/lib/whatever.ts',
     },
   ],
   invalid: [
     // Bare `commands` value import in feature code.
     {
-      code: `import { commands } from '$lib/ipc/bindings'`,
+      code: `import { commands } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/accent-color.ts',
       errors: [{ messageId: 'rawBindingsImport' }],
     },
     // `events` value import in feature code.
     {
-      code: `import { events } from '$lib/ipc/bindings'`,
+      code: `import { events } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/settings-store.ts',
       errors: [{ messageId: 'rawBindingsImport' }],
     },
     // Aliased value import still reaches past the seam.
     {
-      code: `import { commands as ipcCommands } from '$lib/ipc/bindings'`,
+      code: `import { commands as ipcCommands } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/shortcuts/shortcuts-store.ts',
       errors: [{ messageId: 'rawBindingsImport' }],
     },
     // Value `commands` mixed with a type import: only the value specifier is flagged.
     {
-      code: `import { commands, type RepoInfo } from '$lib/ipc/bindings'`,
+      code: `import { commands, type RepoInfo } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/file-explorer/git/git-store.svelte.ts',
       errors: [{ messageId: 'rawBindingsImport' }],
     },
     // Both runtime bindings in one import → one report each.
     {
-      code: `import { commands, events } from '$lib/ipc/bindings'`,
+      code: `import { commands, events } from '#lib/ipc/bindings.js'`,
       filename: 'src/lib/downloads/event-bridge.svelte.ts',
       errors: [{ messageId: 'rawBindingsImport' }, { messageId: 'rawBindingsImport' }],
     },

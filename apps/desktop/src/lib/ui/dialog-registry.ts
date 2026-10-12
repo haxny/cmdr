@@ -8,7 +8,7 @@
  * tools can refuse honestly while a blocking dialog is up.
  *
  * The gate's scope and the reasoning behind each `whileOpen` verdict:
- * `$lib/file-explorer/pane/DETAILS.md` § "The operation-start gate".
+ * `#lib/file-explorer/pane/DETAILS.md` § "The operation-start gate".
  */
 
 /**

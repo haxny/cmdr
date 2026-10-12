@@ -3,7 +3,7 @@
  * (ascending / descending / toggle), and the per-pane MCP `sort.set` (explicit
  * column + order on a specific pane).
  */
-import type { CommandArgs } from '$lib/commands'
+import type { CommandArgs } from '#lib/commands/index.js'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'
 

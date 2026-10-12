@@ -33,10 +33,10 @@ import {
   type KnownClash,
   type SourceItemInput,
   type VolumeConflictInfo,
-} from '$lib/tauri-commands'
-import { pluralize } from '$lib/utils/pluralize'
-import { withTimeout } from '$lib/utils/timing'
-import type { Logger } from '$lib/logging/logger'
+} from '#lib/tauri-commands/index.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import { withTimeout } from '#lib/utils/timing.js'
+import type { Logger } from '#lib/logging/logger.js'
 
 /** The frontend's own bound on the check, in ms.
  *

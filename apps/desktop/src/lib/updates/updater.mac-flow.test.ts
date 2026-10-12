@@ -28,7 +28,7 @@ const {
   getVersionMock: vi.fn(() => Promise.resolve('0.28.0')),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkForUpdate: checkForUpdateMock,
   downloadUpdate: downloadUpdateMock,
   installUpdate: installUpdateMock,
@@ -40,11 +40,11 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 // The whole point of this file: take the macOS branch, where the three custom commands live.
-vi.mock('$lib/shortcuts/key-capture', () => ({ isMacOS: () => true }))
+vi.mock('#lib/shortcuts/key-capture.js', () => ({ isMacOS: () => true }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast: addToastMock, dismissToast: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock, dismissToast: vi.fn() }))
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((id: string) => {
     if (id === 'onboarding.completed') return false
     if (id === 'updates.autoCheck') return true
@@ -57,7 +57,7 @@ vi.mock('$lib/settings/settings-store', () => ({
 
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: getVersionMock }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }),
 }))
 

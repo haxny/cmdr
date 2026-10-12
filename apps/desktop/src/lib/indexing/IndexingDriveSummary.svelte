@@ -23,9 +23,9 @@
         type AggregationSubPhase,
     } from './indexing-steps'
     import { computeScanProgress } from './eta'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import { getVolumes } from '$lib/stores/volume-store.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         activity: VolumeIndexActivity

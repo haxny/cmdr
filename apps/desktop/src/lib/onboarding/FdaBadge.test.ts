@@ -10,14 +10,14 @@ const { checkFullDiskAccessQuiet, isMacOS } = vi.hoisted(() => ({
   isMacOS: vi.fn<() => boolean>(() => true),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkFullDiskAccessQuiet: () => checkFullDiskAccessQuiet(),
 }))
-vi.mock('$lib/shortcuts/key-capture', () => ({
+vi.mock('#lib/shortcuts/key-capture.js', () => ({
   isMacOS: () => isMacOS(),
 }))
 
-import { markDialogOpen, markDialogClosed, _resetOpenDialogsForTesting } from '$lib/ui/open-dialogs.svelte'
+import { markDialogOpen, markDialogClosed, _resetOpenDialogsForTesting } from '#lib/ui/open-dialogs.svelte.js'
 import { refreshFdaStatus, _resetFdaStatusForTests } from './fda-status.svelte'
 import { resetForTesting, setCurrentStep } from './onboarding-state.svelte'
 import FdaBadge from './FdaBadge.svelte'

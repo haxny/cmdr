@@ -464,21 +464,21 @@ Manual end-to-end testing runs the Rust indexer via `pnpm dev`.
 
 ## Dependencies
 
-- `$lib/ipc/bindings`: `commands` (status query).
-- `$lib/tauri-commands`: the `tauri-specta`-typed indexing event wrappers (`onIndexScan*`, `onIndexAggregation*`,
+- `#lib/ipc/bindings`: `commands` (status query).
+- `#lib/tauri-commands`: the `tauri-specta`-typed indexing event wrappers (`onIndexScan*`, `onIndexAggregation*`,
   `onIndexReplay*`, `onIndexRescanNotification`, `onIndexNeedsFreshScan`, `onIndexDirUpdated`) + `UnlistenFn`, in
   `tauri-commands/indexing.ts`.
-- `$lib/ui/toast`: `addToast` (the rescan-notification, needs-fresh-scan, and memory-stop toasts).
-- `$lib/file-explorer/selection/selection-info-utils`: `formatNumber` (indicator only, `'en-US'` locale).
-- `$lib/tooltip/tooltip`: `tooltip` action with the `contentEl` live-content param (indicator only).
-- `$lib/ui/ProgressBar.svelte`: size `sm` (drive row).
-- `$lib/stores/volume-store.svelte`: `getVolumes` (the indicator and the needs-fresh-scan toast each resolve a
+- `#lib/ui/toast`: `addToast` (the rescan-notification, needs-fresh-scan, and memory-stop toasts).
+- `#lib/file-explorer/selection/selection-info-utils`: `formatNumber` (indicator only, `'en-US'` locale).
+- `#lib/tooltip/tooltip`: `tooltip` action with the `contentEl` live-content param (indicator only).
+- `#lib/ui/ProgressBar.svelte`: size `sm` (drive row).
+- `#lib/stores/volume-store.svelte`: `getVolumes` (the indicator and the needs-fresh-scan toast each resolve a
   `volumeId` → display name, both falling back to the id — a drive that just went away may already be out of the store).
 
 ## i18n
 
-All user-facing copy here lives in `$lib/intl/messages/en/indexing.json` (prefix `indexing.*`), resolved via `tString()`
-from `$lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/indexing/`. Don't hardcode copy. The backend's
+All user-facing copy here lives in `#lib/intl/messages/en/indexing.json` (prefix `indexing.*`), resolved via `tString()`
+from `#lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/indexing/`. Don't hardcode copy. The backend's
 typed discriminators map to catalog KEYS (`rescanReasonToMessageKey`; the checklist's `stepKindToLabelKey` /
 `computeSubPhaseToLabelKey` in `indexing-steps.ts`), resolved at render time — branch on the typed enum, never on
 wording. The `'bytes'` / `'entries'` scan-unit tags and `'scan'`/`'aggregation'`/`'replay'` mode strings are internal

@@ -42,7 +42,7 @@ address avoids.
 
 ## The "change" link
 
-`common.attachEmail` carries a `<change>` tag, so the label renders through `<Trans>` (`$lib/intl`) rather than
+`common.attachEmail` carries a `<change>` tag, so the label renders through `<Trans>` (`#lib/intl`) rather than
 `tString()`, with `{emailAddress}` as a plain param. The tag and the param are named apart on purpose:
 `i18n-tag-param-collision` is an error precisely because `<Trans>` merges tag snippets into the interpolation params.
 

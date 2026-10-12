@@ -67,7 +67,7 @@ So: one implementation per quantity, and a lint that keeps it that way.
   the Size filter popover and chips, the Settings unit tiles, and the operation-log size options. The Rust side writes
   its own model- and log-facing sizes with `search::query::format_size` (base 1024, IEC symbols).
 - **Time units need no catalog.** CLDR's narrow units are what `formatDuration` already speaks, and `formatMilliseconds`
-  uses the same style through `formatNarrowMeasure` (`$lib/intl/duration-format`): unit from the UI language, digits
+  uses the same style through `formatNarrowMeasure` (`#lib/intl/duration-format`): unit from the UI language, digits
   from the formatting locale ("1,4 Sek." in German, "1.4 s" for French on a US-formatted Mac).
 
 ## Type safety: how far, and why not further
@@ -107,7 +107,7 @@ rides on `git_meta`, a typed `GitEntryMeta` the frontend words itself.
 
 1. A **binary ladder literal** (`1024`, `1048576`, `1073741824`, `1099511627776`) as an operand of `*`, `/`, or `**`.
 2. A **formatter-shaped name** (`formatBytes`, `formatSize`, `formatSpeed`, `formatEta`, …) whose body also contains a
-   ladder literal or a unit label. The body condition is what lets a wrapper that delegates to `$lib/units` keep a
+   ladder literal or a unit label. The body condition is what lets a wrapper that delegates to `#lib/units` keep a
    descriptive name (`formatDbSize` in the debug panel does).
 
 Base-1000 arithmetic is deliberately NOT flagged: `1000` is milliseconds-per-second far more often than it is a

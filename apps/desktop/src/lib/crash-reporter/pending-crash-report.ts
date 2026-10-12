@@ -5,11 +5,11 @@
  * With `updates.crashReports` on and no crash loop, the report goes out and a toast says so. Otherwise the dialog
  * decides, which is why the condition is an AND: an app crashing on launch would otherwise send a report every time.
  */
-import { checkPendingCrashReport, sendCrashReport, type CrashReport } from '$lib/tauri-commands'
-import { getSetting } from '$lib/settings'
-import { addToast } from '$lib/ui/toast'
-import { getAppLogger } from '$lib/logging/logger'
-import { serverRequestFailureOf, serverRequestLogLevel } from '$lib/error-messages/server-request'
+import { checkPendingCrashReport, sendCrashReport, type CrashReport } from '#lib/tauri-commands/index.js'
+import { getSetting } from '#lib/settings/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { serverRequestFailureOf, serverRequestLogLevel } from '#lib/error-messages/server-request.js'
 import CrashReportToastContent from './CrashReportToastContent.svelte'
 
 const log = getAppLogger('crashReporter')

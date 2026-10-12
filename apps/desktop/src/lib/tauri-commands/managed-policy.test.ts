@@ -4,13 +4,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import type { ManagedPolicyView } from '$lib/ipc/bindings'
+import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
 
 const ipc = vi.hoisted(() => ({
   listener: null as ((event: { payload: unknown }) => void) | null,
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { getManagedPolicy: vi.fn() },
   events: {
     managedPolicyChanged: {
@@ -22,7 +22,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { getManagedPolicy, onManagedPolicyChanged } from './managed-policy'
 
 const view: ManagedPolicyView = {

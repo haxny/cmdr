@@ -6,14 +6,14 @@
  * lands on a `reveal_handler_answered`, and the toast frame's × reports
  * `dismissed` rather than `no`: "read it and declined" and "swept it away" are
  * different answers, and the split is the interesting half of the question.
- * Mirrors `$lib/dock/dock-pin-answer.ts`.
+ * Mirrors `#lib/dock/dock-pin-answer.ts`.
  */
 
-import { addToast, dismissToast } from '$lib/ui/toast'
-import { setRevealHandlerEnabled, trackEvent } from '$lib/tauri-commands'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import type { RevealHandlerState } from '$lib/ipc/bindings'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
+import { setRevealHandlerEnabled, trackEvent } from '#lib/tauri-commands/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import type { RevealHandlerState } from '#lib/ipc/bindings.js'
 
 const log = getAppLogger('reveal')
 

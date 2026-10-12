@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { buildHubRows, isNearbyOnly, openMoveFor, savedSmbHostIds } from './servers-hub-rows'
-import type { SavedServer } from '$lib/tauri-commands'
+import type { SavedServer } from '#lib/tauri-commands/index.js'
 import type { NetworkHost, VolumeInfo } from '../types'
 import type { SignedInAs } from './signed-in-as'
 

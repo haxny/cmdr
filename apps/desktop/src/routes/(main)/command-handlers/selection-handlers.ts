@@ -5,7 +5,7 @@
  * branch (a focused `<input>` selects its own text), distinct from the core's
  * pre-dispatch text-region intercept.
  */
-import type { CommandArgs } from '$lib/commands'
+import type { CommandArgs } from '#lib/commands/index.js'
 import type { CommandHandlerRecord } from './types'
 
 export const selectionHandlers = {

@@ -6,10 +6,10 @@
      * action dismisses the toast, as the failure notice's does: the window then
      * says it all.
      */
-    import Button from '$lib/ui/Button.svelte'
-    import { dismissToast } from '$lib/ui/toast'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { openQueueWindow } from '$lib/file-operations/queue/queue-window'
+    import Button from '#lib/ui/Button.svelte'
+    import { dismissToast } from '#lib/ui/toast/index.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { openQueueWindow } from '#lib/file-operations/queue/queue-window.js'
 
     interface Props {
         /** Dedup id of this toast; lets the action get out of its own way. */

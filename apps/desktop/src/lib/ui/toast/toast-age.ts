@@ -8,8 +8,8 @@
  * older than it is.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { formatDuration, seconds } from '$lib/units'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatDuration, seconds } from '#lib/units/index.js'
 
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS

@@ -45,10 +45,10 @@
      * already works.
      */
     import { untrack } from 'svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { bindOperationSession } from '$lib/file-operations/operation-session/bind-operation-session.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { bindOperationSession } from '#lib/file-operations/operation-session/bind-operation-session.svelte.js'
 
     interface Props {
         /** The reversal to command: the operation the journal opened to undo this

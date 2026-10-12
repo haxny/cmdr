@@ -8,10 +8,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FileEntry } from '$lib/file-explorer/types'
+import type { FileEntry } from '#lib/file-explorer/types.js'
 
 const trackEvent = vi.fn<(name: string, props: Record<string, unknown>) => void>()
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   trackEvent: (name: string, props: Record<string, unknown>) => {
     trackEvent(name, props)
   },

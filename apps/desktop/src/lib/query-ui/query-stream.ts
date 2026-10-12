@@ -14,9 +14,9 @@
  * Search's vocabulary.
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { SearchResultEntry } from '$lib/tauri-commands'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 
 /**
  * Which part of a live run produced an update.

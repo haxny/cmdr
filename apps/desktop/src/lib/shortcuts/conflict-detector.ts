@@ -2,8 +2,8 @@
  * Conflict detection for keyboard shortcuts.
  */
 
-import { commands } from '$lib/commands/command-registry'
-import type { Command } from '$lib/commands/types'
+import { commands } from '#lib/commands/command-registry.js'
+import type { Command } from '#lib/commands/types.js'
 import type { ShortcutConflict } from './types'
 import { scopesOverlap, type CommandScope } from './scope-hierarchy'
 import { getEffectiveShortcuts } from './shortcuts-store'

@@ -5,7 +5,7 @@
  * arm; this module keeps the shape and the pure rules. The cancel flow that reads it:
  * `pane/DETAILS.md` § "Escape during a load".
  */
-import type { Location } from '$lib/tauri-commands'
+import type { Location } from '#lib/tauri-commands/index.js'
 import type { HistoryEntry, NavigationHistory } from '../navigation/navigation-history'
 import type { TabId, TabState } from '../tabs/tab-types'
 

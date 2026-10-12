@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { FullDiskAccessChoice } from '$lib/settings'
+import type { FullDiskAccessChoice } from '#lib/settings/index.js'
 
 const mocks = vi.hoisted(() => ({
   isForceOnboarding: vi.fn(),
@@ -35,7 +35,7 @@ const mocks = vi.hoisted(() => ({
   startIndexingAfterFdaDecision: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   isForceOnboarding: mocks.isForceOnboarding,
   checkFullDiskAccess: mocks.checkFullDiskAccess,
   getMacosMajorVersion: mocks.getMacosMajorVersion,
@@ -44,27 +44,27 @@ vi.mock('$lib/tauri-commands', () => ({
   getRevealHandlerState: mocks.getRevealHandlerState,
   startIndexingAfterFdaDecision: mocks.startIndexingAfterFdaDecision,
 }))
-vi.mock('$lib/dock/dock-nudge', () => ({ offerDockPin: mocks.offerDockPin }))
-vi.mock('$lib/reveal/reveal-nudge', () => ({ offerRevealHandler: mocks.offerRevealHandler }))
-vi.mock('$lib/onboarding/onboarding-state.svelte', () => ({ openWizard: mocks.openWizard }))
-vi.mock('$lib/whats-new/whats-new-trigger.svelte', () => ({
+vi.mock('#lib/dock/dock-nudge.js', () => ({ offerDockPin: mocks.offerDockPin }))
+vi.mock('#lib/reveal/reveal-nudge.js', () => ({ offerRevealHandler: mocks.offerRevealHandler }))
+vi.mock('#lib/onboarding/onboarding-state.svelte.js', () => ({ openWizard: mocks.openWizard }))
+vi.mock('#lib/whats-new/whats-new-trigger.svelte.js', () => ({
   runWhatsNewStartupTrigger: mocks.runWhatsNewStartupTrigger,
 }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   forceSave: mocks.forceSave,
   getSetting: mocks.getSetting,
   setSetting: mocks.setSetting,
 }))
 // `isE2eRun` mirrors the real helper: a capture run counts as an E2E run.
-vi.mock('$lib/app-mode', () => ({
+vi.mock('#lib/app-mode.js', () => ({
   getAppMode: mocks.getAppMode,
   isE2eRun: () => mocks.getAppMode() === 'e2e' || mocks.getAppMode() === 'capture',
 }))
-vi.mock('$lib/updates/updater.svelte', () => ({ notifyOnboardingComplete: mocks.notifyOnboardingComplete }))
-vi.mock('$lib/shortcuts/key-capture', () => ({ isMacOS: mocks.isMacOS }))
-vi.mock('$lib/ui/toast', () => ({ addToast: mocks.addToast }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/updates/updater.svelte.js', () => ({ notifyOnboardingComplete: mocks.notifyOnboardingComplete }))
+vi.mock('#lib/shortcuts/key-capture.js', () => ({ isMacOS: mocks.isMacOS }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: mocks.addToast }))
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: mocks.warn, info: vi.fn(), debug: vi.fn(), error: mocks.error }),
 }))
 

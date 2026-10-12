@@ -4,9 +4,9 @@
  * The one place a list of names becomes a phrase inside a sentence, so no
  * feature module hand-joins with `', '` and a hardcoded English "and". The
  * callers: the eject refusal that names the apps still holding a drive
- * (`$lib/file-explorer/navigation/eject-error-messages.ts`), and the transfer
+ * (`#lib/file-explorer/navigation/eject-error-messages.ts`), and the transfer
  * toast naming the metadata a destination couldn't keep
- * (`$lib/file-operations/transfer/transfer-complete-toast.ts`).
+ * (`#lib/file-operations/transfer/transfer-complete-toast.ts`).
  *
  * The locale is {@link getUiLocale}, not the OS formatting one: this is a
  * conjunction inside catalog copy, so it has to speak the language the sentence

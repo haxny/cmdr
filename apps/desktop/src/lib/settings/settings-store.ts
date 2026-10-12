@@ -9,10 +9,10 @@ import { SettingValidationError } from './types'
 import { getDefaultValue, getSettingDefinition, settingsRegistry, validateSettingValue } from './settings-registry'
 import { resolveStorePath } from './store-path'
 import { SCHEMA_VERSION, migrateSettings } from './settings-migrations'
-import { getAppLogger } from '$lib/logging/logger'
-import { pluralize } from '$lib/utils/pluralize'
-import type { RestrictedWindowPersistableSetting, SettingValue } from '$lib/ipc/bindings'
-// Import from the specific submodule, not the `$lib/tauri-commands` barrel: the
+import { getAppLogger } from '#lib/logging/logger.js'
+import { pluralize } from '#lib/utils/pluralize.js'
+import type { RestrictedWindowPersistableSetting, SettingValue } from '#lib/ipc/bindings.js'
+// Import from the specific submodule, not the `#lib/tauri-commands` barrel: the
 // barrel re-exports the entire IPC surface (mtp, search, indexing, licensing, …),
 // so pulling it in for three functions drags that whole graph into every
 // settings-store consumer. The submodule keeps the dependency (and its transform
@@ -21,14 +21,14 @@ import {
   getRestrictedWindowSettings,
   persistRestrictedWindowSetting,
   recordSettingsDefaults,
-} from '$lib/tauri-commands/settings'
+} from '#lib/tauri-commands/settings.js'
 import {
   getSettingLock,
   initManagedPolicy,
   settingLockIn,
   type ManagedPolicyChange,
-} from '$lib/managed-policy/managed-policy.svelte'
-import { lockAllowsWrite, lockedValue } from '$lib/managed-policy/overlay'
+} from '#lib/managed-policy/managed-policy.svelte.js'
+import { lockAllowsWrite, lockedValue } from '#lib/managed-policy/overlay.js'
 
 const log = getAppLogger('settings')
 

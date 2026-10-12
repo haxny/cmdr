@@ -14,8 +14,14 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { onQuitCalledOff, onQuitRequested, quitCancel, quitConfirm, type OperationSnapshot } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import {
+  onQuitCalledOff,
+  onQuitRequested,
+  quitCancel,
+  quitConfirm,
+  type OperationSnapshot,
+} from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('quit')
 

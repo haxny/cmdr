@@ -17,8 +17,8 @@
  * (`dialog-state.svelte.ts`), handed in as `deps`.
  */
 
-import { conflictPolicyFromMcpName } from '$lib/file-operations/transfer/conflict-policy'
-import { getAppLogger } from '$lib/logging/logger'
+import { conflictPolicyFromMcpName } from '#lib/file-operations/transfer/conflict-policy.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import type { ConfirmOptions, ConfirmPress, DeleteConfirmer, TransferConfirmer } from './dialog-props'
 
 const log = getAppLogger('fileExplorer')

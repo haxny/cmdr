@@ -7,7 +7,7 @@
  * the same `startTransferOperation` the progress dialog uses, minus the
  * foreground claim, so the progress slot stays free and a second F5 opens at
  * once. Without a claim, a clash in the job is the main window's conflict host's
- * to ask (`$lib/file-operations/operation-conflict.svelte.ts`), exactly as for
+ * to ask (`#lib/file-operations/operation-conflict.svelte.ts`), exactly as for
  * any backgrounded job: F2 never means "overwrite silently".
  *
  * What it still owes the person, and nothing more (`transfer/DETAILS.md` §
@@ -29,12 +29,12 @@
  */
 
 import { untrack } from 'svelte'
-import { tString } from '$lib/intl/messages.svelte'
-import { getAppLogger } from '$lib/logging/logger'
-import { showQueueHandoffToast } from '$lib/file-operations/queue/queue-handoff-toast'
-import { startTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
-import { getOperationSessions } from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
-import type { OperationOutcome } from '$lib/file-operations/operation-session/operation-session.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { showQueueHandoffToast } from '#lib/file-operations/queue/queue-handoff-toast.js'
+import { startTransferOperation } from '#lib/file-operations/transfer/transfer-dispatch.js'
+import { getOperationSessions } from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
+import type { OperationOutcome } from '#lib/file-operations/operation-session/operation-session.svelte.js'
 import { createTransferPaneEffects, type TransferPaneEffectsDeps } from './transfer-pane-effects'
 import { transferOpLabel } from './transfer-op-label'
 import type { WriteOperationError } from '../types'

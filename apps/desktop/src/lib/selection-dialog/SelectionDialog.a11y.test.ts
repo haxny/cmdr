@@ -10,10 +10,10 @@ import { describe, it, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import { writable } from 'svelte/store'
 import SelectionDialog from './SelectionDialog.svelte'
-import type { FileEntry } from '$lib/file-explorer/types'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import type { FileEntry } from '#lib/file-explorer/types.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   translateSelectionQuery: vi.fn(() =>
@@ -36,7 +36,7 @@ vi.mock('$lib/tauri-commands', () => ({
 }))
 
 let aiProvider: 'off' | 'local' | 'cloud' = 'off'
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return aiProvider
     if (key === 'search.autoApply') return true
@@ -45,7 +45,7 @@ vi.mock('$lib/settings', () => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
 }))
 

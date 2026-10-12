@@ -7,8 +7,8 @@
  * and the component stays markup.
  */
 
-import { isInstantOperation, type OperationRow } from '$lib/file-operations/queue/operations-store.svelte'
-import { isIndeterminateProgressPhase } from '$lib/file-operations/progress-readout'
+import { isInstantOperation, type OperationRow } from '#lib/file-operations/queue/operations-store.svelte.js'
+import { isIndeterminateProgressPhase } from '#lib/file-operations/progress-readout.js'
 
 /**
  * How long an operation has to last before the chip appears for the first time.

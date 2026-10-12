@@ -23,7 +23,7 @@
  * this spelling and the server's own is `cmdr_fs::volume::remote_paths`.
  */
 
-import { volumeScheme } from '$lib/volume-scheme'
+import { volumeScheme } from '#lib/volume-scheme.js'
 
 /** The protocols that address a place by a scheme path. */
 export type ServerPathProtocol = 'sftp' | 'webdav' | 's3'

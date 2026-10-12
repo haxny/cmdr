@@ -9,9 +9,9 @@
  * do is `dock-pin-answer.ts`.
  */
 
-import { addToast } from '$lib/ui/toast'
-import { markNudgeOffered } from '$lib/nudges/nudge-store'
-import { trackEvent } from '$lib/tauri-commands'
+import { addToast } from '#lib/ui/toast/index.js'
+import { markNudgeOffered } from '#lib/nudges/nudge-store.js'
+import { trackEvent } from '#lib/tauri-commands/index.js'
 import { recordDockPinAnswer } from './dock-pin-answer'
 import DockPinNudgeToastContent from './DockPinNudgeToastContent.svelte'
 

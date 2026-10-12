@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { OperationSnapshot, WriteOperationError } from '$lib/ipc/bindings'
+import type { OperationSnapshot, WriteOperationError } from '#lib/ipc/bindings.js'
 import { failureReasonFor } from './failure-reason'
 
 function snapshot(error: WriteOperationError | null, over: Partial<OperationSnapshot> = {}): OperationSnapshot {

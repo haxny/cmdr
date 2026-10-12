@@ -17,7 +17,7 @@ const mockGetEjectingVolumeIds = vi.fn<() => Promise<string[]>>()
 let lastEjectingHandler: ((payload: { volumeIds: string[] }) => void) | null = null
 const mockUnlistenEjecting = vi.fn()
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   getBusyVolumeIds: () => mockGetBusyVolumeIds(),
   onVolumesBusyChanged: (handler: (payload: { volumeIds: string[] }) => void) => {
     lastEventHandler = handler

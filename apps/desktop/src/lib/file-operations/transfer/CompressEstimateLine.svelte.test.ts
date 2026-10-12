@@ -8,24 +8,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushSync, type ComponentProps } from 'svelte'
 
 // The component reads the compression-level setting and subscribes to its
-// changes; drive both from the test while preserving every other `$lib/settings`
+// changes; drive both from the test while preserving every other `#lib/settings`
 // export (intl and `<Size>` pull from the same module).
 let currentLevel = 6
 let changeCb: ((v: unknown) => void) | null = null
-vi.mock('$lib/settings', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings')>()),
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/index.js')>()),
   getSetting: () => currentLevel,
   onSpecificSettingChange: (_id: string, cb: (v: unknown) => void) => {
     changeCb = cb
     return () => {}
   },
 }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
 }))
 
 import CompressEstimateLine from './CompressEstimateLine.svelte'
-import type { CompressedSizeEstimate } from '$lib/tauri-commands'
+import type { CompressedSizeEstimate } from '#lib/tauri-commands/index.js'
 
 let target: HTMLElement
 function render(props: ComponentProps<typeof CompressEstimateLine>) {

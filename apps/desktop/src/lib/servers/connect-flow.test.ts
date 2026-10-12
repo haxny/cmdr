@@ -8,17 +8,17 @@
  * the IPC it may and may not send, over the real bindings.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { clearIpcMocks, installIpcMock, type IpcRecorder } from '$lib/ipc/test-helpers'
+import { clearIpcMocks, installIpcMock, type IpcRecorder } from '#lib/ipc/test-helpers.js'
 
 const startCycle = vi.fn()
-vi.mock('$lib/file-explorer/network/smb-reconnect-manager.svelte', () => ({
+vi.mock('#lib/file-explorer/network/smb-reconnect-manager.svelte.js', () => ({
   smbReconnectManager: {
     startCycle: (...args: unknown[]) => {
       startCycle(...(args as []))
     },
   },
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 import type { PaneAccess } from './pane-access'
 import type { FilePaneAPI } from './types'
 import type { TransferProgressPropsData } from './dialog-props'
-import type { ToastContent, ToastOptions } from '$lib/ui/toast/toast-store.svelte'
+import type { ToastContent, ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
 
 const {
   copyFilesToClipboardSpy,
@@ -39,7 +39,7 @@ const {
   logErrorSpy: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   DEFAULT_VOLUME_ID: 'root',
   copyFilesToClipboard: copyFilesToClipboardSpy,
   cutFilesToClipboard: cutFilesToClipboardSpy,
@@ -51,7 +51,7 @@ vi.mock('$lib/tauri-commands', () => ({
   storedSpellings: storedSpellingsSpy,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastSpy,
   // Pane-tagged toasts (paste refusals, paste-as-file) funnel into the same spy,
   // dropping the pane arg so the message/options assertions below cover both.
@@ -62,7 +62,7 @@ vi.mock('$lib/ui/toast', () => ({
 // `paste-clipboard-as-file.test.ts`); here we only assert the DISPATCH into it.
 vi.mock('./paste-clipboard-as-file', () => ({ pasteClipboardContentAsFile: pasteClipboardContentAsFileSpy }))
 
-vi.mock('$lib/search/snapshot-store.svelte', () => ({
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({
   resolveSnapshotPaths: resolveSnapshotPathsSpy,
   // The volume the snapshot's search covered, which the clipboard gate classifies.
   getSnapshot: getSnapshotSpy,
@@ -90,18 +90,18 @@ vi.mock('./transfer-operations', () => ({
 // MTP ids ('mtp-…') classify via `volumeScheme` without needing the store.
 // An empty store is enough for every id this suite exercises.
 const volumeStore = vi.hoisted(() => ({ list: [] as VolumeInfo[] }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => volumeStore.list }))
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => volumeStore.list }))
 
 // The refusal toasts NAME the key bound to `file.copy` / `file.move`, which is
 // why this is a spy rather than the real store: a test can rebind one and watch
 // the sentence follow. `toDisplayShortcut` keeps the canonical spelling here
 // (it only swaps in display glyphs like ⌫, which these combos don't carry).
-vi.mock('$lib/shortcuts', () => ({
+vi.mock('#lib/shortcuts/index.js', () => ({
   getEffectiveShortcuts: getEffectiveShortcutsSpy,
   toDisplayShortcut: (combo: string) => combo,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ error: logErrorSpy, warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }))
 

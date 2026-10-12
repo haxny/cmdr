@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount, tick } from 'svelte'
 import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
-import type { WakeDigestFolderView, WakeDigestRollupView } from '$lib/tauri-commands'
+import type { WakeDigestFolderView, WakeDigestRollupView } from '#lib/tauri-commands/index.js'
 
 function folder(overrides: Partial<WakeDigestFolderView> = {}): WakeDigestFolderView {
   return { folder: '/Users/dana/Downloads', created: 0, modified: 0, removed: 0, renamed: 0, ...overrides }

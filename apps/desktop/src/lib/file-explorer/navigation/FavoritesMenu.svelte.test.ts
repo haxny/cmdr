@@ -34,14 +34,14 @@ const stubs = vi.hoisted(() => ({
   switcherFavoritesExpanded: false,
 }))
 
-vi.mock('$lib/settings', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings')>()),
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/index.js')>()),
   setSetting: (...args: unknown[]) => {
     setSetting(...(args as []))
   },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   resolvePathVolume: vi.fn(() => Promise.resolve({ volume: { id: 'root', path: '/' }, timedOut: false })),
   upgradeToSmbVolume: vi.fn(() => Promise.resolve({ status: 'success' })),
   ejectVolume: vi.fn(() => Promise.resolve()),
@@ -65,7 +65,7 @@ vi.mock('$lib/tauri-commands', () => ({
   },
 }))
 
-vi.mock('$lib/tauri-commands/indexing', () => ({
+vi.mock('#lib/tauri-commands/indexing.js', () => ({
   getVolumeIndexStatusById: () => Promise.resolve({ status: 'timedOut' }),
   onIndexFreshnessChanged: () => Promise.resolve(() => {}),
   onIndexScanStarted: () => Promise.resolve(() => {}),
@@ -74,7 +74,7 @@ vi.mock('$lib/tauri-commands/indexing', () => ({
 
 vi.mock('../network/direct-connect', () => ({ connectDirectly: vi.fn(() => Promise.resolve({ kind: 'connected' })) }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => stubs.volumes ?? DEFAULT_VOLUMES,
   getVolumesTimedOut: () => false,
   isVolumesRefreshing: () => false,
@@ -82,18 +82,18 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
   requestVolumeRefresh: vi.fn(),
 }))
 
-vi.mock('$lib/stores/volume-busy-store.svelte', () => ({
+vi.mock('#lib/stores/volume-busy-store.svelte.js', () => ({
   isVolumeBusy: () => false,
   isVolumeEjecting: () => false,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: vi.fn(() => 'toast-id'),
   addToastForPane: vi.fn(() => 'toast-id'),
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: (n: number) => `${String(n)} B`,
   getFileSizeFormat: () => 'binary',
   getFileSizeUnit: () => 'bytes',
@@ -104,7 +104,7 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
   getSwitcherFavoritesExpanded: () => stubs.switcherFavoritesExpanded,
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: vi.fn().mockReturnValue('/icons/dir.png'),
@@ -147,7 +147,7 @@ interface BreadcrumbInstance {
 
 // ============================================================================
 // Both menus are the house `Menu`: they PORTAL to `document.body`, carry the documented
-// `data-*` hooks (`$lib/ui/DETAILS.md` § Menu), and catch keys on their own document
+// `data-*` hooks (`#lib/ui/DETAILS.md` § Menu), and catch keys on their own document
 // capture listener. So these look at the document, select on hooks rather than classes,
 // and press keys for real.
 // ============================================================================

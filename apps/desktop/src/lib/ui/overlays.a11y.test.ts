@@ -5,7 +5,7 @@
  * One file per primitive would cost about seven times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
  * costs"). Each block below keeps its primitive's own doc comment, props, and
- * assertions. `AlertDialog` and `ModalDialog` mocked `$lib/tauri-commands`
+ * assertions. `AlertDialog` and `ModalDialog` mocked `#lib/tauri-commands`
  * identically, so the one mock here is theirs unchanged.
  *
  * Several of these portal to `document.body` and audit the whole body, so the
@@ -18,10 +18,10 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick, createRawSnippet } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 // Avoid Tauri IPC side-effects from notifyDialogOpened / notifyDialogClosed.
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

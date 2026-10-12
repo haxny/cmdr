@@ -8,9 +8,9 @@
      * through `onDone`). Both are claimed, so Enter never reaches the sheet's Enter-starts rule.
      * Escape belongs to the `Popover` around this.
      */
-    import { tString } from '$lib/intl/messages.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
-    import { claimKey } from '$lib/shortcuts/claim-key'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import TextInput from '#lib/ui/TextInput.svelte'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { COUNTER_DEFAULTS, clampCounter, counterSamples, type Counter } from './counter-token'
     import type { TokenEditorProps } from './mask-token-kinds'
 

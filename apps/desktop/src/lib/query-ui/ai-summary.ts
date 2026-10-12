@@ -12,8 +12,8 @@
 
 import type { SizeFilter, SizeUnit, DateFilter, TypeFilter } from './query-filter-state.svelte'
 import { deriveSizeChip, deriveDateChip } from './filter-chips/filter-chip-state'
-import type { FileSizeFormat } from '$lib/settings/types'
-import { tString } from '$lib/intl/messages.svelte'
+import type { FileSizeFormat } from '#lib/settings/types.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** One named filter line shown in the strip ("Size", "Modified", "Type" + its value). */
 export interface AiSummaryFilter {

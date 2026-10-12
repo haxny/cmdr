@@ -31,7 +31,7 @@ const h = vi.hoisted(() => ({
   hosts: [] as NetworkHost[],
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mountNetworkShare: h.mountNetworkShare,
   resolvePathVolume: h.resolvePathVolume,
   saveSmbCredentials: h.saveSmbCredentials,
@@ -52,15 +52,15 @@ vi.mock('$lib/tauri-commands', () => ({
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/servers/sign-in-sheet-state.svelte', () => ({ openSignInSheet: h.openSignInSheet }))
+vi.mock('#lib/servers/sign-in-sheet-state.svelte.js', () => ({ openSignInSheet: h.openSignInSheet }))
 
-vi.mock('$lib/settings/network-settings', () => ({
+vi.mock('#lib/settings/network-settings.js', () => ({
   getMountTimeoutMs: () => 15000,
   getNetworkTimeoutMs: () => 5000,
   getShareCacheTtlMs: () => 30000,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: h.warn, error: vi.fn() }),
 }))
 
@@ -86,8 +86,8 @@ vi.mock('../network/network-store.svelte', () => ({
   forgetCredentials: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({ confirmDialog: vi.fn(() => Promise.resolve(false)) }))
-vi.mock('$lib/ui/toast', () => ({ addToast: vi.fn(() => 'id') }))
+vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: vi.fn(() => Promise.resolve(false)) }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast: vi.fn(() => 'id') }))
 vi.mock('../network/lazy-trigger', () => ({ triggerNetworkDiscovery: vi.fn() }))
 
 /** The address the view mounts by, which is NOT the name a person knows the host by. */

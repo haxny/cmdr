@@ -20,7 +20,7 @@ The onboarded flag is the `onboarding.completed` setting. The trigger still take
 it: the decision stays pure, so the truth table above is unit-testable without a store. `startup-gates.ts` reads it and
 passes it in.
 
-Version ordering comes from `compareVersions` (`$lib/utils/version.ts`), shared with the updater's "is the offered build
+Version ordering comes from `compareVersions` (`#lib/utils/version.ts`), shared with the updater's "is the offered build
 newer than the staged one" question. It compares numerically per component: a string compare would order `0.10.0` before
 `0.9.0` and misread an upgrade as a downgrade.
 
@@ -57,7 +57,7 @@ How the pieces hold together:
   children are a marker span and a label, never markdown.
 
 - **A Markdown link in an entry or a lead works.** Tauri blocks raw `<a>` navigation, so `.scroll-area` delegates clicks
-  to `handleMarkdownLinkClick` (`$lib/ui/markdown-link-click.ts`, shared with `ErrorPane`), which resolves the anchor
+  to `handleMarkdownLinkClick` (`#lib/ui/markdown-link-click.ts`, shared with `ErrorPane`), which resolves the anchor
   from the click target and hands the URL to `openExternalUrl`. Without the delegate a link renders, looks clickable,
   and does nothing.
 
@@ -130,8 +130,8 @@ emit.
 ## i18n
 
 The dialog's own chrome (title, empty state, links, footer, opt-out toast) lives in the `whatsNew.*` catalog
-(`$lib/intl/messages/en/whatsNew.json`), resolved via `tString()`; `cmdr/no-raw-user-facing-string` is enforced on
+(`#lib/intl/messages/en/whatsNew.json`), resolved via `tString()`; `cmdr/no-raw-user-facing-string` is enforced on
 `lib/whats-new/`. The release CONTENT (lead, section titles, entries) is NOT catalog copy: it's the committed
 `CHANGELOG.md` parsed and rendered to HTML backend-side, so changelog wording is fixed in `CHANGELOG.md`, not here. The
 title's apostrophe is the curly U+2019, kept byte-identical in the catalog value. Runtime rules:
-[`$lib/intl/CLAUDE.md`](../intl/CLAUDE.md).
+[`#lib/intl/CLAUDE.md`](../intl/CLAUDE.md).

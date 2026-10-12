@@ -15,8 +15,8 @@
  * A pane tracks its listing only once it has LANDED (and stops when it abandons it),
  * so a read racing a navigation, which also answers "gone", never triggers a re-list.
  */
-import { keepListingsAlive, onListingGone } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { keepListingsAlive, onListingGone } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('fileExplorer')
 

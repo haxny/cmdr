@@ -7,10 +7,10 @@
 -->
 
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatByteSize } from '$lib/units'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatByteSize } from '#lib/units/index.js'
 
     interface Props {
         /**

@@ -3,7 +3,7 @@
  * Determines which scopes' shortcuts are active in a given context.
  */
 
-import type { CommandScope } from '$lib/commands/types'
+import type { CommandScope } from '#lib/commands/types.js'
 
 export type { CommandScope }
 

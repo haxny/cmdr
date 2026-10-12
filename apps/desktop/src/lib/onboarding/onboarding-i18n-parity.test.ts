@@ -15,9 +15,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { t, tString, type TranslationParams } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { t, tString, type TranslationParams } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 beforeAll(() => {
   _setLocaleForTests('en-US')

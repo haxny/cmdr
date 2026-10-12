@@ -1,7 +1,7 @@
 import type { NavigationHistory } from '../navigation/navigation-history'
 import type { SortColumn, SortOrder } from '../types'
-import type { ViewMode } from '$lib/app-status-store'
-import type { Location } from '$lib/tauri-commands'
+import type { ViewMode } from '#lib/app-status-store.js'
+import type { Location } from '#lib/tauri-commands/index.js'
 
 export type TabId = string // crypto.randomUUID()
 

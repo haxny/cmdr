@@ -4,8 +4,8 @@
 // listing; `directory-deleted` fires when the watched directory itself is gone.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { events } from '$lib/ipc/bindings'
-import type { DirectoryDeletedEvent, DirectoryDiff } from '$lib/file-explorer/types'
+import { events } from '#lib/ipc/bindings.js'
+import type { DirectoryDeletedEvent, DirectoryDiff } from '#lib/file-explorer/types.js'
 
 /**
  * A batched set of add/remove/modify/move changes for one watched listing.

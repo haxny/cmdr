@@ -1,10 +1,10 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import StatusGlyph from '$lib/ui/StatusGlyph.svelte'
-    import { dependOn } from '$lib/utils/reactivity'
+    import Icon from '#lib/ui/Icon.svelte'
+    import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
-    import type { FileIndexState, FolderCoverage, ListingIndexSizesChanged } from '$lib/tauri-commands'
+    import type { FileIndexState, FolderCoverage, ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindow, getScrollToPosition } from './virtual-scroll'
     import { startSelectionDragTracking } from '../drag/drag-drop'
     import {
@@ -24,10 +24,10 @@
     import { createGitStatusColumn } from './full-list-git-column.svelte'
     import { planRowMouseDown } from './full-list-mouse'
     import { formatSizeForDisplay, formatNumber } from '../selection/selection-info-utils'
-    import { isVolumeAggregating, getWalkedGround } from '$lib/indexing/index-state.svelte'
-    import { isPathAffectedByWalk } from '$lib/indexing/walked-ground'
-    import { isRestricted } from '$lib/stores/restricted-paths-store.svelte'
-    import { restrictedFolderTooltip } from '$lib/system-strings.svelte'
+    import { isVolumeAggregating, getWalkedGround } from '#lib/indexing/index-state.svelte.js'
+    import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
+    import { isRestricted } from '#lib/stores/restricted-paths-store.svelte.js'
+    import { restrictedFolderTooltip } from '#lib/system-strings.svelte.js'
     const RESTRICTED_FOLDER_TOOLTIP = $derived(restrictedFolderTooltip())
     /* Short, because a screen reader reads it on every restricted row; the instruction above
        is the hover tooltip on the same glyph. */
@@ -65,15 +65,15 @@
         getFileSizeFormat,
         getShowExtensionInName,
         getShowTags,
-    } from '$lib/settings/reactive-settings.svelte'
-    import { iconCacheCleared } from '$lib/icon-cache'
-    import { onDebouncedScaleChange, getEffectiveScale } from '$lib/text-size.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
+    } from '#lib/settings/reactive-settings.svelte.js'
+    import { iconCacheCleared } from '#lib/icon-cache.js'
+    import { onDebouncedScaleChange, getEffectiveScale } from '#lib/text-size.svelte.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import type { RenameState, RenameSessionId } from '../rename/rename-state.svelte'
     import type { RenameStepDirection } from '../rename/rename-step'
-    import { formatByteSizeTiered } from '$lib/units'
+    import { formatByteSizeTiered } from '#lib/units/index.js'
 
     interface Props {
         listingId: string
@@ -1069,7 +1069,7 @@
 
     /* The stripe / selection / cursor fills and the selected-row hairline are
        identical in `BriefList`, so they live in `src/app-file-list.css`. The
-       restricted marker's own chrome is `$lib/ui/StatusGlyph.svelte`'s. */
+       restricted marker's own chrome is `#lib/ui/StatusGlyph.svelte`'s. */
 
     /* Hidden-entry name dim: the same quiet text token as restricted rows
        above, for dotfiles / `UF_HIDDEN` / root-`/.hidden` entries once "show

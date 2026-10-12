@@ -13,10 +13,10 @@
  * the command bodies.
  */
 
-import { resortListing } from '$lib/tauri-commands'
-import { getDirectorySortMode } from '$lib/settings/reactive-settings.svelte'
-import { getSnapshot, snapshotIdFromPanePath } from '$lib/search/snapshot-store.svelte'
-import { nextSnapshotSort, sortSnapshot } from '$lib/search/snapshot-sort.svelte'
+import { resortListing } from '#lib/tauri-commands/index.js'
+import { getDirectorySortMode } from '#lib/settings/reactive-settings.svelte.js'
+import { getSnapshot, snapshotIdFromPanePath } from '#lib/search/snapshot-store.svelte.js'
+import { nextSnapshotSort, sortSnapshot } from '#lib/search/snapshot-sort.svelte.js'
 import type { SortColumn, SortOrder } from '../types'
 import { defaultSortOrders } from '../types'
 import type { FilePaneAPI } from './types'

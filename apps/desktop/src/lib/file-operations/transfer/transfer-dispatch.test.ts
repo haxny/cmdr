@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'copy' })),
   moveBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'move' })),
   renameByMove: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'move' })),
@@ -23,11 +23,11 @@ vi.mock('$lib/tauri-commands', () => ({
 
 vi.mock('@tauri-apps/api/event', () => ({ emit: vi.fn(() => Promise.resolve()) }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   // Key-aware so the archive compression level is distinguishable from the
   // progress-interval / max-conflicts settings (all others resolve to 200).
   getSetting: vi.fn((key: string) => (key === 'behavior.archiveCompressionLevel' ? 6 : 200)),
@@ -43,7 +43,7 @@ import {
   moveFiles,
   deleteFiles,
   trashFiles,
-} from '$lib/tauri-commands'
+} from '#lib/tauri-commands/index.js'
 
 function makeConfig(over: Partial<TransferDispatchConfig> = {}): TransferDispatchConfig {
   return {

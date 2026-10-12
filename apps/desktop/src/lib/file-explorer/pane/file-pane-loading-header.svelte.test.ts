@@ -21,12 +21,12 @@ const events = vi.hoisted(() => ({ recorder: null as ListenRecorder | null }))
 /** Each load's start; a test decides per load whether it ever answers. */
 const listDirectoryStartMock = vi.hoisted(() => vi.fn())
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => {
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => {
   const { createListenRecorder } = await import('./integration-test-utils')
   const recorder = createListenRecorder()
   events.recorder = recorder
   return {
-    ...(await importOriginal<typeof import('$lib/tauri-commands')>()),
+    ...(await importOriginal<typeof import('#lib/tauri-commands/index.js')>()),
     listDirectoryStart: listDirectoryStartMock,
     cancelListing: vi.fn().mockResolvedValue(undefined),
     listDirectoryEnd: vi.fn().mockResolvedValue(undefined),
@@ -85,10 +85,10 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/icon-cache', async (importOriginal) => {
+vi.mock('#lib/icon-cache.js', async (importOriginal) => {
   const { writable } = await import('svelte/store')
   return {
-    ...(await importOriginal<typeof import('$lib/icon-cache')>()),
+    ...(await importOriginal<typeof import('#lib/icon-cache.js')>()),
     getCachedIcon: vi.fn().mockReturnValue('/icons/file.png'),
     getCachedCustomFolderIcon: () => undefined,
     iconCacheVersion: writable(0),
@@ -98,8 +98,8 @@ vi.mock('$lib/icon-cache', async (importOriginal) => {
   }
 })
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/settings/reactive-settings.svelte')>()),
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/settings/reactive-settings.svelte.js')>()),
   getRowHeight: vi.fn().mockReturnValue(24),
   getUseAppIconsForDocuments: vi.fn().mockReturnValue(true),
   getNetworkEnabled: vi.fn().mockReturnValue(true),
@@ -108,9 +108,9 @@ vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
   getShowVirtualGitPortal: vi.fn().mockReturnValue(true),
 }))
 
-vi.mock('$lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
+vi.mock('#lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: vi
     .fn()
     .mockReturnValue([{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }]),

@@ -6,14 +6,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 // `vi.mock` is hoisted above this, so the subject imports the stubbed IPC layer.
 import { quitPrompt, initQuitPrompt, cleanupQuitPrompt } from './quit-prompt.svelte'
-import type { OperationSnapshot, QuitRequested } from '$lib/ipc/bindings'
+import type { OperationSnapshot, QuitRequested } from '#lib/ipc/bindings.js'
 
 let requested: ((event: QuitRequested) => void) | null = null
 let calledOff: (() => void) | null = null
 const quitConfirm = vi.fn(() => Promise.resolve('answered'))
 const quitCancel = vi.fn(() => Promise.resolve('answered'))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   onQuitRequested: vi.fn((cb: (event: QuitRequested) => void) => {
     requested = cb
     return Promise.resolve(() => {

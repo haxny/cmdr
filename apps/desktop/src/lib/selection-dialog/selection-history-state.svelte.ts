@@ -10,9 +10,9 @@
  * `applyHistoryEntry`.
  */
 
-import { getRecentSelections, type SelectionHistoryEntry } from '$lib/tauri-commands'
-import { createRecentItemsState } from '$lib/query-ui/recent-items/recent-items-state.svelte'
-import type { QueryFilterState } from '$lib/query-ui/query-filter-state.svelte'
+import { getRecentSelections, type SelectionHistoryEntry } from '#lib/tauri-commands/index.js'
+import { createRecentItemsState } from '#lib/query-ui/recent-items/recent-items-state.svelte.js'
+import type { QueryFilterState } from '#lib/query-ui/query-filter-state.svelte.js'
 
 /**
  * Recent-selections store. Same shape as Search's `recentSearchesStore`. Wraps

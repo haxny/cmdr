@@ -21,8 +21,8 @@ const { stubs } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: () => stubs.volumes }))
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: () => stubs.volumes }))
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => stubs.settings.get(id),
   // Braces, not an expression body: an untyped `vi.fn()` answers `any`, and
   // returning it is what `no-unsafe-return` is about. Nothing reads the answer.
@@ -30,13 +30,13 @@ vi.mock('$lib/settings', () => ({
     stubs.setSetting(...(args as []))
   },
 }))
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openExternalUrl: (...args: unknown[]) => {
     stubs.openExternalUrl(...(args as []))
   },
 }))
-vi.mock('$lib/intl/messages.svelte', () => ({ tString: (key: string) => key }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/intl/messages.svelte.js', () => ({ tString: (key: string) => key }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 

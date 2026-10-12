@@ -4,13 +4,13 @@ import {
   updateRightPaneState,
   type PaneFileEntry,
   type PaneState,
-} from '$lib/tauri-commands'
-import { type CanonicalPath, parentOf } from '$lib/path/canonical'
-import type { ViewMode } from '$lib/app-status-store'
-import type { PaneListing, SearchResultEntry } from '$lib/ipc/bindings'
-import type { SnapshotSort } from '$lib/search/snapshot-store.svelte'
-import { getWalkedGround, isVolumeAggregating } from '$lib/indexing/index-state.svelte'
-import { isPathAffectedByWalk } from '$lib/indexing/walked-ground'
+} from '#lib/tauri-commands/index.js'
+import { type CanonicalPath, parentOf } from '#lib/path/canonical.js'
+import type { ViewMode } from '#lib/app-status-store.js'
+import type { PaneListing, SearchResultEntry } from '#lib/ipc/bindings.js'
+import type { SnapshotSort } from '#lib/search/snapshot-store.svelte.js'
+import { getWalkedGround, isVolumeAggregating } from '#lib/indexing/index-state.svelte.js'
+import { isPathAffectedByWalk } from '#lib/indexing/walked-ground.js'
 import { isDirSizeUpdating } from '../views/full-list-utils'
 import { snapshotMcpRows } from './snapshot-mcp-rows'
 

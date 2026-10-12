@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { findFileIndex, getFileAt } = vi.hoisted(() => ({ findFileIndex: vi.fn(), getFileAt: vi.fn() }))
-vi.mock('$lib/tauri-commands', () => ({ findFileIndex, getFileAt, onDirectoryDiff: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ findFileIndex, getFileAt, onDirectoryDiff: vi.fn() }))
 
 import { NewEntryNameCheck } from './new-entry-name-check.svelte'
 

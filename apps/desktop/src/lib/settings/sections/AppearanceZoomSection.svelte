@@ -1,12 +1,12 @@
 <script lang="ts">
     import SettingsSection from '../components/SettingsSection.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import SettingRow from '../components/SettingRow.svelte'
     import SettingSlider from '../components/SettingSlider.svelte'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import { getSettingDefinition } from '$lib/settings'
-    import { createShouldShow, anyVisible } from '$lib/settings/settings-search'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import { getSettingDefinition } from '#lib/settings/index.js'
+    import { createShouldShow, anyVisible } from '#lib/settings/settings-search.js'
 
     interface Props {
         searchQuery: string

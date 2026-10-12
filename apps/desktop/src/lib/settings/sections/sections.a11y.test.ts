@@ -9,15 +9,15 @@
  * section still sees exactly the values it was written against.
  *
  * Two neighbours stay in their own files because their mocks can't live here:
- * `AskCmdrSection.a11y.test.ts` needs `$lib/tauri-commands` spread from the real
- * module, and the image-index components need a different `$lib/settings` shape
+ * `AskCmdrSection.a11y.test.ts` needs `#lib/tauri-commands` spread from the real
+ * module, and the image-index components need a different `#lib/settings` shape
  * (`media-index.a11y.test.ts`).
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createRawSnippet, mount, tick, type ComponentProps } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
-import { clearSearchIndex } from '$lib/settings/settings-search'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { clearSearchIndex } from '#lib/settings/settings-search.js'
 
 const settingsStore = vi.hoisted(() => ({
   getSetting: vi.fn<(key: string) => unknown>(),
@@ -27,7 +27,7 @@ const settingsStore = vi.hoisted(() => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
   onSettingChange: vi.fn(() => () => {}),
 }))
-vi.mock('$lib/settings/settings-store', () => settingsStore)
+vi.mock('#lib/settings/settings-store.js', () => settingsStore)
 
 // The union of the IPC each section below reaches for. Both IPC modules keep
 // their real exports (spread first) so a section that calls something outside
@@ -85,17 +85,17 @@ const bindingCommands = vi.hoisted(() => ({
 // `isMacOS()` reads false under jsdom on every host. Off by default, as the real
 // check answers here; the blocks whose rows render on macOS only switch it on.
 const isMacOS = vi.hoisted(() => vi.fn(() => false))
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
 
-vi.mock('$lib/ipc/bindings', async (importOriginal) => ({
+vi.mock('#lib/ipc/bindings.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   commands: bindingCommands,
 }))
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   invoke: vi.fn(() => Promise.resolve()),
   openAppearanceSettings: vi.fn(() => Promise.resolve()),
@@ -110,12 +110,12 @@ vi.mock('$lib/tauri-commands', async (importOriginal) => ({
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: vi.fn(() => Promise.resolve(false)),
 }))
 
-vi.mock('$lib/shortcuts', async () => {
-  const actual = await vi.importActual<object>('$lib/shortcuts')
+vi.mock('#lib/shortcuts/index.js', async () => {
+  const actual = await vi.importActual<object>('#lib/shortcuts/index.js')
   return {
     ...actual,
     onShortcutChange: vi.fn(() => () => {}),
@@ -354,7 +354,7 @@ describe('DeleteAiModelDialog', () => {
     it('is an alertdialog reporting the delete-ai-model id', async () => {
       const { target } = await mountDialog(false)
       expect(target.querySelector('[role="alertdialog"]')).not.toBeNull()
-      const { notifyDialogOpened } = await import('$lib/tauri-commands')
+      const { notifyDialogOpened } = await import('#lib/tauri-commands/index.js')
       expect(vi.mocked(notifyDialogOpened).mock.calls.map(([id]) => id)).toContain('delete-ai-model')
       target.remove()
     })
@@ -740,7 +740,7 @@ describe('SearchSection a11y', () => {
 
 /**
  * Tier 3 a11y tests for `ShortcutPill.svelte`, the chip shared by
- * `KeyboardShortcutsSection` rows and `$lib/downloads/GlobalShortcutRow.svelte`.
+ * `KeyboardShortcutsSection` rows and `#lib/downloads/GlobalShortcutRow.svelte`.
  * Its states differ in the element they render: a `<button>` that starts recording
  * by default, a plain `<span>` when `readOnly`, and the same button plus a
  * hover-only remove control when `remove` is set.

@@ -15,9 +15,9 @@ import {
   calculatePercentage,
   colorizeSize,
 } from './selection-info-utils'
-import { formatDateForDisplay } from '$lib/settings/format-utils'
-import { _setLocaleForTests } from '$lib/intl/locale'
-import { _setCatalogForTests } from '$lib/intl/messages.svelte'
+import { formatDateForDisplay } from '#lib/settings/format-utils.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import type { FileEntry } from '../types'
 
 // Helper to create a basic file entry

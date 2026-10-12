@@ -21,7 +21,7 @@ import {
   type ReclaimResult,
   type SemanticHit,
   type SimilarImage,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
 export type {

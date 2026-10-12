@@ -13,7 +13,7 @@
  * `src-tauri/src/error_reporter/CLAUDE.md`.
  */
 
-import { getSetting, onSpecificSettingChange, setSetting } from '$lib/settings'
+import { getSetting, onSpecificSettingChange, setSetting } from '#lib/settings/index.js'
 
 /**
  * A reply address only has to be routable, so this is the loosest shape that can't be a

@@ -7,8 +7,8 @@
  * table.
  */
 
-import { getSetting, setSetting } from '$lib/settings'
-import type { SettingId } from '$lib/settings/types'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import type { SettingId } from '#lib/settings/types.js'
 import { type NudgeKind, type NudgeLedger } from './nudge-ledger'
 
 /**

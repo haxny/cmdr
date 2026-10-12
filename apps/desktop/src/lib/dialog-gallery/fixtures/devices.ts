@@ -1,5 +1,5 @@
 /**
- * Fixtures for the device-troubleshooting dialogs (`$lib/mtp/`).
+ * Fixtures for the device-troubleshooting dialogs (`#lib/mtp/`).
  *
  * Only `ptpcamerad` takes content props; `mtp-permission` takes callbacks only.
  *

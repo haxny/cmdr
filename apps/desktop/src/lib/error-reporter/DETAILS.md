@@ -129,7 +129,7 @@ showing the "Error report sent" sentence would be the same class of lie amend mo
   rebuild the bundle that just didn't build. The raw reason goes to the warn, never the dialog.
 - **A send or an amend that didn't land** throws an `ErrorReportSendFailure` (`error-report-send-error.ts`) carrying the
   typed `ErrorReportSendError`. The toast is the surface's lead (`dialog.sendFailedToast` or `amend.addFailedToast`)
-  plus `errorReportSendReason`, which words a request failure through `$lib/error-messages/server-request` and the
+  plus `errorReportSendReason`, which words a request failure through `#lib/error-messages/server-request` and the
   dialog's own variants from this catalog. The dialog stays open, so Send is the retry.
 - **Every kind logs at warn here, a 4xx included**: an error-level line would auto-send a report through this same
   endpoint, the one that just didn't take it.

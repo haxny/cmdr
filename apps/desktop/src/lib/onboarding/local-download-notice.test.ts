@@ -9,7 +9,7 @@ const { addToast, dismissToast } = vi.hoisted(() => ({
   addToast: vi.fn<(content: unknown, options: { id: string }) => string>(),
   dismissToast: vi.fn<(id: string) => void>(),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast, dismissToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast, dismissToast }))
 vi.mock('./LocalDownloadFailedToastContent.svelte', () => ({ default: {} }))
 
 import {

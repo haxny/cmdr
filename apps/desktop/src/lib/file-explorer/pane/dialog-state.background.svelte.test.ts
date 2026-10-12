@@ -22,8 +22,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync } from 'svelte'
 import type { WriteOperationError } from '../types'
 
-vi.mock('$lib/tauri-commands', async () => ({
-  ...(await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).tauriCommandsMock(),
+vi.mock('#lib/tauri-commands/index.js', async () => ({
+  ...(await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).tauriCommandsMock(),
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -33,33 +33,33 @@ vi.mock('$lib/tauri-commands', async () => ({
   notifyArchivePasswordDismissed: vi.fn(() => Promise.resolve()),
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/file-operations/queue/queue-window', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).queueWindowMock(),
+vi.mock('#lib/file-operations/queue/queue-window.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).queueWindowMock(),
 )
 // The real store behind a spy, so a case can read what's actually on screen.
-vi.mock('$lib/ui/toast', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/ui/toast')>()
+vi.mock('#lib/ui/toast/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/ui/toast/index.js')>()
   return { ...actual, addToast: vi.fn(actual.addToast) }
 })
-vi.mock('$lib/settings', async () =>
-  (await import('$lib/file-operations/transfer/test-transfer-progress-harness.svelte')).settingsMock(),
+vi.mock('#lib/settings/index.js', async () =>
+  (await import('#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js')).settingsMock(),
 )
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 import { createDialogState } from './dialog-state.svelte'
-import { listeners, settle, snapshot } from '$lib/file-operations/transfer/test-transfer-progress-harness.svelte'
-import { copyBetweenVolumes, deleteFiles, listOperations, trashFiles } from '$lib/tauri-commands'
-import { dispatchTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
-import { addToast, clearAllToasts, getToasts } from '$lib/ui/toast'
-import QueueHandoffToastContent from '$lib/file-operations/queue/QueueHandoffToastContent.svelte'
+import { listeners, settle, snapshot } from '#lib/file-operations/transfer/test-transfer-progress-harness.svelte.js'
+import { copyBetweenVolumes, deleteFiles, listOperations, trashFiles } from '#lib/tauri-commands/index.js'
+import { dispatchTransferOperation } from '#lib/file-operations/transfer/transfer-dispatch.js'
+import { addToast, clearAllToasts, getToasts } from '#lib/ui/toast/index.js'
+import QueueHandoffToastContent from '#lib/file-operations/queue/QueueHandoffToastContent.svelte'
 import { emit } from '@tauri-apps/api/event'
-import { setForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
-import TrashCompleteToastContent from '$lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { setForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
+import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import type { DeleteDialogPropsData, TransferConfirmPayload } from './dialog-props'
 import type { TransferDialogPropsData } from './transfer-operations'
 import type { FilePaneAPI } from './types'

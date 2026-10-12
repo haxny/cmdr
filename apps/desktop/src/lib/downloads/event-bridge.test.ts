@@ -44,8 +44,8 @@ vi.mock('@tauri-apps/api/event', () => ({
 }))
 
 // Permission, the send itself, and its failure handling are `sendMacosNotification`'s
-// (tested in `$lib/notifications`); the bridge only decides when and what to send.
-vi.mock('$lib/notifications/send-macos-notification', () => ({
+// (tested in `#lib/notifications`); the bridge only decides when and what to send.
+vi.mock('#lib/notifications/send-macos-notification.js', () => ({
   sendMacosNotification: sendNotificationMock,
 }))
 
@@ -55,15 +55,15 @@ vi.mock('./notifications-mode', () => ({
   // not used by the bridge itself; left out on purpose.
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
 }))
 
-vi.mock('$lib/shortcuts', async () => ({
+vi.mock('#lib/shortcuts/index.js', async () => ({
   getEffectiveShortcuts: getEffectiveShortcutsMock,
   // Real display formatter (`key-capture` is a dependency-free leaf), so the
   // asserted hint text is what a user would actually read.
-  toDisplayShortcut: (await import('$lib/shortcuts/key-capture')).toDisplayShortcut,
+  toDisplayShortcut: (await import('#lib/shortcuts/key-capture.js')).toDisplayShortcut,
 }))
 
 vi.mock('./global-shortcut-setting', () => ({
@@ -75,7 +75,7 @@ vi.mock('./downloads-toast-collapsed', () => ({
   getDownloadsToastCollapsed: getDownloadsToastCollapsedMock,
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     downloadsWatcherStatus: downloadsWatcherStatusMock,
   },

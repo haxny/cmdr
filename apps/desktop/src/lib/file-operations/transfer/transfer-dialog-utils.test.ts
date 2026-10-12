@@ -3,7 +3,7 @@
  */
 import { resolveTransferFilename, initialEditedPath, editedPathAfterOperationChange } from './transfer-dialog-utils'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import {
   containingFolder,
   deriveTransferLabel,

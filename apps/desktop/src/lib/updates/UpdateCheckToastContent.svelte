@@ -1,7 +1,7 @@
 <script lang="ts">
     import { updateState } from './update-state.svelte'
     import { describeUpdateFailure, formatUpdateStatus, updateFailureOffersReport } from './update-status-text'
-    import ReportOffer from '$lib/error-reporter/ReportOffer.svelte'
+    import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
 
     const statusText = $derived(formatUpdateStatus(updateState))
     const failureText = $derived(updateState.failure === null ? null : describeUpdateFailure(updateState.failure))

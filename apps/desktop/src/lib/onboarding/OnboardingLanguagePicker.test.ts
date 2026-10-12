@@ -9,7 +9,7 @@
  * - picking writes `appearance.language` through `setSetting`, the same wiring the
  *   Settings picker uses (so `settings-applier.ts` live-applies it, no restart);
  * - an explicit pick retires `'system'` for good: the tag itself is written, never a
- *   resolved tag, and a later OS language change doesn't undo it (`$lib/intl/DETAILS.md`
+ *   resolved tag, and a later OS language change doesn't undo it (`#lib/intl/DETAILS.md`
  *   § What `'system'` resolves to);
  * - the `'system'` row names what it currently resolves to.
  *
@@ -20,8 +20,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import OnboardingLanguagePicker from './OnboardingLanguagePicker.svelte'
-import { _setSystemLocalesForTests } from '$lib/intl/os-locales'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setSystemLocalesForTests } from '#lib/intl/os-locales.js'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 // In-memory settings store, the house pattern for a component that writes a setting
 // (see `StepOptional.test.ts`). Keeps the real registry, so the options under test are
@@ -31,7 +31,7 @@ const setSetting = vi.fn((id: string, value: unknown) => {
   settingsMap[id] = value
 })
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,

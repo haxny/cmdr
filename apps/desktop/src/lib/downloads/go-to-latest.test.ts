@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { NavigateResult } from '$lib/file-explorer/pane/navigate'
+import type { NavigateResult } from '#lib/file-explorer/pane/navigate.js'
 
 // Hoisted mocks: vi.mock factories cannot reference top-level bindings, so we
 // declare the spy fns inside vi.hoisted() and reuse them from the mock factories
@@ -39,24 +39,24 @@ const {
   setFocusedPaneMock: vi.fn(),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     goToLatestDownload: goToLatestDownloadMock,
     downloadsWatcherStatus: downloadsWatcherStatusMock,
   },
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openPrivacySettings: openPrivacySettingsMock,
   goToLatestDownload: goToLatestDownloadMock,
   downloadsWatcherStatus: downloadsWatcherStatusMock,
 }))
 
-vi.mock('$lib/file-explorer/navigation/resolve-location', () => ({
+vi.mock('#lib/file-explorer/navigation/resolve-location.js', () => ({
   resolveLocation: resolveLocationMock,
 }))
 

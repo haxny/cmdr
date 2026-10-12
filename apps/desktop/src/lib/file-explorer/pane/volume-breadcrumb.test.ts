@@ -5,8 +5,8 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import VolumeBreadcrumb from '../navigation/VolumeBreadcrumb.svelte'
 import { waitForUpdates, useMountTarget } from './integration-test-utils'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
-import { removeFavorite, renameFavorite, reorderFavorites } from '$lib/tauri-commands'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+import { removeFavorite, renameFavorite, reorderFavorites } from '#lib/tauri-commands/index.js'
 
 /** Right-clicks a row, which opens its → submenu, then clicks the submenu row `value`. */
 async function pickFromRowSubmenu(row: HTMLElement, value: string): Promise<void> {
@@ -23,7 +23,7 @@ async function pickFromRowSubmenu(row: HTMLElement, value: string): Promise<void
 
 // ============================================================================
 // The switcher is the house `Menu`, which PORTALS to `document.body` and carries the
-// documented `data-*` test hooks (`$lib/ui/DETAILS.md` § Menu). So these look at the
+// documented `data-*` test hooks (`#lib/ui/DETAILS.md` § Menu). So these look at the
 // document rather than the mount target, and select on hooks rather than on classes.
 // ============================================================================
 
@@ -59,7 +59,7 @@ function press(key: string, modifiers: KeyboardEventInit = {}): boolean {
 
 let mockEntry: unknown = null
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listDirectoryStart: vi.fn().mockResolvedValue({ listingId: 'mock-listing', status: { status: 'ready' } }),
   cancelListing: vi.fn().mockResolvedValue(undefined),
   listDirectoryEnd: vi.fn().mockResolvedValue(undefined),
@@ -161,7 +161,7 @@ vi.mock('$lib/tauri-commands', () => ({
   onVolumeContextAction: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/icon-cache', async () => {
+vi.mock('#lib/icon-cache.js', async () => {
   const { writable } = await import('svelte/store')
   return {
     getCachedIcon: vi.fn().mockReturnValue('/icons/file.png'),
@@ -173,7 +173,7 @@ vi.mock('$lib/icon-cache', async () => {
   }
 })
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getRowHeight: vi.fn().mockReturnValue(24),
   formatDateTime: vi.fn().mockReturnValue('2025-01-01 00:00'),
   formattedDate: vi.fn().mockReturnValue({
@@ -202,9 +202,9 @@ vi.mock('$lib/settings/reactive-settings.svelte', () => ({
   getSwitcherFavoritesExpanded: () => false,
 }))
 
-vi.mock('$lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
+vi.mock('#lib/drag-drop', () => ({ startDragTracking: vi.fn() }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: vi
     .fn()
     .mockReturnValue([{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }]),

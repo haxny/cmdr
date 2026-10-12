@@ -23,8 +23,8 @@
  */
 
 import type { FileEntry } from '../types'
-import { getDirStatsBatch } from '$lib/tauri-commands'
-import { noteRenderedFolderSizes } from '$lib/indexing/first-size-timing'
+import { getDirStatsBatch } from '#lib/tauri-commands/index.js'
+import { noteRenderedFolderSizes } from '#lib/indexing/first-size-timing.js'
 import {
   createParentEntry,
   getEntryAt as getEntryAtUtil,
@@ -38,7 +38,7 @@ import {
   applyFolderSizes,
   type DirStats,
 } from './file-list-utils'
-import type { ListingIndexSizesChanged } from '$lib/tauri-commands'
+import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
 
 /** Live reads of `FullList`'s props. One getter per prop; see the ❌ note above. */
 export interface FullListCacheDeps {

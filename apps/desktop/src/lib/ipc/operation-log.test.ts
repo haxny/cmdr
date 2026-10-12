@@ -12,14 +12,14 @@
  * `get_operation_log_detail`) are thin getters with ≤ 2 args, which
  * `apps/desktop/src/lib/ipc/DETAILS.md` says to leave alone. `undo_operations` sends
  * one array and is covered where its ORDER matters, in
- * `$lib/tauri-commands/operation-log.test.ts`.
+ * `#lib/tauri-commands/operation-log.test.ts`.
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { commands } from '$lib/ipc/bindings'
-import type { RollbackDispatch } from '$lib/ipc/bindings'
-import { clearIpcMocks, installIpcMock } from '$lib/ipc/test-helpers'
+import { commands } from '#lib/ipc/bindings.js'
+import type { RollbackDispatch } from '#lib/ipc/bindings.js'
+import { clearIpcMocks, installIpcMock } from '#lib/ipc/test-helpers.js'
 
 afterEach(() => {
   clearIpcMocks()

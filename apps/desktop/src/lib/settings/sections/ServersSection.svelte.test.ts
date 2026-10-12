@@ -27,7 +27,7 @@ const forgetSftpHostKey = vi.fn<(host: string, port: number, algorithm: string) 
 // eslint-disable-next-line cmdr/no-confusable-callback-params -- mirrors the real `confirmDialog(message, title)`
 const confirmDialog = vi.fn<(message: string, title: string) => Promise<boolean>>()
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn(() => undefined),
   setSetting: vi.fn(() => Promise.resolve()),
   resetSetting: vi.fn(),
@@ -36,12 +36,12 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listTrustedSftpHostKeys: () => listTrustedSftpHostKeys(),
   forgetSftpHostKey: (host: string, port: number, algorithm: string) => forgetSftpHostKey(host, port, algorithm),
 }))
 
-vi.mock('$lib/utils/confirm-dialog', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({
   confirmDialog: (message: string, title: string) => confirmDialog(message, title),
 }))
 

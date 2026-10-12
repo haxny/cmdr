@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { OperationSnapshot } from '$lib/tauri-commands'
+import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
 import type { OperationRow } from './queue/operations-store.svelte'
 import { conflictOwner, operationsToPauseFor } from './operation-conflict-rules'
 

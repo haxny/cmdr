@@ -2,12 +2,12 @@
   Small uppercase stability pill (ALPHA / BETA) shown next to a feature's title.
   Stable features carry no badge by policy: don't mount this component for them.
   The status itself comes from the repo-root `feature-status.json` via
-  `$lib/feature-status` (`getBadgeStatus(id)`); see `docs/feature-status.md`.
+  `#lib/feature-status` (`getBadgeStatus(id)`); see `docs/feature-status.md`.
   Visual pattern shared with `ToggleGroup.svelte`'s `.tg-badge` (the "AI" chip).
 -->
 <script lang="ts">
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { statusDefinitions, type BadgeStatus } from '$lib/feature-status'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { statusDefinitions, type BadgeStatus } from '#lib/feature-status.js'
 
     interface Props {
         status: BadgeStatus

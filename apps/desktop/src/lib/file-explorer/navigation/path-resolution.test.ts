@@ -17,7 +17,7 @@ const { pathExists, pathExistsChecked } = vi.hoisted(() => ({
     Promise.resolve({ data: false, timedOut: false }),
   ),
 }))
-vi.mock('$lib/tauri-commands', () => ({ pathExists, pathExistsChecked }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ pathExists, pathExistsChecked }))
 
 import { resolveValidPath } from './path-resolution'
 

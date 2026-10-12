@@ -12,7 +12,7 @@
  */
 
 import { escapeMarkdown } from './markdown-escape'
-import { systemStrings } from '$lib/system-strings.svelte'
+import { systemStrings } from '#lib/system-strings.svelte.js'
 
 /** Escape an untrusted runtime param for safe insertion into a markdown template. */
 export function esc(value: string): string {

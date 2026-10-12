@@ -31,7 +31,7 @@ mechanics, deep-link wiring, and the smoke-test guide.
   `setGlobalGoToLatestBinding` resets `acknowledged` to `false`.
 - **`global-shortcut-description.ts`**: pure builder for the on/off toggle's helper text, tracking the live binding.
 - **`GlobalShortcutRow.svelte`**: the go-to-latest hotkey as a `(global)`-marked row in Keyboard shortcuts. Recorder
-  pill (`$lib/settings/sections/ShortcutPill.svelte`, shared with the section's rows) + reset. Calls
+  pill (`#lib/settings/sections/ShortcutPill.svelte`, shared with the section's rows) + reset. Calls
   `set_global_go_to_latest_shortcut` first and saves via `setGlobalGoToLatestBinding` only when the backend accepts: on
   a refusal the backend keeps the previous combo registered, so the row keeps showing it, with "Another app may be using
   that combo" for `unavailable`. It doesn't log a refusal; the backend already did.
@@ -186,8 +186,8 @@ is independent; stop after the ones that cover your change.
 
 ## i18n
 
-All user-facing copy in this area lives in `$lib/intl/messages/en/downloads.json` (prefix `downloads.*`), resolved via
-`tString()` / `<Trans>` from `$lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/downloads/`. Don't
+All user-facing copy in this area lives in `#lib/intl/messages/en/downloads.json` (prefix `downloads.*`), resolved via
+`tString()` / `<Trans>` from `#lib/intl`; `cmdr/no-raw-user-facing-string` is enforced on `lib/downloads/`. Don't
 hardcode copy. The download-toast sentences with inline `ShortcutChip`s / `<code>` / `<em>` use `<Trans>` (snippet per
 tag; the chip snippets discard the tag's inner text and render a literal chip from the snapshotted binding). The
 keyboard-animation SVG's key-cap labels are NOT copy (the lint skips SVG `<text>`). `GlobalShortcutRow`'s status line

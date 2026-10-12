@@ -1,8 +1,8 @@
 <script lang="ts">
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
-    import type { BundleWriteBlocker } from '$lib/tauri-commands'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
 
     interface Props {
         /** Which arrangement is keeping the update out of the bundle. */

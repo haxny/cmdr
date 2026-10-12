@@ -14,9 +14,9 @@
  * - A purely non-native conflict keeps the existing resolvable banner
  *   (Remove-from-other / Keep-both / Cancel).
  */
-import type { Command } from '$lib/commands/types'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import { tString } from '$lib/intl/messages.svelte'
+import type { Command } from '#lib/commands/types.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** A native conflict: the combo is reserved by macOS and can't reach Cmdr. */
 export interface NativeConflict {

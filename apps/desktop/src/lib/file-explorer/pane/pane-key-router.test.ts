@@ -28,7 +28,7 @@ const { shortcuts, quickLook, renameActivation } = vi.hoisted<{
   renameActivation: { cancelClickToRename: vi.fn() },
 }))
 
-vi.mock('$lib/shortcuts', () => ({ eventMatchesCommand: shortcuts.eventMatchesCommand }))
+vi.mock('#lib/shortcuts/index.js', () => ({ eventMatchesCommand: shortcuts.eventMatchesCommand }))
 vi.mock('../quick-look/quick-look-hint', () => ({ maybeShowQuickLookHint: quickLook.maybeShowQuickLookHint }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: renameActivation.cancelClickToRename }))
 

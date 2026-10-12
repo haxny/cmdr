@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { TagRef } from '$lib/ipc/bindings'
+import type { TagRef } from '#lib/ipc/bindings.js'
 import {
   tagDotsModel,
   tagClusterWidthPx,

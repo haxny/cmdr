@@ -352,7 +352,7 @@ pub enum SourceItemOutcome {
 ///
 /// The frontend uses it for gradual deselection during an operation, and
 /// `source_removed` additionally drives the search-snapshot purge
-/// (`$lib/search/snapshot-purge.ts`). Why the outcome rides on this event rather
+/// (`#lib/search/snapshot-purge.ts`). Why the outcome rides on this event rather
 /// than a sibling one, and where each non-`Done` verdict comes from: `DETAILS.md`
 /// § "Per-source outcomes".
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]

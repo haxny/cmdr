@@ -7,7 +7,7 @@
  * family handler modules (`command-handlers/`) can import it without a cycle: the
  * core imports the handlers, the handlers import this, this imports neither.
  */
-import type { CommandDispatchArgs, CommandId } from '$lib/commands'
+import type { CommandDispatchArgs, CommandId } from '#lib/commands/index.js'
 import type { ExplorerAPI } from './explorer-api'
 
 /**

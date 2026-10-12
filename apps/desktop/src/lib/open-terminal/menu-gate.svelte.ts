@@ -14,10 +14,10 @@
  * one window clobber the other's verdict.
  */
 
-import { setOpenTerminalHereEnabled } from '$lib/tauri-commands'
-import { getFocusedPaneVolumeId } from '$lib/file-explorer/pane/focused-pane-reads'
-import { capabilitiesFor } from '$lib/file-explorer/pane/volume-capabilities'
-import { getAppLogger } from '$lib/logging/logger'
+import { setOpenTerminalHereEnabled } from '#lib/tauri-commands/index.js'
+import { getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
+import { capabilitiesFor } from '#lib/file-explorer/pane/volume-capabilities.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { canOpenTerminalIn } from './terminal-target'
 
 const log = getAppLogger('fileExplorer')

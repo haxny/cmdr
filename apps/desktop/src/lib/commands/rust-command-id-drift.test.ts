@@ -27,7 +27,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isCommandId } from './command-ids'
-import { menuCommands } from '$lib/shortcuts/shortcuts-store'
+import { menuCommands } from '#lib/shortcuts/shortcuts-store.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 // here = apps/desktop/src/lib/commands → repo desktop root is three up.

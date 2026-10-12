@@ -1,13 +1,13 @@
 <script lang="ts">
     /**
      * A shortcut pill in the Keyboard shortcuts section: the chip of a
-     * `KeyboardShortcutsSection` row and of `$lib/downloads/GlobalShortcutRow.svelte`, which
+     * `KeyboardShortcutsSection` row and of `#lib/downloads/GlobalShortcutRow.svelte`, which
      * sits in the same list and has to look the same. Editable by default (a button that
      * starts recording); `readOnly` renders the same shape as a plain span for rows Cmdr
-     * can't rebind. The prose-side sibling is `$lib/ui/ShortcutChip`, which only displays.
+     * can't rebind. The prose-side sibling is `#lib/ui/ShortcutChip`, which only displays.
      */
     import type { Snippet } from 'svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
 
     interface Props {
         /** Shown, not editable: a plain span, no hover, no click (macOS-native and fixed-key rows). */

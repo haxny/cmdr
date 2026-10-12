@@ -2,7 +2,7 @@
 //
 // ❌ There is deliberately no generic "IPC error" type here any more. Every
 // command family ships its OWN typed error enum, which the frontend renders from
-// through the message catalog (`$lib/ipc/typed-failure.ts` carries one across a
+// through the message catalog (`#lib/ipc/typed-failure.ts` carries one across a
 // throw). A shared `{ message, timedOut }` shape is how a typed refusal used to
 // become an untranslated English sentence in front of a person.
 
@@ -24,7 +24,7 @@ export interface TimedOut<T> {
  * `Error.message` is a best-effort DIAGNOSTIC for logs and generic consumers.
  * ❌ Nothing a user reads comes from it: a command family whose refusal reaches
  * a human throws a `TypedFailure` subclass instead and words it from the catalog
- * (`$lib/ipc/typed-failure.ts`).
+ * (`#lib/ipc/typed-failure.ts`).
  *
  * A tagged wire error (`{ type: 'timedOut', … }`, the shape every typed command
  * family ships) becomes `Error("timedOut")` rather than a blob of JSON, so a log

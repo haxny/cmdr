@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { formatUsdMicros, isLocalOnly, totalTokens } from './ask-cmdr-cost'
 
 beforeAll(() => {

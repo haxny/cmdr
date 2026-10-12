@@ -3,7 +3,7 @@
  * main-window startup step (`lib/ask-cmdr/DETAILS.md` § Gates, cost, and settings).
  *
  * Before the switch, Ask Cmdr was "on" when its own opt-in was recorded in `main.db`. That
- * record grants nothing now (cloud consent is `$lib/ai/cloud-consent.svelte.ts`), but it still
+ * record grants nothing now (cloud consent is `#lib/ai/cloud-consent.svelte.ts`), but it still
  * says who wanted Ask Cmdr: someone who accepted keeps it on (on Cloud it then waits for "Allow
  * cloud AI"), and someone who saw the opt-in and didn't take it, or held a "no", stays off.
  * Turning it on for them would turn a "not yet" into a yes, proactive loop included.
@@ -15,9 +15,9 @@
  * retry once `_schemaVersion` is stamped.
  */
 
-import { getAppLogger } from '$lib/logging/logger'
-import { getSetting, isExplicitlySet, setSetting } from '$lib/settings'
-import { askCmdrLegacyOptIn } from '$lib/tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getSetting, isExplicitlySet, setSetting } from '#lib/settings/index.js'
+import { askCmdrLegacyOptIn } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
 

@@ -29,12 +29,12 @@
  */
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { getSystemTextSizeMultiplier, onSystemTextSizeChanged } from '$lib/tauri-commands'
+import { getSystemTextSizeMultiplier, onSystemTextSizeChanged } from '#lib/tauri-commands/index.js'
 import { SvelteSet } from 'svelte/reactivity'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
-import { getSetting, onSpecificSettingChange } from '$lib/settings'
-import { ensureFontMetricsLoaded, setMeasuresFontMetrics } from '$lib/font-metrics'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
+import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+import { ensureFontMetricsLoaded, setMeasuresFontMetrics } from '#lib/font-metrics/index.js'
 
 const log = getAppLogger('text-size')
 /**

@@ -14,10 +14,10 @@
  * The next trigger's fixture call puts the destination back (`dev_fixtures.rs`).
  */
 
-import { dispatchTransferOperation } from '$lib/file-operations/transfer/transfer-dispatch'
-import { DEFAULT_VOLUME_ID } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast/toast-store.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { dispatchTransferOperation } from '#lib/file-operations/transfer/transfer-dispatch.js'
+import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/toast-store.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { closeGalleryDialog } from './gallery-state.svelte'
 import type { FixtureDirPayload } from './disk-fixture'
 import { operationConflictFixtures } from './fixtures/operation-conflict'

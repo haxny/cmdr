@@ -5,8 +5,8 @@
  * this holds whether a file is out, and why reading it back didn't go.
  */
 
-import type { MultiRenameError } from '$lib/tauri-commands'
-import { openFileInEditor } from '$lib/text-editor/open-file-in-editor'
+import type { MultiRenameError } from '#lib/tauri-commands/index.js'
+import { openFileInEditor } from '#lib/text-editor/open-file-in-editor.js'
 import type { MultiRenameState } from './multi-rename-state.svelte'
 
 export interface ResultsState {

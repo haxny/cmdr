@@ -12,7 +12,7 @@ const { getRecentPathsMock, addRecentPathMock, removeRecentPathMock } = vi.hoist
   removeRecentPathMock: vi.fn(),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getRecentPaths: getRecentPathsMock,
     addRecentPath: addRecentPathMock,
@@ -27,7 +27,7 @@ import {
   removeRecentPath,
   resetRecentPathsForTests,
 } from './recent-paths-state.svelte'
-import type { RecentPathEntry } from '$lib/ipc/bindings'
+import type { RecentPathEntry } from '#lib/ipc/bindings.js'
 
 const CAP = 10
 

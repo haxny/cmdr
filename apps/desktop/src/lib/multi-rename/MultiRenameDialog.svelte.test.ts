@@ -10,11 +10,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import MultiRenameDialog from './MultiRenameDialog.svelte'
-import { runMenuClaim } from '$lib/commands/menu-claims'
-import type { RenameExample } from '$lib/tauri-commands'
+import { runMenuClaim } from '#lib/commands/menu-claims.js'
+import type { RenameExample } from '#lib/tauri-commands/index.js'
 import { MARK_END, MARK_START } from './rename-examples'
 import { setLastMultiRenameRun } from './last-run.svelte'
-import { RollbackRefusalFailure } from '$lib/operation-log/rollback-refusal'
+import { RollbackRefusalFailure } from '#lib/operation-log/rollback-refusal.js'
 
 const ipc = vi.hoisted(() => ({
   previewMultiRename: vi.fn(),
@@ -32,7 +32,7 @@ const ipc = vi.hoisted(() => ({
   getMultiRenameHistory: vi.fn(() => Promise.resolve([])),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   ...ipc,

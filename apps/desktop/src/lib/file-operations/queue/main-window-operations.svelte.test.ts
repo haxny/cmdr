@@ -7,13 +7,13 @@
  * tests care about subscribe/unsubscribe counts and about a re-init after
  * teardown producing a working instance (the HMR / route-remount case).
  *
- * `$lib/tauri-commands` is mocked exactly as `operations-store.svelte.test.ts`
+ * `#lib/tauri-commands` is mocked exactly as `operations-store.svelte.test.ts`
  * mocks it, with the unlisten functions captured so teardown is observable.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushSync } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 
 const unlistenSnapshots = vi.fn()
 const unlistenProgress = vi.fn()
@@ -21,13 +21,13 @@ const unlistenProgress = vi.fn()
 /** Seeded rows `list_operations` answers with; per-test overridable. */
 let seeded: OperationSnapshot[] = []
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve(seeded)),
   onOperationsChanged: vi.fn(() => Promise.resolve(unlistenSnapshots)),
   onWriteProgress: vi.fn(() => Promise.resolve(unlistenProgress)),
 }))
 
-import { listOperations, onOperationsChanged, onWriteProgress } from '$lib/tauri-commands'
+import { listOperations, onOperationsChanged, onWriteProgress } from '#lib/tauri-commands/index.js'
 import {
   initMainWindowOperations,
   destroyMainWindowOperations,

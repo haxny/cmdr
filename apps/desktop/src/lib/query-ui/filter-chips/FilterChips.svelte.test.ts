@@ -27,7 +27,7 @@ import {
   setCaseSensitive,
   clearSearchState,
   searchQueryState,
-} from '$lib/search/search-state.svelte'
+} from '#lib/search/search-state.svelte.js'
 
 type Props = ComponentProps<typeof SearchFilterChips>
 
@@ -352,7 +352,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     // The textarea's `oninput` is wired through the `onInput` prop, which writes directly into
     // the search-state module (the same path the dialog's `inputHandler` takes in production).
     // We assert against the module state rather than a prop spy, mirroring the real wiring.
-    const { getScope } = await import('$lib/search/search-state.svelte')
+    const { getScope } = await import('#lib/search/search-state.svelte.js')
     const { target, cleanup } = mountChips(baseProps())
     await tick()
     const scopeChip = findChip(target, 'Search in')
@@ -470,7 +470,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     hundred?.click()
     await tick()
     // The comparator promoted to gte, and the value column landed on "100".
-    const { getSizeFilter, getSizeValue } = await import('$lib/search/search-state.svelte')
+    const { getSizeFilter, getSizeValue } = await import('#lib/search/search-state.svelte.js')
     expect(getSizeFilter()).toBe('gte')
     expect(getSizeValue()).toBe('100')
     cleanup()
@@ -497,7 +497,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     // Clicking the `=` cell writes `eq` to the shared state.
     eqCell?.click()
     await tick()
-    const { getSizeFilter } = await import('$lib/search/search-state.svelte')
+    const { getSizeFilter } = await import('#lib/search/search-state.svelte.js')
     expect(getSizeFilter()).toBe('eq')
     cleanup()
     document.querySelectorAll('.ui-popover').forEach((el) => {
@@ -517,7 +517,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     expect(today).not.toBeUndefined()
     today?.click()
     await tick()
-    const { getDateFilter, getDateValue } = await import('$lib/search/search-state.svelte')
+    const { getDateFilter, getDateValue } = await import('#lib/search/search-state.svelte.js')
     expect(getDateFilter()).toBe('after')
     // dateValue is now an ISO date matching "today"; we just check non-empty.
     expect(getDateValue()).toMatch(/^\d{4}-\d{2}-\d{2}$/)

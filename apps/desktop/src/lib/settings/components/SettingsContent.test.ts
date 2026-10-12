@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import SettingsContent from './SettingsContent.svelte'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn(() => undefined),
   setSetting: vi.fn(() => Promise.resolve()),
   resetSetting: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('$lib/settings/settings-store', () => ({
   onSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   openAppearanceSettings: vi.fn(() => Promise.resolve()),
   openPrivacySettings: vi.fn(() => Promise.resolve()),
   invoke: vi.fn(() => Promise.resolve(null)),
@@ -42,7 +42,7 @@ vi.mock('$lib/tauri-commands', () => ({
 // `DriveIndexingSection` (rendered when an "index size" search keeps it
 // visible) calls a handful of backend IPCs on mount. Stub them so the section
 // mounts without a Tauri runtime.
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     downloadsWatcherStatus: vi.fn(() =>
       Promise.resolve({ status: 'ok', data: { running: true, downloadsDir: '/d', fdaPending: false } }),

@@ -1,7 +1,7 @@
 <script lang="ts">
-    import SectionCard from '$lib/ui/SectionCard.svelte'
-    import Popover from '$lib/ui/Popover.svelte'
-    import TextInput from '$lib/ui/TextInput.svelte'
+    import SectionCard from '#lib/ui/SectionCard.svelte'
+    import Popover from '#lib/ui/Popover.svelte'
+    import TextInput from '#lib/ui/TextInput.svelte'
     import DemoAnchor from '../DemoAnchor.svelte'
 
     let anchorEl: HTMLButtonElement | undefined = $state()

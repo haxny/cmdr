@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte'
-    import type { SortColumn, SortOrder } from '$lib/file-explorer/types'
-    import ModalDialog from '$lib/ui/ModalDialog.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import Switch from '$lib/ui/Switch.svelte'
+    import type { SortColumn, SortOrder } from '#lib/file-explorer/types.js'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
+    import Button from '#lib/ui/Button.svelte'
+    import Switch from '#lib/ui/Switch.svelte'
     import {
         generateDeleteTitle,
         abbreviatePath,
@@ -12,18 +12,18 @@
         type CloudOnlineOnlyExtent,
         type DeleteSourceItem,
     } from './delete-dialog-utils'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import Size from '$lib/ui/Size.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tooltip } from '$lib/tooltip/tooltip'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import Size from '#lib/ui/Size.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import S3CostLine from '../S3CostLine.svelte'
     import { costRequestFor } from '../s3-cost-line'
-    import { useShortenMiddle } from '$lib/utils/shorten-middle-action'
-    import Trans from '$lib/intl/Trans.svelte'
-    import { t, tString } from '$lib/intl/messages.svelte'
-    import type { ConfirmOptions, ConfirmOrigin, DeleteConfirmer } from '$lib/file-explorer/pane/dialog-props'
+    import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
+    import Trans from '#lib/intl/Trans.svelte'
+    import { t, tString } from '#lib/intl/messages.svelte.js'
+    import type { ConfirmOptions, ConfirmOrigin, DeleteConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
     import StartInBackgroundButton from '../StartInBackgroundButton.svelte'
     import { createDeleteScanState } from './delete-scan-state.svelte'
     import { isStartInBackgroundKey, swallowHeldKeyRepeat } from '../start-in-background-key'

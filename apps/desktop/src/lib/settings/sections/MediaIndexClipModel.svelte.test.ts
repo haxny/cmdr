@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import type { ClipModelStatus } from '$lib/ipc/bindings'
+import type { ClipModelStatus } from '#lib/ipc/bindings.js'
 // Static import so the `no-isolated-tests` lint sees the exercised source; `vi.mock`
 // below is hoisted above it, so the component still resolves the mocked dependencies.
 import MediaIndexClipModel from './MediaIndexClipModel.svelte'
@@ -16,7 +16,7 @@ import MediaIndexClipModel from './MediaIndexClipModel.svelte'
 const settingValues: Record<string, unknown> = {
   'mediaIndex.semanticSearch.enabled': true,
 }
-vi.mock('$lib/settings', async (importOriginal) => ({
+vi.mock('#lib/settings/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getSetting: (id: string) => settingValues[id],
   setSetting: vi.fn(),
@@ -30,13 +30,13 @@ const { statusMock, downloadMock, deleteMock, confirmMock } = vi.hoisted(() => (
   confirmMock: vi.fn(),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexClipModelStatus: statusMock,
   mediaIndexDownloadClipModel: downloadMock,
   mediaIndexDeleteClipModel: deleteMock,
 }))
-vi.mock('$lib/utils/confirm-dialog', () => ({ confirmDialog: confirmMock }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/utils/confirm-dialog.js', () => ({ confirmDialog: confirmMock }))
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatFileSize: (b: number) => `${String(b)}B`,
 }))

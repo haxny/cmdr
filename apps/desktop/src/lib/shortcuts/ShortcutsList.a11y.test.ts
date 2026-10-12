@@ -9,10 +9,10 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import ShortcutsList from './ShortcutsList.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/shortcuts', async () => {
-  const actual = await vi.importActual<object>('$lib/shortcuts')
+vi.mock('#lib/shortcuts/index.js', async () => {
+  const actual = await vi.importActual<object>('#lib/shortcuts/index.js')
   return {
     ...actual,
     onShortcutChange: vi.fn(() => () => {}),

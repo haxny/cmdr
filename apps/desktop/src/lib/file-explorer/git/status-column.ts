@@ -6,7 +6,7 @@
  * `byPath` map indexes them by relative path so `FullList.svelte` can render
  * the cell in O(1).
  */
-import { getGitStatusForPaths } from '$lib/tauri-commands'
+import { getGitStatusForPaths } from '#lib/tauri-commands/index.js'
 
 export type EntryStatusCode =
   | 'modified'

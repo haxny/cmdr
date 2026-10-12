@@ -16,8 +16,8 @@ import {
   type MutationReply,
   type PasteClipboardReply,
   type PastedClipboardFile,
-} from '$lib/ipc/bindings'
-import { throwMutationError } from '$lib/file-operations/mutation-error'
+} from '#lib/ipc/bindings.js'
+import { throwMutationError } from '#lib/file-operations/mutation-error.js'
 
 /** A command's typed result, as the bindings return it. */
 type Answer<R> = { status: 'ok'; data: R } | { status: 'error'; error: MutationError }

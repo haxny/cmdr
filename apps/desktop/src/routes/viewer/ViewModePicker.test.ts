@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 
 import ViewModePicker from './ViewModePicker.svelte'
-import type { ViewerContentKind } from '$lib/ipc/bindings'
+import type { ViewerContentKind } from '#lib/ipc/bindings.js'
 import type { ViewerDisplayMode } from './viewer-view-mode'
 
 beforeEach(() => {

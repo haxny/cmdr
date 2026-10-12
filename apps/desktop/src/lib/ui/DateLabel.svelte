@@ -13,7 +13,7 @@
   `formattedDate(...)` data. Keep it that way.
 -->
 <script lang="ts">
-    import { formattedDate } from '$lib/settings/reactive-settings.svelte'
+    import { formattedDate } from '#lib/settings/reactive-settings.svelte.js'
 
     interface Props {
         /** Unix timestamp in seconds (matching the FileEntry convention). */

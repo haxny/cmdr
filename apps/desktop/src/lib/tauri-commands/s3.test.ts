@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     saveS3Credentials: vi.fn(),
     getS3UnattendedReconnect: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('$lib/ipc/bindings', () => ({
   },
 }))
 
-import { commands, type S3ProviderChoice, type SavedS3Place } from '$lib/ipc/bindings'
+import { commands, type S3ProviderChoice, type SavedS3Place } from '#lib/ipc/bindings.js'
 import { getS3UnattendedReconnect, knownS3PlaceOf, saveS3Credentials } from './s3'
 
 const AWS: S3ProviderChoice = { kind: 'aws', region: 'eu-west-1' }

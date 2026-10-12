@@ -4,7 +4,7 @@ import { installClipboardShimIfE2e, _resetClipboardShimForTests } from './clipbo
 const { isE2eModeSpy } = vi.hoisted(() => ({
   isE2eModeSpy: vi.fn<() => Promise<boolean>>(),
 }))
-vi.mock('$lib/tauri-commands', () => ({ isE2eMode: isE2eModeSpy }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ isE2eMode: isE2eModeSpy }))
 
 describe('installClipboardShimIfE2e', () => {
   let realWriteText: ReturnType<typeof vi.fn>

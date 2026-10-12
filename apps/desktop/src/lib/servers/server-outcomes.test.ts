@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { SavedServerOutcome } from '$lib/ipc/bindings'
+import type { SavedServerOutcome } from '#lib/ipc/bindings.js'
 import type { ConnectRefusalKind } from './connect-refusals'
 import { needsAHuman, readConnectOutcome, readEjectAndSaveOutcome, readSavedServerOutcome } from './server-outcomes'
 

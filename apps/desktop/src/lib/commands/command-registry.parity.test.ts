@@ -17,7 +17,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { commands, updateLicenseCommandName } from './command-registry'
-import { tString } from '$lib/intl/messages.svelte'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** id → exact pre-migration English `name`. */
 const EXPECTED_NAMES: Record<string, string> = {

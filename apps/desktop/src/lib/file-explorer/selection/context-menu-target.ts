@@ -8,9 +8,9 @@
  *
  * ❗ Both halves are rendered HERE rather than in Rust, for one reason: locale-aware
  * number formatting. A size depends on `appearance.fileSizeFormat` and
- * `listing.sizeUnit` and only `$lib/units/byte-size.ts` honours them; a count needs the
+ * `listing.sizeUnit` and only `#lib/units/byte-size.ts` honours them; a count needs the
  * active locale's grouping separator (`12,345` / `12.345`) and its plural category,
- * which `$lib/intl` has and `crate::intl`'s `menu_t` deliberately does not (it's a table
+ * which `#lib/intl` has and `crate::intl`'s `menu_t` deliberately does not (it's a table
  * lookup with no ICU and no number formatting). Composing either in Rust would be a
  * second, worse implementation drifting from the pane's own status bar and size column,
  * with both on screen at once. See `src-tauri/src/menu/context_menu_header.rs`.
@@ -22,9 +22,9 @@
 import { formatSizeText } from './selection-info-utils'
 import { getDisplaySize } from '../views/full-list-utils'
 import type { ListingStats } from '../types'
-import { formatInteger } from '$lib/intl/number-format'
-import { tString } from '$lib/intl/messages.svelte'
-import { getFileSizeFormat, getFileSizeUnit, getSizeDisplayMode } from '$lib/settings/reactive-settings.svelte'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { getFileSizeFormat, getFileSizeUnit, getSizeDisplayMode } from '#lib/settings/reactive-settings.svelte.js'
 
 /** What the size rule needs off a row. Both file panes' rows and search hits fit it. */
 export interface SizedRow {

@@ -27,8 +27,8 @@
  * reads the dashboard will look.
  */
 
-import { trackEvent } from '$lib/tauri-commands'
-import type { FileEntry } from '$lib/file-explorer/types'
+import { trackEvent } from '#lib/tauri-commands/index.js'
+import type { FileEntry } from '#lib/file-explorer/types.js'
 import { isVolumeCoveredInPhases } from './index-state.svelte'
 
 /**

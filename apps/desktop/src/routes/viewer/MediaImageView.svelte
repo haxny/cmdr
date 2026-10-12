@@ -15,9 +15,9 @@
    * Loading + error states ship from the start: a spinner until `load` / `error`
    * fires, and a friendly inline message on `error`.
    */
-  import Spinner from '$lib/ui/Spinner.svelte'
+  import Spinner from '#lib/ui/Spinner.svelte'
   import { clampZoom, nextClickZoom, type ImageViewMode } from './media-view'
-  import { tString } from '$lib/intl/messages.svelte'
+  import { tString } from '#lib/intl/messages.svelte.js'
 
   const CONTROL_SELECTOR =
     'button, a[href], input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"]'

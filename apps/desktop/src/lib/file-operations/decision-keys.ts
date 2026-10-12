@@ -3,7 +3,7 @@
  * for a decision: the clash prompt (`transfer/TransferConflictDialog.svelte`,
  * inside the progress dialog and the main window's `OperationConflictDialog`)
  * and the transfer error dialog. Every choice has ONE fixed letter, pressed
- * bare, and the button shows it in a chip (`$lib/ui/KeyHint.svelte`).
+ * bare, and the button shows it in a chip (`#lib/ui/KeyHint.svelte`).
  *
  * The letters are not translated and never derived from a label: they're muscle
  * memory, so a German or Czech UI answers with the same keys as the English one.
@@ -14,8 +14,8 @@
  * dialog. `DETAILS.md` § "Letter keys on decision prompts".
  */
 
-import { claimKey } from '$lib/shortcuts/claim-key'
-import { isTextInputTarget } from '$lib/utils/text-input-focus'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
+import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
 
 /**
  * How long a prompt has to be on screen before a key answers it. A clash or an

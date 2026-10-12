@@ -9,9 +9,9 @@
  * a macOS TCC popup. This runs on mount and on every window focus, so the loud one would
  * stack popups on someone who simply alt-tabbed.
  */
-import { getAppLogger } from '$lib/logging/logger'
-import { isMacOS } from '$lib/shortcuts/key-capture'
-import { checkFullDiskAccessQuiet } from '$lib/tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
+import { checkFullDiskAccessQuiet } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('fda-status')
 

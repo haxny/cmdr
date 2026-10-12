@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
-    import SettingSelect from '$lib/settings/components/SettingSelect.svelte'
-    import { trackLanguageChanged } from '$lib/intl/language-analytics'
+    import Icon from '#lib/ui/Icon.svelte'
+    import SettingSelect from '#lib/settings/components/SettingSelect.svelte'
+    import { trackLanguageChanged } from '#lib/intl/language-analytics.js'
 
     /**
      * The escape hatch: a compact language picker in the onboarding wizard's frame,

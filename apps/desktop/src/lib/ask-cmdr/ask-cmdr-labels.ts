@@ -4,12 +4,12 @@
  * would flag a key only reached through a computed prefix).
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import type { AskCmdrErrorKind, RenameEvidenceSource, SkipBreakdown, SkipReason } from '$lib/tauri-commands'
-import type { MessageKey } from '$lib/intl/keys.gen'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
-import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import type { AskCmdrErrorKind, RenameEvidenceSource, SkipBreakdown, SkipReason } from '#lib/tauri-commands/index.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
 
 /** Present-tense (running) and past-tense (done) label keys per read-only tool. */
 const TOOL_LABEL_KEYS: Record<string, { doing: MessageKey; done: MessageKey }> = {

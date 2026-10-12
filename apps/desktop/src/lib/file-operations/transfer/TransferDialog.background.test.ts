@@ -13,8 +13,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { tick, unmount } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
-import type { TransferConfirmPayload, TransferConfirmer } from '$lib/file-explorer/pane/dialog-props'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
+import type { TransferConfirmPayload, TransferConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
 import {
   deferred,
   destinationWriteAccessMock,
@@ -26,7 +26,7 @@ import {
 
 const { queueRows } = vi.hoisted(() => ({ queueRows: { rows: [] as { snapshot: OperationSnapshot }[] } }))
 
-vi.mock('$lib/file-operations/queue/main-window-operations.svelte', () => ({
+vi.mock('#lib/file-operations/queue/main-window-operations.svelte.js', () => ({
   getMainWindowOperationRows: () => queueRows.rows,
 }))
 

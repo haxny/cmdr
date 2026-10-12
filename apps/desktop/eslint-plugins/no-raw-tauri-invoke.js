@@ -33,7 +33,7 @@ export default {
     },
     messages: {
       rawInvoke:
-        "Don't call `invoke('{{ command }}')` directly. Import the typed binding from `$lib/ipc` " +
+        "Don't call `invoke('{{ command }}')` directly. Import the typed binding from `#lib/ipc` " +
         '(or wherever the generated bindings module lives) so command names are checked at compile time. ' +
         'See AGENTS.md § "Type-safe IPC".',
     },

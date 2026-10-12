@@ -17,12 +17,12 @@
  */
 
 import { untrack } from 'svelte'
-import { getFileAt, getListingStats, type FolderSizes } from '$lib/tauri-commands'
+import { getFileAt, getListingStats, type FolderSizes } from '#lib/tauri-commands/index.js'
 import type { FileEntry, ListingStats } from '../types'
-import type { CanonicalPath } from '$lib/path/canonical'
-import type { SearchSnapshot } from '$lib/search/snapshot-store.svelte'
+import type { CanonicalPath } from '#lib/path/canonical.js'
+import type { SearchSnapshot } from '#lib/search/snapshot-store.svelte.js'
 import { applyFolderSizes, updateIndexSizesInPlace } from '../views/file-list-utils'
-import { createDebounce, createThrottle } from '$lib/utils/timing'
+import { createDebounce, createThrottle } from '#lib/utils/timing.js'
 import { createParentEntry } from './parent-entry'
 import { computeSnapshotStats } from './snapshot-stats'
 

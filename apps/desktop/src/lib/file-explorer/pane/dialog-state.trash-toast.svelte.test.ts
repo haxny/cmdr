@@ -14,12 +14,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createDialogState } from './dialog-state.svelte'
-import { setForegroundOperationId } from '$lib/file-operations/foreground-operation.svelte'
-import TrashCompleteToastContent from '$lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { setForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
+import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
 import type { TransferCompletePayload, TransferProgressPropsData } from './dialog-props'
 import type { FilePaneAPI } from './types'
 import type { PaneRevealAPI } from '../navigation/navigate-and-select'
-import type { ToastContent, ToastOptions } from '$lib/ui/toast/toast-store.svelte'
+import type { ToastContent, ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
 
 const { addToast } = vi.hoisted(() => ({
   addToast: vi.fn<(content: ToastContent, options?: ToastOptions) => string>(),
@@ -32,7 +32,7 @@ function raisedToast(): { content: ToastContent; options: ToastOptions } {
   return { content: call[0], options: call[1] ?? {} }
 }
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -45,8 +45,8 @@ vi.mock('$lib/tauri-commands', () => ({
   onWriteSettled: vi.fn(() => Promise.resolve(() => {})),
 }))
 
-vi.mock('$lib/ui/toast', () => ({ addToast, dismissToast: vi.fn() }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast, dismissToast: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
 
 const FOLDER = '/Users/me/photos'
 

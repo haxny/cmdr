@@ -12,7 +12,7 @@
  * and `command-dispatch.delegate-arms.test.ts`.
  */
 import { expect, vi } from 'vitest'
-import { COMMAND_IDS, type CommandId } from '$lib/commands'
+import { COMMAND_IDS, type CommandId } from '#lib/commands/index.js'
 import type { CommandDispatchContext } from './command-dispatch'
 import type { ExplorerAPI } from './explorer-api'
 

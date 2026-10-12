@@ -11,9 +11,9 @@
 
 import { describe, it, vi, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/settings/reactive-settings.svelte', async (importOriginal) => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getFileSizeFormat: () => 'binary',
   formattedDate: (t: number | null | undefined) =>
@@ -41,7 +41,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
   ),
 }))
 
-vi.mock('$lib/ipc/bindings', async (importOriginal) => ({
+vi.mock('#lib/ipc/bindings.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
@@ -60,7 +60,7 @@ afterEach(() => {
 /**
  * Tier 3 a11y test for the DateLabel catalog section. Stubs the reactive-settings
  * `formattedDate` helper the same way the `DateLabel` block of
- * `$lib/ui/display.a11y.test.ts` does so jsdom can render without a live settings
+ * `#lib/ui/display.a11y.test.ts` does so jsdom can render without a live settings
  * store. Catches regressions in the section layout (caption ↔ value pairing) and
  * the underlying DateLabel markup.
  */

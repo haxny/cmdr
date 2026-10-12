@@ -13,8 +13,8 @@ import {
   type DateColorsPalette,
   type ThemeMode,
   type FileSizeFormat,
-} from '$lib/settings'
-import { getAppLogger, setVerboseLogging } from '$lib/logging/logger'
+} from '#lib/settings/index.js'
+import { getAppLogger, setVerboseLogging } from '#lib/logging/logger.js'
 import {
   setUiLanguage,
   updateFileWatcherDebounce,
@@ -42,17 +42,17 @@ import {
   applyRecentSelectionsMaxCount,
   askCmdrWakeSettingsChanged,
   askCmdrEnabledChanged,
-} from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast/toast-store.svelte'
-import { tString, setLocale } from '$lib/intl/messages.svelte'
-import { loadSystemLocales, pickUiLocale, watchSystemLocales } from '$lib/intl/os-locales'
-import { trackLanguageResolved } from '$lib/intl/language-analytics'
-import { refreshSystemStrings } from '$lib/system-strings.svelte'
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/toast-store.svelte.js'
+import { tString, setLocale } from '#lib/intl/messages.svelte.js'
+import { loadSystemLocales, pickUiLocale, watchSystemLocales } from '#lib/intl/os-locales.js'
+import { trackLanguageResolved } from '#lib/intl/language-analytics.js'
+import { refreshSystemStrings } from '#lib/system-strings.svelte.js'
 import { pushConfigToBackend } from './ai-config'
-import { noteSlotSettingChanged } from '$lib/ask-cmdr/ask-cmdr-trigger.svelte'
-import { pushLowDiskSpaceConfigToBackend } from '$lib/low-disk-space/notifications-mode'
-import { cancelScheduledAdbConfigPush, pushAdbConfigToBackend, scheduleAdbConfigPush } from '$lib/adb/adb-settings'
-import { applyAutoCheckEnabled } from '$lib/updates/updater.svelte'
+import { noteSlotSettingChanged } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
+import { pushLowDiskSpaceConfigToBackend } from '#lib/low-disk-space/notifications-mode.js'
+import { cancelScheduledAdbConfigPush, pushAdbConfigToBackend, scheduleAdbConfigPush } from '#lib/adb/adb-settings.js'
+import { applyAutoCheckEnabled } from '#lib/updates/updater.svelte.js'
 
 const log = getAppLogger('settings-applier')
 

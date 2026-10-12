@@ -29,8 +29,8 @@
      * so placing the caret in it isn't a click outside.
      */
     import { onMount, onDestroy, tick, type Snippet } from 'svelte'
-    import { trapFocus } from '$lib/ui/focus-trap'
-    import { tString } from '$lib/intl/messages.svelte'
+    import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { placeOffAnchor } from './anchored-placement'
 
     interface Props {

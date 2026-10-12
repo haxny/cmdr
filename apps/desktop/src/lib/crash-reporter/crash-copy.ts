@@ -8,8 +8,8 @@
  * covered every case would be true but useless. So each fate gets its own true sentence.
  */
 
-import type { AppFate } from '$lib/ipc/bindings'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { AppFate } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * The body key for one pending crash report.

@@ -16,12 +16,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import type { VolumeInfo } from '$lib/file-explorer/types'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 // `capabilitiesFor` reads the volume store to resolve fsType/category from a
 // bare volumeId. Mock it so the test controls the volume list.
 const volumes = vi.hoisted(() => ({ list: [] as VolumeInfo[] }))
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => volumes.list,
 }))
 
@@ -30,7 +30,7 @@ vi.mock('$lib/stores/volume-store.svelte', () => ({
 // path is whatever sits on disk and keeps its volume's own row. Default ON,
 // matching the setting's registry default.
 const gitPortal = vi.hoisted(() => ({ on: true }))
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getShowVirtualGitPortal: () => gitPortal.on,
 }))
 

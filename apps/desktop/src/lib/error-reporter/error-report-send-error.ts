@@ -3,15 +3,15 @@
  * that words it.
  *
  * The request itself fails the way every call to Cmdr's api server does (`server`, worded by
- * `$lib/error-messages/server-request`); the other three variants are the dialog's own: the bundle
+ * `#lib/error-messages/server-request`); the other three variants are the dialog's own: the bundle
  * couldn't be built, the note is over the cap, or there's no auto-sent report to add a note to.
  * ❌ No backend string reaches the toast: `detail` rides the diagnostic, for the log.
  */
-import type { ErrorReportSendError } from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import { TypedFailure, failureOf } from '$lib/ipc/typed-failure'
-import { describeServerRequestFailure, serverRequestDiagnostic } from '$lib/error-messages/server-request'
+import type { ErrorReportSendError } from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
+import { describeServerRequestFailure, serverRequestDiagnostic } from '#lib/error-messages/server-request.js'
 
 function diagnosticOf(failure: ErrorReportSendError): string {
   switch (failure.type) {

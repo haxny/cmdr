@@ -4,9 +4,9 @@
 // The whole flow, end to end, plus what every outcome means:
 // `crates/cmdr-webdav/DETAILS.md`.
 
-import { commands } from '$lib/ipc/bindings'
-import type { KnownWebdavServer, WebdavUnattendedReconnect } from '$lib/ipc/bindings'
-import { throwKeychainError } from '$lib/servers/keychain-failure'
+import { commands } from '#lib/ipc/bindings.js'
+import type { KnownWebdavServer, WebdavUnattendedReconnect } from '#lib/ipc/bindings.js'
+import { throwKeychainError } from '#lib/servers/keychain-failure.js'
 
 export type { KnownWebdavServer, WebdavUnattendedReconnect }
 

@@ -1,12 +1,12 @@
 /** The native confirmation's IPC seam: a question nobody saw is never a yes. */
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({ commands: { confirmWithCheckbox: vi.fn() } }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({ commands: { confirmWithCheckbox: vi.fn() } }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { confirmWithCheckbox } from './confirm-dialog'
 
 const request = {

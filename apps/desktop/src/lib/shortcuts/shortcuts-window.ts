@@ -17,9 +17,9 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { emitTo } from '@tauri-apps/api/event'
-import { getAppLogger } from '$lib/logging/logger'
-import { getEffectiveScale } from '$lib/text-size.svelte'
-import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '$lib/app-mode'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
 import {
   centerOnMain,
   nearestMonitor,
@@ -27,7 +27,7 @@ import {
   readMonitors,
   readSavedRect,
   resolveChildPosition,
-} from '$lib/window-positioning'
+} from '#lib/window-positioning.js'
 
 const log = getAppLogger('shortcuts')
 

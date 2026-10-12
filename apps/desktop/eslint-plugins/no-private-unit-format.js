@@ -1,14 +1,14 @@
 /**
  * ESLint rule: route every byte size, transfer rate, and duration through
- * `$lib/units`; don't reimplement the unit ladder privately.
+ * `#lib/units`; don't reimplement the unit ladder privately.
  *
  * Rationale: four private byte formatters once drifted apart in this codebase.
  * Each hardcoded base 1024 while labelling the result "KB" / "MB" / "GB",
  * ignoring the user's `appearance.fileSizeFormat`, which is how two Cmdr
  * windows came to show different numbers for the same transfer. The canonical
- * surface is `$lib/units` (`formatByteSize`, `formatByteRate`,
+ * surface is `#lib/units` (`formatByteSize`, `formatByteRate`,
  * `formatDuration`, `formatMilliseconds`, `formatFilesPerSecond`), with
- * `$lib/ui/Size.svelte` as the component form.
+ * `#lib/ui/Size.svelte` as the component form.
  *
  * What it flags, both of which are the shape a private formatter takes:
  *   - a BINARY unit-ladder literal (`1024`, `1048576`, `1073741824`,
@@ -21,7 +21,7 @@
  * buffer or chunk size, and — importantly — base-1000 arithmetic. `1000` is
  * milliseconds-per-second far more often than it is a kilobyte, and there's no
  * way to tell from the AST; the name-plus-body check covers SI formatters
- * instead. A named formatter that just DELEGATES to `$lib/units` is fine, since
+ * instead. A named formatter that just DELEGATES to `#lib/units` is fine, since
  * its body carries no ladder or label.
  *
  * Exempt by path: `lib/units/` (the implementation), the size-tier layer in
@@ -60,17 +60,17 @@ export default {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Format byte sizes, transfer rates, and durations through `$lib/units`, not a private unit ladder.',
+      description: 'Format byte sizes, transfer rates, and durations through `#lib/units`, not a private unit ladder.',
       recommended: true,
     },
     messages: {
       privateLadder:
         "Don't build a unit ladder from `{{ value }}` here. Sizes go through `formatByteSize` / `<Size>`, rates " +
-        'through `formatByteRate`, durations through `formatDuration` (all `$lib/units`), so they follow the ' +
+        'through `formatByteRate`, durations through `formatDuration` (all `#lib/units`), so they follow the ' +
         "user's binary/SI setting. If this really is a fixed binary threshold, add " +
         '`// eslint-disable-next-line cmdr/no-private-unit-format -- <reason>`.',
       privateFormatter:
-        "`{{ name }}` looks like a private size/rate/duration formatter. Use `$lib/units` instead: that's the one " +
+        "`{{ name }}` looks like a private size/rate/duration formatter. Use `#lib/units` instead: that's the one " +
         'place a byte count, a rate, or a duration becomes text, and duplicating it is how two windows came to ' +
         'show different numbers for the same transfer.',
     },
@@ -87,7 +87,7 @@ export default {
     /**
      * Report a function whose NAME reads as a unit formatter and whose BODY
      * actually does unit work. The body check is what lets a wrapper that
-     * delegates to `$lib/units` keep a descriptive name.
+     * delegates to `#lib/units` keep a descriptive name.
      */
     const checkName = (node, name) => {
       if (typeof name !== 'string' || !FORMATTER_NAME_RE.test(name)) return

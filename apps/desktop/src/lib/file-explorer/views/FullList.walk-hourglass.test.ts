@@ -24,16 +24,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 
-vi.mock('$lib/tauri-commands', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
-vi.mock('$lib/icon-cache', async () => (await import('./test-file-list-mocks')).iconCacheMock())
-vi.mock('$lib/settings/reactive-settings.svelte', async () =>
+vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
+vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
+vi.mock('#lib/settings/reactive-settings.svelte.js', async () =>
   (await import('./test-file-list-mocks')).reactiveSettingsMock(),
 )
-vi.mock('$lib/settings/settings-store', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
+vi.mock('#lib/settings/settings-store.js', async () => (await import('./test-file-list-mocks')).settingsStoreMock())
 
 // The walked ground is per volume, so the mock answers per volume too: `root` has
 // a walker on one whole folder and deep inside another; `usb` has none.
-vi.mock('$lib/indexing/index-state.svelte', async () =>
+vi.mock('#lib/indexing/index-state.svelte.js', async () =>
   (await import('./test-file-list-mocks')).indexStateMock({
     getWalkedGround: (volumeId: string) =>
       volumeId === 'root' ? ['/root/downloads', '/root/projects/cmdr/target'] : [],

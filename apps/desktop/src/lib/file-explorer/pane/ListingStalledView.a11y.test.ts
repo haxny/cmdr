@@ -9,7 +9,7 @@ import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 
 import ListingStalledView from './ListingStalledView.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 describe('ListingStalledView a11y', () => {
   it('stalled view has no a11y violations', async () => {

@@ -99,7 +99,7 @@ joins it on `app_version` to tell "the user is on the default" apart from "the s
 
 Three things about it are load-bearing:
 
-- **The registry is PARSED, not imported.** `definitions/appearance.ts` pulls in `$lib/intl`, whose `messages.svelte.ts`
+- **The registry is PARSED, not imported.** `definitions/appearance.ts` pulls in `#lib/intl`, whose `messages.svelte.ts`
   is rune-compiled, so a bare `node` import can't evaluate the registry. Reading the definition objects off the
   TypeScript AST needs no Svelte toolchain, and it works against a `git show` of a release tag, which is what makes
   `--backfill` able to reconstruct the history from the tags.

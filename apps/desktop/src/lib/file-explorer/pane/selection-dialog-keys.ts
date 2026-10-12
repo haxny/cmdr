@@ -12,7 +12,7 @@
  * pinned without spinning up `FilePane`.
  */
 
-import { eventMatchesCommand } from '$lib/shortcuts'
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 
 export type SelectionDialogAction = 'open-add' | 'open-remove' | null
 

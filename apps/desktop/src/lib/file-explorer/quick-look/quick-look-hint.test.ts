@@ -6,11 +6,11 @@ const { getSettingMock, addToastMock, getToastsMock } = vi.hoisted(() => ({
   getToastsMock: vi.fn<() => Array<{ id: string }>>(() => []),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: getSettingMock,
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
   getToasts: getToastsMock,
 }))

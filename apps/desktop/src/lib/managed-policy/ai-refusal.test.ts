@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
 import { managedAiRefusalMessage } from './ai-refusal'
 
 describe('managedAiRefusalMessage', () => {

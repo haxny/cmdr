@@ -25,10 +25,10 @@ import type {
   UpgradeFailure,
   WriteOperationError,
   WriteOperationType,
-} from '$lib/ipc/bindings'
-import { tString } from '$lib/intl/messages.svelte'
-import { formatInteger } from '$lib/intl/number-format'
-import { formatDuration, seconds } from '$lib/units'
+} from '#lib/ipc/bindings.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
+import { formatDuration, seconds } from '#lib/units/index.js'
 
 /** A file operation that stopped before it was done. */
 export interface OperationFailedIncident {

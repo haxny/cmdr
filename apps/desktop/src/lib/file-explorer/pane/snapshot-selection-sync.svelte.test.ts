@@ -21,8 +21,8 @@ import {
   removeEntryFromAllSnapshots,
   appendSnapshotEntries,
   type SearchSnapshot,
-} from '$lib/search/snapshot-store.svelte'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+} from '#lib/search/snapshot-store.svelte.js'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 
 function makeEntry(name: string): SearchResultEntry {
   return {

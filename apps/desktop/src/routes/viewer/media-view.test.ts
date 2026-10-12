@@ -12,7 +12,7 @@ import {
   MEDIA_MIN_ZOOM,
   MEDIA_MAX_ZOOM,
 } from './media-view'
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 // The label helpers resolve through the en catalog; pin the locale so the
 // expected English strings are deterministic.

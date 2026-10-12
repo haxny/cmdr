@@ -14,9 +14,9 @@
  * switch reads as off.
  */
 
-import { getNotificationPermission } from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
+import { getNotificationPermission } from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 const PERMISSION_DENIED_TOAST_ID = 'notifications:macos-permission-denied'
 

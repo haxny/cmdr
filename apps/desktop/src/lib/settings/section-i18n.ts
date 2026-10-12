@@ -9,8 +9,8 @@
  * section without a key still renders, just untranslated, until catalogued).
  */
 
-import { tString } from '$lib/intl/messages.svelte'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * Section English name → its title catalog key. `Partial` so an unmapped name

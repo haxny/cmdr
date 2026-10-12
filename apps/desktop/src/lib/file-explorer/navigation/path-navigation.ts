@@ -7,12 +7,12 @@
  * volume with a live session.
  */
 
-import { constructAdbPath, parseAdbPath } from '$lib/adb/adb-path-utils'
-import { isPathOnVolume } from '$lib/path/canonical'
-import { pathExists } from '$lib/tauri-commands'
-import { getLastUsedPathForVolume } from '$lib/app-status-store'
-import { DEFAULT_VOLUME_ID } from '$lib/tauri-commands'
-import { withTimeout } from '$lib/utils/timing'
+import { constructAdbPath, parseAdbPath } from '#lib/adb/adb-path-utils.js'
+import { isPathOnVolume } from '#lib/path/canonical.js'
+import { pathExists } from '#lib/tauri-commands/index.js'
+import { getLastUsedPathForVolume } from '#lib/app-status-store.js'
+import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
+import { withTimeout } from '#lib/utils/timing.js'
 import type { ConnectionState } from '../types'
 import { probeTimeoutMs } from './connection-state'
 

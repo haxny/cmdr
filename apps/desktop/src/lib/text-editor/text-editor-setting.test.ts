@@ -13,19 +13,19 @@ const m = vi.hoisted(() => ({
   settings: new Map<string, unknown>(),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (id: string) => m.settings.get(id),
   setSetting: (id: string, value: unknown) => {
     m.settings.set(id, value)
   },
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: m.openSettingsWindow,
   settingAnchorId: (id: string) => `setting-${id}`,
 }))
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: m.warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

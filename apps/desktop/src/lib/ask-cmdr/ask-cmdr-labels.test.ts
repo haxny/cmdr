@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { errorMessage } from './ask-cmdr-labels'
-import { managedAiRefusalMessage } from '$lib/managed-policy/ai-refusal'
+import { managedAiRefusalMessage } from '#lib/managed-policy/ai-refusal.js'
 
 describe('errorMessage', () => {
   it('words the organization’s refusal by the rule that refused, through the shared copy map', () => {

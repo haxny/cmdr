@@ -62,7 +62,7 @@
   /* === Frosted-glass material (menus, selects, popovers, toasts, tooltips) ===
      Shared values so every glass surface in the app reads as one material.
      `--glass-tint` mirrors the macOS 27 Appearance > Liquid Glass slider, 0 clearest to
-     1 most tinted, set on `<html>` by `$lib/glass-material` (0.5, the slider's middle
+     1 most tinted, set on `<html>` by `#lib/glass-material` (0.5, the slider's middle
      notch, when macOS reports none). The fill's opacity and the blur both grow with it,
      matching how native menus change along the slider. Endpoints tuned by eye against a
      native (muda) context menu over the file list.

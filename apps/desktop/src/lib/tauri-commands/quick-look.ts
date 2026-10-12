@@ -4,7 +4,7 @@
 // it leaves the screen.
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { events, type QuickLookKeyEvent } from '$lib/ipc/bindings'
+import { events, type QuickLookKeyEvent } from '#lib/ipc/bindings.js'
 
 /**
  * A keyboard event the Quick Look panel didn't want. The payload mirrors a DOM

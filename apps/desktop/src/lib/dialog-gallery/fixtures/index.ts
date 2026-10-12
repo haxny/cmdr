@@ -23,7 +23,7 @@
  * They live here anyway so the same test proves their state ids resolve.
  */
 
-import type { SoftDialogId } from '$lib/ui/dialog-registry'
+import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import { alertFixtures } from './alert'
 import { deleteAiModelFixtures, forgetMemoryFixtures } from './ai-model'
 import { archivePasswordFixtures } from './archive-password'

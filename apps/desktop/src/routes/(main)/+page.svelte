@@ -1,54 +1,54 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte'
-    import DualPaneExplorer from '$lib/file-explorer/pane/DualPaneExplorer.svelte'
-    import FunctionKeyBar from '$lib/file-explorer/pane/FunctionKeyBar.svelte'
-    import OnboardingWizard from '$lib/onboarding/OnboardingWizard.svelte'
-    import { refreshFdaStatus } from '$lib/onboarding/fda-status.svelte'
+    import DualPaneExplorer from '#lib/file-explorer/pane/DualPaneExplorer.svelte'
+    import FunctionKeyBar from '#lib/file-explorer/pane/FunctionKeyBar.svelte'
+    import OnboardingWizard from '#lib/onboarding/OnboardingWizard.svelte'
+    import { refreshFdaStatus } from '#lib/onboarding/fda-status.svelte.js'
     import {
         closeFromMainWindowKey,
         shouldCloseFromMainWindowKey,
-    } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-    import AlertDialog from '$lib/ui/AlertDialog.svelte'
-    import ExpirationModal from '$lib/licensing/ExpirationModal.svelte'
-    import CommercialReminderModal from '$lib/licensing/CommercialReminderModal.svelte'
-    import AboutWindow from '$lib/licensing/AboutWindow.svelte'
-    import LicenseKeyDialog from '$lib/licensing/LicenseKeyDialog.svelte'
-    import CommandPalette from '$lib/command-palette/CommandPalette.svelte'
-    import SearchDialog from '$lib/search/SearchDialog.svelte'
-    import SelectionDialog from '$lib/selection-dialog/SelectionDialog.svelte'
-    import MultiRenameDialog from '$lib/multi-rename/MultiRenameDialog.svelte'
-    import type { MultiRenameRun } from '$lib/multi-rename/last-run.svelte'
-    import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '$lib/tauri-commands'
-    import type { MultiRenameOpened, MultiRenameStarted } from '$lib/tauri-commands'
-    import GoToPathDialog from '$lib/go-to-path/GoToPathDialog.svelte'
-    import WhatsNewDialog from '$lib/whats-new/WhatsNewDialog.svelte'
-    import AcknowledgementsDialog from '$lib/licensing/AcknowledgementsDialog.svelte'
+    } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+    import AlertDialog from '#lib/ui/AlertDialog.svelte'
+    import ExpirationModal from '#lib/licensing/ExpirationModal.svelte'
+    import CommercialReminderModal from '#lib/licensing/CommercialReminderModal.svelte'
+    import AboutWindow from '#lib/licensing/AboutWindow.svelte'
+    import LicenseKeyDialog from '#lib/licensing/LicenseKeyDialog.svelte'
+    import CommandPalette from '#lib/command-palette/CommandPalette.svelte'
+    import SearchDialog from '#lib/search/SearchDialog.svelte'
+    import SelectionDialog from '#lib/selection-dialog/SelectionDialog.svelte'
+    import MultiRenameDialog from '#lib/multi-rename/MultiRenameDialog.svelte'
+    import type { MultiRenameRun } from '#lib/multi-rename/last-run.svelte.js'
+    import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '#lib/tauri-commands/index.js'
+    import type { MultiRenameOpened, MultiRenameStarted } from '#lib/tauri-commands/index.js'
+    import GoToPathDialog from '#lib/go-to-path/GoToPathDialog.svelte'
+    import WhatsNewDialog from '#lib/whats-new/WhatsNewDialog.svelte'
+    import AcknowledgementsDialog from '#lib/licensing/AcknowledgementsDialog.svelte'
     import {
         acknowledgementsState,
         closeAcknowledgements,
-    } from '$lib/licensing/acknowledgements-trigger.svelte'
-    import { whatsNewState } from '$lib/whats-new/whats-new-trigger.svelte'
-    import OperationLogDialog from '$lib/operation-log/OperationLogDialog.svelte'
-    import { operationLogState } from '$lib/operation-log/operation-log-trigger.svelte'
-    import SuggestedOpsDialog from '$lib/suggested-ops/SuggestedOpsDialog.svelte'
-    import { suggestedOpsState } from '$lib/suggested-ops/suggested-ops-trigger.svelte'
-    import AskCmdrRail from '$lib/ask-cmdr/AskCmdrRail.svelte'
-    import BulkRenameReviewDialog from '$lib/ask-cmdr/BulkRenameReviewDialog.svelte'
-    import { askCmdrState } from '$lib/ask-cmdr/ask-cmdr-trigger.svelte'
-    import { goToPath } from '$lib/go-to-path/go-to-path'
+    } from '#lib/licensing/acknowledgements-trigger.svelte.js'
+    import { whatsNewState } from '#lib/whats-new/whats-new-trigger.svelte.js'
+    import OperationLogDialog from '#lib/operation-log/OperationLogDialog.svelte'
+    import { operationLogState } from '#lib/operation-log/operation-log-trigger.svelte.js'
+    import SuggestedOpsDialog from '#lib/suggested-ops/SuggestedOpsDialog.svelte'
+    import { suggestedOpsState } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
+    import AskCmdrRail from '#lib/ask-cmdr/AskCmdrRail.svelte'
+    import BulkRenameReviewDialog from '#lib/ask-cmdr/BulkRenameReviewDialog.svelte'
+    import { askCmdrState } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
+    import { goToPath } from '#lib/go-to-path/go-to-path.js'
     import {
         getFocusedPanePath,
         getFocusedPaneSearchScope,
         getFocusedPaneSearchTargetVolume,
-    } from '$lib/file-explorer/pane/focused-pane-reads'
-    import type { FileEntry } from '$lib/file-explorer/types'
-    import StatusCorner from '$lib/status-corner/StatusCorner.svelte'
-    import OperationConflictDialog from '$lib/file-operations/OperationConflictDialog.svelte'
-    import SourcesGonePrompt from '$lib/file-operations/SourcesGonePrompt.svelte'
-    import StaleDriveDialog from '$lib/indexing/StaleDriveDialog.svelte'
-    import { initPathLimits } from '$lib/utils/filename-validation'
-    import { initShortcutDispatch, destroyShortcutDispatch } from '$lib/shortcuts/shortcut-dispatch'
-    import { registerKnownDialogs } from '$lib/tauri-commands'
+    } from '#lib/file-explorer/pane/focused-pane-reads.js'
+    import type { FileEntry } from '#lib/file-explorer/types.js'
+    import StatusCorner from '#lib/status-corner/StatusCorner.svelte'
+    import OperationConflictDialog from '#lib/file-operations/OperationConflictDialog.svelte'
+    import SourcesGonePrompt from '#lib/file-operations/SourcesGonePrompt.svelte'
+    import StaleDriveDialog from '#lib/indexing/StaleDriveDialog.svelte'
+    import { initPathLimits } from '#lib/utils/filename-validation.js'
+    import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
+    import { registerKnownDialogs } from '#lib/tauri-commands/index.js'
     import type {
         CommandDispatcher,
         CommandDispatchers,
@@ -59,8 +59,8 @@
     import { resolveGlobalKeyAction, unclaimedDispatchWarning } from './global-keydown'
     import { exitFullScreenOnEscape, installEscapeStopClaims } from './escape-key'
     import { resolveGlobalContextMenuAction } from './global-contextmenu'
-    import { isMacOS } from '$lib/shortcuts/key-capture'
-    import { getMessage, tString } from '$lib/intl/messages.svelte'
+    import { isMacOS } from '#lib/shortcuts/key-capture.js'
+    import { getMessage, tString } from '#lib/intl/messages.svelte.js'
     import { showMainOnMount } from './show-main-on-mount'
     import {
         type StartupGatesContext,
@@ -76,19 +76,19 @@
         startWindowServices,
         stopWindowServices,
     } from './window-services'
-    import { SOFT_DIALOG_REGISTRY } from '$lib/ui/dialog-registry'
-    import { isAnySoftDialogOpen } from '$lib/ui/open-dialogs.svelte'
-    import { notifyOnboardingComplete, setOnboardingShowing } from '$lib/updates/updater.svelte'
-    import { setWizardShowingForDownloadNotice } from '$lib/onboarding/local-download-notice'
-    import { initSystemStrings } from '$lib/system-strings.svelte'
-    import { getShowFunctionKeyBar, getShowHiddenFiles } from '$lib/settings/reactive-settings.svelte'
-    import { addToast } from '$lib/ui/toast'
-    import { revealSearchResultInPane } from '$lib/file-explorer/navigation/navigate-and-select'
+    import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
+    import { isAnySoftDialogOpen } from '#lib/ui/open-dialogs.svelte.js'
+    import { notifyOnboardingComplete, setOnboardingShowing } from '#lib/updates/updater.svelte.js'
+    import { setWizardShowingForDownloadNotice } from '#lib/onboarding/local-download-notice.js'
+    import { initSystemStrings } from '#lib/system-strings.svelte.js'
+    import { getShowFunctionKeyBar, getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
+    import { addToast } from '#lib/ui/toast/index.js'
+    import { revealSearchResultInPane } from '#lib/file-explorer/navigation/navigate-and-select.js'
     import {
         handleCommandExecute as dispatchCommand,
         type CommandDispatchContext,
     } from './command-dispatch'
-    import { getAppLogger } from '$lib/logging/logger'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import {
         initAppMode,
         getAppMode,
@@ -96,14 +96,14 @@
         isE2eRun,
         decorateMainWindowTitle,
         type AppMode,
-    } from '$lib/app-mode'
+    } from '#lib/app-mode.js'
     import {
         getCachedStatus,
         hideExpirationModal,
         loadLicenseStatus,
         triggerValidationIfNeeded,
-    } from '$lib/licensing/licensing-store.svelte'
-    import { updateLicenseCommandName } from '$lib/commands/command-registry'
+    } from '#lib/licensing/licensing-store.svelte.js'
+    import { updateLicenseCommandName } from '#lib/commands/command-registry.js'
     import type { ExplorerAPI } from './explorer-api'
 
     /**
@@ -177,7 +177,7 @@
     /** Opens the debug window (dev mode only) */
     async function openDebugWindow() {
         try {
-            const { openDebugWindow: open } = await import('$lib/debug/debug-window')
+            const { openDebugWindow: open } = await import('#lib/debug/debug-window.js')
             await open()
         } catch (error) {
             // eslint-disable-next-line no-console -- Debug window is dev-only
@@ -203,7 +203,7 @@
      * (Tab, Space, F5, Insert) and a native-menu accelerator (⌘W, ⌘K) both stay inert
      * behind a dialog.
      *
-     * The INVENTORY is `$lib/ui/open-dialogs.svelte`, exhaustive by construction because
+     * The INVENTORY is `#lib/ui/open-dialogs.svelte`, exhaustive by construction because
      * every soft dialog registers from its own mount/destroy pair. ❌ Never go back to
      * naming dialogs here: the hand-written list this replaced missed most of the ~35
      * dialogs the main window renders, and each miss let Tab reach `pane.switch` behind
@@ -212,11 +212,11 @@
      * The other arms are the things that are NOT soft dialogs and so register nowhere: the
      * explorer's own overlays (inline rename, the volume chooser, a confirmation), and the
      * command palette, which is its own overlay rather than a `ModalDialog`
-     * (`$lib/dialog-gallery/gallery-registry.ts` § `UNREGISTERED_OVERLAY_ENTRIES` is the
+     * (`#lib/dialog-gallery/gallery-registry.ts` § `UNREGISTERED_OVERLAY_ENTRIES` is the
      * standing list of those two). The palette is reported apart because it never stands in
      * the way of its own rows.
      *
-     * No same-tick guard is needed here, unlike `$lib/file-explorer/pane/dialog-state.svelte.ts`:
+     * No same-tick guard is needed here, unlike `#lib/file-explorer/pane/dialog-state.svelte.ts`:
      * every dispatch starts in an event handler (keydown, a menu event, a click), so a
      * `show* = true` set in an earlier turn has long since mounted and registered.
      */

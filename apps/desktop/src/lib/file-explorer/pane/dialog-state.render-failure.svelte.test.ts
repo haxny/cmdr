@@ -18,7 +18,7 @@ import type { FilePaneAPI } from './types'
 
 const { addToast, logError } = vi.hoisted(() => ({ addToast: vi.fn(), logError: vi.fn() }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   refreshListing: vi.fn(() => Promise.resolve()),
   onDirectoryDiff: vi.fn(() => Promise.resolve(() => {})),
   findFileIndex: vi.fn(() => Promise.resolve(null)),
@@ -28,17 +28,17 @@ vi.mock('$lib/tauri-commands', () => ({
   notifyArchivePasswordDismissed: vi.fn(() => Promise.resolve()),
   dismissFailedOperation: vi.fn(() => Promise.resolve()),
 }))
-vi.mock('$lib/ui/toast', () => ({ addToast }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 // Partial: the settings registry pulls `availableLocales` off this module at import time.
-vi.mock('$lib/intl/messages.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/intl/messages.svelte')>()),
+vi.mock('#lib/intl/messages.svelte.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/intl/messages.svelte.js')>()),
   tString: (key: string) => key,
 }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: logError }),
 }))
-vi.mock('$lib/search/snapshot-store.svelte', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
-vi.mock('$lib/file-operations/mkdir/new-folder-operations', () => ({ moveCursorToNewFolder: vi.fn() }))
+vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+vi.mock('#lib/file-operations/mkdir/new-folder-operations.js', () => ({ moveCursorToNewFolder: vi.fn() }))
 
 const onRefocus = vi.fn()
 

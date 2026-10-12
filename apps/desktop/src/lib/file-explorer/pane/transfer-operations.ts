@@ -4,10 +4,10 @@ import {
   getSelectionSnapshot,
   getPathsAtIndices,
   type Initiator,
-} from '$lib/tauri-commands'
-import { addToast } from '$lib/ui/toast'
-import { tString } from '$lib/intl/messages.svelte'
-import { toBackendIndices, toBackendCursorIndex } from '$lib/file-operations/transfer/transfer-dialog-utils'
+} from '#lib/tauri-commands/index.js'
+import { addToast } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { toBackendIndices, toBackendCursorIndex } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 import type { SortColumn, SortOrder, TransferOperationType, VolumeInfo } from '../types'
 import type { DuplicateFollowUp } from './duplicate-rename'
 import type { FilePaneAPI } from './types'

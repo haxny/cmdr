@@ -7,7 +7,7 @@
  * an xattr. A file pane asks `rowIsOsVisible` per row because its volume might be
  * a phone or an archive's insides; a hit never is.
  */
-import type { PaneContextMenuFacts } from '$lib/tauri-commands'
+import type { PaneContextMenuFacts } from '#lib/tauri-commands/index.js'
 
 export const SEARCH_HIT_MENU_FACTS = { canShare: true, canTag: true } as const satisfies PaneContextMenuFacts
 

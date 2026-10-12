@@ -201,7 +201,7 @@ surfaces.
 A tab whose content box shrinks to 80px or less loses its close button; there isn't room for a label and a button both.
 
 The threshold is measured in JS, not queried in CSS. `TabBar.svelte` puts `useInlineSize`
-(`$lib/utils/inline-size-action`) on every `.tab`, keeps the ids that are under the threshold in a `SvelteSet`, and
+(`#lib/utils/inline-size-action`) on every `.tab`, keeps the ids that are under the threshold in a `SvelteSet`, and
 renders `class:narrow` from it; `.tab.narrow .close-btn { display: none }` does the rest. `useInlineSize` reports the
 same content box a size query reads, so the number is the one the old `@container (max-width: 80px)` rule used.
 

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import type { ManagedAiRefusal } from '$lib/ipc/bindings'
+import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
 import CloudProviderSetup from './CloudProviderSetup.svelte'
 
 const checkAiConnection = vi.fn<
@@ -37,13 +37,13 @@ const cloudAiHostVerdicts = vi.fn<(baseUrls: string[]) => Promise<(ManagedAiRefu
 
 // The shared controller suppresses its auto-check on open under `isE2eRun()`. These tests are
 // about the everyday path, so they pin it false rather than lean on an unresolved mode; the
-// suppression itself is covered in `$lib/ai-provider-setup/provider-setup.svelte.test.ts`.
-vi.mock('$lib/app-mode', async (importOriginal) => ({
+// suppression itself is covered in `#lib/ai-provider-setup/provider-setup.svelte.test.ts`.
+vi.mock('#lib/app-mode.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isE2eRun: () => false,
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   checkAiConnection: (baseUrl: string, providerId: string) => checkAiConnection({ baseUrl, providerId }),
   saveAiApiKey: (providerId: string, apiKey: string) => saveAiApiKey({ providerId, apiKey }),
   getAiApiKeyStatus: (id: string) => getAiApiKeyStatus(id),
@@ -59,7 +59,7 @@ function resetSettings(): void {
   settingsMap['ai.cloudProviderConfigs'] = '{}'
 }
 
-vi.mock('$lib/settings', async (importOriginal) => {
+vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return {
     ...actual,

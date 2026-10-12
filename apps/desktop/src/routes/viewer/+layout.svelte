@@ -6,7 +6,7 @@
   the viewer adds was a silent no-op.
 -->
 <script lang="ts">
-    import ToastContainer from '$lib/ui/toast/ToastContainer.svelte'
+    import ToastContainer from '#lib/ui/toast/ToastContainer.svelte'
 </script>
 
 <!--

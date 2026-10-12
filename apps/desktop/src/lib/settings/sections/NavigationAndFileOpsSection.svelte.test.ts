@@ -11,10 +11,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
-import { clearSearchIndex } from '$lib/settings/settings-search'
+import { clearSearchIndex } from '#lib/settings/settings-search.js'
 import NavigationAndFileOpsSection from './NavigationAndFileOpsSection.svelte'
 
-vi.mock('$lib/settings/settings-store', () => ({
+vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'fileOperations.allowFileExtensionChanges') return 'ask'
     if (key === 'behavior.doubleClickPaneNavigatesToParent') return true
@@ -33,14 +33,14 @@ vi.mock('$lib/settings/settings-store', () => ({
 
 // `isMacOS()` reads false under jsdom on every host, so each test says which platform it's on.
 const isMacOS = vi.hoisted(() => vi.fn(() => true))
-vi.mock('$lib/shortcuts/key-capture', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/shortcuts/key-capture')>()),
+vi.mock('#lib/shortcuts/key-capture.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/shortcuts/key-capture.js')>()),
   isMacOS: () => isMacOS(),
 }))
 
 // The Text editor and Terminal rows ask the backend which apps are on this Mac on
 // mount. The Show in Finder card asks macOS too; `null` keeps it hidden here.
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   listTextEditors: vi.fn(() =>
     Promise.resolve({

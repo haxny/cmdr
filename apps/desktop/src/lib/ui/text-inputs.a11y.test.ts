@@ -14,9 +14,9 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createRawSnippet, mount, tick, type ComponentProps } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   copyToClipboard: vi.fn(() => Promise.resolve()),
 }))
 

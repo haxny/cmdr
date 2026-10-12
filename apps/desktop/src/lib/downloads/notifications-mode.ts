@@ -9,9 +9,9 @@
  * resilient if `settings.json` is hand-edited).
  */
 
-import { getSetting, setSetting } from '$lib/settings'
-import { openSettingsWindow } from '$lib/settings/settings-window'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('downloads')
 

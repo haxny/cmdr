@@ -8,16 +8,16 @@ const { dismissToastMock, setSettingMock, setGlobalGoToLatestShortcutMock, getSe
   getSettingMock: vi.fn(),
 }))
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: dismissToastMock,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   setSetting: setSettingMock,
   getSetting: getSettingMock,
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     setGlobalGoToLatestShortcut: setGlobalGoToLatestShortcutMock,
   },

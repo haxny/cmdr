@@ -13,9 +13,9 @@
  * at the same moment. There is nothing to show and nothing to say.
  */
 
-import type { AdoptedOperationData } from '$lib/file-explorer/pane/dialog-props'
-import type { OperationSnapshot } from '$lib/tauri-commands'
-import type { TransferOperationType } from '$lib/file-explorer/types'
+import type { AdoptedOperationData } from '#lib/file-explorer/pane/dialog-props.js'
+import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
+import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import type { OperationRow } from './queue/operations-store.svelte'
 
 /**

@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
 import { writable } from 'svelte/store'
 import SearchDialog from './SearchDialog.svelte'
-import type { SearchResultEntry } from '$lib/ipc/bindings'
+import type { SearchResultEntry } from '#lib/ipc/bindings.js'
 import { clearSearchState, setQuery } from './search-state.svelte'
 import { _resetWalkHandoffForTesting } from './walk-handoff.svelte'
 import { _resetForTesting as resetSnapshots } from './snapshot-store.svelte'
@@ -29,7 +29,7 @@ const { searchFilesStreamingMock, releaseSearchIndexMock, cancelSearchMock, live
   liveListeners: { progress: new Set<(event: unknown) => void>() },
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   prepareSearchIndex: vi.fn(() => Promise.resolve({ ready: true, entryCount: 10, loading: false })),
@@ -68,7 +68,7 @@ vi.mock('../../routes/viewer/media-view', () => ({
   mediaUrl: (token: string) => `cmdr-media://localhost/${token}`,
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn((key: string) => {
     if (key === 'ai.provider') return 'off'
     if (key === 'search.autoApply') return false
@@ -81,13 +81,13 @@ vi.mock('$lib/settings', () => ({
   onSpecificSettingChange: vi.fn(() => () => {}),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({ getVolumes: vi.fn(() => []) }))
-vi.mock('$lib/indexing', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({ getVolumes: vi.fn(() => []) }))
+vi.mock('#lib/indexing/index.js', () => ({
   isVolumeScanning: vi.fn(() => false),
   getEntriesScanned: vi.fn(() => 0),
   ROOT_VOLUME_ID: 'root',
 }))
-vi.mock('$lib/icon-cache', () => ({
+vi.mock('#lib/icon-cache.js', () => ({
   iconCacheVersion: writable(0),
   getCachedIcon: vi.fn(() => undefined),
   getCachedCustomFolderIcon: () => undefined,

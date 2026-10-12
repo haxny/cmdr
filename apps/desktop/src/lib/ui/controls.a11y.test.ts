@@ -19,7 +19,7 @@ import LinkButton from './LinkButton.svelte'
 import RadioGroup, { type RadioItem } from './RadioGroup.svelte'
 import Switch from './Switch.svelte'
 import ToggleGroup from './ToggleGroup.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 /** A fresh container, appended to the document and ready to mount into. */
 function container(): HTMLDivElement {

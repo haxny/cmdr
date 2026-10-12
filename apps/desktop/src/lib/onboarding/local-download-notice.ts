@@ -11,7 +11,7 @@
  * `setOnboardingVisible()` in `routes/(main)/+page.svelte`, the one place it moves.
  */
 
-import { addToast, dismissToast } from '$lib/ui/toast'
+import { addToast, dismissToast } from '#lib/ui/toast/index.js'
 import LocalDownloadFailedToastContent from './LocalDownloadFailedToastContent.svelte'
 
 export const LOCAL_DOWNLOAD_FAILED_TOAST_ID = 'onboarding-local-download-failed'

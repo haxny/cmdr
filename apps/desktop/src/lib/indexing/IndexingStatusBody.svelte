@@ -35,13 +35,13 @@
     } from './indexing-steps'
     import { deriveOverallEta } from './overall-eta'
     import type { VolumeIndexActivity, AggregationActivity } from './index-state.svelte'
-    import type { ActivityPhase, CoveragePhase, ScanRunKind, StepsAheadMs } from '$lib/ipc/bindings'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import { formatNumber } from '$lib/file-explorer/selection/selection-info-utils'
-    import ProgressBar from '$lib/ui/ProgressBar.svelte'
-    import Icon from '$lib/ui/Icon.svelte'
-    import Spinner from '$lib/ui/Spinner.svelte'
-    import { tString } from '$lib/intl/messages.svelte'
+    import type { ActivityPhase, CoveragePhase, ScanRunKind, StepsAheadMs } from '#lib/ipc/bindings.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
+    import ProgressBar from '#lib/ui/ProgressBar.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Spinner from '#lib/ui/Spinner.svelte'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         activity: VolumeIndexActivity

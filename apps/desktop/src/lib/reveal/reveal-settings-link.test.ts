@@ -13,8 +13,8 @@ const mocks = vi.hoisted(() => ({
   warn: vi.fn(),
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({ openSettingsWindow: mocks.openSettingsWindow }))
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({ openSettingsWindow: mocks.openSettingsWindow }))
+vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: mocks.warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 

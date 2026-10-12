@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import TabBar from './TabBar.svelte'
-import { installLayoutMock } from '$lib/test-layout'
+import { installLayoutMock } from '#lib/test-layout.js'
 import { createTabDragController, type TabDragController } from './tab-drag-controller.svelte'
 import type { TabState } from './tab-types'
 

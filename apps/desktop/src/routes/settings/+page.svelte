@@ -2,32 +2,32 @@
     import { onMount, onDestroy, tick } from 'svelte'
     import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window'
     import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-    import { onMcpSettingsClose, activateWindowMenu, isE2eMode } from '$lib/tauri-commands'
-    import SettingsSidebar from '$lib/settings/components/SettingsSidebar.svelte'
-    import SettingsContent from '$lib/settings/components/SettingsContent.svelte'
-    import { forceSave as forceSettingsSave } from '$lib/settings'
-    import { initWindowSettings, initWindowLanguageSync } from '$lib/settings/window-settings'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { initializeShortcuts, flushPendingSave as flushShortcutsSave } from '$lib/shortcuts'
-    import { initAccentColor, cleanupAccentColor } from '$lib/accent-color'
-    import { initGlassMaterial, cleanupGlassMaterial } from '$lib/glass-material'
-    import { initTextSize, cleanupTextSize, getEffectiveScale } from '$lib/text-size.svelte'
-    import { initSystemStrings } from '$lib/system-strings.svelte'
+    import { onMcpSettingsClose, activateWindowMenu, isE2eMode } from '#lib/tauri-commands/index.js'
+    import SettingsSidebar from '#lib/settings/components/SettingsSidebar.svelte'
+    import SettingsContent from '#lib/settings/components/SettingsContent.svelte'
+    import { forceSave as forceSettingsSave } from '#lib/settings/index.js'
+    import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { initializeShortcuts, flushPendingSave as flushShortcutsSave } from '#lib/shortcuts/index.js'
+    import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
+    import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initTextSize, cleanupTextSize, getEffectiveScale } from '#lib/text-size.svelte.js'
+    import { initSystemStrings } from '#lib/system-strings.svelte.js'
     import {
         SETTINGS_BASE_MIN_HEIGHT,
         settingsMaxWidth,
         settingsMinWidth,
         commandIdFromShortcutAnchor,
-    } from '$lib/settings/settings-window'
+    } from '#lib/settings/settings-window.js'
     import {
         resetShortcutFilters,
         setPendingShortcutHighlight,
-    } from '$lib/settings/pending-shortcut-highlight.svelte'
-    import { getMatchingSections } from '$lib/settings/settings-search'
-    import { loadLastSettingsSection, saveLastSettingsSection } from '$lib/app-status-store'
-    import { getAppLogger } from '$lib/logging/logger'
-    import { trackOwnRect } from '$lib/window-positioning'
-    import { closeSelfWindow } from '$lib/child-window-close'
+    } from '#lib/settings/pending-shortcut-highlight.svelte.js'
+    import { getMatchingSections } from '#lib/settings/settings-search.js'
+    import { loadLastSettingsSection, saveLastSettingsSection } from '#lib/app-status-store.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
+    import { trackOwnRect } from '#lib/window-positioning.js'
+    import { closeSelfWindow } from '#lib/child-window-close.js'
 
     const log = getAppLogger('settings')
 
@@ -234,7 +234,7 @@
             // ❌ Never `getCurrentWindow().close()` here: destroying this webview from inside the
             // handler that asked for it stalls queued IPC on webkit2gtk and can segfault the whole
             // app on macOS WebKit. The backend hides it and destroys it a moment later.
-            // See `$lib/child-window-close`.
+            // See `#lib/child-window-close`.
             void closeSelfWindow()
         }
         // Prevent Space from triggering Quick Look (bound to Space in main window menu)
@@ -355,7 +355,7 @@
             // Mirror the Escape-key handler: defer the close so the in-flight IPC ack can
             // settle before webkit2gtk begins destroying the webview, and so an in-flight
             // layer-tree commit can drain before macOS WebKit tears the view down. See
-            // `handleKeydown` and `$lib/window-close-defer`.
+            // `handleKeydown` and `#lib/window-close-defer`.
             unlistenMcpClose = await onMcpSettingsClose(() => {
                 log.debug('Received mcp-settings-close, closing window')
                 void closeSelfWindow()

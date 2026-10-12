@@ -1,5 +1,5 @@
 /**
- * Fixtures for `transfer-error` (`$lib/file-operations/transfer/TransferErrorDialog.svelte`).
+ * Fixtures for `transfer-error` (`#lib/file-operations/transfer/TransferErrorDialog.svelte`).
  *
  * The dialog renders ENTIRELY from the typed `WriteOperationError` plus the
  * operation type: title, explanation, suggestion, icon, container tint, and the
@@ -15,8 +15,8 @@
  * areas, so fixture strings never reach the message catalog.
  */
 
-import type { TransferOperationType, WriteOperationError } from '$lib/file-explorer/types'
-import type { ProgressAtStop } from '$lib/tauri-commands'
+import type { TransferOperationType, WriteOperationError } from '#lib/file-explorer/types.js'
+import type { ProgressAtStop } from '#lib/tauri-commands/index.js'
 
 /** Props of `TransferErrorDialog.svelte`, minus its callbacks. */
 export interface TransferErrorFixture {

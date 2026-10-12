@@ -13,16 +13,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
-import type { OperationSnapshot } from '$lib/ipc/bindings'
+import type { OperationSnapshot } from '#lib/ipc/bindings.js'
 import TransferProgressDialog from './TransferProgressDialog.svelte'
 import {
   initMainWindowOperations,
   destroyMainWindowOperations,
-} from '$lib/file-operations/queue/main-window-operations.svelte'
+} from '#lib/file-operations/queue/main-window-operations.svelte.js'
 import {
   destroyOperationSessions,
   initOperationSessions,
-} from '$lib/file-operations/operation-session/window-operation-sessions.svelte'
+} from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 
 // Hoisted so the `vi.mock` factory (lifted to the top of the file) can reference
 // these. Plain `const`s declared here would be in the temporal dead zone when the
@@ -52,7 +52,7 @@ const {
   writeProgressCbs: [] as ((event: Record<string, unknown>) => void)[],
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   copyBetweenVolumes: vi.fn(() => Promise.resolve({ operationId: 'op-1' })),
@@ -92,17 +92,17 @@ vi.mock('$lib/tauri-commands', () => ({
   DEFAULT_VOLUME_ID: 'root',
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: vi.fn(() => 500),
 }))
 
-vi.mock('$lib/settings/reactive-settings.svelte', () => ({
+vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   formatFileSize: vi.fn((n: number) => `${String(n)} B`),
   getFileSizeFormat: vi.fn(() => 'binary'),
   getFileSizeUnit: vi.fn(() => 'bytes'),
 }))
 
-vi.mock('$lib/stores/volume-store.svelte', () => ({
+vi.mock('#lib/stores/volume-store.svelte.js', () => ({
   getVolumes: () => [{ id: 'root', name: 'Macintosh HD', path: '/', category: 'main_volume', isEjectable: false }],
 }))
 
@@ -110,10 +110,10 @@ const { openQueueWindowMock, addToastMock } = vi.hoisted(() => ({
   openQueueWindowMock: vi.fn(() => Promise.resolve()),
   addToastMock: vi.fn(() => 'toast-id'),
 }))
-vi.mock('$lib/file-operations/queue/queue-window', () => ({
+vi.mock('#lib/file-operations/queue/queue-window.js', () => ({
   openQueueWindow: openQueueWindowMock,
 }))
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   addToast: addToastMock,
 }))
 

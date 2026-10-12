@@ -6,7 +6,7 @@
 import { afterEach, describe, it } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import CounterTokenEditor from './CounterTokenEditor.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 let cleanup: (() => void) | undefined
 afterEach(() => {

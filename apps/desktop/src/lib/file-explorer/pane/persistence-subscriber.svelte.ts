@@ -74,9 +74,9 @@
  * effect-tracking context. Never lazily, never in `onMount`.
  */
 
-import { saveAppStatus, saveLastUsedPathForVolume } from '$lib/app-status-store'
-import type { ViewMode } from '$lib/app-status-store'
-import { recordVisit } from '$lib/tauri-commands'
+import { saveAppStatus, saveLastUsedPathForVolume } from '#lib/app-status-store.js'
+import type { ViewMode } from '#lib/app-status-store.js'
+import { recordVisit } from '#lib/tauri-commands/index.js'
 import type { SortColumn, SortOrder } from '../types'
 import type { LastUsedPathRecord } from './navigate'
 

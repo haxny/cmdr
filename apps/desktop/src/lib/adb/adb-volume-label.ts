@@ -4,8 +4,8 @@
  * "ADB" suffix only then, so a phone that is only reachable one way keeps its
  * plain name. Contract: `docs/specs/android-adb-backend.md` § "App wiring".
  */
-import type { VolumeInfo } from '$lib/file-explorer/types'
-import { tString } from '$lib/intl/messages.svelte'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 /** Whether this is the ADB half of a device also listed over MTP. */
 function hasMtpTwin(volume: VolumeInfo, volumes: readonly VolumeInfo[]): boolean {

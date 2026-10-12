@@ -22,17 +22,17 @@
      *   - `snapshot-promotion.ts`: "Show all in main window", and the recent-search writes.
      *   - `recent-search-adapter.ts`: how a history entry renders, and pick / remove.
      */
-    import { cloudConsentState, refreshCloudConsent } from '$lib/ai/cloud-consent.svelte'
+    import { cloudConsentState, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
     import { onMount, onDestroy } from 'svelte'
-    import { getSetting, onSpecificSettingChange } from '$lib/settings'
-    import { showFileContextMenu, type HistoryEntry, type SearchResultEntry } from '$lib/tauri-commands'
+    import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
+    import { showFileContextMenu, type HistoryEntry, type SearchResultEntry } from '#lib/tauri-commands/index.js'
     import { searchDialogRowMenuFacts } from './search-hit-menu'
-    import { contextMenuSizeBytes, contextMenuSizeText } from '$lib/file-explorer/selection/context-menu-target'
-    import { boundShortcuts } from '$lib/shortcuts'
+    import { contextMenuSizeBytes, contextMenuSizeText } from '#lib/file-explorer/selection/context-menu-target.js'
+    import { boundShortcuts } from '#lib/shortcuts/index.js'
     import { resolveDefaultScope, defaultScopeLabel } from './searchable-folder'
-    import type { ScopePresets } from '$lib/query-ui/query-dialog-config'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { ROOT_VOLUME_ID } from '$lib/indexing'
+    import type { ScopePresets } from '#lib/query-ui/query-dialog-config.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { ROOT_VOLUME_ID } from '#lib/indexing/index.js'
     import {
         searchQueryState,
         clearSearchState,
@@ -49,7 +49,7 @@
         getLastAiPattern,
         getLastAiPatternKind,
     } from './search-state.svelte'
-    import QueryDialog from '$lib/query-ui/QueryDialog.svelte'
+    import QueryDialog from '#lib/query-ui/QueryDialog.svelte'
     import ImageSearchResults from './ImageSearchResults.svelte'
     import CoverageNote from './CoverageNote.svelte'
     import IndexLoadHint from './IndexLoadHint.svelte'
@@ -66,15 +66,15 @@
         searchRecentKey,
     } from './recent-search-adapter'
     import type { SearchTargetVolume } from './search-target-volume'
-    import { getBadgeStatus } from '$lib/feature-status'
+    import { getBadgeStatus } from '#lib/feature-status.js'
     import type {
         QueryDialogConfig,
         QueryDialogFilterChipsExtras,
         ResultsNoticeContext,
-    } from '$lib/query-ui/query-dialog-config'
+    } from '#lib/query-ui/query-dialog-config.js'
     import { loadRecentSearches, recentSearchesStore } from './recent-searches-state.svelte'
     import { setSearchReopener } from './walk-handoff-state.svelte'
-    import type { LiveRunView } from '$lib/query-ui/query-stream'
+    import type { LiveRunView } from '#lib/query-ui/query-stream.js'
 
     interface Props {
         /** Called when user selects a result: receives the full path. */

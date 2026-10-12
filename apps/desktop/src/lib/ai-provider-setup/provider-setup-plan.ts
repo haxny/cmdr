@@ -3,15 +3,15 @@
  *
  * Pure and free of Svelte, so the whole per-provider matrix is testable without a DOM.
  * `ProviderSetupSteps.svelte` renders whatever comes back; adding a provider means
- * filling in its `setup` field in `$lib/settings/cloud-providers`, never editing markup.
+ * filling in its `setup` field in `#lib/settings/cloud-providers`, never editing markup.
  *
  * The plan says WHICH steps and in what order; the component owns the wording, because
  * each step's sentence carries an inline link and `<Trans>` snippet parity is only
  * checkable against a literal message key.
  */
 
-import type { CloudProviderPreset } from '$lib/settings/cloud-providers'
-import type { MessageKey } from '$lib/intl/keys.gen'
+import type { CloudProviderPreset } from '#lib/settings/cloud-providers.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 
 /**
  * A step that only tells the user to go somewhere. Its sentence wraps `url` in an inline

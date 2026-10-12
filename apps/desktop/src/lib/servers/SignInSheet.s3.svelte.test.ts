@@ -8,7 +8,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import SignInSheet from './SignInSheet.svelte'
 import type { SignInAttemptOutcome, SignInSheetRequest, SignInSubmission } from './sign-in-contract'
-import type { S3ProviderChoice, SavedServerOutcome } from '$lib/ipc/bindings'
+import type { S3ProviderChoice, SavedServerOutcome } from '#lib/ipc/bindings.js'
 
 /** What `knownS3PlaceOf` answers, as far as the sheet reads it. */
 interface StoredPlace {
@@ -21,7 +21,7 @@ interface StoredPlace {
   volumeId: string
 }
 
-vi.mock('$lib/tauri-commands', async (importOriginal) => ({
+vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),

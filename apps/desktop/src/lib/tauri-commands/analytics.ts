@@ -1,6 +1,6 @@
 // Analytics commands
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 
 /**
  * Records a frontend-originated feature event through the single backend analytics path.

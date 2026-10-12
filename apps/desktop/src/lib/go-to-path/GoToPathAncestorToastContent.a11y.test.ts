@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest'
 import { mount, tick } from 'svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 import GoToPathAncestorToastContent from './GoToPathAncestorToastContent.svelte'
 

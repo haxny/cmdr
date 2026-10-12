@@ -33,7 +33,7 @@ and collects the user's choices.
   dialog path can attach an email or flip `updates.crashReports` on. Adding a send path means deciding both again.
 - **Send only the preview's `shortId`, never its `CrashReport`.** The backend reloads the authoritative pending file and
   binds consent and deletion to that id. The preview remains display-only.
-- **Attach-email comes from `$lib/attach-email`**, shared with the error-report and feedback dialogs; `persist()` runs
+- **Attach-email comes from `#lib/attach-email`**, shared with the error-report and feedback dialogs; `persist()` runs
   only after `sendCrashReport` resolves. Don't hand-roll the checkbox or add a crash-specific copy of the label. The
   control's own rules: `apps/desktop/src/lib/attach-email/CLAUDE.md`.
 - **Dismiss must reach the backend.** `dismissCrashReport` deletes the crash file; closing the dialog any other way

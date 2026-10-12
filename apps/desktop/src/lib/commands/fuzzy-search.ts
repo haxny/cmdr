@@ -6,7 +6,7 @@
  */
 
 import uFuzzy from '@leeoniya/ufuzzy'
-import { INTRA_MODE_SINGLE_ERROR } from '$lib/utils/ufuzzy-modes'
+import { INTRA_MODE_SINGLE_ERROR } from '#lib/utils/ufuzzy-modes.js'
 import type { Command, CommandMatch, PaletteCondition } from './types'
 import { commands, getPaletteCommands } from './command-registry'
 

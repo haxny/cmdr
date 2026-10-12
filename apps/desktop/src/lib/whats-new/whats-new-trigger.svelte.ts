@@ -10,9 +10,9 @@
  */
 
 import { getVersion } from '@tauri-apps/api/app'
-import { getSetting, setSetting } from '$lib/settings'
-import { getWhatsNew, whatsNewDevOverride, type WhatsNewRelease } from '$lib/tauri-commands'
-import { getAppLogger } from '$lib/logging/logger'
+import { getSetting, setSetting } from '#lib/settings/index.js'
+import { getWhatsNew, whatsNewDevOverride, type WhatsNewRelease } from '#lib/tauri-commands/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { decideWhatsNew } from './whats-new'
 
 const log = getAppLogger('whatsNew')

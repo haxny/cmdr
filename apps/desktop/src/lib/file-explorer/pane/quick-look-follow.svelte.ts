@@ -11,9 +11,9 @@
  * timer from `onDestroy`.
  */
 
-import { quickLookSetPath } from '$lib/tauri-commands'
-import { closeFromPaneError, quickLookState } from '$lib/file-explorer/quick-look/quick-look-state.svelte'
-import { getAppLogger } from '$lib/logging/logger'
+import { quickLookSetPath } from '#lib/tauri-commands/index.js'
+import { closeFromPaneError, quickLookState } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
+import { getAppLogger } from '#lib/logging/logger.js'
 import { pathInsideArchive } from './archive-paths'
 import type { FilePaneAPI } from './types'
 

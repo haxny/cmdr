@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { _setLocaleForTests } from '$lib/intl/locale'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 import { costRequestFor, roundsToZero, visibleCostLines } from './s3-cost-line'
 
 describe('roundsToZero', () => {

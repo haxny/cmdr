@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Select, { type SelectItem } from '$lib/ui/Select.svelte'
-  import type { ViewerContentKind } from '$lib/ipc/bindings'
+  import Select, { type SelectItem } from '#lib/ui/Select.svelte'
+  import type { ViewerContentKind } from '#lib/ipc/bindings.js'
   import { availableMediaKind, mediaKindLabel, viewAsMediaLabel } from './media-view'
   import type { ViewerDisplayMode } from './viewer-view-mode'
-  import { tString } from '$lib/intl/messages.svelte'
+  import { tString } from '#lib/intl/messages.svelte.js'
 
   type Props = {
     mode: ViewerDisplayMode

@@ -9,7 +9,7 @@ Primitives shared by Search and Selection. Chips: `filter-chips/CLAUDE.md`. Cons
   prop per consumer), wiring and layout only. Logic sits in four tested siblings: `query-runner.svelte.ts`,
   `recent-popover.svelte.ts`, `query-shortcuts.ts`, `result-actions.ts`, plus `query-stream.ts`. Their two silent traps
   (`getConfig` stays a GETTER; `highlightedFields` is ONE mutated `SvelteSet`): DETAILS § The controller split.
-- UI pieces (`QueryBar`, `ModeChips`, `AiPromptStrip`, `QueryResults` (states + cells over `$lib/ui/ColumnList`),
+- UI pieces (`QueryBar`, `ModeChips`, `AiPromptStrip`, `QueryResults` (states + cells over `#lib/ui/ColumnList`),
   `EmptyState`, `PathPills`, `recent-items/*`), pure helpers (`result-column-widths.ts`, `ai-summary.ts`,
   `apply-ai-filters.ts`), `query-filter-state.svelte.ts`, and `filter-chips/`. Subsets and adapters: DETAILS § Files.
 
@@ -32,7 +32,7 @@ Primitives shared by Search and Selection. Chips: `filter-chips/CLAUDE.md`. Cons
 - **Reopen re-derives results, not the empty state**: a restored NON-AI session sets `runOnMount`, AI must NOT (cost).
 - **The query field is a hand-assembled combobox, NOT a house/Ark `Combobox`** (Ark filters on one input; this needs
   two). Every key `RecentItemsPopover` claims must `stopPropagation()`; picking LOADS, never runs.
-- **The result rows are `$lib/ui/ColumnList`**, which owns the measured tracks, the cursor, and virtual scrolling.
+- **The result rows are `#lib/ui/ColumnList`**, which owns the measured tracks, the cursor, and virtual scrolling.
   Column demands read entry DATA (`result-column-widths.ts`), ❌ never DOM text. Keep the hook classes (`.result-row`,
   `.column-header`, `.result-name`): E2E and the contrast audit key on them. DETAILS § Column widths.
 - **A `config.streamingSource` consumer answers over TIME, and `isSearching` stays true the whole run.** The run is the

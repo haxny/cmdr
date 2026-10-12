@@ -7,9 +7,9 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, WriteSourcesGoneEvent } from '$lib/tauri-commands'
+import type { OperationSnapshot, WriteSourcesGoneEvent } from '#lib/tauri-commands/index.js'
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
 }))

@@ -19,7 +19,7 @@ const { startMock, pollMock, cancelMock } = vi.hoisted(() => ({
   cancelMock: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   viewerSearchStart: startMock,
   viewerSearchPoll: pollMock,
   viewerSearchCancel: cancelMock,

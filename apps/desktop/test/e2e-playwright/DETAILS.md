@@ -915,7 +915,7 @@ case there is no toast at all. Asserting there would pin a number the test's own
 use it, say in a comment which spec DOES own the wording assertion (`conflict-edge-cases.spec.ts`, for that pair).
 
 **A write operation ends at its TOAST, ❌ never at the pane.** The progress dialog holds itself open for
-`MIN_DISPLAY_MS` (400 ms, `$lib/file-operations/transfer/transfer-progress-state.svelte.ts`) so a fast operation doesn't
+`MIN_DISPLAY_MS` (400 ms, `#lib/file-operations/transfer/transfer-progress-state.svelte.ts`) so a fast operation doesn't
 flash, and the completion handler raises the toast and unmounts the dialog in the same beat. The PANE, meanwhile, drops
 the deleted row as soon as the file watcher re-reads it, which for a small tree is a few hundred milliseconds earlier.
 So a cell that stops at "the row is gone", or at "the bytes are on disk", ends INSIDE the dialog's floor: the leak guard
@@ -926,7 +926,7 @@ one attempt in three. End such a cell with `expectAndDismissToast`, which waits 
 dialog.
 
 **A cancelled transfer now raises a toast, so any spec that presses Rollback on a running one owes the guard
-something.** The reversal summarizes itself (`$lib/file-operations/transfer/cancel-rollback-toast.ts`), so a spec that
+something.** The reversal summarizes itself (`#lib/file-operations/transfer/cancel-rollback-toast.ts`), so a spec that
 cancels with Rollback and then ends leaks a toast into the `afterEach`. Match the CLEAN wording's stable half
 (`Cmdr had written`) rather than its count, which varies with how far the copy got.
 

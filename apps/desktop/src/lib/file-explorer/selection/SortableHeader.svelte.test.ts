@@ -20,12 +20,12 @@ vi.mock('@tauri-apps/plugin-store', () => ({
   ),
 }))
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: { updateMenuAccelerator: vi.fn(() => Promise.resolve({ status: 'ok' })) },
 }))
 
 import SortableHeader from './SortableHeader.svelte'
-import { setShortcut, resetShortcut } from '$lib/shortcuts/shortcuts-store'
+import { setShortcut, resetShortcut } from '#lib/shortcuts/shortcuts-store.js'
 import type { SortColumn } from '../types'
 
 const TOOLTIP_SHOW_DELAY_MS = 400

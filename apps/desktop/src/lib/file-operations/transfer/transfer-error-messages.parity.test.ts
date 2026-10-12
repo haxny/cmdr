@@ -19,9 +19,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getUserFriendlyMessage } from './transfer-error-messages'
 import type { FriendlyErrorMessage } from './transfer-error-messages'
-import type { WriteOperationError, TransferOperationType } from '$lib/file-explorer/types'
-import { colorizeSize } from '$lib/file-explorer/selection/selection-info-utils'
-import { formatByteSizeTiered } from '$lib/units'
+import type { WriteOperationError, TransferOperationType } from '#lib/file-explorer/types.js'
+import { colorizeSize } from '#lib/file-explorer/selection/selection-info-utils.js'
+import { formatByteSizeTiered } from '#lib/units/index.js'
 
 // The insufficient_space message interpolates colorized, formatted sizes. Those
 // helpers are NOT part of the migrated copy (only the template moved), so derive
@@ -39,8 +39,8 @@ const bigFileSize = colorizeSize(formatByteSizeTiered(BIG_FILE))
 
 // `trash_not_supported` interpolates the live `file.deletePermanently` binding.
 // Pin it so the suggestion is deterministic across platforms.
-vi.mock('$lib/shortcuts', async (orig) => {
-  const actual = await orig<typeof import('$lib/shortcuts')>()
+vi.mock('#lib/shortcuts/index.js', async (orig) => {
+  const actual = await orig<typeof import('#lib/shortcuts/index.js')>()
   return { ...actual, getEffectiveShortcuts: (id: string) => (id === 'file.deletePermanently' ? ['⇧F8'] : []) }
 })
 

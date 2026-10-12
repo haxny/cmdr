@@ -8,12 +8,12 @@
  * keys. Call `createHubList()` during the component's init: it holds runes.
  */
 
-import { listSavedServers, type SavedServer } from '$lib/tauri-commands'
-import { getVolumes } from '$lib/stores/volume-store.svelte'
-import { getNearbyServersGroupChoice } from '$lib/settings/reactive-settings.svelte'
-import { setSetting } from '$lib/settings'
-import { getAppLogger } from '$lib/logging/logger'
-import { LogOnceGate } from '$lib/logging/log-once'
+import { listSavedServers, type SavedServer } from '#lib/tauri-commands/index.js'
+import { getVolumes } from '#lib/stores/volume-store.svelte.js'
+import { getNearbyServersGroupChoice } from '#lib/settings/reactive-settings.svelte.js'
+import { setSetting } from '#lib/settings/index.js'
+import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
 import { getListedAccount, getNetworkHosts } from './network-store.svelte'
 import { buildHubRows, savedSmbHostIds } from './servers-hub-rows'
 import { hubItems, isNearbyGroupExpanded, visibleHubItems } from './servers-hub-items'

@@ -8,7 +8,7 @@
      * sidebar order.
      */
     import { onMount, type Snippet } from 'svelte'
-    import { openExternalUrl } from '$lib/tauri-commands'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
 
     interface Props {
         /** Anchor id prefix (`'components'`): every section is `#<prefix>-<subId>`. */

@@ -2,24 +2,24 @@
   The Ask Cmdr settings section: the on/off switch (`askCmdr.enabled`, a plain setting), the
   provider/model (interactive slot), the proactive loop, the memory controls, and the spend
   rollup. Consent to send anything to a cloud service isn't here: it's the Allow cloud AI
-  switch in Settings > AI > Provider (`$lib/ai/`), and this section only points there.
+  switch in Settings > AI > Provider (`#lib/ai/`), and this section only points there.
 -->
 <script lang="ts">
     import SettingsSection from '../components/SettingsSection.svelte'
     import SettingRow from '../components/SettingRow.svelte'
-    import Button from '$lib/ui/Button.svelte'
-    import StatusBadge from '$lib/ui/StatusBadge.svelte'
-    import { getBadgeStatus } from '$lib/feature-status'
-    import { getSetting, onSpecificSettingChange, getSettingDefinition, type AiProvider } from '$lib/settings'
-    import { anyVisible, createShouldShow } from '$lib/settings/settings-search'
-    import { tString } from '$lib/intl/messages.svelte'
-    import { formatInteger } from '$lib/intl/number-format'
-    import { getAppLogger } from '$lib/logging/logger'
+    import Button from '#lib/ui/Button.svelte'
+    import StatusBadge from '#lib/ui/StatusBadge.svelte'
+    import { getBadgeStatus } from '#lib/feature-status.js'
+    import { getSetting, onSpecificSettingChange, getSettingDefinition, type AiProvider } from '#lib/settings/index.js'
+    import { anyVisible, createShouldShow } from '#lib/settings/settings-search.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import SettingSelect from '../components/SettingSelect.svelte'
     import SettingSwitch from '../components/SettingSwitch.svelte'
     import SettingSlider from '../components/SettingSlider.svelte'
     import SettingTextInput from '../components/SettingTextInput.svelte'
-    import { formatDuration, seconds } from '$lib/units'
+    import { formatDuration, seconds } from '#lib/units/index.js'
     import {
         askCmdrCostSummary,
         askCmdrForgetMemory,
@@ -27,13 +27,13 @@
         askCmdrModelWindow,
         requestRevealPath,
         type CostSummary,
-    } from '$lib/tauri-commands'
-    import { cloudAiBlocked, openCloudConsentSettings, refreshCloudConsent } from '$lib/ai/cloud-consent.svelte'
-    import { getManagedPolicyView } from '$lib/managed-policy/managed-policy.svelte'
-    import { formatUsdMicros } from '$lib/ask-cmdr/ask-cmdr-cost'
+    } from '#lib/tauri-commands/index.js'
+    import { cloudAiBlocked, openCloudConsentSettings, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
+    import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
+    import { formatUsdMicros } from '#lib/ask-cmdr/ask-cmdr-cost.js'
     import ForgetMemoryDialog from './ForgetMemoryDialog.svelte'
-    import type { MessageKey } from '$lib/intl/keys.gen'
-    import { dependOn } from '$lib/utils/reactivity'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
 
     interface Props {
         searchQuery: string

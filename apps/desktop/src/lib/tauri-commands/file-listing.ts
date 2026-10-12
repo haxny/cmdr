@@ -10,7 +10,7 @@ import {
   type Initiator,
   type NameFilterResult,
   type RowBeside,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import type {
   FileEntry,
   ListingStats,
@@ -31,12 +31,12 @@ import type {
   ListingReadCompleteEvent,
   ListingRespelledEvent,
   ListingStalledEvent,
-} from '$lib/ipc/bindings'
+} from '#lib/ipc/bindings.js'
 import type { TimedOut } from './ipc-types'
 import { throwIpcError } from './ipc-types'
 import { throwListingLookupError } from './listing-gone'
 import { awaitMutation, type MutationWaitOptions } from './mutation-reply'
-import type { ListingDirectorySortMode } from '$lib/settings'
+import type { ListingDirectorySortMode } from '#lib/settings/index.js'
 
 export type {
   ListingOpeningEvent,

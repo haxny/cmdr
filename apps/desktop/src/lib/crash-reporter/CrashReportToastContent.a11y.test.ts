@@ -9,13 +9,13 @@
 import { describe, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 import CrashReportToastContent from './CrashReportToastContent.svelte'
-import { expectNoA11yViolations } from '$lib/test-a11y'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-vi.mock('$lib/ui/toast', () => ({
+vi.mock('#lib/ui/toast/index.js', () => ({
   dismissToast: vi.fn(),
 }))
 
-vi.mock('$lib/settings/settings-window', () => ({
+vi.mock('#lib/settings/settings-window.js', () => ({
   openSettingsWindow: vi.fn(() => Promise.resolve()),
 }))
 

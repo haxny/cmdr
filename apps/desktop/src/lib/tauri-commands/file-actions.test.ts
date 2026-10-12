@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('$lib/ipc/bindings', () => ({
+vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     openInEditor: vi.fn(),
     listTextEditors: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('$lib/ipc/bindings', () => ({
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn() }))
 
-import { commands } from '$lib/ipc/bindings'
+import { commands } from '#lib/ipc/bindings.js'
 import { asOpenInEditorError, listTextEditors, openInEditor, OpenInEditorFailure } from './file-actions'
 
 beforeEach(() => {

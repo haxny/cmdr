@@ -28,7 +28,7 @@ Render every glyph through the shared `Icon` component, never by importing `~ico
 
 ```svelte
 <script lang="ts">
-    import Icon from '$lib/ui/Icon.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
 </script>
 
 <!-- Basic usage: inherits parent text color -->
@@ -43,7 +43,7 @@ A dynamic glyph (chosen at runtime) takes a typed name:
 
 ```svelte
 <script lang="ts">
-    import type { IconName } from '$lib/ui/icons/icon-map'
+    import type { IconName } from '#lib/ui/icons/icon-map'
     const glyph: IconName = isBranch ? 'git-branch' : 'tag'
 </script>
 <Icon name={glyph} size={16} />

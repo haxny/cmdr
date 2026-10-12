@@ -6,7 +6,7 @@
  *   - `mediaIndex.showInSearch`, "Show image results in Search" (off by default).
  * Flipping either live-hides / reveals the section with no restart.
  *
- * The IPC commands + `$lib/settings` are mocked so the component drives each state
+ * The IPC commands + `#lib/settings` are mocked so the component drives each state
  * deterministically; timers are faked to fire the 300 ms debounced fetch. The settings
  * fake is keyed BY SETTING ID on both halves: the component holds one subscription per
  * gate, so a single shared `liveChange` slot would let the second subscription overwrite
@@ -15,7 +15,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync, tick } from 'svelte'
-import type { MediaIndexVolumeState, OcrHit, SimilarImage } from '$lib/ipc/bindings'
+import type { MediaIndexVolumeState, OcrHit, SimilarImage } from '#lib/ipc/bindings.js'
 import ImageSearchResults from './ImageSearchResults.svelte'
 
 // Hoisted so the `vi.mock` factories (also hoisted) can close over these before the
@@ -47,7 +47,7 @@ const h = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/tauri-commands', () => ({
+vi.mock('#lib/tauri-commands/index.js', () => ({
   mediaIndexSearchOcr: (volumeId: string, query: string, limit: number | null) =>
     h.searchOcr({ volumeId, query, limit }),
   mediaIndexSearchSemantic: (volumeId: string, query: string, limit: number | null) =>
@@ -59,7 +59,7 @@ vi.mock('$lib/tauri-commands', () => ({
     h.findSimilar({ volumeId, sourcePath, limit }),
 }))
 
-vi.mock('$lib/settings', () => ({
+vi.mock('#lib/settings/index.js', () => ({
   getSetting: (key: string) => h.settings.values[key],
   onSpecificSettingChange: (key: string, cb: (value: unknown) => void) => {
     h.settings.liveChange.set(key, cb)
