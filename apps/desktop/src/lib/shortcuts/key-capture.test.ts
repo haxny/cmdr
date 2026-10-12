@@ -10,6 +10,7 @@ import {
   typedCharacterCombo,
   keyComboCandidates,
   capturedKeyCombo,
+  toAriaKeyShortcut,
 } from './key-capture'
 
 // Mock navigator to control isMacOS() behavior
@@ -412,5 +413,35 @@ describe('comboHasShift', () => {
     expect(comboHasShift('Ctrl+C')).toBe(false)
     expect(comboHasShift('Super+Space')).toBe(false)
     expect(comboHasShift('')).toBe(false)
+  })
+})
+
+describe('toAriaKeyShortcut', () => {
+  it('passes a bare key through', () => {
+    expect(toAriaKeyShortcut('F2')).toBe('F2')
+  })
+
+  it('spells the macOS modifier glyphs as ARIA modifier names', () => {
+    expect(toAriaKeyShortcut('⇧F6')).toBe('Shift+F6')
+    expect(toAriaKeyShortcut('⌘C')).toBe('Meta+C')
+    expect(toAriaKeyShortcut('⌥F')).toBe('Alt+F')
+    expect(toAriaKeyShortcut('⌘⌃⌥⇧K')).toBe('Meta+Control+Alt+Shift+K')
+  })
+
+  it('spells the Windows and Linux form as ARIA modifier names', () => {
+    expect(toAriaKeyShortcut('Ctrl+Shift+P')).toBe('Control+Shift+P')
+    expect(toAriaKeyShortcut('Alt+F1')).toBe('Alt+F1')
+    expect(toAriaKeyShortcut('Super+A')).toBe('Meta+A')
+  })
+
+  it('names a display-form key by its KeyboardEvent.key name', () => {
+    expect(toAriaKeyShortcut('⌘⌫')).toBe('Meta+Backspace')
+    expect(toAriaKeyShortcut('Esc')).toBe('Escape')
+  })
+
+  it('spells the keys ARIA reserves a word for', () => {
+    expect(toAriaKeyShortcut('Ctrl++')).toBe('Control+Plus')
+    expect(toAriaKeyShortcut('⌘+')).toBe('Meta+Plus')
+    expect(toAriaKeyShortcut('⇧Space')).toBe('Shift+Space')
   })
 })

@@ -401,6 +401,39 @@ export function toPlatformShortcut(shortcut: string): string {
   return [...uniqueModifiers, key].join('+')
 }
 
+/** Both platforms' modifier tokens → the modifier names `aria-keyshortcuts` uses. */
+const ariaModifierNames: [token: string, ariaName: string][] = [
+  ['⌘', 'Meta'],
+  ['⌃', 'Control'],
+  ['⌥', 'Alt'],
+  ['⇧', 'Shift'],
+  ['Ctrl+', 'Control'],
+  ['Alt+', 'Alt'],
+  ['Shift+', 'Shift'],
+  ['Super+', 'Meta'],
+]
+
+/** Keys `aria-keyshortcuts` spells as a word, because `+` and space are its own separators. */
+const ariaKeyWords: Record<string, string> = { '+': 'Plus', ' ': 'Space' }
+
+/**
+ * A combo in `aria-keyshortcuts` syntax (`⌘C` → `Meta+C`, `Ctrl+Shift+P` →
+ * `Control+Shift+P`), so a screen reader can announce a key that's shown
+ * visually but kept out of the accessible name. Takes the canonical or the
+ * display form, on either platform.
+ */
+export function toAriaKeyShortcut(shortcut: string): string {
+  let rest = toCanonicalShortcut(shortcut)
+  const modifiers: string[] = []
+  for (;;) {
+    const match = ariaModifierNames.find(([token]) => rest.startsWith(token) && rest.length > token.length)
+    if (!match) break
+    modifiers.push(match[1])
+    rest = rest.slice(match[0].length)
+  }
+  return [...modifiers, ariaKeyWords[rest] ?? rest].join('+')
+}
+
 /**
  * Check if a keyboard event matches a stored shortcut string.
  */
