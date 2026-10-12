@@ -559,6 +559,14 @@ the cache").
 already depends on `notify` and `notify-debouncer-full` for filesystem watching (see `crates/cmdr-listing/` and the SMB
 share watcher). Reusing it gives us 200 ms debounce, OS-level event coalescing, and a battle-tested teardown path.
 
+**Decision**: `gix` builds with `default-features = false` plus `sha1`, `status`, `revision`, `max-performance-safe`,
+and `auto-chain-error` (each one's reason sits beside it in `Cargo.toml`) **Why**: the defaults' `extras` bundle is
+write, network, and signal machinery (`worktree-mutation` with `dua-core` + `crossbeam`, `credentials`, `merge`,
+`blame`, `worktree-archive`, `interrupt`) this read-only crate never calls. Trimming it took cmdr-git's normal deps from
+170 to 150 and a clean `cargo build -p cmdr-git` from ~45 s to ~24 s (M1 Max, gix 0.89, 2026-10-12). `parallel` is
+load-bearing, not tuning: without it `ThreadSafeRepository` holds `Rc`s and `GitPortal` stops being `Send + Sync`
+(verified by `cargo check`). A new gix API that won't resolve probably needs its feature added here, not a default.
+
 ## Gotchas
 
 **Gotcha**: gix's `ThreadSafeRepository::work_dir()` is deprecated but the new name (`workdir`) only exists on

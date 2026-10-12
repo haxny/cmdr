@@ -35,7 +35,28 @@ cmdr-fs = { path = "../cmdr-fs" }
 # status walk, and the rev-walks behind every category listing. Same version the
 # app pinned before this crate existed, so nothing about what a repository
 # answers moved with the code.
-gix = "0.89"
+#
+# Defaults off: they bundle `extras`, whose `worktree-mutation`, `credentials`,
+# `merge`, `blame`, `worktree-archive`, and `interrupt` are write, network, and
+# signal machinery a read-only browser never calls. What's on, and for what:
+# - `sha1`: the object hash; gix won't compile without one.
+# - `status`: `Repository::status` behind the status walk and the dirty check.
+#   It implies `index`, `dirwalk`, `blob-diff` (so `Tree::changes` for the
+#   per-commit file lists), and `attributes`, which carries `gix-submodule` for
+#   `Repository::submodules`.
+# - `revision`: `rev_parse_single` for a commit-hash prefix.
+# - `max-performance-safe`: `parallel` (which also makes `ThreadSafeRepository`
+#   `Sync`, so `RepoCache` can share one across threads, and lets the status walk
+#   use threads) and both pack caches the rev-walks and tree diffs lean on.
+# - `auto-chain-error`: the default error shape, kept so `FriendlyGitError`'s
+#   wrapped messages don't change.
+gix = { version = "0.89", default-features = false, features = [
+  "sha1",
+  "status",
+  "revision",
+  "max-performance-safe",
+  "auto-chain-error",
+] }
 # The `.git/*` watcher's file-system events, and the 200 ms debounce that turns a
 # `git checkout`'s burst of ref writes into one report. Same pair the app's own
 # watchers use, at the versions it pins.
