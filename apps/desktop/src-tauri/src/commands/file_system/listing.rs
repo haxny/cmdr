@@ -1,12 +1,12 @@
 //! Tauri commands for directory listing and virtual-scroll API.
 
-use crate::file_system::listing::{
+use crate::listing_host::listings;
+use cmdr_fs::entry::FileEntry;
+use cmdr_listing::{
     CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult, DirectorySortMode, FuzzyJumpError,
     ListingId, ListingLookupError, ListingRequest, ListingStats, NameFilterResult, PaneMarks, ResortResult, RowBeside,
     SelectionSnapshot, SortColumn, SortOrder,
 };
-use crate::listing_host::listings;
-use cmdr_fs::entry::FileEntry;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::time::Duration;

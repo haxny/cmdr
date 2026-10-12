@@ -1,6 +1,6 @@
 //! This app, acting as the listing engine's host.
 //!
-//! The mirror of `file_system::listing::host`: that module declares everything
+//! The mirror of `cmdr_listing::host`: that module declares everything
 //! the listing engine needs from the application around it, and this is the
 //! place that answers, once, at the top of `setup()`, by building the app's one
 //! engine ([`listings`]). Each answer is an adapter here or next to the subsystem
@@ -42,8 +42,8 @@ use cmdr_fs::volume::DirectoryChange;
 
 use tauri::AppHandle;
 
-use crate::file_system::listing::host::ListingEvents;
-use crate::file_system::listing::{Listings, ListingsBuilder};
+use cmdr_listing::host::ListingEvents;
+use cmdr_listing::{Listings, ListingsBuilder};
 
 /// The app's listing engine, once [`install`] built it.
 static LISTINGS: OnceLock<Listings> = OnceLock::new();
@@ -125,7 +125,7 @@ fn builder(events: Arc<dyn ListingEvents>) -> ListingsBuilder {
 /// ordering cells read (`tests/support.rs`).
 #[cfg(test)]
 fn test_listings() -> Listings {
-    builder(Arc::new(crate::file_system::listing::host::NoEvents))
+    builder(Arc::new(cmdr_listing::host::NoEvents))
         .overlay(crate::file_system::git::overlay::overlay())
         .observer(crate::file_system::watcher::observer())
         .observer(crate::file_system::git::arming::observer())
@@ -171,7 +171,7 @@ mod early_reads {
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    use crate::file_system::listing::Listings;
+    use cmdr_listing::Listings;
 
     static HAPPENED: AtomicBool = AtomicBool::new(false);
     static DETACHED: OnceLock<Listings> = OnceLock::new();

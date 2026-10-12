@@ -154,8 +154,8 @@ The deep-link assertion would require spawning the settings window from the test
 
 ### error-pane.spec.ts
 
-**Source surface**: `src/lib/file-explorer/pane/ErrorPane.svelte` +
-`src-tauri/src/file_system/listing/friendly_error.rs` (error classification).
+**Source surface**: `src/lib/file-explorer/pane/ErrorPane.svelte` + `crates/cmdr-fs/src/volume/friendly_error/mod.rs`
+(error classification).
 
 **Behaviors covered (before)**: ETIMEDOUT (transient with retry), retry-clears-error-state, EACCES (NeedsAction without
 retry), accessibility (role/heading).

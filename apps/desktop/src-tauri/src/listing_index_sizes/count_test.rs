@@ -7,11 +7,11 @@ use cmdr_fs::volume::InMemoryVolume;
 
 use super::ListingIndexSizesChanged;
 use super::count::{CountFolderSizesError, CountPlan, cancel, count_with, plan};
-use crate::file_system::listing::IndexSizes;
-use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::IndexSizes;
+use cmdr_listing::testing::{TestListing, TestListingGuard};
 
 const DIR: &str = "/data";
 

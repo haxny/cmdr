@@ -156,10 +156,10 @@ fn event_targets_watch_root_rejects_children_and_neighbours() {
 /// since both use the same mechanism: re-read via Volume, compute diff, update cache.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_refreshes_from_volume() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::watcher::handle_directory_change;
+    use cmdr_listing::testing::TestListing;
     use std::path::PathBuf;
     use std::sync::Arc;
 
@@ -201,10 +201,10 @@ async fn test_handle_directory_change_refreshes_from_volume() {
 /// on a remote volume that the watcher detected).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_handle_directory_change_detects_new_entries() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::watcher::handle_directory_change;
+    use cmdr_listing::testing::TestListing;
     use std::path::PathBuf;
     use std::sync::Arc;
 
@@ -260,11 +260,11 @@ async fn test_handle_directory_change_detects_new_entries() {
 #[cfg(target_os = "macos")]
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::start_watching;
     use crate::test_support::{TestDir, wait_until};
     use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::TestListing;
     use std::time::Duration;
 
     let scratch = TestDir::new("watch-root-replaced");
@@ -328,9 +328,9 @@ fn is_watching(listing_id: &str) -> bool {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_attaches_the_watch() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::watcher::{start_watching_detached, stop_watching};
     use crate::test_support::{TestDir, wait_until};
+    use cmdr_listing::testing::TestListing;
     use std::time::Duration;
 
     let scratch = TestDir::new("detached-arm-attaches");
@@ -392,15 +392,12 @@ fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
 fn rewrite_a_dotfile_beside_a_visible_file(
     tag: &str,
     hidden: bool,
-) -> (
-    crate::test_support::TestDir,
-    crate::file_system::listing::testing::TestListingGuard,
-) {
-    use crate::file_system::listing::testing::TestListing;
-    use crate::file_system::listing::testing::hold_diffs;
+) -> (crate::test_support::TestDir, cmdr_listing::testing::TestListingGuard) {
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
     use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::TestListing;
+    use cmdr_listing::testing::hold_diffs;
     use notify_debouncer_full::DebouncedEvent;
     use notify_debouncer_full::notify::{
         Event,
@@ -436,7 +433,7 @@ fn rewrite_a_dotfile_beside_a_visible_file(
 
 #[test]
 fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
-    use crate::file_system::listing::testing::pending_changes;
+    use cmdr_listing::testing::pending_changes;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-off", false);
 
@@ -455,8 +452,8 @@ fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
 
 #[test]
 fn a_dotfile_write_reaches_a_pane_showing_dotfiles() {
-    use crate::file_system::listing::DiffChangeType;
-    use crate::file_system::listing::testing::pending_changes;
+    use cmdr_listing::DiffChangeType;
+    use cmdr_listing::testing::pending_changes;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-on", true);
 

@@ -147,9 +147,9 @@ async fn path_exists_on_a_saved_server_nobody_connected_answers_that_it_couldnt_
 /// that's fine, and the frontend reads `NotFound` as "this folder was deleted".
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn listing_a_saved_server_nobody_connected_says_it_is_not_connected() {
-    use crate::file_system::listing::testing::{TestListingGuard, read_to_end, request};
     use crate::listing_host::listings;
     use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::{TestListingGuard, read_to_end, request};
 
     let host = "198.51.100.49";
     sftp_known_servers::remember(saved_sftp(host, true));

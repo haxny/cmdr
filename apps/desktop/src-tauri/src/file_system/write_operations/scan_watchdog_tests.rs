@@ -16,10 +16,10 @@ use super::event_sinks::{CollectorScanPreviewSink, ScanPreviewEventSink};
 use super::scan_cache::{ScanOutcome, ScanPreviewState, poll_claim, register_preview, release_preview};
 use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTally, ScanTarget, ScanWatchdog};
-use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::volume::Volume;
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, WedgedVolume, wait_until_async};
+use cmdr_listing::{SortColumn, SortOrder};
 
 /// How long a test waits for the watchdog to publish. Generous against the
 /// 200 ms limits below: these run on a loaded box.

@@ -56,10 +56,10 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::file_system::listing::testing::{TestListing, WatchCoverageVolume};
     use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_fs::testing::unique_test_id;
     use cmdr_fs::volume::{InMemoryVolume, Volume, WatchCoverage};
+    use cmdr_listing::testing::{TestListing, WatchCoverageVolume};
 
     fn entry_at(dir: &str, name: &str) -> FileEntry {
         FileEntry {

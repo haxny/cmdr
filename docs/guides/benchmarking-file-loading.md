@@ -94,8 +94,8 @@ extended metadata appears separately as `get_extended_metadata_batch START/END, 
 
 - `crates/cmdr-fs/src/benchmark.rs`: the Rust emitter (`log_event`, `log_event_value`, `reset_epoch`).
 - `apps/desktop/src/lib/benchmark.ts`: the frontend emitter, forwarding through `benchmarkLog`.
-- `apps/desktop/src-tauri/src/file_system/listing/streaming.rs` and
-  `file_system/volume/backends/local_posix/reading.rs`: the instrumented backend paths.
+- `crates/cmdr-listing/src/streaming.rs` and `file_system/volume/backends/local_posix/reading.rs`: the instrumented
+  backend paths.
 - `apps/desktop/src/lib/file-explorer/pane/listing-loader.ts`: the instrumented frontend path.
 
 ## Recording a result

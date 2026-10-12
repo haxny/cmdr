@@ -284,7 +284,7 @@ pub fn note_foreground_activity_on(volume_id: &str) {
 
 /// Hold `volume_id` busy for as long as the returned guard lives.
 ///
-/// Taken by the spawned directory-listing task (`file_system::listing::streaming`),
+/// Taken by the spawned directory-listing task (`cmdr_listing`'s streaming read),
 /// which is what makes "is the user waiting on this share?" a fact for the real
 /// duration of a listing instead of an estimate that expires mid-wait.
 pub fn lease_foreground_on(volume_id: &str) -> ForegroundLease<'static> {

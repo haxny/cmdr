@@ -44,8 +44,8 @@ Sources that produce a `ListingError`:
   present (reproducing the old override exactly), keyed by `(provider, category)`.
 - **Empty-root path: `listing_error_for_restricted_empty_root(volume_id, path)`** (`empty_root.rs`): for an OS-returned
   successful empty listing at a volume root commonly hidden by macOS TCC (currently iCloud Drive without Full Disk
-  Access). The streaming listing path (`file_system/listing/streaming.rs`) checks this after a successful empty read at
-  the volume root and emits `listing-error` with the `EmptyRootICloud` reason instead of `listing-complete`. Returns
+  Access). The streaming listing path (`crates/cmdr-listing/src/streaming.rs`) checks this after a successful empty read
+  at the volume root and emits `listing-error` with the `EmptyRootICloud` reason instead of `listing-complete`. Returns
   `None` for any other volume / non-root path so genuine empty directories don't warn.
 
 The write path is separate: `write-error` events ship only the typed `WriteOperationError`, and the FE renders its copy

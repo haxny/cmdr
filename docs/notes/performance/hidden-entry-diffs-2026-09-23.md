@@ -2,8 +2,7 @@
 
 A pane with hidden files off refetched its visible rows on every dotfile write in `~`. The fix makes `directory-diff`
 speak the pane's rows and skip changes to rows it doesn't show. The mechanism and its rules live in
-`apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` § "Diffs speak the pane's rows"; this note holds the
-measurements.
+`crates/cmdr-listing/DETAILS.md` § "Diffs speak the pane's rows"; this note holds the measurements.
 
 ## Method
 

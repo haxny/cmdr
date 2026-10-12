@@ -1,7 +1,7 @@
 //! The priority policy, answering the listing engine's "the user is waiting on
 //! this volume".
 
-use crate::file_system::listing::host::{ForegroundHold, ForegroundLeases};
+use cmdr_listing::host::{ForegroundHold, ForegroundLeases};
 
 /// Holds `priority::foreground`'s lease on the volume, so a background upload or
 /// index scan backs off for the whole of a listing the user waits on. That

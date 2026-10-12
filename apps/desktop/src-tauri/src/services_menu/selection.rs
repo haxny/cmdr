@@ -124,7 +124,7 @@ pub fn resolve() -> Vec<PathBuf> {
             has_parent,
         } => crate::listing_host::listings()
             .paths_at_indices(
-                &crate::file_system::listing::ListingId::new(listing_id.clone()),
+                &cmdr_listing::ListingId::new(listing_id.clone()),
                 indices,
                 *include_hidden,
                 *has_parent,

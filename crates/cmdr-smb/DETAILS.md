@@ -159,7 +159,7 @@ The suites split by what a cell ASSERTS, never by what it connects to. Both side
   (`smb_transfer_safety_test.rs`, `smb_transfer_semantics_test.rs`, `smb_full_concurrency_test.rs`,
   `smb_stress_test.rs`, `smb_soak_test.rs`), the remote-archive cells (`smb_archive_integration_test.rs`), the
   local-source stream write (`smb_stream_write_integration_test.rs`), and the fixture wiring they share
-  (`smb_test_support.rs`). `file_system/listing/` holds the pane-close watcher regression
+  (`smb_test_support.rs`). `crates/cmdr-listing/` holds the pane-close watcher regression
   (`smb_pane_close_watch_integration_test.rs`), and `file_system/volume/` holds the two cells where the index crate
   meets a real share (`smb_index_scan_test.rs`, `smb_media_fetch_integration_test.rs`).
 
@@ -418,8 +418,7 @@ case, so a look-alike twin is rare but not impossible.
   name, the named one having vanished". The transfer layer's existence probes and post-move `exists` checks, and a
   delete walker's listings, all hold server-derived paths where a miss means gone. So the resolve is its own call, made
   only at the app's seams where a foreign path enters: the pane's directory open, a backend swap's respell, and a Finder
-  drop or paste (`apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` § "A pane path the volume stores another
-  way").
+  drop or paste (`crates/cmdr-listing/DETAILS.md` § "A pane path the volume stores another way").
 - **Rejected: a normalization retry ladder** (as given, then all-NFC, then all-NFD). Cheap, but a path with n accented
   components has 2ⁿ spellings on the server and the ladder tries three, none mixed, so `(NFC directory, NFD leaf)` from
   an all-NFD path never resolves; it can't see case; and on a share holding twins it opens whichever it reaches first,

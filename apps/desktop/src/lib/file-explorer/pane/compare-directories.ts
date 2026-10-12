@@ -4,7 +4,7 @@
  * per mode, differ in size). Equal files and the older copy end up unmarked, so
  * F5 afterwards brings the other side up to date.
  *
- * The comparison is the backend's (`src-tauri/src/file_system/listing/compare.rs`),
+ * The comparison is the backend's (`crates/cmdr-listing/src/compare.rs`),
  * read off both cached listings at once; this replaces each pane's selection with
  * the answer (adding the `..` offset) and says what happened in a toast.
  *

@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use super::state::FileInfo;
 use super::types::{SourceItemOutcome, TopLevelSkipped};
-use crate::file_system::listing::{SortColumn, SortOrder};
+use cmdr_listing::{SortColumn, SortOrder};
 /// Builds a map from top-level source path to the number of files it contains in the scan result.
 ///
 /// Each `FileInfo` has a `source_root` (the parent of the top-level source) and a `path` (the full

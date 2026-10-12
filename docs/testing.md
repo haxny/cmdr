@@ -197,7 +197,8 @@ path is shared by every process on the machine, and it costs three ways:
    process-per-test does NOT isolate this: processes share the filesystem.
 2. **Cross-run contamination.** A run that doesn't clean up leaves the next one a pre-populated directory, so "the
    listing has three entries" can pass on leftovers and go red later for reasons nobody can reproduce. It also hides
-   weak assertions: `listing/operations_test.rs` asserted `entries.len() >= 3` because an exact count was never safe.
+   weak assertions: `crates/cmdr-listing/src/operations_test.rs` asserted `entries.len() >= 3` because an exact count
+   was never safe.
 3. **No cleanup on panic.** Teardown written as a `remove_dir_all` after the assertions never runs when an assertion
    fails, which is exactly when the debris matters most.
 

@@ -69,13 +69,13 @@ its batched add landed after the rename event that would have cleared it.
 
 **Read-path, not watcher.** Filtering where the frontend asks for a range (`CachedListing::rows`) rather than where the
 cache is filled is what makes the fix safe. The cache stays the truth; read boundaries reconcile scratch visibility
-through the revisioned projection (`listing/DETAILS.md` § "Diff event coalescing"). Filtering the watcher instead inverts the bug into a worse one:
+through the revisioned projection (`crates/cmdr-listing/DETAILS.md` § "Diff event coalescing"). Filtering the watcher instead inverts the bug into a worse one:
 a full listing shows the temp, the watcher skips the removal that would clear it, and the pane keeps an entry pointing
 at nothing. The `.sb-` filter lived in `crates/cmdr-smb/src/volume/watcher.rs` from 2026-04-10 to 2026-08-01 and had exactly that ghost — its
 `continue` sat above the `match action`, so it skipped `Removed` too.
 
 **Re-testing scratch does not require re-deriving every row on every fetch.** Cached row maps and the scratch-candidate
-gate keep ordinary directory reads constant-time; `listing/DETAILS.md` § "Row numbers" explains their split.
+gate keep ordinary directory reads constant-time; `crates/cmdr-listing/DETAILS.md` § "Row numbers" explains their split.
 
 **Other apps' scratch hides by NAME, and that's a different rule on purpose.** macOS safe-save writes
 `file.txt.sb-<uuid>` next to the original on every save (TextEdit, Preview, anything on `NSDocument`). There's no
@@ -570,7 +570,7 @@ date-sorted pane and that reads as if the wrong folder were disappearing, which 
 
 Both watcher paths produce it: the incremental path from `update_entry_sorted`'s pane rows (the cache re-inserts the
 entry at its new sorted position, and a row that differs before and after is a move), and the full re-read path from
-`compute_diff`. Both speak the pane's rows, not entry indices: `listing/DETAILS.md` § "Diffs speak the pane's rows".
+`compute_diff`. Both speak the pane's rows, not entry indices: `crates/cmdr-listing/DETAILS.md` § "Diffs speak the pane's rows".
 
 `compute_diff` has to separate a real jump from the index shift every row below an add or a remove takes, or an ordinary
 delete would make the pane chase the cursor around. It reads the surviving rows' old positions in new order and keeps
@@ -580,7 +580,7 @@ rest are the minimal set that genuinely moved.
 **One event's removals are one call**, `listing::remove_entries_by_paths`, not a loop: the batch resolves every doomed
 row against the pre-removal listing in a single pass under one write lock, which is what keeps the rows the
 `directory-diff` carries in one row space and stops a 500-path event walking the listing 1,000 times. Why, and what
-the loop cost: `listing/DETAILS.md` § "Entries by path".
+the loop cost: `crates/cmdr-listing/DETAILS.md` § "Entries by path".
 
 ## Replacing a watch root
 

@@ -1,6 +1,6 @@
 //! The listing engine's events, as this app's frontend hears them.
 //!
-//! The engine reports facts through `ListingEvents` (`file_system::listing::host`);
+//! The engine reports facts through `ListingEvents` (`cmdr_listing::host`);
 //! [`TauriListingEvents`] is this app's answer, and the only place those facts
 //! become wire events. It owns every policy on them: the typed `listing-error`
 //! classification (with the damaged-archive, password, and cloud-provider
@@ -18,15 +18,15 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tauri_specta::Event;
 
-use crate::file_system::listing::DirectoryDiffBatch;
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::StalledOn;
-use crate::file_system::listing::host::{ListingEnd, ListingEvents};
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::friendly_error::{
     ListingError, archive_needs_password_listing_error, archive_unreadable_listing_error, enrich_with_provider,
     listing_error_for_restricted_empty_root, listing_error_from_volume_error,
 };
+use cmdr_listing::DirectoryDiffBatch;
+use cmdr_listing::ListingId;
+use cmdr_listing::StalledOn;
+use cmdr_listing::host::{ListingEnd, ListingEvents};
 
 // ============================================================================
 // Wire payloads

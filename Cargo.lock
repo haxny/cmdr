@@ -1397,6 +1397,7 @@ dependencies = [
  "cmdr-git",
  "cmdr-http",
  "cmdr-index",
+ "cmdr-listing",
  "cmdr-mtp",
  "cmdr-s3",
  "cmdr-sftp",
@@ -1420,8 +1421,6 @@ dependencies = [
  "genai",
  "getrandom 0.4.3",
  "icns",
- "icu_collator",
- "icu_locale_core",
  "image",
  "kamadak-exif",
  "keyring-core",
@@ -1434,7 +1433,6 @@ dependencies = [
  "muda",
  "notify",
  "notify-debouncer-full",
- "nucleo-matcher",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
  "objc2-core-foundation",
@@ -1645,6 +1643,26 @@ dependencies = [
  "unicode-normalization",
  "usearch",
  "zip 8.6.0",
+]
+
+[[package]]
+name = "cmdr-listing"
+version = "0.0.0"
+dependencies = [
+ "cmdr-fs",
+ "cmdr-listing",
+ "futures-util",
+ "icu_collator",
+ "icu_locale_core",
+ "libc",
+ "log",
+ "nucleo-matcher",
+ "serde",
+ "specta",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "uuid",
 ]
 
 [[package]]

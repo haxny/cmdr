@@ -8,10 +8,10 @@ use tokio::time::Instant;
 
 use super::jobs::{self, Joined};
 use super::{HOURGLASS_DELAY, count_with, plan};
-use crate::file_system::listing::testing::TestListing;
 use crate::listing_index_sizes::ListingIndexSizesChanged;
 use crate::listing_index_sizes::refresh::RowSizes;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::testing::TestListing;
 
 fn folder(path: &str) -> FileEntry {
     let name = path.rsplit('/').next().expect("a path has a name").to_string();

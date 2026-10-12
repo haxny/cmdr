@@ -181,7 +181,7 @@ clipboard paste use, so all three entry points prepare a transfer identically. O
 - **Respells the dropped paths in the source volume's own spelling** (`storedSpellings`, once, after the kind probe).
   Finder hands over kernel-mount paths, which spell accented names decomposed; a share on a direct SMB connection may
   store them composed and match bytes exactly. The paste path does the same. Rule and rationale:
-  `src-tauri/src/file_system/listing/DETAILS.md` § "A pane path the volume stores another way".
+  `crates/cmdr-listing/DETAILS.md` § "A pane path the volume stores another way".
 
 ### Drag image detection (macOS-specific hack)
 

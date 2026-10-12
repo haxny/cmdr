@@ -59,7 +59,7 @@ Verified on macOS 26.5 / WKWebView, via `vmmap -summary` region breakdowns, 2026
   scan. **Already leading-throttled to 2 s/pane** (`pane/index-events.ts`). A background scan of static content updates
   the list at most ~0.5/sec — this path is NOT the frequency problem.
 - **`directory-diff`** (a viewed directory's own files being created/deleted — downloads, copies, builds writing into
-  the open folder): backend coalesces at 50 ms (`file_system/listing/diff_emitter.rs`, up to ~20/sec) → frontend
+  the open folder): backend coalesces at 50 ms (`crates/cmdr-listing/src/diff_emitter.rs`, up to ~20/sec) → frontend
   `softRefreshTick` → `fetchVisibleRange`. This was the **unthrottled** path.
 
 ## What we changed (landed on `main`, 2026-07-15)

@@ -1,6 +1,6 @@
 //! Settings-related commands.
 
-use crate::file_system::listing::host::ScratchVisibility;
+use cmdr_listing::host::ScratchVisibility;
 use tauri::{AppHandle, Manager};
 
 use crate::file_system::{set_direct_smb_enabled, set_smb_concurrency, update_debounce_ms};

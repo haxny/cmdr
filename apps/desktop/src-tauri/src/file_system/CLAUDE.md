@@ -16,7 +16,7 @@ Directory listing, file writing, sync status, volume management, and file watchi
 - **Transient scratch hides on the listing READ path, nowhere but `CachedListing::rows`**: a watcher-side skip strands
   an entry in the pane forever. Cmdr's own (`.cmdr-tmp-*`) hides by OWNERSHIP, other apps' (`.sb-`) by NAME, and
   `is_hidden_from_listings` is GATED on the pure `could_be_hidden_from_listings`, which is what keeps cached row numbers
-  valid. Rows use a committed projection, not live re-sampling; `listing/DETAILS.md` § "Diff event coalescing".
+  valid. Rows use a committed projection, not live re-sampling; `crates/cmdr-listing/DETAILS.md` § "Diff event coalescing".
 - **Tag writes (`tags.rs`) touch ONLY `_kMDItemUserTags`, never `com.apple.FinderInfo`** (zeroing it destroys custom
   folder icons), and encode a **binary** plist.
 - **Never call macOS frameworks from rayon or any constrained-stack pool**: FileProvider XPC blows the 2 MB stack and

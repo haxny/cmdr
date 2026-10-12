@@ -21,8 +21,8 @@ use std::time::Instant;
 
 use cmdr_fs::entry::FileEntry;
 
-use crate::file_system::listing::{ListingId, VisibleRows};
 use crate::listing_host::listings;
+use cmdr_listing::{ListingId, VisibleRows};
 
 /// Per-column widths plus the code points that had to be estimated.
 ///

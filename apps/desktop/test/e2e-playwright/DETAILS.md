@@ -1417,8 +1417,8 @@ Linux run had `ensureAppReady` confirm the full list twice, including the re-con
 very next statement found the pane missing `bravo`, `charlie`, and `delta.txt` for ~10 s. The entries were there and
 were then REMOVED. Two concurrent `FullRefresh`es of one directory raced, and the one that had read the folder mid-write
 landed second, overwriting the cache with its staler snapshot and emitting removals for rows that were on disk. A
-per-directory turnstile now makes read-then-write atomic: `apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` §
-"Serializing full refreshes".
+per-directory turnstile now makes read-then-write atomic: `crates/cmdr-listing/DETAILS.md` § "Serializing full
+refreshes".
 
 **A third face was the probe itself, which no backend fix reaches, so readiness asks the LISTING, never the DOM.**
 `views/FullList.svelte` renders only the virtual window's rows (`visibleFiles`, from `cache.windowRows` plus

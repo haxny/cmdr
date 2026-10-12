@@ -8,9 +8,9 @@
 //! respell the swap leaves a pane whose every accented entry opens nowhere.
 
 use super::*;
-use crate::file_system::listing::testing::TestListing;
 use crate::file_system::write_operations::backend_suites::smb_test_support::*;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::testing::TestListing;
 use cmdr_smb::volume::{MountAnchor, connect_smb_volume};
 use unicode_normalization::UnicodeNormalization;
 
@@ -55,7 +55,12 @@ async fn smb_integration_a_pane_in_an_accented_folder_survives_the_upgrade_to_a_
     .expect("the direct connection to the Docker SMB container");
     register_replacing_predecessor(&volume_id, Arc::new(successor)).await;
 
-    let respelled = || listing.with_listing(|cached| cached.path.as_path() == Path::new(&album));
+    let respelled = || {
+        listing
+            .engine()
+            .location(&listing.listing_id())
+            .is_some_and(|(_, path)| path == Path::new(&album))
+    };
     wait_until_async(Duration::from_secs(5), "the open listing to be respelled", respelled).await;
     let entry_paths: Vec<String> = listing.entries().into_iter().map(|e| e.path).collect();
     let direct = crate::file_system::volume::manager::get_volume_manager()

@@ -9,8 +9,8 @@ use serde::Serialize;
 use genai::chat::ChatOptions;
 
 use crate::ai::AiTranslateError;
-use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator};
 use crate::search::{self, ParsedScope, SearchQuery, SearchResult, VolumeLoad};
+use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator};
 
 use crate::search::ai::{self, query_builder as ai_query_builder};
 use crate::search::history::{DEFAULT_MAX_COUNT, HistoryEntry, RECENT_SEARCHES};
@@ -479,7 +479,7 @@ mod tests {
     // ── `sort_search_results` ────────────────────────────────────────────
 
     use crate::commands::search::{SearchSortRow, sort_search_results};
-    use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
+    use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder};
 
     fn row(name: &str, is_directory: bool, size: Option<u64>, modified_at: Option<u64>) -> SearchSortRow {
         SearchSortRow {

@@ -37,8 +37,8 @@ use tokio::time::Instant;
 use serde::{Deserialize, Serialize};
 use tokio::time::MissedTickBehavior;
 
-use crate::file_system::listing::ListingId;
 use crate::file_system::volume::Volume;
+use cmdr_listing::ListingId;
 
 use super::refresh::RowSizes;
 pub(crate) use jobs::cancel;

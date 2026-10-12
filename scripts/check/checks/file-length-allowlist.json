@@ -20,10 +20,6 @@
       "lines": 1217,
       "reason": "One test module for the error-report bundle (manifest shape, zip contents, redaction, note and email handling, ids, and capping), sharing one set of manifest and zip-reading fixtures; `privacy_tests` already splits off the privacy cases, and splitting further would scatter those fixtures across siblings without making any test easier to find."
     },
-    "apps/desktop/src-tauri/src/file_system/listing/caching.rs": {
-      "lines": 903,
-      "reason": "TODO: three concerns share one file and the test siblings already name the seams. Move the full-refresh machinery (`RefreshSlot`, `REFRESH_SLOTS`, `refresh_slot`, `spawn_full_refresh`, `notify_full_refresh`, `notify_full_refresh_locked`, `publish_replacement`, `find_listings_under_path_on_volume`, `refresh_archive_listings`, roughly lines 540-800) into `caching_refresh.rs` at about 260 lines, and the freshness oracle `try_get_authoritative_listing` with its long contract doc into `caching_oracle.rs` at about 105 lines, matching the `caching_replacement_test.rs` and `caching_oracle_test.rs` siblings that already test exactly those two. What stays is about 550 lines of listing lookups (`snapshot_listings`, `find_listings_for_path*`, `find_listings_on_volume`), the cache patch helpers (`insert_entry_sorted`, `remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, `apply_tags_to_listing`), and the `notify_directory_changed` dispatch with its `notify_added` / `notify_removed` / `notify_modified` arms, which is what the module map in `listing/CLAUDE.md` calls this file."
-    },
     "apps/desktop/src-tauri/src/file_system/volume/backends/local_posix.rs": {
       "lines": 900,
       "reason": "TODO: the `impl Volume for LocalPosixVolume` block plus the query and mutation bodies it can't spread across files. `scan` and `streams` already moved to `local_posix/`; the mutation bodies (create, delete, rename, `apply_metadata`) should follow into `local_posix/mutation.rs` as `pub(super)` inherent methods with one-line delegators here, the shape `cmdr-sftp` and `cmdr-smb` use."

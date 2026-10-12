@@ -6,7 +6,7 @@
 //! where an accented name the server stores composed would miss. The frontend asks
 //! here ONCE, right where the paths enter, so the scan preview, the conflict check,
 //! the transfer, and the journal it writes all carry the stored spelling.
-//! `file_system/listing/DETAILS.md` § "A pane path the volume stores another way".
+//! `crates/cmdr-listing/DETAILS.md` § "A pane path the volume stores another way".
 
 use std::path::PathBuf;
 
@@ -33,7 +33,7 @@ pub async fn stored_spellings(volume_id: String, paths: Vec<String>) -> TimedOut
         };
     };
     let paths = paths.into_iter().map(PathBuf::from).collect();
-    let resolve = crate::file_system::listing::stored_spellings(volume.as_ref(), paths);
+    let resolve = cmdr_listing::stored_spellings(volume.as_ref(), paths);
     match tokio::time::timeout(STORED_SPELLINGS_TIMEOUT, resolve).await {
         Ok(stored) => TimedOut {
             data: stored.into_iter().map(|p| p.to_string_lossy().into_owned()).collect(),

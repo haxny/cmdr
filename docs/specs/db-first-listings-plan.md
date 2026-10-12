@@ -3,7 +3,7 @@
 Serve a directory listing from the volume's SQLite index instead of `readdir` + `stat`, so the first paint is a query
 rather than a filesystem walk. Background verification on each navigation keeps the index honest.
 
-**Status, re-derived from the tree 2026-09-23**: not started. Nothing in `file_system/listing/` reads the index for
+**Status, re-derived from the tree 2026-09-23**: not started. Nothing in `crates/cmdr-listing/` reads the index for
 entries. Its prerequisite, the per-navigation verifier, is built and in production
 (`crates/cmdr-index/src/indexing/reconcile/verifier.rs`).
 
@@ -50,7 +50,7 @@ there is a user-visible win left to win.
 - **`FileEntry` carries fields beyond the index columns**: `is_archive`, `inode`, `physical_size`, `tags`,
   `recursive_has_symlinks`, `recursive_size_complete`, and `recursive_size_stale`. Most are derivable or already
   enriched: `icon_id` and `is_archive` are pure functions of the name and the directory flag, `inode` and both sizes are
-  columns, `tags` are deferred on every path already (`file_system/listing/DETAILS.md` § "Finder tags"), and the
+  columns, `tags` are deferred on every path already (`crates/cmdr-listing/DETAILS.md` § "Finder tags"), and the
   recursive fields come from the same `dir_stats` batch enrichment does today.
 - **❗ `created` is a sort column, and the index does not store it.** `SortColumn` is
   `'name' | 'extension' | 'size' | 'modified' | 'created'`. A DB-first listing with `created_at: None` on every entry

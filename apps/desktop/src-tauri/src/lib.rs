@@ -244,7 +244,7 @@ pub fn run() {
         .setup(move |app| {
             // Everything the listing engine needs from this app, first: nothing may
             // open a listing before its events and runtime are wired. Mirror of
-            // `file_system::listing::host`, which declares the other side of each seam.
+            // `cmdr_listing::host`, which declares the other side of each seam.
             listing_host::install(app.handle());
 
             // Everything a storage backend needs from this app, in one place.
@@ -632,7 +632,7 @@ pub fn run() {
             // Index size updates reach only the listings they touch (`listing_index_sizes`);
             // its open-listing observer is installed with the listing host.
             listing_index_sizes::start(app.handle().clone());
-            listing_host::listings().set_scratch_visibility(file_system::listing::host::ScratchVisibility {
+            listing_host::listings().set_scratch_visibility(cmdr_listing::host::ScratchVisibility {
                 show_safe_save_files: saved_settings.show_safe_save_files.unwrap_or(true),
                 show_staging_temps: saved_settings.show_staging_temp_files.unwrap_or(false),
             });

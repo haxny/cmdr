@@ -10,8 +10,8 @@ use cmdr_fs::volume::{BatchScanResult, InMemoryVolume, ListingProgress, ScanBoun
 use tokio::sync::Notify;
 
 use super::{cancel, count_resolving, count_with, plan};
-use crate::file_system::listing::testing::TestListing;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::testing::TestListing;
 
 #[derive(Default)]
 struct Gate {

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use cmdr_fs::entry::FileEntry;
 
-use crate::file_system::listing::host::ListingIndex;
+use cmdr_listing::host::ListingIndex;
 
 /// Answers from `index_host::index()`, resolved per call: this adapter is built
 /// before `index_host::install` runs, and capturing the index then would win

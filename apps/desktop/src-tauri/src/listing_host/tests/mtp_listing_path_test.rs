@@ -15,11 +15,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::file_system::listing::testing::TestListing;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::listing_host::listings;
 use crate::mtp::test_support::{self, device_lock};
 use cmdr_fs::volume::Volume;
+use cmdr_listing::testing::TestListing;
 
 /// A pane entered with Enter hears about a change the volume reports at the
 /// storage URL.

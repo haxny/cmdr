@@ -3,7 +3,7 @@
 //! Surfaces the last few directory-listing failures (volume not found, permission
 //! denied, I/O error, SMB protocol error) to MCP-driven tests so they can assert
 //! "no error since timestamp X" without grepping the on-disk log file. Populated
-//! from `file_system::listing::streaming` whenever it emits `listing-error`.
+//! from `cmdr_listing`'s streaming read whenever it emits `listing-error`.
 //!
 //! Ring-buffered to 20 entries: enough to triage a problem, small enough that
 //! every `cmdr://state` read pays a bounded YAML cost.

@@ -9,12 +9,12 @@ use super::plan::{MultiRenameSpec, RowStatus};
 use super::run::apply;
 use super::session::{FIRST_PAGE, PreviewFilter, close, is_open, open, page, preview_session, spec_of};
 use super::transform::CaseChange;
-use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::backends::list_directory_core;
 use crate::file_system::write_operations::CollectorEventSink;
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::volume::DirectoryChange;
+use cmdr_listing::testing::{TestListing, TestListingGuard};
 
 pub(super) fn strip_diacritics() -> MultiRenameSpec {
     MultiRenameSpec {

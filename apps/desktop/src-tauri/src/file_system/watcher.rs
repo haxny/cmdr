@@ -23,12 +23,12 @@ use std::time::Duration;
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::host::{ListingObserver, OpenedListing};
-use crate::file_system::listing::{Listings, RefreshOutcome};
 use crate::file_system::volume::backends::{get_single_entry, list_directory_core};
 use cmdr_fs::firmlinks;
 use cmdr_fs::volume::WatchCoverage;
+use cmdr_listing::ListingId;
+use cmdr_listing::host::{ListingObserver, OpenedListing};
+use cmdr_listing::{Listings, RefreshOutcome};
 
 /// Default debounce duration in milliseconds (used if not configured)
 const DEFAULT_DEBOUNCE_MS: u64 = 200;

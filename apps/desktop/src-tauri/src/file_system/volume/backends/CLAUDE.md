@@ -17,8 +17,8 @@ Per-backend `Volume` impls. Trait shape, capabilities, streaming patterns, "Buil
   app-side tests drift to.
 - **A crate backend's app-side tests live beside the app code they assert on**, not here. SMB's are in
   `file_system/write_operations/` (transfers, remote archives, the shared `smb_test_support.rs`),
-  `file_system/listing/` (the pane-close watcher cell), and `file_system/volume/` (index scan, media fetch); the archive
-  watch cell is in `file_system/listing/`. Which side a cell belongs on: `crates/cmdr-smb/DETAILS.md` § "Which side a
+  `crates/cmdr-listing/` (the pane-close watcher cell), and `file_system/volume/` (index scan, media fetch); the archive
+  watch cell is in `crates/cmdr-listing/`. Which side a cell belongs on: `crates/cmdr-smb/DETAILS.md` § "Which side a
   test lives on".
 - The app-side tracker, provider, and connect wiring for ADB and MTP live in `src-tauri/src/adb/` and
   `src-tauri/src/mtp/`, not here.

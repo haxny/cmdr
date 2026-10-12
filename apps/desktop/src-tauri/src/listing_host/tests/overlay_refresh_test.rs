@@ -7,18 +7,18 @@
 //! first read did. Without that, one `git commit` under an open `.git/` pane
 //! would silently empty the portal out of it.
 //!
-//! What the overlays themselves decide: `file_system/listing/host/overlays_test.rs` and
+//! What the overlays themselves decide: `crates/cmdr-listing/src/host/overlays_test.rs` and
 //! `file_system/git/overlay_tests.rs`. That a diff patch keeps the contributed
-//! count is the engine's own cell (`file_system/listing/overlay_read_paths_test.rs`).
+//! count is the engine's own cell (`crates/cmdr-listing/src/overlay_read_paths_test.rs`).
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::file_system::listing::testing::{TestListing, decorate, full_refresh};
 use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::Volume;
+use cmdr_listing::testing::{TestListing, decorate, full_refresh};
 
 use crate::listing_host::listings;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};

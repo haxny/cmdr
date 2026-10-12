@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use cmdr_fs::volume::{ResolvedVolume, Volume};
 
-use crate::file_system::listing::host::{ListingVolumes, Unregistered};
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_listing::host::{ListingVolumes, Unregistered};
 
 /// How long the last-chance mount adoption may take before the listing gives up
 /// and reports the volume missing. It reads the mount table and one NSURL

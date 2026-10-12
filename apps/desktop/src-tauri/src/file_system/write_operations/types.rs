@@ -18,7 +18,7 @@ pub use errors::*;
 pub use events::*;
 
 // Re-export sort types from sorting module
-pub use crate::file_system::listing::{SortColumn, SortOrder};
+pub use cmdr_listing::{SortColumn, SortOrder};
 
 /// One original the operation kept under a new name because its old name was
 /// occupied by the replacement. Shared by failure and cancellation payloads so

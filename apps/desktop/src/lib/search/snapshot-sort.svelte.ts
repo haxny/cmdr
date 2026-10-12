@@ -6,7 +6,7 @@
  *
  * A snapshot pane's rows sort the same way a directory listing's do, and the only
  * way to guarantee that is to run the SAME comparator
- * (`file_system::listing::sorting::entry_comparator`, reached through the
+ * (`cmdr_listing::sorting::entry_comparator`, reached through the
  * `sort_search_results` command). Natural number ordering, case folding,
  * and the user's folders-first and `directorySortMode` choices come along for free, and
  * there is no second copy to drift. A frontend comparator would have had to

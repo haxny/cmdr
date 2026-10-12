@@ -17,9 +17,9 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::file_system::listing::{ListingId, ListingLookupError};
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::{ListingId, ListingLookupError};
 
 use super::error::MultiRenameError;
 use super::names_file::{self, Written};

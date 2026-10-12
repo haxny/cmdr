@@ -17,11 +17,11 @@ join it in the listing pipeline, through the overlay (§ "Two seams, no hooks").
 Three files, and each is one of the app's answers:
 
 - **`overlay.rs`** — the `ListingOverlay` contributor that puts the six category rows into a repo's `.git/` listing, for
-  a PANE and nothing else (`file_system/listing/host/overlays.rs`). It asks the crate for the rows and does nothing else.
+  a PANE and nothing else (`crates/cmdr-listing/src/host/overlays.rs`). It asks the crate for the rows and does nothing else.
 - **`wiring.rs`** — the parked `GitPortal` (`install_git_portal` at startup, `portal()` with a detached-sink fallback so
   a test binary that never runs `setup()` still browses), the toggle both seams consult, `volume_holds_real_repos`, the
   `GitStateChangedPayload` event and the sink that emits it, and the listing re-reads a repo change or a toggle drives.
-- **`arming.rs`** — the `ListingObserver` (`file_system/listing/host/observers.rs`) that keeps a repo's `.git/*` watcher
+- **`arming.rs`** — the `ListingObserver` (`crates/cmdr-listing/src/host/observers.rs`) that keeps a repo's `.git/*` watcher
   armed while a pane is showing one of its virtual listings. § "Who arms the repo watcher".
 - **`mod.rs`** — the module declarations and the `cmdr_git` re-exports the IPC commands import.
 
@@ -29,7 +29,7 @@ The route itself lives with the registry that owns it: `file_system/volume/manag
 
 ## A virtual listing is unwatchable by type, and `.git/` itself is watched
 
-`listing/streaming.rs` arms a `notify` watch on any listing whose volume says it can carry one. A virtual path
+`crates/cmdr-listing/src/streaming.rs` arms a `notify` watch on any listing whose volume says it can carry one. A virtual path
 has nothing on disk, so `notify` answers "No path was found" and spams the warn log; the portal volume returns
 `can_watch_listings() == false`, which keeps every one of them out with no path check anywhere. Invalidation arrives
 from the per-repo watcher's recursive gitdir watch instead (`crates/cmdr-git/DETAILS.md` § "Watcher path set").
@@ -114,9 +114,9 @@ guard there once refused the REAL `.git/config` alongside the virtual folders, w
    only by trait default, unwatchable by `can_watch_listings() == false`, invisible to `mount_id_for_path` by type.
    `volume/DETAILS.md` § "Resolving a path: the two routes".
 2. **The overlay.** `git::overlay::GitPortalOverlay` contributes the six category rows to a repo's `.git/` listing, run
-   by the listing engine's read pipeline (`file_system/listing/pipeline.rs`, on every read that builds or replaces a
+   by the listing engine's read pipeline (`crates/cmdr-listing/src/pipeline.rs`, on every read that builds or replaces a
    listing) after the volume's entries arrive and before the cache insert. Pane-only by construction:
-   `file_system/listing/host/overlays.rs`.
+   `crates/cmdr-listing/src/host/overlays.rs`.
 
 Both consult ONE app-side switch, `git::wiring::is_virtual_portal_enabled()`, so the toggle is "no route" plus "no
 contribution". Both also ask `wiring::volume_holds_real_repos`, which is `local_path().is_some()`: `gix` can't open a

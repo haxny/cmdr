@@ -1,14 +1,14 @@
 //! The app's half of the orphan reaper: a listing the engine ends takes its
 //! FSEvents watch with it. The reaper ends a stale listing the way a pane's
-//! close does (`Listings::end`), which `file_system/listing/caching_reaper_test.rs`
+//! close does (`Listings::end`), which `crates/cmdr-listing/src/caching_reaper_test.rs`
 //! pins against a recording observer; this pins that the app's change watch is
 //! among the observers that let go.
 
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::testing::TestListing;
 use crate::file_system::watcher::{WATCHER_MANAGER, start_watching};
 use crate::listing_host::listings;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_listing::ListingId;
+use cmdr_listing::testing::TestListing;
 
 fn is_watched(id: &str) -> bool {
     WATCHER_MANAGER.read_ignore_poison().watches.contains_key(id)

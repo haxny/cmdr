@@ -1,7 +1,7 @@
 //! What a live search reports while it runs: the event family, and the sink it
 //! reports through.
 //!
-//! Shaped after `file_system/listing/streaming.rs` — a `-progress` stream, one
+//! Shaped after `crates/cmdr-listing/src/streaming.rs` — a `-progress` stream, one
 //! terminal event of three, and a sink trait so the run itself never touches
 //! Tauri. The difference is the **run id**: a search dialog supersedes its own
 //! query as the user types, and every event carries the run it belongs to so the

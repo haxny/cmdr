@@ -12,9 +12,9 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::host::{ListingObserver, OpenedListing};
 use crate::listing_host::listings;
+use cmdr_listing::ListingId;
+use cmdr_listing::host::{ListingObserver, OpenedListing};
 
 /// One lifecycle call as the probe heard it, with whether the engine held the
 /// listing at that moment (and, on a close, whether its FSEvents watch was

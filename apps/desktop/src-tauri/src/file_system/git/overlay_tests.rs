@@ -1,7 +1,7 @@
 //! What the git contributor claims, and what the watcher's refresh reaches.
 //!
 //! The seam's own rules (registration, the shadowing merge) live in
-//! `file_system/listing/host/overlays_test.rs`; the walker-exposure consequences in
+//! `crates/cmdr-listing/src/host/overlays_test.rs`; the walker-exposure consequences in
 //! `walker_exposure_tests.rs`.
 
 #![cfg(test)]
@@ -10,10 +10,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::overlay::GitPortalOverlay;
-use crate::file_system::listing::host::ListingOverlay;
-use crate::file_system::listing::testing::{TestListing, WatchCoverageVolume};
 use crate::file_system::volume::{LocalPosixVolume, Volume, WatchCoverage};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
+use cmdr_listing::host::ListingOverlay;
+use cmdr_listing::testing::{TestListing, WatchCoverageVolume};
 
 fn repo(name: &str) -> PathBuf {
     let dir = temp_dir("git_overlay", name);
@@ -37,8 +37,7 @@ async fn a_dot_git_that_is_not_this_repos_gitdir_gets_no_rows() {
     let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Test", &dir));
     let mut entries = volume.list_directory(&stray, None).await.expect("listing it");
     assert_eq!(
-        crate::file_system::listing::testing::decorate(crate::listing_host::listings(), &volume, &stray, &mut entries)
-            .await,
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &stray, &mut entries).await,
         0,
         "{entries:?}"
     );
@@ -48,13 +47,7 @@ async fn a_dot_git_that_is_not_this_repos_gitdir_gets_no_rows() {
     let real = dir.join(".git");
     let mut real_entries = volume.list_directory(&real, None).await.expect("listing .git");
     assert_eq!(
-        crate::file_system::listing::testing::decorate(
-            crate::listing_host::listings(),
-            &volume,
-            &real,
-            &mut real_entries
-        )
-        .await,
+        cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &real, &mut real_entries).await,
         6
     );
 

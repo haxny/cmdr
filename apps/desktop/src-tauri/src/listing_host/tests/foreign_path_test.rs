@@ -1,15 +1,15 @@
 //! A pane path the volume stores another way, where the app's half decides it:
 //! the SMB upgrade swaps a share's backend in the app's volume registry while a
 //! listing on it is still reading. The engine's half (`list_as_stored`, the
-//! respell) is `file_system/listing/foreign_path_test.rs`, against a fake
+//! respell) is `crates/cmdr-listing/src/foreign_path_test.rs`, against a fake
 //! registry.
 
 use std::future::Future;
 use std::path::Path;
 
-use crate::file_system::listing::testing::SpelledVolume;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
+use cmdr_listing::testing::SpelledVolume;
 
 /// `fotók` composed (how the server stores it) and decomposed (how the macOS
 /// kernel mount spelled it for the pane).
@@ -90,11 +90,11 @@ impl Volume for SwappedMidListing {
 /// is gone, or the pane keeps the kernel's spelling on a byte-exact share.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelling() {
-    use crate::file_system::listing::testing::{TestListingGuard, read_to_end, request};
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::listing_host::listings;
     use crate::test_support::wait_until_async;
     use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::{TestListingGuard, read_to_end, request};
 
     let volume_id = format!("respell-mid-listing-{}", uuid::Uuid::new_v4());
     let kernel = InMemoryVolume::new("Share");
@@ -115,7 +115,12 @@ async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelli
     read_to_end(listings(), &request(listing.id(), &volume_id, FOREIGN))
         .await
         .expect("the kernel mount lists the folder");
-    let respelled = || listing.with_listing(|cached| cached.path.as_path() == Path::new(STORED));
+    let respelled = || {
+        listing
+            .engine()
+            .location(&listing.listing_id())
+            .is_some_and(|(_, path)| path == Path::new(STORED))
+    };
     wait_until_async(
         std::time::Duration::from_secs(5),
         "the listing to be respelled",
@@ -124,12 +129,10 @@ async fn a_listing_read_while_the_backend_is_replaced_lands_on_the_stored_spelli
     .await;
     get_volume_manager().unregister(&volume_id);
 
-    listing.with_listing(|cached| {
-        let paths: Vec<&str> = cached.entries().iter().map(|e| e.path.as_str()).collect();
-        assert_eq!(
-            paths,
-            vec![format!("{STORED}/photo.jpg")],
-            "entries carry the stored bytes"
-        );
-    });
+    let paths: Vec<String> = listing.entries().into_iter().map(|e| e.path).collect();
+    assert_eq!(
+        paths,
+        vec![format!("{STORED}/photo.jpg")],
+        "entries carry the stored bytes"
+    );
 }

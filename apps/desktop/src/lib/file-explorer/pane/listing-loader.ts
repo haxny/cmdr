@@ -258,7 +258,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
    * ❌ Never call `cancelListing` alone to abandon a listing. It only sets a flag the
    * backend checks atomically with its cache insert, so it wins the race only while
    * the listing hasn't landed yet; once it has, only `listDirectoryEnd` removes it
-   * (`file_system/listing/operations.rs`). The gap leaks an entry AND an OS file
+   * (`crates/cmdr-listing/src/operations.rs`). The gap leaks an entry AND an OS file
    * watch per abandoned navigation.
    */
   function abandonListing(listingId: string) {
@@ -468,7 +468,7 @@ export function createListingLoader(deps: ListingLoaderDeps): ListingLoader {
           }
         }),
         // The volume went quiet mid-read. The backend keeps waiting and retrying
-        // (`file_system/listing/stall.rs`), so this only changes what the pane
+        // (`crates/cmdr-listing/src/stall.rs`), so this only changes what the pane
         // SAYS: the load stays in flight and lands through the handlers below.
         onListingStalled((payload) => {
           if (isEventForCurrentLoad(payload.listingId, captured, loadGeneration)) {

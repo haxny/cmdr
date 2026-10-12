@@ -204,8 +204,8 @@ async fn test_volume_manager_with_inmemory() {
 
 #[test]
 fn test_streaming_entries_are_sorted() {
-    use crate::file_system::listing::{DirectorySortMode, sort_entries};
-    use crate::file_system::listing::{SortColumn, SortOrder};
+    use cmdr_listing::{DirectorySortMode, sort_entries};
+    use cmdr_listing::{SortColumn, SortOrder};
 
     // Create unsorted entries
     let mut entries = vec![

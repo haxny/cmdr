@@ -11,7 +11,7 @@ use serde::Serialize;
 use tauri::ipc::Channel;
 
 use crate::ai::llm_log::LlmLogContext;
-use crate::file_system::listing::ListingId;
+use cmdr_listing::ListingId;
 
 /// Maximum number of file names to include in the prompt context.
 const MAX_CONTEXT_ENTRIES: usize = 100;

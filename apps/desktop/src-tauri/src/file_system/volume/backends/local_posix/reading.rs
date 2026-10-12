@@ -15,10 +15,10 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::volume::ListingProgress;
+use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 
 /// Whether a POSIX entry's `st_flags` carries `UF_HIDDEN`, what `chflags hidden`
 /// sets. macOS only; the flag doesn't exist on Linux, so this is always `false`

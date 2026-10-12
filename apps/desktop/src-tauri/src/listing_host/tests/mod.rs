@@ -2,7 +2,7 @@
 //! subsystem it answers from, and the cells whose point is an app piece (the
 //! FSEvents watch, the volume registry's routing, a backend crate, the events
 //! policy). The engine's own cells build an engine of their own, in
-//! `file_system/listing/`.
+//! `crates/cmdr-listing/`.
 //!
 //! These share the test binary's ONE engine (`listing_host::listings()`) unless
 //! a cell builds its own, so they keep unique ids (`TestListing` derives one).

@@ -384,7 +384,7 @@ impl MtpConnectionManager {
     /// DEVICE path rather than at a directory: no listing sits above the storage
     /// root, and a `FullRefresh` whose path matches no listing is what asks the
     /// host to fan the re-read out to every listing on that volume
-    /// (`file_system/listing/DETAILS.md` § "Change notification API"). Aiming it
+    /// (`crates/cmdr-listing/DETAILS.md` § "Change notification API"). Aiming it
     /// at a storage root instead would refresh a pane showing that root and miss
     /// its sibling pane two directories down.
     fn refresh_whole_device(self: &Arc<Self>, device_id: &str) {

@@ -756,8 +756,8 @@ async fn test_list_directory_includes_symlinks() {
 /// opens, covered after `start_watching` succeeds, `None` again after `stop_watching`.
 #[test]
 fn test_listing_watch_coverage_flips_with_watcher_lifecycle() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::watcher::{start_watching, stop_watching};
+    use cmdr_listing::testing::TestListing;
 
     let test_dir = tempfile::tempdir().expect("tempdir");
     let path = test_dir.path().to_path_buf();

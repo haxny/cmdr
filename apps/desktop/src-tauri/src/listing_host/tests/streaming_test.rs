@@ -1,6 +1,6 @@
 //! The app's half of a streaming read: a real local folder through the local
 //! backend's reader, and the foreground hold reaching `priority::foreground`.
-//! The engine's own cells, over fakes, are `file_system/listing/streaming_test.rs`.
+//! The engine's own cells, over fakes, are `crates/cmdr-listing/src/streaming_test.rs`.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -10,8 +10,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::testing::{TestEngine, TestListingGuard, request};
 use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::listing_host::listings;
@@ -21,6 +19,8 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
+use cmdr_listing::ListingId;
+use cmdr_listing::testing::{TestEngine, TestListingGuard, request};
 
 /// Budget for a read to reach the backend.
 const STARTS_WITHIN: std::time::Duration = std::time::Duration::from_secs(2);
@@ -73,7 +73,7 @@ async fn a_local_directory_read_emits_progress_events() {
 /// SMB upload and the index scan standing aside for a folder that takes seconds to
 /// come back, instead of resuming while the user is still watching a spinner. This
 /// is the app's lease (`AppLeases` over `priority::foreground`); the engine's
-/// hold-for-the-whole-read is `file_system/listing/streaming_test.rs`'s.
+/// hold-for-the-whole-read is `crates/cmdr-listing/src/streaming_test.rs`'s.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_listing_holds_a_foreground_lease_for_its_whole_duration() {
     let volume_id = &format!("test-lease-{}", uuid::Uuid::new_v4());

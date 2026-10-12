@@ -103,13 +103,12 @@ suite:
   COMMITS the new path (`sync-path`): skipping it on the network view left a pane that came from a share on that share's
   path, and its header read "Servers ▸ /Volumes/public". The resync first tells the backend the setting
   (`setListingIncludeHidden`), which picks the row space of the pane's `directory-diff`s and which changes reach it at
-  all (`src-tauri/src/file_system/listing/DETAILS.md` § "Diffs speak the pane's rows"). It runs whenever a listing
-  lands, not only on a toggle, and spans three IPC round trips, so it can be OVERTAKEN: by a navigation (which ends the
-  old listing in the same tick it clears the pane's id) or by a newer resync. An overtaken run stops at its next await
-  and writes nothing, and a read that rejects once overtaken is the expected gone-listing refusal
-  (`ListingLookupError::Gone`), swallowed. ❗ Overtaken is read off the pane's current listing id plus a per-pane run
-  counter (`createHiddenFilesResync`), ❌ never off the rejection's message; a failure on the listing the pane still
-  shows keeps rejecting.
+  all (`crates/cmdr-listing/DETAILS.md` § "Diffs speak the pane's rows"). It runs whenever a listing lands, not only on
+  a toggle, and spans three IPC round trips, so it can be OVERTAKEN: by a navigation (which ends the old listing in the
+  same tick it clears the pane's id) or by a newer resync. An overtaken run stops at its next await and writes nothing,
+  and a read that rejects once overtaken is the expected gone-listing refusal (`ListingLookupError::Gone`), swallowed.
+  ❗ Overtaken is read off the pane's current listing id plus a per-pane run counter (`createHiddenFilesResync`), ❌
+  never off the rejection's message; a failure on the listing the pane still shows keeps rejecting.
 - `entries-snapshot.ts`: the Selection dialog's entry list and the operation's selected-names snapshot. Both adapt a
   search snapshot's rows; the Selection list keeps the search engine's BASENAME in `name` (a mask like `*.txt` has to
   mean the filename), unlike `SearchResultsView`'s own adapter, which synthesizes the `~`-shortened full path for the
@@ -249,15 +248,14 @@ state, then delegates to `FilePane.handleKeyDown`. Pane-switch (Tab) clears type
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
 re-sort, listing replace) all call the factory's `clearJumpState()`. The generation counter discards stale async match
-responses. Backend match runs in `apps/desktop/src-tauri/src/file_system/listing/fuzzy_jump.rs`.
+responses. Backend match runs in `crates/cmdr-listing/src/fuzzy_jump.rs`.
 
 **Quick filter (Filter typing mode, the default).** `fileExplorer.typeToJump.mode` picks what typing does: `filter`
 (Total Commander's quick filter) or `jump`. `routeTypingKey` (`type-to-jump-keys.ts`) is the one intercept for both, and
 in Filter mode `routeFilterKey` sends letters and digits (any printable once a pattern is on) to
 `quick-filter-controller.svelte.ts`; Backspace edits and Esc clears while a pattern is on; arrows and Enter fall
-through, so you navigate the filtered list. The filtering is the backend's
-(`apps/desktop/src-tauri/src/file_system/listing/ DETAILS.md` § Quick filter), and everything the pane reads (count,
-rows, selection, diffs) is the filtered row space.
+through, so you navigate the filtered list. The filtering is the backend's (`crates/cmdr-listing/ DETAILS.md` § Quick
+filter), and everything the pane reads (count, rows, selection, diffs) is the filtered row space.
 
 - **One call in flight, latest pattern wins**: keystrokes that land mid-call only move `pattern`, and the loop sends
   whatever stands when the call returns. Successful bursts stay batched; refused growth is replayed one character at a
@@ -1193,13 +1191,13 @@ Extend the explicit prefix branch. See parent § "Gotchas".
 **A landed listing can re-spell the pane's path in place (`adoptStoredSpelling`).** A pane that navigated by a spelling
 its volume doesn't store (a typed or restored path, or a pane carried over from the macOS kernel mount onto a direct SMB
 connection, which matches names byte-for-byte) lands on the stored one: `listing-complete` carries `storedPath`, and
-after an upgrade `listing-respelled` does (backend: `src-tauri/src/file_system/listing/DETAILS.md` § "A pane path the
-volume stores another way"). `FilePane.adoptStoredPath` sets `currentPath` and calls up to
-`navigate.ts::adoptStoredSpelling`, which rewrites the tab path and the CURRENT history entry (`{ respellFrom }`) in the
-same tick, when the tab still holds the old spelling. **Why in place, not a push:** it's the same folder, so a push
-would leave a Back step to its other spelling, and on a pinned tab `commitPathFromListing` would fork a new tab for it.
-An in-place arm whose tab hasn't committed yet makes the rewrite a no-op, and its `commitPathFromListing` lands the
-stored spelling itself. Favorites keep the user's own spelling.
+after an upgrade `listing-respelled` does (backend: `crates/cmdr-listing/DETAILS.md` § "A pane path the volume stores
+another way"). `FilePane.adoptStoredPath` sets `currentPath` and calls up to `navigate.ts::adoptStoredSpelling`, which
+rewrites the tab path and the CURRENT history entry (`{ respellFrom }`) in the same tick, when the tab still holds the
+old spelling. **Why in place, not a push:** it's the same folder, so a push would leave a Back step to its other
+spelling, and on a pinned tab `commitPathFromListing` would fork a new tab for it. An in-place arm whose tab hasn't
+committed yet makes the rewrite a no-op, and its `commitPathFromListing` lands the stored spelling itself. Favorites
+keep the user's own spelling.
 
 **The listing loader (pane-local generation guard).** `listing-loader.ts::createListingLoader` owns the streaming
 directory-load pipeline for one pane. Every `loadDirectory` captures its identity as `{ listingId, generation }` and
@@ -1223,7 +1221,7 @@ tracked listing through `keepListingsAlive` every 30 min, so the backend's six-h
 left idle on a quiet folder. When the heartbeat or any listing read (`onListingGone`) finds a tracked listing gone,
 `relistLostListing` re-lists `loadedPath` with the cursor on the same entry (the selection doesn't survive). Gotcha/Why:
 ❌ don't track at `listDirectoryStart`. A read racing the backend's cache insert also answers `Gone`, which would make a
-loading pane re-list itself in a loop. Backend half: `src-tauri/src/file_system/listing/DETAILS.md` § "Backstop reaper".
+loading pane re-list itself in a loop. Backend half: `crates/cmdr-listing/DETAILS.md` § "Backstop reaper".
 
 **Fast navigation never paints an empty loading frame.** `listing-presentation.svelte.ts` keeps the last settled
 `listingId`, row count, and `..` row (`parentRow`) for 100 ms after the next load starts. The `..` row belongs to the
@@ -1439,13 +1437,13 @@ subscriber. Two behaviors the fold preserves byte-for-byte:
 ### A folder that stops answering
 
 When a listing's volume goes quiet mid-read (a NAS whose server stopped answering), the backend emits `listing-stalled`
-after 8 s and keeps the listing alive, retrying on its own (`apps/desktop/src-tauri/src/file_system/listing/DETAILS.md`
-§ "Stalled listings"). `listing-loader.ts` turns that into the pane's `stalled` state (the event's `stalledOn`, `null`
-when not stalled), and `FilePane` renders `ListingStalledView` in place of the spinner: the folder, a sentence saying
-the server isn't answering, the drive isn't, or (for `unknown`) "the server or drive", Try again (a fresh
-`navigateToPath` of the same folder), and Go back (the same step as Esc, so § "Escape during a load" decides where). The
-load stays in flight underneath: the listing lands through the ordinary handlers, and any progress, read-complete,
-complete, error, or cancel for that load clears it, as does the next `loadDirectory`.
+after 8 s and keeps the listing alive, retrying on its own (`crates/cmdr-listing/DETAILS.md` § "Stalled listings").
+`listing-loader.ts` turns that into the pane's `stalled` state (the event's `stalledOn`, `null` when not stalled), and
+`FilePane` renders `ListingStalledView` in place of the spinner: the folder, a sentence saying the server isn't
+answering, the drive isn't, or (for `unknown`) "the server or drive", Try again (a fresh `navigateToPath` of the same
+folder), and Go back (the same step as Esc, so § "Escape during a load" decides where). The load stays in flight
+underneath: the listing lands through the ordinary handlers, and any progress, read-complete, complete, error, or cancel
+for that load clears it, as does the next `loadDirectory`.
 
 - **A load that ends never renders as an empty list.** An error event shows the error screen (`showListingError`); a
   cancel goes back. Both push to MCP, and `cmdr://state` carries `listing: loading | stalled | error` (from
@@ -1576,12 +1574,12 @@ survive the rebuild on the Rust side, so they aren't in that list.
 
 - **Abandoning a listing goes through `listing-loader.ts::abandonListing`, never a bare `cancelListing`.**
   `cancelListing` only flips a cancel flag the backend checks atomically with its `LISTING_CACHE` insert
-  (`file_system/listing/streaming.rs`), so it wins the race only while the listing hasn't landed yet; once it has, ONLY
-  `listDirectoryEnd` removes the entry and stops its OS watcher (`file_system/listing/operations.rs`). Every path that
-  drops a `listingId` — the error and cancelled handlers via `resetLoadingState`, the superseded-load branch, and
-  `loadDirectory`'s own previous-listing cleanup — must call both, which is why they share one helper. Getting this
+  (`crates/cmdr-listing/src/streaming.rs`), so it wins the race only while the listing hasn't landed yet; once it has,
+  ONLY `listDirectoryEnd` removes the entry and stops its OS watcher (`crates/cmdr-listing/src/operations.rs`). Every
+  path that drops a `listingId` — the error and cancelled handlers via `resetLoadingState`, the superseded-load branch,
+  and `loadDirectory`'s own previous-listing cleanup — must call both, which is why they share one helper. Getting this
   wrong is invisible locally and costs a leaked cache entry plus an armed file watch per abandoned navigation until the
-  6 h orphan reaper (`file_system/listing/DETAILS.md` § Backstop reaper). Measured before the fix: one Linux E2E run
+  6 h orphan reaper (`crates/cmdr-listing/DETAILS.md` § Backstop reaper). Measured before the fix: one Linux E2E run
   carried 11 concurrent orphans, each re-reading a deleted archive every debounce cycle for the whole run (verified on
   the Linux Docker lane, 2026-08-28).
 - **The focus guard must exempt dialog content.** `DualPaneExplorer.handleFocusGuard` refocuses the container on any
@@ -1778,11 +1776,11 @@ open in the default app, or ask. The decision is a pure function; the UI is a sm
 ## Compare directories (⇧F2)
 
 `selection.compareDirectories*` (⇧F2 and two variants) is Total Commander's "Compare directories":
-`compare-directories.ts` asks the backend (`src-tauri/src/file_system/listing/compare.rs`, where the matching rules
-live) which rows each pane should select, replaces both selections with the answer (plus each pane's own `..` offset),
-and says what happened in a toast. What the user should know, and the copy says: it compares only the files directly in
-the two folders, by name and the listed modification time or size, never contents and never subfolders, so "nothing to
-select" is worded per mode and promises no more than that.
+`compare-directories.ts` asks the backend (`crates/cmdr-listing/src/compare.rs`, where the matching rules live) which
+rows each pane should select, replaces both selections with the answer (plus each pane's own `..` offset), and says what
+happened in a toast. What the user should know, and the copy says: it compares only the files directly in the two
+folders, by name and the listed modification time or size, never contents and never subfolders, so "nothing to select"
+is worded per mode and promises no more than that.
 
 - **`pane-row-state.ts` owns each pane's applied row revision and view gate.** Initial rows have sequence zero; loading
   buffers transitions until the initial cursor and selection are installed. `DirectoryDiff.batches` preserves each
@@ -1935,7 +1933,7 @@ directory owns is whether the item MAY appear, pushed as `PaneContextMenuFacts.c
 The same flag gates the context menu's `Services` submenu, which asks the same question for the same reason (a macOS
 service takes file URLs too): `src-tauri/src/menu/DETAILS.md` § "Services in the right-click menu".
 `PaneContextMenuFacts.canTag`, the Finder tag colors, carries the same `rowIsOsVisible` answer as its own flag (a tag is
-an xattr written through the row's path). Why: `src-tauri/src/file_system/listing/DETAILS.md` § "Finder tags".
+an xattr written through the row's path). Why: `crates/cmdr-listing/DETAILS.md` § "Finder tags".
 
 A share service takes file URLs, so the question is whether the right-clicked ROW has a real file behind it, and it
 needs three inputs rather than one kind lookup (`rowIsOsVisible` in `volume-capabilities.ts`):

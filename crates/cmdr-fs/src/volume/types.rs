@@ -169,7 +169,7 @@ pub enum WatchCoverage {
 
 /// Describes a change to a directory's contents on a specific volume.
 ///
-/// Used by `file_system::listing::caching::notify_directory_changed` to apply targeted cache updates
+/// Used by `cmdr_listing::caching::notify_directory_changed` to apply targeted cache updates
 /// and emit `directory-diff` events to the frontend.
 ///
 /// `Clone` so the SMB watch→index translator (`indexing::transports::smb::watch`) can stash a

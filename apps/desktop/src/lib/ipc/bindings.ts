@@ -6403,12 +6403,25 @@ export type CloudAiConsentWriteError =
 // Why a comparison didn't answer. Typed, so the frontend never reads a message.
 export type CompareDirectoriesError =
   // A pane's listing is no longer cached (its pane moved on).
-  | { type: 'gone'; listingId: string }
-  | { type: 'changed'; listingId: string }
+  | {
+      type: 'gone'
+      // The listing the comparison asked for.
+      listingId: string
+    }
+  // A pane's row space moved on since the frontend read it.
+  | {
+      type: 'changed'
+      // The listing whose rows changed.
+      listingId: string
+    }
   // The comparison didn't finish within its deadline.
   | { type: 'timedOut' }
   // The comparison's worker failed; `detail` is log text only.
-  | { type: 'internal'; detail: string }
+  | {
+      type: 'internal'
+      // What went wrong, for the log.
+      detail: string
+    }
 
 /**
  *  Which copies count as different, beyond the files missing on the other side
@@ -6430,13 +6443,16 @@ export type CompareDirectoriesMode =
  *  which state of each listing they were read from.
  */
 export type CompareDirectoriesResult = {
+  // The left pane's rows to mark.
   left: number[]
+  // The right pane's rows to mark.
   right: number[]
   /**
    *  The committed visible revision the rows were read at. A pane may mark them
    *  only while its applied revision is exactly this.
    */
   leftSequence: number
+  // The right pane's twin of `left_sequence`.
   rightSequence: number
   /**
    *  Requested visibility matches both reconciled committed listings.
@@ -7177,7 +7193,9 @@ export type DialogGalleryFixtures = {
 
 // A single directory diff change
 export type DiffChange = {
+  // What happened to the row.
   type: DiffChangeType
+  // The entry the row shows: the fresh one, or for `Remove` the one that went.
   entry: FileEntry
   // Position in the sorted listing: old listing for `Remove`, new listing for the rest.
   index: number
@@ -7187,7 +7205,9 @@ export type DiffChange = {
 
 // What happened to one row of a listing.
 export type DiffChangeType =
+  // A row appeared.
   | 'add'
+  // A row went away.
   | 'remove'
   // The row's contents changed but its sorted position didn't.
   | 'modify'
@@ -7283,9 +7303,13 @@ export type DirectoryDiff = {
 
 // One committed transition, with indices in its own old/new row spaces.
 export type DirectoryDiffBatch = {
+  // The revision the pane must hold for this batch to apply.
   fromSequence: number
+  // The revision the pane holds once it applied this batch.
   sequence: number
+  // How many rows the pane shows after this batch.
   totalCount: number
+  // The row changes, in the order they apply.
   changes: DiffChange[]
 }
 
@@ -10099,9 +10123,17 @@ export type ListingIndexSizesChanged = {
  */
 export type ListingLookupError =
   // Ended by its pane, never started, or reclaimed by the orphan reaper.
-  | { type: 'gone'; listingId: string }
+  | {
+      type: 'gone'
+      // The listing the caller asked for.
+      listingId: string
+    }
   // The supplied row space is not the committed listing state.
-  | { type: 'changed'; listingId: string }
+  | {
+      type: 'changed'
+      // The listing whose rows changed.
+      listingId: string
+    }
 
 // Opening event payload (emitted just before read_dir starts - the slow part for network folders)
 export type ListingOpeningEvent = {
@@ -10149,6 +10181,7 @@ export type ListingStalledEvent = {
 export type ListingStats = {
   // Not including directories.
   totalFiles: number
+  // How many directories the pane shows.
   totalDirs: number
   // Total logical size in bytes (files + directory recursive sizes).
   totalSize: number
@@ -13298,7 +13331,9 @@ export type ResolveLocationResult = {
 
 // Result of re-sorting a directory listing.
 export type ResortResult = {
+  // The revision the re-sorted rows are at.
   sequence: number
+  // How many rows the pane shows.
   totalCount: number
   /**
    *  New index of the file that was at the cursor position before re-sorting.
@@ -13539,7 +13574,11 @@ export type RootChangeKind =
   | 'moved'
 
 // Which side of a named row to read: the one before it or the one after it.
-export type RowBeside = 'previous' | 'next'
+export type RowBeside =
+  // The row before it.
+  | 'previous'
+  // The row after it.
+  | 'next'
 
 /**
  *  An item row's role. `RollbackUnit` rows are the reversal
@@ -14672,8 +14711,11 @@ export type SelectionHistoryEntry = {
 
 // Exact paths and kinds consumed from one guarded backend row space.
 export type SelectionSnapshot = {
+  // Every selected row's full path, in row order.
   paths: string[]
+  // How many of them are files.
   fileCount: number
+  // How many of them are folders.
   folderCount: number
 }
 
@@ -15513,10 +15555,24 @@ export type SmbVolumeRef = {
 }
 
 // Column to sort files by.
-export type SortColumn = 'name' | 'extension' | 'size' | 'modified' | 'created'
+export type SortColumn =
+  // By name, in the reading language's collation.
+  | 'name'
+  // By extension.
+  | 'extension'
+  // By size.
+  | 'size'
+  // By last-modified time.
+  | 'modified'
+  // By creation time.
+  | 'created'
 
 // Sort order (ascending or descending).
-export type SortOrder = 'ascending' | 'descending'
+export type SortOrder =
+  // Low to high.
+  | 'ascending'
+  // High to low.
+  | 'descending'
 
 // Input type for source item information (used by `scan_volume_for_conflicts`).
 export type SourceItemInput = {

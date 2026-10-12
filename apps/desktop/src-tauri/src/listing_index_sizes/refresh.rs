@@ -7,8 +7,8 @@
 //! reading changes nothing on screen, so nothing is sent: most index batches under background churn
 //! (a cache file written and deleted inside one flush, an mtime touch) land here.
 
-use crate::file_system::listing::IndexSizes;
 use cmdr_index::store::DirStats;
+use cmdr_listing::IndexSizes;
 
 use cmdr_fs::entry::FileEntry;
 

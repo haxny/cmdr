@@ -92,8 +92,7 @@ Don't order work off any single window here; the driver is an event rate, not a 
 Two independent checks, and they agree.
 
 **The code is byte-identical to `main`.** `git diff main..HEAD` returns EMPTY for every directory in the call path:
-`apps/desktop/src-tauri/src/file_system/listing/`, `apps/desktop/src/lib/file-explorer/pane/`, and
-`apps/desktop/src/lib/tauri-commands/`.
+`crates/cmdr-listing/`, `apps/desktop/src/lib/file-explorer/pane/`, and `apps/desktop/src/lib/tauri-commands/`.
 
 **`main` reproduces it**, built and driven through the identical protocol in a second worktree:
 
@@ -119,7 +118,7 @@ probe runs on its own `cmdr-sync-status` threads.
    invalidated when the entries or the two staging-visibility settings change, turns `nth(index)` into an array lookup.
    It fixes the root cost for every accessor that shares `visible_entries` (`find_file_index`, `find_file_indices`,
    `get_file_beside`, `get_paths_at_indices`, `get_total_count`), not just this caller. Best value, and contained to
-   `file_system/listing/`.
+   `crates/cmdr-listing/`.
 2. **Ask for the range in one call.** `buildMcpFileList` fetches a CONTIGUOUS range one row at a time;
    `get_file_range(listingId, start, count, includeHidden)` already exists and `pane/entries-snapshot.ts` already uses
    it. One call replaces up to 100, collapsing 100 scans into one walk. Independent of (1), and cheap.
@@ -162,8 +161,7 @@ the window.
 
 - **A materialized row map per listing** (`listing/visible_rows.rs`), so every accessor indexes instead of walking, and
   `entries` is private with `entries_mut()` dropping the map on the way out. Design and the reason the map splits
-  settled rows from scratch-named candidates: `apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` § "Row
-  numbers".
+  settled rows from scratch-named candidates: `crates/cmdr-listing/DETAILS.md` § "Row numbers".
 - **One `getFileRange` for the mirror's visible range** instead of up to 100 `getFileAt` calls
   (`pane/pane-mcp-sync.svelte.ts`).
 - **Every listing read command is `async`**, so none of them runs on the main thread; `refresh_listing_index_sizes` goes
@@ -179,7 +177,8 @@ cover: the callers that arrive with a PATH rather than a row number (Finder-tag 
 its events) each found their entry by walking the listing too. A listing now materializes a path map beside its row map
 (`listing/path_index.rs`), and at large sizes that was the bigger cost of the two: opening a 300,000-row folder spent
 224.8 s of CPU on tags and now spends 10.0 s. Numbers and the blast radius: `listing-wedge-impact-2026-08-22.md` § "What
-the tag fix moved" and § "The rest of the by-path lookups"; design: `listing/DETAILS.md` § "Entries by path".
+the tag fix moved" and § "The rest of the by-path lookups"; design: `crates/cmdr-listing/DETAILS.md` § "Entries by
+path".
 
 ### Before and after, on the running app (dev/debug builds, macOS 26.5.2 / Darwin 25.6.0, 2026-08-22)
 

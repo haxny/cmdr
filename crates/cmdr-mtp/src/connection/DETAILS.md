@@ -447,13 +447,13 @@ the caller's fallback below keeps the update either way. The path reported is th
 (`mtp://{device}/{storage}[/inner]`, built by `listing_path_for`). A pane can hold either spelling of a folder: the URL
 when it came from the volume switcher or go-to-path, the inner `/DCIM` when the user pressed Enter on a row. The app's
 listing cache keys both through `MtpVolume::listing_path` (the inner spelling), so any spelling reported here matches
-every pane on that folder (`apps/desktop/src-tauri/src/file_system/listing/cached_listing.rs`, `ListingPath`).
+every pane on that folder (`crates/cmdr-listing/src/cached_listing.rs`, `ListingPath`).
 
 **Whole-device fallback — never lose an update.** On any resolution failure (handle invalid, parent uncached and the
 walk fails, timeout) or when no pane shows the affected dir on any storage, `refresh_whole_device` reports one
 `DirectoryChange::FullRefresh` per open volume, at the **device** path (`mtp://{device}`) rather than at a directory. No
 listing sits above a storage root, and a `FullRefresh` whose path matches no listing is what asks the host to fan the
-re-read out to every listing on that volume (`file_system/listing/DETAILS.md` § "Change notification API"). ❌ Aiming it
+re-read out to every listing on that volume (`crates/cmdr-listing/DETAILS.md` § "Change notification API"). ❌ Aiming it
 at a storage root instead would refresh a pane showing that root and silently miss its sibling two directories down. The
 device's own 5-second `ListingCache` is cleared first (`clear_listing_caches_for_device`), or the host's re-read through
 `Volume::list_directory` is answered with exactly the entries the event says are out of date.

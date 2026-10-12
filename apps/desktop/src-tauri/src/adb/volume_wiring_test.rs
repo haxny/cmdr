@@ -16,10 +16,10 @@ use super::*;
 use crate::adb::test_support::{
     a_fake_phone, a_listed_phone, dial, dials_seen, phone, registry_and_provider_agree, retire_phone,
 };
-use crate::file_system::listing::host::ListingEvents;
-use crate::file_system::listing::testing::{RecordingEvents, TestListingGuard, read_to_end, request};
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
+use cmdr_listing::host::ListingEvents;
+use cmdr_listing::testing::{RecordingEvents, TestListingGuard, read_to_end, request};
 
 /// An endpoint whose server accepts connections and never says anything, so a
 /// dial against it hangs until something calls it off. `at_without_adb` because

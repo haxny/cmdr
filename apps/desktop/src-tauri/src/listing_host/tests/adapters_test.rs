@@ -8,13 +8,13 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::file_system::listing::host::{ListingIndex, ListingVolumes, Unregistered};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::listing_host::index::AppListingIndex;
 use crate::listing_host::volumes::AppVolumes;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
+use cmdr_listing::host::{ListingIndex, ListingVolumes, Unregistered};
 
 /// The registry serves what was registered, unrouted, and once it's gone the
 /// adapter asks the app why: an id nobody knows is gone, not a server waiting

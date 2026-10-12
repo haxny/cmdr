@@ -25,8 +25,8 @@ use cmdr_smb::volume::ConnectionState;
 #[tokio::test]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_pane_close_does_not_kill_index_watcher() {
-    use crate::file_system::listing::ListingId;
     use crate::listing_host::listings;
+    use cmdr_listing::ListingId;
 
     let vol = make_docker_volume().await;
     assert_eq!(vol.session_state(), ConnectionState::Direct);

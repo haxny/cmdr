@@ -1,0 +1,24 @@
+# Clippy reads the FIRST `clippy.toml` it finds walking up from this package's
+# manifest directory, and never merges, so this file replaces the workspace root's
+# for `cmdr-listing`. It carries the root's general settings below; the root's
+# `disallowed-methods` / `disallowed-types` name `tauri`, `objc2_app_kit`, and
+# `reqwest`, none of which this crate can reach (`index-crate-isolation`), so they
+# have nothing to guard here.
+
+# Complexity threshold of 15 matches ESLint's complexity rule for consistency across Rust and TypeScript
+cognitive-complexity-threshold = 15
+
+# Tests legitimately `.unwrap()` everywhere; this exempts unwraps inside `#[test]` fns. Helper fns in
+# `#[cfg(test)] mod`s aren't covered, so those use the sanctioned `.expect("…")` form.
+allow-unwrap-in-tests = true
+
+# Every spawn goes through the engine's injected runtime (`Inner::runtime`). An ambient spawn INHERITS
+# whatever runtime the calling thread has, and a watcher's OS thread has none, so it panics there; on a
+# thread that has one, it quietly lands the engine's work on a pool the host never handed over. Tests
+# drive the engine from threads and tasks of their own, so `lib.rs` lifts this under `cfg(test)`.
+disallowed-methods = [
+  { path = "tokio::spawn", reason = "spawn on the engine's runtime (`self.runtime.spawn`): a watcher's OS thread has no ambient one" },
+  { path = "tokio::task::spawn", reason = "spawn on the engine's runtime (`self.runtime.spawn`): a watcher's OS thread has no ambient one" },
+  { path = "tokio::task::spawn_blocking", reason = "use the engine's runtime (`self.runtime.spawn_blocking`): a watcher's OS thread has no ambient one" },
+  { path = "std::thread::spawn", reason = "the engine owns no threads; blocking work goes to the runtime's blocking pool" },
+]

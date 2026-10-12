@@ -7,7 +7,7 @@
  *
  * The filtering itself is the backend's: the pattern lives on the listing and is
  * an input to its ONE row-visibility predicate
- * (`src-tauri/src/file_system/listing/name_filter.rs`), so counts, ranges,
+ * (`crates/cmdr-listing/src/name_filter.rs`), so counts, ranges,
  * selection indices, and `directory-diff` rows all speak the filtered row space.
  * This controller only holds the pattern, ships it, and applies the answer
  * (count, cursor, selection) to the pane.

@@ -434,13 +434,12 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
   may never probe. Same shape as `listing_watch_coverage` above.
 - **The listing cache that decides which spellings of a directory are one pane.** The trait names the answer
   (`Volume::listing_path`, identity by default; MTP folds its `mtp://` URL and inner paths together), and the app's
-  listing cache keys every store and lookup on it. Why: `apps/desktop/src-tauri/src/file_system/listing/DETAILS.md`.
+  listing cache keys every store and lookup on it. Why: `crates/cmdr-listing/DETAILS.md`.
 - **When a foreign path gets resolved.** The trait names the question (`Volume::find_stored_spelling`: where is this
   path, spelled the way you store it? `Ok(None)` by default), and SMB answers it against real listings
   (`crates/cmdr-smb/DETAILS.md` § "Resolving a foreign path"). Which callers may ask is app policy: only a pane opening
   a directory and a backend swap's respell, never an operation's own calls, where a resolve could land a delete on a
-  look-alike twin (`apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` § "A pane path the volume stores another
-  way").
+  look-alike twin (`crates/cmdr-listing/DETAILS.md` § "A pane path the volume stores another way").
 - **What spelling a NEW name takes, and whether a look-alike needs a listing to find.** The trait names both facts
   (`Volume::composes_new_names`, read through the provided `spell_new_name`;
   `Volume::matches_names_in_any_unicode_form`), `name_fold` holds the two comparisons (`composed`,

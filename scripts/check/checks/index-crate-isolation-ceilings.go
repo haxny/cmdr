@@ -304,4 +304,24 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 35,
 		},
 	},
+	{
+		// Measured 2026-10-12, at the extraction, and set to exactly what the crate
+		// exposes, with no headroom (David approved the rule in the #301 plan). What
+		// each item is for, grouped by who calls it: `crates/cmdr-listing/DETAILS.md`
+		// § "The public surface is capped".
+		//
+		// `HandleMethods` counts `Listings::builder` and `Listings::detached` (the
+		// constructors) and `flush_pending_diffs`, which only the `playwright-e2e`
+		// feature compiles. `host` is the one public module; its eight seam files are
+		// `pub(crate)` and reach a host only through `host`'s re-exports, which is
+		// what `SubsystemItems` counts. `testing` is gated and counts apart.
+		Name:       "cmdr-listing",
+		HandleType: "Listings",
+		Ceilings: surfaceCeilings{
+			RootPromises:   33,
+			HandleMethods:  48,
+			PublicModules:  1,
+			SubsystemItems: 20,
+		},
+	},
 }

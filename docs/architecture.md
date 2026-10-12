@@ -152,7 +152,7 @@ above is separate: it ships per-character widths to Rust for backend column sizi
 
 All under `apps/desktop/src-tauri/src/`.
 
-- `file_system/listing/`: Directory reading, streaming, caching, sorting (serves virtual scroll)
+- `crates/cmdr-listing/`: Directory reading, streaming, caching, sorting (serves virtual scroll)
 - `apps/desktop/src-tauri/src/file_system/staging.rs`: Where every Cmdr scratch file (`.cmdr-tmp-*`, `.cmdr-temp-*`) is
   named, and whether a listing shows it. Rules and rationale: the module's own docs
 - `file_system/write_operations/`: Copy/move/delete with safety patterns (temp+rename, staging, rollback). Umbrella +
@@ -207,7 +207,7 @@ All under `apps/desktop/src-tauri/src/`.
 - `unregistered_volumes.rs`: why a volume id has no registered volume, asked by every listing, transfer, delete,
   preview, and new-folder site that finds nothing: a listed device or saved server nobody connected, or a volume that's
   gone. Each caller words the answer in its own error vocabulary. Contract in the module doc
-- `listing_host/`: this app as the listing engine's host (`file_system/listing/host/` declares the seams). `install`
+- `listing_host/`: this app as the listing engine's host (`crates/cmdr-listing/src/host/` declares the seams). `install`
   hands over the events adapter, the runtime, the overlays (the git portal's `.git/` category rows,
   `file_system/git/overlay.rs`), and the observers in order. A `ListingOverlay` contributes rows a PANE sees that no
   volume holds; why it must never move into a `Volume`: `file_system/volume/DETAILS.md` § "Architecture". A

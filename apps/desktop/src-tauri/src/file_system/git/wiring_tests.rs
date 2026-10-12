@@ -196,8 +196,8 @@ fn reports_settled_on(sink: &RecordingGitStateSink, branch: &str) -> Vec<(PathBu
 /// land.
 #[test]
 fn a_report_selects_every_open_virtual_listing_for_the_repo() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::DEFAULT_VOLUME_ID;
+    use cmdr_listing::testing::TestListing;
 
     let dir = temp_dir("wiring", "refresh_selection");
     let mut fixture = Fixture::init(dir.clone());
@@ -251,8 +251,8 @@ fn a_report_selects_every_open_virtual_listing_for_the_repo() {
 /// the fixture reproduces it wherever the suite runs.
 #[test]
 fn a_listing_reached_through_a_symlink_is_still_the_repos() {
-    use crate::file_system::listing::testing::TestListing;
     use crate::file_system::volume::DEFAULT_VOLUME_ID;
+    use cmdr_listing::testing::TestListing;
 
     let dir = temp_dir("wiring", "symlinked_spelling");
     let mut fixture = Fixture::init(dir.clone());

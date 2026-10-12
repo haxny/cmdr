@@ -216,7 +216,7 @@ means for the listing cache (`file_system/volume/DETAILS.md` § "Mutation notifi
 mkdir, mkfile, and paste-as-file goes through it too.
 
 **Progress.** The pane's "Loaded N files…" readout needs `on_progress` fed while the stat loop runs (why it matters:
-`listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the work happens.
+`crates/cmdr-listing/DETAILS.md` § "Local listing progress"), but the local backend can't take the callback where the work happens.
 `on_progress` is `Sync` but not `Send`, and `LocalPosixVolume` runs its stat loop on `spawn_blocking`, which demands
 `Send + 'static`. So the two halves are split:
 
@@ -245,7 +245,7 @@ Tier 4 (EXIF, PDF) costs 1-100 ms+ and reads file content. See
 
 macOS extended metadata (`addedAt`, `openedAt`) needs `listxattr()` / `getxattr()` beyond the fast `fs::read_dir()` +
 `metadata()` path. Available via `get_extended_metadata_batch()` but not wired into the streaming path yet. Finder tags
-are deferred too, and `list_directory_core` never reads them: `listing/DETAILS.md` § "Finder tags".
+are deferred too, and `list_directory_core` never reads them: `crates/cmdr-listing/DETAILS.md` § "Finder tags".
 
 ## Local renames are atomic-exclusive
 

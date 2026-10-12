@@ -20,8 +20,8 @@ use super::scan_source_tracker::sort_files;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState, update_operation_status};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::volume::{CopyScanResult, Volume, VolumeError};
+use cmdr_listing::{SortColumn, SortOrder};
 
 /// Totals returned by `scan_subtree_with_oracle`.
 ///

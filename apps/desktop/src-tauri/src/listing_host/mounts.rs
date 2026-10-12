@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::file_system::listing::host::{MountFacts, MountTable};
+use cmdr_listing::host::{MountFacts, MountTable};
 
 /// Reads `getfsstat` on macOS and `/proc/mounts` on Linux, lexically, by path
 /// prefix. ❌ Never a `statfs` on the path, which blocks on the very mount that

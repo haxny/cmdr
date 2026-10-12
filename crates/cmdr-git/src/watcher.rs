@@ -3,7 +3,7 @@
 //!
 //! Frontend never polls. The chip subscribes once and updates reactively from
 //! whatever the host does with a [`GitStateSink`] report. Debounce is 200 ms per
-//! repo, matching the existing listing watcher in `file_system/listing/`, and
+//! repo, matching the existing listing watcher in `crates/cmdr-listing/`, and
 //! [`recompute_and_report`] drops a repeat inside that window so one burst of
 //! writes costs one report however the debouncer batches it.
 //!

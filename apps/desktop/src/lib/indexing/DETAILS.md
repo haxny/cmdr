@@ -524,7 +524,7 @@ cell), `SelectionInfo.svelte` (Brief-mode status bar, so it matches Full), and `
 `..` parent row carries the flags too (it renders the current dir's own stats), so a partially-scanned dir shows `..` as
 `≥` or the `<dir>` placeholder.
 
-**Sort-by-size keeps the three classes distinct** and runs in Rust (`file_system/listing/sorting.rs`), not the FE.
+**Sort-by-size keeps the three classes distinct** and runs in Rust (`crates/cmdr-listing/src/sorting.rs`), not the FE.
 `known_dir_size` returns `None` (sorts LAST, by name, regardless of order) for an unknown dir — either incomplete + size
 0 (the `<dir>` placeholder) or a not-yet-enriched `None`; a genuinely-empty `0 bytes` and a lower-bound both return
 their known numeric value and sort by it. Don't re-conflate unknown with exact-0 in the comparator.

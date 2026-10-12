@@ -42,11 +42,11 @@ use tauri_specta::Event;
 use tokio::sync::mpsc;
 use tokio::time::Instant;
 
-use crate::file_system::listing::host::{ListingObserver, OpenedListing};
-use crate::file_system::listing::{IndexSizes, ListingId};
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
 use cmdr_fs::entry::FileEntry;
+use cmdr_listing::host::{ListingObserver, OpenedListing};
+use cmdr_listing::{IndexSizes, ListingId};
 
 use refresh::RowSizes;
 use schedule::Schedule;

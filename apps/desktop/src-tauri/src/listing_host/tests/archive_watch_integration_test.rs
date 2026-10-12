@@ -17,7 +17,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::file_system::VolumeManager;
-use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::listing_host::backends::AppListings;
 use cmdr_archive::ArchiveVolume;
@@ -25,6 +24,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::WatchCoverage;
+use cmdr_listing::testing::{TestListing, TestListingGuard};
 
 use cmdr_archive::test_fixtures::{FixtureFile, build_zip, stored};
 

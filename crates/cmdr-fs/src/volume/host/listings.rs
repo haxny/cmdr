@@ -19,7 +19,7 @@ use crate::volume::DirectoryChange;
 
 /// The pane listings, from a backend's point of view.
 ///
-/// Cmdr answers all three from `file_system::listing::caching`; a test or a tool
+/// Cmdr answers all three from `cmdr_listing::caching`; a test or a tool
 /// answers none (`NoListings`).
 pub trait ListingHost: Send + Sync {
     /// A directory's contents changed on `volume_id`.

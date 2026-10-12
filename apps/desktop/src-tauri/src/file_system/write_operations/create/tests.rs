@@ -505,7 +505,7 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 /// pane on a different volume picks the entry up from its own watch instead.
 #[test]
 fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
-    use crate::file_system::listing::testing::TestListing;
+    use cmdr_listing::testing::TestListing;
 
     let tmp = create_test_dir("synthetic_diff_volume");
     let new_path = tmp.path().join("made");
@@ -541,10 +541,10 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
 /// taken name, paste retries `pasted (N)`), so the row at that path is this file.
 #[test]
 fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
-    use crate::file_system::listing::DiffChangeType;
-    use crate::file_system::listing::testing::TestListing;
-    use crate::file_system::listing::testing::{hold_diffs, pending_changes};
     use crate::file_system::volume::backends::get_single_entry;
+    use cmdr_listing::DiffChangeType;
+    use cmdr_listing::testing::TestListing;
+    use cmdr_listing::testing::{hold_diffs, pending_changes};
 
     let tmp = create_test_dir("synthetic_diff_duplicate");
     let new_path = tmp.path().join("made.txt");

@@ -1,11 +1,11 @@
 //! Tauri commands for native drag operations and self-drag overlay.
 
 #[cfg(target_os = "macos")]
-use crate::file_system::listing::ListingId;
-#[cfg(target_os = "macos")]
 use crate::file_system::volume::manager::path_routes_over_its_parent;
 #[cfg(target_os = "macos")]
 use crate::native_drag::{self, DragSessionLocality};
+#[cfg(target_os = "macos")]
+use cmdr_listing::ListingId;
 #[cfg(target_os = "macos")]
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]

@@ -149,8 +149,8 @@ encryption pair (`Encrypted → NeedsPassword { wrong_attempt: false }`,
 `WrongPassword → NeedsPassword { wrong_attempt: true }` — the typed signal the frontend prompts on, see below), and the
 rejection family (`NotAnArchive` / `Unsupported` / the `TooLarge` DoS cap `→ NotSupported`). This is a **mid-browse
 backstop** (the archive was swapped or corrupted after navigation). The user-facing "damaged archive" copy is NOT
-produced here: the listing seam (`apps/desktop/src-tauri/src/file_system/listing/streaming.rs`) turns a failed `.zip`
-browse into `ListingErrorReason::ArchiveUnreadable` from the PATH + this collapsed error kind (an integrity collapse —
+produced here: the listing seam (`crates/cmdr-listing/src/streaming.rs`) turns a failed `.zip` browse into
+`ListingErrorReason::ArchiveUnreadable` from the PATH + this collapsed error kind (an integrity collapse —
 `NotSupported`/`IoError` — on a path that `archive::boundary::path_targets_archive_file` says targets a real archive
 file). A valid archive with a missing inner path stays `NotFound` (not an integrity fault). This mapping stays
 message-string-free and keeps only the coarse family the FE needs, because a SINGLE combined message ("damaged,
@@ -247,9 +247,9 @@ password to read its metadata; zip and content-encrypted 7z ignore it at parse).
 - The BROWSE/listing path for a HEADER-encrypted 7z (even listing fails) —
   `crates/cmdr-fs/src/volume/friendly_error/volume_error.rs` maps `NeedsPassword` to
   `ListingErrorReason::ArchiveNeedsPassword { wrong_attempt }` (NOT the unreadable-archive reason), and
-  `apps/desktop/src-tauri/src/file_system/listing/streaming.rs` surfaces it without provider enrichment. The frontend's
-  listing-loader intercepts that reason and raises the SAME `ArchivePasswordDialog` at browse time; on unlock it
-  re-lists the directory.
+  `crates/cmdr-listing/src/streaming.rs` surfaces it without provider enrichment. The frontend's listing-loader
+  intercepts that reason and raises the SAME `ArchivePasswordDialog` at browse time; on unlock it re-lists the
+  directory.
 
 Both are machine-readable.
 

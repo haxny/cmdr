@@ -714,7 +714,7 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
                     match crate::file_system::tags::toggle_color(&paths, color) {
                         Ok(updates) if !updates.is_empty() => {
                             crate::listing_host::listings()
-                                .apply_tags(&crate::file_system::listing::ListingId::new(listing_id), updates);
+                                .apply_tags(&cmdr_listing::ListingId::new(listing_id), updates);
                         }
                         Ok(_) => {}
                         Err(e) => log::warn!(target: "tags", "context-menu tag toggle failed (color={color}): {e}"),

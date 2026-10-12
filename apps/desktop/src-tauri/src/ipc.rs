@@ -1053,7 +1053,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // being called off from a surface that isn't holding the prompt (quit/).
             QuitRequested,
             QuitCalledOff,
-            // Listing sink (file_system/listing/streaming.rs `TauriListingEventSink`).
+            // Listing sink (crates/cmdr-listing/src/streaming.rs `TauriListingEventSink`).
             ListingOpeningEvent,
             ListingStalledEvent,
             ListingProgressEvent,

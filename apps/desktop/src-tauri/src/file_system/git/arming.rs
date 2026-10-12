@@ -17,9 +17,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::host::{ListingObserver, OpenedListing};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_listing::ListingId;
+use cmdr_listing::host::{ListingObserver, OpenedListing};
 
 use super::wiring;
 use crate::file_system::volume::Volume;

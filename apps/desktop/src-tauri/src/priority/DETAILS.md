@@ -31,7 +31,7 @@ cancellation machinery for no behavior we need. The priority order is enforced b
 
 - **`foreground`** — "is the user waiting on this volume?", in two halves per volume plus an app-wide timestamp.
   - **The LEASE** is the exact half: a `ForegroundLease` guard held for the real duration of a foreground operation,
-    counted per volume. The spawned directory-listing task (`file_system/listing/streaming.rs`) takes one, so a folder
+    counted per volume. The spawned directory-listing task (`crates/cmdr-listing/src/streaming.rs`) takes one, so a folder
     that takes ten seconds to come back reads as busy for ten seconds. Release is by DROP only, which is what makes the
     error path, a panic, and a dropped task all correct with nothing to remember.
   - **Only the listing stamps, by decision.** ❌ Don't add foreground stamping (lease or timestamp) to `path_exists`,

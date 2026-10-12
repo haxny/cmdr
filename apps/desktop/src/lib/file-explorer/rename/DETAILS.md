@@ -197,8 +197,8 @@ the virtual window unmounts and its blur discards.
 A pane holds three listings, and a chain runs with all three showing different things:
 
 - The **backend's listing cache**, which a rename mutates the moment it lands there. Its `directory-diff` waits out a 50
-  ms coalescing window (`listing/diff_emitter.rs`), so a chain stepping faster than that runs with renames applied that
-  the frontend hasn't been told about.
+  ms coalescing window (`crates/cmdr-listing/src/diff_emitter.rs`), so a chain stepping faster than that runs with
+  renames applied that the frontend hasn't been told about.
 - The **cursor's listing**, reconciled against every diff the moment it lands (`listing-diff-sync`, deliberately
   unthrottled so it's always exact).
 - The **loaded window**, which is what's on screen, refetched on the throttle that keeps a churn storm from re-rendering

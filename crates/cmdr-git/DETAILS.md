@@ -555,7 +555,7 @@ gain. The cache itself is a VALUE the `GitPortal` owns, ❌ not a static of its 
 the cache").
 
 **Decision**: Watcher uses `notify-debouncer-full` rather than a custom poll loop **Why**: The rest of the codebase
-already depends on `notify` and `notify-debouncer-full` for filesystem watching (see `file_system/listing/` and the SMB
+already depends on `notify` and `notify-debouncer-full` for filesystem watching (see `crates/cmdr-listing/` and the SMB
 share watcher). Reusing it gives us 200 ms debounce, OS-level event coalescing, and a battle-tested teardown path.
 
 ## Gotchas

@@ -165,8 +165,9 @@ directory and the other in a one-file directory. Below 75,000 rows the two pre-f
 - **300,000 rows: unusable.** About 3 s per arrow key at the bottom, still answered.
 - **Wedged (a keystroke that never lands) needs roughly 500,000 rows.** Derived by extrapolating the bottom-of-listing
   trend, which costs about 9.4 ms per 1,000 rows at 300,000 and is climbing (5.6 ms at 75,000, 6.2 ms at 150,000). The
-  rise is **guessed** to be cache pressure: `listing/DETAILS.md` puts a 74,000-entry listing's entries at about 15 MB,
-  so 300,000 rows is roughly 60 MB to walk. ❗ The threshold itself is not measured; nothing was built that large.
+  rise is **guessed** to be cache pressure: `crates/cmdr-listing/DETAILS.md` puts a 74,000-entry listing's entries at
+  about 15 MB, so 300,000 rows is roughly 60 MB to walk. ❗ The threshold itself is not measured; nothing was built that
+  large.
 
 **The top of a listing is free once the directory has settled**: 12 to 16 ms at every size from 5,000 to 300,000 rows,
 which is what the shape predicts, since the fan-out is fixed and the scan short-circuits.
@@ -217,10 +218,10 @@ defect from the row map, which did not touch it, and it is the clearest evidence
 slow rows.
 
 **It is fixed as of 2026-08-22**, on a commit after the one this note's post-fix build came from, by giving a listing a
-path map beside its row map (`apps/desktop/src-tauri/src/file_system/listing/path_index.rs`, and § "Entries by path" of
-that module's `DETAILS.md`). ❗ So every "post" cell in § 2 above measures a build that still carried it, which is
-exactly why the just-opened column there is worse than the settled one. The rest of the cache's by-path lookups went
-through the same map in the commit after; see § "The rest of the by-path lookups".
+path map beside its row map (`crates/cmdr-listing/src/path_index.rs`, and § "Entries by path" of that module's
+`DETAILS.md`). ❗ So every "post" cell in § 2 above measures a build that still carried it, which is exactly why the
+just-opened column there is worse than the settled one. The rest of the cache's by-path lookups went through the same
+map in the commit after; see § "The rest of the by-path lookups".
 
 ### What the tag fix moved (measured)
 
@@ -261,7 +262,7 @@ in 43 / 48 / 97 **µs**.
 
 The tag fix left four callers still finding a row by walking the listing: `carry_forward_tags`, `has_entry`, the removal
 by path, and the position lookup inside `update_entry_sorted`. They all now go through the same map (2026-08-22,
-`apps/desktop/src-tauri/src/file_system/listing/DETAILS.md` § "Entries by path").
+`crates/cmdr-listing/DETAILS.md` § "Entries by path").
 
 ⚠️ **Three of the four are a latent win, and this note should not pretend otherwise.** Each is one lookup per watcher
 event, so no realistic call rate turns them into a visible cost, and none of them BUILDS a map (a single path is far

@@ -11,7 +11,7 @@
 //!   would leave them passing for the wrong reason.
 //!
 //! The order itself (open after the insert, close after the removal) is the
-//! engine's, pinned in `file_system/listing/lifecycle_order_test.rs`. A detached
+//! engine's, pinned in `crates/cmdr-listing/src/lifecycle_order_test.rs`. A detached
 //! arm that lands after its listing ended dropping its watch is
 //! `watcher_test::a_detached_arm_that_lost_the_race_leaves_no_watch_behind`.
 
@@ -21,14 +21,14 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::support::{Heard, disarms_of, heard, record_disarms_of, record_lifecycle_of};
-use crate::file_system::listing::ListingId;
-use crate::file_system::listing::testing::{TestListingGuard, read_to_end, request};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::watcher::WATCHER_MANAGER;
 use crate::listing_host::listings;
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::testing::unique_test_id;
+use cmdr_listing::ListingId;
+use cmdr_listing::testing::{TestListingGuard, read_to_end, request};
 
 async fn stream(listing_id: &str, volume_id: &str, path: &Path) {
     read_to_end(listings(), &request(listing_id, volume_id, path))

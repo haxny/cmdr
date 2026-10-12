@@ -19,8 +19,8 @@ use super::super::types::{
     ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, WriteOperationError,
 };
 use super::settle_failed_preview;
-use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::volume::CopyScanResult;
+use cmdr_listing::{SortColumn, SortOrder};
 
 /// Internal function that runs the scan preview in a background thread.
 ///

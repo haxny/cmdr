@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use objc2::MainThreadMarker;
 
 #[cfg(target_os = "macos")]
-use crate::file_system::listing::ListingId;
+use cmdr_listing::ListingId;
 
 use crate::clipboard;
 use crate::file_system::write_operations::MutationError;

@@ -244,7 +244,7 @@ pub trait Volume: Send + Sync {
     /// different file sharing its folded name, the named one having vanished",
     /// so every `Volume` call keeps meaning the exact path it's given, and a
     /// delete or overwrite never lands on a twin. Directory opens use it
-    /// (`file_system::listing::foreign_path`).
+    /// (`cmdr_listing::foreign_path`).
     ///
     /// Default: `Ok(None)`, for a backend with one spelling per entry, or whose
     /// own lookups already fold.
@@ -913,7 +913,7 @@ pub trait Volume: Send + Sync {
     }
 
     /// What a live watch on the listing at `path` observes right now. Used by
-    /// `file_system::listing::caching::try_get_authoritative_listing` to decide
+    /// `cmdr_listing::caching::try_get_authoritative_listing` to decide
     /// whether a cached listing can replace a real read in write-op pre-flight,
     /// which only [`WatchCoverage::EveryWriter`] allows.
     ///

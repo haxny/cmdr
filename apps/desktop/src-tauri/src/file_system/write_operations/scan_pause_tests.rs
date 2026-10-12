@@ -27,10 +27,10 @@ use super::types::{
     ScanPreviewProgressEvent, WriteOperationConfig, WriteOperationType,
 };
 use super::{OperationEventSink, copy_files_start};
-use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::types::Initiator;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_listing::{SortColumn, SortOrder};
 
 /// Deadline for every wait here. Generous on purpose: each wait has a real
 /// condition, so a healthy run satisfies it in microseconds.

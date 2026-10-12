@@ -54,8 +54,8 @@ use super::scan_cache::{
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::ScanPreviewState;
 use super::types::{ScanPreviewErrorEvent, ScanPreviewStartResult, WriteOperationError};
-use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::volume::Volume;
+use cmdr_listing::{SortColumn, SortOrder};
 
 mod local;
 mod volume;

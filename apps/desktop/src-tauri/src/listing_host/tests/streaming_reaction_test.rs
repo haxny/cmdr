@@ -18,11 +18,6 @@ use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::listing::host::{ListingEnd, ListingEvents, ListingOverlay};
-use crate::file_system::listing::testing::{
-    SpelledVolume, StreamingListingState, TestEngine, TestListingGuard, request,
-};
-use crate::file_system::listing::{DirectoryDiffBatch, ListingId, StalledOn};
 use crate::listing_host::events::{ListingEndEffects, TauriListingEvents, WireCollector, error_analytics_category};
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::entry::FileEntry;
@@ -30,6 +25,9 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::friendly_error::{ListingError, ListingErrorReason, Provider};
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
+use cmdr_listing::host::{ListingEnd, ListingEvents, ListingOverlay};
+use cmdr_listing::testing::{SpelledVolume, StreamingListingState, TestEngine, TestListingGuard, request};
+use cmdr_listing::{DirectoryDiffBatch, ListingId, StalledOn};
 
 /// One bookkeeping call, as the app's reaction made it.
 #[derive(Debug, Clone, PartialEq, Eq)]

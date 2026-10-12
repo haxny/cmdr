@@ -8,11 +8,11 @@
 //! the listing cache and `VolumeManager`. Then we call the command and assert whether
 //! `list_directory` ran, and whether it finished.
 use super::*;
-use crate::file_system::listing::testing::{TestListing, TestListingGuard};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
+use cmdr_listing::testing::{TestListing, TestListingGuard};
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;

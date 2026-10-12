@@ -150,7 +150,7 @@ Full history-stack contract and the volume-breadcrumb detail live in `navigation
   `DirectorySortMode` (`ListingDirectorySortMode` here): the "Sort directories" choice, or `mixedWithFiles` while "Show
   folders first" is off. The settings page greys "Sort directories" out then. Every listing, re-sort, and search-results
   sort reads that one getter, and the explorer's sort-mode `$effect` re-sorts both panes when either setting flips. The
-  mixed comparison (Size included): `src-tauri/src/file_system/listing/sorting.rs::compare_mixed`.
+  mixed comparison (Size included): `crates/cmdr-listing/src/sorting.rs::compare_mixed`.
 - **Name ASC tiebreaker**: when primary sort values are equal, entries fall back to name ascending
 
 ### Implementation
@@ -360,7 +360,7 @@ below (type-to-jump, live disk space, error display) point into the same subsyst
 
 Per-pane in-directory navigation. The user types letters/digits in a focused pane → the cursor jumps to the
 highest-scoring fuzzy match. A bottom-right "Jump: tes" chip shows the live buffer. Backend match runs in
-`apps/desktop/src-tauri/src/file_system/listing/fuzzy_jump.rs` via the `find_first_fuzzy_match` IPC.
+`crates/cmdr-listing/src/fuzzy_jump.rs` via the `find_first_fuzzy_match` IPC.
 
 **State** (one factory instance per pane, in `FilePane.svelte`):
 

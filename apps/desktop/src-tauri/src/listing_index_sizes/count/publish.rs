@@ -6,9 +6,9 @@ use cmdr_fs::volume::ListingProgress;
 use cmdr_index::store::DirStats;
 
 use super::jobs;
-use crate::file_system::listing::{IndexSizes, ListingId};
 use crate::listing_index_sizes::refresh::RowSizes;
 use crate::listing_index_sizes::{FolderSizes, ListingIndexSizesChanged};
+use cmdr_listing::{IndexSizes, ListingId};
 
 pub(super) type Sink<'a> = &'a (dyn Fn(ListingIndexSizesChanged) + Sync);
 
