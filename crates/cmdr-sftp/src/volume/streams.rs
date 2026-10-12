@@ -26,6 +26,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesOrdered;
@@ -98,12 +99,12 @@ impl RemoteFile {
         Self { file, remote }
     }
 
-    /// The file's size and modification date, from an `fstat` on the handle
-    /// already open.
+    /// The file's size, modification date, and mode, from an `fstat` on the
+    /// handle already open.
     ///
     /// The handle rather than the path, so the answer describes the bytes this
     /// stream is about to read even if the name is replaced under it. The date
-    /// rides the same answer, so reporting it costs no round trip.
+    /// and mode ride the same answer, so reporting them costs no round trip.
     async fn stat(&mut self) -> Result<OpenedFile, VolumeError> {
         let meta = self
             .file
@@ -113,6 +114,7 @@ impl RemoteFile {
         Ok(OpenedFile {
             size: meta.len().unwrap_or(0),
             modified_at: meta.modified().map(|stamp| stamp.as_system_time()),
+            mode: meta.permissions().map(super::mapping::permission_bits),
         })
     }
 }
@@ -122,6 +124,9 @@ struct OpenedFile {
     size: u64,
     /// `None` when the server's `fstat` answer carries no times.
     modified_at: Option<SystemTime>,
+    /// The permission bits (`0o7777`) off the same answer: the mode a copy
+    /// carries, at no round trip. `None` when the server sends none.
+    mode: Option<u32>,
 }
 
 impl PositionedRead for RemoteFile {
@@ -254,7 +259,11 @@ impl SftpVolume {
 
         Ok(
             ChannelReadStream::new(chunk_rx, cancel_tx, StreamLength::Known(opened.size))
-                .with_modified_at(opened.modified_at),
+                .with_modified_at(opened.modified_at)
+                .with_metadata(CarriedMetadata {
+                    mode: opened.mode,
+                    ..CarriedMetadata::default()
+                }),
         )
     }
 

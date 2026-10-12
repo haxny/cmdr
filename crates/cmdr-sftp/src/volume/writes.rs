@@ -33,13 +33,14 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use cmdr_fs::metadata::{MetadataClasses, default_file_mode, routed_mode};
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use log::{debug, warn};
 use openssh_sftp_client::UnixTimeStamp;
 use openssh_sftp_client::file::File;
-use openssh_sftp_client::metadata::MetaDataBuilder;
+use openssh_sftp_client::metadata::{MetaDataBuilder, Permissions};
 use tokio::io::AsyncSeek;
 
 use super::SftpVolume;
@@ -235,6 +236,17 @@ impl SftpVolume {
             Err(e) if mode.refuses_occupied() => return Err(self.name_taken(&session, &remote, &e).await),
             Err(e) => return Err(map_sftp_error(&e, &remote)),
         };
+        // The source's mode, folded under the user's umask the way a local
+        // destination folds it, asked before the first chunk while the stream
+        // still holds what its open learned.
+        let landed_mode = stream
+            .metadata(MetadataClasses::MODE)
+            .mode
+            .and_then(|mode| routed_mode(mode, default_file_mode()));
+        let mut file = file;
+        if let Some(narrowed) = landed_mode.and_then(narrower_while_streaming) {
+            narrow_while_streaming(&mut file, &remote, narrowed).await;
+        }
         let writer = RemoteWrite::new(file, Arc::from(remote.as_str()));
 
         match self
@@ -247,7 +259,7 @@ impl SftpVolume {
                     self.remove_partial(&session, &remote).await;
                     return Err(e);
                 }
-                keep_source_date(&session, &remote, stream.modified_at()).await;
+                keep_source_attrs(&session, &remote, stream.modified_at(), landed_mode).await;
                 cmdr_fs::volume::patching::patch_created(self, dest).await;
                 Ok(written)
             }
@@ -337,40 +349,81 @@ impl SftpVolume {
     }
 }
 
-/// Stamps the source's modification date onto what an upload just wrote.
+/// The mode a staged upload wears while its bytes stream, when the server's own
+/// default would show them to more people than the final mode will: the final
+/// group and other bits, owner read and write. `None` when the default is
+/// already no wider, which is every ordinary file, so a plain upload costs no
+/// extra request (`DETAILS.md` § "Mode on copies").
+///
+/// The server's umask is unknowable from here, so the user's own stands in for
+/// it, the way a local destination reads it.
+pub(super) fn narrower_while_streaming(landed_mode: u32) -> Option<u32> {
+    let shown = default_file_mode() & 0o066;
+    (shown & !landed_mode != 0).then_some((landed_mode & 0o077) | 0o600)
+}
+
+/// Puts `mode` on the open upload handle before the first byte (`SSH_FXP_FSETSTAT`).
+/// Best effort: a refusal leaves the server's default, which is today's answer.
+async fn narrow_while_streaming(file: &mut File, remote: &str, mode: u32) {
+    if let Err(e) = file.set_permissions(Permissions::from(mode as u16)).await {
+        warn!(
+            "SftpVolume::write_from_stream: path={remote:?} streams under the server's default mode, not {mode:o}: source=backend, backend=sftp, operation=fsetstat, detail={:?}",
+            cmdr_fs::log_detail::LogDetail(&e.to_string())
+        );
+    }
+}
+
+/// Stamps the source's modification date and its folded mode onto what an
+/// upload just wrote, in ONE `SSH_FXP_SETSTAT`: the mode rides the request the
+/// date already costs.
 ///
 /// ❗ After the close, by path: every byte is committed by then, so no server
 /// that buffers writes until the close can bump the date past ours. Still before
 /// the transfer layer's final rename (`remote` is its staging name), so the file
 /// never wears its real name with the wrong date. SFTP v3 carries whole seconds
 /// and forces atime alongside (`ATTR_ACMODTIME`); atime gets the same value.
+/// `mode` is already folded (`cmdr_fs::metadata::routed_mode`): never wider than
+/// the source, never setuid.
 ///
 /// Best effort: a refusal is logged and the upload stays a success, since the
-/// bytes are what matter. `None` leaves the server's own date. The contract:
+/// bytes are what matter. `None` leaves the server's own value. The contract:
 /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
 /// § "Copies keep the source's metadata".
-pub(super) async fn keep_source_date(
+pub(super) async fn keep_source_attrs(
     session: &crate::transport::SshConnection,
     remote: &str,
     modified_at: Option<SystemTime>,
+    mode: Option<u32>,
 ) {
-    let Some(modified_at) = modified_at else { return };
-    let stamp = match UnixTimeStamp::new(modified_at) {
-        Ok(stamp) => stamp,
-        Err(e) => {
+    let mut attrs = MetaDataBuilder::new();
+    let mut any = false;
+    if let Some(modified_at) = modified_at {
+        match UnixTimeStamp::new(modified_at) {
+            Ok(stamp) => {
+                attrs.time(stamp, stamp);
+                any = true;
+            }
             // Before 1970 or past 2106: outside what SFTP v3's `u32` can say.
-            warn!("SftpVolume::keep_source_date: can't express the source date of {remote:?} in SFTP v3: {e}");
-            return;
+            Err(e) => {
+                warn!("SftpVolume::keep_source_attrs: can't express the source date of {remote:?} in SFTP v3: {e}");
+            }
         }
-    };
-    let attrs = MetaDataBuilder::new().time(stamp, stamp).create();
+    }
+    if let Some(mode) = mode {
+        attrs.permissions(Permissions::from(mode as u16));
+        any = true;
+    }
+    if !any {
+        return;
+    }
+    let attrs = attrs.create();
     if let Err(e) = session.sftp().fs().set_metadata(remote, attrs).await {
         let status = match &e {
             openssh_sftp_client::Error::SftpError(kind, _) => crate::errors::sftp_status_code(*kind),
             _ => 0,
         };
         warn!(
-            "SftpVolume::keep_source_date: couldn't keep the source date on path={remote:?}: source=backend, backend=sftp, operation=set_mtime, sftp_status={status}, detail={:?}",
+            "SftpVolume::keep_source_attrs: couldn't keep the source date and mode on path={remote:?}: source=backend, backend=sftp, operation=setstat, sftp_status={status}, detail={:?}",
             cmdr_fs::log_detail::LogDetail(&e.to_string())
         );
     }

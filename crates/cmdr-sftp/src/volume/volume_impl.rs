@@ -66,13 +66,16 @@ fn prompt_for(rung: AuthRungUsed) -> SignInShape {
 }
 
 impl SftpVolume {
-    /// A folder's modification date (`SETSTAT`), and nothing else yet: SFTP v3
-    /// has no creation date, and the mode waits for M9 of
-    /// `docs/specs/transfer-metadata-preservation.md` (the attrs carry it both
-    /// ways, but a read reports file-type bits only, `mapping.rs`).
+    /// A file's mode both ways, riding attrs a copy already exchanges (the
+    /// read's `fstat`, the upload's date `SETSTAT`), and a folder's
+    /// modification date. SFTP v3 has no creation date; the user flags and
+    /// xattrs have no field; a folder's mode doesn't travel across volumes
+    /// (`DETAILS.md` § "Mode on copies").
     pub const METADATA_CAPS: cmdr_fs::metadata::MetadataCaps = cmdr_fs::metadata::MetadataCaps {
+        stores: cmdr_fs::metadata::MetadataClasses::MODE,
+        reports: cmdr_fs::metadata::MetadataClasses::MODE,
+        folder_stores: cmdr_fs::metadata::MetadataClasses::NONE,
         folder_dates: true,
-        ..cmdr_fs::metadata::MetadataCaps::NONE
     };
 }
 

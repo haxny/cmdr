@@ -34,7 +34,7 @@ use openssh_sftp_client::file::File;
 use tokio::io::AsyncSeek;
 
 use super::SftpVolume;
-use super::writes::keep_source_date;
+use super::writes::keep_source_attrs;
 use crate::errors::map_sftp_error;
 
 /// How much of a file one `copy-data` request asks the server to copy.
@@ -107,12 +107,16 @@ impl SftpVolume {
         // `SSH_FXP_CLOSE` on a detached task and throws away the one report a
         // server gives of bytes it accepted but could not commit.
         dest.close().await.map_err(|e| map_sftp_error(&e, &remote_to))?;
-        // `copy-data` moves bytes only; the date is ours to carry, as on a copy
-        // through the stream.
-        keep_source_date(
+        // `copy-data` moves bytes only; the date and mode are ours to carry, as
+        // on a copy through the stream.
+        keep_source_attrs(
             &session,
             &remote_to,
             source_meta.modified().map(|stamp| stamp.as_system_time()),
+            source_meta
+                .permissions()
+                .map(super::mapping::permission_bits)
+                .and_then(|mode| cmdr_fs::metadata::routed_mode(mode, cmdr_fs::metadata::default_file_mode())),
         )
         .await;
         Ok(total)

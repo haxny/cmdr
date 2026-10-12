@@ -291,7 +291,7 @@ metadata"; this is how SFTP keeps it.
 
 - **Source**: the read stream reports the mtime from the `fstat` it already sends alongside the first chunk
   (`streams.rs`'s `RemoteFile::stat`), so the date costs no round trip.
-- **Destination**: `writes.rs::keep_source_date` sends a path `SETSTAT` with `ATTR_ACMODTIME` after the awaited close
+- **Destination**: `writes.rs::keep_source_attrs` sends a path `SETSTAT` with `ATTR_ACMODTIME` after the awaited close
   and before the transfer layer's final rename. ❗ After the close, ❌ not an `FSETSTAT` on the open handle: a server
   that buffers writes until the close could bump the date past ours, and the close is where every byte is committed.
   Still on the `.cmdr-tmp-*` name, so the real name never wears a wrong date. One round trip per file.
@@ -307,6 +307,28 @@ metadata"; this is how SFTP keeps it.
   `copy_test::sftp_integration_a_server_side_copy_keeps_the_source_date`, and the two
   `sftp_integration_*_keeps_the_source_date` engine cells in
   `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/sftp_transfer_integration_test.rs`.
+
+## Mode on copies
+
+A file's mode travels both ways (`SftpVolume::METADATA_CAPS` claims `MODE` in `stores` and `reports`), riding attrs a
+copy already exchanges. The cross-backend rules (the fold, never wider, no setuid) are
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
+metadata".
+
+- **Source**: the read stream reports the permission bits off the same `fstat` that gives it the size and date
+  (`streams.rs`), so the mode costs no round trip.
+- **Destination**: the source's mode, folded by `cmdr_fs::metadata::routed_mode` under the USER's umask (the server's is
+  unknowable from here), rides the date's `SETSTAT` (`keep_source_attrs`): one request, as before.
+- ❗ **A private file streams private.** The open can't carry attrs (`openssh-sftp-client` 0.15 sends empty ones), so
+  the server creates the temp under ITS umask, usually `0644`. When that would show the bytes to more people than the
+  final mode will (`writes.rs::narrower_while_streaming`), one `FSETSTAT` on the open handle narrows it to the final
+  group and other bits plus owner `rw` before the first byte. A plain file never pays it. Best effort, like the date.
+- **Server-side copy** (`copy.rs`) carries the folded mode from the `fstat` it already does for the length.
+- **Folders**: no mode. The engine carries a routed folder's dates only (a routed folder's mode is rarely meaningful,
+  and one without owner write would refuse every reversal that empties it).
+- **Pinned by** `conformance_test::sftp_honors_the_shared_metadata_contract` and
+  `write_path_test::{a_private_file_streams_owner_only_and_lands_with_its_mode, a_script_lands_executable_and_a_setuid_bit_never_travels}`
+  (stock OpenSSH, 2026-10-12).
 
 ## Scanning, before a copy runs
 
@@ -856,12 +878,10 @@ app sites run one — joined ONTO the root, and strip back to a real, wrong serv
 `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/sftp_transfer_semantics_test.rs` is the cell
 that would catch it.
 
-**`FileEntry.permissions` carries the file-type bits and nothing else** (`mapping.rs::entry_of_type`). The type is what
-lets a walker (the fresh-ZIP planner) skip a FIFO, socket, or device without opening it: a read of a FIFO blocks the
-single-threaded `sftp-server`, and with it every operation sharing this volume's channel. The permission bits stay unset
-on purpose, because a copy onto local disk carries a reported mode's low nine bits (`VolumeReadStream::metadata`, folded
-by `cmdr_fs::metadata::routed_mode`) and this backend doesn't report modes yet (`SftpVolume::METADATA_CAPS` claims no
-`MODE`).
+**`FileEntry.permissions` carries the file-type bits AND the permission bits** (`mapping.rs`). The type is what lets a
+walker (the fresh-ZIP planner) skip a FIFO, socket, or device without opening it: a read of a FIFO blocks the
+single-threaded `sftp-server`, and with it every operation sharing this volume's channel. The permission bits are the
+mode a copy off this volume carries (§ "Mode on copies"), so a listing and the read stream report the same one.
 
 ❗ **A bare server-absolute path is REFUSED**, not accepted as a courtesy: with the prefix in place the app never spells
 one, so leniency buys only that hole. The three root aliases stay (`/`, `.`, the empty path).

@@ -12,6 +12,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Mutex;
 
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::volume::{DirectoryChange, DirectoryCreation, StreamLength, Volume, VolumeError, VolumeReadStream};
 
 use super::SftpVolume;
@@ -519,6 +520,83 @@ async fn every_mutation_patches_the_listing_once() {
     clean_scratch(&volume, &dir).await;
 }
 
+// ── Mode on copies ───────────────────────────────────────────────────
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn a_private_file_streams_owner_only_and_lands_with_its_mode() {
+    // The server would create the temp under its own umask (`0644` on the
+    // fixture), showing a `0600` source's bytes to everyone while they stream.
+    let (volume, dir) = scratch_on("OPENSSH", 12480, "write-private-mode").await;
+    let path = format!("{dir}/private.txt");
+    let (pulled_tx, pulled_rx) = tokio::sync::oneshot::channel();
+    let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+    let gated = GatedSource {
+        bytes: b"only mine\n".to_vec(),
+        mode: 0o600,
+        pulled: Some(pulled_tx),
+        release: Some(release_rx),
+        done: false,
+    };
+
+    let write = volume.write_from_stream(
+        Path::new(&path),
+        WriteMode::CreateOrReplace,
+        StreamLength::Known(10),
+        Box::new(gated),
+        &|_| ControlFlow::Continue(()),
+    );
+    let mid_stream = async {
+        pulled_rx.await.expect("the upload pulls its first chunk");
+        let streaming = volume.get_metadata(Path::new(&path)).await.expect(FIXTURE);
+        release_tx.send(()).expect("the upload waits for the rest");
+        streaming.permissions & 0o777
+    };
+    let (written, mode_while_streaming) = tokio::join!(write, mid_stream);
+
+    written.expect(FIXTURE);
+    assert_eq!(
+        mode_while_streaming, 0o600,
+        "nobody but the owner reads a private file mid-copy"
+    );
+    let landed = volume.get_metadata(Path::new(&path)).await.expect(FIXTURE);
+    assert_eq!(landed.permissions & 0o7777, 0o600);
+    clean_scratch(&volume, &dir).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn a_script_lands_executable_and_a_setuid_bit_never_travels() {
+    let (volume, dir) = scratch_on("OPENSSH", 12480, "write-script-mode").await;
+    for (name, source_mode) in [("script.sh", 0o755), ("setuid.sh", 0o4755)] {
+        let path = format!("{dir}/{name}");
+        let source = GatedSource {
+            bytes: b"#!/bin/sh\n".to_vec(),
+            mode: source_mode,
+            pulled: None,
+            release: None,
+            done: false,
+        };
+        volume
+            .write_from_stream(
+                Path::new(&path),
+                WriteMode::CreateOrReplace,
+                StreamLength::Known(10),
+                Box::new(source),
+                &|_| ControlFlow::Continue(()),
+            )
+            .await
+            .expect(FIXTURE);
+
+        let landed = volume.get_metadata(Path::new(&path)).await.expect(FIXTURE);
+        let expected = cmdr_fs::metadata::routed_mode(source_mode, cmdr_fs::metadata::default_file_mode());
+        assert_eq!(Some(landed.permissions & 0o7777), expected, "{name}");
+        assert_eq!(landed.permissions & 0o7000, 0, "{name}: no setuid on a routed copy");
+        assert_ne!(landed.permissions & 0o100, 0, "{name}: still executable");
+    }
+    clean_scratch(&volume, &dir).await;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /// A volume on `service`, with an empty scratch directory of this cell's own.
@@ -627,4 +705,55 @@ fn failing_unknown_source(bytes: Vec<u8>) -> Box<dyn VolumeReadStream> {
         length: StreamLength::Unknown,
         fails_at,
     })
+}
+
+/// A one-chunk source carrying a mode, that can hold its upload open between
+/// the open and the first byte, so a cell can look at the staged file while it
+/// streams.
+struct GatedSource {
+    bytes: Vec<u8>,
+    mode: u32,
+    /// Fires when the upload first asks for bytes: its handle is open by then.
+    pulled: Option<tokio::sync::oneshot::Sender<()>>,
+    /// What the source waits on before handing its bytes over.
+    release: Option<tokio::sync::oneshot::Receiver<()>>,
+    done: bool,
+}
+
+impl VolumeReadStream for GatedSource {
+    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        Box::pin(async move {
+            if let Some(pulled) = self.pulled.take() {
+                let _ = pulled.send(());
+            }
+            if let Some(release) = self.release.take() {
+                let _ = release.await;
+            }
+            if self.done {
+                return None;
+            }
+            self.done = true;
+            Some(Ok(self.bytes.clone()))
+        })
+    }
+
+    fn total_size(&self) -> StreamLength {
+        StreamLength::Known(self.bytes.len() as u64)
+    }
+
+    fn bytes_read(&self) -> u64 {
+        if self.done { self.bytes.len() as u64 } else { 0 }
+    }
+
+    fn modified_at(&self) -> Option<std::time::SystemTime> {
+        None
+    }
+
+    fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
+        CarriedMetadata {
+            mode: Some(self.mode),
+            ..CarriedMetadata::default()
+        }
+        .restricted_to(wanted)
+    }
 }

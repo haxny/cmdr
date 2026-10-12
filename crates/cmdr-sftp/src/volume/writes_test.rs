@@ -136,3 +136,28 @@ async fn a_failure_partway_through_stops_rather_than_writing_the_rest() {
         "got {outcome:?}"
     );
 }
+
+#[test]
+fn only_a_mode_narrower_than_the_default_streams_narrowed() {
+    // The fold never lands wider than the default (`routed_mode`), so the only
+    // question is whether the default shows the bytes to more people.
+    let default = default_file_mode();
+    assert_eq!(
+        narrower_while_streaming(default),
+        None,
+        "a plain file costs no extra request"
+    );
+    assert_eq!(
+        narrower_while_streaming(default | 0o111),
+        None,
+        "a script adds only execute bits"
+    );
+    if default & 0o066 != 0 {
+        assert_eq!(narrower_while_streaming(0o600), Some(0o600));
+        assert_eq!(
+            narrower_while_streaming(0o400),
+            Some(0o600),
+            "the owner keeps writing its own upload"
+        );
+    }
+}

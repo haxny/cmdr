@@ -2,7 +2,7 @@
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::SpaceInfo;
 use openssh_sftp_client::fs::Statvfs;
-use openssh_sftp_client::metadata::{MetaData, RawFileType};
+use openssh_sftp_client::metadata::{MetaData, Permissions, RawFileType};
 
 /// Builds a [`FileEntry`] from one SFTP stat answer.
 ///
@@ -14,6 +14,7 @@ use openssh_sftp_client::metadata::{MetaData, RawFileType};
 /// it is made.
 pub(super) fn metadata_to_file_entry(name: &str, app_path: &str, meta: &MetaData) -> FileEntry {
     let mut entry = entry_of_type(name, app_path, meta.file_type().map(|t| t.as_raw()));
+    entry.permissions |= meta.permissions().map_or(0, permission_bits);
     entry.size = if entry.is_directory { None } else { meta.len() };
     entry.modified_at = meta.modified().and_then(unix_secs);
     // SFTP v3 carries access and modify times and no creation time, so this stays
@@ -21,14 +22,20 @@ pub(super) fn metadata_to_file_entry(name: &str, app_path: &str, meta: &MetaData
     entry
 }
 
+/// The permission bits of an attrs answer (`0o7777`), the mode a copy off this
+/// volume carries. The read stream reports the same bits off its `fstat`
+/// (`streams.rs`), so a listing and a copy never disagree.
+pub(super) fn permission_bits(permissions: Permissions) -> u32 {
+    permissions.as_raw().bits() & 0o7777
+}
+
 /// The kind half of the mapping, split out because only the server can build a
 /// `MetaData` that carries a file type.
 ///
-/// ❗ `permissions` carries the `st_mode` FILE-TYPE bits and nothing else. The
-/// type is what lets a walker skip a FIFO, socket, or device without opening
-/// it (a read on a FIFO blocks the single-threaded `sftp-server` every
-/// operation on this volume shares). The permission bits stay unset: copies
-/// carry the low nine as a mode (`landed_mode`), and SFTP doesn't report one.
+/// ❗ `permissions` carries the `st_mode` FILE-TYPE bits here; the caller ORs
+/// the permission bits in. The type is what lets a walker skip a FIFO, socket,
+/// or device without opening it (a read on a FIFO blocks the single-threaded
+/// `sftp-server` every operation on this volume shares).
 fn entry_of_type(name: &str, app_path: &str, file_type: Option<RawFileType>) -> FileEntry {
     let is_directory = file_type == Some(RawFileType::Directory);
     let is_symlink = file_type == Some(RawFileType::Symlink);
@@ -71,6 +78,7 @@ fn unix_secs(stamp: openssh_sftp_client::UnixTimeStamp) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use openssh_sftp_client::metadata::MetaDataBuilder;
 
     const S_IFMT: u32 = 0o170_000;
 
@@ -145,12 +153,21 @@ mod tests {
     }
 
     #[test]
-    fn the_permission_bits_stay_unset() {
-        // Copies read the low nine bits as a mode to carry (`landed_mode`), and
-        // SFTP doesn't report one yet: only the type travels.
-        for raw in [RawFileType::RegularFile, RawFileType::Directory, RawFileType::Symlink] {
-            assert_eq!(entry_of_type("x", "sftp://h/x", Some(raw)).permissions & 0o7777, 0);
-        }
-        assert_eq!(entry_of_type("x", "sftp://h/x", None).permissions, 0);
+    fn the_permission_bits_ride_beside_the_type() {
+        // A copy off this volume carries the mode the listing shows, and the
+        // walker still reads the type out of the same field.
+        let meta = MetaDataBuilder::new()
+            .permissions(Permissions::from(0o4750u16))
+            .create();
+        let entry = metadata_to_file_entry("x", "sftp://h/x", &meta);
+        assert_eq!(entry.permissions & 0o7777, 0o4750);
+        assert_eq!(permission_bits(Permissions::from(0o644u16)), 0o644);
+    }
+
+    #[test]
+    fn no_attrs_mean_no_mode() {
+        // `0` is "no mode" to every reader of `FileEntry::permissions`.
+        let entry = metadata_to_file_entry("x", "sftp://h/x", &MetaDataBuilder::new().create());
+        assert_eq!(entry.permissions, 0);
     }
 }

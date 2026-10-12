@@ -763,15 +763,16 @@ test_overwrite_on_a_whole_publishing_destination_replaces_in_place, test_a_faile
 
 ## What mode a landed file wears
 
-**The rule: the source REPORTS a mode on its read stream, the LOCAL destination folds and applies it.** Every backend
+**The rule: the source REPORTS a mode on its read stream, the destination folds and applies it** (local disk, and an
+SFTP server in the `SETSTAT` its date already costs). Every backend
 that knows a file's permissions reports them from what its open already holds (`VolumeReadStream::metadata`, the
 `MODE` class): the git portal off the tree entry's kind (`cmdr-git`'s `tree::lookup_blob`), the archive backend off the
 index entry (zip external attributes, the tar header, 7z's unix extension; the one-pass `MemberStream` too),
-`LocalPosixVolume` off the open's `stat`, ADB off the `stat` its open sends. `LocalPosixVolume::write_from_stream` folds
+`LocalPosixVolume` off the open's `stat`, ADB off the `stat` its open sends, SFTP off the `fstat` its open sends. `LocalPosixVolume::write_from_stream` folds
 it and puts it on the staged temp. Without this, a `run.sh` copied out of a branch snapshot or a release zip lands
 `0o644` and the user has to `chmod` it.
 
-**`0` is the "no permission concept" answer.** `FileEntry::permissions` documents it, and SMB, SFTP, WebDAV, and MTP
+**`0` is the "no permission concept" answer.** `FileEntry::permissions` documents it, and SMB, WebDAV, and MTP
 report `0` (their streams report no mode at all). ❗ MTP used to report a fabricated `0o755`/`0o644`; PTP has no mode,
 and a plausible-looking guess would widen a landed file under a strict umask on nobody's authority. It is
 `NO_PERMISSION_CONCEPT` in `cmdr-mtp`'s `directory_ops.rs` now, named so the next person doesn't re-add one.
@@ -954,9 +955,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   and the one-pass sequential extract alike (whole seconds; zip's DOS time keeps even seconds); a folder's xattrs
   through `folder_metadata`. No creation date in a zip.
 - **Git portal (source only)**: the tree entry's mode; no date (a blob sits in many commits).
-- **SFTP**: reports the mtime from the `fstat` its open already sends; writes it with a path `SETSTAT` on the staging
-  temp after the awaited close, before the final rename. Whole seconds, atime set alongside. No creation date in SFTP
-  v3 (`crates/cmdr-sftp/DETAILS.md` § "Dates on copies").
+- **SFTP**: reports the mtime and mode from the `fstat` its open already sends; writes both with one path `SETSTAT`
+  on the staging temp after the awaited close, before the final rename (the mode folded, and a private file narrowed
+  while it streams). Whole seconds, atime set alongside. No creation date in SFTP v3 (`crates/cmdr-sftp/DETAILS.md` §
+  "Dates on copies", "Mode on copies").
 - **WebDAV**: reports the GET's `Last-Modified`; writes it as an `X-OC-Mtime` header on the PUT, which Nextcloud,
   ownCloud, and rclone honor. ❗ Plain Apache `mod_dav` can't store a date at all (`crates/cmdr-webdav/DETAILS.md` §
   "Dates").

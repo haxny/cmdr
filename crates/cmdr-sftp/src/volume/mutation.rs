@@ -119,7 +119,7 @@ impl SftpVolume {
     /// Sets the modification date of the file or folder at `path`, by path
     /// (`SSH_FXP_SETSTAT`). SFTP v3 carries whole seconds and forces atime
     /// alongside (`ATTR_ACMODTIME`), so atime gets the same value, as on an
-    /// upload (`writes.rs::keep_source_date`).
+    /// upload (`writes.rs::keep_source_attrs`).
     pub(super) async fn set_modified_impl(&self, path: &Path, modified: SystemTime) -> Result<(), VolumeError> {
         let remote = self.to_remote_path(path)?;
         // Before 1970 or past 2106: outside what SFTP v3's `u32` can say.
