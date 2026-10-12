@@ -783,17 +783,9 @@
   "@fileOperations.transferProgress.background": {
     "sourceHash": "ea2b8a8"
   },
-  "fileOperations.transferProgress.backgroundAria": "Garder ce transfert en cours en arrière-plan",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "sourceHash": "bd71d60"
-  },
   "fileOperations.transferProgress.queue": "File d’attente",
   "@fileOperations.transferProgress.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.transferProgress.queueAria": "Envoyer dans la file d’attente des opérations",
-  "@fileOperations.transferProgress.queueAria": {
-    "sourceHash": "2bc3bd9"
   },
   "fileOperations.transferProgress.queueTooltip": "Garder ce transfert en cours en arrière-plan et le gérer dans la file d’attente des opérations (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
@@ -818,14 +810,6 @@
   "fileOperations.backgroundStart.queue": "File d’attente",
   "@fileOperations.backgroundStart.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.backgroundStart.backgroundAria": "Démarrer en arrière-plan",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "sourceHash": "c062b85"
-  },
-  "fileOperations.backgroundStart.queueAria": "Démarrer dans la file d’attente des opérations",
-  "@fileOperations.backgroundStart.queueAria": {
-    "sourceHash": "82ed630"
   },
   "fileOperations.backgroundStart.tooltip": "Démarrer l’opération sans fenêtre de progression et la suivre dans la file d’attente des opérations (F2)",
   "@fileOperations.backgroundStart.tooltip": {

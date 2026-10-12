@@ -130,11 +130,9 @@ function typeKey(target: HTMLElement, init: KeyboardEventInit & { type?: 'keydow
   from.dispatchEvent(new KeyboardEvent(init.type ?? 'keydown', { bubbles: true, ...init }))
 }
 
-/** Found by its spoken name, which carries the visible word in both readings. */
+/** Found by the key it carries, so the lookup holds for both of its words. */
 function backgroundButton(target: HTMLElement): HTMLButtonElement | null {
-  return target.querySelector<HTMLButtonElement>(
-    'button[aria-label="Start this in the background"], button[aria-label="Start this in the operation queue"]',
-  )
+  return target.querySelector<HTMLButtonElement>('button[aria-keyshortcuts="F2"]')
 }
 
 /** The visible word, without the F2 chip that rides inside the button. */

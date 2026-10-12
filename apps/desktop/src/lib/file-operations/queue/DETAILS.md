@@ -109,7 +109,7 @@ Three typed set tests sit beside the factory, all module exports, all sets rathe
 `hasOtherQueuedWork(rows, selfOperationId)` answers one question for `TransferProgressDialog`: is there anything in the
 queue besides the operation the dialog is showing? No → the button reads "Background" (you're not queueing behind
 anything, you're sending this out of sight); yes → "Queue". The click, the tooltip, and the F2 binding are identical
-either way; only the word and its `aria-label` change.
+either way; only the word changes, and the accessible name with it (the button has no `aria-label`).
 
 - **It reads the MAIN window's store** (`main-window-operations.svelte.ts`), the same live rows the corner chip reads,
   through a `$derived` in the dialog. No new store, no new event, no polling, and the word follows the queue while the

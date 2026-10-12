@@ -3148,10 +3148,7 @@
     "accept": ["küld", "elment"],
     "forms": "Send X → X küldése; progress Küldés…; sent (toast) → elment",
     "confidence": "high",
-    "sources": "ms; catalog",
-    "exceptions": {
-      "fileOperations.transferProgress.queueAria": "Send to the operation queue → Áthelyezés a műveleti sorba: the aria contains the visible label Sorba (see decisions)."
-    }
+    "sources": "ms; catalog"
   },
   "server": {
     "chosen": "szerver",

@@ -1165,7 +1165,9 @@ progress dialog (#381). So F5, F2, F5, F2 queues two copies without a modal in b
 **The key is on the button.** Both Background / Queue buttons (here and the progress dialog's) carry a
 `KeyHint key="F2"` (`#lib/ui/KeyHint.svelte`, the same chip the decision prompts use for their letters), so a mouse user
 learns the key. The chip is `aria-hidden` and the button says `aria-keyshortcuts="F2"` (the house menu's pattern),
-keeping the accessible name equal to the word.
+keeping the accessible name equal to the word. ❌ Don't give either button an `aria-label`: axe-core (4.14+,
+`label-content-name-mismatch`, WCAG 2.5.3) counts the hidden chip as visible text, so any label must contain "Background
+F2" word for word, which no sentence does. The tooltip describes what the button does.
 
 **F2 is Enter plus one flag.** The dialog runs its own confirm (`confirmFromUser` → `handleConfirm`), so it meets the
 same guards (a destination that refuses writes, a source that can't be read), waits for `scan.scanStarted` the same way,

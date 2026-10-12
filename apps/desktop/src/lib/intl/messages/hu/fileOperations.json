@@ -781,17 +781,9 @@
   "@fileOperations.transferProgress.background": {
     "sourceHash": "ea2b8a8"
   },
-  "fileOperations.transferProgress.backgroundAria": "Hagyd futni a háttérben",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "sourceHash": "bd71d60"
-  },
   "fileOperations.transferProgress.queue": "Sorba",
   "@fileOperations.transferProgress.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.transferProgress.queueAria": "Áthelyezés a műveleti sorba",
-  "@fileOperations.transferProgress.queueAria": {
-    "sourceHash": "2bc3bd9"
   },
   "fileOperations.transferProgress.queueTooltip": "Hagyd futni a háttérben, és kezeld a műveleti sorban (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
@@ -816,14 +808,6 @@
   "fileOperations.backgroundStart.queue": "Sorba",
   "@fileOperations.backgroundStart.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.backgroundStart.backgroundAria": "Indítás a háttérben",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "sourceHash": "c062b85"
-  },
-  "fileOperations.backgroundStart.queueAria": "Küldés a műveleti sorba",
-  "@fileOperations.backgroundStart.queueAria": {
-    "sourceHash": "82ed630"
   },
   "fileOperations.backgroundStart.tooltip": "Indítsd el folyamatjelző ablak nélkül, és kövesd a műveleti sorban (F2)",
   "@fileOperations.backgroundStart.tooltip": {

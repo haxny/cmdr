@@ -3066,9 +3066,6 @@
     "accept": ["送", "傳給", "寄"],
     "chosen": "傳送",
     "confidence": "high",
-    "exceptions": {
-      "fileOperations.transferProgress.queueAria": "The aria has to open with its visible label 加入佇列 (WCAG 2.5.3), so Send to the queue reads 加入佇列."
-    },
     "forms": "button Send report → 傳送報告; what Cmdr sends to a provider → 送出 / 送到 (Cmdr 絕不會送出…, Cmdr 會送出什麼); sent to a model → 傳給; whoever sent you a file → 寄給你的人",
     "sources": "AP-TW = AP-HK CrashReporterSupport (並傳送報告給Apple)"
   },

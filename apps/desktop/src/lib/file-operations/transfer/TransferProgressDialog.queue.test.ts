@@ -265,16 +265,16 @@ function queryButton(target: HTMLElement, ariaLabel: string): HTMLButtonElement 
   return target.querySelector<HTMLButtonElement>(`button[aria-label="${ariaLabel}"]`)
 }
 
-/** The button's two accessible names. Which one shows is the point of the last
+/** The Background / Queue button, found by the key it carries, so the lookup
+ *  holds for both of its words. Which word shows is the point of the last
  *  describe block; every other test here runs with an empty queue. */
-const BACKGROUND_ARIA = 'Keep this running in the background'
-const QUEUE_ARIA = 'Send to the operation queue'
+function backgroundButton(target: HTMLElement): HTMLButtonElement | null {
+  return target.querySelector<HTMLButtonElement>('button[aria-keyshortcuts="F2"]')
+}
 
 /** The one visible word the button shows right now. */
 function backgroundButtonLabel(target: HTMLElement): string | null {
-  const button =
-    target.querySelector<HTMLButtonElement>(`button[aria-label="${BACKGROUND_ARIA}"]`) ??
-    target.querySelector<HTMLButtonElement>(`button[aria-label="${QUEUE_ARIA}"]`)
+  const button = backgroundButton(target)
   if (!button) return null
   // The F2 chip rides inside the button; the word is everything else.
   const word = button.cloneNode(true) as HTMLElement
@@ -286,9 +286,7 @@ function backgroundButtonLabel(target: HTMLElement): string | null {
 
 /** The key chip inside the button, which teaches F2 to anyone who clicks instead. */
 function backgroundButtonChip(target: HTMLElement): string | null {
-  const button =
-    target.querySelector<HTMLButtonElement>(`button[aria-label="${BACKGROUND_ARIA}"]`) ??
-    target.querySelector<HTMLButtonElement>(`button[aria-label="${QUEUE_ARIA}"]`)
+  const button = backgroundButton(target)
   return button?.querySelector('kbd')?.textContent.trim() ?? null
 }
 
@@ -374,7 +372,7 @@ describe('TransferProgressDialog Queue button', () => {
   it('backgrounds the op: shows a toast, fires onQueue, opens no window, and does NOT cancel', async () => {
     const { component, target, onQueue } = await mountDialog()
 
-    const queueBtn = queryButton(target, BACKGROUND_ARIA)
+    const queueBtn = backgroundButton(target)
     expect(queueBtn, 'Queue button shows during the active phase').not.toBeNull()
     queueBtn?.click()
     await tick()
@@ -399,7 +397,7 @@ describe('TransferProgressDialog Queue button', () => {
     // manager registry.
     const { target } = await mountDialog()
 
-    queryButton(target, BACKGROUND_ARIA)?.click()
+    backgroundButton(target)?.click()
     await tick()
     expect(addToastMock, 'Queue backgrounded the op').toHaveBeenCalledOnce()
     cancelWriteOperationMock.mockClear()
@@ -564,7 +562,7 @@ describe('TransferProgressDialog backgrounding under the real synchronous teardo
     cancelOperationMock.mockClear()
     addToastMock.mockClear()
 
-    queryButton(target, BACKGROUND_ARIA)?.click()
+    backgroundButton(target)?.click()
     await flushPromises()
 
     expect(addToastMock, 'the handoff completes: the toast says where the op went').toHaveBeenCalledOnce()
@@ -593,9 +591,10 @@ describe('TransferProgressDialog background/queue button label', () => {
 
     expect(backgroundButtonLabel(target)).toBe('Background')
     expect(backgroundButtonChip(target), 'the button shows its shortcut').toBe('F2')
-    expect(queryButton(target, BACKGROUND_ARIA)?.getAttribute('aria-keyshortcuts'), 'and says it').toBe('F2')
-    expect(queryButton(target, BACKGROUND_ARIA), 'the accessible name follows the word').not.toBeNull()
-    expect(queryButton(target, QUEUE_ARIA)).toBeNull()
+    expect(backgroundButton(target)?.getAttribute('aria-keyshortcuts'), 'and says it').toBe('F2')
+    // WCAG 2.5.3 (label in name): no aria-label, so the name IS the visible word
+    // (the chip is aria-hidden), and a speech-control user can say what they see.
+    expect(backgroundButton(target)?.getAttribute('aria-label'), 'named by the word itself').toBeNull()
 
     dropView(component)
   })
@@ -607,7 +606,7 @@ describe('TransferProgressDialog background/queue button label', () => {
 
     expect(backgroundButtonLabel(target)).toBe('Queue')
     expect(backgroundButtonChip(target)).toBe('F2')
-    expect(queryButton(target, QUEUE_ARIA)).not.toBeNull()
+    expect(backgroundButton(target)?.getAttribute('aria-label'), 'named by the word itself').toBeNull()
 
     dropView(component)
   })
@@ -660,10 +659,7 @@ describe('TransferProgressDialog while the operation is still counting', () => {
     const { target } = await mountScanningDialog()
 
     expect(queryButton(target, 'Pause this transfer'), 'the scan parks, so the button does something').not.toBeNull()
-    expect(
-      queryButton(target, BACKGROUND_ARIA) ?? queryButton(target, QUEUE_ARIA),
-      'backgrounding a scanning transfer is the whole point',
-    ).not.toBeNull()
+    expect(backgroundButton(target), 'backgrounding a scanning transfer is the whole point').not.toBeNull()
   })
 
   it('titles a PAUSED scan "Paused", and offers Resume', async () => {
@@ -684,7 +680,7 @@ describe('TransferProgressDialog while the operation is still counting', () => {
   it('backgrounds a scanning operation without cancelling it', async () => {
     const { target, onQueue } = await mountScanningDialog()
 
-    ;(queryButton(target, BACKGROUND_ARIA) ?? queryButton(target, QUEUE_ARIA))?.click()
+    backgroundButton(target)?.click()
     await tick()
 
     expect(onQueue).toHaveBeenCalledTimes(1)

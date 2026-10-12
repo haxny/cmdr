@@ -782,17 +782,9 @@
   "@fileOperations.transferProgress.background": {
     "sourceHash": "ea2b8a8"
   },
-  "fileOperations.transferProgress.backgroundAria": "Op de achtergrond laten doorlopen",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "sourceHash": "bd71d60"
-  },
   "fileOperations.transferProgress.queue": "Wachtrij",
   "@fileOperations.transferProgress.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.transferProgress.queueAria": "Naar de bewerkingenwachtrij sturen",
-  "@fileOperations.transferProgress.queueAria": {
-    "sourceHash": "2bc3bd9"
   },
   "fileOperations.transferProgress.queueTooltip": "Laat dit op de achtergrond doorlopen en beheer het in de bewerkingenwachtrij (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
@@ -817,14 +809,6 @@
   "fileOperations.backgroundStart.queue": "Wachtrij",
   "@fileOperations.backgroundStart.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.backgroundStart.backgroundAria": "Start dit op de achtergrond",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "sourceHash": "c062b85"
-  },
-  "fileOperations.backgroundStart.queueAria": "Start dit in de bewerkingenwachtrij",
-  "@fileOperations.backgroundStart.queueAria": {
-    "sourceHash": "82ed630"
   },
   "fileOperations.backgroundStart.tooltip": "Start dit zonder voortgangsvenster en volg het in de bewerkingenwachtrij (F2)",
   "@fileOperations.backgroundStart.tooltip": {

@@ -2476,9 +2476,6 @@
   "send": {
     "chosen": "gửi",
     "confidence": "high",
-    "exceptions": {
-      "fileOperations.transferProgress.queueAria": "Sending to the queue is `Đưa vào hàng đợi thao tác` (MS: queue verb → cho vào hàng), not sending data out."
-    },
     "forms": "send to the operation queue → Đưa vào hàng đợi thao tác",
     "sources": "MS (send → gửi)"
   },

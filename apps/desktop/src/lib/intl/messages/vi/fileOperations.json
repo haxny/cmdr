@@ -780,17 +780,9 @@
   "@fileOperations.transferProgress.background": {
     "sourceHash": "ea2b8a8"
   },
-  "fileOperations.transferProgress.backgroundAria": "Giữ chạy nền",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "sourceHash": "bd71d60"
-  },
   "fileOperations.transferProgress.queue": "Hàng đợi",
   "@fileOperations.transferProgress.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.transferProgress.queueAria": "Đưa vào hàng đợi thao tác",
-  "@fileOperations.transferProgress.queueAria": {
-    "sourceHash": "2bc3bd9"
   },
   "fileOperations.transferProgress.queueTooltip": "Giữ chạy ở chế độ nền và quản lý trong hàng đợi thao tác (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
@@ -815,14 +807,6 @@
   "fileOperations.backgroundStart.queue": "Hàng đợi",
   "@fileOperations.backgroundStart.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.backgroundStart.backgroundAria": "Bắt đầu chạy nền",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "sourceHash": "c062b85"
-  },
-  "fileOperations.backgroundStart.queueAria": "Bắt đầu trong hàng đợi thao tác",
-  "@fileOperations.backgroundStart.queueAria": {
-    "sourceHash": "82ed630"
   },
   "fileOperations.backgroundStart.tooltip": "Bắt đầu mà không mở cửa sổ tiến trình và theo dõi trong hàng đợi thao tác (F2)",
   "@fileOperations.backgroundStart.tooltip": {

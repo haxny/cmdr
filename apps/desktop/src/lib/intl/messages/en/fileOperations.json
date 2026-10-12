@@ -1392,22 +1392,9 @@
     "screenshot": "conflict-dialog.png"
   },
 
-  "fileOperations.transferProgress.backgroundAria": "Keep this running in the background",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "description": "Screen-reader label for the progress dialog’s button while the operation queue is empty (the visible button shows only \"Background\"). Must contain the visible word, so a person using both sight and a screen reader hears what they see. Its sibling for a non-empty queue is fileOperations.transferProgress.queueAria.",
-    "screenshot": "conflict-dialog.png"
-  },
-
   "fileOperations.transferProgress.queue": "Queue",
   "@fileOperations.transferProgress.queue": {
     "description": "Button on the progress dialog that sends this transfer to the background and opens the operation queue window, so the user can keep working while it runs. It does not pause the transfer. Mirrors Total Commander's copy-dialog F2. Short control label.",
-    "screenshot": "transfer-dialog.png",
-    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
-  },
-
-  "fileOperations.transferProgress.queueAria": "Send to the operation queue",
-  "@fileOperations.transferProgress.queueAria": {
-    "description": "Screen-reader label for the Queue button on the progress dialog (the visible button shows only \"Queue\"). Explains that the transfer moves to the background and is managed in the operation queue window. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle.",
     "screenshot": "transfer-dialog.png",
     "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
@@ -1453,16 +1440,6 @@
   "fileOperations.backgroundStart.queue": "Queue",
   "@fileOperations.backgroundStart.queue": {
     "description": "The same button as fileOperations.backgroundStart.background, worded for when other operations are already running: the new one joins them in the operation queue and runs out of sight, with no progress window. Mirrors Total Commander’s \"F2 Queue\" button in its copy dialog. Short control label; must fit the same button as \"Background\"."
-  },
-
-  "fileOperations.backgroundStart.backgroundAria": "Start this in the background",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "description": "Screen-reader label for the confirmation dialog’s button while nothing else is running (the visible button shows only \"Background\"). Must contain the visible word, so a person using both sight and a screen reader hears what they see. Its sibling for a busy queue is fileOperations.backgroundStart.queueAria."
-  },
-
-  "fileOperations.backgroundStart.queueAria": "Start this in the operation queue",
-  "@fileOperations.backgroundStart.queueAria": {
-    "description": "Screen-reader label for the confirmation dialog’s button while other operations are running (the visible button shows only \"Queue\"). \"Operation queue\" is the name of the window that lists running operations; keep it identical to queue.windowTitle."
   },
 
   "fileOperations.backgroundStart.tooltip": "Start this without a progress window and follow it in the operation queue (F2)",

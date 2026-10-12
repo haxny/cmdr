@@ -782,17 +782,9 @@
   "@fileOperations.transferProgress.background": {
     "sourceHash": "ea2b8a8"
   },
-  "fileOperations.transferProgress.backgroundAria": "Manter isto rodando em segundo plano",
-  "@fileOperations.transferProgress.backgroundAria": {
-    "sourceHash": "bd71d60"
-  },
   "fileOperations.transferProgress.queue": "Fila",
   "@fileOperations.transferProgress.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.transferProgress.queueAria": "Enviar para a fila de operações",
-  "@fileOperations.transferProgress.queueAria": {
-    "sourceHash": "2bc3bd9"
   },
   "fileOperations.transferProgress.queueTooltip": "Mantenha isto rodando em segundo plano e gerencie na fila de operações (F2)",
   "@fileOperations.transferProgress.queueTooltip": {
@@ -817,14 +809,6 @@
   "fileOperations.backgroundStart.queue": "Fila",
   "@fileOperations.backgroundStart.queue": {
     "sourceHash": "3b2fe03"
-  },
-  "fileOperations.backgroundStart.backgroundAria": "Iniciar isto em segundo plano",
-  "@fileOperations.backgroundStart.backgroundAria": {
-    "sourceHash": "c062b85"
-  },
-  "fileOperations.backgroundStart.queueAria": "Iniciar isto na fila de operações",
-  "@fileOperations.backgroundStart.queueAria": {
-    "sourceHash": "82ed630"
   },
   "fileOperations.backgroundStart.tooltip": "Inicie isto sem janela de progresso e acompanhe na fila de operações (F2)",
   "@fileOperations.backgroundStart.tooltip": {

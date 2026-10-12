@@ -40,11 +40,9 @@ function pressKey(target: HTMLElement, init: KeyboardEventInit): void {
   overlayOf(target).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }))
 }
 
-/** Found by its spoken name, which carries the visible word in both readings. */
+/** Found by the key it carries, so the lookup holds for both of its words. */
 function backgroundButton(target: HTMLElement): HTMLButtonElement | null {
-  return target.querySelector<HTMLButtonElement>(
-    'button[aria-label="Start this in the background"], button[aria-label="Start this in the operation queue"]',
-  )
+  return target.querySelector<HTMLButtonElement>('button[aria-keyshortcuts="F2"]')
 }
 
 /** The visible word, without the F2 chip that rides inside the button. */
@@ -140,6 +138,17 @@ describe('F2 in the transfer dialog', () => {
     await flushMicrotasks()
 
     expect(backgroundButton(target)?.querySelector('kbd')?.textContent.trim()).toBe('F2')
+  })
+
+  it('is named by its visible word, so a speech-control user can say what they see', async () => {
+    // WCAG 2.5.3 (label in name), enforced by axe-core 4.14's label-content-name-mismatch:
+    // no aria-label, the chip is aria-hidden, and the key rides on aria-keyshortcuts.
+    const target = mountDialog({ onConfirm: vi.fn<ConfirmFn>() })
+    await flushMicrotasks()
+
+    const button = backgroundButton(target)
+    expect(button?.getAttribute('aria-label')).toBeNull()
+    expect(button?.querySelector('.key-hint')?.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('starts in the background from the button too', async () => {

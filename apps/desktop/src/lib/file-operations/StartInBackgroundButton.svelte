@@ -5,6 +5,8 @@
      * F2 in the dialog presses it (`start-in-background-key.ts`). One button, two words, by the same rule as the
      * progress dialog's: "Queue" while other work is live, "Background" when the
      * queue is empty. The F2 chip inside it is how a mouse user learns the key.
+     * No `aria-label`: the name is the visible word (WCAG 2.5.3, label in name),
+     * the tooltip describes it, and `aria-keyshortcuts` carries F2.
      * `transfer/DETAILS.md` § "Starting in the background".
      */
     import Button from '#lib/ui/Button.svelte'
@@ -30,9 +32,6 @@
     {disabled}
     aria-keyshortcuts="F2"
     tooltipContent={tString('fileOperations.backgroundStart.tooltip')}
-    aria-label={queueHasOtherWork
-        ? tString('fileOperations.backgroundStart.queueAria')
-        : tString('fileOperations.backgroundStart.backgroundAria')}
 >
     {queueHasOtherWork
         ? tString('fileOperations.backgroundStart.queue')

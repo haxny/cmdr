@@ -472,11 +472,9 @@ CLDR category: **`other` only** (verified with `new Intl.PluralRules('zh-Hant').
 ### `*Aria` containment pairs that are load-bearing
 
 WCAG 2.5.3 asks an accessible name to CONTAIN its visible label verbatim. Chinese doesn't inflect, so this is usually
-free, but four pairs in this catalog only hold because the aria sentence was shaped around the label rather than the
+free, but these pairs in this catalog only hold because the aria sentence was shaped around the label rather than the
 other way round. Re-wording either half alone breaks it silently, and no check catches it:
 
-- `fileOperations.transferProgress.background` = `背景執行` ⊂ `backgroundAria` = `讓它繼續在背景執行`
-- `fileOperations.transferProgress.queue` = `加入佇列` ⊂ `queueAria` = `加入佇列，移到「操作佇列」視窗管理`
 - `queryUi.filters.chip.scope` / `queryUi.scope.popover.label` = `搜尋範圍` ⊂ `queryUi.scope.popover.aria` =
   `搜尋範圍：選擇資料夾` (a literal `在資料夾中搜尋` would NOT have contained it)
 - `queryUi.scope.toggle.caseSensitive` = `區分大小寫` ⊂ `caseSensitiveAria` = `比對時區分大小寫`

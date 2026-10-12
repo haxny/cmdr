@@ -597,16 +597,10 @@
                 </Button>
                 <!-- One button, two words: "Queue" when there's something to
                      queue behind, "Background" when there isn't. The action, the
-                     tooltip, and F2 are the same either way. -->
+                     tooltip, and F2 are the same either way. No aria-label: the
+                     name is the visible word (WCAG 2.5.3, label in name). -->
                 <span use:tooltip={tString('fileOperations.transferProgress.queueTooltip')}>
-                    <Button
-                        variant="secondary"
-                        onclick={progress.handleQueue}
-                        aria-keyshortcuts="F2"
-                        aria-label={queueHasOtherWork
-                            ? tString('fileOperations.transferProgress.queueAria')
-                            : tString('fileOperations.transferProgress.backgroundAria')}
-                    >
+                    <Button variant="secondary" onclick={progress.handleQueue} aria-keyshortcuts="F2">
                         <span class="btn-inner">
                             <Icon name="list" size={14} />
                             {queueHasOtherWork

@@ -414,7 +414,7 @@ describe('StartInBackgroundButton a11y', () => {
     document.body.innerHTML = ''
   })
 
-  it('has no a11y violations, enabled or disabled, and its name carries the visible word', async () => {
+  it('has no a11y violations, enabled or disabled, and its name is the visible word', async () => {
     for (const disabled of [false, true]) {
       document.body.innerHTML = ''
       const host = document.createElement('div')
@@ -422,12 +422,14 @@ describe('StartInBackgroundButton a11y', () => {
       mount(StartInBackgroundButton, { target: host, props: { onclick: () => {}, disabled } })
       await tick()
       const button = host.querySelector('button')
-      // The F2 chip is decoration; `aria-keyshortcuts` speaks it, so the name matches the word alone.
+      // The F2 chip is decoration and `aria-keyshortcuts` speaks it. With no `aria-label`, the
+      // name is the content minus the hidden chip: the visible word (WCAG 2.5.3, label in name).
       const word = button?.cloneNode(true) as HTMLElement
       word.querySelectorAll('[aria-hidden="true"]').forEach((chip) => {
         chip.remove()
       })
-      expect(button?.getAttribute('aria-label')).toContain(word.textContent.trim().toLowerCase())
+      expect(button?.getAttribute('aria-label')).toBeNull()
+      expect(word.textContent.trim()).toBe('Background')
       expect(button?.getAttribute('aria-keyshortcuts')).toBe('F2')
       await expectNoA11yViolations(host)
     }

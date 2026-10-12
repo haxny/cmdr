@@ -2737,7 +2737,6 @@
     "chosen": "发送",
     "confidence": "high",
     "exceptions": {
-      "fileOperations.transferProgress.queueAria": "The aria spells out what the F2 button does and must contain its visible label 加入队列.",
       "settings.revealHandler.uninstallWarning": "macOS \"keeps sending\" the requests here reads 送到 (delivers to), not a report being sent."
     },
     "forms": "Sending… 正在发送…; send a report 发送一份报告",
