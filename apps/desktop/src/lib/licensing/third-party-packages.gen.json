@@ -112,12 +112,6 @@
       "url": "https://github.com/RustCrypto/password-hashes"
     },
     {
-      "name": "arrayref",
-      "version": "0.3.9",
-      "license": "BSD-2-Clause",
-      "url": "https://github.com/droundy/arrayref"
-    },
-    {
       "name": "arrayvec",
       "version": "0.7.8",
       "license": "MIT OR Apache-2.0",
@@ -251,7 +245,7 @@
     },
     {
       "name": "bitflags",
-      "version": "2.13.1",
+      "version": "2.13.2",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/bitflags/bitflags"
     },
@@ -263,7 +257,7 @@
     },
     {
       "name": "blake3",
-      "version": "1.8.6",
+      "version": "1.8.7",
       "license": "CC0-1.0 OR Apache-2.0 OR Apache-2.0 WITH LLVM-exception",
       "url": "https://github.com/BLAKE3-team/BLAKE3"
     },
@@ -592,6 +586,12 @@
       "url": "https://github.com/kornelski/core-services"
     },
     {
+      "name": "core_detect",
+      "version": "1.0.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/thomcc/core_detect"
+    },
+    {
       "name": "cpubits",
       "version": "0.1.1",
       "license": "MIT OR Apache-2.0",
@@ -785,7 +785,7 @@
     },
     {
       "name": "data-encoding",
-      "version": "2.11.0",
+      "version": "2.11.1",
       "license": "MIT",
       "url": "https://github.com/ia0/data-encoding"
     },
@@ -959,7 +959,7 @@
     },
     {
       "name": "encoding_rs",
-      "version": "0.8.35",
+      "version": "0.8.42",
       "license": "(Apache-2.0 OR MIT) AND BSD-3-Clause",
       "url": "https://github.com/hsivonen/encoding_rs"
     },
@@ -1091,7 +1091,7 @@
     },
     {
       "name": "flate2",
-      "version": "1.1.9",
+      "version": "1.1.10",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/flate2-rs"
     },
@@ -1106,6 +1106,12 @@
       "version": "1.0.7",
       "license": "Apache-2.0  OR  MIT",
       "url": "https://github.com/servo/rust-fnv"
+    },
+    {
+      "name": "foldhash",
+      "version": "0.1.5",
+      "license": "Zlib",
+      "url": "https://github.com/orlp/foldhash"
     },
     {
       "name": "foldhash",
@@ -1157,13 +1163,13 @@
     },
     {
       "name": "futures-channel",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
     {
       "name": "futures-core",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
@@ -1175,25 +1181,25 @@
     },
     {
       "name": "futures-io",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
     {
       "name": "futures-macro",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
     {
       "name": "futures-sink",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
     {
       "name": "futures-task",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
@@ -1205,7 +1211,7 @@
     },
     {
       "name": "futures-util",
-      "version": "0.3.33",
+      "version": "0.3.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/futures-rs"
     },
@@ -1667,6 +1673,12 @@
     },
     {
       "name": "hashbrown",
+      "version": "0.15.5",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/rust-lang/hashbrown"
+    },
+    {
+      "name": "hashbrown",
       "version": "0.16.1",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/hashbrown"
@@ -1733,7 +1745,7 @@
     },
     {
       "name": "http",
-      "version": "1.4.2",
+      "version": "1.5.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/hyperium/http"
     },
@@ -1979,7 +1991,13 @@
     },
     {
       "name": "jiff",
-      "version": "0.2.31",
+      "version": "0.2.38",
+      "license": "Unlicense OR MIT",
+      "url": "https://github.com/BurntSushi/jiff"
+    },
+    {
+      "name": "jiff-core",
+      "version": "0.1.1",
       "license": "Unlicense OR MIT",
       "url": "https://github.com/BurntSushi/jiff"
     },
@@ -2045,13 +2063,13 @@
     },
     {
       "name": "libc",
-      "version": "0.2.189",
+      "version": "0.2.190",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/libc"
     },
     {
       "name": "libsqlite3-sys",
-      "version": "0.38.1",
+      "version": "0.38.2",
       "license": "MIT",
       "url": "https://github.com/rusqlite/rusqlite"
     },
@@ -2075,7 +2093,7 @@
     },
     {
       "name": "log",
-      "version": "0.4.33",
+      "version": "0.4.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/log"
     },
@@ -2200,6 +2218,12 @@
       "url": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
     },
     {
+      "name": "miniz_oxide",
+      "version": "0.9.1",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "url": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide"
+    },
+    {
       "name": "mio",
       "version": "1.2.1",
       "license": "MIT",
@@ -2234,6 +2258,12 @@
       "version": "0.20.0",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/muda"
+    },
+    {
+      "name": "multiversion_no_op",
+      "version": "1.0.0",
+      "license": "Apache-2.0 OR MIT",
+      "url": "https://github.com/hsivonen/multiversion_no_op"
     },
     {
       "name": "mutate_once",
@@ -2369,7 +2399,7 @@
     },
     {
       "name": "objc2",
-      "version": "0.6.4",
+      "version": "0.6.5",
       "license": "MIT",
       "url": "https://github.com/madsmtm/objc2"
     },
@@ -2663,7 +2693,7 @@
     },
     {
       "name": "pdf-extract",
-      "version": "0.12.0",
+      "version": "0.12.1",
       "license": "MIT",
       "url": "https://github.com/jrmuizel/pdf-extract"
     },
@@ -2765,7 +2795,7 @@
     },
     {
       "name": "plist",
-      "version": "1.10.0",
+      "version": "1.10.1",
       "license": "MIT",
       "url": "https://github.com/ebarnard/rust-plist/"
     },
@@ -2855,7 +2885,7 @@
     },
     {
       "name": "proc-macro-crate",
-      "version": "3.5.0",
+      "version": "1.3.1",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/bkchr/proc-macro-crate"
     },
@@ -2908,6 +2938,12 @@
       "url": "https://github.com/tafia/quick-xml"
     },
     {
+      "name": "quick-xml",
+      "version": "0.42.0",
+      "license": "MIT",
+      "url": "https://github.com/tafia/quick-xml"
+    },
+    {
       "name": "quote",
       "version": "1.0.46",
       "license": "MIT OR Apache-2.0",
@@ -2915,7 +2951,7 @@
     },
     {
       "name": "rand",
-      "version": "0.10.2",
+      "version": "0.10.3",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-random/rand"
     },
@@ -2993,7 +3029,7 @@
     },
     {
       "name": "reqwest",
-      "version": "0.13.4",
+      "version": "0.13.5",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/seanmonstar/reqwest"
     },
@@ -3023,7 +3059,7 @@
     },
     {
       "name": "rusqlite",
-      "version": "0.40.1",
+      "version": "0.40.2",
       "license": "MIT",
       "url": "https://github.com/rusqlite/rusqlite"
     },
@@ -3352,6 +3388,12 @@
       "url": "https://github.com/mcountryman/simd-adler32"
     },
     {
+      "name": "simdutf8",
+      "version": "0.1.5",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/rusticstuff/simdutf8"
+    },
+    {
       "name": "siphasher",
       "version": "1.0.3",
       "license": "MIT OR Apache-2.0",
@@ -3575,7 +3617,7 @@
     },
     {
       "name": "tauri",
-      "version": "2.12.1",
+      "version": "2.12.2",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
@@ -3659,7 +3701,7 @@
     },
     {
       "name": "tauri-plugin-updater",
-      "version": "2.13.1",
+      "version": "2.13.2",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/plugins-workspace"
     },
@@ -3791,7 +3833,7 @@
     },
     {
       "name": "tokio",
-      "version": "1.53.1",
+      "version": "1.53.2",
       "license": "MIT",
       "url": "https://github.com/tokio-rs/tokio"
     },
@@ -3827,7 +3869,7 @@
     },
     {
       "name": "tokio-util",
-      "version": "0.7.19",
+      "version": "0.7.20",
       "license": "MIT",
       "url": "https://github.com/tokio-rs/tokio"
     },
@@ -3839,13 +3881,19 @@
     },
     {
       "name": "toml_datetime",
+      "version": "0.6.3",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/toml-rs/toml"
+    },
+    {
+      "name": "toml_datetime",
       "version": "1.1.1+spec-1.1.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/toml-rs/toml"
     },
     {
       "name": "toml_edit",
-      "version": "0.25.12+spec-1.1.0",
+      "version": "0.19.15",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/toml-rs/toml"
     },
@@ -3875,7 +3923,7 @@
     },
     {
       "name": "tower-http",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "license": "MIT",
       "url": "https://github.com/tower-rs/tower-http"
     },
@@ -4061,7 +4109,7 @@
     },
     {
       "name": "usearch",
-      "version": "2.26.0",
+      "version": "2.26.4",
       "license": "Apache-2.0",
       "url": "https://github.com/unum-cloud/USearch"
     },
@@ -4085,7 +4133,7 @@
     },
     {
       "name": "uuid",
-      "version": "1.24.0",
+      "version": "1.27.0",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/uuid-rs/uuid"
     },
@@ -4235,7 +4283,7 @@
     },
     {
       "name": "zeroize",
-      "version": "1.9.0",
+      "version": "1.9.1",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/RustCrypto/utils"
     },
