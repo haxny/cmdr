@@ -692,7 +692,7 @@ when no listing matches the exact path. ❗ Sorting before the diff is load-bear
 in its protocol's order (MTP by object handle), so a diff computed against that order carries indices pointing at the
 wrong rows in a pane sorted any other way.
 
-All variants enrich entries with index data and queue `directory-diff` events through `diff_emitter::enqueue_diff`.
+All variants enrich entries with index data and queue `directory-diff` events through `diff_emitter::Publish`.
 A re-stat whose sort-relevant fields changed re-inserts the entry at its new sorted position and reports one
 `DiffChangeType::Move` (`../DETAILS.md` § "Reordered rows"), which is what lets the pane cursor follow the row.
 Natural deduplication: `insert_entry_sorted` returns `None` for duplicates, `remove_entry_by_name` returns `None` if
@@ -719,8 +719,11 @@ Mutation owners (`caching.rs` patch helpers and tag writes, `operations.rs` full
 visible `sequence` and enqueue under ONE cache write lock. Initial revision is zero; hidden-only patches do not
 advance it. Full replacements enrich and sort first, then `diff_rows` compares the committed old projection with the
 pinned replacement projection and stores the final replacement under that lock. An identical raw replacement still
-reconciles visibility drift. Callers never enqueue the same patch again. Lock order is cache then queue; the emitter
-never reads the cache to stamp a batch.
+reconciles visibility drift. Callers never enqueue the same patch again. Lock order is cache then queue, and that is a
+type: the queue's only writer is `diff_emitter::Publish`, which `CacheWrite::get_mut` (`Inner::write_cache`) hands out
+borrowed from the cache's write guard, so nothing enqueues or drops a listing's batches without holding the lock;
+`CacheWrite::remove` drops a closed listing's queue in the same acquisition. The emitter never reads the cache to stamp
+a batch.
 
 **Scratch visibility belongs to the revision.** `CachedListing` captures exact path-keyed decisions at construction,
 so revision zero's count and later rows agree. Ordinary directories have an empty projection. Read boundaries keep

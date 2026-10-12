@@ -141,11 +141,7 @@ impl Inner {
     /// every observer (the change watch among them).
     pub(crate) fn list_directory_end(&self, listing_id: &str) {
         // Remove and discard publication under the mutation lock (cache then queue).
-        {
-            let mut cache = self.cache.write_ignore_poison();
-            cache.remove(listing_id);
-            self.diffs.drop_pending(listing_id);
-        }
+        self.write_cache().remove(listing_id);
 
         // AFTER the cache removal, ❗ never before: an observer's own detached arm
         // reconciles against listing-cache membership, so releasing while the entry
@@ -167,11 +163,11 @@ impl Inner {
         all_selected: bool,
     ) -> Result<ResortResult, ListingLookupError> {
         let visibility = self.scratch_visibility();
-        let mut cache = self.cache.write_ignore_poison();
-        let listing = cache
+        let mut cache = self.write_cache();
+        let (listing, publish) = cache
             .get_mut(listing_id)
             .ok_or_else(|| ListingLookupError::gone(listing_id))?;
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         check_expected(listing_id, listing, expected_sequence)?;
         let old_rows = listing.pane_rows();
         let selected_paths = selected_indices.or(all_selected.then_some(&[])).map(|indices| {
@@ -189,7 +185,7 @@ impl Inner {
         drop(old_rows);
         if listing.set_include_hidden(include_hidden) {
             listing.advance_sequence();
-            self.diffs.drop_pending(listing_id);
+            publish.drop_pending(listing_id);
         }
         listing.touch();
         let rows = listing.pane_rows();
@@ -515,13 +511,13 @@ impl Inner {
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();
-        let mut cache = self.cache.write_ignore_poison();
+        let mut cache = self.write_cache();
 
-        let listing = cache
+        let (listing, publish) = cache
             .get_mut(listing_id)
             .ok_or_else(|| ListingLookupError::gone(listing_id))?;
 
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         check_expected(listing_id, listing, expected_sequence)?;
         if expected_sequence.is_some() && listing.include_hidden() != include_hidden {
             return Err(ListingLookupError::changed(listing_id));
@@ -552,7 +548,7 @@ impl Inner {
         listing.directory_sort_mode = dir_sort_mode;
         listing.sort_order = sort_order;
         listing.advance_sequence();
-        self.diffs.drop_pending(listing_id);
+        publish.drop_pending(listing_id);
 
         let rows = listing.rows(include_hidden);
 
@@ -605,9 +601,9 @@ impl Inner {
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();
-        let mut cache = self.cache.write_ignore_poison();
-        if let Some(listing) = cache.get_mut(listing_id) {
-            listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        let mut cache = self.write_cache();
+        if let Some((listing, publish)) = cache.get_mut(listing_id) {
+            listing.reconcile_scratch(listing_id, visibility, &publish);
             listing.touch();
             let mut entries = entries;
             self.index.enrich(&listing.volume_id, &mut entries);
@@ -622,7 +618,7 @@ impl Inner {
             if let OverlayRows::Recounted(count) = overlay_rows {
                 listing.set_overlay_rows(count);
             }
-            listing.publish_changes(&self.diffs, listing_id, changes);
+            listing.publish_changes(&publish, listing_id, changes);
         }
     }
 }

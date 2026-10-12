@@ -6,8 +6,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-
 use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::operations::ListingLookupError;
@@ -119,11 +117,11 @@ impl Inner {
     ) -> Result<NameFilterResult, ListingLookupError> {
         let visibility = self.scratch_visibility();
         let result = {
-            let mut cache = self.cache.write_ignore_poison();
-            let listing = cache
+            let mut cache = self.write_cache();
+            let (listing, publish) = cache
                 .get_mut(listing_id)
                 .ok_or_else(|| ListingLookupError::gone(listing_id))?;
-            listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+            listing.reconcile_scratch(listing_id, visibility, &publish);
             super::operations::check_expected(listing_id, listing, expected_sequence)?;
             if expected_sequence.is_some() && listing.include_hidden() != include_hidden {
                 return Err(ListingLookupError::changed(listing_id));
@@ -153,7 +151,7 @@ impl Inner {
             // Under the write lock, so no diff can be sequenced between the switch and this.
             let sequence = if changed {
                 let sequence = listing.advance_sequence();
-                self.diffs.drop_pending(listing_id);
+                publish.drop_pending(listing_id);
                 Some(sequence)
             } else {
                 expected_sequence

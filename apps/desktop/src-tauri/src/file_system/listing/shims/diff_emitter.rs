@@ -55,11 +55,11 @@ pub(crate) fn pending_changes_for_test(listing_id: &str) -> Vec<DiffChange> {
 // shim: removed in M4b
 #[cfg(test)]
 pub(crate) fn enqueue_diff(listing_id: &str, batch: DirectoryDiffBatch) {
-    installed().diffs.enqueue(listing_id, batch);
+    installed().write_cache().publish().enqueue(listing_id, batch);
 }
 
 // shim: removed in M4b
 #[cfg(test)]
 pub(crate) fn drop_pending(listing_id: &str) {
-    installed().diffs.drop_pending(listing_id);
+    installed().write_cache().publish().drop_pending(listing_id);
 }

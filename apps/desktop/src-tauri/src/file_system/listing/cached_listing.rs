@@ -8,11 +8,11 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::RwLockReadGuard;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLockReadGuard};
 use std::time::Instant;
 
-use crate::file_system::listing::diff_emitter::DiffQueue;
+use crate::file_system::listing::diff_emitter::{CacheWrite, Publish};
 use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::host::{ListingVolumes, ScratchVisibility};
 use crate::file_system::listing::name_filter::NameFilter;
@@ -47,13 +47,19 @@ impl Inner {
                 return cache;
             }
             drop(cache);
-            let mut cache = self.cache.write_ignore_poison();
+            let mut cache = self.write_cache();
             for id in ids {
-                if let Some(listing) = cache.get_mut(*id) {
-                    listing.reconcile_scratch(id, visibility, &self.diffs);
+                if let Some((listing, publish)) = cache.get_mut(id) {
+                    listing.reconcile_scratch(id, visibility, &publish);
                 }
             }
         }
+    }
+
+    /// The cache under its write lock, the only place a listing's changes are
+    /// published from (`diff_emitter.rs`).
+    pub(crate) fn write_cache(&self) -> CacheWrite<'_, CachedListing> {
+        CacheWrite::lock(&self.cache, &self.diffs)
     }
 
     /// Whether the cache holds `listing_id`.
@@ -392,12 +398,7 @@ impl CachedListing {
 
     /// Commit projection drift BEFORE any consumer interprets old row indices.
     /// Both sides come from captured decisions, never a second ownership sample.
-    pub(crate) fn reconcile_scratch(
-        &mut self,
-        listing_id: &str,
-        visibility: ScratchVisibility,
-        diffs: &Arc<DiffQueue>,
-    ) {
+    pub(crate) fn reconcile_scratch(&mut self, listing_id: &str, visibility: ScratchVisibility, publish: &Publish<'_>) {
         let next = self.scratch_projection.live(visibility);
         if next == self.scratch_projection {
             return;
@@ -415,7 +416,7 @@ impl CachedListing {
             super::diff::diff_rows(&old, &new)
         };
         self.scratch_projection = next;
-        self.publish_transition(diffs, listing_id, changes);
+        self.publish_transition(publish, listing_id, changes);
     }
 
     /// Replacement diffs compare projected rows, including newly admitted paths.
@@ -451,20 +452,20 @@ impl CachedListing {
     /// Publication is part of the mutation, under the same cache write lock.
     pub(crate) fn publish_changes(
         &mut self,
-        diffs: &Arc<DiffQueue>,
+        publish: &Publish<'_>,
         listing_id: &str,
         changes: Vec<super::diff::DiffChange>,
     ) {
         if changes.is_empty() {
             return;
         }
-        self.publish_transition(diffs, listing_id, changes);
+        self.publish_transition(publish, listing_id, changes);
     }
 
-    fn publish_transition(&mut self, diffs: &Arc<DiffQueue>, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
+    fn publish_transition(&mut self, publish: &Publish<'_>, listing_id: &str, changes: Vec<super::diff::DiffChange>) {
         let from_sequence = self.sequence.load(Ordering::Relaxed);
         let sequence = self.advance_sequence();
-        diffs.enqueue(
+        publish.enqueue(
             listing_id,
             super::diff::DirectoryDiffBatch {
                 from_sequence,

@@ -148,9 +148,9 @@ impl Inner {
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();
-        let mut cache = self.cache.write_ignore_poison();
-        let listing = cache.get_mut(listing_id)?;
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        let mut cache = self.write_cache();
+        let (listing, publish) = cache.get_mut(listing_id)?;
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
 
         // Don't insert if an entry with this path already exists. Asked BEFORE
@@ -174,7 +174,7 @@ impl Inner {
         listing.entries_mut().insert(pos, entry.clone());
         let rows = PaneRows { before: None, after };
         listing.publish_changes(
-            &self.diffs,
+            &publish,
             listing_id,
             DiffChange::for_pane(entry, rows).into_iter().collect(),
         );
@@ -213,11 +213,11 @@ impl Inner {
     /// order that stops each removal shifting an entry a later one still points at.
     pub(crate) fn remove_entries_by_paths(&self, listing_id: &str, paths: &[PathBuf]) -> Vec<(PaneRows, FileEntry)> {
         let visibility = self.scratch_visibility();
-        let mut cache = self.cache.write_ignore_poison();
-        let Some(listing) = cache.get_mut(listing_id) else {
+        let mut cache = self.write_cache();
+        let Some((listing, publish)) = cache.get_mut(listing_id) else {
             return Vec::new();
         };
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
 
         let path_strings: Vec<String> = paths.iter().map(|path| path.to_string_lossy().into_owned()).collect();
@@ -260,7 +260,7 @@ impl Inner {
             .iter()
             .filter_map(|(rows, entry)| DiffChange::for_pane(entry.clone(), *rows))
             .collect();
-        listing.publish_changes(&self.diffs, listing_id, changes);
+        listing.publish_changes(&publish, listing_id, changes);
         removed
     }
 
@@ -279,9 +279,9 @@ impl Inner {
         name: &std::ffi::OsStr,
     ) -> Option<(PaneRows, FileEntry)> {
         let visibility = self.scratch_visibility();
-        let mut cache = self.cache.write_ignore_poison();
-        let listing = cache.get_mut(listing_id)?;
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        let mut cache = self.write_cache();
+        let (listing, publish) = cache.get_mut(listing_id)?;
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
         let idx = listing
             .entries()
@@ -294,7 +294,7 @@ impl Inner {
         let entry = listing.entries_mut().remove(idx);
         listing.forget_entry(&entry);
         listing.publish_changes(
-            &self.diffs,
+            &publish,
             listing_id,
             DiffChange::for_pane(entry.clone(), rows).into_iter().collect(),
         );
@@ -319,9 +319,9 @@ impl Inner {
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();
-        let mut cache = self.cache.write_ignore_poison();
-        let listing = cache.get_mut(listing_id)?;
-        listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+        let mut cache = self.write_cache();
+        let (listing, publish) = cache.get_mut(listing_id)?;
+        listing.reconcile_scratch(listing_id, visibility, &publish);
         listing.touch();
 
         let cmp = entry_comparator_with(
@@ -372,7 +372,7 @@ impl Inner {
             entries[idx] = new_entry.clone();
         }
         listing.publish_changes(
-            &self.diffs,
+            &publish,
             listing_id,
             DiffChange::for_pane(new_entry, rows).into_iter().collect(),
         );
@@ -420,11 +420,11 @@ impl Inner {
     pub(crate) fn apply_tags_to_listing(&self, listing_id: &str, updates: Vec<(String, Vec<TagRef>)>) {
         let visibility = self.scratch_visibility();
         {
-            let mut cache = self.cache.write_ignore_poison();
-            let Some(listing) = cache.get_mut(listing_id) else {
+            let mut cache = self.write_cache();
+            let Some((listing, publish)) = cache.get_mut(listing_id) else {
                 return;
             };
-            listing.reconcile_scratch(listing_id, visibility, &self.diffs);
+            listing.reconcile_scratch(listing_id, visibility, &publish);
             listing.touch();
             let changed = listing.set_tags_by_path(updates);
             // A tag moves no row and hides none, so a row answers both sides.
@@ -437,7 +437,7 @@ impl Inner {
                 })
                 .collect();
             drop(pane);
-            listing.publish_changes(&self.diffs, listing_id, changes);
+            listing.publish_changes(&publish, listing_id, changes);
         }
     }
 

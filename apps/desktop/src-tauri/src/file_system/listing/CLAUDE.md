@@ -15,8 +15,8 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
   `CachedListing::rows` is the ONLY filter point, on READ; by-path callers go through `index_of_path` /
   `indices_of_paths`. ❗ A MUTATING caller resolves BEFORE `entries_mut`, which drops both maps. `entries` stays
   private: accessors that grew their own filter were each a row off.
-- **Mutation owners allocate revisions and enqueue stamped batches under the cache write lock**, cache then queue.
-  The emitter coalesces transport, never transition boundaries or revisions. Indices are pane rows, not entry indices.
+- **Mutation owners allocate revisions and enqueue stamped batches under the cache write lock**: the queue's only
+  writer, `Publish`, is borrowed from it (`write_cache`). The emitter coalesces transport, never boundaries or revisions. Indices are pane rows, not entry indices.
   Rows use committed exact-path scratch decisions. Reconcile and publish scratch drift BEFORE an entry mutation or
   guarded index consumption, then check the expected revision. `DETAILS.md` § "Diff event coalescing".
 - **Quick-filter changes share that revision** and drop superseded pending batches under the cache write lock,
