@@ -436,6 +436,12 @@ Each one lands as its own commit with a red test first, and the commit body name
    - The kept maps are part of the change (no more full map rebuild per index event); name it in the commit body. Red
      tests: a `FakeIndex` whose enrich blocks on a gate, and a `file_range` on the same listing returns while it's held;
      a re-read that publishes while the gate is held, and the stale sizes are dropped.
+   - **Part of this change (lead's M3c carry-over):** the replace step (`update_listing_entries`, every full re-read)
+     also enriched under the cache WRITE lock, and enriched routed (archive, git snapshot) re-reads the pipeline skips.
+     It now enriches nothing under its lock; once its rows land, a read the index holds rows for (`Prepared::indexed`)
+     runs the same off-lock, generation-checked routine, and a routed re-read is never enriched. That second ask is what
+     makes "the re-read enriched them at least as recently" true. Red tests: a `file_range` returns while the replace
+     step's enrich is held; a routed re-read keeps no index sizes.
 6. **A Cmdr-made create reaches the panes the way every other local mutation does.** `emit_synthetic_entry_diff` (mkdir,
    mkfile, paste-as-file) becomes one call to the local backend's
    `patch_listing_after_local_mutation(volume_id, parent, MutationEvent::Created(name))`, the function
@@ -935,6 +941,31 @@ commit 2. Change 3's two cells and change 5's two cells (§ "Behavior changes, c
 finds nothing); change 3's and change 5's four cells each seen red, then green; lanes: `desktop-rust-tests`,
 `desktop-rust-clippy`, `desktop-rust-tests-linux`, `desktop-rust-test-sleep`, `desktop-svelte-e2e-playwright` (the
 watcher's re-read and `flush_file_watcher` are what E2E leans on).
+
+Executor notes:
+
+- The engine half lives in `listing/reread.rs`:
+  `Listings::{refresh, begin_read, refresh_from_entries, observe_children}` over `Inner` methods, plus `RefreshOutcome`,
+  `ReadTicket`, the crate-private `ReadGeneration`, and `Inner::update_listing_entries` (moved from `operations.rs`: THE
+  replace step, generation-checked, returning the outcome). The watcher calls `listing_host::listings()` directly; no
+  new shim. `RefreshOutcome::DirectoryGone` carries the path (the wrapper emits it in `directory-deleted`), and
+  `ReadTicket::path()` tells the app what to read.
+- `ReadGeneration` is one engine-wide counter (`Inner::read_generations`), compared per listing against
+  `CachedListing::published_generation`; equal generations both land (the respell writes one read twice). The test shims
+  `publish_replacement` / `update_listing_entries` take a fresh generation per call.
+- Change 3's second cell can't fail on the old code (nothing dropped reads then); it was seen red against a generation
+  deliberately taken at `notify_full_refresh` entry. Change 5's cells and the carry-over's two each build their own
+  engine over a scripted index (`index_sizes_test.rs`); change 3's use the shared engine and the real registry, like the
+  turnstile tests they sit beside.
+- `index_sizes.rs` holds `IndexSizes` (crate-private for now; M4a makes it the public `update_index_sizes` input) and
+  the off-lock routine. The write-back skips a row that stopped being a non-symlink folder in between.
+- Dead after the lift and removed: `get_listing_entries`, the `pipeline::prepare` shim. `has_entry`,
+  `remove_entries_by_paths`, `update_entry_sorted`, `carry_forward_tags`, and `update_listing_entries` shims are now
+  `#[cfg(test)]`.
+- Still under the cache write lock, out of this plan's scope: `resort_listing` runs `index.enrich` over every entry (via
+  `entries_mut`) before re-sorting. Invariant 24's "no exception" doesn't hold until that moves too; it needs its own
+  behavior change and David's OK.
+- `caching.rs` sits at 902 of its 903-line `file-length` entry; M5's split retires it.
 
 ### M4a: The app programs against the public API
 
