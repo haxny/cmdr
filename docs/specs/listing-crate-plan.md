@@ -746,6 +746,32 @@ registry only to resolve. M0's collation golden passes with `ReadingLocale` fixe
 `rg -n 'crate::' apps/desktop/src-tauri/src/file_system/listing --glob '!*test*' | rg -v 'crate::file_system::listing'`
 finds nothing; lanes as M2a plus `desktop-rust-module-cycles` (slow) and `desktop-rust-cfg-gate`.
 
+Executor notes:
+
+- The slot (`host::ListingSeams`) now holds all eight seams; `listing_host::with_app_answers` wires `AppVolumes`,
+  `AppListingIndex`, `AppLeases`, `AppLocale`, and `AppMountTable` (one file each in `listing_host/`), and
+  `test_seams()` is that plus the watch observer, with detached events and runtime. So tests still list through the real
+  registry, index, intl lock, and mount table: `stall_test` / `streaming_test` keep the global registry and
+  `collation_test` the intl lock until M4b's per-test engines (one shared slot can't take a per-test fake).
+- Scratch visibility is `host::ScratchVisibility` in the slot (two atomics), read through `host::scratch_visibility()`
+  inside `visible_rows.rs` as before. Threading it as an argument read once per operation is left to M3a, which rewrites
+  those functions anyway. `staging`'s setters forward (read, flip one flag, write), its getters and
+  `is_hidden_from_listings` are `#[cfg(test)]`.
+- The composer is `listing_host::directory_changed`; `AppListings`, git wiring, and the local mutation patch call it,
+  and `notify_directory_changed` is panes only. Tests calling the engine function directly no longer run the index apply
+  (they asserted panes only).
+- The `#[cfg(test)]` sync start (`list_directory_start_with_volume`) no longer calls `note_root_failure` on a refused
+  read; that is the events adapter's policy, and no test relied on it.
+- `brief_columns.rs` (+ test) moved to `font_metrics/` now, unchanged apart from paths, so the DONE grep holds; M4a
+  still switches it to `with_rows`. `fuzzy_jump.rs`'s inline tests moved to `fuzzy_jump_test.rs` for the same grep.
+- The `cmdr::file_system::listing` tangle is cut: `name_filter.rs` is now only the pure `NameFilter`, and the pane
+  setting moved to `quick_filter.rs`. Routing the stall probe through `host::mounts()` closed `host ↔ stalled_on`, so
+  `StalledOn` now lives in `host/events.rs` (re-exported from `stalled_on`). `module-cycles` shows nothing in
+  `listing/`; the tangles it still warns about (`menu`, `licensing`, `write_operations`, `volumes`, `cmdr-index`,
+  `cmdr-s3`) came in with main.
+- `ListingEnd`'s `Cancelled.volume_id` / `volume_id()` / `path()` and `OpenedListing`'s `volume_id` / `stored_path`
+  carry targeted `dead_code` expects (nothing in the app reads them yet); M3a and M5 drop them.
+
 ### M3a: The engine owns its state (`Listings`)
 
 **Scope.** Introduce `Listings` (an `Arc<Inner>`), `ListingsBuilder`, and `Listings::detached()`. Every static in the
