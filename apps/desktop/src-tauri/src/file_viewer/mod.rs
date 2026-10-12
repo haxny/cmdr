@@ -25,6 +25,7 @@ mod rows;
 mod search_matcher;
 pub mod session;
 mod source;
+mod volume_source;
 pub mod watcher;
 
 #[cfg(test)]
@@ -59,6 +60,8 @@ mod search_cancel_test_support;
 mod search_matcher_test;
 #[cfg(test)]
 mod session_test;
+#[cfg(test)]
+mod volume_source_test;
 #[cfg(test)]
 mod watcher_test;
 

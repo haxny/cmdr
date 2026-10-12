@@ -44,6 +44,8 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   per search; reused across every line. Huge-line chunking (1 MB windows, 256 byte overlap) lives here.
 - `source.rs`: `ByteSource` (positioned `read_at`), `SharedSource`, `LocalFileSource` (`pread` on a held `File`),
   `OpenedFile` (source + size + name), and `SourceOrigin` (how a session opens its file again). See § "Byte sources"
+- `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's held `VolumeRandomReader` (SMB) with a small
+  block cache, and `open_for_viewer`, which `open_session` asks first. See § "A file read through its volume"
 - `headless.rs`: `open_text_backend(path, encoding, cancel) -> HeadlessBackend`, the backend pick with nothing around
   it, for callers that read a file the viewer's way without a window. See § "Headless reads".
 - `*_test.rs`: unit tests for each backend: UTF-8 edge cases, search highlighting, checkpoint math, range reads,
@@ -67,6 +69,40 @@ search share the handle without locking. Pinned by `fetches_and_searches_read_th
 from the origin and stores the new `OpenedFile` on the session: a file replaced under the session (an atomic save, a
 log rotation) is a different inode, and the old handle would keep reading the old one. Appends need no reopen: the held
 handle sees them, and `extend_to` only moves the size.
+
+### A file read through its volume
+
+`open_session` first asks `volume_source::open_for_viewer`: when the pane's volume answers `open_random_reader` (today
+only `SmbVolume`, one smb2 `FileReader`), the session reads the file through it, whether or not the share's OS mount is
+alive. No temp, no `PREVIEW_CAP_BYTES`, no OS open: a 5 GiB log on a share opens and jumps like a local one. Every other
+volume answers `NotSupported` and the open goes on exactly as before (`std::fs`, or a pull into a temp). A routed path
+(`.zip` inner, `.git` portal) never asks: its route mints the volume that serves it.
+
+**Decision**: SMB reads through smb2 even while the mount is alive. **Why**: smbfs adds an OS open and its own 64 KiB
+reads per fetch, and depends on the mount's health; smb2 is already the connection Cmdr browses with, reconnects, and
+reports liveness on. The OS path stays the fallback: any `open_random_reader` error (session down, file missing) falls
+back to it, so a live mount still opens and a missing file still answers `NotFound`.
+
+- **One open per session, a block cache on top.** `VolumeSource` asks the volume for whole 256 KiB blocks
+  (`BLOCK_BYTES`), fetches every missing block of a request in ONE read, and keeps the last 16 full blocks. A jump costs
+  one or two round trips; scrolling back over nearby rows costs none. A short block (the file's tail) is never cached,
+  so an append reads fresh.
+- **A held reader answers only up to the size it opened at.** The backends never read past their `total_bytes`
+  (`FileSource` clamps), so a request past the reader's size means tail mode said the file grew: the source reopens
+  first. Any failed read reopens once and retries (a handle may not outlive a reconnect), then surfaces the error.
+- **The sync core bridges with `tauri::async_runtime::block_on`**, like `materialize.rs`, so it must run off any
+  runtime worker (every caller is a blocking worker or a plain thread). A replaced reader closes on the runtime once the
+  last read holding it lets go (`HeldReader`'s `Drop`).
+- **No media, a watcher only while the mount lives, an index only under 32 MiB.** A volume-read image or PDF opens as
+  text (media renders only from a local volume anyway). The FSEvents watcher needs the OS path, so it runs only when
+  `paths_are_os_visible()`. The background `LineIndex` scan runs only up to `VOLUME_INDEX_MAX_BYTES`: past it the scan
+  can't finish inside the 5 s indexing timeout on an ordinary link and would only compete with the viewport for the link
+  and the cache.
+
+Pinned by `volume_source_test.rs` against a synthetic 5 GiB share: the open and three jumps over one reader with
+bounded bytes each, a 10-fetch drag 100 ms apart on a 200 ms-latency share all inside the 2 s deadline, the reopen on
+error, the reopen on growth, and the cache. The smb2 side is
+`cmdr-smb`'s `smb_integration_random_reader_serves_positioned_reads_over_one_handle`.
 
 ## Raw byte reads
 
@@ -159,8 +195,9 @@ the scheme + range support regardless, so one path (the token scheme for everyth
 path (`/…/foo.zip/inner.txt`) or a path in a repo's virtual `.git` trees (`/…/.git/branches/main/src/lib.rs`), and a
 file on a volume whose paths aren't OS-visible (§ "A file on a volume the OS can't open" below). The viewer core is
 100% `std::fs::File`-based (byte-seek, line-index, encoding, and the `cmdr-media://` handler all `File::open` a real
-path), so there's no `Volume` byte-source seam to thread through. Instead of that larger refactor, `open_session`
-streams the file to a bounded temp and opens THAT — the deliberately simple bridge.
+path), and a route mints a read-only volume with no positioned reads, so `open_session` streams the file to a bounded
+temp and opens THAT — the deliberately simple bridge. A volume that DOES hold a file open for positioned reads skips
+the temp: § "A file read through its volume".
 
 **One code path for both routes.** Both mint a read-only volume, both answer `open_read_stream`, and a second copy of
 the temp lifecycle would drift. The only thing that reads the `RoutedKind` is the error mapping: the archive family
@@ -223,8 +260,7 @@ Pinned on both sides (`materialize_test.rs`, `viewer-i18n-parity.test.ts`).
 
 ### A file on a volume the OS can't open
 
-A phone over ADB or MTP, an SFTP or WebDAV server, and a direct SMB share whose mount went away hand out paths no
-`std::fs` call can open (`adb://R58M1/sdcard/notes.txt`, `mtp://…`, `sftp://…`). `materialize_for_viewer` and
+A phone over ADB or MTP and an SFTP or WebDAV server hand out paths no `std::fs` call can open (`adb://R58M1/sdcard/notes.txt`, `mtp://…`, `sftp://…`). `materialize_for_viewer` and
 `materialize_for_inspect` try the route first (so a `.zip` ON a phone still routes), then `resolve` the path and, when
 the volume's `paths_are_os_visible()` is false, pull the file through that volume with the same `pull_to_temp` a routed
 entry uses. Same cap, refused from the volume's stat before a temp exists; same `.cmdr-viewer-<uuid>/` subdir; same
@@ -232,13 +268,12 @@ cleanup ownership; same local media and text pipeline. Errors map like a portal 
 keep their twins, and anything else (a phone dropping mid-read) is a plain `ViewerError::Io`.
 
 **Decision**: locality is `Volume::paths_are_os_visible()`, not `supports_local_fs_access()`. **Why**: the viewer core
-opens paths with `std::fs`, which is the question `paths_are_os_visible` answers. A direct SMB volume answers `false` to
-`supports_local_fs_access` (its own I/O rides smb2) but `true` here while its share is mounted, and a direct open keeps
-the watcher, tail mode, and no size cap. Once the registry latches the mount gone, the same share pulls through smb2.
+opens paths with `std::fs`, which is the question `paths_are_os_visible` answers.
 
 Which volumes this covers (verified in code, 2026-09-10): ADB, MTP, SFTP, and WebDAV answer `false`, so their files
-materialize; before, each answered `notFound`. Direct SMB answers `true` while mounted and opens directly, as it always
-did. A local disk and an OS-mounted share are unchanged.
+materialize; before, each answered `notFound`. Direct SMB never gets here: it reads through smb2 (§ "A file read through
+its volume"), and only pulls into a temp when that open fails AND the mount is gone. `inspect_file` still pulls a
+mount-gone SMB file, under its own cap. A local disk and an OS-mounted share are unchanged.
 
 **The temp is a snapshot, like a routed temp.** No watcher is spawned for it, so tail mode never extends it and
 `viewer_reload` re-reads the temp, not the phone. The toolbar's tail toggle stays available and does nothing visible,

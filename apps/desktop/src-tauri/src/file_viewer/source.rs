@@ -15,6 +15,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::ViewerError;
+use super::materialize::map_volume_error;
+use super::volume_source::{open_on_volume, size_on_volume};
+use crate::file_system::volume::{Volume, VolumeError};
 
 /// A file the viewer reads by absolute offset.
 pub trait ByteSource: Send + Sync {
@@ -79,12 +82,24 @@ pub struct OpenedFile {
 pub enum SourceOrigin {
     /// A path `std::fs` opens.
     Local(PathBuf),
+    /// A file read through its volume's held random reader (`volume_source.rs`).
+    Volume { volume: Arc<dyn Volume>, path: PathBuf },
 }
 
 impl SourceOrigin {
     pub fn open(&self) -> Result<OpenedFile, ViewerError> {
         match self {
             Self::Local(path) => open_local(path),
+            Self::Volume { .. } => self.open_volume().map_err(|e| map_volume_error(e, None)),
+        }
+    }
+
+    /// [`open`](Self::open) for a volume origin, keeping the volume's own error so a
+    /// caller can tell `NotSupported` (fall back) from a real failure.
+    pub fn open_volume(&self) -> Result<OpenedFile, VolumeError> {
+        match self {
+            Self::Local(_) => Err(VolumeError::NotSupported),
+            Self::Volume { volume, path } => open_on_volume(volume, path),
         }
     }
 
@@ -92,6 +107,7 @@ impl SourceOrigin {
     pub fn current_size(&self) -> Result<u64, ViewerError> {
         match self {
             Self::Local(path) => Ok(std::fs::metadata(path)?.len()),
+            Self::Volume { volume, path } => size_on_volume(volume, path),
         }
     }
 }
@@ -122,10 +138,10 @@ pub fn file_name_of(path: &Path) -> String {
         .unwrap_or_else(|| path.display().to_string())
 }
 
-/// Up to `limit` bytes from the start of `source`, for the encoding sniff and the BOM
-/// check.
-pub fn read_head(source: &dyn ByteSource, limit: usize) -> Result<Vec<u8>, ViewerError> {
-    let mut head = vec![0u8; limit];
+/// Up to `limit` bytes from the start of a `total_bytes`-long file, for the encoding
+/// sniff and the BOM check. Never asks past the end (see `FileSource::read_window`).
+pub fn read_head(source: &dyn ByteSource, total_bytes: u64, limit: usize) -> Result<Vec<u8>, ViewerError> {
+    let mut head = vec![0u8; total_bytes.min(limit as u64) as usize];
     let read = source.read_at(0, &mut head)?;
     head.truncate(read);
     Ok(head)

@@ -41,12 +41,12 @@ pub fn test_only_open_call_count() -> usize {
 
 /// Read enough of the file to decide where its content starts, through the one rule
 /// all three backends share (`row_walk::content_start`).
-fn read_content_start(source: &SharedSource, encoding: FileEncoding) -> Result<u64, ViewerError> {
+fn read_content_start(source: &SharedSource, total_bytes: u64, encoding: FileEncoding) -> Result<u64, ViewerError> {
     let bom = encoding.bom_bytes();
     if bom.is_empty() {
         return Ok(0);
     }
-    let head = read_head(source.as_ref(), bom.len())?;
+    let head = read_head(source.as_ref(), total_bytes, bom.len())?;
     Ok(row_walk::content_start(&head, encoding))
 }
 
@@ -105,7 +105,7 @@ impl LineIndexBackend {
 
         // Walk the file's rows ONCE, recording both coordinates as we go. A second pass
         // to recover either one would read the file twice and break invariant I1.
-        let content_start = read_content_start(&file.source, encoding)?;
+        let content_start = read_content_start(&file.source, total_bytes, encoding)?;
 
         let mut reader = RowReader::new(
             FileSource::new(file.source.clone(), total_bytes),

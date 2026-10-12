@@ -372,6 +372,13 @@ const INITIAL_LINE_COUNT: usize = 200;
 /// This prevents hammering slow disks or network drives.
 const INDEXING_TIMEOUT_SECS: u64 = 5;
 
+/// The biggest file read through its volume (a share, over smb2) that still gets the
+/// background line index. Past it the scan can't finish inside
+/// [`INDEXING_TIMEOUT_SECS`] on an ordinary link (32 MiB is about 0.3 s at 1 Gbit/s and
+/// 2.7 s at 100 Mbit/s), so it would only compete with the viewport's own reads for
+/// the link and the block cache before being cancelled.
+const VOLUME_INDEX_MAX_BYTES: u64 = 32 * 1024 * 1024;
+
 /// Generates a unique session ID.
 pub(super) fn generate_session_id() -> String {
     uuid::Uuid::new_v4().to_string()
@@ -483,27 +490,43 @@ fn open_session_core(
     // `"root"`. A view switch hands in the copy its window already holds (`reuse`), so
     // it pulls nothing. The temp goes when the last session holding it closes, or right
     // here if this open fails. See `materialize`.
-    let temp = match reuse {
-        Some(temp) => Some(temp),
-        None => super::materialize::materialize_for_viewer(&requested, volume_id, open)?
+    //
+    // Before both: a volume that holds a file open for positioned reads (SMB, through
+    // smb2) serves it directly, mount or no mount, with no temp and no size cap. See
+    // `volume_source`.
+    let on_volume = match reuse {
+        Some(_) => None,
+        None => super::volume_source::open_for_viewer(&requested, volume_id),
+    };
+    let temp = match (reuse, &on_volume) {
+        (Some(temp), _) => Some(temp),
+        (None, Some(_)) => None,
+        (None, None) => super::materialize::materialize_for_viewer(&requested, volume_id, open)?
             .map(|file| Arc::new(PreviewTemp::new(file, requested.clone(), volume_id))),
     };
     let file_path = temp
         .as_ref()
         .map_or_else(|| requested.clone(), |temp| temp.temp_file.clone());
-    let is_extracted = temp.is_some();
-
-    if !file_path.exists() {
-        return Err(ViewerError::NotFound { path: path.to_string() });
-    }
-    if file_path.is_dir() {
-        return Err(ViewerError::IsDirectory);
-    }
 
     // Stat and open ONCE: every backend this session builds reads through this handle.
-    let origin = SourceOrigin::Local(file_path.clone());
-    let opened = origin.open()?;
+    // A temp is a snapshot of a file the OS can't watch, and a volume-read file is
+    // watchable only while its mount is there, so those decide the watcher too.
+    let (origin, opened, watchable) = match on_volume {
+        Some(found) => (found.origin, found.opened, found.os_visible),
+        None => {
+            if !file_path.exists() {
+                return Err(ViewerError::NotFound { path: path.to_string() });
+            }
+            if file_path.is_dir() {
+                return Err(ViewerError::IsDirectory);
+            }
+            let origin = SourceOrigin::Local(file_path.clone());
+            let opened = origin.open()?;
+            (origin, opened, temp.is_none())
+        }
+    };
     let file_size = opened.total_bytes;
+    let on_a_volume = !matches!(origin, SourceOrigin::Local(_));
 
     // Classify by magic bytes (unless the caller forced text, e.g. "View as text").
     // A media kind (Image/Pdf on a local volume) opens a no-op session that serves bytes
@@ -511,12 +534,17 @@ fn open_session_core(
     // An extracted image/PDF renders inline too: the media session serves the temp via
     // `cmdr-media://` and holds the same shared `temp`, so its temp lives as long as the
     // session. `try_open_media` returns `None` (falls through to text) for non-media kinds.
-    if !force_text && let Some(result) = media_session::try_open_media(&file_path, file_size, temp.clone()) {
+    // A volume-read file has no local path to serve, and media renders only from a
+    // local volume anyway (`media_session::is_local_posix_path`).
+    if !force_text
+        && !on_a_volume
+        && let Some(result) = media_session::try_open_media(&file_path, file_size, temp.clone())
+    {
         return result;
     }
 
     // Auto-detect encoding at open time. Used as the initial encoding for every backend.
-    let detected_encoding = read_head(opened.source.as_ref(), DETECT_HEAD_BYTES)
+    let detected_encoding = read_head(opened.source.as_ref(), opened.total_bytes, DETECT_HEAD_BYTES)
         .map(|head| detect_from_head(&head))
         .unwrap_or(FileEncoding::Utf8);
 
@@ -525,10 +553,12 @@ fn open_session_core(
             let b = FullLoadBackend::open_source(&opened, detected_encoding)?;
             (Box::new(b), BackendType::FullLoad, None)
         } else {
-            // Start with ByteSeek (instant), then upgrade to LineIndex in background
+            // Start with ByteSeek (instant), then upgrade to LineIndex in background,
+            // unless the file is on a volume and too big for the scan to finish.
             let b = ByteSeekBackend::open_source(&opened, detected_encoding)?;
-            let cancel = Arc::new(AtomicBool::new(false));
-            (Box::new(b), BackendType::ByteSeek, Some(cancel))
+            let index = !on_a_volume || file_size <= VOLUME_INDEX_MAX_BYTES;
+            let upgrading = index.then(|| Arc::new(AtomicBool::new(false)));
+            (Box::new(b), BackendType::ByteSeek, upgrading)
         };
 
     // Get initial lines
@@ -592,7 +622,7 @@ fn open_session_core(
     //
     // Tests can opt out via `CMDR_VIEWER_DISABLE_WATCHER=1`. A materialized temp is a
     // snapshot of a file the OS can't watch, so it gets no watcher (nothing to tail).
-    if !is_extracted && std::env::var("CMDR_VIEWER_DISABLE_WATCHER").is_err() {
+    if watchable && std::env::var("CMDR_VIEWER_DISABLE_WATCHER").is_err() {
         spawn_watcher_manager(session_id.clone(), session_path, watcher_stop_for_thread);
     }
 

@@ -53,12 +53,12 @@ pub struct ByteSeekBackend {
 
 /// The file's content start: past a BOM if it has one, through the one rule all three
 /// backends share (`row_walk::content_start`), so row 0 is the same row in each of them.
-fn detect_content_start(source: &dyn ByteSource, encoding: FileEncoding) -> u64 {
+fn detect_content_start(source: &dyn ByteSource, total_bytes: u64, encoding: FileEncoding) -> u64 {
     let bom = encoding.bom_bytes();
     if bom.is_empty() {
         return 0;
     }
-    match read_head(source, bom.len()) {
+    match read_head(source, total_bytes, bom.len()) {
         Ok(head) => row_walk::content_start(&head, encoding),
         Err(_) => 0,
     }
@@ -83,7 +83,7 @@ impl ByteSeekBackend {
     /// Open over a file the session already holds open. Reads only the BOM and one
     /// bytes-per-row sample, so it stays instant on any file and any volume.
     pub fn open_source(file: &OpenedFile, encoding: FileEncoding) -> Result<Self, ViewerError> {
-        let content_start = detect_content_start(file.source.as_ref(), encoding);
+        let content_start = detect_content_start(file.source.as_ref(), file.total_bytes, encoding);
         let bytes_per_row = sample_bytes_per_row(&file.source, encoding, file.total_bytes, content_start)?;
 
         Ok(Self {
