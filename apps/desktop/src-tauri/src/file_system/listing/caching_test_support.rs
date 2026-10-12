@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 use super::cached_listing::{CachedListing, epoch_millis_now, listing_cache};
 use super::operations::list_directory_end;
+use super::pipeline::{OverlayRows, Prepared};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
@@ -176,13 +177,12 @@ impl TestListing {
             super::installed(),
             self.volume_id,
             self.path,
-            self.entries,
+            Prepared::for_test(self.entries, OverlayRows::Recounted(self.overlay_rows)),
             self.include_hidden,
             self.sort_by,
             self.sort_order,
             self.directory_sort_mode,
-        )
-        .with_overlay_rows(self.overlay_rows);
+        );
         listing.sequence.store(self.sequence, Ordering::Relaxed);
         listing.last_accessed_ms.store(self.last_accessed_ms, Ordering::Relaxed);
         listing_cache()

@@ -145,8 +145,10 @@ async fn a_diff_patch_leaves_the_contributed_row_count_alone() {
     ));
     crate::file_system::listing::update_listing_entries(
         listing.id(),
-        entries,
-        crate::file_system::listing::OverlayRows::Unchanged,
+        crate::file_system::listing::pipeline::Prepared::for_test(
+            entries,
+            crate::file_system::listing::OverlayRows::Unchanged,
+        ),
     );
 
     assert!(

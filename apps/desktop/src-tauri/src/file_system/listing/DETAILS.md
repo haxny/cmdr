@@ -30,13 +30,15 @@ that cost, and the two rules that keep it cheap: `../DETAILS.md` § "Arming a li
 
 ## The overlay step
 
-Between the index enrich and the sort, `read_directory_with_progress` calls `host::overlays::decorate`, which
-folds in rows a PANE sees that the volume doesn't hold. Every other read that builds or replaces a listing does the
-same, in the same place, so a refresh can't quietly strip them: `listing/operations.rs` (the test-only sync start),
-`caching::notify_full_refresh_locked` (a backend's `FullRefresh`), `foreign_path::respell_listing` (a backend swap's
-re-read), and `file_system/watcher.rs`'s `handle_directory_change` (the watcher's full re-read, also ⌘R). Five paths in
-all, each pinned by `overlay_read_paths_test.rs`. A device backend's `Replaced` hand-over is the one replacement that
-runs no overlay and records zero contributed rows.
+Every read that builds or replaces a listing runs ONE step between the volume's answer and the sort: `pipeline.rs`'s
+`Inner::prepare`, the index enrich and then the overlays, which fold in rows a PANE sees that the volume doesn't hold.
+It returns a `Prepared`, which nothing else can build, and `CachedListing::new` and `update_listing_entries` take
+nothing else, so a read path that skips the overlays doesn't compile. Five paths go through it, each pinned by
+`overlay_read_paths_test.rs`: the streaming read, the test-only sync start (`operations.rs`), a backend's `FullRefresh`
+(`caching::notify_full_refresh_locked`), a backend swap's re-read (`foreign_path::respell_listing`), and the watcher's
+full re-read, also ⌘R (`file_system/watcher.rs`'s `handle_directory_change`). Its `std::fs` fallback, with no volume to
+decorate through, keeps the count the listing had (`OverlayRows::Unchanged`). A device backend's `Replaced` hand-over
+runs no overlay and records zero contributed rows (`Inner::prepare_handed_over`).
 
 Today's one contributor is the git portal, which puts the six virtual category rows into a repo's `.git/` listing.
 Placement matters three ways:

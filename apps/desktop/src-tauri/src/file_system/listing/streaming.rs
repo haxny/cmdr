@@ -16,7 +16,8 @@ use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::foreign_path::Listed;
 use crate::file_system::listing::host::{ListingEnd, ListingEvents, OpenedListing, Unregistered};
 use crate::file_system::listing::listing_id::ListingId;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries_with};
+use crate::file_system::listing::pipeline::ReadBy;
+use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use cmdr_fs::benchmark;
 use cmdr_fs::volume::VolumeError;
@@ -321,7 +322,7 @@ impl Inner {
         let asked_path = path;
         let Listed {
             path: listed_path,
-            mut entries,
+            entries,
         } = listed;
         let path = listed_path.as_path();
         let read_dir_time = read_start.elapsed();
@@ -338,26 +339,25 @@ impl Inner {
         }
 
         // Enrich directory entries with index data (recursive_size etc.) before sorting,
-        // so that sort-by-size works correctly for directories. A routed volume has no
-        // drive index (an archive's inner paths and a git snapshot's paths aren't real
-        // FS paths), so enrich/verify are skipped.
+        // so that sort-by-size works correctly for directories, and fold in the rows a
+        // PANE sees that the volume doesn't hold (`pipeline.rs`). A routed volume has
+        // no drive index (an archive's inner paths and a git snapshot's paths aren't
+        // real FS paths), so enrich and verify are skipped.
         let enrich_start = std::time::Instant::now();
+        let read_by = ReadBy::Volume {
+            volume: &volume,
+            routed: is_routed,
+        };
+        let mut entries = self.prepare(read_by, volume_id, path, entries).await;
         if !is_routed {
-            self.index.enrich(volume_id, &mut entries);
             self.index.verify_directory(volume_id, path);
         }
         let enrich_ms = enrich_start.elapsed().as_millis();
 
-        // Fold in the rows a PANE sees that the volume doesn't hold: today the git
-        // portal's six category rows on a repo's `.git/` listing. AFTER enrich (a
-        // contributed row has no drive-index entry) and BEFORE the sort, so the rows
-        // land where the pane's sort puts them. `host/overlays.rs`.
-        let overlay_rows = self.decorate(&volume, path, &mut entries).await;
-
         // Sort entries
         benchmark::log_event("sort START");
         let sort_start = std::time::Instant::now();
-        sort_entries_with(&self.collator(), &mut entries, sort_by, sort_order, dir_sort_mode);
+        entries.sort(&self.collator(), sort_by, sort_order, dir_sort_mode);
         let sort_ms = sort_start.elapsed().as_millis();
         benchmark::log_event("sort END");
 
@@ -378,8 +378,7 @@ impl Inner {
             sort_by,
             sort_order,
             dir_sort_mode,
-        )
-        .with_overlay_rows(overlay_rows);
+        );
         let cached_path = listing.path.as_path().to_path_buf();
         // The row count comes off the listing's own map, so the number the frontend
         // sizes its scroller with is produced by the same filter every later fetch

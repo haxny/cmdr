@@ -15,6 +15,7 @@ pub(crate) mod name_filter;
 pub(crate) mod operations;
 pub(crate) mod orphan_reaper;
 pub(crate) mod path_index;
+pub(crate) mod pipeline;
 pub(crate) mod quick_filter;
 mod shims;
 pub use quick_filter::NameFilterResult;
@@ -55,10 +56,11 @@ pub(crate) use caching::{
     update_entry_sorted,
 };
 // Notification API for volume mutations
-pub(crate) use cached_listing::OverlayRows;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub(crate) use operations::volume_ids_with_listings;
 pub(crate) use operations::{get_listing_entries, update_listing_entries};
+#[cfg(test)]
+pub(crate) use pipeline::OverlayRows;
 
 // The app's half of `cmdr-archive`'s live-content watch: what a refresh does to
 // the listing cache, which is this module's side of the seam.

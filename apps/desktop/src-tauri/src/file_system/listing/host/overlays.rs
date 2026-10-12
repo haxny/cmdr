@@ -19,21 +19,18 @@
 //! fresh-listing oracle declines it (`listing/caching.rs`).
 //!
 //! The host hands its contributors to the engine's builder, in order
-//! (`ListingsBuilder::overlay`), and the pipeline folds over whatever the engine
-//! holds.
+//! (`ListingsBuilder::overlay`), and the read pipeline (`pipeline.rs`) folds
+//! over whatever the engine holds, between the enrich and the sort, on every
+//! read that builds or replaces a listing.
 
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::path::Path;
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
-use tokio::runtime::Handle;
 
-use crate::file_system::listing::engine::Inner;
-
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-pub(crate) use crate::file_system::listing::shims::overlays::*;
+// shim: removed in M4b. The tests that pin the overlay step alone name it here.
+#[cfg(test)]
+pub(crate) use crate::file_system::listing::pipeline::test_support::decorate;
 
 /// A source of extra rows for one kind of directory.
 pub trait ListingOverlay: Send + Sync + 'static {
@@ -52,66 +49,4 @@ pub trait ListingOverlay: Send + Sync + 'static {
     /// The rows to fold in. Runs on the blocking pool, so it may open a
     /// repository or hit the disk.
     fn extra_entries(&self, volume: &dyn Volume, path: &Path) -> Vec<FileEntry>;
-}
-
-impl Inner {
-    /// Folds every applicable contributor's rows into `entries`, and reports how
-    /// many rows they added.
-    ///
-    /// **A contributed row SHADOWS a real one of the same name.** A repo created by
-    /// an older git carries a real (deprecated) `.git/branches/` directory, and the
-    /// portal's `branches` row is the one the user came for; showing two rows called
-    /// `branches` would be worse than either.
-    ///
-    /// Sorting happens after this returns, so a contributor hands rows over in any
-    /// order.
-    pub(crate) async fn decorate(&self, volume: &Arc<dyn Volume>, path: &Path, entries: &mut Vec<FileEntry>) -> usize {
-        let applicable: Vec<Arc<dyn ListingOverlay>> = self
-            .overlays()
-            .into_iter()
-            .filter(|overlay| overlay.applies_to(volume.as_ref(), path))
-            .collect();
-        if applicable.is_empty() {
-            return 0;
-        }
-
-        let contributed = gather(&self.runtime, applicable, Arc::clone(volume), path.to_path_buf()).await;
-        if contributed.is_empty() {
-            return 0;
-        }
-
-        let names: HashSet<&str> = contributed.iter().map(|entry| entry.name.as_str()).collect();
-        entries.retain(|entry| !names.contains(entry.name.as_str()));
-        let added = contributed.len();
-        entries.extend(contributed);
-        added
-    }
-}
-
-/// Runs the applicable contributors on the host runtime's blocking pool: one of
-/// them opens a repository and counts refs, which is not work for an async
-/// worker.
-///
-/// A contributor that panics costs its rows and nothing else. The volume's own
-/// entries are already in hand by the time this runs, and a pane showing a
-/// repo's real `.git/` contents beats a pane showing a listing error because
-/// `gix` tripped over a damaged object.
-async fn gather(
-    runtime: &Handle,
-    overlays: Vec<Arc<dyn ListingOverlay>>,
-    volume: Arc<dyn Volume>,
-    path: PathBuf,
-) -> Vec<FileEntry> {
-    runtime
-        .spawn_blocking(move || {
-            overlays
-                .iter()
-                .flat_map(|overlay| overlay.extra_entries(volume.as_ref(), &path))
-                .collect()
-        })
-        .await
-        .unwrap_or_else(|e| {
-            log::warn!(target: "listing", "a listing overlay panicked, listing without its rows: {e}");
-            Vec::new()
-        })
 }

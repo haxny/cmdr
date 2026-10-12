@@ -143,7 +143,11 @@ pub(crate) async fn notify_full_refresh(
 // shim: removed in M4b
 #[cfg(test)]
 pub(crate) fn publish_replacement(listing_id: &str, entries: Vec<FileEntry>, overlay_rows: usize) {
-    installed().publish_replacement(listing_id, entries, overlay_rows);
+    use crate::file_system::listing::pipeline::{OverlayRows, Prepared};
+    installed().publish_replacement(
+        listing_id,
+        Prepared::for_test(entries, OverlayRows::Recounted(overlay_rows)),
+    );
 }
 
 /// `Inner::refresh_archive_listings` on the installed engine.

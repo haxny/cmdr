@@ -4,7 +4,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- **engine.rs** (`Listings`). Read: **streaming.rs**, **stall.rs**. App seams: **host/**. Cache and mutate:
+- **engine.rs** (`Listings`). Read: **streaming.rs**, **stall.rs**, **pipeline.rs**. App seams: **host/**. Cache and mutate:
   **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**, **path_index.rs**, **name_filter.rs**,
   **quick_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
   `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
@@ -22,8 +22,8 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 - **Quick-filter changes share that revision** and drop superseded pending batches under the cache write lock,
   never after unlocking. Guard selection remapping before changing the filter. `DETAILS.md` § "The quick filter and in-flight diffs".
 - **Refreshes of ONE directory stay serialized** (`notify_full_refresh`), or an older read lands last.
-- **`host::overlays::decorate` folds in rows no volume holds**, between enrich and sort, in all FIVE read paths
-  (`DETAILS.md` § "The overlay step"); miss one and a refresh strips them.
+- **Overlay rows fold in through `pipeline.rs`'s `Prepared`**, the only entries a listing stores. `DETAILS.md` §
+  "The overlay step".
 - **A close notifies the observers (`host/observers.rs`) AFTER the cache removal**, ❌ never before: an observer's detached arm
   reconciles against cache membership.
 - **The orphan reaper keys on `last_accessed_ms`**, bumped by reads, cache patches, and the panes'

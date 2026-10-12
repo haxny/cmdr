@@ -212,8 +212,10 @@ fn safety_replacement_diffs_current_rows_against_its_final_sorted_entries() {
     // A reader returns ascending protocol order after a sort and another mutation committed.
     super::operations::update_listing_entries(
         left.id(),
-        vec![file(L, "a", 1, 1), file(L, "c", 1, 1)],
-        super::cached_listing::OverlayRows::Recounted(0),
+        super::pipeline::Prepared::for_test(
+            vec![file(L, "a", 1, 1), file(L, "c", 1, 1)],
+            super::cached_listing::OverlayRows::Recounted(0),
+        ),
     );
     let batches = super::diff_emitter::pending_batches_for_test(left.id());
     assert_eq!(batches.len(), 2);

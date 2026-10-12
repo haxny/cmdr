@@ -17,6 +17,8 @@ use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::host::{ListingVolumes, ScratchVisibility};
 use crate::file_system::listing::name_filter::NameFilter;
 use crate::file_system::listing::path_index::PathIndexCache;
+pub(crate) use crate::file_system::listing::pipeline::OverlayRows;
+use crate::file_system::listing::pipeline::Prepared;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::visible_rows::{ScratchProjection, VisibleRows, VisibleRowsCache};
 use cmdr_fs::entry::{FileEntry, TagRef};
@@ -158,25 +160,11 @@ pub(crate) struct CachedListing {
     overlay_rows: usize,
 }
 
-/// What a cache update knows about the [`ListingOverlay`](crate::file_system::listing::host::ListingOverlay)
-/// rows inside the entries it is about to write.
-///
-/// The two travel together because they must be written under ONE lock
-/// acquisition: a walker asking the fresh-listing oracle in between would see
-/// decorated entries described by the previous count, and six rows with no inode
-/// behind them would go to a delete walker.
-pub(crate) enum OverlayRows {
-    /// The overlays ran again for this write, and this is what they contributed.
-    Recounted(usize),
-    /// The overlays did not run: this write patches entries a previous read
-    /// already decorated, so the stored count still describes them.
-    Unchanged,
-}
-
 impl CachedListing {
     /// A listing freshly filled from a volume read, for `engine`: sequence 0,
     /// created and accessed now. `include_hidden` is the pane's setting at the
-    /// time.
+    /// time. The entries arrive [`Prepared`] (enriched and decorated, the read
+    /// pipeline's only output) and sorted.
     ///
     /// ❗ Build it before taking the cache: it asks the volume seam for the
     /// listing's spelling. It reads its epoch and scratch settings off `engine`
@@ -189,12 +177,19 @@ impl CachedListing {
         engine: &Inner,
         volume_id: String,
         path: PathBuf,
-        entries: Vec<FileEntry>,
+        prepared: Prepared,
         include_hidden: bool,
         sort_by: SortColumn,
         sort_order: SortOrder,
         directory_sort_mode: DirectorySortMode,
     ) -> Self {
+        let (entries, overlay_rows) = prepared.into_parts();
+        // A new listing has no earlier count for `Unchanged` to keep, so it
+        // carries none.
+        let overlay_rows = match overlay_rows {
+            OverlayRows::Recounted(count) => count,
+            OverlayRows::Unchanged => 0,
+        };
         let scratch_projection =
             ScratchProjection::for_entries(&entries, &ScratchProjection::default(), engine.scratch_visibility());
         Self {
@@ -213,15 +208,8 @@ impl CachedListing {
             created_at: Instant::now(),
             last_accessed_ms: AtomicU64::new(engine.epoch_millis_now()),
             epoch: engine.epoch,
-            overlay_rows: 0,
+            overlay_rows,
         }
-    }
-
-    /// Records that `count` of the entries came from a listing overlay. See
-    /// [`Self::has_overlay_rows`].
-    pub(crate) fn with_overlay_rows(mut self, count: usize) -> Self {
-        self.overlay_rows = count;
-        self
     }
 
     /// Replaces the overlay-row count, for a re-read that ran the overlays

@@ -9,6 +9,7 @@ use super::diff::{DiffChangeType, compute_diff};
 use super::diff_emitter::{hold_for_test, pending_changes_for_test, take_batches_for_test};
 use super::name_filter::NameFilter;
 use super::operations::{find_file_index, get_file_at, get_total_count, update_listing_entries};
+use super::pipeline::Prepared;
 use super::quick_filter::set_listing_name_filter;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_fs::entry::FileEntry;
@@ -361,7 +362,7 @@ fn a_re_read_that_crossed_a_filter_change_is_diffed_again_in_the_new_rows() {
     let fresh = sorted(fresh);
     set_listing_name_filter(listing.id(), Some("pdf"), false, None, &[], false).expect("listing is cached");
     hold_for_test(listing.id());
-    update_listing_entries(listing.id(), fresh, OverlayRows::Unchanged);
+    update_listing_entries(listing.id(), Prepared::for_test(fresh, OverlayRows::Unchanged));
     let sent = take_batches_for_test(listing.id())
         .into_iter()
         .flat_map(|batch| batch.changes);

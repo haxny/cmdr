@@ -14,9 +14,12 @@ use uuid::Uuid;
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+use crate::file_system::listing::cached_listing::CachedListing;
 pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
-use crate::file_system::listing::cached_listing::{CachedListing, OverlayRows};
 use crate::file_system::listing::engine::Inner;
+#[cfg(test)]
+use crate::file_system::listing::pipeline::ReadBy;
+use crate::file_system::listing::pipeline::{OverlayRows, Prepared};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries_with};
 #[cfg(test)]
 use cmdr_fs::benchmark;
@@ -82,22 +85,21 @@ impl Inner {
         // Generate listing ID
         let listing_id = Uuid::new_v4().to_string();
 
-        // Enrich directory entries with index data (recursive_size etc.) before sorting,
-        // so that sort-by-size works correctly for directories. A routed volume has no
-        // drive index (its paths aren't real FS paths), so enrich/verify are skipped.
-        let mut all_entries = all_entries;
+        // Enrich (before sorting, so sort-by-size works for directories) and fold
+        // in the rows a PANE sees that the volume doesn't hold, as the streaming
+        // path does (`pipeline.rs`). A routed volume has no drive index (its paths
+        // aren't real FS paths), so enrich and verify are skipped.
+        let read_by = ReadBy::Volume {
+            volume: &volume,
+            routed: is_routed,
+        };
+        let mut all_entries = self.prepare(read_by, volume_id, path, all_entries).await;
         if !is_routed {
-            self.index.enrich(volume_id, &mut all_entries);
             self.index.verify_directory(volume_id, path);
         }
 
-        // Fold in the rows a PANE sees that the volume doesn't hold (the git
-        // portal's six category rows on a repo's `.git/`), between enrich and the
-        // sort for the same reasons as the streaming path. `host/overlays.rs`.
-        let overlay_rows = self.decorate(&volume, path, &mut all_entries).await;
-
         // Sort the entries
-        sort_entries_with(&self.collator(), &mut all_entries, sort_by, sort_order, dir_sort_mode);
+        all_entries.sort(&self.collator(), sort_by, sort_order, dir_sort_mode);
 
         // Cache the entries FIRST (watcher will read from here), then read the row
         // count back off the listing's own map so the number the frontend sizes its
@@ -111,8 +113,7 @@ impl Inner {
             sort_by,
             sort_order,
             dir_sort_mode,
-        )
-        .with_overlay_rows(overlay_rows);
+        );
         let total_count = listing.rows(include_hidden).len();
         let cached_path = listing.path.as_path().to_path_buf();
         self.cache.write_ignore_poison().insert(listing_id.clone(), listing);
@@ -597,9 +598,10 @@ impl Inner {
         Some((listing.path.as_path().to_path_buf(), listing.entries().to_vec()))
     }
 
-    /// Updates the entries in the listing cache (after watcher detects changes).
-    /// Re-sorts using the stored sort parameters so the cache stays consistent.
-    pub(crate) fn update_listing_entries(&self, listing_id: &str, entries: Vec<FileEntry>, overlay_rows: OverlayRows) {
+    /// Replaces a listing's entries with a re-read's (`pipeline.rs`), re-sorted
+    /// the listing's way, and publishes what changed.
+    pub(crate) fn update_listing_entries(&self, listing_id: &str, prepared: Prepared) {
+        let (entries, overlay_rows) = prepared.into_parts();
         // Both resolved before the lock: each asks the host.
         let visibility = self.scratch_visibility();
         let collator = self.collator();

@@ -9,9 +9,9 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::WatchCoverage;
 
 use crate::file_system::listing::cached_listing::CachedListing;
-use crate::file_system::listing::cached_listing::OverlayRows;
 use crate::file_system::listing::diff::{DiffChange, PaneRows};
 use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::pipeline::{Prepared, ReadBy};
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator_with};
 use cmdr_fs::entry::{FileEntry, TagRef};
 pub use cmdr_fs::volume::DirectoryChange;
@@ -500,14 +500,11 @@ impl Inner {
             }
             DirectoryChange::Replaced(entries) => {
                 // The backend already re-read the directory, so there's nothing to ask
-                // it for: enrich once for the volume, then publish per listing. This is
+                // it for: prepare once for the volume, then publish per listing. This is
                 // where the diffing a device backend used to do for itself lives now.
-                let mut entries = entries;
-                self.index.enrich(volume_id, &mut entries);
+                let prepared = self.prepare_handed_over(volume_id, entries);
                 for (listing_id, ..) in &listings {
-                    // Zero overlay rows: this arm is a device backend handing over
-                    // its own re-read (SMB, MTP), and no overlay contributes to one.
-                    self.publish_replacement(listing_id, entries.clone(), 0);
+                    self.publish_replacement(listing_id, prepared.clone());
                 }
             }
             DirectoryChange::FullRefresh => {
@@ -674,16 +671,14 @@ impl Inner {
     /// that order carries indices that point at the wrong rows in a pane sorted any
     /// other way.
     ///
-    /// `entries` must already be enriched with index data, so the rows the frontend
-    /// receives carry the recursive sizes the cache is about to hold. Callers enrich
-    /// ONCE per directory rather than once per listing.
-    ///
-    /// `overlay_rows` is how many of `entries` a listing overlay contributed, which
-    /// the listing has to keep recorded: a `.git/` listing that regained its six
-    /// virtual rows in this refresh must not read as authoritative to a walker
-    /// afterwards (`host/overlays.rs`).
-    pub(crate) fn publish_replacement(&self, listing_id: &str, entries: Vec<FileEntry>, overlay_rows: usize) {
-        self.update_listing_entries(listing_id, entries, OverlayRows::Recounted(overlay_rows));
+    /// The entries arrive [`Prepared`]: enriched, so the rows the frontend
+    /// receives carry the recursive sizes the cache is about to hold, and
+    /// decorated, with the count of contributed rows the listing has to keep: a
+    /// `.git/` listing that regained its six virtual rows in this refresh must not
+    /// read as authoritative to a walker afterwards (`host/overlays.rs`). Callers
+    /// prepare ONCE per directory rather than once per listing.
+    pub(crate) fn publish_replacement(&self, listing_id: &str, prepared: Prepared) {
+        self.update_listing_entries(listing_id, prepared);
     }
 
     /// The body of one refresh, with the directory's turn already held.
@@ -706,7 +701,7 @@ impl Inner {
             }
         };
 
-        let mut new_entries = match vol.list_directory(&parent_path, None).await {
+        let new_entries = match vol.list_directory(&parent_path, None).await {
             Ok(entries) => entries,
             Err(e) => {
                 log::warn!(
@@ -718,19 +713,14 @@ impl Inner {
             }
         };
 
-        // A routed volume has no drive index, so enrich is a no-op — skip it.
-        if !is_routed {
-            self.index.enrich(&volume_id, &mut new_entries);
-        }
-
-        // Re-run the overlays, in the same place in the pipeline the first read ran
-        // them. Without this a watcher-driven refresh of a repo's `.git/` would
-        // replace the listing with the real entries alone and the six portal rows
-        // would vanish from an open pane.
-        let overlay_rows = self.decorate(&vol, &parent_path, &mut new_entries).await;
+        let read_by = ReadBy::Volume {
+            volume: &vol,
+            routed: is_routed,
+        };
+        let prepared = self.prepare(read_by, &volume_id, &parent_path, new_entries).await;
 
         for (listing_id, ..) in &listings {
-            self.publish_replacement(listing_id, new_entries.clone(), overlay_rows);
+            self.publish_replacement(listing_id, prepared.clone());
         }
     }
 

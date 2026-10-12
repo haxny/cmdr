@@ -23,7 +23,7 @@ pub(crate) mod foreign_path;
 pub(crate) mod fuzzy_jump;
 pub(crate) mod operations;
 pub(crate) mod orphan_reaper;
-pub(crate) mod overlays;
+pub(crate) mod pipeline;
 pub(crate) mod quick_filter;
 pub(crate) mod sorting;
 pub(crate) mod streaming;

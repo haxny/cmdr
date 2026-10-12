@@ -8,12 +8,12 @@ use std::path::PathBuf;
 use cmdr_fs::entry::FileEntry;
 
 use super::installed;
-use crate::file_system::listing::cached_listing::OverlayRows;
 #[cfg(test)]
 use crate::file_system::listing::operations::ListingStartResult;
 use crate::file_system::listing::operations::{
     ListingLookupError, ListingStats, ResortResult, RowBeside, SelectionSnapshot,
 };
+use crate::file_system::listing::pipeline::Prepared;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 
 /// `Inner::list_directory_start_with_volume` on the installed engine.
@@ -182,8 +182,8 @@ pub(crate) fn get_listing_entries(listing_id: &str) -> Option<(PathBuf, Vec<File
 
 /// `Inner::update_listing_entries` on the installed engine.
 // shim: removed in M4b
-pub(crate) fn update_listing_entries(listing_id: &str, entries: Vec<FileEntry>, overlay_rows: OverlayRows) {
-    installed().update_listing_entries(listing_id, entries, overlay_rows);
+pub(crate) fn update_listing_entries(listing_id: &str, prepared: Prepared) {
+    installed().update_listing_entries(listing_id, prepared);
 }
 
 /// `Inner::get_selection_snapshot` on the installed engine.

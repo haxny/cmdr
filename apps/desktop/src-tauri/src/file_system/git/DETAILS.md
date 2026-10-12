@@ -114,9 +114,9 @@ guard there once refused the REAL `.git/config` alongside the virtual folders, w
    only by trait default, unwatchable by `can_watch_listings() == false`, invisible to `mount_id_for_path` by type.
    `volume/DETAILS.md` § "Resolving a path: the two routes".
 2. **The overlay.** `git::overlay::GitPortalOverlay` contributes the six category rows to a repo's `.git/` listing, run
-   by `listing/streaming.rs::read_directory_with_progress` (and `listing/operations.rs`, and again on every
-   watcher-driven `FullRefresh`) after the volume's entries arrive and before the cache insert. Pane-only by
-   construction: `file_system/listing/host/overlays.rs`.
+   by the listing engine's read pipeline (`file_system/listing/pipeline.rs`, on every read that builds or replaces a
+   listing) after the volume's entries arrive and before the cache insert. Pane-only by construction:
+   `file_system/listing/host/overlays.rs`.
 
 Both consult ONE app-side switch, `git::wiring::is_virtual_portal_enabled()`, so the toggle is "no route" plus "no
 contribution". Both also ask `wiring::volume_holds_real_repos`, which is `local_path().is_some()`: `gix` can't open a

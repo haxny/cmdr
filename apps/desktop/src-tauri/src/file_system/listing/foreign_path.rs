@@ -22,8 +22,8 @@ use std::path::{Path, PathBuf};
 
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::listing::OverlayRows;
 use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::pipeline::ReadBy;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
@@ -184,23 +184,21 @@ impl Inner {
                 return;
             }
         };
-        let Listed {
-            path: stored,
-            mut entries,
-        } = listed;
-        if !is_routed {
-            self.index.enrich(&volume_id, &mut entries);
-        }
-        let overlay_rows = self.decorate(&volume, &stored, &mut entries).await;
+        let Listed { path: stored, entries } = listed;
+        let read_by = ReadBy::Volume {
+            volume: &volume,
+            routed: is_routed,
+        };
+        let prepared = self.prepare(read_by, &volume_id, &stored, entries).await;
         if stored == path {
-            self.publish_replacement(&listing_id, entries, overlay_rows);
+            self.publish_replacement(&listing_id, prepared);
             return;
         }
         // The diff tells the pane what came and went, but it matches rows by name, so
         // it can't see every path changing spelling: the entries are written whole on
         // top, and the pane refetches its rows when it adopts the new spelling.
-        self.publish_replacement(&listing_id, entries.clone(), overlay_rows);
-        self.update_listing_entries(&listing_id, entries, OverlayRows::Recounted(overlay_rows));
+        self.publish_replacement(&listing_id, prepared.clone());
+        self.update_listing_entries(&listing_id, prepared);
         self.rekey_listing(&listing_id, &volume_id, &stored);
     }
 

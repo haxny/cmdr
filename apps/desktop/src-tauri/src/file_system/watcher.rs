@@ -25,9 +25,10 @@ use tauri_specta::Event as _;
 
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
 use crate::file_system::listing::listing_id::ListingId;
+use crate::file_system::listing::pipeline::{ReadBy, prepare};
 use crate::file_system::listing::{
-    OverlayRows, get_listing_entries, get_listing_volume_id_and_path, has_entry, insert_entry_sorted,
-    remove_entries_by_paths, update_entry_sorted, update_listing_entries,
+    get_listing_entries, get_listing_volume_id_and_path, has_entry, insert_entry_sorted, remove_entries_by_paths,
+    update_entry_sorted, update_listing_entries,
 };
 use crate::file_system::volume::backends::{get_single_entry, list_directory_core};
 use crate::index_host::index;
@@ -581,33 +582,26 @@ pub async fn handle_directory_change(listing_id: &str) {
         }
     };
 
-    let mut new_entries = new_entries;
-
-    // Enrich with index data so diff entries have recursive_size etc. Skipped for
-    // a routed volume, which has no drive index (an archive's inner paths and a
-    // git snapshot's paths aren't real FS paths) — the same gate every other read
-    // that builds or replaces a listing uses. Without it a ⌘R could put a Size on a row the
-    // first read left alone, from an index row that happens to share its path.
-    if !is_routed {
-        index().enrich(&volume_id, &mut new_entries);
-    }
-
-    // Re-run the overlays, in the same place in the pipeline the first read ran
-    // them (after the enrich, before the sort). `list_directory` above answers
-    // with the real directory alone, so without this a `refresh_listing` (⌘R, and
-    // the top-up every copy, move, and delete fires when it settles) would empty
-    // a repo's six portal rows out of an open `.git/` pane. A listing whose
-    // volume was unregistered took the `std::fs` fallback and has nothing to
-    // decorate through, so it keeps the count it had.
-    let overlay_rows = match &volume {
-        Some(vol) => OverlayRows::Recounted(
-            crate::file_system::listing::host::overlays::decorate(vol, &path, &mut new_entries).await,
-        ),
-        None => OverlayRows::Unchanged,
+    // Enrich with index data so diff entries have recursive_size etc., then re-run
+    // the overlays, as every read that builds or replaces a listing does
+    // (`listing/pipeline.rs`). `list_directory` above answers with the real
+    // directory alone, so without the overlays a `refresh_listing` (⌘R, and the
+    // top-up every copy, move, and delete fires when it settles) would empty a
+    // repo's six portal rows out of an open `.git/` pane. A routed volume has no
+    // drive index, so its enrich is skipped. A listing whose volume was
+    // unregistered took the `std::fs` fallback and has nothing to decorate
+    // through, so it keeps the count it had.
+    let read_by = match &volume {
+        Some(vol) => ReadBy::Volume {
+            volume: vol,
+            routed: is_routed,
+        },
+        None => ReadBy::StdFs,
     };
+    let prepared = prepare(read_by, &volume_id, &path, new_entries).await;
 
     // Sort, diff the actual current cache, replace, and publish under one write lock.
-    update_listing_entries(listing_id, new_entries, overlay_rows);
+    update_listing_entries(listing_id, prepared);
 }
 
 /// Flushes pending watcher events by re-reading every active watch.

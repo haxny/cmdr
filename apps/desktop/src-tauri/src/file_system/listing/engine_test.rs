@@ -10,6 +10,7 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use super::cached_listing::CachedListing;
 use super::engine::Listings;
 use super::operations::ListingLookupError;
+use super::pipeline::{OverlayRows, Prepared};
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 
 const DIR: &str = "/two-engines";
@@ -25,7 +26,7 @@ fn insert_listing(engine: &Listings, listing_id: &str) {
         inner,
         "root".to_string(),
         PathBuf::from(DIR),
-        vec![entry("a.txt")],
+        Prepared::for_test(vec![entry("a.txt")], OverlayRows::Recounted(0)),
         true,
         SortColumn::Name,
         SortOrder::Ascending,
