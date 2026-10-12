@@ -71,7 +71,9 @@ The coupling is one-directional: listing → indexer, never the reverse. The arc
 
 ## The observers
 
-Registered in this order, and called in it on every open and close (after the cache removal on close):
+Registered in this order by `install` (the list is `observers()` in `mod.rs`, pinned by
+`adapters_test.rs::the_app_installs_its_observers_watch_then_git_portal_then_index_sizes`), and called in it on every
+open and close (after the cache removal on close):
 
 1. **The FSEvents change watch** (`file_system::watcher::observer()`): arms through `start_watching_detached` only when
    `Volume::can_watch_listings`, and disarms in the close call, so an event landing between the removal and the disarm

@@ -42,7 +42,7 @@ use cmdr_fs::volume::DirectoryChange;
 
 use tauri::AppHandle;
 
-use cmdr_listing::host::ListingEvents;
+use cmdr_listing::host::{ListingEvents, ListingObserver};
 use cmdr_listing::{Listings, ListingsBuilder};
 
 /// The app's listing engine, once [`install`] built it.
@@ -56,23 +56,20 @@ static LISTINGS: OnceLock<Listings> = OnceLock::new();
 /// runs before `index_host::install`, and capturing `index()` now would win
 /// its slot with an unconfigured index.
 pub fn install(app: &AppHandle) {
-    let listings = builder(Arc::new(events::TauriListingEvents::new(app.clone())))
-        // The app's own runtime, so a listing's background work shares one
-        // thread pool with everything else, and a watcher's OS thread (no
-        // reactor) can still start a refresh.
-        .runtime(tauri::async_runtime::handle().inner().clone())
-        // The portal's `.git/` landing rows. Everything below `.git/` is a
-        // routed volume instead; this seam is what keeps the six rows out of
-        // every walker.
-        .overlay(crate::file_system::git::overlay::overlay())
-        // FIRST: arms a listing's change watch on open and disarms it on close,
-        // after the cache removal like every observer.
-        .observer(crate::file_system::watcher::observer())
-        // Keeps a repo's `.git/*` watcher armed for as long as a pane shows one
-        // of its virtual listings, so a lone `branches/` pane stays live.
-        .observer(crate::file_system::git::arming::observer())
-        // Routes the index's folder-size updates to the listings they touch.
-        .observer(crate::listing_index_sizes::observer())
+    let listings = observers()
+        .into_iter()
+        .fold(
+            builder(Arc::new(events::TauriListingEvents::new(app.clone())))
+                // The app's own runtime, so a listing's background work shares one
+                // thread pool with everything else, and a watcher's OS thread (no
+                // reactor) can still start a refresh.
+                .runtime(tauri::async_runtime::handle().inner().clone())
+                // The portal's `.git/` landing rows. Everything below `.git/` is a
+                // routed volume instead; this seam is what keeps the six rows out of
+                // every walker.
+                .overlay(crate::file_system::git::overlay::overlay()),
+            ListingsBuilder::observer,
+        )
         .build();
     if LISTINGS.set(listings).is_err() {
         crate::log_error!(target: "listing", "the listing host was installed twice; keeping the first");
@@ -82,6 +79,20 @@ pub fn install(app: &AppHandle) {
     if early_reads::happened() {
         crate::log_error!(target: "listing", "the listing engine was read before install(); early events were dropped");
     }
+}
+
+/// The app's observers, in the order every listing open and close reaches them.
+fn observers() -> [Arc<dyn ListingObserver>; 3] {
+    [
+        // FIRST: arms a listing's change watch on open and disarms it on close,
+        // after the cache removal like every observer.
+        crate::file_system::watcher::observer(),
+        // Keeps a repo's `.git/*` watcher armed for as long as a pane shows one
+        // of its virtual listings, so a lone `branches/` pane stays live.
+        crate::file_system::git::arming::observer(),
+        // Routes the index's folder-size updates to the listings they touch.
+        crate::listing_index_sizes::observer(),
+    ]
 }
 
 /// The app's listing engine.

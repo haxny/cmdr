@@ -2,8 +2,8 @@
 //! are proven on both ends and not only through the engine's fakes. The events
 //! adapter's matrix is `streaming_reaction_test.rs`, the lease's is
 //! `streaming_test.rs`, the reading language's is `listing_host/locale.rs`, and
-//! the mount table's is `listing_host/mounts.rs`. The observers' order (the
-//! FSEvents watch first) is `lifecycle_order_test.rs`'s.
+//! the mount table's is `listing_host/mounts.rs`. What the FSEvents watch, as the
+//! first observer, hears relative to the cache is `lifecycle_order_test.rs`'s.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -60,4 +60,17 @@ fn the_app_index_leaves_a_volume_it_never_indexed_alone() {
             .all(|e| e.recursive_size.is_none() && e.recursive_file_count.is_none()),
         "no index sizes for a volume the index never saw: {entries:?}"
     );
+}
+
+/// The engine calls observers in registration order, and the app's depend on it:
+/// the change watch first, so it disarms before the git portal or the index-size
+/// router hears a close, then the git portal, then index sizes.
+#[test]
+fn the_app_installs_its_observers_watch_then_git_portal_then_index_sizes() {
+    let ids: Vec<&str> = crate::listing_host::observers()
+        .iter()
+        .map(|observer| observer.id())
+        .collect();
+
+    assert_eq!(ids, vec!["fs-watcher", "git-portal", "index-sizes"]);
 }
