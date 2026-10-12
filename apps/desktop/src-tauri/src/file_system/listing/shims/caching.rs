@@ -61,6 +61,7 @@ pub fn get_listing_volume_id_and_path(listing_id: &str) -> Option<(String, PathB
 
 /// `Inner::remove_entries_by_paths` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub fn remove_entries_by_paths(listing_id: &str, paths: &[PathBuf]) -> Vec<(PaneRows, FileEntry)> {
     installed().remove_entries_by_paths(listing_id, paths)
 }
@@ -74,18 +75,21 @@ pub fn remove_entry_by_name(listing_id: &str, name: &std::ffi::OsStr) -> Option<
 
 /// `Inner::has_entry` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub fn has_entry(listing_id: &str, path: &str) -> bool {
     installed().has_entry(listing_id, path)
 }
 
 /// `Inner::update_entry_sorted` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub fn update_entry_sorted(listing_id: &str, new_entry: FileEntry) -> Option<PaneRows> {
     installed().update_entry_sorted(listing_id, new_entry)
 }
 
 /// `Inner::carry_forward_tags` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub fn carry_forward_tags(listing_id: &str, entry: &mut FileEntry) {
     installed().carry_forward_tags(listing_id, entry);
 }

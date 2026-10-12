@@ -210,9 +210,6 @@ async fn gather(
         })
 }
 
-// shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
-pub(crate) use crate::file_system::listing::shims::pipeline::*;
-
 #[cfg(test)]
 #[path = "pipeline_test_support.rs"]
 pub(crate) mod test_support;

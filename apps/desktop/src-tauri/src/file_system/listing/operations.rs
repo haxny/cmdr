@@ -586,14 +586,6 @@ impl Inner {
 // ============================================================================
 
 impl Inner {
-    /// Gets entries and path from the listing cache (for watcher diff computation).
-    /// Returns None if listing not found.
-    pub(crate) fn get_listing_entries(&self, listing_id: &str) -> Option<(PathBuf, Vec<FileEntry>)> {
-        let cache = self.cache.read_ignore_poison();
-        let listing = cache.get(listing_id)?;
-        Some((listing.path.as_path().to_path_buf(), listing.entries().to_vec()))
-    }
-
     /// Replaces a listing's entries with a re-read's (`pipeline.rs`), re-sorted
     /// the listing's way, and publishes what changed.
     pub(crate) fn update_listing_entries(&self, listing_id: &str, prepared: Prepared) {

@@ -13,6 +13,7 @@ use crate::file_system::listing::operations::ListingStartResult;
 use crate::file_system::listing::operations::{
     ListingLookupError, ListingStats, ResortResult, RowBeside, SelectionSnapshot,
 };
+#[cfg(test)]
 use crate::file_system::listing::pipeline::Prepared;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 
@@ -174,14 +175,9 @@ pub fn resort_listing(
     )
 }
 
-/// `Inner::get_listing_entries` on the installed engine.
-// shim: removed in M4b
-pub(crate) fn get_listing_entries(listing_id: &str) -> Option<(PathBuf, Vec<FileEntry>)> {
-    installed().get_listing_entries(listing_id)
-}
-
 /// `Inner::update_listing_entries` on the installed engine.
 // shim: removed in M4b
+#[cfg(test)]
 pub(crate) fn update_listing_entries(listing_id: &str, prepared: Prepared) {
     installed().update_listing_entries(listing_id, prepared);
 }

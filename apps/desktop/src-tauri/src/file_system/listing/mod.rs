@@ -19,6 +19,7 @@ pub(crate) mod pipeline;
 pub(crate) mod quick_filter;
 mod shims;
 pub use quick_filter::NameFilterResult;
+pub(crate) mod reread;
 pub(crate) mod sorting;
 pub(crate) mod stall;
 pub(crate) mod stalled_on;
@@ -27,6 +28,7 @@ pub(crate) mod streaming;
 pub(crate) mod visible_rows;
 
 pub use engine::{Listings, ListingsBuilder};
+pub use reread::RefreshOutcome;
 
 /// The app's installed engine, for the free functions that still forward to it
 /// from outside the engine. ❌ Never call it from engine code, which reaches its
@@ -51,14 +53,12 @@ pub use streaming::{StreamingListingStartResult, cancel_listing, list_directory_
 pub use operations::{get_files_at_indices, get_paths_at_indices};
 
 // Internal re-exports for file_system module internals (pub(crate) for crate-internal use)
-pub(crate) use caching::{
-    get_cached_listing, get_listing_volume_id_and_path, has_entry, insert_entry_sorted, remove_entries_by_paths,
-    update_entry_sorted,
-};
+pub(crate) use caching::{get_cached_listing, get_listing_volume_id_and_path, insert_entry_sorted};
 // Notification API for volume mutations
+#[cfg(test)]
+pub(crate) use operations::update_listing_entries;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub(crate) use operations::volume_ids_with_listings;
-pub(crate) use operations::{get_listing_entries, update_listing_entries};
 #[cfg(test)]
 pub(crate) use pipeline::OverlayRows;
 

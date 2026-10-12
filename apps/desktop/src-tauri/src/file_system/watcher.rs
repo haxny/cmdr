@@ -1,10 +1,10 @@
 //! File system watcher with debouncing, incremental processing, and diff computation.
 //!
-//! Watches directories for changes and emits `directory-diff` events to frontend.
-//! Uses the unified the listing cache from operations.rs (no duplicate cache).
-//! Two processing paths: incremental (stat + classify individual events, patch cache
-//! in-place via cache helpers) and full re-read fallback (> 500 events or unknown
-//! event kinds).
+//! Watches directories for changes and hands what it hears to the listing engine,
+//! which patches the cache and publishes `directory-diff`s. Two processing paths:
+//! incremental (stat each event's path, then `Listings::observe_children`) and
+//! full re-read (`Listings::refresh`), the fallback for over 500 events, unknown
+//! event kinds, or a watch root that changed identity.
 
 use crate::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -25,13 +25,8 @@ use tauri_specta::Event as _;
 
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
 use crate::file_system::listing::listing_id::ListingId;
-use crate::file_system::listing::pipeline::{ReadBy, prepare};
-use crate::file_system::listing::{
-    get_listing_entries, get_listing_volume_id_and_path, has_entry, insert_entry_sorted, remove_entries_by_paths,
-    update_entry_sorted, update_listing_entries,
-};
+use crate::file_system::listing::{Listings, RefreshOutcome, get_listing_volume_id_and_path};
 use crate::file_system::volume::backends::{get_single_entry, list_directory_core};
-use crate::index_host::index;
 use cmdr_fs::firmlinks;
 use cmdr_fs::volume::WatchCoverage;
 
@@ -390,8 +385,8 @@ pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<
         return;
     }
 
-    // Get watched directory path + volume from the cache (without cloning all entries)
-    let Some((volume_id, dir_path)) = get_listing_volume_id_and_path(listing_id) else {
+    // The watched directory's path, from the cache (without cloning its entries).
+    let Some((_, dir_path)) = get_listing_volume_id_and_path(listing_id) else {
         return;
     };
 
@@ -435,174 +430,76 @@ pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<
         return;
     }
 
-    // Stat all paths BEFORE acquiring any locks
-    let mut stat_results: HashMap<PathBuf, Option<FileEntry>> = HashMap::new();
-    for path in &unique_paths {
-        let entry = get_single_entry(path).ok();
-        stat_results.insert(path.clone(), entry);
-    }
+    // Stat every path BEFORE handing the batch over: the engine takes its locks
+    // after, and a stat on a slow disk must not sit inside one.
+    let children: Vec<(PathBuf, Option<FileEntry>)> = unique_paths
+        .into_iter()
+        .map(|path| {
+            let entry = get_single_entry(&path).ok();
+            (path, entry)
+        })
+        .collect();
 
-    // Classify changes against the cache
-    let mut adds: Vec<FileEntry> = Vec::new();
-    let mut removes: Vec<PathBuf> = Vec::new();
-    let mut modifies: Vec<FileEntry> = Vec::new();
-
-    for (path, stat_entry) in &stat_results {
-        let path_str = path.to_string_lossy();
-        let in_cache = has_entry(listing_id, &path_str);
-        match (in_cache, stat_entry) {
-            (true, Some(entry)) => modifies.push(entry.clone()),
-            (true, None) => removes.push(path.clone()),
-            (false, Some(entry)) => adds.push(entry.clone()),
-            (false, None) => {} // Not in cache and gone from disk: ignore
-        }
-    }
-
-    if adds.is_empty() && removes.is_empty() && modifies.is_empty() {
-        return;
-    }
-
-    // Enrich new/modified entries with index data: ONE call for the batch, since
-    // a seam is called per mutation, never per entry. Every entry is a direct
-    // child of the listing's directory, so the batch resolves one parent.
-    let added = adds.len();
-    let mut batch: Vec<FileEntry> = adds.into_iter().chain(modifies).collect();
-    index().enrich(&volume_id, &mut batch);
-    let modifies = batch.split_off(added);
-    let adds = batch;
-
-    // Apply changes: removes first (their rows are the OLD pane's), then adds, then
-    // modifies. `remove_entries_by_paths` resolves every entry against the pre-removal
-    // listing and drops them highest-index-first, so no removal shifts the next one's
-    // entry, and the whole batch costs one lookup pass. Every patch lands in the cache;
-    // only the ones the pane shows on some side become a change (`DiffChange::for_pane`),
-    // so a dotfile write in `~` with hidden files off emits nothing.
-    let _ = remove_entries_by_paths(listing_id, &removes);
-
-    for entry in adds {
-        let _ = insert_entry_sorted(listing_id, entry);
-    }
-
-    for mut entry in modifies {
-        // Preserve already-loaded Finder tags across this re-stat: `get_single_entry`
-        // reads no xattr, so a bare modify would otherwise blank the file's dots.
-        crate::file_system::listing::caching::carry_forward_tags(listing_id, &mut entry);
-        let _ = update_entry_sorted(listing_id, entry);
-    }
+    crate::listing_host::listings().observe_children(&ListingId::new(listing_id), children);
 }
 
 /// Force a re-read of a directory listing, computing and emitting any diff.
 /// Called by the file watcher on change events, and also available as a Tauri
 /// command for cases where the watcher doesn't fire (e.g. rename-move on Linux).
 ///
-/// Works for all volume types: reads via the Volume trait's `list_directory`,
-/// not via `std::fs`.
+/// The engine re-reads through the listing's volume (`Listings::refresh`); this
+/// wrapper owns what the app does with the outcome: `directory-deleted` plus
+/// `stop_watching` when the directory is gone, and the `std::fs` re-read when
+/// nothing serves the volume any more. Returns once the re-read landed.
 pub async fn handle_directory_change(listing_id: &str) {
     log::debug!("handle_directory_change: listing_id={}", listing_id);
 
-    // Look up this listing's volume id so we can re-read through the Volume trait.
-    let volume_id = {
-        use crate::file_system::listing::cached_listing::listing_cache;
-        let cache = match listing_cache().read() {
-            Ok(c) => c,
-            Err(_) => return,
-        };
-        match cache.get(listing_id) {
-            Some(l) => l.volume_id.clone(),
-            None => return,
+    let listings = crate::listing_host::listings();
+    let id = ListingId::new(listing_id);
+    match listings.refresh(&id).await {
+        RefreshOutcome::DirectoryGone(path) => directory_deleted(listing_id, &path),
+        // Volume unregistered: fall back to std::fs for local paths.
+        RefreshOutcome::NoVolume => reread_with_std_fs(listings, &id).await,
+        RefreshOutcome::Landed | RefreshOutcome::ListingGone | RefreshOutcome::Skipped => {}
+    }
+}
+
+/// The re-read for a listing whose volume nothing serves any more: `std::fs`,
+/// handed to the engine. The ticket is taken BEFORE the read, so it dates the read.
+async fn reread_with_std_fs(listings: &Listings, id: &ListingId) {
+    let Some(ticket) = listings.begin_read(id) else {
+        return;
+    };
+    match list_directory_core(ticket.path()) {
+        Ok(entries) => {
+            listings.refresh_from_entries(ticket, entries).await;
         }
-    };
-
-    // Get old entries and path from the unified the listing cache
-    let Some((path, _)) = get_listing_entries(listing_id) else {
-        return; // Listing no longer exists
-    };
-
-    // Resolve (not plain `get`) so a `.zip`-crossing listing re-reads through the
-    // same ArchiveVolume the listing used, re-registering it if the LRU evicted
-    // it. (Archives get no FSEvents watcher today, so this fires for them only
-    // once live archive watching lands.)
-    let resolved = crate::file_system::volume::manager::get_volume_manager()
-        .resolve(&volume_id, &path)
-        .await;
-    let is_routed = resolved.is_routed();
-    let volume = resolved.volume;
-
-    // Get app handle for emitting events
-    let app_handle = { WATCHER_MANAGER.read_ignore_poison().app_handle.clone() };
-
-    // Re-read the directory via the Volume trait (works for all volume types).
-    // Falls back to list_directory_core for listings whose volume was unregistered.
-    let new_entries = if let Some(vol) = volume.clone() {
-        match vol.list_directory(&path, None).await {
-            Ok(entries) => entries,
-            Err(crate::file_system::VolumeError::NotFound(_)) => {
-                log::info!("Watcher: Directory deleted, notifying frontend: {}", path.display());
-                if let Some(app) = &app_handle {
-                    let event = DirectoryDeletedEvent {
-                        listing_id: listing_id.to_string(),
-                        path: path.to_string_lossy().to_string(),
-                    };
-                    if let Err(emit_err) = event.emit(app) {
-                        log::warn!("Watcher: Failed to emit directory-deleted event: {}", emit_err);
-                    }
-                }
-                stop_watching(listing_id);
-                return;
-            }
-            Err(crate::file_system::VolumeError::PermissionDenied { .. }) => return,
-            Err(e) => {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let path = ticket.path().to_path_buf();
+            directory_deleted(id.as_str(), &path);
+        }
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::PermissionDenied {
                 log::warn!("Watcher: Failed to re-read directory: {}", e);
-                return;
             }
         }
-    } else {
-        // Volume unregistered: fall back to std::fs for local paths
-        match list_directory_core(&path) {
-            Ok(entries) => entries,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                log::info!("Watcher: Directory deleted, notifying frontend: {}", path.display());
-                if let Some(app) = &app_handle {
-                    let event = DirectoryDeletedEvent {
-                        listing_id: listing_id.to_string(),
-                        path: path.to_string_lossy().to_string(),
-                    };
-                    if let Err(emit_err) = event.emit(app) {
-                        log::warn!("Watcher: Failed to emit directory-deleted event: {}", emit_err);
-                    }
-                }
-                stop_watching(listing_id);
-                return;
-            }
-            Err(e) => {
-                if e.kind() != std::io::ErrorKind::PermissionDenied {
-                    log::warn!("Watcher: Failed to re-read directory: {}", e);
-                }
-                return;
-            }
+    }
+}
+
+/// The watched directory itself is gone: tell the pane, and stop watching it.
+fn directory_deleted(listing_id: &str, path: &Path) {
+    log::info!("Watcher: Directory deleted, notifying frontend: {}", path.display());
+    let app_handle = { WATCHER_MANAGER.read_ignore_poison().app_handle.clone() };
+    if let Some(app) = &app_handle {
+        let event = DirectoryDeletedEvent {
+            listing_id: listing_id.to_string(),
+            path: path.to_string_lossy().to_string(),
+        };
+        if let Err(emit_err) = event.emit(app) {
+            log::warn!("Watcher: Failed to emit directory-deleted event: {}", emit_err);
         }
-    };
-
-    // Enrich with index data so diff entries have recursive_size etc., then re-run
-    // the overlays, as every read that builds or replaces a listing does
-    // (`listing/pipeline.rs`). `list_directory` above answers with the real
-    // directory alone, so without the overlays a `refresh_listing` (⌘R, and the
-    // top-up every copy, move, and delete fires when it settles) would empty a
-    // repo's six portal rows out of an open `.git/` pane. A routed volume has no
-    // drive index, so its enrich is skipped. A listing whose volume was
-    // unregistered took the `std::fs` fallback and has nothing to decorate
-    // through, so it keeps the count it had.
-    let read_by = match &volume {
-        Some(vol) => ReadBy::Volume {
-            volume: vol,
-            routed: is_routed,
-        },
-        None => ReadBy::StdFs,
-    };
-    let prepared = prepare(read_by, &volume_id, &path, new_entries).await;
-
-    // Sort, diff the actual current cache, replace, and publish under one write lock.
-    update_listing_entries(listing_id, prepared);
+    }
+    stop_watching(listing_id);
 }
 
 /// Flushes pending watcher events by re-reading every active watch.
