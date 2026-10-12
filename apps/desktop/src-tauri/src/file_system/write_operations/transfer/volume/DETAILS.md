@@ -921,8 +921,8 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 - **Never on a failed or stopped copy**: one failure fails the whole subtree, so nothing in it is stamped. Every stamp
   also checks the intent first.
 - **Cheap where it can't happen**: `apply_metadata` defaults to `NotApplicable` for every class (S3's prefixes, MTP,
-  WebDAV, ADB's sync protocol has no setstat, read-only backends), and the first answer that holds nothing
-  (`MetadataReport::holds_none`) ends the pass.
+  WebDAV on a server that keeps no dates, ADB's sync protocol has no setstat, read-only backends), and the first
+  answer that holds nothing (`MetadataReport::holds_none`) ends the pass.
 - **Decision/Why a defaulted trait method, ❌ not a required one**: every mutation on the trait defaults and opts in,
   and over 20 test doubles and wrappers would each need a refusal body. The omission a required method would catch is
   caught instead by `conformance::assert_apply_metadata_dates_a_folder`, which every backend that implements it runs.
@@ -963,8 +963,9 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   while it streams). Whole seconds, atime set alongside. No creation date in SFTP v3 (`crates/cmdr-sftp/DETAILS.md` §
   "Dates on copies", "Mode on copies").
 - **WebDAV**: reports the GET's `Last-Modified`; writes it as an `X-OC-Mtime` header on the PUT, which Nextcloud,
-  ownCloud, and rclone honor. ❗ Plain Apache `mod_dav` can't store a date at all (`crates/cmdr-webdav/DETAILS.md` §
-  "Dates").
+  ownCloud, and rclone honor. On a server whose connect probe found Nextcloud's `nc:creation_time`, a file's creation
+  date rides `X-OC-CTime` on the same PUT and a folder's dates take one PROPPATCH; the caps say so per volume. ❗ Plain
+  Apache `mod_dav` can't store a date at all (`crates/cmdr-webdav/DETAILS.md` § "Dates").
 
 **How it's pinned.** Two layers, so a gap shows where it lives:
 

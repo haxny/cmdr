@@ -26,6 +26,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream, WriteMode};
@@ -138,6 +139,11 @@ impl BodySource {
 /// PROPPATCH may set). `DETAILS.md` § "Dates".
 const X_OC_MTIME: &str = "X-OC-Mtime";
 
+/// Nextcloud's request header that sets an uploaded file's creation date, in
+/// Unix seconds (answered `X-OC-CTime: accepted`). Sent only to a server whose
+/// connect probe said it keeps dates (`DETAILS.md` § "Dates").
+const X_OC_CTIME: &str = "X-OC-CTime";
+
 /// `X-OC-Mtime`'s value for `modified_at`: whole Unix seconds, truncated.
 /// `None` before 1970, which the header can't say.
 fn mtime_header_value(modified_at: std::time::SystemTime) -> Option<u64> {
@@ -147,12 +153,13 @@ fn mtime_header_value(modified_at: std::time::SystemTime) -> Option<u64> {
         .map(|d| d.as_secs())
 }
 
-/// Whether the server says it stored the date: Nextcloud answers a PUT that
-/// carried `X-OC-Mtime` with `X-OC-MTime: accepted`.
-fn mtime_accepted(response: &reqwest::Response) -> bool {
+/// Whether the server says it stored the date `header` carried: Nextcloud
+/// answers a PUT that carried `X-OC-Mtime` with `X-OC-MTime: accepted`, and
+/// `X-OC-CTime` likewise.
+fn accepted(response: &reqwest::Response, header: &str) -> bool {
     response
         .headers()
-        .get(X_OC_MTIME)
+        .get(header)
         .is_some_and(|value| value.as_bytes().eq_ignore_ascii_case(b"accepted"))
 }
 
@@ -233,9 +240,15 @@ impl WebdavVolume {
         stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     ) -> Result<u64, VolumeError> {
-        // Read before the stream moves into the body. A source knows its date
-        // from its open, so nothing is lost by asking before the first byte.
+        // Read before the stream moves into the body. A source knows its dates
+        // from its open, so nothing is lost by asking before the first byte. The
+        // creation date only where the server keeps one (`keeps_dates`).
         let modified_at = stream.modified_at();
+        let created_at = if self.keeps_dates() {
+            stream.metadata(MetadataClasses::CREATED).created
+        } else {
+            None
+        };
         let counts = BodyCounts::new();
         let stop = CancellationToken::new();
         let source_error: Arc<std::sync::Mutex<Option<VolumeError>>> = Arc::new(std::sync::Mutex::new(None));
@@ -285,6 +298,9 @@ impl WebdavVolume {
         if let Some(secs) = modified_at.and_then(mtime_header_value) {
             request = request.header(X_OC_MTIME, secs);
         }
+        if let Some(secs) = created_at.and_then(mtime_header_value) {
+            request = request.header(X_OC_CTIME, secs);
+        }
         let request = request.body(body);
 
         // The block scopes the in-flight request: leaving it drops the
@@ -318,10 +334,16 @@ impl WebdavVolume {
         // differ by exactly the case this guard exists for.
         let total = counts.fetched.load(Ordering::Relaxed);
         let outcome = outcome.map(|response| {
-            if modified_at.is_some() && !mtime_accepted(&response) {
+            if modified_at.is_some() && !accepted(&response, X_OC_MTIME) {
                 // Not a failure: a server without the ownCloud extension (plain
                 // `mod_dav`) has no way to store a date, and keeps its own.
                 debug!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date");
+            }
+            if created_at.is_some() && !accepted(&response, X_OC_CTIME) {
+                // A server that said at connect it keeps creation dates, then
+                // didn't take this one: the loss note can't hear it from here
+                // (`write_from_stream` returns no report), so the log does.
+                log::warn!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date");
             }
         });
         if let Err(e) = outcome {

@@ -174,6 +174,35 @@ async fn a_read_stream_reports_the_listed_date() {
     conformance::assert_read_stream_reports_the_listed_date(&volume, &volume.root().join(FIXTURE_DATED_FILE)).await;
 }
 
+/// Apache has no `nc:creation_time`, so its connect probe says it keeps no
+/// dates: the caps claim nothing, a copy sends no `X-OC-CTime`, and a folder
+/// gets no PROPPATCH (`mod_dav` would store one as dead properties).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the WebDAV fixture stack: apps/desktop/test/webdav-servers/start.sh (webdav-fixture)"]
+async fn apache_keeps_no_creation_dates_and_says_so() {
+    if not_for_your_own_server("plain Apache `mod_dav`") {
+        return;
+    }
+    let (volume, dir) = stock_server_with_scratch().await;
+    assert_eq!(volume.metadata_caps(), cmdr_fs::metadata::MetadataCaps::NONE);
+
+    let folder = dir.join("born");
+    volume.create_directory(&folder).await.expect(FIXTURE);
+    let carried = cmdr_fs::metadata::CarriedMetadata {
+        created: Some(std::time::UNIX_EPOCH + std::time::Duration::from_secs(conformance::BIRTH_SECS)),
+        ..cmdr_fs::metadata::CarriedMetadata::default()
+    };
+    let report = volume
+        .apply_metadata(&folder, &carried, Some(std::time::SystemTime::now()))
+        .await;
+    assert!(
+        report.holds_none(),
+        "no PROPPATCH on a server that keeps no dates; got {report:?}"
+    );
+
+    clean(&volume, &dir).await;
+}
+
 /// Apache stores no date, so a copy onto it carries the server's own: the
 /// documented limit of a plain `mod_dav` destination, ❗ asserted so it stays a
 /// fact rather than an assumption.

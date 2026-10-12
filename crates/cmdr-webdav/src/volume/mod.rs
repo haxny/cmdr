@@ -114,6 +114,10 @@ struct WebdavVolumeInner {
     /// (`cmdr_fs::volume::liveness`). A field rather than the constant so a cell can
     /// shorten it and still run in real time.
     silence: std::sync::RwLock<Timings>,
+    /// Whether the server keeps creation dates and a folder's dates (a
+    /// Nextcloud), as its last connect probe said (`transport.rs`'s `PROBE_BODY`).
+    /// Read by `metadata_caps`, which can't wait on the client's lock.
+    keeps_dates: AtomicBool,
     /// Everything this backend asks the app around it.
     host: VolumeHost,
 }
@@ -275,28 +279,38 @@ pub async fn connect_webdav_volume(
     let Some(secret) = secret else {
         return Err(WebdavConnectError::NeedsCredentials);
     };
-    let client = build_and_probe(&params, &secret.secret, &cancel).await?;
+    let (client, keeps_dates) = build_and_probe(&params, &secret.secret, &cancel).await?;
     if cancel.is_cancelled() {
         return Err(WebdavConnectError::Cancelled);
     }
     // PII-free: a WebDAV client came up. ❌ No host, account, or path crosses.
     host.analytics().record("webdav_connected", &[]);
-    Ok(WebdavVolume::assemble(name, volume_id, params, client, host))
+    Ok(WebdavVolume::assemble(
+        name,
+        volume_id,
+        params,
+        (client, keeps_dates),
+        host,
+    ))
 }
 
-/// A client for `params` with `password`, proven by one PROPFIND on the root.
+/// A client for `params` with `password`, proven by one PROPFIND on the root,
+/// and whether that answer says the server keeps dates (Nextcloud's
+/// `creation_time` in a 2xx `propstat`; `DETAILS.md` § "Dates").
 pub(super) async fn build_and_probe(
     params: &WebdavConnectionParams,
     password: &str,
     cancel: &CancellationToken,
-) -> Result<WebdavClient, WebdavConnectError> {
+) -> Result<(WebdavClient, bool), WebdavConnectError> {
     let client = WebdavClient::new(params.base_url.clone(), &params.username, password)?;
     let root = paths::root_remote_path(&params.remote_root);
     let root_url = client.url_for(&root, true);
-    tokio::select! {
+    let entries = tokio::select! {
         () = cancel.cancelled() => Err(WebdavConnectError::Cancelled),
-        probed = client.probe(root_url) => probed.map(|_| client),
-    }
+        probed = client.probe(root_url) => probed,
+    }?;
+    let keeps_dates = entries.iter().any(|entry| entry.nc_creation_time.is_some());
+    Ok((client, keeps_dates))
 }
 
 impl WebdavVolume {
@@ -304,7 +318,7 @@ impl WebdavVolume {
         name: &str,
         volume_id: &str,
         params: WebdavConnectionParams,
-        client: WebdavClient,
+        (client, keeps_dates): (WebdavClient, bool),
         host: VolumeHost,
     ) -> Self {
         let root = RemoteRoot::new(
@@ -327,6 +341,7 @@ impl WebdavVolume {
                 auto_reconnect: AtomicBool::new(auto_reconnect),
                 auth_attempt_spent: AtomicBool::new(false),
                 silence: std::sync::RwLock::new(Timings::PRODUCTION),
+                keeps_dates: AtomicBool::new(keeps_dates),
                 host,
             }),
         }

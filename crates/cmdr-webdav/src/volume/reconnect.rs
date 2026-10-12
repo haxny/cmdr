@@ -191,7 +191,8 @@ impl WebdavVolumeInner {
             },
         };
         match build_and_probe(&self.params(), &secret, &CancellationToken::new()).await {
-            Ok(client) => {
+            Ok((client, keeps_dates)) => {
+                self.keeps_dates.store(keeps_dates, Ordering::Relaxed);
                 if self.unmounted.load(Ordering::Relaxed) {
                     return Err(gone());
                 }

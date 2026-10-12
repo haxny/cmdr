@@ -42,8 +42,11 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basi
   satisfied. Hence two counters: `fetched` guards the size, `handed` (clamped) drives progress. ❌ Never collapse them.
   `DETAILS.md` § "Write staging".
 - ❗ **`Range` may be ignored**: a 200 to a ranged GET is skipped locally (fixture `webdav-fixture-norange`).
-- ❗ **Unbounded space reads `oc:size`, ❌ never `quota-used-bytes`** (an unlimited Nextcloud answers `0`). The only
-  non-standard property; `DETAILS.md` § "What a real server answers" sets the bar for a second.
+- ❗ **Unbounded space reads `oc:size`, ❌ never `quota-used-bytes`** (an unlimited Nextcloud answers `0`). One of two
+  non-standard properties; `DETAILS.md` § "What a real server answers" sets the bar for a third.
+- ❗ **Creation and folder dates only where the connect probe found `nc:creation_time`** (the other one, asked by the
+  probe alone): ❌ never a PROPPATCH of dates on `mod_dav`, which stores it as dead properties and changes nothing.
+  Nextcloud's `creationdate` of 1970 means none. `DETAILS.md` § "Dates".
 - ❗ **DELETE is recursive by protocol; the trait's is not.** `delete` refuses a non-empty collection with `ENOTEMPTY`
   after a `Depth: 1` PROPFIND.
 - ❌ Never `root_anchored`, never a stat per child in a scan, never `authoritative_listing` (coverage is `None`).

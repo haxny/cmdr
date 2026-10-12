@@ -24,6 +24,14 @@ const OC: &[u8] = b"http://owncloud.org/ns";
 /// contain a colon, so the prefix keeps the two namespaces from colliding.
 const OC_PREFIX: &[u8] = b"oc:";
 
+/// Nextcloud's own namespace. The one property read from it is
+/// `creation_time`, and only to learn whether the server keeps creation dates
+/// (`DETAILS.md` § "Dates").
+const NC: &[u8] = b"http://nextcloud.org/ns";
+
+/// How an `nc:` name is held on the element stack, like [`OC_PREFIX`].
+const NC_PREFIX: &[u8] = b"nc:";
+
 /// One `response` element, with the properties this backend asks for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct PropfindEntry {
@@ -48,6 +56,10 @@ pub(crate) struct PropfindEntry {
     /// those servers report a real count here rather than RFC 4331's sentinels,
     /// so a negative value is malformed and parses to `None`.
     pub oc_size: Option<u64>,
+    /// `nc:creation_time`, Unix seconds (`0` for none recorded). Nextcloud only,
+    /// and asked for only by the connect probe: its presence is how a server
+    /// says it keeps creation dates.
+    pub nc_creation_time: Option<u64>,
 }
 
 /// The body didn't parse as a `multistatus`.
@@ -140,10 +152,14 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
                     b"getlastmodified" => {
                         pending.modified_at = httpdate::parse_http_date(&value).ok().and_then(unix_secs);
                     }
-                    b"creationdate" => pending.created_at = parse_rfc3339(&value),
+                    // ❗ Nextcloud answers 1970-01-01 for an item with no creation
+                    // time recorded (everything not uploaded with `X-OC-CTime`):
+                    // that's "unknown", or a copy off the server would stamp it.
+                    b"creationdate" => pending.created_at = parse_rfc3339(&value).filter(|&secs| secs != 0),
                     b"quota-available-bytes" => pending.quota_available = value.parse().ok(),
                     b"quota-used-bytes" => pending.quota_used = value.parse().ok(),
                     b"oc:size" => pending.oc_size = value.parse().ok(),
+                    b"nc:creation_time" => pending.nc_creation_time = value.parse().ok(),
                     b"propstat" => {
                         if pending_status_ok && let Some(entry) = current.as_mut() {
                             merge(entry, &pending);
@@ -168,6 +184,47 @@ pub(crate) fn parse_multistatus(body: &str) -> Result<Vec<PropfindEntry>, NotMul
     Ok(entries)
 }
 
+/// Whether a PROPPATCH answer (a `multistatus`, RFC 4918 § 9.2) applied every
+/// property it was sent: true when each `propstat` it holds is 2xx. A PROPPATCH
+/// is atomic, so one refusal means none took (the rest come back `424`).
+pub(crate) fn every_propstat_succeeded(body: &str) -> Result<bool, NotMultistatus> {
+    let mut reader = NsReader::from_str(body);
+    let mut saw_multistatus = false;
+    let mut stack: Vec<Vec<u8>> = Vec::new();
+    let mut text = String::new();
+    let mut all = true;
+    loop {
+        let (ns, event) = reader.read_resolved_event().map_err(|_| NotMultistatus)?;
+        match event {
+            Event::Start(start) => {
+                let local = stack_name(&ns, start.local_name().as_ref());
+                if local == b"multistatus" {
+                    saw_multistatus = true;
+                }
+                text.clear();
+                stack.push(local);
+            }
+            Event::Text(t) => {
+                if let Ok(decoded) = t.decode() {
+                    text.push_str(&decoded);
+                }
+            }
+            Event::End(_) => {
+                let Some(local) = stack.pop() else {
+                    return Err(NotMultistatus);
+                };
+                if local == b"status" && stack.last().is_some_and(|parent| parent == b"propstat") {
+                    all &= status_is_success(text.trim());
+                }
+                text.clear();
+            }
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    if saw_multistatus { Ok(all) } else { Err(NotMultistatus) }
+}
+
 /// Folds one 2xx `propstat`'s values into the response they belong to.
 fn merge(entry: &mut PropfindEntry, from: &PropfindEntry) {
     entry.is_collection |= from.is_collection;
@@ -177,16 +234,22 @@ fn merge(entry: &mut PropfindEntry, from: &PropfindEntry) {
     entry.quota_available = entry.quota_available.or(from.quota_available);
     entry.quota_used = entry.quota_used.or(from.quota_used);
     entry.oc_size = entry.oc_size.or(from.oc_size);
+    entry.nc_creation_time = entry.nc_creation_time.or(from.nc_creation_time);
 }
 
 /// How an element is held on the stack: its local name for a `DAV:` element,
-/// the same prefixed with `oc:` for an ownCloud one, and empty for a namespace
+/// the same prefixed with `oc:` for an ownCloud one and `nc:` for a Nextcloud one, and empty for a namespace
 /// this parser reads nothing from.
 fn stack_name(ns: &ResolveResult, local: &[u8]) -> Vec<u8> {
     match ns {
         ResolveResult::Bound(namespace) if namespace.as_ref() == DAV => local.to_vec(),
         ResolveResult::Bound(namespace) if namespace.as_ref() == OC => {
             let mut name = OC_PREFIX.to_vec();
+            name.extend_from_slice(local);
+            name
+        }
+        ResolveResult::Bound(namespace) if namespace.as_ref() == NC => {
+            let mut name = NC_PREFIX.to_vec();
             name.extend_from_slice(local);
             name
         }

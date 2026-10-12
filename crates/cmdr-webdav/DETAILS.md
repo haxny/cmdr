@@ -265,11 +265,41 @@ metadata".
   cells split the contract: the source half runs on `seed.sh`'s `dated.txt` (the fixture's own `touch -d`, the only way
   to age a file there), and `apache_stores_no_date_so_a_copy_onto_it_carries_its_own` asserts the limit so it stays a
   fact. The destination half is pinned where it can hold, `nextcloud_test.rs`, so a PUT that stops sending the header
-  fails a cell. That's a per-fixture expectation, ❌ not a capability flag: nothing in the app branches on whether a
-  server keeps dates, and a flag would only move the same fact from a test into the trait.
+  fails a cell. For the mtime that's a per-fixture expectation, ❌ not a capability flag: mtime isn't a loss-note class,
+  so nothing in the app branches on it. Creation and folder dates ARE a capability (§ "Creation dates and folder
+  dates"), because the loss note reads it.
 - **Through the engine**, only the copy-off cell exists
   (`webdav_integration_a_copy_off_a_server_keeps_the_source_date`): the shared lane's servers are all Apache, and the
   Nextcloud lane runs this crate's cells only.
+
+### Creation dates and folder dates (Nextcloud)
+
+WebDAV has no standard way to set either; Nextcloud has its own, documented in its WebDAV client API ("Basic File &
+Folder Operations": the `X-OC-CTime` request header and the `nc:creation_time` property). Verified on
+`nextcloud:34.0.2-apache` (`webdav-fixture-nextcloud`, by `curl` and the cells below, 2026-10-12):
+
+- **A file's creation date rides the PUT** as `X-OC-CTime: <Unix seconds>` beside `X-OC-Mtime`; the server answers
+  `X-OC-CTime: accepted`, lists it as `creationdate` and `nc:creation_time`, and the staging `MOVE` keeps it. Zero new
+  requests. A server that took the probe's word and then didn't take the header is a `warn!` (the loss note can't hear a
+  refusal inside `write_from_stream`).
+- **A folder's creation and modification dates take ONE PROPPATCH** (`d:lastmodified` and `nc:creation_time`, whole
+  seconds) in `apply_metadata`, after its contents land: one request per created folder, like SFTP's and SMB's
+  `SETSTAT`. A 207 whose every `propstat` is 2xx is `Kept`; anything else `Refused`.
+- ❗ **Which server keeps them is the connect probe's answer**, per volume: the probe alone asks for `nc:creation_time`
+  (`transport.rs`'s `PROBE_BODY`), and a 2xx `propstat` holding it sets `keeps_dates`, re-read on every reconnect.
+  `metadata_caps()` then answers `WebdavVolume::DATE_KEEPING_CAPS` (stores `CREATED`, folders keep `CREATED` and their
+  modification date), else `MetadataCaps::NONE`. ❌ Not every PROPFIND: on a server without it every entry grows a 404
+  `propstat`, real bytes on a big listing. ❌ Never PROPPATCH dates on `mod_dav`: it answers 207 and stores them as dead
+  properties, changing nothing, so the copy would report dates kept that weren't. Pinned by
+  `conformance_test.rs::apache_keeps_no_creation_dates_and_says_so`.
+- **Copies off the server report no creation date**: a GET carries none, and a PROPFIND per file would be a request per
+  file. A folder's comes off the listing, like every backend's.
+- ❗ **Nextcloud answers `creationdate` 1970-01-01 for an item with no creation time** (anything not uploaded with
+  `X-OC-CTime`, every folder it made itself). The parser reads that as none: as a date, a copy off the server would
+  stamp 1970 on the user's folder (`FolderMetadata` carries a listed creation date onto every created folder).
+- **Pinned by**
+  `nextcloud_test.rs::{nextcloud_keeps_a_files_creation_date, nextcloud_keeps_a_folders_dates, a_folder_with_no_creation_time_lists_none}`
+  and `propfind_test.rs` (the epoch, the namespace, the PROPPATCH answer).
 
 ## The reconnect model
 

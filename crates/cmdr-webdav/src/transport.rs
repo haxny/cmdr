@@ -15,7 +15,7 @@ use reqwest::{Method, RequestBuilder, Response, StatusCode};
 use url::Url;
 
 use crate::errors::{WebdavConnectError, classify_connect_error};
-use crate::propfind::{PropfindEntry, parse_multistatus};
+use crate::propfind::{PropfindEntry, every_propstat_succeeded, parse_multistatus};
 use cmdr_fs::volume::liveness::Liveness;
 
 /// The connect budget, per request: the PROBE's total budget and the idle
@@ -88,6 +88,20 @@ const PROPFIND_BODY: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <D:resourcetype/><D:getcontentlength/><D:getlastmodified/><D:creationdate/><D:getetag/>
 <D:quota-available-bytes/><D:quota-used-bytes/><oc:size/>
 </D:prop></D:propfind>"#;
+
+/// The connect probe's question: the listing's properties plus Nextcloud's
+/// `creation_time`, whose presence in a 2xx `propstat` is how a server says it
+/// keeps creation dates (`X-OC-CTime`) and takes a folder's dates by PROPPATCH
+/// (`DETAILS.md` § "Dates"). ❗ Asked by the probe ONLY: a server without it
+/// answers a 404 `propstat` per entry, which on a big listing is real bytes.
+const PROBE_BODY: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"><D:prop>
+<D:resourcetype/><D:getcontentlength/><D:getlastmodified/><D:creationdate/><D:getetag/>
+<D:quota-available-bytes/><D:quota-used-bytes/><oc:size/><nc:creation_time/>
+</D:prop></D:propfind>"#;
+
+/// The most a PROPPATCH answer may hold: one resource's handful of statuses.
+const MAX_PROPPATCH_BODY: usize = 64 * 1024;
 
 /// One authenticated client for one account on one server.
 pub(crate) struct WebdavClient {
@@ -272,6 +286,31 @@ impl WebdavClient {
         .await
     }
 
+    /// One PROPPATCH of `props` (already-escaped `<d:prop>` children, in the
+    /// `d:` and `nc:` namespaces) on `url`.
+    pub(crate) async fn proppatch(&self, url: Url, props: &str) -> Result<ProppatchOutcome, reqwest::Error> {
+        let body = format!(
+            r#"<?xml version="1.0" encoding="utf-8"?>
+<d:propertyupdate xmlns:d="DAV:" xmlns:nc="http://nextcloud.org/ns"><d:set><d:prop>{props}</d:prop></d:set></d:propertyupdate>"#
+        );
+        let response = self
+            .send(
+                self.request(method("PROPPATCH"), url)
+                    .header(reqwest::header::CONTENT_TYPE, "application/xml; charset=utf-8")
+                    .body(body)
+                    .timeout(MUTATION_BUDGET),
+            )
+            .await?;
+        if response.status() != StatusCode::MULTI_STATUS {
+            return Ok(ProppatchOutcome::Status(response.status()));
+        }
+        let Some(body) = self.read_body(response, MAX_PROPPATCH_BODY).await? else {
+            return Ok(ProppatchOutcome::Unreadable);
+        };
+        Ok(every_propstat_succeeded(&String::from_utf8_lossy(&body))
+            .map_or(ProppatchOutcome::Unreadable, ProppatchOutcome::Multistatus))
+    }
+
     /// The connect probe: PROPFIND `Depth: 0` on `root`, judged in connect
     /// terms.
     pub(crate) async fn probe(&self, root_url: Url) -> Result<Vec<PropfindEntry>, WebdavConnectError> {
@@ -280,7 +319,7 @@ impl WebdavClient {
             .request(method("PROPFIND"), root_url)
             .header("Depth", "0")
             .header(reqwest::header::CONTENT_TYPE, "application/xml; charset=utf-8")
-            .body(PROPFIND_BODY)
+            .body(PROBE_BODY)
             .timeout(REQUEST_BUDGET);
         let response = request.send().await.map_err(|e| classify_connect_error(&e))?;
         let status = response.status();
@@ -309,6 +348,16 @@ impl WebdavClient {
             _ => Err(WebdavConnectError::NotAWebdavServer),
         }
     }
+}
+
+/// What a PROPPATCH produced.
+pub(crate) enum ProppatchOutcome {
+    /// A 207 that applied every property (`true`) or refused them (`false`).
+    Multistatus(bool),
+    /// A 207 whose body wasn't a `multistatus`, or ran past its cap.
+    Unreadable,
+    /// Anything but a 207.
+    Status(StatusCode),
 }
 
 /// What a PROPFIND produced.

@@ -390,3 +390,55 @@ async fn nextcloud_a_copy_keeps_the_source_date() {
 
     clean(&volume, &dir).await;
 }
+
+/// Nextcloud keeps a file's creation date, and its connect probe says so: it
+/// rides `X-OC-CTime` on the PUT and survives the staging `MOVE`. Holds the
+/// server to `WebdavVolume::DATE_KEEPING_CAPS` (verified on
+/// `nextcloud:34.0.2-apache`, 2026-10-12).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
+async fn nextcloud_keeps_a_files_creation_date() {
+    use cmdr_fs::volume::conformance;
+    let (volume, dir) = nextcloud_with_scratch().await;
+    assert_eq!(
+        volume.metadata_caps(),
+        WebdavVolume::DATE_KEEPING_CAPS,
+        "the connect probe found `nc:creation_time`"
+    );
+
+    conformance::assert_write_from_stream_keeps_metadata(&volume, &dir.join("born.txt")).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(&volume, &dir.join("born.txt")).await;
+
+    clean(&volume, &dir).await;
+}
+
+/// A folder's creation and modification dates take one PROPPATCH on
+/// Nextcloud, after its contents land (verified on `nextcloud:34.0.2-apache`,
+/// 2026-10-12).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
+async fn nextcloud_keeps_a_folders_dates() {
+    use cmdr_fs::volume::conformance;
+    let (volume, dir) = nextcloud_with_scratch().await;
+
+    conformance::assert_apply_metadata_keeps(&volume, &dir.join("born")).await;
+    conformance::assert_apply_metadata_dates_a_folder(&volume, &dir.join("dated"), std::time::Duration::ZERO).await;
+
+    clean(&volume, &dir).await;
+}
+
+/// A folder Nextcloud made itself has no creation time, and lists none,
+/// ❌ never the 1970 its `creationdate` answers: a copy off the server would
+/// stamp that on the user's folder.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
+async fn a_folder_with_no_creation_time_lists_none() {
+    let (volume, dir) = nextcloud_with_scratch().await;
+    let plain = dir.join("plain");
+    volume.create_directory(&plain).await.expect(FIXTURE);
+
+    let listed = volume.get_metadata(&plain).await.expect(FIXTURE);
+
+    assert_eq!(listed.created_at, None);
+    clean(&volume, &dir).await;
+}

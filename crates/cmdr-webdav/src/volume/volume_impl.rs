@@ -10,6 +10,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use cmdr_fs::volume::patching;
 use cmdr_fs::volume::scan_walk;
 use cmdr_fs::volume::{
@@ -20,6 +21,27 @@ use cmdr_fs::volume::{
 use tokio_util::sync::CancellationToken;
 
 use super::{BACKEND, WebdavVolume};
+
+impl WebdavVolume {
+    /// What a server that keeps dates (a Nextcloud, as its connect probe said)
+    /// keeps of a copy beyond the mtime `X-OC-Mtime` already carries: a file's
+    /// creation date (`X-OC-CTime` on the PUT), and a folder's creation and
+    /// modification dates (one PROPPATCH). Its streams report nothing: a GET
+    /// carries no creation date (`DETAILS.md` § "Dates"). Any other server keeps
+    /// nothing beyond a file's mtime (`MetadataCaps::NONE`).
+    pub const DATE_KEEPING_CAPS: MetadataCaps = MetadataCaps {
+        stores: MetadataClasses::CREATED,
+        reports: MetadataClasses::NONE,
+        folder_stores: MetadataClasses::CREATED,
+        folder_dates: true,
+    };
+
+    /// Whether the server keeps creation dates and a folder's dates, as its
+    /// last connect probe said.
+    pub(super) fn keeps_dates(&self) -> bool {
+        self.inner.keeps_dates.load(Ordering::Relaxed)
+    }
+}
 
 impl WebdavVolume {
     /// Runs `work`, noticing on the way out if the answer says the server is
@@ -129,6 +151,57 @@ impl Volume for WebdavVolume {
     /// ❗ Implementing the read path does not declare it; this does.
     fn supports_export(&self) -> bool {
         true
+    }
+
+    /// [`Self::DATE_KEEPING_CAPS`] on a server that keeps dates, else nothing.
+    fn metadata_caps(&self) -> MetadataCaps {
+        if self.keeps_dates() {
+            Self::DATE_KEEPING_CAPS
+        } else {
+            MetadataCaps::NONE
+        }
+    }
+
+    /// A folder's creation and modification dates in one PROPPATCH, on a server
+    /// that keeps dates; every class answers `NotApplicable` anywhere else
+    /// (Apache `mod_dav` would store the PROPPATCH as dead properties and
+    /// change nothing).
+    fn apply_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        carried: &'a CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
+        Box::pin(async move {
+            let mut report = MetadataReport::none_applicable(carried, modified);
+            if !self.keeps_dates() || (modified.is_none() && carried.created.is_none()) {
+                return report;
+            }
+            let outcome = match self.noting(self.set_dates_impl(path, modified, carried.created)).await {
+                Ok(true) => ClassOutcome::Kept,
+                Ok(false) => {
+                    log::warn!(
+                        "WebdavVolume::apply_metadata: the server refused the dates of {}",
+                        path.display()
+                    );
+                    ClassOutcome::Refused
+                }
+                Err(e) => {
+                    log::warn!(
+                        "WebdavVolume::apply_metadata: {} keeps the server's dates, not the source's: {e}",
+                        path.display()
+                    );
+                    ClassOutcome::Refused
+                }
+            };
+            if modified.is_some() {
+                report.modified = outcome;
+            }
+            if carried.created.is_some() {
+                report.created = outcome;
+            }
+            report
+        })
     }
 
     #[allow(

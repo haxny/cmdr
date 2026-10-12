@@ -41,6 +41,7 @@ pub(super) fn make_test_volume_with(root: &str, host: VolumeHost) -> WebdavVolum
             auto_reconnect: AtomicBool::new(true),
             auth_attempt_spent: AtomicBool::new(false),
             silence: std::sync::RwLock::new(Timings::PRODUCTION),
+            keeps_dates: AtomicBool::new(false),
             host,
         }),
     }

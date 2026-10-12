@@ -1,16 +1,17 @@
-//! Changing what's on the server: PUT, MKCOL, DELETE, and MOVE.
+//! Changing what's on the server: PUT, MKCOL, DELETE, MOVE, and a folder's dates (PROPPATCH).
 //!
 //! Every refusal is the SERVER's, ❌ never a check of ours: `If-None-Match: *`
 //! and `Overwrite: F` are preconditions the server evaluates atomically, where
 //! a stat-then-write would be a TOCTOU window.
 
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::pluralize::pluralize_with;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::mkdir_all::{self, LeadsTo, MakesDirectories};
-use cmdr_fs::volume::patching::{PatchSource, patch_created, patch_deleted, patch_renamed};
+use cmdr_fs::volume::patching::{PatchSource, patch_created, patch_deleted, patch_modified, patch_renamed};
 use cmdr_fs::volume::scan_walk::Walking;
 use cmdr_fs::volume::{DirectoryCreation, VolumeError};
 use log::debug;
@@ -18,8 +19,8 @@ use reqwest::Method;
 use reqwest::header::IF_NONE_MATCH;
 
 use super::WebdavVolume;
-use crate::errors::Attempted;
-use crate::transport::{Depth, MUTATION_BUDGET, WebdavClient, method};
+use crate::errors::{Attempted, map_status, map_transport_error};
+use crate::transport::{Depth, MUTATION_BUDGET, ProppatchOutcome, WebdavClient, method};
 
 /// `ENOTEMPTY`, which POSIX numbers differently per platform. The number is
 /// what the app renders "this folder still has something in it" from.
@@ -51,6 +52,47 @@ impl WebdavVolume {
         self.mkcol(&client, &remote).await?;
         patch_created(self, path).await;
         Ok(())
+    }
+
+    /// A folder's modification and creation dates in ONE PROPPATCH
+    /// (`d:lastmodified`, Nextcloud's `nc:creation_time`), whole seconds. `true`
+    /// when the server applied every property it was sent. ❗ Only for a server
+    /// that keeps dates: `mod_dav` answers 207 and stores them as dead properties.
+    pub(super) async fn set_dates_impl(
+        &self,
+        path: &Path,
+        modified: Option<SystemTime>,
+        created: Option<SystemTime>,
+    ) -> Result<bool, VolumeError> {
+        let remote = self.to_remote_path(path)?;
+        let secs = |at: SystemTime| at.duration_since(UNIX_EPOCH).ok().map(|since| since.as_secs());
+        let mut props = String::new();
+        if let Some(secs) = modified.and_then(secs) {
+            props.push_str(&format!("<d:lastmodified>{secs}</d:lastmodified>"));
+        }
+        if let Some(secs) = created.and_then(secs) {
+            props.push_str(&format!("<nc:creation_time>{secs}</nc:creation_time>"));
+        }
+        if props.is_empty() {
+            // Before 1970: nothing the properties can say.
+            return Ok(false);
+        }
+        let client = self.clone_client().await?;
+        debug!("WebdavVolume::set_dates: {remote}");
+        let applied = match client
+            .proppatch(client.url_for(&remote, true), &props)
+            .await
+            .map_err(|e| map_transport_error(&e, self.volume_id(), &remote))?
+        {
+            ProppatchOutcome::Multistatus(applied) => applied,
+            ProppatchOutcome::Unreadable => false,
+            ProppatchOutcome::Status(status) if status.is_success() => true,
+            ProppatchOutcome::Status(status) => return Err(map_status(status, &remote, Attempted::Reaching)),
+        };
+        if applied {
+            patch_modified(self, path).await;
+        }
+        Ok(applied)
     }
 
     async fn mkcol(&self, client: &WebdavClient, remote: &str) -> Result<(), VolumeError> {

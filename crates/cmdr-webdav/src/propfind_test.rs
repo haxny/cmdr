@@ -96,6 +96,7 @@ fn a_nextcloud_listing_yields_decoded_hrefs_and_typed_props() {
             quota_available: None,
             quota_used: None,
             oc_size: None,
+            nc_creation_time: None,
         }
     );
 }
@@ -235,4 +236,70 @@ fn an_escaped_entity_is_unescaped_exactly_once() {
     // Percent-decoding is a separate, later step; `&amp;amp;` is exactly `&amp;`,
     // and a numeric reference resolves too.
     assert_eq!(entries[1].href, "/dav/c&d&amp;e<f.txt");
+}
+
+// ── Creation dates (Nextcloud's `creation_time`) ─────────────────────
+
+/// What Nextcloud 34 answers for a folder it made itself and a file uploaded
+/// with `X-OC-CTime` (captured from the fixture, 2026-10-12).
+const NEXTCLOUD_CREATION: &str = r#"<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/remote.php/webdav/m9spike/</d:href><d:propstat><d:prop><d:creationdate>1970-01-01T00:00:00+00:00</d:creationdate><nc:creation_time>0</nc:creation_time></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/remote.php/webdav/m9spike/ct.txt</d:href><d:propstat><d:prop><d:creationdate>2015-03-01T00:00:00+00:00</d:creationdate><nc:creation_time>1425168000</nc:creation_time></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"#;
+
+/// The same question to Apache `mod_dav`: it knows `creationdate` and not the
+/// Nextcloud property (captured from the fixture, 2026-10-12).
+const APACHE_CREATION: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:ns1="http://nextcloud.org/ns" xmlns:ns0="DAV:">
+<D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/" xmlns:g0="http://nextcloud.org/ns">
+<D:href>/dav/</D:href>
+<D:propstat>
+<D:prop>
+<lp1:creationdate>2026-10-12T00:01:50Z</lp1:creationdate>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+<D:propstat>
+<D:prop>
+<g0:creation_time/>
+</D:prop>
+<D:status>HTTP/1.1 404 Not Found</D:status>
+</D:propstat>
+</D:response>
+</D:multistatus>"#;
+
+#[test]
+fn nextclouds_epoch_creationdate_means_no_creation_date() {
+    // A folder Nextcloud made itself lists 1970: read as a date, a copy off
+    // the server would stamp it on the user's folder.
+    let entries = parse_multistatus(NEXTCLOUD_CREATION).unwrap();
+    assert_eq!(entries[0].created_at, None);
+    assert_eq!(entries[1].created_at, Some(1_425_168_000));
+}
+
+#[test]
+fn creation_time_is_read_only_from_nextclouds_namespace_and_a_2xx_propstat() {
+    let nextcloud = parse_multistatus(NEXTCLOUD_CREATION).unwrap();
+    assert_eq!(
+        nextcloud[0].nc_creation_time,
+        Some(0),
+        "the property exists, even unset"
+    );
+    assert_eq!(nextcloud[1].nc_creation_time, Some(1_425_168_000));
+
+    let apache = parse_multistatus(APACHE_CREATION).unwrap();
+    assert_eq!(
+        apache[0].nc_creation_time, None,
+        "a 404 propstat lists what the server doesn't know"
+    );
+    assert!(apache[0].created_at.is_some());
+}
+
+#[test]
+fn a_proppatch_answer_says_whether_every_property_took() {
+    let took = r#"<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/remote.php/webdav/m9spike/fold</d:href><d:propstat><d:prop><d:lastmodified/><nc:creation_time/></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"#;
+    let refused = r#"<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:nc="http://nextcloud.org/ns"><d:response><d:href>/x</d:href><d:propstat><d:prop><d:lastmodified/></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat><d:propstat><d:prop><nc:creation_time/></d:prop><d:status>HTTP/1.1 403 Forbidden</d:status></d:propstat></d:response></d:multistatus>"#;
+    assert_eq!(super::every_propstat_succeeded(took).ok(), Some(true));
+    assert_eq!(super::every_propstat_succeeded(refused).ok(), Some(false));
+    assert!(super::every_propstat_succeeded("<html/>").is_err());
 }

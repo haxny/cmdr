@@ -56,6 +56,10 @@ fn destinations() -> Vec<(&'static str, MetadataCaps)> {
         ("SFTP", cmdr_sftp::SftpVolume::METADATA_CAPS),
         ("ADB", cmdr_adb::AdbVolume::METADATA_CAPS),
         ("S3", cmdr_s3::S3Volume::METADATA_CAPS),
+        (
+            "WebDAV keeping dates (Nextcloud)",
+            cmdr_webdav::WebdavVolume::DATE_KEEPING_CAPS,
+        ),
         ("MTP / WebDAV", MetadataCaps::NONE),
     ]
 }
