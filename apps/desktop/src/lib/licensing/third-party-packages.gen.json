@@ -3065,7 +3065,7 @@
     },
     {
       "name": "russh",
-      "version": "0.63.3",
+      "version": "0.64.1",
       "license": "Apache-2.0",
       "url": "https://github.com/warp-tech/russh"
     },
