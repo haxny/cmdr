@@ -134,7 +134,7 @@ pub static FAIL_NEXT_WIDTH_CALLS: std::sync::atomic::AtomicUsize = std::sync::at
 fn take_injected_failure() -> bool {
     use std::sync::atomic::Ordering;
     FAIL_NEXT_WIDTH_CALLS
-        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+        .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
         .is_ok()
 }
 

@@ -1,7 +1,7 @@
 //! Shared conformance assertions every `Volume` implementation runs.
 //!
 //! A trait contract no test enforces is a comment. The promises in
-//! [`Volume`](crate::volume::Volume)'s doc comments are load-bearing for data safety,
+//! [`Volume`]'s doc comments are load-bearing for data safety,
 //! and a backend that talks to a device rather than to a filesystem can stop
 //! honoring one with no compile error and no visible symptom — right up until a
 //! user loses a file.
