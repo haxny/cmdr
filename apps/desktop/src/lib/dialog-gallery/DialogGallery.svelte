@@ -180,8 +180,8 @@
      * The callback-only ones take no fixture, so there's none to miss; what states
      * each exposes is what its gallery row discloses.
      */
-    const planResolvers: Partial<Record<SoftDialogId, (stateId: string, context: GalleryPreviewContext) => RenderPlan>> =
-        {
+    type PlanResolver = (stateId: string, context: GalleryPreviewContext) => RenderPlan
+    const planResolvers: Partial<Record<SoftDialogId, PlanResolver>> = {
         alert: (id) => withFixture(fixtureRecords.alert[id], (f) => ({ kind: 'alert', props: f })),
         expiration: (id) => withFixture(fixtureRecords.expiration[id], (f) => ({ kind: 'expiration', props: f })),
         'extension-change': (id) =>
