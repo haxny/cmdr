@@ -191,6 +191,8 @@
 {#snippet selectChip()}<ShortcutChip key="Enter" size="sm" />{/snippet}
 
 <Popover {anchor} {open} {onClose} {ariaLabel}>
+    <!-- Catches the filter input's keys as they bubble (↑ / ↓ / Enter). -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div class="recent-popover" onkeydown={handleKeydown} role="search">
         <TextInput
             type="text"

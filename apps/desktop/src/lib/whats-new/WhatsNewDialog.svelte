@@ -87,8 +87,9 @@
 
     <div class="body" id="whats-new-body">
         <!-- Click delegate for anchor tags inside rendered markdown: an entry or a lead
-             can carry a Markdown link, and Tauri blocks raw <a> navigation. -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
+             can carry a Markdown link, and Tauri blocks raw <a> navigation. Each link is
+             focusable, and its Enter bubbles here as a click. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
         <div class="scroll-area" onclick={handleMarkdownLinkClick}>
             {#if isEmpty}
                 <p class="empty">{tString('whatsNew.dialog.empty')}</p>

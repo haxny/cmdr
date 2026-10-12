@@ -10,12 +10,18 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 import { listLocales } from './scripts/i18n-catalog-lib.ts'
 import { buildBootGuardData, injectBootGuardData } from './scripts/gen-boot-guard-lib.ts'
 
-// A11y warnings to suppress (same as in package.json check script)
+// Compiler warnings suppressed app-wide. The ONE list: `svelte-check` (the `svelte-check`
+// lane, which fails on any warning) and the Vite build both read this filter.
+//
+// The keyboard-reachability warnings (`a11y_click_events_have_key_events`,
+// `a11y_no_noninteractive_element_interactions`, `a11y_interactive_supports_focus`) stay ON:
+// they catch a click handler with no keyboard path. A site whose keys live elsewhere (a
+// listbox input, a grid's page-level keydown, a link delegate) opts out with a
+// `<!-- svelte-ignore <code> -->` plus the reason, next to the code (#383).
 const suppressedWarnings = [
-  'a11y_no_noninteractive_element_interactions',
-  'a11y_click_events_have_key_events',
+  // Flags the opposite of a gap: a focusable scroll region or `role="document"` view, which
+  // axe's `scrollable-region-focusable` wants focusable so arrow keys can scroll it.
   'a11y_no_noninteractive_tabindex',
-  'a11y_interactive_supports_focus',
   'state_referenced_locally',
   'non_reactive_update',
 ]

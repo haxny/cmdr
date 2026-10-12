@@ -171,8 +171,10 @@
 <!--
   The stage is a focusable region so keyboard users can zoom/pan. role="img" with the
   file name as the label keeps the announcement meaningful while the interactive
-  handlers live on the container.
+  handlers live on the container. Its keys (Enter / Space toggle zoom, + / - / 0) arrive
+  through `handleKey` from the window-level router in `+page.svelte`.
 -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <div
   class="media-image-stage"
   class:actual={mode === 'actual'}

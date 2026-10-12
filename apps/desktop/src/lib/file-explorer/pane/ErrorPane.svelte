@@ -149,15 +149,15 @@
         </h2>
         <p class="folder-path">{folderPath}</p>
 
-        <!-- Click delegate for anchor tags inside rendered markdown -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- Click delegate for anchor tags inside rendered markdown. Each link is focusable, and its Enter bubbles here as a click. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
         <div class="explanation" onclick={handleMarkdownLinkClick}>
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- Input is our own hardcoded strings from Rust, not user content -->
             {@html renderErrorMarkdown(friendly.explanation)}
         </div>
 
-        <!-- Click delegate for anchor tags inside rendered markdown -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- Click delegate for anchor tags inside rendered markdown, keyboard-reachable like the one above. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
         <div class="suggestion" onclick={handleMarkdownLinkClick}>
             <!-- eslint-disable-next-line svelte/no-at-html-tags -- Input is our own hardcoded strings from Rust, not user content -->
             {@html renderErrorMarkdown(friendly.suggestion)}

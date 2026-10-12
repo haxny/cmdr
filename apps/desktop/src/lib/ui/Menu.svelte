@@ -401,7 +401,8 @@
                         <!-- The section's own row, in place of a heading: a full row the cursor
                              lands on, whose pick shows or hides the rows under it. The chevron
                              takes the checkmark column, so the label lines up with the rows. -->
-                        <!-- svelte-ignore a11y_mouse_events_have_key_events -->
+                        <!-- Keys live on the menu surface (`menu-navigation.ts`): Enter picks the highlighted row. -->
+                        <!-- svelte-ignore a11y_mouse_events_have_key_events, a11y_click_events_have_key_events -->
                         <div
                             id={rowId(value)}
                             class="menu-row"
@@ -523,6 +524,8 @@
         </div>
 
         {#if menu.openSubmenuValue !== null}
+            <!-- The parent surface keeps focus and routes keys here (→ opens, ← closes). -->
+            <!-- svelte-ignore a11y_interactive_supports_focus -->
             <div
                 bind:this={submenuEl}
                 class="menu-surface menu-submenu"

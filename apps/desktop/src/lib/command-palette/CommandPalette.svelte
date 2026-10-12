@@ -254,6 +254,8 @@
                     {#if recentCount > 0 && index === recentCount}
                         <div class="group-heading">{tString('commandPalette.groupAll')}</div>
                     {/if}
+                    <!-- Keys live on the search input (↑ / ↓ / Enter over `aria-activedescendant`). -->
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <div
                         class="result-item"
                         id={optionId(match.command.id)}

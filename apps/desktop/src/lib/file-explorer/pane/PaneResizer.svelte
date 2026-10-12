@@ -43,6 +43,8 @@
     }
 </script>
 
+<!-- A known gap: no keyboard path resizes or resets the split yet (#407). Drop this ignore when it lands. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     class="pane-resizer"
     class:dragging={isDragging}

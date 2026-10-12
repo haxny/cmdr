@@ -365,6 +365,7 @@
      buttons, and the row's name is its summary plus its status. Every button
      leaves the Tab order (`tabindex={-1}`), so the list is one Tab stop.
      DETAILS § Keyboard has the grid-over-listbox call. -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
     bind:this={rowEl}
     class="queue-row"

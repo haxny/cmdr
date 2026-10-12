@@ -152,6 +152,8 @@
     onkeydown={handleKeydown}
 >
     {#each cloudProviderPresets as preset (preset.id)}
+        <!-- Keys live on the listbox (`aria-activedescendant`, `handleKeydown`). -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
         <li
             id={optionId(preset.id)}
             class="provider-option"

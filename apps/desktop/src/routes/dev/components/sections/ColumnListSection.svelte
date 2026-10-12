@@ -107,7 +107,7 @@
         click the list and the arrow keys move it too.
     </p>
     <!-- The demo owns the keys the way a dialog would; the list itself takes no focus. -->
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
     <div class="frame short" tabindex="0" role="group" aria-label="Measured list demo" onkeydown={onListKeydown}>
         <ColumnList
             bind:this={list}

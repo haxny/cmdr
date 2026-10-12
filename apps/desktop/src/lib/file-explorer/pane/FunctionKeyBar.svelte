@@ -229,6 +229,9 @@
 {/snippet}
 
 {#if visible}
+    <!-- Every button's keyboard path is its F-key, so the bar never takes focus. The
+         right-click menu's one item is Settings' `appearance.showFunctionKeyBar`. -->
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
     <div
         class="function-key-bar"
         data-row={shiftHeld ? 'shift' : 'plain'}

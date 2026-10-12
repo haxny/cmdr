@@ -122,6 +122,8 @@
     ></button>
 
     {#if open}
+        <!-- A focus-trapped popover: focus sits on its swatch buttons, never the dialog itself. -->
+        <!-- svelte-ignore a11y_interactive_supports_focus -->
         <div
             bind:this={popoverEl}
             role="dialog"

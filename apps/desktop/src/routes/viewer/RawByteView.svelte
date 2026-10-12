@@ -132,6 +132,8 @@
     }
 </script>
 
+<!-- A focusable scroll region that pages with the keyboard: `role="document"` is right, and its keydown is the point. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     class="raw-byte-view"
     role="document"

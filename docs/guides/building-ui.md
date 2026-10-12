@@ -177,6 +177,19 @@ component form with size-tier colors, and `<DateLabel>` is the date equivalent. 
 `formatEta`: `cmdr/no-private-unit-format` rejects them, because four private copies once drifted apart and two windows
 showed different numbers for the same transfer.
 
+## Giving every action a keyboard path
+
+Everything a mouse can do, a keyboard can too. Two checks hold the line:
+
+- **Commands**: `lib/commands/command-reachability.test.ts` fails when a command has no default key and no palette row,
+  unless its `KEYBOARD_PATH_NOT_NEEDED` entry says why.
+- **Markup**: the Svelte compiler's `a11y_click_events_have_key_events`, `a11y_no_noninteractive_element_interactions`,
+  and `a11y_interactive_supports_focus` warnings stay on, and `svelte-check` fails on any warning. Prefer a `<button>`
+  or a primitive. When the keys live elsewhere (a listbox's input, a grid's page-level keydown, a link delegate), put
+  `<!-- svelte-ignore <code>, <code> -->` above the element (comma-separated: in runes mode a space drops every code
+  after the first, verified with `svelte-check` 2026-10-12) with a comment naming that keyboard path. The suppression
+  list lives in `apps/desktop/svelte.config.js` alone.
+
 ## Adding a new primitive
 
 A new `lib/ui/` primitive is a four-part contract, enforced so it can't half-land:
