@@ -70,12 +70,15 @@ sevenz-rust2 = { version = "0.23.0", default-features = false, features = [
 ] }
 # Wipes the per-archive password from memory on drop (`Zeroizing<String>`).
 zeroize = "1.9.0"
-# A compress source's xattrs, read for the AppleDouble sidecar a zip carries
-# them in (`mutator::local_file_sidecar`). Already in the graph through `cmdr-fs`.
-xattr = "1"
 # The MS-DOS date/time a preserved zip entry carries: `SystemTime` has to become
 # broken-down local-free UTC fields before `zip::DateTime` can take them.
 chrono = "0.4"
+
+# A compress source's xattrs, read for the AppleDouble sidecar a zip carries
+# them in (`mutator::local_file_sidecar`), which is macOS-only: `__MACOSX` is a
+# Mac convention. Already in the graph through `cmdr-fs`.
+[target.'cfg(target_os = "macos")'.dependencies]
+xattr = "1"
 
 [dev-dependencies]
 # Depending on ourselves turns the `testing` feature on for every DEV target and
@@ -97,5 +100,7 @@ zstd = "0.13"
 # shape as `cmdr-fs`'s, so no second copy enters the graph.
 tokio-util = { version = "0.7.18", default-features = false }
 # The mutator's metadata-preservation tests read back what it wrote: mtime through
-# `filetime` (already in the workspace graph at this version).
+# `filetime`, Finder tags through `xattr`. Both are already in the workspace graph
+# at these versions.
 filetime = "0.2"
+xattr = "1"
