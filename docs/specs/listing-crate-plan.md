@@ -1127,6 +1127,25 @@ new member; `cargo-machete` / `cargo-udeps` will flag the ICU crates if they sta
 `desktop-rust-module-cycles`, `desktop-rust-cargo-deny`, `desktop-rust-cargo-machete`, `desktop-rust-cargo-udeps`,
 `desktop-rust-rustdoc`, the docs lanes, `nextest-filter-coverage`), and `desktop-svelte-e2e-linux` once.
 
+Executor notes:
+
+- Layout stays flat beside `engine/`, `host/`, `testing/`, with `Inner` in `lib.rs`: the `src/*/` grouping puts
+  `cached_listing` (cache) and `pipeline` (read) in sibling groups that use each other, a new tangle. `module-cycles`
+  shows no tangle in `cmdr-listing`. `caching.rs` split along its TODO into `refresh.rs`, `authoritative.rs` (the
+  oracle; `engine/oracle.rs` already took that name), and `mutate.rs`; its `file-length` entry went.
+- `host`'s eight seam files are `pub(crate)`, so `host` is the one public module and its re-exports are the seam
+  surface. Ceilings at the measured 33 / 48 / 1 / 20; the three `testing` methods on `Listings` repeat the feature gate
+  per method so the count sees them as fixtures.
+- `deny(missing_docs)` put docs on the specta wire types' fields and variants, so `bindings.ts` changed in comments only
+  (no name or shape); the lane is zero-diff against the committed file.
+- `TestListingGuard::with_listing` is crate-private (it hands out `CachedListing`); the two app tests that read a path
+  through it use `Listings::location`. The app's `listings()` fallback stays `cfg(test)`: the app has no `testing`
+  feature.
+- Knock-ons: `jscpd-rust` gained an entry for the fixture volumes' forwarded `Volume` methods (91 lines, test-only), and
+  `fresh_plan.rs`'s progress callback is `report_to`, since `discarded-outcome` read `observer(…)` as one of the app's
+  `observer()` constructors once the engine's builder methods left the app tree.
+- Not run here: `desktop-svelte-e2e-linux` (the lead's full suite).
+
 ### M6: The docs move with the code
 
 **Scope.** Crate `CLAUDE.md` (must-knows only, 300–400 words, the module map, the seam rule, the `cfg(test)` rule, "the
