@@ -61,6 +61,7 @@
     data-index={pinned ? undefined : index}
     data-pinned-index={pinned ? index : undefined}
     data-row-id={row.id}
+    data-state={row.state}
     style:padding-inline-start="calc(var(--spacing-xs) + {row.depth} * var(--spacing-lg))"
 >
     <span class="chevron" class:open={row.expanded} data-chevron={isFolder && row.hasChildren ? '' : undefined}>

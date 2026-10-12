@@ -472,6 +472,11 @@ test.describe('Operation queue window', () => {
         { timeout: waitBudget(15000) },
       )
       .toBe('running')
+    // The running row carries its live file tree inline, once a progress tick
+    // past the scan has given the tree something to show.
+    await expect
+      .poll(() => queuePage.isVisible('.queue-row [data-queue-tree] [role="tree"]'), { timeout: waitBudget(10000) })
+      .toBeTruthy()
 
     // Start a SECOND same-lane copy via IPC. Its lane is busy, so the manager
     // admits it as Queued. The queue window shows two rows; no second modal opens
@@ -493,6 +498,10 @@ test.describe('Operation queue window', () => {
 
     // No progress modal stacked in the main window for the queued op.
     expect(await main.isVisible(PROGRESS_DIALOG), 'no second modal for the queued op').toBe(false)
+    // A waiting row has no tree, so one tree contests no room: no collapse toggle.
+    expect(await queuePage.isVisible('[aria-label="Files in this operation"]'), 'no tree toggle with one tree').toBe(
+      false,
+    )
   })
 
   // The whole reason failures are retained in the backend: the window that would

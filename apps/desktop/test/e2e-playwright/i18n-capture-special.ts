@@ -234,6 +234,10 @@ export async function captureQueueWindow(
           { timeout: waitBudget(20000) },
         )
         .toBe('queued,running')
+      // The running row's live file tree, mid-copy: the one capture of the
+      // tree's rows (`fileOperations.transferTree.*`). It renders once a
+      // progress tick past the scan has given it rows.
+      await q.waitForSelector('.queue-row [data-queue-tree] [role="treeitem"]', 15000)
       return { page: q, focusLabel: 'queue' }
     })
 
