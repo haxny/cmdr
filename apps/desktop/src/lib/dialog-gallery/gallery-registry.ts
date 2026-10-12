@@ -56,12 +56,14 @@ interface DialogGalleryEntryBase {
    *   `routes/(main)/+page.svelte`).
    * - `event-seeded`: the gallery arranges the dialog's preconditions and emits
    *   the real backend event it self-mounts off (`drive-index-stale`).
-   * - `real-operation`: the gallery starts a real operation in the conflict
-   *   fixture tree, and that operation raises the dialog (`operation-conflict`).
-   *   Answers really happen, inside the fixture tree.
+   * - `real-operation`: the gallery starts a real operation in a throwaway
+   *   fixture tree, and that operation drives the dialog: it raises the
+   *   `operation-conflict` prompt, and `transfer-progress` (which the harness
+   *   renders with real start props) shows its own copy. What happens really
+   *   happens, inside the fixture tree.
    *
-   * The Debug panel discloses this per row, and the harness's mount sweep knows
-   * these rows render nothing of their own.
+   * The Debug panel discloses this per row, and the harness's mount sweep skips
+   * these rows: none of them can open from a fixture alone.
    */
   openedBy?: 'store-seeded' | 'app-command' | 'event-seeded' | 'real-operation'
   /**
@@ -149,10 +151,14 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     dialogId: 'transfer-progress',
     label: 'Transfer progress',
     hostWindow: 'main',
-    status: 'not-triggerable',
-    reason:
-      'Start a real copy (F5), move, or delete and you have it — that’s also the only way to see it. Every phase it shows is driven by a live operation on the backend’s write-progress / write-conflict / write-error / write-cancelled / write-settled stream: the scan phase, the two bars, pause and queue, the flush at the end, and the conflict section it embeds (TransferConflictDialog is a section of this dialog’s body, not its own chrome). Choosing a phase from the gallery would need a script that replays that stream, which nobody has written yet.',
-    states: [],
+    status: 'ready',
+    openedBy: 'real-operation',
+    note: 'Each state starts a REAL copy of a throwaway folder into an emptied To/ folder beside it, paced to 400 ms per file so the live file tree has time to move: the dialog you see is driven by that operation, scan, bars, pause, and all. Escape sends it to the background like the real dialog does. The parallel (SMB, eight files at once) and failed-rows shapes need a remote volume or a failing write, so they stay in Debug → Components → Transfer tree. Its conflict section (TransferConflictDialog) only shows when a copy clashes, which the Operation conflict row stages.',
+    states: [
+      { id: 'folders', label: 'Five folders of photos' },
+      { id: 'compact-chains', label: 'Compacted folder chains' },
+      { id: 'flat', label: 'One folder of 300 files' },
+    ],
   },
   {
     dialogId: 'rollback-confirmation',

@@ -144,8 +144,9 @@ name.
   the section below.
 - **Event-seeded**: the component self-mounts off a backend event (`StaleDriveDialog`). The gallery arranges the
   preconditions and emits the real event. See the section below.
-- **Real-operation**: the dialog shows only what a live operation is parked on (`OperationConflictDialog`). The gallery
-  starts a real operation in a throwaway tree, and that operation raises it. See the section below.
+- **Real-operation**: the dialog shows only what a live operation reports (`OperationConflictDialog`,
+  `TransferProgressDialog`). The gallery starts a real operation in a throwaway tree, and that operation drives it. See
+  the two sections below.
 
 A row whose mechanism isn't "the harness renders it" says so in `openedBy`, which the Debug panel discloses and the
 harness's mount sweep reads (those rows render nothing of their own, so the sweep would otherwise fail on them).
@@ -254,6 +255,29 @@ the honest rendering.
 **The E2E sweeps skip it** (`dialog-inset.spec.ts`, `i18n-capture-gallery.ts`): both close a preview with Escape, and
 this prompt has none by design, so it would sit over every later dialog.
 
+## `transfer-progress` is real-operation
+
+`TransferProgressDialog` starts its own operation on mount and renders only what that operation reports: the scan, the
+two bars, the live file tree, pause and background. A replayed event stream would be a second engine to keep honest, so
+the preview hands the SHIPPING dialog real start props and lets it copy: `transfer-progress-preview.ts` resolves the
+state's shape (`fixtures/transfer-progress.ts`) to a copy out of `dialog-gallery-transfer-fixtures/From/` into its
+`To/`, and the harness renders the dialog with it (the one real-operation row the harness renders, through the
+`transfer` field of the open request). Every outcome callback only closes the preview; Escape sends the copy to the
+background, as the real dialog's does.
+
+**The pace is the backend's, and it reaches nothing else.** A local copy of small files is over in a blink, so the
+fixture command registers `From/` with `test_mode::pace_copies_from` (400 ms per file), and the local copy loop's
+throttle asks `effective_copy_throttle_ms_for(source)`. Only copies out of that folder slow down: nothing to arm or
+clear from the frontend, and nothing left throttled when a preview goes to the background.
+`dev_fixtures/ transfer_preview.rs` builds the three local shapes (five folders of photos, compacting single-child
+chains, one folder of 300 files) and empties `To/` on every trigger, so a copy never clashes with the last one. The
+parallel SMB and failed-rows shapes need a remote volume or a failing write, so they stay in Debug → Components →
+Transfer tree, and the row's note says so.
+
+**The E2E sweeps skip it too**: their Escape would leave the paced copy running in the background, holding the local
+lane and putting the corner chip in every later shot. The i18n capture photographs the tree on the queue window's
+running row instead (`i18n-capture-special.ts`).
+
 ## The disk-backed dialogs
 
 `delete-confirmation`, `transfer-confirmation`, `mkdir-confirmation`, `new-file-confirmation`, and `go-to-path` do real
@@ -355,18 +379,11 @@ operation isn't in the log, and the detail command answers `None` for an unknown
 recorded items"). `onboarding` is the extreme case: every step's buttons do exactly what they do on first launch,
 including recording the FDA choice and signing up for the beta.
 
-## The gap rows
+## The gap row
 
-Two registered dialogs have no button, and the reason each row prints is the point: a reader who doesn't know the
-internals has to be able to tell a real obstacle from a choice we made.
+One registered dialog has no button, and the reason its row prints is the point: a reader who doesn't know the internals
+has to be able to tell a real obstacle from a choice we made.
 
-- **`transfer-progress` is genuinely blocked.** Every phase it shows — the scan, the two bars, pause and queue, the
-  flush, and the conflict section it embeds — is driven by a live operation on the backend's `write-progress` /
-  `write-conflict` / `write-error` / `write-cancelled` / `write-settled` stream. Choosing a phase from the gallery needs
-  a script that replays that stream, which nobody has written. `TransferConflictDialog` is folded into this gap rather
-  than getting its own row: it renders a bare `.conflict-section` designed to sit inside `TransferProgressDialog`'s
-  body, so standalone it would need the gallery to fake its parent's chrome. The row also says what you CAN do — start a
-  real copy — because "not triggerable" must not read as "unreachable".
 - **`search` is deferred, not blocked, and the row says exactly that.** `SearchDialog` takes plain props, the drive
   index is live in dev, and ⌘F (or the MCP `open_search_dialog` tool) opens it right now. ❌ Never dress this up as a
   technical obstacle: publishing a false reason inside an instrument whose thesis is "must not lie" is the worst

@@ -113,9 +113,8 @@
                 {/if}
                 {#if entry.openedBy === 'real-operation'}
                     <p class="dialog-note">
-                        Raised by a real operation, so the gallery starts one in a throwaway conflict folder
-                        in the app data dir, and the app's own conflict host shows the dialog. Your answer
-                        really happens there.
+                        Driven by a real operation, so the gallery starts one in a throwaway folder in the app
+                        data dir, and that operation shows the dialog. What you do there really happens.
                     </p>
                 {/if}
                 {#if entry.openedBy === 'app-command'}

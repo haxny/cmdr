@@ -521,11 +521,12 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             }
 
             // E2E-only per-file throttle. In production (env + IPC override both
-            // unset), `effective_copy_throttle_ms()` returns None and this is a
-            // single atomic load (zero added latency). Under E2E it gives the
-            // spec a deterministic window to click Cancel/Rollback. Strictly
+            // unset, no paced gallery folder), this returns None after an atomic
+            // load and an empty `OnceLock` read (zero added latency). Under E2E it
+            // gives the spec a deterministic window to click Cancel/Rollback, and
+            // in the dialog gallery it paces the transfer preview's copy. Strictly
             // additive: see `crate::test_mode` for the convention.
-            if let Some(ms) = crate::test_mode::effective_copy_throttle_ms()
+            if let Some(ms) = crate::test_mode::effective_copy_throttle_ms_for(&file_info.path)
                 && ms > 0
             {
                 std::thread::sleep(Duration::from_millis(ms));

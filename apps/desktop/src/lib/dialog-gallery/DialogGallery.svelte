@@ -71,7 +71,15 @@
     import type { SourcesGoneFixture } from './fixtures/sources-gone'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { untrack } from 'svelte'
-    import { closeGalleryDialog, getOpenGalleryDialog, type GalleryDiskFixture } from './gallery-state.svelte'
+    import TransferProgressDialog from '#lib/file-operations/transfer/TransferProgressDialog.svelte'
+    import { DEFAULT_VOLUME_ID } from '#lib/tauri-commands/index.js'
+    import {
+        closeGalleryDialog,
+        getOpenGalleryDialog,
+        type GalleryDiskFixture,
+        type GalleryPreviewContext,
+    } from './gallery-state.svelte'
+    import type { TransferProgressRun } from './fixtures/transfer-progress'
     import { fixtureRecords } from './fixtures'
     import { buildStoreSeed, type StoreSeededDialogId } from './fixtures/store-seeded'
     import type { StoreSeed } from './store-seeding'
@@ -116,6 +124,7 @@
         | { kind: 'mkdir'; props: NewEntryFixture }
         | { kind: 'mkfile'; props: NewEntryFixture }
         | { kind: 'go-to-path'; props: GoToPathFixture }
+        | { kind: 'transfer-progress'; props: TransferProgressRun }
         | { kind: 'delete-ai-model'; props: DeleteAiModelFixture }
         | { kind: 'forget-memory'; props: ForgetMemoryFixture }
         | { kind: 'quit-confirmation'; props: QuitFixture }
@@ -171,9 +180,8 @@
      * The callback-only ones take no fixture, so there's none to miss; what states
      * each exposes is what its gallery row discloses.
      */
-    const planResolvers: Partial<
-        Record<SoftDialogId, (stateId: string, disk: GalleryDiskFixture | undefined) => RenderPlan>
-    > = {
+    const planResolvers: Partial<Record<SoftDialogId, (stateId: string, context: GalleryPreviewContext) => RenderPlan>> =
+        {
         alert: (id) => withFixture(fixtureRecords.alert[id], (f) => ({ kind: 'alert', props: f })),
         expiration: (id) => withFixture(fixtureRecords.expiration[id], (f) => ({ kind: 'expiration', props: f })),
         'extension-change': (id) =>
@@ -224,19 +232,21 @@
         'operation-log': (id) => withStoreSeed('operation-log', id),
         'whats-new': (id) => withStoreSeed('whats-new', id),
 
-        'delete-confirmation': (id, disk) =>
+        'delete-confirmation': (id, { disk }) =>
             withDiskFixture(fixtureRecords['delete-confirmation'][id], disk, (props) => ({ kind: 'delete', props })),
-        'transfer-confirmation': (id, disk) =>
+        'transfer-confirmation': (id, { disk }) =>
             withDiskFixture(fixtureRecords['transfer-confirmation'][id], disk, (props) => ({
                 kind: 'transfer',
                 props,
             })),
-        'mkdir-confirmation': (id, disk) =>
+        'mkdir-confirmation': (id, { disk }) =>
             withDiskFixture(fixtureRecords['mkdir-confirmation'][id], disk, (props) => ({ kind: 'mkdir', props })),
-        'new-file-confirmation': (id, disk) =>
+        'new-file-confirmation': (id, { disk }) =>
             withDiskFixture(fixtureRecords['new-file-confirmation'][id], disk, (props) => ({ kind: 'mkfile', props })),
-        'go-to-path': (id, disk) =>
+        'go-to-path': (id, { disk }) =>
             withDiskFixture(fixtureRecords['go-to-path'][id], disk, (props) => ({ kind: 'go-to-path', props })),
+        // A real copy the dialog starts itself, resolved by `transfer-progress-preview.ts`.
+        'transfer-progress': (_id, { transfer }) => (transfer ? { kind: 'transfer-progress', props: transfer } : null),
 
         'sources-gone': (id) =>
             withFixture(fixtureRecords['sources-gone'][id], (f) => ({
@@ -259,7 +269,7 @@
         const open = getOpenGalleryDialog()
         if (!open) return null
 
-        const resolved = planResolvers[open.dialogId]?.(open.stateId, open.disk) ?? null
+        const resolved = planResolvers[open.dialogId]?.(open.stateId, open) ?? null
         if (resolved) return resolved
 
         log.debug('Dialog gallery has no fixture for {dialogId} / {stateId}', {
@@ -367,6 +377,20 @@
         <NewFileDialog {...plan.props} onCreated={closeGalleryDialog} onCancel={closeGalleryDialog} />
     {:else if plan?.kind === 'go-to-path'}
         <GoToPathDialog {...plan.props} onGo={closeGoToPathPreview} onCancel={closeGalleryDialog} />
+    {:else if plan?.kind === 'transfer-progress'}
+        <!-- Starts a real copy on mount, like the app's own: every outcome only closes the preview. -->
+        <TransferProgressDialog
+            {...plan.props}
+            operationType="copy"
+            previewId={null}
+            sourceVolumeId={DEFAULT_VOLUME_ID}
+            destVolumeId={DEFAULT_VOLUME_ID}
+            conflictResolution="stop"
+            onComplete={closeGalleryDialog}
+            onCancelled={closeGalleryDialog}
+            onError={closeGalleryDialog}
+            onQueue={closeGalleryDialog}
+        />
     {:else if plan?.kind === 'delete-ai-model'}
         <DeleteAiModelDialog {...plan.props} onConfirm={closeGalleryDialog} onCancel={closeGalleryDialog} />
     {:else if plan?.kind === 'forget-memory'}

@@ -52,6 +52,13 @@ const FIXTURES: FixtureDirPayload = {
     fileOverFolder: 'Quarterly report.pdf',
     fileOverFile: 'Budget 2026.xlsx',
   },
+  transferPreview: {
+    fromDir: '/data/dialog-gallery-transfer-fixtures/From',
+    toDir: '/data/dialog-gallery-transfer-fixtures/To',
+    folders: 'Holiday photos',
+    compactChains: 'Project archive',
+    flat: 'Scanned receipts',
+  },
 }
 
 beforeEach(() => {

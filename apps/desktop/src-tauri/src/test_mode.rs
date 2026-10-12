@@ -65,6 +65,31 @@ pub fn effective_copy_throttle_ms() -> Option<u64> {
     e2e_copy_throttle_ms()
 }
 
+/// One folder whose copies are paced per file, with the pace: the dialog
+/// gallery's transfer-preview tree (`dev_fixtures.rs`), so its real copy runs
+/// long enough to review the progress dialog's live tree. Set once, by the
+/// fixture command that exists only in dev and E2E builds, so a shipped build
+/// never sets it and its copies never pay more than one empty `OnceLock` read.
+static PACED_SOURCE_ROOT: std::sync::OnceLock<(PathBuf, u64)> = std::sync::OnceLock::new();
+
+/// Paces every copy whose source sits under `root` by `ms` per file. The first
+/// call wins: the root is the same app-data folder for the whole run.
+pub fn pace_copies_from(root: PathBuf, ms: u64) {
+    // A second call names the same folder, so losing the race changes nothing.
+    let _ = PACED_SOURCE_ROOT.set((root, ms));
+}
+
+/// [`effective_copy_throttle_ms`], plus the gallery's pace for a file copied out
+/// of its paced folder ([`pace_copies_from`]). A spec's throttle wins.
+pub fn effective_copy_throttle_ms_for(source: &std::path::Path) -> Option<u64> {
+    effective_copy_throttle_ms().or_else(|| {
+        PACED_SOURCE_ROOT
+            .get()
+            .filter(|(root, _)| source.starts_with(root))
+            .map(|(_, ms)| *ms)
+    })
+}
+
 /// Runtime override for the per-item ROLLBACK throttle, settable via the
 /// `set_test_rollback_throttle` IPC command (feature-gated to `playwright-e2e`).
 /// Same `-1`-means-unset shape as the copy throttle above.
@@ -625,6 +650,28 @@ mod tests {
         // We don't assert the exact result because the env is test-runner-dependent;
         // we only assert the call doesn't panic and behaves as documented.
         let _ = effective_copy_throttle_ms();
+
+        COPY_THROTTLE_OVERRIDE.store(prior, Ordering::Relaxed);
+    }
+
+    /// The gallery's pace reaches copies out of its own folder and nothing else,
+    /// and a spec's throttle still wins inside it.
+    #[test]
+    fn paced_folder_paces_only_its_own_copies() {
+        let prior = COPY_THROTTLE_OVERRIDE.load(Ordering::Relaxed);
+        COPY_THROTTLE_OVERRIDE.store(-1, Ordering::Relaxed);
+        let root = PathBuf::from("/cmdr-test-paced-gallery-root");
+        pace_copies_from(root.clone(), 400);
+
+        if e2e_copy_throttle_ms().is_none() {
+            assert_eq!(effective_copy_throttle_ms_for(&root.join("From/a/b.jpg")), Some(400));
+            assert_eq!(
+                effective_copy_throttle_ms_for(std::path::Path::new("/Users/someone/b.jpg")),
+                None
+            );
+        }
+        set_copy_throttle_override(Some(150));
+        assert_eq!(effective_copy_throttle_ms_for(&root.join("From/a/b.jpg")), Some(150));
 
         COPY_THROTTLE_OVERRIDE.store(prior, Ordering::Relaxed);
     }

@@ -57,6 +57,13 @@ const fixtures: FixtureDirPayload = {
     fileOverFolder: 'Quarterly report.pdf',
     fileOverFile: 'Budget 2026.xlsx',
   },
+  transferPreview: {
+    fromDir: '/transfer-fixtures/From',
+    toDir: '/transfer-fixtures/To',
+    folders: 'Holiday photos',
+    compactChains: 'Project archive',
+    flat: 'Scanned receipts',
+  },
 }
 
 function makeExplorer(listingId: string | null): ExplorerAPI {

@@ -21,7 +21,10 @@
 //! copy into it that parks on a real clash, and whatever the reviewer answers
 //! really happens, so every trigger puts the destination side back the way the
 //! clash needs it. It's a sibling, not a subfolder, so the disk-backed dialogs'
-//! listing never shows it.
+//! listing never shows it. The `transfer-progress` row's tree is a third sibling
+//! with the same reset rule for its destination (`transfer_preview.rs`).
+
+mod transfer_preview;
 
 use std::collections::HashSet;
 use std::fs;
@@ -51,7 +54,11 @@ pub struct DialogGalleryFixtures {
     pub nested_path: String,
     /// The conflict preview's clash pairs, in their own sibling tree.
     pub conflict_preview: ConflictPreviewFixtures,
+    /// The transfer preview's shapes, in their own sibling tree.
+    pub transfer_preview: TransferPreviewFixtures,
 }
+
+pub use transfer_preview::{TRANSFER_FIXTURE_DIR_NAME, TransferPreviewFixtures};
 
 /// Where the `operation-conflict` preview copies from and to. Every name below
 /// exists in BOTH folders, as the kinds its field names, so copying `from_dir/<name>`
@@ -194,6 +201,9 @@ pub fn ensure_dialog_gallery_fixtures(data_dir: &Path) -> Result<DialogGalleryFi
         existing_file_name: EXISTING_FILE.to_string(),
         nested_path: path_string(root, NESTED_DIR),
         conflict_preview: ensure_conflict_preview_fixtures(&data_dir.join(CONFLICT_FIXTURE_DIR_NAME))?,
+        transfer_preview: transfer_preview::ensure_transfer_preview_fixtures(
+            &data_dir.join(TRANSFER_FIXTURE_DIR_NAME),
+        )?,
     })
 }
 
@@ -261,7 +271,7 @@ fn ensure_conflict_preview_fixtures(root: &Path) -> Result<ConflictPreviewFixtur
     })
 }
 
-/// Removes one entry of the conflict preview's destination, whatever kind it is.
+/// Removes one entry of a preview's destination, whatever kind it is.
 fn remove_entry(path: &Path) -> Result<(), String> {
     let is_dir = fs::symlink_metadata(path).is_ok_and(|m| m.is_dir());
     let removed = if is_dir {

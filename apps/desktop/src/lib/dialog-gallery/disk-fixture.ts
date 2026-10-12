@@ -25,7 +25,7 @@ import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
 import { getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
 import { getActiveTab } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 import type { ExplorerAPI } from '../../routes/(main)/explorer-api'
-import type { ConflictPreviewFixtures } from '#lib/ipc/bindings.js'
+import type { ConflictPreviewFixtures, TransferPreviewFixtures } from '#lib/ipc/bindings.js'
 import type { GalleryDiskFixture } from './gallery-state.svelte'
 
 const log = getAppLogger('dialogGallery')
@@ -39,6 +39,8 @@ export interface FixtureDirPayload {
   nestedPath: string
   /** The conflict preview's own tree, beside this one (`operation-conflict-preview.ts`). */
   conflictPreview: ConflictPreviewFixtures
+  /** The transfer preview's own tree, beside this one (`transfer-progress-preview.ts`). */
+  transferPreview: TransferPreviewFixtures
 }
 
 /**

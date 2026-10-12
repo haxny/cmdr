@@ -20,7 +20,9 @@
  * (`./indexing`) holds the payload of the event that opens it, and
  * `operation-conflict` picks the clash its real copy walks into: those dialogs
  * aren't rendered by the harness at all (see `gallery-registry.ts` § `openedBy`).
- * They live here anyway so the same test proves their state ids resolve.
+ * `transfer-progress` picks the folder its real copy walks, and the harness
+ * renders it once its preview resolved that copy. They live here anyway so the
+ * same test proves their state ids resolve.
  */
 
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
@@ -48,6 +50,7 @@ import {
   whatsNewFixtures,
 } from './store-seeded'
 import { transferErrorFixtures } from './transfer-error'
+import { transferProgressFixtures } from './transfer-progress'
 import { moveToApplicationsFixtures } from './updates'
 import { viewerCopyConfirmFixtures, viewerCopyRefuseFixtures } from './viewer-copy'
 
@@ -81,6 +84,7 @@ export const fixtureRecords = {
   'sources-gone': sourcesGoneFixtures,
   'transfer-confirmation': transferFixtures,
   'transfer-error': transferErrorFixtures,
+  'transfer-progress': transferProgressFixtures,
   'viewer-copy-confirm': viewerCopyConfirmFixtures,
   'viewer-copy-refuse': viewerCopyRefuseFixtures,
   'whats-new': whatsNewFixtures,

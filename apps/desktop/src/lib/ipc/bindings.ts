@@ -7188,6 +7188,8 @@ export type DialogGalleryFixtures = {
   nestedPath: string
   // The conflict preview's clash pairs, in their own sibling tree.
   conflictPreview: ConflictPreviewFixtures
+  // The transfer preview's shapes, in their own sibling tree.
+  transferPreview: TransferPreviewFixtures
 }
 
 // A single directory diff change
@@ -16260,6 +16262,23 @@ export type TransferActivity = {
    *  an operation's paths, not its volumes.
    */
   reconnectingVolume: string | null
+}
+
+/**
+ *  Where the `transfer-progress` preview copies from and to, and the folder each
+ *  state copies.
+ */
+export type TransferPreviewFixtures = {
+  // Absolute path of the folder holding every shape.
+  fromDir: string
+  // Absolute path of the folder every preview copies into, empty on each trigger.
+  toDir: string
+  // Name of the five-folders shape inside `from_dir`.
+  folders: string
+  // Name of the compact-chains shape inside `from_dir`.
+  compactChains: string
+  // Name of the flat shape inside `from_dir`.
+  flat: string
 }
 
 /**

@@ -65,6 +65,7 @@ import { resolveDiskFixture, type FixtureDirPayload } from '#lib/dialog-gallery/
 import { openOnboardingPreview } from '#lib/dialog-gallery/onboarding-preview.js'
 import { openStaleDrivePreview } from '#lib/dialog-gallery/stale-drive-preview.js'
 import { openOperationConflictPreview } from '#lib/dialog-gallery/operation-conflict-preview.js'
+import { openTransferProgressPreview } from '#lib/dialog-gallery/transfer-progress-preview.js'
 import { isE2eRun } from '#lib/app-mode.js'
 import type { ExplorerAPI } from './explorer-api'
 import type { FriendlyError, TransferOperationType } from '#lib/file-explorer/types.js'
@@ -582,12 +583,20 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
           await openOperationConflictPreview(stateId, fixtures)
           return
         }
+        // `transfer-progress` shows only what its own operation reports, so its
+        // preview hands the harness real start props over the paced transfer
+        // fixture tree. See `dialog-gallery/transfer-progress-preview.ts`.
+        if (dialogId === 'transfer-progress') {
+          openTransferProgressPreview(stateId, fixtures)
+          await focusMainWindow()
+          return
+        }
         // A disk-backed dialog needs the focused pane pointed at the fixture
         // directory first: it's where its live listing id and its real entries
         // come from. No context resolved means open nothing, not a half-real dialog.
         const disk = fixtures ? await resolveDiskFixture(getExplorer(), fixtures) : null
         if (fixtures && !disk) return
-        openGalleryDialog(dialogId, stateId, disk ?? undefined)
+        openGalleryDialog(dialogId, stateId, disk ? { disk } : {})
         await focusMainWindow()
       })()
     })

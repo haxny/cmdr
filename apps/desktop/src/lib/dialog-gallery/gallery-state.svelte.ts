@@ -11,6 +11,7 @@
 
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import type { FileEntry } from '#lib/file-explorer/types.js'
+import type { TransferProgressRun } from './fixtures/transfer-progress'
 
 /**
  * The real directory the disk-backed dialogs work against, plus the live pane
@@ -45,20 +46,26 @@ export interface GalleryDiskFixture {
   entries: FileEntry[]
 }
 
+/** What a preview needs beyond its fixture record, resolved before it opens. */
+export interface GalleryPreviewContext {
+  /** Present only for the disk-backed dialogs. */
+  disk?: GalleryDiskFixture
+  /** Present only for `transfer-progress`: the real copy the dialog starts. */
+  transfer?: TransferProgressRun
+}
+
 /** The dialog + named state the Debug window asked for. */
-interface OpenGalleryDialog {
+interface OpenGalleryDialog extends GalleryPreviewContext {
   dialogId: SoftDialogId
   /** A `DialogGalleryState.id` from the entry's `states` list. */
   stateId: string
-  /** Present only for the disk-backed dialogs. */
-  disk?: GalleryDiskFixture
 }
 
 const galleryState = $state<{ open: OpenGalleryDialog | null }>({ open: null })
 
 /** Opens (or swaps to) a gallery preview. Re-triggering the same state remounts the dialog. */
-export function openGalleryDialog(dialogId: SoftDialogId, stateId: string, disk?: GalleryDiskFixture): void {
-  galleryState.open = { dialogId, stateId, disk }
+export function openGalleryDialog(dialogId: SoftDialogId, stateId: string, context: GalleryPreviewContext = {}): void {
+  galleryState.open = { dialogId, stateId, ...context }
 }
 
 /** Closes whatever the gallery is previewing. The harness passes this as every fixture's `onClose`. */

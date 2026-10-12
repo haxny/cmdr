@@ -185,10 +185,10 @@ describe('DialogGallery', () => {
     // the previous trigger on screen next to the new state's file list: a real
     // number, but not of what you're looking at. A remount reports to the tracker
     // again, so two calls is the proof. Production keys these dialogs too.
-    openGalleryDialog('delete-confirmation', 'trash-many', diskFixture)
+    openGalleryDialog('delete-confirmation', 'trash-many', { disk: diskFixture })
     mountGallery()
     await tick()
-    openGalleryDialog('delete-confirmation', 'permanent-single', diskFixture)
+    openGalleryDialog('delete-confirmation', 'permanent-single', { disk: diskFixture })
     await tick()
 
     const opens = vi.mocked(notifyDialogOpened).mock.calls.filter(([id]) => id === 'delete-confirmation')
@@ -238,7 +238,8 @@ const diskFixture: GalleryDiskFixture = {
 /**
  * Every `[dialogId, stateId]` the Debug list offers a button for AND the harness
  * renders itself. Rows with an `openedBy` don't render here by design (the app's
- * own mount site does, or its own command opens it); they're covered below.
+ * own mount site does, its own command opens it, or a real operation drives it);
+ * they're covered below and in their preview modules' tests.
  */
 const readyStates = DIALOG_GALLERY_ENTRIES.filter(
   (entry) => entry.status === 'ready' && entry.openedBy === undefined,
@@ -246,7 +247,7 @@ const readyStates = DIALOG_GALLERY_ENTRIES.filter(
 
 describe('every advertised gallery state opens its dialog', () => {
   it.each(readyStates)('%s / %s', async (dialogId, stateId, usesFixtureDir) => {
-    openGalleryDialog(dialogId, stateId, usesFixtureDir ? diskFixture : undefined)
+    openGalleryDialog(dialogId, stateId, usesFixtureDir ? { disk: diskFixture } : {})
     const target = mountGallery()
     await tick()
     // Every soft dialog reports its own mount to the Rust tracker, so this
