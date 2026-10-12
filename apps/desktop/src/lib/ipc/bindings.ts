@@ -16276,10 +16276,9 @@ export type TransferRole =
 
 // An open row above a window's first row.
 export type TransferTreeAncestor = {
-  id: number
-  label: string
   // Its flat row index.
   index: number
+  row: TransferTreeRow
 }
 
 // One row.
@@ -16328,7 +16327,8 @@ export type TransferTreeView = {
   /**
    *  The first row's ancestor rows, outermost first. With them, every row in
    *  the window has its parent row and its full path at hand, even when the
-   *  parent sits far above the window.
+   *  parent sits far above the window, and a view can pin the folders it
+   *  scrolled past (its sticky headers) with their live progress.
    */
   ancestors: TransferTreeAncestor[]
   // Flat index of the topmost active row (or the folder row hiding it).

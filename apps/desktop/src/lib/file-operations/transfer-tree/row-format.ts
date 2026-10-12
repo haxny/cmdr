@@ -180,7 +180,7 @@ function sizeText(done: number | null, total: number): string {
  * row's parents are the nearest earlier rows one level up.
  */
 export function rowPaths(rows: readonly TransferTreeRow[], ancestors: readonly TransferTreeAncestor[]): string[] {
-  const trail = ancestors.map((ancestor) => ancestor.label)
+  const trail = ancestors.map((ancestor) => ancestor.row.label)
   return rows.map((row) => {
     trail.length = Math.min(trail.length, row.depth)
     const path = [...trail, row.label].join('/')

@@ -7,14 +7,23 @@
  * only what the backend can't know (what THIS view toggled and scrolled to).
  */
 
-import type { TransferTreeRow, TransferTreeView, TransferTreeViewRequest } from '$lib/tauri-commands'
+import type {
+  TransferTreeAncestor,
+  TransferTreeRow,
+  TransferTreeView,
+  TransferTreeViewRequest,
+} from '$lib/tauri-commands'
 import { getAppLogger } from '$lib/logging/logger'
 import { createCoalesced } from '$lib/utils/timing'
 import type { TransferTreeSource } from './transfer-tree-source'
+import { MAX_PINNED } from './pinned-headers'
 
 const log = getAppLogger('transferTree')
 
-/** Rows kept above the work while following, so the folder it sits in stays in sight. */
+/**
+ * Rows kept above the work while following, so the folder it sits in stays in sight. A
+ * deeper row gets one per pinned header (up to `MAX_PINNED`), so the stack never hides it.
+ */
 export const FOLLOW_LEAD = 2
 
 /** Rows fetched above and below the viewport, so a short scroll lands on loaded rows. */
@@ -55,6 +64,8 @@ export interface TransferTreeViewState {
   toggle: (id: number, expandedNow: boolean) => void
   /** The row at a flat index, if the last window holds it. */
   rowAt: (index: number) => TransferTreeRow | undefined
+  /** A loaded row's open ancestor rows, outermost first: earlier rows of the window, else the view's `ancestors`. */
+  ancestorsOf: (index: number) => TransferTreeAncestor[]
   /** The flat index of a row's parent row, `null` for a top-level row or one the window doesn't know. */
   parentIndexOf: (index: number) => number | null
   /** The view went away: answer nothing more, ask nothing more. */
@@ -101,8 +112,10 @@ export function createTransferTreeViewState(
     return {
       expanded,
       collapsed,
+      // The window reaches as far above the work as below the viewport, so the rows the
+      // pinned headers cover and a short scroll up land on loaded rows.
       window: following
-        ? { kind: 'follow', lead: FOLLOW_LEAD }
+        ? { kind: 'follow', lead: OVERSCAN_ROWS }
         : { kind: 'at', offset: Math.max(0, topRow - OVERSCAN_ROWS) },
       limit: Math.min(MAX_LIMIT, viewportRows + 2 * OVERSCAN_ROWS),
     }
@@ -131,11 +144,34 @@ export function createTransferTreeViewState(
     void pulls.call(null)
   }
 
-  /** The top row that puts the work `FOLLOW_LEAD` rows down, clamped so the viewport stays full. */
+  /** The top row that puts the work `FOLLOW_LEAD` rows down (more under a deep stack), clamped so the viewport stays full. */
   function followPosition(): number | null {
     if (view === null || !view.ready || view.focusRow === null) return null
+    const depth = view.rows[view.focusRow - view.offset]?.depth ?? 0
+    const lead = Math.max(FOLLOW_LEAD, Math.min(MAX_PINNED, depth))
     const lastTop = Math.max(0, view.totalRows - viewportRows)
-    return Math.min(lastTop, Math.max(0, view.focusRow - FOLLOW_LEAD))
+    return Math.min(lastTop, Math.max(0, view.focusRow - lead))
+  }
+
+  function ancestorsOf(index: number): TransferTreeAncestor[] {
+    if (view === null) return []
+    const row = view.rows[index - view.offset] as TransferTreeRow | undefined
+    if (row === undefined) return []
+    const out: TransferTreeAncestor[] = []
+    let depth = row.depth - 1
+    for (let at = index - 1; at >= view.offset && depth >= 0; at--) {
+      const above = view.rows[at - view.offset]
+      if (above.depth === depth) {
+        out.push({ index: at, row: above })
+        depth--
+      }
+    }
+    // Whatever the window's rows didn't reach sits above its first row.
+    for (; depth >= 0; depth--) {
+      const above = view.ancestors.at(depth)
+      if (above) out.push(above)
+    }
+    return out.reverse()
   }
 
   /** At most one pull per frame for scrolls, which fire far faster than that. */
@@ -206,14 +242,9 @@ export function createTransferTreeViewState(
       disposed = true
       pulls.cancel()
     },
+    ancestorsOf,
     parentIndexOf(index) {
-      if (view === null) return null
-      const row = view.rows[index - view.offset] as TransferTreeRow | undefined
-      if (row === undefined || row.depth === 0) return null
-      for (let at = index - 1; at >= view.offset; at--) {
-        if (view.rows[at - view.offset].depth === row.depth - 1) return at
-      }
-      return view.ancestors[row.depth - 1]?.index ?? null
+      return ancestorsOf(index).at(-1)?.index ?? null
     },
   }
 }

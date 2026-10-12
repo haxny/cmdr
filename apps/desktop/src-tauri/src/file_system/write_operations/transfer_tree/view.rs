@@ -51,7 +51,8 @@ pub(crate) struct TransferTreeView {
     pub(crate) rows: Vec<TransferTreeRow>,
     /// The first row's ancestor rows, outermost first. With them, every row in
     /// the window has its parent row and its full path at hand, even when the
-    /// parent sits far above the window.
+    /// parent sits far above the window, and a view can pin the folders it
+    /// scrolled past (its sticky headers) with their live progress.
     pub(crate) ancestors: Vec<TransferTreeAncestor>,
     /// Flat index of the topmost active row (or the folder row hiding it).
     pub(crate) focus_row: Option<u32>,
@@ -121,10 +122,9 @@ pub(crate) struct TransferTreeRow {
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TransferTreeAncestor {
-    pub(crate) id: u32,
-    pub(crate) label: String,
     /// Its flat row index.
     pub(crate) index: u32,
+    pub(crate) row: TransferTreeRow,
 }
 
 /// The most rows one response carries.
@@ -327,9 +327,8 @@ impl<'m> Layout<'m> {
                 if target <= start + size {
                     stack.push((parent, *position));
                     ancestors.push(TransferTreeAncestor {
-                        id: child.get(),
-                        label: label(self.model, *child),
                         index: listing_start + start,
+                        row: self.row(*child, (stack.len() - 1) as u16, *position, parent),
                     });
                     listing_start += start + 1;
                     parent = *child;

@@ -131,8 +131,8 @@ describe('rowPaths', () => {
       folder({ id: 4, depth: 0, label: 'Other' }),
     ]
     const ancestors = [
-      { id: 10, label: 'Photos', index: 0 },
-      { id: 11, label: 'edited', index: 4 },
+      { index: 0, row: folder({ id: 10, depth: 0, label: 'Photos' }) },
+      { index: 4, row: folder({ id: 11, depth: 1, label: 'edited' }) },
     ]
     expect(rowPaths(rows, ancestors)).toEqual([
       'Photos/edited/b.txt',

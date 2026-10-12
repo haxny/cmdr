@@ -94,9 +94,10 @@ set per request).
 `Follow { lead }` puts the focus row `lead` rows from the top, clamped so the window fills; `At { offset }` clamps to
 the row count. `focus_row` is the topmost focus file's row, or the shut folder hiding it.
 
-`ancestors` names the open rows the descent to the window's first row passed through (id, label, flat index), outermost
-first. A row's parent is either an earlier row in the window or one of these, so a view has every row's full relative
-path (its tooltip) and its parent's index (the Left key) without a second request.
+`ancestors` holds the open rows the descent to the window's first row passed through (each a whole row, plus its flat
+index), outermost first. A row's parent is either an earlier row in the window or one of these, so a view has every
+row's full relative path (its tooltip), its parent's index (the Left key), and the live counts of the folders it pins
+over its scrolled-past rows (the sticky headers), without a second request. At most one row per depth level.
 
 ## The view command
 

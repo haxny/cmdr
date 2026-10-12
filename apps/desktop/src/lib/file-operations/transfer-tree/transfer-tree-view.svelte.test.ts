@@ -12,6 +12,7 @@ import { createFixturePlayer } from './fixtures/fixture-player.svelte'
 vi.mock('$lib/tauri-commands', () => ({
   getTransferTreeView: vi.fn(() => Promise.resolve({ refusal: { type: 'unknown_operation' } })),
 }))
+import { MAX_PINNED } from './pinned-headers'
 import { FOLLOW_LEAD, MAX_TOGGLES, OVERSCAN_ROWS, createTransferTreeViewState } from './transfer-tree-view.svelte'
 
 /** A source whose answers the test releases by hand, recording every request. */
@@ -121,11 +122,20 @@ describe('following', () => {
   it('asks for the window around the work and scrolls the focus row to the lead', async () => {
     const state = create()
     state.refresh()
-    expect(src.requests[0].window).toEqual({ kind: 'follow', lead: FOLLOW_LEAD })
+    // Rows above the work too: the ones the pinned headers cover, and a short scroll up.
+    expect(src.requests[0].window).toEqual({ kind: 'follow', lead: OVERSCAN_ROWS })
     expect(src.requests[0].limit).toBe(8 + 2 * OVERSCAN_ROWS)
 
     await src.answer(view({ focusRow: 500, offset: 498 }))
     expect(state.followTop).toBe(500 - FOLLOW_LEAD)
+  })
+
+  it('keeps a deep row of work below the folders pinned over it', async () => {
+    const state = create()
+    state.refresh()
+    const deep = { ...base(), id: 9, depth: 5, kind: 'file', state: 'active', label: 'x' } as const
+    await src.answer(view({ focusRow: 500, offset: 499, rows: [{ ...base(), id: 8, depth: 4 }, deep] }))
+    expect(state.followTop).toBe(500 - MAX_PINNED)
   })
 
   it('clamps the follow position so the viewport stays full near the end', async () => {
@@ -149,7 +159,7 @@ describe('following', () => {
 
     state.resumeFollowing()
     expect(state.following).toBe(true)
-    expect(src.requests.at(-1)?.window).toEqual({ kind: 'follow', lead: FOLLOW_LEAD })
+    expect(src.requests.at(-1)?.window).toEqual({ kind: 'follow', lead: OVERSCAN_ROWS })
   })
 
   it('pauses where the follow had scrolled to, so the next tick windows the rows on screen', async () => {
@@ -201,7 +211,7 @@ describe('parentIndexOf', () => {
     await src.answer(
       view({
         offset: 40,
-        ancestors: [{ id: 1, label: 'a', index: 3 }],
+        ancestors: [{ index: 3, row: { ...base(), id: 1, depth: 0, kind: 'folder', label: 'a' } }],
         rows: [
           { ...base(), ...row, id: 10, depth: 1 },
           { ...base(), id: 11, depth: 1, kind: 'folder', label: 'b' },
@@ -212,6 +222,8 @@ describe('parentIndexOf', () => {
     expect(state.parentIndexOf(42)).toBe(41)
     expect(state.parentIndexOf(41)).toBe(3)
     expect(state.parentIndexOf(40)).toBe(3)
+    expect(state.ancestorsOf(42).map((ancestor) => ancestor.index)).toEqual([3, 41])
+    expect(state.ancestorsOf(42)[0].row.label).toBe('a')
   })
 })
 

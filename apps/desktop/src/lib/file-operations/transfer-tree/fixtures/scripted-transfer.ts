@@ -313,7 +313,7 @@ export function createScriptedTransfer(options: ScriptedTransferOptions): Script
     if (first !== undefined) {
       for (let depth = first.depth - 1, at = offset - 1; depth >= 0 && at >= 0; at--) {
         if (flat[at].depth === depth) {
-          ancestors.unshift({ id: flat[at].key, label: label(flat[at].key), index: at })
+          ancestors.unshift({ index: at, row: toRow(flat[at], open, sums) })
           depth--
         }
       }

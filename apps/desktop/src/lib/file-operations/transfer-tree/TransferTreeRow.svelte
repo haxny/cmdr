@@ -6,6 +6,10 @@
     It fills the slot the tree places at its flat index. The tree owns the
     keyboard and the clicks (delegated); the chevron only carries a
     `data-chevron` hook, and its indent comes inline from its depth.
+
+    `pinned` draws the same row as a sticky header: a mirror of a real row, so
+    it carries no tree semantics and no tab stop (the tree's stack is
+    `aria-hidden`; `DETAILS.md` § "Pinned headers").
 -->
 <script lang="ts">
     import type { ProgressAxis, TransferTreeRow } from '$lib/tauri-commands'
@@ -26,9 +30,11 @@
         path: string
         /** The roving tab stop: the one row Tab lands on. */
         tabStop: boolean
+        /** A sticky header mirroring the row at `index`, not a treeitem. */
+        pinned?: boolean
     }
 
-    const { row, index, axis, operation, path, tabStop }: Props = $props()
+    const { row, index, axis, operation, path, tabStop, pinned = false }: Props = $props()
 
     const isFolder = $derived(row.kind === 'folder')
     const segments = $derived(countSegments(row, operation))
@@ -44,15 +50,16 @@
 <div
     class="tree-row"
     class:at-work={atWork}
-    role="treeitem"
-    aria-level={row.depth + 1}
-    aria-posinset={row.posInSet}
-    aria-setsize={row.setSize}
-    aria-expanded={isFolder && row.hasChildren ? row.expanded : undefined}
-    aria-label={name}
-    aria-selected={false}
-    tabindex={tabStop ? 0 : -1}
-    data-index={index}
+    role={pinned ? undefined : 'treeitem'}
+    aria-level={pinned ? undefined : row.depth + 1}
+    aria-posinset={pinned ? undefined : row.posInSet}
+    aria-setsize={pinned ? undefined : row.setSize}
+    aria-expanded={!pinned && isFolder && row.hasChildren ? row.expanded : undefined}
+    aria-label={pinned ? undefined : name}
+    aria-selected={pinned ? undefined : false}
+    tabindex={pinned ? undefined : tabStop ? 0 : -1}
+    data-index={pinned ? undefined : index}
+    data-pinned-index={pinned ? index : undefined}
     data-row-id={row.id}
     style:padding-inline-start="calc(var(--spacing-xs) + {row.depth} * var(--spacing-lg))"
 >

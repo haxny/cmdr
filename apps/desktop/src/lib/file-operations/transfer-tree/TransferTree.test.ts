@@ -74,6 +74,22 @@ describe('TransferTree', () => {
     expect(rows()).toHaveLength(0)
   })
 
+  it('takes the height of its rows up to its default, and never shrinks back', async () => {
+    const heightRows = () =>
+      target.querySelector<HTMLElement>('.transfer-tree')?.style.getPropertyValue('--spacing-tree-rows')
+    await render('single-file')
+    expect(heightRows()).toBe('1')
+
+    document.body.innerHTML = ''
+    const { transfer, advance } = await render('failed-and-skipped', 1)
+    expect(heightRows()).toBe('8')
+    while (!transfer.finished) await advance()
+    await advance()
+    // `Reports` shut again once the work left it (four rows), and the tree keeps its height.
+    expect(rows()).toHaveLength(4)
+    expect(heightRows()).toBe('8')
+  })
+
   it('gives every row its level and its place among its siblings, from the backend', async () => {
     await render('folders-5x1000', 3)
     const album = rowNamed('Album 1')

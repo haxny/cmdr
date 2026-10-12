@@ -108,6 +108,52 @@ export const TRANSFER_TREE_FIXTURES: readonly TransferTreeFixture[] = [
       }),
   },
   {
+    id: 'deep-nesting',
+    title: 'Deep nesting, past the pinned-header cap',
+    operation: 'copy',
+    create: () => {
+      const leaves = (prefix: string, count: number, seed: number): FixtureNode[] =>
+        files(count, (i) => `${prefix}-${pad(i, 2)}.ts`, sizes(seed, 4 * KB, 60 * KB))
+      return createScriptedTransfer({
+        top: [
+          {
+            name: 'Projects',
+            children: [
+              { name: 'archive', children: leaves('old', 3, 41) },
+              {
+                name: 'cmdr',
+                children: [
+                  { name: 'docs', children: leaves('guide', 3, 42) },
+                  {
+                    name: 'apps',
+                    children: [
+                      { name: 'website', children: leaves('page', 3, 43) },
+                      {
+                        name: 'desktop',
+                        children: [
+                          { name: 'scripts', children: leaves('build', 3, 44) },
+                          {
+                            name: 'src',
+                            children: [
+                              { name: 'lib', children: leaves('module', 40, 45) },
+                              { name: 'routes', children: leaves('route', 5, 46) },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        bytesPerStep: 20 * KB,
+        preparingSteps: 5,
+      })
+    },
+  },
+  {
     id: 'parallel-smb',
     title: 'Parallel SMB, 8 files in flight across 3 folders',
     operation: 'copy',

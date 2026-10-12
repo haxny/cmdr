@@ -9,7 +9,8 @@ over a virtual window. The progress dialog and the queue window embed `TransferT
 - `TransferTree.svelte` (the tree, keyboard, follow, the Follow button), `TransferTreeRow.svelte` (one row),
   `transfer-tree-view.svelte.ts` (per-view state: hand toggles, following, scroll, the coalesced pull),
   `transfer-tree-source.ts` (the `view(request)` interface and its IPC implementation), `row-format.ts` (what a row
-  says). `fixtures/`: scripted transfers for Debug → Components → Transfer tree and the tests.
+  says), `pinned-headers.ts` (which scrolled-past folders stick to the top). `fixtures/`: scripted transfers for Debug →
+  Components → Transfer tree and the tests.
 
 ## Must-knows
 
@@ -24,6 +25,10 @@ over a virtual window. The progress dialog and the queue window embed `TransferT
 - **Failure text is the typed pipeline's title** (`getUserFriendlyMessage`), ❌ never new prose.
 - **Sizes in rows are plain text**, ❌ not `<Size>`: its tier colors turned a tree of them loud.
 - **Folder bars fill along the view's `axis`**, file bars by bytes; only rows at work draw a bar.
+- **Pinned headers are `aria-hidden` mirrors**, ❌ never treeitems: a second copy of a row confuses a screen reader,
+  which reaches every parent with Left anyway. A row hidden under them counts as out of sight (`reveal`, `followTop`).
+- **The height only grows** (`--spacing-tree-rows`, up to `defaultRows`): a folder shutting as the work moves on must
+  not bounce the host's layout every tick.
 
 Keyboard model, follow mechanics, the full-path tooltip, and decisions: `DETAILS.md`. Read it before any non-trivial
 work here: editing, planning, reorganizing, or advising.

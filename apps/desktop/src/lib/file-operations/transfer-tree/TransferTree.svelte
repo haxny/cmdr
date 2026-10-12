@@ -7,7 +7,10 @@
     and again on every `tick` (the operation's `write-progress`), at most one
     request in flight (`transfer-tree-view.svelte.ts`). It follows the work
     until the user scrolls, wheels, or moves by keyboard; the Follow button (or
-    F) resumes. `DETAILS.md` has the keyboard model and the follow mechanics.
+    F) resumes. The open folders scrolled past stay pinned at the top. It's as
+    tall as its rows, up to `defaultRows`, and grows with a host that gives it
+    more. `DETAILS.md` has the keyboard model, the follow mechanics, and the
+    pinned headers.
 -->
 <script lang="ts">
     import { onDestroy, tick as afterRender, untrack } from 'svelte'
@@ -19,6 +22,7 @@
     import { dependOn } from '$lib/utils/reactivity'
     import TransferTreeRow from './TransferTreeRow.svelte'
     import { createTransferTreeViewState } from './transfer-tree-view.svelte'
+    import { MAX_PINNED, pinnedHeaders } from './pinned-headers'
     import { rowPaths, type TransferTreeOperation } from './row-format'
     import { ipcTransferTreeSource, type TransferTreeSource } from './transfer-tree-source'
 
@@ -26,7 +30,8 @@
         /** Anything that changes when the operation advanced (the session's `progress`): each change pulls a fresh window. */
         tick: unknown
         operation: TransferTreeOperation
-        /** Rows tall before the host gives it more room (the dialog's 8, the queue's 6). Never below three. */
+        /** Rows tall at most before the host gives it more room (the dialog's 8, the queue's 6), never below
+         *  three. Fewer rows take less: a single file is one row. */
         defaultRows?: number
     }
 
@@ -79,6 +84,23 @@
     const total = $derived(ready && view ? view.totalRows : 0)
     const measured = $derived(rowHeight > 0 && viewportHeight > 0)
     const paths = $derived(view ? rowPaths(view.rows, view.ancestors) : [])
+
+    /** The tallest the content has asked for (capped at `defaultRows`): it grows as rows
+     *  arrive but never shrinks back, so a folder shutting as the work moves on doesn't
+     *  bounce the host's layout on every tick. */
+    const maxRows = $derived(Math.max(3, defaultRows))
+    let contentRows = $state(1)
+    $effect(() => {
+        const wanted = Math.min(Math.max(total, 1), maxRows)
+        if (wanted > untrack(() => contentRows)) contentRows = wanted
+    })
+
+    const topRow = $derived(measured ? Math.floor(scrollTop / rowHeight) : 0)
+    /** The open folders scrolled past, pinned at the top (none before there's a layout). */
+    const pinned = $derived(
+        measured && ready ? pinnedHeaders(topRow, total, (index) => tree.ancestorsOf(index)) : [],
+    )
+    const pinnedPaths = $derived(pinned.map((_, level) => pinned.slice(0, level + 1).map((h) => h.row.label).join('/')))
 
     /** The rows on screen, or, before there's a layout (first frame, jsdom), the loaded window. */
     const range = $derived(
@@ -213,12 +235,18 @@
             tree.scrolledTo(index)
             return
         }
-        const next = revealScrollTop({
-            index,
-            rowHeight,
-            scrollTop: scroller.scrollTop,
-            viewportHeight: scroller.clientHeight,
-        })
+        // A row under the pinned stack is out of sight too: bring it to just below the
+        // headers its own folders will make (one per level, up to the cap).
+        const underStack = index * rowHeight < scroller.scrollTop + pinned.length * rowHeight
+        const inset = Math.min(MAX_PINNED, rowFor(index)?.depth ?? 0)
+        const next = underStack
+            ? Math.max(0, (index - inset) * rowHeight)
+            : revealScrollTop({
+                  index,
+                  rowHeight,
+                  scrollTop: scroller.scrollTop,
+                  viewportHeight: scroller.clientHeight,
+              })
         if (next !== undefined) {
             scroller.scrollTop = next
             scrollTop = scroller.scrollTop
@@ -307,6 +335,15 @@
         if (row?.kind === 'folder' && row.hasChildren) tree.toggle(row.id, row.expanded)
     }
 
+    /** A header jumps to its folder's row; its chevron shuts the folder. */
+    function onPinnedClick(event: MouseEvent): void {
+        const el = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-pinned-index]')
+        const header = el ? pinned.find((candidate) => candidate.index === Number(el.dataset.pinnedIndex)) : undefined
+        if (!header) return
+        if ((event.target as HTMLElement).closest('[data-chevron]')) tree.toggle(header.row.id, true)
+        else moveTo(header.index)
+    }
+
     function onFocusIn(event: FocusEvent): void {
         treeHasFocus = true
         const index = rowIndexOf(event.target)
@@ -323,7 +360,7 @@
 </script>
 
 {#if tree.ended !== 'notATransfer'}
-    <div class="transfer-tree" style:height="calc({Math.max(3, defaultRows)} * var(--spacing-tree-row))">
+    <div class="transfer-tree" style:--spacing-tree-rows={contentRows}>
         <div class="probe" aria-hidden="true" bind:this={probe}></div>
         {#if !ready || total === 0}
             <p class="placeholder">
@@ -340,6 +377,30 @@
                 onwheel={onWheel}
                 onpointerdown={onPointerDown}
             >
+                {#if pinned.length > 0}
+                    <!-- Mirrors of real rows, so hidden from assistive tech: a screen
+                         reader walks the tree, where Left already reaches every parent.
+                         The pointer gets a click that jumps to the folder. -->
+                    <div class="pinned" aria-hidden="true" onclick={onPinnedClick}>
+                        {#each pinned as header, level (level)}
+                            <div
+                                class="pinned-slot"
+                                class:last={level === pinned.length - 1}
+                                style:top="calc({level} * var(--spacing-tree-row))"
+                            >
+                                <TransferTreeRow
+                                    row={header.row}
+                                    index={header.index}
+                                    axis={view.axis}
+                                    {operation}
+                                    path={pinnedPaths[level]}
+                                    tabStop={false}
+                                    pinned
+                                />
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
                 <div
                     class="rows"
                     role="tree"
@@ -401,7 +462,7 @@
     .transfer-tree {
         /* A row: one line of small text plus breathing room, compact but not cramped. The
            probe carries it, so the virtual window divides by the real pixel height, and it
-           scales with the text size. The height (inline) is `defaultRows` of these. */
+           scales with the text size. */
         --spacing-tree-row: calc(var(--font-size-sm) * var(--font-line-height-normal) + 2 * var(--spacing-xs));
 
         position: relative;
@@ -409,7 +470,12 @@
         flex-direction: column;
         flex: 1 1 auto;
         box-sizing: content-box;
-        min-height: calc(3 * var(--spacing-tree-row));
+        /* The rows the content asked for (set inline over this default); a resizable
+           host may squeeze it to three of them, never fewer than it has. */
+        --spacing-tree-rows: 1;
+
+        height: calc(var(--spacing-tree-rows) * var(--spacing-tree-row));
+        min-height: calc(min(var(--spacing-tree-rows), 3) * var(--spacing-tree-row));
         padding-block: var(--spacing-xxs);
         border: 1px solid var(--color-border-subtle);
         border-radius: var(--radius-md);
@@ -435,6 +501,32 @@
         min-height: 0;
         overflow-y: auto;
         overscroll-behavior: contain;
+    }
+
+    /* Sticky at the scroller's top with no height of its own, so the rows start under it
+       and the headers float over the ones they cover. */
+    .pinned {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 1;
+        height: 0;
+        margin-inline: var(--spacing-xxs);
+    }
+
+    .pinned-slot {
+        position: absolute;
+        box-sizing: border-box;
+        inset-inline: 0;
+        height: var(--spacing-tree-row);
+        background: var(--color-bg-primary);
+    }
+
+    .pinned-slot.last {
+        border-block-end: 1px solid var(--color-border-subtle);
+    }
+
+    .pinned-slot:hover {
+        background: var(--color-bg-secondary);
     }
 
     .rows {

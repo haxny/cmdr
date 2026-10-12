@@ -225,7 +225,7 @@ fn a_window_names_the_open_rows_above_its_first_row() {
         flatten(&model, &request)
             .ancestors
             .into_iter()
-            .map(|ancestor| (ancestor.id, ancestor.label, ancestor.index))
+            .map(|ancestor| (ancestor.row.id, ancestor.row.label, ancestor.index))
             .collect()
     };
 
@@ -235,6 +235,18 @@ fn a_window_names_the_open_rows_above_its_first_row() {
         ancestors(12),
         vec![(c.get(), "a/b/c".to_string(), 0), (d.get(), "d".to_string(), 1)],
         "deep in `d`, both open rows above are named with their flat index"
+    );
+    let deep = {
+        let mut request = at(12, 3);
+        request.expanded = open.expanded.clone();
+        flatten(&model, &request).ancestors
+    };
+    assert_eq!(
+        deep.iter()
+            .map(|ancestor| (ancestor.row.depth, ancestor.row.files_total, ancestor.row.expanded))
+            .collect::<Vec<_>>(),
+        vec![(0, 21, true), (1, 20, true)],
+        "each ancestor is a whole row, counts included, so a view can pin it"
     );
     assert_eq!(ancestors(23), vec![], "`z.txt` is top-level again");
 }
