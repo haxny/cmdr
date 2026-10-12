@@ -23,7 +23,8 @@
       "files": "*.astro",
       "options": {
         "plugins": ["prettier-plugin-astro"],
-        "parser": "astro"
+        "parser": "astro",
+        "astroCompressHTML": true
       }
     }
   ]

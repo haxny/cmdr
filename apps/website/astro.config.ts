@@ -18,6 +18,7 @@ export default defineConfig({
   // Astro 7's default `compressHTML: 'jsx'` strips inter-element whitespace text nodes, which collapses
   // the home and pricing layouts (they rely on significant whitespace between inline/flex children).
   // `true` is the classic minifier that preserves significant whitespace, keeping the render pixel-identical.
+  // The root `.prettierrc` mirrors it as `astroCompressHTML: true`, so a reformat never changes what renders.
   compressHTML: true,
   build: {
     // Inline all CSS into the HTML: removes the render-blocking stylesheet request, which directly
