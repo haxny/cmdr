@@ -370,7 +370,7 @@
                 }}
                 onClear={clearDate}
             />
-        {:else if key === 'scope'}
+        {:else}
             <Chip
                 bind:chipElement={scopeChipEl}
                 label={tString('queryUi.filters.chip.scope')}

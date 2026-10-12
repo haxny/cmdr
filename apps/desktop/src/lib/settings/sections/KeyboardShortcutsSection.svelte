@@ -206,7 +206,7 @@
                         >{tString('shortcuts.section.cancel')}</Button
                     >
                 </div>
-            {:else if conflict.kind === 'normal'}
+            {:else}
                 {#snippet comboStrong(children: Snippet)}
                     <strong>{@render children()}</strong>
                 {/snippet}

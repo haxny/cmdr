@@ -254,7 +254,7 @@
                         {/if}
                     </div>
                 {/if}
-            {:else if entry.kind === 'special' && shouldShowSpecialSection(entry.path)}
+            {:else if shouldShowSpecialSection(entry.path)}
                 <div class="section-group">
                     <button
                         class="section-item"

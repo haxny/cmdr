@@ -148,7 +148,7 @@
     <div class="msg model-change" role="status">
         {tString('askCmdr.event.contextTrimmed', { count: message.count })}
     </div>
-{:else if message.kind === 'renameApplied'}
+{:else}
     <!-- The safety net that fires AFTER the names land: the user only finds out a name
          is wrong once they see the result. `role="status"` so a screen reader hears the
          outcome without the focus moving. -->

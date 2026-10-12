@@ -159,7 +159,7 @@
                             >
                         </div>
                     {/if}
-                {:else if step.kind === 'model'}
+                {:else}
                     <span class="step-label">{tString('onboarding.cloudSetup.step.pickModel')}</span>
                     <Combobox
                         items={modelComboboxItems}
