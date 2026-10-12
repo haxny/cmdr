@@ -260,7 +260,7 @@ metadata".
   extension, honored by Nextcloud (it answers `X-OC-MTime: accepted`), ownCloud, and rclone. WebDAV itself has no way to
   set a date: `getlastmodified` is a protected live property that no PROPPATCH may change. A server without the
   extension ignores the header and keeps its own date; that's a `debug!`, never a failure. The staging `MOVE` keeps what
-  the PUT set (verified on `nextcloud:34.0.2-apache` by `nextcloud_a_copy_keeps_the_source_date`, 2026-10-07).
+  the PUT set (verified on `nextcloud:35.0.0-apache` by `nextcloud_a_copy_keeps_the_source_date`, 2026-10-12).
 - ❗ **Apache `mod_dav` stores no date at all** (verified on httpd 2.4, by `conformance_test.rs`, 2026-10-07), so its
   cells split the contract: the source half runs on `seed.sh`'s `dated.txt` (the fixture's own `touch -d`, the only way
   to age a file there), and `apache_stores_no_date_so_a_copy_onto_it_carries_its_own` asserts the limit so it stays a

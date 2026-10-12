@@ -394,7 +394,7 @@ async fn nextcloud_a_copy_keeps_the_source_date() {
 /// Nextcloud keeps a file's creation date, and its connect probe says so: it
 /// rides `X-OC-CTime` on the PUT and survives the staging `MOVE`. Holds the
 /// server to `WebdavVolume::DATE_KEEPING_CAPS` (verified on
-/// `nextcloud:34.0.2-apache`, 2026-10-12).
+/// `nextcloud:35.0.0-apache`, 2026-10-12).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
 async fn nextcloud_keeps_a_files_creation_date() {
@@ -413,7 +413,7 @@ async fn nextcloud_keeps_a_files_creation_date() {
 }
 
 /// A folder's creation and modification dates take one PROPPATCH on
-/// Nextcloud, after its contents land (verified on `nextcloud:34.0.2-apache`,
+/// Nextcloud, after its contents land (verified on `nextcloud:35.0.0-apache`,
 /// 2026-10-12).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
