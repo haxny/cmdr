@@ -663,6 +663,9 @@
          row; inside, the tree owns the keys and Escape returns here. DETAILS § "The
          inline tree". -->
     {#if treeOperation !== null && treeOpen}
+        <!-- The cell only hears Escape bubbling up from the focused tree inside it,
+             which is the keyboard path; the cell itself is never a focus target. -->
+        <!-- svelte-ignore a11y_interactive_supports_focus -->
         <div class="tree-cell" role="gridcell" id="{domId}-tree" data-queue-tree onkeydown={leaveTree}>
             <!-- The page keys each row by its operation, so this tree's id never changes. -->
             <TransferTree
