@@ -1811,7 +1811,7 @@
     },
     {
       "name": "icns",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "license": "MIT",
       "url": "https://github.com/mdsteele/rust-icns"
     },
@@ -2885,7 +2885,7 @@
     },
     {
       "name": "proc-macro-crate",
-      "version": "1.3.1",
+      "version": "3.5.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/bkchr/proc-macro-crate"
     },
@@ -3665,7 +3665,7 @@
     },
     {
       "name": "tauri-plugin-mcp-bridge",
-      "version": "0.12.0",
+      "version": "0.13.1",
       "license": "MIT",
       "url": "https://github.com/hypothesi/mcp-server-tauri"
     },
@@ -3875,19 +3875,13 @@
     },
     {
       "name": "toml_datetime",
-      "version": "0.6.3",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/toml-rs/toml"
-    },
-    {
-      "name": "toml_datetime",
       "version": "1.1.1+spec-1.1.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/toml-rs/toml"
     },
     {
       "name": "toml_edit",
-      "version": "0.19.15",
+      "version": "0.25.12+spec-1.1.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/toml-rs/toml"
     },
