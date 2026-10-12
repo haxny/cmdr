@@ -1,14 +1,15 @@
 # File system details
 
 Depth and rationale. `CLAUDE.md` holds the must-knows; this is everything else. Submodule depth lives in each
-submodule's own `DETAILS.md` (`listing/`, `write_operations/`, `volume/`).
+submodule's own `DETAILS.md` (`write_operations/`, `volume/`); the listing engine's is `crates/cmdr-listing/DETAILS.md`.
 
 ## Module map
 
-Four submodules carry their own docs: `listing/`, `write_operations/`, `volume/`, and `sync_status/` (the cloud
-badges). The leaves beside them:
+Three submodules carry their own docs: `write_operations/`, `volume/`, and `sync_status/` (the cloud badges). The leaves beside them:
 
-- `watcher.rs`: FSEvents-driven listing updates.
+- `watcher.rs`: FSEvents-driven listing updates: the OS half (debounce, rebasing, the stat, the full-re-read decision,
+  the `std::fs` fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and
+  `refresh`.
 - `staging.rs`: scratch visibility. The `StagingTemp` mint itself is `cmdr_fs::staging`.
 - `index_provider.rs`: the app's `VolumeProvider`, so the index never has to import `VolumeManager`. Its
   `ensure_direct_smb` is `network::smb_connect_directly::connect_directly`, with every `UpgradeResult` but `Success`
@@ -465,10 +466,48 @@ Which app F4 opens a file in: the regular pane, the search-results pane, and the
   every `e2e_opened_paths` consumer is untouched. On macOS that's `text_editor_macos.rs`'s own `launch`; off macOS it's the
   command's E2E arm.
 
-## Finder tags MCP consumer (`tags.rs`)
+## Finder tags (`tags.rs`)
+
+What a tag is, why reading them is deferred, and how the listing carries them forward across a re-stat:
+`crates/cmdr-listing/DETAILS.md` § "Finder tags". This is the app's half: reading and writing the xattr.
+
+**Write path.** `tags.rs::set_tags(path, &[TagRef])` encodes the full desired set as a **binary** plist
+(`plist::Value::to_writer_binary` — `plist` defaults to XML, which is NOT Finder-compatible) of `"Name\nN"` strings
+(always with the `\nN` suffix, even color 0, matching Finder), and `xattr::set`s it. An empty set REMOVES the xattr
+(matching Finder clearing all tags), guarded so an already-untagged file doesn't surface a spurious ENOATTR. The
+encode↔decode round-trip is verified **semantically** (re-`read_tags` equals the input), not byte-for-byte against a
+Finder reference — valid bplists differ in object-table ordering/dedup.
+
+**Where the menu offers tags.** Only on rows that are real OS paths (`PaneContextMenuFacts.can_tag`, the frontend's
+`rowIsOsVisible`, the same reading `Share…` takes). Decision/Why: hiding an action that can't work beats explaining
+after the click, and the write is an `xattr::set` through the path, so a phone, an ADB device, an SFTP or WebDAV server,
+an archive's insides, or a `.git`-portal row takes the click and stores nothing. Keyed on the capability, ❌ never a
+list of backends, so a new protocol-only backend (S3) hides them for free. A share Cmdr talks to directly over smb2
+keeps them: its share stays mounted by macOS, its rows are `/Volumes/…` paths, and the xattr goes through that mount. A
+macOS-mounted filesystem that can't store xattrs still shows them; only trying can tell. Reading tags (`enrich_tags`)
+still runs everywhere, since an empty read is harmless.
+
+`tags.rs::toggle_color(paths, color)` is the higher-level op behind both triggers: it reads each path's current tags,
+applies Finder's multi-file rule (if EVERY path already carries the color, remove it from all; otherwise add the
+canonical system tag — `Red\n6`, …, `Gray\n1` — to every path that lacks it), preserves all other tags, skips rewriting
+files already in the target state, and returns the new per-path sets. The `toggle_tags(listing_id, paths, color)` IPC
+command wraps it in the 5 s write-timeout tier and feeds the result to `Listings::apply_tags` so the panes refresh
+immediately. A same-color _custom_ tag counts as "applied" (no duplicate system tag is added; removing strips every tag
+of that color).
+
+**D11 — never touch `com.apple.FinderInfo`.** The write path touches ONLY `_kMDItemUserTags`. That 32-byte `FinderInfo`
+blob carries `kHasCustomIcon` (`0x0400` at offset 8, see `icons/per_path.rs`) plus type/creator codes; zeroing it would
+destroy custom folder icons and break `has_custom_folder_icon`. Modern Finder reads tags straight from
+`_kMDItemUserTags`, so the dot/color shows without the legacy label bits — verified to survive in
+`tags.rs::write_tests::tagging_preserves_finder_info_custom_icon_flag`. `setxattr` is atomic per attribute, so a single
+file is never half-written; a multi-file toggle that fails mid-loop leaves earlier files updated and propagates the
+error (the IPC command logs it rather than surfacing a hard failure — tags are low-stakes and the panes still reflect
+what's on disk).
+
+### Finder tags MCP consumer
 
 The MCP `tag` tool wraps `tags::toggle_color` / `set_tags` (and `system_color_name` for canonical names), resolving
-target paths off the pane state and refreshing via `apply_tags_to_listing`. `cmdr://state` file entries also surface a
+target paths off the pane state and refreshing via `Listings::apply_tags`. `cmdr://state` file entries also surface a
 `[tags:…]` marker mirrored from `PaneFileEntry.tags`. See `mcp/DETAILS.md`.
 
 ## Threading
@@ -486,10 +525,11 @@ module) follows the same rule for `fetch_path_icons`.
 
 The notify-rs debouncer callback runs on notify-rs's internal thread, which has no Tokio runtime, so `tokio::spawn`
 there panics with "there is no reactor running". It bit `watcher.rs`'s full-reread fallback path (`>500` events or
-ambiguous event kinds), then again in v0.24.0 via `git::watcher::refresh_local_listings_under` →
-`listing::caching::notify_directory_changed(FullRefresh)` (CRASH-26SBB) — which is why FullRefresh dispatch now funnels
-through `caching::spawn_full_refresh`. Use `tauri::async_runtime::spawn` (same as `indexing::watch::watcher`), and
-apply the rule to every watcher OS thread (git, SMB, MTP, archive), not just notify-rs.
+ambiguous event kinds), then again in v0.24.0 via the git watcher's `FullRefresh` (CRASH-26SBB). The listing engine
+spawns every re-read on the runtime it was built with (`crates/cmdr-listing/CLAUDE.md`, enforced by its
+`clippy.toml`), so a `FullRefresh` from any thread is safe. App code on a watcher OS thread uses
+`tauri::async_runtime::spawn` (same as `indexing::watch::watcher`), on every watcher OS thread (git, SMB, MTP, archive),
+not just notify-rs.
 
 ## Arming a listing watch is detached
 

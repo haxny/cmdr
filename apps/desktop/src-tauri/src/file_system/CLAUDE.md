@@ -1,10 +1,11 @@
 # File system module
 
-Directory listing, file writing, sync status, volume management, and file watching.
+File writing, sync status, volume management, and file watching. The listing engine itself is `crates/cmdr-listing`;
+this app hosts it from `listing_host/`.
 
 ## Module map
 
-- Submodules with their own docs: `listing/`, `write_operations/`, `volume/`, `sync_status/` (cloud badges). Around
+- Submodules with their own docs: `write_operations/`, `volume/`, `sync_status/` (cloud badges). Around
   them, a dozen leaves (`watcher.rs`, `google_drive/`, `share.rs`, …), one line each in DETAILS § Module map.
 - `mod.rs` is a facade: it re-exports downward and bootstraps the volume registry (`init_volume_manager`), which is why
   it may know every backend.
@@ -13,18 +14,18 @@ Directory listing, file writing, sync status, volume management, and file watchi
 
 - **Reach the volume-manager singleton at `volume::manager::get_volume_manager()`; ❌ never re-export it from here**: a
   facade that also hands out the accessor welds the subtree into one cycle. `volume/DETAILS.md` § "Key decisions".
-- **Transient scratch hides on the listing READ path, nowhere but `CachedListing::rows`**: a watcher-side skip strands
-  an entry in the pane forever. Cmdr's own (`.cmdr-tmp-*`) hides by OWNERSHIP, other apps' (`.sb-`) by NAME, and
-  `is_hidden_from_listings` is GATED on the pure `could_be_hidden_from_listings`, which is what keeps cached row numbers
-  valid. Rows use a committed projection, not live re-sampling; `crates/cmdr-listing/DETAILS.md` § "Diff event coalescing".
+- **Transient scratch hides on the listing READ path only** (`cmdr-listing`'s `CachedListing::rows`): a watcher-side
+  skip strands an entry in the pane forever. Cmdr's own (`.cmdr-tmp-*`) hides by OWNERSHIP, other apps' (`.sb-`) by
+  NAME. § "Hiding transient scratch".
 - **Tag writes (`tags.rs`) touch ONLY `_kMDItemUserTags`, never `com.apple.FinderInfo`** (zeroing it destroys custom
   folder icons), and encode a **binary** plist.
 - **Never call macOS frameworks from rayon or any constrained-stack pool**: FileProvider XPC blows the 2 MB stack and
   can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`), not a per-call
   `std::thread::scope`. § "Threading".
 - **Watcher rules.** Each has its own section in `DETAILS.md`; read them before touching `watcher.rs`:
-  - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`, and
-    `caching::spawn_full_refresh` for FullRefresh dispatch.
+  - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`.
+  - The watcher is the engine's first `ListingObserver` and keeps only the OS half: changes go to
+    `Listings::observe_children`, full re-reads to `Listings::refresh`.
   - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (an inline arm was p90 653 ms of dead
     time), keeping all four rules that made it cheap.
   - Rebase event paths (`rebase_event_path`), or firmlinks (`/tmp`, `/var`, `/etc`) plus a symlinked watch root drop

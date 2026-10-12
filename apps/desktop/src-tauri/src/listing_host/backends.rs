@@ -8,7 +8,7 @@
 //! itself instead of handing backends `Listings::listing_host`.
 //!
 //! ❌ The seam is per mutation, never per entry. That rule is the backend's to
-//! keep, but it's this module's to know: `notify_directory_changed` walks every
+//! keep, but it's this module's to know: `Listings::directory_changed` walks every
 //! cached listing on the volume, so a per-entry caller would turn one directory
 //! into a quadratic sweep.
 

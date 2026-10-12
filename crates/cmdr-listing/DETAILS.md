@@ -1,8 +1,9 @@
-# File system listing details
+# cmdr-listing details
 
-Depth and rationale for the listing module. `CLAUDE.md` holds the must-knows that prevent silent breakage; the
-narrative, data flow, and decision rationale live here. For profiling listing performance, see
-`docs/guides/benchmarking-file-loading.md`.
+Read this before any non-trivial work in the listing engine: editing, planning, reorganizing, or advising. `CLAUDE.md`
+holds the must-knows; the data flow, decisions, and rationale live here. The seams have their own docs
+(`src/host/DETAILS.md`), and so does Cmdr's side of them (`apps/desktop/src-tauri/src/listing_host/DETAILS.md`). For
+profiling listing performance, see `docs/guides/benchmarking-file-loading.md`.
 
 ## Data flow
 
@@ -24,10 +25,41 @@ Frontend                          Backend
    |<-- [FileEntry, FileEntry, ...]    |
 ```
 
-`listing-complete` is what commits the listing in the pane, so nothing slow may sit in front of it. Arming the FSEvents
-watch used to, and no longer does: `start_watching_detached` hands it to the blocking pool. Why arming is slow, what
-that cost, and the two rules that keep it cheap: `apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Arming a listing
-watch is detached".
+`listing-complete` is what commits the listing in the pane, so nothing slow may sit in front of it, and an observer's
+`listing_opened` runs right before it. Cmdr's change watch therefore detaches its arm to the blocking pool
+(`start_watching_detached`). Why arming is slow, what an inline arm cost, and the rules that keep it cheap:
+`apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Arming a listing watch is detached".
+
+## Driving the engine without Cmdr
+
+A host hands over the two seams nothing works without and takes the no-op answer for the rest:
+
+```rust
+let listings = Listings::builder(Arc::new(MyVolumes), Arc::new(MyEvents))
+    .runtime(tokio::runtime::Handle::current()) // optional: else cmdr-fs's fallback runtime
+    .index(Arc::new(MyIndex))                   // optional, like leases / locale / mounts
+    .overlay(Arc::new(MyOverlay))               // optional lists, in registration order
+    .observer(Arc::new(MyObserver))
+    .build();
+listings.start_orphan_reaper();
+let id = ListingId::new("pane-1-nav-7");
+listings.start(ListingRequest {
+    id: id.clone(),
+    volume_id: "root".into(),
+    path: "/tmp".into(),
+    include_hidden: false,
+    sort_by: SortColumn::Name,
+    sort_order: SortOrder::Ascending,
+    dir_sort_mode: DirectorySortMode::LikeFiles,
+});
+// `MyEvents::finished` hears `ListingEnd::Complete`; then read rows by pane index
+// (`file_range`, `file_at`, …), and close it:
+listings.end(&id);
+```
+
+Change intake (`directory_changed`, `observe_children`, `refresh`) is how the host keeps an open listing current; a host
+wires its storage backends' `cmdr_fs` `ListingHost` to those methods. `Listings::detached()` defaults all eight seams,
+for tools and tests; the crate's own tests build a `testing::TestEngine` instead (§ "Tests own their engine").
 
 ## The overlay step
 
@@ -36,9 +68,9 @@ Every read that builds or replaces a listing runs ONE step between the volume's 
 It returns a `Prepared`, which nothing else can build, and `CachedListing::new` and `update_listing_entries` take
 nothing else, so a read path that skips the overlays doesn't compile. Five paths go through it, each pinned by
 `overlay_read_paths_test.rs`: the streaming read, the test-only sync start (`operations.rs`), a backend's `FullRefresh`
-(`caching::notify_full_refresh_locked`), a backend swap's re-read (`foreign_path::respell_listing`), and the watcher's
-full re-read, also ⌘R (`file_system/watcher.rs`'s `handle_directory_change`). Its `std::fs` fallback, with no volume to
-decorate through, keeps the count the listing had (`OverlayRows::Unchanged`). A device backend's `Replaced` hand-over is
+(`refresh.rs`'s `notify_full_refresh_locked`), a backend swap's re-read (`foreign_path::respell_listing`), and the
+watcher's full re-read, also ⌘R (`Listings::refresh`, `reread.rs`). Its `std::fs` fallback, with no volume to decorate
+through, keeps the count the listing had (`OverlayRows::Unchanged`). A device backend's `Replaced` hand-over is
 synchronous and can't wait on the overlays' blocking gather, so it asks only their zero-I/O `applies_to`
 (`Inner::prepare_handed_over`): none applies (every device backend today) and it records zero contributed rows; one
 applies and the arm drops the backend's entries and re-reads the directory as a `FullRefresh` does.
@@ -69,23 +101,25 @@ reader".
 
 ## Caching
 
-The record is `cached_listing.rs`, everything that patches one or notifies about it is `caching.rs`, and the six-hour
-backstop that reclaims a leaked one is `orphan_reaper.rs`.
+The record is `cached_listing.rs`; the lookups and change intake are `caching.rs`, the single-entry patches `mutate.rs`,
+the full-refresh turnstile `refresh.rs`, the fresh-listing oracle `authoritative.rs`, and the six-hour backstop that
+reclaims a leaked listing `orphan_reaper.rs`.
 
 - **The engine** (`engine/mod.rs`): `Listings`, a cheap-to-clone `Arc<Inner>`, built by
   `Listings::builder(volumes, events)` (the other seams optional) or `Listings::detached()`. `Inner` (defined in
-  `mod.rs`) holds the seams the host handed over and every piece of engine state: the cache, the in-flight reads' cancel
+  `lib.rs`) holds the seams the host handed over and every piece of engine state: the cache, the in-flight reads' cancel
   tokens, the pending diffs, the refresh turnstiles, the hung-read registry, the collator per locale, the epoch
   `last_accessed_ms` counts from, and the scratch settings. Two engines share nothing. Each module adds its operations
   as an `impl Inner` block. The app builds one in `listing_host::install` and hands it out as
   `listing_host::listings()`.
 
-  **Decision:** `Inner` lives at the module root, not in `engine/`. **Why:** every module implements its part of `Inner`
+  **Decision:** `Inner` lives at the crate root, not in `engine/`. **Why:** every module implements its part of `Inner`
   and `Inner` holds every module's state, so wherever it's defined, that module and the implementers point at each
-  other. At the root, the root is their parent, which `module-cycles` reads as one hub; in `engine/` it was a 16-module
-  tangle of siblings.
+  other. At the root, the root is their parent, which `module-cycles` reads as one hub; any sibling home makes a
+  16-module tangle. The same reason keeps the layout flat: grouping into `cache/` and `read/` puts `cached_listing` and
+  `pipeline` in sibling groups that use each other.
 
-- **The public API** is `mod.rs`'s `pub use` list: `Listings`' methods (in `engine/`, one file per caller group:
+- **The public API** is `lib.rs`'s `pub use` list: `Listings`' methods (in `engine/`, one file per caller group:
   `open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`, plus `backends.rs`, the engine's own
   weak `cmdr_fs` `ListingHost`) and the types they take and return. Every submodule but `host` is private, so the
   compiler keeps callers on that list. A listing id crosses it as a `ListingId`; only IPC sees a `String`. Methods
@@ -107,31 +141,31 @@ backstop that reclaims a leaked one is `orphan_reaper.rs`.
 
 ### Lifecycle
 
-1. `list_directory_start_streaming()` receives the listing ID from the frontend, spawns a task.
-2. The background task reads the directory, sorts, stores in the cache.
-3. Frontend calls `get_file_range()` for visible entries (on-demand).
-4. Frontend calls `find_file_indices()` to batch-resolve file names to indices (selection adjustment during operations).
-5. Frontend calls `get_paths_at_indices()` / `get_files_at_indices()` for batch selection lookups (transfer dialogs,
-   delete dialog, drag, clipboard).
-6. `list_directory_end()` removes from the cache (primary, fast eviction), then tells the observers.
+The method names below are `Listings`'; the app's IPC commands of the old names (`list_directory_start_streaming`,
+`get_file_range`, …) are pass-throughs to them.
+
+1. `start(ListingRequest)` registers the cancel token, spawns the read on the host runtime, and returns at once.
+2. The read lists the directory, runs the pipeline (§ "The overlay step"), sorts, stores in the cache, tells the
+   observers, and reports `finished(Complete)`.
+3. The pane reads visible rows on demand (`file_range`), batch-resolves names to rows (`find_file_indices`, selection
+   adjustment during operations), and batch-reads selections (`paths_at_indices` / `files_at_indices`: transfer dialogs,
+   delete, drag, clipboard).
+4. `end(id)` removes the listing from the cache and drops its pending diffs, then tells the observers.
 
 Both ends tell the observers (`host/observers.rs`), the seam for subsystems that keep something alive while a pane is
-showing a directory. Cmdr installs three, in order (`listing_host/mod.rs`): the FSEvents change watch
-(`file_system/watcher.rs`, armed only when `Volume::can_watch_listings`), the git portal's per-repo watcher (which a
-virtual path can't arm through FSEvents), and `listing_index_sizes`. ❗ The close call comes AFTER the cache removal: an
-observer's own detached arm reconciles against listing-cache membership, so releasing while the entry is still there
-lets a racing arm re-take what was just released. The change watch disarms in that same call, so an FSEvents event
-landing between the removal and the disarm finds no listing to patch. The test binary's shared engine holds the change
-watch too (`listing_host::test_listings`), so a listing in a test arms a watch as it does in the app. An observer that
-keeps a record per open listing asks `OpenedListing::still_open` before keeping one: a close can race the open and reach
-every observer first.
+showing a directory, outside every engine lock and in registration order (Cmdr's order and why:
+`apps/desktop/src-tauri/src/listing_host/DETAILS.md` § "The observers"). ❗ The close call comes AFTER the cache
+removal: an observer's own detached arm reconciles against listing-cache membership, so releasing while the entry is
+still there lets a racing arm re-take what was just released, and a change event landing between the removal and a
+watch's disarm finds no listing to patch. An observer that keeps a record per open listing asks
+`OpenedListing::still_open` before keeping one: a close can race the open and reach every observer first.
 
 ### Backstop reaper
 
-`Listings::start_orphan_reaper` (called in `lib.rs` setup) sweeps every `REAPER_SWEEP_INTERVAL` (30 min) and tears down
-any listing idle past `ORPHAN_IDLE_WINDOW` (6 h) via the same `list_directory_end` path, so a leaked listing (close IPC
-never delivered) can't pin its entry vector and OS watcher for the whole session. Its loop holds the engine weakly and
-ends once the last handle is dropped. Pure, clock-injectable seam: `orphan_ids(now_ms, window_ms, …)` and
+`Listings::start_orphan_reaper` (the app calls it in its `setup()`) sweeps every `REAPER_SWEEP_INTERVAL` (30 min) and
+tears down any listing idle past `ORPHAN_IDLE_WINDOW` (6 h) via the same `list_directory_end` path, so a leaked listing
+(close IPC never delivered) can't pin its entry vector and OS watcher for the whole session. Its loop holds the engine
+weakly and ends once the last handle is dropped. Pure, clock-injectable seam: `orphan_ids(now_ms, window_ms, …)` and
 `reap_orphaned_listings_at_for(now_ms, window_ms, only)`. Mirrors the search index's idle/backstop timers and the file
 viewer's window-`Destroyed` net.
 
@@ -162,20 +196,15 @@ next read or heartbeat.
 
 #### Tests own their engine
 
-Every test in this module builds its own engine (`testing/`): `TestEngine` is a `Listings` over one fake per seam it
+Every test in this crate builds its own engine (`testing/`): `TestEngine` is a `Listings` over one fake per seam it
 reads back (`FakeVolumes`, `RecordingEvents`, `RecordingLeases`, a fixed `en` locale, plus `FakeMountTable`,
 `StaticOverlay`, and `RecordingObserver` on request), and `TestListing::insert(&engine, tag)` puts a listing straight
 into its cache. Two engines share nothing, so a test asserts on engine-wide state (every listing on a path, an orphan
 sweep, scratch visibility) without seeing anyone else's, and needs no lock to flip a setting. A test reaches engine
-internals through `engine.inner`, which every module under `listing/` can see.
+internals through `engine.inner`, which every module in the crate can see.
 
-The app's half lives in `listing_host/tests/`: each adapter against the real subsystem it answers from, and the cells
-whose point is an app piece (the FSEvents watch, the volume registry's routing, the events policy's reaction matrix, a
-backend crate). Those share the test binary's ONE engine (`listing_host::listings()`, built with the app's answers, the
-git overlay, and the watch and git observers), so they keep what isolation there needs: `TestListing` derives a
-process-unique id (`cmdr_fs::testing::unique_test_id`), and `TestListingGuard` ends its listing on drop, unwind
-included. `listing_host::engine_reporting_to(events)` builds an app-wired engine of a test's own when a cell reads what
-the engine reported.
+The `testing` feature makes the same fixtures `pub` for the host's tests. Cmdr's half, which shares one engine and so
+keeps unique ids: `apps/desktop/src-tauri/src/listing_host/DETAILS.md` § "Tests".
 
 **Decision:** a test builds the engine it asserts on, rather than isolating tests on one shared cache. **Why:** a shared
 cache needed unique ids, scoped orphan sweeps, a teardown guard, and a process-wide lock serializing every
@@ -330,8 +359,8 @@ for row 1).
   and under the same write lock (`VisibleRows::rows_before` / `row_of_entry`, two binary searches). ❗ Reading after the
   patch would rebuild the map per patch, once per add in a burst. `DiffChange::for_pane` turns the pair into a change or
   none.
-- Batch re-reads (`publish_replacement`, the watcher's `handle_directory_change`) call `update_listing_entries`, which
-  diffs committed projected rows through `CachedListing::replace_entries` under the cache write lock.
+- Batch re-reads (`publish_replacement`, `Listings::refresh`) call `update_listing_entries`, which diffs committed
+  projected rows through `CachedListing::replace_entries` under the cache write lock.
   `compute_diff(old, new, include_hidden, name_filter, visibility)` is a test-only helper.
 - `CachedListing::shows` combines the filter with captured scratch decisions and hidden visibility, matching its row
   map.
@@ -405,14 +434,14 @@ worth having: a modify or removal that takes no row leaves both maps standing ra
 never touched, which matters because an add-only watcher event calls the removal batch with an empty path list.
 
 **The watcher's removals were the second quadratic**, and the only one of these callers with a measured win rather than
-a latent one. `handle_directory_change_incremental` resolved each removal's index with its own full walk (the diff needs
-the PRE-removal index) and then walked again inside the removal itself, and one coalesced watcher event carries up to
-500 paths — a directory emptied, a `git checkout` across a big tree, an unpack over a folder. Measured by the counting
-probe: a 500-path removal from a 20,000-entry listing examined **9,981,000 entries**, and now examines **20,500** (one
-walk to build the map, plus one lookup per path). `remove_entries_by_paths` is now the only by-path removal, since its
-caller is always a batch. Resolving and removing under ONE write lock also makes the emitted indices true: the two-lock
-shape it replaced let another writer move a row between the lookup and the removal, and the `directory-diff` would have
-named a row that had shifted.
+a latent one. The incremental path (`Listings::observe_children`) once resolved each removal's index with its own full
+walk (the diff needs the PRE-removal index) and then walked again inside the removal itself, and one coalesced watcher
+event carries up to 500 paths — a directory emptied, a `git checkout` across a big tree, an unpack over a folder.
+Measured by the counting probe: a 500-path removal from a 20,000-entry listing examined **9,981,000 entries**, and now
+examines **20,500** (one walk to build the map, plus one lookup per path). `remove_entries_by_paths` is now the only
+by-path removal, since its caller is always a batch. Resolving and removing under ONE write lock also makes the emitted
+indices true: the two-lock shape it replaced let another writer move a row between the lookup and the removal, and the
+`directory-diff` would have named a row that had shifted.
 
 **What is still linear per removal**: `Vec::remove` per doomed row, so dropping `k` rows from an `n`-entry listing
 memmoves about `k × n / 2` entries. The lookup fix doesn't touch it, and the incremental path's 500-event cap bounds it.
@@ -483,11 +512,11 @@ against the files beside it, including the honest-size coverage flags), and `col
 come out in). `sorting_test_support` holds the two builders more than one of them needs; a builder used by one suite
 stays in that suite.
 
-The fixture each suite needs is what marks the seam. `collation_test` pins the process-wide reading language under a
-lock shared with `intl::native_strings`, which is why case-insensitive ordering is tested THERE and not beside the other
-column tests: case folding is a collation question, so `to_lowercase` would answer it wrongly (see the
-raw-bytes-tiebreak note above). `sorting_dir_mode_test` owns the honest-size directory builder. Each file's header names
-its two neighbours, so the boundary is legible from whichever one you open first.
+The fixture each suite needs is what marks the seam. `collation_test` fixes the reading language per engine
+(`testing::FixedLocale`), which is why case-insensitive ordering is tested THERE and not beside the other column tests:
+case folding is a collation question, so `to_lowercase` would answer it wrongly (see the raw-bytes-tiebreak note above).
+`sorting_dir_mode_test` owns the honest-size directory builder. Each file's header names its two neighbours, so the
+boundary is legible from whichever one you open first.
 
 **Both readings end with a raw-bytes tiebreak**, because the NFC and NFD spellings of one name carry identical collation
 weights and would otherwise compare `Equal`. Without a total order the watcher's re-read could order such a pair either
@@ -558,22 +587,23 @@ shipped build.
 - **Sort after read, before caching**: the frontend expects sorted order, and the sort runs in the background task after
   all entries are collected. Cost is ~105 ms per 100k entries (§ "Collating names"), well under the I/O it follows.
 - **Enrichment at cache-write time, not on `get_file_range`**: every path that stores entries (streaming, watcher
-  update, re-sort) enriches first. Index freshness is event-driven: `src-tauri/src/listing_index_sizes/` writes the rows
-  an index update moved straight into the cache (`CachedListing::update_index_sizes_by_path`, which keeps both maps)
-  before it tells the pane, so `get_listing_stats` stays read-only and sees up-to-date `recursive_size`. A whole-volume
-  update runs the full `refresh_listing_index_sizes` re-enrich instead (§ "Index sizes off the lock").
+  update, re-sort) enriches first. Index freshness is event-driven: the app's index-size worker
+  (`apps/desktop/src-tauri/src/listing_index_sizes/`) writes the rows an index update moved straight into the cache
+  (`Listings::update_index_sizes`, data as `IndexSizes`, through `CachedListing::update_index_sizes_by_path`, which
+  keeps both maps) before it tells the pane, so `get_listing_stats` stays read-only and sees up-to-date
+  `recursive_size`. A whole-volume update runs the full `Listings::refresh_index_sizes` re-enrich instead (§ "Index
+  sizes off the lock"). `IndexSizes` is data and not a `&mut FileEntry` closure so no app code can touch a name or path
+  under the cache write lock (a renamed entry would desync the path index).
 - **Hidden-file filtering in Rust, not the frontend**: visible count is unknown until all files are read. APIs accept
   `include_hidden: bool` and read through the listing's row map (§ "Row numbers"); `directory-diff` events use the
   listing's own recorded setting (§ "Diffs speak the pane's rows").
-- **The listing read commands are `async`**: a sync `#[tauri::command]` runs on the MAIN thread in Tauri 2, so one slow
-  accessor stops the app answering IPC at all, which is principle 2's "never block the main thread" broken at the IPC
-  layer. `refresh_listing_index_sizes` goes one further onto the blocking pool, because it runs two indexed SQLite
-  queries and an index storm fires it once per event per pane.
-- **Font metrics in a Rust binary cache, not frontend canvas measurement**: measuring 50k filenames in JS is slow. The
-  frontend measures each code point's width once via Canvas and ships the table to Rust; later text-width queries are
-  hash lookups in the cached `.bin` table. `calculate_max_width_with_suffixes()` is the entry point, used by
-  `font_metrics::brief_columns::compute_brief_column_text_widths` to size each Brief column to its widest filename (plus
-  a per-row trailing suffix that reserves room for the Finder tag-dot cluster).
+- **The engine's methods are synchronous; the app's read commands are `async`**: a sync `#[tauri::command]` runs on the
+  MAIN thread in Tauri 2, so one slow accessor stops the app answering IPC at all. The app wraps them (and their
+  deadlines) in `commands/file_system/listing.rs`; the engine never sees a deadline. `refresh_index_sizes` runs on the
+  app's blocking pool, because it asks the index two SQLite queries and an index storm fires it once per event per pane.
+- **Brief column widths stay app-side** (`font_metrics/brief_columns.rs`, reading rows through `with_rows`): they're
+  pane layout over font metrics. Why the metrics live in a Rust cache:
+  `apps/desktop/src-tauri/src/font_metrics/DETAILS.md`.
 - **Revision on `CachedListing`, not `WatchedDirectory`**: it describes the committed pane view on every volume,
   including SMB and MTP, which have no FSEvents `WatchedDirectory`. See § "Diff event coalescing".
 - **The engine reports facts through the `ListingEvents` seam** (`host/events.rs`): `opening`, `progress`,
@@ -582,14 +612,16 @@ shipped build.
   engine names no Tauri type. A read reports its own complete or cancel; a refused one is reported by its task
   (`streaming::report_failure`) after the cancel token is gone. Tests record facts with `testing::RecordingEvents`; the
   app policy's matrix (`listing_host/tests/streaming_reaction_test.rs`) collects wire events with `WireCollector`.
-  `Arc<dyn ListingEvents>` (not `&dyn`) because it's cloned into the progress callback.
+  `Arc<dyn ListingEvents>` (not `&dyn`) because it's cloned into the progress callback. **Why facts and not wire
+  events:** the restricted-empty-root hint, error classification, analytics, the MCP ring, and TCC bookkeeping are
+  product policy, and wire payloads, their `tauri_specta` derives, and every English word belong with the product. The
+  engine derives only `serde` and `specta::Type` on the answers it returns (`index-crate-isolation` forbids
+  `tauri-specta` here).
 - **Every other app question is a seam too** (`host/mod.rs`): which volume serves a path (`volumes`, including the one
   `unregistered` question that folds mount adoption and "why is it missing"), what the drive index knows (`index`), the
-  foreground hold (`leases`), the reading language (`locale`), and the mount table (`mounts`). The app answers each in
-  `listing_host/`, resolving its subsystem per call. The two scratch-visibility settings are engine state the host sets
-  (`Listings::set_scratch_visibility`; `file_system::staging`'s setters forward to it). The test binary's shared engine
-  holds every app answer except events and the runtime (`listing_host::test_listings`), so tests list through the real
-  registry and index, as the app does.
+  foreground hold (`leases`), the reading language (`locale`), and the mount table (`mounts`). What each one is, and the
+  no-op it degrades to: `src/host/DETAILS.md`. The two scratch-visibility settings are engine state the host sets
+  (`Listings::set_scratch_visibility`, which the app's settings commands call).
 - **Watcher starts AFTER listing-complete**: watcher diffs rely on cached entries; starting before the cache is
   populated would miss initial state.
 - **Incremental watcher path with fallback to full re-read**: most FS changes touch a few files. The incremental path
@@ -597,27 +629,57 @@ shipped build.
   `insert_entry_sorted` / `remove_entries_by_paths` / `update_entry_sorted`. Falls back to full
   `handle_directory_change` when events exceed 500 or contain unknown kinds (`Any` / `Other`), which can't be reliably
   classified.
-- **Instant row for entry creation (`patch_listings_after_create`)**: `create_directory` / `create_file` and the paste
-  writer return before the watcher fires; without it the new entry wouldn't appear until the next debounce (~200 ms).
-  The create hands the local backend's mutation patch a `MutationEvent::Created`, which stats the entry and sends an
-  `Added` through the composer (index, badges, panes), like every other local mutation. `notify_added` upserts, so a row
-  the watcher added first gets the create's fresher stat, and the watcher's later duplicate is a modify.
+- **Instant row for entry creation** (the app's `write_operations/create.rs::patch_listings_after_create`):
+  `create_directory` / `create_file` and the paste writer return before the watcher fires; without it the new entry
+  wouldn't appear until the next debounce (~200 ms). The create hands the local backend's mutation patch a
+  `MutationEvent::Created` for `new_path`'s file name, which stats the entry and sends an `Added` through the app's
+  composer (index, badges, panes), like every other local mutation. `notify_added` upserts, so a row the watcher added
+  first gets the create's fresher stat, and the watcher's later duplicate is a modify. Upsert is safe because no create
+  overwrites (mkdir and mkfile refuse a taken name, paste retries `pasted (N)` on `O_EXCL`), so a row already at the
+  path is the watcher's row for this file or a stale one; `insert_entry_sorted` re-checks the path under the write lock,
+  so a race can't duplicate. The index half is an upsert too, pinned idempotent by `cmdr-index`'s
+  `the_same_added_applied_twice_counts_once`.
+- **The engine is a handle, `Listings`**, not crate statics. **Why:** a static cache made every test share one cache
+  (unique ids, scoped reaper sweeps, a process-wide lock serializing every scratch-visibility test) and kept the cache
+  global for any other consumer. The app holds its one engine in a `OnceLock` (`listing_host::listings()`).
+- **`Listings::builder(volumes, events)` takes the two seams a consumer can't do without as arguments**; the other six
+  default to no-ops, and `Listings::detached()` defaults all eight. **Why:** an engine with no volumes lists nothing and
+  one with no events leaves every pane on "loading", so forgetting either is a compile error, not a degraded mode. The
+  no-op defaults are public unit types so a caller can pass one explicitly (the app's test engine passes `NoEvents`).
+- **A listing id is a `ListingId` in every Rust signature**; only the IPC boundary sees a `String`. **Why:** a listing
+  id and a volume id were both `&str` side by side in a dozen signatures, the confusable-positional-params shape
+  `AGENTS.md` bans. It's not a `specta::Type`, since an exported type would change the generated bindings. Volume ids
+  stay `&str`: they're `cmdr_fs` vocabulary.
+- **Nothing long-lived holds the engine strongly.** Background loops (the orphan reaper) and anything the engine hands
+  out that outlives a call hold `Inner` weakly and give up, or answer the no-op, once the last `Listings` is dropped.
+  **Why:** a strong handle in a loop leaks one engine per test, and one held by a volume closes a cycle (`Listings` →
+  volumes → a volume → its `VolumeHost` → `Listings`) for any host that hands volumes over as values. Per-event tasks (a
+  refresh, the 50 ms diff flush) hold it strongly, because they end. Cmdr wires its backends' `ListingHost` app-side
+  (`listing_host/DETAILS.md` § "The adapters"), since its `directory_changed` must go through the composer.
+- **What isn't the engine:** the local backend's `std::fs` reader and mutation patch
+  (`apps/desktop/src-tauri/src/file_system/volume/backends/local_posix/`), Brief column widths, the FSEvents watcher's
+  OS half, and every wire event struct. They answer to the engine's API from the app.
+- **A poisoned engine lock recovers** (`cmdr_fs`'s `*_ignore_poison`), ❌ never `.expect`: a panic would turn one
+  poisoned cache into a crash on every later IPC, and skipping the work (the shape it replaced) silently dropped a
+  listing while still reporting it complete.
 
-## Cache helpers (caching.rs)
+## Cache helpers (`caching.rs`, `mutate.rs`, `authoritative.rs`)
 
-Used by the watcher's incremental path and the change intake to patch listings without full re-reads:
+The `Inner` methods the watcher's incremental path (`observe_children`) and the change intake patch listings with,
+without full re-reads. Callers outside the crate reach them through `Listings`' lookups and intake methods:
 
 - `find_listings_for_path_on_volume(volume_id, path)`: all listing IDs whose directory matches the path on that volume
   (multiple panes/tabs may show the same directory). `None` matches verbatim across every volume (below).
-- `try_get_authoritative_listing(volume_id, path)`: the fresh-listing oracle for write-op pre-flight scans and the
-  look-alike check before a new name (`write_operations/look_alike.rs`). Returns `Some(entries)` when a cached listing
-  exists for `(volume_id, path)` and `listing_watch_coverage(path) == WatchCoverage::EveryWriter` (delegated to the
-  backend via the `Volume` trait), else `None`. When multiple listings exist for the same pair (two panes), picks the
-  most-recently-updated one deterministically: highest `sequence` (an `AtomicU64`), ties broken by latest `created_at`.
-  Entries are cloned out under the cache `RwLock`, then the lock is released before the volume call (cheap clone for a
-  flat `Vec<FileEntry>`, < 5 ms for 15k entries; matters because otherwise the volume call holds the cache lock across
-  an await and blocks pane navigation). See the freshness-contract section in `volume/CLAUDE.md` for per-backend
-  debounce windows callers must tolerate.
+- `try_get_authoritative_listing(volume_id, path)` (`authoritative.rs`, public as `Listings::authoritative_listing`):
+  the fresh-listing oracle for write-op pre-flight scans and the look-alike check before a new name
+  (`write_operations/look_alike.rs`). Returns `Some(entries)` when a cached listing exists for `(volume_id, path)` and
+  `listing_watch_coverage(path) == WatchCoverage::EveryWriter` (delegated to the backend via the `Volume` trait), else
+  `None`. When multiple listings exist for the same pair (two panes), picks the most-recently-updated one
+  deterministically: highest `sequence` (an `AtomicU64`), ties broken by latest `created_at`. Entries are cloned out
+  under the cache `RwLock`, then the lock is released before the volume call (cheap clone for a flat `Vec<FileEntry>`, <
+  5 ms for 15k entries; matters because otherwise the volume call holds the cache lock across an await and blocks pane
+  navigation). See the freshness-contract section in `volume/CLAUDE.md` for per-backend debounce windows callers must
+  tolerate.
 - `insert_entry_sorted(listing_id, entry)`: inserts in sorted position, returns the pane rows (`PaneRows`, § "Diffs
   speak the pane's rows"). All four patch helpers here answer in pane rows.
 - `remove_entries_by_paths(listing_id, paths)`: removes by exact file-path match, returning
@@ -633,7 +695,7 @@ Used by the watcher's incremental path and the change intake to patch listings w
 - `update_entry_sorted(listing_id, entry)`: updates an existing entry (remove + re-insert if sort position changed),
   returns the pane rows before and after; a pair that differs is a `Move`.
 - `has_entry(listing_id, path)`: whether a path exists in the cached listing (classifies watcher events add vs modify).
-- `get_listing_path(listing_id)`: the directory path for a listing (filters watcher events to direct children).
+- `Listings::location(id)`: a listing's volume id and directory (the watcher filters its events to direct children).
 
 ## One spelling per directory (`ListingPath`)
 
@@ -652,10 +714,11 @@ ERR-46A6B, v0.44.0). MTP canonicalizes to the inner spelling because its rows, t
 use it. ADB, SFTP, and WebDAV rows carry their full app URL, and SMB, archive, and git-portal rows share their root's
 spelling, so they keep the default. Pinned by `listing_host/tests/mtp_listing_path_test.rs`.
 
-`find_listings_for_path_on_volume(None, parent_path)` has no volume id and compares verbatim across EVERY volume, so a
-remote pane showing the same path string matches too. Only `LocalPosixVolume::listing_watch_coverage` relies on it,
-because the volume doesn't know its own id. A caller that knows its volume passes it: the create op's synthetic row
-(`write_operations/create.rs`) once landed in an SFTP pane showing a remote `/tmp` beside a local one.
+`Listings::listings_for_local_path(path)` (`find_listings_for_path_on_volume(None, …)` inside) has no volume id and
+compares verbatim across EVERY volume, so a remote pane showing the same path string matches too. Only
+`LocalPosixVolume::listing_watch_coverage` relies on it, because the volume doesn't know its own id. A caller that knows
+its volume uses `listings_for_path_on_volume`: a local create's instant row once landed in an SFTP pane showing a remote
+`/tmp` beside a local one.
 
 ## A pane path the volume stores another way (`foreign_path.rs`)
 
@@ -674,13 +737,13 @@ the share stores composed answers the kernel's decomposed spelling with `STATUS_
   and the cost is one resolve per click, remembered per share until the folder changes.
 - **A backend swap respells what's open.** When `network/smb_upgrade.rs` hands a share from the kernel mount to a direct
   connection, `respell_listings_on_volume` re-reads each open listing on it through the new backend, holding the
-  directory's refresh turn (`caching::refresh_turn`). A listing whose path changed spelling is re-keyed, its entries are
-  written whole (the diff matches rows by name, so it can't see every path changing), and the pane adopts the path from
-  `listing-respelled` and refetches its rows. That sweep sees only listings already cached, and a pane landing on the
-  share starts the upgrade the moment it starts listing (`network/smb_pane_upgrade.rs`), so the swap often lands
-  mid-read. So `read_directory_with_progress`, right after its cache insert, re-reads its own listing when the registry
-  no longer serves the id with the backend that read it (`respell_if_read_by_a_replaced_backend`, pointer identity): a
-  swap before the insert is caught there, one after it by the sweep.
+  directory's refresh turn (`refresh.rs`'s `refresh_turn`). A listing whose path changed spelling is re-keyed, its
+  entries are written whole (the diff matches rows by name, so it can't see every path changing), and the pane adopts
+  the path from `listing-respelled` and refetches its rows. That sweep sees only listings already cached, and a pane
+  landing on the share starts the upgrade the moment it starts listing (`network/smb_pane_upgrade.rs`), so the swap
+  often lands mid-read. So `read_directory_with_progress`, right after its cache insert, re-reads its own listing when
+  the registry no longer serves the id with the backend that read it (`respell_if_read_by_a_replaced_backend`, pointer
+  identity): a swap before the insert is caught there, one after it by the sweep.
 - **Files from outside Cmdr respell where they enter.** A Finder drag-in and a paste of files copied in Finder hand over
   kernel-mount paths (`/Volumes/<share>/…`), which route to the direct SMB volume when the share has one
   (`resolveSourceVolumeId`). The frontend asks `stored_spellings`
@@ -710,10 +773,11 @@ Docker cell `network/smb_upgrade_respell_test.rs`, and on the frontend the drop 
 
 ## Change notification API (caching.rs)
 
-`notify_directory_changed(volume_id, parent_path, change)`: applies a directory change on a volume to the panes. Panes
-only: every caller goes through the app's composer, `listing_host::directory_changed`, which applies the change to the
-drive index and the cloud badge FIRST (the SMB watcher fires with no pane open, and the enrich below must see fresh
-sizes), then calls this. `DirectoryChange` variants:
+`Listings::directory_changed(volume_id, parent_path, change)` (`caching.rs`'s `notify_directory_changed`): applies a
+directory change on a volume to the panes, and only the panes. ❌ The engine never applies it to the drive index itself:
+the host composes the subsystems that hear a change around this call, in its own order, and Cmdr's is
+`apps/desktop/src-tauri/src/listing_host/DETAILS.md` § "The composer". It runs live from the first call, with or without
+anyone listening: the events seam drops what nobody hears. `DirectoryChange` variants:
 
 - `Added(FileEntry)`: single add, patches via `insert_entry_sorted`.
 - `Removed(String)`: single remove by name, patches via `remove_entry_by_name` (name match, not full path — see above).
@@ -736,10 +800,11 @@ whose sort-relevant fields changed re-inserts the entry at its new sorted positi
 `DiffChangeType::Move` (`apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Reordered rows"), which is what lets the
 pane cursor follow the row. Natural deduplication: `insert_entry_sorted` returns `None` for duplicates,
 `remove_entry_by_name` returns `None` if already removed. Callers: `Volume::notify_mutation()` (after each successful
-create/delete/rename on all volume types) and the `rename_file` command (local FS renames). A create on a volume where
-`supports_local_fs_access()` is `true` goes through the same local mutation patch (`patch_listings_after_create`).
+create/delete/rename on all volume types) and the `rename_file` command (local FS renames), both through the app's
+composer. A create on a volume where `supports_local_fs_access()` is `true` goes through the same local mutation patch
+(§ "Decisions", the instant row).
 
-`refresh_archive_listings(volume_id, archive_path)` is a sibling entry point for the archive content watch: it
+`Listings::refresh_archive_listings(volume_id, archive_path)` is a sibling entry point for the archive content watch: it
 `FullRefresh`es every open listing at or inside a changed `.zip` (parent drive id + full path) WITHOUT the drive-index
 sync the composer runs, since an archive-inner path isn't a real filesystem path. Rationale and the watch that drives
 it: `crates/cmdr-archive/src/watch/DETAILS.md`. What a refresh DOES to this cache is
@@ -754,7 +819,7 @@ watcher is the one at stake, and it takes its fixture from `write_operations::ba
 
 ## Diff event coalescing (diff_emitter.rs)
 
-Mutation owners (`caching.rs` patch helpers and tag writes, `reread.rs` full replacements) allocate the listing's
+Mutation owners (`mutate.rs`'s patch helpers and tag writes, `reread.rs` full replacements) allocate the listing's
 visible `sequence` and enqueue under ONE cache write lock. Initial revision is zero; hidden-only patches do not advance
 it. Full replacements arrive enriched (`pipeline.rs`) and sort first, then `diff_rows` compares the committed old
 projection with the pinned replacement projection and stores the final replacement under that lock. An identical raw
@@ -798,8 +863,8 @@ under one reconciled read lock, returning `{ paths, fileCount, folderCount }`. R
 invalid rows return typed `ListingLookupError::Changed` (`type: "changed"`); a missing listing remains `Gone`. This
 guards row-to-path consumption, not subsequent filesystem operations.
 
-Ending a listing drops the queue under the cache write lock. The E2E `flush_all_watchers` helper also drains queues
-through `flush_all_pending()` without waiting for the transport window.
+Ending a listing drops the queue under the cache write lock. The app's E2E `flush_all_watchers` helper also drains
+queues through `Listings::flush_pending_diffs` (the `playwright-e2e` feature) without waiting for the transport window.
 
 ## File metadata tiers
 
@@ -807,7 +872,7 @@ What the local reader fetches eagerly and what it defers: `volume/backends/DETAI
 
 ## Finder tags
 
-`FileEntry.tags` holds macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`), parsed in
+`FileEntry.tags` holds macOS Finder tags (`com.apple.metadata:_kMDItemUserTags`), which the app reads and writes in
 `apps/desktop/src-tauri/src/file_system/tags.rs`. Each tag is `(name, color)` where color `0` = none (a colorless named
 tag), `1` grey, `2` green, `3` purple, `4` blue, `5` yellow, `6` red, `7` orange. The per-file xattr is the display
 source of truth — Finder rewrites every file's xattr on a recolor, so we never read the system tag registry.
@@ -818,51 +883,22 @@ free). So `list_directory_core` never touches tags; the frontend calls `enrich_t
 range (mirroring the custom-folder-icon prefetch), and a background sweep backfills the rest. Visible range (~100 rows)
 ≈ 1.5 ms; a full 200k sweep ≈ 3 s, off the render path.
 
-**Flow.** `enrich_tags` reads tags for the batch and calls `caching::apply_tags_to_listing`, which mutates entries in
-place (tags are sort-irrelevant — no reorder), replaces **unconditionally** (clearing to empty so an external removal
-propagates), and emits one coalesced `modify` diff for the rows that actually changed (so re-enriching an unchanged
-visible range is silent). It's timeout-guarded and degrades to empty on non-local/hung paths. The whole batch resolves
-against the listing's path map in one pass, and the write it does leaves both maps standing: § "Entries by path".
+**Flow.** The app's `enrich_tags` command reads tags for the batch and calls `Listings::apply_tags` (`mutate.rs`'s
+`apply_tags_to_listing`), which mutates entries in place (tags are sort-irrelevant — no reorder), replaces
+**unconditionally** (clearing to empty so an external removal propagates), and emits one coalesced `modify` diff for the
+rows that actually changed (so re-enriching an unchanged visible range is silent). It's timeout-guarded and degrades to
+empty on non-local/hung paths. The whole batch resolves against the listing's path map in one pass, and the write it
+does leaves both maps standing: § "Entries by path".
 
 **Carry-forward.** A watcher re-stat builds entries via `get_single_entry`, which reads no xattr (empty tags). Every
-modify path (`notify_modified`, the incremental watcher loop) calls `caching::carry_forward_tags` BEFORE storing and
+modify path (`notify_modified`, `observe_children`) calls `mutate.rs`'s `carry_forward_tags` BEFORE storing and
 emitting, copying the cached entry's tags onto the re-stat'd one — otherwise any unrelated Modify event (content edit,
 mtime touch, chmod) would blank a file's dots until the next enrich. `carry_forward_tags` only ever restores (no-op when
 the incoming entry already has tags), so it never masks a real change; clearing flows solely through the enrich path's
 unconditional replace.
 
-**Write path.** `tags.rs::set_tags(path, &[TagRef])` encodes the full desired set as a **binary** plist
-(`plist::Value::to_writer_binary` — `plist` defaults to XML, which is NOT Finder-compatible) of `"Name\nN"` strings
-(always with the `\nN` suffix, even color 0, matching Finder), and `xattr::set`s it. An empty set REMOVES the xattr
-(matching Finder clearing all tags), guarded so an already-untagged file doesn't surface a spurious ENOATTR. The
-encode↔decode round-trip is verified **semantically** (re-`read_tags` equals the input), not byte-for-byte against a
-Finder reference — valid bplists differ in object-table ordering/dedup.
-
-**Where the menu offers tags.** Only on rows that are real OS paths (`PaneContextMenuFacts.can_tag`, the frontend's
-`rowIsOsVisible`, the same reading `Share…` takes). Decision/Why: hiding an action that can't work beats explaining
-after the click, and the write is an `xattr::set` through the path, so a phone, an ADB device, an SFTP or WebDAV server,
-an archive's insides, or a `.git`-portal row takes the click and stores nothing. Keyed on the capability, ❌ never a
-list of backends, so a new protocol-only backend (S3) hides them for free. A share Cmdr talks to directly over smb2
-keeps them: its share stays mounted by macOS, its rows are `/Volumes/…` paths, and the xattr goes through that mount. A
-macOS-mounted filesystem that can't store xattrs still shows them; only trying can tell. Reading tags (`enrich_tags`)
-still runs everywhere, since an empty read is harmless.
-
-`tags.rs::toggle_color(paths, color)` is the higher-level op behind both triggers: it reads each path's current tags,
-applies Finder's multi-file rule (if EVERY path already carries the color, remove it from all; otherwise add the
-canonical system tag — `Red\n6`, …, `Gray\n1` — to every path that lacks it), preserves all other tags, skips rewriting
-files already in the target state, and returns the new per-path sets. The `toggle_tags(listing_id, paths, color)` IPC
-command wraps it in the 5 s write-timeout tier and feeds the result to `apply_tags_to_listing` so the panes refresh
-immediately. A same-color _custom_ tag counts as "applied" (no duplicate system tag is added; removing strips every tag
-of that color).
-
-**D11 — never touch `com.apple.FinderInfo`.** The write path touches ONLY `_kMDItemUserTags`. That 32-byte `FinderInfo`
-blob carries `kHasCustomIcon` (`0x0400` at offset 8, see `icons/per_path.rs`) plus type/creator codes; zeroing it would
-destroy custom folder icons and break `has_custom_folder_icon`. Modern Finder reads tags straight from
-`_kMDItemUserTags`, so the dot/color shows without the legacy label bits — verified to survive in
-`tags.rs::write_tests::tagging_preserves_finder_info_custom_icon_flag`. `setxattr` is atomic per attribute, so a single
-file is never half-written; a multi-file toggle that fails mid-loop leaves earlier files updated and propagates the
-error (the IPC command logs it rather than surfacing a hard failure — tags are low-stakes and the panes still reflect
-what's on disk).
+**Write path, the context menu, and the toggle** (the app's `tags.rs`):
+`apps/desktop/src-tauri/src/file_system/DETAILS.md` § "Finder tags".
 
 ## The foreground lease a listing holds
 
@@ -1061,8 +1097,8 @@ on its `ListingPath`, which differ for MTP. Pinned by `read_generation_test.rs`.
 
 ## Index sizes off the lock
 
-`index_sizes.rs` refreshes a listing's folder sizes (`refresh_listing_index_sizes`, once per index event per open pane)
-with no engine lock held while the index answers, which is two indexed SQLite queries:
+`index_sizes.rs` refreshes a listing's folder sizes (`Listings::refresh_index_sizes`, once per index event per open
+pane) with no engine lock held while the index answers, which is two indexed SQLite queries:
 
 1. Under the READ lock, clone the non-symlink folders (the only rows `ListingIndex::enrich` writes, by the seam's
    contract) and the listing's PUBLISHED read generation. No folders, nothing to do.
@@ -1085,3 +1121,24 @@ generation check. A routed re-read (an archive, a git snapshot) is never enriche
 `resort_listing` runs the same routine before it takes the cache lock, so a sort by size sees the index's current sizes
 and no pane read waits behind the index. That makes the rule hold with no exception: no seam runs under an engine lock.
 Pinned by `index_sizes_test.rs`.
+
+## Where each crate invariant lives
+
+The rules the engine keeps that this crate's extraction added, each with one home:
+
+- **No `tauri`, `tauri-specta`, or `cmdr` in the tree, and a capped surface**: `index-crate-isolation` enforces both; §
+  "The public surface is capped".
+- **Every app concern arrives through a `host` seam that degrades to a no-op and has a `testing` fake; a seam is called
+  per read or mutation, never per entry**: `src/host/CLAUDE.md`.
+- **The engine reports facts; wire payloads, derives, and words live app-side, and the bindings don't move**: §
+  "Decisions" (the `ListingEvents` bullet).
+- **`index → badges → panes` is the order every directory change is applied in, owned by the host's composer, and the
+  observers run in registration order**: Cmdr's are `apps/desktop/src-tauri/src/listing_host/DETAILS.md` § "The
+  composer" and § "The observers".
+- **Test scaffolding is gated on `any(test, feature = "testing")`**: `CLAUDE.md`.
+- **No seam, observer, or overlay runs under an engine lock, with no exception; `with_rows` is the one closure run under
+  the cache lock and it never re-enters `Listings`; everything else crosses as data**: `CLAUDE.md`, and § "Index sizes
+  off the lock" for the index refresh, the replace step, and resort, which honor it by enriching off the lock.
+- **Background loops hold the engine weakly**: `CLAUDE.md`, and § "Decisions".
+- **A listing id is a `ListingId` in every Rust signature; only the IPC boundary sees a `String`**: § "Decisions". The
+  same reasoning (no confusable positional params) shapes the row-space methods' arguments.

@@ -1573,7 +1573,7 @@ survive the rebuild on the Rust side, so they aren't in that list.
 ## Gotchas
 
 - **Abandoning a listing goes through `listing-loader.ts::abandonListing`, never a bare `cancelListing`.**
-  `cancelListing` only flips a cancel flag the backend checks atomically with its `LISTING_CACHE` insert
+  `cancelListing` only flips a cancel flag the backend checks atomically with its listing-cache insert
   (`crates/cmdr-listing/src/streaming.rs`), so it wins the race only while the listing hasn't landed yet; once it has,
   ONLY `listDirectoryEnd` removes the entry and stops its OS watcher (`crates/cmdr-listing/src/operations.rs`). Every
   path that drops a `listingId` — the error and cancelled handlers via `resetLoadingState`, the superseded-load branch,
@@ -1933,7 +1933,7 @@ directory owns is whether the item MAY appear, pushed as `PaneContextMenuFacts.c
 The same flag gates the context menu's `Services` submenu, which asks the same question for the same reason (a macOS
 service takes file URLs too): `src-tauri/src/menu/DETAILS.md` § "Services in the right-click menu".
 `PaneContextMenuFacts.canTag`, the Finder tag colors, carries the same `rowIsOsVisible` answer as its own flag (a tag is
-an xattr written through the row's path). Why: `crates/cmdr-listing/DETAILS.md` § "Finder tags".
+an xattr written through the row's path). Why: `src-tauri/src/file_system/DETAILS.md` § "Finder tags".
 
 A share service takes file URLs, so the question is whether the right-clicked ROW has a real file behind it, and it
 needs three inputs rather than one kind lookup (`rowIsOsVisible` in `volume-capabilities.ts`):

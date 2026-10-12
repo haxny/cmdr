@@ -153,7 +153,7 @@ pub(crate) fn engine_reporting_to(events: Arc<dyn ListingEvents>) -> Listings {
 ///    for `root` and any non-indexed volume.
 /// 2. The cloud badge, which caches per directory, so this is how it learns a
 ///    file it has an answer for moved on. One hash lookup, hit or miss.
-/// 3. The panes (the engine's `notify_directory_changed`).
+/// 3. The panes (`Listings::directory_changed`).
 ///
 /// The coupling is one-directional: listing → indexer, never the reverse.
 pub(crate) fn directory_changed(volume_id: &str, parent_path: &Path, change: DirectoryChange) {

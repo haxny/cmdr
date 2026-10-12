@@ -16,6 +16,14 @@ Rust measuring fonts directly.
 rasterizer the user sees, so measurements match pixel-perfectly. Any Rust-side font library would need to load font
 files, resolve system fonts, and might produce slightly different widths than the browser actually renders.
 
+**Decision**: Brief column widths are computed in Rust from a per-code-point table, not by measuring each filename in
+the frontend.
+**Why**: measuring 50k filenames in JS is slow. The frontend measures each code point once and ships the table; later
+width queries are hash lookups. `brief_columns::compute_brief_column_text_widths` sizes each column to its widest name
+plus a per-row suffix that reserves room for the Finder tag-dot cluster, reading the pane's rows through the listing
+engine's `Listings::with_rows`. That closure runs under the engine's cache lock, so it measures and returns: ❌ never
+call back into the engine from inside it.
+
 **Decision**: binary format (bincode2, a maintained fork of bincode) on disk instead of JSON.
 **Why**: a full Latin character set produces ~4,000 code-point-to-width entries, ~100 KB as JSON with key-quoting
 overhead. bincode compresses this to ~26 KB and deserializes in microseconds vs. milliseconds for JSON parsing. Read

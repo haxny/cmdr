@@ -1,17 +1,11 @@
 //! What keeps something alive while a pane shows a directory.
 //!
 //! A [`ListingObserver`] hears one call when a listing enters the listing cache
-//! and one when it leaves. Cmdr's observers, in order: the FSEvents watcher, the
-//! virtual `.git` portal (which keeps a repository's `.git/*` watcher armed for
-//! as long as a pane stands in its virtual trees), and `listing_index_sizes`
-//! (which routes the index's folder-size updates to the listings they touch).
+//! and one when it leaves, in registration order. Cmdr's observers and their
+//! order: the app's `listing_host/DETAILS.md` § "The observers".
 //!
-//! **Arming belongs to the BACKEND, ❌ never to a frontend subscription.** The
-//! breadcrumb chip's `subscribe_git_state` used to be the only thing starting a
-//! per-repo watcher, so a pane on `branches/` with nothing else open went stale,
-//! and turning both git features off stopped every watcher in the app. An
-//! observer here holds for a pane the MCP server drove, for a window that never
-//! rendered a chip, and for whatever asks next.
+//! **Arming belongs to the BACKEND, ❌ never to a frontend subscription**:
+//! `host/DETAILS.md` § "Observers".
 //!
 //! The host hands its observers to the engine's builder, in order
 //! (`ListingsBuilder::observer`).

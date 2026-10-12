@@ -7,16 +7,9 @@
 //! while every real entry beside them stays the local volume's, editable and
 //! deletable as always.
 //!
-//! ❌ **Never move this into a `Volume` impl or into the volume manager.** The
-//! whole point is that a contributed row reaches a pane and NOTHING else: a copy
-//! scan, a delete walker, and the drive indexer all list through `Volume`, and
-//! the moment one of them can see a row with no inode behind it, a repo delete
-//! stops half-way through with `.git/` still on disk. That was a real bug, and
-//! this seam is the shape that makes it unrepresentable.
-//!
-//! The same rule is why a listing that carries contributed rows is never
-//! authoritative for a walker: `CachedListing::has_overlay_rows` says so and the
-//! fresh-listing oracle declines it (`authoritative.rs`).
+//! ❌ **Never move this into a `Volume` impl**: a contributed row must reach a
+//! pane and nothing else, which is also why a decorated listing never answers
+//! the fresh-listing oracle. Why: `host/DETAILS.md` § "Overlays".
 //!
 //! The host hands its contributors to the engine's builder, in order
 //! (`ListingsBuilder::overlay`), and the read pipeline (`pipeline.rs`) folds
