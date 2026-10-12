@@ -285,8 +285,8 @@ fn is_skipped_kind(entry: &FileEntry) -> bool {
 }
 
 fn report(on_progress: Option<PlanProgressObserver<'_>>, files: usize, dirs: usize, bytes: u64, current_dir: &Path) {
-    if let Some(observer) = on_progress {
-        observer(PlanProgress {
+    if let Some(report_to) = on_progress {
+        report_to(PlanProgress {
             files,
             dirs,
             bytes,
