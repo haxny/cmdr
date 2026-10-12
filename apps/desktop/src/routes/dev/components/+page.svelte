@@ -28,6 +28,7 @@
     import ShortcutChipSection from './sections/ShortcutChip.svelte'
     import CopyBoxSection from './sections/CopyBoxSection.svelte'
     import EmptyStates from './sections/EmptyStates.svelte'
+    import TransferTreeSection from './sections/TransferTreeSection.svelte'
 
     interface Props {
         /** Optional sub-anchor (e.g. `'buttons'`). Catalog scrolls to `#components-<anchor>` when this changes. */
@@ -71,6 +72,7 @@
         'shortcut-chip',
         'commandbox',
         'empty-states',
+        'transfer-tree',
     ] as const
 </script>
 
@@ -116,6 +118,7 @@
         <ShortcutChipSection />
         <CopyBoxSection />
         <EmptyStates />
+        <TransferTreeSection />
     </CatalogPage>
 {/if}
 

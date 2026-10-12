@@ -83,6 +83,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Placeholder tooltips** (`multiRename.placeholderHelp.*`), set without the pile: caret → `textmarkören` (the cursor
   ruling's viewer form) and hover → `håll pekaren över`; the [C] value → `Ett nummer` (not `löpnummer`); time of day →
   `klockslaget`, since `Hela tiden` would read as "all the time"; leading zeros → `inledande nollor`.
+- **Transfer tree counts** (`fileOperations.transferTree.failedCount`/`.state.failed`): the tight count says
+  `{countText} gick inte` (as `askCmdr.decision.result`), the row marker the longer `Gick inte att slutföra` (as
+  `operationLog.status.failed`); confirm the bare `3 gick inte` reads clearly after `· 2 överhoppade`.
 
 ## Layout (overflow-check against the pseudolocale)
 

@@ -1066,5 +1066,77 @@
   "fileOperations.validation.pathSegmentTooLong": "路径中有一个文件夹名过长（{byteCount}/{maxBytes} 字节）",
   "@fileOperations.validation.pathSegmentTooLong": {
     "sourceHash": "75b2602"
+  },
+  "fileOperations.transferTree.treeLabel": "这次传输中的文件",
+  "@fileOperations.transferTree.treeLabel": {
+    "sourceHash": "29a637d"
+  },
+  "fileOperations.transferTree.preparing": "正在列出文件…",
+  "@fileOperations.transferTree.preparing": {
+    "sourceHash": "e6dc842"
+  },
+  "fileOperations.transferTree.empty": "没有要显示的文件",
+  "@fileOperations.transferTree.empty": {
+    "sourceHash": "cd0bf08"
+  },
+  "fileOperations.transferTree.follow": "跟随",
+  "@fileOperations.transferTree.follow": {
+    "sourceHash": "641d1ef"
+  },
+  "fileOperations.transferTree.followTooltip": "滚动返回进行中的文件，并持续跟随",
+  "@fileOperations.transferTree.followTooltip": {
+    "sourceHash": "0ff230b"
+  },
+  "fileOperations.transferTree.filesTotal": "{countText} 个{count, plural, other {文件}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} 个{total, plural, other {文件}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "sourceHash": "48675a6"
+  },
+  "fileOperations.transferTree.filesProgressAria": "{totalText} 个{total, plural, other {文件}}中的 {doneText} 个",
+  "@fileOperations.transferTree.filesProgressAria": {
+    "sourceHash": "0597d05"
+  },
+  "fileOperations.transferTree.sizeProgressAria": "{total} 中的 {done}",
+  "@fileOperations.transferTree.sizeProgressAria": {
+    "sourceHash": "e7a467e"
+  },
+  "fileOperations.transferTree.skippedCount": "{count, plural, other {{countText} 个已跳过}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "sourceHash": "3cb9b95"
+  },
+  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} 个无法传输}}",
+  "@fileOperations.transferTree.failedCount": {
+    "sourceHash": "67899d9"
+  },
+  "fileOperations.transferTree.state.waiting": "等待中",
+  "@fileOperations.transferTree.state.waiting": {
+    "sourceHash": "6e293a8"
+  },
+  "fileOperations.transferTree.state.copying": "正在拷贝",
+  "@fileOperations.transferTree.state.copying": {
+    "sourceHash": "82bc68a"
+  },
+  "fileOperations.transferTree.state.moving": "正在移动",
+  "@fileOperations.transferTree.state.moving": {
+    "sourceHash": "8dac743"
+  },
+  "fileOperations.transferTree.state.compressing": "正在压缩",
+  "@fileOperations.transferTree.state.compressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferTree.state.done": "已完成",
+  "@fileOperations.transferTree.state.done": {
+    "sourceHash": "11a6767"
+  },
+  "fileOperations.transferTree.state.skipped": "已跳过",
+  "@fileOperations.transferTree.state.skipped": {
+    "sourceHash": "12698ce"
+  },
+  "fileOperations.transferTree.state.failed": "无法传输",
+  "@fileOperations.transferTree.state.failed": {
+    "sourceHash": "031a8f0"
   }
 }

@@ -787,3 +787,8 @@ share options → `Nincs megosztási lehetőség`.
 
 - Positions sit in a colon slot (`ezen a helyen: {at}`), the example file after `esetén` or before `nevű`, the date
   before `időpontban`: none of them can take an article or suffix. On/Off → `Be` / `Ki` (the switch states).
+
+## Az átvitel élő fájlfája (`fileOperations.transferTree.*`)
+
+- "X of Y" aria → `X kész ennyiből: Y`: a size can't take `-ból/-ből`, so a colon slot, and the file count shares it.
+  Follow → `Követés` (the viewer's tail toggle); row states reuse the queue and log words (`Másolás`, `Kihagyva`).

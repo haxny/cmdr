@@ -235,6 +235,7 @@
     "confidence": "high",
     "decision": "Rà soát trôi thuật ngữ toàn catalog",
     "exceptions": {
+      "fileOperations.transferTree.followTooltip": "English-sense: \"scroll back to\" moves the tree's viewport, nothing navigates; `Cuộn về` carries it.",
       "multiRename.undoTooltip": "English-sense: \"back to their old names\" restores names, nothing navigates; `đặt lại tên cũ` carries it."
     },
     "forms": "returning to the previous SCREEN or step in a flow → Quay lại (Quay lại danh sách máy chủ, Quay lại trò chuyện); back in the folder HISTORY → Trở lại (Go menu, commands.navBack.label, fileExplorer.errorPane.goBack)",
@@ -2404,6 +2405,9 @@
     "accept": ["chạy", "đang tiến hành", "đang quét"],
     "chosen": "đang chạy",
     "confidence": "high",
+    "exceptions": {
+      "fileOperations.transferTree.followTooltip": "\"the files in progress\" are files mid-copy/move in the transfer tree, so `các tệp đang truyền` names what is happening to them; `đang chạy` / `đang tiến hành` don't fit a file."
+    },
     "forms": "Still running → Vẫn đang chạy; while X is running → trong khi X đang chạy",
     "sources": "macOS Finder N144 (trong khi Finder đang chạy)"
   },

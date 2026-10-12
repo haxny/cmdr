@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { _setLocaleForTests } from './locale'
-import { _clearListFormatCacheForTests, formatConjunctionList, formatDisjunctionList } from './list-format'
+import {
+  _clearListFormatCacheForTests,
+  formatConjunctionList,
+  formatDisjunctionList,
+  formatUnitList,
+} from './list-format'
 
 describe('formatDisjunctionList', () => {
   afterEach(() => {
@@ -54,6 +59,22 @@ describe('formatConjunctionList', () => {
     _setLocaleForTests('ja')
     expect(formatConjunctionList(['Preview', 'Warp'])).toBe(
       new Intl.ListFormat('ja', { type: 'conjunction' }).format(['Preview', 'Warp']),
+    )
+  })
+})
+
+describe('formatUnitList', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  it('lists standalone facts with no conjunction, in the UI language', () => {
+    _setLocaleForTests('en-US')
+    expect(formatUnitList([])).toBe('')
+    expect(formatUnitList(['Photos', 'copying', '3 of 10 files'])).toBe('Photos, copying, 3 of 10 files')
+    _setLocaleForTests('ja')
+    expect(formatUnitList(['写真', 'コピー中'])).toBe(
+      new Intl.ListFormat('ja', { type: 'unit' }).format(['写真', 'コピー中']),
     )
   })
 })

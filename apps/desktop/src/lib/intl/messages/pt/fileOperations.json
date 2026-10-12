@@ -1069,5 +1069,77 @@
   "fileOperations.validation.pathSegmentTooLong": "Um nome de pasta no caminho é muito longo ({byteCount}/{maxBytes} bytes)",
   "@fileOperations.validation.pathSegmentTooLong": {
     "sourceHash": "75b2602"
+  },
+  "fileOperations.transferTree.treeLabel": "Arquivos desta transferência",
+  "@fileOperations.transferTree.treeLabel": {
+    "sourceHash": "29a637d"
+  },
+  "fileOperations.transferTree.preparing": "Listando os arquivos…",
+  "@fileOperations.transferTree.preparing": {
+    "sourceHash": "e6dc842"
+  },
+  "fileOperations.transferTree.empty": "Nenhum arquivo para mostrar",
+  "@fileOperations.transferTree.empty": {
+    "sourceHash": "cd0bf08"
+  },
+  "fileOperations.transferTree.follow": "Acompanhar",
+  "@fileOperations.transferTree.follow": {
+    "sourceHash": "641d1ef"
+  },
+  "fileOperations.transferTree.followTooltip": "Rolar de volta até os arquivos em andamento e continuar acompanhando-os",
+  "@fileOperations.transferTree.followTooltip": {
+    "sourceHash": "0ff230b"
+  },
+  "fileOperations.transferTree.filesTotal": "{countText} {count, plural, one {arquivo} many {arquivos} other {arquivos}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, one {arquivo} many {arquivos} other {arquivos}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "sourceHash": "48675a6"
+  },
+  "fileOperations.transferTree.filesProgressAria": "{doneText} de {totalText} {total, plural, one {arquivo} many {arquivos} other {arquivos}}",
+  "@fileOperations.transferTree.filesProgressAria": {
+    "sourceHash": "0597d05"
+  },
+  "fileOperations.transferTree.sizeProgressAria": "{done} de {total}",
+  "@fileOperations.transferTree.sizeProgressAria": {
+    "sourceHash": "e7a467e"
+  },
+  "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} ignorado} many {{countText} ignorados} other {{countText} ignorados}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "sourceHash": "3cb9b95"
+  },
+  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} não concluído} many {{countText} não concluídos} other {{countText} não concluídos}}",
+  "@fileOperations.transferTree.failedCount": {
+    "sourceHash": "67899d9"
+  },
+  "fileOperations.transferTree.state.waiting": "Aguardando",
+  "@fileOperations.transferTree.state.waiting": {
+    "sourceHash": "6e293a8"
+  },
+  "fileOperations.transferTree.state.copying": "Copiando",
+  "@fileOperations.transferTree.state.copying": {
+    "sourceHash": "82bc68a"
+  },
+  "fileOperations.transferTree.state.moving": "Movendo",
+  "@fileOperations.transferTree.state.moving": {
+    "sourceHash": "8dac743"
+  },
+  "fileOperations.transferTree.state.compressing": "Comprimindo",
+  "@fileOperations.transferTree.state.compressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferTree.state.done": "Concluído",
+  "@fileOperations.transferTree.state.done": {
+    "sourceHash": "11a6767"
+  },
+  "fileOperations.transferTree.state.skipped": "Ignorado",
+  "@fileOperations.transferTree.state.skipped": {
+    "sourceHash": "12698ce"
+  },
+  "fileOperations.transferTree.state.failed": "Não concluído",
+  "@fileOperations.transferTree.state.failed": {
+    "sourceHash": "031a8f0"
   }
 }

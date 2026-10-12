@@ -1069,5 +1069,77 @@
   "fileOperations.validation.pathSegmentTooLong": "Een mapnaam in het pad is te lang ({byteCount}/{maxBytes} bytes)",
   "@fileOperations.validation.pathSegmentTooLong": {
     "sourceHash": "75b2602"
+  },
+  "fileOperations.transferTree.treeLabel": "Bestanden in deze bewerking",
+  "@fileOperations.transferTree.treeLabel": {
+    "sourceHash": "29a637d"
+  },
+  "fileOperations.transferTree.preparing": "Bestanden op een rij zetten…",
+  "@fileOperations.transferTree.preparing": {
+    "sourceHash": "e6dc842"
+  },
+  "fileOperations.transferTree.empty": "Geen bestanden om te tonen",
+  "@fileOperations.transferTree.empty": {
+    "sourceHash": "cd0bf08"
+  },
+  "fileOperations.transferTree.follow": "Volg",
+  "@fileOperations.transferTree.follow": {
+    "sourceHash": "641d1ef"
+  },
+  "fileOperations.transferTree.followTooltip": "Scroll terug naar de bestanden waar Cmdr nu mee bezig is en blijf ze volgen",
+  "@fileOperations.transferTree.followTooltip": {
+    "sourceHash": "0ff230b"
+  },
+  "fileOperations.transferTree.filesTotal": "{countText} {count, plural, one {bestand} other {bestanden}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, one {bestand} other {bestanden}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "sourceHash": "48675a6"
+  },
+  "fileOperations.transferTree.filesProgressAria": "{doneText} van {totalText} {total, plural, one {bestand} other {bestanden}}",
+  "@fileOperations.transferTree.filesProgressAria": {
+    "sourceHash": "0597d05"
+  },
+  "fileOperations.transferTree.sizeProgressAria": "{done} van {total}",
+  "@fileOperations.transferTree.sizeProgressAria": {
+    "sourceHash": "e7a467e"
+  },
+  "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} overgeslagen} other {{countText} overgeslagen}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "sourceHash": "3cb9b95"
+  },
+  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} niet voltooid} other {{countText} niet voltooid}}",
+  "@fileOperations.transferTree.failedCount": {
+    "sourceHash": "67899d9"
+  },
+  "fileOperations.transferTree.state.waiting": "Wachten",
+  "@fileOperations.transferTree.state.waiting": {
+    "sourceHash": "6e293a8"
+  },
+  "fileOperations.transferTree.state.copying": "Kopiëren",
+  "@fileOperations.transferTree.state.copying": {
+    "sourceHash": "82bc68a"
+  },
+  "fileOperations.transferTree.state.moving": "Verplaatsen",
+  "@fileOperations.transferTree.state.moving": {
+    "sourceHash": "8dac743"
+  },
+  "fileOperations.transferTree.state.compressing": "Comprimeren",
+  "@fileOperations.transferTree.state.compressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferTree.state.done": "Gereed",
+  "@fileOperations.transferTree.state.done": {
+    "sourceHash": "11a6767"
+  },
+  "fileOperations.transferTree.state.skipped": "Overgeslagen",
+  "@fileOperations.transferTree.state.skipped": {
+    "sourceHash": "12698ce"
+  },
+  "fileOperations.transferTree.state.failed": "Niet voltooid",
+  "@fileOperations.transferTree.state.failed": {
+    "sourceHash": "031a8f0"
   }
 }

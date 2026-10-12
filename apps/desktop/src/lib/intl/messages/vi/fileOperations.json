@@ -1067,5 +1067,77 @@
   "fileOperations.validation.pathSegmentTooLong": "Một tên thư mục trong đường dẫn quá dài ({byteCount}/{maxBytes} byte)",
   "@fileOperations.validation.pathSegmentTooLong": {
     "sourceHash": "75b2602"
+  },
+  "fileOperations.transferTree.treeLabel": "Tệp trong lần truyền này",
+  "@fileOperations.transferTree.treeLabel": {
+    "sourceHash": "29a637d"
+  },
+  "fileOperations.transferTree.preparing": "Đang liệt kê các tệp…",
+  "@fileOperations.transferTree.preparing": {
+    "sourceHash": "e6dc842"
+  },
+  "fileOperations.transferTree.empty": "Không có tệp nào để hiển thị",
+  "@fileOperations.transferTree.empty": {
+    "sourceHash": "cd0bf08"
+  },
+  "fileOperations.transferTree.follow": "Theo dõi",
+  "@fileOperations.transferTree.follow": {
+    "sourceHash": "641d1ef"
+  },
+  "fileOperations.transferTree.followTooltip": "Cuộn về các tệp đang truyền và tiếp tục bám theo chúng",
+  "@fileOperations.transferTree.followTooltip": {
+    "sourceHash": "0ff230b"
+  },
+  "fileOperations.transferTree.filesTotal": "{countText} {count, plural, other {tệp}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, other {tệp}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "sourceHash": "48675a6"
+  },
+  "fileOperations.transferTree.filesProgressAria": "{doneText} trên {totalText} {total, plural, other {tệp}}",
+  "@fileOperations.transferTree.filesProgressAria": {
+    "sourceHash": "0597d05"
+  },
+  "fileOperations.transferTree.sizeProgressAria": "{done} trên {total}",
+  "@fileOperations.transferTree.sizeProgressAria": {
+    "sourceHash": "e7a467e"
+  },
+  "fileOperations.transferTree.skippedCount": "{count, plural, other {đã bỏ qua {countText}}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "sourceHash": "3cb9b95"
+  },
+  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} không thành công}}",
+  "@fileOperations.transferTree.failedCount": {
+    "sourceHash": "67899d9"
+  },
+  "fileOperations.transferTree.state.waiting": "Đang chờ",
+  "@fileOperations.transferTree.state.waiting": {
+    "sourceHash": "6e293a8"
+  },
+  "fileOperations.transferTree.state.copying": "Đang sao chép",
+  "@fileOperations.transferTree.state.copying": {
+    "sourceHash": "82bc68a"
+  },
+  "fileOperations.transferTree.state.moving": "Đang di chuyển",
+  "@fileOperations.transferTree.state.moving": {
+    "sourceHash": "8dac743"
+  },
+  "fileOperations.transferTree.state.compressing": "Đang nén",
+  "@fileOperations.transferTree.state.compressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferTree.state.done": "Xong",
+  "@fileOperations.transferTree.state.done": {
+    "sourceHash": "11a6767"
+  },
+  "fileOperations.transferTree.state.skipped": "Đã bỏ qua",
+  "@fileOperations.transferTree.state.skipped": {
+    "sourceHash": "12698ce"
+  },
+  "fileOperations.transferTree.state.failed": "Chưa hoàn tất được",
+  "@fileOperations.transferTree.state.failed": {
+    "sourceHash": "031a8f0"
   }
 }

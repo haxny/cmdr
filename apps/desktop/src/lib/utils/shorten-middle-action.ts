@@ -12,6 +12,12 @@ export interface ShortenMiddleParams {
    * full text is on hover whatever the width.
    */
   tooltipWhenTruncated?: boolean
+  /**
+   * Hover text that says MORE than `text` (a transfer tree row shows its name and hovers
+   * its full relative path). Shown whatever the width, so it overrides
+   * `tooltipWhenTruncated`.
+   */
+  tooltip?: string
 }
 
 // Shared across all action instances so the dynamic import runs at most once.
@@ -53,11 +59,16 @@ export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams)
   node.style.textOverflow = 'ellipsis'
   node.style.whiteSpace = 'nowrap'
   node.textContent = params.text
+  function hoverText(truncated: boolean): string {
+    if (params.tooltip !== undefined) return params.tooltip
+    return !params.tooltipWhenTruncated || truncated ? currentText : ''
+  }
+
   // Nothing is truncated yet, so `tooltipWhenTruncated` starts out with nothing to say.
-  const tip = tooltip(node, params.tooltipWhenTruncated ? '' : params.text)
+  const tip = tooltip(node, hoverText(false))
 
   function applyTooltip(truncated: boolean): void {
-    tip.update?.(!params.tooltipWhenTruncated || truncated ? currentText : '')
+    tip.update?.(hoverText(truncated))
   }
 
   // What the last truncation was computed for and what it wrote. A width transition resizes every
@@ -70,7 +81,18 @@ export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams)
   function truncate() {
     if (!measureWidth) return
     const width = node.clientWidth
-    if (width <= 0) return
+    if (width <= 0) {
+      // Nothing to measure against (hidden, or not laid out yet): show the whole text and let
+      // the first real width truncate it. Bailing without a write left a recycled row showing
+      // the text it had before.
+      if (lastResult !== currentText) {
+        lastWidth = -1
+        lastResult = currentText
+        node.textContent = currentText
+        applyTooltip(false)
+      }
+      return
+    }
     if (width === lastWidth && currentText === lastInput) return
     const result = shortenMiddle(currentText, width, measureWidth, {
       preferBreakAt: params.preferBreakAt,
@@ -103,8 +125,12 @@ export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams)
   return {
     update(newParams: ShortenMiddleParams) {
       const textChanged = newParams.text !== currentText
+      const tooltipChanged = newParams.tooltip !== params.tooltip
       params = newParams
-      if (!textChanged) return
+      if (!textChanged) {
+        if (tooltipChanged) applyTooltip(lastResult !== null && lastResult !== currentText)
+        return
+      }
       currentText = newParams.text
       if (measureWidth) {
         truncate()

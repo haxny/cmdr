@@ -2596,6 +2596,7 @@
     "accept": ["schuif", "scroll"],
     "chosen": "schuiven",
     "confidence": "tentative",
+    "forms": "the catalog's prose and tooltips say scrollen / Scroll (viewer, settings, fileOperations.transferTree.followTooltip); Schuif only in commands.cursorScrollTo.label",
     "sources": "MS (scroll → schuiven)"
   },
   "search": {
@@ -3045,6 +3046,9 @@
     "chosen": "overdracht",
     "confidence": "high",
     "decision": "Operation queue: de hernoeming van Overdrachtswachtrij",
+    "exceptions": {
+      "fileOperations.transferTree.treeLabel": "The tree also serves a compress, which is no copy or move in flight, so the label names the wider category: Bestanden in deze bewerking."
+    },
     "forms": "copy/move sense only (Pauzeer deze overdracht, bij een latere overdracht); progress → overdragen; de-woord, pronoun hem",
     "sources": "standard NL"
   },

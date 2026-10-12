@@ -90,3 +90,9 @@ item once settled, and record the outcome in `terms.json` or `decisions.md`.
 - **Multi-Rename placeholder tooltips** (`multiRename.placeholderHelp.*`): `Номер, который растет на один шаг…`,
   `с ведущими нулями` for leading zeros, `Имя папки уровнем выше` for [G], and `если шаг с минусом, номера уменьшаются`.
   Natural, or is there a more familiar TC wording?
+- **Transfer tree's follow button** (`fileOperations.transferTree.follow`, `.followTooltip`): `Следить` for a log-viewer
+  style follow mode (Microsoft's `follow` is the social `подписаться`, the pile has no autoscroll toggle). Natural, or
+  would `Автопрокрутка` or `К текущему` read better on a tiny button?
+- **Transfer tree folder counts** (`fileOperations.transferTree.skippedCount`, `.failedCount`, `.state.failed`): the row
+  tail reads `1 000 файлов · пропущено: 3 · не выполнено: 1`, and a failed row's marker is `Не удалось передать`.
+  Natural in a tight gray count line?

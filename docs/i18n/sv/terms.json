@@ -2504,6 +2504,7 @@
     "confidence": "high",
     "decision": "Boundaries: both forms are right",
     "forms": "an operation → Pågår (Pågår fortfarande); a process or server → Körs",
+    "proseAccept": ["på gång"],
     "sources": "macOS Finder (en annan åtgärd pågår; medan Finder körs)"
   },
   "runtime": {

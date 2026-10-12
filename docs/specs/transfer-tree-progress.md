@@ -154,6 +154,26 @@ Differences:
 - **Not done here**: an MCP or dev call against a running copy (no app was running in this session; the integration
   suites drive the real engines instead).
 
+## Built in M4 (2026-10-12), and where it differs from the plan below
+
+Code and docs: `apps/desktop/src/lib/file-operations/transfer-tree/` (`CLAUDE.md` + `DETAILS.md`); live in Debug →
+Components → Transfer tree. Differences:
+
+- **The view answers `ancestors`** (id, label, flat index of the open rows above the window's first row). Without it a
+  row whose folder sat above the window had no full path for its tooltip and no target for Left.
+- **Props are `operationId` (or a fixture's `source`), `tick`, `operation`, `defaultRows`**, not a session: the dialog
+  and queue pass `tick={session.progress}`, and fixtures need no fake session.
+- **Intent pauses following, a scroll event never does** (wheel, scrollbar press, keyboard move). Tagging programmatic
+  scrolls still lost the browser's clamp when a folder above shut.
+- **Virtualization reuses `lib/ui/column-list-layout.ts`** (`visibleRange`, `revealScrollTop`), the dialog lists'
+  helpers, over a probe-measured row-height token, so rows scale with the text size.
+- **Rows show sizes as plain text**, not `<Size>`: tier colors made a tree of rows loud. Only rows at work draw a bar,
+  without the shimmer.
+- **The accessible name is a localized unit list** (`formatUnitList`, new in `$lib/intl/list-format.ts`) of standalone
+  phrases, so no catalog key is a fragment. The Follow key is F (physical `KeyF`).
+- **`useShortenMiddle` gained `tooltip`** (hover a fuller text than shown), and stopped leaving stale text on a node
+  with no width yet.
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +

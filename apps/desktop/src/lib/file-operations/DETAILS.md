@@ -17,6 +17,8 @@ Subdirs, each with its own docs:
 - `queue/`: the standalone operation-queue window (every running/waiting operation with per-row
   pause/resume/cancel/rollback, multi-select + Cancel selected, global pause/resume), rendered from the operations store
   that merges the thin `operations-changed` snapshot with the live `write-progress` stream.
+- `transfer-tree/`: the live transfer tree (every selected file and folder with its own progress) the progress dialog
+  and the queue embed.
 
 Umbrella-level files:
 

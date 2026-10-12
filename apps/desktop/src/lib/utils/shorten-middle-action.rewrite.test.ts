@@ -103,6 +103,22 @@ describe('useShortenMiddle DOM writes', () => {
     action.destroy?.()
   })
 
+  it('shows new text on a node with no width yet, and truncates it once laid out', async () => {
+    // A recycled row (a virtual list's slot) can get new text while hidden: it must not keep
+    // showing the text it had before.
+    const cell = makeCell(0)
+    const action = useShortenMiddle(cell.el, { text: 'first.txt' })
+    await settle()
+
+    action.update?.({ text: 'a-rather-long-file-name-that-needs-room.txt' })
+    expect(cell.el.textContent).toBe('a-rather-long-file-name-that-needs-room.txt')
+
+    cell.setWidth(100)
+    resize()
+    expect(cell.el.textContent).toContain('…')
+    action.destroy?.()
+  })
+
   it('still rewrites when the width truncates the text differently', async () => {
     const cell = makeCell(400)
     const text = 'a-rather-long-file-name-that-needs-room.txt'

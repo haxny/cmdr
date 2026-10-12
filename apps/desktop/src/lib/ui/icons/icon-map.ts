@@ -28,6 +28,7 @@ import IconFileArchive from '~icons/lucide/file-archive'
 import IconFilePlus from '~icons/lucide/file-plus'
 import IconFolder from '~icons/lucide/folder'
 import IconFolderInput from '~icons/lucide/folder-input'
+import IconFolderOpen from '~icons/lucide/folder-open'
 import IconFolderPlus from '~icons/lucide/folder-plus'
 import IconGitBranch from '~icons/lucide/git-branch'
 import IconGitCommitHorizontal from '~icons/lucide/git-commit-horizontal'
@@ -40,6 +41,7 @@ import IconKey from '~icons/lucide/key'
 import IconLink from '~icons/lucide/link'
 import IconList from '~icons/lucide/list'
 import IconListChecks from '~icons/lucide/list-checks'
+import IconLocateFixed from '~icons/lucide/locate-fixed'
 import IconLock from '~icons/lucide/lock'
 import IconMail from '~icons/lucide/mail'
 import IconMessagesSquare from '~icons/lucide/messages-square'
@@ -117,6 +119,7 @@ export const ICON_COMPONENTS = {
   'file-plus': IconFilePlus,
   folder: IconFolder,
   'folder-input': IconFolderInput,
+  'folder-open': IconFolderOpen,
   'folder-plus': IconFolderPlus,
   'git-branch': IconGitBranch,
   'git-commit-horizontal': IconGitCommitHorizontal,
@@ -129,6 +132,7 @@ export const ICON_COMPONENTS = {
   link: IconLink,
   list: IconList,
   'list-checks': IconListChecks,
+  'locate-fixed': IconLocateFixed,
   lock: IconLock,
   mail: IconMail,
   'messages-square': IconMessagesSquare,

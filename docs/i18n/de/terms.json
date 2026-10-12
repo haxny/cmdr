@@ -1349,6 +1349,23 @@
     "forms": "the whole-run time-left label → Insgesamt: {eta}",
     "sources": "GN insgesamt; DC Gesamt: (the label form, read stiffer before a time phrase)"
   },
+  "scroll": {
+    "accept": ["Scrollen", "scrollt"],
+    "avoid": [
+      {
+        "form": "Bildlauf",
+        "why": "Microsoft's noun; macOS de and the catalog say scrollen"
+      }
+    ],
+    "chosen": "scrollen",
+    "confidence": "high",
+    "exceptions": {
+      "viewer.statusBar.badge.inMemoryTooltip": "quickly scroll to any line → schnell zu jeder Zeile springen; the badge promises the jump, and scrollen reads as slow wheel motion",
+      "viewer.statusBar.badge.indexedTooltip": "quickly scroll to any point → schnell zu jedem Punkt springen; same reason as inMemoryTooltip"
+    },
+    "forms": "Scroll back to X → Zurück zu X scrollen",
+    "sources": "macOS de (Seite nach unten scrollen), catalog commands.cursorScrollTo.label (Bereich zu Index scrollen), settings prefetch (flüssigeres Scrollen); MS Bildlauf"
+  },
   "secret-access-key": {
     "accept": ["geheim"],
     "chosen": "geheimer Zugriffsschlüssel",
@@ -2667,6 +2684,7 @@
     "chosen": "Läuft",
     "confidence": "high",
     "exceptions": {
+      "fileOperations.transferTree.followTooltip": "the files in progress → die Dateien, die gerade in Arbeit sind; a file isn't a process that läuft",
       "queryUi.results.scanProgress": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanProgressWithCount": "Scan in progress → Laufwerk wird durchsucht, the progress passive",
       "queryUi.results.scanning": "Scan in progress → Laufwerk wird durchsucht, the progress passive",

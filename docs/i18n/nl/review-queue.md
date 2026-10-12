@@ -172,3 +172,12 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - `multiRename.placeholderHelp.counterDigits` `met voorloopnullen`, `.counterEditHint` `houd de aanwijzer erboven`, and
   `.counterAll` `een negatieve stap telt terug`: written without the reference pile (absent on the agent box); confirm
   against macOS/MS Dutch.
+
+## Overdrachtsboom (`fileOperations.transferTree.*`)
+
+- `.preparing` `Bestanden op een rij zetten…` for "Listing the files…" (no `listing` ruling; everyday idiom over the
+  bookish `inventariseren`); fallback `Bestanden tellen…`.
+- `.followTooltip` `Scroll terug …` follows the catalog's `scrollen` (four prose uses) over the tentative MS `schuiven`
+  ruling; confirm which one Dutch macOS shows for scrolling.
+- `.state.copying` / `.moving` / `.compressing` take the infinitive (`Kopiëren`), byte-identical to
+  `transferProgress.stageCompressing`, over the row form `Bezig met …`.

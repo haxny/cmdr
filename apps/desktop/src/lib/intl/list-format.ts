@@ -25,7 +25,7 @@ interface ListJoiner {
   spacesHan: boolean
 }
 
-type ListType = 'conjunction' | 'disjunction'
+type ListType = 'conjunction' | 'disjunction' | 'unit'
 
 /** Cache of one joiner per UI locale and list type. */
 const listFormatterCache = new Map<string, ListJoiner>()
@@ -61,6 +61,15 @@ export function formatConjunctionList(items: readonly string[]): string {
  */
 export function formatDisjunctionList(items: readonly string[]): string {
   return formatList(items, 'disjunction')
+}
+
+/**
+ * List standalone facts the way the UI language lists units, with no "and":
+ * `Photos, copying, 3 of 10 files`. For an accessible name built from phrases
+ * that each read on their own (a transfer tree row's). Empty for an empty list.
+ */
+export function formatUnitList(items: readonly string[]): string {
+  return formatList(items, 'unit')
 }
 
 function formatList(items: readonly string[], type: ListType): string {

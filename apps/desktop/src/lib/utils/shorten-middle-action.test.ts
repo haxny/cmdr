@@ -73,6 +73,24 @@ describe('useShortenMiddle tooltips', () => {
     action.destroy?.()
   })
 
+  it('hovers a fuller text than it shows, fitting or not, and follows it through an update', () => {
+    const el = makeNode()
+    const action = useShortenMiddle(el, {
+      text: 'IMG_0001.jpg',
+      tooltip: 'Photos/2024/IMG_0001.jpg',
+      tooltipWhenTruncated: true,
+    })
+
+    expect(el.textContent).toBe('IMG_0001.jpg')
+    expect(hover(el)?.textContent).toBe('Photos/2024/IMG_0001.jpg')
+
+    el.dispatchEvent(new MouseEvent('mouseleave'))
+    action.update?.({ text: 'IMG_0001.jpg', tooltip: 'Photos/2025/IMG_0001.jpg', tooltipWhenTruncated: true })
+    expect(hover(el)?.textContent).toBe('Photos/2025/IMG_0001.jpg')
+
+    action.destroy?.()
+  })
+
   it('drops its tooltip when the node goes away', () => {
     const el = makeNode()
     const action = useShortenMiddle(el, { text: LONG_PATH })

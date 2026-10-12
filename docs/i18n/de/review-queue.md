@@ -100,6 +100,10 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
 - `commands.queueNextControl.label` / `.queuePreviousControl.label` (`Nächste Taste in der Zeile`): `Taste` follows the
   button ruling, but in the Keyboard shortcuts list it can read as a keyboard key. A reviewer may prefer
   `Nächstes Bedienelement in der Zeile` here.
+- `fileOperations.transferTree.failedCount` (`3 nicht abgeschlossen`): the per-item failed ruling, but 19 chars in a
+  tight gray count line after a middle dot. Needs a fit check; a shorter non-`Fehler` word would help if it overflows.
+- `fileOperations.transferTree.followTooltip` (`… die gerade in Arbeit sind …`): `in Arbeit` for "in progress" since
+  files don't `laufen`; `die gerade übertragen werden` is the alternative but misfits Compress.
 - `commands.queueMoveEarlier.label` / `.queueMoveLater.label`, `queue.reorder.*` (`nach vorn rücken`,
   `Nach vorn gerückt.`, `Jetzt Platz 2 von 5 in der Warteschlange.`): `rücken` for reordering keeps `bewegen` (the F6
   Move command) and Microsoft's `verschieben` out; `vorziehen` / `zurückstellen` is the alternative. The long labels (55

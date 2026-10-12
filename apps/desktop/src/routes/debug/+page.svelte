@@ -62,6 +62,7 @@
         | 'components-shortcut-chip'
         | 'components-copybox'
         | 'components-empty-states'
+        | 'components-transfer-tree'
         | 'graphics'
         | 'graphics-icons'
         | 'graphics-spinners'
@@ -119,6 +120,7 @@
                 { id: 'components-shortcut-chip', label: 'Shortcut chip' },
                 { id: 'components-copybox', label: 'CopyBox' },
                 { id: 'components-empty-states', label: 'Empty states' },
+                { id: 'components-transfer-tree', label: 'Transfer tree' },
             ],
         },
         {

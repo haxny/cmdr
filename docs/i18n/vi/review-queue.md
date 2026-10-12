@@ -78,6 +78,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   step".
 - **Shortcut-list toggles** (`commands.multiRename*.label`): `Bật/tắt “<checkbox label>”`, quoting the checkbox byte for
   byte (so `Bật/tắt “Phân biệt chữ hoa/thường”` carries two slashes); `Bật hoặc tắt …` is the alternative.
+- **Transfer-tree folder counts** (`fileOperations.transferTree.skippedCount`, `.failedCount`): `đã bỏ qua 3` and
+  `3 không thành công`, each picked for how it reads alone after a middle dot; the full status `Chưa hoàn tất được`
+  (`.state.failed`) was too long for the tight count text. Alternatives: `3 bị bỏ qua`, `3 chưa hoàn tất`.
 
 ## Layout
 

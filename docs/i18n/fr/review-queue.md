@@ -75,6 +75,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   caret in `counterEditHint` (picked over `curseur`, which names the file-list cursor here; the reference pile wasn’t
   available to confirm Apple’s form); `Le caractère {at} seul` (no ordinal available); `Activé` / `Désactivé` as the
   on/off row labels (masculine, matching the shipped `Désactivé`, though the implied noun is `option`).
+- **Transfer tree row states** (`fileOperations.transferTree.state.*`, `failedCount`): `Non terminé` /
+  `{n} non terminés` for a file that couldn’t be transferred (reuses `operationLog.outcome.failed`; does it read as "not
+  attempted yet"?); `Compression` stays bare to match `transferProgress.stageCompressing`, while the siblings say
+  `Copie en cours` / `Déplacement en cours` because a bare `Copie` reads as "a copy" to a screen reader.
 
 ## Overflow (check against the `en-XA` pseudolocale)
 

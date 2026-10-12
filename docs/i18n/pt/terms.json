@@ -2750,8 +2750,9 @@
   "tail": {
     "chosen": "acompanhar",
     "accept": ["acompanhamento", "seguir"],
+    "note": "Also the transfer tree's Follow button (fileOperations.transferTree.follow → Acompanhar): the same follow-the-live-end mode as the viewer's Tail.",
     "confidence": "tentative",
-    "sources": "shipped pt catalog"
+    "sources": "shipped pt catalog (viewer.toolbar.tail.label); Microsoft pt-BR terminology acompanhar"
   },
   "tap": {
     "chosen": "tocar",

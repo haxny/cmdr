@@ -286,3 +286,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   points back at the `{classes}` insert. Name the destination generically and use a noun ("that information").
 - `transfer.metadataClass.*` joined by `formatDisjunctionList`: "or" inside a negation reads stiff in fr (wants `ni`),
   hu, and nl; a conjunction ("and") or a colon-list frame would read naturally everywhere. (fr, hu, nl)
+- `back` and `running` concepts: "Scroll back to the files in progress" (`fileOperations.transferTree.followTooltip`)
+  hit both, though it navigates nowhere and "in progress" describes files; add `notMatch` for "scroll back". (vi, ru,
+  zh)
+- No `listing` or `follow-mode` concept: `fileOperations.transferTree.preparing` and `.follow` had no ruling, and the
+  viewer's tail toggle is the only follow precedent (`tail`). Add both, or `follow` to `tail`. (pt, zh, zh-Hant)
+- Term consistency ties `fileOperations.transferTree.state.compressing` (a row's state) to
+  `fileOperations.transferProgress.stageCompressing` (the dialog's stage); fr and nl wanted different forms. (fr, nl)

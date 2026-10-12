@@ -116,11 +116,14 @@ toward start or end), and custom ellipsis strings. `createPretextMeasure()` crea
 `@chenglou/pretext` loads async (CSS `text-overflow: ellipsis` covers the gap), and the full text is reachable on hover
 through the HOUSE tooltip. Never a native `title`: its delay and chrome are the OS's, and this action feeds pane rows,
 dialogs, and result lists alike, which would otherwise hover three different ways. `tooltipWhenTruncated?: boolean`
-narrows the tooltip to strings truncation actually trimmed (default `false`: hover always shows the full text).
+narrows the tooltip to strings truncation actually trimmed (default `false`: hover always shows the full text), and
+`tooltip?: string` hovers a text that says MORE than the label, whatever the width (a transfer tree row hovers its full
+relative path).
 
-A resize at the same width and text is a no-op, and a truncation that comes out the same doesn't touch the DOM. The Full
-list's 300 ms column transition resizes every name cell each frame, so without both skips every transition cost a
-`textContent` write per row per frame.
+A node with no width yet (hidden, not laid out) shows the whole text, so a recycled virtual-list row never keeps its
+previous text. A resize at the same width and text is a no-op, and a truncation that comes out the same doesn't touch
+the DOM. The Full list's 300 ms column transition resizes every name cell each frame, so without both skips every
+transition cost a `textContent` write per row per frame.
 
 ## inline-size-action.ts
 

@@ -1914,5 +1914,121 @@
       "byteCount": "how many bytes the offending folder name uses (e.g. 260)",
       "maxBytes": "the maximum bytes allowed for one name (e.g. 255)"
     }
+  },
+
+  "fileOperations.transferTree.treeLabel": "Files in this transfer",
+  "@fileOperations.transferTree.treeLabel": {
+    "description": "Screen-reader name of the live file tree in the copy/move/compress progress dialog and under a running row in the operation queue window. The tree lists every selected file and folder with its own progress. Not shown on screen. The tree also serves a compress (into a new zip), so a word wider than your “transfer” term, like “operation”, is fine."
+  },
+
+  "fileOperations.transferTree.preparing": "Listing the files…",
+  "@fileOperations.transferTree.preparing": {
+    "description": "Quiet placeholder where the live file tree of a copy/move/compress will appear, shown while Cmdr is still scanning the selection and has no list to show yet. Ends in an ellipsis (U+2026) because it’s still in progress."
+  },
+
+  "fileOperations.transferTree.empty": "No files to show",
+  "@fileOperations.transferTree.empty": {
+    "description": "Quiet placeholder in the live file tree of a copy/move/compress when the transfer holds no files or folders at all. Rare."
+  },
+
+  "fileOperations.transferTree.follow": "Follow",
+  "@fileOperations.transferTree.follow": {
+    "description": "Small button above the live file tree of a running copy/move/compress. It appears once the user has scrolled the tree or moved through it by keyboard, which stops the tree from scrolling along with the work. Pressing it makes the tree scroll back to the files being transferred right now and keep following them, like the follow mode of a log viewer. A verb, kept very short."
+  },
+
+  "fileOperations.transferTree.followTooltip": "Scroll back to the files in progress, and keep following them",
+  "@fileOperations.transferTree.followTooltip": {
+    "description": "Hover text of the Follow button above the live file tree of a running copy/move/compress (see fileOperations.transferTree.follow). Explains what the button does."
+  },
+
+  "fileOperations.transferTree.filesTotal": "{countText} {count, plural, one {file} other {files}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "description": "How many files a folder holds, in the small gray count text at the end of a folder’s row in the live file tree of a copy/move/compress. Shown before the folder’s files start and after they’re all done, for example “1,000 files”. A size may follow it after a middle dot. Screen readers hear it as one item of the row’s comma-separated description. Tight space: keep it short.",
+    "placeholders": {
+      "countText": "the number of files, already formatted for display (e.g. 1,000)",
+      "count": "the same number (drives the singular/plural form of the noun)"
+    }
+  },
+
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, one {file} other {files}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "description": "How far a folder’s files have got, in the small gray count text at the end of a folder’s row in the live file tree of a copy/move/compress, for example “312 / 1,000 files”. The slash reads as “out of”; keep it as a slash. A size like “1.2 / 4.0 GB” may follow after a middle dot. Tight space: keep it short.",
+    "placeholders": {
+      "doneText": "how many of the folder’s files are finished, already formatted (e.g. 312)",
+      "totalText": "how many files the folder holds, already formatted (e.g. 1,000)",
+      "total": "the same total number (drives the singular/plural form of the noun)"
+    }
+  },
+
+  "fileOperations.transferTree.filesProgressAria": "{doneText} of {totalText} {total, plural, one {file} other {files}}",
+  "@fileOperations.transferTree.filesProgressAria": {
+    "description": "Screen-reader-only form of fileOperations.transferTree.filesProgress: how far a folder’s files have got, read as part of the folder’s row in the live file tree of a copy/move/compress, for example “312 of 1,000 files”. It’s one item of a comma-separated list that also names the folder, what’s happening to it (fileOperations.transferTree.state.copying and its siblings), and its size, so it has to read on its own. It names no visible control, so any natural “X of Y” frame works, a colon or a slash frame included.",
+    "placeholders": {
+      "doneText": "how many of the folder’s files are finished, already formatted (e.g. 312)",
+      "totalText": "how many files the folder holds, already formatted (e.g. 1,000)",
+      "total": "the same total number (drives the singular/plural form of the noun)"
+    }
+  },
+
+  "fileOperations.transferTree.sizeProgressAria": "{done} of {total}",
+  "@fileOperations.transferTree.sizeProgressAria": {
+    "description": "Screen-reader-only: how much of a file or folder has been transferred so far, by size, read as part of its row in the live file tree of a copy/move/compress, for example “1.2 GB of 4.0 GB”. One item of a comma-separated list (see fileOperations.transferTree.filesProgressAria), so it has to read on its own. It names no visible control, and the sizes come with their units, so pick a frame that needs no case ending on them (a colon or a slash frame is fine).",
+    "placeholders": {
+      "done": "the size transferred so far, with its unit (e.g. 1.2 GB)",
+      "total": "the full size, with its unit (e.g. 4.0 GB)"
+    }
+  },
+
+  "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} skipped} other {{countText} skipped}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "description": "How many files inside a folder were skipped (left out on purpose, for example because the user chose Skip when a file already existed), in the small gray count text of the folder’s row in the live file tree of a copy/move/compress, for example “3 skipped”. Follows the file count after a middle dot, and screen readers hear it as one item of a comma-separated list, so it has to read on its own. Word order is free: the number may come after the word. Tight space: keep it short.",
+    "placeholders": {
+      "countText": "the number of skipped files, already formatted (e.g. 3)",
+      "count": "the same number (drives the plural form and any agreement your language needs)"
+    }
+  },
+
+  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} failed} other {{countText} failed}}",
+  "@fileOperations.transferTree.failedCount": {
+    "description": "How many files inside a folder couldn’t be transferred, in red in the count text of the folder’s row in the live file tree of a copy/move/compress, for example “1 failed”. Follows the file count after a middle dot, and screen readers hear it as one item of a comma-separated list, so it has to read on its own. Word order is free: the number may come after the word. Tight space: keep it short.",
+    "placeholders": {
+      "countText": "the number of files that couldn’t be transferred, already formatted (e.g. 1)",
+      "count": "the same number (drives the plural form and any agreement your language needs)"
+    }
+  },
+
+  "fileOperations.transferTree.state.waiting": "Waiting",
+  "@fileOperations.transferTree.state.waiting": {
+    "description": "State of a file or folder in the live file tree of a copy/move/compress that hasn’t started yet. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+  },
+
+  "fileOperations.transferTree.state.copying": "Copying",
+  "@fileOperations.transferTree.state.copying": {
+    "description": "State of a file or folder being copied right now, in the live file tree of a copy. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name. Siblings: fileOperations.transferTree.state.moving and fileOperations.transferTree.state.compressing for the other two operations."
+  },
+
+  "fileOperations.transferTree.state.moving": "Moving",
+  "@fileOperations.transferTree.state.moving": {
+    "description": "State of a file or folder being moved right now, in the live file tree of a move. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+  },
+
+  "fileOperations.transferTree.state.compressing": "Compressing",
+  "@fileOperations.transferTree.state.compressing": {
+    "description": "State of a file or folder being added to a new zip right now, in the live file tree of a compress. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+  },
+
+  "fileOperations.transferTree.state.done": "Done",
+  "@fileOperations.transferTree.state.done": {
+    "description": "State of a file or folder that has finished transferring, in the live file tree of a copy/move/compress. The accessible name of the small checkmark at the end of its row, and one item of the row’s comma-separated screen-reader description. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
+  },
+
+  "fileOperations.transferTree.state.skipped": "Skipped",
+  "@fileOperations.transferTree.state.skipped": {
+    "description": "State of a file or folder that was left out on purpose (for example the user chose Skip when it already existed at the destination), in the live file tree of a copy/move/compress. Shown as the gray count text of a skipped file’s row, as the accessible name of the small marker beside it, and in the row’s screen-reader description. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
+  },
+
+  "fileOperations.transferTree.state.failed": "Failed",
+  "@fileOperations.transferTree.state.failed": {
+    "description": "State of a file or folder that couldn’t be transferred, in the live file tree of a copy/move/compress. The accessible name of the small red marker at the end of its row (the row itself shows the reason), and one item of the row’s screen-reader description. In a compress it means the file couldn’t be added to the zip, so a word that fits both is best. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
   }
 }

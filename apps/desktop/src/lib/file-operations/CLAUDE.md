@@ -7,7 +7,7 @@ F6 (move), F7 (new folder), F8 / Shift+F8 (trash / delete).
 
 - Subdirs with their own docs: `transfer/` (copy + move + the shared `TransferProgressDialog`), `delete/`, `mkdir/`,
   `mkfile/`, `operation-session/` (per-`operationId` event fan-out + the refcounted session registry), `queue/` (the
-  standalone operation-queue window).
+  standalone operation-queue window), `transfer-tree/`.
 - Umbrella-level files (the shared readout, the foreground slots, the main-window conflict host, the mutation-refusal
   path, the `mkdir/` + `mkfile/` shared field, the prompts' letter keys): DETAILS § File map.
 
