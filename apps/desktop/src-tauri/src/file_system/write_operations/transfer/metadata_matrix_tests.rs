@@ -1,10 +1,12 @@
 //! What a local copy or move keeps of a file's and a folder's metadata, one cell
-//! per (path, class) (`docs/specs/transfer-metadata-preservation.md`).
+//! per (path, class). The contract and its invariants:
+//! `volume/DETAILS.md` § "Copies keep the source's metadata".
 //!
 //! A keep cell asserts the class lands. A cell still pinning a bug or a loss
-//! asserts today's outcome, and a `// FLIPS` comment says what would turn it.
-//! Every cell that flipped was first written against the target and seen red
-//! for the documented reason.
+//! asserts today's outcome and names the issue that would flip it (the Locked
+//! moves: <https://github.com/vdavid/cmdr/issues/408>). Every cell that flipped
+//! was first written against the target and seen red for the documented
+//! reason.
 //!
 //! The fixture is `cmdr_fs::testing::metadata_fixture` (macOS). Elsewhere: the
 //! extract cell in `volume/copy_extract_out_tests.rs`, the APFS → HFS+ cell in
@@ -711,11 +713,11 @@ mod macos {
         assert!(source.join("inner/b.txt").exists(), "the original stays");
     }
 
-    /// `rename(2)` refuses a Locked item (`EPERM`). Out of scope by David's
-    /// decision (spec § "Decided"); M10 files the follow-up.
+    /// `rename(2)` refuses a Locked item (`EPERM`). Moving one needs the user's
+    /// consent to unlock it, a product decision tracked in
+    /// <https://github.com/vdavid/cmdr/issues/408>, which flips this pin.
     #[test]
     fn a_same_fs_move_of_a_locked_file_is_refused_today() {
-        // FLIPS: not in this plan (M10 files a follow-up issue).
         let fixture = MetadataFixture::new("matrix_same_fs_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);

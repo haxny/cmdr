@@ -84,7 +84,8 @@ const METADATA_CLASS_KEYS: Record<LostMetadataClass, MessageKey> = {
 
 /**
  * Appends the note about what the destination couldn't store, when it couldn't store something
- * a source item had (`docs/specs/transfer-metadata-preservation.md` § "Telling the user"). Names
+ * a source item had (`src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` §
+ * "Copies keep the source's metadata"). Names
  * the classes in the backend's order and never the counts: the log carries those.
  */
 function withMetadataLeftBehind(toast: string, left: MetadataLeftBehind | null | undefined): string {

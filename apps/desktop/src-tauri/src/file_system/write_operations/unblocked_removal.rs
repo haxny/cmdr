@@ -1,7 +1,7 @@
 //! Removing an item a reversal already verified as its operation's own, when
 //! the item refuses: what a copy put on it from its source (Locked, a `deny
 //! delete` ACL, SMB's Read-only) blocks even its owner's removal
-//! (`docs/specs/transfer-metadata-preservation.md`, rule 9).
+//! (invariant 9, `transfer/volume/DETAILS.md` § "Copies keep the source's metadata").
 //!
 //! Every reversal that removes a copy goes through [`delete_clearing_blockers`]:
 //! the journal rollback (`rollback.rs`) and the volume engine's in-flight one

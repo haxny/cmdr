@@ -242,7 +242,7 @@ mod macos {
         assert_eq!(flags(&path) & LOCKED_FLAG, 0, "flags wait for the landing");
     }
 
-    /// Rule 1: a refused time-set (an ACL denying `writeattr`) never undoes or
+    /// Invariant 1: a refused time-set (an ACL denying `writeattr`) never undoes or
     /// skips the mode.
     #[test]
     fn a_refused_time_set_still_applies_the_mode() {

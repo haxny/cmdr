@@ -121,8 +121,8 @@ impl CarriedMetadata {
     /// fresh file gets `default_mode`: a creation date before the last edit (an
     /// equal one is what a dropped date looks like anyway), a mode a fresh file
     /// wouldn't get, any user flag, and any xattr but the quarantine. What the
-    /// loss note counts (`docs/specs/transfer-metadata-preservation.md` §
-    /// "Telling the user"); a class this set doesn't carry is never in it.
+    /// loss note counts (the app's `transfer/volume/DETAILS.md` § "Copies keep
+    /// the source's metadata"); a class this set doesn't carry is never in it.
     pub fn worth_keeping(&self, modified: Option<SystemTime>, default_mode: u32) -> MetadataClasses {
         let whole_secs = |date: SystemTime| date.duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
         let mut worth = MetadataClasses::NONE;

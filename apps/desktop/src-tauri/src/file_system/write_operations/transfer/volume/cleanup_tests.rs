@@ -547,7 +547,7 @@ async fn a_sweep_that_cleared_the_destination_reports_no_leftovers() {
     );
 }
 
-/// Rule 9: a rollback removes the Locked copy it made and the Locked folder
+/// Invariant 9: a rollback removes the Locked copy it made and the Locked folder
 /// it made, though both refuse a plain removal, unlocking each only after
 /// verifying it (`unblocked_removal.rs`). The file inside the Locked folder
 /// needs the folder opened for its own removal.

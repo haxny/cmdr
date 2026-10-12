@@ -553,7 +553,8 @@ pub trait Volume: Send + Sync {
     /// `deny delete` ACL, SMB's Read-only). Never follows a symlink.
     ///
     /// ❗ Only a reversal calls it, on an item it already verified as the
-    /// operation's own (`docs/specs/transfer-metadata-preservation.md`, rule 9).
+    /// operation's own (invariant 9 in the app's `transfer/volume/DETAILS.md` §
+    /// "Copies keep the source's metadata").
     /// The user's own delete never does: unlocking is not a delete's business.
     /// [`Unblock::Cleared`] says to try the removal again; what it hands back is
     /// what a landing would put back, and a reversal drops it.

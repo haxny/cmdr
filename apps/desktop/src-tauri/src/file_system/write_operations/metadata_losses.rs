@@ -12,7 +12,7 @@
 //! (`transfer/volume/strategy.rs`, `sequential_extract.rs`), a folder when its
 //! dates and xattrs go on (`transfer/volume/folder_metadata.rs`). The native engine keeps
 //! everything local disk can hold and counts nothing. The contract:
-//! `docs/specs/transfer-metadata-preservation.md` § "Telling the user".
+//! `transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 
 use std::sync::atomic::{AtomicU32, Ordering};
 

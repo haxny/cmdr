@@ -199,7 +199,7 @@ async fn reverse_written_file(volume: &Arc<dyn Volume>, entry: &WrittenFile) -> 
         }
     }
     // One node each: these are the FILES this operation wrote, verified just
-    // above, so a Locked one is ours to unlock (rule 9).
+    // above, so a Locked one is ours to unlock (invariant 9).
     removal_result(&entry.path, delete_clearing_blockers(volume, &entry.path).await)
 }
 
@@ -450,7 +450,7 @@ async fn delete_written_file(volume: &Arc<dyn Volume>, path: &Path) -> Result<()
 /// the normal outcome, not a failure.
 async fn prune_created_dir_if_empty(volume: &Arc<dyn Volume>, dir: &Path) -> ItemResult {
     match volume.list_directory(dir, None).await {
-        // Verified empty and ours, so a Locked one is ours to unlock (rule 9).
+        // Verified empty and ours, so a Locked one is ours to unlock (invariant 9).
         Ok(entries) if entries.is_empty() => match delete_clearing_blockers(volume, dir).await {
             Ok(()) => ItemResult::Reversed,
             Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Skipped(SkipReason::AlreadyGone),

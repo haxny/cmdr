@@ -196,7 +196,7 @@ fn install_journal() -> Journal {
     }
 }
 
-/// Rule 9 on a share: a finished copy's rollback takes back its Locked copies
+/// Invariant 9 on a share: a finished copy's rollback takes back its Locked copies
 /// and its Locked folder, though the share refuses a plain delete of each
 /// (`STATUS_CANNOT_DELETE`). The reversal verifies each as its own, clears
 /// `READONLY`, and deletes it.

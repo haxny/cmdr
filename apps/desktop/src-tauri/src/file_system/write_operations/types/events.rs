@@ -140,7 +140,7 @@ pub struct WriteCompleteEvent {
 
 /// The metadata a copy or move couldn't carry to its destination, per class,
 /// for the one calm note on its completion
-/// (`docs/specs/transfer-metadata-preservation.md` § "Telling the user").
+/// (`transfer/volume/DETAILS.md` § "Copies keep the source's metadata").
 ///
 /// Not a failure and ❌ never folded into the skip counts: every byte landed.
 /// Typed, never a sentence: the FE words it.

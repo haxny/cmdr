@@ -128,7 +128,7 @@ pub fn chunked_copy_with_metadata(
         message: format!("Couldn't flush destination to disk: {}", e),
     })?;
 
-    // Best effort: a refused class is logged and the copy stands (rule 1).
+    // Best effort: a refused class is logged and the copy stands (invariant 1).
     let carried = CarriedMetadata::of_local_file(&src_file, &src_meta);
     let times = StagedTimes {
         modified: src_meta.modified().ok(),

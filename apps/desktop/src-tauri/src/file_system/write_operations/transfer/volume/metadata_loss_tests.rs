@@ -7,8 +7,8 @@
 //! never hand-written, and the whole matrix runs at in-memory speed. Two real
 //! cells pin the ends the doubles stand in for: a local source (its stream's
 //! name-only xattr outline) onto SFTP's caps here, and a real SFTP server in
-//! `backend_suites`. The contract: `docs/specs/transfer-metadata-preservation.md`
-//! § "The conformance matrix".
+//! `backend_suites`. The contract: `DETAILS.md` § "Copies keep the source's
+//! metadata", invariant 7.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
