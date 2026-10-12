@@ -49,6 +49,10 @@ pub(crate) struct TransferTreeView {
     /// Where `rows` starts.
     pub(crate) offset: u32,
     pub(crate) rows: Vec<TransferTreeRow>,
+    /// The first row's ancestor rows, outermost first. With them, every row in
+    /// the window has its parent row and its full path at hand, even when the
+    /// parent sits far above the window.
+    pub(crate) ancestors: Vec<TransferTreeAncestor>,
     /// Flat index of the topmost active row (or the folder row hiding it).
     pub(crate) focus_row: Option<u32>,
     /// The axis every folder bar fills along: the operation's bottleneck,
@@ -65,6 +69,7 @@ impl TransferTreeView {
             total_rows: 0,
             offset: 0,
             rows: Vec::new(),
+            ancestors: Vec::new(),
             focus_row: None,
             axis,
         }
@@ -112,6 +117,16 @@ pub(crate) struct TransferTreeRow {
     pub(crate) failure: Option<WriteOperationError>,
 }
 
+/// An open row above a window's first row.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TransferTreeAncestor {
+    pub(crate) id: u32,
+    pub(crate) label: String,
+    /// Its flat row index.
+    pub(crate) index: u32,
+}
+
 /// The most rows one response carries.
 pub(crate) const MAX_LIMIT: u32 = 200;
 
@@ -137,10 +152,10 @@ pub(crate) fn flatten(model: &TreeModel, request: &TransferTreeViewRequest) -> T
             wanted.min(total_rows.saturating_sub(limit))
         }
     };
-    let rows = if offset < total_rows {
+    let (rows, ancestors) = if offset < total_rows {
         layout.rows_from(offset, limit)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     TransferTreeView {
         ready: true,
@@ -148,6 +163,7 @@ pub(crate) fn flatten(model: &TreeModel, request: &TransferTreeViewRequest) -> T
         total_rows,
         offset,
         rows,
+        ancestors,
         focus_row,
         axis: ProgressAxis::Bytes,
     }
@@ -286,10 +302,14 @@ impl<'m> Layout<'m> {
         index
     }
 
-    /// Up to `limit` rows from flat index `offset` on.
-    fn rows_from(&self, offset: u32, limit: u32) -> Vec<TransferTreeRow> {
+    /// Up to `limit` rows from flat index `offset` on, and the open rows the
+    /// descent to `offset` passed through.
+    fn rows_from(&self, offset: u32, limit: u32) -> (Vec<TransferTreeRow>, Vec<TransferTreeAncestor>) {
         // Descend to the row at `offset`, keeping each level's listing position.
         let mut stack: Vec<(NodeId, u32)> = Vec::new();
+        let mut ancestors = Vec::new();
+        // The flat index of the current `parent` listing's first row.
+        let mut listing_start = 0;
         let mut parent = NodeId::ROOT;
         let mut target = offset;
         'descend: loop {
@@ -306,6 +326,12 @@ impl<'m> Layout<'m> {
                 let size = self.sizes[child];
                 if target <= start + size {
                     stack.push((parent, *position));
+                    ancestors.push(TransferTreeAncestor {
+                        id: child.get(),
+                        label: label(self.model, *child),
+                        index: listing_start + start,
+                    });
+                    listing_start += start + 1;
                     parent = *child;
                     target -= start + 1;
                     continue 'descend;
@@ -338,7 +364,7 @@ impl<'m> Layout<'m> {
                 here.1 += 1;
             }
         }
-        rows
+        (rows, ancestors)
     }
 
     fn row(&self, key: NodeId, depth: u16, position: u32, parent: NodeId) -> TransferTreeRow {

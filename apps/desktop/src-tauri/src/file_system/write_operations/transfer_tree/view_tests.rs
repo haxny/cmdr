@@ -202,6 +202,44 @@ fn a_single_child_folder_chain_is_one_row_keyed_by_its_deepest_folder() {
 }
 
 #[test]
+fn a_window_names_the_open_rows_above_its_first_row() {
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a"), PathBuf::from("/src/z.txt")]);
+    for dir in ["/src/a", "/src/a/b", "/src/a/b/c", "/src/a/b/c/d"] {
+        recorder.dir(Path::new(dir));
+    }
+    recorder.file(Path::new("/src/a/b/c/1"), 1);
+    for file in 0..20 {
+        recorder.file(&PathBuf::from(format!("/src/a/b/c/d/f_{file:02}")), 1);
+    }
+    recorder.file(Path::new("/src/z.txt"), 1);
+    let model = recorder.finish(&english());
+    let c = node_at(&model, &["a", "b", "c"]);
+    let d = node_at(&model, &["a", "b", "c", "d"]);
+    let mut open = at(0, 3);
+    open.expanded = vec![c.get(), d.get()];
+    assert_eq!(labels(&model, &open), vec!["a/b/c", "  d", "    f_00"]);
+
+    let ancestors = |offset: u32| -> Vec<(u32, String, u32)> {
+        let mut request = at(offset, 3);
+        request.expanded = open.expanded.clone();
+        flatten(&model, &request)
+            .ancestors
+            .into_iter()
+            .map(|ancestor| (ancestor.id, ancestor.label, ancestor.index))
+            .collect()
+    };
+
+    assert_eq!(ancestors(0), vec![], "the first row is a top-level row");
+    assert_eq!(ancestors(1), vec![(c.get(), "a/b/c".to_string(), 0)]);
+    assert_eq!(
+        ancestors(12),
+        vec![(c.get(), "a/b/c".to_string(), 0), (d.get(), "d".to_string(), 1)],
+        "deep in `d`, both open rows above are named with their flat index"
+    );
+    assert_eq!(ancestors(23), vec![], "`z.txt` is top-level again");
+}
+
+#[test]
 fn a_file_never_compacts_into_its_folder() {
     let recorder = TreeRecorder::new(&[PathBuf::from("/src/a")]);
     recorder.dir(Path::new("/src/a"));

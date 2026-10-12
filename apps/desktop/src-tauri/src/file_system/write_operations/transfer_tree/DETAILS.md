@@ -94,6 +94,10 @@ set per request).
 `Follow { lead }` puts the focus row `lead` rows from the top, clamped so the window fills; `At { offset }` clamps to
 the row count. `focus_row` is the topmost focus file's row, or the shut folder hiding it.
 
+`ancestors` names the open rows the descent to the window's first row passed through (id, label, flat index), outermost
+first. A row's parent is either an earlier row in the window or one of these, so a view has every row's full relative
+path (its tooltip) and its parent's index (the Left key) without a second request.
+
 ## The view command
 
 `get_transfer_tree_view(operation_id, request)` (`../tree_view.rs`, its own leaf because it looks the operation up in

@@ -16274,6 +16274,14 @@ export type TransferRole =
   // The volume the files were going TO.
   | 'destination'
 
+// An open row above a window's first row.
+export type TransferTreeAncestor = {
+  id: number
+  label: string
+  // Its flat row index.
+  index: number
+}
+
 // One row.
 export type TransferTreeRow = {
   // The node id; for a compact chain, the deepest folder's.
@@ -16317,6 +16325,12 @@ export type TransferTreeView = {
   // Where `rows` starts.
   offset: number
   rows: TransferTreeRow[]
+  /**
+   *  The first row's ancestor rows, outermost first. With them, every row in
+   *  the window has its parent row and its full path at hand, even when the
+   *  parent sits far above the window.
+   */
+  ancestors: TransferTreeAncestor[]
   // Flat index of the topmost active row (or the folder row hiding it).
   focusRow: number | null
   /**

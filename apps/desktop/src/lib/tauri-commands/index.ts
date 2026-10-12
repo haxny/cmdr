@@ -360,6 +360,7 @@ export type {
 export { getTransferTreeView } from './operations'
 export type {
   ProgressAxis,
+  TransferTreeAncestor,
   TransferTreeAnswer,
   TransferTreeRow,
   TransferTreeView,
