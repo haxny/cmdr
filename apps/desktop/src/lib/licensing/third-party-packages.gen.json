@@ -4321,13 +4321,13 @@
   "npm": [
     {
       "name": "@ark-ui/svelte",
-      "version": "5.22.1",
+      "version": "5.24.3",
       "license": "MIT",
       "url": "https://ark-ui.com"
     },
     {
       "name": "@chenglou/pretext",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "MIT",
       "url": "https://github.com/chenglou/pretext#readme"
     },
@@ -4357,7 +4357,7 @@
     },
     {
       "name": "@formatjs/icu-messageformat-parser",
-      "version": "3.5.16",
+      "version": "3.5.18",
       "license": "MIT",
       "url": "https://github.com/formatjs/formatjs#readme"
     },
@@ -4369,13 +4369,13 @@
     },
     {
       "name": "@internationalized/date",
-      "version": "3.12.2",
+      "version": "3.12.4",
       "license": "Apache-2.0",
       "url": "https://github.com/adobe/react-spectrum/tree/main#readme"
     },
     {
       "name": "@internationalized/number",
-      "version": "3.6.6",
+      "version": "3.6.7",
       "license": "Apache-2.0",
       "url": "https://github.com/adobe/react-spectrum#readme"
     },
@@ -4417,7 +4417,7 @@
     },
     {
       "name": "@logtape/logtape",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "MIT",
       "url": "https://logtape.org/"
     },
@@ -4435,7 +4435,7 @@
     },
     {
       "name": "@tauri-apps/api",
-      "version": "2.12.1",
+      "version": "2.12.2",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri#readme"
     },
@@ -4471,7 +4471,7 @@
     },
     {
       "name": "@tauri-apps/plugin-updater",
-      "version": "2.13.1",
+      "version": "2.13.2",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/tauri-apps/plugins-workspace#readme"
     },
@@ -4483,457 +4483,463 @@
     },
     {
       "name": "@typescript-eslint/types",
-      "version": "8.71.0",
+      "version": "8.71.1",
       "license": "MIT",
       "url": "https://typescript-eslint.io"
     },
     {
       "name": "@zag-js/accordion",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/anatomy",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/angle-slider",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/aria-hidden",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/async-list",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/auto-resize",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/avatar",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/carousel",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/cascade-select",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/checkbox",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/clipboard",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/collapsible",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/collection",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/color-picker",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/color-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/combobox",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/core",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/date-input",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/date-picker",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/date-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/dialog",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/dismissable",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/dom-query",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/drawer",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/editable",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/file-upload",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/file-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/floating-panel",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/focus-trap",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/focus-visible",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/highlight-word",
-      "version": "1.41.2",
+      "version": "1.45.0",
+      "license": "MIT",
+      "url": "https://github.com/chakra-ui/zag#readme"
+    },
+    {
+      "name": "@zag-js/hotkeys",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/hover-card",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/i18n-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/image-cropper",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/interact-outside",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/json-tree-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/listbox",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/live-region",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/marquee",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/menu",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/navigation-menu",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/number-input",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/pagination",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/password-input",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/pin-input",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/popover",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/popper",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/presence",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/progress",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/qr-code",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/radio-group",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/rating-group",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/rect-utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/remove-scroll",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/scroll-area",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/scroll-snap",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/select",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/signature-pad",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/slider",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/splitter",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/steps",
-      "version": "1.41.2",
-      "license": "MIT",
-      "url": "https://github.com/chakra-ui/zag#readme"
-    },
-    {
-      "name": "@zag-js/store",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/svelte",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/switch",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/tabs",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/tags-input",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/timer",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/toast",
-      "version": "1.41.2",
+      "version": "1.45.0",
+      "license": "MIT",
+      "url": "https://github.com/chakra-ui/zag#readme"
+    },
+    {
+      "name": "@zag-js/toc",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/toggle",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/toggle-group",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/tooltip",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/tour",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
-      "url": "https://github.com/chakra-ui/zag#readme"
+      "url": "https://zagjs.com/components/tour"
     },
     {
       "name": "@zag-js/tree-view",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/types",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
     {
       "name": "@zag-js/utils",
-      "version": "1.41.2",
+      "version": "1.45.0",
       "license": "MIT",
       "url": "https://github.com/chakra-ui/zag#readme"
     },
@@ -4987,7 +4993,7 @@
     },
     {
       "name": "intl-messageformat",
-      "version": "11.2.13",
+      "version": "11.2.15",
       "license": "BSD-3-Clause",
       "url": "https://github.com/formatjs/formatjs"
     },
@@ -5035,7 +5041,7 @@
     },
     {
       "name": "svelte",
-      "version": "5.57.1",
+      "version": "5.57.2",
       "license": "MIT",
       "url": "https://svelte.dev"
     },
