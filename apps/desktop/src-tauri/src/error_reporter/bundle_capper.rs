@@ -66,7 +66,9 @@ pub(crate) fn cap_bundle_to_bytes(zip_bytes: Vec<u8>, cap_bytes: usize) -> Vec<u
     let mut log_entries: Vec<LogEntry> = Vec::new();
     for i in 0..archive.len() {
         let Ok(mut entry) = archive.by_index(i) else { continue };
-        let name = entry.name().to_string();
+        let Ok(name) = entry.name().map(std::borrow::Cow::into_owned) else {
+            continue;
+        };
         if !name.starts_with("logs/") {
             continue;
         }

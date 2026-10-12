@@ -30,7 +30,7 @@ fn read_back(path: &Path) -> HashMap<String, Vec<u8>> {
     let mut out = HashMap::new();
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).expect("read entry");
-        let name = entry.name().to_string();
+        let name = entry.name().expect("a decodable name").into_owned();
         let mut buf = Vec::new();
         entry.read_to_end(&mut buf).expect("read entry bytes");
         out.insert(name, buf);
@@ -338,7 +338,7 @@ fn raw_entry_bytes(path: &Path, name: &str) -> Vec<u8> {
     let file = File::open(path).expect("open");
     let mut archive = ZipArchive::new(file).expect("parse");
     let idx = (0..archive.len())
-        .find(|&i| archive.by_index_raw(i).expect("raw").name() == name)
+        .find(|&i| archive.by_index_raw(i).expect("raw").name().expect("a decodable name") == name)
         .expect("entry present");
     let mut raw = archive.by_index_raw(idx).expect("raw entry");
     let mut buf = Vec::new();

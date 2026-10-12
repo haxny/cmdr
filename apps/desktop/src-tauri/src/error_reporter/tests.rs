@@ -137,7 +137,7 @@ fn read_zip_entries(zip_bytes: &[u8]) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).unwrap();
-        let name = entry.name().to_string();
+        let name = entry.name().expect("a decodable name").into_owned();
         let mut body = String::new();
         entry.read_to_string(&mut body).unwrap();
         out.insert(name, body);
@@ -151,7 +151,7 @@ fn read_zip_entries_with_mtime(zip_bytes: &[u8]) -> Vec<(String, ZipDateTime, Ve
     let mut out = Vec::new();
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).unwrap();
-        let name = entry.name().to_string();
+        let name = entry.name().expect("a decodable name").into_owned();
         let mtime = entry.last_modified().unwrap_or_default();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).unwrap();

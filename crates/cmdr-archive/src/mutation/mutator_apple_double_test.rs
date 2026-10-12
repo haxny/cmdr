@@ -18,7 +18,10 @@ const QUARANTINE: &str = "com.apple.quarantine";
 
 fn names_in(path: &Path) -> Vec<String> {
     let archive = ZipArchive::new(File::open(path).expect("open the zip")).expect("the zip parses");
-    let mut names: Vec<String> = archive.file_names().map(str::to_string).collect();
+    let mut names: Vec<String> = archive
+        .file_names()
+        .map(|name| name.expect("a decodable name").into_owned())
+        .collect();
     names.sort();
     names
 }

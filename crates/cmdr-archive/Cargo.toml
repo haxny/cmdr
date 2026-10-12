@@ -38,8 +38,10 @@ uuid = { version = "1.19.0", features = ["v4"] }
 # The zip WRITE side (temp+rename mutation), plus the read side's decrypt path:
 # rc-zip parses the central directory but does NOT decrypt, so an encrypted entry's
 # bytes go through this crate's `by_index_decrypt`. `aes-crypto` adds WinZip AES
-# (AE-1/AE-2) on top of the built-in legacy PKWARE ZipCrypto.
-zip = { version = "8.6", default-features = false, features = ["deflate", "aes-crypto"] }
+# (AE-1/AE-2) on top of the built-in legacy PKWARE ZipCrypto. `unreserved` lets a
+# rewrite carry a retained entry's extra fields verbatim, `ditto`'s `0x5855` included
+# (`src/mutation/DETAILS.md`).
+zip = { version = "9.0.1", default-features = false, features = ["deflate", "aes-crypto", "unreserved"] }
 # The zip READ side: a sans-IO reader whose state machines (`ArchiveFsm` for the
 # central directory, `EntryFsm` per entry) request byte ranges and let the caller
 # supply them under any I/O model. We drive those fsms over our own

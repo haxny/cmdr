@@ -314,7 +314,10 @@ pub(crate) fn unzip_into(zip_path: &Path, dest_dir: &Path) -> Result<(), Install
         let mut entry = archive.by_index(i).map_err(|e| InstallError::Zip(e.to_string()))?;
         // Reject absolute / `..` entries that would write outside dest (zip-slip).
         let Some(rel) = entry.enclosed_name() else {
-            return Err(InstallError::Zip(format!("unsafe archive entry: {}", entry.name())));
+            return Err(InstallError::Zip(format!(
+                "unsafe archive entry: {}",
+                String::from_utf8_lossy(entry.name_raw())
+            )));
         };
         let out_path = dest_dir.join(rel);
         if entry.is_dir() {

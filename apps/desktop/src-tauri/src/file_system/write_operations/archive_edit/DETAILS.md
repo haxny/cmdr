@@ -186,7 +186,7 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   compress rate as the product's. (Measured on an M3 MacBook Pro, `zip` 8.6.0 + `zlib-rs` 0.6.5, level 6, Pixel 9 Pro
   XL over USB, 2026-09-30.) In a release build the phone's link is the likelier limit on incompressible data.
 
-  `fresh_zip.rs` drives `zip` 8.6 `ZipWriter::new_stream` on one OS worker. Local files are read directly; one remote
+  `fresh_zip.rs` drives `zip` 9 `ZipWriter::new_stream` on one OS worker. Local files are read directly; one remote
   feeder is live at a time. Remote input and generated output cross separate four-chunk Tokio channels (the worker
   parks in `blocking_recv` / `blocking_send`), split into 128 KiB payloads, so queued bytes are bounded independently of
   archive size. The ZIP writer necessarily retains O(entries) central-directory metadata. Each remote source sends
@@ -225,11 +225,11 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   quarantine, a last-used date, or an all-zero FinderInfo writes none, so an ordinary zip stays clean. A remote source reports no xattrs.
   The reader hides `__MACOSX`, so the stage's read-back never sees a sidecar, and a SELECTED item named `__MACOSX` is
   skipped and counted by the planner (copy INTO a zip skips one landing at the root `__MACOSX` too): it could never be
-  seen again. ❗ `ditto -x -k` can't stream a FOLDER entry this producer writes: `zip` 8.6's stream mode flags a data
-  descriptor on a directory and never writes one, so ditto loses its place ("Couldn't read pkzip signature"). `unzip`
-  and Cmdr read the central directory and are fine; `zip` 9.0.1 sets no descriptor flag on a directory (verified in
-  the 9.0.1 source, `write.rs` `start_entry`, 2026-10-12). Pinned for files by
-  `fresh_zip_tests.rs::a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads`.
+  seen again. ❗ `ditto -x -k` (Finder's double-click) streams the LOCAL headers, so a folder entry flagged with a data
+  descriptor it never gets loses ditto its place ("Couldn't read pkzip signature") while `unzip` and Cmdr, which read
+  the central directory, pass. `zip` 8.6's stream mode did exactly that (#400); 9.0.1 sets no descriptor flag on a
+  directory. Pinned for a folder, its files, and their tags by
+  `fresh_zip_tests.rs::a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads` (macOS).
 
   **Validation precedes publication.** After producer close and destination close/sync, producer bytes, writer bytes,
   and staged stat size must agree. `ArchiveVolume` then parses the staged ZIP, which must read back as exactly the

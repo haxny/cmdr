@@ -67,7 +67,10 @@ async fn producer_preserves_names_empty_entries_metadata_and_level() {
         .expect("produce");
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).expect("valid zip");
     assert_eq!(archive.len(), 2);
-    assert_eq!(archive.by_index(0).expect("dir").name(), "folder/");
+    assert_eq!(
+        archive.by_index(0).expect("dir").name().expect("a decodable name"),
+        "folder/"
+    );
     assert_eq!(archive.by_index(0).expect("dir").unix_mode(), Some(0o40750));
     assert_eq!(archive.by_index(1).expect("file").unix_mode(), Some(0o100640));
     assert_eq!(archive.by_index(1).expect("file").size(), 0);
@@ -462,9 +465,12 @@ async fn a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads() {
         local("tagged-dir/plain.txt", &plain, false, 1),
     ])
     .await;
+    let zip_path = tmp.path().join("out.zip");
+    std::fs::write(&zip_path, &bytes).expect("write the zip");
     let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes.clone())).expect("valid zip");
-    let mut sidecars: Vec<&str> = archive
+    let mut sidecars: Vec<String> = archive
         .file_names()
+        .map(|name| name.expect("a decodable name").into_owned())
         .filter(|name| name.starts_with("__MACOSX/"))
         .collect();
     sidecars.sort_unstable();
@@ -486,16 +492,9 @@ async fn a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads() {
         );
     }
 
-    // ❗ ditto can't stream a folder entry from `zip` 8.6's stream mode: the crate
-    // flags a data descriptor there that it never writes, and ditto loses its
-    // place. So the ditto read-back is of files alone.
-    let bytes = produce(vec![
-        local("tagged.txt", &tagged, false, 1),
-        local("plain.txt", &plain, false, 1),
-    ])
-    .await;
-    let zip_path = tmp.path().join("out.zip");
-    std::fs::write(&zip_path, bytes).expect("write the zip");
+    // Regression anchor for #400: `zip` 8.6's stream mode flagged a data
+    // descriptor on a folder entry and never wrote one, so ditto (and with it a
+    // Finder double-click) lost its place on any compressed folder.
     let out = tmp.path().join("ditto-out");
     let ditto = std::process::Command::new("/usr/bin/ditto")
         .args(["-x", "-k"])
@@ -508,10 +507,20 @@ async fn a_tagged_local_file_and_folder_compress_with_sidecars_ditto_reads() {
         "ditto: {}",
         String::from_utf8_lossy(&ditto.stderr)
     );
-    assert_eq!(
-        xattr::get(out.join("tagged.txt"), TAGS_XATTR).expect("read").as_deref(),
-        Some(TAGS)
-    );
-    assert_eq!(xattr::get(out.join("plain.txt"), TAGS_XATTR).expect("read"), None);
+    let out_folder = out.join("tagged-dir");
+    assert_eq!(std::fs::read(out_folder.join("tagged.txt")).expect("read"), b"t");
+    assert_eq!(std::fs::read(out_folder.join("plain.txt")).expect("read"), b"p");
+    for (path, expected) in [
+        (&out_folder, Some(TAGS)),
+        (&out_folder.join("tagged.txt"), Some(TAGS)),
+        (&out_folder.join("plain.txt"), None),
+    ] {
+        assert_eq!(
+            xattr::get(path, TAGS_XATTR).expect("read").as_deref(),
+            expected,
+            "{}",
+            path.display()
+        );
+    }
     assert!(!out.join("__MACOSX").exists());
 }

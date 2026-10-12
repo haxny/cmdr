@@ -65,7 +65,7 @@ fn an_extended_timestamp_wins_over_the_dos_field() {
     let mut options = SimpleFileOptions::default()
         .last_modified_time(noon_dos())
         .into_full_options();
-    options.add_extra_data(0x5455, field, false).expect("add UT");
+    options.add_extra_field(0x5455, field, false).expect("add UT");
 
     let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
     writer.start_file("with-ut.txt", options).expect("start");
@@ -87,7 +87,7 @@ fn dos_only_and_extended_entries_mix_in_one_archive() {
     let mut with_ut = SimpleFileOptions::default()
         .last_modified_time(noon_dos())
         .into_full_options();
-    with_ut.add_extra_data(0x5455, field, false).expect("add UT");
+    with_ut.add_extra_field(0x5455, field, false).expect("add UT");
     let dos_only = SimpleFileOptions::default().last_modified_time(noon_dos());
 
     let mut writer = ZipWriter::new(Cursor::new(Vec::new()));

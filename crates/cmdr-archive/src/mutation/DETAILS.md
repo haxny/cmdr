@@ -18,10 +18,13 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   original does NOT survive). Building fresh into a temp and renaming is Cmdr's mandated safe-overwrite and the only
   shape where cancel is genuinely free (abandon the temp, no rollback ledger). The original is byte-for-byte untouched
   until the final rename; a cancel or crash at any earlier point leaves it fully readable.
-- **Retained entries copy verbatim** via `raw_copy_file_rename` (no decompress/recompress); only added files
-  stream-compress (chunked, never whole-buffered — the add chunk is also the pause/cancel granularity mid-file). An
-  added file carries its SOURCE's modification time into the entry (`add_entry_options`); a new folder and an in-memory
-  file carry the write time.
+- **Retained entries copy verbatim** via `raw_copy_file_rename` (no decompress/recompress), extra fields included. ❗
+  That's why `zip` carries its `unreserved` feature: without it, the writer refuses any entry with an extra-field ID it
+  reserves but doesn't model, and `ditto` (Finder's Compress) writes one, Info-ZIP's `0x5855`, so every rename or delete
+  inside a Finder-made zip would fail (verified on `zip` 9.0.1, `write.rs` `start_entry`, 2026-10-12; pinned by
+  `mutator_apple_double_test.rs`, which edits a `ditto` fixture). Only added files stream-compress (chunked, never
+  whole-buffered — the add chunk is also the pause/cancel granularity mid-file). An added file carries its SOURCE's
+  modification time into the entry (`add_entry_options`); a new folder and an in-memory file carry the write time.
 - **Every new entry's time is written twice, by `with_entry_mtime`** (the one place, which the host's fresh-ZIP producer
   calls too, so the two writers can't drift apart again):
   - The header's MS-DOS date and time, decomposed in LOCAL time. The field carries no zone and every tool (`unzip -l`,

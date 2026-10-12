@@ -220,7 +220,7 @@ tauri-plugin-playwright = { version = "0.4.1", optional = true }
 # use of this crate (the write side, and the decrypt path rc-zip can't serve) lives in
 # `cmdr-archive`; `aes-crypto` is declared there and unifies here, so the feature set is a
 # superset of both. `aes 0.9.1` (stable) unifies with `smb2`'s SMB3 AEAD stack.
-zip = { version = "8.6", default-features = false, features = ["deflate", "aes-crypto"] }
+zip = { version = "9.0.1", default-features = false, features = ["deflate", "aes-crypto", "unreserved"] }
 # `write_operations/compress_estimate.rs` sizes a deflate stream with `flate2`. The archive
 # backend declares its own copies (plus the other tar codecs and 7z) in `cmdr-archive`.
 # `tar` is NOT here: its only production caller is the macOS updater, so it's declared

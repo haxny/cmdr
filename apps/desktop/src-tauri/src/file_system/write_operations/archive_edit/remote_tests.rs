@@ -56,7 +56,7 @@ async fn read_remote_zip(parent: &dyn Volume, path: &Path) -> HashMap<String, Ve
     for i in 0..archive.len() {
         use std::io::Read;
         let mut entry = archive.by_index(i).expect("entry");
-        let name = entry.name().to_string();
+        let name = entry.name().expect("a decodable name").into_owned();
         let mut buf = Vec::new();
         entry.read_to_end(&mut buf).expect("entry bytes");
         out.insert(name, buf);

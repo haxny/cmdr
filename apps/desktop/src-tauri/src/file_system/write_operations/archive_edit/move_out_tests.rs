@@ -687,7 +687,7 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     let mut names: Vec<String> = ZipArchive::new(file)
         .expect("the zip parses")
         .file_names()
-        .map(str::to_string)
+        .map(|name| name.expect("a decodable name").into_owned())
         .collect();
     names.sort();
     assert_eq!(names, vec!["__MACOSX/", "__MACOSX/._plain.txt", "plain.txt"]);

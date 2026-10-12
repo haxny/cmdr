@@ -537,7 +537,7 @@ fn write_sidecar<W: Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
     name: &str,
     sidecar: &[u8],
-    options: zip::write::FullFileOptions<'static>,
+    options: zip::write::FullFileOptions<'static, 'static>,
 ) -> Result<(), FreshZipError> {
     zip.start_file(cmdr_archive::mutator::sidecar_entry_name(name), options)
         .map_err(map_zip)?;

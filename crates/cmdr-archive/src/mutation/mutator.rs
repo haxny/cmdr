@@ -226,7 +226,7 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
     let mut renamed_count: usize = 0;
     for index in 0..src.len() {
         let file = src.by_index_raw(index).map_err(MutationError::Zip)?;
-        let original_name = file.name().to_string();
+        let original_name = file.name().map_err(MutationError::Zip)?.into_owned();
         let compressed_size = file.compressed_size();
         let encrypted = file.encrypted();
         drop(file);
@@ -547,7 +547,7 @@ fn with_sidecar_renames(renames: &[(String, String)]) -> Vec<(String, String)> {
 /// The level is CLAMPED to 1..=9: the `zip` crate hard-errors (`UnsupportedArchive`)
 /// on an out-of-range deflate level at the first entry write rather than clamping, so
 /// a bad setting value or MCP `set_setting` must not be able to fail the whole edit.
-fn add_entry_options(add: &AddEntry, compression_level: Option<i64>) -> FullFileOptions<'static> {
+fn add_entry_options(add: &AddEntry, compression_level: Option<i64>) -> FullFileOptions<'static, 'static> {
     let options = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
         .compression_level(compression_level.map(|level| level.clamp(1, 9)));
@@ -587,7 +587,10 @@ const EXTENDED_TIMESTAMP_ID: u16 = 0x5455;
 /// Every entry Cmdr writes goes through here, the fresh-ZIP producer included.
 /// ❗ Without it a `zip` entry says 1980-01-01: the crate's own "now" default
 /// needs its `time` feature, which this workspace doesn't enable.
-pub fn with_entry_mtime(options: SimpleFileOptions, modified: std::time::SystemTime) -> FullFileOptions<'static> {
+pub fn with_entry_mtime(
+    options: SimpleFileOptions,
+    modified: std::time::SystemTime,
+) -> FullFileOptions<'static, 'static> {
     with_entry_mtime_in(options, modified, &chrono::Local)
 }
 
@@ -597,7 +600,7 @@ fn with_entry_mtime_in<Tz: chrono::TimeZone>(
     options: SimpleFileOptions,
     modified: std::time::SystemTime,
     local_zone: &Tz,
-) -> FullFileOptions<'static> {
+) -> FullFileOptions<'static, 'static> {
     use chrono::{Datelike, Timelike};
     let utc: chrono::DateTime<chrono::Utc> = modified.into();
     let local = utc.with_timezone(local_zone).naive_local();
@@ -623,7 +626,7 @@ fn with_entry_mtime_in<Tz: chrono::TimeZone>(
         let mut field = [MODIFIED_PRESENT; 5];
         field[1..].copy_from_slice(&seconds.to_le_bytes());
         // `false`: into the local header, which `zip` repeats in the central directory.
-        if let Err(error) = options.add_extra_data(EXTENDED_TIMESTAMP_ID, field, false) {
+        if let Err(error) = options.add_extra_field(EXTENDED_TIMESTAMP_ID, field, false) {
             log::warn!(target: "archive_mutator", "Couldn't attach a ZIP entry's exact timestamp: {error}");
         }
     }

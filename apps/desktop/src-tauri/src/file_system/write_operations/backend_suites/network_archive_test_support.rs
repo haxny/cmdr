@@ -71,7 +71,7 @@ async fn read_server_zip(remote: &dyn Volume, path: &Path) -> HashMap<String, Ve
         if entry.is_dir() {
             continue;
         }
-        let name = entry.name().to_string();
+        let name = entry.name().expect("a decodable name").into_owned();
         let mut buf = Vec::new();
         entry.read_to_end(&mut buf).expect("zip entry bytes");
         out.insert(name, buf);

@@ -986,9 +986,9 @@ decided; then the ask itself, creation and modification dates on files AND folde
   - **A selected item named `__MACOSX`** (fresh compress) or one landing at a zip's root `__MACOSX` (copy INTO a zip) is
     skipped and counted: the reader hides that folder.
   - **The archive's caps report `MODE | XATTRS`**, so the loss note names tags an extract can't keep.
-  - **Found, not fixed**: `ditto -x -k` can't stream any FOLDER entry fresh compress writes, sidecar or not (`zip` 8.6's
-    stream mode flags a data descriptor on a directory and never writes one; 9.0.1 doesn't flag it). The DONE check's
-    ditto half runs on files; the mutator's seekable writer is unaffected (its cell checks a folder with ditto).
+  - **Found, then fixed by `zip` 9.0.1 (#400)**: `ditto -x -k` couldn't stream any FOLDER entry fresh compress wrote
+    (`zip` 8.6's stream mode flagged a data descriptor on a directory and never wrote one). The DONE check's ditto half
+    now runs on a folder with its files and tags.
   - **A folder's xattrs left behind count too** (David, 2026-10-12): `FolderMetadata` asks a source whose caps report
     xattrs for the folder's set (`folder_metadata`, which `LocalPosixVolume` and `InMemoryVolume` now answer as well as
     the archive), counts them by the same "worth keeping" a file's xattrs use, and the loss matrix seeds its folder with
