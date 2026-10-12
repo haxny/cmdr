@@ -97,9 +97,10 @@ maps it onto `FileEntry`. Inner paths are `/`-separated, no leading/trailing sla
 ## AppleDouble sidecars: paired, hidden, and carried as xattrs
 
 macOS archivers store each item's xattrs (Finder tags, comments, FinderInfo, a resource fork, quarantine) as an
-AppleDouble sidecar, and both macOS extractors restore them and never show the sidecar. So does this index. The codec
-(byte layout, hostile-input rules, the compress side's "worth keeping" test) is `crate::apple_double`; this section is
-how the index uses it.
+AppleDouble sidecar, and both macOS extractors restore them and never show the sidecar. So does this index, for browsing
+too (David's call, 2026-10-11: a pane matches what an extract lands, `ditto -x`, and Archive Utility). The codec (byte
+layout, hostile-input rules, the compress side's "worth keeping" test) is `crate::apple_double`; this section is how the
+index uses it.
 
 - **Where they are, per format** (`SidecarLayout`, verified with the checked-in fixtures in `test_fixtures`, made by
   `ditto -c -k --sequesterRsrc` and `/usr/bin/tar -czf` on macOS 27.0, 2026-10-12):

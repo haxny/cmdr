@@ -845,10 +845,13 @@ unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out
 ## Copies keep the source's metadata
 
 **The rule: the source REPORTS what its file carries on the read stream, the destination WRITES the classes it can
-store.** This is the canonical home of the contract; the trait docs, the conformance assertions, and the backend docs
-point here. The plan behind it, and the classes still to come (xattrs over SMB): 
-`docs/specs/transfer-metadata-preservation.md`. Local → local copies keep everything on their own path
-(`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below.
+store.** This is the canonical home of the contract, for every engine: the trait docs, the conformance assertions, the
+backend docs, and the code comments that cite an invariant by number point here. Local → local copies keep everything
+on their own path (`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below. The
+invariants, what each pair keeps, and the decisions behind both close this section. Measured evidence:
+`docs/notes/transfer-metadata-experiments-2026-10-11.md`. Open: xattrs over direct SMB
+([#405](https://github.com/vdavid/cmdr/issues/405)) and moving a Locked item
+([#408](https://github.com/vdavid/cmdr/issues/408)).
 
 - **Source half**: `VolumeReadStream::modified_at` (REQUIRED, so a new backend can't skip mtime by omission) and
   `VolumeReadStream::metadata(wanted)` (default empty: creation date, mode, user flags, xattrs, as a
@@ -870,7 +873,7 @@ point here. The plan behind it, and the classes still to come (xattrs over SMB):
     safe-replace temp the CALLER lands (`WriteStaging::AlreadyStaged`) is held on `WriteOperationState`, keyed by the
     temp, until `finalize_safe_replace` swaps it over the original and puts it on THERE (or drops it on a failed swap).
   - A refused flags write counts as a loss (`LockedAndHidden`). A crash between the landing and this step leaves a
-    file without its Locked; accepted, like M1's native landing.
+    file without its Locked; accepted, like the native landing's same gap (`../DETAILS.md` § "Local copies stage").
   - Not on the one-pass sequential extract: no archive reports flags.
 - **Best effort**: every apply returns a `MetadataReport` and has no error path; a refused class is a `log::warn!`, and
   the copy stands.
@@ -883,7 +886,17 @@ point here. The plan behind it, and the classes still to come (xattrs over SMB):
 
 **What couldn't be kept is reported, once per operation.** The completion event's `metadata_left_behind`
 (`MetadataLeftBehind`: a count per person-facing class) feeds one calm sentence on the copy or move toast, plus one
-`info!` line with the counts. The spec's § "Telling the user" holds the why; the mechanics:
+`info!` line with the counts.
+
+- **Decision/Why one calm note, with no setting and no prompt**: silence would hide a permanent loss (a person who
+  moves photos to a NAS deserves to know the creation dates didn't make it before the originals are gone); a setting
+  could only switch off an honest sentence, since nobody wants less metadata kept and there's nothing to choose when a
+  destination can't hold a class; a prompt would interrupt every copy to a phone or a bucket with a question that has
+  one answer.
+- **Only classes a person can see**: creation dates, permissions, Locked and Hidden, Finder tags and other xattrs, and
+  folder dates. atime, ACLs, `com.apple.provenance`, and the quarantine never appear.
+
+The mechanics:
 
 - **Counted, never listed**: `../../metadata_losses.rs`, a fixed array of counters on
   `WriteOperationState`. A file counts at its landing (`staged.commit`, in `stream_pipe_file` and
@@ -950,7 +963,7 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   when asked. Writes through `cmdr_fs::metadata::apply_staged` on the open handle after the last byte AND the flush
   (`cmdr_fs::durable::sync_file_data`): xattrs, the folded mode, then birth and mtime in one call. ❗ Flush first: on a
   macOS SMB mount, writes still buffered when the dates go on reach the server at the handle's real close, which
-  stamps its own mtime (verified in M3). `apply_metadata` does a folder (or a landed file's flags) by path, the same
+  stamps its own mtime (verified against the Docker Samba share, macOS 27.0, 2026-10-11). `apply_metadata` does a folder (or a landed file's flags) by path, the same
   helper, flags last. Birth and flags are macOS-only: Linux can't set either (`NotApplicable`).
 - **S3**: reports and writes the date as `x-amz-meta-mtime`, and a file's creation date and mode as rclone's
   `x-amz-meta-btime` and `x-amz-meta-mode`, on the PUT and GET a copy already makes. The mode is stored as the source
@@ -1019,6 +1032,111 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 **Why it took a test layer of its own.** Every copy suite checksums both ends, and a destination stamping its own date
 passes all of them. On 2026-10-07 a 562-photo copy from a Pixel (ADB) onto a QNAP (SFTP) landed every file dated to
 the copy, with both gaps at once: ADB's stream reported no date, and SFTP never set one.
+
+### The invariants every copy path holds
+
+Both engines, every backend. Code comments cite them by number.
+
+1. **A metadata failure never fails a copy, and is never silent.** The bytes are the copy. `apply_staged`,
+   `apply_landed`, and `Volume::apply_metadata` return a `MetadataReport` with no error path, and each class is its own
+   step, so a refused one never skips the next (❌ never chain classes with `?`). Only the landing rename itself can
+   fail an item. Known gap: a refusal inside a destination's `write_from_stream` stays a `log::warn!`, uncounted, since
+   its report doesn't leave the trait call.
+2. **Dates go last, in one call.** Birth and mtime (and atime where it's carried) in ONE `fsetattrlist` /
+   `setattrlist`, after every xattr: a resource-fork write bumps mtime, and APFS/HFS+ drag birth down to an earlier
+   mtime. xattrs go before the mode (a path xattr write on a `0444` item is `EACCES`). On a network mount the data flush
+   goes before the dates too, since the server stamps the real close. ACLs and flags may follow the dates: neither bumps
+   mtime.
+3. **Nothing that will still be renamed wears a rename-blocker**: neither a staged `.cmdr-tmp-*` temp nor any item of a
+   cross-FS move's staging tree before Phase 3. The blockers (all verified): `uchg`/`uappnd` on the item, an ACL with
+   `deny delete` on it or `deny delete_child` on its folder, `uchg` on the folder it leaves, and, for a folder moving to
+   another parent, a mode without owner write. They go on the LANDED item, ACL first, then flags (`uchg` refuses a later
+   ACL write and a later time-set). The one window this can't close: `clonefile` copies the flags onto the temp in the
+   same call, so the clone arm's landing rename is the probe (`../DETAILS.md` § "Local copies stage"), and a crash
+   between the clone and the clearing leaves a `uchg` temp, which the sweep clears (invariant 9).
+4. **Only what the copy CREATED takes metadata.** A folder it merged into keeps its own. An Overwrite replaces the
+   file, so the landed file wears the SOURCE's metadata, the way Finder's Replace does.
+5. **Mode never widens or escalates, not even mid-copy.** A routed copy folds the source's bits through the umask
+   default (`routed_mode`); setuid, setgid, and sticky travel only local to local; `SF_*` system flags and ownership
+   never travel. A temp is created `0600` and takes its mode after its bytes, and a native copy's folder is born with
+   its source's bits plus owner `rwx` (`../DETAILS.md` § "Folders keep their metadata"). A refused `chmod` leaves an
+   item narrower, never wider.
+6. **No new per-file round trip on a remote source.** Metadata rides what the open or the listing already returned, and
+   a class that would cost a request is gated on the caps. Two accepted exceptions: an SMB source's folder flags cost
+   one `stat` per created folder, paid only when the destination keeps them; a zip's sidecar is read at stream open for
+   each entry that has one, even when the destination keeps no xattrs (`VolumeReadStream::metadata` is sync).
+7. **Every (source, destination, class) is kept, reported, or not applicable by the caps**, never a silent drop.
+   `metadata_loss_tests.rs` computes the expectations from the caps, so a hand-written "kept" can't sneak in.
+8. **Metadata never decides a temp's name or whether a write stages**: it changes only what goes on the temp, and when.
+9. **Every reversal can remove what a copy made**, Locked and ACL'd items included, and a Locked, `0500`, or
+   `deny delete_child` folder's children: the in-flight reversal, the ledger's `Drop` net, a cross-FS move's staging
+   cleanup, the in-flight sweep (temps only), the journal rollback, and this engine's in-flight rollback
+   (`../../unblocked_removal.rs`, SMB's Read-only too). Each clears only after its own first removal was refused, and
+   after the check that path already makes (`../DETAILS.md` § "What a reversal does with that identity"). A
+   `deny delete` ACL refuses even the owner's `unlink`, so clearing the flags alone isn't enough.
+10. **A plain file costs what it did before.** No flags, no ACL, and no xattrs worth keeping means no extra syscall or
+    frame on either engine, and a lossless pair never asks the stream for the loss note. Pinned by
+    `metadata_losses_tests.rs` and the clone arm's
+    `metadata_matrix_tests.rs::a_plain_file_through_the_clone_arm_never_calls_the_metadata_helper`.
+11. **The ordering lives in one host helper, `cmdr_fs::metadata`**; no engine path or local writer reimplements it
+    (the network backends write their own wire formats in the same order). Every macOS-only call is `cfg`-gated, and
+    the Linux lanes cover the helper: Linux sets no birth and no flags and carries `user.*` xattrs only, so a
+    `com.apple.*` xattr reaching Linux is not applicable (❌ never mapped to an invented `user.com.apple.*`).
+
+### What each pair keeps
+
+Everything a pair can't hold is reported by the note. "Lost" means the destination could hold it and Cmdr doesn't carry
+it yet.
+
+- **Local, same APFS volume (the clone)**: everything, files and folders, a symlink's own dates too; Locked and
+  `deny delete` files land.
+- **Local, another APFS or HFS+ volume (chunked)**: everything but ownership: birth, mtime, atime, mode, xattrs, ACL,
+  and flags, on files and folders.
+- **Local, exFAT or FAT**: file birth (2 s on FAT) and Hidden and Locked as FAT attributes; xattrs as `._` sidecars; a
+  resource fork refused by the FSKit drivers; mode and ACL not applicable (notes file § "Results"). ❗ No automated cell
+  can pin this, since tests never use a FAT or exFAT image (`crates/cmdr-fs/CLAUDE.md`), so a regression in the FAT
+  attribute mapping shows only in a hand check. David's check on a real exFAT stick is still to do.
+- **Local, a Finder-mounted SMB share (chunked through `smbfs`)**: birth, mtime, Hidden, Locked, tags, comments,
+  quarantine, and `user.*` xattrs (as `._` sidecars on a share without `vfs_fruit`); a resource fork is lost; mode not
+  applicable (`noowners`).
+- **Same-filesystem move**: one `rename`, which keeps everything; a Locked item fails (#408). **Cross-filesystem local
+  move**: the chunked row, made permanent; a Locked or `deny delete` original stays behind beside its landed copy
+  (#408).
+- **Local ↔ direct SMB, and SMB → SMB**: mtime, birth, Hidden, and Locked, on files and folders; xattrs lost (#405);
+  mode and ACL not applicable.
+- **Local ↔ SFTP**: mtime and the file mode (folded); birth not applicable (SFTP v3); a folder's mode not carried
+  (§ "What mode a landed file wears").
+- **Local → WebDAV**: mtime where the server stores one (Nextcloud, not `mod_dav`), plus on Nextcloud file and folder
+  birth and folder dates. **WebDAV → local**: mtime, and a folder's birth off the listing.
+- **Local ↔ S3**: mtime, birth, and mode in rclone's keys; folders not applicable; a server-side copy keeps every
+  `x-amz-meta-*`.
+- **Local ↔ MTP**: mtime; birth not applicable on Android.
+- **Local → ADB**: mtime; the mode is sent, but `/sdcard` ignores it, so it's reported. **ADB → local**: mtime and mode.
+- **Archive → local** (a copy or a move out): mtime, mode, the xattrs of a zip's `__MACOSX` and a tar's `._name` and
+  pax records (files and folders), the archive's quarantine, and folder dates. 7z carries no sidecars.
+- **Local → zip** (fresh or into an existing one): mtime, mode, and xattrs as `__MACOSX` sidecars when worth keeping;
+  birth not applicable.
+
+### Decisions behind the contract
+
+- **The bar is `rsync -aNHAX --crtimes`** (birth on files AND folders) plus BSD flags, folders, and Finder's quarantine
+  discipline on extract. `ditto` and `cp -p` drop birth across volumes and never date a folder's birth (measured, notes
+  file § "Results"), so `ditto` parity is the floor.
+- **atime is never reported or extended**: kept only where it's free (local, SFTP's forced pair). Nobody reads it, and
+  `noatime` and `relatime` make it meaningless on most destinations.
+- **`CarriedMetadata` holds no mtime**: `VolumeReadStream::modified_at` stays the one source of it, so its 20-odd
+  implementers didn't migrate and two getters can't disagree.
+- **One trait method applies a set by path** (`apply_metadata`), for a folder's full set and a landed file's flags
+  alike: two near-identical methods would be the same body twice on every backend.
+- **Undo removes a Locked copy** (David, 2026-10-11): a reversal unlocks its OWN identity-verified copy and strips its
+  `deny delete` ACL, then removes it. An item that fails verification is left alone and reported as a typed skip.
+- **Compress writes `__MACOSX` only when a source has xattrs worth keeping** (David, 2026-10-11), so an ordinary zip
+  stays clean for Windows users (`crates/cmdr-archive/src/mutation/DETAILS.md`); browsing a zip hides `__MACOSX` like an
+  extract does (`crates/cmdr-archive/src/read/DETAILS.md` § "AppleDouble sidecars: paired, hidden, and carried as
+  xattrs").
+- **The loss-note wording is David's placeholder** until he rewrites it, marked so in its `@key` descriptions.
+- **Finder isn't verified as a reference**: driving it needs a TCC prompt. It's reported to keep "Date Created", tags,
+  comments, and Locked on Mac-format destinations; Cmdr keeps birth either way.
 
 ## A volume that goes away mid-transfer
 

@@ -163,6 +163,9 @@ All under `apps/desktop/src-tauri/src/`.
   (`copyfile(3)` / `copy_file_range(2)` / chunked)
 - `file_system/write_operations/transfer/volume/`: The cross-volume (Local ↔ MTP ↔ SMB ↔ archive) copy/move engine
   behind a facade module
+- `file_system/write_operations/metadata_losses.rs`: the loss note, per-class counters of what a destination couldn't
+  keep, read off each backend's `MetadataCaps`. The metadata contract every copy path holds, its invariants, and what
+  each pair keeps: `file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"
 - `file_system/write_operations/delete/`: Delete walker, trash, oracle-aware delete semantics
 - `file_system/volume/`: `VolumeManager` plus the `backends/` umbrella, re-exporting the `Volume` trait and its types
   from `crates/cmdr-fs/`. Checklist + capability matrix for new backends. `drive_release/` is the one gate for every
@@ -375,6 +378,11 @@ ordinary members.
     connection events, credentials, index notification, settings, user activity, analytics. What a backend crate is
     written against; the app answers them from `apps/desktop/src-tauri/src/volume_host.rs`. See
     `crates/cmdr-fs/src/volume/host/CLAUDE.md`
+  - `src/metadata/`: the one host helper for what a copy puts on an item beyond its bytes (the order, rename-blockers
+    after the landing, clearing them for a reversal), plus `MetadataCaps`, each backend's claim of what it keeps and
+    reports. See `crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on"
+  - `src/apple_double.rs`: whether a listed `._name` is the AppleDouble sidecar the kernel serves as its sibling's
+    xattrs (FAT, exFAT, a stream-less SMB share), so a copy skips it as a file: its contents already travel as xattrs
 - `crates/cmdr-listing/`: the directory listing engine behind every pane: streaming reads with progress and stall
   reporting, the listing cache, sorting and Unicode collation, pane row numbers, the quick filter, and the diffs that
   keep a pane current. One handle (`Listings`) that a host builds with explicit seams; Cmdr's host is `listing_host/`.

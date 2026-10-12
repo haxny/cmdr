@@ -628,6 +628,25 @@ source's metadata". Finder's Locked is the DOS `READONLY` attribute, its Hidden 
   app's pipeline: `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/smb_flags_test.rs` (onto and
   off the share, and a rollback of Locked copies). The QNAP answer is unverified.
 
+## Finder tags and other xattrs on copies (open gap)
+
+A direct-SMB copy keeps no xattrs either way: Finder tags, comments, custom icons (FinderInfo), and resource forks stay
+behind, and the loss note says so (`METADATA_CAPS` claims no `XATTRS`). Tracked as
+[#405](https://github.com/vdavid/cmdr/issues/405), blocked on `smb2` named streams
+([vdavid/smb2#9](https://github.com/vdavid/smb2/issues/9)); Finder tags alone on a share are
+[#289](https://github.com/vdavid/cmdr/issues/289), which shares the trait capability.
+
+- **What it has to write**: what `smbfs` writes, so Finder on any Mac sees it: `AFP_AfpInfo`, `AFP_Resource`, and each
+  other xattr as a stream whose name carries the `U+F022` mapping for `:` (#289's verified QNAP finding).
+- **The caps come from probing each share**: a server without `vfs_fruit` or streams refuses them, so a backend-wide
+  claim would lie, and a refusal counts as a reported loss.
+- **Ordering**: written as streams on the staged temp before its landing rename, like any staged xattr; read off the
+  CREATE plus a stream enumeration the read can compound.
+- **The Finder-mounted share already keeps them** (the native chunked arm through `smbfs`; on the Docker fixture, which
+  has no `vfs_fruit`, as `._` sidecars, and a resource fork is lost:
+  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Local copies stage"). The QNAP-shaped
+  `vfs_fruit` answer is unverified until a `fruit` fixture exists, which comes with smb2#9.
+
 ## Copy concurrency and the credit window
 
 Every SMB2 request spends credits from a budget the server grants (smb2 steers toward a ~512-credit window), and the
