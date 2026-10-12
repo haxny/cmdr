@@ -328,6 +328,9 @@ pub(super) async fn stream_pipe_file(
     staging: WriteStaging,
 ) -> Result<u64, FinalizeFailure> {
     log::debug!("stream_pipe_file: {} -> {}", source_path.display(), dest_path.display());
+    // Whether the CALLER lands this write (a safe-replace temp it swaps over the
+    // original): then the flags that wait for the landing wait for that swap.
+    let caller_lands = matches!(staging, WriteStaging::AlreadyStaged);
 
     // Register BOTH halves of the eventual rename with the downloads watcher's
     // ignore set when the destination is local-FS-backed (the only case where
@@ -433,6 +436,9 @@ pub(super) async fn stream_pipe_file(
         // asked before the write consumes the stream and counted once it
         // lands: nothing at all for a pair that keeps everything.
         let lost = metadata_losses::file_losses(&**source_volume, &**dest_volume, &*stream);
+        // What can't go on until the file has its final name (Locked), asked
+        // before the write consumes the stream; empty for a plain file.
+        let after_landing = super::landed_flags::after_landing(&**source_volume, &**dest_volume, &*stream);
         // ONE probe, two consumers: the staging decision below and the
         // destination-side foreground yield's floor exemption (handed to the
         // `CheckpointStream`). See `resolve_staging`.
@@ -623,7 +629,8 @@ pub(super) async fn stream_pipe_file(
 
         // Past the last byte: give the file its final name. What the source
         // carries beyond its bytes is already on it: the destination asked the
-        // stream and put it on the staged write (`Volume::write_from_stream`).
+        // stream and put it on the staged write (`Volume::write_from_stream`),
+        // all but the flags that wait for the final name.
         let landing_from = staged.target().to_path_buf();
         match staged.commit(dest_volume).await {
             Ok(()) => {
@@ -631,6 +638,11 @@ pub(super) async fn stream_pipe_file(
                 // to take back (`naming.rs::take_back_unfilled_reservations`).
                 state.claimed_names.release_placeholder(dest_path);
                 state.metadata_losses.note_file(lost);
+                if caller_lands {
+                    super::landed_flags::hold(state, dest_path, after_landing);
+                } else {
+                    super::landed_flags::put_on(dest_volume, dest_path, &after_landing, state).await;
+                }
                 return Ok(bytes);
             }
             Err(FinalizeFailure {

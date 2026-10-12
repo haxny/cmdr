@@ -12,7 +12,7 @@
 //! what a test reaches for.
 
 use crate::entry::FileEntry;
-use crate::metadata::{CarriedMetadata, MetadataClasses, MetadataReport};
+use crate::metadata::{CarriedMetadata, MetadataClasses, MetadataReport, Unblock};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -499,7 +499,8 @@ pub trait Volume: Send + Sync {
     /// created once that folder's contents have landed (writing a child bumps
     /// its folder's date), and on a FILE right after its landing rename for the
     /// part of its metadata that would have refused that rename
-    /// ([`CarriedMetadata::after_landing`]: Locked). Everything else a file
+    /// ([`CarriedMetadata::after_landing`]: Locked, with the rest of its flags).
+    /// Everything else a file
     /// carries travels on its write (`write_from_stream` asks
     /// [`VolumeReadStream::metadata`] and reads
     /// [`VolumeReadStream::modified_at`]). A routed mode is folded
@@ -545,6 +546,23 @@ pub trait Volume: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
         let _ = (path, wanted);
         Box::pin(async { CarriedMetadata::default() })
+    }
+
+    /// Clears what makes the item at `path` refuse its own removal, a removal
+    /// that was just refused: what a copy put on it from its source (Locked, a
+    /// `deny delete` ACL, SMB's Read-only). Never follows a symlink.
+    ///
+    /// ❗ Only a reversal calls it, on an item it already verified as the
+    /// operation's own (`docs/specs/transfer-metadata-preservation.md`, rule 9).
+    /// The user's own delete never does: unlocking is not a delete's business.
+    /// [`Unblock::Cleared`] says to try the removal again; what it hands back is
+    /// what a landing would put back, and a reversal drops it.
+    ///
+    /// Default [`Unblock::NothingToClear`], with no I/O: a backend whose items
+    /// can't wear a blocker.
+    fn clear_blockers<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Unblock> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async { Unblock::NothingToClear })
     }
 
     /// Deletes a single file or **empty** directory.

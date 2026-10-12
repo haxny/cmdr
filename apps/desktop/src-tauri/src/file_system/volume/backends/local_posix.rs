@@ -21,7 +21,7 @@ use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, Strea
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 use cmdr_fs::volume::MountClass;
 use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use std::future::Future;
@@ -258,18 +258,18 @@ impl LocalPosixVolume {
 
 impl LocalPosixVolume {
     /// What local disk keeps of a copy routed through the volume engine, and
-    /// what its streams report off the open's `stat` and fd. The user flags
-    /// travel only local-to-local (the native engine) until the volume engine
-    /// puts them on after the landing (M6 of
-    /// `docs/specs/transfer-metadata-preservation.md`), so a FILE doesn't claim
-    /// them; a folder's `apply_metadata` does put them on. Linux can't set a
+    /// what its streams report off the open's `stat` and fd. Every user flag
+    /// waits for the landing (`staged_flags` is empty): the copy puts them on
+    /// with `apply_metadata` once the file has its final name, since Locked
+    /// refuses the rename and the set goes on as one. Linux can't set a
     /// creation date (`statx` reads it) and has no user flags.
     #[cfg(target_os = "macos")]
     pub const METADATA_CAPS: MetadataCaps = MetadataCaps {
-        stores: MetadataClasses::ALL.without(MetadataClasses::FLAGS),
+        stores: MetadataClasses::ALL,
         reports: MetadataClasses::ALL,
         folder_stores: MetadataClasses::ALL,
         folder_dates: true,
+        staged_flags: UserFlags::NONE,
     };
     /// See the macOS twin.
     #[cfg(not(target_os = "macos"))]
@@ -280,6 +280,7 @@ impl LocalPosixVolume {
             .union(MetadataClasses::XATTRS),
         folder_stores: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
         folder_dates: true,
+        staged_flags: UserFlags::NONE,
     };
 }
 
@@ -536,8 +537,9 @@ impl Volume for LocalPosixVolume {
     }
 
     /// The folder's xattrs (Finder tags, comments, the FinderInfo of a custom
-    /// icon), the one class a folder reports beyond its listing entry: one
-    /// `lstat` and one `listxattr`, plus a read per name, and only when asked.
+    /// icon) and its flags (Hidden, Locked), the classes a folder reports beyond
+    /// its listing entry: one `lstat`, which answers the flags, and one
+    /// `listxattr` plus a read per name when the xattrs are asked for.
     fn folder_metadata<'a>(
         &'a self,
         path: &'a Path,
@@ -545,13 +547,15 @@ impl Volume for LocalPosixVolume {
     ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
         let abs_path = self.resolve(path);
         Box::pin(async move {
-            if !wanted.contains(MetadataClasses::XATTRS) {
+            let wanted = wanted.intersection(MetadataClasses::XATTRS | MetadataClasses::FLAGS);
+            if wanted.is_empty() {
                 return CarriedMetadata::default();
             }
             spawn_blocking(move || match std::fs::symlink_metadata(&abs_path) {
-                Ok(meta) if meta.is_dir() => {
-                    CarriedMetadata::of_local_dir(&abs_path, &meta).restricted_to(MetadataClasses::XATTRS)
+                Ok(meta) if meta.is_dir() && wanted.contains(MetadataClasses::XATTRS) => {
+                    CarriedMetadata::of_local_dir(&abs_path, &meta).restricted_to(wanted)
                 }
+                Ok(meta) if meta.is_dir() => CarriedMetadata::of_local_stat(&meta).restricted_to(wanted),
                 _ => CarriedMetadata::default(),
             })
             .await
@@ -574,6 +578,19 @@ impl Volume for LocalPosixVolume {
             spawn_blocking(move || streams::apply_metadata_at(&abs_path, &carried, modified))
                 .await
                 .expect("spawn_blocking apply_metadata closure doesn't panic and the task is uncancelable")
+        })
+    }
+
+    /// Clears the item's own `uchg`/`uappnd` and strips its ACL
+    /// (`cmdr_fs::metadata::clear_blockers`), never through a symlink. A
+    /// Locked FOLDER refusing its child's removal is the caller's to open
+    /// (`open_parent_folder`), since only it knows when to close it again.
+    fn clear_blockers<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Unblock> + Send + 'a>> {
+        let abs_path = self.resolve(path);
+        Box::pin(async move {
+            spawn_blocking(move || cmdr_fs::metadata::clear_blockers(&abs_path))
+                .await
+                .expect("spawn_blocking clear_blockers closure doesn't panic and the task is uncancelable")
         })
     }
 

@@ -2,7 +2,9 @@
 //! -> `VolumeError`. No shared state; the cleanest extraction.
 
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::metadata::UserFlags;
 use cmdr_fs::volume::{SpaceInfo, VolumeError};
+use smb2::FileAttributes;
 
 /// Converts an `smb2::FileTime` to seconds since the Unix epoch, matching
 /// `FileEntry.modified_at` / `created_at` (seconds, like `LocalPosixVolume`).
@@ -30,6 +32,38 @@ pub(super) fn directory_entry_to_file_entry(
     fe.modified_at = filetime_to_unix_secs(entry.modified);
     fe.created_at = filetime_to_unix_secs(entry.created);
     fe
+}
+
+/// The user flags a copy carries off an SMB item named `name`: Locked from
+/// `READONLY`, Hidden from `HIDDEN`, except on a dot-name. Samba reports every
+/// dotfile as Hidden (`hide dot files`, on by default), and its name already
+/// hides it everywhere; a local copy that also wore `UF_HIDDEN` would stay
+/// hidden after a rename to a plain name, which nobody asked for.
+pub(super) fn user_flags_of(attributes: FileAttributes, name: &str) -> UserFlags {
+    let mut flags = UserFlags::NONE;
+    if attributes.is_hidden() && !name.starts_with('.') {
+        flags = flags | UserFlags::HIDDEN;
+    }
+    if attributes.is_readonly() {
+        flags = flags | UserFlags::LOCKED;
+    }
+    flags
+}
+
+/// The DOS attributes that stand for `flags` on a share: `HIDDEN` and
+/// `READONLY` (Finder shows the latter as Locked through a mount). Append-only
+/// and no-dump have no SMB attribute and drop. Empty means "none of them",
+/// which on the wire CLEARS the settable set, so a caller sends it only when it
+/// means that.
+pub(super) fn attributes_of(flags: UserFlags) -> FileAttributes {
+    let mut bits = 0;
+    if flags.contains(UserFlags::HIDDEN) {
+        bits |= FileAttributes::HIDDEN;
+    }
+    if flags.contains(UserFlags::LOCKED) {
+        bits |= FileAttributes::READONLY;
+    }
+    FileAttributes::new(bits)
 }
 
 /// Converts an `smb2::FsInfo` to `SpaceInfo`. A share always has a size, so it
@@ -62,6 +96,16 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
     // falling through to the generic kind match.
     if err.status() == Some(NtStatus::DELETE_PENDING) {
         return VolumeError::DeletePending(path.to_string());
+    }
+    // A Read-only item refusing its own removal: a permission refusal like
+    // local disk's `EPERM` on a Locked file, which is what lets a reversal
+    // clear it and try again (`Volume::clear_blockers`). smb2 files it under
+    // `ErrorKind::Other`.
+    if err.status() == Some(NtStatus::CANNOT_DELETE) {
+        return VolumeError::PermissionDenied {
+            path: path.to_string(),
+            raw_os_error: None,
+        };
     }
 
     match err.kind() {

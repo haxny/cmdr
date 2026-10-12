@@ -26,6 +26,7 @@ mod extract_quarantine;
 mod finalize;
 mod folder_metadata;
 mod item_identity;
+mod landed_flags;
 mod landing;
 mod merge;
 mod merge_ctx;
@@ -139,6 +140,9 @@ mod dest_precheck_failure_tests;
 #[cfg(test)]
 mod folder_metadata_tests;
 
+/// A copy keeps Hidden and Locked, Locked only once each item has its final name.
+#[cfg(test)]
+mod copy_flags_tests;
 /// A copy onto local disk keeps creation dates and a routed source's mode.
 #[cfg(test)]
 mod copy_metadata_tests;

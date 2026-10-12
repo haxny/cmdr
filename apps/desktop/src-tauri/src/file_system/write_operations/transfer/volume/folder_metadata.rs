@@ -97,7 +97,7 @@ impl FolderMetadata {
             if is_cancelled(&state.intent) {
                 return;
             }
-            let carried = source_set(source_volume, &folder, state).await;
+            let carried = source_set(source_volume, dest_volume, &folder, state).await;
             let outcome = if asking {
                 stamp_one(dest_volume, &folder, &carried).await
             } else {
@@ -116,6 +116,7 @@ enum Stamped {
         created: ClassOutcome,
         modified: ClassOutcome,
         xattrs: ClassOutcome,
+        flags: ClassOutcome,
     },
     /// The destination can hold none of a folder's metadata; ask it no more.
     HeldNone,
@@ -125,16 +126,24 @@ enum Stamped {
 
 /// What the source folder carries beyond its dates: its xattrs (an archive's
 /// sidecar, a local folder's tags), asked only of a source that reports them,
-/// and with the archive's quarantine in place of any a sidecar names.
+/// and with the archive's quarantine in place of any a sidecar names; and its
+/// flags (Hidden, Locked), asked only when the destination keeps a folder's,
+/// since a share answers them with a round trip a loss count alone doesn't
+/// earn.
 async fn source_set(
     source_volume: &Arc<dyn Volume>,
+    dest_volume: &Arc<dyn Volume>,
     folder: &FilledFolder,
     state: &WriteOperationState,
 ) -> CarriedMetadata {
+    let flags = dest_volume
+        .metadata_caps()
+        .folder_stores
+        .intersection(MetadataClasses::FLAGS);
     let wanted = source_volume
         .metadata_caps()
         .reports
-        .intersection(MetadataClasses::XATTRS);
+        .intersection(MetadataClasses::XATTRS | flags);
     if wanted.is_empty() {
         return CarriedMetadata::default();
     }
@@ -153,13 +162,15 @@ fn note_losses(
     state: &WriteOperationState,
 ) {
     let caps = dest_volume.metadata_caps();
-    let (created, modified, xattrs) = match outcome {
+    let (created, modified, xattrs, flags) = match outcome {
         Stamped::Answered {
             created,
             modified,
             xattrs,
-        } => (created, modified, xattrs),
+            flags,
+        } => (created, modified, xattrs, flags),
         Stamped::HeldNone | Stamped::NotAsked => (
+            ClassOutcome::NotApplicable,
             ClassOutcome::NotApplicable,
             ClassOutcome::NotApplicable,
             ClassOutcome::NotApplicable,
@@ -179,6 +190,9 @@ fn note_losses(
         modified: source.modified_at.is_some() && (!caps.folder_dates || modified == ClassOutcome::Refused),
         xattrs: xattrs_worth_keeping
             && (!caps.folder_stores.contains(MetadataClasses::XATTRS) || xattrs == ClassOutcome::Refused),
+        // Asked only of a destination that keeps them (`source_set`), so only
+        // a refusal is a loss here.
+        flags: !carried.flags.is_empty() && flags == ClassOutcome::Refused,
     });
 }
 
@@ -197,6 +211,7 @@ async fn stamp_one(dest_volume: &Arc<dyn Volume>, folder: &FilledFolder, carried
             created: ClassOutcome::Absent,
             modified: ClassOutcome::Absent,
             xattrs: ClassOutcome::Absent,
+            flags: ClassOutcome::Absent,
         };
     }
     let dest = folder.dest.as_path();
@@ -215,5 +230,6 @@ async fn stamp_one(dest_volume: &Arc<dyn Volume>, folder: &FilledFolder, carried
         created: report.created,
         modified: report.modified,
         xattrs: report.xattrs,
+        flags: report.flags,
     }
 }

@@ -12,7 +12,6 @@ use super::SmbVolume;
 use cmdr_fs::volume::{MutationEvent, Volume, VolumeError};
 use log::{debug, warn};
 use std::path::Path;
-use std::time::SystemTime;
 
 impl SmbVolume {
     /// Writes `content` to a file that must not already exist, then tells the
@@ -67,16 +66,11 @@ impl SmbVolume {
         Ok(())
     }
 
-    /// Sets `CreationTime` and `LastWriteTime` on a file or folder, by path, in
-    /// the one CREATE + SET_INFO + CLOSE frame either alone would cost, then
-    /// tells the panes about it. A `None` leaves that time the server's own,
-    /// and the server keeps its own access time.
-    pub(super) async fn set_times_impl(
-        &self,
-        path: &Path,
-        created: Option<SystemTime>,
-        modified: Option<SystemTime>,
-    ) -> Result<(), VolumeError> {
+    /// Sets what `times` names (the dates, and the attributes when it carries
+    /// them) on a file or folder, by path, in one CREATE + SET_INFO + CLOSE
+    /// frame, then tells the panes about it. What `times` leaves unset stays
+    /// the server's own.
+    pub(super) async fn set_basic_info_impl(&self, path: &Path, times: smb2::FileTimes) -> Result<(), VolumeError> {
         let smb_path = self.to_smb_path(path)?;
 
         debug!(
@@ -85,13 +79,6 @@ impl SmbVolume {
         );
 
         {
-            let mut times = smb2::FileTimes::new();
-            if let Some(created) = created {
-                times = times.set_created(created);
-            }
-            if let Some(modified) = modified {
-                times = times.set_modified(modified);
-            }
             let (tree, mut conn) = self.clone_session().await?;
             let result = tree.set_times(&mut conn, &smb_path, times).await;
             self.handle_smb_result("set_times", &smb_path, result)?;

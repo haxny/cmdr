@@ -14,7 +14,7 @@ use super::{BackendKind, ConnectionState, IndexWalk, SpaceInfo, VolumeError};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
-use crate::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses};
+use crate::metadata::{CarriedMetadata, MetadataCaps};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -212,14 +212,11 @@ impl InMemoryVolume {
         self
     }
 
-    /// Every class reported and kept, files and folders, except the user flags
-    /// on a FILE: the volume engine puts those on after the landing only from
-    /// M6 of `docs/specs/transfer-metadata-preservation.md`, and the double
-    /// claims nothing a copy onto it doesn't keep.
-    pub const REFERENCE_CAPS: MetadataCaps = MetadataCaps {
-        stores: MetadataClasses::ALL.without(MetadataClasses::FLAGS),
-        ..MetadataCaps::ALL
-    };
+    /// Every class reported and kept, files and folders. A file's flags all
+    /// wait for the landing, like local disk's: the write keeps none of them
+    /// (`staged_flags` is empty), and the copy's `apply_metadata` after the
+    /// rename puts them on.
+    pub const REFERENCE_CAPS: MetadataCaps = MetadataCaps::ALL;
 
     /// Makes this double keep and report only what `caps` says, so it stands in
     /// for a real backend's metadata: a class outside `caps.reports` never

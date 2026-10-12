@@ -75,6 +75,9 @@ mod sftp_transfer_semantics_test;
 // are opt-in by hand.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod smb_archive_integration_test;
+// Hidden and Locked onto and off a share: the local half needs macOS's flags.
+#[cfg(target_os = "macos")]
+mod smb_flags_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod smb_full_concurrency_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]

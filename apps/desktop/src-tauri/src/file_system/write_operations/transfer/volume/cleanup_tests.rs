@@ -546,3 +546,37 @@ async fn a_sweep_that_cleared_the_destination_reports_no_leftovers() {
             .is_none()
     );
 }
+
+/// Rule 9: a rollback removes the Locked copy it made and the Locked folder
+/// it made, though both refuse a plain removal, unlocking each only after
+/// verifying it (`unblocked_removal.rs`). The file inside the Locked folder
+/// needs the folder opened for its own removal.
+#[cfg(target_os = "macos")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
+    use cmdr_fs::testing::metadata_fixture::{LOCKED_FLAG, MetadataFixture, set_flags};
+
+    let fixture = MetadataFixture::new("cleanup_locked_rollback");
+    std::fs::write(fixture.join("loose.txt"), b"locked copy").unwrap();
+    std::fs::create_dir(fixture.join("album")).unwrap();
+    std::fs::write(fixture.join("album/photo.jpg"), b"inside a locked folder").unwrap();
+    set_flags(&fixture.join("loose.txt"), LOCKED_FLAG);
+    set_flags(&fixture.join("album"), LOCKED_FLAG);
+    let volume: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+        "Local", &*fixture,
+    ));
+
+    roll_back(
+        &volume,
+        &[PathBuf::from("loose.txt"), PathBuf::from("album/photo.jpg")],
+        &[PathBuf::from("album")],
+    )
+    .await;
+
+    for name in ["loose.txt", "album/photo.jpg", "album"] {
+        assert!(
+            !fixture.join(name).exists(),
+            "{name}: the rollback removes what the copy made, Locked or not"
+        );
+    }
+}

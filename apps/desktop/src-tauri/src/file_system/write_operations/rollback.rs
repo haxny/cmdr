@@ -38,9 +38,8 @@ use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::oneshot;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use cmdr_fs::metadata::{ParentOpening, Unblock, clear_blockers, open_parent_folder};
 
-use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume, VolumeError};
+use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::rollback::{
     ActRefusal, InverseAct, InversePlan, RollbackDispatch, RollbackProgress, RollbackRefusal, RollbackReport,
@@ -55,6 +54,7 @@ use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText
 use super::state::{StopMeans, WriteOperationState, update_operation_status};
 use super::transfer::volume::move_file_across_volumes;
 use super::types::{DEFAULT_PROGRESS_INTERVAL_MS, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::unblocked_removal::RemovalRefused;
 
 /// Map the inverse op's journal kind to the manager's `WriteOperationType` (for
 /// the queue row + busy registration). The inverse kind is only ever delete /
@@ -254,47 +254,16 @@ impl RollbackRunner for ReversalRunner {
     }
 }
 
-/// `volume.delete`, and when a LOCAL item refuses it, clearing that item's
-/// Locked flag and ACL before one retry, then opening the folder holding it
-/// (`open_parent_folder`: a copied folder carries its source's Locked, `deny
-/// delete_child`, or `0500`) for one more, closing it again right after. The
-/// planner verified the item as this operation's own right before this act, so
-/// what's cleared is what the copy carried over. ❗ The clearing lives here,
-/// never in the volume: the local volume's delete is also F8's, which must never
-/// unlock the user's own files.
+/// The planner verified the item as this operation's own right before this
+/// act, so what the removal clears is what the copy carried over
+/// (`unblocked_removal.rs`).
 async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Result<(), ActRefusal> {
-    let refused = match volume.delete(path).await {
-        Err(e @ VolumeError::PermissionDenied { .. }) => e,
-        other => return Ok(other?),
-    };
-    let Some(root) = volume.local_path() else {
-        return Err(refused.into());
-    };
-    let local = cmdr_fs::volume::root_anchored(&root, path);
-    // A few syscalls, but on a mounted share each one can block: off the runtime.
-    let item = local.clone();
-    let refused = match tokio::task::spawn_blocking(move || clear_blockers(&item)).await {
-        Ok(Unblock::Cleared(_)) => match volume.delete(path).await {
-            Err(e @ VolumeError::PermissionDenied { .. }) => e,
-            other => return Ok(other?),
-        },
-        Ok(Unblock::Refused) => return Err(ActRefusal::Locked),
-        Ok(Unblock::NothingToClear) | Err(_) => refused,
-    };
-    match tokio::task::spawn_blocking(move || open_parent_folder(&local)).await {
-        Ok(ParentOpening::Opened(folder)) => {
-            let deleted = volume.delete(path).await;
-            // Dropping it closes it too, so even a failed join puts it back.
-            if let Ok(report) = tokio::task::spawn_blocking(move || folder.close()).await
-                && report.any_refused()
-            {
-                log::warn!(target: "rollback", "rollback: a folder it opened for a removal didn't get all its metadata back: {report:?}");
-            }
-            Ok(deleted?)
-        }
-        Ok(ParentOpening::Refused) => Err(ActRefusal::Locked),
-        Ok(ParentOpening::NothingToOpen) | Err(_) => Err(refused.into()),
-    }
+    super::unblocked_removal::delete_clearing_blockers(volume, path)
+        .await
+        .map_err(|refused| match refused {
+            RemovalRefused::Volume(e) => ActRefusal::Volume(e),
+            RemovalRefused::Locked => ActRefusal::Locked,
+        })
 }
 
 /// Roll back operation `op_id`: gate it, set it `rolling_back`, and spawn its

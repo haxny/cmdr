@@ -278,7 +278,7 @@ async fn copy_leaf<'a>(
     }
     let recorded = match replaces {
         Replaces::ViaTemp(orig) => {
-            super::finalize::finalize_safe_replace(dest_volume, &write_dest, &orig)
+            super::finalize::finalize_safe_replace(dest_volume, &write_dest, &orig, state)
                 .await
                 .map_err(|e| PathedVolumeError::at_destination(e, &orig))?;
             orig

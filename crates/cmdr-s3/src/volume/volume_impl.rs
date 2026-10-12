@@ -71,6 +71,7 @@ impl S3Volume {
         reports: cmdr_fs::metadata::MetadataClasses::CREATED.union(cmdr_fs::metadata::MetadataClasses::MODE),
         folder_stores: cmdr_fs::metadata::MetadataClasses::NONE,
         folder_dates: false,
+        staged_flags: cmdr_fs::metadata::UserFlags::NONE,
     };
 }
 

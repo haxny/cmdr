@@ -5,9 +5,9 @@
 //! trait method in `volume_impl` delegates to.
 
 use super::SmbVolume;
-use super::mapping::map_smb_error;
+use super::mapping::{attributes_of, map_smb_error, user_flags_of};
 use super::session::update_state_on_smb_error;
-use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::volume::{
     ChannelReadStream, MutationEvent, StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
@@ -160,6 +160,8 @@ pub(super) struct InlineReadStream {
     modified_at: Option<std::time::SystemTime>,
     /// The server's `CreationTime`, from the same CREATE response.
     created: Option<std::time::SystemTime>,
+    /// Hidden and Locked, from the same CREATE response's attributes.
+    flags: UserFlags,
 }
 
 impl InlineReadStream {
@@ -171,13 +173,16 @@ impl InlineReadStream {
             bytes_read: 0,
             modified_at,
             created: None,
+            flags: UserFlags::NONE,
         }
     }
 
-    /// The source file's creation date, for [`VolumeReadStream::metadata`].
+    /// The source file's creation date and flags, from the CREATE response
+    /// `info` of the file at `smb_path`, for [`VolumeReadStream::metadata`].
     #[must_use]
-    pub(super) fn with_created(mut self, created: Option<std::time::SystemTime>) -> Self {
-        self.created = created;
+    pub(super) fn with_source_info(mut self, info: &smb2::FileInfo, smb_path: &str) -> Self {
+        self.created = info.created.to_system_time();
+        self.flags = user_flags_of(info.attributes, name_of(smb_path));
         self
     }
 }
@@ -189,17 +194,32 @@ struct OpenedDownload {
     modified_at: Option<std::time::SystemTime>,
     /// The server's `CreationTime`, from the same CREATE response.
     created: Option<std::time::SystemTime>,
+    /// Hidden and Locked, from the same CREATE response's attributes.
+    flags: UserFlags,
 }
 
-/// The times a copy stamps on what it wrote: the source's `LastWriteTime` and
-/// `CreationTime`, both in the one `FILE_BASIC_INFORMATION` either alone
-/// would cost, so the server keeps only its own access time. `None` when the
-/// source has neither, which leaves the server's.
+/// The last component of an SMB path, which decides whether Samba's Hidden is
+/// the name's own (`user_flags_of`).
+fn name_of(smb_path: &str) -> &str {
+    smb_path.rsplit(['\\', '/']).next().unwrap_or(smb_path)
+}
+
+/// What a copy stamps on what it wrote, in one `FILE_BASIC_INFORMATION`: the
+/// source's `LastWriteTime` and `CreationTime`, and `HIDDEN` when the source is
+/// Hidden, so neither costs a frame of its own. The server keeps its own access
+/// time. `None` when the source has none of them, which leaves the server's.
+///
+/// Only Hidden rides here ([`SmbVolume::METADATA_CAPS`]'s `staged_flags`):
+/// this lands on the staged temp, and Read-only waits for the landing. Sending
+/// attributes REPLACES the settable set, so a Hidden copy doesn't wear the
+/// `ARCHIVE` a fresh file gets, which nothing on a Mac reads.
 fn source_times(
     modified: Option<std::time::SystemTime>,
     created: Option<std::time::SystemTime>,
+    flags: UserFlags,
 ) -> Option<smb2::FileTimes> {
-    if modified.is_none() && created.is_none() {
+    let staged = flags.intersection(SmbVolume::METADATA_CAPS.staged_flags);
+    if modified.is_none() && created.is_none() && staged.is_empty() {
         return None;
     }
     let mut times = smb2::FileTimes::new();
@@ -208,6 +228,9 @@ fn source_times(
     }
     if let Some(created) = created {
         times = times.set_created(created);
+    }
+    if !staged.is_empty() {
+        times = times.set_attributes(attributes_of(staged));
     }
     Some(times)
 }
@@ -246,6 +269,7 @@ impl VolumeReadStream for InlineReadStream {
     fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
         CarriedMetadata {
             created: self.created,
+            flags: self.flags,
             ..CarriedMetadata::default()
         }
         .restricted_to(wanted)
@@ -312,6 +336,9 @@ impl SmbVolume {
                 total_size,
                 modified_at: download.info().and_then(|info| info.modified.to_system_time()),
                 created: download.info().and_then(|info| info.created.to_system_time()),
+                flags: download.info().map_or(UserFlags::NONE, |info| {
+                    user_flags_of(info.attributes, name_of(&smb_path_owned))
+                }),
             };
             if opened_tx.send(Ok(opened)).is_err() {
                 // Caller dropped the stream before receiving size. Drop download
@@ -396,6 +423,7 @@ impl SmbVolume {
                 .with_modified_at(opened.modified_at)
                 .with_metadata(CarriedMetadata {
                     created: opened.created,
+                    flags: opened.flags,
                     ..CarriedMetadata::default()
                 }),
         )
@@ -477,10 +505,11 @@ impl SmbVolume {
             // fast-path and the streaming fallback drive their write on
             // this same clone — no second `clone_session` needed.
             let (tree, mut conn) = self.clone_session().await?;
-            // SMB stores the creation date beside the modification date; the
-            // rest (mode, flags, xattrs) isn't settable over this client yet.
-            let carried = stream.metadata(MetadataClasses::CREATED);
-            let times = source_times(stream.modified_at(), carried.created);
+            // The creation date and Hidden ride the dates' frame; Read-only
+            // waits for the landing (the copy's `apply_metadata`). A share has
+            // no mode, and xattrs wait for named streams (vdavid/smb2#9).
+            let carried = stream.metadata(MetadataClasses::CREATED | MetadataClasses::FLAGS);
+            let times = source_times(stream.modified_at(), carried.created, carried.flags);
 
             // Best-effort delete of a partial file on a FRESH cloned session.
             // Once a `FileWriter` is open and bytes have streamed into it, an

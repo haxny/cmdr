@@ -526,9 +526,13 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             let source_overwrote = replaces.overwrites() || created.any_overwrote();
                             let landed_path = match replaces {
                                 Replaces::ViaTemp(orig) => {
-                                    if let Err(e) =
-                                        super::finalize::finalize_safe_replace(&dest_volume, &dest_item_path, &orig)
-                                            .await
+                                    if let Err(e) = super::finalize::finalize_safe_replace(
+                                        &dest_volume,
+                                        &dest_item_path,
+                                        &orig,
+                                        &state,
+                                    )
+                                    .await
                                     {
                                         // The rename that failed is entirely on the
                                         // destination, so it names the destination

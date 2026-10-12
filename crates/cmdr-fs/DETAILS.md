@@ -176,13 +176,18 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   `VolumeReadStream::metadata(wanted)` answers a `CarriedMetadata` from what the source's open already learned;
   `Volume::apply_metadata(path, &CarriedMetadata, modified)` puts a set on a landed item by path (a folder after its
   contents, or a file's `after_landing` flags) and reports per class, defaulting to `NotApplicable`
-  (`MetadataReport::none_applicable`; `holds_none` tells a caller to stop asking). The contract, per backend:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-  metadata".
+  (`MetadataReport::none_applicable`; `holds_none` tells a caller to stop asking). `Volume::clear_blockers(path)` is
+  `clear_blockers` through the trait (local disk's flags and ACL, SMB's Read-only), default `NothingToClear`; only a
+  reversal calls it, on an item it verified as its own, never a volume's own `delete` (that's also F8's). The contract,
+  per backend: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
+  source's metadata".
 - **`MetadataCaps` is each backend's claim** (`Volume::metadata_caps`, a predicate like the rest): what a file written
-  there keeps, what its streams report, what `apply_metadata` keeps. `file_classes_at_risk_from` is the pair question
-  the loss note asks, and `CarriedMetadata::worth_keeping` narrows it to what a person would miss (a birth before the
-  last edit, a mode a fresh file wouldn't get, any flag, any xattr but the quarantine).
+  there keeps, what its streams report, what `apply_metadata` keeps, and `staged_flags`: the user flags a file's write
+  keeps on the staged temp itself (SMB's Hidden), because they refuse no rename.
+  `CarriedMetadata::after_landing(staged)` is the rest: empty when the write kept every flag the file has, else the
+  WHOLE set, so a destination that replaces its flags as one word keeps the staged ones too. `file_classes_at_risk_from`
+  is the pair question the loss note asks, and `CarriedMetadata::worth_keeping` narrows it to what a person would miss
+  (a birth before the last edit, a mode a fresh file wouldn't get, any flag, any xattr but the quarantine).
   `VolumeReadStream::metadata_outline` answers it cheaply (a local file's xattrs by name only). The note itself is the
   app's, in the contract section the previous bullet names.
 - **A routed mode is folded, never copied** (`routed_mode`): a volume's mode is metadata out of an archive header, a

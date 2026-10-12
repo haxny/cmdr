@@ -19,6 +19,7 @@ use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
 use super::super::super::state::{StopMeans, WriteOperationState, update_operation_status};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
 use super::transfer_error::{AtPath, PathedVolumeError};
 use crate::file_system::volume::{EntryKind, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
@@ -197,14 +198,26 @@ async fn reverse_written_file(volume: &Arc<dyn Volume>, entry: &WrittenFile) -> 
             }
         }
     }
-    // One node each: these are the FILES this operation wrote.
-    match delete_written_file(volume, &entry.path).await {
-        Ok(()) => ItemResult::Reversed,
-        Err(e) => {
+    // One node each: these are the FILES this operation wrote, verified just
+    // above, so a Locked one is ours to unlock (rule 9).
+    removal_result(&entry.path, delete_clearing_blockers(volume, &entry.path).await)
+}
+
+/// What one verified removal came to, as a rollback item.
+fn removal_result(path: &Path, removed: Result<(), RemovalRefused>) -> ItemResult {
+    match removed {
+        Ok(()) | Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Reversed,
+        Err(RemovalRefused::Locked) => {
             log::warn!(
-                "volume_rollback_with_progress: couldn't delete {}: {:?}",
-                e.path.display(),
-                e.error
+                "volume_rollback_with_progress: {} wears a lock this process can't clear",
+                path.display()
+            );
+            ItemResult::Skipped(SkipReason::Locked)
+        }
+        Err(RemovalRefused::Volume(e)) => {
+            log::warn!(
+                "volume_rollback_with_progress: couldn't delete {}: {e:?}",
+                path.display()
             );
             ItemResult::Skipped(SkipReason::Failed)
         }
@@ -437,10 +450,12 @@ async fn delete_written_file(volume: &Arc<dyn Volume>, path: &Path) -> Result<()
 /// the normal outcome, not a failure.
 async fn prune_created_dir_if_empty(volume: &Arc<dyn Volume>, dir: &Path) -> ItemResult {
     match volume.list_directory(dir, None).await {
-        Ok(entries) if entries.is_empty() => match volume.delete(dir).await {
+        // Verified empty and ours, so a Locked one is ours to unlock (rule 9).
+        Ok(entries) if entries.is_empty() => match delete_clearing_blockers(volume, dir).await {
             Ok(()) => ItemResult::Reversed,
-            Err(VolumeError::NotFound(_)) => ItemResult::Skipped(SkipReason::AlreadyGone),
-            Err(e) => {
+            Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Skipped(SkipReason::AlreadyGone),
+            Err(RemovalRefused::Locked) => ItemResult::Skipped(SkipReason::Locked),
+            Err(RemovalRefused::Volume(e)) => {
                 log::debug!(
                     "prune_created_dir_if_empty: couldn't remove empty created dir {}: {:?}",
                     dir.display(),

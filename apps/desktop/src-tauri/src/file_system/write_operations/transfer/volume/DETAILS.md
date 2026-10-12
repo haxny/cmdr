@@ -32,7 +32,8 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
   (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside it in `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
   recurses there, a file child goes to `strategy.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which
   is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_metadata.rs` holds what
-  the walk notes about the folders it created, stamped once the subtree landed (§ "Copies keep the source's metadata").
+  the walk notes about the folders it created, stamped once the subtree landed, and `landed_flags.rs` the flags a FILE
+  waits to wear until its landing (both § "Copies keep the source's metadata").
 - **The move is three files, and the dependency runs ONE way.** `r#move` is the DISPATCHER and nothing else: it picks
   same-volume (`move_same`), both-local (`move_files_start`, one level up), or cross-volume (`move_cross`), then owns
   the managed-op lifecycle around whichever it picked. Both engines are leaves under it. ❗ Nothing in an engine may
@@ -845,7 +846,7 @@ unquarantined zip, the sequential `.tar.gz`, a cancelled extract, and a move-out
 
 **The rule: the source REPORTS what its file carries on the read stream, the destination WRITES the classes it can
 store.** This is the canonical home of the contract; the trait docs, the conformance assertions, and the backend docs
-point here. The plan behind it, and the classes still to come (flags over SMB, xattrs): 
+point here. The plan behind it, and the classes still to come (xattrs over SMB): 
 `docs/specs/transfer-metadata-preservation.md`. Local → local copies keep everything on their own path
 (`chunked_copy.rs`, copyfile/clonefile, `cmdr_fs::metadata`); their folders are below.
 
@@ -859,17 +860,26 @@ point here. The plan behind it, and the classes still to come (flags over SMB, x
   `metadata` once, before the first chunk, for the classes it stores. So every engine path (staged, single-shot,
   whole-publish) gets it with no engine code. A staged write sets it on the temp and the engine's final rename carries
   it; an in-place writer sets it after the last byte.
-- **The user flags never go on in `write_from_stream`**: Locked refuses the landing rename, so they belong after it,
-  through `Volume::apply_metadata` (`CarriedMetadata::after_landing`). No cross-volume pair carries one yet (local to
-  local is native; SMB stores none until M6), so the engine doesn't snapshot them; M6 wires that with its consumer.
+- **Locked goes on only once a file has its final name** (`landed_flags.rs`): it refuses the landing rename on local
+  disk, and SMB's Read-only makes a staged temp unremovable by a cancel. The engine snapshots the source stream's flags
+  before the write consumes them (`landed_flags::after_landing`), and spends one `Volume::apply_metadata` on the
+  landed name only when the file has a flag its destination's write can't put on (`MetadataCaps::staged_flags`: SMB's
+  write keeps Hidden itself, local disk keeps none). Then the WHOLE set goes, so a destination that replaces its
+  flags as one word (SMB's attributes) keeps Hidden too. A plain file, or a Hidden one onto SMB, costs nothing.
+  - **Two landings**: `stream_pipe_file` lands most files and puts the set on right after `staged.commit`. A
+    safe-replace temp the CALLER lands (`WriteStaging::AlreadyStaged`) is held on `WriteOperationState`, keyed by the
+    temp, until `finalize_safe_replace` swaps it over the original and puts it on THERE (or drops it on a failed swap).
+  - A refused flags write counts as a loss (`LockedAndHidden`). A crash between the landing and this step leaves a
+    file without its Locked; accepted, like M1's native landing.
+  - Not on the one-pass sequential extract: no archive reports flags.
 - **Best effort**: every apply returns a `MetadataReport` and has no error path; a refused class is a `log::warn!`, and
   the copy stands.
 - **`None` leaves the destination's own value**, ❌ never an invented one. atime is never carried across volumes (where
   a protocol forces it alongside, SFTP's `ATTR_ACMODTIME`, it gets the mtime).
 - **Each backend states what it keeps and reports in `Volume::metadata_caps`** (`cmdr_fs::metadata::MetadataCaps`:
   `stores` for a file, `reports` for its streams, `folder_stores` and `folder_dates` for `apply_metadata`). A
-  backend's conformance run is held to it (below), and the loss note trusts it. No backend's `stores` holds the user
-  flags until the engine snapshots them (M6).
+  backend's conformance run is held to it (below), and the loss note trusts it. `stores` holding `FLAGS` means the
+  write plus the post-landing step keep them; `staged_flags` says which the write keeps alone.
 
 **What couldn't be kept is reported, once per operation.** The completion event's `metadata_left_behind`
 (`MetadataLeftBehind`: a count per person-facing class) feeds one calm sentence on the copy or move toast, plus one
@@ -908,8 +918,13 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   stamps after the data pass.
 - **What a source folder carries beyond its listing entry** comes from `Volume::folder_metadata`, asked once per
   created folder at stamp time (a folder has no stream to ask). It defaults to empty with no I/O; the archive answers
-  with the folder's AppleDouble xattrs (`crates/cmdr-archive/src/read/DETAILS.md` § "AppleDouble sidecars"). A folder
-  whose source carried nothing at all costs the destination no call.
+  with the folder's AppleDouble xattrs (`crates/cmdr-archive/src/read/DETAILS.md` § "AppleDouble sidecars"), local
+  disk with its tags and flags off one `lstat`. A folder whose source carried nothing at all costs the destination no
+  call.
+- **A folder's flags (Hidden, Locked) are asked only when the destination keeps them** (`folder_stores` holds
+  `FLAGS`): a share answers them with one `stat` per folder, which a loss count alone doesn't earn. So only a refusal
+  counts as a folder's flags lost. They go on with the folder's dates, in the same `apply_metadata`, after its
+  contents land, so a Locked folder never refuses its own children.
 - **Decision/Why the scan carries the root's dates, ❌ not a `get_metadata` at stamp time**: that stat was one more
   request per top-level folder, which `s3_engine_integration_test.rs::the_engine_sends_what_the_estimate_counts`
   caught as a HEAD and a LIST over the cost estimate, and a whole parent listing on MTP.
@@ -936,7 +951,7 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   (`cmdr_fs::durable::sync_file_data`): xattrs, the folded mode, then birth and mtime in one call. ❗ Flush first: on a
   macOS SMB mount, writes still buffered when the dates go on reach the server at the handle's real close, which
   stamps its own mtime (verified in M3). `apply_metadata` does a folder (or a landed file's flags) by path, the same
-  helper. Birth is macOS-only: Linux can't set one (`NotApplicable`).
+  helper, flags last. Birth and flags are macOS-only: Linux can't set either (`NotApplicable`).
 - **S3**: reports and writes the date as `x-amz-meta-mtime`, and a file's creation date and mode as rclone's
   `x-amz-meta-btime` and `x-amz-meta-mode`, on the PUT and GET a copy already makes. The mode is stored as the source
   reported it (a bucket runs nothing), and folded where it lands on a filesystem (`crates/cmdr-s3/DETAILS.md` §
@@ -955,7 +970,9 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   compound), both off the read's own CREATE response; writes both in the one `FILE_BASIC_INFORMATION` it already
   sent for the date (zero new frames): on the streaming writer's own handle before it closes, or by path right after a
   one-frame compound write. Folders by path, both times in one compound. The landing rename keeps `CreationTime`
-  (`crates/cmdr-smb/DETAILS.md` § "Dates on copies").
+  (`crates/cmdr-smb/DETAILS.md` § "Dates on copies"). Hidden and Locked map to `HIDDEN` and `READONLY`: Hidden rides
+  the write's dates frame, Read-only the post-landing `apply_metadata`, one frame for a Locked file alone; a dotfile's
+  Hidden is its name's, never a flag (`crates/cmdr-smb/DETAILS.md` § "Hidden and Locked on copies").
 - **Archive (source only)**: reports each entry's date and mode from the parsed index, and its xattrs from its
   AppleDouble sidecar (a Finder-made zip's `__MACOSX`, a macOS tar's `._name`) or pax records, on random-access reads
   and the one-pass sequential extract alike (whole seconds; zip's DOS time keeps even seconds); a folder's xattrs
@@ -987,7 +1004,10 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   WebDAV copy-off only) and creation-date scenarios (`a_copy_onto_the_server_keeps_the_creation_dates`,
   `a_copy_off_the_server_keeps_the_creation_dates`, `a_copy_within_the_server_keeps_the_creation_dates`: a one-frame
   file, a streamed file, and a folder each, on the SMB cells); `in_memory_dates_test.rs`; `copy_metadata_tests.rs`
-  (onto local disk: file and folder birth, the folded mode); `copy_extract_apple_double_tests.rs` (a Finder-made zip
+  (onto local disk: file and folder birth, the folded mode); `copy_flags_tests.rs` (Hidden and Locked on files, a
+  folder, and an Overwrite; onto SMB's caps only a Locked file costs a call after its landing);
+  `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/smb_flags_test.rs` (onto and off a real share, and a rollback of Locked copies there);
+  `copy_extract_apple_double_tests.rs` (a Finder-made zip
   and a macOS tar: tags on files and folders, no `__MACOSX`); and S3's
   `s3_transfer_integration_test.rs::copying_onto_a_bucket_lands_every_byte_and_the_mtime`.
 - **Folder dates**: `conformance::assert_apply_metadata_dates_a_folder` per backend (local, in-memory, SFTP, SMB);

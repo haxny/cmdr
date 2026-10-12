@@ -305,9 +305,14 @@ async fn finalize_safe_replace_swaps_temp_over_original() {
         .unwrap();
     let dest_dyn: Arc<dyn Volume> = dest.clone();
 
-    finalize_safe_replace(&dest_dyn, Path::new("/notes.txt.cmdr-tmp-abc"), Path::new("/notes.txt"))
-        .await
-        .unwrap();
+    finalize_safe_replace(
+        &dest_dyn,
+        Path::new("/notes.txt.cmdr-tmp-abc"),
+        Path::new("/notes.txt"),
+        &WriteOperationState::new(std::time::Duration::ZERO),
+    )
+    .await
+    .unwrap();
 
     assert!(!dest.exists(Path::new("/notes.txt.cmdr-tmp-abc")).await);
     let mut stream = dest.open_read_stream(Path::new("/notes.txt")).await.unwrap();

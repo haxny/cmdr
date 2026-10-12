@@ -41,6 +41,11 @@ impl UserFlags {
     pub const fn intersection(self, other: Self) -> Self {
         Self(self.0 & other.0)
     }
+
+    /// This set without the flags in `other`.
+    pub const fn without(self, other: Self) -> Self {
+        Self(self.0 & !other.0)
+    }
 }
 
 impl BitOr for UserFlags {

@@ -17,6 +17,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
 };
@@ -63,11 +64,24 @@ use crate::file_system::volume::{Volume, VolumeError};
 /// designating the temp the moment the streaming write succeeded, before this
 /// function runs. See `transfer/CLAUDE.md` § "The post-write temp is committed
 /// data" and the `*_preserves_new_data_on_finalize_failure` tests.
+///
+/// Once the swap is done, the file takes the flags it waited to wear until it
+/// had its final name (Locked, `landed_flags.rs`), which the write held for
+/// `temp` in `state`.
 pub(super) async fn finalize_safe_replace(
     dest_volume: &Arc<dyn Volume>,
     temp: &Path,
     orig: &Path,
+    state: &WriteOperationState,
 ) -> Result<(), FinalizeFailure> {
+    let swapped = swap_into_place(dest_volume, temp, orig).await;
+    let landed_at = swapped.is_ok().then_some(orig);
+    super::landed_flags::land_held(dest_volume, temp, landed_at, state).await;
+    swapped
+}
+
+/// [`finalize_safe_replace`]'s swap: the delete, then the rename.
+async fn swap_into_place(dest_volume: &Arc<dyn Volume>, temp: &Path, orig: &Path) -> Result<(), FinalizeFailure> {
     match dest_volume.delete(orig).await {
         Ok(()) => {}
         Err(VolumeError::NotFound(_)) => {

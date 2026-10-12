@@ -96,7 +96,7 @@ async fn names_in_root(volume: &InMemoryVolume) -> Vec<String> {
 async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
     let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -126,7 +126,7 @@ async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_stale_temp_reap_cannot_touch_rescued_data() {
     let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -153,7 +153,7 @@ async fn a_taken_recovered_name_continues_the_house_series() {
         .await
         .unwrap();
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -184,7 +184,7 @@ async fn a_rescue_that_cannot_rename_reports_the_temp_it_left() {
     inner.create_file(&temp, b"NEW").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("every rename fails here");
 
@@ -253,7 +253,7 @@ async fn dest_refusing_the_delete(goes_through: bool) -> (Arc<InMemoryVolume>, A
 async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
     let (inner, dest, temp) = dest_refusing_the_delete(false).await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the delete is rigged to be refused");
 
@@ -285,7 +285,7 @@ async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
 async fn a_delete_that_went_through_despite_its_answer_still_lands_the_new_bytes() {
     let (inner, dest, temp) = dest_refusing_the_delete(true).await;
 
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect("the original is gone, so the swap completes");
 
@@ -304,7 +304,7 @@ async fn a_refused_delete_nobody_can_confirm_keeps_the_temp() {
     let (inner, dest, temp) = dest_refusing_the_delete(false).await;
     inner.set_stat_failing(Path::new("/notes.txt"));
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the delete is rigged to be refused");
 
@@ -401,7 +401,7 @@ async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
     inner.create_file(&temp, b"NEW").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"))
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
         .await
         .expect_err("the delete is rigged to fail");
 
@@ -424,3 +424,9 @@ async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
 /// and the forwarding macro names the type in its expansion.
 #[allow(dead_code, reason = "the macro expansion names the type")]
 type ListingRow = FileEntry;
+
+/// A state for a finalize no operation is watching: it holds no flags for any
+/// temp, so the swap is all that happens.
+fn unwatched_state() -> WriteOperationState {
+    WriteOperationState::new(std::time::Duration::ZERO)
+}

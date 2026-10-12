@@ -42,7 +42,9 @@ The full top-level inventory is here:
   `archive_edit/` (the zip-edit driver).
 - The in-flight ledgers and what reverses them: `ledger.rs` (`CopyTransaction` and `WrittenFile`, the vocabulary of what
   an operation currently has at the destination, plus the `Drop` panic net) and `reversal.rs` (the policy over it: the
-  recheck before each destructive act, and `ReversalTally`). That recheck shares `verify_snapshot` + `SkipReason` with
+  recheck before each destructive act, and `ReversalTally`), plus `unblocked_removal.rs` (the one removal every
+  reversal of a copy goes through: a Locked, `deny delete`, or Read-only copy of the operation's own is cleared through
+  `Volume::clear_blockers` after its plain removal is refused, never by a volume's own `delete`, which is also F8's). That recheck shares `verify_snapshot` + `SkipReason` with
   the operation-log history engine — ❌ never a batch or a fork of either, so one reversal can't quietly grow a laxer
   rule than the other; only the `Drop` net is unconditional. The persisted leftover ledger is three files:
   `in_flight_records.rs` (what a record IS: its kind, its path space, and what that kind needs),

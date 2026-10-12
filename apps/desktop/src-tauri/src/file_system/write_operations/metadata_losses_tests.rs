@@ -68,6 +68,7 @@ fn the_counts_come_out_per_class_in_a_fixed_order() {
         created: true,
         modified: true,
         xattrs: false,
+        flags: false,
     });
     losses.note_folder(FolderLosses {
         modified: true,

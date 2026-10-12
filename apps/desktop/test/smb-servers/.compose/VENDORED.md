@@ -8,8 +8,9 @@ be lost the next time we re-vendor.**
 `~/projects-git/vdavid/smb2/crates/smb2/src/testing/fixtures/consumer/` (GitHub:
 https://github.com/vdavid/smb2/tree/main/crates/smb2/src/testing/fixtures/consumer)
 
-**Synced from:** smb2 v0.27.1 (commit `8b55345`), byte-identical to the published crate's
-`src/testing/fixtures/consumer/` apart from the two cmdr-owned files. Keep this line in step with the `smb2` version in
+**Synced from:** smb2 v0.28.0 (unchanged since v0.27.1, commit `8b55345`), identical to the published crate's
+`src/testing/fixtures/consumer/` apart from the two cmdr-owned files and the digest pins on each `FROM` line (Renovate
+pins them here; a re-vendor keeps them). Keep this line in step with the `smb2` version in
 `Cargo.lock`: the published crate ships the fixtures, so
 `diff -r ~/.cargo/registry/src/*/smb2-<version>/src/testing/fixtures/consumer apps/desktop/test/smb-servers/.compose`
 shows drift against the locked version (expect only `VENDORED.md` and `docker-compose.override.yml`).

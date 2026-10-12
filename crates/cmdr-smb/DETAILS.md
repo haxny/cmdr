@@ -132,10 +132,11 @@ on", not by watching a number.
   volume-relative paths and the share-relative ones smb2 speaks; `query` reads the share without changing it (listings,
   metadata, existence, space); `mutation` changes it and patches the listings that showed it; then `session`,
   `reconnect`, `state`, `streams`, `scan`, `scan_pool`, `watcher`, `foreground_yield`, `slow_calls` (the rolled-up
-  `warn` for a metadata call the server held over a second), and the stateless `mapping`. Splitting further needs a
-  responsibility you can name the same way; a line count is not one. `e5ea10d02` reverted four splits invented to
-  satisfy the counter, and every one of them had widened a visibility or torn a struct from its trait impl to do it.
-  These carry the same `pub(super)` the crate already used and leave no module reaching into another's internals.
+  `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path), and the stateless
+  `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not one. `e5ea10d02`
+  reverted four splits invented to satisfy the counter, and every one of them had widened a visibility or torn a struct
+  from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no module reaching
+  into another's internals.
 - **`volume/foreground_yield.rs` answers "should a background transfer stand aside?" from the WORK, not the transport.**
   MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over one connection, so there is
   nothing on the transport to count. A foreground LISTING is a scoped operation, though, so it holds a per-volume lease
@@ -568,13 +569,13 @@ source's metadata".
 - **The scan pool's prefetch stays dateless**: enrichment never copies those bytes.
 - **Destination half: `write_from_stream_impl` stamps `LastWriteTime` and `CreationTime`**, both in the one
   `FILE_BASIC_INFORMATION` (`source_times`; access and change times go as 0, "don't change"), so the creation date costs
-  no frame. It asks the stream for `CREATED` alone: mode, flags, and xattrs aren't settable over this client yet. Best
-  effort: a refused stamp is a `warn!` and the copy succeeds. Gotcha/Why: the server rewrites a file's date when the
-  handle that WROTE it closes, so the moment matters. The streaming writer stamps its own handle before `finish()`
-  (`stamp_writer`, which `FileWriter::set_times` orders after the pending writes); the one-frame compound write has
-  already closed its handle, so it stamps by path right after, one more compound frame (CREATE+SET_INFO+CLOSE). ❌ Never
-  stamp by path while a writer is still open: its close wins. A one-shot write to the user's real name (unstaged,
-  `write_is_single_shot`) shows the server's dates for that one frame.
+  no frame. It asks the stream for `CREATED` and the flags (§ "Hidden and Locked on copies"); a share has no mode, and
+  xattrs wait for named streams. Best effort: a refused stamp is a `warn!` and the copy succeeds. Gotcha/Why: the server
+  rewrites a file's date when the handle that WROTE it closes, so the moment matters. The streaming writer stamps its
+  own handle before `finish()` (`stamp_writer`, which `FileWriter::set_times` orders after the pending writes); the
+  one-frame compound write has already closed its handle, so it stamps by path right after, one more compound frame
+  (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a writer is still open: its close wins. A one-shot write to the
+  user's real name (unstaged, `write_is_single_shot`) shows the server's dates for that one frame.
 - **The landing rename keeps `CreationTime`** (verified on the Docker guest share, Samba 4.20.6 with
   `store dos attributes = yes`,
   `conformance_test.rs::smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract`, 2026-10-11):
@@ -595,8 +596,37 @@ source's metadata".
 - **Folders: `apply_metadata` stamps `CreationTime` and `LastWriteTime` by path** (`mutation.rs::set_times_impl`,
   `Tree::set_times`, which opens with no create options so a directory opens like a file; one frame for both), then
   patches the parent listing with a `Modified`. The copy engine calls it on each folder it created once the contents
-  landed. Mode, flags, and xattrs answer `NotApplicable`. Pinned by `smb_integration_apply_metadata_dates_a_folder`, the
+  landed. Mode and xattrs answer `NotApplicable`. Pinned by `smb_integration_apply_metadata_dates_a_folder`, the
   creation-date conformance cell, and the engine's `smb_integration_folders_copied_*` cells.
+
+## Hidden and Locked on copies
+
+The contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
+source's metadata". Finder's Locked is the DOS `READONLY` attribute, its Hidden is `HIDDEN` (`mapping.rs`:
+`user_flags_of`, `attributes_of`). Append-only and no-dump have no attribute and drop.
+
+- **Reads ride the CREATE response a read already gets**: `FileInfo.attributes` on both read paths (`streams.rs`), so a
+  file's flags cost no frame. A folder has no read, so `folder_metadata` spends one `stat` (`attributes.rs`); the app
+  asks only when its destination keeps a folder's flags.
+- **A dotfile's Hidden is its name's, never a flag.** Samba reports every dotfile `HIDDEN` (`hide dot files`, on by
+  default), and the name already hides it; a local copy wearing `UF_HIDDEN` too would stay hidden after a rename.
+- **Hidden rides the write's dates frame** (`source_times`: `FileTimes::set_attributes` in the same
+  `FILE_BASIC_INFORMATION`), so a Hidden file costs no frame. `METADATA_CAPS.staged_flags` says so to the engine.
+- **Read-only goes on only after the landing**, through `apply_metadata` with the whole set and the dates in one
+  compound (one frame for a Locked file alone). Gotcha/Why: Samba RENAMES a Read-only file, as Windows does, but refuses
+  to DELETE one (`STATUS_CANNOT_DELETE`, files and folders alike), so a staged temp wearing it couldn't be taken away by
+  a cancel or a failed landing.
+- **Sending attributes REPLACES the settable set**: an empty set goes as `NORMAL`, which clears them. So
+  `apply_metadata` sends nothing for a set with neither flag, and a Hidden or Locked copy doesn't wear the `ARCHIVE` a
+  fresh Samba file gets (nothing on a Mac reads it).
+- **`STATUS_CANNOT_DELETE` maps to `VolumeError::PermissionDenied`** (by status, `map_smb_error`), which is what lets a
+  reversal clear and retry: `Volume::clear_blockers` reads the attributes (one `stat`) and drops `READONLY`, keeping the
+  rest. Only the app's reversals call it, on an item they verified as their own.
+- **Evidence** (verified on the Docker guest share, Samba 4.20.6, default `map readonly = no` and
+  `store dos attributes = yes`, 2026-10-12): `attributes_integration_test.rs`, which pins Hidden on the write (one-frame
+  and streamed), Read-only after it, the rename and the refused delete, the unlock, and the dotfile rule. Through the
+  app's pipeline: `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/smb_flags_test.rs` (onto and
+  off the share, and a rollback of Locked copies). The QNAP answer is unverified.
 
 ## Copy concurrency and the credit window
 

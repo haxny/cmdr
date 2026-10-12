@@ -9,10 +9,10 @@ dates across volumes (`docs/notes/transfer-metadata-experiments-2026-10-11.md`).
 
 **Status**: M0 (characterization), M1 (the Locked landing), M2 (extract quarantine), M3 (local files), M4 (local
 folders), M5a (creation dates across volumes, SMB first), and M5b (the loss note) done (2026-10-11), M8 (archives) and
-M9 (SFTP, S3, WebDAV, MTP, ADB) done (2026-10-12); review rounds 1 (correctness and data safety), 2 (architecture,
-resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the code, fixture
-verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the file:line
-citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
+M9 (SFTP, S3, WebDAV, MTP, ADB) and M6 (SMB Hidden and Locked) done (2026-10-12); review rounds 1 (correctness and data
+safety), 2 (architecture, resource cost, executability, Linux, SMB), and 3 (coherence, the M5a seam traced against the
+code, fixture verifiability, M0/M1 agent-readiness) folded in. Issue: none yet. Evidence: the notes file above, plus the
+file:line citations in § "Fresh read". Sizes are rough agent-sessions (one session ≈ one focused milestone agent run).
 
 ## Loud rules
 
@@ -265,9 +265,10 @@ Paths are from the repo root; `T` = `apps/desktop/src-tauri/src/file_system/writ
   QNAP-shaped `vfs_fruit` answer stays unverified until M7's fixture.
 - **Same-FS move**: keeps everything; a Locked item FAILS (`rename` `EPERM`, out of scope). **Cross-FS local move**: the
   chunked row, made permanent; a Locked source stays behind (Phase 4 can't delete it).
-- **Local → SMB (direct)**: mtime and birth keep (M5a, files and folders); hidden/Locked LOST (needs smb2 attributes);
-  xattrs LOST (needs smb2#9 + a server with streams); mode/ACL n/a.
-- **SMB → local**: mtime and birth keep (M5a, files and folders); hidden/readonly LOST; xattrs LOST (smb2#9).
+- **Local → SMB (direct)**: mtime and birth keep (M5a, files and folders); Hidden and Locked keep (M6, files and
+  folders); xattrs LOST (needs smb2#9 + a server with streams); mode/ACL n/a.
+- **SMB → local**: mtime and birth keep (M5a, files and folders); Hidden and Locked keep (M6; a dotfile's Hidden stays
+  its name's); xattrs LOST (smb2#9).
 - **SMB → SMB copy** (any share: `SmbVolume` has no server-side copy, so even a same-share copy streams): mtime and
   birth keep (M5a). A move within one share renames and keeps all.
 - **Local ↔ SFTP**: mtime and file mode keep both ways (M9, folded, a private file streamed private); birth n/a; folder
@@ -906,6 +907,29 @@ decided; then the ask itself, creation and modification dates on files AND folde
   smb2's own integration test against the QNAP (read-only checks only: ❌ never write to David's NAS without asking).
 - **DONE**: Finder, through a fresh mount, shows Hidden and Locked on files and folders Cmdr copied to the share, and a
   copy back keeps them.
+
+- **Done** (2026-10-12). Where the code differs from the plan above:
+  - **smb2 0.28.0** carries `FileAttributes` on `FileInfo`/`DirectoryEntry` and `FileTimes::set_attributes` (an empty
+    set goes as `NORMAL`); the fixtures didn't change, so no re-vendor.
+  - **`MetadataCaps::staged_flags`**: which flags a destination's WRITE keeps on the staged temp (SMB: Hidden; local and
+    `InMemoryVolume`: none). `CarriedMetadata::after_landing(staged)` is empty when the write kept every flag the file
+    has, else the WHOLE set, because SMB's attribute write replaces the set. So a Hidden file onto SMB costs no frame
+    after its landing, a Locked one costs one.
+  - **The engine's snapshot** lives in `transfer/volume/landed_flags.rs`. A safe-replace temp the caller lands is held
+    on `WriteOperationState::flags_after_landing` until `finalize_safe_replace` (now taking the state) swaps it in.
+    Local disk now claims `FLAGS` in `stores` (macOS), so a cross-volume copy onto it keeps Hidden and Locked too.
+  - **Folders**: `FolderMetadata` asks a source for a folder's flags only when the destination keeps them. Local disk
+    answers off its `lstat`; SMB spends one `stat` per folder (a listing entry has no field for them), the one new
+    per-folder round trip on a remote source, paid only by a copy that keeps the flags. A folder's flags lost count only
+    when refused.
+  - **Rule 9 through the trait**: `Volume::clear_blockers` (default `NothingToClear`; local clears flags and ACL, SMB
+    drops `READONLY`), and one shared removal, `write_operations/unblocked_removal.rs`, which the journal rollback and
+    the volume engine's in-flight rollback (`cleanup.rs`, files and created folders) both go through. SMB's
+    `STATUS_CANNOT_DELETE` maps to `PermissionDenied`.
+  - **Verified on Samba 4.20.6**: Read-only RENAMES (like Windows) but refuses DELETE, so rule 3 still holds it until
+    the landing for the temp's removability; Samba marks every dotfile Hidden, which a copy doesn't turn into a flag.
+    `crates/cmdr-smb/DETAILS.md` § "Hidden and Locked on copies".
+  - No new user-facing strings.
 
 ### M7: SMB keeps Finder tags, comments, icons, and resource forks. Size: L (blocked)
 

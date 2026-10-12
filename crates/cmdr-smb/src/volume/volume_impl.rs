@@ -13,7 +13,7 @@ use super::state::ConnectionState;
 use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
+use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
@@ -21,22 +21,25 @@ use cmdr_fs::volume::{
     WriteMode,
 };
 use cmdr_fs::volume::{ListingProgress, Retirement};
-use log::{debug, warn};
+use log::debug;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 impl SmbVolume {
-    /// The creation date both ways, on files and folders, riding the frames a
-    /// date already costs (`DETAILS.md` § "Dates on copies"). Hidden and Locked
-    /// wait for smb2 to send attributes, the xattrs for named streams
-    /// (vdavid/smb2#9), and a share has no POSIX mode.
+    /// The creation date and Hidden and Locked both ways, on files and
+    /// folders, riding the frames a date already costs: Hidden goes on the
+    /// staged temp with its dates, and Read-only (Locked) only after the
+    /// landing, one frame for a Locked file alone (`DETAILS.md` § "Dates on
+    /// copies" and § "Hidden and Locked on copies"). The xattrs wait for named
+    /// streams (vdavid/smb2#9), and a share has no POSIX mode.
     pub const METADATA_CAPS: MetadataCaps = MetadataCaps {
-        stores: MetadataClasses::CREATED,
-        reports: MetadataClasses::CREATED,
-        folder_stores: MetadataClasses::CREATED,
+        stores: MetadataClasses::CREATED.union(MetadataClasses::FLAGS),
+        reports: MetadataClasses::CREATED.union(MetadataClasses::FLAGS),
+        folder_stores: MetadataClasses::CREATED.union(MetadataClasses::FLAGS),
         folder_dates: true,
+        staged_flags: UserFlags::HIDDEN,
     };
 }
 
@@ -309,38 +312,30 @@ impl Volume for SmbVolume {
         Box::pin(self.create_directory_impl(path))
     }
 
-    /// The creation and modification dates, in the one frame a date alone
-    /// costs. Mode, flags, and xattrs aren't settable over this client yet:
-    /// `NotApplicable` (`DETAILS.md` § "What a copy keeps").
+    /// The creation and modification dates and Hidden and Locked, in the one
+    /// frame a date alone costs (`attributes.rs`).
     fn apply_metadata<'a>(
         &'a self,
         path: &'a Path,
         carried: &'a CarriedMetadata,
         modified: Option<std::time::SystemTime>,
     ) -> Pin<Box<dyn Future<Output = MetadataReport> + Send + 'a>> {
-        Box::pin(async move {
-            let mut report = MetadataReport::none_applicable(carried, modified);
-            if carried.created.is_none() && modified.is_none() {
-                return report;
-            }
-            let outcome = match self.set_times_impl(path, carried.created, modified).await {
-                Ok(()) => ClassOutcome::Kept,
-                Err(e) => {
-                    warn!(
-                        "SmbVolume::apply_metadata: {} keeps the server's dates, not the source's: {e}",
-                        path.display()
-                    );
-                    ClassOutcome::Refused
-                }
-            };
-            if carried.created.is_some() {
-                report.created = outcome;
-            }
-            if modified.is_some() {
-                report.modified = outcome;
-            }
-            report
-        })
+        Box::pin(self.apply_metadata_impl(path, carried, modified))
+    }
+
+    /// A folder's Hidden and Locked: one `stat` round trip (`attributes.rs`).
+    fn folder_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+        wanted: MetadataClasses,
+    ) -> Pin<Box<dyn Future<Output = CarriedMetadata> + Send + 'a>> {
+        Box::pin(self.folder_metadata_impl(path, wanted))
+    }
+
+    /// Clears `READONLY`, for a reversal whose removal was refused
+    /// (`attributes.rs`).
+    fn clear_blockers<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Unblock> + Send + 'a>> {
+        Box::pin(self.clear_blockers_impl(path))
     }
 
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
@@ -528,8 +523,7 @@ impl Volume for SmbVolume {
                             if data.len() as u64 == size {
                                 let modified_at = info.modified.to_system_time();
                                 return Ok(Box::new(
-                                    InlineReadStream::new(data, modified_at)
-                                        .with_created(info.created.to_system_time()),
+                                    InlineReadStream::new(data, modified_at).with_source_info(&info, &smb_path),
                                 ) as Box<dyn VolumeReadStream>);
                             }
                             debug!(

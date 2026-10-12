@@ -143,10 +143,17 @@ impl CarriedMetadata {
         worth
     }
 
-    /// The part of this set that goes on only AFTER the landing rename,
-    /// because on the staged item it would refuse that rename: the user flags
-    /// (Locked does; the rest land with it so Hidden can't race ahead).
-    pub fn after_landing(&self) -> Self {
+    /// The part of this set a copy puts on only AFTER the landing rename, onto
+    /// a destination whose write keeps `staged` flags on the staged temp
+    /// ([`super::MetadataCaps::staged_flags`]): the whole flag set when it holds
+    /// any flag the write couldn't put on (Locked refuses the rename), so a
+    /// destination that sets its flags as one word keeps the rest too; nothing
+    /// otherwise, which is what lets a plain or Hidden-only file onto SMB cost no
+    /// frame after its landing.
+    pub fn after_landing(&self, staged: UserFlags) -> Self {
+        if self.flags.without(staged).is_empty() {
+            return Self::default();
+        }
         Self {
             flags: self.flags,
             ..Self::default()

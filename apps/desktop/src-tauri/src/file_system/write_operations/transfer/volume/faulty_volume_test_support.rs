@@ -150,6 +150,14 @@ macro_rules! forward_volume_methods {
             self.$inner.folder_metadata(path, wanted)
         }
     };
+    (@one $inner:ident, clear_blockers) => {
+        fn clear_blockers<'a>(
+            &'a self,
+            path: &'a ::std::path::Path,
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = ::cmdr_fs::metadata::Unblock> + Send + 'a>> {
+            self.$inner.clear_blockers(path)
+        }
+    };
     (@one $inner:ident, delete) => {
         fn delete<'a>(&'a self, path: &'a ::std::path::Path) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.delete(path)
@@ -388,6 +396,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         apply_metadata,
         metadata_caps,
         folder_metadata,
+        clear_blockers,
         supports_unknown_length_writes, write_is_single_shot, publishes_writes_whole,
     );
 

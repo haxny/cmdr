@@ -27,7 +27,7 @@ fn directory_entry_to_file_entry_file() {
         is_directory: false,
         created: smb2::pack::FileTime(133_485_408_000_000_000),
         modified: smb2::pack::FileTime(133_485_408_000_000_000),
-        attributes: smb2::FileAttributes::default(),
+        attributes: FileAttributes::default(),
     };
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share/Documents");
@@ -49,7 +49,7 @@ fn directory_entry_to_file_entry_directory() {
         is_directory: true,
         created: smb2::pack::FileTime::ZERO,
         modified: smb2::pack::FileTime::ZERO,
-        attributes: smb2::FileAttributes::default(),
+        attributes: FileAttributes::default(),
     };
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share");
@@ -248,5 +248,50 @@ fn map_smb_error_access_denied_is_not_misclassified() {
     assert!(
         matches!(&ve, VolumeError::PermissionDenied { path, .. } if path == "/Volumes/share/holiday.raw"),
         "PermissionDenied must carry the path, got: {ve:?}",
+    );
+}
+
+/// A Read-only item refusing its own removal is a permission refusal, which is
+/// what a reversal clears and retries on.
+#[test]
+fn map_smb_error_cannot_delete_is_a_permission_refusal() {
+    let err = smb2::Error::Protocol {
+        status: smb2::types::status::NtStatus::CANNOT_DELETE,
+        command: smb2::types::Command::SetInfo,
+    };
+    assert!(matches!(
+        map_smb_error(err, "/Volumes/Share/locked.txt"),
+        VolumeError::PermissionDenied { path, .. } if path == "/Volumes/Share/locked.txt"
+    ));
+}
+
+#[test]
+fn user_flags_of_maps_hidden_and_read_only() {
+    let both = FileAttributes::new(FileAttributes::HIDDEN | FileAttributes::READONLY | FileAttributes::ARCHIVE);
+    assert_eq!(user_flags_of(both, "notes.txt"), UserFlags::HIDDEN | UserFlags::LOCKED);
+    assert_eq!(
+        user_flags_of(FileAttributes::new(FileAttributes::ARCHIVE), "notes.txt"),
+        UserFlags::NONE
+    );
+}
+
+/// Samba marks every dotfile Hidden; its name already hides it, so a copy
+/// doesn't add a flag on top.
+#[test]
+fn a_dot_names_hidden_is_its_name_not_a_flag() {
+    let both = FileAttributes::new(FileAttributes::HIDDEN | FileAttributes::READONLY);
+    assert_eq!(user_flags_of(both, ".profile"), UserFlags::LOCKED);
+}
+
+#[test]
+fn attributes_of_maps_the_flags_an_smb_item_can_wear() {
+    assert_eq!(
+        attributes_of(UserFlags::HIDDEN | UserFlags::LOCKED | UserFlags::NO_DUMP),
+        FileAttributes::new(FileAttributes::HIDDEN | FileAttributes::READONLY)
+    );
+    assert_eq!(
+        attributes_of(UserFlags::APPEND_ONLY | UserFlags::NO_DUMP).bits(),
+        0,
+        "no SMB attribute stands for these"
     );
 }

@@ -313,6 +313,7 @@ async fn a_double_configured_to_a_backends_caps_honors_them() {
         reports: MetadataClasses::CREATED,
         folder_stores: MetadataClasses::CREATED,
         folder_dates: true,
+        staged_flags: crate::metadata::UserFlags::NONE,
     });
 
     conformance::assert_write_from_stream_keeps_metadata(&volume, Path::new("/born.txt")).await;
@@ -361,7 +362,9 @@ async fn the_double_keeps_xattrs_on_the_write_and_flags_after_it() {
     );
     let dest = InMemoryVolume::new("Dest");
     let stream = source.open_read_stream(Path::new("/tagged.txt")).await.expect("open");
-    let after_landing = stream.metadata(MetadataClasses::ALL).after_landing();
+    let after_landing = stream
+        .metadata(MetadataClasses::ALL)
+        .after_landing(InMemoryVolume::REFERENCE_CAPS.staged_flags);
     dest.write_from_stream(
         Path::new("/tagged.txt"),
         WriteMode::CreateNew,

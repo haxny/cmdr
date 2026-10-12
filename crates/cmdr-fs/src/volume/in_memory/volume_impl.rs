@@ -285,9 +285,9 @@ impl Volume for InMemoryVolume {
         })
     }
 
-    /// A folder's stored xattrs, the one class a folder reports beyond its
-    /// listing entry, within `wanted` and the caps' `reports`. Empty for a file
-    /// or a missing path.
+    /// A folder's stored xattrs and flags, the classes a folder reports beyond
+    /// its listing entry, within `wanted` and the caps' `reports`. Empty for a
+    /// file or a missing path.
     fn folder_metadata<'a>(
         &'a self,
         path: &'a Path,
@@ -301,6 +301,7 @@ impl Volume for InMemoryVolume {
             };
             CarriedMetadata {
                 xattrs: entry.extra.xattrs.clone(),
+                flags: entry.extra.flags,
                 ..CarriedMetadata::default()
             }
             .restricted_to(wanted.intersection(self.metadata_caps.reports))
@@ -641,9 +642,11 @@ impl Volume for InMemoryVolume {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
         Box::pin(async move {
-            // What it keeps, which never holds the flags: a real destination
-            // puts those on only after the landing rename (`Volume::apply_metadata`).
-            let carried = stream.metadata(self.metadata_caps.stores.without(MetadataClasses::FLAGS));
+            // What it keeps: of the flags only `staged_flags`, the ones a real
+            // destination puts on the staged temp; the copy puts the rest on
+            // after the landing rename (`Volume::apply_metadata`).
+            let mut carried = stream.metadata(self.metadata_caps.stores);
+            carried.flags = carried.flags.intersection(self.metadata_caps.staged_flags);
             let mut data = Vec::new();
             let mut bytes_written = 0u64;
 

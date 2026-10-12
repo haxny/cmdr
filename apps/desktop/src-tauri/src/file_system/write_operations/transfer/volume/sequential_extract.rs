@@ -196,7 +196,7 @@ pub(super) async fn extract_sequential_subtree(
         // so if it's told.
         let recorded = match planned.replaces {
             Replaces::ViaTemp(orig) => {
-                super::finalize::finalize_safe_replace(dest_volume, &planned.dest_path, &orig)
+                super::finalize::finalize_safe_replace(dest_volume, &planned.dest_path, &orig, state)
                     .await
                     .map_err(|e| PathedVolumeError::at_destination(e, &orig))?;
                 created.record_overwrite();

@@ -22,6 +22,7 @@ use std::sync::Arc;
 use std::sync::RwLock as StdRwLock;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize};
 
+mod attributes;
 mod foreground_yield;
 mod liveness;
 mod mapping;
@@ -624,6 +625,8 @@ mod params_normalization_test {
 // SMB cells whose other half is the app's own machinery (the transfer pipeline,
 // the volume registry, the listing cache); see `DETAILS.md` § "Which side a test
 // lives on".
+#[cfg(test)]
+mod attributes_integration_test;
 #[cfg(test)]
 mod conformance_test;
 #[cfg(test)]

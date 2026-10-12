@@ -12,6 +12,7 @@ const SMB_LIKE: MetadataCaps = MetadataCaps {
     reports: MetadataClasses::CREATED,
     folder_stores: MetadataClasses::CREATED,
     folder_dates: true,
+    staged_flags: UserFlags::NONE,
 };
 
 /// What a source reports and the destination can't store is at risk, and only
@@ -107,4 +108,27 @@ fn a_quarantine_alone_is_not_worth_reporting() {
 #[test]
 fn nothing_carried_is_nothing_worth_keeping() {
     assert!(CarriedMetadata::default().worth_keeping(Some(at(1)), 0o644).is_empty());
+}
+
+/// What waits for the landing: nothing when the write kept every flag the file
+/// has, and then the WHOLE set, so a destination that replaces its flags as one
+/// word (SMB's attributes) doesn't drop the ones the write already put on.
+#[test]
+fn only_a_flag_the_write_couldnt_keep_sends_the_set_after_the_landing() {
+    let with = |flags| CarriedMetadata {
+        flags,
+        created: Some(at(1)),
+        ..CarriedMetadata::default()
+    };
+    assert!(with(UserFlags::NONE).after_landing(UserFlags::NONE).is_empty());
+    assert!(with(UserFlags::HIDDEN).after_landing(UserFlags::HIDDEN).is_empty());
+    let all_after = with(UserFlags::HIDDEN).after_landing(UserFlags::NONE);
+    assert_eq!(all_after.flags, UserFlags::HIDDEN);
+    assert!(all_after.created.is_none(), "only the flags wait for the landing");
+    assert_eq!(
+        with(UserFlags::HIDDEN | UserFlags::LOCKED)
+            .after_landing(UserFlags::HIDDEN)
+            .flags,
+        UserFlags::HIDDEN | UserFlags::LOCKED
+    );
 }

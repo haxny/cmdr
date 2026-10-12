@@ -56,6 +56,7 @@ pub(crate) struct FolderLosses {
     pub(crate) created: bool,
     pub(crate) modified: bool,
     pub(crate) xattrs: bool,
+    pub(crate) flags: bool,
 }
 
 /// Per-class counts of items that arrived without something worth keeping.
@@ -82,7 +83,7 @@ impl MetadataLosses {
     }
 
     /// A FOLDER the operation created arrived without its creation date, its
-    /// modification date, its xattrs, or any mix of them.
+    /// modification date, its xattrs, its flags, or any mix of them.
     pub(crate) fn note_folder(&self, lost: FolderLosses) {
         if lost.created {
             self.bump(LostMetadataClass::CreationDates);
@@ -92,6 +93,9 @@ impl MetadataLosses {
         }
         if lost.modified {
             self.bump(LostMetadataClass::FolderDates);
+        }
+        if lost.flags {
+            self.bump(LostMetadataClass::LockedAndHidden);
         }
     }
 

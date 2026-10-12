@@ -240,6 +240,11 @@ pub struct WriteOperationState {
     /// What this operation couldn't carry of its sources' metadata, per class,
     /// for the note on its completion: [`super::metadata_losses`].
     pub(crate) metadata_losses: super::metadata_losses::MetadataLosses,
+    /// The user flags each caller-landed safe-replace temp waits to wear until
+    /// it has its final name, keyed by that temp: sparse, since only a file
+    /// with Locked (or another flag its destination can't put on with the
+    /// write) has one. `transfer/volume/landed_flags.rs`.
+    pub(crate) flags_after_landing: std::sync::Mutex<HashMap<PathBuf, cmdr_fs::metadata::CarriedMetadata>>,
     /// The `com.apple.quarantine` of the local archive this operation extracts
     /// from, keyed by that archive's path and read once per operation. Every file
     /// and folder the extract creates carries it:
@@ -292,6 +297,7 @@ impl WriteOperationState {
             liveness: std::sync::Mutex::new(Some(Arc::new(()))),
             claimed_names: super::unique_name::ClaimedNames::default(),
             metadata_losses: super::metadata_losses::MetadataLosses::default(),
+            flags_after_landing: std::sync::Mutex::new(HashMap::new()),
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
         }

@@ -34,6 +34,7 @@ impl WebdavVolume {
         reports: MetadataClasses::NONE,
         folder_stores: MetadataClasses::CREATED,
         folder_dates: true,
+        staged_flags: cmdr_fs::metadata::UserFlags::NONE,
     };
 
     /// Whether the server keeps creation dates and a folder's dates, as its

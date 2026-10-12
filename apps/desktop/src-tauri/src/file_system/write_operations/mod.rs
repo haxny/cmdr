@@ -67,6 +67,7 @@ mod target_names;
 mod transfer;
 mod transfer_sides;
 mod types;
+mod unblocked_removal;
 mod unique_name;
 mod validation;
 

@@ -2,7 +2,7 @@
 //! backend states it, so the engine knows which classes a copy is about to leave
 //! behind, and the conformance layer holds every backend to its claim.
 
-use super::MetadataClasses;
+use super::{MetadataClasses, UserFlags};
 
 /// Which metadata classes a volume keeps on what a copy writes, and which its
 /// read streams report. mtime isn't a class here: every backend keeps a file's
@@ -17,10 +17,9 @@ use super::MetadataClasses;
 // that stores no metadata beyond a file's mtime.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MetadataCaps {
-    /// What a FILE a copy writes here keeps, through `Volume::write_from_stream`.
-    /// No volume claims the user flags yet: they'd go on after the landing,
-    /// which the volume engine starts doing in M6
-    /// (`docs/specs/transfer-metadata-preservation.md`).
+    /// What a FILE a copy writes here keeps: through `Volume::write_from_stream`,
+    /// and for the user flags also through the `Volume::apply_metadata` the copy
+    /// spends after the landing rename ([`Self::staged_flags`]).
     pub stores: MetadataClasses,
     /// What this volume's read streams report from what their open already
     /// holds (`VolumeReadStream::metadata`). A class not in here is unknown,
@@ -31,15 +30,24 @@ pub struct MetadataCaps {
     pub folder_stores: MetadataClasses,
     /// Whether a folder created here keeps its source's modification date.
     pub folder_dates: bool,
+    /// The user flags a FILE keeps through `write_from_stream` itself, on the
+    /// staged temp, because they refuse no rename (SMB's Hidden rides the
+    /// temp's SET_INFO). When a file carries any OTHER flag, the copy spends one
+    /// `apply_metadata` after the landing with the whole set
+    /// ([`CarriedMetadata::after_landing`](super::CarriedMetadata::after_landing)),
+    /// so a destination that sets its flags as one word (SMB's attributes)
+    /// keeps these too. Empty: every flag waits for the landing.
+    pub staged_flags: UserFlags,
 }
 
 impl MetadataCaps {
-    /// Keeps and reports nothing beyond a file's mtime: MTP, WebDAV, S3 today.
+    /// Keeps and reports nothing beyond a file's mtime: MTP and most WebDAV servers.
     pub const NONE: Self = Self {
         stores: MetadataClasses::NONE,
         reports: MetadataClasses::NONE,
         folder_stores: MetadataClasses::NONE,
         folder_dates: false,
+        staged_flags: UserFlags::NONE,
     };
 
     /// Reports a mode and keeps nothing: a source whose files carry a real mode
@@ -56,6 +64,7 @@ impl MetadataCaps {
         reports: MetadataClasses::ALL,
         folder_stores: MetadataClasses::ALL,
         folder_dates: true,
+        staged_flags: UserFlags::NONE,
     };
 
     /// The classes a FILE copied from `source` onto this volume can't keep,
