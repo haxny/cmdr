@@ -14,7 +14,8 @@ Centralized command registry and fuzzy search engine for the command palette.
 - **`fuzzy-search.ts`**: `searchCommands()` (palette set) + `searchAllCommands()` (full registry), via
   `@leeoniya/ufuzzy`.
 - Tests: `fuzzy-search.test.ts`, `command-registry.test.ts` (set-equality + palette pin), `command-types.test.ts`
-  (arg-shape guards), `rust-command-id-drift.test.ts` (Rust-emitted ids ∈ `COMMAND_IDS`).
+  (arg-shape guards), `rust-command-id-drift.test.ts` (Rust ids ∈ `COMMAND_IDS`), `command-reachability.test.ts` (a key,
+  a palette row, or a reasoned exemption).
 
 ## Must-knows (invariants and guardrails)
 
@@ -58,6 +59,5 @@ Centralized command registry and fuzzy search engine for the command palette.
 
 ## Adding a command
 
-Full step list in `DETAILS.md` § "Adding a command", as is everything else: the type definitions, the two labels, the
-uFuzzy config and ranking, `searchAllCommands`, the `view.showHidden` local-first path, decision rationale. The guards
-above catch most omissions; the four-places gotcha covers the menu-item case.
+Full step list in `DETAILS.md` § "Adding a command", with everything else (types, labels, uFuzzy ranking, rationale).
+The guards above catch most omissions; the four-places gotcha covers the menu-item case.
