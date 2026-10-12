@@ -4512,12 +4512,6 @@
       "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree"
     },
     {
-      "name": "@typescript-eslint/types",
-      "version": "8.71.1",
-      "license": "MIT",
-      "url": "https://typescript-eslint.io"
-    },
-    {
       "name": "@zag-js/accordion",
       "version": "1.45.0",
       "license": "MIT",
