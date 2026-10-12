@@ -10,10 +10,10 @@
 use std::path::{Path, PathBuf};
 
 use cmdr_fs::volume::VolumeError;
+use serde::{Deserialize, Serialize};
 
 use crate::file_system::listing::diff::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
-use crate::file_system::listing::stalled_on::StalledOn;
 
 /// How one streaming listing ended. Exactly one per listing the engine starts.
 #[derive(Debug)]
@@ -81,6 +81,18 @@ impl ListingEnd {
             Self::Complete { path, .. } | Self::Cancelled { path, .. } | Self::Failed { path, .. } => path,
         }
     }
+}
+
+/// What a stalled listing's folder lives on, as far as the mount proves it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum StalledOn {
+    /// A network share or a direct server connection (SMB, NFS, AFP, WebDAV, SFTP, S3, ...).
+    Server,
+    /// A known local disk: a block device, or a local filesystem type.
+    Drive,
+    /// Anything else: a phone, a FUSE or cloud mount, or a mount we couldn't read.
+    Unknown,
 }
 
 /// Where the engine reports what happened to a listing.

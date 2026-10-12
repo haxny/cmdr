@@ -7,8 +7,9 @@ use super::caching::notify_added;
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff::{DiffChangeType, compute_diff};
 use super::diff_emitter::{hold_for_test, pending_changes_for_test, take_batches_for_test};
-use super::name_filter::{NameFilter, set_listing_name_filter};
+use super::name_filter::NameFilter;
 use super::operations::{find_file_index, get_file_at, get_total_count, update_listing_entries};
+use super::quick_filter::set_listing_name_filter;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_fs::entry::FileEntry;
 
@@ -183,7 +184,7 @@ fn a_new_epoch_enqueue_between_filter_unlock_and_return_survives_flush() {
     let listing = pane("name-filter-new-epoch-pending-race");
     notify_added(listing.id(), entry("echo.txt"));
 
-    let result = super::name_filter::set_listing_name_filter_inner(
+    let result = super::quick_filter::set_listing_name_filter_inner(
         listing.id(),
         Some("pdf"),
         false,
@@ -267,7 +268,7 @@ fn one_onet_onets(tag: &str) -> TestListingGuard {
     listing
 }
 
-fn type_pattern(listing: &TestListingGuard, pattern: &str) -> super::name_filter::NameFilterResult {
+fn type_pattern(listing: &TestListingGuard, pattern: &str) -> super::quick_filter::NameFilterResult {
     set_listing_name_filter(listing.id(), Some(pattern), false, None, &[], true).expect("listing is cached")
 }
 
@@ -382,7 +383,7 @@ fn a_filter_change_invalidates_guarded_selection_from_the_previous_rows() {
     let snapshot = get_selection_snapshot(listing.id(), false, &[1], 1).unwrap();
     assert_eq!(snapshot.paths, vec![entry("charlie.pdf").path]);
     assert!(matches!(
-        super::name_filter::set_listing_name_filter_guarded(listing.id(), None, false, None, &[1], false, Some(0)),
+        super::quick_filter::set_listing_name_filter_guarded(listing.id(), None, false, None, &[1], false, Some(0)),
         Err(ListingLookupError::Changed { .. })
     ));
     assert_eq!(row_names(&listing), vec!["alpha.pdf", "charlie.pdf"]);
@@ -408,12 +409,27 @@ fn scratch_drift_is_reconciled_before_a_guarded_filter_consumes_selection() {
     assert_eq!(row_names(&listing), vec!["z.pdf"]);
     drop(owner);
     assert!(matches!(
-        super::name_filter::set_listing_name_filter_guarded(listing.id(), Some("z"), false, None, &[0], false, Some(0)),
+        super::quick_filter::set_listing_name_filter_guarded(
+            listing.id(),
+            Some("z"),
+            false,
+            None,
+            &[0],
+            false,
+            Some(0)
+        ),
         Err(ListingLookupError::Changed { .. })
     ));
-    let result =
-        super::name_filter::set_listing_name_filter_guarded(listing.id(), Some("z"), false, None, &[1], false, Some(1))
-            .unwrap();
+    let result = super::quick_filter::set_listing_name_filter_guarded(
+        listing.id(),
+        Some("z"),
+        false,
+        None,
+        &[1],
+        false,
+        Some(1),
+    )
+    .unwrap();
     assert_eq!(result.new_selected_indices, vec![0]);
     assert_eq!(result.sequence, Some(2));
     assert_eq!(row_names(&listing), vec!["z.pdf"]);

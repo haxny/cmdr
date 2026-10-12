@@ -2,7 +2,7 @@
 
 use crate::file_system::get_files_at_indices as ops_get_files_at_indices;
 use crate::file_system::get_paths_at_indices as ops_get_paths_at_indices;
-use crate::file_system::listing::name_filter::set_listing_name_filter_guarded as ops_set_listing_name_filter;
+use crate::file_system::listing::quick_filter::set_listing_name_filter_guarded as ops_set_listing_name_filter;
 use crate::file_system::{
     DirectorySortMode, ListingLookupError, ListingStats, NameFilterResult, ResortResult, RowBeside, SortColumn,
     SortOrder, StreamingListingStartResult, cancel_listing as ops_cancel_listing,

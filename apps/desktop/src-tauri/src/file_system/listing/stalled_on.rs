@@ -6,23 +6,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
-
 use cmdr_fs::volume::{BackendKind, Volume};
 
+pub use crate::file_system::listing::host::events::StalledOn;
 use crate::file_system::listing::host::{self, MountTable};
-
-/// What a stalled listing's folder lives on, as far as the mount proves it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub enum StalledOn {
-    /// A network share or a direct server connection (SMB, NFS, AFP, WebDAV, SFTP, S3, ...).
-    Server,
-    /// A known local disk: a block device, or a local filesystem type.
-    Drive,
-    /// Anything else: a phone, a FUSE or cloud mount, or a mount we couldn't read.
-    Unknown,
-}
 
 /// How long the stall report waits for the symlink-resolving probe before it
 /// settles for [`StalledOn::Unknown`]. A healthy local disk resolves in

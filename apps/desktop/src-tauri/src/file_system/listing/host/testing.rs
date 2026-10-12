@@ -6,11 +6,11 @@ use std::sync::{Arc, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 
+use super::events::StalledOn;
 use super::events::{ListingEnd, ListingEvents};
 use super::{ListingObserver, ListingOverlay, ListingSeams};
 use crate::file_system::listing::diff::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
-use crate::file_system::listing::stalled_on::StalledOn;
 
 /// What the slot holds in a test binary, where nothing installs: the app's
 /// test stand-in (`crate::listing_host::test_seams`).

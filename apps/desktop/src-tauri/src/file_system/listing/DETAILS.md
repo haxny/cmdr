@@ -231,11 +231,14 @@ copies (`newerAndMissing`, TC's default), nothing more (`missing`), or both copi
 - **Two seconds apart is the same time** (`SAME_TIME_TOLERANCE_SECS`): FAT and many shares store time in 2 s steps. An
   unknown time or size never marks a copy; only a difference we can see does.
 - No content comparison: like TC's ⇧F2, it reads metadata only. Byte comparison belongs to Synchronize directories.
-## Quick filter (name_filter.rs)
+## Quick filter (name_filter.rs, quick_filter.rs)
 
 The pane's "type to narrow" mode (Total Commander's quick filter). The pattern lives on the `CachedListing`
 (`set_name_filter`) and is one more input to the row predicate (`visible_rows::shows`), so it is NOT a second filter
 point: counts, ranges, selection, type-to-jump, and `directory-diff` rows all speak the filtered row space.
+`name_filter.rs` is the pure matcher (`NameFilter`), which the row map and the diff read; `quick_filter.rs` is the pane
+setting that swaps it under the cache lock. Split so the matcher depends on nothing in the cache, which is what keeps
+`cached_listing` → `visible_rows` → `name_filter` from cycling back through `operations`.
 
 - **Decision: the filter is the listing's, not a per-call argument like `include_hidden`.** Why: every pane-index IPC
   already carries `include_hidden`; threading a pattern through all of them would touch every caller for no gain, since
