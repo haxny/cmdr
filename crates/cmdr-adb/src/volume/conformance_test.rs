@@ -183,7 +183,62 @@ async fn a_copy_keeps_the_source_date_over_the_v1_verbs() {
     conformance::assert_read_stream_reports_the_listed_date(volume.as_ref(), &dated).await;
 }
 
+/// Holds the device to `AdbVolume::METADATA_CAPS`: its streams report the mode
+/// the listing shows, and a write keeps no class it doesn't claim.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_shared_metadata_contract() {
+    let (_server, volume) = seeded().await;
+    let born = fixture_path("/sdcard/born.txt");
+    conformance::assert_write_from_stream_keeps_metadata(volume.as_ref(), &born).await;
+    conformance::assert_read_stream_reports_the_listed_metadata(volume.as_ref(), &born).await;
+}
+
 // ── This backend's own cells ─────────────────────────────────────────
+
+/// `SEND` carries the source's mode, folded under the user's umask, where a
+/// source has one, and `adb push`'s `0660` where it doesn't. The fake keeps
+/// what it's sent, the way `/data/local/tmp` does; `/sdcard` ignores it
+/// (`DETAILS.md` § "The `Volume` answers, and why").
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copy_sends_the_sources_mode_and_a_modeless_one_lands_as_adb_push_would() {
+    let (_server, volume) = seeded().await;
+    for (name, mode) in [
+        ("private.txt", Some(0o600)),
+        ("run.sh", Some(0o4755)),
+        ("plain.txt", None),
+    ] {
+        // A source that reports no mode at all (an SMB share, a phone over MTP).
+        let caps = if mode.is_some() {
+            cmdr_fs::metadata::MetadataCaps::ALL
+        } else {
+            cmdr_fs::metadata::MetadataCaps::NONE
+        };
+        let source = cmdr_fs::volume::InMemoryVolume::new("Source").with_metadata_caps(caps);
+        let from = std::path::PathBuf::from(format!("/{name}"));
+        source.create_file(&from, b"bytes").await.unwrap();
+        source.set_carried_metadata(
+            &from,
+            cmdr_fs::metadata::CarriedMetadata {
+                mode,
+                ..cmdr_fs::metadata::CarriedMetadata::default()
+            },
+        );
+        let stream = source.open_read_stream(&from).await.unwrap();
+        let dest = fixture_path(&format!("/sdcard/{name}"));
+        volume
+            .write_from_stream(&dest, WriteMode::CreateNew, StreamLength::Known(5), stream, &|_| {
+                std::ops::ControlFlow::Continue(())
+            })
+            .await
+            .unwrap();
+
+        let landed = volume.get_metadata(&dest).await.unwrap().permissions & 0o7777;
+        let expected = mode
+            .and_then(|mode| cmdr_fs::metadata::routed_mode(mode, cmdr_fs::metadata::default_file_mode()))
+            .unwrap_or(0o660);
+        assert_eq!(landed, expected, "{name}");
+    }
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_path_escaping_the_root_is_refused_before_any_io() {

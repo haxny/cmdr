@@ -27,8 +27,10 @@ use crate::sync::SyncSession;
 
 impl AdbVolume {
     /// Reports the mode, off the device's own `stat` its open already sends
-    /// (masked to `0o7777` in `mapping.rs`). Keeps nothing but a file's mtime:
-    /// `SEND` takes a fixed `0o660`, and the sync protocol has no folder dates.
+    /// (masked to `0o7777` in `mapping.rs`). Promises to keep nothing beyond a
+    /// file's mtime: `SEND` carries the folded mode, but `/sdcard` ignores it
+    /// (`DETAILS.md` § "The `Volume` answers, and why"), and the sync protocol
+    /// has no folder dates.
     pub const METADATA_CAPS: cmdr_fs::metadata::MetadataCaps = cmdr_fs::metadata::MetadataCaps::MODE_REPORTER;
 
     /// Runs `work`, noticing on the way out if the answer says the device is

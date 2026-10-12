@@ -126,6 +126,15 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   flags), so `done_mtime_word` clamps past 2106-02-07 and drops sub-seconds; the staging `mv -f` keeps the date. The
   same `stat` gives the stream its mode (`VolumeReadStream::metadata`), so a file copied onto local disk lands with it,
   folded through the umask. Both verb sets have a cell (`a_copy_keeps_the_source_date[_over_the_v1_verbs]`).
+- **A push sends the source's mode**: `SEND`'s mode word is the stream's mode folded under the user's umask
+  (`cmdr_fs::metadata::routed_mode`: never wider, no setuid), or `adb push`'s `0660` for a source that reports none
+  (`streams.rs::send_mode`). Zero cost: the word goes out either way. ❗ `/sdcard` ignores it (FUSE over the shared
+  storage hands every file the same mode), so `METADATA_CAPS` does NOT claim `MODE` in `stores`: the loss note keeps
+  saying permissions stayed behind, true on `/sdcard` where nearly every copy lands, and a false alarm only on
+  `/data/local/tmp` or a rooted device's own filesystems, which keep it. A per-path cap would need the trait to ask by
+  path. Pinned on the fake (which keeps what it's sent, like `/data/local/tmp`) by
+  `a_copy_sends_the_sources_mode_and_a_modeless_one_lands_as_adb_push_would`; the `/sdcard` claim is unverified on a
+  real device.
 - **`rerooted` → `None`.** One volume per device; the pane's path is inside it. A device has no second root to offer.
 - **`lane_key` → the serial.** Two panes on one phone contend on one `adbd`, so they share a lane and the operation
   manager serializes their writes.

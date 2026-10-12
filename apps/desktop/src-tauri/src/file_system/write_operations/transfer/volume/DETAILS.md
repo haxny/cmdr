@@ -945,7 +945,9 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   or only what `with_metadata_caps` says, so it stands in for any backend's caps; keeps whole seconds, and moves a folder's date to now when an entry lands in or leaves it, which is what lets an
   engine test tell a folder dated after its contents from one dated before.
 - **ADB**: reports the open's `STAT`/`STA2` date and mode; writes the date as the push's `DONE` mtime (a u32: whole
-  seconds, clamped at 2106), falling back to now only for a dateless source (`crates/cmdr-adb/DETAILS.md`).
+  seconds, clamped at 2106), falling back to now only for a dateless source, and the folded mode as `SEND`'s mode
+  word (`0660` for a modeless source), which `/sdcard` ignores, so the caps don't claim it
+  (`crates/cmdr-adb/DETAILS.md`).
 - **MTP**: reports the `DateModified` from the `ObjectInfo` the read's open already fetched; writes it as the upload's
   `DateModified`, in UTC with a `Z` (`crates/cmdr-mtp/DETAILS.md` § "Dates on copies").
 - **SMB**: reports the server's `LastWriteTime` and `CreationTime` on both foreground read paths (streamed and one-frame

@@ -10,7 +10,7 @@
 use std::ops::ControlFlow;
 use std::path::Path;
 
-use cmdr_fs::metadata::CarriedMetadata;
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, default_file_mode, routed_mode};
 use cmdr_fs::staging::temp_sibling_name;
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
 use log::debug;
@@ -29,8 +29,23 @@ const STREAM_CHANNEL_CAPACITY: usize = 4;
 /// skipped regular-file blocks, then performs at most one extra block of I/O.
 const RANGE_BLOCK_BYTES: u64 = 64 * 1024;
 
-/// The mode a fresh file lands with: `rw-rw----`, what `adb push` uses.
+/// The mode a file from a modeless source lands with: `rw-rw----`, what `adb
+/// push` uses.
 const NEW_FILE_MODE: u32 = 0o100660;
+
+/// `S_IFREG`, the file-type bits `SEND`'s mode word carries.
+const S_IFREG: u32 = 0o100_000;
+
+/// The mode word `SEND` creates a file with: the source's mode folded under the
+/// user's umask (`cmdr_fs::metadata::routed_mode`: never wider, no setuid), or
+/// [`NEW_FILE_MODE`] for a source that reports none. `/sdcard` ignores it
+/// (`DETAILS.md` § "The `Volume` answers, and why"); `/data/local/tmp` and a rooted device's
+/// own filesystems keep it.
+fn send_mode(source_mode: Option<u32>) -> u32 {
+    source_mode
+        .and_then(|mode| routed_mode(mode, default_file_mode()))
+        .map_or(NEW_FILE_MODE, |mode| S_IFREG | mode)
+}
 
 impl AdbVolume {
     /// Opens `[offset, size)` of `path` for streaming.
@@ -188,8 +203,9 @@ impl AdbVolume {
         }
     }
 
-    /// The upload itself: `SEND`, one `DATA` frame per chunk, `DONE` with the
-    /// mtime, progress after every chunk the device took.
+    /// The upload itself: `SEND` with the source's folded mode, one `DATA` frame
+    /// per chunk, `DONE` with the mtime, progress after every chunk the device
+    /// took.
     ///
     /// The mtime is the source's date, so a copy keeps it; `DONE` must carry
     /// one, so a source without a date lands dated now, as `adb push` does.
@@ -204,7 +220,9 @@ impl AdbVolume {
         on_progress: &(dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
     ) -> Result<u64, VolumeError> {
         let map = |e| self.inner.map_adb_error(e, device);
-        session.send_start(staging, NEW_FILE_MODE).await.map_err(map)?;
+        // Asked before the first chunk, while the stream still holds its open's answer.
+        let mode = send_mode(stream.metadata(MetadataClasses::MODE).mode);
+        session.send_start(staging, mode).await.map_err(map)?;
         let mut written = 0u64;
         while let Some(chunk) = stream.next_chunk().await {
             let chunk = chunk?;
