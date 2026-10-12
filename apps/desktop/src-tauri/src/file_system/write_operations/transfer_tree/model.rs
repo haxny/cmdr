@@ -277,10 +277,10 @@ impl TreeModel {
         if id.0 >= agg.first_child && id.0 < agg.first_child + agg.child_count {
             return id.0 - agg.first_child;
         }
-        let extras = &self.extra_children[&parent.0];
-        let at = extras
-            .iter()
-            .position(|extra| *extra == id)
+        // `discover` appends fresh ids, so a folder's extras ascend: a binary
+        // search keeps a view's focus path O(log k) inside a big opaque folder.
+        let at = self.extra_children[&parent.0]
+            .binary_search(&id)
             .expect("a child is either scanned or discovered");
         agg.child_count + at as u32
     }

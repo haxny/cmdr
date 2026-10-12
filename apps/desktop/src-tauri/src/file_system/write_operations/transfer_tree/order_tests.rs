@@ -2,12 +2,7 @@
 
 use std::cmp::Ordering;
 
-use super::TreeOrder;
-use cmdr_listing::testing::collator_for;
-
-fn english() -> TreeOrder {
-    TreeOrder::with_collator(collator_for("en"))
-}
+use super::super::test_support::english;
 
 #[test]
 fn folders_come_first_then_files_each_by_collation() {
