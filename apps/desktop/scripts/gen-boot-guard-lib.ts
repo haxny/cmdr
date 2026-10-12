@@ -1,6 +1,6 @@
 /**
  * Pure logic for the old-WebKit boot guard's build-time data, factored out of
- * the config-time entry point (`svelte.config.js`) so it's unit-testable.
+ * the config-time entry point (`vite.config.js`) so it's unit-testable.
  *
  * The guard is an inline ES5 `<script>` in `src/app.html`. It runs before the
  * module bundle loads, on a WebKit that in the worst case can't PARSE that

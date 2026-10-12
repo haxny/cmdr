@@ -250,7 +250,7 @@ a translated "Cmdr needs a newer Safari" screen instead of leaving a white one. 
 the dev override is the only routine way to see it.
 
 1. Run `VITE_CMDR_FORCE_OLD_WEBKIT=unsupported pnpm dev` from the repo root. The flag is read at BUILD time by
-   `svelte.config.js`, so it has to be set before the dev server starts; restarting an already-running one won't pick it
+   `vite.config.js`, so it has to be set before the dev server starts; restarting an already-running one won't pick it
    up.
 2. Confirm the screen paints: title, one paragraph, one Quit button, centered, correct in both light and dark mode.
 3. Click Quit. The app should exit. (It goes through `plugin:process|exit`, so the quit gate sees it like ⌘Q.)

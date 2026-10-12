@@ -73,7 +73,7 @@ const typeAwareRuleNames = [
   '@typescript-eslint/no-duplicate-type-constituents',
   '@typescript-eslint/no-redundant-type-constituents',
   // Rejects `void` on anything but a call. Our reactive-dependency reads go through
-  // `dependOn(...)` from `$lib/utils/reactivity`, so `void` is left meaning exactly one thing:
+  // `dependOn(...)` from `#lib/utils/reactivity`, so `void` is left meaning exactly one thing:
   // discarding a floating promise.
   '@typescript-eslint/no-meaningless-void-operator',
   '@typescript-eslint/no-mixed-enums',
@@ -186,7 +186,7 @@ export default tseslint.config(
     // Fixture generators and JS config files need Node globals. The `scripts/` dev/build
     // scripts are all TypeScript and get Node globals plus type-aware rules from the
     // TypeScript block above.
-    files: ['test/fixtures/**/*.js', 'vite.config.js', 'svelte.config.js', 'vitest.config.ts', 'playwright.config.ts'],
+    files: ['test/fixtures/**/*.js', 'vite.config.js', 'vitest.config.ts', 'playwright.config.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -249,7 +249,7 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: '$lib/ui/TextInput.svelte',
+              name: '#lib/ui/TextInput.svelte',
               message:
                 'Use SettingTextInput for registry-backed text settings. Add a narrow config exemption only for transient or specialized non-setting behavior.',
             },
@@ -327,7 +327,7 @@ export default tseslint.config(
       // dropped-parameter mismatch and a swapped-argument mismatch have shipped as real bugs.
       'cmdr/no-confusable-callback-params': 'error',
       'cmdr/no-raw-tauri-invoke': 'error',
-      // Feature code imports typed wrappers from `$lib/tauri-commands`, never the
+      // Feature code imports typed wrappers from `#lib/tauri-commands`, never the
       // raw `commands`/`events` bindings (type imports from bindings stay fine).
       'cmdr/no-raw-bindings-import': 'error',
       'cmdr/no-explorer-state-writes': 'error',
@@ -345,13 +345,13 @@ export default tseslint.config(
       // plus the three sanctioned settings wrappers (see the rule).
       'cmdr/no-raw-ark-import': 'error',
       // One locale source, one formatting layer: feature code routes every
-      // user-facing number/size/date through `$lib/intl` and the central format
+      // user-facing number/size/date through `#lib/intl` and the central format
       // utils, never a raw `.toLocaleString(...)` or a hand-built `Intl.*`
       // formatter. Turned OFF for `*.test.ts` below (tests legitimately
       // construct `Intl.NumberFormat`/`DateTimeFormat` to compute expecteds).
       'cmdr/no-raw-locale-format': 'error',
       // One place turns a byte count, a transfer rate, or a duration into text:
-      // `$lib/units` (plus `<Size>` for the colored inline form). Four private
+      // `#lib/units` (plus `<Size>` for the colored inline form). Four private
       // byte formatters once drifted apart, each hardcoding base 1024 while
       // labelling the result "KB"/"MB"/"GB", which is how two windows came to
       // show different numbers for the same transfer. Turned OFF for `*.test.ts`

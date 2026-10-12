@@ -2069,7 +2069,7 @@ doubles as production code.
   settings-defaults (regenerates the defaults manifest from the desktop settings registry and diffs it). Stylelint,
   knip, and import-cycles run through the same `runStylelintCheck` / `runKnipCheck` / `runImportCyclesCheck` helpers the
   desktop lanes use, parameterized by app dir. `dashboard-build` is NOT redundant with `dashboard-svelte-check`: the
-  `$lib/server` boundary guard trips only at build time, so it's the only check standing between a stray runtime import
+  `#lib/server` boundary guard trips only at build time, so it's the only check standing between a stray runtime import
   and shipping a server-side API key into the browser bundle. The dashboard deliberately has no css-unused (Tailwind
   supplies every utility class, so "undefined class" would fire on all of them), no a11y-contrast (that tool models
   desktop's accent matrix and light/dark token pairs; the dashboard is dark-only), no type-drift (no Rust), and no
@@ -2363,18 +2363,19 @@ suppress `reportUnusedDisableDirectives` (since disable comments for type-aware 
 are still caught.
 
 **Decision**: `desktop-svelte-kit-sync` runs before every check that needs the TypeScript program. **Why**:
-`apps/desktop/tsconfig.json` extends the gitignored, generated `.svelte-kit/tsconfig.json`, and on a fresh tree (new
-clone or worktree) nothing else creates it before the checks run. Without it, typescript-eslint's projectService can't
-build a program: every imported type resolves to "could not be resolved", type-aware rules go silent, their
-`eslint-disable` directives look unused, and the local `--fix` deletes them — this once stripped directives from 7
-source files in a fresh worktree. The sync check (~1 s) is the single serialized syncer: `eslint-typecheck-svelte`,
-`eslint-typecheck-ts`, and `svelte-check` depend on it. `RunSvelteCheck` calls `typecheck:no-sync` so it doesn't rewrite
-`.svelte-kit/` while the parallel eslint passes read it; a human standing in `apps/desktop` runs `pnpm typecheck`, which
-still syncs. Those scripts are named `typecheck`, not `check`, so that a stray cwd can't make `pnpm check` mean this one
-narrow pass instead of the root runner. As defense in depth, `runScopedESLintTypecheck` refuses to run when
-`.svelte-kit/tsconfig.json` is missing (relevant for targeted `--check eslint-typecheck-*` runs, where the dependency is
-treated as satisfied if not selected), so a degraded projectService can never strip directives again. `apps/desktop`
-also has `"prepare": "svelte-kit sync"` so plain installs and IDE flows generate the file.
+`apps/desktop/tsconfig.json` extends `$app/tsconfig`, the gitignored `node_modules/$app/tsconfig.json` sync generates,
+and on a fresh tree (new clone or worktree) nothing else creates it before the checks run. Without it,
+typescript-eslint's projectService can't build a program: every imported type resolves to "could not be resolved",
+type-aware rules go silent, their `eslint-disable` directives look unused, and the local `--fix` deletes them — this
+once stripped directives from 7 source files in a fresh worktree. The sync check (~1 s) is the single serialized syncer:
+`eslint-typecheck-svelte`, `eslint-typecheck-ts`, and `svelte-check` depend on it. `RunSvelteCheck` calls
+`typecheck:no-sync` so it doesn't rewrite the generated files while the parallel eslint passes read it; a human standing
+in `apps/desktop` runs `pnpm typecheck`, which still syncs. Those scripts are named `typecheck`, not `check`, so that a
+stray cwd can't make `pnpm check` mean this one narrow pass instead of the root runner. As defense in depth,
+`runScopedESLintTypecheck` refuses to run when `node_modules/$app/tsconfig.json` is missing (relevant for targeted
+`--check eslint-typecheck-*` runs, where the dependency is treated as satisfied if not selected), so a degraded
+projectService can never strip directives again. `apps/desktop` also has `"prepare": "svelte-kit sync"` so plain
+installs and IDE flows generate the file.
 
 **Decision**: Clippy runs the enforcing pass (`-D warnings`) first, and only invokes `cargo clippy --fix` if that fails
 (and we're not in CI). **Why**: Running `--fix` speculatively before every check doubled wall time on the happy path (no

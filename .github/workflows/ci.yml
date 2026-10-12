@@ -85,7 +85,6 @@ jobs:
               - 'eslint-plugins/**'
               - 'apps/desktop/scripts/**'
               - 'apps/desktop/package.json'
-              - 'apps/desktop/svelte.config.js'
               - 'apps/desktop/vite.config.js'
               - 'apps/desktop/vitest.config.ts'
               - 'apps/desktop/eslint.config.js'
@@ -890,7 +889,7 @@ jobs:
         run: go build -o check .
         working-directory: ./scripts/check
 
-      # The type-aware checks need `.svelte-kit/tsconfig.json`, which the app's tsconfig extends.
+      # The type-aware checks need `$app/tsconfig` (`node_modules/$app/tsconfig.json`), which the app's tsconfig extends.
       # The `dashboard-svelte-kit-sync` check generates it locally; CI does it as a setup step so
       # the checks below can run in any order.
       - name: Generate SvelteKit types

@@ -250,7 +250,7 @@ costs about eight seconds of the roughly 27-second warm lint run.
 `any`, so the `no-unsafe-*` rules on the `.ts` side report ~90 false positives across five files. The
 `website-astro-sync` check is a dependency of `website-eslint`, which also refuses to start when the file is missing;
 CI's website job runs `pnpm exec astro sync` as a setup step. This mirrors what `desktop-svelte-kit-sync` does for
-`.svelte-kit/tsconfig.json`.
+SvelteKit's generated `$app/tsconfig`.
 
 **`PUBLIC_*` environment variables are typed** in `src/env.d.ts` (`ImportMetaEnv`), mirroring `.env.example`. Without
 those declarations `import.meta.env.PUBLIC_ANYTHING` is `any`, so a typo reads as `undefined` and the feature quietly

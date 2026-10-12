@@ -20,7 +20,7 @@
       `apps/desktop/scripts/app-boot-guard.test.ts` fails on the ones you'd reach for.
 
       The strings come from the message catalog, spliced in at build time by
-      `svelte.config.js` (see `scripts/gen-boot-guard-lib.ts`), so translators own
+      `vite.config.js` (see `scripts/gen-boot-guard-lib.ts`), so translators own
       this copy like any other. A missing marker fails the build.
 
       This is also the one place other than `setLocale()` that writes `<html lang>`.
@@ -232,7 +232,7 @@
     %sveltekit.head%
   </head>
 
-  <body data-sveltekit-preload-data="off">
+  <body data-sveltekit-preload-data="false">
     <div id="loading-screen">
       <div class="app-loader"></div>
     </div>

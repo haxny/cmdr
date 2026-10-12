@@ -935,7 +935,7 @@ var AllChecks = []CheckDefinition{
 		Inputs:      svelteInputs,
 		Run:         RunDesktopESLint,
 	},
-	// Generates `.svelte-kit/tsconfig.json` (which `tsconfig.json` extends).
+	// Generates `node_modules/$app/tsconfig.json` (which `tsconfig.json` extends as `$app/tsconfig`).
 	// The type-aware checks below depend on it so a TypeScript program can be
 	// built; without it on a fresh tree, type-aware `eslint --fix` strips
 	// "unused" disable directives. See the Decision in checks/CLAUDE.md.

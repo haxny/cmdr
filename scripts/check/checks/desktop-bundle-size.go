@@ -33,7 +33,7 @@ const desktopBundleBaselineComment = "Baseline for the desktop-bundle-size check
 // output dir on every build, so measuring in place would race a concurrent
 // `--include-slow` run and invalidate a cached E2E binary for nothing.
 // `CMDR_FRONTEND_BUILD_DIR` is the existing seam for exactly this (see
-// `apps/desktop/svelte.config.js`); it must live inside `.svelte-kit/` so it is
+// `apps/desktop/vite.config.js`); it must live inside `.svelte-kit/` so it is
 // never itself a mount point.
 func desktopBundleOutDir(rootDir string) string {
 	return filepath.Join(rootDir, "apps", "desktop", ".svelte-kit", "bundle-size-build")

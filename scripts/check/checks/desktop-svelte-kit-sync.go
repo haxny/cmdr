@@ -7,8 +7,8 @@ import (
 )
 
 // RunDesktopSvelteKitSync runs `svelte-kit sync`, which generates
-// `apps/desktop/.svelte-kit/tsconfig.json`. That file is gitignored, and
-// `apps/desktop/tsconfig.json` extends it, so the type-aware ESLint passes and
+// `apps/desktop/node_modules/$app/tsconfig.json`. That file is gitignored, and
+// `apps/desktop/tsconfig.json` extends it (as `$app/tsconfig`), so the type-aware ESLint passes and
 // svelte-check can't build a TypeScript program without it.
 //
 // On a fresh tree (a new clone or worktree) the file doesn't exist until

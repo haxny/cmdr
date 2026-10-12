@@ -98,8 +98,8 @@ carries two predicates: `isTextInputFocused()` reads `document.activeElement` (k
 positive, `Array.sort`-shaped). A leading `v` and any pre-release or build suffix are ignored, so `v0.26.0-beta.1` and
 `0.26.0` compare equal; we only ever order released versions.
 
-Two callers, which is why it isn't private to either: `$lib/whats-new` asks whether this launch is an upgrade over the
-version it last showed, and `$lib/updates` asks whether the build the manifest offers is newer than the one already
+Two callers, which is why it isn't private to either: `#lib/whats-new` asks whether this launch is an upgrade over the
+version it last showed, and `#lib/updates` asks whether the build the manifest offers is newer than the one already
 staged in the bundle. A comparator that disagreed with itself would let one surface call a release an upgrade while the
 other called it a downgrade.
 
@@ -200,13 +200,13 @@ mounts into that captured element later; once the body is emptied, a bundle that
 and never reaches the screen. So the guard wins whichever order the two run in.
 
 **Its copy comes from the message catalog**, which is the other half of the design. The guard runs before any module, so
-it can't call `t()`. `svelte.config.js` resolves the three `boot-guard-keys.ts` keys against every shipped catalog at
+it can't call `t()`. `vite.config.js` resolves the three `boot-guard-keys.ts` keys against every shipped catalog at
 config-load time, formats the ICU away (the values carry `''` escaping the guard would otherwise show verbatim), and
-splices the answers into a copy of the shell at `.svelte-kit/cmdr-app.html`, which is what `kit.files.appTemplate`
-points at. Nothing is committed, so nothing can go stale; a missing marker fails the build rather than shipping a
-stringless guard. Locale matching is precomputed too, because the guard can't run the script-boundary rule: the payload
-carries a flat lowercase alias map so `zh-TW` lands on Traditional and never falls through to Simplified. Details:
-`apps/desktop/scripts/gen-boot-guard-lib.ts`.
+splices the answers into a copy of the shell at `.svelte-kit/cmdr-app.html`, which is what the SvelteKit plugin's
+`files.appTemplate` points at. Nothing is committed, so nothing can go stale; a missing marker fails the build rather
+than shipping a stringless guard. Locale matching is precomputed too, because the guard can't run the script-boundary
+rule: the payload carries a flat lowercase alias map so `zh-TW` lands on Traditional and never falls through to
+Simplified. Details: `apps/desktop/scripts/gen-boot-guard-lib.ts`.
 
 **Gotcha**: because `appTemplate` is the generated path, `pnpm dev` does NOT hot-reload an edit to `src/app.html`.
 Restart the dev server after touching the shell.

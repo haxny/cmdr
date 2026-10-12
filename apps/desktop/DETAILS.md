@@ -83,10 +83,11 @@ no lock contention.
 
 ### The app shell is generated, and `src/app.html` isn't what SvelteKit reads
 
-`svelte.config.js` points `kit.files.appTemplate` at `.svelte-kit/cmdr-app.html`, a copy of `src/app.html` with the
-old-WebKit boot guard's translated strings spliced in at config-load time. Two consequences worth knowing before you
-touch the shell: `pnpm dev` does NOT hot-reload an edit to `src/app.html` (restart the dev server), and the guard's copy
-comes from the message catalog rather than the HTML. How and why: `src/lib/utils/DETAILS.md` § Old-WebKit boot guard.
+`vite.config.js` points the SvelteKit plugin's `files.appTemplate` at `.svelte-kit/cmdr-app.html`, a copy of
+`src/app.html` with the old-WebKit boot guard's translated strings spliced in at config-load time. Two consequences
+worth knowing before you touch the shell: `pnpm dev` does NOT hot-reload an edit to `src/app.html` (restart the dev
+server), and the guard's copy comes from the message catalog rather than the HTML. How and why:
+`src/lib/utils/DETAILS.md` § Old-WebKit boot guard.
 
 The bundle's `minimumSystemVersion` in `src-tauri/tauri.conf.json` (10.15) and `build.target` in `vite.config.js`
 (`safari15`) are the other two halves of the same story: `docs/notes/system-requirements-and-es2025.md`.
@@ -113,7 +114,7 @@ Two watchers run during `pnpm dev`, each with its own shield (don't delete eithe
   watcher startup, so editing it needs a `pnpm dev` restart.
 - **Vite** watches the rest of `apps/desktop/`; `server.watch.ignored` in `vite.config.js` excludes `src-tauri/` so Rust
   builds don't churn the frontend watcher. Markdown elsewhere is harmless to Vite (`.md` isn't in the module graph;
-  SvelteKit only full-reloads on route files, `app.html`, hooks, and `svelte.config.js`).
+  SvelteKit only full-reloads on route files, `app.html`, and hooks).
 
 If a new always-edited non-build file type shows up under `src-tauri/` or any watched crate, add it to the root
 `.taurignore` rather than teaching people to avoid saving.

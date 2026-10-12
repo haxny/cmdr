@@ -59,7 +59,6 @@ func e2eBinaryInputs() []string {
 		"apps/desktop/src/**",
 		"apps/desktop/static/**",
 		"apps/desktop/package.json",
-		"apps/desktop/svelte.config.js",
 		"apps/desktop/vite.config.js",
 		"apps/desktop/tsconfig.json",
 		// The wrapper and the model downloader that drive the build itself.

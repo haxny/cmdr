@@ -58,9 +58,9 @@ Work in a worktree. Take npm and Cargo in **separate commits**, so a bisect can 
 
 ## Majors
 
-Same pass, but one major per commit, and read the release notes first. Some are pinned shut on purpose and the
-`renovate.json` rule says why: the `specta` trio (rc.25 types non-`Option` float PARAMETERS as `number | null`) and
-`cookie` (<2.0 while SvelteKit's runtime still imports the 0.x/1.x names). Don't "fix" those by bumping them.
+Same pass, but one major per commit, and read the release notes first. Some are pinned shut on purpose, and the
+`renovate.json` rule says why, like the `specta` trio (rc.25 types non-`Option` float PARAMETERS as `number | null`).
+Don't "fix" those by bumping them.
 
 ## Version constraints
 

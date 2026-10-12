@@ -118,11 +118,6 @@
       "enabled": false
     },
     {
-      "description": "`cookie` stays below 2.0: that release renamed the whole API, and `@sveltejs/kit`'s runtime still imports the 0.x/1.x names, so 2.x breaks the SvelteKit build. Raise the ceiling only once Kit uses the 2.x names. The override and the full rationale live in `pnpm-workspace.yaml`.",
-      "matchPackageNames": ["cookie"],
-      "allowedVersions": "<2.0.0"
-    },
-    {
       "description": "Desktop `axe-core` stays below 4.14: 4.14 turns on `label-content-name-mismatch` (WCAG 2.5.3, label in name), which fails the E2E accessibility audit on three components whose `aria-label` doesn't contain their visible text (the function-key bar's buttons, the transfer dialog's background button, the search mode toggle). Fixing it is UI copy plus every i18n catalog, so it's its own task; lift this rule in the same commit.",
       "matchFileNames": ["apps/desktop/**"],
       "matchPackageNames": ["axe-core"],

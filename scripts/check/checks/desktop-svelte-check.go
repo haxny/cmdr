@@ -13,7 +13,7 @@ import (
 //
 // Uses `typecheck:no-sync`, not the `typecheck` humans run standalone: the
 // `desktop-svelte-kit-sync` dependency already generated `.svelte-kit/`, and
-// re-syncing here would rewrite `.svelte-kit/tsconfig.json` while the parallel
+// re-syncing here would rewrite the generated tsconfig while the parallel
 // eslint-typecheck passes are reading it.
 func RunSvelteCheck(ctx *CheckContext) (CheckResult, error) {
 	desktopDir := filepath.Join(ctx.RootDir, "apps", "desktop")

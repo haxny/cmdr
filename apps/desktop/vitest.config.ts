@@ -2,9 +2,10 @@ import { defineConfig } from 'vitest/config'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import Icons from 'unplugin-icons/vite'
 import path from 'path'
+import { svelteOptions } from './vite.config.js'
 
 export default defineConfig({
-  plugins: [Icons({ compiler: 'svelte' }), svelte()],
+  plugins: [Icons({ compiler: 'svelte' }), svelte(svelteOptions)],
   // Bake the E2E build's instruments in (TRUE) so the capture-mode unit tests in
   // `messages.svelte.test.ts` can exercise `window.__cmdrI18nCapture`. In a real
   // build this constant comes from `vite.config.js`'s `define` (TRUE only in E2E
@@ -69,7 +70,6 @@ export default defineConfig({
   resolve: {
     conditions: ['browser'],
     alias: {
-      $lib: path.resolve('./src/lib'),
       // ❗ Keeps the Playwright runner out of the happy-dom workers, where merely
       // importing it kills a Node process per spec file. Playwright's own runner
       // never sees these aliases. Why, and what the shim may export:

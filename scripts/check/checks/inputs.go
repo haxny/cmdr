@@ -278,7 +278,6 @@ var frontendSourceRoots = []string{
 var svelteInputs = inputs(treeGlobs(frontendSourceRoots...), []string{
 	"apps/desktop/static/**",
 	"apps/desktop/package.json",
-	"apps/desktop/svelte.config.js",
 	"apps/desktop/vite.config.js",
 	"apps/desktop/vitest.config.ts",
 	"apps/desktop/eslint.config.js",
