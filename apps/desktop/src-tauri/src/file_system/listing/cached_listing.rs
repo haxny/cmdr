@@ -75,9 +75,9 @@ impl ListingPath {
     /// `path` in the spelling `volume_id`'s volume keys listings under; verbatim
     /// when no volume is registered under that id.
     ///
-    /// ❗ Call it before taking `LISTING_CACHE`: it reads the volume registry.
+    /// ❗ Call it before taking `LISTING_CACHE`: it asks the host's volume seam.
     pub(crate) fn on_volume(volume_id: &str, path: &Path) -> Self {
-        let volume = crate::file_system::volume::manager::get_volume_manager().get(volume_id);
+        let volume = super::host::volumes().get(volume_id);
         Self(volume.map_or_else(|| path.to_path_buf(), |volume| volume.listing_path(path)))
     }
 

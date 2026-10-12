@@ -10,8 +10,8 @@
 use std::path::Path;
 
 use super::reading::get_single_entry;
-use crate::file_system::listing::caching::{DirectoryChange, notify_directory_changed};
-use cmdr_fs::volume::MutationEvent;
+use crate::listing_host::directory_changed;
+use cmdr_fs::volume::{DirectoryChange, MutationEvent};
 
 /// Patches the listing cache after a mutation on a LOCAL-FS-backed volume: stats
 /// the affected entry through `std::fs` and turns it into the right
@@ -21,7 +21,7 @@ use cmdr_fs::volume::MutationEvent;
 /// real `std::fs` paths. It lives here rather than on the trait because
 /// `cmdr-fs` knows nothing about the listing cache; a backend on a protocol that
 /// can answer `get_metadata` faster than `std::fs` would (SMB, MTP) builds its
-/// own entry and calls [`notify_directory_changed`] directly instead.
+/// own entry and calls its `ListingHost::directory_changed` directly instead.
 ///
 /// Fire-and-forget: a failed stat logs and drops the patch, because the mutation
 /// it follows has already succeeded and a watcher event may still land.
@@ -36,7 +36,7 @@ pub fn patch_listing_after_local_mutation(volume_id: &str, parent_path: &Path, m
                     } else {
                         DirectoryChange::Modified(entry)
                     };
-                    notify_directory_changed(volume_id, parent_path, change);
+                    directory_changed(volume_id, parent_path, change);
                 }
                 Err(e) => {
                     log::warn!("notify_mutation: couldn't stat {}: {}", entry_path.display(), e);
@@ -44,13 +44,13 @@ pub fn patch_listing_after_local_mutation(volume_id: &str, parent_path: &Path, m
             }
         }
         MutationEvent::Deleted(name) => {
-            notify_directory_changed(volume_id, parent_path, DirectoryChange::Removed(name));
+            directory_changed(volume_id, parent_path, DirectoryChange::Removed(name));
         }
         MutationEvent::Renamed { from, to } => {
             let new_path = parent_path.join(&to);
             match get_single_entry(&new_path) {
                 Ok(entry) => {
-                    notify_directory_changed(
+                    directory_changed(
                         volume_id,
                         parent_path,
                         DirectoryChange::Renamed {

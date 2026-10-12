@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_fs::volume::{BackendKind, Volume};
 
+use crate::file_system::listing::host::{self, MountTable};
+
 /// What a stalled listing's folder lives on, as far as the mount proves it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +31,7 @@ const RESOLVE_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Classifies the folder a stalled listing is reading.
 ///
-/// A direct backend names itself. A filesystem path is read off the kernel's mount
+/// A direct backend names itself. A filesystem path is read off the host's mount
 /// table ❌ never with a `statfs` on the path, which blocks on the very mount that
 /// just stalled. The table lookup is lexical, so a path that reads as a local disk
 /// is resolved through its symlinks first (`~/nas` → `/Volumes/nas`), off-thread
@@ -38,13 +40,14 @@ pub(crate) async fn stalled_on(volume: &Arc<dyn Volume>, path: &Path) -> Stalled
     if let Some(answer) = stalled_on_backend(volume.backend_kind()) {
         return answer;
     }
-    let lexical = stalled_on_mount_of(path);
+    let mounts = host::mounts();
+    let lexical = stalled_on_mount_of(mounts.as_ref(), path);
     if lexical != StalledOn::Drive {
         return lexical;
     }
     let path = path.to_path_buf();
-    let resolved = crate::file_system::listing::host::runtime()
-        .spawn_blocking(move || stalled_on_mount_of(&resolve_symlinks(&path)));
+    let resolved =
+        host::runtime().spawn_blocking(move || stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(&path)));
     match tokio::time::timeout(RESOLVE_TIMEOUT, resolved).await {
         Ok(Ok(answer)) => answer,
         // Timed out (the probe sits on a hung mount) or the task panicked.
@@ -108,27 +111,13 @@ fn resolve_symlinks(path: &Path) -> PathBuf {
     }
 }
 
-/// Classifies the mount `path` lies on, read lexically off the kernel's mount table.
-#[cfg(target_os = "macos")]
-fn stalled_on_mount_of(path: &Path) -> StalledOn {
-    match crate::volumes::mount_type_and_source_for(path) {
-        Some((fs_type, source)) => classify_mount(&fs_type, &source),
+/// Classifies the mount `path` lies on, read lexically off the host's mount
+/// table ([`MountTable`]).
+fn stalled_on_mount_of(mounts: &dyn MountTable, path: &Path) -> StalledOn {
+    match mounts.mount_of(path) {
+        Some(mount) => classify_mount(&mount.fs_type, &mount.source),
         None => StalledOn::Unknown,
     }
-}
-
-/// Classifies the mount `path` lies on, read lexically off `/proc/mounts`.
-#[cfg(target_os = "linux")]
-fn stalled_on_mount_of(path: &Path) -> StalledOn {
-    match crate::file_system::linux_mounts::mount_entry_for_path(path) {
-        Some(entry) => classify_mount(&entry.fstype, &entry.device),
-        None => StalledOn::Unknown,
-    }
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
-fn stalled_on_mount_of(_path: &Path) -> StalledOn {
-    StalledOn::Unknown
 }
 
 #[cfg(test)]
@@ -243,6 +232,10 @@ mod tests {
     fn a_temp_folder_reads_as_a_drive() {
         // Holds where the temp dir is a local disk: a dev Mac's APFS, a Linux box's ext4 or tmpfs.
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(stalled_on_mount_of(&resolve_symlinks(dir.path())), StalledOn::Drive);
+        let mounts = host::mounts();
+        assert_eq!(
+            stalled_on_mount_of(mounts.as_ref(), &resolve_symlinks(dir.path())),
+            StalledOn::Drive
+        );
     }
 }

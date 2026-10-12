@@ -209,9 +209,10 @@ pub fn entry_comparator<E: SortableEntry + ?Sized>(
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
 ) -> impl Fn(&E, &E) -> std::cmp::Ordering {
-    // Resolved once per sort, not once per comparison: `active_collator` reads
-    // the live UI locale, and a language switch mid-sort would otherwise reorder
-    // rows against each other and break the strict-weak-ordering `sort_by` needs.
+    // Resolved once per sort, not once per comparison: `active_collator` asks
+    // the host for the live reading locale, and a language switch mid-sort
+    // would otherwise reorder rows against each other and break the
+    // strict-weak-ordering `sort_by` needs.
     let collator: Arc<NameCollator> = active_collator();
 
     move |a, b| {

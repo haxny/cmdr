@@ -38,58 +38,53 @@
 
 #[cfg(test)]
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use cmdr_fs::staging::StagingTemp;
+#[cfg(test)]
 use cmdr_fs::staging::hidden_with_settings;
 
+use crate::file_system::listing::host::{ScratchVisibility, scratch_visibility, set_scratch_visibility};
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
 
-/// Whether the user asked to see Cmdr's scratch files anyway
-/// (`advanced.showStagingTempFiles`). Off by default.
-static SHOW_STAGING_TEMPS: AtomicBool = AtomicBool::new(false);
+// The two settings are the listing engine's state (`listing::host`, which
+// documents their defaults); these forward to it, so settings live-apply and
+// startup seeding name one place in the app.
 
 /// Applies the `advanced.showStagingTempFiles` setting. Seeded at startup from
 /// `load_settings`, then pushed on every change (settings § live-apply rule).
 pub fn set_show_staging_temps(show: bool) {
-    SHOW_STAGING_TEMPS.store(show, Ordering::Relaxed);
+    set_scratch_visibility(ScratchVisibility {
+        show_staging_temps: show,
+        ..scratch_visibility()
+    });
 }
 
 /// Whether Cmdr's scratch files are being shown.
+#[cfg(test)]
 pub fn show_staging_temps() -> bool {
-    SHOW_STAGING_TEMPS.load(Ordering::Relaxed)
+    scratch_visibility().show_staging_temps
 }
-
-/// Whether the user asked to see other apps' safe-save scratch
-/// (`advanced.showSafeSaveFiles`). ON by default: unlike Cmdr's own temps, these
-/// are someone else's business, and quietly hiding another app's files by name is
-/// a bigger claim to make on a user's behalf than hiding our own.
-static SHOW_SAFE_SAVE_FILES: AtomicBool = AtomicBool::new(true);
 
 /// Applies the `advanced.showSafeSaveFiles` setting. Seeded at startup from
 /// `load_settings`, then pushed on every change (settings § live-apply rule).
 pub fn set_show_safe_save_files(show: bool) {
-    SHOW_SAFE_SAVE_FILES.store(show, Ordering::Relaxed);
+    set_scratch_visibility(ScratchVisibility {
+        show_safe_save_files: show,
+        ..scratch_visibility()
+    });
 }
 
 /// Whether safe-save scratch is being shown.
+#[cfg(test)]
 pub fn show_safe_save_files() -> bool {
-    SHOW_SAFE_SAVE_FILES.load(Ordering::Relaxed)
+    scratch_visibility().show_safe_save_files
 }
 
-/// The listing layer's question: should `name` be left out of the pane?
-///
-/// The cache holds what's on disk; its committed scratch projection records
-/// this decision on admission and reconciles drift at read/mutation boundaries
-/// before interpreting row indices (`listing/DETAILS.md`).
-/// Filtering the WATCHER instead would produce exactly that stuck entry — a
-/// listing shows the temp, the watcher skips the removal that would clear it,
-/// and it stays in the pane pointing at nothing. The `.sb-` filter lived there
-/// until 2026-08-01 and had precisely that bug.
-///
-/// Gated on the pure `cmdr_fs::staging::could_be_hidden_from_listings`, which is
-/// what keeps a cached row map valid.
+/// Should `name` be left out of the pane under the settings now? The listing
+/// engine's own answer is `listing/visible_rows.rs`'s; this one is for the tests
+/// below.
+#[cfg(test)]
 pub fn is_hidden_from_listings(name: &str) -> bool {
     hidden_with_settings(name, show_staging_temps(), show_safe_save_files())
 }

@@ -12,12 +12,12 @@ use tokio_util::sync::CancellationToken;
 
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE};
 use crate::file_system::listing::foreign_path::{Listed, respell_if_read_by_a_replaced_backend};
-use crate::file_system::listing::host::{self, ListingEnd, ListingEvents, OpenedListing};
+use crate::file_system::listing::host::{self, ListingEnd, ListingEvents, OpenedListing, Unregistered};
 use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::stall::{ListingRead, ReadOutcome, StallWatch, read_until_answered};
 use cmdr_fs::benchmark;
-use cmdr_fs::volume::{Volume, VolumeError};
+use cmdr_fs::volume::VolumeError;
 
 // ============================================================================
 // Types and state
@@ -194,48 +194,6 @@ pub(crate) fn report_failure(
     }
 }
 
-/// How long the last-chance mount adoption may take before the listing gives up
-/// and reports the volume missing. It reads the mount table and one NSURL
-/// resource, which is sub-millisecond locally and can hang on a wedged mount, so
-/// it's bounded like every other mount-touching read (`commands/CLAUDE.md`).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-const ADOPT_MOUNT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
-
-/// Registers the live mount serving `path` when it derives exactly `volume_id`,
-/// off the async thread and under a deadline.
-///
-/// Reached only when the registry had nothing, so its cost is paid on a path
-/// that was about to fail anyway.
-async fn adopt_mount_for_listing(volume_id: &str, path: &Path) -> Option<Arc<dyn Volume>> {
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
-    {
-        let volume_id = volume_id.to_string();
-        let path = path.to_path_buf();
-        crate::deadline::blocking_with_timeout(ADOPT_MOUNT_TIMEOUT, None, move || {
-            crate::file_system::volume::mount_registration::adopt_mount_serving(&volume_id, &path)
-        })
-        .await
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-    {
-        let _ = (volume_id, path);
-        None
-    }
-}
-
-/// Why a listing found no volume registered under `volume_id`, in the listing's
-/// vocabulary: a listed phone or saved server nobody connected is `NotConnected`,
-/// any other id `NotFound`, as an unmount race is. The why of both answers:
-/// `crate::unregistered_volumes`.
-async fn missing_volume_error(volume_id: &str, path: &Path) -> VolumeError {
-    use crate::unregistered_volumes::{Unregistered, why_unregistered};
-
-    match why_unregistered(volume_id).await {
-        Unregistered::NotConnected => VolumeError::NotConnected(path.display().to_string()),
-        Unregistered::Gone => VolumeError::NotFound(path.display().to_string()),
-    }
-}
-
 /// Reads a directory with progress reporting.
 ///
 /// Async implementation that spawns the Volume I/O in a background task
@@ -264,8 +222,8 @@ pub(crate) async fn read_directory_with_progress(
     // task being dropped at shutdown — so no path can leak it and pin the share
     // busy. Cancel releases it deliberately: the pane has moved on, so the user
     // is no longer waiting on this listing even while the backend unwinds behind
-    // it. `priority/foreground.rs` owns the signal.
-    let _foreground_lease = crate::priority::foreground::lease_foreground_on(volume_id);
+    // it. The host owns the signal (`host::leases`).
+    let _foreground_hold = host::leases().hold(volume_id);
 
     benchmark::log_event("read_directory_with_progress START");
     log::debug!(
@@ -296,21 +254,19 @@ pub(crate) async fn read_directory_with_progress(
     // `ArchiveVolume`. The cache still keys on the FE-provided `volume_id` (the
     // parent drive), so the downstream re-read sites re-resolve the same archive
     // from `(volume_id, path)` — eviction-safe (see `caching.rs`).
-    let resolved = crate::file_system::volume::manager::get_volume_manager()
-        .resolve(volume_id, path)
-        .await;
+    let resolved = host::volumes().resolve(volume_id, path).await;
     let is_routed = resolved.is_routed();
     let volume = match resolved.volume {
         Some(volume) => volume,
-        // Nothing serves this ID. Before calling it gone, ask whether the mount
-        // under `path` IS this volume and nobody had registered it — a cloud
-        // drive that mounted into the home folder posts no `NSWorkspace`
-        // notification, and the startup sweep runs off the main thread, so a
-        // restored tab can resolve ahead of it. Adoption only ever confirms the
-        // caller's own ID (`mount_registration::adopt_mount_serving`).
-        None => match adopt_mount_for_listing(volume_id, path).await {
-            Some(adopted) => adopted,
-            None => return Err(missing_volume_error(volume_id, path).await),
+        // Nothing serves this ID. Before calling it gone, ask the host once
+        // whether the mount under `path` IS this volume and nobody had
+        // registered it, and if not, why it's missing: a listed phone or saved
+        // server nobody connected is `NotConnected`, any other id `NotFound`,
+        // as an unmount race is.
+        None => match host::volumes().unregistered(volume_id, path).await {
+            Unregistered::Adopted(adopted) => adopted,
+            Unregistered::NotConnected => return Err(VolumeError::NotConnected(path.display().to_string())),
+            Unregistered::Gone => return Err(VolumeError::NotFound(path.display().to_string())),
         },
     };
     // Read directory entries via Volume abstraction. Each read runs in its own
@@ -380,8 +336,9 @@ pub(crate) async fn read_directory_with_progress(
     // FS paths), so enrich/verify are skipped.
     let enrich_start = std::time::Instant::now();
     if !is_routed {
-        crate::index_host::index().enrich(volume_id, &mut entries);
-        crate::index_host::index().verify_directory(volume_id, &path.to_string_lossy());
+        let index = host::index();
+        index.enrich(volume_id, &mut entries);
+        index.verify_directory(volume_id, path);
     }
     let enrich_ms = enrich_start.elapsed().as_millis();
 

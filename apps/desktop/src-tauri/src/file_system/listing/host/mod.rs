@@ -2,7 +2,7 @@
 //! traits instead of reaches upward.
 //!
 //! Each seam answers one question, degrades to a no-op (the public `No*` unit
-//! types), and is answered app-side by one adapter in `crate::listing_host`.
+//! types), and is answered app-side by one adapter in the app's `listing_host` module.
 //! The engine reports facts and asks questions; what the user sees, which
 //! volume serves a path, and what the index knows are the host's.
 //!
@@ -16,19 +16,16 @@
 //! - `leases`: the user is waiting on this volume ([`leases::ForegroundLeases`]).
 //! - `locale`: which language names collate in ([`locale::ReadingLocale`]).
 //! - `mounts`: what a filesystem path is mounted on ([`mounts::MountTable`]).
+//! - The scratch visibility: engine STATE the host sets, not a seam
+//!   ([`ScratchVisibility`]); see [`set_scratch_visibility`].
 //! - The runtime: a [`tokio::runtime::Handle`], not a trait. ❌ Never
 //!   `tokio::spawn` in the engine: it INHERITS an ambient runtime, and a watcher's
 //!   OS thread has none, so it panics there. [`runtime`] RESOLVES one.
 //!
 //! The installed seams live in one process-wide slot that the app fills once at
-//! startup (`crate::listing_host::install`). The engine reads them per call
+//! startup (the app's `listing_host::install`). The engine reads them per call
 //! through the accessors here. ❌ A seam is called per read or per mutation,
 //! never per entry: every one is a `dyn` call.
-
-#![expect(
-    dead_code,
-    reason = "issue #301: the seams arrive in their final shape before M2b and M2c route the engine through all of them"
-)]
 
 pub mod events;
 pub mod index;
@@ -43,24 +40,37 @@ mod overlays_test;
 pub(crate) mod testing;
 pub mod volumes;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use tokio::runtime::Handle;
 
 pub use events::{ListingEnd, ListingEvents, NoEvents};
+pub use index::{ListingIndex, NoIndex};
+pub use leases::{ForegroundHold, ForegroundLeases, NoLeases};
+pub use locale::{NoLocale, ReadingLocale};
+pub use mounts::{MountFacts, MountTable, NoMountTable};
 pub use observers::{ListingObserver, OpenedListing};
 pub use overlays::ListingOverlay;
+pub use volumes::{ListingVolumes, NoVolumes, Unregistered};
 
 /// The seams one application installs, as one value.
 pub struct ListingSeams {
     events: Arc<dyn ListingEvents>,
+    volumes: Arc<dyn ListingVolumes>,
+    index: Arc<dyn ListingIndex>,
+    leases: Arc<dyn ForegroundLeases>,
+    locale: Arc<dyn ReadingLocale>,
+    mounts: Arc<dyn MountTable>,
     runtime: Handle,
     /// Behind a lock only so a test can add one to the shared slot; the host
     /// hands its own over before install.
     overlays: RwLock<Vec<Arc<dyn ListingOverlay>>>,
     /// Same as `overlays`.
     observers: RwLock<Vec<Arc<dyn ListingObserver>>>,
+    /// Engine state, not a seam: the host sets it, the engine reads it.
+    scratch: ScratchSettings,
 }
 
 impl ListingSeams {
@@ -69,10 +79,46 @@ impl ListingSeams {
     pub fn new(events: Arc<dyn ListingEvents>) -> Self {
         Self {
             events,
+            volumes: Arc::new(NoVolumes),
+            index: Arc::new(NoIndex),
+            leases: Arc::new(NoLeases),
+            locale: Arc::new(NoLocale),
+            mounts: Arc::new(NoMountTable),
             runtime: cmdr_fs::volume::host::VolumeHost::detached().runtime(),
             overlays: RwLock::new(Vec::new()),
             observers: RwLock::new(Vec::new()),
+            scratch: ScratchSettings::new(ScratchVisibility::default()),
         }
+    }
+
+    /// Asks `volumes` which volume serves a path.
+    pub fn volumes(mut self, volumes: Arc<dyn ListingVolumes>) -> Self {
+        self.volumes = volumes;
+        self
+    }
+
+    /// Asks `index` what the drive index knows about a listing's rows.
+    pub fn index(mut self, index: Arc<dyn ListingIndex>) -> Self {
+        self.index = index;
+        self
+    }
+
+    /// Takes a foreground hold from `leases` for every streaming read.
+    pub fn leases(mut self, leases: Arc<dyn ForegroundLeases>) -> Self {
+        self.leases = leases;
+        self
+    }
+
+    /// Collates names in the language `locale` answers.
+    pub fn locale(mut self, locale: Arc<dyn ReadingLocale>) -> Self {
+        self.locale = locale;
+        self
+    }
+
+    /// Reads what a stalled folder is mounted on from `mounts`.
+    pub fn mounts(mut self, mounts: Arc<dyn MountTable>) -> Self {
+        self.mounts = mounts;
+        self
     }
 
     /// Folds `overlay`'s rows into the listings it applies to, after every
@@ -170,6 +216,92 @@ fn seams() -> &'static ListingSeams {
 /// Where the engine reports what happened to a listing.
 pub(crate) fn events() -> Arc<dyn ListingEvents> {
     Arc::clone(&seams().events)
+}
+
+/// Which volume serves a path.
+pub(crate) fn volumes() -> Arc<dyn ListingVolumes> {
+    Arc::clone(&seams().volumes)
+}
+
+/// What the drive index knows.
+pub(crate) fn index() -> Arc<dyn ListingIndex> {
+    Arc::clone(&seams().index)
+}
+
+/// Who hands out foreground holds.
+pub(crate) fn leases() -> Arc<dyn ForegroundLeases> {
+    Arc::clone(&seams().leases)
+}
+
+/// Which language names collate in.
+pub(crate) fn locale() -> Arc<dyn ReadingLocale> {
+    Arc::clone(&seams().locale)
+}
+
+/// What a filesystem path is mounted on.
+pub(crate) fn mounts() -> Arc<dyn MountTable> {
+    Arc::clone(&seams().mounts)
+}
+
+/// Which scratch files the user asked to see, read once per question.
+pub fn scratch_visibility() -> ScratchVisibility {
+    seams().scratch.get()
+}
+
+/// Applies the user's scratch-visibility settings to every listing from its next
+/// read on; a listing already cached reconciles lazily, at its next read or
+/// mutation (`visible_rows.rs`).
+pub fn set_scratch_visibility(visibility: ScratchVisibility) {
+    seams().scratch.set(visibility);
+}
+
+/// Which scratch files a pane shows, as the user set it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ScratchVisibility {
+    /// Cmdr's own scratch (`advanced.showStagingTempFiles`). Off by default.
+    pub show_staging_temps: bool,
+    /// Other apps' safe-save scratch (`advanced.showSafeSaveFiles`). On by
+    /// default: hiding another app's files by name is a bigger claim to make on
+    /// a user's behalf than hiding Cmdr's own.
+    pub show_safe_save_files: bool,
+}
+
+impl Default for ScratchVisibility {
+    fn default() -> Self {
+        Self {
+            show_staging_temps: false,
+            show_safe_save_files: true,
+        }
+    }
+}
+
+/// [`ScratchVisibility`] behind two atomics, so a read never takes a lock.
+struct ScratchSettings {
+    show_staging_temps: AtomicBool,
+    show_safe_save_files: AtomicBool,
+}
+
+impl ScratchSettings {
+    fn new(visibility: ScratchVisibility) -> Self {
+        Self {
+            show_staging_temps: AtomicBool::new(visibility.show_staging_temps),
+            show_safe_save_files: AtomicBool::new(visibility.show_safe_save_files),
+        }
+    }
+
+    fn get(&self) -> ScratchVisibility {
+        ScratchVisibility {
+            show_staging_temps: self.show_staging_temps.load(Ordering::Relaxed),
+            show_safe_save_files: self.show_safe_save_files.load(Ordering::Relaxed),
+        }
+    }
+
+    fn set(&self, visibility: ScratchVisibility) {
+        self.show_staging_temps
+            .store(visibility.show_staging_temps, Ordering::Relaxed);
+        self.show_safe_save_files
+            .store(visibility.show_safe_save_files, Ordering::Relaxed);
+    }
 }
 
 /// The runtime the engine spawns onto: the host's own, or the shared fallback.

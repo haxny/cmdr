@@ -28,12 +28,20 @@ pub struct OpenedListing<'a> {
     /// The listing's id; [`ListingObserver::listing_closed`] names it again.
     pub id: &'a ListingId,
     /// The volume the pane asked for, which keys the listing.
+    #[expect(
+        dead_code,
+        reason = "issue #301: `IndexSizeListings` reads these instead of the cache once each test owns its engine (M3a)"
+    )]
     pub volume_id: &'a str,
     /// The volume that served the read (for a routed path, the routed one).
     pub volume: &'a dyn Volume,
     /// The directory as the read listed it.
     pub path: &'a Path,
     /// The directory in the volume's listing spelling, the one the cache keys on.
+    #[expect(
+        dead_code,
+        reason = "issue #301: `IndexSizeListings` reads these instead of the cache once each test owns its engine (M3a)"
+    )]
     pub stored_path: &'a Path,
 }
 

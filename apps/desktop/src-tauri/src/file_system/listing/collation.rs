@@ -95,9 +95,9 @@ fn build(locale: &str) -> Option<CollatorBorrowed<'static>> {
 
 /// The collator for the locale the user reads now, built once per locale.
 ///
-/// A language switch is picked up here rather than pushed: `intl::active_locale`
-/// re-resolves on an OS locale change, so the next sort asks for a collator for
-/// the new language. Listings already sorted keep their order until something
+/// A language switch is picked up here rather than pushed: the host's
+/// [`ReadingLocale`](super::host::ReadingLocale) answers the language the user
+/// reads now, so the next sort asks for a collator for the new language. Listings already sorted keep their order until something
 /// re-reads them, the same way they do when the sort column changes.
 ///
 /// Locales are a bounded set (14 catalogs ship), so the cache never grows past
@@ -105,7 +105,7 @@ fn build(locale: &str) -> Option<CollatorBorrowed<'static>> {
 pub fn active_collator() -> Arc<NameCollator> {
     static CACHE: RwLock<Option<HashMap<String, Arc<NameCollator>>>> = RwLock::new(None);
 
-    let locale = crate::intl::active_locale();
+    let locale = super::host::locale().locale();
 
     if let Some(cached) = CACHE
         .read_ignore_poison()

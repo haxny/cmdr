@@ -144,7 +144,7 @@ pub(crate) fn respell_if_read_by_a_replaced_backend(
     path: &Path,
     read_by: &std::sync::Arc<dyn Volume>,
 ) {
-    let serving = crate::file_system::volume::manager::get_volume_manager().get(volume_id);
+    let serving = super::host::volumes().get(volume_id);
     if serving.is_some_and(|serving| !std::sync::Arc::ptr_eq(&serving, read_by)) {
         log::debug!(
             "listing {listing_id} was read by a backend replaced mid-read; re-reading {}",
@@ -161,9 +161,7 @@ pub(crate) fn respell_if_read_by_a_replaced_backend(
 /// One listing's respell; `pub(super)` so a test can await it directly.
 pub(super) async fn respell_listing(volume_id: String, listing_id: String, path: PathBuf) {
     let _turn = super::caching::refresh_turn(&volume_id, &path).await;
-    let resolved = crate::file_system::volume::manager::get_volume_manager()
-        .resolve(&volume_id, &path)
-        .await;
+    let resolved = super::host::volumes().resolve(&volume_id, &path).await;
     let is_routed = resolved.is_routed();
     let Some(volume) = resolved.volume else {
         return;
@@ -181,7 +179,7 @@ pub(super) async fn respell_listing(volume_id: String, listing_id: String, path:
         mut entries,
     } = listed;
     if !is_routed {
-        crate::index_host::index().enrich(&volume_id, &mut entries);
+        super::host::index().enrich(&volume_id, &mut entries);
     }
     let overlay_rows = super::host::overlays::decorate(&volume, &stored, &mut entries).await;
     if stored == path {

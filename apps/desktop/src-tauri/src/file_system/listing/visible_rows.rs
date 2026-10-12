@@ -40,9 +40,27 @@ use std::sync::{RwLock, RwLockReadGuard};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
+use crate::file_system::listing::host::{self, ScratchVisibility};
 use crate::file_system::listing::name_filter::NameFilter;
-use crate::file_system::staging;
 use cmdr_fs::entry::FileEntry;
+
+/// Whether `name` is scratch the pane leaves out under `visibility`.
+fn hidden_with(name: &str, visibility: ScratchVisibility) -> bool {
+    cmdr_fs::staging::hidden_with_settings(name, visibility.show_staging_temps, visibility.show_safe_save_files)
+}
+
+/// Whether `name` is scratch the pane leaves out under the user's settings now.
+///
+/// The cache holds what's on disk; its committed scratch projection records
+/// this decision on admission and reconciles drift at read/mutation boundaries
+/// before interpreting row indices (`DETAILS.md`). Filtering the WATCHER
+/// instead would produce exactly that stuck entry: a listing shows the temp,
+/// the watcher skips the removal that would clear it, and it stays in the pane
+/// pointing at nothing. The `.sb-` filter lived there until 2026-08-01 and had
+/// precisely that bug.
+fn is_hidden_from_listings(name: &str) -> bool {
+    hidden_with(name, host::scratch_visibility())
+}
 
 /// Exact-path scratch decisions committed with the listing revision. Ordinary
 /// directories have an empty map; checking drift visits only scratch candidates.
@@ -52,17 +70,17 @@ pub(crate) struct ScratchProjection(HashMap<String, (String, bool)>);
 
 impl ScratchProjection {
     pub(crate) fn for_entries(entries: &[FileEntry], previous: &Self) -> Self {
-        let staging = staging::show_staging_temps();
-        let safe_save = staging::show_safe_save_files();
+        let visibility = host::scratch_visibility();
         Self(
             entries
                 .iter()
                 .filter(|e| cmdr_fs::staging::could_be_hidden_from_listings(&e.name))
                 .map(|e| {
-                    let hidden = previous.0.get(&e.path).filter(|(name, _)| name == &e.name).map_or_else(
-                        || cmdr_fs::staging::hidden_with_settings(&e.name, staging, safe_save),
-                        |(_, hidden)| *hidden,
-                    );
+                    let hidden = previous
+                        .0
+                        .get(&e.path)
+                        .filter(|(name, _)| name == &e.name)
+                        .map_or_else(|| hidden_with(&e.name, visibility), |(_, hidden)| *hidden);
                     (e.path.clone(), (e.name.clone(), hidden))
                 })
                 .collect(),
@@ -70,30 +88,20 @@ impl ScratchProjection {
     }
 
     pub(crate) fn live(&self) -> Self {
-        let staging = staging::show_staging_temps();
-        let safe_save = staging::show_safe_save_files();
+        let visibility = host::scratch_visibility();
         Self(
             self.0
                 .iter()
-                .map(|(path, (name, _))| {
-                    (
-                        path.clone(),
-                        (
-                            name.clone(),
-                            cmdr_fs::staging::hidden_with_settings(name, staging, safe_save),
-                        ),
-                    )
-                })
+                .map(|(path, (name, _))| (path.clone(), (name.clone(), hidden_with(name, visibility))))
                 .collect(),
         )
     }
 
     pub(crate) fn has_drift(&self) -> bool {
-        let staging = staging::show_staging_temps();
-        let safe_save = staging::show_safe_save_files();
+        let visibility = host::scratch_visibility();
         self.0
             .values()
-            .any(|(name, hidden)| *hidden != cmdr_fs::staging::hidden_with_settings(name, staging, safe_save))
+            .any(|(name, hidden)| *hidden != hidden_with(name, visibility))
     }
 
     pub(crate) fn admit(&mut self, entry: &FileEntry) {
@@ -102,7 +110,7 @@ impl ScratchProjection {
         } else if !self.0.get(&entry.path).is_some_and(|(name, _)| name == &entry.name) {
             self.0.insert(
                 entry.path.clone(),
-                (entry.name.clone(), staging::is_hidden_from_listings(&entry.name)),
+                (entry.name.clone(), is_hidden_from_listings(&entry.name)),
             );
         }
     }
@@ -230,7 +238,7 @@ impl VisibleMap {
 /// setting.
 #[cfg(test)]
 pub(crate) fn shows(entry: &FileEntry, include_hidden: bool, name_filter: Option<&NameFilter>) -> bool {
-    shown_by_setting(entry, include_hidden, name_filter) && !staging::is_hidden_from_listings(&entry.name)
+    shown_by_setting(entry, include_hidden, name_filter) && !is_hidden_from_listings(&entry.name)
 }
 
 /// The hidden-file and name-filter predicates, independent of scratch ownership.

@@ -5,7 +5,7 @@
 //! category: it says "this listing finished, here's how", and the host decides
 //! that a refused read becomes a `listing-error` with a typed classification, a
 //! TCC bookkeeping call, and an entry in the MCP ring. Cmdr's answer is
-//! `crate::listing_host::events::TauriListingEvents`.
+//! `TauriListingEvents`, in the app's `listing_host::events`.
 
 use std::path::{Path, PathBuf};
 
@@ -38,6 +38,10 @@ pub enum ListingEnd {
     /// The pane moved on before the listing landed. Nothing was cached.
     Cancelled {
         /// The volume the pane asked for.
+        #[expect(
+            dead_code,
+            reason = "issue #301: a fact the engine hands any host; Cmdr's adapter doesn't need it, and the crate exports it (M5)"
+        )]
         volume_id: String,
         /// The directory as the pane asked for it.
         path: PathBuf,
@@ -55,6 +59,10 @@ pub enum ListingEnd {
 
 impl ListingEnd {
     /// The volume the pane asked for.
+    #[expect(
+        dead_code,
+        reason = "issue #301: a fact the engine hands any host; Cmdr's adapter doesn't need it, and the crate exports it (M5)"
+    )]
     pub fn volume_id(&self) -> &str {
         match self {
             Self::Complete { volume_id, .. } | Self::Cancelled { volume_id, .. } | Self::Failed { volume_id, .. } => {
@@ -64,6 +72,10 @@ impl ListingEnd {
     }
 
     /// The directory the listing was for.
+    #[expect(
+        dead_code,
+        reason = "issue #301: a fact the engine hands any host; Cmdr's adapter doesn't need it, and the crate exports it (M5)"
+    )]
     pub fn path(&self) -> &Path {
         match self {
             Self::Complete { path, .. } | Self::Cancelled { path, .. } | Self::Failed { path, .. } => path,

@@ -182,7 +182,7 @@ coalescing".
 operation settling un-hides its leftover with no change to the listing and nothing to notify anyone, because the
 ownership signal is a `Weak` that simply stops upgrading (`cmdr_fs::staging`). Hunting for every event that could flip
 it is exactly the kind of invariant that rots; re-asking about the few names it could apply to cannot. What makes it
-sound is that `staging::is_hidden_from_listings` is GATED on the pure `could_be_hidden_from_listings`, so a name outside
+sound is that `visible_rows::is_hidden_from_listings` is GATED on the pure `could_be_hidden_from_listings`, so a name outside
 that set is settled by construction.
 
 **Two slots, one per `include_hidden`**, so a pane toggling hidden files — or two readers disagreeing about the flag
@@ -428,7 +428,7 @@ row order".
 ### Collating names
 
 `collation.rs` owns the one answer to "how do two names rank". It wraps an ICU4X `Collator` built for the locale
-`intl::active_locale()` reports, with numeric ordering on.
+the host's `ReadingLocale` seam reports (Cmdr's answer: `intl::active_locale()`), with numeric ordering on.
 
 **Why a collator and not code-point order.** macOS stores whatever bytes a writer hands it, so a single folder holds
 both spellings of an accented name: Cocoa writers emit NFD (`a` + U+0301), browsers and most others NFC (U+00E1).
@@ -478,8 +478,8 @@ surface used is that one call and `Vec<u8>`'s upstream `CollationKeySink` impl; 
 arrives as a red Renovate PR rather than on `main`. What type checking cannot see is a change to the key BYTES, which
 is what the never-persist rule and the ordering tests above cover.
 
-**Locale changes are pulled, not pushed.** `active_collator` caches one collator per locale tag and re-reads
-`intl::active_locale()` on each call, so the next sort after an OS language switch uses the new language. Listings
+**Locale changes are pulled, not pushed.** `active_collator` caches one collator per locale tag and re-asks
+the host's `ReadingLocale` on each call, so the next sort after an OS language switch uses the new language. Listings
 already sorted keep their order until something re-reads them, exactly as they do when the sort column changes.
 
 `sort_entries` sorts indices and then permutes the rows in place by cycle-following, rather than building a second
@@ -516,8 +516,8 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
 - **Font metrics in a Rust binary cache, not frontend canvas measurement**: measuring 50k filenames in JS is slow. The
   frontend measures each code point's width once via Canvas and ships the table to Rust; later text-width queries are
   hash lookups in the cached `.bin` table. `calculate_max_width_with_suffixes()` is the entry point, used by
-  `brief_columns::compute_brief_column_text_widths` to size each Brief column to its widest filename (plus a per-row
-  trailing suffix that reserves room for the Finder tag-dot cluster).
+  `font_metrics::brief_columns::compute_brief_column_text_widths` to size each Brief column to its widest filename
+  (plus a per-row trailing suffix that reserves room for the Finder tag-dot cluster).
 - **Revision on `CachedListing`, not `WatchedDirectory`**: it describes the committed pane view on every volume,
   including SMB and MTP, which have no FSEvents `WatchedDirectory`. See § "Diff event coalescing".
 - **The engine reports facts through the `ListingEvents` seam** (`host/events.rs`): `opening`, `progress`,
@@ -527,6 +527,13 @@ loudly, so `sorting::tests::apply_permutation_moves_each_row_to_its_destination`
   (`streaming::report_failure`) after the cancel token is gone. Tests record facts with `host::testing::RecordingEvents`;
   the app policy's matrix (`streaming_reaction_test.rs`) collects wire events with `WireCollector`.
   `Arc<dyn ListingEvents>` (not `&dyn`) because it's cloned into the progress callback.
+- **Every other app question is a seam too** (`host/mod.rs`): which volume serves a path (`volumes`, including the
+  one `unregistered` question that folds mount adoption and "why is it missing"), what the drive index knows (`index`),
+  the foreground hold (`leases`), the reading language (`locale`), and the mount table (`mounts`). The app answers each
+  in `listing_host/`, resolving its subsystem per call. The two scratch-visibility settings are engine state the host
+  sets (`host::set_scratch_visibility`; `file_system::staging`'s setters forward to it). In the test binary the slot
+  holds every app answer except events and the runtime (`listing_host::test_seams`), so tests list through the real
+  registry and index, as the app does.
 - **Watcher starts AFTER listing-complete**: watcher diffs rely on cached entries; starting before the cache is
   populated would miss initial state.
 - **Incremental watcher path with fallback to full re-read**: most FS changes touch a few files. The incremental path
@@ -576,7 +583,7 @@ Used by the watcher's incremental path and synthetic mkdir to patch listings wit
 asks the registered volume for its spelling (`Volume::listing_path`, identity by default). Every store
 (`CachedListing::new`) and every path-keyed lookup (`find_listings_for_path_on_volume`, `get_cached_listing`,
 `try_get_authoritative_listing`, the archive refresh) builds its key through it BEFORE taking `LISTING_CACHE`, since it
-reads the volume registry.
+asks the host's volume seam.
 
 **Decision:** canonicalize in the cache, not at each caller. **Why:** a pane path enters from the frontend (navigation,
 Enter on a row, go-to-path, history, tab restore), from a backend's change report, and from pre-flight oracle queries
@@ -644,8 +651,10 @@ Docker cell `network/smb_upgrade_respell_test.rs`, and on the frontend the drop 
 
 ## Change notification API (caching.rs)
 
-`notify_directory_changed(volume_id, parent_path, change)`: unified entry point for notifying the listing system that a
-directory changed on a volume. `DirectoryChange` variants:
+`notify_directory_changed(volume_id, parent_path, change)`: applies a directory change on a volume to the panes. Panes
+only: every caller goes through the app's composer, `listing_host::directory_changed`, which applies the change to the
+drive index and the cloud badge FIRST (the SMB watcher fires with no pane open, and the enrich below must see fresh
+sizes), then calls this. `DirectoryChange` variants:
 
 - `Added(FileEntry)`: single add, patches via `insert_entry_sorted`.
 - `Removed(String)`: single remove by name, patches via `remove_entry_by_name` (name match, not full path — see above).
@@ -672,7 +681,7 @@ and the `rename_file` command (local FS renames). `emit_synthetic_entry_diff` re
 
 `refresh_archive_listings(volume_id, archive_path)` is a sibling entry point for the archive content watch: it
 `FullRefresh`es every open listing at or inside a changed `.zip` (parent drive id + full path) WITHOUT the drive-index
-sync `notify_directory_changed` runs, since an archive-inner path isn't a real filesystem path. Rationale and the watch
+sync the composer runs, since an archive-inner path isn't a real filesystem path. Rationale and the watch
 that drives it: `crates/cmdr-archive/src/watch/DETAILS.md`. What a refresh DOES to this cache is
 `archive_watch_integration_test.rs`, here: a refresh through `AppListings` reflected in an open listing while an outside
 listing is untouched, a truncated mid-write keeping the previous listing, and LRU eviction releasing the watch. No
@@ -794,7 +803,8 @@ what's on disk).
 
 ## The foreground lease a listing holds
 
-`read_directory_with_progress` takes a `priority::foreground` lease on the volume as its FIRST statement and holds it
+`read_directory_with_progress` takes a foreground hold on the volume (`host::leases()`, which Cmdr answers with a
+`priority::foreground` lease) as its FIRST statement and holds it
 for the whole body. That is what tells a background SMB upload and the index scan that the user is waiting on this
 share right now, for however long the folder actually takes to come back. The command entry point
 (`commands/file_system/listing.rs`) still stamps the volume's timestamp on the way in: it covers the non-streaming path
@@ -892,9 +902,9 @@ combined line otherwise. Classified once per listing, at its first stall:
 - **Direct backends name themselves**: SMB direct, SFTP, and WebDAV are `server`; MTP and ADB are `unknown` (a USB
   cable for one, a cable or Wi-Fi for the other, so neither word fits both).
 - **A filesystem path** (`Local`, and an archive or `.git` portal inside one) reads the mount it lies on off the kernel's
-  table, ❌ never a `statfs` on the path, which blocks on the very mount that just stalled. macOS uses the
-  `getfsstat(MNT_NOWAIT)` snapshot (`volumes::mount_type_and_source_for`), Linux `/proc/mounts`
-  (`linux_mounts::mount_entry_for_path`). Network types on an explicit allowlist (`smbfs`, `nfs`, `afpfs`, `webdav`,
+  table through the host's `MountTable` seam, ❌ never a `statfs` on the path, which blocks on the very mount that just
+  stalled. Cmdr answers with the `getfsstat(MNT_NOWAIT)` snapshot on macOS (`volumes::mount_type_and_source_for`) and
+  `/proc/mounts` on Linux (`linux_mounts::mount_entry_for_path`). Network types on an explicit allowlist (`smbfs`, `nfs`, `afpfs`, `webdav`,
   `ftp`; `cifs`, `smb3`, `nfs4`, `fuse.sshfs`, `fuse.rclone`, `fuse.s3fs`, …) are `server`; a known local disk
   (`cmdr_fs::filesystem_kind::mount_is_local_disk`) is `drive`; anything else (GVFS's `fuse.gvfsd-fuse`, which holds phones and
   shares alike, macFUSE, cloud clients' mounts, autofs, `9p`) is `unknown`.

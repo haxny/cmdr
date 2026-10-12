@@ -415,30 +415,20 @@ pub fn apply_tags_to_listing(listing_id: &str, updates: Vec<(String, Vec<TagRef>
     }
 }
 
-/// Notifies the listing system that a directory's contents changed on a volume.
+/// Applies a directory change on a volume to the panes showing it.
 ///
 /// Finds all active listings matching `volume_id` and `parent_path`, applies the
 /// change to the cache, and emits `directory-diff` events to the frontend.
 ///
 /// For single-entry changes (add/remove/modify/rename), patches the cache in-place.
 /// For `FullRefresh`, re-reads the directory via the Volume trait and computes a diff.
+///
+/// Panes only: the host applies the change to everything else that keeps a copy
+/// of the directory (the drive index, the cloud badge) BEFORE this, so the
+/// enrich below sees fresh sizes. Cmdr's order lives in the app's
+/// `listing_host::directory_changed`; ❌ never call the index's own change intake
+/// from here.
 pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: DirectoryChange) {
-    // Index sync FIRST, before any pane-listing work (plan Architecture §3).
-    // The SMB watcher runs for the WHOLE volume's lifetime, not just while a pane
-    // shows the share, so the index must update even when no listing matches this
-    // path — hence this sits ahead of the "no listing, bail" early-return below.
-    // It's a no-op for `root` and any non-indexed volume. Sequencing the index
-    // write before the pane enrich means the enrich (and the `DirsUpdated`
-    // the writer emits) reflect the just-written sizes, not the pre-event ones.
-    // The coupling is one-directional: listing → indexer, never the reverse.
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
-    crate::index_host::index().apply_directory_change(volume_id, parent_path, &change);
-
-    // The cloud badge caches per directory, so this is how it learns that a file it
-    // has an answer for moved on. Cheap: one hash lookup, hit or miss.
-    #[cfg(target_os = "macos")]
-    crate::file_system::sync_status::invalidate_dir(parent_path);
-
     let listings = find_listings_for_path_on_volume(Some(volume_id), parent_path);
 
     // For non-FullRefresh changes, bail early if no listing matches this path.
@@ -450,7 +440,7 @@ pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: Dir
     match change {
         DirectoryChange::Added(entry) => {
             let mut entry = entry;
-            crate::index_host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
+            super::host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
             for (listing_id, ..) in &listings {
                 notify_added(listing_id, entry.clone());
             }
@@ -463,14 +453,14 @@ pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: Dir
         }
         DirectoryChange::Modified(entry) => {
             let mut entry = entry;
-            crate::index_host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
+            super::host::index().enrich(volume_id, std::slice::from_mut(&mut entry));
             for (listing_id, ..) in &listings {
                 notify_modified(listing_id, entry.clone());
             }
         }
         DirectoryChange::Renamed { old_name, new_entry } => {
             let mut new_entry = new_entry;
-            crate::index_host::index().enrich(volume_id, std::slice::from_mut(&mut new_entry));
+            super::host::index().enrich(volume_id, std::slice::from_mut(&mut new_entry));
             let old_path = parent_path.join(&old_name);
             for (listing_id, ..) in &listings {
                 notify_removed(listing_id, &old_path);
@@ -482,7 +472,7 @@ pub fn notify_directory_changed(volume_id: &str, parent_path: &Path, change: Dir
             // it for: enrich once for the volume, then publish per listing. This is
             // where the diffing a device backend used to do for itself lives now.
             let mut entries = entries;
-            crate::index_host::index().enrich(volume_id, &mut entries);
+            super::host::index().enrich(volume_id, &mut entries);
             for (listing_id, ..) in &listings {
                 // Zero overlay rows: this arm is a device backend handing over
                 // its own re-read (SMB, MTP), and no overlay contributes to one.
@@ -685,9 +675,7 @@ async fn notify_full_refresh_locked(
     // Re-resolve from `(volume_id, parent_path)` so a `.zip`-crossing listing hits
     // the same `ArchiveVolume` the read used (the cache keys on the parent drive
     // id, and a re-resolve re-registers a lazily-evicted archive).
-    let resolved = crate::file_system::volume::manager::get_volume_manager()
-        .resolve(&volume_id, &parent_path)
-        .await;
+    let resolved = super::host::volumes().resolve(&volume_id, &parent_path).await;
     let is_routed = resolved.is_routed();
     let vol = match resolved.volume {
         Some(v) => v,
@@ -711,7 +699,7 @@ async fn notify_full_refresh_locked(
 
     // A routed volume has no drive index, so enrich is a no-op — skip it.
     if !is_routed {
-        crate::index_host::index().enrich(&volume_id, &mut new_entries);
+        super::host::index().enrich(&volume_id, &mut new_entries);
     }
 
     // Re-run the overlays, in the same place in the pipeline the first read ran
@@ -860,7 +848,7 @@ pub fn try_get_authoritative_listing(volume_id: &str, path: &Path) -> Option<Vec
     // `listing_watch_coverage` honestly (covered once established, `None` if it
     // couldn't start). This oracle runs on sync recursive scan walkers, so it can't
     // `.await` the async remote confirm — hence the local-only variant.
-    let resolved = crate::file_system::volume::manager::get_volume_manager().resolve_local_only(volume_id, path);
+    let resolved = super::host::volumes().resolve_local_only(volume_id, path);
     let volume = resolved.volume?;
 
     // Honesty guard for a REMOTE archive-inner path. `resolve_local_only` can't

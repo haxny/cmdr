@@ -16,9 +16,9 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
 use crate::file_system::listing::cached_listing::{CachedListing, LISTING_CACHE, OverlayRows};
+use crate::file_system::listing::host::index;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use crate::file_system::listing::visible_rows::VisibleRows;
-use crate::index_host::index;
 #[cfg(test)]
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
@@ -55,9 +55,7 @@ pub async fn list_directory_start_with_volume(
     // Resolve the volume, routing a `.zip`-crossing path to its read-only
     // `ArchiveVolume`. The cache keeps the FE-provided `volume_id` (parent drive);
     // the downstream re-read sites re-resolve the archive from `(volume_id, path)`.
-    let resolved = crate::file_system::volume::manager::get_volume_manager()
-        .resolve(volume_id, path)
-        .await;
+    let resolved = super::host::volumes().resolve(volume_id, path).await;
     let is_routed = resolved.is_routed();
     let volume = resolved.volume.ok_or_else(|| {
         std::io::Error::new(
@@ -66,14 +64,13 @@ pub async fn list_directory_start_with_volume(
         )
     })?;
 
-    // Use the Volume trait to list the directory
-    let all_entries = volume.list_directory(path, None).await.map_err(|e| {
-        // A stale-mount errno is the only evidence we get that this volume's
-        // active mount died; if the filesystem is reachable through another
-        // mount, this moves the volume there. See `volume::note_root_failure`.
-        crate::file_system::volume::note_root_failure(volume_id, &e);
-        std::io::Error::other(e.to_string())
-    })?;
+    // Use the Volume trait to list the directory. A refused read is the error
+    // and nothing else: the streaming path's `ListingEvents::finished` is where
+    // the host hears about a failure (and moves a volume off a dead mount).
+    let all_entries = volume
+        .list_directory(path, None)
+        .await
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
     benchmark::log_event_value("volume.list_directory COMPLETE, entries", all_entries.len());
 
     // Generate listing ID
@@ -85,7 +82,7 @@ pub async fn list_directory_start_with_volume(
     let mut all_entries = all_entries;
     if !is_routed {
         index().enrich(volume_id, &mut all_entries);
-        index().verify_directory(volume_id, &path.to_string_lossy());
+        index().verify_directory(volume_id, path);
     }
 
     // Fold in the rows a PANE sees that the volume doesn't hold (the git

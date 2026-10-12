@@ -26,7 +26,7 @@ pub struct AppListings;
 
 impl ListingHost for AppListings {
     fn directory_changed(&self, volume_id: &str, parent_path: &Path, change: DirectoryChange) {
-        caching::notify_directory_changed(volume_id, parent_path, change);
+        super::directory_changed(volume_id, parent_path, change);
     }
 
     fn authoritative_listing(&self, volume_id: &str, path: &Path) -> Option<Vec<FileEntry>> {

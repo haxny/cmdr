@@ -4,7 +4,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
 
 ## Module map
 
-- Read: **streaming.rs**, **stall.rs**. Seams the app answers: **host/** (events, runtime, …). Cache and
+- Read: **streaming.rs**, **stall.rs**. Seams the app answers: **host/** (events, volumes, index, …). Cache and
   mutate: **cached_listing.rs**, **caching.rs**, **operations.rs**. Project and publish: **visible_rows.rs**,
   **path_index.rs**, **name_filter.rs**, **diff.rs**, **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
   `FileEntry` comes from `cmdr-fs`; the `std::fs` reader is the local backend's (`volume/backends/`).
@@ -28,7 +28,7 @@ Backend directory reading, caching, sorting, and streaming: 100k+ entries, non-b
   reconciles against cache membership.
 - **The orphan reaper keys on `last_accessed_ms`**, bumped by reads, cache patches, and the panes'
   `keep_listings_alive` heartbeat (idle panes make no reads). ❌ Never from `refresh_listing_index_sizes`.
-- **`read_directory_with_progress` holds a `priority::foreground` lease** for its whole body: ❌ never bind it to `_`.
+- **`read_directory_with_progress` holds a `host::leases()` foreground hold** for its whole body: ❌ never bind it to `_`.
 - ❌ **A listing never aborts a read**, on cancel or when a retry wins: detaching lets it unwind; aborting wedges an
   MTP phone. A read quiet for `stall_after` emits `listing-stalled` and keeps waiting, ❌ never a deadline that ends
   it. `DETAILS.md` § "Stalled listings".

@@ -157,10 +157,10 @@ pub fn volume_holds_real_repos(volume: &dyn Volume) -> bool {
 /// Re-reads every open listing a repo change can have moved, so a pane standing
 /// in one picks up a ref change.
 pub(crate) fn refresh_virtual_listings(repo_root: &Path) {
-    use crate::file_system::listing::caching::{DirectoryChange, notify_directory_changed};
+    use cmdr_fs::volume::DirectoryChange;
 
     for (volume_id, listing_path) in listings_a_repo_change_re_reads(repo_root) {
-        notify_directory_changed(&volume_id, &listing_path, DirectoryChange::FullRefresh);
+        crate::listing_host::directory_changed(&volume_id, &listing_path, DirectoryChange::FullRefresh);
     }
 }
 
@@ -260,10 +260,10 @@ fn listings_matching(wanted: impl Fn(&Path) -> bool) -> Vec<(String, PathBuf)> {
 /// mutation may touch. That distinction is exactly what the deleted
 /// `local_posix` guards got wrong.
 pub fn refresh_all_virtual_listings_after_toggle() {
-    use crate::file_system::listing::caching::{DirectoryChange, notify_directory_changed};
+    use cmdr_fs::volume::DirectoryChange;
 
     for (volume_id, path) in listings_inside_a_dot_git() {
-        notify_directory_changed(&volume_id, &path, DirectoryChange::FullRefresh);
+        crate::listing_host::directory_changed(&volume_id, &path, DirectoryChange::FullRefresh);
     }
 }
 
