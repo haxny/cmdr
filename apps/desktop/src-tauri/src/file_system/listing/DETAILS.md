@@ -71,13 +71,19 @@ reader".
 The record is `cached_listing.rs`, everything that patches one or notifies about it is `caching.rs`, and the six-hour
 backstop that reclaims a leaked one is `orphan_reaper.rs`.
 
-- **The engine** (`engine.rs`): `Listings`, a cheap-to-clone `Arc<Inner>`, built by `Listings::builder(volumes,
+- **The engine** (`engine/mod.rs`): `Listings`, a cheap-to-clone `Arc<Inner>`, built by `Listings::builder(volumes,
   events)` (the other seams optional) or `Listings::detached()`. `Inner` holds the seams the host handed over and every
   piece of engine state: the cache, the in-flight reads' cancel tokens, the pending diffs, the refresh turnstiles, the
   hung-read registry, the collator per locale, the epoch `last_accessed_ms` counts from, and the scratch settings. Two
   engines share nothing. Each module adds its operations as an `impl Inner` block. The app builds one in
-  `listing_host::install` and hands it out as `listing_host::listings()`; the free functions callers outside the engine
-  still name are shims over it (`shims/`, one file per engine module, which re-exports its own; all go in M4b). A scratch-visibility or
+  `listing_host::install` and hands it out as `listing_host::listings()`.
+- **The public API** is `mod.rs`'s `pub use` list: `Listings`' methods (in `engine/`, one file per caller group:
+  `open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`, plus `backends.rs`, the engine's
+  own weak `cmdr_fs` `ListingHost`) and the types they take and return. Every submodule but `host` is private, so the
+  compiler keeps callers on that list. A listing id crosses it as a `ListingId`; only IPC sees a `String`. Methods
+  return owned data; `with_rows` is the one closure the engine runs under its cache lock, and it must never call back
+  into the engine. Tests that still drive the shared engine use `shims/` and the `#[cfg(test)]` root re-exports (both
+  go in M4b). A scratch-visibility or
   collator read happens BEFORE the cache lock and travels down as a value; `CachedListing` keeps no reference to its
   engine (it copies the epoch).
 - **The cache** (`Inner::cache`): `RwLock<HashMap<String, CachedListing>>`, keyed by `listing_id` (UUID per navigation).
@@ -86,10 +92,10 @@ backstop that reclaims a leaked one is `orphan_reaper.rs`.
   `entries_mut()` / `set_entries()` change it and drop BOTH maps on the way, `rows(include_hidden)` is what every read
   accessor asks, and `index_of_path` / `indices_of_paths` are what every by-path caller asks. See § "Row numbers" and
   § "Entries by path".
-- **Focused-pane reads**: `get_cached_listing(volume_id, path)` clones the newest matching cached listing without
+- **Focused-pane reads**: `Listings::cached_entries(volume_id, path)` clones the newest matching cached listing without
   requiring watcher coverage. Agent reads use it for the already-open pane, including SMB and MTP, and never start a
   new filesystem listing.
-- **`caching::snapshot_listings()`**: lightweight summary of every active listing (id, volume, path, entry count, age).
+- **`Listings::summaries()`**: lightweight summary of every active listing (id, volume, path, entry count, age).
   Used by `cmdr://state` so error reports surface orphan listings (started but not bound to a pane).
 - **Concurrency**: multiple listings coexist (different panes, rapid navigation), each with a unique ID.
 

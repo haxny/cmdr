@@ -1008,6 +1008,29 @@ unchanged apart from import paths.
 `file-length`, `desktop-rust-jscpd`, plus `desktop-svelte-e2e-playwright` (the pane, mkdir's cursor-land, and Brief
 columns all moved).
 
+Executor notes:
+
+- Lead decision, part of change 5: `resort_listing`'s under-lock enrich moved off the lock (own commit, red first), so
+  invariant 24 has no exception now.
+- Change 6: the index apply's idempotence is pinned in `cmdr-index` (`the_same_added_applied_twice_counts_once`), so the
+  index half stays. The create path is `create.rs::patch_listings_after_create`.
+- The API lives in `listing/engine/` (`open.rs`, `rows.rs`, `settings.rs`, `intake.rs`, `oracle.rs`, `housekeeping.rs`,
+  `backends.rs`); `listing/mod.rs`'s `pub use` list is the surface. Additions to § "Public API": `PaneMarks` (cursor,
+  selection, all-selected, so `resort` / `set_include_hidden` don't take three confusable positionals),
+  `selection_names` (multi-rename's guarded read, mirroring `selection_snapshot`), `entries(id)` (all entries, owned;
+  multi-rename's siblings, which `entries_named` couldn't give), `sort_entries(collator, …)` (the local reader's sort),
+  and `update_index_sizes` returns how many sizes found a row (the count's `Wrote`). Dropped for having no caller:
+  `total_count`, the unguarded `set_name_filter`, `entries_named`. `IndexSizes` has public fields.
+- `ListingRequest` is the renamed `StreamingRequest` (with `id: ListingId`); `StreamingListingStartResult` and
+  `ListingStatus` moved to `commands/file_system/listing.rs` unchanged.
+- `listing_host()` is built (`engine/backends.rs`, weak) but the app's `AppListings` calls the API methods directly,
+  since its `directory_changed` must go through the composer; it carries a `dead_code` allow until a host uses it.
+- `with_rows` reconciles scratch drift and doesn't touch (Brief columns' semantics). The folder-size count's plan now
+  reads through it (it read without reconciling before) and touches via `keep_alive`.
+- Test-only names outside the engine reach it through a `#[cfg(test)]` root re-export block in `listing/mod.rs` beside
+  the shims; M4b deletes both. `Listings::inner()` is test-only.
+- `mcp/executor/tags.rs` keeps tagging ONE listing (the youngest showing the pane's folder), as before.
+
 ### M4b: Tests own their engine
 
 **Scope.** Write the `testing` fixtures (`TestEngine` builder with `FakeVolumes`, `RecordingEvents`, `RecordingLeases`,

@@ -395,7 +395,7 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     crate::file_system::listing::caching_test_support::TestListingGuard,
 ) {
     use crate::file_system::listing::caching_test_support::TestListing;
-    use crate::file_system::listing::diff_emitter::hold_for_test;
+    use crate::file_system::listing::hold_for_test;
     use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
     use cmdr_fs::testing::unique_test_id;
@@ -434,7 +434,7 @@ fn rewrite_a_dotfile_beside_a_visible_file(
 
 #[test]
 fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
-    use crate::file_system::listing::diff_emitter::pending_changes_for_test;
+    use crate::file_system::listing::pending_changes_for_test;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-off", false);
 
@@ -453,8 +453,8 @@ fn a_dotfile_write_reaches_the_cache_but_not_a_pane_hiding_dotfiles() {
 
 #[test]
 fn a_dotfile_write_reaches_a_pane_showing_dotfiles() {
-    use crate::file_system::listing::diff::DiffChangeType;
-    use crate::file_system::listing::diff_emitter::pending_changes_for_test;
+    use crate::file_system::listing::DiffChangeType;
+    use crate::file_system::listing::pending_changes_for_test;
 
     let (_scratch, listing) = rewrite_a_dotfile_beside_a_visible_file("watch-dotfile-hidden-on", true);
 

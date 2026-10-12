@@ -18,7 +18,7 @@
 6. The frontend (`src/lib/file-explorer/pane/index-events.ts` → `FilePane.applyIndexSizes`) writes the readings onto
    its cached rows and the cursor entry in place, re-reads only the status-bar totals, and pushes the MCP pane state.
 
-A whole-volume batch (`Touched::Whole`) skips the per-row comparison: it runs the full `refresh_listing_index_sizes`
+A whole-volume batch (`Touched::Whole`) skips the per-row comparison: it runs the full `Listings::refresh_index_sizes`
 re-enrich and sends `full: true`, and the pane re-reads its window's sizes the old way. It happens once per scan.
 
 The open-listing set is kept by a `ListingObserver` (`file_system/listing/host/observers.rs`), which

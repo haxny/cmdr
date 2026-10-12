@@ -6,11 +6,9 @@ use cmdr_fs::volume::ListingProgress;
 use cmdr_index::store::DirStats;
 
 use super::jobs;
-use crate::file_system::listing::cached_listing::listing_cache;
-use crate::ignore_poison::RwLockIgnorePoison;
+use crate::file_system::listing::{IndexSizes, ListingId};
 use crate::listing_index_sizes::refresh::RowSizes;
 use crate::listing_index_sizes::{FolderSizes, ListingIndexSizesChanged};
-use cmdr_fs::entry::FileEntry;
 
 pub(super) type Sink<'a> = &'a (dyn Fn(ListingIndexSizesChanged) + Sync);
 
@@ -52,15 +50,18 @@ pub(super) enum Wrote {
 }
 
 pub(super) fn listing_is_open(listing_id: &str) -> bool {
-    listing_cache().read_ignore_poison().get(listing_id).is_some()
+    crate::listing_host::listings().contains(&ListingId::new(listing_id))
 }
 
 /// Writes `stats` onto the folder's cached row, then sends it to the pane. The
 /// row's size is the count's from here on (`jobs::mark_manual`).
 pub(super) fn publish(listing_id: &str, folder: &str, stats: DirStats, sink: Sink<'_>) -> Wrote {
-    let wrote = write_to_cache(listing_id, folder, |entry| {
-        RowSizes::of(entry, false).after(Some(&stats)).apply_to(entry);
-    });
+    // A reading replaces every index field, so it needs nothing from the row it lands on.
+    let wrote = write_to_cache(
+        listing_id,
+        folder,
+        RowSizes::default().after(Some(&stats)).index_sizes(),
+    );
     if wrote == Wrote::Row {
         jobs::mark_manual(listing_id, folder);
         sink(ListingIndexSizesChanged {
@@ -86,7 +87,7 @@ pub(super) fn restore(listing_id: &str, folder: &str, before: RowSizes, before_m
     } else {
         jobs::unmark_manual(listing_id, folder);
     }
-    if write_to_cache(listing_id, folder, |entry| before.apply_to(entry)) == Wrote::Row {
+    if write_to_cache(listing_id, folder, before.index_sizes()) == Wrote::Row {
         sink(ListingIndexSizesChanged {
             listing_id: listing_id.to_string(),
             full: true,
@@ -97,18 +98,12 @@ pub(super) fn restore(listing_id: &str, folder: &str, before: RowSizes, before_m
     }
 }
 
-fn write_to_cache(listing_id: &str, folder: &str, write: impl FnOnce(&mut FileEntry)) -> Wrote {
-    let mut cache = listing_cache().write_ignore_poison();
-    let Some(listing) = cache.get_mut(listing_id) else {
-        return Wrote::NoListing;
-    };
-    let mut write = Some(write);
-    let mut wrote = Wrote::NoRow;
-    listing.update_index_sizes_by_path(&[folder.to_string()], |_, entry| {
-        if let Some(write) = write.take() {
-            write(entry);
-            wrote = Wrote::Row;
-        }
-    });
-    wrote
+fn write_to_cache(listing_id: &str, folder: &str, sizes: IndexSizes) -> Wrote {
+    match crate::listing_host::listings()
+        .update_index_sizes(&ListingId::new(listing_id), &[(folder.to_string(), sizes)])
+    {
+        Ok(0) => Wrote::NoRow,
+        Ok(_) => Wrote::Row,
+        Err(_) => Wrote::NoListing,
+    }
 }

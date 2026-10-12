@@ -1,67 +1,83 @@
-//! Directory listing module - reading, operations, caching, metadata, sorting, streaming.
+//! The directory listing engine: [`Listings`] and everything a host programs
+//! against. The re-exports below ARE the API; every submodule but `host` is
+//! private, so nothing outside can reach past them.
 
-pub(crate) mod cached_listing;
-pub(crate) mod caching;
-pub(crate) mod collation;
-pub(crate) mod compare;
-pub(crate) mod diff;
-pub(crate) mod diff_emitter;
-pub(crate) mod engine;
-pub(crate) mod foreign_path;
-pub(crate) mod fuzzy_jump;
+mod cached_listing;
+mod caching;
+mod collation;
+mod compare;
+mod diff;
+mod diff_emitter;
+mod engine;
+mod foreign_path;
+mod fuzzy_jump;
 pub(crate) mod host;
-pub(crate) mod index_sizes;
-pub(crate) mod listing_id;
-pub(crate) mod name_filter;
-pub(crate) mod operations;
-pub(crate) mod orphan_reaper;
-pub(crate) mod path_index;
-pub(crate) mod pipeline;
-pub(crate) mod quick_filter;
+mod index_sizes;
+mod listing_id;
+mod name_filter;
+mod operations;
+mod orphan_reaper;
+mod path_index;
+mod pipeline;
+mod quick_filter;
+mod reread;
+#[cfg(test)]
 mod shims;
+mod sorting;
+mod stall;
+mod stalled_on;
+mod stats;
+mod streaming;
+mod visible_rows;
+
+// The public API names a few types the app only meets as values (returned, or
+// inside another type); M5 makes this the crate root, where none is unused.
+#[allow(unused_imports, reason = "public API the app meets only as values")]
+pub use caching::ListingSummary;
+#[allow(unused_imports, reason = "public API the app meets only as values")]
+pub use collation::NameCollator;
+pub use compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
+#[allow(unused_imports, reason = "public API the app meets only as values")]
+pub use diff::{DiffChange, DiffChangeType, DirectoryDiffBatch};
+pub use engine::{Listings, ListingsBuilder, PaneMarks};
+pub use foreign_path::stored_spellings;
+pub use fuzzy_jump::FuzzyJumpError;
+pub use index_sizes::IndexSizes;
+pub use listing_id::ListingId;
+pub use operations::{ListingLookupError, ResortResult, RowBeside, SelectionSnapshot};
 pub use quick_filter::NameFilterResult;
-pub(crate) mod reread;
-pub(crate) mod sorting;
-pub(crate) mod stall;
-pub(crate) mod stalled_on;
-pub(crate) mod stats;
-pub(crate) mod streaming;
-pub(crate) mod visible_rows;
+#[allow(unused_imports, reason = "public API the app meets only as values")]
+pub use reread::{ReadTicket, RefreshOutcome};
+pub use sorting::{
+    DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator_with as entry_comparator,
+    sort_entries_with as sort_entries,
+};
+pub use stalled_on::StalledOn;
+pub use stats::ListingStats;
+pub use streaming::ListingRequest;
+pub use visible_rows::VisibleRows;
 
-pub use engine::{Listings, ListingsBuilder};
-pub use reread::RefreshOutcome;
+// Test shims and test-only names at the root, for tests (inside and outside the
+// engine) that still drive the one shared engine. M4b deletes them with the
+// shims, once every test builds its own engine.
+#[cfg(test)]
+pub(crate) use {
+    cached_listing::listing_cache,
+    caching::try_get_authoritative_listing,
+    diff_emitter::{hold_for_test, pending_changes_for_test},
+    fuzzy_jump::fuzzy_find_first_match_in_listing,
+    operations::{list_directory_end, list_directory_start_with_volume, update_listing_entries},
+    pipeline::OverlayRows,
+    streaming::{StreamingListingState, cancel_listing, read_directory_with_progress, streaming_state},
+};
 
-/// The app's installed engine, for the free functions that still forward to it
-/// from outside the engine. ❌ Never call it from engine code, which reaches its
-/// own state through `self`.
+/// The app's installed engine, for the test shims that still forward to it.
+/// ❌ Never call it from engine code, which reaches its own state through `self`.
 // shim: removed in M4b
+#[cfg(test)]
 pub(crate) fn installed() -> &'static std::sync::Arc<engine::Inner> {
     crate::listing_host::listings().inner()
 }
-
-// Re-export types so they're available both externally and locally in this module
-// (call sites import them from `crate::file_system::listing` directly).
-pub use fuzzy_jump::fuzzy_find_first_match_in_listing;
-pub use operations::{
-    ListingLookupError, ListingStats, ResortResult, RowBeside, find_file_index, find_file_indices, get_file_at,
-    get_file_beside, get_file_range, get_listing_stats, keep_listings_alive, list_directory_end,
-    refresh_listing_index_sizes, resort_listing, set_listing_include_hidden,
-};
-pub use sorting::{DirectorySortMode, SortColumn, SortOrder};
-pub use streaming::{StreamingListingStartResult, cancel_listing, list_directory_start_streaming};
-
-// Batch accessors (used by drag, clipboard, and transfer dialogs)
-pub use operations::{get_files_at_indices, get_paths_at_indices};
-
-// Internal re-exports for file_system module internals (pub(crate) for crate-internal use)
-pub(crate) use caching::{get_cached_listing, get_listing_volume_id_and_path};
-// Notification API for volume mutations
-#[cfg(test)]
-pub(crate) use operations::update_listing_entries;
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-pub(crate) use operations::volume_ids_with_listings;
-#[cfg(test)]
-pub(crate) use pipeline::OverlayRows;
 
 // The app's half of `cmdr-archive`'s live-content watch: what a refresh does to
 // the listing cache, which is this module's side of the seam.

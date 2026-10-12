@@ -249,7 +249,7 @@ fn shown_by_setting(entry: &FileEntry, include_hidden: bool, name_filter: Option
 /// Holds the map's read lock, so keep it only as long as the read takes. Every
 /// answer it gives comes from one committed scratch projection, which is
 /// why a count and a row read through the same value can never disagree.
-pub(crate) struct VisibleRows<'a> {
+pub struct VisibleRows<'a> {
     entries: &'a [FileEntry],
     map: RwLockReadGuard<'a, Option<VisibleMap>>,
     /// The candidates a reader can see right now, in listing order.
@@ -284,7 +284,7 @@ impl<'a> VisibleRows<'a> {
     }
 
     /// How many rows the pane is showing.
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.map().settled.len() + self.live.len()
     }
 
@@ -312,7 +312,7 @@ impl<'a> VisibleRows<'a> {
     /// `None` is a legitimate answer, not a bug: the frontend iterates over a row
     /// count it cached before a `directory-diff` shrank the listing, and asks for
     /// rows that briefly no longer exist.
-    pub(crate) fn get(&self, row: usize) -> Option<&'a FileEntry> {
+    pub fn get(&self, row: usize) -> Option<&'a FileEntry> {
         let ahead = self.live_before(row);
         if let Some(candidate) = self.live.get(ahead)
             && candidate.rows_before as usize + ahead == row
@@ -351,13 +351,13 @@ impl<'a> VisibleRows<'a> {
     }
 
     /// Every shown entry, in row order.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &'a FileEntry> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = &'a FileEntry> + '_ {
         (0..self.len()).map(|row| self.get(row).expect("row is within len"))
     }
 
     /// The row number of the entry named `name`, or `None` when the pane isn't
     /// showing it. A directory has no duplicate names, so this is unambiguous.
-    pub(crate) fn row_of(&self, name: &str) -> Option<usize> {
+    pub fn row_of(&self, name: &str) -> Option<usize> {
         self.iter().position(|entry| entry.name == name)
     }
 
@@ -369,7 +369,7 @@ impl<'a> VisibleRows<'a> {
     /// key (`cmdr_fs::name_fold`) answers; two or more look-alikes answer `None`,
     /// so a cursor never lands on a guessed twin. Placement only: ❌ never use it to
     /// pick a row to act on.
-    pub(crate) fn row_of_any_spelling(&self, name: &str) -> Option<usize> {
+    pub fn row_of_any_spelling(&self, name: &str) -> Option<usize> {
         if let Some(row) = self.row_of(name) {
             return Some(row);
         }

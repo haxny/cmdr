@@ -9,7 +9,7 @@ use serde::Serialize;
 use genai::chat::ChatOptions;
 
 use crate::ai::AiTranslateError;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator};
+use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder, SortableEntry, entry_comparator};
 use crate::search::{self, ParsedScope, SearchQuery, SearchResult, VolumeLoad};
 
 use crate::search::ai::{self, query_builder as ai_query_builder};
@@ -427,7 +427,8 @@ pub fn sort_search_results(
     sort_order: SortOrder,
     dir_sort_mode: DirectorySortMode,
 ) -> Vec<u32> {
-    let comparator = entry_comparator::<SearchSortRow>(sort_by, sort_order, dir_sort_mode);
+    let collator = crate::listing_host::listings().collator();
+    let comparator = entry_comparator::<SearchSortRow>(collator, sort_by, sort_order, dir_sort_mode);
     let mut order: Vec<u32> = (0..rows.len() as u32).collect();
     order.sort_by(|a, b| comparator(&rows[*a as usize], &rows[*b as usize]));
     order

@@ -14,13 +14,14 @@ use std::time::Duration;
 
 use tokio::runtime::Handle;
 
-use crate::file_system::listing::diff::DirectoryDiffBatch;
+use crate::file_system::listing::DirectoryDiffBatch;
 use crate::file_system::listing::host::ListingEvents;
 use crate::file_system::listing::listing_id::ListingId;
 use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
 #[cfg(any(test, feature = "playwright-e2e"))]
+#[cfg(test)]
 pub(crate) use crate::file_system::listing::shims::diff_emitter::*;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.

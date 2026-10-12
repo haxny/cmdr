@@ -21,9 +21,9 @@ use notify_debouncer_full::DebouncedEvent;
 use notify_debouncer_full::notify::Event;
 use notify_debouncer_full::notify::event::{DataChange, EventKind, ModifyKind};
 
+use super::listing::DiffChangeType;
 use super::listing::caching_test_support::{TestListing, TestListingGuard};
-use super::listing::diff::DiffChangeType;
-use super::listing::diff_emitter::{hold_for_test, pending_changes_for_test};
+use super::listing::{hold_for_test, pending_changes_for_test};
 use super::volume::backends::list_directory_core;
 use super::watcher::{handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};

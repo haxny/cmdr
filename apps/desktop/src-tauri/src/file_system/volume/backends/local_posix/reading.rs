@@ -15,7 +15,7 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::volume::ListingProgress;
@@ -215,6 +215,7 @@ fn list_directory_core_impl(
     // Sort: directories first, then files, both alphabetically (using natural sort)
     benchmark::log_event("sort START");
     sort_entries(
+        &crate::listing_host::listings().collator(),
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,

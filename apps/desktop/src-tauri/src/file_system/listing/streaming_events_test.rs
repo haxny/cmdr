@@ -10,7 +10,7 @@ use super::caching_test_support::{SpelledVolume, TestListingGuard};
 use super::host::ListingEvents;
 use super::host::testing::RecordingEvents;
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use super::streaming::{StreamingRequest, start_streaming_listing};
+use super::streaming::{ListingRequest, start_streaming_listing};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;
@@ -41,8 +41,8 @@ async fn list_root(volume_id: &str, listing: &TestListingGuard) -> Arc<Recording
     let recorded = Arc::new(RecordingEvents::new());
     start_streaming_listing(
         Arc::clone(&recorded) as Arc<dyn ListingEvents>,
-        StreamingRequest {
-            listing_id: listing.id().to_string(),
+        ListingRequest {
+            id: super::listing_id::ListingId::new(listing.id()),
             volume_id: volume_id.to_string(),
             path: Path::new("/").to_path_buf(),
             include_hidden: true,

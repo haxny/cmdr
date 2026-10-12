@@ -26,6 +26,7 @@ use cmdr_fs::entry::{FileEntry, TagRef};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub(crate) use crate::file_system::listing::shims::cached_listing::*;
 
 impl Inner {
@@ -160,7 +161,7 @@ pub(crate) struct CachedListing {
     /// contributed: rows the PANE shows that no volume holds.
     ///
     /// Nonzero makes this listing a pane view rather than a picture of a
-    /// directory, so [`try_get_authoritative_listing`](crate::file_system::listing::caching::try_get_authoritative_listing) declines it and a delete
+    /// directory, so `try_get_authoritative_listing` declines it and a delete
     /// walker or a copy scan pays the re-read. Without that, a `.git/` listing a
     /// watch keeps fresh would hand six virtual folders straight to a walker
     /// that then tries to remove them.

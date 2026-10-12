@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::listing::operations::{list_directory_end, list_directory_start_with_volume};
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::{list_directory_end, list_directory_start_with_volume};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
 use crate::test_support::wait_until_async;

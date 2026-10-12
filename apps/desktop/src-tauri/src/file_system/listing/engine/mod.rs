@@ -32,11 +32,21 @@ use super::host::{
 use super::stall::{HungReads, StallPolicy, StallWatch};
 use super::streaming::StreamingListingState;
 
+mod backends;
+mod housekeeping;
+mod intake;
+mod open;
+mod oracle;
+mod rows;
+mod settings;
+
+pub use settings::PaneMarks;
+
 /// The listing engine: every open listing, and the seams it asks the host
 /// through. Cheap to clone; every clone is the same engine.
 #[derive(Clone)]
 pub struct Listings {
-    inner: Arc<Inner>,
+    pub(super) inner: Arc<Inner>,
 }
 
 impl Listings {
@@ -54,30 +64,11 @@ impl Listings {
         Self::builder(Arc::new(NoVolumes), Arc::new(NoEvents)).build()
     }
 
-    /// The engine's state and operations, for the free functions that still
-    /// forward to it. Shim: removed in M4b, when callers program against
-    /// `Listings`' own methods.
+    /// The engine's state and operations, for the test shims that still forward
+    /// to it. Shim: removed in M4b, when every test builds its own engine.
+    #[cfg(test)]
     pub(crate) fn inner(&self) -> &Arc<Inner> {
         &self.inner
-    }
-
-    /// Starts the backstop that reclaims listings whose close never arrived
-    /// (`orphan_reaper.rs`). Call once. The loop holds this engine weakly, so it
-    /// ends once the last handle is dropped.
-    pub fn start_orphan_reaper(&self) {
-        Inner::start_orphan_reaper(&self.inner);
-    }
-
-    /// Which scratch files the user asked to see.
-    pub fn scratch_visibility(&self) -> ScratchVisibility {
-        self.inner.scratch_visibility()
-    }
-
-    /// Applies the user's scratch-visibility settings to every listing from its
-    /// next read on; a listing already cached reconciles lazily, at its next read
-    /// or mutation (`visible_rows.rs`).
-    pub fn set_scratch_visibility(&self, visibility: ScratchVisibility) {
-        self.inner.scratch.set(visibility);
     }
 }
 

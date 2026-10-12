@@ -7,7 +7,7 @@
 
 use super::caching_test_support::{TestListing, TestListingGuard};
 use super::diff_emitter::{drop_pending, flush_now_for_test, hold_for_test, pending_count};
-use crate::file_system::listing::diff::DiffChange;
+use crate::file_system::listing::DiffChange;
 use cmdr_fs::entry::FileEntry;
 
 /// A cached listing under a unique id. Dropping the guard runs the production

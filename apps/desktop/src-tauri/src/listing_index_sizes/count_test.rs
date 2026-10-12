@@ -7,8 +7,8 @@ use cmdr_fs::volume::InMemoryVolume;
 
 use super::ListingIndexSizesChanged;
 use super::count::{CountFolderSizesError, CountPlan, cancel, count_with, plan};
-use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::listing::caching_test_support::{TestListing, TestListingGuard};
+use crate::file_system::listing::listing_cache;
 use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::test_support::TestDir;

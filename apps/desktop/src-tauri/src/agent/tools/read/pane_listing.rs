@@ -8,7 +8,6 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
-use crate::file_system::listing::get_cached_listing;
 use crate::mcp::pane_state::PaneState;
 use crate::mcp::{PaneStateStore, ToolError, ToolResult};
 
@@ -157,7 +156,8 @@ pub async fn execute_list_pane_files<R: Runtime>(app: &AppHandle<R>, _params: &V
         .volume_id
         .as_deref()
         .ok_or_else(|| ToolError::internal("The focused pane's volume isn't available yet"))?;
-    let entries = get_cached_listing(volume_id, Path::new(&state.path))
+    let entries = crate::listing_host::listings()
+        .cached_entries(volume_id, Path::new(&state.path))
         .ok_or_else(|| ToolError::internal("The focused pane's listing isn't available yet"))?
         .into_iter()
         .map(PaneListingSource::from)

@@ -77,7 +77,7 @@ impl VolumeManager {
     /// it's identical here.
     ///
     /// The ONE caller is the write-op fresh-listing oracle
-    /// (`listing::caching::try_get_authoritative_listing`), which runs on sync
+    /// (`Listings::authoritative_listing`), which runs on sync
     /// recursive scan walkers. That oracle guards remote archives separately (a
     /// non-local parent's volume-level `listing_watch_coverage` would falsely
     /// claim freshness), so the local-only routing here is sufficient there.

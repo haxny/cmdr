@@ -1,25 +1,18 @@
 //! Shims over the installed engine for `operations`'s callers (`shims/mod.rs`).
 
 use std::collections::HashMap;
-#[cfg(test)]
 use std::path::Path;
-use std::path::PathBuf;
 
 use cmdr_fs::entry::FileEntry;
 
 use super::installed;
-#[cfg(test)]
 use crate::file_system::listing::operations::ListingStartResult;
-use crate::file_system::listing::operations::{
-    ListingLookupError, ListingStats, ResortResult, RowBeside, SelectionSnapshot,
-};
-#[cfg(test)]
 use crate::file_system::listing::pipeline::Prepared;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::{ListingLookupError, ListingStats, ResortResult, RowBeside, SelectionSnapshot};
 
 /// `Inner::list_directory_start_with_volume` on the installed engine.
 // shim: removed in M4b
-#[cfg(test)]
 pub async fn list_directory_start_with_volume(
     volume_id: &str,
     path: &Path,
@@ -78,7 +71,6 @@ pub fn get_file_range(
 
 /// `Inner::get_total_count` on the installed engine.
 // shim: removed in M4b
-#[cfg(test)]
 pub fn get_total_count(listing_id: &str, include_hidden: bool) -> Result<usize, ListingLookupError> {
     installed().get_total_count(listing_id, include_hidden)
 }
@@ -124,27 +116,6 @@ pub fn get_file_at(
     installed().get_file_at(listing_id, index, include_hidden)
 }
 
-/// `Inner::get_paths_at_indices` on the installed engine.
-// shim: removed in M4b
-pub fn get_paths_at_indices(
-    listing_id: &str,
-    selected_indices: &[usize],
-    include_hidden: bool,
-    has_parent: bool,
-) -> Result<Vec<PathBuf>, ListingLookupError> {
-    installed().get_paths_at_indices(listing_id, selected_indices, include_hidden, has_parent)
-}
-
-/// `Inner::get_files_at_indices` on the installed engine.
-// shim: removed in M4b
-pub fn get_files_at_indices(
-    listing_id: &str,
-    selected_indices: &[usize],
-    include_hidden: bool,
-) -> Result<Vec<FileEntry>, ListingLookupError> {
-    installed().get_files_at_indices(listing_id, selected_indices, include_hidden)
-}
-
 /// `Inner::resort_listing` on the installed engine.
 // shim: removed in M4b
 #[allow(
@@ -177,7 +148,6 @@ pub fn resort_listing(
 
 /// `Inner::update_listing_entries` on the installed engine.
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn update_listing_entries(listing_id: &str, prepared: Prepared) {
     // A re-read starting now, as a test's hand-over always is.
     installed().update_listing_entries(listing_id, prepared, installed().next_read_generation());
@@ -194,13 +164,6 @@ pub fn get_selection_snapshot(
     installed().get_selection_snapshot(listing_id, include_hidden, selected_indices, expected_sequence)
 }
 
-/// `Inner::volume_ids_with_listings` on the installed engine.
-// shim: removed in M4b
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-pub(crate) fn volume_ids_with_listings(prefix: &str) -> Vec<String> {
-    installed().volume_ids_with_listings(prefix)
-}
-
 /// `Inner::get_listing_stats` on the installed engine.
 // shim: removed in M4b
 pub fn get_listing_stats(
@@ -209,10 +172,4 @@ pub fn get_listing_stats(
     selected_indices: Option<&[usize]>,
 ) -> Result<ListingStats, ListingLookupError> {
     installed().get_listing_stats(listing_id, include_hidden, selected_indices)
-}
-
-/// `Inner::refresh_listing_index_sizes` on the installed engine.
-// shim: removed in M4b
-pub fn refresh_listing_index_sizes(listing_id: &str) -> Result<(), String> {
-    installed().refresh_listing_index_sizes(listing_id)
 }

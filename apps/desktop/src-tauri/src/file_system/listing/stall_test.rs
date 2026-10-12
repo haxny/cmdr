@@ -21,7 +21,7 @@ use crate::file_system::listing::host::testing::RecordingEvents;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use crate::file_system::listing::stall::{HungReads, StallPolicy, StallWatch};
 use crate::file_system::listing::stalled_on::StalledOn;
-use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
+use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::wait_until_async;
 use cmdr_fs::entry::FileEntry;

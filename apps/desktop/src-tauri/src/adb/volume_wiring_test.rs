@@ -19,8 +19,8 @@ use crate::adb::test_support::{
 use crate::file_system::listing::caching_test_support::TestListingGuard;
 use crate::file_system::listing::host::ListingEvents;
 use crate::file_system::listing::host::testing::RecordingEvents;
-use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
+use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
+use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 

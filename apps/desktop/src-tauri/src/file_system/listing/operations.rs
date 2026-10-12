@@ -15,7 +15,6 @@ use uuid::Uuid;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 use crate::file_system::listing::cached_listing::CachedListing;
-pub(crate) use crate::file_system::listing::cached_listing::reconciled_cache;
 use crate::file_system::listing::engine::Inner;
 #[cfg(test)]
 use crate::file_system::listing::pipeline::ReadBy;
@@ -24,9 +23,8 @@ use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOr
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::FileEntry;
 
-pub use crate::file_system::listing::stats::ListingStats;
-
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::operations::*;
 
 // ============================================================================
@@ -632,6 +630,39 @@ impl Inner {
         }
         listing.touch();
         Ok(snapshot)
+    }
+
+    /// The names on the selected rows (every row with `None`), only while the
+    /// pane's rows are the committed ones: the multi-rename sheet's input.
+    pub(crate) fn get_selection_names(
+        &self,
+        listing_id: &str,
+        include_hidden: bool,
+        selected: Option<&[usize]>,
+        expected_sequence: u64,
+    ) -> Result<Vec<String>, ListingLookupError> {
+        let cache = self.reconciled_cache(&[listing_id]);
+        let listing = cache
+            .get(listing_id)
+            .ok_or_else(|| ListingLookupError::gone(listing_id))?;
+        check_expected(listing_id, listing, Some(expected_sequence))?;
+        if listing.include_hidden() != include_hidden {
+            return Err(ListingLookupError::changed(listing_id));
+        }
+        let rows = listing.pane_rows();
+        let names = match selected {
+            Some(selected) => selected
+                .iter()
+                .map(|&row| {
+                    rows.get(row)
+                        .map(|entry| entry.name.clone())
+                        .ok_or_else(|| ListingLookupError::changed(listing_id))
+                })
+                .collect::<Result<_, _>>()?,
+            None => rows.iter().map(|entry| entry.name.clone()).collect(),
+        };
+        listing.touch();
+        Ok(names)
     }
 
     /// The distinct volume ids under `prefix` that have at least one cached listing.

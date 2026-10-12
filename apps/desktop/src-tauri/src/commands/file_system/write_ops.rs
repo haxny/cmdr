@@ -1,5 +1,6 @@
 //! Tauri commands for write operations (create, copy, move, delete, trash) and scan preview.
 
+use crate::file_system::listing::{SortColumn, SortOrder};
 use crate::file_system::write_operations::RetryOutcome;
 use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
@@ -13,8 +14,8 @@ use crate::file_system::write_operations::{
 };
 use crate::file_system::{
     OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
-    ReadOnlySide, SortColumn, SortOrder, TauriEventSink, WriteOperationConfig, WriteOperationError,
-    WriteOperationStartResult, cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
+    ReadOnlySide, TauriEventSink, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
     cancel_write_operation as ops_cancel_write_operation, delete_files_start as ops_delete_files_start,
     dismiss_all_failed_operations as ops_dismiss_all_failed_operations,
     dismiss_failed_operation as ops_dismiss_failed_operation, list_operations as ops_list_operations,

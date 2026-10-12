@@ -19,7 +19,6 @@ use cmdr_fs::apple_double::SidecarRule;
 
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
-use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::CopyScanResult;
 use cmdr_fs::entry::FileEntry;
 /// Per-regular-file hook fired by the walk, receiving the file path and size (the `WalkContext::on_file` field).
@@ -190,7 +189,7 @@ pub(super) fn walk_sources_with_per_path<E>(
 /// **Oracle reuse**: when `volume_id` is provided and the listing cache holds a
 /// watcher-backed listing for the directory currently being walked, the walker
 /// hydrates that level's entries from the cache instead of touching the disk.
-/// See `file_system::listing::caching::try_get_authoritative_listing` for the full
+/// See `Listings::authoritative_listing` for the full
 /// freshness contract. Pass `None` for `volume_id` to opt out (no listing
 /// lookup is performed, behavior is identical to the pre-oracle walker).
 ///
@@ -282,7 +281,7 @@ pub(super) fn walk_dir_recursive<E>(
         // step below still goes through `walk_dir_recursive`, which re-applies
         // the oracle at each level.
         if let Some(vid) = volume_id
-            && let Some(cached_entries) = try_get_authoritative_listing(vid, path)
+            && let Some(cached_entries) = crate::listing_host::listings().authoritative_listing(vid, path)
         {
             walk_cached_entries(
                 path,

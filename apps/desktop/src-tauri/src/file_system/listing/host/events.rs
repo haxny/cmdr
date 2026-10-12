@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use cmdr_fs::volume::VolumeError;
 use serde::{Deserialize, Serialize};
 
-use crate::file_system::listing::diff::DirectoryDiffBatch;
+use crate::file_system::listing::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
 
 /// How one streaming listing ended. Exactly one per listing the engine starts.

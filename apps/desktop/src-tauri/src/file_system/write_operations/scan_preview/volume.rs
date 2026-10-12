@@ -19,7 +19,6 @@ use super::super::types::{
     ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewProgressEvent, WriteOperationError,
 };
 use super::settle_failed_preview;
-use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::{BatchScanResult, CopyScanResult, Volume};
 use crate::ignore_poison::IgnorePoison;
 
@@ -285,7 +284,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
             .get(parent)
             .expect("group_order tracks every parent inserted into groups");
 
-        if let Some(cached_entries) = try_get_authoritative_listing(volume_id, parent) {
+        if let Some(cached_entries) = crate::listing_host::listings().authoritative_listing(volume_id, parent) {
             files = None;
             log::debug!(
                 "scan-preview: oracle hit for parent {} ({} cached entries, {} selected children)",

@@ -1,5 +1,6 @@
 //! Settings-related commands.
 
+use crate::file_system::listing::host::ScratchVisibility;
 use tauri::{AppHandle, Manager};
 
 use crate::file_system::{set_direct_smb_enabled, set_smb_concurrency, update_debounce_ms};
@@ -118,7 +119,11 @@ pub fn set_direct_smb_connection(enabled: bool) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_show_safe_save_files_cmd(show: bool) {
-    crate::file_system::staging::set_show_safe_save_files(show);
+    let listings = crate::listing_host::listings();
+    listings.set_scratch_visibility(ScratchVisibility {
+        show_safe_save_files: show,
+        ..listings.scratch_visibility()
+    });
 }
 
 /// Show or hide the temporary files Cmdr writes while copying
@@ -128,7 +133,11 @@ pub fn set_show_safe_save_files_cmd(show: bool) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_show_staging_temp_files_cmd(show: bool) {
-    crate::file_system::staging::set_show_staging_temps(show);
+    let listings = crate::listing_host::listings();
+    listings.set_scratch_visibility(ScratchVisibility {
+        show_staging_temps: show,
+        ..listings.scratch_visibility()
+    });
 }
 
 /// Update the SMB concurrency limit used by `SmbVolume::max_concurrent_ops()`.

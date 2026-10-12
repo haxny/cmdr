@@ -4,7 +4,6 @@
 //! The read runs on the host's runtime and reports through the `ListingEvents`
 //! seam (`host/`); the host turns those facts into what the pane sees.
 
-use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
@@ -25,30 +24,12 @@ use cmdr_fs::benchmark;
 use cmdr_fs::volume::VolumeError;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::streaming::*;
 
 // ============================================================================
 // Types and state
 // ============================================================================
-
-/// Status of a streaming directory listing
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "status")]
-pub enum ListingStatus {
-    Loading,
-    Ready,
-    Cancelled,
-    Error { message: String },
-}
-
-/// Result of starting a streaming directory listing
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct StreamingListingStartResult {
-    pub listing_id: String,
-    /// Always `Loading`.
-    pub status: ListingStatus,
-}
 
 /// State for an in-progress streaming listing
 pub struct StreamingListingState {
@@ -111,59 +92,22 @@ impl ReadSession {
 // Streaming implementation
 // ============================================================================
 
-impl Inner {
-    /// Starts a streaming directory listing that returns immediately and reports
-    /// its progress through the installed `ListingEvents`.
-    ///
-    /// This is non-blocking: the actual directory reading happens in a task on the
-    /// host's runtime. Progress is reported every ~200ms.
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Streaming operation requires many state parameters"
-    )]
-    pub(crate) fn list_directory_start_streaming(
-        self: &Arc<Self>,
-        volume_id: &str,
-        path: &Path,
-        include_hidden: bool,
-        sort_by: SortColumn,
-        sort_order: SortOrder,
-        dir_sort_mode: DirectorySortMode,
-        listing_id: String,
-    ) -> StreamingListingStartResult {
-        // Reset benchmark epoch for this navigation
-        benchmark::reset_epoch();
-        benchmark::log_event_value("list_directory_start_streaming CALLED", path.display());
-
-        self.start_streaming_listing(
-            Arc::clone(&self.events),
-            StreamingRequest {
-                listing_id: listing_id.clone(),
-                volume_id: volume_id.to_string(),
-                path: path.to_path_buf(),
-                include_hidden,
-                sort_by,
-                sort_order,
-                dir_sort_mode,
-            },
-        );
-
-        benchmark::log_event("list_directory_start_streaming RETURNING");
-        StreamingListingStartResult {
-            listing_id,
-            status: ListingStatus::Loading,
-        }
-    }
-}
-
-/// What a pane asked to list.
-pub(crate) struct StreamingRequest {
-    pub listing_id: String,
+/// What a pane asked to list ([`Listings::start`](super::Listings::start)).
+#[derive(Debug, Clone)]
+pub struct ListingRequest {
+    /// The listing's id, minted by the pane per navigation.
+    pub id: ListingId,
+    /// The volume to read through.
     pub volume_id: String,
+    /// The directory, as the pane spelled it.
     pub path: std::path::PathBuf,
+    /// Whether the pane shows hidden files.
     pub include_hidden: bool,
+    /// The pane's sort column.
     pub sort_by: SortColumn,
+    /// The pane's sort direction.
     pub sort_order: SortOrder,
+    /// Where folders sort.
     pub dir_sort_mode: DirectorySortMode,
 }
 
@@ -171,14 +115,14 @@ impl Inner {
     /// Registers the listing's cancel token, then spawns its read onto the host's
     /// runtime, reporting to `events`. The token is registered BEFORE this returns,
     /// so a cancel that follows at once still finds the read.
-    pub(crate) fn start_streaming_listing(self: &Arc<Self>, events: Arc<dyn ListingEvents>, request: StreamingRequest) {
+    pub(crate) fn start_streaming_listing(self: &Arc<Self>, events: Arc<dyn ListingEvents>, request: ListingRequest) {
         // Create streaming state with cancellation flag
         let state = Arc::new(StreamingListingState::with_stall_watch(self.stall_watch()));
 
         // Store state for cancellation
         self.streaming
             .write_ignore_poison()
-            .insert(request.listing_id.clone(), Arc::clone(&state));
+            .insert(request.id.as_str().to_string(), Arc::clone(&state));
 
         // A strong handle: the read ends.
         let engine = Arc::clone(self);
@@ -186,11 +130,11 @@ impl Inner {
             let result = engine.read_directory_with_progress(&events, &state, &request).await;
 
             // Clean up streaming state
-            engine.streaming.write_ignore_poison().remove(&request.listing_id);
+            engine.streaming.write_ignore_poison().remove(request.id.as_str());
 
             report_failure(
                 events.as_ref(),
-                &request.listing_id,
+                request.id.as_str(),
                 &request.volume_id,
                 &request.path,
                 result,
@@ -232,7 +176,7 @@ impl Inner {
         self: &Arc<Self>,
         events: &Arc<dyn ListingEvents>,
         state: &Arc<StreamingListingState>,
-        request: &StreamingRequest,
+        request: &ListingRequest,
     ) -> Result<(), VolumeError> {
         // Hold the volume busy for the REAL duration of this listing. The command
         // entry point's timestamp seeds the debounce but decays in half a second,
@@ -251,10 +195,10 @@ impl Inner {
         self: &Arc<Self>,
         events: &Arc<dyn ListingEvents>,
         session: ReadSession,
-        request: &StreamingRequest,
+        request: &ListingRequest,
     ) -> Result<(), VolumeError> {
-        let StreamingRequest {
-            listing_id,
+        let ListingRequest {
+            id: listing_id,
             volume_id,
             path,
             include_hidden,

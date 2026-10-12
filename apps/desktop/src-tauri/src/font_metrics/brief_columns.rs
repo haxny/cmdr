@@ -21,6 +21,9 @@ use std::time::Instant;
 
 use cmdr_fs::entry::FileEntry;
 
+use crate::file_system::listing::{ListingId, VisibleRows};
+use crate::listing_host::listings;
+
 /// Per-column widths plus the code points that had to be estimated.
 ///
 /// `missing_code_points` is empty in the steady state. When it isn't, the
@@ -198,24 +201,55 @@ pub fn compute_brief_column_text_widths(
 
     let start = Instant::now();
 
-    let cache = crate::file_system::listing::operations::reconciled_cache(&[listing_id]);
-
-    let listing = cache
-        .get(listing_id)
-        .ok_or_else(|| BriefColumnsError::ListingNotFound(listing_id.to_string()))?;
-
     // The pane's own rows, so a column's width covers exactly the names the pane
     // will draw. Asking `entries` directly would size a column around scratch a
-    // running operation owns, which the pane never shows.
-    let visible = listing.rows(include_hidden);
+    // running operation owns, which the pane never shows. Runs under the cache
+    // read lock and asks only the font cache, never the engine.
+    let measured = listings().with_rows(&ListingId::new(listing_id), include_hidden, |visible| {
+        measure_columns(visible, items_per_column, has_parent, font_id, listing_id)
+    });
+    let (widths, missing) = match measured {
+        Ok(columns) => columns?,
+        Err(_) => return Err(BriefColumnsError::ListingNotFound(listing_id.to_string())),
+    };
+    let elapsed = start.elapsed();
+    if elapsed.as_millis() > 5 {
+        log::debug!(
+            target: "brief_columns",
+            "Computed {} widths for listing {} in {}μs",
+            widths.len(),
+            listing_id,
+            elapsed.as_micros(),
+        );
+    }
+    if !missing.is_empty() {
+        log::debug!(
+            target: "brief_columns",
+            "{} code point(s) not yet measured for font_id='{}'; widths are estimated until they're filled in",
+            missing.len(),
+            font_id,
+        );
+    }
 
+    Ok(BriefColumnWidths {
+        widths,
+        missing_code_points: missing.into_iter().collect(),
+    })
+}
+
+/// One text-only width per Brief column over the pane's `visible` rows, plus
+/// every code point the font cache had no width for.
+fn measure_columns(
+    visible: &VisibleRows<'_>,
+    items_per_column: usize,
+    has_parent: bool,
+    font_id: &str,
+    listing_id: &str,
+) -> Result<(Vec<f32>, BTreeSet<u32>), BriefColumnsError> {
     // Total cells (display slots): visible entries + ".." if has_parent.
     let total_cells = visible.len() + usize::from(has_parent);
     if total_cells == 0 {
-        return Ok(BriefColumnWidths {
-            widths: Vec::new(),
-            missing_code_points: Vec::new(),
-        });
+        return Ok((Vec::new(), BTreeSet::new()));
     }
 
     let total_columns = total_cells.div_ceil(items_per_column);
@@ -276,30 +310,7 @@ pub fn compute_brief_column_text_widths(
         let width = if width.is_finite() { width.max(0.0) } else { 0.0 };
         widths.push(width);
     }
-
-    let elapsed = start.elapsed();
-    if elapsed.as_millis() > 5 {
-        log::debug!(
-            target: "brief_columns",
-            "Computed {} widths for listing {} in {}μs",
-            widths.len(),
-            listing_id,
-            elapsed.as_micros(),
-        );
-    }
-    if !missing.is_empty() {
-        log::debug!(
-            target: "brief_columns",
-            "{} code point(s) not yet measured for font_id='{}'; widths are estimated until they're filled in",
-            missing.len(),
-            font_id,
-        );
-    }
-
-    Ok(BriefColumnWidths {
-        widths,
-        missing_code_points: missing.into_iter().collect(),
-    })
+    Ok((widths, missing))
 }
 
 #[cfg(test)]

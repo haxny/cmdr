@@ -28,6 +28,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub(crate) use crate::file_system::listing::shims::foreign_path::*;
 
 /// A directory listing, and the path it lists as its volume spells it.
@@ -88,7 +89,7 @@ pub(crate) async fn list_as_stored(
 /// An all-ASCII path is never asked about: it has one Unicode form, and the kernel
 /// mount keeps the server's case, so these paths can only differ in form. That
 /// keeps a drop of a thousand plain names from costing a thousand round trips.
-pub(crate) async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -> Vec<PathBuf> {
+pub async fn stored_spellings(volume: &dyn Volume, paths: Vec<PathBuf>) -> Vec<PathBuf> {
     let mut stored = Vec::with_capacity(paths.len());
     for path in paths {
         if path.as_os_str().is_ascii() {
@@ -141,7 +142,7 @@ impl Inner {
     /// Re-reads a just-cached pane listing when the backend that read it no longer
     /// serves `volume_id`.
     ///
-    /// [`respell_listings_on_volume`] sees only the listings cached when the swap
+    /// `respell_listings_on_volume` sees only the listings cached when the swap
     /// lands, and a pane landing on a kernel-mounted share starts the upgrade at the
     /// same moment it starts listing (`network::smb_pane_upgrade`), so the swap
     /// routinely lands mid-read. Checked after the cache insert, this closes that

@@ -17,8 +17,8 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::file_system::listing::cached_listing::{listing_cache, reconciled_cache};
-use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use crate::file_system::listing::{ListingId, ListingLookupError};
+use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
 
 use super::error::MultiRenameError;
@@ -131,28 +131,20 @@ pub(crate) fn open(
     selected: Option<&[usize]>,
     expected_sequence: u64,
 ) -> Result<MultiRenameOpened, MultiRenameError> {
-    let (volume_id, dir, names) = {
-        let cache = reconciled_cache(&[listing_id]);
-        let listing = cache.get(listing_id).ok_or_else(|| MultiRenameError::Gone {
-            listing_id: listing_id.to_string(),
-        })?;
-        let changed = || MultiRenameError::SelectionChanged {
-            listing_id: listing_id.to_string(),
-        };
-        if listing.sequence.load(Ordering::Acquire) != expected_sequence || listing.include_hidden() != include_hidden {
-            return Err(changed());
-        }
-        let rows = listing.pane_rows();
-        let names: Vec<String> = match selected {
-            Some(selected) => selected
-                .iter()
-                .map(|&row| rows.get(row).map(|entry| entry.name.clone()).ok_or_else(changed))
-                .collect::<Result<_, _>>()?,
-            None => rows.iter().map(|entry| entry.name.clone()).collect(),
-        };
-        listing.touch();
-        (listing.volume_id.clone(), listing.path.as_path().to_path_buf(), names)
+    let listings = crate::listing_host::listings();
+    let id = ListingId::new(listing_id);
+    let gone = || MultiRenameError::Gone {
+        listing_id: listing_id.to_string(),
     };
+    let names = listings
+        .selection_names(&id, include_hidden, selected, expected_sequence)
+        .map_err(|error| match error {
+            ListingLookupError::Gone { .. } => gone(),
+            ListingLookupError::Changed { .. } => MultiRenameError::SelectionChanged {
+                listing_id: listing_id.to_string(),
+            },
+        })?;
+    let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
     let count = names.len();
     let session_id = format!("multi-rename-{}", NEXT_SESSION.fetch_add(1, Ordering::Relaxed));
     let mut sessions = SESSIONS.lock_ignore_poison();
@@ -215,12 +207,12 @@ fn with_session<R>(session_id: &str, f: impl FnOnce(&mut Session) -> R) -> Resul
 /// with the Results names in `edits`.
 fn compute(inputs: &Inputs, compiled: &Compiled, edits: &NameEdits) -> Result<Vec<PreviewRow>, MultiRenameError> {
     let (present, missing, siblings) = {
-        let cache = listing_cache().read_ignore_poison();
-        let listing = cache.get(&inputs.listing_id).ok_or_else(|| MultiRenameError::Gone {
-            listing_id: inputs.listing_id.clone(),
-        })?;
-        listing.touch();
-        let by_name: HashMap<&str, &FileEntry> = listing.entries().iter().map(|e| (e.name.as_str(), e)).collect();
+        let siblings = crate::listing_host::listings()
+            .entries(&ListingId::new(inputs.listing_id.clone()))
+            .map_err(|_| MultiRenameError::Gone {
+                listing_id: inputs.listing_id.clone(),
+            })?;
+        let by_name: HashMap<&str, &FileEntry> = siblings.iter().map(|e| (e.name.as_str(), e)).collect();
         let mut present: Vec<(usize, FileEntry)> = Vec::with_capacity(inputs.names.len());
         let mut missing: Vec<usize> = Vec::new();
         for (row, name) in inputs.names.iter().enumerate() {
@@ -229,7 +221,8 @@ fn compute(inputs: &Inputs, compiled: &Compiled, edits: &NameEdits) -> Result<Ve
                 None => missing.push(row),
             }
         }
-        (present, missing, listing.entries().to_vec())
+        drop(by_name);
+        (present, missing, siblings)
     };
     let rows: Vec<(usize, &FileEntry)> = present.iter().map(|(row, entry)| (*row, entry)).collect();
     let mut previewed = preview(compiled, &inputs.dir, &rows, &siblings, edits);

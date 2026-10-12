@@ -9,7 +9,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use super::events::StalledOn;
 use super::events::{ListingEnd, ListingEvents};
 use super::{ListingObserver, ListingOverlay};
-use crate::file_system::listing::diff::DirectoryDiffBatch;
+use crate::file_system::listing::DirectoryDiffBatch;
 use crate::file_system::listing::listing_id::ListingId;
 
 /// Adds `overlay` to the shared engine. Test registration stays global until

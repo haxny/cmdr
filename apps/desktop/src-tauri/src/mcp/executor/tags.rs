@@ -211,12 +211,15 @@ fn refresh_listing_tags(
         return;
     }
     let volume_id = state.volume_id.as_deref().unwrap_or("root");
-    let key = crate::file_system::listing::installed().listing_path(volume_id, std::path::Path::new(&state.path));
-    let listing = crate::file_system::listing::caching::snapshot_listings()
+    let listings = crate::listing_host::listings();
+    // The youngest listing showing the pane's folder, as the pane's own.
+    let showing = listings.listings_for_path_on_volume(volume_id, std::path::Path::new(&state.path));
+    let listing = listings
+        .summaries()
         .into_iter()
-        .find(|l| l.volume_id == volume_id && l.path.as_path() == key.as_path());
+        .find(|summary| showing.contains(&summary.listing_id));
     if let Some(listing) = listing {
-        crate::file_system::listing::caching::apply_tags_to_listing(&listing.listing_id, updates);
+        listings.apply_tags(&listing.listing_id, updates);
     }
 }
 

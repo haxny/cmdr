@@ -21,12 +21,13 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_fs::name_fold::fold_name;
 
+use crate::file_system::listing::ListingLookupError;
 use crate::file_system::listing::engine::Inner;
-use crate::file_system::listing::operations::ListingLookupError;
 use crate::file_system::listing::visible_rows::VisibleRows;
 use cmdr_fs::entry::FileEntry;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::compare::*;
 
 /// How far apart two modification times can be and still count as the same, in

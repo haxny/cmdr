@@ -17,8 +17,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
+use crate::file_system::listing::ListingId;
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
-use crate::file_system::listing::listing_id::ListingId;
 use crate::ignore_poison::IgnorePoison;
 
 use super::wiring;
@@ -131,7 +131,7 @@ fn arm_detached(listing_id: String, worktree_root: PathBuf) {
             wiring::portal().unsubscribe_state(&previous);
         }
 
-        if crate::file_system::listing::caching::get_listing_path(&listing_id).is_none() {
+        if !crate::listing_host::listings().contains(&ListingId::new(listing_id.clone())) {
             log::debug!(target: "git", "listing {listing_id} ended while arming its repo watcher, releasing it");
             disarm(&listing_id);
         }

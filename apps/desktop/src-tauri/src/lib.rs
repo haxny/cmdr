@@ -632,8 +632,10 @@ pub fn run() {
             // Index size updates reach only the listings they touch (`listing_index_sizes`);
             // its open-listing observer is installed with the listing host.
             listing_index_sizes::start(app.handle().clone());
-            file_system::staging::set_show_safe_save_files(saved_settings.show_safe_save_files.unwrap_or(true));
-            file_system::staging::set_show_staging_temps(saved_settings.show_staging_temp_files.unwrap_or(false));
+            listing_host::listings().set_scratch_visibility(file_system::listing::host::ScratchVisibility {
+                show_safe_save_files: saved_settings.show_safe_save_files.unwrap_or(true),
+                show_staging_temps: saved_settings.show_staging_temp_files.unwrap_or(false),
+            });
             file_system::set_smb_concurrency(saved_settings.smb_concurrency.unwrap_or(10) as usize);
 
             // Initialize disk space poller (live status bar updates + low-disk-space warning)

@@ -66,8 +66,8 @@ subfolders (the executor's one-parent rule refuses it today), "next step" chaini
   batch row renaming away frees its name, so chains and swaps preview as ready.
 - **Decision: a backend session holds the files, by name.** `open_multi_rename(listing, includeHidden, rows | null,
   sequence)` reads the pane's rows (`null`: every row the pane shows, which is what "all selected" and "nothing
-  selected" both mean) under `reconciled_cache`, refuses with `SelectionChanged` when the sequence or the hidden-files
-  setting moved (the `get_selection_snapshot` guard F5 uses), and stores the names. Every preview looks them up in the
+  selected" both mean) through `Listings::selection_names`, refuses with `SelectionChanged` when the sequence or the
+  hidden-files setting moved (the `selection_snapshot` guard F5 uses), and stores the names. Every preview looks them up in the
   listing's entries by name. Why: the sheet first sent row numbers and every preview mapped them through the LIVE
   listing, so a file landing above the selection shifted it onto files the user never picked, in the preview and at
   Start. A row's `row` is its place in the session, so it's stable across previews.

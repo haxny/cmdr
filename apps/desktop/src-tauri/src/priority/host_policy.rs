@@ -34,7 +34,8 @@ impl HostPolicy for AppHostPolicy {
     }
 
     fn open_listings(&self) -> Vec<OpenListing> {
-        crate::file_system::listing::caching::snapshot_listings()
+        crate::listing_host::listings()
+            .summaries()
             .into_iter()
             .map(|listing| OpenListing {
                 volume_id: listing.volume_id,

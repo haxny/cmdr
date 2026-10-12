@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::file_system::listing::ListingLookupError;
 use crate::file_system::listing::engine::Inner;
-use crate::file_system::listing::operations::ListingLookupError;
 use crate::file_system::listing::visible_rows::VisibleRows;
 
 /// Statistics about a directory listing.

@@ -11,7 +11,7 @@ use serde::Serialize;
 use tauri::ipc::Channel;
 
 use crate::ai::llm_log::LlmLogContext;
-use crate::file_system::get_file_at;
+use crate::file_system::listing::ListingId;
 
 /// Maximum number of file names to include in the prompt context.
 const MAX_CONTEXT_ENTRIES: usize = 100;
@@ -24,8 +24,10 @@ const SUGGESTION_SYSTEM_PROMPT: &str = "You are a pattern-matching assistant. Ca
 /// Gets file names from the listing cache (up to MAX_CONTEXT_ENTRIES).
 fn get_file_names(listing_id: &str, include_hidden: bool) -> Vec<String> {
     let mut names = Vec::new();
+    let listings = crate::listing_host::listings();
+    let id = ListingId::new(listing_id);
     for i in 0..MAX_CONTEXT_ENTRIES {
-        match get_file_at(listing_id, i, include_hidden) {
+        match listings.file_at(&id, i, include_hidden) {
             Ok(Some(entry)) => names.push(entry.name),
             _ => break,
         }

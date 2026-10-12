@@ -43,17 +43,20 @@ pub use cmdr_fs::staging::StagingTemp;
 #[cfg(test)]
 use cmdr_fs::staging::hidden_with_settings;
 
+#[cfg(test)]
 use crate::file_system::listing::host::ScratchVisibility;
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
+#[cfg(test)]
 use crate::listing_host::listings;
 
 // The two settings are the listing engine's state (`Listings::set_scratch_visibility`;
-// `listing::host::ScratchVisibility` documents their defaults); these forward to it, so settings live-apply and
-// startup seeding name one place in the app.
+// `listing::host::ScratchVisibility` documents their defaults). These test shims flip one flag of the shared
+// engine for `ShowTempsGuard`'s tests; M4b deletes them with the shared state they guard.
 
-/// Applies the `advanced.showStagingTempFiles` setting. Seeded at startup from
-/// `load_settings`, then pushed on every change (settings § live-apply rule).
+/// Flips the shared engine's `show_staging_temps`.
+// shim: removed in M4b
+#[cfg(test)]
 pub fn set_show_staging_temps(show: bool) {
     listings().set_scratch_visibility(ScratchVisibility {
         show_staging_temps: show,
@@ -67,8 +70,9 @@ pub fn show_staging_temps() -> bool {
     listings().scratch_visibility().show_staging_temps
 }
 
-/// Applies the `advanced.showSafeSaveFiles` setting. Seeded at startup from
-/// `load_settings`, then pushed on every change (settings § live-apply rule).
+/// Flips the shared engine's `show_safe_save_files`.
+// shim: removed in M4b
+#[cfg(test)]
 pub fn set_show_safe_save_files(show: bool) {
     listings().set_scratch_visibility(ScratchVisibility {
         show_safe_save_files: show,

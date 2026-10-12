@@ -13,8 +13,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::file_system::LocalPosixVolume;
-use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::listing::caching_test_support::TestListing;
+use crate::file_system::listing::try_get_authoritative_listing;
 use crate::file_system::volume::{StreamLength, Volume, WriteMode};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 

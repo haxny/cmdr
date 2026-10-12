@@ -1,7 +1,6 @@
 //! Shims over the installed engine for `diff_emitter`'s callers (`shims/mod.rs`).
 
-#[cfg(test)]
-use crate::file_system::listing::diff::{DiffChange, DirectoryDiffBatch};
+use crate::file_system::listing::{DiffChange, DirectoryDiffBatch};
 
 #[cfg(any(test, feature = "playwright-e2e"))]
 use super::installed;
@@ -14,37 +13,31 @@ pub(crate) fn flush_all_pending() {
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn pending_count(listing_id: &str) -> usize {
     pending_changes_for_test(listing_id).len()
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn flush_now_for_test(listing_id: &str) {
     installed().diffs.flush(listing_id);
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn take_batches_for_test(listing_id: &str) -> Vec<DirectoryDiffBatch> {
     installed().diffs.take_pending(listing_id)
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn hold_for_test(listing_id: &str) {
     installed().diffs.hold(listing_id);
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn pending_batches_for_test(listing_id: &str) -> Vec<DirectoryDiffBatch> {
     installed().diffs.pending_batches(listing_id)
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn pending_changes_for_test(listing_id: &str) -> Vec<DiffChange> {
     pending_batches_for_test(listing_id)
         .into_iter()
@@ -53,13 +46,11 @@ pub(crate) fn pending_changes_for_test(listing_id: &str) -> Vec<DiffChange> {
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn enqueue_diff(listing_id: &str, batch: DirectoryDiffBatch) {
     installed().write_cache().publish().enqueue(listing_id, batch);
 }
 
 // shim: removed in M4b
-#[cfg(test)]
 pub(crate) fn drop_pending(listing_id: &str) {
     installed().write_cache().publish().drop_pending(listing_id);
 }

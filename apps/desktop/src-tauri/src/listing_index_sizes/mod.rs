@@ -35,7 +35,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use std::time::Duration;
 
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_index::store::DirStats;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
@@ -43,9 +42,8 @@ use tauri_specta::Event;
 use tokio::sync::mpsc;
 use tokio::time::Instant;
 
-use crate::file_system::listing::cached_listing::listing_cache;
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
-use crate::file_system::listing::listing_id::ListingId;
+use crate::file_system::listing::{IndexSizes, ListingId};
 use crate::ignore_poison::IgnorePoison;
 use crate::index_host::index;
 use cmdr_fs::entry::FileEntry;
@@ -288,7 +286,7 @@ fn refresh_blocking(
 
     if matches!(touched, Touched::Whole) {
         // Every row moved: a full re-enrich of the cache, and the pane re-reads its window.
-        let _ = crate::file_system::listing::operations::refresh_listing_index_sizes(listing_id);
+        crate::listing_host::listings().refresh_index_sizes(&ListingId::new(listing_id));
         lit.clear();
         return RefreshOutcome {
             event: Some(ListingIndexSizesChanged {
@@ -314,10 +312,12 @@ fn refresh_blocking(
         }
     }
     if !moved.is_empty() {
-        let moved_paths: Vec<String> = moved.iter().map(|(position, _)| paths[*position].clone()).collect();
-        if let Some(listing) = listing_cache().write_ignore_poison().get_mut(listing_id) {
-            listing.update_index_sizes_by_path(&moved_paths, |i, entry| moved[i].1.apply_to(entry));
-        }
+        let sizes: Vec<(String, IndexSizes)> = moved
+            .iter()
+            .map(|(position, after)| (paths[*position].clone(), after.index_sizes()))
+            .collect();
+        // A listing gone in between has no row to write; its pane moved on.
+        let _ = crate::listing_host::listings().update_index_sizes(&ListingId::new(listing_id), &sizes);
     }
     for (position, after) in &moved {
         if after.pending() {
@@ -387,19 +387,18 @@ fn recheck_of(
 /// The listing's own path and the folder rows `touched` names, with their cached entries, or `None`
 /// when the listing is gone.
 fn rows_to_read(listing_id: &str, touched: &Touched) -> Option<(String, Vec<(String, FileEntry)>)> {
-    let cache = listing_cache().read_ignore_poison();
-    let listing = cache.get(listing_id)?;
-    let dir_path = listing.path.as_path().to_string_lossy().into_owned();
-    let is_folder = |entry: &&FileEntry| entry.is_directory && !entry.is_symlink;
+    let listings = crate::listing_host::listings();
+    let id = ListingId::new(listing_id);
+    let (_, dir) = listings.location(&id)?;
+    let dir_path = dir.to_string_lossy().into_owned();
     let rows = match touched {
         // Whole reads nothing per row: the full re-enrich covers them.
         Touched::Whole => Vec::new(),
-        Touched::Rows { children, .. } => listing
-            .entries()
-            .iter()
-            .filter(is_folder)
-            .filter(|entry| children.contains(&entry.name))
-            .map(|entry| (entry.path.clone(), entry.clone()))
+        Touched::Rows { children, .. } => listings
+            .folder_entries_named(&id, children)
+            .ok()?
+            .into_iter()
+            .map(|entry| (entry.path.clone(), entry))
             .collect(),
     };
     Some((dir_path, rows))

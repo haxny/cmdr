@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use objc2::MainThreadMarker;
 
 #[cfg(target_os = "macos")]
-use crate::file_system::get_paths_at_indices as ops_get_paths_at_indices;
+use crate::file_system::listing::ListingId;
 
 use crate::clipboard;
 use crate::file_system::write_operations::MutationError;
@@ -41,8 +41,14 @@ pub async fn copy_files_to_clipboard(
     include_hidden: bool,
 ) -> Result<usize, String> {
     let indices = resolve_indices(&selected_indices, cursor_index, has_parent);
-    let paths =
-        ops_get_paths_at_indices(&listing_id, &indices, include_hidden, has_parent).map_err(|e| e.to_string())?;
+    let paths = crate::listing_host::listings()
+        .paths_at_indices(
+            &ListingId::new(listing_id.clone()),
+            &indices,
+            include_hidden,
+            has_parent,
+        )
+        .map_err(|e| e.to_string())?;
 
     if paths.is_empty() {
         return Err("No files to copy".to_string());
@@ -145,8 +151,14 @@ pub async fn cut_files_to_clipboard(
     include_hidden: bool,
 ) -> Result<usize, String> {
     let indices = resolve_indices(&selected_indices, cursor_index, has_parent);
-    let paths =
-        ops_get_paths_at_indices(&listing_id, &indices, include_hidden, has_parent).map_err(|e| e.to_string())?;
+    let paths = crate::listing_host::listings()
+        .paths_at_indices(
+            &ListingId::new(listing_id.clone()),
+            &indices,
+            include_hidden,
+            has_parent,
+        )
+        .map_err(|e| e.to_string())?;
 
     if paths.is_empty() {
         return Err("No files to cut".to_string());

@@ -1,12 +1,11 @@
 //! Shims over the installed engine for `quick_filter`'s callers (`shims/mod.rs`).
 
 use super::installed;
-use crate::file_system::listing::operations::ListingLookupError;
+use crate::file_system::listing::ListingLookupError;
 use crate::file_system::listing::quick_filter::NameFilterResult;
 
 /// `Inner::set_listing_name_filter` on the installed engine.
 // shim: removed in M4b
-#[cfg(test)]
 pub fn set_listing_name_filter(
     listing_id: &str,
     pattern: Option<&str>,
@@ -53,7 +52,6 @@ pub fn set_listing_name_filter_guarded(
 
 /// `Inner::set_listing_name_filter_inner` on the installed engine.
 // shim: removed in M4b
-#[cfg(test)]
 #[allow(
     clippy::too_many_arguments,
     reason = "Filter reconfiguration carries a guarded selection and test hook"

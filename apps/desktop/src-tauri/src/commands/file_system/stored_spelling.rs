@@ -33,7 +33,7 @@ pub async fn stored_spellings(volume_id: String, paths: Vec<String>) -> TimedOut
         };
     };
     let paths = paths.into_iter().map(PathBuf::from).collect();
-    let resolve = crate::file_system::listing::foreign_path::stored_spellings(volume.as_ref(), paths);
+    let resolve = crate::file_system::listing::stored_spellings(volume.as_ref(), paths);
     match tokio::time::timeout(STORED_SPELLINGS_TIMEOUT, resolve).await {
         Ok(stored) => TimedOut {
             data: stored.into_iter().map(|p| p.to_string_lossy().into_owned()).collect(),

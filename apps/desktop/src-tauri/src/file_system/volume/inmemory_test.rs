@@ -205,7 +205,7 @@ async fn test_volume_manager_with_inmemory() {
 #[test]
 fn test_streaming_state_lifecycle() {
     use crate::file_system::listing::cancel_listing;
-    use crate::file_system::listing::streaming::{StreamingListingState, streaming_state};
+    use crate::file_system::listing::{StreamingListingState, streaming_state};
     use std::sync::Arc;
 
     // Create and register a streaming state
@@ -244,7 +244,7 @@ fn test_streaming_state_lifecycle() {
 #[test]
 fn test_multiple_concurrent_streaming_states() {
     use crate::file_system::listing::cancel_listing;
-    use crate::file_system::listing::streaming::{StreamingListingState, streaming_state};
+    use crate::file_system::listing::{StreamingListingState, streaming_state};
     use std::sync::Arc;
 
     // Create multiple streaming states
@@ -284,7 +284,7 @@ fn test_multiple_concurrent_streaming_states() {
 
 #[test]
 fn test_streaming_entries_are_sorted() {
-    use crate::file_system::listing::sorting::{DirectorySortMode, sort_entries};
+    use crate::file_system::listing::{DirectorySortMode, sort_entries};
     use crate::file_system::listing::{SortColumn, SortOrder};
 
     // Create unsorted entries
@@ -297,6 +297,7 @@ fn test_streaming_entries_are_sorted() {
 
     // Sort by name ascending (default)
     sort_entries(
+        &crate::listing_host::listings().collator(),
         &mut entries,
         SortColumn::Name,
         SortOrder::Ascending,

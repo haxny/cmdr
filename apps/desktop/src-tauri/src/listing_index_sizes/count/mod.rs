@@ -37,9 +37,8 @@ use tokio::time::Instant;
 use serde::{Deserialize, Serialize};
 use tokio::time::MissedTickBehavior;
 
-use crate::file_system::listing::cached_listing::listing_cache;
+use crate::file_system::listing::ListingId;
 use crate::file_system::volume::Volume;
-use crate::ignore_poison::RwLockIgnorePoison;
 
 use super::refresh::RowSizes;
 pub(crate) use jobs::cancel;
@@ -110,32 +109,37 @@ pub(crate) fn plan(
     index_owns: impl Fn(&str) -> bool,
 ) -> Result<CountPlan, CountFolderSizesError> {
     let manual = jobs::manual_paths(listing_id, publish::listing_is_open);
-    let cache = listing_cache().read_ignore_poison();
-    let listing = cache.get(listing_id).ok_or_else(|| CountFolderSizesError::Gone {
+    let listings = crate::listing_host::listings();
+    let id = ListingId::new(listing_id);
+    let gone = || CountFolderSizesError::Gone {
         listing_id: listing_id.to_string(),
-    })?;
-    listing.touch();
-    let owned = index_owns(&listing.volume_id);
-    let folders = listing
-        .rows(include_hidden)
-        .iter()
-        .filter(|entry| entry.is_directory && !entry.is_symlink)
-        .filter(|entry| only.is_none_or(|paths| paths.contains(&entry.path)))
-        .filter(|entry| {
-            let exact = entry.recursive_size.is_some() && entry.recursive_size_complete == Some(true);
-            match owned {
-                true => entry.recursive_size.is_none() || (manual.contains(&entry.path) && !exact),
-                false => !exact,
-            }
+    };
+    let (volume_id, dir) = listings.location(&id).ok_or_else(gone)?;
+    let owned = index_owns(&volume_id);
+    let folders = listings
+        .with_rows(&id, include_hidden, |rows| {
+            rows.iter()
+                .filter(|entry| entry.is_directory && !entry.is_symlink)
+                .filter(|entry| only.is_none_or(|paths| paths.contains(&entry.path)))
+                .filter(|entry| {
+                    let exact = entry.recursive_size.is_some() && entry.recursive_size_complete == Some(true);
+                    match owned {
+                        true => entry.recursive_size.is_none() || (manual.contains(&entry.path) && !exact),
+                        false => !exact,
+                    }
+                })
+                .map(|entry| PlannedFolder {
+                    path: entry.path.clone(),
+                    before: RowSizes::of(entry, false),
+                })
+                .collect::<Vec<_>>()
         })
-        .map(|entry| PlannedFolder {
-            path: entry.path.clone(),
-            before: RowSizes::of(entry, false),
-        })
-        .collect();
+        .map_err(|_| gone())?;
+    // A count is the pane using its listing.
+    listings.keep_alive(std::slice::from_ref(&id));
     Ok(CountPlan {
-        volume_id: listing.volume_id.clone(),
-        dir: listing.path.as_path().to_path_buf(),
+        volume_id,
+        dir,
         folders,
     })
 }

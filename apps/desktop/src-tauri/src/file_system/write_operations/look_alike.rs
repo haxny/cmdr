@@ -16,7 +16,6 @@ use std::path::{Path, PathBuf};
 
 use cmdr_fs::name_fold::differ_only_in_form;
 
-use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::{Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
 
@@ -167,7 +166,7 @@ impl<'v> ListedFolders<'v> {
 
     /// Answers a folder a pane shows from that pane's listing, when the volume's
     /// watch keeps it current for every writer
-    /// (`listing::caching::try_get_authoritative_listing`); lists the rest. For
+    /// (`Listings::authoritative_listing`); lists the rest. For
     /// a person waiting on a new name: re-reading a 3,000-entry share folder the
     /// pane already holds costs a second or more on a busy NAS.
     pub(crate) fn with_pane_listings(volume: &'v dyn Volume, volume_id: &'v str) -> Self {
@@ -202,7 +201,7 @@ impl<'v> ListedFolders<'v> {
     /// risks only a missed twin: a second, look-alike entry, never an
     /// overwrite, since the volume holds the two spellings as two names.
     fn pane_listing(&self, dir: &Path) -> Option<Vec<FileEntry>> {
-        let entries = try_get_authoritative_listing(self.pane_listings_of?, dir)?;
+        let entries = crate::listing_host::listings().authoritative_listing(self.pane_listings_of?, dir)?;
         log::debug!(
             target: "look_alike",
             "answered from a pane's listing of {} ({} entries)",

@@ -150,8 +150,8 @@ async fn listing_a_saved_server_nobody_connected_says_it_is_not_connected() {
     use crate::file_system::listing::caching_test_support::TestListingGuard;
     use crate::file_system::listing::host::ListingEvents;
     use crate::file_system::listing::host::testing::RecordingEvents;
-    use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder};
-    use crate::file_system::listing::streaming::{StreamingListingState, read_directory_with_progress};
+    use crate::file_system::listing::{DirectorySortMode, SortColumn, SortOrder};
+    use crate::file_system::listing::{StreamingListingState, read_directory_with_progress};
     use cmdr_fs::testing::unique_test_id;
 
     let host = "198.51.100.49";

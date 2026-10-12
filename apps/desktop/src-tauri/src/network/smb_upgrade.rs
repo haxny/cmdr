@@ -352,7 +352,7 @@ pub(crate) async fn register_replacing_predecessor(
     // kernel mount's paths decompose every name, and the direct connection matches
     // names byte-for-byte: re-read them through the new one, in its spelling.
     if !refused {
-        crate::file_system::listing::foreign_path::respell_listings_on_volume(volume_id);
+        crate::listing_host::listings().respell_on_volume(volume_id);
     }
 
     // Tell the frontend the volume's connection state changed (os_mount → direct).

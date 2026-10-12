@@ -8,6 +8,7 @@ use crate::file_system::listing::collation::{NameCollator, NameKey};
 use cmdr_fs::entry::FileEntry;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::sorting::*;
 
 // ============================================================================
@@ -57,7 +58,7 @@ pub enum DirectorySortMode {
 // Sorting logic
 // ============================================================================
 
-/// The fields [`entry_comparator`] reads, so ONE comparator body serves every row
+/// The fields `entry_comparator` reads, so ONE comparator body serves every row
 /// shape the app orders.
 ///
 /// Two implementors today: [`FileEntry`], a directory listing's row, and
@@ -74,7 +75,7 @@ pub trait SortableEntry {
     ///
     /// The default asks the collator live, which is what the one-off callers
     /// want (`insert_entry_sorted` probes ~17 rows to place one entry in a 100k
-    /// listing). [`sort_entries`] overrides it through [`Keyed`], answering from
+    /// listing). `sort_entries` overrides it through `Keyed`, answering from
     /// a key built once per row, so a bulk sort pays one key per row instead of
     /// one collation per comparison. `DETAILS.md` § "Collating names".
     fn compare_name(&self, other: &Self, collator: &NameCollator) -> std::cmp::Ordering {
@@ -142,7 +143,7 @@ fn extract_extension_for_sort(name: &str) -> (bool, bool, String) {
 /// A row paired with the collation key for its name, so a bulk sort collates
 /// each name once instead of once per comparison.
 ///
-/// Private on purpose: it exists to feed [`entry_comparator`], never to become a
+/// Private on purpose: it exists to feed `entry_comparator`, never to become a
 /// second way to describe a row.
 struct Keyed<'a, E: ?Sized> {
     row: &'a E,

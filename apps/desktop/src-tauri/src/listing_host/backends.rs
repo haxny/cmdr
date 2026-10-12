@@ -1,10 +1,11 @@
 //! The app's answer to a backend's "what are the panes showing?" question.
 //!
-//! A storage backend can't reach `listing::caching` from its own crate, so it
+//! A storage backend can't reach the listing engine from its own crate, so it
 //! asks through `cmdr_fs::volume::host::listings::ListingHost` and this is what
-//! the app installs. A pure adapter: the cache, the diff emitter, the index sync,
-//! and the cloud-badge invalidation all stay where they are, and every decision
-//! is still made by the functions below it.
+//! the app installs. The oracle, the open-listing question, and the archive
+//! refresh are the engine's own answers; `directory_changed` goes through the
+//! composer (index, badges, then panes), which is why the app answers this seam
+//! itself instead of handing backends `Listings::listing_host`.
 //!
 //! ❌ The seam is per mutation, never per entry. That rule is the backend's to
 //! keep, but it's this module's to know: `notify_directory_changed` walks every
@@ -17,7 +18,6 @@ use std::pin::Pin;
 
 use cmdr_fs::volume::host::listings::ListingHost;
 
-use crate::file_system::listing::caching;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::DirectoryChange;
 
@@ -30,11 +30,11 @@ impl ListingHost for AppListings {
     }
 
     fn authoritative_listing(&self, volume_id: &str, path: &Path) -> Option<Vec<FileEntry>> {
-        caching::try_get_authoritative_listing(volume_id, path)
+        super::listings().authoritative_listing(volume_id, path)
     }
 
     fn volumes_with_open_listings(&self, volume_id_prefix: &str) -> Vec<String> {
-        crate::file_system::listing::volume_ids_with_listings(volume_id_prefix)
+        super::listings().volume_ids_with_listings(volume_id_prefix)
     }
 
     fn refresh_archive_listings<'a>(
@@ -42,7 +42,11 @@ impl ListingHost for AppListings {
         volume_id: &'a str,
         archive_path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
-        Box::pin(caching::refresh_archive_listings(volume_id, archive_path))
+        Box::pin(async move {
+            super::listings()
+                .refresh_archive_listings(volume_id, archive_path)
+                .await
+        })
     }
 }
 

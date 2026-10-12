@@ -6,11 +6,12 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::file_system::listing::ListingLookupError;
 use crate::file_system::listing::engine::Inner;
 use crate::file_system::listing::name_filter::NameFilter;
-use crate::file_system::listing::operations::ListingLookupError;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::quick_filter::*;
 
 /// Where the pane's cursor and selection land after a quick-filter change, in

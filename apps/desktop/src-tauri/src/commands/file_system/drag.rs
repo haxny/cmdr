@@ -1,7 +1,7 @@
 //! Tauri commands for native drag operations and self-drag overlay.
 
 #[cfg(target_os = "macos")]
-use crate::file_system::get_paths_at_indices as ops_get_paths_at_indices;
+use crate::file_system::listing::ListingId;
 #[cfg(target_os = "macos")]
 use crate::file_system::volume::manager::path_routes_over_its_parent;
 #[cfg(target_os = "macos")]
@@ -112,7 +112,13 @@ pub fn start_selection_drag(
     has_parent: bool,
     icon_path: String,
 ) -> Result<(), String> {
-    let paths = ops_get_paths_at_indices(&listing_id, &selected_indices, include_hidden, has_parent)
+    let paths = crate::listing_host::listings()
+        .paths_at_indices(
+            &ListingId::new(listing_id.clone()),
+            &selected_indices,
+            include_hidden,
+            has_parent,
+        )
         .map_err(|e| e.to_string())?;
 
     if paths.is_empty() {
@@ -121,7 +127,9 @@ pub fn start_selection_drag(
 
     // The listing knows its own volume, so the session's locality is derivable
     // here without a new parameter.
-    let volume_id = crate::file_system::listing::get_listing_volume_id_and_path(&listing_id).map(|(vid, _)| vid);
+    let volume_id = crate::listing_host::listings()
+        .location(&ListingId::new(listing_id.clone()))
+        .map(|(vid, _)| vid);
     let locality = locality_for_volume(volume_id.as_deref());
 
     run_drag_on_main_thread(&app, paths, PathBuf::from(icon_path), locality, volume_id)

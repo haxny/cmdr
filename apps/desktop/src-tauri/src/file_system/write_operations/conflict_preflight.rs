@@ -18,7 +18,6 @@ use std::sync::Arc;
 use tokio::time::Duration;
 
 use crate::deadline::{Deadline, timeout_detached_within};
-use crate::file_system::listing::caching::try_get_authoritative_listing;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{ScanConflict, Volume, VolumeError};
 use crate::unregistered_volumes::{Unregistered, why_unregistered};
@@ -334,7 +333,7 @@ async fn stat_source_paths(
 /// paths that still need one, asking the fresh-listing oracle once per parent
 /// folder, never once per path.
 ///
-/// Only a listing a live watch keeps fresh answers (`try_get_authoritative_listing`),
+/// Only a listing a live watch keeps fresh answers (`Listings::authoritative_listing`),
 /// the same bar the delete walker and the copy scan hold a cached entry to.
 fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(PathBuf, FileEntry)>, Vec<PathBuf>) {
     use std::collections::HashMap;
@@ -350,7 +349,7 @@ fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(
     let mut answered = Vec::new();
     let mut unanswered = Vec::new();
     for (parent, children) in by_parent {
-        let listing = try_get_authoritative_listing(source_volume_id, parent);
+        let listing = crate::listing_host::listings().authoritative_listing(source_volume_id, parent);
         let by_name: HashMap<&str, &FileEntry> = listing
             .iter()
             .flatten()

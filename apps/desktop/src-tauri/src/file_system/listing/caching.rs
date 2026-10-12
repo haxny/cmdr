@@ -11,6 +11,7 @@ use cmdr_fs::volume::WatchCoverage;
 use crate::file_system::listing::cached_listing::CachedListing;
 use crate::file_system::listing::diff::{DiffChange, PaneRows};
 use crate::file_system::listing::engine::Inner;
+use crate::file_system::listing::listing_id::ListingId;
 use crate::file_system::listing::pipeline::{Prepared, ReadBy};
 use crate::file_system::listing::reread::ReadGeneration;
 use crate::file_system::listing::sorting::{DirectorySortMode, SortColumn, SortOrder, entry_comparator_with};
@@ -19,14 +20,21 @@ pub use cmdr_fs::volume::DirectoryChange;
 use cmdr_fs::volume::RoutedKind;
 
 // shim: removed in M4b. Callers outside the engine name these here; they forward to the installed engine.
+#[cfg(test)]
 pub use crate::file_system::listing::shims::caching::*;
 
-/// Lightweight summary of one cached listing, for `snapshot_listings`.
+/// One open listing at a glance ([`Listings::summaries`](super::Listings::summaries)).
+#[derive(Debug, Clone)]
 pub struct ListingSummary {
-    pub listing_id: String,
+    /// The listing.
+    pub listing_id: ListingId,
+    /// The volume it reads through.
     pub volume_id: String,
+    /// The directory, in the volume's spelling.
     pub path: PathBuf,
+    /// How many entries it holds, hidden ones included.
     pub entry_count: usize,
+    /// How long ago it was opened.
     pub age_ms: u128,
 }
 
@@ -48,7 +56,7 @@ impl Inner {
         let mut out: Vec<ListingSummary> = cache
             .iter()
             .map(|(id, listing)| ListingSummary {
-                listing_id: id.clone(),
+                listing_id: ListingId::new(id.clone()),
                 volume_id: listing.volume_id.clone(),
                 path: listing.path.as_path().to_path_buf(),
                 entry_count: listing.entries().len(),
@@ -96,7 +104,7 @@ impl Inner {
 
     /// Returns the newest cached pane listing for a `(volume_id, path)` pair.
     ///
-    /// Unlike [`try_get_authoritative_listing`], this doesn't require a watcher: SMB, MTP, and
+    /// Unlike `try_get_authoritative_listing`, this doesn't require a watcher: SMB, MTP, and
     /// other virtual panes still have a UI listing cache. No filesystem call happens here.
     pub(crate) fn get_cached_listing(&self, volume_id: &str, path: &Path) -> Option<Vec<FileEntry>> {
         let key = self.listing_path(volume_id, path);
@@ -180,14 +188,6 @@ impl Inner {
             DiffChange::for_pane(entry, rows).into_iter().collect(),
         );
         Some(rows)
-    }
-
-    /// Returns the directory path for a cached listing, without cloning entries.
-    pub(crate) fn get_listing_path(&self, listing_id: &str) -> Option<PathBuf> {
-        let cache = self.cache.read_ignore_poison();
-        cache
-            .get(listing_id)
-            .map(|listing| listing.path.as_path().to_path_buf())
     }
 
     /// Returns `(volume_id, path)` for a cached listing in one read-lock acquisition.

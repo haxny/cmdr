@@ -122,7 +122,13 @@ pub fn resolve() -> Vec<PathBuf> {
             indices,
             include_hidden,
             has_parent,
-        } => crate::file_system::get_paths_at_indices(listing_id, indices, *include_hidden, *has_parent)
+        } => crate::listing_host::listings()
+            .paths_at_indices(
+                &crate::file_system::listing::ListingId::new(listing_id.clone()),
+                indices,
+                *include_hidden,
+                *has_parent,
+            )
             .unwrap_or_default(),
         SelectedRows::Paths { paths } => paths.iter().map(PathBuf::from).collect(),
     })

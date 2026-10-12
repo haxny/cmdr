@@ -23,9 +23,9 @@ use std::time::Duration;
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
+use crate::file_system::listing::ListingId;
 use crate::file_system::listing::host::{ListingObserver, OpenedListing};
-use crate::file_system::listing::listing_id::ListingId;
-use crate::file_system::listing::{Listings, RefreshOutcome, get_listing_volume_id_and_path};
+use crate::file_system::listing::{Listings, RefreshOutcome};
 use crate::file_system::volume::backends::{get_single_entry, list_directory_core};
 use cmdr_fs::firmlinks;
 use cmdr_fs::volume::WatchCoverage;
@@ -251,7 +251,7 @@ pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
         return;
     }
 
-    if get_listing_volume_id_and_path(listing_id).is_none() {
+    if !crate::listing_host::listings().contains(&ListingId::new(listing_id)) {
         log::debug!(
             "start_watching_detached: listing {} ended while arming, dropping the watch",
             listing_id
@@ -386,7 +386,7 @@ pub(super) fn handle_directory_change_incremental(listing_id: &str, events: Vec<
     }
 
     // The watched directory's path, from the cache (without cloning its entries).
-    let Some((_, dir_path)) = get_listing_volume_id_and_path(listing_id) else {
+    let Some((_, dir_path)) = crate::listing_host::listings().location(&ListingId::new(listing_id)) else {
         return;
     };
 
@@ -524,5 +524,5 @@ pub async fn flush_all_watchers() {
     }
     // handle_directory_change now enqueues into the coalescer; flush so the
     // emit happens before this returns (E2E callers expect synchronous flush).
-    crate::file_system::listing::diff_emitter::flush_all_pending();
+    crate::listing_host::listings().flush_pending_diffs();
 }

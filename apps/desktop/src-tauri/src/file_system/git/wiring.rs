@@ -227,17 +227,19 @@ fn canonical(path: &Path) -> PathBuf {
 /// listings does this change reach?" is answered by a predicate rather than by a
 /// second copy of the iteration.
 fn listings_matching(wanted: impl Fn(&Path) -> bool) -> Vec<(String, PathBuf)> {
-    use crate::file_system::listing::caching::{find_listings_for_path_on_volume, get_listing_path, snapshot_listings};
-
+    let listings = crate::listing_host::listings();
     let mut out = Vec::new();
-    for entry in snapshot_listings() {
-        let Some(listing_path) = get_listing_path(&entry.listing_id) else {
+    for entry in listings.summaries() {
+        let Some((_, listing_path)) = listings.location(&entry.listing_id) else {
             continue;
         };
         if !wanted(&listing_path) {
             continue;
         }
-        if !find_listings_for_path_on_volume(Some(&entry.volume_id), &listing_path).is_empty() {
+        if !listings
+            .listings_for_path_on_volume(&entry.volume_id, &listing_path)
+            .is_empty()
+        {
             out.push((entry.volume_id, listing_path));
         }
     }
@@ -269,12 +271,17 @@ pub fn refresh_all_virtual_listings_after_toggle() {
 
 /// Every cached listing whose path IS a `.git` directory or sits inside one.
 pub(crate) fn listings_inside_a_dot_git() -> Vec<(String, PathBuf)> {
-    use crate::file_system::listing::caching::{get_listing_path, snapshot_listings};
     use std::path::Component;
 
-    snapshot_listings()
+    let listings = crate::listing_host::listings();
+    listings
+        .summaries()
         .into_iter()
-        .filter_map(|entry| get_listing_path(&entry.listing_id).map(|path| (entry.volume_id, path)))
+        .filter_map(|entry| {
+            listings
+                .location(&entry.listing_id)
+                .map(|(_, path)| (entry.volume_id, path))
+        })
         .filter(|(_, path)| {
             path.components()
                 .any(|component| matches!(component, Component::Normal(segment) if segment == ".git"))

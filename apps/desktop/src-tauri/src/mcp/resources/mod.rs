@@ -430,7 +430,7 @@ async fn build_state_yaml<R: Runtime>(app: &tauri::AppHandle<R>, opts: &StateOpt
     }
 
     if opts.includes("listings") {
-        let listings = crate::file_system::listing::caching::snapshot_listings();
+        let listings = crate::listing_host::listings().summaries();
         if listings.is_empty() {
             yaml.push_str("listings: []\n");
         } else {

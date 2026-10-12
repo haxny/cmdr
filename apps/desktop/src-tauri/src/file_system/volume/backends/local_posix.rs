@@ -470,7 +470,7 @@ impl Volume for LocalPosixVolume {
         // Find any listing on this path (volume-agnostic: the listing cache is keyed
         // by listing_id and tagged with a volume_id, but LocalPosixVolume doesn't
         // store its own volume_id — the manager assigns it at registration time).
-        let listings = crate::file_system::listing::caching::find_listings_for_path_on_volume(None, &abs_path);
+        let listings = crate::listing_host::listings().listings_for_local_path(&abs_path);
         if listings.is_empty() {
             return WatchCoverage::None;
         }
@@ -483,7 +483,7 @@ impl Volume for LocalPosixVolume {
         // in-memory read: a `statfs` here would land in the middle of every
         // recursive scan walk. `watcher::coverage_for_watched_path` is where the
         // network-mount question is actually asked.
-        let listing_ids: Vec<String> = listings.into_iter().map(|(lid, ..)| lid).collect();
+        let listing_ids: Vec<String> = listings.into_iter().map(|id| id.as_str().to_string()).collect();
         crate::file_system::watcher::coverage_for_listings(&listing_ids)
     }
 

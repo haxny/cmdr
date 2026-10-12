@@ -7,6 +7,7 @@
 //! reading changes nothing on screen, so nothing is sent: most index batches under background churn
 //! (a cache file written and deleted inside one flush, an mtime touch) land here.
 
+use crate::file_system::listing::IndexSizes;
 use cmdr_index::store::DirStats;
 
 use cmdr_fs::entry::FileEntry;
@@ -81,15 +82,18 @@ impl RowSizes {
         }
     }
 
-    /// Writes the index fields onto the cached entry (the hourglass isn't an entry field).
-    pub(super) fn apply_to(self, entry: &mut FileEntry) {
-        entry.recursive_size = self.recursive_size;
-        entry.recursive_physical_size = self.recursive_physical_size;
-        entry.recursive_file_count = self.recursive_file_count;
-        entry.recursive_dir_count = self.recursive_dir_count;
-        entry.recursive_has_symlinks = self.recursive_has_symlinks;
-        entry.recursive_size_complete = self.recursive_size_complete;
-        entry.recursive_size_stale = self.recursive_size_stale;
+    /// The index fields, as the listing engine writes them onto the cached entry (the hourglass
+    /// isn't an entry field).
+    pub(super) fn index_sizes(self) -> IndexSizes {
+        IndexSizes {
+            recursive_size: self.recursive_size,
+            recursive_physical_size: self.recursive_physical_size,
+            recursive_file_count: self.recursive_file_count,
+            recursive_dir_count: self.recursive_dir_count,
+            recursive_has_symlinks: self.recursive_has_symlinks,
+            recursive_size_complete: self.recursive_size_complete,
+            recursive_size_stale: self.recursive_size_stale,
+        }
     }
 }
 
