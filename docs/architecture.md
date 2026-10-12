@@ -53,6 +53,9 @@ All under `apps/desktop/src/lib/`.
 - `file-operations/queue/`: Standalone operation-queue window (per-row pause/resume/cancel/rollback through each row's
   session, multi-select, global pause/resume), rendered from an ops store merging `operations-changed` +
   `write-progress`; route at `routes/queue/`. See `apps/desktop/src/lib/file-operations/queue/CLAUDE.md`
+- `file-operations/transfer-tree/`: The live file tree of a copy, move, or compress (per-folder and per-file progress),
+  in the progress dialog and inline on running queue rows; the backend's model and view command are
+  `file_system/write_operations/transfer_tree/`. See `apps/desktop/src/lib/file-operations/transfer-tree/CLAUDE.md`
 - `file-viewer/`: Read-only file viewer (separate window, virtual scrolling)
 - `settings/`: Settings UI + registry-based architecture, reactive state
 - `intl/`: The two locale sources (`getUiLocale` for catalog text, `getFormatLocale` for the OS's number/date

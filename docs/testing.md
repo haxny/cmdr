@@ -841,7 +841,9 @@ E2E test hooks split along two axes:
   `tooling/virtual-mtp.md`.
 - **`CMDR_E2E_COPY_THROTTLE_MS`** (no E2E-mode gate; the variable alone is enough, and it's re-read every file):
   Per-file sleep inside the copy loop, and a per-entry sleep inside an archive edit's rewrite (`archive_edit/engine.rs`,
-  in 10 ms slices that give way to a cancel). Lets tests stage Cancel/Rollback.
+  in 10 ms slices that give way to a cancel). Lets tests stage Cancel/Rollback. The dialog gallery's transfer preview
+  has a pace of its own that reaches only copies out of its fixture folder (`test_mode::pace_copies_from`, set by the
+  dev-and-E2E fixture command); this variable and `set_test_throttle` win over it.
 - **`CMDR_E2E_ROLLBACK_THROTTLE_MS`** (**needs `CMDR_E2E_MODE=1` too**, else it does nothing at all): Per-item sleep
   inside the operation-log ROLLBACK engine's file loop (`operation_log/rollback.rs`), so a spec can watch a reversal run
   and press Cancel inside it. Its own knob rather than a reuse of the copy throttle: pacing the reversal must not also

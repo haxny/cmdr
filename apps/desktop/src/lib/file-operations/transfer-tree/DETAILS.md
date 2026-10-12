@@ -1,7 +1,26 @@
 # Transfer tree (frontend): details
 
-Must-knows: `CLAUDE.md`. The plan this implements, until it ships: `docs/specs/transfer-tree-progress.md`. The view
-command's contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view".
+Must-knows: `CLAUDE.md`. The view command's contract:
+`apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view". Designed in
+`docs/specs/transfer-tree-progress.md` (issue #382).
+
+## What it promises
+
+A copy of six folders used to show one bar for the whole job, so nobody could tell which folder was untouched, which
+file was in flight, or whether the first three landed. These are the product calls (David, 2026-10-11) the code holds:
+
+- **Rows are the selection, as a tree** rooted at the sources' common parent, every label relative to it. A single-child
+  folder chain is one row (`a/b`, like VS Code); a file never compacts into its folder.
+- **The tree follows the work**: folders holding it open, a folder shuts once the work left it, and a folder the user
+  toggled stays as they left it. A user's scroll or keyboard move pauses following until Follow (or F).
+- **Everything stays reachable**: 5,000 top-level files is a 5,000-row virtual list, and a finished row keeps its
+  checkmark, ❌ never folded into "N done".
+- **Rows below the work really are next**: every driver starts files in tree order
+  (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Processing order"). Parallel drivers
+  show several active rows.
+- **One axis for every folder bar**: the operation's bottleneck (files or bytes), the same one its ETA follows.
+- **Out of scope**, each its own follow-up: skipping the rest of a folder, keeping the tree after the operation ends
+  (#261), trees for delete, trash, and edits inside an existing archive, and remembering a resized dialog's height.
 
 ## Using it
 
@@ -33,7 +52,13 @@ a tree a bug turned off), and keeps its last rows once the operation has finishe
 `transfer-tree-view.svelte.ts` builds each request when it's SENT (`createCoalesced`: one in flight, the newest
 waiting), so a toggle or scroll during a pending request rides along. Following asks `Follow { lead: 10 }`, so the rows
 the pinned headers cover and a short scroll up are loaded; paused, it asks `At { offset: top − 10 }`. The limit is the
-viewport's rows plus 10 above and below. Scroll-driven pulls wait for a frame.
+viewport's rows plus 10 above and below. Scroll-driven pulls wait for a frame. Hand toggles are capped at the backend's
+2,000 each way; past that the oldest drops (`withNewest`).
+
+**Decision: no tree event; each view pulls on the operation's own `write-progress`.** **Why**: a broadcast tick can't
+know what each view expanded or scrolled to, so it would either flood every window with rows nobody shows or need
+per-view backend registrations that leak when a window closes. Pulling keeps the backend stateless per view, bounds
+every answer by the viewport (≤ 200 rows), and makes attaching mid-copy the same code path as an update.
 
 `followTop` is where the viewport's top belongs while following: the work sits `max(2, min(3, its depth))` rows down
 (one row per header its folders will pin, so the stack never covers it), clamped so the viewport stays full. The
@@ -110,6 +135,10 @@ answers views with the backend's semantics in plain O(rows) code. `fixture-playe
 `one-copying-file.ts` is the smallest static view, for tests of a surface that embeds the tree (the dialog, a queue
 row).
 
+The real thing is in Debug → Soft dialogs → Transfer progress: a paced local copy over a fixture tree for the local
+shapes (`apps/desktop/src/lib/dialog-gallery/DETAILS.md` § "`transfer-progress` is real-operation"). The parallel and
+failed shapes need a remote volume or a failing write, so they live only in the catalog.
+
 ## Tests
 
 `row-format.test.ts`, `tree-operation.test.ts`, `pinned-headers.test.ts` (which folders pin, the cap's compaction,
@@ -118,3 +147,9 @@ toggles, ancestors), `TransferTree.test.ts` (fixtures: posinset / setsize / leve
 failure rows, the content-sized height), and `transfer-tree.a11y.test.ts` (axe over every fixture: preparing,
 mid-transfer, paused, finished). Axe's contrast rule is off in jsdom; `pnpm check a11y-contrast` checks the rows' color
 pairs in both themes.
+
+End to end: `apps/desktop/test/e2e-playwright/transfer-tree.spec.ts` pauses a paced copy of five folders and checks the
+tree against tree order (done folders shut above the work, the work's folder open, Follow, Left / Right), reading each
+row's `data-state`; `operation-queue.spec.ts` checks a backgrounded copy's queue row shows its tree;
+`dialog-resize.spec.ts` drags the dialog taller and checks the tree takes the height. The i18n capture photographs the
+tree on the queue window's running row.

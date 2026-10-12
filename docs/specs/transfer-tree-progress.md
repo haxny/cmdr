@@ -217,6 +217,31 @@ Code and docs: `QueueRow.svelte`, `row-tree.ts`, and `queue/DETAILS.md` § "The 
   cases, the pull-per-tick case in `queue-row-session.svelte.test.ts`, and the page's keyboard cases in
   `queue-selection.svelte.test.ts`. The shared `fixtures/one-copying-file.ts` replaced the dialog test's own copy.
 
+## Built in M7 (2026-10-13), and where it differs from the plan below
+
+E2E, the gallery row, and the doc sweep. The spec's durable intent now lives beside the code: the product calls and the
+pull-on-push decision in `apps/desktop/src/lib/file-operations/transfer-tree/DETAILS.md` § "What it promises" and § "The
+pull", the million-file budget in `write_operations/transfer_tree/DETAILS.md`, the order decision in
+`write_operations/transfer/DETAILS.md` § "Processing order". Differences:
+
+- **`transfer-tree.spec.ts` uses 5 folders × 6 files, not × 20**, at 60 ms per file, and pauses through
+  `pause_operation` from the page the moment the backend's tree counts the third folder's first file. Every check polls
+  a picture of the PAUSED copy (rows read through a new `data-state` on each row). **Why**: the Linux lane warns past 2
+  s per test, and a round trip per poll let a short copy finish before a button click landed. "Earlier folders collapse
+  with a checkmark" is asserted as `done` + `aria-expanded=false`. The queue line also checks that one tree gets no
+  collapse toggle.
+- **The gallery row's pace is path-scoped on the backend** (`test_mode::pace_copies_from`, 400 ms per file, armed by the
+  dev-and-E2E fixture command), not the E2E `set_test_throttle` (absent from dev builds): only copies out of the
+  gallery's fixture folder slow down, so nothing needs clearing when a preview goes to the background. The harness
+  renders the shipping dialog with real start props (`openGalleryDialog` gained a `{ disk, transfer }` context). States:
+  five folders, compact chains, one folder of 300 files. The single-file shape isn't a gallery state: one paced file is
+  over in 400 ms, so it stays catalog-only with the parallel and failed shapes. It's a `note`, not a `reason`: a `ready`
+  row has no reason field.
+- **The i18n capture photographs the tree on the queue window's running row** (the `queue` surface waits for it), not in
+  the progress dialog: the gallery pass skips real-operation rows, since Escape would leave the paced copy running
+  behind every later shot. `pnpm i18n:couple` found no stale couplings to clear.
+- **Not done**: filing the follow-up issues below; that belongs to the spec's wipe.
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +

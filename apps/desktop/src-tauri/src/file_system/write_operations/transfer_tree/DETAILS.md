@@ -1,7 +1,13 @@
 # Transfer tree: details
 
-Read this before any non-trivial work here. Must-knows: `CLAUDE.md`. The plan this implements, until it ships:
-`docs/specs/transfer-tree-progress.md`.
+Read this before any non-trivial work here. Must-knows: `CLAUDE.md`. What the tree promises the person watching it,
+and the frontend half: `apps/desktop/src/lib/file-operations/transfer-tree/DETAILS.md`. Designed in
+`docs/specs/transfer-tree-progress.md` (issue #382).
+
+**Budget for a million-file job**: ≤ 64 B per node in memory (below), freed when the operation settles; ≤ 200 rows per
+view answer and ≤ 2,000 hand toggles each way per request; O(depth) per file boundary and O(|expansion| + 200) per
+view. **Why it's held this tight**: volume scans never kept a per-file record before this tree, so the tree is the one
+thing a huge remote copy holds that it didn't, and the local engine's own file list already costs ~4× it.
 
 ## Where a tree comes from
 

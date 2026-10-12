@@ -2,8 +2,8 @@
 //!
 //! Folders first, then files, each group by the panes' name collation
 //! (`cmdr_listing::NameCollator`), depth-first. The tree displays exactly this order,
-//! so the rows below the active one really are the upcoming ones once the
-//! drivers start files in it too (`docs/specs/transfer-tree-progress.md`).
+//! so the rows below the active one really are the upcoming ones, because every
+//! driver starts files in it too (`../transfer/DETAILS.md` § "Processing order").
 
 use std::cmp::Ordering;
 use std::sync::Arc;
