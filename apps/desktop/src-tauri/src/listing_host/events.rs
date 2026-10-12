@@ -13,7 +13,7 @@
 //! payloads go out through a [`ListingWire`] (`AppHandle` in the app, a collector
 //! in tests), the bookkeeping through [`ListingEndEffects`].
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tauri_specta::Event;
@@ -328,7 +328,7 @@ impl<W: ListingWire, E: ListingEndEffects> TauriListingEvents<W, E> {
             listing_id,
             end.total_count,
             end.volume_root.to_string_lossy().to_string(),
-            end.stored_path,
+            end.stored_path.map(|path| path.to_string_lossy().into_owned()),
         );
     }
 
@@ -388,7 +388,7 @@ struct Completed<'a> {
     listed_path: &'a Path,
     total_count: usize,
     volume_root: &'a Path,
-    stored_path: Option<String>,
+    stored_path: Option<PathBuf>,
     empty_at_volume_root: bool,
 }
 
@@ -420,7 +420,7 @@ impl<W: ListingWire, E: ListingEndEffects> ListingEvents for TauriListingEvents<
                 stored_path,
                 empty_at_volume_root,
             } => {
-                let listed_path = stored_path.as_deref().map(Path::new).unwrap_or(&path).to_path_buf();
+                let listed_path = stored_path.as_deref().unwrap_or(&path).to_path_buf();
                 self.complete(
                     listing_id,
                     Completed {

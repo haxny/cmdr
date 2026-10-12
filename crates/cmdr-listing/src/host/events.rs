@@ -29,8 +29,9 @@ pub enum ListingEnd {
         /// The serving volume's root. For a path inside an archive, the archive file.
         volume_root: PathBuf,
         /// The volume's own spelling of the directory, when it differs from what the
-        /// pane asked for; `None` for a path that listed as given.
-        stored_path: Option<String>,
+        /// pane asked for; `None` for a path that listed as given. The real bytes:
+        /// how the pane is told is the host's.
+        stored_path: Option<PathBuf>,
         /// The listing came back empty AT its volume's root, which on some volumes
         /// means the OS hid the contents (iCloud Drive without Full Disk Access).
         empty_at_volume_root: bool,

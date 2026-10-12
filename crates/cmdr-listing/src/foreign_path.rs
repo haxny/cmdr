@@ -37,8 +37,8 @@ pub(crate) struct Listed {
 impl Listed {
     /// The volume's spelling when it differs from what was asked, for the
     /// frontend to adopt; `None` for the common case, a path that listed as given.
-    pub(crate) fn stored_spelling_of(&self, asked: &Path) -> Option<String> {
-        (self.path != asked).then(|| self.path.to_string_lossy().into_owned())
+    pub(crate) fn stored_spelling_of(&self, asked: &Path) -> Option<PathBuf> {
+        (self.path != asked).then(|| self.path.clone())
     }
 }
 

@@ -4,7 +4,7 @@
 //! reports recorded, foreground holds counted.
 
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -238,7 +238,7 @@ async fn a_foreign_spelling_lands_the_listing_on_the_stored_path() {
     let stored_paths = sink.stored_paths.lock().unwrap();
     assert_eq!(
         *stored_paths,
-        vec![(listing.id().to_string(), Some(stored.to_string()))],
+        vec![(listing.id().to_string(), Some(PathBuf::from(stored)))],
         "the pane must learn the stored spelling"
     );
 }
@@ -251,7 +251,7 @@ async fn a_foreign_spelling_lands_the_listing_on_the_stored_path() {
 /// ran to its own cooperative end; `aborted` means it was dropped mid-listing,
 /// which on a real phone abandons a PTP transaction and wedges the device.
 struct CooperativeCancelVolume {
-    root: std::path::PathBuf,
+    root: PathBuf,
     started: Arc<AtomicBool>,
     finished: Arc<AtomicBool>,
     aborted: Arc<AtomicBool>,
@@ -274,7 +274,7 @@ impl Drop for AbortWitness {
 impl CooperativeCancelVolume {
     fn new() -> Self {
         Self {
-            root: std::path::PathBuf::from("/"),
+            root: PathBuf::from("/"),
             started: Arc::new(AtomicBool::new(false)),
             finished: Arc::new(AtomicBool::new(false)),
             aborted: Arc::new(AtomicBool::new(false)),

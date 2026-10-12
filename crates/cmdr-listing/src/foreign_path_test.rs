@@ -48,7 +48,10 @@ async fn a_foreign_spelling_lists_the_stored_directory_under_its_stored_path() {
         .expect("the foreign spelling resolves and lists");
 
     assert_eq!(listed.path, Path::new(STORED));
-    assert_eq!(listed.stored_spelling_of(Path::new(FOREIGN)).as_deref(), Some(STORED));
+    assert_eq!(
+        listed.stored_spelling_of(Path::new(FOREIGN)).as_deref(),
+        Some(Path::new(STORED))
+    );
     let child = &listed.entries.first().expect("the photo is listed").path;
     assert!(
         child.starts_with(STORED),

@@ -36,10 +36,10 @@ Each entry: the question, what the engine does with the answer, the no-op, and C
   sharing a trait would couple two crates through methods neither needs.
 - **`ListingEvents`: what happened to a listing.** `opening`, `stalled(StalledOn)`, `progress`, `read_complete`,
   `finished(ListingEnd)`, `diff`, `respelled`, each taking the `&ListingId` first. `ListingEnd` is `Complete` (total,
-  volume root, stored spelling, empty-at-volume-root), `Cancelled`, or `Failed` with the `VolumeError`, each carrying
-  the volume id and path. A read reports its own complete or cancel; a refused read is reported by its task after the
-  cancel token is gone. No-op `NoEvents`: drops everything. Cmdr: `TauriListingEvents`, which owns every wire struct and
-  the policy on them.
+  volume root, stored spelling as a `PathBuf`, empty-at-volume-root), `Cancelled`, or `Failed` with the `VolumeError`,
+  each carrying the volume id and path. A read reports its own complete or cancel; a refused read is reported by its
+  task after the cancel token is gone. No-op `NoEvents`: drops everything. Cmdr: `TauriListingEvents`, which owns every
+  wire struct and the policy on them, down to formatting a path as the wire's string.
 - **`ListingIndex`: what the drive index knows.** `enrich(volume_id, &mut [FileEntry])` and
   `verify_directory(volume_id, path)`. ❗ `enrich` writes only the seven `recursive_*` fields and only on non-symlink
   folders (verified in `cmdr_index`'s `enrich_entries_with_index_on_volume` / `apply_dir_stats`, 2026-10-11 on

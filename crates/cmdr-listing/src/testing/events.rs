@@ -1,6 +1,6 @@
 //! The events fake: every report the engine makes, recorded.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -25,7 +25,7 @@ pub struct RecordingEvents {
     /// Per completed listing, its row count.
     pub complete: Mutex<Vec<(String, usize)>>,
     /// Per completed listing, the stored spelling it reported (`None` = as asked).
-    pub stored_paths: Mutex<Vec<(String, Option<String>)>>,
+    pub stored_paths: Mutex<Vec<(String, Option<PathBuf>)>>,
     /// Per completed listing, whether it came back empty at its volume's root.
     pub empty_at_volume_root: Mutex<Vec<(String, bool)>>,
     /// Every listing that ended cancelled.
