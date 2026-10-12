@@ -791,9 +791,11 @@ A file's creation date and mode ride beside the mtime in rclone's `--metadata` k
 `CREATED` and `MODE`, files only: a folder is a prefix):
 
 - **Keys and formats** (rclone `4f19e9c`, 2026-10-09, read from source): `x-amz-meta-btime` in RFC 3339 with nanoseconds
-  (`backend/local/metadata.go` formats it `time.RFC3339Nano`; `backend/s3/s3.go` stores it as user metadata "since we
-  can't set it"), and `x-amz-meta-mode` as the whole `st_mode` in octal (`%0o`: `100644`). Cmdr writes the btime in UTC
-  and reads any offset (rclone's local backend writes the machine's zone); it reads a mode's permission bits only.
+  (rclone's [local backend](https://github.com/rclone/rclone/blob/4f19e9c/backend/local/metadata.go) formats it
+  `time.RFC3339Nano`; its [S3 backend](https://github.com/rclone/rclone/blob/4f19e9c/backend/s3/s3.go) stores it as user
+  metadata "since we can't set it"), and `x-amz-meta-mode` as the whole `st_mode` in octal (`%0o`: `100644`). Cmdr
+  writes the btime in UTC and reads any offset (rclone's local backend writes the machine's zone); it reads a mode's
+  permission bits only.
 - **Both ways at no request**: a write takes them from the source stream's `metadata` beside the date and sets them on
   the PUT or `CreateMultipartUpload`; the read stream reports them off the GET's headers, `get_metadata` off the HEAD's.
   ❗ A listing carries no user metadata (§ "Listing and stat"), so a pane row shows neither until Get info HEADs it.

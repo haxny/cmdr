@@ -21,12 +21,11 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basi
   a second configuration would enter the graph twice.
 - ❌ **Never classify by message.** A status by number plus `Attempted`; a `reqwest::Error` by `is_timeout` /
   `is_connect` / `is_request`; a TLS refusal by the `io::ErrorKind::InvalidData` in its source chain.
-- ❗ **Every wire-touching delegator wraps itself in `noting`.** No watcher, no session: the operations ARE the
-  detector. `noting` also races each one against its client's `lost` token, so a server that goes SILENT (10 s quiet,
-  then two unanswered probes: 30 s) cuts them with `DeviceDisconnected` exactly like a refused one, which flips the
-  state once and starts the backoff. `DETAILS.md` § "Silent or slow".
+- ❗ **Every wire-touching delegator wraps itself in `noting`**: the operations ARE the detector, and it races each one
+  against the client's `lost` token, so a SILENT server (30 s) cuts them with `DeviceDisconnected` like a refused one.
+  `DETAILS.md` § "Silent or slow".
 - ❗ **Every request goes out through `WebdavClient::send` or `propfind`**, and a body read counts its chunks as
-  `heard`. A path that skips both looks silent to the watch however much it hears.
+  `heard`, or the silence watch never hears it.
 - ❗ **A buffered body goes through `read_body` with a cap**, ❌ never `.text()` / `.bytes()`. `DETAILS.md` § "Bounded
   bodies".
 - ❌ **No `read_timeout`, no `.timeout()` on the streaming PUT or GET, and never a timeout read as a lost server**: a
@@ -44,9 +43,8 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basi
 - ❗ **`Range` may be ignored**: a 200 to a ranged GET is skipped locally (fixture `webdav-fixture-norange`).
 - ❗ **Unbounded space reads `oc:size`, ❌ never `quota-used-bytes`** (an unlimited Nextcloud answers `0`). One of two
   non-standard properties; `DETAILS.md` § "What a real server answers" sets the bar for a third.
-- ❗ **Creation and folder dates only where the connect probe found `nc:creation_time`** (the other one, asked by the
-  probe alone): ❌ never a PROPPATCH of dates on `mod_dav`, which stores it as dead properties and changes nothing.
-  Nextcloud's `creationdate` of 1970 means none. `DETAILS.md` § "Dates".
+- ❗ **Dates beyond the mtime only where the connect probe saw `nc:creation_time`** (the other one); ❌ never a
+  PROPPATCH of dates on `mod_dav`, which keeps them as dead properties. `DETAILS.md` § "Dates".
 - ❗ **DELETE is recursive by protocol; the trait's is not.** `delete` refuses a non-empty collection with `ENOTEMPTY`
   after a `Depth: 1` PROPFIND.
 - ❌ Never `root_anchored`, never a stat per child in a scan, never `authoritative_listing` (coverage is `None`).
