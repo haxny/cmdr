@@ -1,10 +1,10 @@
 # Build stage
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+FROM node:26-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
+# Install pnpm, the version `.mise.toml` pins (Node 25+ no longer ships corepack)
+RUN npm install --global pnpm@11.27.1
 
 # Copy workspace config, lockfile, and root package.json (needed for overrides)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
