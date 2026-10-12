@@ -12,7 +12,7 @@
 //! The index is built by walking the file's rows once. After scanning, supports O(1)
 //! row-based seeking via the checkpoint array.
 
-use std::fs::File;
+#[cfg(test)]
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,6 +21,9 @@ use super::encoding::FileEncoding;
 use super::row_walk::{self, RowReader, TotalRows, collect_rows, search_rows};
 use super::rows::FileSource;
 use super::search_matcher::Matcher;
+#[cfg(test)]
+use super::source::open_local;
+use super::source::{OpenedFile, SharedSource, read_head};
 use super::{
     BackendCapabilities, FileViewerBackend, INDEX_CHECKPOINT_INTERVAL, LineChunk, SearchMatch, SeekTarget, ViewerError,
 };
@@ -36,17 +39,15 @@ pub fn test_only_open_call_count() -> usize {
     OPEN_CALL_COUNT.load(Ordering::Relaxed)
 }
 
-/// Read enough of `path` to decide where its content starts, through the one rule all
-/// three backends share (`row_walk::content_start`).
-fn read_content_start(path: &Path, encoding: FileEncoding) -> Result<u64, ViewerError> {
+/// Read enough of the file to decide where its content starts, through the one rule
+/// all three backends share (`row_walk::content_start`).
+fn read_content_start(source: &SharedSource, encoding: FileEncoding) -> Result<u64, ViewerError> {
     let bom = encoding.bom_bytes();
     if bom.is_empty() {
         return Ok(0);
     }
-    let mut head = vec![0u8; bom.len()];
-    let mut file = File::open(path)?;
-    let read = std::io::Read::read(&mut file, &mut head)?;
-    Ok(row_walk::content_start(&head[..read], encoding))
+    let head = read_head(source.as_ref(), bom.len())?;
+    Ok(row_walk::content_start(&head, encoding))
 }
 
 /// A checkpoint in the row index.
@@ -65,7 +66,8 @@ struct Checkpoint {
 }
 
 pub struct LineIndexBackend {
-    path: std::path::PathBuf,
+    /// The session's open file, shared with every backend built from it.
+    source: SharedSource,
     total_bytes: u64,
     file_name: String,
     /// Sparse index: one checkpoint every INDEX_CHECKPOINT_INTERVAL rows.
@@ -90,31 +92,26 @@ impl LineIndexBackend {
         Self::open_with_encoding(path, encoding, cancel)
     }
 
+    #[cfg(test)]
     pub fn open_with_encoding(path: &Path, encoding: FileEncoding, cancel: &AtomicBool) -> Result<Self, ViewerError> {
+        Self::open_source(&open_local(path)?, encoding, cancel)
+    }
+
+    /// Build the index over a file the session already holds open.
+    pub fn open_source(file: &OpenedFile, encoding: FileEncoding, cancel: &AtomicBool) -> Result<Self, ViewerError> {
         #[cfg(test)]
         OPEN_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
-        let metadata = std::fs::metadata(path).map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => ViewerError::NotFound {
-                path: path.display().to_string(),
-            },
-            _ => ViewerError::from(e),
-        })?;
-        if metadata.is_dir() {
-            return Err(ViewerError::IsDirectory);
-        }
-
-        let total_bytes = metadata.len();
-        let file_name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| path.display().to_string());
+        let total_bytes = file.total_bytes;
 
         // Walk the file's rows ONCE, recording both coordinates as we go. A second pass
         // to recover either one would read the file twice and break invariant I1.
-        let content_start = read_content_start(path, encoding)?;
+        let content_start = read_content_start(&file.source, encoding)?;
 
-        let file = File::open(path)?;
-        let mut reader = RowReader::new(FileSource::new(file, total_bytes), encoding, content_start);
+        let mut reader = RowReader::new(
+            FileSource::new(file.source.clone(), total_bytes),
+            encoding,
+            content_start,
+        );
         let mut checkpoints = Vec::new();
         let mut rows = 0usize;
         let mut lines = 0usize;
@@ -138,9 +135,9 @@ impl LineIndexBackend {
         }
 
         Ok(Self {
-            path: path.to_path_buf(),
+            source: file.source.clone(),
             total_bytes,
-            file_name,
+            file_name: file.file_name.clone(),
             checkpoints,
             total_rows: rows.max(1),
             total_lines: lines.max(1),
@@ -162,7 +159,7 @@ impl LineIndexBackend {
     pub fn extend_to(&self, new_size: u64, cancel: &AtomicBool) -> Result<Self, ViewerError> {
         if new_size <= self.total_bytes {
             return Ok(Self {
-                path: self.path.clone(),
+                source: self.source.clone(),
                 total_bytes: new_size,
                 file_name: self.file_name.clone(),
                 checkpoints: self.checkpoints.clone(),
@@ -189,8 +186,11 @@ impl LineIndexBackend {
         // Keep everything strictly below the resume point; the rewalk re-pushes the
         // checkpoint AT it, since `resume.row` is a multiple of the interval.
         let mut checkpoints: Vec<Checkpoint> = self.checkpoints[..idx.min(self.checkpoints.len())].to_vec();
-        let file = File::open(&self.path)?;
-        let mut reader = RowReader::new(FileSource::new(file, new_size), self.encoding, self.content_start);
+        let mut reader = RowReader::new(
+            FileSource::new(self.source.clone(), new_size),
+            self.encoding,
+            self.content_start,
+        );
         reader.seek(resume.offset)?;
         let mut rows = resume.row;
         let mut lines = resume.line;
@@ -212,7 +212,7 @@ impl LineIndexBackend {
         }
 
         Ok(Self {
-            path: self.path.clone(),
+            source: self.source.clone(),
             total_bytes: new_size,
             file_name: self.file_name.clone(),
             checkpoints,
@@ -225,9 +225,8 @@ impl LineIndexBackend {
 
     /// The start of the row containing `offset`, through the shared rule.
     fn row_start_of(&self, offset: u64) -> Result<u64, ViewerError> {
-        let file = File::open(&self.path)?;
         let mut reader = RowReader::new(
-            FileSource::new(file, self.total_bytes),
+            FileSource::new(self.source.clone(), self.total_bytes),
             self.encoding,
             self.content_start,
         );
@@ -251,9 +250,8 @@ impl LineIndexBackend {
     /// every onward seek land short and duplicate a line at each chunk seam.
     fn reader_at_row(&self, target_row: usize) -> Result<(RowReader<FileSource>, u64, usize), ViewerError> {
         let checkpoint = self.find_checkpoint(target_row).clone();
-        let file = File::open(&self.path)?;
         let mut reader = RowReader::new(
-            FileSource::new(file, self.total_bytes),
+            FileSource::new(self.source.clone(), self.total_bytes),
             self.encoding,
             self.content_start,
         );
@@ -303,9 +301,8 @@ impl LineIndexBackend {
         let Some(checkpoint) = self.checkpoints.get(idx) else {
             return Ok(0);
         };
-        let file = File::open(&self.path)?;
         let mut reader = RowReader::new(
-            FileSource::new(file, self.total_bytes),
+            FileSource::new(self.source.clone(), self.total_bytes),
             self.encoding,
             self.content_start,
         );
@@ -336,7 +333,7 @@ impl FileViewerBackend for LineIndexBackend {
             return None;
         }
         Some(Box::new(Self {
-            path: self.path.clone(),
+            source: self.source.clone(),
             total_bytes: self.total_bytes,
             file_name: self.file_name.clone(),
             checkpoints: self.checkpoints.clone(),
@@ -376,9 +373,8 @@ impl FileViewerBackend for LineIndexBackend {
         results: &Mutex<Vec<SearchMatch>>,
         progress: &Mutex<u64>,
     ) -> Result<u64, ViewerError> {
-        let file = File::open(&self.path)?;
         let mut reader = RowReader::new(
-            FileSource::new(file, self.total_bytes),
+            FileSource::new(self.source.clone(), self.total_bytes),
             self.encoding,
             self.content_start,
         );

@@ -4,7 +4,7 @@
 //! API for the frontend. Sessions are cached by ID and cleaned up on close.
 
 use std::collections::HashMap;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, RwLock};
@@ -23,7 +23,7 @@ use tauri::{AppHandle, Emitter};
 
 use super::byte_seek::ByteSeekBackend;
 use super::content_kind::ViewerContentKind;
-use super::encoding::{FileEncoding, detect, same_byte_layout};
+use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, detect_from_head, same_byte_layout};
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
 use super::media;
@@ -32,6 +32,7 @@ use super::range_read::{
     RangeEnd, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
 };
 use super::search_matcher::{Matcher, SearchMode};
+use super::source::{OpenedFile, SourceOrigin, read_head};
 use super::watcher::{VIEWER_WATCHER_MANAGER, WatcherEvent};
 use super::{
     BackendCapabilities, FULL_LOAD_THRESHOLD, FileViewerBackend, LineChunk, MAX_SEARCH_MATCHES, SearchMatch,
@@ -240,6 +241,11 @@ pub(super) struct ViewerSession {
     /// affect a follow-up read that started in the same gesture.
     active_reads: Mutex<HashMap<u64, Arc<AtomicBool>>>,
     path: PathBuf,
+    /// Where the file lives, for a fresh handle on reload. See `file_viewer::source`.
+    origin: SourceOrigin,
+    /// The handle every backend of this session reads through, opened once. `None`
+    /// until first needed on a media session, which serves its bytes elsewhere.
+    file: Mutex<Option<OpenedFile>>,
     /// The `cmdr-media://` token for a media (Image/PDF) session, dropped from the
     /// global token map at `close_session`. `None` for text sessions. Tying the drop
     /// to the single close choke point keeps the token's lifetime exactly the
@@ -263,6 +269,8 @@ pub(super) struct ViewerSessionInit {
     pub(super) detected_encoding: FileEncoding,
     pub(super) watcher_stop: Arc<AtomicBool>,
     pub(super) path: PathBuf,
+    pub(super) origin: SourceOrigin,
+    pub(super) file: Option<OpenedFile>,
     pub(super) media_token: Option<String>,
     pub(super) temp: Option<Arc<PreviewTemp>>,
 }
@@ -283,6 +291,8 @@ impl ViewerSession {
             watcher_stop: init.watcher_stop,
             active_reads: Mutex::new(HashMap::new()),
             path: init.path,
+            origin: init.origin,
+            file: Mutex::new(init.file),
             media_token: init.media_token,
             temp: init.temp,
         }
@@ -292,6 +302,25 @@ impl ViewerSession {
     /// `get_lines` can run in parallel.
     fn load_backend(&self) -> Arc<Box<dyn FileViewerBackend>> {
         self.backend.load_full()
+    }
+
+    /// The session's open file, opening it on first use.
+    fn open_file(&self) -> Result<OpenedFile, ViewerError> {
+        let mut file = self.file.lock_ignore_poison();
+        if let Some(opened) = file.as_ref() {
+            return Ok(opened.clone());
+        }
+        let opened = self.origin.open()?;
+        *file = Some(opened.clone());
+        Ok(opened)
+    }
+
+    /// The open file at the size the live backend knows (tail mode moves it past the
+    /// size seen at open), for building a sibling backend over the same bytes.
+    fn file_at_backend_size(&self) -> Result<OpenedFile, ViewerError> {
+        let mut opened = self.open_file()?;
+        opened.total_bytes = self.load_backend().total_bytes();
+        Ok(opened)
     }
 }
 
@@ -471,8 +500,10 @@ fn open_session_core(
         return Err(ViewerError::IsDirectory);
     }
 
-    let metadata = std::fs::metadata(&file_path)?;
-    let file_size = metadata.len();
+    // Stat and open ONCE: every backend this session builds reads through this handle.
+    let origin = SourceOrigin::Local(file_path.clone());
+    let opened = origin.open()?;
+    let file_size = opened.total_bytes;
 
     // Classify by magic bytes (unless the caller forced text, e.g. "View as text").
     // A media kind (Image/Pdf on a local volume) opens a no-op session that serves bytes
@@ -485,15 +516,17 @@ fn open_session_core(
     }
 
     // Auto-detect encoding at open time. Used as the initial encoding for every backend.
-    let detected_encoding = detect(&file_path).unwrap_or(FileEncoding::Utf8);
+    let detected_encoding = read_head(opened.source.as_ref(), DETECT_HEAD_BYTES)
+        .map(|head| detect_from_head(&head))
+        .unwrap_or(FileEncoding::Utf8);
 
     let (backend_box, backend_type, upgrading): (Box<dyn FileViewerBackend>, BackendType, Option<Arc<AtomicBool>>) =
         if file_size <= FULL_LOAD_THRESHOLD {
-            let b = FullLoadBackend::open_with_encoding(&file_path, detected_encoding)?;
+            let b = FullLoadBackend::open_source(&opened, detected_encoding)?;
             (Box::new(b), BackendType::FullLoad, None)
         } else {
             // Start with ByteSeek (instant), then upgrade to LineIndex in background
-            let b = ByteSeekBackend::open_with_encoding(&file_path, detected_encoding)?;
+            let b = ByteSeekBackend::open_source(&opened, detected_encoding)?;
             let cancel = Arc::new(AtomicBool::new(false));
             (Box::new(b), BackendType::ByteSeek, Some(cancel))
         };
@@ -524,6 +557,8 @@ fn open_session_core(
         detected_encoding,
         watcher_stop,
         path: file_path.clone(),
+        origin,
+        file: Some(opened.clone()),
         media_token: None,
         temp,
     });
@@ -564,7 +599,7 @@ fn open_session_core(
     // If we're using ByteSeek, start background upgrade to LineIndex with timeout
     if let Some(cancel_flag) = upgrade_cancel {
         let session_id_clone = session_id.clone();
-        let path_clone = file_path.clone();
+        let opened_for_indexer = opened;
         let cancel_for_indexer = cancel_flag.clone();
         let cancel_for_timeout = cancel_flag.clone();
 
@@ -601,7 +636,7 @@ fn open_session_core(
         // window is queued in `pending_grew` and consumed by the swap.
         let encoding_for_upgrade = detected_encoding;
         thread::spawn(move || {
-            match LineIndexBackend::open_with_encoding(&path_clone, encoding_for_upgrade, &cancel_for_indexer) {
+            match LineIndexBackend::open_source(&opened_for_indexer, encoding_for_upgrade, &cancel_for_indexer) {
                 Ok(new_backend) => {
                     // Test-only gate: park with the scan finished but the swap
                     // not yet done, the exact window a watcher `Grew` has to
@@ -698,17 +733,17 @@ pub fn get_lines(
 /// The session path also points at the shared temp for routed and device files.
 pub fn get_bytes(session_id: &str, offset: u64, count: usize) -> Result<Vec<u8>, ViewerError> {
     const MAX_BYTES: usize = 64 * 1024;
-    let path = {
+    let file = {
         let sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
             session_id: session_id.to_string(),
         })?;
-        session.path.clone()
+        session.file_at_backend_size()?
     };
-    let mut file = std::fs::File::open(path)?;
-    file.seek(SeekFrom::Start(offset))?;
-    let mut bytes = Vec::with_capacity(count.min(MAX_BYTES));
-    file.take(count.min(MAX_BYTES) as u64).read_to_end(&mut bytes)?;
+    let wanted = file.total_bytes.saturating_sub(offset).min(count.min(MAX_BYTES) as u64) as usize;
+    let mut bytes = vec![0u8; wanted];
+    let read = file.source.read_at(offset, &mut bytes)?;
+    bytes.truncate(read);
     Ok(bytes)
 }
 
@@ -764,19 +799,21 @@ pub fn search_start(session_id: &str, query: String, mode: SearchMode) -> Result
         status: status.clone(),
     };
 
-    // Get the file path from the session to open a fresh file handle in the search thread
-    let path = {
+    // The search walks the session's own open file, in the session's encoding.
+    let (file, encoding) = {
         let mut sessions = SESSIONS.lock_ignore_poison();
         let session = sessions
             .get_mut(session_id)
             .ok_or_else(|| ViewerError::SessionNotFound {
                 session_id: session_id.to_string(),
             })?;
+        let file = session.file_at_backend_size()?;
+        let encoding = *session.encoding.lock_ignore_poison();
         session.search = Some(search_state);
-        session.path.clone()
+        (file, encoding)
     };
 
-    spawn_search_worker(path, matcher, cancel, matches, bytes_scanned, status);
+    spawn_search_worker(file, encoding, matcher, cancel, matches, bytes_scanned, status);
     Ok(())
 }
 
@@ -785,7 +822,8 @@ pub fn search_start(session_id: &str, query: String, mode: SearchMode) -> Result
 /// the watchdog's so a watchdog-set `Cancelled` is sticky (see step 1.4 of the
 /// viewer-search plan).
 fn spawn_search_worker(
-    path: PathBuf,
+    file: OpenedFile,
+    encoding: FileEncoding,
     matcher: Matcher,
     cancel: Arc<AtomicBool>,
     matches: Arc<Mutex<Vec<SearchMatch>>>,
@@ -802,7 +840,7 @@ fn spawn_search_worker(
         let watchdog_handle = thread::spawn(move || run_search_watchdog(watchdog_cancel, watchdog_status));
 
         // Use ByteSeekBackend for streaming search (low memory, works on any file)
-        let backend = match ByteSeekBackend::open(&path) {
+        let backend = match ByteSeekBackend::open_source(&file, encoding) {
             Ok(b) => b,
             Err(_) => {
                 finalize_search_status(&status, &cancel, /*errored=*/ true);
@@ -1166,7 +1204,7 @@ pub fn get_encoding_options(session_id: &str) -> Result<EncodingOptions, ViewerE
 /// Returns immediately. The FE polls `get_session_status` for `is_indexing` and
 /// switches its progress indicator like for the initial ByteSeek → LineIndex upgrade.
 pub fn set_encoding(session_id: &str, new_encoding: FileEncoding) -> Result<(), ViewerError> {
-    let path;
+    let file;
     let was_full_load;
     let current_encoding;
     let prev_cancel: Option<Arc<AtomicBool>>;
@@ -1175,7 +1213,7 @@ pub fn set_encoding(session_id: &str, new_encoding: FileEncoding) -> Result<(), 
         let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
             session_id: session_id.to_string(),
         })?;
-        path = session.path.clone();
+        file = session.file_at_backend_size()?;
         was_full_load = matches!(*session.backend_type.lock_ignore_poison(), BackendType::FullLoad);
         current_encoding = *session.encoding.lock_ignore_poison();
         // Cancel any in-flight rebuild from a previous set_encoding call. The earlier
@@ -1192,8 +1230,7 @@ pub fn set_encoding(session_id: &str, new_encoding: FileEncoding) -> Result<(), 
     // FullLoad path: reopen + atomic swap. Fast enough on <1 MB files that no
     // background thread is needed.
     if was_full_load {
-        let new_backend: Box<dyn FileViewerBackend> =
-            Box::new(FullLoadBackend::open_with_encoding(&path, new_encoding)?);
+        let new_backend: Box<dyn FileViewerBackend> = Box::new(FullLoadBackend::open_source(&file, new_encoding)?);
         let sessions = SESSIONS.lock_ignore_poison();
         if let Some(session) = sessions.get(session_id) {
             session.backend.store(Arc::new(new_backend));
@@ -1226,7 +1263,7 @@ pub fn set_encoding(session_id: &str, new_encoding: FileEncoding) -> Result<(), 
 
     // Large-file path: snap to ByteSeek immediately so the viewport stays interactive,
     // then rebuild LineIndex under the new encoding in the background.
-    let bs = ByteSeekBackend::open_with_encoding(&path, new_encoding)?;
+    let bs = ByteSeekBackend::open_source(&file, new_encoding)?;
     let bs_box: Box<dyn FileViewerBackend> = Box::new(bs);
     let cancel = Arc::new(AtomicBool::new(false));
     {
@@ -1240,14 +1277,13 @@ pub fn set_encoding(session_id: &str, new_encoding: FileEncoding) -> Result<(), 
     }
 
     let session_id_clone = session_id.to_string();
-    let path_clone = path;
     let cancel_for_thread = cancel.clone();
     thread::spawn(move || {
         #[cfg(test)]
         let _exit_guard = RebuildExitGuard;
         #[cfg(test)]
         test_gate::REBUILD_PRE_SCAN.wait_if_armed();
-        match LineIndexBackend::open_with_encoding(&path_clone, new_encoding, &cancel_for_thread) {
+        match LineIndexBackend::open_source(&file, new_encoding, &cancel_for_thread) {
             Ok(new_backend) => {
                 // See the upgrade thread: parks with the scan done, before the
                 // drain-and-swap. Holds no lock.
@@ -1369,14 +1405,13 @@ pub fn set_tail_mode(session_id: &str, enabled: bool) -> Result<(), ViewerError>
     // was off, jump the backend to the on-disk EOF so the user doesn't have to
     // wait for the next change to see the catch-up.
     if enabled {
-        let path = session.path.clone();
+        let origin = session.origin.clone();
         let backend_arc = session.load_backend();
         drop(sessions);
-        if let Ok(meta) = std::fs::metadata(&path) {
-            let on_disk = meta.len();
-            if on_disk > backend_arc.total_bytes() {
-                apply_tail_extend(session_id, on_disk);
-            }
+        if let Ok(on_disk) = origin.current_size()
+            && on_disk > backend_arc.total_bytes()
+        {
+            apply_tail_extend(session_id, on_disk);
         }
     }
     Ok(())
@@ -1388,21 +1423,22 @@ pub fn set_tail_mode(session_id: &str, enabled: bool) -> Result<(), ViewerError>
 /// otherwise ByteSeek (an in-flight LineIndex upgrade isn't restarted here;
 /// the next `get_lines` settles into the right backend).
 pub fn reload(session_id: &str) -> Result<(), ViewerError> {
-    let path;
+    let origin;
     let encoding;
     {
         let sessions = SESSIONS.lock_ignore_poison();
         let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
             session_id: session_id.to_string(),
         })?;
-        path = session.path.clone();
+        origin = session.origin.clone();
         encoding = *session.encoding.lock_ignore_poison();
     }
 
-    let (new_backend, new_type) = reopen_backend(&path, encoding)?;
+    let (new_backend, new_type, opened) = reopen_backend(&origin, encoding)?;
 
     let sessions = SESSIONS.lock_ignore_poison();
     if let Some(session) = sessions.get(session_id) {
+        *session.file.lock_ignore_poison() = Some(opened);
         session.backend.store(Arc::new(new_backend));
         *session.backend_type.lock_ignore_poison() = new_type;
         // Reset the pending grew queue; the fresh backend covers what the queue
@@ -1412,23 +1448,20 @@ pub fn reload(session_id: &str) -> Result<(), ViewerError> {
     Ok(())
 }
 
-/// A fresh backend for the file as it is on disk now: FullLoad under the
-/// threshold, ByteSeek above it.
+/// A fresh handle and backend for the file as it is now: FullLoad under the
+/// threshold, ByteSeek above it. A fresh handle, not the session's: a file replaced
+/// under the session (an atomic save, a log rotation) is a different file.
 fn reopen_backend(
-    path: &Path,
+    origin: &SourceOrigin,
     encoding: FileEncoding,
-) -> Result<(Box<dyn FileViewerBackend>, BackendType), ViewerError> {
-    let file_size = std::fs::metadata(path)?.len();
-    if file_size <= FULL_LOAD_THRESHOLD {
-        Ok((
-            Box::new(FullLoadBackend::open_with_encoding(path, encoding)?),
-            BackendType::FullLoad,
-        ))
+) -> Result<(Box<dyn FileViewerBackend>, BackendType, OpenedFile), ViewerError> {
+    let opened = origin.open()?;
+    if opened.total_bytes <= FULL_LOAD_THRESHOLD {
+        let backend = FullLoadBackend::open_source(&opened, encoding)?;
+        Ok((Box::new(backend), BackendType::FullLoad, opened))
     } else {
-        Ok((
-            Box::new(ByteSeekBackend::open_with_encoding(path, encoding)?),
-            BackendType::ByteSeek,
-        ))
+        let backend = ByteSeekBackend::open_source(&opened, encoding)?;
+        Ok((Box::new(backend), BackendType::ByteSeek, opened))
     }
 }
 
@@ -1598,20 +1631,20 @@ fn apply_tail_extend(session_id: &str, new_size: u64) {
             return;
         }
         let reopen_from = matches!(*session.backend_type.lock_ignore_poison(), BackendType::FullLoad)
-            .then(|| (session.path.clone(), *session.encoding.lock_ignore_poison()));
+            .then(|| (session.origin.clone(), *session.encoding.lock_ignore_poison()));
         (backend, reopen_from)
     };
 
-    let (extended, new_type) = match reopen_from {
-        Some((path, encoding)) => match reopen_backend(&path, encoding) {
-            Ok((backend, backend_type)) => (backend, Some(backend_type)),
+    let (extended, new_type, reopened) = match reopen_from {
+        Some((origin, encoding)) => match reopen_backend(&origin, encoding) {
+            Ok((backend, backend_type, opened)) => (backend, Some(backend_type), Some(opened)),
             Err(e) => {
                 debug!("apply_tail_extend: reopening session {session_id} failed: {e}");
                 return;
             }
         },
         None => match backend_snapshot.extend_to_boxed(new_size, &dummy_cancel) {
-            Ok(b) => (b, None),
+            Ok(b) => (b, None, None),
             Err(e) => {
                 debug!("apply_tail_extend: extending session {session_id} failed: {e}");
                 return;
@@ -1631,6 +1664,9 @@ fn apply_tail_extend(session_id: &str, new_size: u64) {
         session.backend.store(Arc::new(extended));
         if let Some(new_type) = new_type {
             *session.backend_type.lock_ignore_poison() = new_type;
+        }
+        if let Some(opened) = reopened {
+            *session.file.lock_ignore_poison() = Some(opened);
         }
     } else {
         // A fresh backend was installed during our extend. Discard the stale

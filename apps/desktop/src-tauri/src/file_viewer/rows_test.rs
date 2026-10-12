@@ -881,8 +881,8 @@ fn a_file_source_produces_the_same_rows_as_a_slice_source() {
 
     let expected = real_rows(&bytes, FileEncoding::Utf8);
 
-    let file = std::fs::File::open(&path).unwrap();
-    let mut ruler = RowRuler::new(FileSource::new(file, bytes.len() as u64), FileEncoding::Utf8);
+    let source = super::source::LocalFileSource::shared(&path).unwrap();
+    let mut ruler = RowRuler::new(FileSource::new(source, bytes.len() as u64), FileEncoding::Utf8);
     let mut got = Vec::new();
     let mut start = 0u64;
     while start < bytes.len() as u64 {

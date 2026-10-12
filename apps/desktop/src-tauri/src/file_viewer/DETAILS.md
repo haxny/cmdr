@@ -42,15 +42,36 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   the checkpoint before the old file's last row
 - `search_matcher.rs`: `Matcher` (literal or regex), `SearchMode`, `scan_line_with_matcher` helper. One matcher built
   per search; reused across every line. Huge-line chunking (1 MB windows, 256 byte overlap) lives here.
+- `source.rs`: `ByteSource` (positioned `read_at`), `SharedSource`, `LocalFileSource` (`pread` on a held `File`),
+  `OpenedFile` (source + size + name), and `SourceOrigin` (how a session opens its file again). See § "Byte sources"
 - `headless.rs`: `open_text_backend(path, encoding, cancel) -> HeadlessBackend`, the backend pick with nothing around
   it, for callers that read a file the viewer's way without a window. See § "Headless reads".
 - `*_test.rs`: unit tests for each backend: UTF-8 edge cases, search highlighting, checkpoint math, range reads,
   cancellation, encoding detection, UTF-16 newline scanning, encoding-switch rebuild + drain-and-swap
 
+## Byte sources
+
+A text session opens its file ONCE (`SourceOrigin::open` → `OpenedFile`) and every backend it builds reads through that
+handle: the first `ByteSeek`, the background `LineIndex` scan, an encoding rebuild, a search, a tail extend, and
+`get_bytes`. Backends take an `&OpenedFile` (`open_source`); the path-taking `open_with_encoding` constructors are
+test-only conveniences. `FileSource` (`rows.rs`) adapts a `SharedSource` to the row rule and never asks it for bytes
+past the backend's `total_bytes`.
+
+**Decision**: one held handle, positioned reads. **Why**: a fetch used to `File::open` the path per request. On an SMB
+mount each open is a network round trip, and a scrollbar drag fires a fetch every 100 ms under a 2 s deadline, so jumps
+in a big file on a share timed out (#303). Reads are `pread`-shaped (no cursor), so a fetch, the index scan, and a
+search share the handle without locking. Pinned by `fetches_and_searches_read_through_the_handle_held_since_open`
+(byte-seek) and its line-index twin: both unlink the file after open and still read.
+
+**A reload takes a fresh handle.** `reload` (and a FullLoad tail extend) goes through `reopen_backend`, which reopens
+from the origin and stores the new `OpenedFile` on the session: a file replaced under the session (an atomic save, a
+log rotation) is a different inode, and the old handle would keep reading the old one. Appends need no reopen: the held
+handle sees them, and `extend_to` only moves the size.
+
 ## Raw byte reads
 
-`get_bytes(session_id, offset, count)` reads at most 64 KiB directly from the session's path, regardless of text
-encoding or media kind. The path is the shared materialized temp for routed and device files. The command runs in a
+`get_bytes(session_id, offset, count)` reads at most 64 KiB through the session's open file, regardless of text
+encoding or media kind. For routed and device files that file is the shared materialized temp. The command runs in a
 blocking worker behind the viewer's two-second read deadline, so a slow mount cannot block the IPC thread. The caller
 uses the byte offset as its only coordinate; text row numbers and UTF-16 offsets never enter this path.
 
@@ -522,7 +543,7 @@ Per-session, a manager thread (`spawn_watcher_manager`) does the FSEvents subscr
 
 `extend_to_boxed` is a trait method on `FileViewerBackend` with backend-specific impls:
 
-- `LineIndexBackend::extend_to(new_size, cancel)` opens the file, seeks to `self.total_bytes`, drives a
+- `LineIndexBackend::extend_to(new_size, cancel)` reads the session's held handle from `self.total_bytes`, drives a
   `NewlineScanner` started at that offset over the new range, clones the checkpoint vec and appends new entries.
 - `ByteSeekBackend::extend_to` returns a fresh `ByteSeekBackend` with the updated size field.
 - `FullLoadBackend::extend_to_boxed` returns `ViewerError::Io`: it can't extend in place. So `apply_tail_extend`

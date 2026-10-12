@@ -8,6 +8,7 @@
 //! the frontend's row cache and the other two backends' grids out of step.
 
 use crate::ignore_poison::IgnorePoison;
+#[cfg(test)]
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,6 +17,9 @@ use super::encoding::FileEncoding;
 use super::row_walk::{self, RowReader, TotalRows, ViewerRow};
 use super::rows::SliceSource;
 use super::search_matcher::{LineScan, Matcher, scan_line_with_matcher};
+use super::source::OpenedFile;
+#[cfg(test)]
+use super::source::open_local;
 use super::{BackendCapabilities, ChunkEnd, FileViewerBackend, LineChunk, SearchMatch, SeekTarget, ViewerError};
 
 pub struct FullLoadBackend {
@@ -44,24 +48,23 @@ impl FullLoadBackend {
         Self::open_with_encoding(path, encoding)
     }
 
+    #[cfg(test)]
     pub fn open_with_encoding(path: &Path, encoding: FileEncoding) -> Result<Self, ViewerError> {
-        let metadata = std::fs::metadata(path).map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => ViewerError::NotFound {
-                path: path.display().to_string(),
-            },
-            _ => ViewerError::from(e),
-        })?;
-        if metadata.is_dir() {
-            return Err(ViewerError::IsDirectory);
-        }
+        Self::open_source(&open_local(path)?, encoding)
+    }
 
-        let total_bytes = metadata.len();
-        let bytes = std::fs::read(path)?;
-        let file_name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| path.display().to_string());
-        Ok(Self::build_from_bytes(bytes, total_bytes, file_name, encoding))
+    /// Read the whole (small, under `FULL_LOAD_THRESHOLD`) file from the session's open
+    /// handle.
+    pub fn open_source(file: &OpenedFile, encoding: FileEncoding) -> Result<Self, ViewerError> {
+        let mut bytes = vec![0u8; file.total_bytes as usize];
+        let read = file.source.read_at(0, &mut bytes)?;
+        bytes.truncate(read);
+        Ok(Self::build_from_bytes(
+            bytes,
+            file.total_bytes,
+            file.file_name.clone(),
+            encoding,
+        ))
     }
 
     /// Split `bytes` into rows through the shared row rule, with absolute byte offsets

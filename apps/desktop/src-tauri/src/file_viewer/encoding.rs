@@ -165,11 +165,14 @@ pub fn same_byte_layout(a: FileEncoding, b: FileEncoding) -> bool {
 /// existing empty-file behaviour).
 pub fn detect(path: &Path) -> std::io::Result<FileEncoding> {
     let mut file = File::open(path)?;
-    let mut head = vec![0u8; 64 * 1024];
+    let mut head = vec![0u8; DETECT_HEAD_BYTES];
     let read = file.read(&mut head)?;
     head.truncate(read);
     Ok(detect_from_head(&head))
 }
+
+/// How much of the file's head [`detect`] looks at.
+pub const DETECT_HEAD_BYTES: usize = 64 * 1024;
 
 /// Pure version of [`detect`]: same logic against an in-memory buffer.
 ///

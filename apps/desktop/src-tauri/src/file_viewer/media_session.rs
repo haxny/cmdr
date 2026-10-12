@@ -26,6 +26,7 @@ use super::materialize::PreviewTemp;
 use super::media::{self, MediaEntry};
 use super::media_backend::MediaBackend;
 use super::session::{BackendType, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id};
+use super::source::SourceOrigin;
 use super::{FileViewerBackend, LineChunk, ViewerError};
 
 /// Image pixel dimensions, read header-only at open time.
@@ -105,6 +106,8 @@ fn open_media_session(
         detected_encoding: FileEncoding::Utf8,
         watcher_stop: Arc::new(AtomicBool::new(false)),
         path: file_path.to_path_buf(),
+        origin: SourceOrigin::Local(file_path.to_path_buf()),
+        file: None,
         media_token: Some(media_token.clone()),
         temp,
     });

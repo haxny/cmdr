@@ -17,6 +17,7 @@ use super::byte_seek::ByteSeekBackend;
 use super::encoding::FileEncoding;
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
+use super::source::open_local;
 use super::{FULL_LOAD_THRESHOLD, FileViewerBackend, ViewerError};
 
 /// A text backend plus the one fact a reader must relay: whether the line numbers it
@@ -46,27 +47,20 @@ pub(crate) fn open_text_backend(
     encoding: FileEncoding,
     cancel: &AtomicBool,
 ) -> Result<HeadlessBackend, ViewerError> {
-    let size = std::fs::metadata(path)
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => ViewerError::NotFound {
-                path: path.display().to_string(),
-            },
-            _ => ViewerError::from(e),
-        })?
-        .len();
-    if size <= FULL_LOAD_THRESHOLD {
+    let file = open_local(path)?;
+    if file.total_bytes <= FULL_LOAD_THRESHOLD {
         return Ok(HeadlessBackend {
-            backend: Box::new(FullLoadBackend::open_with_encoding(path, encoding)?),
+            backend: Box::new(FullLoadBackend::open_source(&file, encoding)?),
             line_numbers_exact: true,
         });
     }
-    match LineIndexBackend::open_with_encoding(path, encoding, cancel) {
+    match LineIndexBackend::open_source(&file, encoding, cancel) {
         Ok(indexed) => Ok(HeadlessBackend {
             backend: Box::new(indexed),
             line_numbers_exact: true,
         }),
         Err(ViewerError::Cancelled) => Ok(HeadlessBackend {
-            backend: Box::new(ByteSeekBackend::open_with_encoding(path, encoding)?),
+            backend: Box::new(ByteSeekBackend::open_source(&file, encoding)?),
             line_numbers_exact: false,
         }),
         Err(other) => Err(other),
@@ -86,17 +80,10 @@ pub(crate) fn open_scan_backend(
     path: &Path,
     encoding: FileEncoding,
 ) -> Result<Box<dyn FileViewerBackend>, ViewerError> {
-    let size = std::fs::metadata(path)
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => ViewerError::NotFound {
-                path: path.display().to_string(),
-            },
-            _ => ViewerError::from(e),
-        })?
-        .len();
-    if size <= FULL_LOAD_THRESHOLD {
-        Ok(Box::new(FullLoadBackend::open_with_encoding(path, encoding)?))
+    let file = open_local(path)?;
+    if file.total_bytes <= FULL_LOAD_THRESHOLD {
+        Ok(Box::new(FullLoadBackend::open_source(&file, encoding)?))
     } else {
-        Ok(Box::new(ByteSeekBackend::open_with_encoding(path, encoding)?))
+        Ok(Box::new(ByteSeekBackend::open_source(&file, encoding)?))
     }
 }

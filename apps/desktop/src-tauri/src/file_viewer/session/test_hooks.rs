@@ -242,6 +242,8 @@ pub fn test_only_install_session(backend: Box<dyn FileViewerBackend>, path: Path
         encoding: FileEncoding::Utf8,
         detected_encoding: FileEncoding::Utf8,
         watcher_stop: Arc::new(AtomicBool::new(false)),
+        origin: SourceOrigin::Local(path.clone()),
+        file: None,
         path,
         media_token: None,
         temp: None,

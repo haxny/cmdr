@@ -24,6 +24,7 @@ mod row_walk;
 mod rows;
 mod search_matcher;
 pub mod session;
+mod source;
 pub mod watcher;
 
 #[cfg(test)]

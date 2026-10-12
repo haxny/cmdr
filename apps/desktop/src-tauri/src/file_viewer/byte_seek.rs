@@ -8,17 +8,20 @@
 //! through `bytes_per_row`, a sample taken once at open: this backend has no index, so
 //! its row numbers are estimates mid-file, exactly as its line numbers were.
 
-use std::fs::File;
+#[cfg(test)]
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 
 use log::debug;
 
-use super::encoding::{FileEncoding, detect};
+use super::encoding::FileEncoding;
 use super::row_walk::{self, RowReader, TotalRows, collect_rows, search_rows};
 use super::rows::{FileSource, SEGMENT_BYTES};
 use super::search_matcher::Matcher;
+#[cfg(test)]
+use super::source::open_local;
+use super::source::{ByteSource, OpenedFile, SharedSource, read_head};
 use super::{BackendCapabilities, FileViewerBackend, LineChunk, SearchMatch, SeekTarget, ViewerError};
 
 /// How much of the file `sample_bytes_per_row` reads at open. Bounded, so opening stays
@@ -27,7 +30,8 @@ use super::{BackendCapabilities, FileViewerBackend, LineChunk, SearchMatch, Seek
 const BYTES_PER_ROW_SAMPLE: u64 = 64 * 1024;
 
 pub struct ByteSeekBackend {
-    path: std::path::PathBuf,
+    /// The session's open file, shared with every backend built from it.
+    source: SharedSource,
     total_bytes: u64,
     file_name: String,
     encoding: FileEncoding,
@@ -42,57 +46,50 @@ pub struct ByteSeekBackend {
     /// comes out exactly `SEGMENT_BYTES`, making row numbers EXACT on precisely the
     /// file this backend exists for. On an ordinary file it is an estimate, as before.
     bytes_per_row: u64,
-    /// The file's first content byte, past any BOM. Decided once at open: this backend
-    /// opens the file per fetch and per search, and re-sniffing the head each time would
-    /// buy nothing on an immutable value.
+    /// The file's first content byte, past any BOM. Decided once at open: re-sniffing the
+    /// head per fetch and per search would buy nothing on an immutable value.
     content_start: u64,
 }
 
 /// The file's content start: past a BOM if it has one, through the one rule all three
 /// backends share (`row_walk::content_start`), so row 0 is the same row in each of them.
-fn detect_content_start(path: &Path, encoding: FileEncoding) -> u64 {
+fn detect_content_start(source: &dyn ByteSource, encoding: FileEncoding) -> u64 {
     let bom = encoding.bom_bytes();
     if bom.is_empty() {
         return 0;
     }
-    let mut head = vec![0u8; bom.len()];
-    match File::open(path).map(|mut f| std::io::Read::read(&mut f, &mut head)) {
-        Ok(Ok(read)) => row_walk::content_start(&head[..read], encoding),
-        _ => 0,
+    match read_head(source, bom.len()) {
+        Ok(head) => row_walk::content_start(&head, encoding),
+        Err(_) => 0,
     }
 }
 
 impl ByteSeekBackend {
     /// Open with auto-detected encoding.
+    ///
+    /// Test-only, like `open_with_encoding`: production opens through `open_source`
+    /// over the session's held handle.
+    #[cfg(test)]
     pub fn open(path: &Path) -> Result<Self, ViewerError> {
-        let encoding = detect(path).unwrap_or(FileEncoding::Utf8);
+        let encoding = super::encoding::detect(path).unwrap_or(FileEncoding::Utf8);
         Self::open_with_encoding(path, encoding)
     }
 
+    #[cfg(test)]
     pub fn open_with_encoding(path: &Path, encoding: FileEncoding) -> Result<Self, ViewerError> {
-        let metadata = std::fs::metadata(path).map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => ViewerError::NotFound {
-                path: path.display().to_string(),
-            },
-            _ => ViewerError::from(e),
-        })?;
-        if metadata.is_dir() {
-            return Err(ViewerError::IsDirectory);
-        }
+        Self::open_source(&open_local(path)?, encoding)
+    }
 
-        let file_name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| path.display().to_string());
-
-        let total_bytes = metadata.len();
-        let content_start = detect_content_start(path, encoding);
-        let bytes_per_row = sample_bytes_per_row(path, encoding, total_bytes, content_start)?;
+    /// Open over a file the session already holds open. Reads only the BOM and one
+    /// bytes-per-row sample, so it stays instant on any file and any volume.
+    pub fn open_source(file: &OpenedFile, encoding: FileEncoding) -> Result<Self, ViewerError> {
+        let content_start = detect_content_start(file.source.as_ref(), encoding);
+        let bytes_per_row = sample_bytes_per_row(&file.source, encoding, file.total_bytes, content_start)?;
 
         Ok(Self {
-            path: path.to_path_buf(),
-            total_bytes,
-            file_name,
+            source: file.source.clone(),
+            total_bytes: file.total_bytes,
+            file_name: file.file_name.clone(),
             encoding,
             bytes_per_row,
             content_start,
@@ -107,7 +104,7 @@ impl ByteSeekBackend {
     /// renumber rows under a live frontend cache for no gain.
     pub fn extend_to(&self, new_size: u64, _cancel: &AtomicBool) -> Self {
         Self {
-            path: self.path.clone(),
+            source: self.source.clone(),
             total_bytes: new_size,
             file_name: self.file_name.clone(),
             encoding: self.encoding,
@@ -118,9 +115,8 @@ impl ByteSeekBackend {
 
     /// A row walk over the file, positioned at the row containing `offset`.
     fn reader_at(&self, offset: u64) -> Result<(RowReader<FileSource>, u64), ViewerError> {
-        let file = File::open(&self.path)?;
         let mut reader = RowReader::new(
-            FileSource::new(file, self.total_bytes),
+            FileSource::new(self.source.clone(), self.total_bytes),
             self.encoding,
             self.content_start,
         );
@@ -159,13 +155,12 @@ impl ByteSeekBackend {
 /// exactly `SEGMENT_BYTES`; an empty or tiny file falls back to the segment size, which
 /// keeps the divisor away from zero.
 fn sample_bytes_per_row(
-    path: &Path,
+    source: &SharedSource,
     encoding: FileEncoding,
     total_bytes: u64,
     content_start: u64,
 ) -> Result<u64, ViewerError> {
-    let file = File::open(path)?;
-    let mut reader = RowReader::new(FileSource::new(file, total_bytes), encoding, content_start);
+    let mut reader = RowReader::new(FileSource::new(source.clone(), total_bytes), encoding, content_start);
     let limit = BYTES_PER_ROW_SAMPLE.min(total_bytes);
     let mut rows = 0u64;
     let mut consumed = content_start;
@@ -193,7 +188,7 @@ impl FileViewerBackend for ByteSeekBackend {
             return None;
         }
         Some(Box::new(Self {
-            path: self.path.clone(),
+            source: self.source.clone(),
             total_bytes: self.total_bytes,
             file_name: self.file_name.clone(),
             encoding: new_encoding,

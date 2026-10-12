@@ -560,3 +560,32 @@ fn a_fetch_whose_flag_is_set_stops_with_cancelled() {
     let result = backend.get_lines(&SeekTarget::ByteOffset(0), 3, &AtomicBool::new(true));
     assert!(matches!(result, Err(ViewerError::Cancelled)), "got {result:?}");
 }
+
+/// A fetch reads through the handle the backend opened, never a fresh `open` per
+/// request. Over an SMB mount every open is a round trip, and a scrollbar drag fires a
+/// fetch every 100 ms, so a per-fetch open is what pushed jumps past the 2 s deadline
+/// (#303). Unlinking the file after open proves it: only a held handle still reads.
+#[test]
+fn fetches_and_searches_read_through_the_handle_held_since_open() {
+    let dir = create_test_dir("held_handle");
+    let content: String = (0..2000).map(|i| format!("line {i}\n")).collect();
+    let file = write_test_file(&dir, "test.txt", &content);
+    let backend = ByteSeekBackend::open(&file).unwrap();
+    fs::remove_file(&file).unwrap();
+
+    let chunk = backend
+        .get_lines(&SeekTarget::Fraction(0.5), 10, &AtomicBool::new(false))
+        .expect("a fetch after the file is unlinked still reads the held handle");
+    assert_eq!(chunk.rows.len(), 10);
+
+    let results = Mutex::new(Vec::new());
+    backend
+        .search(
+            &literal_matcher("line 1999", true),
+            &AtomicBool::new(false),
+            &results,
+            &Mutex::new(0),
+        )
+        .expect("a search after the file is unlinked still reads the held handle");
+    assert_eq!(results.lock().unwrap().len(), 1);
+}

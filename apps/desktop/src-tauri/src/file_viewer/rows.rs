@@ -50,11 +50,9 @@
 //!
 //! Architecture and the invariants (I1-I6): `DETAILS.md` § "Rows, not lines".
 
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
-
 use super::ViewerError;
 use super::encoding::{FileEncoding, NewlineScanner};
+use super::source::SharedSource;
 
 /// The grid row boundaries sit on, and the length of every row inside a long line
 /// except its first.
@@ -121,15 +119,15 @@ impl RowSource for SliceSource<'_> {
     }
 }
 
-/// A [`RowSource`] over an open file.
+/// A [`RowSource`] over a session's open file ([`SharedSource`]).
 pub struct FileSource {
-    file: File,
+    source: SharedSource,
     total_bytes: u64,
 }
 
 impl FileSource {
-    pub fn new(file: File, total_bytes: u64) -> Self {
-        Self { file, total_bytes }
+    pub fn new(source: SharedSource, total_bytes: u64) -> Self {
+        Self { source, total_bytes }
     }
 }
 
@@ -138,17 +136,15 @@ impl RowSource for FileSource {
         self.total_bytes
     }
 
+    /// Never asks the source for bytes past `total_bytes`: the backend's size is the
+    /// file as far as this walk knows it, and a volume source reads a request that
+    /// runs past ITS size as "the file grew" (`volume_source.rs`).
     fn read_window(&mut self, start: u64, buf: &mut [u8]) -> Result<usize, ViewerError> {
-        self.file.seek(SeekFrom::Start(start))?;
-        let mut filled = 0usize;
-        while filled < buf.len() {
-            let read = self.file.read(&mut buf[filled..])?;
-            if read == 0 {
-                break;
-            }
-            filled += read;
+        let wanted = self.total_bytes.saturating_sub(start).min(buf.len() as u64) as usize;
+        if wanted == 0 {
+            return Ok(0);
         }
-        Ok(filled)
+        self.source.read_at(start, &mut buf[..wanted])
     }
 }
 

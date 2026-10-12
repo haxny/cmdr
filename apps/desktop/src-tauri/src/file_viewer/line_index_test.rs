@@ -596,3 +596,35 @@ fn test_per_match_cancel_observes_within_100ms() {
     let backend = LineIndexBackend::open(&path, &open_cancel).unwrap();
     assert_search_stops_on_per_match_cancel(&backend, &literal_matcher("a", true));
 }
+
+/// Every fetch, search, and tail extend reads through the handle the scan opened, never
+/// a fresh `open` (#303). Unlinking the file after open proves it.
+#[test]
+fn fetches_searches_and_extends_read_through_the_handle_held_since_open() {
+    let dir = create_test_dir("held_handle");
+    let content: String = (0..2000).map(|i| format!("line {i}\n")).collect();
+    let file = write_test_file(&dir, "test.txt", &content);
+    let backend = LineIndexBackend::open(&file, &AtomicBool::new(false)).unwrap();
+    fs::remove_file(&file).unwrap();
+
+    let chunk = backend
+        .get_lines(&SeekTarget::Row(1500), 10, &AtomicBool::new(false))
+        .expect("a fetch after the file is unlinked still reads the held handle");
+    assert_eq!(chunk.rows[0].text, "line 1500");
+
+    let results = Mutex::new(Vec::new());
+    backend
+        .search(
+            &literal_matcher("line 1999", true),
+            &AtomicBool::new(false),
+            &results,
+            &Mutex::new(0),
+        )
+        .expect("a search after the file is unlinked still reads the held handle");
+    assert_eq!(results.lock().unwrap().len(), 1);
+
+    let grown = backend.total_bytes() + 10;
+    backend
+        .extend_to(grown, &AtomicBool::new(false))
+        .expect("an extend after the file is unlinked still reads the held handle");
+}
