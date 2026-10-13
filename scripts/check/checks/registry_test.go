@@ -196,3 +196,22 @@ func containsID(defs []CheckDefinition, id string) bool {
 	}
 	return false
 }
+
+// A lane that joins every scoped run must stay what makes that free: an enabled,
+// whole-repo scanner in the fast lane, never a formatter (a local run rewrites
+// files, and the git hooks own formatting).
+func TestScopedRunLanesAreCheapWholeRepoScanners(t *testing.T) {
+	count := 0
+	for _, c := range AllChecks {
+		if !c.JoinsScopedRuns {
+			continue
+		}
+		count++
+		if c.App != AppOther || !c.IsFast || c.Tech == "📐 Format" || c.Disabled != "" {
+			t.Errorf("%s joins scoped runs, but it isn't an enabled, fast, non-formatter AppOther lane", c.ID)
+		}
+	}
+	if count == 0 {
+		t.Error("no lane joins scoped runs")
+	}
+}

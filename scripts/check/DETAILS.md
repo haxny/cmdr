@@ -54,6 +54,7 @@ naming review (§ "The unrecognized-name log").
 - **`--only-slow`**: Run only slow checks
 - **`--fast`**: Run only the curated fast pre-commit check set
 - **`--fresh`**: Bypass the input-fingerprint cache: run everything selected, then refresh it
+- **`--exact`**: Run only the selected checks, without the whole-repo doc lanes a scoped run adds (§ "Scoped runs")
 - **`--fail-fast`**: Stop on first failure
 - **`--no-log`**: Disable the CSV logs (all four of them) and the saved outputs
 - **`--graph`**: Render the check dependency graph (weights + lanes + median wall-time) and exit
@@ -190,7 +191,8 @@ pnpm check [flags]
 
 ## Key files
 
-- **`main.go`**: Entry point: flag parsing, root dir discovery, check selection, pnpm gating, runner delegation
+- **`main.go`**: Entry point: flag parsing, root dir discovery, pnpm gating, runner delegation
+- **`select.go`**: Check selection: named checks, app and tech selectors, and the doc lanes a scoped run adds
 - **`runner.go`**: Parallel executor: CPU-weighted admission gate, dependency graph, fail-fast, live TTY status line
 - **`graph.go`**: `--graph` renderer: dependency forest with CPU weights, size lanes, and median wall-time from the
   stats CSV (tree / mermaid / dot)
@@ -670,17 +672,19 @@ harness that reproduces the counts.
 
 ### Scoped runs
 
-Those 12 lanes are registered `AppOther`, which means no scoped selector reaches them: `pnpm check svelte`, `rust`, and
-`desktop` all skip formatting, `file-length`, and every `docs-*` / `claude-md-*` lane. Only a bare `pnpm check`, or
-naming a lane outright (`pnpm check oxfmt`), runs them.
+Those 12 lanes are registered `AppOther`, which no app or tech selector reaches. So a scoped local run
+(`pnpm check svelte`, `rust`, `desktop`, or named checks) adds the ten that carry `JoinsScopedRuns`: `file-length`, the
+five `docs-*`, the three `claude-md-*`, and `resident-doc-budget`. Each takes a second or less and reads only the tree,
+so a scoped run can't go green over a dead doc link or an over-budget `CLAUDE.md` any more.
+`TestScopedRunLanesAreCheapWholeRepoScanners` keeps the flag on enabled, fast, non-formatter `AppOther` lanes.
 
-That matters more than it sounds, because of how the formatters behave in the two environments: a local run REWRITES the
-tree, while CI only CHECKS (`--ci`). So a scoped lane can go green over a file the formatter would have silently fixed,
-and CI then fails on it. Measured on 2026-09-21: a 125-character line in `routes/viewer/DETAILS.md` survived a green
-`pnpm check svelte` and was only caught by a bare `pnpm check`, which reflowed it along with ten other files.
+The formatters stay out on purpose. A local run REWRITES the tree while CI only CHECKS (`--ci`), and the git hooks own
+formatting: pre-commit formats what's staged, and pre-push formats the whole repo and then runs the whole `--fast` lane
+(`docs/tooling/git-hooks.md`). That closes the old hole, where a 125-character line in `routes/viewer/DETAILS.md`
+survived a green `pnpm check svelte` (2026-09-21).
 
-The rule that falls out: a scoped run is for iterating, never for finishing. Match the scope to the change while you
-work (`.claude/rules/check-scope-matches-change.md`), then close the unit of work with a bare `pnpm check`.
+Two runs stay exact: `--ci` (each CI job names its checks, and the doc lanes have a job of their own) and `--exact`,
+which the pre-push hook's notices step uses so a doc-lane failure can't read as "the runner didn't finish".
 
 - The **2 registry readers** (`ci-coverage`, `workspace-member-coverage`) reach every check file because `AllChecks`
   names every `Run` function, and the closure can't tell "reads the registry as data" from "calls it". Both are ~0.01 s.

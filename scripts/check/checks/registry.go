@@ -1581,35 +1581,38 @@ var AllChecks = []CheckDefinition{
 
 	// Monorepo-wide metrics. The two length gates below fail; the rest inform.
 	{
-		ID:          "file-length",
-		DisplayName: "file length",
-		App:         AppOther,
-		Tech:        "📏 Metrics",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs,
-		Run:         RunFileLength,
+		ID:              "file-length",
+		DisplayName:     "file length",
+		App:             AppOther,
+		Tech:            "📏 Metrics",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs,
+		Run:             RunFileLength,
 	},
 	{
-		ID:          "claude-md-reminder",
-		DisplayName: "CLAUDE.md reminder",
-		App:         AppOther,
-		Tech:        "📏 Metrics",
-		NotInCI:     "warn-only metric; it can never fail, so a CI step would be noise",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs,
-		Run:         RunClaudeMdReminder,
+		ID:              "claude-md-reminder",
+		DisplayName:     "CLAUDE.md reminder",
+		App:             AppOther,
+		Tech:            "📏 Metrics",
+		NotInCI:         "warn-only metric; it can never fail, so a CI step would be noise",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs,
+		Run:             RunClaudeMdReminder,
 	},
 	{
-		ID:          "claude-md-length",
-		DisplayName: "CLAUDE.md length",
-		App:         AppOther,
-		Tech:        "📏 Metrics",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs,
-		Run:         RunClaudeMdLength,
+		ID:              "claude-md-length",
+		DisplayName:     "CLAUDE.md length",
+		App:             AppOther,
+		Tech:            "📏 Metrics",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs,
+		Run:             RunClaudeMdLength,
 	},
 	{
 		ID:          "invariant-density",
@@ -1629,14 +1632,15 @@ var AllChecks = []CheckDefinition{
 		Run:       RunInvariantDensity,
 	},
 	{
-		ID:          "docs-reachable",
-		DisplayName: "docs reachable from AGENTS.md",
-		App:         AppOther,
-		Tech:        "🔗 Links",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // walks every CLAUDE.md / DETAILS.md / docs file + AGENTS.md
-		Run:         RunDocsReachable,
+		ID:              "docs-reachable",
+		DisplayName:     "docs reachable from AGENTS.md",
+		App:             AppOther,
+		Tech:            "🔗 Links",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // walks every CLAUDE.md / DETAILS.md / docs file + AGENTS.md
+		Run:             RunDocsReachable,
 	},
 	{
 		ID:          "desktop-third-party-notices",
@@ -1671,48 +1675,52 @@ var AllChecks = []CheckDefinition{
 		Run: RunThirdPartyNotices,
 	},
 	{
-		ID:          "docs-dead-links",
-		Nickname:    "dead-links",
-		DisplayName: "no dead links in docs",
-		App:         AppOther,
-		Tech:        "🔗 Links",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // scans every markdown doc for relative links to missing files
-		Run:         RunDocsDeadLinks,
+		ID:              "docs-dead-links",
+		Nickname:        "dead-links",
+		DisplayName:     "no dead links in docs",
+		App:             AppOther,
+		Tech:            "🔗 Links",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // scans every markdown doc for relative links to missing files
+		Run:             RunDocsDeadLinks,
 	},
 	{
-		ID:          "docs-section-refs",
-		Nickname:    "section-refs",
-		DisplayName: "§ pointers name real headings",
-		App:         AppOther,
-		Tech:        "🔗 Links",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // scans every markdown doc for `path.md` § Heading pointers
-		Run:         RunDocsSectionRefs,
+		ID:              "docs-section-refs",
+		Nickname:        "section-refs",
+		DisplayName:     "§ pointers name real headings",
+		App:             AppOther,
+		Tech:            "🔗 Links",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // scans every markdown doc for `path.md` § Heading pointers
+		Run:             RunDocsSectionRefs,
 	},
 	{
-		ID:          "docs-table-hygiene",
-		Nickname:    "table-hygiene",
-		DisplayName: "agent-doc table hygiene",
-		App:         AppOther,
-		Tech:        "📝 Docs",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // scans every CLAUDE.md / DETAILS.md / AGENTS.md / docs / .claude/rules markdown
-		Run:         RunDocsTableHygiene,
+		ID:              "docs-table-hygiene",
+		Nickname:        "table-hygiene",
+		DisplayName:     "agent-doc table hygiene",
+		App:             AppOther,
+		Tech:            "📝 Docs",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // scans every CLAUDE.md / DETAILS.md / AGENTS.md / docs / .claude/rules markdown
+		Run:             RunDocsTableHygiene,
 	},
 	{
-		ID:          "docs-link-text",
-		Nickname:    "link-text",
-		DisplayName: "no path-shaped link text in docs",
-		App:         AppOther,
-		Tech:        "🔗 Links",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // scans every agent-facing markdown doc for Markdown links
-		Run:         RunDocsLinkText,
+		ID:              "docs-link-text",
+		Nickname:        "link-text",
+		DisplayName:     "no path-shaped link text in docs",
+		App:             AppOther,
+		Tech:            "🔗 Links",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // scans every agent-facing markdown doc for Markdown links
+		Run:             RunDocsLinkText,
 	},
 	{
 		ID:          "analytics-event-catalog",
@@ -1745,27 +1753,29 @@ var AllChecks = []CheckDefinition{
 		Run: RunAnalyticsSettingsDefaults,
 	},
 	{
-		ID:          "claude-md-details-sibling",
-		Nickname:    "details-sibling",
-		DisplayName: "CLAUDE.md has a sibling DETAILS.md",
-		App:         AppOther,
-		Tech:        "📝 Docs",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // walks every CLAUDE.md and reads each one's sibling DETAILS.md
-		Run:         RunClaudeMdDetailsSibling,
+		ID:              "claude-md-details-sibling",
+		Nickname:        "details-sibling",
+		DisplayName:     "CLAUDE.md has a sibling DETAILS.md",
+		App:             AppOther,
+		Tech:            "📝 Docs",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // walks every CLAUDE.md and reads each one's sibling DETAILS.md
+		Run:             RunClaudeMdDetailsSibling,
 	},
 	{
-		ID:          "resident-doc-budget",
-		Nickname:    "resident-budget",
-		DisplayName: "resident agent-doc budget",
-		App:         AppOther,
-		Tech:        "📏 Metrics",
-		NotInCI:     "warn-only metric; it can never fail, so a CI step would be noise",
-		DependsOn:   nil,
-		IsFast:      true,
-		Inputs:      wholeRepoInputs, // reads root CLAUDE.md, its @-imports, and .claude/rules/**
-		Run:         RunResidentDocBudget,
+		ID:              "resident-doc-budget",
+		Nickname:        "resident-budget",
+		DisplayName:     "resident agent-doc budget",
+		App:             AppOther,
+		Tech:            "📏 Metrics",
+		NotInCI:         "warn-only metric; it can never fail, so a CI step would be noise",
+		DependsOn:       nil,
+		IsFast:          true,
+		JoinsScopedRuns: true,
+		Inputs:          wholeRepoInputs, // reads root CLAUDE.md, its @-imports, and .claude/rules/**
+		Run:             RunResidentDocBudget,
 	},
 	{
 		ID:          "changelog-commit-links",
@@ -1906,6 +1916,18 @@ func ValidateCheckNames(reservedNames ...string) error {
 		}
 	}
 	return nil
+}
+
+// ScopedRunLanes returns the whole-repo lanes that join every scoped local run
+// (`JoinsScopedRuns`).
+func ScopedRunLanes() []CheckDefinition {
+	var result []CheckDefinition
+	for _, check := range AllChecks {
+		if check.JoinsScopedRuns {
+			result = append(result, check)
+		}
+	}
+	return result
 }
 
 // GetChecksByApp returns all checks for a specific app.

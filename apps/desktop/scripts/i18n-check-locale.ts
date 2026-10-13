@@ -119,7 +119,9 @@ function command(name: string, cwd: string, argv: string[]): Step {
 }
 
 function externalSteps(tags: readonly string[]): Step[] {
-  const steps = [command('citations (repo-wide)', join(DESKTOP, '..', '..'), ['./scripts/check.sh', 'i18n-citations'])]
+  const steps = [
+    command('citations (repo-wide)', join(DESKTOP, '..', '..'), ['./scripts/check.sh', 'i18n-citations', '--exact']),
+  ]
   const overlayTests: [string, string[]][] = [
     ['scripts/i18n-es-overlay.test.ts', ['es', 'es-419']],
     ['scripts/i18n-en-overlays.test.ts', ['en-GB', 'en-AU']],

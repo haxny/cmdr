@@ -5,8 +5,8 @@ Authoring a check: `checks/CLAUDE.md`.
 
 ## Module map
 
-- `main.go` (entry), `runner.go` (parallel executor: weighted admission, exclusive resources, dependency graph,
-  fail-fast, TTY status line).
+- `main.go` (entry), `select.go` (selectors), `runner.go` (parallel executor: weighted admission, exclusive resources,
+  dependency graph, fail-fast, TTY status line).
 - `plan.go` + `cache.go` + `runner-sources.go` + `checks/fingerprint.go` (the input-fingerprint cache),
   `checks/inputs.go` (shared `Inputs` blocks), `checks/cargo-workspace.go` (the geometry Rust checks scope from).
 - `stack_orchestrator.go` + `stacklease/` (Docker fixture stacks), `graph.go` / `docs_graph_render.go` (renderers),
@@ -31,7 +31,7 @@ Authoring a check: `checks/CLAUDE.md`.
   20-100 s of rebuild per flip. ❌ No per-package `-p` lanes.
 - **The Rust and frontend lanes are blind to `CLAUDE.md` / `DETAILS.md`** (`agentDocExclusions`), so a docs-only edit is
   a cache hit. ❌ No other `!` exclusion.
-- **A scoped run skips the whole-repo lanes**: formatting and doc links go unchecked. ❌ Never finish on one.
+- **Scoped runs add the cheap doc and size lanes** (`JoinsScopedRuns`), never formatters; pre-push runs `--fast`.
   `DETAILS.md` § "Scoped runs".
 - **A check names its Docker fixtures in `NeedsContainers []StackMode`** (`stacklease` registry: `smb`, `sftp`,
   `webdav`, `s3`). One machine-wide lease per stack lets worktrees coexist; the stack downs at its last holder. ❌ No

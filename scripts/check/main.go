@@ -51,6 +51,7 @@ type cliFlags struct {
 	quiet        bool   // the default: collapse passing checks into a one-line count; stream only warns, failures, skips, and changes. `-v` turns it off
 	allowMain    bool   // permit running in the main clone instead of a worktree (checks mutate the tree)
 	fresh        bool   // bypass the input-fingerprint cache: run everything selected, then refresh its entries
+	exact        bool   // run only what was selected, without the doc lanes a scoped run adds (`JoinsScopedRuns`)
 	graph        bool   // render the DependsOn graph (with weights + lanes) and exit
 	graphFormat  string // tree (default) | mermaid | dot
 	docsGraph    bool   // render the doc-discoverability tree (rooted at AGENTS.md) and exit
@@ -294,6 +295,7 @@ func parseFlags(args []string) (*cliFlags, error) {
 		noLog        = fs.Bool("no-log", false, "Disable CSV stats logging")
 		allowMain    = fs.Bool("allow-main", false, "Allow running in the main clone instead of a worktree")
 		fresh        = fs.Bool("fresh", false, "Bypass the input-fingerprint cache: run everything selected, then refresh the cache")
+		exact        = fs.Bool("exact", false, "Run only the selected checks, without the whole-repo doc lanes a scoped run adds")
 		graph        = fs.Bool("graph", false, "Render the check dependency graph (with CPU weights + size lanes) and exit")
 		graphFormat  = fs.String("graph-format", "tree", "Graph output format: tree | mermaid | dot")
 		docsGraph    = fs.Bool("docs-graph", false, "Render the doc-discoverability tree (CLAUDE.md / DETAILS.md / docs, rooted at AGENTS.md) and exit")
@@ -343,6 +345,7 @@ func parseFlags(args []string) (*cliFlags, error) {
 		quiet:        !(*verbose || *ciMode),
 		allowMain:    *allowMain,
 		fresh:        *fresh,
+		exact:        *exact,
 		graph:        *graph,
 		graphFormat:  *graphFormat,
 		docsGraph:    *docsGraph,
@@ -438,85 +441,6 @@ func applySelector(flags *cliFlags, name string) bool {
 		return false
 	}
 	return true
-}
-
-// selectChecks determines which checks to run based on flags.
-// Selectors are additive: `pnpm check clippy svelte` runs clippy plus all Svelte checks.
-func selectChecks(flags *cliFlags) ([]checks.CheckDefinition, error) {
-	hasFilter := len(flags.checkNames) > 0 || len(flags.appNames) > 0 || flags.rustOnly || flags.svelteOnly || flags.goOnly
-	if !hasFilter {
-		return checks.AllChecks, nil
-	}
-
-	seen := make(map[string]bool)
-	var result []checks.CheckDefinition
-	addUnique := func(cs []checks.CheckDefinition) {
-		for _, c := range cs {
-			if !seen[c.ID] {
-				seen[c.ID] = true
-				result = append(result, c)
-			}
-		}
-	}
-
-	if len(flags.checkNames) > 0 {
-		named, err := selectChecksByID(flags.checkNames)
-		if err != nil {
-			return nil, err
-		}
-		addUnique(named)
-	}
-	for _, appName := range flags.appNames {
-		byApp, err := selectChecksByApp(appName)
-		if err != nil {
-			return nil, err
-		}
-		addUnique(byApp)
-	}
-	if flags.rustOnly {
-		addUnique(checks.GetChecksByTech(checks.AppDesktop, "🦀 Rust"))
-	}
-	if flags.svelteOnly {
-		addUnique(checks.GetChecksByTech(checks.AppDesktop, "🎨 Svelte"))
-	}
-	if flags.goOnly {
-		addUnique(checks.GetChecksByTech(checks.AppScripts, "🐹 Go"))
-	}
-
-	return result, nil
-}
-
-// selectChecksByID returns checks matching the given IDs.
-func selectChecksByID(names []string) ([]checks.CheckDefinition, error) {
-	var result []checks.CheckDefinition
-	for _, name := range names {
-		check := checks.GetCheckByID(name)
-		if check == nil {
-			return nil, fmt.Errorf("unknown check ID: %s\nRun with --help to see available checks", name)
-		}
-		result = append(result, *check)
-	}
-	return result, nil
-}
-
-// selectChecksByApp returns checks for the given app name.
-func selectChecksByApp(appName string) ([]checks.CheckDefinition, error) {
-	switch strings.ToLower(appName) {
-	case "desktop":
-		return checks.GetChecksByApp(checks.AppDesktop), nil
-	case "website":
-		return checks.GetChecksByApp(checks.AppWebsite), nil
-	case "api-server":
-		return checks.GetChecksByApp(checks.AppApiServer), nil
-	case "dashboard":
-		return checks.GetChecksByApp(checks.AppDashboard), nil
-	case "scripts":
-		return checks.GetChecksByApp(checks.AppScripts), nil
-	case "crates":
-		return checks.GetChecksByApp(checks.AppCrates), nil
-	default:
-		return nil, fmt.Errorf("unknown app: %s\nAvailable apps: desktop, website, api-server, dashboard, scripts, crates", appName)
-	}
 }
 
 // runChecks executes the cache-miss checks, replays cache hits, records this
@@ -705,6 +629,7 @@ func showUsage() {
 	fmt.Println("    --only-slow              Run only slow checks")
 	fmt.Println("    --fast                   Run only the curated fast pre-commit check set")
 	fmt.Println("    --fresh                  Bypass the input-fingerprint cache: run everything selected, then refresh it")
+	fmt.Println("    --exact                  Run only the selected checks, without the doc lanes a scoped run adds")
 	fmt.Println("    --fail-fast              Stop on first failure")
 	fmt.Println("    --no-log                 Disable the CSV logs and saved outputs (~/.local/share/check-runner/cmdr/)")
 	fmt.Println("    --graph                  Render the check dependency graph (weights + lanes) and exit")
