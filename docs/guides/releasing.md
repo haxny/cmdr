@@ -679,7 +679,12 @@ every file it copies, which nothing can strip (verified on macOS 27.0, 2026-10-0
 
 ### Renewing the Developer ID Installer certificate
 
-David's calendar reminds him every 10 months. Steps 1–3 and 5–6 are his (portal and Bitwarden), step 4 is an agent's.
+David's calendar reminds him two months before expiry, then every 58 months (a certificate lasts about five years);
+after a renewal, he moves the next reminder to two months before the new expiry. Steps 1–3 and 5–6 are his (portal and
+Bitwarden), step 4 is an agent's. The Developer ID Application certificate (expires 2031-03-03) has its own reminder and
+the same flow: pick "Developer ID Application" (G2 Sub-CA) in step 2, replace `APPLE_CERTIFICATE` and
+`APPLE_CERTIFICATE_PASSWORD` in step 4, and check that the app's designated requirement still matches `/trust` and the
+Full Disk Access profile.
 
 1. Keychain Access › Certificate Assistant › Request a Certificate From a Certificate Authority: his email, a common
    name, "Saved to disk".
