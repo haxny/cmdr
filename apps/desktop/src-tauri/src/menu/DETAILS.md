@@ -290,9 +290,9 @@ one carrying the new accelerator, and reinserts it at the same position.
 HashMap; `rebuild_view_mode_items()` handles the four per-pane view-mode CheckMenuItems together
 because they share a single accelerator pair (⌘1 / ⌘2 by default) that "follows" the active pane.
 
-⚠️ **This design is stated everywhere as "Tauri has no `set_accelerator()`", and that is false.** Tauri 2.11.5 exposes
-one on all three item kinds (`tauri-2.11.5/src/menu/normal.rs:110`, `check.rs:112`, `icon.rs:191`), over muda 0.19.3's
-own (`muda-0.19.3/src/items/normal.rs:104`) — read from the vendored sources, 2026-09-16. So the machinery this section
+⚠️ **This design is stated everywhere as "Tauri has no `set_accelerator()`", and that is false.** Tauri 2.12.2 exposes
+one on all three item kinds (`tauri-2.12.2/src/menu/normal.rs:110`, `check.rs:112`, `icon.rs:190`), over muda 0.20.0's
+own (`muda-0.20.0/src/items/normal.rs:165`) — read from the vendored sources, 2026-10-13. So the machinery this section
 describes is probably reducible to one call per item, and an in-place set would ALSO keep the item's SF Symbol and its
 attributed title instead of destroying and restoring them (see "Display-only accelerators"). Nobody has tried it; it's
 its own change, gated on the `menu_bar_test.rs` snapshot plus a live rebind on both platforms. ❗ Whatever replaces
