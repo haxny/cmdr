@@ -1019,6 +1019,17 @@ jobs:
       - name: Check workflow rustup pins
         run: ./scripts/check/check --check workflows-rustup --ci
 
+      # `go install` of the pinned scorecard takes a minute or two; its version lives in the
+      # check file and the Go toolchain in `.mise.toml`, so either bump changes the key.
+      - name: Cache scorecard
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/cmdr-go-tools/scorecard
+          key: ${{ runner.os }}-scorecard-${{ hashFiles('scripts/check/checks/scorecard-local.go', '.mise.toml') }}
+
+      - name: Check OpenSSF Scorecard's file-based checks
+        run: ./scripts/check/check --check scorecard-local --ci
+
       - name: Check CI coverage of registry checks
         run: ./scripts/check/check --check ci-coverage --ci
 

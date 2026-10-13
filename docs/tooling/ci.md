@@ -182,32 +182,47 @@ with the `scorecard` release binary:
 `GITHUB_AUTH_TOKEN=$(gh auth token) scorecard --repo=github.com/vdavid/cmdr --show-details` (the `gcr.io` image needs a
 billed GCP project).
 
-Where the score stands (scorecard v5.5.0 against the pushed `main`, 2026-10-07: 7.1 with Vulnerabilities erroring out;
-the CodeQL, digest-pin, and OSV-config changes of 2026-10-08 should lift it to ~7.5 once pushed):
+Where the score stands (public API, 2026-10-13: 7.6, with Vulnerabilities at 5 and SAST at 7; the fixes for both landed
+2026-10-14 and should take it to ~8.1 once pushed). Two `pnpm check` lanes keep it from sliding back, and
+`workflows-hardening` holds the rest:
 
+- **`scorecard-local`** runs Scorecard's own file-based checks (Binary-Artifacts, Dangerous-Workflow,
+  Dependency-Update-Tool, Fuzzing, License, Pinned-Dependencies, SAST, Security-Policy, Token-Permissions) on the
+  tracked tree, and fails on any new `Warn:` finding. Accepted findings and floors, each with its reason:
+  `scripts/check/checks/scorecard-local-baseline.json`. How it works: `scripts/check/checks/DETAILS.md`.
+- **`osv-scanner`** is Scorecard's Vulnerabilities check, run the same way, with a fix-age grace (below).
 - **Held by `workflows-hardening`**: Pinned-Dependencies' GitHub Actions half, Token-Permissions (every workflow has a
-  read-only top-level `permissions:`, jobs ask for write themselves), and part of Dangerous-Workflow (no
-  `pull_request_target`).
-- **SAST** reads check runs on merged PRs; with none, it scores on whether a CodeQL workflow exists, so `codeql.yml`
-  takes it to 10.
+  read-only top-level `permissions:`, jobs ask for write themselves), part of Dangerous-Workflow (no
+  `pull_request_target`), and SAST's PR half (CodeQL must trigger on `pull_request`).
+- **SAST** scores the merged PRs in its window by whether CodeQL checked their head commit. Renovate's PRs count as
+  merged, so `codeql.yml` runs on PRs; push-only CodeQL scored 7. With no merged PRs, it scores on whether a CodeQL
+  workflow exists.
 - **Binary-Artifacts**: the one binary is `tools/intellij-plugin/gradle/wrapper/gradle-wrapper.jar`. Scorecard stops
   counting it only when a `gradle/actions/wrapper-validation` workflow has a successful run on `main`'s latest commit,
   so `gradle-wrapper.yml` runs on every push with no path filter (10 s). A push's Scorecard run could in theory finish
-  first and still see 9; the next run corrects it.
-- **Structurally low for a solo, no-PR project**: Branch-Protection, Code-Review, and CI-Tests (n/a).
-- **Structurally capped**: License (BSL isn't OSI, 9), CII-Best-Practices (needs an OSI license), Contributors.
-- **Vulnerabilities is 10 minus a raw OSV count** over every lockfile, not cargo-deny's macOS-scoped view. Per-lockfile
-  `osv-scanner.toml` files (root, `convert-clip-model/`, `fuzz/`, `benchmarks/smb/`, `scripts/release-finish/`) ignore
-  what can't put the shipped app at risk, each with its reason: the frozen CLIP-conversion pins, Linux-only GTK/Wayland
-  crates, build- and test-only crates, dev-only npm tooling with no fix, "unmaintained" notices with no known
-  vulnerability (`ttf-parser`, five `unic-*` crates, each naming the upgrade that drops it), and `rsa`, whose Marvin
-  timing attack needs a decryption oracle our client-side SSH signing isn't (`deny.toml` holds the analysis). ❌ Never
-  ignore a vulnerability that applies to the shipped app. That leaves 0 (10/10, verified with osv-scanner v2.6.0,
-  2026-10-08). Preview with `osv-scanner scan source -r .` (Scorecard runs osv-scanner's v2 library with the same
-  per-directory configs).
+  first and still see 9; the next run corrects it. `scorecard-local` can't see that run, so its floor is 9.
+- **Signed-Releases** looks at the last five releases and gives 10 only when each carries a `*.intoto.jsonl` provenance
+  asset (`docs/guides/releasing.md`). Releases before v0.51.0 have none, so it climbs back to 10 on its own as new
+  releases replace them.
+- **Structurally low for a solo, no-PR project**: Branch-Protection and Code-Review (#380 weighs an automated reviewer,
+  which wouldn't move Code-Review). CI-Tests scores Renovate's PRs, which CI checks.
+- **Structurally capped**: License (BSL isn't OSI, 9), CII-Best-Practices (the "passing" badge needs an OSI license;
+  registering as "in progress" would score 2), Contributors.
+- **Vulnerabilities is 10 minus a raw OSV count** over every lockfile, not cargo-deny's macOS-scoped view. The
+  `osv-scanner` lane runs the same sweep: a new advisory warns while its fix is under six days old, then fails, and its
+  pass is trusted for a day only, so a daily `pnpm check` surfaces a new one. Per-lockfile `osv-scanner.toml` files
+  (root, `convert-clip-model/`, `fuzz/`, `benchmarks/smb/`, `scripts/release-finish/`) ignore what can't put the shipped
+  app at risk, each with its reason: the frozen CLIP-conversion pins, Linux-only GTK/Wayland crates, build- and
+  test-only crates, dev-only npm tooling with no fix, "unmaintained" notices with no known vulnerability (`ttf-parser`,
+  five `unic-*` crates, each naming the upgrade that drops it), and `rsa`, whose Marvin timing attack needs a decryption
+  oracle our client-side SSH signing isn't (`deny.toml` holds the analysis). ❌ Never ignore a vulnerability that
+  applies to the shipped app. Preview with `pnpm check osv`; ❌ not a bare `osv-scanner scan source -r .` in a worktree,
+  whose walk silently finds nothing (the main clone ignores `.claude/worktrees/`).
 - **Pinned-Dependencies' container half**: every pulled image is digest-pinned, and Renovate's `docker images` group
-  keeps the digests fresh (`renovate.json`). The one gap is `FROM ${BASE_IMAGE}` in the E2E `Dockerfile`, our own
-  locally built base, which nothing can pin.
+  keeps the digests fresh (`renovate.json`). Two accepted gaps hold it at 9: `FROM ${BASE_IMAGE}` in the E2E
+  `Dockerfile` (our own locally built base, with no registry digest) and the website `Dockerfile`'s
+  `npm install --global pnpm@<exact>`. Fixing only the second leaves 9 (simulated with scorecard v5.5.0, 2026-10-13),
+  and the first means folding the E2E image into `Dockerfile.base` as a stage, at the risk of its ~1 s rebuild.
 
 ## CodeQL
 

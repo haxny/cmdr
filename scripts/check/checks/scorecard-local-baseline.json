@@ -1,0 +1,62 @@
+{
+  "$comment": "The scorecard-local check: each file-based OpenSSF Scorecard check must score at least `floor` on the tracked tree (`scorecard --local`), and every `Warn:` finding must be listed in `accepted` (line number dropped). The keys are also the list of checks it runs. A local run raises a beaten floor and drops an accepted warning that's gone; adding an acceptance or lowering a floor loosens an allowlist and needs David's OK. Context: docs/tooling/ci.md § OpenSSF Scorecard.",
+  "checks": {
+    "Binary-Artifacts": {
+      "floor": 9,
+      "accepted": [
+        {
+          "warning": "Warn: binary detected: tools/intellij-plugin/gradle/wrapper/gradle-wrapper.jar",
+          "reason": "Gradle's wrapper jar, checked against Gradle's published checksums by gradle-wrapper.yml on every push. The public Scorecard sees that run and scores 10; local mode can't, hence 9 here."
+        }
+      ]
+    },
+    "Dangerous-Workflow": { "floor": 10 },
+    "Dependency-Update-Tool": { "floor": 10 },
+    "Fuzzing": { "floor": 10 },
+    "License": {
+      "floor": 9,
+      "accepted": [
+        {
+          "warning": "Warn: project license file does not contain an FSF or OSI license.",
+          "reason": "Cmdr is BSL 1.1 on purpose (free for personal use), which isn't on the OSI list."
+        }
+      ]
+    },
+    "Pinned-Dependencies": {
+      "floor": 9,
+      "accepted": [
+        {
+          "warning": "Warn: containerImage not pinned by hash: apps/desktop/test/e2e-linux/docker/Dockerfile",
+          "reason": "`FROM ${BASE_IMAGE}`: our own locally built E2E base, which has no registry digest. Folding it into Dockerfile.base as a stage would pin it, at the risk of the ~1 s entrypoint rebuild."
+        },
+        {
+          "warning": "Warn: npmCommand not pinned by hash: apps/website/Dockerfile",
+          "reason": "`npm install --global pnpm@<exact>` in the website build. Pinning it alone doesn't move the score while the E2E image above stays, so it waits for that."
+        }
+      ]
+    },
+    "SAST": {
+      "floor": 10,
+      "accepted": [
+        {
+          "warning": "Warn: no pull requests merged into dev branch",
+          "reason": "Local mode has no PR history to read. The public check reads it, and workflows-hardening keeps CodeQL running on PRs."
+        }
+      ]
+    },
+    "Security-Policy": { "floor": 10 },
+    "Token-Permissions": {
+      "floor": 10,
+      "accepted": [
+        {
+          "warning": "Warn: jobLevel 'contents' permission set to 'write': .github/workflows/release-pipeline.yml",
+          "reason": "The release jobs that create the GitHub release, upload assets, and push the website deploy commit. Job-scoped, as workflows-hardening requires; the score stays 10."
+        },
+        {
+          "warning": "Warn: jobLevel 'contents' permission set to 'write': .github/workflows/release.yml",
+          "reason": "The caller of release-pipeline.yml has to grant what the reusable workflow's jobs ask for."
+        }
+      ]
+    }
+  }
+}

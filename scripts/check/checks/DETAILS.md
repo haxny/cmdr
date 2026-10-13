@@ -2108,7 +2108,8 @@ doubles as production code.
   `go.mod` floors disagree with each other, or when a floor exceeds the pinned toolchain)
 - **Other / Security**: workflows-hardening (SHA-pinning, no `pull_request_target`, job-scoped `id-token: write`,
   read-only workflow-level `permissions:`, CodeQL also on `pull_request`), osv-scanner (every tracked lockfile against
-  OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck)
+  OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck), scorecard-local (Scorecard's
+  file-based checks on the tracked tree, against `scorecard-local-baseline.json`)
 
 ## The single source for the Go version
 
@@ -2225,6 +2226,16 @@ That gap let five `quinn-proto` advisories sit in `fuzz/` and `benchmarks/smb/` 
 held the score at 5/10. Running Scorecard's own tool leaves one ignore list per lockfile instead of three (cargo-audit's
 Go list, its `audit.toml`, and the osv files). It scans a fresh copy of the tracked tree (`tracked-tree.go`): inside a
 worktree, osv-scanner's own walk skips everything, because the main clone ignores `.claude/worktrees/`.
+
+**Decision**: `scorecard-local` runs Scorecard's own binary (`--local`, pinned) on the file-based checks, and judges
+FINDINGS, not just scores. **Why**: restating Scorecard's rules by hand drifts (the SAST drop came from Scorecard's view
+changing, not ours). Scores alone are too coarse: Pinned-Dependencies sits at 9, and a second unpinned image still
+rounds to 9 (verified with a probe Dockerfile, scorecard v5.5.0, 2026-10-13). So every `Warn:` line must match an
+`accepted` entry in `scorecard-local-baseline.json`, compared without its line number and remediation hint, so edits
+elsewhere in the file don't churn it. The baseline's keys are the checks it runs; it shrink-wraps locally (beaten floors
+rise, gone warnings drop) and CI fails on staleness. GitHub-API checks (Branch-Protection, Code-Review, Signed-Releases,
+CI-Tests) can't run locally, and Vulnerabilities stays with `osv-scanner` for its fix-age grace. ~4.5 s warm: most of it
+is copying the tracked tree, since pointed at the worktree it walks `target/` (68 s) and dies on a socket.
 
 **Decision**: the advisory lanes (`osv-scanner`, `govulncheck`, `cargo-deny`) carry `CacheTTL: advisoryCacheTTL` (a
 day). **Why**: their answer moves when the advisory database does, not only when their inputs do, so an input-keyed

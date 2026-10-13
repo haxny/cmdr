@@ -1810,6 +1810,18 @@ var AllChecks = []CheckDefinition{
 		Run:      RunOSVScanner,
 	},
 	{
+		ID:          "scorecard-local",
+		Nickname:    "scorecard",
+		DisplayName: "OpenSSF Scorecard (file-based checks)",
+		App:         AppOther,
+		Tech:        "🔒 Security",
+		DependsOn:   nil,
+		CpuWeight:   1,
+		// Binary-Artifacts reads every file, so any tracked change can move it.
+		Inputs: wholeRepoInputs,
+		Run:    RunScorecardLocal,
+	},
+	{
 		ID:          "workflows-rustup",
 		Nickname:    "rustup-add",
 		DisplayName: "workflows / rustup add",
