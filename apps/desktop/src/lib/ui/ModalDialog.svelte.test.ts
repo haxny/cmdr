@@ -344,6 +344,74 @@ describe('ModalDialog edge resizing', () => {
     target.remove()
   })
 
+  // A body that used the height can give way to one that doesn't (the progress dialog's
+  // tree to a conflict prompt), and the bands for height go with it: nothing could undo a
+  // tall, mostly empty panel then.
+  describe('when vertical resizing is withdrawn', () => {
+    async function mountToggling(containerStyle: string) {
+      const target = document.createElement('div')
+      document.body.appendChild(target)
+      const props = $state<{ resizable: boolean | 'horizontal' }>({ resizable: true })
+      mount(ModalDialog, {
+        target,
+        props: {
+          titleId: 't',
+          title: titleSnippet,
+          children: bodySnippet,
+          containerStyle,
+          get resizable() {
+            return props.resizable
+          },
+        },
+      })
+      await tick()
+      const panel = target.querySelector<HTMLElement>('.modal-dialog')
+      if (!panel) throw new Error('the panel never mounted')
+      givePanelSize(panel, 400, 300)
+      return { target, panel, props }
+    }
+
+    it('goes back to its natural height, then gets the user’s height back when it returns', async () => {
+      const { target, panel, props } = await mountToggling('width: 500px')
+      await dragBand(target, 's', 0, 60)
+      expect(panel.style.height).toBe('360px')
+
+      props.resizable = 'horizontal'
+      await tick()
+      expect(panel.style.height).toBe('')
+      expect(panel.style.width).toBe('500px')
+
+      props.resizable = true
+      await tick()
+      expect(panel.style.height).toBe('360px')
+      target.remove()
+    })
+
+    it('keeps the height its own style gives it while the user’s is set aside', async () => {
+      const { target, panel, props } = await mountToggling('width: 500px; height: 280px')
+      await dragBand(target, 's', 0, 60)
+
+      props.resizable = 'horizontal'
+      await tick()
+      expect(panel.style.height).toBe('280px')
+      target.remove()
+    })
+
+    it('leaves a height the window no longer fits set aside for good', async () => {
+      const { target, panel, props } = await mountToggling('width: 500px')
+      await dragBand(target, 's', 0, 60)
+      props.resizable = 'horizontal'
+      await tick()
+
+      // The window shrank meanwhile: the panel's cap is now below what the user dragged to.
+      panel.style.maxHeight = '320px'
+      props.resizable = true
+      await tick()
+      expect(panel.style.height).toBe('')
+      target.remove()
+    })
+  })
+
   // Dragged past the floor, the panel stops but the pointer doesn't: the offset has to stop
   // with it, or the panel keeps sliding while its size stands still.
   it('floors the height at the chrome plus a readable body', async () => {

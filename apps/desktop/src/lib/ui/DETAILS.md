@@ -174,6 +174,11 @@ also what keeps the height content-driven. A dialog never remembers the size it 
 - **The floors are the panel's `min-width` (360px, raised in `containerStyle` when content needs more, as the progress
   readout's fixed columns do) and a measured height floor**: the title bar plus footer plus 60px of body. The panel
   carries no CSS `min-height`, so every dialog still opens at its natural height instead of padding out to a number.
+- **Withdrawing vertical resizing sets the dragged height aside.** When `resizable` stops being `true` (the progress
+  dialog's tree giving way to a conflict prompt), the panel goes back to its natural height (`containerStyle`'s own, if
+  it has one, read back through a detached element's style, never parsed by hand), and the user's height returns with
+  `true` if the panel's current `max-height` still fits it. **Why**: the body that used the height is gone, and so are
+  the bands that could undo a tall, mostly empty panel.
 
 The bands carry their direction in `data-direction`, not in a class per edge, so `.resize-band` stays statically
 matchable for Svelte's CSS scoping and the `css-unused` check. Their `cursor` is the single source for which arrow a

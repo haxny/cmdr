@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy, tick } from 'svelte'
+    import { onMount, onDestroy, tick, untrack } from 'svelte'
     import type { Snippet } from 'svelte'
     import { notifyDialogOpened, notifyDialogClosed } from '#lib/tauri-commands/index.js'
     import { focusFirstField, trapFocus } from './focus-trap'
@@ -212,6 +212,44 @@
             el.style.marginTop = `${String(anchoredTop)}px`
         }
     })
+
+    /** The height the user dragged to, set aside while vertical resizing is withdrawn. */
+    let parkedHeight: number | null = null
+
+    /**
+     * A dialog that stops being vertically resizable goes back to its natural height,
+     * and gets the user's height back once it's resizable again, if the window still
+     * fits it. **Why**: the body that used the height has given way to one that doesn't
+     * (the progress dialog's tree to a conflict prompt), and the bands that could undo a
+     * tall, mostly empty panel are gone with it.
+     */
+    $effect(() => {
+        const vertical = resizable === true
+        const el = dialogElement
+        if (!el) return
+        untrack(() => {
+            if (!vertical && resizedSize.height !== null) {
+                parkedHeight = resizedSize.height
+                resizedSize = { ...resizedSize, height: null }
+                // Back to what `containerStyle` says (nothing, for most): the drag's
+                // height shares that one inline declaration.
+                el.style.height = ownHeight(containerStyle)
+            } else if (vertical && parkedHeight !== null) {
+                const height = parkedHeight
+                parkedHeight = null
+                if (height <= cssLength(getComputedStyle(el).maxHeight, Number.POSITIVE_INFINITY)) {
+                    resizedSize = { ...resizedSize, height }
+                }
+            }
+        })
+    })
+
+    /** The height a style string declares, `''` for none: parsed by the browser, never by hand. */
+    function ownHeight(style: string): string {
+        const probe = document.createElement('div')
+        probe.style.cssText = style
+        return probe.style.height
+    }
 
     /** Where flex centering puts the dialog's top right now. */
     function centeredTop(): number {
