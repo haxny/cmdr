@@ -178,8 +178,9 @@ fern = "0.7.1"
 file-rotate = "0.8.0"
 # HTTP client for API server validation and AI downloads. Every client is built through
 # `cmdr_http::client_builder()`, which owns proxy routing (system settings, PAC, bypass list),
-# so reqwest's own `system-proxy` reader is no longer what decides.
-reqwest = { version = "0.13", features = ["json", "rustls", "stream", "multipart"], default-features = false }
+# so reqwest's own `system-proxy` reader is no longer what decides. `cookies` is `cmdr-webdav`'s
+# (its session jar), declared here so that crate's features stay a subset of the app's.
+reqwest = { version = "0.13", features = ["cookies", "json", "rustls", "stream", "multipart"], default-features = false }
 # The one door every HTTP client is built through: proxy routing the way macOS decides it.
 cmdr-http = { path = "../../../crates/cmdr-http" }
 # MCP server

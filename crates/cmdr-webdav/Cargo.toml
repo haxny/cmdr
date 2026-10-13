@@ -39,8 +39,10 @@ cmdr-http = { path = "../cmdr-http" }
 # is declared here although the app gets it anyway (through `genai`): without
 # it this crate's own tests speak HTTP/1.1 while the app negotiates HTTP/2, the
 # gap that hid a GCS-only HTTP/2 refusal from `cmdr-s3`'s live suite.
-# `transport_test.rs` pins it.
-reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls", "stream"] }
+# `transport_test.rs` pins it. `cookies` keeps a server's session, which spares
+# Nextcloud a password hash per request (`DETAILS.md` § "Session cookies"); the
+# app declares it too, so both resolve one reqwest.
+reqwest = { version = "0.13", default-features = false, features = ["cookies", "http2", "rustls", "stream"] }
 # PROPFIND `multistatus` parsing, namespace-aware: servers prefix `DAV:` as `D:`,
 # `d:`, `a:`, or nothing at all.
 quick-xml = "0.42"

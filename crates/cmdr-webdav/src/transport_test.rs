@@ -144,6 +144,78 @@ async fn a_propfind_body_under_the_cap_is_read() {
     assert!(!matches!(outcome, PropfindOutcome::TooLarge { .. }));
 }
 
+/// A server answering `count` requests with a 207, the first of them also
+/// setting a session cookie, and handing each request's head back as text.
+async fn serving_a_session_cookie(count: usize) -> (WebdavClient, Url, tokio::sync::mpsc::UnboundedReceiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (heads, received) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        for answered in 0..count {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = Vec::new();
+            let mut chunk = [0u8; 4096];
+            while !buffer.windows(4).any(|w| w == b"\r\n\r\n") {
+                let read = socket.read(&mut chunk).await.unwrap();
+                if read == 0 {
+                    break;
+                }
+                buffer.extend_from_slice(&chunk[..read]);
+            }
+            let _ = heads.send(String::from_utf8_lossy(&buffer).to_lowercase());
+            let cookie = if answered == 0 {
+                "set-cookie: nc_session=abc123; path=/; HttpOnly\r\n"
+            } else {
+                ""
+            };
+            let body = b"<?xml version=\"1.0\"?><d:multistatus xmlns:d=\"DAV:\"></d:multistatus>";
+            let head = format!(
+                "HTTP/1.1 207 Multi-Status\r\ncontent-type: application/xml\r\n{cookie}content-length: {}\r\n\
+                 connection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = socket.write_all(head.as_bytes()).await;
+            let _ = socket.write_all(body).await;
+            let _ = socket.shutdown().await;
+        }
+    });
+    let base = Url::parse(&format!("http://{addr}/dav/")).unwrap();
+    (
+        WebdavClient::new(base.clone(), "user", "secret").unwrap(),
+        base,
+        received,
+    )
+}
+
+/// ❗ The session cookie a server sets comes back on the next request, with
+/// the Basic credentials still on it. Nextcloud verifies the password (a
+/// deliberately slow hash) on every request that brings no session, which
+/// made each round trip ~150 ms where it costs ~20 ms with one (`DETAILS.md`
+/// § "Session cookies"). Basic stays so an expired session falls back to the
+/// password without a 401 round trip.
+#[tokio::test]
+async fn the_next_request_brings_back_the_session_cookie_and_the_password() {
+    let (client, url, mut heads) = serving_a_session_cookie(2).await;
+
+    client.propfind(url.clone(), Depth::Zero).await.unwrap();
+    client.propfind(url, Depth::Zero).await.unwrap();
+
+    let first = heads.recv().await.unwrap();
+    let second = heads.recv().await.unwrap();
+    assert!(
+        !first.contains("\r\ncookie:"),
+        "nothing set yet, nothing to send:\n{first}"
+    );
+    assert!(
+        second.contains("\r\ncookie: nc_session=abc123"),
+        "the second request must bring the cookie back:\n{second}"
+    );
+    assert!(
+        second.contains("\r\nauthorization: basic "),
+        "and still the password:\n{second}"
+    );
+}
+
 /// ❗ This crate builds reqwest with `http2` itself, so its own tests speak
 /// what the app negotiates (the app gets the feature through `genai`).
 /// `http2_prior_knowledge` exists only with the feature, so dropping it from

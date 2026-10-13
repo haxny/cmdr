@@ -145,7 +145,11 @@ impl WebdavClient {
         };
         let build_failed = |e: reqwest::Error| WebdavConnectError::Transport(e.to_string());
         Ok(Self {
-            http: builder().build().map_err(build_failed)?,
+            // ❗ The jar keeps the server's session, which spares Nextcloud a
+            // password hash per request (~150 ms each without it, ~20 ms with
+            // it). Basic still goes on every request, so an expired session
+            // falls back to the password. `DETAILS.md` § "Session cookies".
+            http: builder().cookie_store(true).build().map_err(build_failed)?,
             // `0` turns hyper-util's pool off outright (verified on 0.1.20,
             // `pool::Config::is_enabled`, 2026-09-23).
             fresh: builder().pool_max_idle_per_host(0).build().map_err(build_failed)?,

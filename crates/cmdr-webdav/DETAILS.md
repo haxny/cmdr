@@ -4,14 +4,15 @@ Must-knows and the module map: `CLAUDE.md`. This file carries the decisions.
 
 ## The connection model
 
-HTTP holds no session. "Connected" means the last request that reached the wire came back; "disconnected" means one
-failed with a transport error (`reqwest::Error::is_connect` / `is_request`, mapped to
-`VolumeError::DeviceDisconnected`), or that the server went silent under a waiting request (§ "Silent or slow").
-`connect_webdav_volume` reads the account's secret from the `CredentialStore` (service `scheme://host:port`, scope
-`username`; nothing stored is `NeedsCredentials`), builds a `WebdavClient` (`user_agent("Cmdr")`, a 10 s connect timeout
-and no `read_timeout`, redirects off, Basic auth on every request, plus a pool-free twin for the silence probe), and
-proves it with one `PROPFIND Depth: 0` on the root. The probe rides `tokio::select!` against the cancel token; a cancel
-leaves nothing behind. On success the backend records the PII-free analytics event `webdav_connected`.
+HTTP holds no session that liveness depends on (a server's session cookie only saves work). "Connected" means the last
+request that reached the wire came back; "disconnected" means one failed with a transport error
+(`reqwest::Error::is_connect` / `is_request`, mapped to `VolumeError::DeviceDisconnected`), or that the server went
+silent under a waiting request (§ "Silent or slow"). `connect_webdav_volume` reads the account's secret from the
+`CredentialStore` (service `scheme://host:port`, scope `username`; nothing stored is `NeedsCredentials`), builds a
+`WebdavClient` (`user_agent("Cmdr")`, a 10 s connect timeout and no `read_timeout`, redirects off, Basic auth on every
+request, a cookie jar (§ "Session cookies"), plus a pool-free twin for the silence probe), and proves it with one
+`PROPFIND Depth: 0` on the root. The probe rides `tokio::select!` against the cancel token; a cancel leaves nothing
+behind. On success the backend records the PII-free analytics event `webdav_connected`.
 
 **Decision: the client turns every response decoder off and the crate declares `http2` itself.** The app's reqwest has
 `gzip` and `http2` unified in through `genai`, which `cmdr-webdav` built alone never saw. Decoders: a file manager
@@ -22,6 +23,23 @@ on through a dev-dependency so `transport_test.rs::an_encoded_file_reads_back_as
 client the app ships. `http2`: so this crate's own tests negotiate what the app does; the gap hid a GCS-only HTTP/2
 refusal from `cmdr-s3`'s live suite (`crates/cmdr-s3/DETAILS.md` § "Connecting"). `transport_test.rs` fails to compile
 without it (2026-10-02).
+
+### Session cookies
+
+**Gotcha: Nextcloud verifies the Basic password on every request that brings no session cookie**, and that check is a
+deliberately slow hash. Every authenticated DAV request cost ~145 ms on a quiet host (even `OPTIONS`; unauthenticated
+`status.php` answers in 7 ms) and 300–750 ms on a busy one; sending back the cookies the first answer set brings it to
+15–45 ms, PROPPATCH and the writes included (verified on the Nextcloud 34 fixture with curl, with and without a cookie
+jar, 2026-10-13). The cost is CPU on the server, so parallel requests contend: the Nextcloud suite's cells took 8–22 s
+and timed out at 30 s under load, with one cell's 35 requests spanning 11 s alone.
+
+**Decision: the main client keeps a reqwest cookie jar (`cookie_store(true)`, the `cookies` feature, which the app's
+manifest declares too) and still sends Basic on every request.** Basic stays so an expired or dropped session falls back
+to the password in the same request rather than a 401 round trip. Nextcloud skips its CSRF check for a session that
+signed in through DAV Basic auth, so the writes work on it. The jar lives in memory with the client and dies with it, so
+a reconnect starts fresh; servers that set no cookie see no change. The pool-free silence twin keeps no jar: its
+`OPTIONS` proves only that the server answers.
+`transport_test.rs::the_next_request_brings_back_the_session_cookie_and_the_password` pins both halves.
 
 **An instance is a name and a root over a shared client.** `WebdavVolume` is `{ name, root, inner }`, the same split
 `crates/cmdr-sftp/DETAILS.md` § "The connection model" describes, and

@@ -1,15 +1,14 @@
 # cmdr-webdav
 
-The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basic credentials on it. Same shape as
+The WebDAV backend: a `Volume` over one `reqwest` client with one account's credentials. Same shape as
 `crates/cmdr-sftp`, leaner: no host keys, no auth ladder, no extensions probe. Fixtures:
 `apps/desktop/test/webdav-servers/start.sh`.
 
 ## Module map
 
-- `params.rs`: `WebdavConnectionParams` (base URL, username, root under it) and the store key `scheme://host:port`
-  scoped by username.
-- `errors.rs`: `WebdavConnectError` and the status-code table (`map_status`, keyed by an `Attempted` context).
-- `transport.rs`: `WebdavClient`, URL building, PROPFIND, the connect probe. `propfind.rs`: the `multistatus` parser.
+- `params.rs`: `WebdavConnectionParams` and the store key (`scheme://host:port`, scoped by username).
+- `errors.rs`: `WebdavConnectError` and the status table (`map_status`, keyed by `Attempted`).
+- `transport.rs`: `WebdavClient`, URLs, PROPFIND, the connect probe. `propfind.rs`: the `multistatus` parser.
 - `volume/`: `mod.rs` (the volume, `connect_webdav_volume`, `send`), `paths.rs`, `query.rs`, `streams.rs` (GET),
   `writes.rs` (the PUT), `mutation.rs`, `copy.rs`, `scan.rs`, `state.rs` + `reconnect.rs`, `volume_impl.rs`,
   `testing.rs` (fixtures, `testing` feature).
@@ -32,14 +31,15 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basi
   long transfer or a slow listing would be cut or flicker `Disconnected`. `transport.rs` has why.
 - ❌ **One unattended auth attempt, never a loop.** A 401 on the re-probe moves to `NeedsCredentials` and stops. Only an
   attended sign-in refreshes the store.
+- ❗ **A cookie jar AND Basic on every request**: sessionless, Nextcloud hashes the password per request (~150 ms vs
+  ~20). `DETAILS.md` § "Session cookies".
 - ❗ **Redirects are off**: a followed MOVE or COPY would resend `Destination` somewhere the user never named.
 - ❗ **The engine owns staging**: `CreateOrReplace` is one plain PUT onto its temp; ❌ don't stage it again (a MOVE per
   file). Only `CreateNew` stages here (MOVE `Overwrite: F`). `DETAILS.md` § "Write staging".
 - ❗ **PUT sends `Content-Length` from `size`.** ❌ A byte count that disagrees fails the write and removes its target:
   hyper truncates a longer body and the server keeps the prefix.
-- ❗ **The upload body reads one piece AHEAD, and that is load-bearing**: hyper stops polling once `Content-Length` is
-  satisfied. Hence two counters: `fetched` guards the size, `handed` (clamped) drives progress. ❌ Never collapse them.
-  `DETAILS.md` § "Write staging".
+- ❗ **The upload body reads one piece AHEAD** (hyper stops polling at `Content-Length`): `fetched` guards the size,
+  `handed` (clamped) drives progress. ❌ Never collapse them. `DETAILS.md` § "Write staging".
 - ❗ **`Range` may be ignored**: a 200 to a ranged GET is skipped locally (fixture `webdav-fixture-norange`).
 - ❗ **Unbounded space reads `oc:size`, ❌ never `quota-used-bytes`** (an unlimited Nextcloud answers `0`). One of two
   non-standard properties; `DETAILS.md` § "What a real server answers" sets the bar for a third.
@@ -50,5 +50,4 @@ The WebDAV backend: a `Volume` over one `reqwest` client with one account's Basi
 - ❌ Never `root_anchored`, never a stat per child in a scan, never `authoritative_listing` (coverage is `None`).
 - Digest-only servers are a typed `AuthMethodUnsupported`, by the `WWW-Authenticate` scheme token.
 
-Decisions and the full tables: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing,
-or advising.
+Decisions and the full tables: `DETAILS.md`. Read it before any non-trivial work here.
