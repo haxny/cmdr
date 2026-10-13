@@ -1109,9 +1109,9 @@
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"
   },
-  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} gick inte} other {{countText} gick inte}}",
+  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} slutfördes inte} other {{countText} slutfördes inte}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "Väntar",
   "@fileOperations.transferTree.state.waiting": {
@@ -1139,6 +1139,6 @@
   },
   "fileOperations.transferTree.state.failed": "Gick inte att slutföra",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }

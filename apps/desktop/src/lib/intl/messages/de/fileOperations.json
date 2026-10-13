@@ -1114,7 +1114,7 @@
   },
   "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} nicht abgeschlossen} other {{countText} nicht abgeschlossen}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "Wartet",
   "@fileOperations.transferTree.state.waiting": {
@@ -1142,6 +1142,6 @@
   },
   "fileOperations.transferTree.state.failed": "Nicht abgeschlossen",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }

@@ -1776,9 +1776,10 @@
       "no ha podido completar",
       "no ha terminado",
       "no se ha completado",
-      "no terminó"
+      "no terminó",
+      "sin completar"
     ],
-    "forms": "queue status No se ha podido completar; the toast title arms No se ha podido completar + the operation noun (la copia, el movimiento, la eliminación, el cambio de nombre…); operation log status No se completó (a history row)",
+    "forms": "queue status No se ha podido completar; the toast title arms No se ha podido completar + the operation noun (la copia, el movimiento, la eliminación, el cambio de nombre…); operation log status No se completó (a history row); the transfer tree's tight count {countText} sin completar (no agreement with the count)",
     "avoid": [
       {
         "form": "No se pudo terminar de copiar",

@@ -123,8 +123,9 @@ pauses following.
 ## What a row says (`row-format.ts`)
 
 - Count line, joined by middle dots: a folder at work "312 / 1,000 files · 1.2 GB / 4.0 GB", a waiting or finished one
-  "1,000 files · 4.0 GB", plus "3 skipped" and a red "1 failed". A file: its size, "1.0 MB / 4.0 MB" at work, "Skipped",
-  or its failure's typed title in red. A failed folder keeps the progress form, so "999 / 1,000" says what's missing.
+  "1,000 files · 4.0 GB", plus "3 skipped" and a red "1 couldn’t finish" (the house voice never says "failed"; the
+  queue's word). A file: its size, "1.0 MB / 4.0 MB" at work, "Skipped", or its failure's typed title in red. A failed
+  folder keeps the progress form, so "999 / 1,000" says what's missing.
 - Accessible name: `formatUnitList([label, …the count line's segments, state])`, "Photos 2024, 312 / 1,000 files, 1.2 GB
   / 4.0 GB, Copying": the visible text first, verbatim and in order, then the state (left out when a segment already
   says it, as a skipped file's "Skipped" does). **Why**: WCAG 2.5.3 (label in name). Speech control finds a row by the

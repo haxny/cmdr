@@ -1989,9 +1989,9 @@
     }
   },
 
-  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} failed} other {{countText} failed}}",
+  "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} couldn’t finish} other {{countText} couldn’t finish}}",
   "@fileOperations.transferTree.failedCount": {
-    "description": "How many files inside a folder couldn’t be transferred, in red in the count text of the folder’s row in the live file tree of a copy/move/compress, for example “1 failed”. Follows the file count after a middle dot, and screen readers hear it as one item of a comma-separated list, so it has to read on its own. Word order is free: the number may come after the word. Tight space: keep it short.",
+    "description": "How many files inside a folder couldn’t be transferred, in red in the count text of the folder’s row in the live file tree of a copy/move/compress, for example “1 couldn’t finish”. Follows the file count after a middle dot, and screen readers hear it as one item of a comma-separated list, so it has to read on its own. Gentle wording on purpose, the same as the queue’s status for an operation that stopped (queue.row.status): avoid the words error and failed. Word order is free: the number may come after the phrase. Tight space: keep it short.",
     "placeholders": {
       "countText": "the number of files that couldn’t be transferred, already formatted (e.g. 1)",
       "count": "the same number (drives the plural form and any agreement your language needs)"
@@ -2028,8 +2028,8 @@
     "description": "State of a file or folder that was left out on purpose (for example the user chose Skip when it already existed at the destination), in the live file tree of a copy/move/compress. Shown as the gray count text of a skipped file’s row, as the accessible name of the small marker beside it, and in the row’s screen-reader description. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
   },
 
-  "fileOperations.transferTree.state.failed": "Failed",
+  "fileOperations.transferTree.state.failed": "Couldn’t finish",
   "@fileOperations.transferTree.state.failed": {
-    "description": "State of a file or folder that couldn’t be transferred, in the live file tree of a copy/move/compress. The accessible name of the small red marker at the end of its row (the row itself shows the reason), and one item of the row’s screen-reader description. In a compress it means the file couldn’t be added to the zip, so a word that fits both is best. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
+    "description": "State of a file or folder that couldn’t be transferred, in the live file tree of a copy/move/compress. The accessible name of the small red marker at the end of its row (the row itself shows the reason), and one item of the row’s screen-reader description. Gentle wording on purpose, the same as the queue’s status for an operation that stopped (queue.row.status): avoid the words error and failed. In a compress it means the file couldn’t be added to the zip, so a phrase that fits both is best. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
   }
 }

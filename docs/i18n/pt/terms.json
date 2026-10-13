@@ -1715,8 +1715,8 @@
   },
   "not-finished": {
     "chosen": "Não foi possível concluir",
-    "accept": ["concluir", "terminou", "não foi concluíd"],
-    "forms": "failure toast arms add the action noun: Não foi possível concluir a cópia / a movimentação / o apagamento",
+    "accept": ["concluir", "terminou", "não foi concluíd", "não concluíd"],
+    "forms": "failure toast arms add the action noun: Não foi possível concluir a cópia / a movimentação / o apagamento; the transfer tree's tight count {countText} não concluído / não concluídos (plural arms)",
     "avoid": [
       {
         "form": "Falhou",

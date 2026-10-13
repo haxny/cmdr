@@ -1112,7 +1112,7 @@
   },
   "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} niet voltooid} other {{countText} niet voltooid}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "Wachten",
   "@fileOperations.transferTree.state.waiting": {
@@ -1140,6 +1140,6 @@
   },
   "fileOperations.transferTree.state.failed": "Niet voltooid",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }

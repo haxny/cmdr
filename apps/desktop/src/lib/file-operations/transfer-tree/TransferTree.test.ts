@@ -216,7 +216,7 @@ describe('TransferTree', () => {
     await advance()
     const reports = rowNamed('Reports')
     expect(reports.getAttribute('aria-label')).toContain('2 skipped')
-    expect(reports.getAttribute('aria-label')).toContain('1 failed')
+    expect(reports.getAttribute('aria-label')).toContain('1 couldn’t finish')
     expect(rowNamed('draft.docx').querySelector('.count')?.textContent.trim()).toBe('Skipped')
     expect(rowNamed('locked.pdf').querySelector('.count .error')).not.toBeNull()
   })

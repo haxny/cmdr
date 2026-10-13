@@ -83,8 +83,19 @@ describe('countSegments', () => {
     expect(text(folder({ state: 'failed', filesDone: 999, bytesDone: 4 * GB, failed: 1 }))).toEqual([
       '999 / 1,000 files',
       '4.0 GB / 4.0 GB',
-      '!1 failed',
+      '!1 couldn’t finish',
     ])
+  })
+
+  // The house voice (`docs/style-guide.md`) never says “error” or “failed”; the queue says “Couldn’t finish”.
+  it('words a failure in the house voice, never “failed”', () => {
+    const failedFolder = folder({ state: 'failed', filesDone: 999, failed: 2 })
+    const failedFile = file({ state: 'failed', failure: null })
+    expect(text(failedFolder).at(-1)).toBe('!2 couldn’t finish')
+    expect(text(failedFile)).toEqual(['!Couldn’t finish'])
+    for (const name of [accessibleName(failedFolder, 'copy'), accessibleName(failedFile, 'move')]) {
+      expect(name).not.toMatch(/fail|error/i)
+    }
   })
 
   it('leaves the size out of a folder whose files hold no bytes', () => {

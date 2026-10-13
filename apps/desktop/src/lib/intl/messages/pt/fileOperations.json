@@ -1112,7 +1112,7 @@
   },
   "fileOperations.transferTree.failedCount": "{count, plural, one {{countText} não concluído} many {{countText} não concluídos} other {{countText} não concluídos}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "Aguardando",
   "@fileOperations.transferTree.state.waiting": {
@@ -1138,8 +1138,8 @@
   "@fileOperations.transferTree.state.skipped": {
     "sourceHash": "12698ce"
   },
-  "fileOperations.transferTree.state.failed": "Não concluído",
+  "fileOperations.transferTree.state.failed": "Não foi possível concluir",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }

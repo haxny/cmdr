@@ -1107,9 +1107,9 @@
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"
   },
-  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} 个无法传输}}",
+  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} 个无法完成}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "等待中",
   "@fileOperations.transferTree.state.waiting": {
@@ -1135,8 +1135,8 @@
   "@fileOperations.transferTree.state.skipped": {
     "sourceHash": "12698ce"
   },
-  "fileOperations.transferTree.state.failed": "无法传输",
+  "fileOperations.transferTree.state.failed": "无法完成",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }

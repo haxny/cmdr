@@ -1108,9 +1108,9 @@
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"
   },
-  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} không thành công}}",
+  "fileOperations.transferTree.failedCount": "{count, plural, other {{countText} chưa hoàn tất được}}",
   "@fileOperations.transferTree.failedCount": {
-    "sourceHash": "67899d9"
+    "sourceHash": "367fc30"
   },
   "fileOperations.transferTree.state.waiting": "Đang chờ",
   "@fileOperations.transferTree.state.waiting": {
@@ -1138,6 +1138,6 @@
   },
   "fileOperations.transferTree.state.failed": "Chưa hoàn tất được",
   "@fileOperations.transferTree.state.failed": {
-    "sourceHash": "031a8f0"
+    "sourceHash": "a59364b"
   }
 }
