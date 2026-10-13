@@ -386,6 +386,8 @@ letters live in `decision-keys.ts` (`CONFLICT_KEYS`, `ERROR_KEYS`):
 - Clash: S Skip, K Skip all, R Rename, N Rename all, O Overwrite, A Overwrite all, M Overwrite all smaller, L Overwrite
   all older, C Cancel, B Rollback. Enter = Skip (this file): the safe default, never an overwrite.
 - Error: R Retry, A Copy anyway, C Close. Enter = Close, as before.
+- The operation queue's row buttons read their letters the same way (`QUEUE_ROW_KEYS`: S Show, P Pause / Resume, C
+  Cancel, B Rollback), on the row under the queue's cursor and without an arming delay (`queue/DETAILS.md` § Keyboard).
 
 Escape still answers no clash: with a clash up the host has no `onclose`, so `ModalDialog` hands Escape to the host's
 `onkeydown` and the body ignores it. B goes through `RollbackConfirmDialog` exactly like a click.

@@ -28,6 +28,7 @@
     import TransferTree from '../transfer-tree/TransferTree.svelte'
     import { rowTreeOperation } from './row-tree'
     import { queueKeyAction } from './queue-keys'
+    import { QUEUE_ROW_KEYS } from '../decision-keys'
     import { getAppLogger } from '#lib/logging/logger.js'
 
     const log = getAppLogger('queue')
@@ -340,15 +341,35 @@
         return true
     }
 
-    /** ⌫: the row's own Cancel or Dismiss, whichever it offers. Like the Cancel
-     *  button, no confirmation: cancel keeps every file already written. */
+    /** P: the Pause or Resume button's action, where the row offers it. */
+    export function pauseOrResume(): boolean {
+        if (!isRunning && !isPaused) return false
+        void op?.togglePause()
+        return true
+    }
+
+    /** ⌫: the row's own Cancel or Dismiss, whichever it offers. */
     export function cancelOrDismiss(): boolean {
         if (isFailed) {
             onDismiss()
             return true
         }
+        return cancel()
+    }
+
+    /** C: the Cancel button's action. Like the button, no confirmation: cancel keeps
+     *  every file already written. */
+    export function cancel(): boolean {
         if (!isActionable) return false
         void op?.cancel()
+        return true
+    }
+
+    /** B: the Rollback button's action, which raises the confirmation; the reversal
+     *  starts only from its answer. */
+    export function rollback(): boolean {
+        if (!canRollback) return false
+        rollbackAsked = true
         return true
     }
 
@@ -480,7 +501,8 @@
                 onclick={() => void showInMainWindow()}
                 aria-label={tString('queue.row.foregroundAria')}
                 tooltipContent={tString('queue.row.foregroundTooltip')}
-                aria-keyshortcuts="Enter"
+                keyHint={QUEUE_ROW_KEYS.show}
+                aria-keyshortcuts="{QUEUE_ROW_KEYS.show} Enter"
                 tabindex={-1}
             >
                 <span class="btn-inner">
@@ -499,6 +521,8 @@
                 size="mini"
                 onclick={() => void op?.togglePause()}
                 aria-label={pauseResumeAria}
+                keyHint={QUEUE_ROW_KEYS.pauseOrResume}
+                aria-keyshortcuts={QUEUE_ROW_KEYS.pauseOrResume}
                 tabindex={-1}
             >
                 <span class="btn-inner">
@@ -513,7 +537,8 @@
                 size="mini"
                 onclick={() => void op?.cancel()}
                 aria-label={tString('queue.row.cancelAria')}
-                aria-keyshortcuts="Backspace"
+                keyHint={QUEUE_ROW_KEYS.cancel}
+                aria-keyshortcuts="{QUEUE_ROW_KEYS.cancel} Backspace"
                 tabindex={-1}
             >
                 <span class="btn-inner">
@@ -562,6 +587,8 @@
                 variant="danger"
                 size="mini"
                 tooltipContent={tString(inFlightRollbackTooltipKey(inFlightVariant))}
+                keyHint={QUEUE_ROW_KEYS.rollback}
+                aria-keyshortcuts={QUEUE_ROW_KEYS.rollback}
                 tabindex={-1}
                 onclick={() => {
                     rollbackAsked = true

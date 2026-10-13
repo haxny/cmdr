@@ -145,6 +145,22 @@ describe('QueueRow', () => {
     expect(target.querySelector('[aria-label="Pause this operation"]')).toBeNull()
   })
 
+  // The buttons take no Tab stop, so each shows the letter that presses it on the cursor row.
+  it('shows each button’s letter in a chip and names it for a screen reader', () => {
+    render({ row: buildRow('running', 'copy', null, true) })
+    const keyed = [...target.querySelectorAll('.actions-cell button')].map((button) => [
+      button.getAttribute('aria-label'),
+      button.querySelector('kbd')?.textContent,
+      button.getAttribute('aria-keyshortcuts'),
+    ])
+    expect(keyed).toEqual([
+      ['Show this operation in the main window', 'S', 'S Enter'],
+      ['Pause this operation', 'P', 'P'],
+      ['Cancel this operation', 'C', 'C Backspace'],
+      [null, 'B', 'B'],
+    ])
+  })
+
   it('a queued op has Cancel but no Pause/Resume', () => {
     render({ row: buildRow('queued') })
     expect(target.querySelector('[aria-label="Cancel this operation"]')).not.toBeNull()

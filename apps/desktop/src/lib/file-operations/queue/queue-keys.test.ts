@@ -60,6 +60,12 @@ describe('queueKeyAction', () => {
       { kind: 'control', step: -1 },
     ],
     [{ key: 'Escape', code: 'Escape' }, { kind: 'close' }],
+    [{ key: 's', code: 'KeyS' }, { kind: 'show' }],
+    [{ key: 'p', code: 'KeyP' }, { kind: 'pauseOrResume' }],
+    [{ key: 'c', code: 'KeyC' }, { kind: 'cancel' }],
+    [{ key: 'b', code: 'KeyB' }, { kind: 'rollback' }],
+    // A Russian layout's B key types "и": the physical key answers, as on the decision prompts.
+    [{ key: 'и', code: 'KeyB' }, { kind: 'rollback' }],
   ])('reads %o as %o', (init, action) => {
     expect(queueKeyAction(key(init))).toEqual(action)
   })
@@ -71,6 +77,13 @@ describe('queueKeyAction', () => {
     expect(queueKeyAction(key({ key: 'ArrowUp', code: 'ArrowUp', altKey: true, shiftKey: true }))).toBeNull()
     expect(queueKeyAction(key({ key: 'ArrowDown', code: 'ArrowDown', metaKey: true }))).toBeNull()
     expect(queueKeyAction(key({ key: 'Enter', code: 'Enter', metaKey: true }))).toBeNull()
+  })
+
+  // A held P would pause and resume in turn, and ⌘C is copy.
+  it('reads a letter only bare and unrepeated', () => {
+    expect(queueKeyAction(key({ key: 'p', code: 'KeyP', repeat: true }))).toBeNull()
+    expect(queueKeyAction(key({ key: 'c', code: 'KeyC', metaKey: true }))).toBeNull()
+    expect(queueKeyAction(key({ key: 'C', code: 'KeyC', shiftKey: true }))).toBeNull()
   })
 
   it('answers nothing for a key the window has no use for', () => {

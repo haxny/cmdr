@@ -24,7 +24,12 @@
     import Icon from '#lib/ui/Icon.svelte'
     import QueueRow from '#lib/file-operations/queue/QueueRow.svelte'
     import { createQueueCursor } from '#lib/file-operations/queue/queue-cursor.svelte.js'
-    import { queueKeyAction, type QueueKeyAction, type QueueRowApi } from '#lib/file-operations/queue/queue-keys.js'
+    import {
+        queueKeyAction,
+        type QueueKeyAction,
+        type QueueRowAction,
+        type QueueRowApi,
+    } from '#lib/file-operations/queue/queue-keys.js'
     import {
         createOperationsStore,
         isHiddenSettledStatus,
@@ -179,7 +184,10 @@
                 void moveCursorRow(action.direction)
                 return true
             case 'show':
+            case 'pauseOrResume':
             case 'cancelOrDismiss':
+            case 'cancel':
+            case 'rollback':
             case 'control':
                 return runRowAction(action)
             case 'close':
@@ -188,13 +196,24 @@
     }
 
     /** The keys that act on the cursor row's own operation, through the row. */
-    function runRowAction(action: Extract<QueueKeyAction, { kind: 'show' | 'cancelOrDismiss' | 'control' }>): boolean {
+    function runRowAction(action: QueueRowAction): boolean {
         const id = cursor.cursorId
         const api = id === null ? undefined : rowApis[id]
         if (!api) return false
-        if (action.kind === 'show') return api.show()
-        if (action.kind === 'cancelOrDismiss') return api.cancelOrDismiss()
-        return api.focusControl(action.step)
+        switch (action.kind) {
+            case 'show':
+                return api.show()
+            case 'pauseOrResume':
+                return api.pauseOrResume()
+            case 'cancelOrDismiss':
+                return api.cancelOrDismiss()
+            case 'cancel':
+                return api.cancel()
+            case 'rollback':
+                return api.rollback()
+            case 'control':
+                return api.focusControl(action.step)
+        }
     }
 
     /** Whether the grid answers a key pressed on `target`. Inside the grid, yes;
@@ -210,10 +229,11 @@
         return target === document.body || target.classList.contains('queue-window')
     }
 
-    /** Enter and Space press a focused BUTTON natively, and ⌫ belongs to the
-     *  row wherever focus is in it; the row's own keys apply only on the row. */
-    function isRowOnlyKey(action: QueueKeyAction, target: EventTarget | null): boolean {
-        return (action.kind === 'show' || action.kind === 'toggleSelected') && target instanceof HTMLButtonElement
+    /** Enter and Space press a focused BUTTON natively; ⌫ and the letters belong
+     *  to the row wherever focus is in it. */
+    function isRowOnlyKey(action: QueueKeyAction, event: KeyboardEvent): boolean {
+        if (!(event.target instanceof HTMLButtonElement)) return false
+        return action.kind === 'toggleSelected' || (action.kind === 'show' && event.key === 'Enter')
     }
 
     function toggleSelect(operationId: string): void {
@@ -292,7 +312,7 @@
             closeWindow()
             return
         }
-        if (!gridHears(event.target) || isRowOnlyKey(action, event.target)) return
+        if (!gridHears(event.target) || isRowOnlyKey(action, event)) return
         if (runGridAction(action)) event.preventDefault()
     }
 

@@ -5,6 +5,7 @@ import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import type { OperationRow } from './operations-store.svelte'
 import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js'
 import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
+import { buttonLabel } from '../test-button-label'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
@@ -129,7 +130,8 @@ describe('QueueRow a11y', () => {
     const list = await mountRow(row('running', 'copy', runningProgress))
     const button = list.querySelector('[aria-label="Show this operation in the main window"]')
     expect(button, 'the running row offers Show').not.toBeNull()
-    expect(button?.getAttribute('aria-label')).toContain(button?.textContent.trim())
+    // The visible word, without the `S` chip (`aria-hidden`, so it's no part of the name).
+    expect(button?.getAttribute('aria-label')).toContain(button && buttonLabel(button))
     await expectNoA11yViolations(list)
   })
 

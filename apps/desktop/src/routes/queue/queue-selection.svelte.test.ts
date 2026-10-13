@@ -20,6 +20,8 @@ const cancelOperations = vi.fn((_ids: string[]) => Promise.resolve())
 const cancelOperation = vi.fn((_id: string) => Promise.resolve())
 const dismissFailedOperation = vi.fn((_id: string) => Promise.resolve())
 const requestForegroundOperation = vi.fn((_id: string) => Promise.resolve())
+const pauseOperation = vi.fn((_id: string) => Promise.resolve())
+const cancelWriteOperation = vi.fn((_id: string, _rollback: boolean) => Promise.resolve())
 const moveQueuedOperation = vi.fn((_id: string, _direction: string): Promise<QueueMoveOutcome> =>
   Promise.resolve({ kind: 'not_queued' }),
 )
@@ -29,7 +31,7 @@ let selectAllFromMenu: (() => void) | null = null
 vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelOperation: (id: string) => cancelOperation(id),
   cancelOperations: (ids: string[]) => cancelOperations(ids),
-  cancelWriteOperation: vi.fn(() => Promise.resolve()),
+  cancelWriteOperation: (id: string, rollback: boolean) => cancelWriteOperation(id, rollback),
   dismissAllFailedOperations: vi.fn(() => Promise.resolve()),
   dismissFailedOperation: (id: string) => dismissFailedOperation(id),
   moveQueuedOperation: (id: string, direction: string) => moveQueuedOperation(id, direction),
@@ -38,8 +40,11 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
     return Promise.resolve(() => {})
   },
   requestForegroundOperation: (id: string) => requestForegroundOperation(id),
+  // B raises the row's rollback confirmation, a `ModalDialog`.
+  notifyDialogOpened: vi.fn(() => Promise.resolve()),
+  notifyDialogClosed: vi.fn(() => Promise.resolve()),
   pauseAll: vi.fn(() => Promise.resolve()),
-  pauseOperation: vi.fn(() => Promise.resolve()),
+  pauseOperation: (id: string) => pauseOperation(id),
   resumeAll: vi.fn(() => Promise.resolve()),
   resumeOperation: vi.fn(() => Promise.resolve()),
   // The store's own imports: it subscribes on `init()` and seeds from the list.
@@ -172,6 +177,8 @@ beforeEach(() => {
   cancelOperation.mockClear()
   dismissFailedOperation.mockClear()
   requestForegroundOperation.mockClear()
+  pauseOperation.mockClear()
+  cancelWriteOperation.mockClear()
   moveQueuedOperation.mockClear()
   selectAllFromMenu = null
 })
@@ -378,6 +385,65 @@ describe('queue window keyboard', () => {
     expect(requestForegroundOperation).not.toHaveBeenCalled()
   })
 
+  // The row's buttons take no Tab stop, so each has a letter that acts on the cursor
+  // row, read like the decision prompts' (`decision-keys.ts`). DETAILS § Keyboard.
+  it('S shows the cursor row in the main window, like Enter', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 's', code: 'KeyS' })
+    expect(requestForegroundOperation).toHaveBeenCalledWith('op-1')
+  })
+
+  it('P pauses the cursor row', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'p', code: 'KeyP' })
+    await vi.waitFor(() => {
+      expect(pauseOperation).toHaveBeenCalledWith('op-1')
+    })
+  })
+
+  it('C cancels the cursor row with no confirmation, like its Cancel button and ⌫', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'c', code: 'KeyC' })
+    await vi.waitFor(() => {
+      expect(cancelOperation).toHaveBeenCalledWith('op-1')
+    })
+  })
+
+  it('B asks before rolling the cursor row back, like its Rollback button', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'b', code: 'KeyB' })
+    expect(target.querySelector('[data-dialog-id="rollback-confirmation"]')).not.toBeNull()
+    expect(cancelWriteOperation).not.toHaveBeenCalled()
+    expect(cancelOperation).not.toHaveBeenCalled()
+  })
+
+  it('reaches the letters from a focused row button, and through the physical key on a non-Latin layout', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'ArrowRight', code: 'ArrowRight' })
+    expect(document.activeElement?.tagName).toBe('BUTTON')
+    // A Russian layout's C key types "с".
+    press({ key: 'с', code: 'KeyC' })
+    await vi.waitFor(() => {
+      expect(cancelOperation).toHaveBeenCalledWith('op-1')
+    })
+  })
+
+  it('ignores a held letter, and a letter with a modifier', async () => {
+    await renderPage(three)
+    press(DOWN)
+    press({ key: 'c', code: 'KeyC', repeat: true })
+    press({ key: 'c', code: 'KeyC', metaKey: true })
+    press({ key: 'C', code: 'KeyC', shiftKey: true })
+    press({ key: 'p', code: 'KeyP', repeat: true })
+    expect(cancelOperation).not.toHaveBeenCalled()
+    expect(pauseOperation).not.toHaveBeenCalled()
+  })
+
   it('⌥↑ asks the backend to move the waiting row, and announces where it landed', async () => {
     moveQueuedOperation.mockResolvedValueOnce({ kind: 'moved', position: 1, waiting: 2 })
     await renderPage(three)
@@ -461,10 +527,13 @@ describe('queue window: a row’s live tree', () => {
     rowFor('op-1')?.querySelector<HTMLElement>('[role="treeitem"]')?.focus()
 
     press({ key: 'Backspace', code: 'Backspace' })
+    press({ key: 'c', code: 'KeyC' })
+    press({ key: 'p', code: 'KeyP' })
     press(DOWN)
     press({ key: ' ', code: 'Space' })
 
     expect(cancelOperation).not.toHaveBeenCalled()
+    expect(pauseOperation).not.toHaveBeenCalled()
     expect(cursorRowId()).toBe('op-1')
     expect(selectedCountText()).toBeNull()
   })

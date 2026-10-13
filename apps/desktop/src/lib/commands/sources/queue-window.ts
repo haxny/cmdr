@@ -7,6 +7,7 @@
  */
 import type { CommandSource } from '../types'
 import { BLOCKED_BY_DIALOGS } from '../while-dialog-open'
+import { QUEUE_ROW_KEYS } from '#lib/file-operations/decision-keys.js'
 
 /** Every entry shares these: the window answers them itself, never the dispatch spine. */
 const queueWindowKey = {
@@ -33,16 +34,32 @@ export const queueWindowCommands: CommandSource[] = [
   // The menu accelerator fires before the page sees ⌘A, so the native menu routes it to
   // the window too (`queue-select-all`); this entry is the keydown road and the listing.
   { id: 'queue.selectAll', nameKey: 'commands.queueSelectAll.label', shortcuts: ['⌘A'], ...queueWindowKey },
+  // The letters are the row buttons' chips, read like the decision prompts' letters
+  // (`decisionKeyOf`: bare, unrepeated, the physical key on a non-Latin layout).
   {
     id: 'queue.showInMainWindow',
     nameKey: 'commands.queueShowInMainWindow.label',
-    shortcuts: ['Enter'],
+    shortcuts: ['Enter', QUEUE_ROW_KEYS.show],
+    ...queueWindowKey,
+  },
+  {
+    id: 'queue.pauseOrResume',
+    nameKey: 'commands.queuePauseOrResume.label',
+    shortcuts: [QUEUE_ROW_KEYS.pauseOrResume],
     ...queueWindowKey,
   },
   {
     id: 'queue.cancelOrDismiss',
     nameKey: 'commands.queueCancelOrDismiss.label',
     shortcuts: ['Backspace', 'Delete'],
+    ...queueWindowKey,
+  },
+  { id: 'queue.cancel', nameKey: 'commands.queueCancel.label', shortcuts: [QUEUE_ROW_KEYS.cancel], ...queueWindowKey },
+  // Raises the row's rollback confirmation, as the button does; never rolls back by itself.
+  {
+    id: 'queue.rollback',
+    nameKey: 'commands.queueRollback.label',
+    shortcuts: [QUEUE_ROW_KEYS.rollback],
     ...queueWindowKey,
   },
   // ⌥↑ / ⌥↓ is the house reorder key (`lib/ui/menu-navigation.ts`) and the ARIA APG

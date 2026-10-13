@@ -394,8 +394,9 @@ copy, and ↓ must walk the files, not the rows. So:
 
 The list is one Tab stop with a row cursor, so the window works without the mouse (#397). The page owns the cursor and
 the keys (`routes/queue/+page.svelte`); `queue-cursor.svelte.ts` is the bookkeeping, `queue-keys.ts` reads a keypress,
-and each `QueueRow` exports what a key does to ITS operation (`show`, `cancelOrDismiss`, `focusControl`, `focusRow`),
-next to the buttons that do the same.
+and each `QueueRow` exports what a key does to ITS operation (`QueueRowApi`: `show`, `pauseOrResume`, `cancel`,
+`rollback`, `cancelOrDismiss`, `focusControl`, `focusRow`), next to the buttons that do the same. Each returns `false`
+where the row doesn't offer that button, so its key does nothing there.
 
 - **The keys** are fixed-key registry commands in the `Operation queue window` scope
   (`../../commands/sources/queue-window.ts`), matched whole through `comboMatchesCommand`, so Settings and the Help
@@ -408,15 +409,25 @@ next to the buttons that do the same.
     can still be canceled. A settled failure is never selectable.
   - Enter is the row's Show; ⌫ (or ⌦) is the row's own Cancel, or Dismiss on a failure. ← / → walk the row's buttons and
     back out. ⌥↑ / ⌥↓ reorder (below). Escape closes the window.
+  - **A letter per row button**, shown as its `keyHint` chip and acting on the cursor row from anywhere in it (the row,
+    or a button → reached): S Show, P Pause / Resume, C Cancel, B Rollback (`QUEUE_ROW_KEYS` in `../decision-keys.ts`).
+    C and B are the clash prompt's own, and the letters read the prompts' way (`decisionKeyOf`): bare, never a held
+    key's repeat (a held P would pause and resume in turn), and the physical key on a non-Latin layout;
+    `queue-keys.ts::queueCombo` drops a bare letter that reading refuses. They stay clear of the window's other keys, of
+    Retry and Dismiss (no letter; ⌫ dismisses), and of F, which the row forwards to its live tree (§ "The inline tree");
+    inside the tree the grid hears no letter at all. Untranslated, like every decision letter.
   - Tab from the cursor row enters its live tree, where the tree owns the keys and Escape comes back (§ "The inline
     tree").
 - **⌘A arrives as a menu event, not a keydown.** The Edit > Select all accelerator fires before the webview sees the
   key, and every other secondary window gets the native `selectAll:` (text selection).
   `apps/desktop/src-tauri/src/menu/menu_handlers.rs` routes it to this window as `queue-select-all` instead
   (`onQueueSelectAll`); the keydown road stays for a menu that doesn't claim the key (the dev browser).
-- **⌫ cancels with no confirmation, the same policy as the row's Cancel button** (`CLAUDE.md` § "Cancel keeps
-  partials"): cancel keeps every file already written, so a confirm would guard nothing the button doesn't. Rollback,
-  the destructive one, has no key; it's reached through → and still asks.
+- **Decision: ⌫ and C cancel with no confirmation, and B asks first; neither takes a modifier.** Each does exactly what
+  its button does. Cancel keeps every file already written (`CLAUDE.md` § "Cancel keeps partials"), so a confirm on the
+  key would guard nothing the button doesn't. Rollback, the destructive one, raises the row's `RollbackConfirmDialog`
+  like its button, and nothing reverses until that's answered: the confirmation is the guard, so a modifier would only
+  make B harder to find. The letters' own guards (bare, no repeat, never inside the tree or a dialog) keep a stray or
+  held key from acting twice.
 - **The cursor is an operation id, ❌ never an index.** `operations-changed` rebuilds the rows whenever anything moves;
   an index would slide a different operation under the cursor on every reorder or finish. When the cursor's operation
   leaves, the row that slid into its place takes the cursor (`reconcile`).
@@ -443,8 +454,8 @@ The issue left it open: a listbox whose buttons only have keys, or a grid whose 
 - **A grid keeps every button a button.** → lands VoiceOver on a real, named `button` ("Pause this operation"), and a
   new button in `.actions-cell` joins the walk with no key work at all. The row is the focus target (`role="row"`,
   roving `tabindex`), named by its summary and status cells (`aria-labelledby`), described by its failure reason, and
-  carries `aria-selected` for "Cancel selected" (`aria-multiselectable` on the grid). Enter and ⌫ carry
-  `aria-keyshortcuts` on the buttons they stand for.
+  carries `aria-selected` for "Cancel selected" (`aria-multiselectable` on the grid). Each button's letter (plus Enter
+  on Show and ⌫ on Cancel) rides `aria-keyshortcuts`, since the chip itself is `aria-hidden`.
 - **The checkbox stays for the pointer** but leaves the Tab order and the → walk: Space does its job from the row, and
   the row's `aria-selected` already says it.
 

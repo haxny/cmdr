@@ -518,6 +518,18 @@
   "@commands.queueShowInMainWindow.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It brings the operation under the cursor back into the main window’s progress dialog, like the row’s Show button. Only running and paused operations can be shown."
   },
+  "commands.queuePauseOrResume.label": "Pause or resume the operation",
+  "@commands.queuePauseOrResume.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Pause or Resume button does to the operation under the cursor: pauses a running one in place, or resumes a paused one."
+  },
+  "commands.queueCancel.label": "Cancel the operation",
+  "@commands.queueCancel.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Cancel button does to the operation under the cursor: stops it, keeping the files already copied, with no confirmation."
+  },
+  "commands.queueRollback.label": "Roll back the operation",
+  "@commands.queueRollback.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Rollback button does to the operation under the cursor: asks for confirmation first, then stops the operation and undoes what it already did (deletes the copies, or moves the files back). Use the same verb as the Rollback button."
+  },
   "commands.queueCancelOrDismiss.label": "Cancel the operation, or dismiss one that couldn’t finish",
   "@commands.queueCancelOrDismiss.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own button does: it cancels a running, paused, or waiting operation (files already copied are kept, and there’s no confirmation, same as the Cancel button), or removes a row for an operation that couldn’t finish, like Dismiss."

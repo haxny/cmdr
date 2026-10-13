@@ -2,7 +2,8 @@
  * Total Commander-style letter answers for the file-operation prompts that ask
  * for a decision: the clash prompt (`transfer/TransferConflictDialog.svelte`,
  * inside the progress dialog and the main window's `OperationConflictDialog`)
- * and the transfer error dialog. Every choice has ONE fixed letter, pressed
+ * and the transfer error dialog, plus the operation queue's row buttons, which
+ * read their letters the same way. Every choice has ONE fixed letter, pressed
  * bare, and the button shows it in a chip (`Button`'s `keyHint`).
  *
  * The letters are not translated and never derived from a label: they're muscle
@@ -45,6 +46,19 @@ export const ERROR_KEYS = {
   retry: 'R',
   copyAnyway: 'A',
   close: 'C',
+} as const
+
+/**
+ * The operation queue's row letters, acting on the row under the queue's cursor
+ * (`queue/queue-keys.ts`). Cancel and Rollback match the clash prompt's, so a
+ * hand that learned them there finds them here. No arming delay: nothing raises
+ * the queue mid-keystroke, and Rollback asks first anyway.
+ */
+export const QUEUE_ROW_KEYS = {
+  show: 'S',
+  pauseOrResume: 'P',
+  cancel: 'C',
+  rollback: 'B',
 } as const
 
 /** One answer a prompt offers by key. */
