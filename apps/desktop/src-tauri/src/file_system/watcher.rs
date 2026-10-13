@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, RwLock};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
@@ -222,31 +222,54 @@ pub(crate) fn coverage_for_listings(listing_ids: &[String]) -> WatchCoverage {
 ///
 /// The listing doesn't depend on the watch: entries are read, sorted, and cached
 /// before this is called. The watch only has to be in place before the user notices a
-/// change on disk, and the window between the read and the arm is unchanged in
-/// duration by detaching it, since it's the same work either way.
+/// change on disk. A change that lands between the read and the arm is caught by
+/// [`arm_and_reconcile`]'s mtime check, since the new stream only reports what happens
+/// after it starts.
 pub fn start_watching_detached(listing_id: &str, path: &Path) {
     let listing_id = listing_id.to_string();
     let path = path.to_path_buf();
+    // Taken here, on the open path, not inside the task: the blocking pool can queue the
+    // task under load, and a change in that wait must still count as "after the open".
+    let opened_at = SystemTime::now();
     // `spawn_blocking`, not `spawn`: arming is a chain of blocking syscalls, so it must
     // not sit on a runtime worker. `tauri::async_runtime` rather than `tokio` because
     // the sync `list_directory_start` path calls this from the IPC handler thread,
     // which has no Tokio runtime context.
-    tauri::async_runtime::spawn_blocking(move || arm_and_reconcile(&listing_id, &path));
+    tauri::async_runtime::spawn_blocking(move || arm_and_reconcile(&listing_id, &path, opened_at, start_watching));
 }
 
-/// Arms the watch, then hands it back if the listing ended while we were arming.
+/// The coarsest directory mtime a volume Cmdr watches can keep: FAT and some SMB
+/// servers store 2 s ticks. APFS stores nanoseconds.
+const MTIME_GRANULARITY: Duration = Duration::from_secs(2);
+
+/// Arms the watch, hands it back if the listing ended while we were arming, and
+/// re-reads the listing if the directory changed before the stream started.
 ///
-/// The reconcile half is not optional. `list_directory_end` removes the listing from
-/// the listing cache and then removes a watch that a detached arm may not have inserted
-/// yet, so the arm can land on a listing nobody will ever close again. Left alone that
-/// strands an FSEvents stream, its CFRunLoop thread, and a manager entry for the life
-/// of the process, each still costing `fseventsd` fan-out.
+/// **Liveness.** `list_directory_end` removes the listing from the listing cache and
+/// then removes a watch that a detached arm may not have inserted yet, so the arm can
+/// land on a listing nobody will ever close again. Left alone that strands an FSEvents
+/// stream, its CFRunLoop thread, and a manager entry for the life of the process, each
+/// still costing `fseventsd` fan-out. The listing cache membership is the signal because
+/// `list_directory_end` is what clears it, and reading it is a plain lookup that doesn't
+/// bump `last_accessed_ms` (this is background work, not user activity — see
+/// `crates/cmdr-listing/CLAUDE.md`).
 ///
-/// the listing cache membership is the liveness signal because `list_directory_end` is
-/// what clears it, and reading it is a plain lookup that doesn't bump `last_accessed_ms`
-/// (this is background work, not user activity — see `crates/cmdr-listing/CLAUDE.md`).
-pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
-    if let Err(e) = start_watching(listing_id, path) {
+/// **The change the stream can't see.** The stream starts "since now", and under
+/// fseventsd load the arm lands seconds after the read, so a create in that window was
+/// never shown until the user navigated away and back. One `stat` before and after the
+/// arm decides it ([`arm_missed_a_change`]); the full re-read runs only when the mtime
+/// says it must, so a huge folder doesn't pay a second readdir per navigation.
+///
+/// `arm` is [`start_watching`] in production; a test passes one that makes a change land
+/// while the arm is in flight.
+pub(super) fn arm_and_reconcile(
+    listing_id: &str,
+    path: &Path,
+    opened_at: SystemTime,
+    arm: impl FnOnce(&str, &Path) -> Result<(), String>,
+) {
+    let mtime_before = dir_mtime(path);
+    if let Err(e) = arm(listing_id, path) {
         log::warn!("Failed to start watcher: {}", e);
         return;
     }
@@ -257,6 +280,53 @@ pub(super) fn arm_and_reconcile(listing_id: &str, path: &Path) {
             listing_id
         );
         stop_watching(listing_id);
+        return;
+    }
+
+    if arm_missed_a_change(mtime_before, dir_mtime(path), opened_at) {
+        log::debug!(
+            "start_watching_detached: {} may have changed before its watch started, re-reading",
+            path.display()
+        );
+        let lid = listing_id.to_string();
+        // `tauri::async_runtime::spawn`: this runs on the blocking pool, outside any
+        // Tokio context (see `handle_directory_change_incremental`).
+        tauri::async_runtime::spawn(async move { handle_directory_change(&lid).await });
+    }
+}
+
+fn dir_mtime(path: &Path) -> Option<SystemTime> {
+    std::fs::metadata(path).and_then(|m| m.modified()).ok()
+}
+
+/// Whether the directory may have changed between the listing's read and its watch
+/// starting, so the listing must be re-read.
+///
+/// - The mtime moved across the arm: a child was created, removed, or renamed.
+/// - The mtime before the arm is within [`MTIME_GRANULARITY`] of the open, or later. A
+///   change in the same coarse tick as the last one leaves the mtime unchanged, and so
+///   does one between the read and the first stat, so a recently touched directory
+///   can't be trusted to have stood still. Real navigation rarely lands here.
+/// - Either `stat` failed: the re-read sorts out a vanished or unreadable directory.
+///
+/// Edits inside an existing child don't touch the directory's mtime, so a size change in
+/// the window is still missed; the next event on that file corrects it. Assumes the
+/// volume's clock agrees with ours within a tick; a server clock running ahead only
+/// costs extra re-reads.
+pub(super) fn arm_missed_a_change(
+    mtime_before: Option<SystemTime>,
+    mtime_after: Option<SystemTime>,
+    opened_at: SystemTime,
+) -> bool {
+    let (Some(before), Some(after)) = (mtime_before, mtime_after) else {
+        return true;
+    };
+    if before != after {
+        return true;
+    }
+    match opened_at.checked_sub(MTIME_GRANULARITY) {
+        Some(trust_from) => before >= trust_from,
+        None => true,
     }
 }
 

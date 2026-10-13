@@ -366,9 +366,10 @@ fn a_detached_arm_attaches_the_watch() {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
-    use crate::file_system::watcher::arm_and_reconcile;
+    use crate::file_system::watcher::{arm_and_reconcile, start_watching};
     use crate::test_support::TestDir;
     use cmdr_fs::testing::unique_test_id;
+    use std::time::SystemTime;
 
     let scratch = TestDir::new("detached-arm-orphan");
     let watched = scratch.join("dir");
@@ -378,11 +379,107 @@ fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
     // it beats the arm.
     let listing_id = unique_test_id("detached-arm-orphan");
 
-    arm_and_reconcile(&listing_id, &watched);
+    arm_and_reconcile(&listing_id, &watched, SystemTime::now(), start_watching);
 
     assert!(
         !is_watching(&listing_id),
         "an arm for an already-ended listing must not leave its watch behind"
+    );
+}
+
+/// A file created while the detached arm is in flight: after the listing read, before
+/// the FSEvents stream exists. The stream starts "since now", so it never reports that
+/// create, and under fseventsd load the arm lands seconds late (4–10 s measured in E2E,
+/// 2026-10-13). Without the reconcile re-read the file stays missing from the pane until
+/// the user navigates away and back.
+///
+/// The directory's mtime is pushed into the past first, so the re-read here is earned by
+/// the mtime MOVING, not by the "modified too recently to trust" rule.
+///
+/// Named `a_detached_arm_` so it shares the arming tests' 20 s nextest cap.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight() {
+    use crate::file_system::volume::backends::list_directory_core;
+    use crate::file_system::watcher::{arm_and_reconcile, start_watching, stop_watching};
+    use crate::test_support::{TestDir, wait_until};
+    use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::TestListing;
+    use std::time::{Duration, SystemTime};
+
+    let scratch = TestDir::new("arm-in-flight-change");
+    let watched = scratch.join("dir");
+    std::fs::create_dir(&watched).expect("scratch dir is writable");
+    std::fs::write(watched.join("alpha.txt"), b"a").expect("scratch dir is writable");
+    filetime::set_file_mtime(&watched, filetime::FileTime::from_unix_time(1_600_000_000, 0))
+        .expect("the scratch dir's mtime is settable");
+
+    // An unregistered volume id, as in the replaced-root test: the re-read takes the
+    // `list_directory_core` fallback, a real readdir.
+    let listing = TestListing::new()
+        .volume(&unique_test_id("arm-in-flight-vol"))
+        .path(&watched)
+        .entries(list_directory_core(&watched).expect("the fresh dir lists"))
+        .insert(crate::listing_host::listings(), "arm-in-flight-change");
+
+    arm_and_reconcile(listing.id(), &watched, SystemTime::now(), |id, path| {
+        std::fs::write(path.join("late.txt"), b"l").expect("scratch dir is writable");
+        start_watching(id, path)
+    });
+
+    // Generous deadline: the re-read hops onto the async runtime, which a saturated
+    // `rust-tests` run starves. A satisfied wait returns immediately.
+    wait_until(
+        Duration::from_secs(30),
+        "the file created mid-arm to reach the listing",
+        || listing.entry_names().iter().any(|name| name == "late.txt"),
+    );
+
+    stop_watching(listing.id());
+}
+
+/// The reconcile's decision, one rule per case. `opened_at` is a fixed instant, so the
+/// "recent" boundary is exact.
+#[test]
+fn an_arm_rereads_only_when_the_directory_mtime_cannot_rule_out_a_change() {
+    use crate::file_system::watcher::arm_missed_a_change;
+    use std::time::{Duration, SystemTime};
+
+    let opened_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
+    let old = opened_at - Duration::from_secs(3600);
+    let secs = Duration::from_secs;
+
+    assert!(
+        !arm_missed_a_change(Some(old), Some(old), opened_at),
+        "an old, unmoved mtime is trusted"
+    );
+    assert!(
+        arm_missed_a_change(Some(old), Some(old + secs(1)), opened_at),
+        "a moved mtime means a child changed mid-arm"
+    );
+    assert!(
+        arm_missed_a_change(
+            Some(opened_at - Duration::from_millis(1500)),
+            Some(opened_at - Duration::from_millis(1500)),
+            opened_at
+        ),
+        "an mtime within a 2 s tick of the open could hide a same-tick change"
+    );
+    assert!(
+        !arm_missed_a_change(Some(opened_at - secs(3)), Some(opened_at - secs(3)), opened_at),
+        "an mtime a full tick before the open is trusted"
+    );
+    assert!(
+        arm_missed_a_change(Some(opened_at + secs(1)), Some(opened_at + secs(1)), opened_at),
+        "an mtime after the open (a change in the blocking-pool wait) is re-read"
+    );
+    assert!(
+        arm_missed_a_change(None, Some(old), opened_at),
+        "a failed stat before is re-read"
+    );
+    assert!(
+        arm_missed_a_change(Some(old), None, opened_at),
+        "a failed stat after is re-read"
     );
 }
 

@@ -20,14 +20,13 @@ this app hosts it from `listing_host/`.
 - **Tag writes (`tags.rs`) touch ONLY `_kMDItemUserTags`, never `com.apple.FinderInfo`** (zeroing it destroys custom
   folder icons), and encode a **binary** plist.
 - **Never call macOS frameworks from rayon or any constrained-stack pool**: FileProvider XPC blows the 2 MB stack and
-  can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`), not a per-call
-  `std::thread::scope`. § "Threading".
+  can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`). § "Threading".
 - **Watcher rules.** Each has its own section in `DETAILS.md`; read them before touching `watcher.rs`:
   - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`.
   - The watcher is the engine's first `ListingObserver` and keeps only the OS half: changes go to
     `Listings::observe_children`, full re-reads to `Listings::refresh`.
-  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (an inline arm was p90 653 ms of dead
-    time), keeping all four rules that made it cheap.
+  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (inline was p90 653 ms of dead time).
+    A late arm misses earlier changes, so `arm_missed_a_change` (mtime) gates a re-read, ❌ never an unconditional one.
   - Rebase event paths (`rebase_event_path`), or firmlinks (`/tmp`, `/var`, `/etc`) plus a symlinked watch root drop
     every event.
   - A created, removed, or renamed watch ROOT forces a full re-read; ❌ don't add `Modify(Metadata(_))`, since every

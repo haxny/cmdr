@@ -576,6 +576,28 @@ the life of the process, each one still costing `fseventsd` fan-out. Pinned by
 `watcher_test::a_detached_arm_that_lost_the_race_leaves_no_watch_behind`, which drives `arm_and_reconcile` directly so
 the losing interleaving is the only one under test.
 
+**A change that lands before the stream starts is caught by an mtime check.** notify starts the FSEvents stream
+"since now", so a child created between the listing's read and the arm is never reported, and the pane missed it
+until the user navigated away and back. The arm is not short: under fseventsd load it landed 4–10 s after the open
+(verified on macOS 27, release E2E build at load 7–18, `ended while arming` lines in the debug file log, 2026-10-13;
+a standalone notify 8.2 loop measured each `watch` at 40–900 ms and each teardown at up to 660 ms on the same host).
+`arm_and_reconcile` stats the directory before and after arming and calls `handle_directory_change` only when
+`arm_missed_a_change` says so:
+
+- The mtime moved across the arm: a child was created, removed, or renamed.
+- The pre-arm mtime is within `MTIME_GRANULARITY` (2 s, FAT's and some SMB servers' tick) of `opened_at`, or later.
+  That covers a change in the same coarse tick as the previous one (the mtime doesn't move), a change between the read
+  and the first stat, and one while the task waited in the blocking pool. `opened_at` is taken on the open path for
+  that last reason.
+- Either stat failed: the re-read reports a vanished directory.
+
+Decision/Why: one stat pair per navigation, with the full readdir only when the mtime can't rule a change out, because
+an unconditional re-read doubles the I/O of opening a 100k-entry folder. Known gaps: an edit INSIDE an existing child
+doesn't touch the directory's mtime, so a size change in the window waits for that file's next event; and a volume
+clock running more than a tick behind ours can hide a same-tick change (one running ahead only costs re-reads). Pinned
+by `watcher_test::a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight` (the arm closure writes the file)
+and `an_arm_rereads_only_when_the_directory_mtime_cannot_rule_out_a_change`.
+
 `watcher_start_ms` in the `stall_probe::listing` line now measures only the dispatch, so it should read ~0. A
 regression that puts arming back on the critical path shows up there first.
 
