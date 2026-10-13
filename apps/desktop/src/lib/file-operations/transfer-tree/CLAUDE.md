@@ -21,7 +21,7 @@ over a virtual window. The progress dialog and the queue window embed `TransferT
   Ticks pull at most every 200 ms (a clock, ❌ never animation frames: the E2E app gets none), the last one always.
   `unknown_operation` means "finished" (keep the last rows, stop asking); `not_a_transfer` renders nothing.
 - **A scroll alone never pauses following**: the tree's own follow scrolls and the browser clamping a shrunk list fire
-  the same event. INTENT pauses it: a wheel, a scrollbar press, a keyboard move.
+  the same event. INTENT pauses it: a wheel, a scrollbar press, a keyboard move, a row click.
 - **Rows are slots keyed by flat index**, and the focused row stays rendered wherever it scrolled to; the cursor follows
   its row by id when rows shift above it. ❌ Never key slots by row id: a keyed move blurs the focused row.
 - **Failure text is the typed pipeline's title** (`getUserFriendlyMessage`), ❌ never new prose.

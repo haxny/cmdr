@@ -426,7 +426,9 @@ next to the buttons that do the same.
   (focusing would collapse it).
 - **The cursor looks like the file list's** (`apps/desktop/src/app-file-list.css`): `--color-cursor-inactive` with the
   accent hairline, `--color-cursor-active` while the grid has focus, winning over the selection fill. It IS the row's
-  focus indicator, so the row drops the browser ring; a focused button keeps the global one.
+  focus indicator, so the row drops the browser ring; a focused button keeps the global one. While focus is inside the
+  row's live tree, the row's cursor dims to inactive (`:has([data-queue-tree]:focus-within)`): the tree's own cursor,
+  drawn the same way, is the active one, so exactly one accent cursor says where the keys go.
 
 ### Decision: an ARIA grid, not a listbox
 

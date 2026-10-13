@@ -216,6 +216,24 @@ describe('TransferTree', () => {
     expect(followButton()).toBeNull()
   })
 
+  it('draws its cursor where a click or a key put it, and nowhere before that', async () => {
+    await render('folders-5x1000', 3)
+    const underCursor = () => rows().filter((row) => row.classList.contains('is-under-cursor'))
+    expect(underCursor()).toHaveLength(0)
+
+    const clicked = rowNamed('track_0002.flac')
+    clicked.focus()
+    clicked.click()
+    await settle()
+    expect(underCursor()).toEqual([rowNamed('track_0002.flac')])
+    // A click picks a row to look at: following would scroll it away.
+    expect(followButton()).not.toBeNull()
+
+    key('ArrowDown')
+    await settle()
+    expect(underCursor().map((row) => row.querySelector('.label')?.textContent)).toEqual(['track_0003.flac'])
+  })
+
   it('shows Follow as a word with its F key chip, no glyph', async () => {
     await render('flat-5000', 3)
     rows()[0].focus()

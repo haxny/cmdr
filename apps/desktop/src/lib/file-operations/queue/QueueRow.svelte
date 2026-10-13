@@ -706,7 +706,9 @@
         box-shadow: inset 0 0 0 1px var(--color-cursor-outline);
     }
 
-    :global(.queue-grid:focus-within) .queue-row.is-under-cursor {
+    /* While focus is inside the row's live tree, the tree's cursor is the active one, and
+       this one dims like an unfocused list's: one accent cursor says where the keys go. */
+    :global(.queue-grid:focus-within) .queue-row.is-under-cursor:not(:has([data-queue-tree]:focus-within)) {
         background: var(--color-cursor-active);
     }
 

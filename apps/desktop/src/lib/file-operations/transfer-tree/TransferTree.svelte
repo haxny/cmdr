@@ -356,9 +356,15 @@
         return el ? Number(el.dataset.index) : null
     }
 
+    /** A chevron toggles its folder (following goes on); anywhere else picks the row to look
+     *  at, so following pauses rather than scroll it away. Focus already put the cursor there. */
     function onClick(event: MouseEvent): void {
         const index = rowIndexOf(event.target)
-        if (index === null || !(event.target as HTMLElement).closest('[data-chevron]')) return
+        if (index === null) return
+        if (!(event.target as HTMLElement).closest('[data-chevron]')) {
+            tree.pauseFollowing()
+            return
+        }
         const row = rowFor(index)
         if (row) tree.toggle(row.id, row.expanded)
     }
@@ -461,6 +467,7 @@
                                     {operation}
                                     path={pathFor(index, row)}
                                     tabStop={tabbable && index === tabStop}
+                                    cursor={index === focusIndex}
                                 />
                             </div>
                         {/if}

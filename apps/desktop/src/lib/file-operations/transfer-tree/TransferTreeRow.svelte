@@ -30,11 +30,13 @@
         path: string
         /** The roving tab stop: the one row Tab lands on. */
         tabStop: boolean
+        /** The tree's cursor is on this row: drawn like the file list's, and the focus indicator. */
+        cursor?: boolean
         /** A sticky header mirroring the row at `index`, not a treeitem. */
         pinned?: boolean
     }
 
-    const { row, index, axis, operation, path, tabStop, pinned = false }: Props = $props()
+    const { row, index, axis, operation, path, tabStop, cursor = false, pinned = false }: Props = $props()
 
     const isFolder = $derived(row.kind === 'folder')
     const segments = $derived(countSegments(row, operation))
@@ -50,6 +52,7 @@
 <div
     class="tree-row"
     class:at-work={atWork}
+    class:is-under-cursor={cursor}
     role={pinned ? undefined : 'treeitem'}
     aria-level={pinned ? undefined : row.depth + 1}
     aria-posinset={pinned ? undefined : row.posInSet}
@@ -117,13 +120,32 @@
         user-select: none;
     }
 
-    .tree-row:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: -2px;
-    }
-
     .at-work {
         color: var(--color-text-primary);
+    }
+
+    /* The cursor is the file list's (`app-file-list.css`) and the queue's: a quiet
+       fill with an accent hairline, accent while the tree has focus, dimmed when it
+       doesn't, the way an unfocused pane dims its cursor. A click shows it too, which
+       a `:focus-visible` ring never did. Under its tint the muted tones read at full
+       contrast, as in the queue's rows. */
+    .tree-row.is-under-cursor {
+        background: var(--color-cursor-inactive);
+        box-shadow: inset 0 0 0 1px var(--color-cursor-outline);
+        color: var(--color-text-primary);
+    }
+
+    :global([role='tree']:focus-within) .tree-row.is-under-cursor {
+        background: var(--color-cursor-active);
+    }
+
+    .tree-row.is-under-cursor :is(.chevron, .kind-icon, .count) {
+        color: var(--color-text-primary);
+    }
+
+    /* The cursor IS the focus indicator, so the browser's ring would draw a second box. */
+    .tree-row:focus-visible {
+        outline: none;
     }
 
     .chevron,
