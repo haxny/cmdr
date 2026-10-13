@@ -1,14 +1,3 @@
-<script lang="ts" module>
-    /**
-     * The host dialog's `containerStyle` while this body shows: as wide as the button
-     * grid asks (a label never wraps, so a long translation widens the dialog), at least
-     * `floorPx`, and inside the window. Only the grid sets that width (the style block).
-     */
-    export function conflictDialogWidthStyle(floorPx: number): string {
-        return `width: max-content; min-width: ${String(floorPx)}px; max-width: calc(100vw - 2 * var(--spacing-xl))`
-    }
-</script>
-
 <script lang="ts">
     import { untrack } from 'svelte'
     import Icon from '#lib/ui/Icon.svelte'

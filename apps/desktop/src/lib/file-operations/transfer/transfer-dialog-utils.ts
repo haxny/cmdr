@@ -29,6 +29,16 @@ export function generateTitle(operationType: TransferOperationType, files: numbe
 }
 
 /**
+ * A host dialog's `containerStyle` while the clash prompt (`TransferConflictDialog.svelte`)
+ * is its body: as wide as the prompt's button grid asks (a label never wraps, so a long
+ * translation widens the dialog), at least `floorPx`, and inside the window. Only the
+ * grid sets that width; the prompt's text blocks are `contain: inline-size`.
+ */
+export function conflictDialogWidthStyle(floorPx: number): string {
+  return `width: max-content; min-width: ${String(floorPx)}px; max-width: calc(100vw - 2 * var(--spacing-xl))`
+}
+
+/**
  * The folder a file sits in, for a dialog that has named the file and now has
  * to say WHICH one it means. A conflict prompt showing a bare `f001` is
  * ambiguous the moment two folders hold that name, and a copy of a deep tree is
