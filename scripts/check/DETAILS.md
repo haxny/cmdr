@@ -713,8 +713,8 @@ on:
   declares in `rustScannerJurisdictions`, so its cache key and the trees it walks come from one decision;
   `TestScannerInputsMatchTheirJurisdiction` fails when they disagree either way.
 - `rustAppTreeInputs` — for the scanners whose jurisdiction is `AppTreeOnly`. A crate edit can't change their verdict.
-- `rustWorkspaceConfigInputs` alone is enough for `cargo-audit` and `cargo-deny`: both answer a question about the
-  lockfile, not about anybody's sources.
+- `rustWorkspaceConfigInputs` alone is enough for `cargo-deny`: it answers a question about the lockfile, not about
+  anybody's sources.
 
 ❌ `tools/**` is not in any of them. `tools/intellij-plugin` and `tools/privatesize-poc` are outside the cargo
 workspace, so no Rust lane compiles or scans either one; carrying them cost 22 commits a full Rust battery plus both E2E
@@ -1000,7 +1000,7 @@ the lane selects that fixture's APP-crate cells by, and the backend crate whose 
 
 **Decision**: `IsFast` field on `CheckDefinition` and a curated `--fast` pre-commit lane. **Why**: A pre-commit run
 should finish in ~10s so it actually gets used. The list is editorially curated, not derived from CSV timings: warm
-average is what matters, but cold-cache outliers (`cargo-audit` spiking to ~3 min on advisory DB refresh) would silently
+average is what matters, but cold-cache outliers (an advisory scanner spiking to ~3 min on a DB refresh) would silently
 make the lane unreliable on the first run of the day. Mirrors the `IsSlow` / `CIOnly` field pattern (negative-sense
 boolean default, same colocated style). Mutually exclusive with `--include-slow` / `--only-slow` to keep the semantics
 unambiguous: "give me the fast lane" and "give me the slow lane" can't both be true. Named check invocations bypass the

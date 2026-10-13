@@ -104,7 +104,6 @@ var rustCargoLanes = map[string]string{
 	"desktop-rust-clippy-mimalloc":   "`--workspace` via CargoSelectionArgs, with `cmdr/mimalloc` in a private target dir",
 	"desktop-rust-rustdoc":           "every first-party member named explicitly; the vendored fork is skipped, since `--all-features` turns on two mutually exclusive arms there",
 	"desktop-rust-cargo-deny":        "reads the whole `cargo metadata` graph from the workspace root",
-	"desktop-rust-cargo-audit":       "reads the workspace `Cargo.lock`",
 	"desktop-rust-cargo-machete":     "handed each member's directory (it walks dirs, not the cargo graph)",
 	"desktop-rust-cargo-udeps":       "`--workspace` via CargoSelectionArgs",
 	"desktop-rust-fuzz":              "`cargo fuzz` in `fuzz/`, a crate outside the workspace that takes four members by path (`cmdr-adb`, `cmdr-archive`, `cmdr-s3`, `cmdr-webdav`); a targeted smoke, not a sweep",

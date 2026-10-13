@@ -231,8 +231,9 @@ const toc = [
             failure means a fix follows; it doesn't block the change.
         </li>
         <li>
-            <strong>Every day, on GitHub</strong>: the Rust dependency vulnerability and license scans
-            (<code>cargo-audit</code> and <code>cargo-deny</code>) against the locked versions.
+            <strong>Every day, on GitHub</strong>: the dependency vulnerability and license scans
+            (<code>osv-scanner</code> over every lockfile, and <code>cargo-deny</code> for Rust) against the locked
+            versions.
         </li>
         <li>
             <strong>Every six days, on GitHub</strong>: <code>govulncheck</code> for the Go build scripts, an
@@ -275,10 +276,10 @@ const toc = [
             only SFTP logins with an RSA key file.
         </li>
         <li>
-            <strong>When the scans run</strong>: <code>cargo-deny</code> runs on the maintainer's Mac whenever the
-            dependencies or the policy change. On GitHub, <code>cargo-deny</code> and <code>cargo-audit</code> (which
-            also covers Linux-only and test-only crates) check the locked versions every day. So a new advisory for a
-            dependency that hasn't changed shows up within a day.
+            <strong>When the scans run</strong>: <code>cargo-deny</code> and <code>osv-scanner</code> run on the
+            maintainer's Mac whenever the dependencies or the policy change. On GitHub, both check the locked versions
+            every day. <code>osv-scanner</code> also covers Linux-only and test-only crates, plus the JavaScript, Go,
+            and Python lockfiles. So a new advisory for a dependency that hasn't changed shows up within a day.
         </li>
         <li>
             <strong>A three-day wait</strong>: a new version of any dependency is used only once it's been public for

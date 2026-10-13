@@ -27,8 +27,8 @@ type CacheEntry struct {
 	// Message is the pass's summary line, replayed on a cache hit so the skip line
 	// shows real context ("12 tests passed") rather than a bare "(cached)".
 	Message string `json:"message"`
-	// PassedAt is when the cached pass ran (informational; helps a human reading
-	// the cache file).
+	// PassedAt is when the cached pass ran. A check with a `CacheTTL` re-runs once
+	// its pass is older than that, inputs unchanged or not.
 	PassedAt time.Time `json:"passedAt"`
 }
 

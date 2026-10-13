@@ -66,8 +66,8 @@ jobs:
         run: go build -o check .
         working-directory: ./scripts/check
 
-      - name: Run cargo-audit
-        run: ./scripts/check/check --check desktop-rust-cargo-audit --ci
+      - name: Run osv-scanner
+        run: ./scripts/check/check --check osv-scanner --ci
 
       - name: Run cargo-deny
         run: ./scripts/check/check --check desktop-rust-cargo-deny --ci

@@ -1,11 +1,13 @@
 name: Advisory scan
 
-# Daily check of `Cargo.lock` against the RustSec advisory database, so a new
-# advisory for a dependency that hasn't changed shows up within a day. Both
-# checks read the lockfile and crate metadata only, nothing compiles, so this
-# is cheap next to the every-6-days `slow-checks.yml` lane (which also runs
-# them, beside `cargo-udeps` and the rest). The `/trust/development` page on
-# the website states this one-day cadence: change both together.
+# Daily check of every lockfile against the advisory databases, so a new
+# advisory for a dependency that hasn't changed shows up within a day.
+# `osv-scanner` sweeps every tracked lockfile (Rust, npm, Go, Python) the way
+# OpenSSF Scorecard's Vulnerabilities check does; `cargo-deny` reads the
+# shipped macOS Rust graph. Neither compiles anything, so this is cheap next to
+# the every-6-days `slow-checks.yml` lane (which also runs them, beside
+# `cargo-udeps` and the rest). The `/trust/development` page on the website
+# states this one-day cadence: change both together.
 # GitHub automatically emails repo admins on failure.
 on:
   schedule:
@@ -17,7 +19,7 @@ permissions:
 
 jobs:
   advisories:
-    name: Rust advisories
+    name: Advisories
     runs-on: ubuntu-latest
 
     steps:
@@ -30,26 +32,27 @@ jobs:
       - name: Install tools with mise
         run: mise install
 
-      # The checks `cargo install` their pinned tool versions when missing, which
-      # compiles for minutes. The versions live in the two check files, so a
-      # version bump there changes the key and reinstalls. A daily run keeps
-      # this cache inside GitHub's 7-day eviction window.
-      - name: Cache cargo-audit and cargo-deny
+      # The checks install their pinned tool versions when missing: `cargo install`
+      # compiles cargo-deny for minutes, and `go install` builds osv-scanner. The
+      # versions live in the check files (and the Go toolchain in `.mise.toml`), so a
+      # bump changes the key and reinstalls. A daily run keeps this cache inside
+      # GitHub's 7-day eviction window.
+      - name: Cache cargo-deny and osv-scanner
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            ~/.cargo/bin/cargo-audit
             ~/.cargo/bin/cargo-deny
+            node_modules/.cache/cmdr-go-tools/osv-scanner
           key:
-            ${{ runner.os }}-advisory-tools-${{ hashFiles('scripts/check/checks/desktop-rust-cargo-audit.go',
-            'scripts/check/checks/desktop-rust-cargo-deny.go') }}
+            ${{ runner.os }}-advisory-tools-${{ hashFiles('scripts/check/checks/desktop-rust-cargo-deny.go',
+            'scripts/check/checks/osv-scanner.go', '.mise.toml') }}
 
       - name: Build check tool
         run: go build -o check .
         working-directory: ./scripts/check
 
-      - name: Run cargo-audit
-        run: ./scripts/check/check --check desktop-rust-cargo-audit --ci
+      - name: Run osv-scanner
+        run: ./scripts/check/check --check osv-scanner --ci
 
       - name: Run cargo-deny
         run: ./scripts/check/check --check desktop-rust-cargo-deny --ci

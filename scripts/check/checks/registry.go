@@ -66,20 +66,6 @@ var AllChecks = []CheckDefinition{
 		Run:         RunRustdoc,
 	},
 	{
-		ID:          "desktop-rust-cargo-audit",
-		CpuWeight:   1,
-		Nickname:    "cargo-audit",
-		DisplayName: "cargo-audit",
-		App:         AppDesktop,
-		Tech:        "🦀 Rust",
-		DependsOn:   nil,
-		// The lockfile is the whole question: it audits resolved versions against an
-		// advisory database, and reads no source. A manifest edit that doesn't move
-		// `Cargo.lock` can't change the answer.
-		Inputs: rustWorkspaceConfigInputs,
-		Run:    RunCargoAudit,
-	},
-	{
 		ID:          "desktop-rust-cargo-deny",
 		CpuWeight:   1,
 		Nickname:    "cargo-deny",
@@ -87,10 +73,11 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
-		// Same as cargo-audit: a question about the resolved graph and the policy
-		// file, never about anybody's source.
-		Inputs: inputs(rustWorkspaceConfigInputs, []string{"deny.toml"}),
-		Run:    RunCargoDeny,
+		// A question about the resolved graph and the policy file, never about
+		// anybody's source. The advisory half moves daily on its own, hence the TTL.
+		Inputs:   inputs(rustWorkspaceConfigInputs, []string{"deny.toml"}),
+		CacheTTL: advisoryCacheTTL,
+		Run:      RunCargoDeny,
 	},
 	{
 		ID:          "desktop-rust-cargo-machete",
@@ -1568,6 +1555,7 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🐹 Go",
 		DependsOn:   nil,
 		Inputs:      goSourceInputs,
+		CacheTTL:    advisoryCacheTTL,
 		Run:         RunGovulncheck,
 	},
 
@@ -1803,6 +1791,23 @@ var AllChecks = []CheckDefinition{
 		IsFast:      true,
 		Inputs:      workflowsInputs,
 		Run:         RunWorkflowsHardening,
+	},
+	{
+		ID:          "osv-scanner",
+		Nickname:    "osv",
+		DisplayName: "osv-scanner (every lockfile)",
+		App:         AppOther,
+		Tech:        "🔒 Security",
+		DependsOn:   nil,
+		CpuWeight:   1,
+		// Every lockfile type osv-scanner reads, plus the per-directory ignore files. A new
+		// lockfile type it learns to read waits for the daily TTL re-run at worst.
+		Inputs: inputs([]string{
+			"**/Cargo.lock", "**/pnpm-lock.yaml", "**/package-lock.json", "**/yarn.lock",
+			"**/go.mod", "**/go.sum", "**/requirements*.txt", "**/osv-scanner.toml",
+		}),
+		CacheTTL: advisoryCacheTTL,
+		Run:      RunOSVScanner,
 	},
 	{
 		ID:          "workflows-rustup",

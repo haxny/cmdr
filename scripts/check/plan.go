@@ -100,7 +100,8 @@ func planCache(ctx *checks.CheckContext, flags *cliFlags, selected []checks.Chec
 			continue
 		}
 		entry, ok := plan.cache.Entries[def.ID]
-		if ok && entry.Fingerprint == plan.fingerprints[def.ID] {
+		expired := def.CacheTTL > 0 && time.Since(entry.PassedAt) >= def.CacheTTL
+		if ok && entry.Fingerprint == plan.fingerprints[def.ID] && !expired {
 			plan.cached = append(plan.cached, cachedHit{def: def, message: entry.Message})
 			continue
 		}

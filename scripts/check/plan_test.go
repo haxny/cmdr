@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"cmdr/scripts/check/checks"
 )
@@ -77,6 +78,45 @@ func TestPlanCacheHitSkipsCheck(t *testing.T) {
 	}
 	if len(plan.cached) != 1 || plan.cached[0].def.ID != "c1" {
 		t.Fatalf("expected c1 served from cache, got %+v", plan.cached)
+	}
+}
+
+// seedCacheAt is seedCache with the pass dated, for the CacheTTL tests.
+func seedCacheAt(t *testing.T, ctx *checks.CheckContext, def checks.CheckDefinition, passedAt time.Time) {
+	t.Helper()
+	seedCache(t, ctx, def)
+	c := checks.LoadCheckCache(ctx.RootDir)
+	entry := c.Entries[def.ID]
+	entry.PassedAt = passedAt
+	c.Entries[def.ID] = entry
+	if err := c.Save(ctx.RootDir); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPlanCacheTTLExpiresAPassOnUnchangedInputs(t *testing.T) {
+	dir := planGitRepo(t, map[string]string{"Cargo.lock": "v1"})
+	ctx := &checks.CheckContext{RootDir: dir}
+	def := noopCheck("advisories", "Cargo.lock")
+	def.CacheTTL = 24 * time.Hour
+	seedCacheAt(t, ctx, def, time.Now().Add(-25*time.Hour))
+
+	plan := planCache(ctx, &cliFlags{}, []checks.CheckDefinition{def})
+	if len(plan.toRun) != 1 || len(plan.cached) != 0 {
+		t.Fatalf("a pass older than CacheTTL must re-run, got toRun=%v cached=%v", plan.toRun, plan.cached)
+	}
+}
+
+func TestPlanCacheTTLKeepsAFreshPass(t *testing.T) {
+	dir := planGitRepo(t, map[string]string{"Cargo.lock": "v1"})
+	ctx := &checks.CheckContext{RootDir: dir}
+	def := noopCheck("advisories", "Cargo.lock")
+	def.CacheTTL = 24 * time.Hour
+	seedCacheAt(t, ctx, def, time.Now().Add(-time.Hour))
+
+	plan := planCache(ctx, &cliFlags{}, []checks.CheckDefinition{def})
+	if len(plan.toRun) != 0 || len(plan.cached) != 1 {
+		t.Fatalf("a pass younger than CacheTTL must stay a hit, got toRun=%v cached=%v", plan.toRun, plan.cached)
 	}
 }
 

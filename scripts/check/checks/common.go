@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // App represents the application a check belongs to.
@@ -152,6 +153,12 @@ type CheckDefinition struct {
 	// Declaring it costs no wall clock (they were serial already) and hands that
 	// weight back to the lanes that can actually use it.
 	Exclusive string
+	// CacheTTL caps how long a cached pass is trusted, for a check whose answer
+	// depends on the outside world as well as its inputs: an advisory database
+	// gains entries daily while the lockfiles it reads stay put, so without it a
+	// pass stays "OK (cached)" for as long as nobody touches a lockfile. 0 means
+	// the inputs alone decide.
+	CacheTTL time.Duration
 	// NotInCI documents WHY this check intentionally has no step in any GitHub
 	// workflow. The ci-coverage check enforces the invariant both ways: a check
 	// that's neither referenced by a workflow nor carrying a NotInCI reason

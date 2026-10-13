@@ -8,14 +8,14 @@ How the GitHub workflows fit together, and the invariants that keep them honest.
 | Workflow                | Trigger                                 | What it does                                                                                         |
 | ----------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `ci.yml`                | PRs, pushes to main, manual             | Main suite. Change detection gates the per-app jobs; `hygiene` always runs; deploys website on green |
-| `slow-checks.yml`       | Every 6 days (3 AM UTC), manual         | cargo-audit/deny/udeps, govulncheck, type-aware ESLint, website Docker build, manual 30-min SMB soak |
-| `advisories.yml`        | Daily (4:17 AM UTC), manual             | cargo-audit and cargo-deny on `Cargo.lock` only (no compile): new advisories surface in a day        |
+| `slow-checks.yml`       | Every 6 days (3 AM UTC), manual         | osv-scanner, cargo-deny/udeps, govulncheck, type-aware ESLint, website Docker build, 30-min SMB soak |
+| `advisories.yml`        | Daily (4:17 AM UTC), manual             | osv-scanner (every lockfile) and cargo-deny (no compile): new advisories surface in a day            |
 | `deploy-api-server.yml` | Push to main touching `apps/api-server` | Deploys the Cloudflare Worker.                                                                       |
 | `deploy-dashboard.yml`  | Push to main touching the dashboard     | Builds and deploys the analytics dashboard to Cloudflare Pages.                                      |
 | `release.yml`           | `v*` tags                               | Only calls `release-pipeline.yml` (so attestations name the reusable workflow as signer).            |
 | `release-pipeline.yml`  | Called by `release.yml`                 | Builds, signs, and publishes the desktop app on macOS runners. `docs/guides/releasing.md`            |
 | `scorecard.yml`         | Push to main, weekly, rule edits        | OpenSSF Scorecard: publishes the score (README badge) and SARIF to code scanning. § below            |
-| `codeql.yml`            | Push to main, weekly, manual            | CodeQL (Actions, JS/TS, Rust); a high or critical finding fails it and blocks releases. § below      |
+| `codeql.yml`            | PRs, push to main, weekly, manual       | CodeQL (Actions, JS/TS, Rust); a high or critical finding fails it and blocks releases. § below      |
 | `gradle-wrapper.yml`    | Push to main, weekly, manual            | Checks the IntelliJ plugin's `gradle-wrapper.jar` against Gradle's published checksums. § Scorecard  |
 
 `slow-checks.yml` also runs the fuzz smoke job (120 s per target, findings uploaded as `fuzz-artifacts`;

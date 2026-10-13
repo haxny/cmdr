@@ -941,8 +941,8 @@ Policy by staleness class:
 
 External tools enforce the same principle natively: knip (`treatConfigHintsAsErrors` in `knip.json`), stylelint
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
-slow eslint lane (`reportUnusedDisableDirectives`). The one list nothing can verify automatically is `audit.toml`'s
-RUSTSEC ignores — that's a quarterly task in `docs/maintenance.md`.
+slow eslint lane (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the `osv-scanner.toml`
+ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
 
 ## Allowlist consent
 
@@ -1930,16 +1930,16 @@ Checks by app and tech:
   private target dir, so the global-allocator path macOS doesn't ship can't rot), rustdoc
   (`cargo doc --all-features --document-private-items` over every first-party member, with every doc lint in
   `rustdocDeniedLints` denied and any leftover warning failing the check too; the vendored fork is skipped because
-  `--all-features` turns on two mutually exclusive arms there), cargo-audit, cargo-deny, cargo-machete, cargo-udeps
-  (CI-only), fuzz (CI-only and slow: every target in `fuzz/` for `CMDR_FUZZ_SECONDS`, default 60, `fuzz/DETAILS.md`; a
-  target loosens its sanitizer limits only through `fuzzTargetOverrides`, each entry naming its upstream finding), jscpd
-  (the clone list, on a per-file-pair ratchet), log-error-macro, macos-availability (no call to a selector newer than
-  the bundle's `minimumSystemVersion`; § "macOS availability"), macos-framework-floor (no framework in the BUILT
-  binary's load commands newer than that same floor, which is the half no runtime gate can save; § "macOS framework
-  floor"), sqlite-open-direct (every SQLite connection opens through `crate::sqlite_util`, so the process-wide shared
-  page cache is always installed before SQLite initializes), error-string-match, write-ops-isolation (the write engine
-  may not name the `agent` module: an approved operation is an ordinary operation, and an engine that can see the agent
-  grows a second execution path; per-source outcomes reach a caller through the injected `OperationEventSink` instead),
+  `--all-features` turns on two mutually exclusive arms there), cargo-deny, cargo-machete, cargo-udeps (CI-only), fuzz
+  (CI-only and slow: every target in `fuzz/` for `CMDR_FUZZ_SECONDS`, default 60, `fuzz/DETAILS.md`; a target loosens
+  its sanitizer limits only through `fuzzTargetOverrides`, each entry naming its upstream finding), jscpd (the clone
+  list, on a per-file-pair ratchet), log-error-macro, macos-availability (no call to a selector newer than the bundle's
+  `minimumSystemVersion`; § "macOS availability"), macos-framework-floor (no framework in the BUILT binary's load
+  commands newer than that same floor, which is the half no runtime gate can save; § "macOS framework floor"),
+  sqlite-open-direct (every SQLite connection opens through `crate::sqlite_util`, so the process-wide shared page cache
+  is always installed before SQLite initializes), error-string-match, write-ops-isolation (the write engine may not name
+  the `agent` module: an approved operation is an ordinary operation, and an engine that can see the agent grows a
+  second execution path; per-source outcomes reach a caller through the injected `OperationEventSink` instead),
   lock-poison (two lanes: an error-level one for an acquisition that records no poison-handling choice, and a warn-only
   one for a failure that's silently discarded, on a per-file ratchet), test-sleep (flags a fixed `thread::sleep` /
   `tokio::time::sleep` in test code, where a condition-based `wait_until` belongs; opt out a genuine
@@ -2107,7 +2107,8 @@ doubles as production code.
 - **Other / Go**: go-version-single-source (errors when anything but `.mise.toml` names a Go toolchain version, when the
   `go.mod` floors disagree with each other, or when a floor exceeds the pinned toolchain)
 - **Other / Security**: workflows-hardening (SHA-pinning, no `pull_request_target`, job-scoped `id-token: write`,
-  read-only workflow-level `permissions:`, CodeQL also on `pull_request`)
+  read-only workflow-level `permissions:`, CodeQL also on `pull_request`), osv-scanner (every tracked lockfile against
+  OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck)
 
 ## The single source for the Go version
 
@@ -2211,12 +2212,24 @@ same pin, so one bump moves both.
    usually genuine (the `unused_imports` tightening flagged real redundant imports), so fix the code rather than
    reaching for an `allow`.
 
-**Decision**: `cargo-deny` checks advisories over the macOS graph only; `cargo-audit` sweeps the full graph. **Why**:
+**Decision**: `cargo-deny` checks advisories over the macOS graph only; `osv-scanner` sweeps every lockfile. **Why**:
 Tauri's Linux GTK3 stack carries unmaintained-crate advisories no macOS build links, which once got the whole advisory
 lane commented out and hid real vulnerabilities with it. `deny.toml` pins `[graph] targets` to the two macOS triples we
 release and sets `unmaintained = "workspace"`, so any RUSTSEC vulnerability in a shipped crate fails at any depth while
-transitive unmaintained noise doesn't. `cargo-audit` (the six-day CI lane) still reads the whole lockfile: a hit there
+transitive unmaintained noise doesn't. `osv-scanner` reads every tracked lockfile (Rust, npm, Go, Python): a hit there
 but not in deny means "real, but nothing we ship links it". See `deny.toml` and `docs/maintenance.md`.
+
+**Decision**: `osv-scanner` replaced `cargo-audit`. **Why**: OpenSSF Scorecard's Vulnerabilities check is osv-scanner
+over every lockfile, honoring each directory's `osv-scanner.toml`, while cargo-audit read the root `Cargo.lock` alone.
+That gap let five `quinn-proto` advisories sit in `fuzz/` and `benchmarks/smb/` lockfiles, which nothing watched, and
+held the score at 5/10. Running Scorecard's own tool leaves one ignore list per lockfile instead of three (cargo-audit's
+Go list, its `audit.toml`, and the osv files). It scans a fresh copy of the tracked tree (`tracked-tree.go`): inside a
+worktree, osv-scanner's own walk skips everything, because the main clone ignores `.claude/worktrees/`.
+
+**Decision**: the advisory lanes (`osv-scanner`, `govulncheck`, `cargo-deny`) carry `CacheTTL: advisoryCacheTTL` (a
+day). **Why**: their answer moves when the advisory database does, not only when their inputs do, so an input-keyed
+cache alone kept a pass "OK (cached)" for as long as nobody touched a lockfile. The TTL makes a daily `pnpm check`
+re-ask.
 
 **Decision**: `workflows-hardening` check enforces five GitHub Actions invariants and acts as a regression guard.
 **Why**: cmdr's workflows are already correctly hardened (every third-party action is SHA-pinned with a comment, no
@@ -2231,22 +2244,23 @@ Scorecard). The fifth: a workflow running CodeQL analysis also triggers on `pull
 each merged PR by whether CodeQL checked its head commit, and Renovate's PRs land as merged PRs, so a push-only CodeQL
 quietly took SAST from 10 to 7.
 
-**Decision**: `govulncheck` runs against every Go module. **Why**: cargo-audit covers Rust deps; nothing covered Go
-until now. `govulncheck` is static-analysis-based, so it only flags vulns actually reachable from the code (low false
-positive rate). Most of cmdr's Go modules are dep-free tooling scripts but still call into the Go stdlib, which gets its
-own CVEs; the check found 7 real reachable stdlib vulns the first time it ran (fixed by bumping mise's Go pin). Mirrors
-the cargo-audit role on the Rust side.
+**Decision**: `govulncheck` runs against every Go module. **Why**: it's static-analysis-based, so it only flags vulns
+actually reachable from the code (low false positive rate), where `osv-scanner` flags whatever `go.mod` names. Most of
+cmdr's Go modules are dep-free tooling scripts but still call into the Go stdlib, which gets its own CVEs; the check
+found 7 real reachable stdlib vulns the first time it ran (fixed by bumping mise's Go pin).
 
-**Decision**: a `govulncheck` advisory whose fix is under six days old warns instead of failing, locally and in CI.
-**Why**: the repo holds every dependency to a three-day release-age window (pnpm's `minimum-release-age`, Renovate's
-`minimumReleaseAge`), so failing on day zero demands an upgrade the policy forbids, and turned `slow-checks` red for
-everyone (go1.27.2, 2026-10-08). Failing the moment the fix turns adoptable would leave no time to upgrade either, so
-the warning runs three more days (`govulnUpgradeGrace`, David's call, 2026-10-11); each line names when its fix is
-adoptable and when it fails. A stdlib fix is dated by its advisory's `published` (the Go team publishes them with the
-point release); the proxy's `golang.org/toolchain` times can't stand in, since they predate the release by days. A
-module fix is dated by the proxy's `.info` for the fixed version. No fix, or one the check can't date, still fails.
-Warnings are never cached, so the lane turns red by itself on the first run after the six days. It reads the
-`-format json` stream and counts only findings whose innermost frame names a function, the same bar text mode fails on.
+**Decision**: a `govulncheck` or `osv-scanner` advisory whose fix is under six days old warns instead of failing,
+locally and in CI. The policy lives in `vuln-fix-age.go`; `osv-scanner` dates a crate, npm, or PyPI fix by its
+registry's publish time. **Why**: the repo holds every dependency to a three-day release-age window (pnpm's
+`minimum-release-age`, Renovate's `minimumReleaseAge`), so failing on day zero demands an upgrade the policy forbids,
+and turned `slow-checks` red for everyone (go1.27.2, 2026-10-08). Failing the moment the fix turns adoptable would leave
+no time to upgrade either, so the warning runs three more days (`vulnUpgradeGrace`, David's call, 2026-10-11); each line
+names when its fix is adoptable and when it fails. A stdlib fix is dated by its advisory's `published` (the Go team
+publishes them with the point release); the proxy's `golang.org/toolchain` times can't stand in, since they predate the
+release by days. A module fix is dated by the proxy's `.info` for the fixed version. No fix, or one the check can't
+date, still fails. Warnings are never cached, so the lane turns red by itself on the first run after the six days. It
+reads the `-format json` stream and counts only findings whose innermost frame names a function, the same bar text mode
+fails on.
 
 **Decision**: `cfg-gate` check to catch ungated macOS-only imports. **Why**: Rust code naming something absent from the
 Linux build compiles fine on macOS and fails on Linux if the `use` isn't wrapped in `#[cfg(target_os = "macos")]`. CI
