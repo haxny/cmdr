@@ -48,8 +48,9 @@ export interface CrashEmailRow {
   /** Contact email the tester voluntarily attached at send time, or `null` if none. */
   email: string | null
   /**
-   * `panic_message`: the panic payload, already redacted and capped by the client. `null` for
-   * signal crashes (no payload) and for rows written before the column existed.
+   * `panic_message`: the panic payload (or an uncaught Objective-C exception's reason), already
+   * redacted and capped by the client. `null` for other signal crashes (no payload) and for rows
+   * written before the column existed.
    */
   message: string | null
   /**

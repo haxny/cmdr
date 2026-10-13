@@ -33,8 +33,8 @@ each in `DETAILS.md`.
   would query a nil delegate, silently producing no file. Delegates + providers live in process-global storage in
   `promises.rs`, freed only when the gesture has ended AND every in-flight fulfillment has drained (Finder pumps the
   queue AFTER the drop). Pinned by `session_counters_wait_for_in_flight_to_drain`.
-- **Main-thread invariant**: the fulfillment service never does synchronous main-thread work from the queue thread (no
-  `run_on_main_thread`), so `block_on`-ing it on the queue thread can't deadlock against a busy main thread.
+- **Main-thread invariant**: fulfillment never does synchronous main-thread work (no `run_on_main_thread`), so
+  `block_on`-ing it on the queue thread can't deadlock against a busy main thread.
 - **Folder fulfillment is a hand-rolled recursive walk**, NOT the cross-volume copy engine: the copy engine derives
   landed names from source basenames and can't target a Finder-renamed root. The happy-path test asserts the landed
   filename EQUALS the Finder-chosen leaf (regression guard).
@@ -48,15 +48,14 @@ each in `DETAILS.md`.
   thread, so the delegate must be usable off-main. The one main-thread-only method (`fileNameForType:`) gets its
   `MainThreadMarker` from the protocol signature; ivars are all `Send + Sync` (queue via the `SendQueue` wrapper). The
   drag SOURCE (`source.rs`) IS `MainThreadOnly` (`NSDraggingSource` requires it).
-- **`initWithFileType:delegate:` RAISES on a fileType AppKit doesn't accept**, and an uncaught Objective-C exception
-  aborts the app (CRASH-K35S2). Build providers only through `new_provider`, which catches it and falls back to
-  `public.data`; pinned by `a_file_type_appkit_rejects_falls_back_instead_of_aborting`.
+- **Build providers only via `new_provider`**: `initWithFileType:` raises on a type AppKit refuses, and an uncaught
+  ObjC exception aborts the app (CRASH-K35S2).
 - **`session_key` is a monotonic counter, NOT the drag sequence number**: delegates register BEFORE the drag begins, and
   `draggingSequenceNumber` exists only AFTER. The source stashes the key and reads it back in its end callback.
 - **Completion toasts**: Finder shows nothing while a promise downloads, so typed
-  `SessionStarted`/`SessionComplete` events (in the always-compiled `crate::system_events`) become ONE toast per session
-  via `lib/file-explorer/drag/drag-out-event-bridge.ts`. Counts are top-level items (one folder = one folder); a drag
-  dropped back into Cmdr never fulfills, so it emits nothing.
+  `SessionStarted`/`SessionComplete` events (`crate::system_events`) become ONE toast per session via
+  `lib/file-explorer/drag/drag-out-event-bridge.ts`. Counts are top-level items; a drag dropped back into Cmdr emits
+  nothing.
 
 Flows, the promise lifecycle, and the manual test plan: `DETAILS.md`. Read it before any non-trivial work here: editing,
 planning, reorganizing, or advising.

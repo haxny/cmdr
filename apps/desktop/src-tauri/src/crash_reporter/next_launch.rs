@@ -23,6 +23,13 @@ use super::{
 /// gather and left in place; a raw signal-crash file is read and converted to one; and a report
 /// already delivered in-session is deleted rather than offered twice.
 pub(super) fn process_pending_crash(crash_json_path: &Path, raw_crash_path: &Path) {
+    process_evidence(crash_json_path, raw_crash_path);
+    // Read (or found to belong to no crash) by now, so it can't attach itself to a later one.
+    #[cfg(target_os = "macos")]
+    let _ = std::fs::remove_file(objc_exception_path(raw_crash_path));
+}
+
+fn process_evidence(crash_json_path: &Path, raw_crash_path: &Path) {
     super::pending_delivery::restore_unfinished_sends(crash_json_path);
     if let Some(mut report) = read_crash_report(crash_json_path) {
         finish_panic_report(crash_json_path, &mut report);
@@ -121,7 +128,10 @@ fn convert_raw_signal_crash(crash_json_path: &Path, raw_crash_path: &Path) {
         // crash-loop check, a log bundle's window) wants the crash.
         timestamp: to_iso8601(crash_time),
         signal: Some(signal_name(signal)),
-        panic_message: None,
+        // A signal carries no payload, but an uncaught Objective-C exception's SIGABRT leaves its
+        // `<name>: <reason>` behind (`objc_exception.rs`). Redacted and capped with the rest by
+        // `prepare_for_delivery` below.
+        panic_message: objc_exception_line(raw_crash_path, crash_time),
         backtrace_frames,
         thread_name: None,
         thread_count: 0,
@@ -167,6 +177,24 @@ fn convert_raw_signal_crash(crash_json_path: &Path, raw_crash_path: &Path) {
     if let Err(e) = write_crash_report(crash_json_path, &report) {
         log::warn!("Crash reporter: couldn't write symbolicated crash report: {e}");
     }
+}
+
+/// The uncaught-exception sidecar sits beside the raw crash file in the data dir.
+#[cfg(target_os = "macos")]
+fn objc_exception_path(raw_crash_path: &Path) -> std::path::PathBuf {
+    raw_crash_path.with_file_name(super::objc_exception::FILE_NAME)
+}
+
+#[cfg(target_os = "macos")]
+fn objc_exception_line(raw_crash_path: &Path, crash_time: std::time::SystemTime) -> Option<String> {
+    let line = super::objc_exception::line_near(&objc_exception_path(raw_crash_path), crash_time)?;
+    Some(format!("Uncaught Objective-C exception {line}"))
+}
+
+/// Only macOS has Objective-C exceptions to record.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn objc_exception_line(_raw_crash_path: &Path, _crash_time: std::time::SystemTime) -> Option<String> {
+    None
 }
 
 /// Attach macOS's own view of this crash, if it wrote one.

@@ -8,7 +8,8 @@ reporter's Flow B. Everything else: `error_reporter/`.
 - **`mod.rs`**: report type, privacy transform, hook, and file I/O. **`next_launch.rs`**: previous-session assembly.
   **`pending_delivery.rs`**: authoritative pending-file send and dismissal. **`contain.rs`**: parser exemption.
   **`panic_courier.rs`** / **`survival.rs`**: survived-panic delivery and amendments. **`signal_handler.rs`** /
-  **`symbolicate.rs`** / **`os_crash_report.rs`**: native crash evidence. Tests are siblings.
+  **`symbolicate.rs`** / **`os_crash_report.rs`** / **`objc_exception.rs`** (an uncaught exception's reason, which the
+  `.ips` lacks): native crash evidence. Tests are siblings.
 - IPC: `commands/crash_reporter.rs`. Frontend: `src/lib/crash-reporter/`.
 
 Both paths write `crash-report.json` in the app data dir: the hook with full stdlib, the handler async-signal-safe.

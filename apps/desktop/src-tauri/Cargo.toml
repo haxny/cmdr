@@ -330,6 +330,9 @@ objc2-foundation = { version = "0.3", features = [
     # `NSSearchPathDirectory::TrashDirectory`, how `trash_dir_for_path` asks Cocoa which
     # trash a given volume uses instead of reconstructing it from `statfs` + `getuid`.
     "NSPathUtilities",
+    # `NSSetUncaughtExceptionHandler`: the crash report's uncaught Objective-C exception reason
+    # (`crash_reporter/objc_exception.rs`).
+    "NSException",
 ] }
 objc2-app-kit = { version = "0.3", features = [
     "NSDragging", "NSDraggingItem", "NSImage", "NSColor", "NSColorSpace",

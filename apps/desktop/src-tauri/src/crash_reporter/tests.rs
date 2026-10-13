@@ -1147,3 +1147,46 @@ fn active_settings_report_the_effective_ai_provider_under_a_managed_policy() {
         None
     );
 }
+
+/// An uncaught Objective-C exception ends in a bare SIGABRT; the sidecar its handler left is the
+/// only record of WHY (CRASH-K35S2 had none). It ships as the panic message, redacted like one,
+/// and is gone once read so it can't attach itself to a later crash.
+#[cfg(target_os = "macos")]
+#[test]
+fn an_uncaught_objc_exception_reason_ships_redacted_with_the_signal_crash() {
+    use std::io::Write as _;
+    let dir = crate::test_support::TestDir::new("crash-objc-exception");
+    let crash_path = dir.join(CRASH_FILE_NAME);
+    let raw_path = dir.join(RAW_CRASH_FILE_NAME);
+
+    let mut raw = std::fs::File::create(&raw_path).unwrap();
+    raw.write_all(b"CMCR").unwrap();
+    raw.write_all(&2u32.to_le_bytes()).unwrap();
+    raw.write_all(&libc::SIGABRT.to_le_bytes()).unwrap();
+    raw.write_all(&1u32.to_le_bytes()).unwrap();
+    raw.write_all(&0x1_0000_0000u64.to_le_bytes()).unwrap();
+    raw.write_all(&0x1_0000_1000u64.to_le_bytes()).unwrap();
+    raw.write_all(&[0u8; 32]).unwrap();
+    drop(raw);
+    let sidecar = dir.join(objc_exception::FILE_NAME);
+    std::fs::write(
+        &sidecar,
+        "NSInvalidArgumentException: fileType '/Users/alice/Secret/plan.mkv' is not a valid UTI",
+    )
+    .unwrap();
+
+    process_pending_crash(&crash_path, &raw_path);
+
+    let report = read_crash_report(&crash_path).expect("the signal crash became a report");
+    let message = report.panic_message.expect("the exception reason rides along");
+    assert!(
+        message.starts_with("Uncaught Objective-C exception NSInvalidArgumentException: fileType"),
+        "{message}"
+    );
+    assert!(!message.contains("alice"), "the user name is redacted: {message}");
+    assert!(
+        !message.contains("plan.mkv") && !message.contains("Secret"),
+        "file and folder names are redacted: {message}"
+    );
+    assert!(!sidecar.exists(), "the sidecar is consumed");
+}

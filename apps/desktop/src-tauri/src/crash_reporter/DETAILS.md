@@ -358,6 +358,25 @@ report for the same crash to `~/Library/Logs/DiagnosticReports/`, and `os_crash_
   (`rwxrwx--- <user>:_analyticsusers`), and nothing here is gated on the FDA flag; if reports come back with
   `osFrames` always empty on machines without the grant, that's the answer.
 
+## Uncaught Objective-C exceptions
+
+An Objective-C exception nothing catches ends in `abort()`, so the report is a bare SIGABRT, and neither our raw file
+nor the `.ips` says why: macOS 27 writes only `"asi": {"libsystem_c.dylib": ["abort() called"]}` (verified on macOS
+27.0 with a throwing `NSFilePromiseProvider`, 2026-10-13). CRASH-K35S2 shipped exactly that. `objc_exception.rs` fills
+the gap:
+
+- **Capture**: `_objc_terminate` calls the `NSSetUncaughtExceptionHandler` handler before it aborts, on the throwing
+  thread, in ordinary (not signal) context. Ours writes `<name>: <reason>` (capped at 4 KB) to
+  `crash-report.objc-exception.txt` in the data dir, then chains to the handler that was there before it. `init`
+  installs it after `process_pending_crash`, so the previous session's sidecar is read before anything can overwrite it.
+- **Assembly**: `convert_raw_signal_crash` puts it in `panic_message` as `Uncaught Objective-C exception <name>:
+  <reason>`, when the sidecar's mtime is within 60 s of the raw file's. `prepare_for_delivery` then redacts and caps it
+  like any panic payload, which matters: the reason is free text from AppKit and can quote a path or file name (pinned
+  by `an_uncaught_objc_exception_reason_ships_redacted_with_the_signal_crash`). `process_pending_crash` deletes the
+  sidecar whatever happened, so it can't attach itself to a later crash.
+- `panic_message` was the honest field to reuse: it's "the message the process died with", already redacted, capped,
+  stored, and shown in the crash email, so no wire, schema, or policy change was needed.
+
 ## Signal-handler limits we accept
 
 - **The pre-opened fd goes stale if the data dir is deleted while the app runs.** Acceptable: it takes deliberate user

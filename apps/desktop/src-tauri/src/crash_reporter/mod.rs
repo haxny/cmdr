@@ -7,6 +7,8 @@
 mod contain;
 mod next_launch;
 #[cfg(target_os = "macos")]
+mod objc_exception;
+#[cfg(target_os = "macos")]
 mod os_crash_report;
 mod panic_courier;
 mod pending_delivery;
@@ -354,6 +356,9 @@ pub fn init<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 
     #[cfg(unix)]
     install_signal_handlers(&raw_crash_path);
+    // After `process_pending_crash` read the previous session's sidecar, never before.
+    #[cfg(target_os = "macos")]
+    objc_exception::install(&data_dir.join(objc_exception::FILE_NAME));
 }
 
 /// Returns the pending crash report from a previous session, if any.

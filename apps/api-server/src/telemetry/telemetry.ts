@@ -54,8 +54,9 @@ interface CrashReport {
   email?: string
   /**
    * Optional. The panic payload string, already PII-redacted and capped by the client
-   * (`crash_reporter::sanitize_panic_message`). Absent for signal crashes (SIGSEGV/SIGBUS/
-   * SIGABRT carry no payload) and for clients older than the field.
+   * (`crash_reporter::sanitize_panic_message`). On a SIGABRT from an uncaught Objective-C exception,
+   * the exception's `Uncaught Objective-C exception <name>: <reason>` line. Absent for other signal
+   * crashes (no payload) and for clients older than the field.
    */
   panicMessage?: string
   /**
