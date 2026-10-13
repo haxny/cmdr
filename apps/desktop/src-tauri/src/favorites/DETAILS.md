@@ -259,7 +259,10 @@ servers-hub path would be written down with nothing able to reopen it.
    `getfsstat(MNT_NOWAIT)` / `/proc/mounts`, lexical) names the network mount the path sits on, and
    if the registry holds a place backend AT that mount point (`find_by_root`), that's the volume,
    named as its switcher row is. ❗ AT, ❌ never above: a mount nested inside a registered share is
-   another filesystem, and a prefix match would give it the share's id. Local disks skip this (their
+   another filesystem, and a prefix match would give it the share's id. On Linux a GVFS share names
+   its own folder, ❌ never the one FUSE root serving them all (`volumes_linux/DETAILS.md` § "A path
+   inside a GVFS share resolves to the share"). Tests inject the resolver to see whether the gate
+   asked it, ❌ not a zero deadline: Linux's lexical resolver beats the timer. Local disks skip this (their
    `statfs` is cheap, and the resolver knows a cloud folder on the boot disk is its own row); a miss
    goes on to step 3, never a refusal.
 3. The canonical resolver (`resolve_path_volume_with_timeout`): protocol arms for `mtp://`,

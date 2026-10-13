@@ -147,15 +147,20 @@ async fn favorite_volume_for_with_timeout(
     path: &str,
     fs_timeout: Duration,
 ) -> Result<FavoriteVolume, AddFavoriteError> {
-    favorite_volume_for_with(path, fs_timeout, crate::volume_listing::network_mount_under).await
+    favorite_volume_for_with(path, crate::volume_listing::network_mount_under, |path| {
+        crate::commands::volumes::resolve_path_volume_with_timeout(path, fs_timeout)
+    })
+    .await
 }
 
-/// [`favorite_volume_for_with_timeout`] with the mount-table read injected, so a test can put a
-/// path on a share no test machine has.
-async fn favorite_volume_for_with(
+/// [`favorite_volume_for_with_timeout`] with the mount-table read and the resolver injected, so a
+/// test can put a path on a share no test machine has, and see whether the gate asked the resolver
+/// at all. ❗ Not a zero deadline for that: the resolver's answer races the timer, and on Linux,
+/// where it's a lexical `/proc/mounts` walk, it wins.
+async fn favorite_volume_for_with<R: Future<Output = PathVolumeResolution>>(
     path: &str,
-    fs_timeout: Duration,
     network_mount_under: impl FnOnce(&Path) -> Option<NetworkMount>,
+    resolve: impl FnOnce(String) -> R,
 ) -> Result<FavoriteVolume, AddFavoriteError> {
     if crate::file_system::volume::manager::path_routes_over_its_parent(Path::new(path)) {
         return Err(AddFavoriteError::NotAPlace);
@@ -175,7 +180,7 @@ async fn favorite_volume_for_with(
     if let Some(volume) = on_a_connected_share {
         return Ok(volume);
     }
-    let resolution = crate::commands::volumes::resolve_path_volume_with_timeout(path.to_string(), fs_timeout).await;
+    let resolution = resolve(path.to_string()).await;
     favorite_volume_from(path, resolution, |id| {
         crate::file_system::volume::manager::get_volume_manager()
             .get(id)
@@ -522,16 +527,28 @@ mod add_gate_tests {
         }
     }
 
+    /// The resolver a server answering in 2-3 s looks like to the gate: its `statfs` on the path
+    /// misses the deadline. A gate that answers `TimedOut` over it asked it.
+    async fn a_slow_server(_path: String) -> PathVolumeResolution {
+        PathVolumeResolution {
+            volume: None,
+            timed_out: true,
+        }
+    }
+
     /// ❗ cmdr-reports#40: favoriting a folder on a share Cmdr already holds must not wait on the
-    /// server. A zero resolver deadline is what a server answering in 2-3 s looks like to the
-    /// gate: any `statfs` on the path misses it.
+    /// server, so the resolver is never asked.
     #[tokio::test]
     async fn a_folder_on_a_connected_share_is_favorited_without_asking_the_server() {
         register_share("smb-gate-test-connected", "/Volumes/gate-test-connected");
-        let volume = favorite_volume_for_with("/Volumes/gate-test-connected/docs", Duration::ZERO, |path| {
-            assert_eq!(path, Path::new("/Volumes/gate-test-connected/docs"));
-            Some(network_mount("/Volumes/gate-test-connected"))
-        })
+        let volume = favorite_volume_for_with(
+            "/Volumes/gate-test-connected/docs",
+            |path| {
+                assert_eq!(path, Path::new("/Volumes/gate-test-connected/docs"));
+                Some(network_mount("/Volumes/gate-test-connected"))
+            },
+            |_| async { unreachable!("a connected share never waits on the server") },
+        )
         .await
         .expect("a connected share answers from the registry");
         assert_eq!(
@@ -548,9 +565,11 @@ mod add_gate_tests {
     /// way, and a slow answer there stays a timeout.
     #[tokio::test]
     async fn an_unregistered_network_mount_still_asks_the_resolver() {
-        let result = favorite_volume_for_with("/Volumes/gate-test-unregistered/docs", Duration::ZERO, |_| {
-            Some(network_mount("/Volumes/gate-test-unregistered"))
-        })
+        let result = favorite_volume_for_with(
+            "/Volumes/gate-test-unregistered/docs",
+            |_| Some(network_mount("/Volumes/gate-test-unregistered")),
+            a_slow_server,
+        )
         .await;
         assert!(matches!(result, Err(AddFavoriteError::TimedOut)), "{result:?}");
     }
@@ -560,9 +579,11 @@ mod add_gate_tests {
     #[tokio::test]
     async fn a_mount_nested_inside_a_registered_share_is_not_that_share() {
         register_share("smb-gate-test-outer", "/Volumes/gate-test-outer");
-        let result = favorite_volume_for_with("/Volumes/gate-test-outer/inner/docs", Duration::ZERO, |_| {
-            Some(network_mount("/Volumes/gate-test-outer/inner"))
-        })
+        let result = favorite_volume_for_with(
+            "/Volumes/gate-test-outer/inner/docs",
+            |_| Some(network_mount("/Volumes/gate-test-outer/inner")),
+            a_slow_server,
+        )
         .await;
         assert!(matches!(result, Err(AddFavoriteError::TimedOut)), "{result:?}");
     }
