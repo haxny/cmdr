@@ -22,6 +22,7 @@ use super::super::scan_dry_run::handle_dry_run;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
 use super::super::state::{OperationIntent, WriteOperationState, load_intent, update_operation_status};
 use super::super::transfer_sides::transfer_stop_event;
+use super::super::transfer_tree::TreeLanding;
 use super::super::types::{
     CancelRollback, ConflictResolution, SourceItemOutcome, TopLevelSkipped, WriteCancelledEvent, WriteCompleteEvent,
     WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
@@ -221,7 +222,10 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         scan_result.file_count,
         scan_result.total_bytes
     );
-    state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
+    state.transfer_tree.install(
+        scan_result.order_by_transfer_tree(sources),
+        TreeLanding::under(destination, config.destination_name.as_deref()),
+    );
     let tree = state.transfer_tree.reporter();
 
     // Pre-flight free-space check, before anything is written.

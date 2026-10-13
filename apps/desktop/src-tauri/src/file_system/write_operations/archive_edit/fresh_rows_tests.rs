@@ -2,7 +2,9 @@
 
 use super::*;
 use crate::file_system::write_operations::transfer_tree::test_support::{node_at, row_states};
-use crate::file_system::write_operations::transfer_tree::{TransferTreeSlot, TreeOrder, from_archive_plan};
+use crate::file_system::write_operations::transfer_tree::{
+    TransferTreeSlot, TreeLanding, TreeOrder, from_archive_plan,
+};
 
 /// The compress's rows follow the plan: the producer writes entries one at a
 /// time in plan order, and its ticks alone say which one is in flight. A folder
@@ -18,7 +20,7 @@ fn compress_rows_follow_the_producers_ticks_entry_by_entry() {
     ];
     let (model, entry_rows) = from_archive_plan(plan.iter().copied(), &TreeOrder::active()).expect("the tree builds");
     let slot = TransferTreeSlot::default();
-    slot.install(Some(model));
+    slot.install(Some(model), TreeLanding::nowhere());
     let rows = CompressRows::new(
         slot.reporter(),
         entry_rows

@@ -956,3 +956,42 @@ fn a_tree_that_fails_to_build_leaves_the_local_copy_as_it_would_run_without_one(
         "no tree, so views answer `ready: false`"
     );
 }
+
+/// A write the destination refuses (here a folder that won't take new files;
+/// a full disk names its path the same way) marks the row of the file it was
+/// writing, found from the destination path through the landing folder. The
+/// failure names the file the user knows, never its staging temp.
+#[cfg(unix)]
+#[test]
+fn a_write_the_destination_refuses_marks_the_row_it_was_writing() {
+    use crate::file_system::write_operations::transfer_tree::test_support::row_states;
+    use std::os::unix::fs::PermissionsExt;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(src.join("photos")).unwrap();
+    fs::create_dir_all(dst.join("photos")).unwrap();
+    fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
+    fs::set_permissions(dst.join("photos"), fs::Permissions::from_mode(0o555)).unwrap();
+    let state = make_state(0);
+
+    let result = copy_files_with_progress_inner(
+        &CollectorEventSink::new(),
+        "op-local-copy-dest-refused",
+        &state,
+        &[src.join("photos")],
+        &dst,
+        &WriteOperationConfig::default(),
+    );
+    fs::set_permissions(dst.join("photos"), fs::Permissions::from_mode(0o755)).unwrap();
+
+    let error = result.expect_err("the destination refuses the write");
+    let landing = dst.join("photos/a.jpg").display().to_string();
+    assert_eq!(error.item_path(), Some(landing.as_str()), "{error:?}");
+    let tree = state.transfer_tree.get().expect("the scan installed a tree");
+    assert_eq!(
+        tree.read(row_states).expect("the tree is on"),
+        vec!["photos/ failed", "  a.jpg failed"]
+    );
+}

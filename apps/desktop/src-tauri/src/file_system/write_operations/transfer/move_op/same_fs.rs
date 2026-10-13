@@ -24,7 +24,7 @@ use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::{
     OperationIntent, WriteOperationState, load_intent, update_operation_status,
 };
-use crate::file_system::write_operations::transfer_tree::{TreeOrder, from_sources};
+use crate::file_system::write_operations::transfer_tree::{TreeLanding, TreeOrder, from_sources};
 use crate::file_system::write_operations::types::{
     CancelRollback, SourceItemOutcome, TopLevelSkipped, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
     WriteOperationError, WriteOperationPhase, WriteOperationType, WriteSourceItemDoneEvent,
@@ -63,9 +63,10 @@ pub(super) fn move_with_rename(
     let total_items = sources.len() + already_in_place;
     // The tree is the items themselves, the same unit the status counts: a
     // rename takes a folder whole and walks nothing (`from_sources`).
-    state
-        .transfer_tree
-        .install(from_sources(sources, is_real_directory, &TreeOrder::active()));
+    state.transfer_tree.install(
+        from_sources(sources, is_real_directory, &TreeOrder::active()),
+        TreeLanding::under(destination, config.destination_name.as_deref()),
+    );
     let tree = state.transfer_tree.reporter();
     update_operation_status(
         operation_id,

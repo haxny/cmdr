@@ -27,7 +27,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 pub(crate) use build::{TreeRecorder, from_archive_plan, from_local_scan, from_per_path, from_sources, sort_sources};
-pub(crate) use model::{NodeId, TreeModel};
+pub(crate) use model::{NodeId, TreeLanding, TreeModel};
 pub(crate) use order::TreeOrder;
 pub(crate) use report::{TreeLeaf, TreeReporter};
 pub(crate) use view::{TransferTreeView, TransferTreeViewRequest};
@@ -137,13 +137,15 @@ pub(super) fn built<R>(what: &str, build: impl FnOnce() -> R) -> Option<R> {
 pub(crate) struct TransferTreeSlot(OnceLock<Arc<TransferTree>>);
 
 impl TransferTreeSlot {
-    /// Hands the operation the tree its scan built. Once: a later call (no
-    /// operation scans twice today) keeps the first tree, whose ids views may
-    /// already hold. `None` is a tree whose building panicked ([`built`],
+    /// Hands the operation the tree its scan built, and where its sources
+    /// land (for a failure that names a destination path). Once: a later call
+    /// (no operation scans twice today) keeps the first tree, whose ids views
+    /// may already hold. `None` is a tree whose building panicked ([`built`],
     /// logged there): the operation runs without one, and views answer
     /// `ready: false`.
-    pub(crate) fn install(&self, tree: Option<TreeModel>) {
-        let Some(model) = tree else { return };
+    pub(crate) fn install(&self, tree: Option<TreeModel>, landing: TreeLanding) {
+        let Some(mut model) = tree else { return };
+        model.set_landing(landing);
         let nodes = model.len();
         let kib = model.heap_bytes() / 1024;
         if self.0.set(Arc::new(TransferTree::new(model))).is_ok() {
@@ -165,9 +167,9 @@ impl TransferTreeSlot {
     }
 
     /// Marks the row a failure names, from the typed path on the error
-    /// (`WriteOperationError::item_path`), ❌ never its message. A path the
-    /// tree doesn't hold (a destination path, an operation-wide refusal)
-    /// marks nothing.
+    /// (`WriteOperationError::item_path`), ❌ never its message: a source path,
+    /// or a destination path through where the sources land. A path the tree
+    /// doesn't hold (an operation-wide refusal) marks nothing.
     pub(crate) fn note_failure(&self, error: &WriteOperationError) {
         self.reporter().fail_at(error);
     }

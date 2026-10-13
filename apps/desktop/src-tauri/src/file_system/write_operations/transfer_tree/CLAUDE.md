@@ -19,7 +19,7 @@ in flight, what landed, and what's next. The backend owns the model; a view asks
   rank outside `built`, and never let a transfer read the tree's STATE back.
 - **≤ 64 B per node, names included**, pinned at 1M nodes by `budget_tests.rs`. ❗ `Node` is 16 bytes on purpose; grow
   it or add a per-node side vector and the budget test says by how much. ❌ Never a global path map: the only paths kept
-  are the selected sources'.
+  are the selected sources' and their landing folders (`TreeLanding`).
 - **Ids are breadth-first, assigned once by `TreeBuilder::finish`**, so a folder's scanned children are one contiguous
   range in tree order. A child found later goes to `extra_children`, after them. ❌ Never renumber after `finish`:
   views key rows and hand toggles by id.

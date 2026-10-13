@@ -33,7 +33,7 @@ use std::time::Instant;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::take_cached_scan_result;
 use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
-use super::super::super::transfer_tree::{TreeOrder, TreeRecorder, from_per_path, sort_sources};
+use super::super::super::transfer_tree::{TreeModel, TreeOrder, TreeRecorder, from_per_path, sort_sources};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent,
@@ -146,11 +146,15 @@ impl SourceFileFacts {
 /// (which probes) and simply pass no size hint. `SourceHint` has no `Default`
 /// precisely so an absent key can't be turned into a confident `is_directory:
 /// false`. `DETAILS.md` § "A missing source hint means unknown".
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(super) struct VolumePreflight {
     pub total_files: usize,
     pub total_bytes: u64,
     pub source_hints: HashMap<PathBuf, SourceHint>,
+    /// The transfer tree the scan recorded (or the cached preview built), for
+    /// the caller to install with where its sources land. `None` after a tree
+    /// bug (`transfer_tree::built`).
+    pub tree: Option<TreeModel>,
 }
 
 impl VolumePreflight {
@@ -263,7 +267,6 @@ pub(super) async fn scan_volume_sources(
             .tree
             .take()
             .or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active()));
-        state.transfer_tree.install(tree);
         let mut source_hints = HashMap::with_capacity(cached.per_path.len());
         for (path, scan) in cached.per_path {
             let size = if scan.top_level_is_directory {
@@ -285,6 +288,7 @@ pub(super) async fn scan_volume_sources(
             total_files: cached.file_count,
             total_bytes: cached.total_bytes,
             source_hints,
+            tree,
         });
     }
 
@@ -381,7 +385,7 @@ pub(super) async fn scan_volume_sources(
         ),
     );
 
-    state.transfer_tree.install(recorder.finish(&TreeOrder::active()));
+    let tree = recorder.finish(&TreeOrder::active());
 
     let mut source_hints = HashMap::with_capacity(batch.per_path.len());
     for (source_path, scan) in &batch.per_path {
@@ -413,6 +417,7 @@ pub(super) async fn scan_volume_sources(
         total_files: batch.aggregate.file_count,
         total_bytes: batch.aggregate.total_bytes,
         source_hints,
+        tree,
     })
 }
 

@@ -31,6 +31,7 @@ use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_
 use super::super::super::state::{
     OperationIntent, WriteOperationState, is_cancelled, load_intent, update_operation_status,
 };
+use super::super::super::transfer_tree::TreeLanding;
 use super::super::super::types::{
     CancelRollback, SpaceShortfall, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
     WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
@@ -686,7 +687,7 @@ pub(crate) async fn copy_volumes_with_progress(
     // available). Populates `total_files`, `total_bytes`, and per-source
     // `is_directory` / `size` hints so the copy loop doesn't have to re-probe
     // each source. Shared with the move pipeline.
-    let preflight = scan_volume_sources(
+    let mut preflight = scan_volume_sources(
         &source_volume,
         source_paths,
         config,
@@ -696,6 +697,10 @@ pub(crate) async fn copy_volumes_with_progress(
         &*events,
     )
     .await?;
+    state.transfer_tree.install(
+        preflight.tree.take(),
+        TreeLanding::under(dest_path, config.destination_name.as_deref()),
+    );
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();

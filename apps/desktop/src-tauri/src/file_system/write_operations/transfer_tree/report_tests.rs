@@ -11,19 +11,27 @@ use cmdr_fs::volume::ScanRecorder;
 use super::model::{LeafState, NodeId, TreeRowState};
 use super::test_support::{english, node_at};
 use super::view::{TransferTreeViewRequest, TreeWindow};
-use super::{TransferTree, TransferTreeSlot, TreeLeaf, TreeRecorder, TreeReporter};
+use super::{TransferTree, TransferTreeSlot, TreeLanding, TreeLeaf, TreeRecorder, TreeReporter};
 use crate::file_system::write_operations::types::{ProgressAxis, WriteOperationError};
 
-/// `/src/top/{a.bin 10 B, sub/c.bin 30 B}`, installed in a slot.
+/// `/src/top/{a.bin 10 B, sub/c.bin 30 B}`, landing in `/dest`, installed in a slot.
 fn installed() -> TransferTreeSlot {
+    installed_landing(TreeLanding::under(Path::new("/dest"), None))
+}
+
+fn installed_landing(landing: TreeLanding) -> TransferTreeSlot {
     let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
     recorder.dir(Path::new("/src/top"));
     recorder.file(Path::new("/src/top/a.bin"), 10);
     recorder.dir(Path::new("/src/top/sub"));
     recorder.file(Path::new("/src/top/sub/c.bin"), 30);
     let slot = TransferTreeSlot::default();
-    slot.install(recorder.finish(&english()));
+    slot.install(recorder.finish(&english()), landing);
     slot
+}
+
+fn full_disk_at(path: &str) -> WriteOperationError {
+    WriteOperationError::DestinationFull { path: path.to_string() }
 }
 
 fn tree(slot: &TransferTreeSlot) -> &Arc<TransferTree> {
@@ -100,16 +108,61 @@ fn a_walker_finds_each_child_by_name_and_a_newcomer_joins_the_tree() {
     );
 }
 
+/// A destination-side failure (a full disk, a folder that won't take a write)
+/// names where the file was landing: the landing folder plus the source's own
+/// name plus the path below it.
 #[test]
-fn a_failure_marks_the_row_its_path_names_and_a_destination_path_marks_nothing() {
+fn a_failure_on_the_destination_side_marks_the_row_it_was_writing() {
     let slot = installed();
     let deep = node(&slot, &["top", "sub", "c.bin"]);
 
-    slot.note_failure(&WriteOperationError::WriteError {
-        path: "/dest/top/sub/c.bin".to_string(),
-        message: "disk full".to_string(),
-    });
-    assert_eq!(state_of(&slot, deep), LeafState::Waiting);
+    slot.note_failure(&full_disk_at("/dest/top/sub/c.bin"));
+
+    assert_eq!(state_of(&slot, deep), LeafState::Failed);
+    assert_eq!(state_of(&slot, node(&slot, &["top", "a.bin"])), LeafState::Waiting);
+}
+
+/// A single source the user named lands under that name, and a cross-FS move
+/// stages under its own folder first; both find their rows.
+#[test]
+fn a_named_copy_and_a_staging_folder_find_their_rows_too() {
+    let named = installed_landing(TreeLanding::under(Path::new("/dest"), Some("renamed")));
+    named.note_failure(&full_disk_at("/dest/renamed/a.bin"));
+    assert_eq!(state_of(&named, node(&named, &["top", "a.bin"])), LeafState::Failed);
+
+    let staged = installed_landing(
+        TreeLanding::under(Path::new("/dest"), None).and_first_under(PathBuf::from("/dest/.cmdr-staging-op")),
+    );
+    staged.note_failure(&full_disk_at("/dest/.cmdr-staging-op/top/sub/c.bin"));
+    assert_eq!(
+        state_of(&staged, node(&staged, &["top", "sub", "c.bin"])),
+        LeafState::Failed
+    );
+}
+
+/// A path the tree never held marks nothing: a landing renamed on a clash, the
+/// destination folder itself, a path under neither side.
+#[test]
+fn a_destination_path_the_tree_never_held_marks_nothing() {
+    let slot = installed();
+    for path in [
+        "/dest/top (1)/a.bin",
+        "/dest",
+        "/dest/top/nope.bin",
+        "/elsewhere/top/a.bin",
+    ] {
+        slot.note_failure(&full_disk_at(path));
+    }
+    let failed = tree(&slot)
+        .read(|model| model.folder(node_at(model, &["top"])).map(|agg| agg.failed))
+        .flatten();
+    assert_eq!(failed, Some(0));
+}
+
+#[test]
+fn a_failure_marks_the_row_its_source_path_names() {
+    let slot = installed();
+    let deep = node(&slot, &["top", "sub", "c.bin"]);
 
     slot.note_failure(&WriteOperationError::ReadError {
         path: "/src/top/sub/c.bin".to_string(),
@@ -194,7 +247,7 @@ fn tree_boundary_cost_bench() {
             recorder.file(&PathBuf::from(format!("/src/top/sub/f_{file:05}.bin")), 4_096);
         }
         let slot = TransferTreeSlot::default();
-        slot.install(recorder.finish(&english()));
+        slot.install(recorder.finish(&english()), TreeLanding::nowhere());
         let reporter = slot.reporter();
         let mut level = reporter.level(reporter.source(Path::new("/src/top")));
         let sub = level.child("sub", true, 0);

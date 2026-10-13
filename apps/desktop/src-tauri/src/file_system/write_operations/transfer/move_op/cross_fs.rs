@@ -42,6 +42,7 @@ use crate::file_system::write_operations::scan_cache::take_cached_scan_result;
 use crate::file_system::write_operations::scan_source_tracker::SourceItemTracker;
 use crate::file_system::write_operations::state::{WriteOperationState, update_operation_status};
 use crate::file_system::write_operations::transfer_sides::transfer_stop_event;
+use crate::file_system::write_operations::transfer_tree::TreeLanding;
 use crate::file_system::write_operations::types::{
     WriteCompleteEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType,
     WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -93,7 +94,12 @@ pub(super) fn move_with_staging(
         scan_sources(sources, state, events, operation_id, WriteOperationType::Move)?
     };
 
-    state.transfer_tree.install(scan_result.order_by_transfer_tree(sources));
+    // Where the copy phase stages everything before Phase 3 renames it out.
+    let staging_dir = destination.join(format!("{}{}", cmdr_fs::staging::STAGING_DIR_PREFIX, operation_id));
+    state.transfer_tree.install(
+        scan_result.order_by_transfer_tree(sources),
+        TreeLanding::under(destination, config.destination_name.as_deref()).and_first_under(staging_dir.clone()),
+    );
     let tree = state.transfer_tree.reporter();
 
     // Pre-flight filesystem-limit check: a cross-FS move stages a full copy, so
@@ -103,7 +109,6 @@ pub(super) fn move_with_staging(
     validate_file_sizes_for_filesystem(destination, &scan_result.files)?;
 
     // Create staging directory
-    let staging_dir = destination.join(format!("{}{}", cmdr_fs::staging::STAGING_DIR_PREFIX, operation_id));
     fs::create_dir(&staging_dir).map_err(|e| WriteOperationError::IoError {
         path: staging_dir.display().to_string(),
         message: format!("Failed to create staging directory: {}", e),

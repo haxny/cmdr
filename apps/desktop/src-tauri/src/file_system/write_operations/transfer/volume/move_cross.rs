@@ -23,6 +23,7 @@ use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::state::WriteOperationState;
+use super::super::super::transfer_tree::TreeLanding;
 use super::super::super::types::{
     CancelRollback, SourceItemOutcome, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationPhase, WriteOperationType,
@@ -113,7 +114,7 @@ pub(crate) async fn move_volumes_with_progress(
     // Copy+delete per file: on partial failure, already-moved files exist at
     // dest, remaining files stay at source. No data loss, but the move is
     // partial.
-    let preflight = scan_volume_sources(
+    let mut preflight = scan_volume_sources(
         &source_volume,
         source_paths,
         config,
@@ -123,6 +124,10 @@ pub(crate) async fn move_volumes_with_progress(
         &*events,
     )
     .await?;
+    state.transfer_tree.install(
+        preflight.tree.take(),
+        TreeLanding::under(dest_path, config.destination_name.as_deref()),
+    );
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();

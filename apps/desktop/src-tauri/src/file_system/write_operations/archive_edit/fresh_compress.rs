@@ -15,7 +15,7 @@ use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, Operati
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::transfer::StagedWrite;
-use super::super::transfer_tree::{TreeOrder, from_archive_plan};
+use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
@@ -307,7 +307,7 @@ async fn run(
         &TreeOrder::active(),
     )
     .unzip();
-    state.transfer_tree.install(tree);
+    state.transfer_tree.install(tree, TreeLanding::nowhere());
     let rows = CompressRows::new(
         state.transfer_tree.reporter(),
         entry_rows

@@ -19,7 +19,8 @@ Every transfer's scan builds one, and the operation installs it on `WriteOperati
   right there from the walk's `files` and `dirs`. Either way each `FileInfo` learns its `tree_node`, and `files` is
   sorted into the tree's order.
 - **Volume copy and cross-volume move**: `scan_volume_sources` (`../transfer/volume/preflight.rs`) hangs a
-  `TreeRecorder` on the scan's `ScanBoundary`. A cached preview's tree is taken as is; a cached preview without one
+  `TreeRecorder` on the scan's `ScanBoundary` and hands the tree back on `VolumePreflight::tree`, which the copy or
+  move installs with where it lands. A cached preview's tree is taken as is; a cached preview without one
   (a delete's, never consumed here today) degrades to `from_per_path`: each source a file or an opaque folder.
 - **Volume previews**: `../scan_preview/volume.rs` records both branches: the backend's batch scan through the
   boundary, and the fresh-listing oracle's walk (`../scan.rs::scan_subtree_with_oracle`) directly. A cached top-level
@@ -156,9 +157,15 @@ A driver holds a `TreeReporter` (`TransferTreeSlot::reporter`), cloned freely, s
 - **Failures**: the two gateways every transfer's `write-error` goes through, `transfer_sides::transfer_stop_event`
   (local) and `volume/transfer_error.rs::write_error_event_from` (volume), call `TransferTreeSlot::note_failure`, which
   marks the row at the error's typed `item_path` (an `OriginalsKeptAside`'s cause's), found by walking down from its
-  source by name. A destination path, or a path the tree never held, marks nothing. The row shows while the error is
-  on screen; keeping it past settle is #261's. A compress tree holds no source paths, so a compress failure marks no
-  row.
+  source by name. A destination-side failure (a full disk, a folder that won't take a write) names where the file was
+  landing, so the tree also knows where its sources land (`TreeLanding`, handed over with the tree at `install`): the
+  destination folder (plus a cross-FS move's staging folder, which its copy phase writes into first), where each source
+  lands under its own name, or under the name the user gave a single source's copy. The first component past the
+  landing folder picks the source, the rest walks down. A path the tree never held marks nothing: a landing renamed on a
+  clash, the destination folder itself, a name two sources share. A local staged write names its target, never the
+  `.cmdr-tmp-*` temp (`overwrite::stage_and_land_file` via `WriteOperationError::on_item_instead`), which the user
+  never saw either. The row shows while the error is on screen; keeping it past settle is #261's. A compress lands in
+  one archive (`TreeLanding::nowhere`), so a compress failure marks no row.
 
 ### Observation only, structurally
 

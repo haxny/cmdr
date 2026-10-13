@@ -492,6 +492,36 @@ pub enum WriteOperationError {
     },
 }
 
+/// The path of the item an in-flight failure happened on, from the variants
+/// that carry one: `&String` from a shared borrow, `&mut String` from a unique
+/// one. One list for [`WriteOperationError::item_path`] and
+/// [`WriteOperationError::on_item_instead`], so they can't disagree on which
+/// variants name an item.
+macro_rules! item_path_of {
+    ($error:expr) => {
+        match $error {
+            WriteOperationError::IoError { path, .. }
+            | WriteOperationError::ReadError { path, .. }
+            | WriteOperationError::WriteError { path, .. }
+            | WriteOperationError::SourceNotFound { path }
+            | WriteOperationError::DestinationNotFound { path }
+            | WriteOperationError::DeviceDisconnected { path, .. }
+            | WriteOperationError::PermissionDenied { path, .. }
+            | WriteOperationError::DestinationFull { path }
+            | WriteOperationError::ConnectionInterrupted { path }
+            | WriteOperationError::FileLocked { path }
+            | WriteOperationError::MoveNotConfirmed { path, .. }
+            | WriteOperationError::NameTooLong { path }
+            | WriteOperationError::InvalidName { path, .. }
+            | WriteOperationError::DeletePending { path }
+            | WriteOperationError::SourceInColdStorage { path }
+            | WriteOperationError::SourceChanged { path }
+            | WriteOperationError::SymlinkLoop { path } => Some(path),
+            _ => None,
+        }
+    };
+}
+
 impl WriteOperationError {
     /// The item an in-flight failure happened ON, as its variant names it: the
     /// file or folder the operation was reading or writing when it stopped.
@@ -502,26 +532,20 @@ impl WriteOperationError {
     /// that rewrites the error by its path would drop where the user's data
     /// is. ❌ Never read an item out of a message.
     pub fn item_path(&self) -> Option<&str> {
-        match self {
-            Self::IoError { path, .. }
-            | Self::ReadError { path, .. }
-            | Self::WriteError { path, .. }
-            | Self::SourceNotFound { path }
-            | Self::DestinationNotFound { path }
-            | Self::DeviceDisconnected { path, .. }
-            | Self::PermissionDenied { path, .. }
-            | Self::DestinationFull { path }
-            | Self::ConnectionInterrupted { path }
-            | Self::FileLocked { path }
-            | Self::MoveNotConfirmed { path, .. }
-            | Self::NameTooLong { path }
-            | Self::InvalidName { path, .. }
-            | Self::DeletePending { path }
-            | Self::SourceInColdStorage { path }
-            | Self::SourceChanged { path }
-            | Self::SymlinkLoop { path } => Some(path),
-            _ => None,
+        item_path_of!(self).map(String::as_str)
+    }
+
+    /// The same failure, named on `to` when its item is `from` (untouched
+    /// otherwise). For a staged write: its temp is a name the user never saw,
+    /// so a failure there is about the file the temp was becoming.
+    #[must_use]
+    pub fn on_item_instead(mut self, from: &std::path::Path, to: &std::path::Path) -> Self {
+        if let Some(path) = item_path_of!(&mut self)
+            && std::path::Path::new(path.as_str()) == from
+        {
+            *path = to.display().to_string();
         }
+        self
     }
 
     /// The one way to build [`PermissionDenied`](Self::PermissionDenied).

@@ -23,7 +23,7 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::state::WriteOperationState;
-use super::super::super::transfer_tree::{TreeOrder, from_sources};
+use super::super::super::transfer_tree::{TreeLanding, TreeOrder, from_sources};
 use super::super::super::types::{
     CancelRollback, RecoveredOriginal, SourceItemOutcome, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent,
     WriteErrorEvent, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
@@ -441,11 +441,14 @@ pub(crate) async fn move_within_same_volume_with_progress(
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(top_level.source_hints);
     // A rename takes each item whole and walks nothing, so the tree is the
     // items themselves, the same unit the counts above use (`from_sources`).
-    state.transfer_tree.install(from_sources(
-        source_paths,
-        |source| source_hints.get(source).is_some_and(|hint| hint.is_directory),
-        &TreeOrder::active(),
-    ));
+    state.transfer_tree.install(
+        from_sources(
+            source_paths,
+            |source| source_hints.get(source).is_some_and(|hint| hint.is_directory),
+            &TreeOrder::active(),
+        ),
+        TreeLanding::under(dest_path, config.destination_name.as_deref()),
+    );
 
     // Operation-log journaling for the same-volume move: the one volume id (as both
     // source and dest) plus the set of top-level sources whose conflict resolution

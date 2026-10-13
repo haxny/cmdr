@@ -160,7 +160,9 @@ where
         Ok(staged) => staged,
         Err(e) => {
             discard_temp(state, &temp_record);
-            return Err(e);
+            // The temp is a name the user never saw: the failure is about `dest`
+            // (and the transfer tree finds its row by it).
+            return Err(e.on_item_instead(temp_path, dest));
         }
     };
 

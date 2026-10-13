@@ -138,6 +138,44 @@ pub(crate) struct ActiveLeaf {
     pub(crate) bytes: Arc<AtomicU64>,
 }
 
+/// Where a transfer's sources land, so a failure that names a DESTINATION path
+/// (a full disk, a folder that won't take a write) finds its row: each source
+/// sits in a landing folder under its own name, or under the name the user gave
+/// the copy of a single source.
+// DEFAULT-OK: no landing folder is "nothing lands anywhere a path could name",
+// which is what a compress (its destination is one archive) truthfully says.
+#[derive(Debug, Default)]
+pub(crate) struct TreeLanding {
+    /// Where the sources land: the destination folder, plus a cross-FS move's
+    /// staging folder, which its copy phase writes into first.
+    folders: Vec<PathBuf>,
+    /// The name the user gave a single source's copy.
+    named: Option<String>,
+}
+
+impl TreeLanding {
+    /// Each source lands in `folder` under its own name, or under `named` when
+    /// the user named the copy of a single source.
+    pub(crate) fn under(folder: &Path, named: Option<&str>) -> Self {
+        Self {
+            folders: vec![folder.to_path_buf()],
+            named: named.map(str::to_owned),
+        }
+    }
+
+    /// Nothing a path could name: a compress writes one archive.
+    pub(crate) fn nowhere() -> Self {
+        Self::default()
+    }
+
+    /// The sources pass through `folder` first, under the same names.
+    #[must_use]
+    pub(crate) fn and_first_under(mut self, folder: PathBuf) -> Self {
+        self.folders.push(folder);
+        self
+    }
+}
+
 /// The selection as a tree, plus where every file stands.
 // DEFAULT-OK: an empty arena with nothing active; `from_seeds` fills it before
 // anyone reads it.
@@ -158,6 +196,8 @@ pub(crate) struct TreeModel {
     /// starts its walk down (`node_at_path`). The selection only, ❌ never a
     /// path per node.
     sources: HashMap<PathBuf, NodeId>,
+    /// Where the sources land, for a failure that names a destination path.
+    landing: TreeLanding,
 }
 
 /// What the builder hands the arena for one node, in final (breadth-first) id
@@ -312,20 +352,66 @@ impl TreeModel {
         self.sources = sources;
     }
 
-    /// The row at `path`: its source's row, then down one name per component.
-    /// `None` for a path under no source (a destination path, say) or one the
-    /// tree never held. O(depth × siblings), for the rare caller with nothing
-    /// but a path (a failure), ❌ never per file.
+    pub(crate) fn set_landing(&mut self, landing: TreeLanding) {
+        self.landing = landing;
+    }
+
+    /// The row at `path`, a source-side or a destination-side one: its
+    /// source's row (by the source's own path, or by where it lands), then
+    /// down one name per component. `None` for a path the tree never held
+    /// (an operation-wide refusal, a renamed landing). O(sources + depth ×
+    /// siblings), for the rare caller with nothing but a path (a failure), ❌
+    /// never per file.
     pub(crate) fn node_at_path(&self, path: &Path) -> Option<NodeId> {
+        let (node, below) = self.under_a_source(path).or_else(|| self.under_a_landing(path))?;
+        below.components().try_fold(node, |at, component| {
+            self.child_named(at, &component.as_os_str().to_string_lossy())
+        })
+    }
+
+    /// The source `path` sits under, and the rest of the path below it.
+    fn under_a_source<'p>(&self, path: &'p Path) -> Option<(NodeId, &'p Path)> {
         let (source, node) = self
             .sources
             .iter()
             .filter(|(source, _)| path.starts_with(source))
             .max_by_key(|(source, _)| source.as_os_str().len())?;
-        let below = path.strip_prefix(source).ok()?;
-        below.components().try_fold(*node, |at, component| {
-            self.child_named(at, &component.as_os_str().to_string_lossy())
-        })
+        Some((*node, path.strip_prefix(source).ok()?))
+    }
+
+    /// The source whose landing `path` sits under, and the rest below it. Two
+    /// sources with one name can't both land under it, so that name answers
+    /// neither rather than a guess.
+    fn under_a_landing<'p>(&self, path: &'p Path) -> Option<(NodeId, &'p Path)> {
+        // Every folder, not the first that holds the path: a cross-FS move's
+        // staging folder sits inside its destination.
+        self.landing
+            .folders
+            .iter()
+            .filter_map(|folder| path.strip_prefix(folder).ok())
+            .find_map(|below| self.landed_source(below))
+    }
+
+    /// The source that landed as `below`'s first component, and the rest.
+    fn landed_source<'p>(&self, below: &'p Path) -> Option<(NodeId, &'p Path)> {
+        let mut components = below.components();
+        let landed_as = components.next()?.as_os_str();
+        let node = match &self.landing.named {
+            Some(named) if self.sources.len() == 1 && landed_as == named.as_str() => *self.sources.values().next()?,
+            _ => {
+                let mut by_name = self
+                    .sources
+                    .iter()
+                    .filter(|(source, _)| source.file_name() == Some(landed_as))
+                    .map(|(_, node)| *node);
+                let node = by_name.next()?;
+                if by_name.next().is_some() {
+                    return None;
+                }
+                node
+            }
+        };
+        Some((node, components.as_path()))
     }
 
     /// The child of `folder` called `name`, by a walk over its children.
@@ -432,6 +518,7 @@ impl TreeModel {
                 .keys()
                 .map(|path| path.capacity() + size_of::<(PathBuf, NodeId)>())
                 .sum::<usize>()
+            + self.landing.folders.iter().map(PathBuf::capacity).sum::<usize>()
     }
 
     // ---- Mutations: one per file boundary ------------------------------------
