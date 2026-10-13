@@ -417,6 +417,7 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 # 7.8–8.0 s), the lifecycle pair timed out 16 of 25 runs, and every timeout passed when
 # the check runner re-ran it alone. Their only slow step is the FSEvents stream start
 # and its teardown join, both `fseventsd` round trips.
+# allowed-unmatched-nextest-filter: macos-only, the `lifecycle_order_test` and `a_detached_arm_` tests are `#[cfg(target_os = "macos")]` (the engine's own lifecycle-order tests in `cmdr-listing` run no FSEvents stream)
 filter = '''
     test(listing_host::tests::caching_reaper_test::)
   + test(listing_host::tests::archive_watch_integration_test::)
