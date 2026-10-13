@@ -274,6 +274,20 @@ describe('TransferTree', () => {
     expect(button?.getAttribute('aria-keyshortcuts')).toBe('F')
   })
 
+  // F is the way to it; a Tab stop on a button that comes and goes would shift every
+  // Tab after it, in the dialog and in the queue alike.
+  it('keeps Follow out of the Tab order, and still clickable', async () => {
+    await render('flat-5000', 3)
+    rows()[0].focus()
+    key('ArrowDown')
+    await settle()
+    const button = followButton()
+    expect(button?.getAttribute('tabindex')).toBe('-1')
+    button?.click()
+    await settle()
+    expect(followButton()).toBeNull()
+  })
+
   it('pauses following on a wheel only when the tree has somewhere to scroll', async () => {
     await render('flat-5000', 3)
     const scroller = target.querySelector<HTMLElement>('.scroller')

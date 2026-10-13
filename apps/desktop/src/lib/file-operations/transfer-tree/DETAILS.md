@@ -41,9 +41,9 @@ landed. These are the product calls (David, 2026-10-11) the code holds:
   The tree leaves its hand toggles, following, scroll position, and grown height there when it unmounts, and the next
   tree over the same operation (or fixture) picks them up; a different operation starts fresh. The dialog passes one,
   since its conflict prompt and reversals replace the body.
-- `tabbable` (default true): whether Tab reaches the tree (its tab-stop row, then Follow). The queue clears it on every
-  row but its grid's cursor row, so the grid stays one Tab stop plus that row's tree (`../queue/DETAILS.md` § "The
-  inline tree"). Click and code still focus a row.
+- `tabbable` (default true): whether Tab reaches the tree's tab-stop row. The queue clears it on every row but its
+  grid's cursor row, so the grid stays one Tab stop plus that row's tree (`../queue/DETAILS.md` § "The inline tree").
+  Click and code still focus a row.
 
 Which operations and phases show a tree is `tree-operation.ts` (`treeOperationFor`): a copy, move, or compress past its
 scan, never during a reversal. The dialog and the queue rows both ask it, so they can't disagree.
@@ -80,9 +80,10 @@ clamping `scrollTop` when a folder above shut, and a user's drag all fire the sa
 programmatic ones still loses the clamp. A wheel, a press on the scroller itself (its scrollbar), and a keyboard move
 are unambiguous. A wheel counts only when the rows overflow: over a tree that fits, it scrolls the page around it (the
 queue window), and pausing there would pop up Follow for nothing. The Follow button (a mini `Button` floating
-bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and no glyph; opaque and stacked above the
-rows and the pinned headers, since a secondary button is see-through and the row under it showed through) and the F key
-resume (§ "The F key").
+bottom-right, out of the Tab order (`tabindex="-1"`: F is the way to it, and a stop that comes and goes would shift
+every Tab after it), its word plus an F `keyHint` chip and no glyph; opaque and stacked above the rows and the pinned
+headers, since a secondary button is see-through and the row under it showed through) and the F key resume (§ "The F
+key").
 
 ## Rendering and focus
 

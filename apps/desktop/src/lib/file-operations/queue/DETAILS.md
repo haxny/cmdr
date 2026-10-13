@@ -381,8 +381,8 @@ binds nothing of its own: it asks `get_transfer_tree_view` for this row's operat
 own (arrows, Home / End, Left / Right, F), so it can't share keys with the grid: ⌫ inside it must not cancel the whole
 copy, and ↓ must walk the files, not the rows. So:
 
-- Tab from the grid's cursor row lands in its tree (the tree's own tab-stop row, then its Follow button). Only the
-  cursor row's tree is a Tab stop (`tabbable`), so the grid stays one stop plus that tree; Shift+Tab goes back.
+- Tab from the grid's cursor row lands in its tree (the tree's own tab-stop row; Follow takes no Tab, F reaches it).
+  Only the cursor row's tree is a Tab stop (`tabbable`), so the grid stays one stop plus that tree; Shift+Tab goes back.
 - Inside, the tree owns every key, and the page's grid hears none (`gridHears` skips `[data-queue-tree]`).
 - Escape (the `queue.close` command, read by the row's `leaveTree`) returns focus to the row instead of closing the
   window; from the row, Escape closes it as before.

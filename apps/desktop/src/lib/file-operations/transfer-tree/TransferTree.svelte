@@ -34,7 +34,7 @@
         /** Rows tall at most before the host gives it more room (the dialog's 8, the queue's 6), never below
          *  three. Fewer rows take less: a single file is one row. */
         defaultRows?: number
-        /** Whether Tab reaches the tree (its cursor row, then Follow). The queue clears it on every
+        /** Whether Tab reaches the tree's cursor row (Follow never takes Tab: F reaches it). The queue clears it on every
          *  row but the grid's cursor row, so the grid stays one Tab stop plus that row's tree. */
         tabbable?: boolean
         /** Where the host keeps this tree while it's away (the dialog's conflict prompt takes its
@@ -508,7 +508,7 @@
                     }}
                     keyHint={FOLLOW_KEY}
                     aria-keyshortcuts={FOLLOW_KEY}
-                    tabindex={tabbable ? undefined : -1}
+                    tabindex={-1}
                     tooltipContent={tString('fileOperations.transferTree.followTooltip')}
                 >
                     {tString('fileOperations.transferTree.follow')}
