@@ -6,6 +6,8 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 ## Key files
 
 - **`ModalDialog.svelte`**: Central modal container: overlay, dragging, Escape, focus, MCP tracking
+- **`modal-resize.ts`**: `ModalDialog`'s edge-and-corner resize geometry as pure functions (`resizeStep`, the limits,
+  which bands show)
 - **`focus-trap.ts`**: `use:trapFocus` action: Tab wrapping, focus-leak guard, Escape fallback, trap stack
 - **`dialog-registry.ts`**: `SOFT_DIALOG_REGISTRY` array: single source of truth for all dialog IDs
 - **`markdown-link-click.ts`**: `handleMarkdownLinkClick`, the click delegate every `{@html}`-rendered markdown block
@@ -167,7 +169,8 @@ also what keeps the height content-driven. A dialog never remembers the size it 
 - **The opposite edge stays put.** The panel is CENTERED, not absolutely placed, so growing it by N also slides its
   layout box by N/2 and the drag offset has to pay that back. Vertically the share depends on the alignment: a centered
   panel drifts by half its growth, while `growDownward` and `align="top"` pin the top edge and drift by none, so
-  dragging their top edge has to move the whole growth. `ModalDialog.svelte.test.ts` pins each case.
+  dragging their top edge has to move the whole growth. The geometry is pure (`modal-resize.ts::resizeStep`), pinned by
+  `modal-resize.test.ts`; `ModalDialog.svelte.test.ts` drives the bands end to end.
 - **Size and offset are written as inline PROPERTIES from an effect**, never into the `style` attribute: that attribute
   is `containerStyle`'s, and re-rendering it mid-drag would snap the panel back to its opening size on the next pointer
   frame. The effect only ever SETS width and height — removing them would take `containerStyle`'s own sizing with them.

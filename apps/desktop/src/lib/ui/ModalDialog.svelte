@@ -4,6 +4,14 @@
     import { notifyDialogOpened, notifyDialogClosed } from '#lib/tauri-commands/index.js'
     import { focusFirstField, trapFocus } from './focus-trap'
     import { anchoredTopFor } from './modal-anchor'
+    import {
+        declaredHeight,
+        resizeDirectionsFor,
+        resizeLimitsOf,
+        resizeStep,
+        type DraggedSize,
+        type ResizeDirection,
+    } from './modal-resize'
     import type { SoftDialogId } from './dialog-registry'
     import { registerDialogClose, unregisterDialogClose } from './dialog-close-registry'
     import { markDialogOpen, markDialogClosed } from './open-dialogs.svelte'
@@ -150,21 +158,12 @@
      */
     let previousActiveElement: HTMLElement | null = null
     let heightObserver: ResizeObserver | null = null
-    /** Size the user dragged the panel to. `null` on an axis means "still content- or `containerStyle`-driven". */
-    let resizedSize = $state<{ width: number | null; height: number | null }>({ width: null, height: null })
+    /** Size the user dragged the panel to. */
+    let resizedSize = $state<DraggedSize>({ width: null, height: null })
     /** Tears down whichever pointer drag (move or resize) is running, so a dialog closed mid-drag leaves no listeners. */
     let stopActiveDrag: (() => void) | null = null
 
-    /**
-     * Edges first, corners last: they're siblings in the panel, so the later ones
-     * win the hit test where a corner overlaps the two edges it joins.
-     */
-    const ALL_RESIZE_DIRECTIONS = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'] as const
-    type ResizeDirection = (typeof ALL_RESIZE_DIRECTIONS)[number]
-
-    const resizeDirections = $derived<readonly ResizeDirection[]>(
-        resizable === false ? [] : resizable === 'horizontal' ? (['w', 'e'] as const) : ALL_RESIZE_DIRECTIONS,
-    )
+    const resizeDirections = $derived(resizeDirectionsFor(resizable))
 
     /**
      * The drag offset rides on `left` / `top` against the panel's own `position: relative`,
@@ -233,23 +232,16 @@
                 resizedSize = { ...resizedSize, height: null }
                 // Back to what `containerStyle` says (nothing, for most): the drag's
                 // height shares that one inline declaration.
-                el.style.height = ownHeight(containerStyle)
+                el.style.height = declaredHeight(containerStyle)
             } else if (vertical && parkedHeight !== null) {
                 const height = parkedHeight
                 parkedHeight = null
-                if (height <= cssLength(getComputedStyle(el).maxHeight, Number.POSITIVE_INFINITY)) {
+                if (height <= resizeLimitsOf(el).maxHeight) {
                     resizedSize = { ...resizedSize, height }
                 }
             }
         })
     })
-
-    /** The height a style string declares, `''` for none: parsed by the browser, never by hand. */
-    function ownHeight(style: string): string {
-        const probe = document.createElement('div')
-        probe.style.cssText = style
-        return probe.style.height
-    }
 
     /** Where flex centering puts the dialog's top right now. */
     function centeredTop(): number {
@@ -312,40 +304,7 @@
         stopActiveDrag = handleMouseUp
     }
 
-    /**
-     * Height the panel can't be dragged below: its chrome, plus enough body to read
-     * a line or two. The chrome is measured rather than assumed, because a wrapped
-     * title or a footer with a leading control is taller than a one-line one.
-     */
-    function minimumPanelHeight(el: HTMLElement): number {
-        const chrome = [...el.querySelectorAll<HTMLElement>('.dialog-title-bar, .modal-footer')].reduce(
-            (total, part) => total + part.offsetHeight,
-            0,
-        )
-        const readableBody = 60
-        return chrome + readableBody
-    }
-
-    /** Resolves a computed `min-*` / `max-*` to a number; `none` and the empty string mean "no limit". */
-    function cssLength(value: string, fallback: number): number {
-        const parsed = Number.parseFloat(value)
-        return Number.isNaN(parsed) ? fallback : parsed
-    }
-
-    function clamp(value: number, min: number, max: number): number {
-        return Math.min(Math.max(value, min), max)
-    }
-
-    /**
-     * Drags one edge or corner, keeping the OPPOSITE edge where it is.
-     *
-     * That last part is the whole trick, because the panel is centered rather than
-     * absolutely placed: widening it by `growth` also slides its layout box left by
-     * `growth / 2`, so the drag offset has to pay that back. Vertically the share
-     * depends on the alignment — a centered panel drifts by half its growth, while a
-     * `growDownward` or `align="top"` panel has its top edge pinned and drifts by none,
-     * so dragging its top edge has to move the whole growth.
-     */
+    /** Drags one edge or corner, keeping the OPPOSITE edge where it is (`resizeStep`). */
     function handleResizePointerDown(event: PointerEvent, direction: ResizeDirection) {
         const el = dialogElement
         if (!el) return
@@ -360,40 +319,25 @@
         const bandCursor =
             event.currentTarget instanceof HTMLElement ? getComputedStyle(event.currentTarget).cursor : ''
         const rect = el.getBoundingClientRect()
-        const styles = getComputedStyle(el)
-        const startWidth = rect.width
-        const startHeight = rect.height
-        const startX = event.clientX
-        const startY = event.clientY
-        const startPosition = { ...dialogPosition }
-        const minWidth = cssLength(styles.minWidth, 0)
-        const maxWidth = cssLength(styles.maxWidth, Number.POSITIVE_INFINITY)
-        const minHeight = Math.max(cssLength(styles.minHeight, 0), minimumPanelHeight(el))
-        const maxHeight = cssLength(styles.maxHeight, Number.POSITIVE_INFINITY)
-        const verticalDrift = align === 'center' && anchoredTop === null ? 0.5 : 0
+        const start = {
+            direction,
+            startWidth: rect.width,
+            startHeight: rect.height,
+            startPosition: { ...dialogPosition },
+            limits: resizeLimitsOf(el),
+            verticalDrift: align === 'center' && anchoredTop === null ? 0.5 : 0,
+        }
+        const [startX, startY] = [event.clientX, event.clientY]
 
         const handlePointerMove = (moveEvent: PointerEvent) => {
-            const position = { ...startPosition }
-            let { width, height } = resizedSize
-
-            if (direction.includes('w') || direction.includes('e')) {
-                const towardsEast = direction.includes('e')
-                const dx = moveEvent.clientX - startX
-                width = clamp(startWidth + (towardsEast ? dx : -dx), minWidth, maxWidth)
-                const growth = width - startWidth
-                position.x = startPosition.x + (towardsEast ? growth / 2 : -growth / 2)
-            }
-            if (direction.includes('n') || direction.includes('s')) {
-                const towardsSouth = direction.includes('s')
-                const dy = moveEvent.clientY - startY
-                height = clamp(startHeight + (towardsSouth ? dy : -dy), minHeight, maxHeight)
-                const growth = height - startHeight
-                position.y =
-                    startPosition.y + growth * (towardsSouth ? verticalDrift : -(1 - verticalDrift))
-            }
-
-            resizedSize = { width, height }
-            dialogPosition = position
+            const next = resizeStep({
+                ...start,
+                dragged: resizedSize,
+                dx: moveEvent.clientX - startX,
+                dy: moveEvent.clientY - startY,
+            })
+            resizedSize = next.size
+            dialogPosition = next.position
         }
 
         const handlePointerUp = () => {
