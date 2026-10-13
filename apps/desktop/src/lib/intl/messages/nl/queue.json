@@ -60,6 +60,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Toon het voortgangsvenster van deze bewerking in het hoofdvenster en haal het hoofdvenster naar voren. De bewerking loopt hoe dan ook door.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Toon deze bewerking in het hoofdvenster",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

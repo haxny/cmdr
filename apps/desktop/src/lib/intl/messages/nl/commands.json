@@ -442,6 +442,18 @@
   "@commands.queueShowInMainWindow.label": {
     "sourceHash": "9e15137"
   },
+  "commands.queuePauseOrResume.label": "Pauzeer of hervat de bewerking",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "Annuleer de bewerking",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "Draai de bewerking terug",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
   "commands.queueCancelOrDismiss.label": "Annuleer de bewerking, of sluit er een die niet is voltooid",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "eed155a"

@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "在主窗口中显示这项操作的进度对话框，并把主窗口调到最前面。不管怎样，这项操作都会继续运行。",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "在主窗口中显示这项操作",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

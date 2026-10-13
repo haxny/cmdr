@@ -440,6 +440,18 @@
   "@commands.queueShowInMainWindow.label": {
     "sourceHash": "9e15137"
   },
+  "commands.queuePauseOrResume.label": "Приостановить или возобновить операцию",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "Отменить операцию",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "Откатить операцию",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
   "commands.queueCancelOrDismiss.label": "Отменить операцию или скрыть ту, что не удалось завершить",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "eed155a"

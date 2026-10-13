@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Muestra el diálogo de progreso de esta operación en la ventana principal y trae la ventana principal al frente. La operación sigue en marcha de todos modos.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Mostrar esta operación en la ventana principal",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

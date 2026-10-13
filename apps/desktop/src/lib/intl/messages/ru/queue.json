@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Показать диалоговое окно хода выполнения этой операции в главном окне и вывести главное окно на передний план. Операция в любом случае продолжает выполняться.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Показать эту операцию в главном окне",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

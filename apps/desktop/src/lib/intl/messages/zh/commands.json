@@ -440,6 +440,18 @@
   "@commands.queueShowInMainWindow.label": {
     "sourceHash": "9e15137"
   },
+  "commands.queuePauseOrResume.label": "暂停或继续操作",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "取消操作",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "回滚操作",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
   "commands.queueCancelOrDismiss.label": "取消操作，或关闭无法完成的操作的记录",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "eed155a"

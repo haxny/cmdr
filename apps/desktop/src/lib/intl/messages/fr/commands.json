@@ -440,6 +440,18 @@
   "@commands.queueShowInMainWindow.label": {
     "sourceHash": "9e15137"
   },
+  "commands.queuePauseOrResume.label": "Mettre l’opération en pause ou la reprendre",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "Annuler l’opération",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "Revenir en arrière sur l’opération",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
   "commands.queueCancelOrDismiss.label": "Annuler l’opération ou l’ignorer si elle n’a pas pu se terminer",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "eed155a"

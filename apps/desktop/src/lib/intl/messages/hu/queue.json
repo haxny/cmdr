@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Jelenítsd meg ennek a műveletnek a folyamatjelző párbeszédablakát a főablakban, és hozd előtérbe a főablakot. A művelet mindenképp tovább fut.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Megjelenítés a főablakban",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

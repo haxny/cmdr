@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Visa förloppsdialogen för den här åtgärden i huvudfönstret och ta fram huvudfönstret. Åtgärden fortsätter oavsett.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Visa den här åtgärden i huvudfönstret",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

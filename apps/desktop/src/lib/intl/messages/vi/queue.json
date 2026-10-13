@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Hiển thị hộp thoại tiến trình của thao tác này trong cửa sổ chính và đưa cửa sổ chính ra trước. Dù sao thì thao tác vẫn tiếp tục chạy.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Hiển thị thao tác này trong cửa sổ chính",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

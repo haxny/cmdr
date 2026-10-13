@@ -440,6 +440,18 @@
   "@commands.queueShowInMainWindow.label": {
     "sourceHash": "9e15137"
   },
+  "commands.queuePauseOrResume.label": "A művelet szüneteltetése vagy folytatása",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "A művelet megszakítása",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "A művelet visszagörgetése",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
   "commands.queueCancelOrDismiss.label": "A művelet megszakítása, vagy elvetése, ha nem sikerült befejezni",
   "@commands.queueCancelOrDismiss.label": {
     "sourceHash": "eed155a"

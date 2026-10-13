@@ -2650,6 +2650,7 @@
     "confidence": "high",
     "sources": "macOS Finder (Előrehaladás paraméterei); Xfce Thunar (Fájlművelet előrehaladása)",
     "exceptions": {
+      "queue.row.foregroundTooltip": "a progress dialog → folyamatjelző párbeszédablak, matching folyamatjelző ablak in fileOperations.backgroundStart.tooltip",
       "fileOperations.backgroundStart.tooltip": "a progress window → folyamatjelző ablak: the window is named after its indicator; előrehaladási ablak reads as a calque."
     }
   },

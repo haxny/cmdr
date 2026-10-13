@@ -59,6 +59,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "在主視窗中顯示這項操作的進度對話方塊，並把主視窗移到最前面。不管怎樣，這項操作都會繼續進行。",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "在主視窗中顯示這項操作",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

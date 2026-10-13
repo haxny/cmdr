@@ -528,7 +528,7 @@
   },
   "commands.queueRollback.label": "Roll back the operation",
   "@commands.queueRollback.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Rollback button does to the operation under the cursor: asks for confirmation first, then stops the operation and undoes what it already did (deletes the copies, or moves the files back). Use the same verb as the Rollback button."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Rollback button does to the operation under the cursor: asks for confirmation first, then stops the operation and undoes what it already did (deletes the copies, or moves the files back). Word it the way the Rollback button or its confirmation names the action."
   },
   "commands.queueCancelOrDismiss.label": "Cancel the operation, or dismiss one that couldn’t finish",
   "@commands.queueCancelOrDismiss.label": {

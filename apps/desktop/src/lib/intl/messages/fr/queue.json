@@ -60,6 +60,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Afficher la boîte de dialogue de progression de cette opération dans la fenêtre principale et mettre la fenêtre principale au premier plan. L’opération continue dans tous les cas.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Afficher cette opération dans la fenêtre principale",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

@@ -60,6 +60,10 @@
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
+  "queue.row.foregroundTooltip": "Den Fortschrittsdialog dieses Vorgangs im Hauptfenster anzeigen und das Hauptfenster nach vorne holen. Der Vorgang läuft so oder so weiter.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
   "queue.row.foregroundAria": "Diesen Vorgang im Hauptfenster anzeigen",
   "@queue.row.foregroundAria": {
     "sourceHash": "ece64ad"

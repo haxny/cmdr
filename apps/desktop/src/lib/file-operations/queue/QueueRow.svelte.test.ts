@@ -651,7 +651,7 @@ describe('QueueRow: Show (back to the main window)', () => {
       button.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
       vi.advanceTimersByTime(500)
       expect(document.querySelector('.cmdr-tooltip')?.textContent.trim()).toBe(
-        'Open this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.',
+        'Show this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.',
       )
     } finally {
       button.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))

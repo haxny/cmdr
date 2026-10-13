@@ -1392,7 +1392,7 @@
     "distinct": ["back", "previous-next"],
     "en": "Go back",
     "match": ["go back", "go forward", "forward"],
-    "notMatch": ["go back far"],
+    "notMatch": ["go back far", "window forward"],
     "sense": "Navigating backward or forward in a pane's history."
   },
   "go-to-path": {
