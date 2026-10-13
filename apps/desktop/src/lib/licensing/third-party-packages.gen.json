@@ -544,6 +544,12 @@
       "url": "https://github.com/SergioBenitez/cookie-rs"
     },
     {
+      "name": "cookie_store",
+      "version": "0.22.1",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/pfernie/cookie_store"
+    },
+    {
       "name": "core-foundation",
       "version": "0.10.1",
       "license": "MIT OR Apache-2.0",
@@ -860,6 +866,12 @@
       "version": "0.2.6",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/yaahc/displaydoc"
+    },
+    {
+      "name": "document-features",
+      "version": "0.2.12",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/slint-ui/document-features"
     },
     {
       "name": "dom_query",
@@ -1990,6 +2002,12 @@
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
+      "name": "litrs",
+      "version": "1.0.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/LukasKalbertodt/litrs"
+    },
+    {
       "name": "lock_api",
       "version": "0.4.14",
       "license": "MIT OR Apache-2.0",
@@ -2804,6 +2822,18 @@
       "version": "31.0.1",
       "license": "MIT",
       "url": "https://github.com/GitoxideLabs/prodash"
+    },
+    {
+      "name": "psl-types",
+      "version": "2.0.11",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/addr-rs/psl-types"
+    },
+    {
+      "name": "publicsuffix",
+      "version": "2.3.0",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/rushmorem/publicsuffix"
     },
     {
       "name": "pulldown-cmark",
