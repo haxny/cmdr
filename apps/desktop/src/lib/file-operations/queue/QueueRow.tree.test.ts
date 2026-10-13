@@ -189,6 +189,26 @@ describe('QueueRow: focus between the row and its tree', () => {
     expect(document.activeElement).toBe(target.querySelector('[role="row"]'))
   })
 
+  it('resumes a paused tree on F from the row itself, where a wheel leaves focus', async () => {
+    await render({ row: row() })
+    const press = (on: Element, init: KeyboardEventInit) => {
+      on.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }))
+    }
+    const item = treeCell()?.querySelector<HTMLElement>('[role="treeitem"]')
+    if (!item) throw new Error('no tree row')
+    item.focus()
+    press(item, { key: 'ArrowDown', code: 'ArrowDown' })
+    await flushPromises()
+    expect(treeCell()?.querySelector('.follow button')).not.toBeNull()
+
+    const rowEl = target.querySelector<HTMLElement>('[role="row"]')
+    if (!rowEl) throw new Error('no row')
+    rowEl.focus()
+    press(rowEl, { key: 'f', code: 'KeyF' })
+    await flushPromises()
+    expect(treeCell()?.querySelector('.follow button')).toBeNull()
+  })
+
   it('leaves other keys inside the tree to the tree', async () => {
     await render({ row: row() })
     const item = treeCell()?.querySelector<HTMLElement>('[role="treeitem"]')

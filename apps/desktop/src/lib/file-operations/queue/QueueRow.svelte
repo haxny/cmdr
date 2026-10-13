@@ -68,6 +68,8 @@
     /** Prefix for the ids the row's name and description point at. */
     const domId = $props.id()
     let rowEl: HTMLDivElement | undefined = $state()
+    /** The row's live tree, which hears F from anywhere in the row (`resumeTreeFollowing`). */
+    let treeView: TransferTree | undefined = $state()
 
     const snapshot = $derived(row.snapshot)
     const progress = $derived(row.progress)
@@ -379,6 +381,13 @@
      *  row in any list. Two clicks are left alone: one that ends a text selection in
      *  the failure reason (focusing would collapse it), and one inside a button that
      *  already holds focus. */
+    /** F on this row (the grid's cursor row, one of its buttons, or its tree) resumes its
+     *  tree's following while that's paused; the grid has no F of its own. A wheel pauses
+     *  the tree without focusing it, so F from the row is the one that has to work. */
+    function resumeTreeFollowing(event: KeyboardEvent): void {
+        treeView?.handleFollowKey(event)
+    }
+
     function handleRowClick(): void {
         if (!rowEl) return
         const textSelection = window.getSelection()
@@ -408,6 +417,7 @@
     data-status={status}
     onfocusin={() => onFocusRow?.()}
     onclick={handleRowClick}
+    onkeydown={resumeTreeFollowing}
 >
     <div class="select-cell" role="gridcell">
         <!-- The checkbox exists for "Cancel selected", so a settled failure has
@@ -669,6 +679,7 @@
         <div class="tree-cell" role="gridcell" id="{domId}-tree" data-queue-tree onkeydown={leaveTree}>
             <!-- The page keys each row by its operation, so this tree's id never changes. -->
             <TransferTree
+                bind:this={treeView}
                 operationId={snapshot.operationId}
                 tick={op?.progress ?? null}
                 operation={treeOperation}

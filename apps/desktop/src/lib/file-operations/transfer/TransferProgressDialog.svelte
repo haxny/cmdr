@@ -131,6 +131,8 @@
     /** The conflict prompt and a reversal take the tree's place; this brings it back as the
      *  user left it (toggles, following, scroll, height) rather than fresh. */
     const treeMemory = createTransferTreeMemory()
+    /** The tree on screen, which hears the dialog's F (`handleKeydown`). */
+    let treeView: TransferTree | undefined = $state()
 
     /** Wide enough that the shared readout's fixed columns (amount, percent,
      *  rate, time left) still leave the bars a readable width. It's also the
@@ -330,6 +332,10 @@
             progress.handleQueue()
             return
         }
+
+        // F resumes the tree's following from anywhere in the dialog, not only from its rows: a
+        // wheel pauses the tree without moving focus into it (`transfer-tree/DETAILS.md` § Keyboard).
+        if (treeView?.handleFollowKey(event)) return
 
         if (event.key === 'Tab') {
             // Trap focus within the dialog
@@ -535,6 +541,7 @@
             <!-- Keyed by id: a tree's operation is fixed for its life. -->
             {#key treeOperationId}
                 <TransferTree
+                    bind:this={treeView}
                     operationId={treeOperationId}
                     tick={progress.progressTick}
                     operation={treeOperation}

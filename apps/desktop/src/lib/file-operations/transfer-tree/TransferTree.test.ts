@@ -234,6 +234,27 @@ describe('TransferTree', () => {
     expect(underCursor().map((row) => row.querySelector('.label')?.textContent)).toEqual(['track_0003.flac'])
   })
 
+  it('reads F like the decision prompts: the typed letter, or the physical key on a non-Latin layout', async () => {
+    await render('flat-5000', 3)
+    const pauseThenPress = async (init: KeyboardEventInit) => {
+      rows()[0].focus()
+      key('ArrowDown')
+      await settle()
+      expect(followButton()).not.toBeNull()
+      key('', init)
+      await settle()
+    }
+    // A keystroke with no physical key (what a synthesized press carries).
+    await pauseThenPress({ key: 'f' })
+    expect(followButton()).toBeNull()
+    // A Russian layout's F key types "а".
+    await pauseThenPress({ key: 'а', code: 'KeyF' })
+    expect(followButton()).toBeNull()
+    // ⇧F is another combo.
+    await pauseThenPress({ key: 'F', code: 'KeyF', shiftKey: true })
+    expect(followButton()).not.toBeNull()
+  })
+
   it('shows Follow as a word with its F key chip, no glyph', async () => {
     await render('flat-5000', 3)
     rows()[0].focus()

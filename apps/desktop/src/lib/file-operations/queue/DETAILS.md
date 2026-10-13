@@ -387,6 +387,8 @@ copy, and ↓ must walk the files, not the rows. So:
 - Escape (the `queue.close` command, read by the row's `leaveTree`) returns focus to the row instead of closing the
   window; from the row, Escape closes it as before.
 - A click in a row's tree focuses its treeitem, and the focus bubbling up moves the cursor to that row.
+- F anywhere in a row (the row, its buttons, its tree) resumes that row's paused tree: the row forwards its keydowns to
+  `handleFollowKey` (`../transfer-tree/DETAILS.md` § "The F key"). The grid has no F of its own.
 
 ## Keyboard
 

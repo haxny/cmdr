@@ -195,6 +195,31 @@ describe('TransferProgressDialog’s transfer tree', () => {
     void unmount(component)
   })
 
+  // Regression: F did nothing in the real app. A paused tree is one somebody scrolled away
+  // from, usually with the wheel, which leaves focus wherever it was (a dialog button), and F
+  // listened on the tree alone. This presses F the way WebKit delivers a real keystroke.
+  it('resumes following on F from anywhere in the dialog, not only from inside the tree', async () => {
+    const { component, target, send } = await mountDialog('copy')
+    await send(event('copying'))
+    const press = (on: Element, init: KeyboardEventInit) => {
+      on.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }))
+    }
+    const row = target.querySelector<HTMLElement>('[role="treeitem"]')
+    if (!row) throw new Error('no tree row')
+    row.focus()
+    press(row, { key: 'ArrowDown', code: 'ArrowDown' })
+    await flushPromises()
+    expect(target.querySelector('.follow button')).not.toBeNull()
+
+    const cancel = [...target.querySelectorAll<HTMLButtonElement>('.btn')].find((b) => buttonLabel(b) === 'Cancel')
+    if (!cancel) throw new Error('no Cancel button')
+    cancel.focus()
+    press(cancel, { key: 'f', code: 'KeyF' })
+    await flushPromises()
+    expect(target.querySelector('.follow button')).toBeNull()
+    void unmount(component)
+  })
+
   it('pulls a fresh window on each progress tick', async () => {
     const { component, send } = await mountDialog('move')
     await send(event('copying', 1))

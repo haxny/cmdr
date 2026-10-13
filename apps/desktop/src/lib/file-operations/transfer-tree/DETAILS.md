@@ -82,7 +82,7 @@ are unambiguous. A wheel counts only when the rows overflow: over a tree that fi
 queue window), and pausing there would pop up Follow for nothing. The Follow button (a mini `Button` floating
 bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and no glyph; opaque and stacked above the
 rows and the pinned headers, since a secondary button is see-through and the row under it showed through) and the F key
-(the physical `KeyF`, untranslated like the decision prompts' letters) resume.
+resume (§ "The F key").
 
 ## Rendering and focus
 
@@ -135,6 +135,22 @@ level up, or, when the parent is above the window, the view's `ancestors` entry 
 resumes following while paused. A click on the chevron toggles; a double-click on a folder row toggles. A toggle never
 pauses following. A click anywhere else on a row puts the cursor there and pauses following, so the row it picked stays
 in sight.
+
+### The F key
+
+F resumes following while the tree is paused (Follow showing), read by `decisionKeyOf` like the decision prompts'
+letters: the typed letter, the physical `KeyF` only on a non-Latin layout, never with a modifier or a repeat, never in a
+text field, and never translated. `handleFollowKey` is the one entry; the tree calls it from its rows, and each host
+forwards its own keydowns to widen the scope:
+
+- **The progress dialog: anywhere in it.** Its other keys are F2, Tab, Escape, and Enter on a focused button; the clash
+  letters only exist while a clash replaces the tree. So a bare F has no other meaning there.
+- **The queue window: anywhere in the tree's own row** (the row, its buttons, its tree). The grid has no F of its own,
+  and the row scopes it to the one tree the user is looking at, where a window-wide F would have to pick among several.
+
+**Why**: F listened on the tree's rows alone and matched only `event.code`. A wheel is what usually pauses a tree, and
+it leaves focus where it was (a dialog button, the queue row), so in the real app F did nothing. Matching `code` alone
+also missed any keystroke without one (the MCP bridge sends none) and a layout that types F elsewhere.
 
 ## What a row says (`row-format.ts`)
 

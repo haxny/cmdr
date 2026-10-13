@@ -24,6 +24,8 @@
     import { MAX_PINNED, pinnedHeaders } from './pinned-headers'
     import { rowPaths, type TransferTreeOperation } from './row-format'
     import { ipcTransferTreeSource, type TransferTreeSource } from './transfer-tree-source'
+    import { decisionKeyOf } from '../decision-keys'
+    import { claimKey } from '#lib/shortcuts/claim-key.js'
 
     interface CommonProps {
         /** Anything that changes when the operation advanced (the session's `progress`): each change pulls a fresh window. */
@@ -46,8 +48,8 @@
 
     const { tick, operation, defaultRows = 8, tabbable = true, operationId, source, memory }: Props = $props()
 
-    /** The physical key that resumes following (like the decision prompts' letters, never translated). */
-    const FOLLOW_KEY_CODE = 'KeyF'
+    /** The letter that resumes following: read like the decision prompts' letters (`decisionKeyOf`), so never
+     *  translated, the typed letter first and the physical key only for a non-Latin layout. */
     const FOLLOW_KEY = 'F'
     /** DOM rows kept beyond the viewport on each side. */
     const OVERSCAN = 4
@@ -335,8 +337,18 @@
         if (parent !== null) moveTo(parent)
     }
 
-    function isFollowKey(event: KeyboardEvent): boolean {
-        return event.code === FOLLOW_KEY_CODE && !event.shiftKey && !event.repeat && showFollow
+    /**
+     * Resumes following on F while the tree is paused, and says whether it did. The tree
+     * hears F from its own rows; a host forwards its keydowns here to widen that (the
+     * progress dialog forwards every one, since a wheel pauses the tree without moving focus
+     * into it). A key something else already claimed, or one typed in a text field, is left
+     * alone (`decisionKeyOf`).
+     */
+    export function handleFollowKey(event: KeyboardEvent): boolean {
+        if (event.defaultPrevented || !showFollow || decisionKeyOf(event) !== FOLLOW_KEY) return false
+        claimKey(event)
+        tree.resumeFollowing()
+        return true
     }
 
     function onKeydown(event: KeyboardEvent): void {
@@ -346,7 +358,7 @@
         if (cursorTo) moveTo(cursorTo(at))
         else if (event.key === 'ArrowRight') expandOrEnter(at)
         else if (event.key === 'ArrowLeft') collapseOrLeave(at)
-        else if (isFollowKey(event)) tree.resumeFollowing()
+        else if (handleFollowKey(event)) return
         else return
         event.preventDefault()
     }
