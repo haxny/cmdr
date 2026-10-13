@@ -479,6 +479,7 @@
                 size="mini"
                 onclick={() => void showInMainWindow()}
                 aria-label={tString('queue.row.foregroundAria')}
+                tooltipContent={tString('queue.row.foregroundTooltip')}
                 aria-keyshortcuts="Enter"
                 tabindex={-1}
             >

@@ -2997,6 +2997,7 @@ export type MessageKey =
   | 'queue.row.dismissAria'
   | 'queue.row.foreground'
   | 'queue.row.foregroundAria'
+  | 'queue.row.foregroundTooltip'
   | 'queue.row.label'
   | 'queue.row.pause'
   | 'queue.row.pauseAria'

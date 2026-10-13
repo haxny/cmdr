@@ -624,6 +624,25 @@ describe('QueueRow: Show (back to the main window)', () => {
     })
   })
 
+  // "Show" alone doesn't say where, or that nothing about the operation changes.
+  it('explains Show on hover: the progress dialog comes back in the main window, the work keeps going', () => {
+    render({ row: buildRow('running') })
+    const button = showButton()
+    if (!button) throw new Error('no Show button')
+
+    vi.useFakeTimers()
+    try {
+      button.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
+      vi.advanceTimersByTime(500)
+      expect(document.querySelector('.cmdr-tooltip')?.textContent.trim()).toBe(
+        'Open this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.',
+      )
+    } finally {
+      button.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))
+      vi.useRealTimers()
+    }
+  })
+
   it('offers Show on a paused row and on one still counting', () => {
     render({ row: buildRow('paused') })
     expect(showButton()).not.toBeNull()
