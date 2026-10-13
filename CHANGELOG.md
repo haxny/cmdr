@@ -5,6 +5,150 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0] - 2026-10-13
+
+The big highlight is **multi-rename**, which I've been missing for a long time! It lets you rename many files at once,
+with patterns, counters, search and replace, presets, a live preview, and Undo. Huge thanks to
+[Jiri Slovacek](https://github.com/haxny) for the core functionality, which I then pimped with some fixes and a bunch of
+UI polish.
+
+Secondary highlight: proper file-level progress for copy/move/compress transfers, in a tree-view thing. Looks really
+nice in my opinion.
+
+Then also a truckload of fixes and improvements, mostly based on user feedback (thanks!) and my own testing.
+
+### Added
+
+- Add Multi-rename (⌃M, alpha), contributed by Jiri Slovacek: name and extension masks, counters, search and replace
+  with regex, case changes, transliteration, a live preview, presets, per-field history, editing the new names in your
+  text editor, and one-step Undo (b3b2d581b, 35fb93cc1, 83a359ba6, 450686abd, a243220b8, c26639746, 12fc47c46,
+  cf26149b3, 6b3be9b16, 5df8c2a11, 1bb91e98a, f2b3e4d67, c26ea2e83, ae9207c37, c6a48a251, cf605a111, 2821a6c89,
+  8c918db27, 112a6d373, 5d920899d, 233feac8d, 4cd00362b, 9b3bd93cd, 087417ee7, 07b1f0d36, 4292c0585, 232e88781,
+  50084d56c, 1752f6d93, 73c40747c, c37ef50f0, 37b49cc84, 802c552a3, 65612fc14, 60ff2caa6, 15b52272a, 0d174c705,
+  45cc68eed, 285f45e89, 8fb427662, 520b846ca, 7eee055d2, 4d8b6566c, 5710c32e4)
+- Add a live file tree to copy, move, and compress progress, in the dialog and the queue: the folder and file in flight,
+  what landed, what got skipped, and what couldn't finish, plus how many files are left (a3130f04e, 78181a63e,
+  efd78244a, f8c83f07f, 3a5c604d6, 05187ecfc, 80753d282, 027537edf, d138cdf81, 29bc11f46, 596320940, 2e8983f52,
+  1e2dbff89, 6aeded13a, c4a0e3976, eb1aeb7f3, 04cbb1097, e37f393eb, e742fcb28, f4f5733ea, 779f92e80, 4789208e0,
+  8e46624d8, 8547331af, f22e90d51)
+- Keep creation dates, permissions, and Locked and Hidden on copies to and from servers and phones, wherever they can
+  store them: SMB, SFTP, S3, Nextcloud, and ADB (d8ee97a92, 6195a6cb5, d5f0dd3a0, b0f191f64, a69f0a581, ff0d8926e,
+  944c89cb0, b57edfc1f)
+- Say once after a copy or move which metadata the destination couldn't keep (389ceefca, ad0bfb574, 80c4c26f9,
+  b2e7ac590)
+- Send a copy, move, compress, or trash straight to the background with F2 or the new Background button (8eaae4f1b,
+  fe9e76a57, ca47d4ca0, 966ead5b6, db28267ae, de9df8026, 5b901366b, 3ca12900d, ea71de9ff, 052cf32d8, 8ae9b184a,
+  5cf0de63a, 89b4c1a37, 51a2e19b3, 2544f3b9b)
+- Drive the operation queue from the keyboard: arrows, Space, Enter, ⌫, one-letter row keys (S, P, C, B), and ⌥↑ / ⌥↓ to
+  reorder waiting jobs (5bb02e1a2, 8fd4ebf18, f0c6ba712, f2472527f, e60c534f1, 415cba419)
+- Retry a failed background copy or move right from its queue row (539593637, e9540680d, f77bf6c66)
+- Wait up to 15 minutes for a NAS that drops off the network mid-copy, then finish the copy (a38e7079a, 0b3941af9,
+  d54c4f2c3, b82717baa, c35a39368)
+- Ask whether to move the rest when files a queued operation was waiting on got moved or deleted meanwhile (e4554950d,
+  3184e9cfd, ea2fd5bba, 87c691ee9)
+- Let Copy and Move take a full destination name: rename on the way, or copy beside the source, contributed by Gábor
+  Gyebnár (ce24aebc1, 5f54ebcfd, 49a69f6b7, bbc6763e8, 9332cf716)
+- Answer "file already exists" and error prompts with one key (S Skip, O Overwrite, R Rename, and more), contributed by
+  Jiri Slovacek (34489fafc, 7c76bb2c2, 6b84bc60d, 42ecf4bbf)
+- Delete permanently with ⇧Delete and ⌥⌘⌫ too, contributed by Jiri Slovacek (07dea5361, 796c4eb84, 681e8de41)
+- Add a "Skip confirmation" setting that starts copy, move, and trash in one keypress (permanent deletes still ask)
+  (e133ff0df)
+- Favorite folders on SFTP, WebDAV, and S3 servers and on phones, and keep favorites on offline shares: picking one
+  connects (6dbd79d7d, 0ab9512c4, 5f1efdc7a, 687477c69, a6e20b1b8, 6ad67437e, a3a9c8e98, f6bca9e28, 78d96c589,
+  d3af5a5bf)
+- Show favorites as a foldable section in the volume switcher and in the Dock menu (8fa882352, e577050f8, d0b278641)
+- Change a saved server's address without losing its passwords, favorites, or tabs, with Eject and save for a NAS that
+  got a new IP (5aa41c1e6, 137817b27, 54982ce56, 46424a0de, 1a5ce7de6, 74003e6af, a479dba51, 62bed750d, 9d8640144,
+  e0a1e3dc3, 14beed519)
+- Extract Finder-made zips and macOS tars with their Finder tags and icons and without `__MACOSX` clutter, and keep tags
+  when compressing (20a12be13, d515b65a2, 9b2e79fa8)
+- Offer "Send error report…" on every failure, and on operations that take long (61717d55f, 43f1bf802, 7c9278a57,
+  4494adc61)
+- Let agents send a copy, move, or trash to the background (1991166b4, 507ee745b, a9cd62452)
+
+### Changed
+
+- Make Copy path and Copy filename copy every selected item, one per line (c6eeba373, 1ea4e5038, 019d39bfc, 607f09baf,
+  ca67c52cd, a80179fef)
+- Copy, move, and compress folder by folder in name order, whatever the pane sorts by (bd8e94507)
+- Start each file sooner in copies between a server and your Mac, and keep one slow disk from holding up other copies
+  (9a2040504, 407a0ed7f, c365eff1a, d50e6e9ad)
+- Make Nextcloud about five times faster per request (d37b8ba56)
+- Keep panes responsive while the index updates folder sizes or a pane re-sorts (dbfb8552f, c7b585904, 4c65f8bd2,
+  831a0ee13)
+- Always offer a plain Cancel on the "file exists" prompt that keeps what's copied, as a full-size button (03e1a4642,
+  cf78b1d5b)
+- Stop offering drive indexing for mounts that can't be indexed (NFS, AFP, WebDAV, FUSE), and ask to connect a phone
+  instead of restarting Cmdr (b4563cb08, 799c77867, d6f782ef4, d16f5e616, dae803fa1)
+- Hand an open volume switcher or favorites menu to the other pane with ⌥F1 / ⌥F2 (2b119a1c6)
+
+### Fixed
+
+- Fix copies and moves across drives losing creation dates, tags, custom icons, permissions, and Locked and Hidden, on
+  folders too (82b7f6feb, 6e04eb635, 75261bdf6, e4cb1e475, 9a51e4fda, 249ce825f, 9f6862a13)
+- Fix copying a Locked file failing and leaving an undeletable temp file behind (eb10e06ee, 941e24762, ee29321ef,
+  d3d272a6c)
+- Fix files with long names failing to copy or move, especially onto Synology shares (86c89ce7b, c14de088b)
+- Fix copies and zip edits on Finder-mounted SMB shares failing with "Couldn't flush destination to disk" (c03dbca0d,
+  d968321b6)
+- Fix copying a symlinked folder like ~/Dropbox to a NAS, phone, or server (1fd54c18f)
+- Fix copies from FAT, exFAT, and some SMB drives adding stray hidden `._` files (3f47cada2, 9b8419a7e)
+- Fix Finder refusing to open zips Cmdr made with folders inside (8d411b906)
+- Fix large files on SMB shares timing out in the viewer, and files over 256 MiB refusing to open (f5c135b23, b24eca2dc,
+  f49dd3d73)
+- Fix Retry now, Cancel, and Disconnect doing nothing on a reconnecting server (95b16b3c2, f42387f1d)
+- Fix adding a folder on a slow SMB server to favorites (309ac74b9, 066ee0ec0, b9522d88c, 7cfb4ec6b, 9aad86d4a)
+- Fix a crash when dragging some files from a phone or server to Finder (2f694e9d8)
+- Fix a rare crash while rotating log files (8baff7e61)
+- Fix Cancel on a move's "file exists" prompt leaving the prompt on screen, contributed by Jiri Slovacek (af35957ba,
+  96f669503, 5986b9b47)
+- Fix the error dialog naming a hidden temp file instead of the file it couldn't write (9dd8995ac)
+- Fix a slow cancel claiming it's "finishing USB transfers" on SMB and local copies (6b3cb431a, 50f61fed9, cfc226a8d)
+- Fix selection after copies: a ⌘A copy deselects files as they finish, and the other pane's files stay selected
+  (ac64cb405, c7ef21f25, ffb6b6add)
+- Fix Space not closing Quick view, and ⇧Space closing and reopening it (039f8d146)
+- Fix viewer zoom keys needing a click on the image first, contributed by Jiri Slovacek (074156169, f07c01ebe)
+- Fix ⌘⌥ shortcuts like ⌘⌥R not firing on keyboard layouts where ⌥ types a symbol (debd84885)
+- Fix favorites and Go to folder landing on a remembered folder instead of a drive's or share's root (8205d72af,
+  654228585, ef245b5e2)
+- Fix the copy dialog missing "into its own subfolder" on external drives, and refusing some cross-drive copies
+  (2c4892af7)
+- Fix trusting a server's new host key rejecting its saved password (746205945)
+- Fix an eject blocked by a background macOS process asking you to close files you didn't have open (c3111c71b)
+- Fix a file created as you open its folder staying missing until you navigate away (314eb0c68)
+- Fix a slow refresh occasionally showing an older listing over a newer one (abba69e8a)
+- Fix a new local folder adding a phantom row to an SFTP pane (09164a092)
+- Fix dialog buttons wrapping in longer translations (5363605f6, a23fc6d24, f1336180c, b65851255)
+- Fix Voice Control not finding the function key bar, search chips, and Background buttons by their visible words
+  (19207e149, 9c6724ce7, 11487be75)
+- Fix short toasts breaking mid-word, and tooltips drawing over open menus (bfd0c0293, b7aadabb9)
+- Fix password-protected or custom-port SMB shares mounted through GNOME on Linux opening the wrong folder (d00f6bf73,
+  f26f1ebf8)
+
+### Security
+
+- Keep Gatekeeper's quarantine on files extracted from a downloaded archive (792f15cfe)
+- Keep private files and folders private while copying them (82b7f6feb, 9a51e4fda)
+- Stop a tiny crafted `.xz` or `.zst` archive from reserving gigabytes of memory (4ee07013c)
+- Update the network and SFTP libraries for upstream security fixes (6fe59c8c5, 287f74e27)
+
+### Non-app
+
+- Pin how copies preserve every metadata class with a test matrix that each fix flips (0f7ddfd4e, 6600e20f1, 0b5503138,
+  e43184704, b289e1ff4, 87eef5b2f, f27e8cf5c, 4dda6c387)
+- Extract the listing engine into its own Tauri-free crate (1646cc78b, 733c4b6f2, 5ce733600, 357af1551, c04f8cf63,
+  fb8faedd7, 67d3e6411)
+- Move to SvelteKit 3, Rust 1.99, Go 1.27.2, Vitest 5, pnpm 12, Tauri 2.12.2, and Svelte 5.57, and halve the git crate's
+  clean build (4538a4660, fb29947e7, 90334fcfd, f44c721b4, 50111991c, 10d640925, 970abf428, 33ab5951f, f50cf74b6,
+  d5008795c, aa1e23e18, e2ef385b5, b5542ec93, 90a3346e4)
+- Make `pnpm check --fast` take ~6 s instead of ~55 s and run it on every push (547b50ee7, deb0c5404, 4ae3496db)
+- Fail the build on a command with no keyboard path or a mouse-only click handler (6ab7e4089, 05f3220d1)
+- Report the reason behind an Objective-C exception crash, redacted like a panic message (1f578b957)
+- Replace Prettier with oxfmt everywhere (005d2683c, 4a52960b6)
+- Claim SLSA Build Level 3 on the trust page, and fix the Homebrew tap skipping its version bump (ff3dede36, 60a6428e1)
+- Fix flaky watcher, downloads, Nextcloud, SMB, and website test lanes (dbe06ca49, eceb5ea75, 51c39c840, 559192ea4,
+  f92a03e76, 434e1c756, 3f13e47e5)
+
 ## [0.51.0] - 2026-10-08
 
 Some missing Total Commander features got in (thanks for the contributions to [haxny](https://github.com/haxny) ❤️):

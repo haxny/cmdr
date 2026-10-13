@@ -694,6 +694,18 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'Space and ⌥⇧⏎ work with drive indexing off. Also on servers and in archives.',
             done: true,
           },
+          {
+            date: '(Oct 7)',
+            title: 'Multi-rename tool',
+            description: 'Rename many files with a pattern, counters, and replaces.',
+            done: true,
+          },
+          {
+            date: '(Oct 11)',
+            title: 'File-level transfer progress',
+            description: 'See what a copy/move is doing on the folder+file level.',
+            done: true,
+          },
         ],
       },
     ],
@@ -730,12 +742,6 @@ export const roadmapSections: RoadmapSection[] = [
             date: '(this fall?)',
             title: 'Folder sync',
             description: 'Compare/sync two folders.',
-            done: false,
-          },
-          {
-            date: '(this fall?)',
-            title: 'Bulk rename tool',
-            description: 'To bulk-rename files without using AI.',
             done: false,
           },
           {
