@@ -13,7 +13,7 @@ import {
   beginForegroundClaim,
   endForegroundClaim,
   setForegroundOperationId,
-} from '#lib/file-operations/foreground-operation.svelte'
+} from '#lib/file-operations/foreground-operation.svelte.js'
 import { initListingDiffSync, type ListingDiffSyncDeps } from './listing-diff-sync.svelte'
 import { createPaneRowState } from './pane-row-state'
 

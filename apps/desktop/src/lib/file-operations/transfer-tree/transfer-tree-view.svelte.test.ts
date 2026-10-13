@@ -145,7 +145,7 @@ describe('the request coalescer', () => {
     }
   })
 
-  it('picks up where a view over the same operation left off: its hand toggles, following, and scroll', async () => {
+  it('picks up where a view over the same operation left off: its hand toggles, following, and scroll', () => {
     const first = create()
     first.toggle(42, false)
     first.toggle(7, true)
