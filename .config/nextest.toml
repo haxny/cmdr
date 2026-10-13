@@ -404,10 +404,18 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 # release benchmark in another worktree (host load ~30). Every one passed when the
 # check runner re-ran it alone at the SAME deadline, which is the contention
 # signature rather than a defect, and each takes well under a second when idle.
+#
+# The `lifecycle_order_test` pair and the `a_detached_arm_` pair joined on 2026-10-13:
+# the detached-arm pair logged 86 timeouts each at exactly 8.0 s (passing runs up to
+# 7.8–8.0 s), the lifecycle pair timed out 16 of 25 runs, and every timeout passed when
+# the check runner re-ran it alone. Their only slow step is the FSEvents stream start
+# and its teardown join, both `fseventsd` round trips.
 filter = '''
     test(listing_host::tests::caching_reaper_test::)
   + test(listing_host::tests::archive_watch_integration_test::)
   + test(file_system::volume::backends::local_posix_test::test_listing_watch_coverage_flips_with_watcher_lifecycle)
+  + test(listing_host::tests::lifecycle_order_test::)
+  + test(file_system::watcher_test::a_detached_arm_)
 '''
 slow-timeout = { period = "20s", terminate-after = 1 }
 
