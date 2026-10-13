@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "那个文件夹现在响应很慢，所以还没加入个人收藏。稍后再试一次？",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "已达到标签页数量上限",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "那個資料夾現在回應很慢，所以還沒加入喜好項目。要稍後再試一次嗎？",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "已達分頁數量上限",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

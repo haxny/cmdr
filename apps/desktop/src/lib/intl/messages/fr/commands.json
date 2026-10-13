@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Ce dossier met du temps à répondre en ce moment et n’a donc pas encore été ajouté à vos favoris. Réessayer dans un instant ?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Limite d’onglets atteinte",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

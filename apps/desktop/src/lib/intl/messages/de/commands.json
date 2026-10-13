@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Dieser Ordner antwortet gerade nur langsam, deshalb ist er noch nicht in deinen Favoriten. Gleich noch einmal versuchen?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Tab-Limit erreicht",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

@@ -971,6 +971,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Die map reageert nu traag, dus staat hij nog niet in je favorieten. Probeer het zo meteen opnieuw?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Tabbladlimiet bereikt",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

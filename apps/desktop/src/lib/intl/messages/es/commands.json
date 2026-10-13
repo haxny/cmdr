@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Esa carpeta tarda en responder ahora mismo, así que todavía no está en favoritos. ¿Lo intentas de nuevo en un momento?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Límite de pestañas alcanzado",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

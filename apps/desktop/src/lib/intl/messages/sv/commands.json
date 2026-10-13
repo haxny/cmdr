@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Mappen svarar långsamt just nu, så den finns inte i favoriter än. Försök igen om en stund?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Gränsen för antal flikar nådd",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

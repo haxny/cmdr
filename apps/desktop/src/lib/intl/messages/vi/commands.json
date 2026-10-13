@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Thư mục đó hiện đang phản hồi chậm, nên chưa có trong mục ưa thích. Thử lại sau giây lát nhé?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Đã đạt giới hạn số tab",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

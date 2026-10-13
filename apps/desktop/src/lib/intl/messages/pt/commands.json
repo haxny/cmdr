@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Essa pasta está demorando para responder agora, então ainda não está nos favoritos. Tentar de novo em instantes?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Limite de abas atingido",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

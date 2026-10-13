@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Эта папка сейчас отвечает медленно, поэтому ее пока нет в избранном. Попробуйте еще раз чуть позже.",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Достигнут предел вкладок",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"

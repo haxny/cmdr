@@ -968,6 +968,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "Az a mappa most lassan válaszol, ezért még nincs a kedvencek között. Megpróbálod újra egy pillanat múlva?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.handler.tabLimitReached": "Elérted a lapok korlátját",
   "@commands.handler.tabLimitReached": {
     "sourceHash": "2d4205a"
