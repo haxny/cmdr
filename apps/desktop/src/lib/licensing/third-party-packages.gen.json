@@ -1072,12 +1072,6 @@
       "url": "https://github.com/notify-rs/notify.git"
     },
     {
-      "name": "file-rotate",
-      "version": "0.8.0",
-      "license": "MIT",
-      "url": "https://github.com/kstrafe/file-rotate"
-    },
-    {
       "name": "filetime",
       "version": "0.2.29",
       "license": "MIT OR Apache-2.0",
