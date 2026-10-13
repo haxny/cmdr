@@ -149,6 +149,8 @@ syscall) answers the share's own row instead, built by the same `smb::gvfs_share
 the two can't name one share two ways. ❗ This is what lets a favorite on a GVFS share remember the share's id (the add
 gate resolves through here); before, it stored the FUSE root's path id and read "unplugged drive" from the first
 listing (caught by `test/e2e-playwright/favorites-offline-smb.spec.ts`, Linux Docker lane, 2026-10-10).
+`network_mount_under`, the gate's no-round-trip shortcut, answers the share's folder the same way; reading the table
+alone, it named the FUSE root and brought "unplugged" back (same spec, 2026-10-13).
 
 One GVFS gap this doesn't close, visible to that spec: in the Docker lane the GVFS watcher's inotify sees nothing
 inside the FUSE mount, so an unmount from outside Cmdr pushes no `volumes-changed` until something else does, and

@@ -311,14 +311,24 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
 }
 
 /// The twin of macOS `volumes::network_mount_under`, named as `resolve_path_volume_fast` names it.
-/// A GVFS share isn't a mount of its own, so it reads as nothing and the add gate resolves it the
-/// long way.
 pub(crate) fn network_mount_under(path: &Path) -> Option<crate::volume_listing::NetworkMount> {
     network_mount_in(&linux_mounts::parse_proc_mounts()?, path)
 }
 
 /// [`network_mount_under`] over a table already read.
+///
+/// ❗ A GVFS SMB share answers its own folder, the way `resolve_path_volume_fast` does, ❌ never the
+/// FUSE root the table names: one FUSE mount serves every share, and its root is a volume no row
+/// lists, so a favorite saved on it reads "unplugged" (`DETAILS.md` § "A path inside a GVFS share
+/// resolves to the share").
 fn network_mount_in(mounts: &[MountEntry], path: &Path) -> Option<crate::volume_listing::NetworkMount> {
+    if let Some(root) = path.to_str().and_then(smb::gvfs_share_root) {
+        let dirname = Path::new(root).file_name()?.to_str()?;
+        return Some(crate::volume_listing::NetworkMount {
+            mount_point: root.to_string(),
+            name: parse_gvfs_smb_dirname(dirname)?.share,
+        });
+    }
     let entry = linux_mounts::mount_entry_for_path_from_entries(path, mounts)?;
     if cmdr_fs::filesystem_kind::mount_is_local_disk(Some(&entry.device), Some(&entry.fstype)) {
         return None;
@@ -360,6 +370,33 @@ mod tests {
         );
         assert_eq!(network("/mnt/media-1/x"), None);
         assert_eq!(network("/home/me"), None);
+    }
+
+    /// ❗ One FUSE mount serves every GVFS share, so the table's own answer for a folder on one is
+    /// that FUSE root. The add gate would then favorite the folder on the root's volume, which no
+    /// row lists ("unplugged"), rather than on the share's (`favorites-offline-smb.spec.ts`).
+    #[test]
+    fn network_mount_in_names_a_gvfs_share_rather_than_the_fuse_root() {
+        let mounts = vec![
+            proc_mount("/dev/sda1", "/", "ext4"),
+            proc_mount("gvfsd-fuse", "/run/user/1000/gvfs", "fuse.gvfsd-fuse"),
+        ];
+        let share = "/run/user/1000/gvfs/smb-share:server=nas,share=public";
+        assert_eq!(
+            network_mount_in(&mounts, Path::new(&format!("{share}/docs/2026"))),
+            Some(crate::volume_listing::NetworkMount {
+                mount_point: share.to_string(),
+                name: "public".to_string(),
+            })
+        );
+        // Anything else GVFS serves has no row of its own, and the resolver answers the FUSE root.
+        assert_eq!(
+            network_mount_in(&mounts, Path::new("/run/user/1000/gvfs/sftp:host=nas/home")),
+            Some(crate::volume_listing::NetworkMount {
+                mount_point: "/run/user/1000/gvfs".to_string(),
+                name: mounts::mount_display_name("/run/user/1000/gvfs"),
+            })
+        );
     }
 
     #[test]
