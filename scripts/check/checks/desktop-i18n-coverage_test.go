@@ -25,10 +25,11 @@ func TestNonEnLocaleCountCountsCatalogDirsOnly(t *testing.T) {
 		}
 	}
 
-	// Everything with JSON except `en` itself and the non-locale `screenshots/`:
-	// de, hu, en-GB, pt, pt-PT, zh, zh-Hant, en-XA.
-	if got := nonEnLocaleCount(root); got != 8 {
-		t.Errorf("nonEnLocaleCount = %d, want 8", got)
+	// Everything with JSON except `en` itself, the non-locale `screenshots/`, and the
+	// gitignored pseudolocale `en-XA/` the locale checks leave out of a default run:
+	// de, hu, en-GB, pt, pt-PT, zh, zh-Hant.
+	if got := nonEnLocaleCount(root); got != 7 {
+		t.Errorf("nonEnLocaleCount = %d, want 7", got)
 	}
 }
 

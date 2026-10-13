@@ -25,7 +25,7 @@
  */
 
 import { BASE_LOCALE, loadCatalog } from './i18n-catalog-lib.ts'
-import { EXIT_ERROR, runLocaleCheck } from './i18n-locale-check-lib.ts'
+import { EXIT_ERROR, runLocaleCheck, withoutGeneratedLocales } from './i18n-locale-check-lib.ts'
 import type { LocaleCheckOptions } from './i18n-locale-check-lib.ts'
 import type { Issue } from './i18n-locale-check-lib.ts'
 
@@ -88,14 +88,20 @@ export function mismatchedQuotes(pairs: readonly QuotedLabelPair[], messages: Re
  * Runs the check over the catalogs under `messagesRoot`.
  * @param opts.messagesRoot override the `messages/` root (for tests)
  * @param opts.write output sink, one line at a time (for tests)
+ * @param opts.only only these locales (a generated one is skipped even when named)
  */
 export function runQuotedLabelsCheck(opts: LocaleCheckOptions = {}): number {
   const pairs = quotedLabelPairs(loadCatalog(BASE_LOCALE, opts.messagesRoot).messages)
+  const write =
+    opts.write ??
+    ((line: string) => {
+      console.log(line)
+    })
   return runLocaleCheck({
     title: 'Quoted labels',
     messagesRoot: opts.messagesRoot,
-    write: opts.write,
-    only: opts.only,
+    write,
+    only: withoutGeneratedLocales(opts.only, write),
     summaryLine: (count) => `${String(count)} key(s) quote a label in words the label itself doesn’t use:`,
     inspectLocale: ({ source, isOverlay, catalog, findings }) => {
       // An overlay reads through its base, and answers only for a pair it forks a side of:

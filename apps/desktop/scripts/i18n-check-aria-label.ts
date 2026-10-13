@@ -42,6 +42,7 @@
 
 import {
   BASE_LOCALE,
+  isCheckedLocale,
   isRawKey,
   layerCatalogs,
   listLocales,
@@ -49,7 +50,7 @@ import {
   resolveLocaleSource,
 } from './i18n-catalog-lib.ts'
 import type { Catalog } from './i18n-catalog-lib.ts'
-import { EXIT_CLEAN, EXIT_ERROR, EXIT_ISSUES } from './i18n-locale-check-lib.ts'
+import { EXIT_CLEAN, EXIT_ERROR, EXIT_ISSUES, withoutGeneratedLocales } from './i18n-locale-check-lib.ts'
 import type { LocaleCheckOptions } from './i18n-locale-check-lib.ts'
 
 /** A visible-label key and the accessible-name key that must contain it. */
@@ -156,7 +157,8 @@ export function runAriaCheck({ messagesRoot, write, only }: LocaleCheckOptions =
     return fresh
   }
 
-  const locales = available.filter((tag) => tag !== BASE_LOCALE && (only === undefined || only.includes(tag)))
+  const checked = withoutGeneratedLocales(only, out)
+  const locales = available.filter((tag) => tag !== BASE_LOCALE && isCheckedLocale(tag, checked))
   if (locales.length === 0) {
     out(`Aria label containment: no non-${BASE_LOCALE} locales to check.`)
     return EXIT_CLEAN

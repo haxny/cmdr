@@ -67,6 +67,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   BASE_LOCALE,
+  isCheckedLocale,
   isRawKey,
   layerCatalogs,
   listLocales,
@@ -278,18 +279,21 @@ export interface LocaleOutcome {
 }
 
 /**
- * Runs the check over every non-`en` locale.
+ * Runs the check over every non-`en` locale the run inspects (`isCheckedLocale`).
  *
  * @param options.messagesRoot override the `messages/` root (for tests)
  * @param options.allowlist the accepted splits and baselines
+ * @param options.only only these locales; every one but a generated locale when absent
  * @returns one outcome per locale, in locale order
  */
 export function inspectLocales({
   messagesRoot,
   allowlist,
+  only,
 }: {
   messagesRoot?: string
   allowlist: Allowlist
+  only?: readonly string[]
 }): LocaleOutcome[] {
   const available = listLocales(messagesRoot)
   const loaded = new Map<string, Catalog>()
@@ -306,7 +310,7 @@ export function inspectLocales({
   if (problems.length > 0) throw new Error(`Malformed @key.agreesWith in ${BASE_LOCALE}:\n  ${problems.join('\n  ')}`)
 
   const outcomes: LocaleOutcome[] = []
-  for (const locale of available.filter((tag) => tag !== BASE_LOCALE)) {
+  for (const locale of available.filter((tag) => tag !== BASE_LOCALE && isCheckedLocale(tag, only))) {
     const { overrides, isOverlay } = resolveLocaleSource(locale, available)
     // `agreesWith` is a fact about the English key, so an overlay's source keeps
     // `en`'s metadata: layering would let the base locale's `@key` blocks replace it.

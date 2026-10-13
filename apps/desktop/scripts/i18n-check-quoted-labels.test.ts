@@ -76,6 +76,17 @@ describe('runQuotedLabelsCheck (fixture tree)', () => {
     expect(lines.join('\n')).toMatch(/es-419[\s\S]*a\.hint → quotes “Don’t show again”/)
   })
 
+  it('skips the pseudolocale even when named: its per-string padding never matches inside the quoting text', () => {
+    write(join(root, 'en-XA', 'a.json'), {
+      'a.dontShow': 'Ðöñ’ţ šḣöŵ áǧáíñ⟦áéíöü⟧',
+      'a.hint': 'Ṗŕéšš “Ðöñ’ţ šḣöŵ áǧáíñ”.⟦áéíöüáé⟧',
+    })
+    const lines: string[] = []
+    const code = runQuotedLabelsCheck({ messagesRoot: root, write: (line) => void lines.push(line), only: ['en-XA'] })
+    expect(code).toBe(EXIT_CLEAN)
+    expect(lines.join('\n')).toMatch(/en-XA: skipped/)
+  })
+
   it('is clean once the overlay forks the quoting text too', () => {
     write(join(root, 'es-419', 'a.json'), {
       'a.dontShow': 'No mostrar de nuevo',

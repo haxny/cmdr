@@ -43,7 +43,15 @@
  * fixture instead of the real catalogs.
  */
 
-import { BASE_LOCALE, layerCatalogs, listLocales, loadCatalog, resolveLocaleSource } from './i18n-catalog-lib.ts'
+import {
+  BASE_LOCALE,
+  GENERATED_LOCALES,
+  isCheckedLocale,
+  layerCatalogs,
+  listLocales,
+  loadCatalog,
+  resolveLocaleSource,
+} from './i18n-catalog-lib.ts'
 import type { Catalog } from './i18n-catalog-lib.ts'
 
 /** Exit codes shared by every locale check, mirrored by the Go wrappers. */
@@ -52,18 +60,35 @@ export const EXIT_ISSUES = 1
 export const EXIT_ERROR = 2
 
 /**
- * The non-`en` locales a check must inspect, sorted: full translations and
- * overlays alike. In a repo with only `en` this is empty, so every locale check
- * is a clean no-op.
+ * The non-`en` locales a default run inspects, sorted: full translations and
+ * overlays alike, minus the generated pseudolocale (`isCheckedLocale`). In a repo
+ * with only `en` this is empty, so every locale check is a clean no-op.
  * @param messagesRoot override the `messages/` root (for tests)
  */
 export function localesToCheck(messagesRoot?: string): string[] {
-  return nonBaseLocales(listLocales(messagesRoot))
+  return listLocales(messagesRoot).filter((locale) => locale !== BASE_LOCALE && isCheckedLocale(locale))
 }
 
-/** The checkable locales among `available`: everything but the base locale itself. */
-function nonBaseLocales(available: readonly string[]): string[] {
-  return available.filter((locale) => locale !== BASE_LOCALE)
+/**
+ * Drops the generated locales from `only`, saying so for each, for a check whose
+ * rule the pseudolocale breaks by construction: it pads every string separately
+ * (`Ṗáüšé⟦áé⟧`), so a label's padding never appears inside a longer string that
+ * names the label. The same goes for a term shared across strings. A default run
+ * (no `only`) leaves them out already.
+ * @param only the locales the caller named, if any
+ * @param write output sink for the "skipped" lines
+ */
+export function withoutGeneratedLocales(
+  only: readonly string[] | undefined,
+  write: (line: string) => void,
+): readonly string[] | undefined {
+  if (only === undefined) return undefined
+  for (const locale of only.filter((tag) => GENERATED_LOCALES.has(tag))) {
+    write(
+      `${locale}: skipped (a generated locale pads each string separately, so its text never matches across strings).`,
+    )
+  }
+  return only.filter((tag) => !GENERATED_LOCALES.has(tag))
 }
 
 /** One per-key issue: `detail` is a short, translator-facing reason. */
@@ -310,8 +335,8 @@ export function runLocaleCheck({
   only,
 }: RunLocaleCheckOptions): number {
   const available = listLocales(messagesRoot)
-  const locales = (includeBaseLocale ? available : nonBaseLocales(available)).filter(
-    (locale) => only === undefined || only.includes(locale),
+  const locales = available.filter(
+    (locale) => (includeBaseLocale || locale !== BASE_LOCALE) && isCheckedLocale(locale, only),
   )
   // One catalog read per tag, however many locales point at it as their source.
   const loaded = new Map<string, Catalog>()

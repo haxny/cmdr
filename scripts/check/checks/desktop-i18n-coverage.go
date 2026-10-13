@@ -66,13 +66,14 @@ func RunDesktopI18nCoverage(ctx *CheckContext) (CheckResult, error) {
 }
 
 // nonEnLocaleCount counts the non-`en` locale directories under `messages/` the
-// way the JS `listLocales` does: a subdirectory holding at least one `.json`,
-// excluding `en` and the reserved `screenshots/` sibling. It lets the locale
-// checks report the real locale count instead of implying no locales exist (exit
-// 0 means "no locales OR all clean"). Source of truth for the rules:
-// `i18n-catalog-lib.ts` (`listLocales` / `NON_LOCALE_DIRS`). Returns 0 on any
-// read error, so a passing check degrades to the English-only phrasing and never
-// fails on this.
+// way the JS `localesToCheck` does: a subdirectory holding at least one `.json`,
+// excluding `en`, the reserved `screenshots/` sibling, and the gitignored
+// pseudolocale `en-XA/`, which a default run leaves out so a local run counts
+// what CI counts. It lets the locale checks report the real locale count instead
+// of implying no locales exist (exit 0 means "no locales OR all clean"). Source
+// of truth for the rules: `i18n-catalog-lib.ts` (`listLocales`,
+// `NON_LOCALE_DIRS`, `isCheckedLocale`). Returns 0 on any read error, so a
+// passing check degrades to the English-only phrasing and never fails on this.
 //
 // It deliberately does NOT split full translations from overlays, though the
 // success lines would read a little richer if it did. Deciding that needs CLDR
@@ -89,7 +90,7 @@ func nonEnLocaleCount(rootDir string) int {
 	}
 	count := 0
 	for _, entry := range entries {
-		if !entry.IsDir() || entry.Name() == "en" || entry.Name() == "screenshots" {
+		if !entry.IsDir() || entry.Name() == "en" || entry.Name() == "screenshots" || entry.Name() == "en-XA" {
 			continue
 		}
 		files, err := os.ReadDir(filepath.Join(messagesDir, entry.Name()))

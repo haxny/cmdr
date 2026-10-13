@@ -95,13 +95,15 @@ describe('staleReason: pure classifier', () => {
 describe('runStaleCheck against the committed fixture', () => {
   it('is clean: en-XA hashes match en, so nothing is stale', () => {
     const { lines, write } = capture()
-    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, write })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/en-XA: clean\./)
   })
 
   it('a clean catalog passes in BOTH normal and strict mode', () => {
-    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, write: () => {} })).toBe(EXIT_CLEAN)
-    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, strict: true, write: () => {} })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], write: () => {} })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], strict: true, write: () => {} })).toBe(
+      EXIT_CLEAN,
+    )
   })
 })
 
@@ -130,7 +132,7 @@ describe('runStaleCheck negative cases (temp catalog copies)', () => {
   /** Run and return { code, text }. */
   const run = () => {
     const cap = capture()
-    const code = runStaleCheck({ messagesRoot: root, write: cap.write })
+    const code = runStaleCheck({ messagesRoot: root, only: ['en-XA'], write: cap.write })
     return { code, text: cap.lines.join('\n') }
   }
 
@@ -211,7 +213,7 @@ describe('release-strict mode escalates a stale finding to an error exit', () =>
     en['fixture.plainLabel'] = 'Dismiss' // was "Cancel"
     writeFileSync(enFile, JSON.stringify(en, null, 2) + '\n', 'utf8')
     const { lines, write } = capture()
-    return { code: runStaleCheck({ messagesRoot: root, strict, write }), text: lines.join('\n') }
+    return { code: runStaleCheck({ messagesRoot: root, only: ['en-XA'], strict, write }), text: lines.join('\n') }
   }
 
   it('normal mode: a stale finding is a WARN (exit 1)', () => {
@@ -241,8 +243,8 @@ describe('review is never a gate', () => {
   // The committed fixture carries no `reviewed` flags, so it's already a "no review
   // recorded" catalog. It must pass in both modes: missing review never fails a check.
   it('an unreviewed but fresh catalog passes in normal AND strict mode', () => {
-    expect(runStaleCheck({ messagesRoot: root, write: () => {} })).toBe(EXIT_CLEAN)
-    expect(runStaleCheck({ messagesRoot: root, strict: true, write: () => {} })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: root, only: ['en-XA'], write: () => {} })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: root, only: ['en-XA'], strict: true, write: () => {} })).toBe(EXIT_CLEAN)
   })
 
   it('a fresh key marked reviewed: true is still clean (review state never forces a finding)', () => {
@@ -270,7 +272,7 @@ describe('no-locales path (only en)', () => {
 
   it('the check is a clean no-op', () => {
     const { lines, write } = capture()
-    expect(runStaleCheck({ messagesRoot: root, write })).toBe(EXIT_CLEAN)
+    expect(runStaleCheck({ messagesRoot: root, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/no non-en locales to check/)
   })
 })

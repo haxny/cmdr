@@ -32,7 +32,7 @@ import { runQuotedLabelsCheck } from './i18n-check-quoted-labels.ts'
 import { runStaleCheck } from './i18n-check-stale.ts'
 import * as termConsistency from './i18n-check-term-consistency.ts'
 import * as termbase from './i18n-check-termbase.ts'
-import { EXIT_CLEAN, EXIT_ERROR } from './i18n-locale-check-lib.ts'
+import { EXIT_CLEAN, EXIT_ERROR, withoutGeneratedLocales } from './i18n-locale-check-lib.ts'
 
 /** One check: its name, and a run that writes its report and returns an exit code (0 = clean). */
 interface Step {
@@ -74,11 +74,9 @@ function inProcessSteps(
         const outcomes = termConsistency.inspectLocales({
           messagesRoot,
           allowlist: termConsistency.loadAllowlist(termAllowlistPath),
+          only: withoutGeneratedLocales(only, write),
         })
-        return termConsistency.report(
-          outcomes.filter(({ locale }) => wanted.has(locale)),
-          write,
-        )
+        return termConsistency.report(outcomes, write)
       },
     },
     {

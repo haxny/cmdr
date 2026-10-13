@@ -73,7 +73,7 @@ describe('droppedTokens: pure detector', () => {
 describe('runDontTranslateCheck against the committed fixture', () => {
   it('is clean: en-XA keeps {system_settings} and the Cmdr/macOS brand words verbatim', () => {
     const { lines, write } = capture()
-    expect(runDontTranslateCheck({ messagesRoot: FIXTURE_ROOT, write })).toBe(EXIT_CLEAN)
+    expect(runDontTranslateCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/en-XA: clean\./)
   })
 })
@@ -98,7 +98,10 @@ describe('runDontTranslateCheck negative cases (temp catalog copies)', () => {
   }
   const run = () => {
     const cap = capture()
-    return { code: runDontTranslateCheck({ messagesRoot: root, write: cap.write }), text: cap.lines.join('\n') }
+    return {
+      code: runDontTranslateCheck({ messagesRoot: root, only: ['en-XA'], write: cap.write }),
+      text: cap.lines.join('\n'),
+    }
   }
 
   it('flags a locale value that dropped {system_settings}', () => {
@@ -138,7 +141,7 @@ describe('no-locales path (only en)', () => {
   it('is a clean no-op', () => {
     expect(localesToCheck(root)).toEqual([])
     const { lines, write } = capture()
-    expect(runDontTranslateCheck({ messagesRoot: root, write })).toBe(EXIT_CLEAN)
+    expect(runDontTranslateCheck({ messagesRoot: root, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/no non-en locales to check/)
   })
 })

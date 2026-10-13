@@ -57,7 +57,7 @@ describe('icuError: pure classifier', () => {
 describe('runIcuCheck against the committed fixture', () => {
   it('is clean: en-XA is valid ICU and the raw errors.* value is skipped', () => {
     const { lines, write } = capture()
-    expect(runIcuCheck({ messagesRoot: FIXTURE_ROOT, write })).toBe(EXIT_CLEAN)
+    expect(runIcuCheck({ messagesRoot: FIXTURE_ROOT, only: ['en', 'en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/en-XA: clean\./)
   })
 })
@@ -80,7 +80,10 @@ describe('runIcuCheck negative cases (temp catalog copies)', () => {
   }
   const run = () => {
     const cap = capture()
-    return { code: runIcuCheck({ messagesRoot: root, write: cap.write }), text: cap.lines.join('\n') }
+    return {
+      code: runIcuCheck({ messagesRoot: root, only: ['en', 'en-XA'], write: cap.write }),
+      text: cap.lines.join('\n'),
+    }
   }
 
   it('flags exactly the ICU key that no longer parses', () => {

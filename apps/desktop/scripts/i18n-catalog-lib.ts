@@ -145,6 +145,21 @@ export const NON_LOCALE_DIRS: Set<string> = new Set(['screenshots'])
  */
 export const GENERATED_LOCALES: Set<string> = new Set(['en-XA'])
 
+/**
+ * Whether a locale check inspects `locale`: when `only` names locales, exactly
+ * those; otherwise every locale but a GENERATED one. `en-XA` is gitignored, so CI
+ * never has it, and a local copy is whatever `pnpm i18n:pseudo` last wrote, often
+ * weeks behind `en`: inspecting it by default turned local runs red where CI was
+ * green. Its generator's tests and the committed fixture
+ * (`test/fixtures/i18n-pseudolocale/`) verify it, and `pnpm i18n:check-locale
+ * en-XA` checks the real one on demand.
+ * @param locale the locale dir tag
+ * @param only the locales the caller named, if any
+ */
+export function isCheckedLocale(locale: string, only?: readonly string[]): boolean {
+  return only === undefined ? !GENERATED_LOCALES.has(locale) : only.includes(locale)
+}
+
 /** The base (source) locale, and the final fallback of every other locale. */
 export const BASE_LOCALE = 'en'
 

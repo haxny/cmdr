@@ -62,7 +62,7 @@ describe('parityDetail: pure comparison', () => {
 describe('runParityCheck against the committed fixture', () => {
   it('is clean: en-XA preserves every placeholder, tag, and raw token', () => {
     const { lines, write } = capture()
-    expect(runParityCheck({ messagesRoot: FIXTURE_ROOT, write })).toBe(EXIT_CLEAN)
+    expect(runParityCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/en-XA: clean\./)
   })
 })
@@ -86,7 +86,7 @@ describe('runParityCheck negative cases (temp catalog copies)', () => {
   }
   const run = () => {
     const cap = capture()
-    const code = runParityCheck({ messagesRoot: root, write: cap.write })
+    const code = runParityCheck({ messagesRoot: root, only: ['en-XA'], write: cap.write })
     return { code, text: cap.lines.join('\n') }
   }
 
@@ -144,7 +144,7 @@ describe('no-locales path (only en)', () => {
   it('localesToCheck is empty and the check is a clean no-op', () => {
     expect(localesToCheck(root)).toEqual([])
     const { lines, write } = capture()
-    expect(runParityCheck({ messagesRoot: root, write })).toBe(EXIT_CLEAN)
+    expect(runParityCheck({ messagesRoot: root, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/no non-en locales to check/)
   })
 })

@@ -6,7 +6,7 @@
  * screenshot coverage report's "say what's covered, list what isn't" stance). It
  * reads a locale by KIND, and the two kinds have opposite rules.
  *
- * ## A FULL TRANSLATION (`de`, `hu`, and `en-XA`) must cover every English key
+ * ## A FULL TRANSLATION (`de`, `hu`, and a named `en-XA`) must cover every English key
  *
  *  - MISSING: an English key with no entry in the locale. The runtime silently
  *    renders English, so the gap is invisible without this check.

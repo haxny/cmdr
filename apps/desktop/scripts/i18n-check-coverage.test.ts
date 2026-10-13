@@ -96,7 +96,7 @@ describe('englishBranches: a branch left in English beside its translated siblin
 describe('runCoverageCheck against the committed fixture', () => {
   it('is clean: en-XA has every key and every value differs from English', () => {
     const { lines, write } = capture()
-    expect(runCoverageCheck({ messagesRoot: FIXTURE_ROOT, write })).toBe(EXIT_CLEAN)
+    expect(runCoverageCheck({ messagesRoot: FIXTURE_ROOT, only: ['en-XA'], write })).toBe(EXIT_CLEAN)
     expect(lines.join('\n')).toMatch(/en-XA: clean\./)
   })
 })
@@ -117,10 +117,21 @@ describe('runCoverageCheck negative cases (temp catalog copies)', () => {
   const writeXa = (obj: Record<string, unknown>) => {
     writeFileSync(xaFile, JSON.stringify(obj, null, 2) + '\n', 'utf8')
   }
+  // The fixture's only translation is the pseudolocale, which a check inspects only when named.
   const run = () => {
     const cap = capture()
-    return { code: runCoverageCheck({ messagesRoot: root, write: cap.write }), text: cap.lines.join('\n') }
+    const code = runCoverageCheck({ messagesRoot: root, write: cap.write, only: ['en-XA'] })
+    return { code, text: cap.lines.join('\n') }
   }
+
+  it('leaves a stale pseudolocale out of a default run, which then agrees with CI (where en-XA never exists)', () => {
+    const xa = read()
+    delete xa['fixture.plainLabel'] // `en` gained a key since the last `pnpm i18n:pseudo`
+    writeXa(xa)
+    const { lines, write } = capture()
+    expect(runCoverageCheck({ messagesRoot: root, write })).toBe(EXIT_CLEAN)
+    expect(lines.join('\n')).not.toMatch(/en-XA/)
+  })
 
   it('flags a key missing from the locale', () => {
     const xa = read()

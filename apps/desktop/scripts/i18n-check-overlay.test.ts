@@ -134,9 +134,9 @@ describe('coverage: an overlay of en itself (en-GB)', () => {
 })
 
 describe('coverage: the pseudolocale is a full translation, never an overlay', () => {
-  it('still reports a key missing from en-XA', () => {
+  it('still reports a key missing from en-XA (named, since a default run leaves it out)', () => {
     writeLocale('en-XA', withHashes({ 'app.trash': '[Mövé tö Trásh]' }, EN))
-    const { code, text } = run(runCoverageCheck)
+    const { code, text } = run((opts) => runCoverageCheck({ ...opts, only: ['en-XA'] }))
     expect(code).toBe(EXIT_ISSUES)
     expect(text).toMatch(/app\.color → missing; renders the English fallback/)
   })
