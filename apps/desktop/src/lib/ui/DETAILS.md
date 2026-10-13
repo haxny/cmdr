@@ -1783,16 +1783,16 @@ last cells to the pill, so no per-cell corner rounding is needed).
 
 `ToggleGroupOption` shape:
 
-| Field          | Type       | Notes                                                                                                                 |
-| -------------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
-| `value`        | `string`   | Identity                                                                                                              |
-| `label`        | `string`   | Visible text                                                                                                          |
-| `badge`        | `string?`  | Small uppercase pill rendered before the label (for example `AI`)                                                     |
-| `hint`         | `string?`  | Mono text after the label (for example `⌥A`); `aria-hidden`                                                           |
-| `disabled`     | `boolean?` | Per-option disable. Combine with `tooltip` for "visible-disabled" affordances                                         |
-| `tooltip`      | `string?`  | Tooltip text; stays active on hover/focus even when `disabled` is set (the "Coming soon" idiom)                       |
-| `keyShortcuts` | `string?`  | The key that picks it, in `aria-keyshortcuts` syntax (`Alt+F`): how a screen reader learns the key `hint` shows       |
-| `ariaLabel`    | `string?`  | Overrides the accessible name. Only to ADD words (the disabled Content chip's "coming soon"), ❌ never for a shortcut |
+| Field          | Type       | Notes                                                                                                 |
+| -------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| `value`        | `string`   | Identity                                                                                              |
+| `label`        | `string`   | Visible text                                                                                          |
+| `badge`        | `string?`  | Small uppercase pill rendered before the label (for example `AI`)                                     |
+| `hint`         | `string?`  | Mono text after the label (for example `⌥A`); `aria-hidden`                                           |
+| `disabled`     | `boolean?` | Per-option disable. Combine with `tooltip` for "visible-disabled" affordances                         |
+| `tooltip`      | `string?`  | Tooltip text; stays active on hover/focus even when `disabled` is set (the "Coming soon" idiom)       |
+| `keyShortcuts` | `string?`  | The key that picks it, in `aria-keyshortcuts` syntax (`Alt+F`), so a screen reader hears `hint`       |
+| `ariaLabel`    | `string?`  | Overrides the accessible name, only to ADD words (for example "coming soon"), ❌ never for a shortcut |
 
 **A cell's accessible name is its content; the shortcut rides on `keyShortcuts`.** axe-core (4.14+,
 `label-content-name-mismatch`, WCAG 2.5.3) requires an `ariaLabel` to contain the cell's visible text as one contiguous

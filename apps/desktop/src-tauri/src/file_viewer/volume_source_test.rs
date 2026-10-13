@@ -199,7 +199,10 @@ fn a_multi_gigabyte_file_on_a_share_opens_and_jumps_through_one_held_reader() {
             "a jump to {fraction} landed on row {first}"
         );
         let read = state.bytes_read.load(Ordering::SeqCst) - before;
-        assert!(read <= 2 * BLOCK_BYTES, "a jump to {fraction} read {read} bytes");
+        assert!(
+            read <= 2 * BLOCK_BYTES,
+            "a jump to {fraction} read {read} B, over the two-block budget"
+        );
     }
 
     assert_eq!(
@@ -207,7 +210,10 @@ fn a_multi_gigabyte_file_on_a_share_opens_and_jumps_through_one_held_reader() {
         1,
         "one open serves the whole session"
     );
-    assert!(after_open <= 2 * BLOCK_BYTES, "the open read {after_open} bytes");
+    assert!(
+        after_open <= 2 * BLOCK_BYTES,
+        "the open read {after_open} B, over the two-block budget"
+    );
     session::close_session(&opened.session_id).unwrap();
 }
 
