@@ -433,6 +433,7 @@ export type MessageKey =
   | 'commands.handler.cloudDownloadFailed'
   | 'commands.handler.cloudRemoveDownloadFailed'
   | 'commands.handler.favoriteAddFailed'
+  | 'commands.handler.favoriteAddSlow'
   | 'commands.handler.favoriteAdded'
   | 'commands.handler.getInfo.automationOff'
   | 'commands.handler.getInfo.notReached'

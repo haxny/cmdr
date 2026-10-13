@@ -658,7 +658,9 @@ volume, the same path under each one's root (so a share mounted at a moved path 
 trailing slashes aside. Re-adding a folder that IS one is refused rather than allowed because the store answers a
 duplicate by moving that favorite to the END of the list, which looks like the row jumping for no reason (David,
 2026-09-16). The add itself is `add-favorite-folder.ts`, shared with the `favorites.add` command so the success and
-failure wording can't drift.
+failure wording can't drift. `addFavorite` throws an `AddFavoriteFailure` (`add-favorite-error.ts`) carrying the
+backend's typed `AddFavoriteError`: `timedOut` (the folder's volume answered too slowly to classify) gets its own "slow
+to respond, try again" warning, and every other failure the generic one (cmdr-reports#40).
 
 **Add** has three surfaces. The `favorites.add` command (palette + the Go menu's "Add to favorites", no default
 shortcut, handler in `routes/(main)/command-handlers/misc-handlers.ts`) favorites the focused pane's current dir; the

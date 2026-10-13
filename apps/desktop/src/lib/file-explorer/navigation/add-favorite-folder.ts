@@ -14,6 +14,7 @@
 import { addFavorite } from '#lib/tauri-commands/index.js'
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
+import { asAddFavoriteError } from './add-favorite-error'
 
 /** The last path segment, for a friendly toast label (`/Users/me/Docs` → `Docs`). */
 export function lastPathSegment(path: string): string {
@@ -28,12 +29,18 @@ export function lastPathSegment(path: string): string {
  * Rust's `add_favorite` is the gate that can refuse (a path the switcher could never
  * show a row for); both callers grey their affordance out on the same reading first,
  * so a refusal here means the two disagreed and the failure toast is the honest answer.
+ * A timeout is the exception: the folder's volume answered too slowly to classify (a busy
+ * share), so the toast says that and invites a retry (cmdr-reports#40).
  */
 export async function addFavoriteFolder(path: string): Promise<void> {
   try {
     await addFavorite(path, null)
     addToast(tString('commands.handler.favoriteAdded', { name: lastPathSegment(path) }), { level: 'success' })
-  } catch {
-    addToast(tString('commands.handler.favoriteAddFailed'), { level: 'error' })
+  } catch (e) {
+    if (asAddFavoriteError(e)?.type === 'timedOut') {
+      addToast(tString('commands.handler.favoriteAddSlow'), { level: 'warn' })
+    } else {
+      addToast(tString('commands.handler.favoriteAddFailed'), { level: 'error' })
+    }
   }
 }

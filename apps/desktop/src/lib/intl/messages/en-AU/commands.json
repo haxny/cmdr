@@ -63,6 +63,10 @@
   "@commands.handler.favoriteAddFailed": {
     "sourceHash": "0792537"
   },
+  "commands.handler.favoriteAddSlow": "That folder is slow to respond right now, so it’s not in your favourites yet. Try again in a moment?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
   "commands.favoritesOpen.label": "Show favourites",
   "@commands.favoritesOpen.label": {
     "sourceHash": "f4dfe9b"

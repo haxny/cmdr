@@ -6,6 +6,7 @@
 // re-emits `volumes-changed`, so the switcher refreshes live with no manual refresh.
 
 import { commands } from '#lib/ipc/bindings.js'
+import { throwAddFavoriteError } from '#lib/file-explorer/navigation/add-favorite-error.js'
 import { throwIpcError } from './ipc-types'
 
 /** The `fav-` prefix the backend puts on a favorite's `LocationInfo.id`. */
@@ -29,10 +30,12 @@ export function favoriteLocationId(favoriteId: string): string {
 /**
  * Favorites `path`. When `name` is null the backend defaults the label to the path's file name.
  * Deduping by normalized path: re-adding an existing path moves it to the end and keeps its id.
+ * A refusal throws an `AddFavoriteFailure` carrying the typed `AddFavoriteError`; `asAddFavoriteError`
+ * gets it back.
  */
 export async function addFavorite(path: string, name: string | null): Promise<void> {
   const res = await commands.addFavorite(path, name)
-  if (res.status === 'error') throwIpcError(res.error)
+  if (res.status === 'error') throwAddFavoriteError(res.error)
 }
 
 /** Removes a favorite by its bare id (strip the `fav-` prefix first via `stripFavoritePrefix`). */

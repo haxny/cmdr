@@ -1122,6 +1122,10 @@
   "@commands.handler.favoriteAddFailed": {
     "description": "Error toast shown when adding a folder to favorites didn't go through. Friendly and reassuring; ends with an offer to retry. Uses a contraction (\"Couldn't\")."
   },
+  "commands.handler.favoriteAddSlow": "That folder is slow to respond right now, so it’s not in your favorites yet. Try again in a moment?",
+  "@commands.handler.favoriteAddSlow": {
+    "description": "Warning toast shown when adding a folder to favorites ran out of time because the folder's drive or network share answered too slowly (for example, a busy file server). Nothing went wrong with the folder itself, and trying again usually works. Ends with an offer to retry. \"Slow to respond\" refers to the folder's location (disk or server), not to the app."
+  },
   "commands.handler.tabLimitReached": "Tab limit reached",
   "@commands.handler.tabLimitReached": {
     "description": "Warning toast shown when the user tries to open or reopen a tab but the per-pane tab limit is already reached. Terse. Shown for both new-tab and reopen-tab attempts."
