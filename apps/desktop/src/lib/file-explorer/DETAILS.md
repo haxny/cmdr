@@ -100,10 +100,12 @@ fallback contract, and the snapshot-pane note.
   progress dialog owns (`getForegroundOperationId()`), the only operation a pane snapshot exists for. **Why**: the queue
   runs operations on other lanes at once, and one finishing a same-named file deselected this pane's row. An event that
   beats the start command's answer (`isForegroundClaimPending()`) waits for the name, then is kept or dropped
-  (`pane/listing-diff-sync.svelte.ts`).
+  (`pane/listing-diff-sync.svelte.ts`). A ⌘A operation (`'all'` sentinel) deselects the same way: each event finds its
+  own row by file name, so the snapshot only has to exist. The selection stays an explicit `SvelteSet`, so leaving "all"
+  costs one O(1) delete per finished item.
 - **Clear on complete/error**: safety net clears all selection on the source pane
 - **Cancel behavior**: selection reflects survivors. For `'all'` sentinel: calls `selectAll()` (move/delete/trash) or
-  leaves untouched (copy)
+  leaves untouched (copy), so a cancelled ⌘A copy keeps its unfinished items selected, same as a hand selection
 
 ### Gotchas
 

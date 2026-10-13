@@ -240,11 +240,16 @@ export function initListingDiffSync(deps: ListingDiffSyncDeps): void {
   // runs operations on other lanes at once, and one finishing a same-named file would
   // deselect this pane's row. An event that beats the start command's answer (the claim
   // is still pending, so the operation has no name here yet) waits for it.
+  //
+  // A ⌘A snapshot (`'all'`) deselects the same way: each finished source finds its own
+  // row by file name, so the snapshot's names are never needed, only its presence. The
+  // selection itself is always an explicit index set, so leaving "all" is one O(1) delete.
   let unnamed: WriteSourceItemDoneEvent[] = []
 
+  const hasOperationSnapshot = () => deps.getOperationSelectedNames() !== null
+
   function deselectFinished(payload: WriteSourceItemDoneEvent): void {
-    // Only process when we have an active operation with explicit name tracking
-    if (!Array.isArray(deps.getOperationSelectedNames())) return
+    if (!hasOperationSnapshot()) return
     const owner = getForegroundOperationId()
     if (payload.operationId !== owner) {
       if (isForegroundClaimPending()) unnamed.push(payload)
@@ -261,7 +266,7 @@ export function initListingDiffSync(deps: ListingDiffSyncDeps): void {
     unnamed = []
     untrack(() => {
       for (const payload of waiting) {
-        if (payload.operationId === owner && Array.isArray(deps.getOperationSelectedNames())) deselectSource(payload)
+        if (payload.operationId === owner && hasOperationSnapshot()) deselectSource(payload)
       }
     })
   })

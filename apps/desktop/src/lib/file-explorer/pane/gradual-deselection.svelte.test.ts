@@ -42,12 +42,15 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-/** A pane whose `a.txt` (row 3) is selected for the operation it started. */
-function pane() {
-  const selected = new SvelteSet([3])
+/**
+ * A pane whose `a.txt` (row 3) is selected for the operation it started. `'all'` is the
+ * ⌘A shape: rows 1–4 selected, and the snapshot holds `'all'` in place of a name list.
+ */
+function pane(snapshot: 'names' | 'all' = 'names') {
+  const selected = new SvelteSet(snapshot === 'all' ? [1, 2, 3, 4] : [3])
   const rows = createPaneRowState({ getListingId: () => 'L', getLoading: () => false, getOperationActive: () => true })
   rows.initialize()
-  const names = ['a.txt']
+  const names = snapshot === 'all' ? 'all' : ['a.txt']
   const deps = {
     rowState: rows,
     selection: { selectedIndices: selected, getSelectedIndices: () => [...selected] },
@@ -82,6 +85,14 @@ describe('gradual deselection', () => {
     done('op-mine')
     await settle()
     expect(selected.has(3)).toBe(false)
+  })
+
+  it('deselects each finished source of a ⌘A operation and leaves the rest selected', async () => {
+    setForegroundOperationId('op-mine')
+    const selected = pane('all')
+    done('op-mine')
+    await settle()
+    expect([...selected].sort()).toEqual([1, 2, 4])
   })
 
   it('leaves a same-named row alone when another operation finishes its own', async () => {
