@@ -21,7 +21,6 @@
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import Icon from '#lib/ui/Icon.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
-    import KeyHint from '#lib/ui/KeyHint.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import TransferTree from '../transfer-tree/TransferTree.svelte'
     import { createTransferTreeMemory } from '../transfer-tree/transfer-tree-view.svelte'
@@ -594,13 +593,13 @@
                      tooltip, and F2 are the same either way. No aria-label: the
                      name is the visible word (WCAG 2.5.3, label in name). -->
                 <span use:tooltip={tString('fileOperations.transferProgress.queueTooltip')}>
-                    <Button variant="secondary" onclick={progress.handleQueue} aria-keyshortcuts="F2">
+                    <Button variant="secondary" onclick={progress.handleQueue} keyHint="F2" aria-keyshortcuts="F2">
                         <span class="btn-inner">
                             <Icon name="list" size={14} />
                             {queueHasOtherWork
                                 ? tString('fileOperations.transferProgress.queue')
                                 : tString('fileOperations.transferProgress.background')}
-                        </span><KeyHint key="F2" />
+                        </span>
                     </Button>
                 </span>
             {/if}

@@ -15,7 +15,7 @@
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import TextArea from '#lib/ui/TextArea.svelte'
     import FilterPopover from '#lib/ui/FilterPopover.svelte'
-    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
+    import Button from '#lib/ui/Button.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import Trans from '#lib/intl/Trans.svelte'
@@ -35,7 +35,7 @@
         /**
          * The two scope presets the footer buttons set. `currentFolder` is `null` when the
          * focused pane is a search-results snapshot with no real folder behind it; the button
-         * then renders disabled with `currentFolderUnavailableReason` as its tooltip.
+         * then renders blocked (`ariaDisabled`) with `currentFolderUnavailableReason` as its tooltip.
          */
         scopePresets: ScopePresets
         /** What an empty box means: the path a defaulted search actually runs against. */
@@ -132,15 +132,19 @@
              (matching the round-2 resolved shortcut allocation: the global
              ⌥F now drives the Filename mode chip instead). -->
         <div class="popover-footer">
-            <!-- "Use current folder" renders disabled when the focused pane is
+            <!-- "Use current folder" renders blocked when the focused pane is
                  a search-results snapshot AND no real-folder history entry is
                  reachable. The button still shows so the user sees the option
-                 exists; the tooltip explains why it's off. -->
-            <button
-                type="button"
-                class="footer-button"
-                disabled={scopePresets.currentFolder === null}
-                use:tooltip={scopePresets.currentFolder === null ? scopePresets.currentFolderUnavailableReason : ''}
+                 exists, and stays hoverable and focusable so its tooltip can
+                 say why it's off. -->
+            <Button
+                size="mini"
+                ariaDisabled={scopePresets.currentFolder === null}
+                tooltipContent={scopePresets.currentFolder === null
+                    ? scopePresets.currentFolderUnavailableReason
+                    : undefined}
+                keyHint="⌥C"
+                aria-keyshortcuts="Alt+C"
                 onclick={() => {
                     if (!scopePresets.currentFolder) return
                     onSetScope(scopePresets.currentFolder)
@@ -148,20 +152,19 @@
                 }}
             >
                 {tString('queryUi.scope.useCurrentFolder')}
-                <ShortcutChip key="⌥C" size="sm" />
-            </button>
-            <button
-                type="button"
-                class="footer-button"
-                use:tooltip={scopePresets.volumeRoot}
+            </Button>
+            <Button
+                size="mini"
+                tooltipContent={scopePresets.volumeRoot}
+                keyHint="⌥V"
+                aria-keyshortcuts="Alt+V"
                 onclick={() => {
                     onSetScope(scopePresets.volumeRoot)
                     scheduleSearch()
                 }}
             >
                 {tString('queryUi.scope.thisVolume')}
-                <ShortcutChip key="⌥V" size="sm" />
-            </button>
+            </Button>
         </div>
 </FilterPopover>
 
@@ -201,28 +204,5 @@
         padding-top: var(--spacing-xs);
         border-top: 1px solid var(--color-border-subtle);
         margin-top: var(--spacing-xs);
-    }
-
-    .footer-button {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        padding: var(--spacing-xxs) var(--spacing-sm);
-        font-size: var(--font-size-sm);
-        background: transparent;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
-        color: var(--color-text-secondary);
-        line-height: var(--font-line-height-flat);
-    }
-
-    .footer-button:not(:disabled):hover {
-        background: var(--color-bg-tertiary);
-        color: var(--color-text-primary);
-    }
-
-    .footer-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
     }
 </style>

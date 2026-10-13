@@ -73,7 +73,6 @@
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Switch from '#lib/ui/Switch.svelte'
     import Button from '#lib/ui/Button.svelte'
-    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -732,13 +731,10 @@
                                     activateSecondaryAtCursor(config)
                                 }}
                                 aria-label={config.secondaryAction.ariaLabel ?? config.secondaryAction.label}
+                                tooltipContent={config.secondaryAction.tooltip}
+                                keyHint={enterAction === 'go-to-file' ? config.secondaryAction.shortcutHint : undefined}
                             >
-                                <span class="action-label" use:tooltip={config.secondaryAction.tooltip ?? ''}>
-                                    {config.secondaryAction.label}{#if enterAction === 'go-to-file'}<ShortcutChip
-                                            key={config.secondaryAction.shortcutHint}
-                                            size="sm"
-                                        />{/if}
-                                </span>
+                                {config.secondaryAction.label}
                             </Button>
                         {/if}
                         {#if config.primaryAction}
@@ -749,13 +745,10 @@
                                     activatePrimary(config)
                                 }}
                                 aria-label={config.primaryAction.ariaLabel ?? config.primaryAction.label}
+                                tooltipContent={config.primaryAction.tooltip}
+                                keyHint={config.primaryAction.shortcutHint}
                             >
-                                <span class="action-label" use:tooltip={config.primaryAction.tooltip ?? ''}>
-                                    {config.primaryAction.label}<ShortcutChip
-                                        key={config.primaryAction.shortcutHint}
-                                        size="sm"
-                                    />
-                                </span>
+                                {config.primaryAction.label}
                             </Button>
                         {/if}
                     </div>
@@ -857,12 +850,5 @@
         align-items: center;
         gap: var(--spacing-sm);
         padding: var(--spacing-sm) 0;
-    }
-
-    /* The action verb leads; the shortcut hint rides a standard `ShortcutChip` to its right. */
-    .action-label {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
     }
 </style>

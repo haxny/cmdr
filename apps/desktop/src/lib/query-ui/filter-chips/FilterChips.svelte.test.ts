@@ -334,7 +334,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     expect(popover?.querySelector('textarea')).not.toBeNull()
     const checkboxes = popover?.querySelectorAll('input[type="checkbox"]')
     expect(checkboxes?.length).toBe(2)
-    const footerButtons = popover?.querySelectorAll('.footer-button')
+    const footerButtons = popover?.querySelectorAll('.popover-footer button')
     expect(footerButtons?.length).toBe(2)
     // Footer buttons surface ⌥C / ⌥V, scoped to the open popover (⌥F is the global
     // Filename mode chip elsewhere).
@@ -384,7 +384,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     const scopeChip = findChip(target, 'Search in')
     scopeChip?.click()
     await tick()
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.footer-button')
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.popover-footer button')
     buttons[0].click()
     expect(onSetScope).toHaveBeenCalledWith('/Users/test/work')
     expect(onScheduleSearch).toHaveBeenCalled()
@@ -675,10 +675,10 @@ describe('SearchFilterChips: scope popover behavior', () => {
     const scopeChip = findChip(target, 'Search in')
     scopeChip?.click()
     await tick()
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.footer-button')
-    expect(buttons[0].disabled).toBe(true)
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.popover-footer button')
+    expect(buttons[0].getAttribute('aria-disabled')).toBe('true')
     buttons[0].click()
-    // Disabled button doesn't fire onclick in real DOM; ensure we didn't reach the setter.
+    // Blocked, so the press reaches the handler, which refuses it.
     expect(onSetScope).not.toHaveBeenCalled()
     cleanup()
     document.querySelectorAll('.ui-popover').forEach((el) => {
@@ -700,7 +700,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     const scopeChip = findChip(target, 'Search in')
     scopeChip?.click()
     await tick()
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.footer-button')
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.popover-footer button')
     expect(buttons[0].disabled).toBe(false)
     buttons[0].click()
     expect(onSetScope).toHaveBeenCalledWith('/Users/me/projects')
@@ -728,7 +728,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     const scopeChip = findChip(target, 'Search in')
     scopeChip?.click()
     await tick()
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.footer-button')
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.popover-footer button')
     buttons[1].click()
     // NOT '' (which used to mean "all folders"): the widest rung is one volume.
     expect(onSetScope).toHaveBeenCalledWith('/Volumes/naspi')

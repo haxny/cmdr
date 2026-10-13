@@ -42,6 +42,7 @@ import noPrivateUnitFormat from './eslint-plugins/no-private-unit-format.js'
 import noRawUserFacingString from './eslint-plugins/no-raw-user-facing-string.js'
 import dialogNeedsFocusTrap from './eslint-plugins/dialog-needs-focus-trap.js'
 import preferUiPrimitive from './eslint-plugins/prefer-ui-primitive.js'
+import keyHintViaButtonProp from './eslint-plugins/key-hint-via-button-prop.js'
 import noTitleAttribute from './eslint-plugins/no-title-attribute.js'
 import noArbitrarySleepInE2E from './eslint-plugins/no-arbitrary-sleep-in-e2e.js'
 import noRawWaitBudget from './eslint-plugins/no-raw-wait-budget.js'
@@ -315,6 +316,7 @@ export default tseslint.config(
           'no-raw-user-facing-string': noRawUserFacingString,
           'dialog-needs-focus-trap': dialogNeedsFocusTrap,
           'prefer-ui-primitive': preferUiPrimitive,
+          'key-hint-via-button-prop': keyHintViaButtonProp,
           'no-title-attribute': noTitleAttribute,
           'no-unrendered-log-fields': noUnrenderedLogFields,
         },
@@ -369,6 +371,10 @@ export default tseslint.config(
       // raw controls gray out on window blur, ignore theme tokens, and
       // re-implement a11y the primitive already owns.
       'cmdr/prefer-ui-primitive': 'error',
+      // A key that presses a button goes through `Button`'s `keyHint` prop, which draws
+      // the chip in its own centered, non-wrapping slot. A chip placed in the label flowed
+      // with the text: it sat low, and wrapped under the label in a squeezed button.
+      'cmdr/key-hint-via-button-prop': 'error',
       // Hover hints go through `use:tooltip`, never a native `title`: a native
       // title never shows on keyboard focus (fatal in a keyboard-first app),
       // lands about a second after ours, ignores our theme tokens, and is

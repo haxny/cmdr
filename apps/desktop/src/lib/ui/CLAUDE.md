@@ -9,9 +9,9 @@ Reusable components; only silent-breakage rules live here. Ark UI backs the comp
 - The house menu: `Menu.svelte` + `createMenu` (`menu-controller.svelte.ts`), over `menu-navigation.ts` /
   `menu-reorder.ts`. ❗ A `.svelte.ts` may never case-collide with a component. DETAILS § Menu.
 - The primitives (`Icon`, `Spinner`, `Button`, `ColumnList`, form controls, `Select`, `Combobox`, text fields,
-  `ShortcutChip`, `KeyHint`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row
-  wrecks keyboard navigation), `toast/`) are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠
-  `RadioGroup`; Tooltip is the sibling `../tooltip/tooltip.ts`.
+  `ShortcutChip`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row wrecks
+  keyboard navigation), `toast/`) are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠ `RadioGroup`;
+  Tooltip is the sibling `../tooltip/tooltip.ts`.
 
 ## Must-knows
 
@@ -31,6 +31,7 @@ Reusable components; only silent-breakage rules live here. Ark UI backs the comp
   never restore `overflow: hidden` on `.modal-dialog` (resize bands overhang), ❌ never drop
   `.modal-overlay:focus { outline: none }` (the scrim holds focus, so a UA ring lines the title bar in the SYSTEM
   accent), ❌ keep the MCP close registration in its `$effect`, or `dialog close` lies. DETAILS § ModalDialog.
+- **A button's key is `Button`'s `keyHint`**, ❌ never a chip in its content (`cmdr/key-hint-via-button-prop`).
 - **Don't restyle `.btn-*` colors from a scoped feature component** (`scripts/check-btn-restyle`; one-offs need
   `/* allowed-btn-restyle: <reason> */`). `LinkButton` is the ONLY `cursor: pointer` opt-in.
 - **Per-component traps.** Each has its own section in `DETAILS.md`:
@@ -44,13 +45,11 @@ Reusable components; only silent-breakage rules live here. Ark UI backs the comp
     one of `commandId` / `key`.
   - `Select`: `.select-*` classes are a contract; don't rename or recolor off the accent tokens. `--z-dropdown` on
     `.select-content`, ❌ never the positioner. Trapping modals call `providePortalTarget`.
-  - `Combobox`: drive its text off `inputValue`, never `value` / `items`, which blanks it on an empty list or custom
-    name.
+  - `Combobox`: drive its text off `inputValue`, never `value` / `items` (blanks on an empty list).
   - Text fields: chrome lives in `app.css` § "Text fields", so ONE edit restyles all five (keep `Combobox` /
     `NumberInput` in sync). `.text-field` / `.text-field-control` are a selector contract, and `TextInput` is one-way
     `value` + `oninput`, never an internal `bind:value`.
-  - Toasts: pick a level by feedback kind, not wording; a full all-persistent stack silently drops new ones; a
-    pane-local transient toast needs `addToastForPane(pane, …)`, else that pane's navigation won't clear it.
+  - Toasts: pick a level by feedback kind; a full all-persistent stack drops new ones; a pane-local transient toast
+    needs `addToastForPane(pane, …)`, else navigation won't clear it.
 
-Catalogs, prop tables, and remaining component traps: `DETAILS.md`. Read it before any non-trivial work here: editing,
-planning, reorganizing, or advising.
+Catalogs, prop tables, and remaining component traps: `DETAILS.md`. Read it before any non-trivial work here.

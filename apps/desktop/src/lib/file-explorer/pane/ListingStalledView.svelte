@@ -1,6 +1,5 @@
 <script lang="ts">
     import Button from '#lib/ui/Button.svelte'
-    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -38,9 +37,8 @@
         <p class="detail">{tString(detailKey[stalledOn])}</p>
         <div class="actions">
             <Button variant="primary" onclick={onRetry}>{tString('fileExplorer.listingStalled.tryAgain')}</Button>
-            <Button onclick={onGoBack}>
+            <Button onclick={onGoBack} keyHint="Esc" aria-keyshortcuts="Escape">
                 {tString('fileExplorer.listingStalled.goBack')}
-                <ShortcutChip key="Esc" size="sm" />
             </Button>
         </div>
     </div>

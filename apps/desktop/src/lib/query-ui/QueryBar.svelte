@@ -31,7 +31,6 @@
     import Icon from '#lib/ui/Icon.svelte'
     import Button from '#lib/ui/Button.svelte'
     import TextInput from '#lib/ui/TextInput.svelte'
-    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import type { SearchMode } from './query-filter-state.svelte'
 
     interface Props {
@@ -184,10 +183,15 @@
          house `Button` in the same secondary family as the footer's actions, so the
          dialog has exactly one button style. -->
     <div class="run-action">
-        <Button variant="secondary" {disabled} onclick={onRun} aria-label={runTitle}>
-            <span class="run-label" use:tooltip={{ text: runTitle, shortcut: '⏎' }}>
-                {tString('queryUi.bar.runLabel')}{#if showEnterHint}<ShortcutChip key="⏎" size="sm" />{/if}
-            </span>
+        <Button
+            variant="secondary"
+            {disabled}
+            onclick={onRun}
+            aria-label={runTitle}
+            tooltipContent={{ text: runTitle, shortcut: '⏎' }}
+            keyHint={showEnterHint ? '⏎' : undefined}
+        >
+            {tString('queryUi.bar.runLabel')}
         </Button>
     </div>
 </div>
@@ -268,14 +272,5 @@
 
     .run-action :global(button) {
         width: 100%;
-    }
-
-    /* --spacing-xs gap between "Search" and "⏎" matches the visual rhythm of the
-       footer's "Go to file ⏎". */
-    .run-label {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        line-height: var(--font-line-height-flat);
     }
 </style>

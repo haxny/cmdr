@@ -11,7 +11,6 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
     import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
-    import KeyHint from '#lib/ui/KeyHint.svelte'
     import { answerDecisionKey, DECISION_KEYS_ARM_MS, ERROR_KEYS, type DecisionChoice } from '../decision-keys'
 
     interface Props {
@@ -157,17 +156,17 @@
     {#snippet footer()}
         <ReportOffer incident={reportIncident} />
         {#if onRetry && showRetry}
-            <Button variant="secondary" onclick={onRetry} aria-keyshortcuts={ERROR_KEYS.retry}
-                >{tString('fileOperations.errorDialog.retry')}<KeyHint key={ERROR_KEYS.retry} /></Button
+            <Button variant="secondary" onclick={onRetry} aria-keyshortcuts={ERROR_KEYS.retry} keyHint={ERROR_KEYS.retry}
+                >{tString('fileOperations.errorDialog.retry')}</Button
             >
         {/if}
         {#if onCopyAnyway && showCopyAnyway}
-            <Button variant="secondary" onclick={onCopyAnyway} aria-keyshortcuts={ERROR_KEYS.copyAnyway}
-                >{tString('fileOperations.errorDialog.copyAnyway')}<KeyHint key={ERROR_KEYS.copyAnyway} /></Button
+            <Button variant="secondary" onclick={onCopyAnyway} aria-keyshortcuts={ERROR_KEYS.copyAnyway} keyHint={ERROR_KEYS.copyAnyway}
+                >{tString('fileOperations.errorDialog.copyAnyway')}</Button
             >
         {/if}
-        <Button variant="primary" onclick={onClose} aria-keyshortcuts="{ERROR_KEYS.close} Enter"
-            >{tString('fileOperations.errorDialog.close')}<KeyHint key={ERROR_KEYS.close} /></Button
+        <Button variant="primary" onclick={onClose} aria-keyshortcuts="{ERROR_KEYS.close} Enter" keyHint={ERROR_KEYS.close}
+            >{tString('fileOperations.errorDialog.close')}</Button
         >
     {/snippet}
 </ModalDialog>

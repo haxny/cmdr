@@ -148,7 +148,7 @@ describe('F2 in the transfer dialog', () => {
 
     const button = backgroundButton(target)
     expect(button?.getAttribute('aria-label')).toBeNull()
-    expect(button?.querySelector('.key-hint')?.getAttribute('aria-hidden')).toBe('true')
+    expect(button?.querySelector('.btn-key-hint')?.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('starts in the background from the button too', async () => {

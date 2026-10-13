@@ -524,23 +524,27 @@
                     disabled={undoing}
                     onclick={() => { void undoLastRun() }}
                     tooltipContent={{ text: tString('multiRename.undoTooltip', { count: lastRun.renaming }), shortcut: undoShortcut }}
+                    keyHint={{ commandId: 'multiRename.undoRename' }}
                 >
                     {tString('multiRename.undo')}
-                    <ShortcutChip commandId="multiRename.undoRename" clickable={false} size="sm" />
                 </Button>
             {/if}
             <Button
                 disabled={!canResults}
                 onclick={openResults}
                 tooltipContent={{ text: tString('multiRename.resultsTooltip'), shortcut: resultsShortcut }}
+                keyHint={{ commandId: 'multiRename.results' }}
             >
                 {tString('multiRename.results')}
-                <ShortcutChip commandId="multiRename.results" clickable={false} size="sm" />
             </Button>
             <Button onclick={onClose}>{tString('multiRename.cancel')}</Button>
-            <Button variant="primary" onclick={() => { void start() }} disabled={!canStart}>
+            <Button
+                variant="primary"
+                onclick={() => { void start() }}
+                disabled={!canStart}
+                keyHint={{ commandId: 'multiRename.rename' }}
+            >
                 {tString('multiRename.rename', { count: tool.counts.ready })}
-                <ShortcutChip commandId="multiRename.rename" clickable={false} size="sm" />
             </Button>
         </span>
     {/snippet}

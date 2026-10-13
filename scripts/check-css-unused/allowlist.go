@@ -30,11 +30,12 @@ var allowedUnusedClasses = map[string]bool{
 	// honor the prefers-reduced-transparency media query, so the app drives the class itself)
 	"reduce-transparency": true,
 	// Button.svelte - classes constructed dynamically via template strings (btn-{variant}, btn-{size})
-	"btn-primary":   true,
-	"btn-secondary": true,
-	"btn-danger":    true,
-	"btn-mini":      true,
-	"btn-regular":   true,
+	"btn-primary":      true,
+	"btn-secondary":    true,
+	"btn-danger":       true,
+	"btn-danger-plain": true,
+	"btn-mini":         true,
+	"btn-regular":      true,
 	// ProgressBar.svelte - applied dynamically via class="track {size}" template string
 	"sm": true,
 	"md": true,

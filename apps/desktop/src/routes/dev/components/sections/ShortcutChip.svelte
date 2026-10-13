@@ -2,7 +2,6 @@
     import SectionCard from '#lib/ui/SectionCard.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Button from '#lib/ui/Button.svelte'
-    import KeyHint from '#lib/ui/KeyHint.svelte'
 </script>
 
 <SectionCard id="components-shortcut-chip" label="Shortcut chip">
@@ -43,10 +42,10 @@
         </div>
 
         <div class="row">
-            <span class="row-label">Key hint inside a button (KeyHint)</span>
+            <span class="row-label">Key hint inside a button (Button keyHint)</span>
             <div class="chips">
-                <Button aria-keyshortcuts="F2">Background<KeyHint key="F2" /></Button>
-                <Button variant="primary" aria-keyshortcuts="S Enter">Skip<KeyHint key="S" /></Button>
+                <Button keyHint="F2" aria-keyshortcuts="F2">Background</Button>
+                <Button variant="primary" keyHint="S" aria-keyshortcuts="S Enter">Skip</Button>
             </div>
             <span class="row-note">The key that presses the button; hidden from screen readers, which get aria-keyshortcuts</span>
         </div>

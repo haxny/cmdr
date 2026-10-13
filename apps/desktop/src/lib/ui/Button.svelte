@@ -1,9 +1,14 @@
 <script lang="ts">
     import { onMount, type Snippet } from 'svelte'
     import { tooltip, type TooltipParam } from '#lib/tooltip/tooltip.js'
+    import type { CommandId } from '#lib/commands/index.js'
+    import ShortcutChip from './ShortcutChip.svelte'
 
-    type Variant = 'primary' | 'secondary' | 'danger'
+    /** `danger-plain`: the danger color with no border or fill, for a quieter way out beside louder choices. */
+    type Variant = 'primary' | 'secondary' | 'danger' | 'danger-plain'
     type Size = 'regular' | 'mini'
+    /** A fixed key (`"F2"`, `"S"`, `"⏎"`), or a command whose live binding shows (nothing while it has none). */
+    type KeyHint = string | { commandId: CommandId }
 
     interface Props {
         variant?: Variant
@@ -29,7 +34,14 @@
          * still telling a screen reader which row it belongs to.
          */
         'aria-describedby'?: string
-        /** The key that presses this button, for a screen reader; pair it with an `aria-hidden` visible chip. */
+        /**
+         * The key that presses this button, drawn as a chip after the label in its own slot:
+         * centered on the button, never wrapping away from the label, and `aria-hidden` (read
+         * into the name it garbles it: "Skip S"). ❌ Never a `ShortcutChip` in `children`
+         * (`cmdr/key-hint-via-button-prop`). Pair a fixed key with `aria-keyshortcuts`.
+         */
+        keyHint?: KeyHint
+        /** The key that presses this button, for a screen reader, in ARIA's spelling (`"Alt+C"`, `"S Enter"`). */
         'aria-keyshortcuts'?: string
         /**
          * For a button that shows and hides a region (a disclosure): the pair tells a screen
@@ -61,6 +73,7 @@
         onclick,
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedby,
+        keyHint,
         'aria-keyshortcuts': ariaKeyshortcuts,
         'aria-expanded': ariaExpanded,
         'aria-controls': ariaControls,
@@ -78,10 +91,12 @@
     })
 </script>
 
+<!-- eslint-disable-next-line cmdr/key-hint-via-button-prop -- this IS the key hint's slot -->
 <button
     bind:this={buttonEl}
     {type}
     class="btn btn-{variant} btn-{size}"
+    class:btn-keyed={keyHint !== undefined}
     {disabled}
     aria-disabled={ariaDisabled ? 'true' : undefined}
     {onclick}
@@ -93,7 +108,19 @@
     {tabindex}
     use:tooltip={tooltipContent}
 >
-    {@render children()}
+    {#if keyHint === undefined}
+        {@render children()}
+    {:else}
+        <span class="btn-label">{@render children()}</span>
+        <!-- No whitespace inside: an unbound command draws nothing, and `:empty` then drops the slot. -->
+        <span class="btn-key-hint" aria-hidden="true"
+            >{#if typeof keyHint === 'string'}<ShortcutChip key={keyHint} size="sm" />{:else}<ShortcutChip
+                    commandId={keyHint.commandId}
+                    clickable={false}
+                    size="sm"
+                />{/if}</span
+        >
+    {/if}
 </button>
 
 <style>
@@ -124,6 +151,28 @@
         outline: 2px solid var(--color-accent);
         outline-offset: 1px;
         box-shadow: var(--shadow-focus-contrast);
+    }
+
+    /* A key hint gets its own flex slot, so the chip centers on the button's cross axis
+       (inline, it sat on the text's baseline and read low) and never wraps under the
+       label: the button grows instead. */
+    .btn-keyed {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        white-space: nowrap;
+    }
+
+    .btn-label,
+    .btn-key-hint {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* A command with no binding draws no chip, and its empty slot mustn't add a gap. */
+    .btn-key-hint:empty {
+        display: none;
     }
 
     /* === Size: regular === */
@@ -171,5 +220,16 @@
 
     .btn-danger:hover:not(:disabled, [aria-disabled='true']) {
         background: color-mix(in srgb, var(--color-error), transparent 90%);
+    }
+
+    /* === Variant: danger-plain === */
+    .btn-danger-plain {
+        background: transparent;
+        color: var(--color-error-text);
+        border: 1px solid transparent;
+    }
+
+    .btn-danger-plain:hover:not(:disabled, [aria-disabled='true']) {
+        text-decoration: underline;
     }
 </style>

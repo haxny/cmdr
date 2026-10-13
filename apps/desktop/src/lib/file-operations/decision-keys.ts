@@ -3,7 +3,7 @@
  * for a decision: the clash prompt (`transfer/TransferConflictDialog.svelte`,
  * inside the progress dialog and the main window's `OperationConflictDialog`)
  * and the transfer error dialog. Every choice has ONE fixed letter, pressed
- * bare, and the button shows it in a chip (`#lib/ui/KeyHint.svelte`).
+ * bare, and the button shows it in a chip (`Button`'s `keyHint`).
  *
  * The letters are not translated and never derived from a label: they're muscle
  * memory, so a German or Czech UI answers with the same keys as the English one.

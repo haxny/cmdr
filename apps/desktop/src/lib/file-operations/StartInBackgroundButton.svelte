@@ -10,7 +10,6 @@
      * `transfer/DETAILS.md` § "Starting in the background".
      */
     import Button from '#lib/ui/Button.svelte'
-    import KeyHint from '#lib/ui/KeyHint.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
     import { hasOtherQueuedWork } from '#lib/file-operations/queue/queue-backlog.js'
@@ -30,10 +29,11 @@
     variant="secondary"
     {onclick}
     {disabled}
+    keyHint="F2"
     aria-keyshortcuts="F2"
     tooltipContent={tString('fileOperations.backgroundStart.tooltip')}
 >
     {queueHasOtherWork
         ? tString('fileOperations.backgroundStart.queue')
-        : tString('fileOperations.backgroundStart.background')}<KeyHint key="F2" />
+        : tString('fileOperations.backgroundStart.background')}
 </Button>

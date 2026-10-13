@@ -13,7 +13,6 @@
     import { formatDate } from '#lib/file-explorer/selection/selection-info-utils.js'
     import type { WriteConflictEvent } from '#lib/tauri-commands/index.js'
     import type { ConflictResolution } from '#lib/file-explorer/types.js'
-    import KeyHint from '#lib/ui/KeyHint.svelte'
     import { answerDecisionKey, CONFLICT_KEYS, DECISION_KEYS_ARM_MS, type DecisionChoice } from '../decision-keys'
 
     interface Props {
@@ -279,17 +278,19 @@
                 variant="secondary"
                 onclick={skip}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.skip}
                 aria-keyshortcuts="{CONFLICT_KEYS.skip} Enter"
             >
-                {tString('fileOperations.transferProgress.conflictSkip')}<KeyHint key={CONFLICT_KEYS.skip} />
+                {tString('fileOperations.transferProgress.conflictSkip')}
             </Button>
             <Button
                 variant="secondary"
                 onclick={skipAll}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.skipAll}
                 aria-keyshortcuts={CONFLICT_KEYS.skipAll}
             >
-                {tString('fileOperations.transferProgress.conflictSkipAll')}<KeyHint key={CONFLICT_KEYS.skipAll} />
+                {tString('fileOperations.transferProgress.conflictSkipAll')}
             </Button>
         </div>
         <div class="conflict-buttons-row">
@@ -297,19 +298,19 @@
                 variant="secondary"
                 onclick={rename}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.rename}
                 aria-keyshortcuts={CONFLICT_KEYS.rename}
             >
-                {tString('fileOperations.transferProgress.conflictRename')}<KeyHint key={CONFLICT_KEYS.rename} />
+                {tString('fileOperations.transferProgress.conflictRename')}
             </Button>
             <Button
                 variant="secondary"
                 onclick={renameAll}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.renameAll}
                 aria-keyshortcuts={CONFLICT_KEYS.renameAll}
             >
-                {tString('fileOperations.transferProgress.conflictRenameAll')}<KeyHint
-                    key={CONFLICT_KEYS.renameAll}
-                />
+                {tString('fileOperations.transferProgress.conflictRenameAll')}
             </Button>
         </div>
         <div class="conflict-buttons-row">
@@ -317,17 +318,19 @@
                 variant="secondary"
                 onclick={overwrite}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.overwrite}
                 aria-keyshortcuts={CONFLICT_KEYS.overwrite}
             >
-                {overwriteLabel}<KeyHint key={CONFLICT_KEYS.overwrite} />
+                {overwriteLabel}
             </Button>
             <Button
                 variant="secondary"
                 onclick={overwriteAll}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.overwriteAll}
                 aria-keyshortcuts={CONFLICT_KEYS.overwriteAll}
             >
-                {overwriteAllLabel}<KeyHint key={CONFLICT_KEYS.overwriteAll} />
+                {overwriteAllLabel}
             </Button>
         </div>
         <div class="conflict-buttons-row">
@@ -336,22 +339,20 @@
                     variant="secondary"
                     onclick={overwriteAllSmaller}
                     disabled={isResolvingConflict || destSizeUnknown}
+                    keyHint={CONFLICT_KEYS.overwriteAllSmaller}
                     aria-keyshortcuts={CONFLICT_KEYS.overwriteAllSmaller}
                 >
-                    {tString('fileOperations.transferProgress.conflictOverwriteAllSmaller')}<KeyHint
-                        key={CONFLICT_KEYS.overwriteAllSmaller}
-                    />
+                    {tString('fileOperations.transferProgress.conflictOverwriteAllSmaller')}
                 </Button>
             </span>
             <Button
                 variant="secondary"
                 onclick={overwriteAllOlder}
                 disabled={isResolvingConflict}
+                keyHint={CONFLICT_KEYS.overwriteAllOlder}
                 aria-keyshortcuts={CONFLICT_KEYS.overwriteAllOlder}
             >
-                {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}<KeyHint
-                    key={CONFLICT_KEYS.overwriteAllOlder}
-                />
+                {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}
             </Button>
         </div>
     </div>
@@ -361,32 +362,39 @@
          move adds Rollback beside it; one the backend can't reverse shows
          Rollback DISABLED, with a tooltip saying why. -->
     <div class="conflict-cancel">
-        <button
-            class="danger-text"
+        <Button
+            variant="danger-plain"
+            size="mini"
             onclick={cancel}
             disabled={exitLocked}
+            keyHint={CONFLICT_KEYS.cancel}
             aria-keyshortcuts={CONFLICT_KEYS.cancel}
         >
-            {tString('fileOperations.transferProgress.conflictCancel')}<KeyHint key={CONFLICT_KEYS.cancel} />
-        </button>
+            {tString('fileOperations.transferProgress.conflictCancel')}
+        </Button>
         {#if rollbackUnavailable}
             <!-- Blocked, not `disabled`: the reason is worth reading, and a
                  disabled button leaves the tab order with its tooltip. No click
                  handler, so pressing it does nothing. -->
-            <button class="danger-text" aria-disabled="true" use:tooltip={ROLLBACK_UNAVAILABLE_TOOLTIP}
-                >{tString('fileOperations.transferProgress.conflictRollback')}</button
+            <Button
+                variant="danger-plain"
+                size="mini"
+                ariaDisabled
+                tooltipContent={ROLLBACK_UNAVAILABLE_TOOLTIP}
             >
+                {tString('fileOperations.transferProgress.conflictRollback')}
+            </Button>
         {:else if offersRollback}
-            <button
-                class="danger-text"
+            <Button
+                variant="danger-plain"
+                size="mini"
                 onclick={rollBack}
                 disabled={exitLocked}
+                keyHint={CONFLICT_KEYS.rollback}
                 aria-keyshortcuts={CONFLICT_KEYS.rollback}
             >
-                {tString('fileOperations.transferProgress.conflictRollback')}<KeyHint
-                    key={CONFLICT_KEYS.rollback}
-                />
-            </button>
+                {tString('fileOperations.transferProgress.conflictRollback')}
+            </Button>
         {/if}
     </div>
 </div>
@@ -568,29 +576,5 @@
         gap: var(--spacing-md);
         padding-top: var(--spacing-md);
         border-top: 1px solid var(--color-border-strong);
-    }
-
-    /* Text-only danger button (for less prominent cancel) */
-    .danger-text {
-        background: transparent;
-        color: var(--color-error-text);
-        border: none;
-        font-size: var(--font-size-sm);
-        font-weight: 500;
-        padding: var(--spacing-sm) var(--spacing-lg);
-        transition: all var(--transition-base);
-    }
-
-    /* Switched off, either way it got there: `disabled` for a button with nothing
-       to explain, `aria-disabled` for one carrying a tooltip that says why (it
-       keeps its pointer events and its place in the tab order). */
-    .danger-text:disabled,
-    .danger-text[aria-disabled='true'] {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-    .danger-text:hover:not(:disabled, [aria-disabled='true']) {
-        text-decoration: underline;
     }
 </style>

@@ -134,4 +134,45 @@ describe('Button', () => {
     expect(button.classList.contains('btn-primary')).toBe(true)
     expect(button.classList.contains('btn-mini')).toBe(true)
   })
+
+  it('draws a key hint in its own hidden slot after the label, and keeps it out of the name', async () => {
+    const target = document.createElement('div')
+    mount(Button, {
+      target,
+      props: { keyHint: 'F2', 'aria-keyshortcuts': 'F2', children: textSnippet('Background') },
+    })
+    await tick()
+
+    const button = getButton(target)
+    expect(button.classList.contains('btn-keyed')).toBe(true)
+    const [label, slot] = [...button.children]
+    expect(label.classList.contains('btn-label')).toBe(true)
+    expect(label.textContent).toBe('Background')
+    expect(slot.classList.contains('btn-key-hint')).toBe(true)
+    expect(slot.getAttribute('aria-hidden')).toBe('true')
+    expect(slot.textContent).toBe('F2')
+    expect(button.getAttribute('aria-keyshortcuts')).toBe('F2')
+  })
+
+  it('leaves the slot empty for a command with no binding, so it adds no gap', async () => {
+    const target = document.createElement('div')
+    mount(Button, {
+      target,
+      props: { keyHint: { commandId: 'app.about' }, children: textSnippet('About') },
+    })
+    await tick()
+
+    const slot = getButton(target).querySelector('.btn-key-hint')
+    expect(slot?.matches(':empty')).toBe(true)
+  })
+
+  it('renders its content alone without a key hint', async () => {
+    const target = document.createElement('div')
+    mount(Button, { target, props: { children: textSnippet('Plain') } })
+    await tick()
+
+    const button = getButton(target)
+    expect(button.classList.contains('btn-keyed')).toBe(false)
+    expect(button.querySelector('.btn-label, .btn-key-hint')).toBeNull()
+  })
 })

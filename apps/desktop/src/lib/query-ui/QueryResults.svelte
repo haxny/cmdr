@@ -36,7 +36,6 @@
     import { resultColumnWidths } from './result-column-widths'
     import EmptyState from './EmptyState.svelte'
     import PathPills from './PathPills.svelte'
-    import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import {
         createAnnouncementThrottle,
@@ -566,8 +565,8 @@
         {/if}
         {#if streaming && onStopLive}
             <span class="status-stop" use:tooltip={tString('queryUi.results.live.stopTooltip')}>
-                <Button variant="secondary" size="mini" onclick={onStopLive}>
-                    {tString('queryUi.results.live.stop')}<ShortcutChip key="Esc" size="sm" />
+                <Button variant="secondary" size="mini" onclick={onStopLive} keyHint="Esc">
+                    {tString('queryUi.results.live.stop')}
                 </Button>
             </span>
         {/if}

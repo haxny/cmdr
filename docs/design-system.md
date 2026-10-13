@@ -909,9 +909,11 @@ line-height: 1;
 
 Keep them visually quiet; they're reference, not action. Monospace so key combinations (`Cmd+Shift+N`) align neatly.
 
-A key that presses a BUTTON sits inside it, after the label, as a `KeyHint` (`apps/desktop/src/lib/ui/KeyHint.svelte`):
-a small literal `ShortcutChip`, hidden from screen readers, with the key on the button's `aria-keyshortcuts` instead.
-The Background / Queue buttons' F2 and the "file already exists" prompt's letters both use it.
+A key that presses a BUTTON sits inside it, after the label, through `Button`'s `keyHint` prop
+(`apps/desktop/src/lib/ui/Button.svelte`): a small `ShortcutChip` in its own slot, centered on the button and never
+wrapping away from the label, hidden from screen readers, with the key on the button's `aria-keyshortcuts` instead. The
+Background / Queue buttons' F2, the "file already exists" prompt's letters, and the Follow button's F all use it;
+`cmdr/key-hint-via-button-prop` rejects a chip placed in a button's content.
 
 ### Loading states (app)
 

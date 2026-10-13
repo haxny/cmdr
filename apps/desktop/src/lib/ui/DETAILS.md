@@ -62,7 +62,6 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`DateLabel.svelte`**: Canonical inline modified-date renderer: format + per-component age-tier coloring
 - **`ShortcutChip.svelte`**: Canonical keyboard-shortcut renderer: live `commandId` mode (clickable) or literal `key`
   mode
-- **`KeyHint.svelte`**: The key that presses a button, as an `aria-hidden` small chip after its label. See § KeyHint
 - **`StatusBadge.svelte`**: Uppercase stability pill (ALPHA / BETA) for early-stage features; fed by
   `feature-status.json`
 - **`toast/`**: Centralized toast notification system: store, container, item
@@ -592,16 +591,34 @@ is module state that outlives a single test.
 
 ## Button
 
-Variants: `primary` | `secondary` (default) | `danger`. Sizes: `regular` (default) | `mini`. ⚠️ Props are declared one
-by one, so a native attribute only reaches the `<button>` if `Props` names it: `aria-label`, `aria-describedby`,
-`aria-keyshortcuts`, and the disclosure pair `aria-expanded` + `aria-controls` do, anything else needs adding. The pair
-is for a button that shows and hides a region, with a name that stays the same open or shut (the queue rows' tree
-toggle, `../file-operations/queue/DETAILS.md` § "The inline tree"). `aria-describedby` is for the button repeated once
-per row, where it keeps the NAME short ("Roll back") while still telling a screen reader which row the button belongs
-to; the operation log's rows point it at the row's own head button. `aria-keyshortcuts` names the bare letter a decision
-prompt answers with (`../file-operations/decision-keys.ts`), whose visible chip is `aria-hidden` so it stays out of the
-name. `tabindex={-1}` is for a button inside a composite widget whose arrow keys reach it instead of Tab (the operation
-queue's grid rows, `../file-operations/queue/DETAILS.md` § Keyboard): still clickable, out of the Tab order.
+Variants: `primary` | `secondary` (default) | `danger` | `danger-plain` (the danger color with no border or fill, for a
+quieter way out beside louder choices: the clash prompt's Cancel and Rollback). Sizes: `regular` (default) | `mini`.
+
+**The key that presses it: `keyHint`.** A fixed key (`keyHint="F2"`) or a command's live binding
+(`keyHint={{ commandId: 'nav.back' }}`, which draws nothing while the command has no binding). The button then lays out
+as a flex row: the content in `.btn-label`, the chip in `.btn-key-hint`, both centered on the cross axis, with
+`white-space: nowrap` so a squeezed button grows instead of wrapping. The slot is `aria-hidden` (read into the name, the
+key garbles it: "Skip S"), so put the key on `aria-keyshortcuts` in ARIA's spelling (`"Alt+C"`, `"S Enter"` for a button
+Enter also presses); the prop doesn't derive it, since a display glyph (`⌥C`, `⏎`) isn't ARIA's form.
+
+- **Why a prop, ❌ not a chip in `children`**: an inline chip flows with the text, so `vertical-align` puts it on the
+  text's baseline (it read low, the F2 on Background), and a narrow button wrapped it under the label (the clash
+  prompt's "Overwrite all smaller"). Every button that showed a key had grown its own `inline-flex` wrapper to fight
+  this, at three different gaps. `cmdr/key-hint-via-button-prop` (`eslint-plugins/`) rejects a `ShortcutChip` anywhere
+  inside a `Button` or a raw `<button>`; `Button.svelte` itself is the one opt-out.
+- **Tests read a label without the chip** through `../file-operations/test-button-label.ts`; the E2E `clickButtonByText`
+  drops `aria-hidden` text the same way.
+
+⚠️ Props are declared one by one, so a native attribute only reaches the `<button>` if `Props` names it: `aria-label`,
+`aria-describedby`, `aria-keyshortcuts`, and the disclosure pair `aria-expanded` + `aria-controls` do, anything else
+needs adding. The pair is for a button that shows and hides a region, with a name that stays the same open or shut (the
+queue rows' tree toggle, `../file-operations/queue/DETAILS.md` § "The inline tree"). `aria-describedby` is for the
+button repeated once per row, where it keeps the NAME short ("Roll back") while still telling a screen reader which row
+the button belongs to; the operation log's rows point it at the row's own head button. `aria-keyshortcuts` names the
+bare letter a decision prompt answers with (`../file-operations/decision-keys.ts`), whose visible chip is `aria-hidden`
+so it stays out of the name. `tabindex={-1}` is for a button inside a composite widget whose arrow keys reach it instead
+of Tab (the operation queue's grid rows, `../file-operations/queue/DETAILS.md` § Keyboard): still clickable, out of the
+Tab order.
 
 **`disabled` vs `ariaDisabled` ("blocked").** `disabled` is the inert one: no click, no focus, `pointer-events: none`.
 `ariaDisabled` renders the same dimmed look and `not-allowed` cursor but keeps the button focusable, in the tab order,
@@ -1649,21 +1666,6 @@ network browser's refresh hint is NOT one of them any more: it names `pane.refre
 
 The litmus test for a future Class B site: migrate when the chip reads same-or-better than the current treatment; keep
 the current treatment (and note it here) when the boxed pill genuinely reads worse in a dense or label-fused context.
-
-## KeyHint
-
-`KeyHint.svelte` (`key`): the key that presses a button, rendered after the button's label as a literal `sm`
-`ShortcutChip` with its own leading space. It's the one way to put a key inside a control: the Background / Queue
-buttons' F2 (`../file-operations/StartInBackgroundButton.svelte`, the progress dialog's Queue) and the decision prompts'
-letters (`../file-operations/decision-keys.ts`).
-
-- **The chip is `aria-hidden`, so the button carries `aria-keyshortcuts`.** Read into the name, the key garbles it
-  ("Skip S"); the attribute is where a screen reader learns it, the house menu's pattern. Put the same key there (a
-  button that Enter also presses names both, `"S Enter"`).
-- **Place it as the button's last child, outside any flex wrapper** around an icon and a label: it owns its spacing, and
-  a `gap` around it would double it.
-- **Tests read a label without it** through `../file-operations/test-button-label.ts`, and the E2E `clickButtonByText`
-  drops `aria-hidden` text the same way.
 
 ## StatusBadge
 

@@ -182,15 +182,13 @@
             {/if}
 
             {#if canGoBack}
-                <Button onclick={() => onGoBack?.()}>
+                <Button onclick={() => onGoBack?.()} keyHint={{ commandId: 'nav.back' }}>
                     {tString('fileExplorer.errorPane.goBack')}
-                    <ShortcutChip commandId="nav.back" clickable={false} size="sm" />
                 </Button>
             {/if}
 
-            <Button onclick={() => onGoHome?.()}>
+            <Button onclick={() => onGoHome?.()} keyHint={{ commandId: 'nav.goHome' }}>
                 {tString('fileExplorer.errorPane.goHome')}
-                <ShortcutChip commandId="nav.goHome" clickable={false} size="sm" />
             </Button>
 
             <ReportOffer incident={reportIncident} />

@@ -134,7 +134,7 @@ export async function scopeSearchToThisVolume(tauriPage: PageLike): Promise<void
   await tauriPage.click(SCOPE_CHIP)
   await tauriPage.waitForSelector(SCOPE_POPOVER, 3000)
   // Footer buttons in order: "Use current folder" (⌥C), "This volume" (⌥V).
-  await tauriPage.click(`${SCOPE_POPOVER} .popover-footer .footer-button:nth-of-type(2)`)
+  await tauriPage.click(`${SCOPE_POPOVER} .popover-footer button:nth-of-type(2)`)
   // `dismissOverlay` finds `.ui-popover` before `.search-overlay`, so it closes the
   // popover and leaves the dialog mounted (the chip-popover focus contract).
   await dismissOverlay(tauriPage)

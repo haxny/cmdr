@@ -152,8 +152,8 @@ describe('QueryBar', () => {
     const enterHints = button?.querySelectorAll('.shortcut-chip') ?? []
     expect(enterHints.length).toBe(1)
     expect(enterHints[0]?.textContent).toBe('⏎')
-    // Label then hint, in that order. The visible gap between them is the `--spacing-xs`
-    // flex gap on `.run-label`, not literal whitespace, so the text runs together here.
+    // Label then hint, in that order. The visible gap between them is `Button`'s key-hint
+    // slot gap, not literal whitespace, so the text runs together here.
     const text = button?.textContent.replace(/\s+/g, '').trim()
     expect(text).toBe('Search⏎')
     cleanup()
