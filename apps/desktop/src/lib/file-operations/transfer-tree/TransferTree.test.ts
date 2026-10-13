@@ -216,6 +216,18 @@ describe('TransferTree', () => {
     expect(followButton()).toBeNull()
   })
 
+  it('shows Follow as a word with its F key chip, no glyph', async () => {
+    await render('flat-5000', 3)
+    rows()[0].focus()
+    key('ArrowDown')
+    await settle()
+    const button = followButton()
+    expect(button?.querySelector('svg')).toBeNull()
+    expect(button?.querySelector('.btn-label')?.textContent.trim()).toBe('Follow')
+    expect(button?.querySelector('.btn-key-hint')?.textContent).toBe('F')
+    expect(button?.getAttribute('aria-keyshortcuts')).toBe('F')
+  })
+
   it('pauses following on a wheel only when the tree has somewhere to scroll', async () => {
     await render('flat-5000', 3)
     const scroller = target.querySelector<HTMLElement>('.scroller')

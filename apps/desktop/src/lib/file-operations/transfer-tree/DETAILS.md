@@ -80,8 +80,8 @@ clamping `scrollTop` when a folder above shut, and a user's drag all fire the sa
 programmatic ones still loses the clamp. A wheel, a press on the scroller itself (its scrollbar), and a keyboard move
 are unambiguous. A wheel counts only when the rows overflow: over a tree that fits, it scrolls the page around it (the
 queue window), and pausing there would pop up Follow for nothing. The Follow button (a mini `Button` floating
-bottom-right, in Tab order after the tree) and the F key (the physical `KeyF`, untranslated like the decision prompts'
-letters) resume.
+bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and no glyph) and the F key (the physical
+`KeyF`, untranslated like the decision prompts' letters) resume.
 
 ## Rendering and focus
 

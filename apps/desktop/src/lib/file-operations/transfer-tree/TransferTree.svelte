@@ -16,7 +16,6 @@
     import { onDestroy, tick as afterRender, untrack } from 'svelte'
     import type { TransferTreeRow as Row } from '#lib/tauri-commands/index.js'
     import Button from '#lib/ui/Button.svelte'
-    import Icon from '#lib/ui/Icon.svelte'
     import { revealScrollTop, visibleRange } from '#lib/ui/column-list-layout.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { dependOn } from '#lib/utils/reactivity.js'
@@ -476,18 +475,12 @@
                     onclick={() => {
                         tree.resumeFollowing()
                     }}
+                    keyHint={FOLLOW_KEY}
                     aria-keyshortcuts={FOLLOW_KEY}
                     tabindex={tabbable ? undefined : -1}
-                    tooltipContent={{
-                        text: tString('fileOperations.transferTree.followTooltip'),
-                        shortcut: FOLLOW_KEY,
-                    }}
+                    tooltipContent={tString('fileOperations.transferTree.followTooltip')}
                 >
-                    <span class="follow-label"
-                        ><Icon name="locate-fixed" size={12} aria-hidden="true" />{tString(
-                            'fileOperations.transferTree.follow',
-                        )}</span
-                    >
+                    {tString('fileOperations.transferTree.follow')}
                 </Button>
             </div>
         {/if}
@@ -587,11 +580,5 @@
         inset-inline-end: var(--spacing-md);
         border-radius: var(--radius-input);
         box-shadow: var(--shadow-sm);
-    }
-
-    .follow-label {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
     }
 </style>

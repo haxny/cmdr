@@ -52,7 +52,6 @@
         link: 'Symlink badge overlaid on a file or folder icon when the entry is a symlink.',
         list: 'Queue button on the transfer progress dialog (send the transfer to the background, managed in the queue window).',
         'list-checks': 'The "Select" row of the with-AI / without-AI comparison table on the onboarding AI step.',
-        'locate-fixed': 'The Follow button on the live transfer tree, which scrolls back to the files in progress.',
         lock: 'Pinned-tab marker in the tab bar, the read-only-volume indicator in the breadcrumb, and the SMB login-form lock.',
         mail: 'The email row of the onboarding open-beta checklist.',
         'messages-square': 'Opens the Ask Cmdr sessions panel (past chats) from the rail header.',

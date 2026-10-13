@@ -8,7 +8,7 @@
  * label when the button is squeezed (the conflict prompt's "Overwrite all
  * smaller" dropped its `M` to a second line). `Button`'s `keyHint` renders the
  * chip in its own slot, centered on the button's cross axis and never wrapping,
- * hides it from assistive tech, and fills `aria-keyshortcuts` from it. One slot
+ * and hides it from assistive tech (`aria-keyshortcuts` carries the key). One slot
  * means one look, everywhere a key presses a button.
  *
  * ## What this rule catches
@@ -51,7 +51,7 @@ export default {
       chipInButton:
         'Pass the key as `Button`\'s `keyHint` prop (`keyHint="F2"`, or an object naming a `commandId`) ' +
         "instead of placing a `ShortcutChip` in the button's content. The prop draws the chip in its own slot, " +
-        'centered and never wrapping, hides it from screen readers, and fills `aria-keyshortcuts`. See ' +
+        'centered and never wrapping, and hides it from screen readers (put the key on `aria-keyshortcuts`). See ' +
         "`src/lib/ui/DETAILS.md` § Button. A raw `<button>` that genuinely isn't a `Button` opts out per " +
         'element: `<!-- eslint-disable-next-line cmdr/key-hint-via-button-prop -- <reason> -->`.',
     },

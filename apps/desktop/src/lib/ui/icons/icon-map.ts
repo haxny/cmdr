@@ -41,7 +41,6 @@ import IconKey from '~icons/lucide/key'
 import IconLink from '~icons/lucide/link'
 import IconList from '~icons/lucide/list'
 import IconListChecks from '~icons/lucide/list-checks'
-import IconLocateFixed from '~icons/lucide/locate-fixed'
 import IconLock from '~icons/lucide/lock'
 import IconMail from '~icons/lucide/mail'
 import IconMessagesSquare from '~icons/lucide/messages-square'
@@ -132,7 +131,6 @@ export const ICON_COMPONENTS = {
   link: IconLink,
   list: IconList,
   'list-checks': IconListChecks,
-  'locate-fixed': IconLocateFixed,
   lock: IconLock,
   mail: IconMail,
   'messages-square': IconMessagesSquare,
