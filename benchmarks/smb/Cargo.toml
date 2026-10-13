@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
+# Outside the root workspace on purpose: it pins an old `smb` stack the app doesn't
+# ship, and keeps its own `Cargo.lock`. Without this table, cargo walks up to the
+# root manifest and refuses to build it.
+[workspace]
+
 [[bin]]
 name = "smb-benchmark"
 path = "src/main.rs"
