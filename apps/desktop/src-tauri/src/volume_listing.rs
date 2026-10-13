@@ -39,6 +39,35 @@ fn list_locations() -> Vec<LocationInfo> {
     crate::stubs::volumes::list_volumes()
 }
 
+/// The network mount a path lexically lies on, read from the kernel's cached mount table
+/// (`getfsstat(MNT_NOWAIT)` on macOS, `/proc/mounts` on Linux): ❌ never a `statfs` on the path,
+/// which on a slow share waits on the server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct NetworkMount {
+    /// Where it's mounted, for example `/Volumes/naspi`.
+    pub mount_point: String,
+    /// What the switcher calls it, from the table alone (an SMB share reads "share on server").
+    pub name: String,
+}
+
+/// The network mount `path` lies on: the deepest mount point that's a whole-segment prefix of it.
+/// `None` when that mount is a local disk, or the table couldn't be read. Lexical, so a symlink on
+/// the way isn't followed.
+#[cfg(target_os = "macos")]
+pub(crate) fn network_mount_under(path: &std::path::Path) -> Option<NetworkMount> {
+    crate::volumes::network_mount_under(path)
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn network_mount_under(path: &std::path::Path) -> Option<NetworkMount> {
+    crate::volumes_linux::network_mount_under(path)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+pub(crate) fn network_mount_under(_path: &std::path::Path) -> Option<NetworkMount> {
+    None
+}
+
 // ============================================================================
 // The hub row
 // ============================================================================

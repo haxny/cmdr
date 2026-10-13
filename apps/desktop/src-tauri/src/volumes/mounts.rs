@@ -211,6 +211,34 @@ pub(super) fn mount_entry_for_test(mount_point: &str, fs_type: &str) -> MountEnt
     }
 }
 
+/// The network mount `path` lies on, from the same non-blocking table: what the favorites add gate
+/// asks before it `statfs`es anything, so a folder on a slow share it already knows costs no round
+/// trip. `None` on a local disk. See `crate::volume_listing::network_mount_under`.
+pub(crate) fn network_mount_under(path: &Path) -> Option<crate::volume_listing::NetworkMount> {
+    network_mount_in(&enumerate_mounts()?, path)
+}
+
+/// [`network_mount_under`] over a table already read.
+fn network_mount_in(mounts: &[MountEntry], path: &Path) -> Option<crate::volume_listing::NetworkMount> {
+    let mount = mount_under(mounts, path)?;
+    if cmdr_fs::filesystem_kind::mount_is_local_disk(Some(&mount.mount_from), Some(&mount.fs_type)) {
+        return None;
+    }
+    Some(crate::volume_listing::NetworkMount {
+        mount_point: mount.mount_point.clone(),
+        name: network_name(mount),
+    })
+}
+
+/// The SMB mount mounted exactly at `mount_point`, from the same non-blocking table: the lexical
+/// twin of `get_smb_mount_info`, whose `statfs` waits on the server.
+pub(crate) fn smb_mount_info_at(mount_point: &str) -> Option<SmbMountInfo> {
+    enumerate_mounts()?
+        .iter()
+        .filter(|mount| mount.mount_point == mount_point)
+        .find_map(smb_info)
+}
+
 /// [`mount_type_and_source_for`] over a table already read.
 fn mount_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&'a MountEntry> {
     // `max_by_key` keeps the LAST of equal keys, so a stacked mount wins.

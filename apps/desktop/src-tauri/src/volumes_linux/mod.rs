@@ -310,10 +310,57 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
     })
 }
 
+/// The twin of macOS `volumes::network_mount_under`, named as `resolve_path_volume_fast` names it.
+/// A GVFS share isn't a mount of its own, so it reads as nothing and the add gate resolves it the
+/// long way.
+pub(crate) fn network_mount_under(path: &Path) -> Option<crate::volume_listing::NetworkMount> {
+    network_mount_in(&linux_mounts::parse_proc_mounts()?, path)
+}
+
+/// [`network_mount_under`] over a table already read.
+fn network_mount_in(mounts: &[MountEntry], path: &Path) -> Option<crate::volume_listing::NetworkMount> {
+    let entry = linux_mounts::mount_entry_for_path_from_entries(path, mounts)?;
+    if cmdr_fs::filesystem_kind::mount_is_local_disk(Some(&entry.device), Some(&entry.fstype)) {
+        return None;
+    }
+    Some(crate::volume_listing::NetworkMount {
+        mount_point: entry.mountpoint.clone(),
+        name: mounts::mount_display_name(&entry.mountpoint),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use test_support::parse_test_mounts;
+
+    fn proc_mount(device: &str, mountpoint: &str, fstype: &str) -> MountEntry {
+        MountEntry {
+            device: device.to_string(),
+            mountpoint: mountpoint.to_string(),
+            fstype: fstype.to_string(),
+            options: String::new(),
+        }
+    }
+
+    #[test]
+    fn network_mount_in_names_the_share_and_skips_local_disks() {
+        let mounts = vec![
+            proc_mount("/dev/sda1", "/", "ext4"),
+            proc_mount("//nas/media", "/mnt/media", "cifs"),
+            proc_mount("/dev/sdb1", "/mnt/media-1", "ext4"),
+        ];
+        let network = |path: &str| network_mount_in(&mounts, Path::new(path));
+        assert_eq!(
+            network("/mnt/media/films"),
+            Some(crate::volume_listing::NetworkMount {
+                mount_point: "/mnt/media".to_string(),
+                name: "media".to_string(),
+            })
+        );
+        assert_eq!(network("/mnt/media-1/x"), None);
+        assert_eq!(network("/home/me"), None);
+    }
 
     #[test]
     fn test_get_main_volume() {

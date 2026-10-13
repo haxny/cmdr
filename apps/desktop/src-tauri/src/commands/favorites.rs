@@ -24,7 +24,7 @@ use tokio::time::Duration;
 use crate::commands::volumes::PathVolumeResolution;
 use crate::deadline::{DeadlineError, blocking_typed_result_with_timeout};
 use crate::favorites::store::{self, FavoriteVolume};
-use crate::volume_listing::{LocationCategory, LocationInfo};
+use crate::volume_listing::{LocationCategory, LocationInfo, NetworkMount};
 
 /// 5s matches the write timeout other persisting commands use. The store write is local-only, but a
 /// hung data-dir mount must never freeze the IPC thread.
@@ -106,7 +106,11 @@ pub async fn add_favorite(path: String, name: Option<String>) -> Result<(), AddF
         store::add(&path, name, volume);
         Ok(())
     })
-    .await?;
+    .await
+    .inspect_err(|error| {
+        // The gate passed, so this is the save itself (a hung data-dir mount, a panicked write).
+        log::warn!(target: "favorites", "couldn't save the favorite: {error}");
+    })?;
     crate::volume_broadcast::emit_volumes_changed();
     Ok(())
 }
@@ -118,13 +122,15 @@ pub async fn add_favorite(path: String, name: Option<String>) -> Result<(), AddF
 /// 1. [`path_routes_over_its_parent`](crate::file_system::volume::manager::path_routes_over_its_parent):
 ///    an archive-inner or `.git`-portal path resolves to the parent DRIVE, yet has no folder of its
 ///    own there.
-/// 2. The canonical path→volume resolver, protocol arms first (`mtp://`, `adb://`, `sftp://`,
+/// 2. A folder on a network mount the registry holds at that mount point is answered there, with
+///    no round trip to the server ([`favorite_volume_on_network_mount`]). Anything else goes on.
+/// 3. The canonical path→volume resolver, protocol arms first (`mtp://`, `adb://`, `sftp://`,
 ///    `webdav://`, `s3://`, `smb://` → the servers hub), the mount table otherwise. A timeout is
 ///    UNKNOWN, ❌ never a refusal.
-/// 3. The volume must CONTAIN the path, by whole segments. A scheme with no protocol arm
+/// 4. The volume must CONTAIN the path, by whole segments. A scheme with no protocol arm
 ///    (`search-results://`) reaches the mount table, which walks UP to `/`, which doesn't contain
 ///    it; that's what refuses the next unarmed scheme too, with no list to extend.
-/// 4. The volume must be REGISTERED, which means the folder was seen live, and its backend admitted
+/// 5. The volume must be REGISTERED, which means the folder was seen live, and its backend admitted
 ///    by [`backend_holds_favorites`]. An unregistered saved place or listed device is
 ///    [`AddFavoriteError::PlaceNotConnected`]; anything else unregistered (the servers hub) is
 ///    [`AddFavoriteError::NotAPlace`].
@@ -141,8 +147,33 @@ async fn favorite_volume_for_with_timeout(
     path: &str,
     fs_timeout: Duration,
 ) -> Result<FavoriteVolume, AddFavoriteError> {
+    favorite_volume_for_with(path, fs_timeout, crate::volume_listing::network_mount_under).await
+}
+
+/// [`favorite_volume_for_with_timeout`] with the mount-table read injected, so a test can put a
+/// path on a share no test machine has.
+async fn favorite_volume_for_with(
+    path: &str,
+    fs_timeout: Duration,
+    network_mount_under: impl FnOnce(&Path) -> Option<NetworkMount>,
+) -> Result<FavoriteVolume, AddFavoriteError> {
     if crate::file_system::volume::manager::path_routes_over_its_parent(Path::new(path)) {
         return Err(AddFavoriteError::NotAPlace);
+    }
+    let manager = crate::file_system::volume::manager::get_volume_manager();
+    let on_a_connected_share = path
+        .starts_with('/')
+        .then(|| network_mount_under(Path::new(path)))
+        .flatten()
+        .and_then(|mount| {
+            favorite_volume_on_network_mount(path, mount, |root| {
+                manager
+                    .find_by_root(root)
+                    .map(|(id, volume)| (id, volume.backend_kind()))
+            })
+        });
+    if let Some(volume) = on_a_connected_share {
+        return Ok(volume);
     }
     let resolution = crate::commands::volumes::resolve_path_volume_with_timeout(path.to_string(), fs_timeout).await;
     favorite_volume_from(path, resolution, |id| {
@@ -152,7 +183,35 @@ async fn favorite_volume_for_with_timeout(
     })
 }
 
-/// Steps 3 and 4 of [`favorite_volume_for`], over a resolution already made. `registered_backend`
+/// Step 2, the shortcut: a folder on a network mount the registry already holds, answered from the
+/// cached mount table and the registry, with no `statfs` on the path. A slow server holds that
+/// `statfs` past the resolver's deadline, and a share Cmdr is connected to needs no proof it's
+/// live (cmdr-reports#40).
+///
+/// `registered_at` answers the id and backend of the volume registered at a mount root, `None` for
+/// none. ❗ The registered volume must sit AT the mount point the table names, ❌ never merely
+/// above it: a mount nested inside a registered share is another filesystem, and a prefix match
+/// would hand it the share's id. `None` sends the caller the long way, never a refusal.
+///
+/// Network mounts only: a local disk's `statfs` is cheap, and the resolver also knows what the
+/// table can't (a cloud folder on the boot disk is its own row).
+fn favorite_volume_on_network_mount(
+    path: &str,
+    mount: NetworkMount,
+    registered_at: impl FnOnce(&Path) -> Option<(String, BackendKind)>,
+) -> Option<FavoriteVolume> {
+    if !path_is_under(path, &mount.mount_point) {
+        return None;
+    }
+    let (id, kind) = registered_at(Path::new(&mount.mount_point))?;
+    backend_holds_favorites(kind).then_some(FavoriteVolume {
+        id,
+        root: mount.mount_point,
+        name: mount.name,
+    })
+}
+
+/// Steps 4 and 5 of [`favorite_volume_for`], over a resolution already made. `registered_backend`
 /// answers which backend serves a registered volume id, `None` for one the registry doesn't hold.
 fn favorite_volume_from(
     path: &str,
@@ -448,6 +507,91 @@ mod add_gate_tests {
             favorite_volume_for_with_timeout(&dir.path().to_string_lossy(), TEST_FS_TIMEOUT)
                 .await
                 .is_ok()
+        );
+    }
+
+    /// A share registered at the mount point the table names, the way a connected one is.
+    fn register_share(id: &str, root: &str) {
+        get_volume_manager().register_if_absent(id, Arc::new(LocalPosixVolume::local_folder("Share", root)));
+    }
+
+    fn network_mount(mount_point: &str) -> NetworkMount {
+        NetworkMount {
+            mount_point: mount_point.to_string(),
+            name: "share on nas".to_string(),
+        }
+    }
+
+    /// ❗ cmdr-reports#40: favoriting a folder on a share Cmdr already holds must not wait on the
+    /// server. A zero resolver deadline is what a server answering in 2-3 s looks like to the
+    /// gate: any `statfs` on the path misses it.
+    #[tokio::test]
+    async fn a_folder_on_a_connected_share_is_favorited_without_asking_the_server() {
+        register_share("smb-gate-test-connected", "/Volumes/gate-test-connected");
+        let volume = favorite_volume_for_with("/Volumes/gate-test-connected/docs", Duration::ZERO, |path| {
+            assert_eq!(path, Path::new("/Volumes/gate-test-connected/docs"));
+            Some(network_mount("/Volumes/gate-test-connected"))
+        })
+        .await
+        .expect("a connected share answers from the registry");
+        assert_eq!(
+            volume,
+            FavoriteVolume {
+                id: "smb-gate-test-connected".to_string(),
+                root: "/Volumes/gate-test-connected".to_string(),
+                name: "share on nas".to_string(),
+            }
+        );
+    }
+
+    /// A network mount nothing registered (an adopter pass that hasn't run yet) still goes the long
+    /// way, and a slow answer there stays a timeout.
+    #[tokio::test]
+    async fn an_unregistered_network_mount_still_asks_the_resolver() {
+        let result = favorite_volume_for_with("/Volumes/gate-test-unregistered/docs", Duration::ZERO, |_| {
+            Some(network_mount("/Volumes/gate-test-unregistered"))
+        })
+        .await;
+        assert!(matches!(result, Err(AddFavoriteError::TimedOut)), "{result:?}");
+    }
+
+    /// ❗ The registered volume must sit at the mount point itself. A mount nested inside a
+    /// registered share is another filesystem, so the share's id would be the wrong answer.
+    #[tokio::test]
+    async fn a_mount_nested_inside_a_registered_share_is_not_that_share() {
+        register_share("smb-gate-test-outer", "/Volumes/gate-test-outer");
+        let result = favorite_volume_for_with("/Volumes/gate-test-outer/inner/docs", Duration::ZERO, |_| {
+            Some(network_mount("/Volumes/gate-test-outer/inner"))
+        })
+        .await;
+        assert!(matches!(result, Err(AddFavoriteError::TimedOut)), "{result:?}");
+    }
+
+    /// A mount whose name is a prefix of the path's first segment doesn't contain it, and a view
+    /// backend registered at the mount holds no favorites; both go the long way.
+    #[test]
+    fn the_network_mount_shortcut_needs_containment_and_a_place_backend() {
+        let share = || network_mount("/Volumes/share");
+        assert_eq!(
+            favorite_volume_on_network_mount("/Volumes/share2/docs", share(), |_| unreachable!(
+                "containment fails before the registry is asked"
+            )),
+            None
+        );
+        assert_eq!(
+            favorite_volume_on_network_mount("/Volumes/share/docs", share(), |_| Some((
+                "routed-1".to_string(),
+                BackendKind::Archive
+            ))),
+            None
+        );
+        assert_eq!(
+            favorite_volume_on_network_mount("/Volumes/share/docs", share(), |root| {
+                assert_eq!(root, Path::new("/Volumes/share"), "asked at the mount point itself");
+                Some(("smb-1".to_string(), BackendKind::Smb))
+            })
+            .map(|volume| volume.id),
+            Some("smb-1".to_string())
         );
     }
 

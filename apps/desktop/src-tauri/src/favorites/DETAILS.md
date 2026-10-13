@@ -254,13 +254,21 @@ servers-hub path would be written down with nothing able to reopen it.
 1. `VolumeManager::path_routes_over_its_parent()`. An archive-inner or `.git`-portal path resolves to
    the parent DRIVE while the path itself has no folder of its own there. Same reading the
    write-op router and the agent's `WritableDestination` take.
-2. The canonical resolver (`resolve_path_volume_with_timeout`): protocol arms for `mtp://`,
+2. **A folder on a connected network mount answers without the server**
+   (`favorite_volume_on_network_mount`). The cached mount table (`volume_listing::network_mount_under`,
+   `getfsstat(MNT_NOWAIT)` / `/proc/mounts`, lexical) names the network mount the path sits on, and
+   if the registry holds a place backend AT that mount point (`find_by_root`), that's the volume,
+   named as its switcher row is. ❗ AT, ❌ never above: a mount nested inside a registered share is
+   another filesystem, and a prefix match would give it the share's id. Local disks skip this (their
+   `statfs` is cheap, and the resolver knows a cloud folder on the boot disk is its own row); a miss
+   goes on to step 3, never a refusal.
+3. The canonical resolver (`resolve_path_volume_with_timeout`): protocol arms for `mtp://`,
    `adb://`, `sftp://`, `webdav://`, `s3://` (each from cached state, never dialing), `smb://` → the
    servers hub, the mount table otherwise.
-3. **The volume must CONTAIN the path**, by whole segments (`cmdr_fs::volume::app_paths`). A scheme
+4. **The volume must CONTAIN the path**, by whole segments (`cmdr_fs::volume::app_paths`). A scheme
    with no protocol arm (`search-results://`) reaches the mount table, which walks UP to `/`, and `/`
    doesn't contain it. That keeps the rule generic instead of a list of schemes to extend.
-4. **The volume must be REGISTERED, and its backend admitted** by `backend_holds_favorites`, an
+5. **The volume must be REGISTERED, and its backend admitted** by `backend_holds_favorites`, an
    EXHAUSTIVE match on `BackendKind` (❌ no `_` arm, so a new backend is a compile error here
    rather than a silent yes): `Local | Smb | Sftp | Webdav | S3 | Mtp | Adb` yes, `Archive |
    GitPortal` no. Registered means the folder was seen live. An unregistered saved place or listed
@@ -282,8 +290,18 @@ left exactly as it is (pin and account included). Visible effect: the share appe
 hub, unpinned. Its password lives in Finder's Keychain item, so the first offline pick asks once
 through the sign-in sheet. A GVFS share (Linux) reads the same fields off its folder name.
 
+**Why step 2 sits in the gate and not in the shared resolver** (cmdr-reports#40, ERR-GQ6HQ: a share
+answering in 2–2.6 s ran the resolver's `statfs` past its 2 s deadline, and the add failed). The gate
+needs only `{ id, root, name }`, which the table and the registry give exactly. `resolve_path_volume`
+hands the frontend a whole `LocationInfo` (icon, read-only, fs type) that only the `statfs` path
+fills, so a registry answer there would publish a thinner row than discovery does.
+`remember_favorited_share` reads the same cached table (`volumes::smb_mount_info_at` on macOS), so
+the save after the gate doesn't wait on the server either.
+
 **A resolver timeout is not a refusal.** It means the gate could not classify the path, so
-`add_favorite` returns `AddFavoriteError::TimedOut` and does not persist anything. Resolver-correctness
+`add_favorite` returns `AddFavoriteError::TimedOut` and does not persist anything; the frontend
+words that one as "slow to respond, try again" (`add-favorite-folder.ts`), apart from every other
+failure. A save that misses its own deadline answers `TimedOut` too and logs under `favorites`. Resolver-correctness
 tests inject a generous filesystem timeout because a saturated blocking pool can spend the production
 two-second budget waiting to schedule an otherwise fast mount-table read; a separate synthetic resolver
 result pins the typed timeout outcome without depending on scheduler timing. The classification

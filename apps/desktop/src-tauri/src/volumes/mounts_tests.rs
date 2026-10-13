@@ -416,6 +416,34 @@ fn mount_under_picks_the_deepest_whole_component_mount() {
     assert_eq!(fs_type("/Users/david"), Some("apfs"));
 }
 
+/// The add gate's lexical read (cmdr-reports#40): the share a folder sits on, named as its row is,
+/// and nothing for a local disk, whose `statfs` is cheap. A mount nested inside the share wins, and
+/// a sibling whose name extends the share's is its own mount.
+#[test]
+fn network_mount_in_names_the_share_and_skips_local_disks() {
+    let mounts = vec![
+        mount("/", "apfs", "/dev/disk3s1s1", true),
+        mount("/Volumes/naspi", "smbfs", "//david@192.0.2.9/naspi", false),
+        mount("/Volumes/naspi/nested", "nfs", "192.0.2.10:/export", false),
+        mount("/Volumes/naspi-1", "exfat", "/dev/disk6s1", false),
+    ];
+    let network = |path: &str| network_mount_in(&mounts, Path::new(path));
+
+    let share = network("/Volumes/naspi/photos").expect("a folder on the share is on a network mount");
+    assert_eq!(share.mount_point, "/Volumes/naspi");
+    assert!(
+        share.name.starts_with("naspi on "),
+        "named as its row is, got {:?}",
+        share.name
+    );
+    assert_eq!(
+        network("/Volumes/naspi/nested/x").map(|m| m.mount_point),
+        Some("/Volumes/naspi/nested".to_string())
+    );
+    assert_eq!(network("/Volumes/naspi-1/backup"), None);
+    assert_eq!(network("/Users/david"), None);
+}
+
 #[test]
 fn mount_under_reaches_the_last_of_stacked_mounts() {
     let mounts = vec![

@@ -22,7 +22,9 @@ each favorite row tells the frontend about where it points. Full depth in `DETAI
   whole list. `volume` is serde-defaulted, like `shortcut`.
 - **Every add goes through `commands::favorites::add_favorite`, ❌ never `store::add`.** Only the
   gate names the volume a favorite lives on (registered, containing the path, an exhaustively
-  admitted backend) and saves an unsaved SMB share, unpinned. `DETAILS.md` § The add gate.
+  admitted backend) and saves an unsaved SMB share, unpinned. A folder on a connected share answers
+  from the cached mount table + registry, ❌ never a `statfs` that waits on a slow server.
+  `DETAILS.md` § The add gate.
 - **A favorite's identity is its volume id + the path under its root**, like a tab's. The reach
   pass decides `FavoriteReach` from rows alone, and ❌ a favorite row never carries
   `connection_state` (volume-shaped consumers read it). `target.rs` header.
