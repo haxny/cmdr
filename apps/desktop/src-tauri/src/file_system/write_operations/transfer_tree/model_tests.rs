@@ -314,3 +314,31 @@ fn a_level_names_its_children_and_a_newcomer_joins_it() {
     let late = model.discover(top, "late.bin", NodeKind::File, 1);
     assert_eq!(model.children_by_name(top).get("late.bin"), Some(&late));
 }
+
+/// An opaque folder's scan counted fewer files than its walk finds (one
+/// arrived since): its counts read complete while the extra one is still in
+/// flight, and the folder must not read done before that lands.
+#[test]
+fn a_folder_with_work_in_flight_below_is_never_done() {
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque")]);
+    recorder.subtree(
+        Path::new("/src/opaque"),
+        &CopyScanResult {
+            file_count: 1,
+            dir_count: 0,
+            total_bytes: 10,
+            dedup_bytes: 10,
+            top_level_is_directory: true,
+            top_level_modified_at: None,
+            top_level_created_at: None,
+        },
+    );
+    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let opaque = node_at(&model, &["opaque"]);
+    let counted = model.discover(opaque, "a.bin", NodeKind::File, 10);
+    let arrived = model.discover(opaque, "b.bin", NodeKind::File, 10);
+    model.complete(counted);
+    model.begin(arrived, Arc::new(AtomicU64::new(0)));
+
+    assert_eq!(model.folder_state(opaque, true), TreeRowState::Active);
+}

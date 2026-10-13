@@ -42,18 +42,37 @@ impl TreeReporter {
         TreeLeaf::begin(self, node)
     }
 
-    /// The level `folder` a walker is about to list, indexed by name once.
-    pub(crate) fn level(&self, folder: Option<NodeId>) -> TreeLevel {
+    /// The level `folder` a walker has listed, indexed by name once. `listed`
+    /// is the listing, `(name, is_folder, size)` per child: every child the scan
+    /// never saw joins the tree right here, before any child lands, so the
+    /// folder's counts hold the whole listing and it can't read done while a
+    /// newcomer (a file that arrived since the scan, last in tree order, say)
+    /// is still to come. One lock for the level.
+    pub(crate) fn level<'a>(
+        &self,
+        folder: Option<NodeId>,
+        listed: impl IntoIterator<Item = (&'a str, bool, u64)>,
+    ) -> TreeLevel {
         let by_name = match (&self.0, folder) {
             (Some(tree), Some(folder)) => tree
-                .read(|model| {
-                    model.kind(folder).is_folder().then(|| {
-                        model
-                            .children_by_name(folder)
-                            .into_iter()
-                            .map(|(name, child)| (name, (child, model.kind(child).is_folder())))
-                            .collect()
-                    })
+                .mutate(|model| {
+                    if !model.kind(folder).is_folder() {
+                        return None;
+                    }
+                    let mut by_name: HashMap<String, (NodeId, bool)> = model
+                        .children_by_name(folder)
+                        .into_iter()
+                        .map(|(name, child)| (name, (child, model.kind(child).is_folder())))
+                        .collect();
+                    for (name, is_folder, size) in listed {
+                        if by_name.contains_key(name) {
+                            continue;
+                        }
+                        let kind = if is_folder { NodeKind::Folder } else { NodeKind::File };
+                        let node = model.discover(folder, name, kind, size);
+                        by_name.insert(name.to_owned(), (node, is_folder));
+                    }
+                    Some(by_name)
                 })
                 .flatten(),
             _ => None,
@@ -197,8 +216,8 @@ pub(crate) struct TreeLevel {
 
 impl TreeLevel {
     /// The row of the child called `name`, if the tree holds one of the same
-    /// kind. A child the scan never saw (an opaque folder's contents, a file
-    /// that appeared since) joins the tree here.
+    /// kind. The level's listing already brought in every child the scan never
+    /// saw; a name outside that listing joins the tree here.
     pub(crate) fn child(&mut self, name: &str, is_folder: bool, size: u64) -> Option<NodeId> {
         let folder = self.folder?;
         if let Some(&(node, was_folder)) = self.by_name.get(name) {

@@ -90,7 +90,7 @@ fn a_walker_finds_each_child_by_name_and_a_newcomer_joins_the_tree() {
     let top = reporter.source(Path::new("/src/top"));
     assert_eq!(top, Some(node(&slot, &["top"])));
 
-    let mut level = reporter.level(top);
+    let mut level = reporter.level(top, []);
 
     assert_eq!(level.child("a.bin", false, 10), Some(node(&slot, &["top", "a.bin"])));
     assert_eq!(level.child("sub", true, 0), Some(node(&slot, &["top", "sub"])));
@@ -180,7 +180,7 @@ fn a_failure_marks_the_row_its_source_path_names() {
 fn with_no_tree_and_no_row_every_report_is_silent() {
     let nothing = TreeReporter::none();
     assert_eq!(nothing.source(Path::new("/src/top")), None);
-    let mut level = nothing.level(None);
+    let mut level = nothing.level(None, []);
     assert_eq!(level.child("a.bin", false, 1), None);
     nothing.skip_whole(None);
     nothing.complete_whole(None);
@@ -249,9 +249,9 @@ fn tree_boundary_cost_bench() {
         let slot = TransferTreeSlot::default();
         slot.install(recorder.finish(&english()), TreeLanding::nowhere());
         let reporter = slot.reporter();
-        let mut level = reporter.level(reporter.source(Path::new("/src/top")));
+        let mut level = reporter.level(reporter.source(Path::new("/src/top")), []);
         let sub = level.child("sub", true, 0);
-        let mut level = reporter.level(sub);
+        let mut level = reporter.level(sub, []);
         let rows: Vec<Option<NodeId>> = (0..FILES)
             .map(|file| level.child(&format!("f_{file:05}.bin"), false, 4_096))
             .collect();
@@ -283,4 +283,36 @@ fn a_whole_source_skipped_by_its_path_settles_its_rows() {
     assert_eq!(view.rows[0].label, "top");
     assert_eq!(view.rows[0].state, TreeRowState::Skipped);
     assert_eq!((view.rows[0].files_done, view.rows[0].skipped), (2, 2));
+}
+
+/// A folder whose contents grew after the scan: the walker lists `late.bin`,
+/// which the scan never saw. It joins the folder's counts as the level is
+/// listed, before any child lands, so the folder can't read done while
+/// `late.bin` is still to come (it's last in tree order).
+#[test]
+fn a_listed_newcomer_keeps_its_folder_open_until_it_lands() {
+    let slot = installed();
+    let reporter = slot.reporter();
+    let top = reporter.source(Path::new("/src/top"));
+    let mut level = reporter.level(top, [("sub", true, 0), ("a.bin", false, 10), ("late.bin", false, 5)]);
+    let top = node(&slot, &["top"]);
+    let folder_state = |slot: &TransferTreeSlot| {
+        tree(slot)
+            .read(|model| model.folder_state(top, !model.in_flight_by_folder().is_empty()))
+            .expect("the tree is on")
+    };
+
+    for (name, is_folder) in [("sub", true), ("a.bin", false)] {
+        let row = level.child(name, is_folder, 0);
+        if is_folder {
+            let mut sub_level = reporter.level(row, [("c.bin", false, 30)]);
+            reporter.leaf(sub_level.child("c.bin", false, 30)).complete();
+        } else {
+            reporter.leaf(row).complete();
+        }
+    }
+    assert_eq!(folder_state(&slot), TreeRowState::Active, "late.bin is still to come");
+
+    reporter.leaf(level.child("late.bin", false, 5)).complete();
+    assert_eq!(folder_state(&slot), TreeRowState::Done);
 }

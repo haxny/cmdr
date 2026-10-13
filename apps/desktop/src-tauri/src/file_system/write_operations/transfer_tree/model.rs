@@ -470,6 +470,10 @@ impl TreeModel {
     }
 
     /// A folder's state from its counts and whether work is in flight below it.
+    ///
+    /// ❗ Never done while something below is in flight: an opaque folder's
+    /// scan can count fewer files than its walk finds (one arrived since), and
+    /// its counts then read complete while the extra one is still landing.
     pub(crate) fn folder_state(&self, id: NodeId, active_beneath: bool) -> TreeRowState {
         let agg = self.folder(id).expect("a folder's state is derived from its aggregate");
         if agg.failed > 0 {
@@ -483,7 +487,7 @@ impl TreeModel {
                 _ => TreeRowState::Waiting,
             };
         }
-        if agg.files_done >= agg.files_total {
+        if agg.files_done >= agg.files_total && !active_beneath {
             return if agg.skipped >= agg.files_done {
                 TreeRowState::Skipped
             } else {

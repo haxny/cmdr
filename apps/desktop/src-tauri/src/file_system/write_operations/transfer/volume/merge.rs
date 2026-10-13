@@ -576,7 +576,16 @@ async fn merge_level<'a>(
     created.record_walked_source_dir(source_path);
     // The level's children by name, for each entry's tree row: one index per
     // level, dropped with it.
-    let mut tree_level = progress.tree().level(folder);
+    let mut tree_level = progress.tree().level(
+        folder,
+        entries.iter().map(|entry| {
+            (
+                entry.name.as_str(),
+                merges_as_a_directory(entry),
+                entry.size.unwrap_or(0),
+            )
+        }),
+    );
 
     for entry in &entries {
         // The cooperative boundary, per entry. The walk's own work (listings,

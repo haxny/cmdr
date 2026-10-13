@@ -77,9 +77,10 @@ nothing counts twice. Whole-subtree calls, one per subtree: `complete_subtree` a
 below (plus what an opaque folder's scan counted and its walk never named), and `empty_folders_created` finishes every
 empty folder at once.
 
-Folder state is derived at read time, never stored: failed if any file below failed; else, once every file is settled,
-skipped if all were skipped, done otherwise; else active if anything below is in flight or landed; else waiting. An
-empty folder is done once created.
+Folder state is derived at read time, never stored: failed if any file below failed; else, once every file is settled
+and nothing below is in flight, skipped if all were skipped, done otherwise; else active if anything below is in flight
+or landed; else waiting. An empty folder is done once created. "Nothing in flight" matters for an opaque folder whose
+scan counted fewer files than its walk finds: its counts read complete while the newcomer is still landing.
 
 ## The view (`view.rs`)
 
@@ -133,8 +134,10 @@ A driver holds a `TreeReporter` (`TransferTreeSlot::reporter`), cloned freely, s
   leaf's high-water mark IS the row's byte counter, so the bar and the row can't disagree. `SourceProgress` carries the
   top-level source's row (`for_source` looks it up by path); a top-level file's leaf is that row.
 - **The merge walker resolves rows per level** (`../transfer/volume/merge.rs`): one `TreeLevel` per listed folder,
-  children by name, built once and dropped with the level. A child the scan never saw (an opaque folder's contents, a
-  file that appeared since) joins the tree there (`discover`), and an opaque folder's totals already count it, so
+  children by name, built once (one lock) from the level's listing and dropped with the level. Every child the scan
+  never saw (an opaque folder's contents, a file that appeared since) joins the tree as the level is built
+  (`discover`), before any child lands: discovered one by one as the walker reached them, a newcomer last in tree order
+  let its folder read done before it was even found. An opaque folder's totals already count its contents, so
   `discover` adds a found file's totals only up to the nearest opaque ancestor. A name whose kind changed since the scan
   gets no row. The walker asks by the scan's kind (`merges_as_a_directory`): a link the scan counted as one file, which
   a stat-following backend's walk recurses through, keeps its file row, and that level completes it. A level that
