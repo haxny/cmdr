@@ -178,7 +178,7 @@
     },
     "apps/desktop/src/lib/ui/ModalDialog.svelte": {
       "lines": 823,
-      "reason": "The `Props` interface is ~120 script lines whose per-prop docs are this primitive's API contract and can't leave, and the `<style>` block (~305 lines) is one primitive's chrome that `ui/CLAUDE.md` pins several rules of. The separable pure part, the edge-and-corner resize geometry, already lives in `modal-resize.ts`; what stays is listener plumbing, focus, and the MCP close registry."
+      "reason": "The `Props` interface is ~120 script lines whose per-prop docs are this primitive's API contract and can't leave, and the `\u003cstyle\u003e` block (~305 lines) is one primitive's chrome that `ui/CLAUDE.md` pins several rules of. The separable pure part, the edge-and-corner resize geometry, already lives in `modal-resize.ts`; what stays is listener plumbing, focus, and the MCP close registry."
     },
     "apps/desktop/src/routes/(main)/+page.svelte": {
       "lines": 929,
@@ -251,10 +251,6 @@
     "crates/cmdr-sftp/src/transport.rs": {
       "lines": 945,
       "reason": "The crate's headline invariant is that `russh` is named in exactly one module so a breaking minor stays one file's problem (eight breaking minors in eight months), stated in the module doc and again in `crates/cmdr-sftp/CLAUDE.md`; everything russh-free has already been pushed out to `auth.rs`, `trust.rs`, `known_hosts.rs`, `extensions.rs`, and `errors.rs`, so what remains is one dial conversation (`open_session` to `authenticate` to `hello`) plus the `PendingEngine` teardown guard and the two `Handler` impls, under a 57-line module doc for the three abort hazards the shape defends against."
-    },
-    "scripts/check/checks/common.go": {
-      "lines": 803,
-      "reason": "TODO: split; `DETAILS.md` § Key files scopes this file to the core types and command plumbing every check builds on, and two unrelated toolchains have grown inside it. Move the pinned-tool installer (`ResolveDevSecret`, `InstallPinnedBinary`, `extractFromTarGz`, `installExecutable`, `NextestVersion`, `EnsureCargoNextest`, `GoToolsBinPath`, `goToolBuildInfo`, `EnsureGoTool`, `goToolIsCurrent`, `parseGoToolBuildInfo`, `pinnedModuleVersion`, roughly 265 lines) to `tool-install.go`, and the frontend lane runners (`runOxfmtCheck`, `parseOxfmtFileCount`, `runESLintCheck`, `runStylelintCheck`, `runKnipCheck`, `runImportCyclesCheck`, `buildFindArgs`, roughly 195 lines) to `frontend-lanes.go`. Both stay in the package, so `runner-sources.go` still reaches them by following `Run`, and what is left is the vocabulary (`App`, `CheckResult`, `CheckContext`, `CheckDefinition`), the process tracker, and the output helpers at roughly 420 lines."
     },
     "scripts/check/checks/desktop-rust-cfg-gate_test.go": {
       "lines": 1228,
