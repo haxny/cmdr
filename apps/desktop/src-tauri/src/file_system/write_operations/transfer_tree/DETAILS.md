@@ -45,7 +45,10 @@ driver.
 - **Breadth-first ids** make a folder's scanned children `first_child..first_child + child_count`, so a child's
   position is a subtraction and the arena carries no child list. Discovered children live in `extra_children`.
 - `heap_bytes()` counts capacity. 47.0 B/node at 1,000,002 nodes of 23-byte names (verified 2026-10-11, the budget
-  test, debug build): 16 for the node, 8 for the size, the name, and the folders' share.
+  test, debug build): 16 for the node, 8 for the size, the name, and the folders' share. The same tree filled by
+  discovery under one opaque source, as a backend that doesn't walk at scan time fills it, is 52.4 B/node (verified
+  2026-10-13, `budget_tests.rs`, debug build): growing vectors over-allocate, and each discovered child costs its
+  parent's `extra_children` an id.
 
 ### Building
 

@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use super::build::{BuilderId, TreeBuilder};
-use super::model::{NodeKind, TreeModel};
+use super::model::{NodeId, NodeKind, TreeModel};
 use super::order::TreeOrder;
 use super::view::{TransferTreeViewRequest, TreeWindow, flatten};
 
@@ -41,6 +41,42 @@ fn a_million_node_tree_stays_within_64_bytes_a_node_names_included() {
     assert!(nodes > 1_000_000, "node count: {nodes}");
 
     // 47.0 B/node measured (2026-10-11, these 23-byte names, debug build).
+    let per_node = model.heap_bytes() as f64 / nodes as f64;
+    assert!(per_node <= 64.0, "{per_node:.1} bytes per node");
+}
+
+/// The same camera roll, but the scan saw only the top folder (an opaque
+/// source, `ScanRecorder::subtree`): every folder and photo joins live as the
+/// walker lists it (`discover`), the way a backend that doesn't walk at scan
+/// time fills its tree. Vectors that grow one push at a time over-allocate, so
+/// this is the shape that tests the budget hardest.
+#[test]
+fn a_million_node_tree_filled_by_discovery_stays_within_64_bytes_a_node() {
+    let mut builder = TreeBuilder::new();
+    let top = builder.child(BuilderId::ROOT, "Photos", NodeKind::Folder, 0);
+    builder.set_opaque_totals(top, (FOLDERS * FILES_PER_FOLDER) as u32, 0);
+    let mut model = builder.finish(&TreeOrder::bytewise()).0;
+    let top = model.child_at(NodeId::ROOT, 0);
+    for folder in 0..FOLDERS {
+        let day = model.discover(
+            top,
+            &format!("2024-{:02}-{:02} trip", folder % 12 + 1, folder % 28 + 1),
+            NodeKind::Folder,
+            0,
+        );
+        for file in 0..FILES_PER_FOLDER {
+            model.discover(
+                day,
+                &format!("IMG_2024{folder:04}_{file:06}.jpg"),
+                NodeKind::File,
+                2_000_000 + file as u64,
+            );
+        }
+    }
+    let nodes = model.len();
+    assert!(nodes > 1_000_000, "node count: {nodes}");
+
+    // 52.4 B/node measured (2026-10-13, these 23-byte names, debug build).
     let per_node = model.heap_bytes() as f64 / nodes as f64;
     assert!(per_node <= 64.0, "{per_node:.1} bytes per node");
 }
