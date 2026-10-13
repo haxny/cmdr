@@ -13,7 +13,7 @@
 //!   from `CMDR_LOG_DIR` / `CMDR_DATA_DIR` / the Tauri default. The error reporter bundle builder
 //!   needs the same path without re-deriving the env-var logic.
 //! - **Live keep-count** ([`set_keep_count`] / [`keep_count`]): the rotation keep-N value the file
-//!   chain was built with. `file-rotate` is one-shot; changing this at runtime does NOT reconfigure
+//!   chain was built with. The rotator is one-shot; changing this at runtime does NOT reconfigure
 //!   the chain, but [`eager_prune`] uses it to delete excess archived files immediately when the
 //!   user lowers the cap.
 //! - **One-shot pruner** ([`eager_prune`]): for the user-lowered-the-cap case.
@@ -22,6 +22,7 @@
 mod coalesce;
 pub mod dispatch;
 pub mod ram_gauge;
+mod rotating_file;
 pub mod startup;
 mod target_style;
 
@@ -85,7 +86,7 @@ pub fn keep_count() -> usize {
     KEEP_COUNT.load(Ordering::Relaxed)
 }
 
-/// Returns `true` for filenames `file-rotate` actively manages: `cmdr.log` plus its
+/// Returns `true` for filenames `RotatingFile` actively manages: `cmdr.log` plus its
 /// numeric-suffixed siblings `cmdr.log.1`, `cmdr.log.2`, ...
 ///
 /// Match is case-insensitive so the same predicate works on macOS (where the on-disk

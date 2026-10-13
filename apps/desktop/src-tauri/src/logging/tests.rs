@@ -24,7 +24,7 @@ fn touch_log(dir: &Path, name: &str, age_secs: u64) {
 #[test]
 fn list_recent_log_files_sorted() {
     let dir = make_temp_dir("list");
-    // file-rotate uses numeric suffixes (`cmdr.log.1`, `.2`, ...), with the live file having no
+    // Rotation uses numeric suffixes (`cmdr.log.1`, `.2`, ...), with the live file having no
     // suffix, so a higher suffix is an older file.
     touch_log(&dir, "cmdr.log.3", 30);
     touch_log(&dir, "cmdr.log.2", 20);

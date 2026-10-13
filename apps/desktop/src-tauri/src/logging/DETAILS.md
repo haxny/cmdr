@@ -15,7 +15,7 @@ root Dispatch (level Trace: pure ceiling, per-chain filters do real gating)
 │     .chain(io::stderr())
 └── file chain (skipped when advanced.maxLogStorageMb = 0)
       .level(Debug)                      // always, regardless of RUST_LOG/verbose
-      .chain(file-rotate(50 MB, KeepN))  // N = ceil(cap_mb / 50)
+      .chain(RotatingFile(50 MB, KeepN)) // N = ceil(cap_mb / 50)
 ```
 
 Per-output filtering matters because error-report bundles need debug context regardless of the dev's `RUST_LOG`. With a
@@ -60,7 +60,7 @@ exists, so they call `config::standalone_app_data_dir()` (the OS data dir plus `
 
 ## Duplicate coalescing (file chain)
 
-The file chain's terminal writer is `coalesce::CoalescingWriter`, wrapping `FileRotate`. It exists so a runaway loop
+The file chain's terminal writer is `coalesce::CoalescingWriter`, wrapping `RotatingFile`. It exists so a runaway loop
 logging the same line thousands of times a second can't peg a core through `write` syscalls or stall other threads on
 the log mutex (an incident once logged 12,700 near-identical warnings; a thread sample caught ~900 samples inside
 `write`). The loop's source is fixed elsewhere (fatal storage errors stop instead of retrying); this is the general
@@ -80,7 +80,7 @@ How it works:
   cleared if still full. At worst this re-emits a line that would have been coalesced.
 
 Why this design and not an async drain thread: synchronous, unbuffered per-record writes (fern flushes after each one;
-`file-rotate` writes straight to an unbuffered `File`) are exactly what makes the crash tail complete: every line a
+`RotatingFile` writes straight to an unbuffered `File`) are exactly what makes the crash tail complete: every line a
 crashing run logged is already on disk when the next launch bundles it. A bounded async channel would leave the most
 recent lines in-process at crash time, and a flood-then-crash (the worst case for triage) would lose precisely the
 lines that matter. Coalescing keeps the synchronous path and only removes redundant duplicate writes, so the crash tail
@@ -108,13 +108,30 @@ closure. The dedup key must be timestamp-free, or two identical messages a milli
 never coalesce. Don't move `file_timestamp()` back into the file-chain format. The on-disk line shape is unchanged
 (`<iso-ts> LEVEL target  message`), so the error reporter's timestamp parsing is unaffected.
 
-## Why fern + file-rotate
+## Why fern
 
 `tauri-plugin-log` is one-shot, owns the global `log` facade, and routes everything through a single shared level.
 Per-target levels would have required patching the plugin or shipping two loggers. fern gives a tree of independent
-dispatches with their own levels and filters; `file-rotate` is a small, focused crate exposing size+count rotation
-behind a `Write` impl. Together ~250 LOC of glue plus two well-maintained MIT crates. `file-rotate` wraps `cmdr.log` and
-produces siblings (`cmdr.log.1`, `cmdr.log.2`, …); `list_recent_log_files` sorts by mtime so the live file is first.
+dispatches with their own levels and filters, behind which our `RotatingFile` writes `cmdr.log` and its siblings
+(`cmdr.log.1`, `cmdr.log.2`, …); `list_recent_log_files` sorts by mtime so the live file is first.
+
+## Rotation
+
+`rotating_file.rs`. Rotation runs on `flush`, after the record that reached 50 MB: fern ends every record with one
+flush, so a record is never split across files. It removes `cmdr.log.N`, shifts each `.n` to `.n+1`, renames
+`cmdr.log` to `.1`, and lets the next write create a fresh `cmdr.log`.
+
+- **It never remembers which siblings exist.** Another Cmdr process can log into the same directory, and `eager_prune`
+  and the user delete files in it, so every step renames over whatever is there (`rename(2)` replaces atomically) and
+  treats a missing file as nothing to move. `file-rotate`, which this replaced, listed the siblings once at startup and
+  asserted they hadn't changed; when another process had rotated meanwhile, the assertion panicked the thread that was
+  logging, which was the drive index writer (CRASH-EC4QS, 0.51.0; that bundle shows two processes' heartbeats
+  interleaved in one `cmdr.log`). Pinned by `a_sibling_created_behind_its_back_is_rotated_over_instead_of_panicking`.
+- **Failure is an `io::Error`, never a panic.** fern reports it on stderr and the record is lost, nothing else. A
+  rotation that fails (a read-only directory, say) is retried only after another 50 MB, so a broken directory doesn't
+  cost a rename attempt per line.
+- **The size counter starts from the file's size at open**, so a restart resumes the current file rather than
+  rotating early or overshooting.
 
 ## Manifest snapshot
 
@@ -139,9 +156,13 @@ this.
 ## Cap changes at runtime
 
 `set_keep_count(n)` updates the in-RAM count. `eager_prune(dir, n)`, called by `set_max_log_storage_mb`, deletes excess
-archived files immediately so the user sees the change. `file-rotate` itself isn't reconfigured: the keep-N baked in at
+archived files immediately so the user sees the change. `RotatingFile` itself isn't reconfigured: the keep-N baked in at
 startup stays. Restart-to-apply is documented in the settings UI for `0 ↔ non-zero` transitions and for raising the cap
 above the baked-in value.
+
+`eager_prune(dir, 0)` (storage turned off) deletes the live `cmdr.log` too. The open handle keeps taking writes into
+the now-unlinked file, so nothing visible stays on disk, and the next rotation finds no `cmdr.log` to move and starts a
+fresh one (pinned by `a_live_file_deleted_underneath_rotates_without_an_error`).
 
 ## Timestamp formats
 
@@ -221,9 +242,10 @@ E2E, and prod builds identically.
 
 - **fern over a custom logger**: a from-scratch `log::Log` impl is ~150 LOC plus ~100 of tests; fern gives battle-tested
   record routing and the formatter abstraction for ~free, with a tiny dep (`log` only).
-- **file-rotate over a hand-rolled rotating writer**: ~50 LOC plus a rotation step, but then we own the corner cases
-  (rename-during-write on macOS, rotation atomicity on power loss, count-suffix vs timestamp-suffix collation).
-  file-rotate has covered all of these for years.
+- **A hand-rolled rotating writer over `file-rotate`**: the crate's cached sibling list and its `assert!`s turned a
+  directory another process had touched into a panic on whichever thread logged (CRASH-EC4QS), and it had no release
+  after 2025-02. Ours is ~100 lines with no state about the directory to go stale. We don't need what the crate added
+  beyond that (compression, timestamp suffixes).
 - **AtomicU8 for the verbose toggle, not a dispatch rebuild**: rebuilding briefly drops records (old logger gone, new
   one not yet installed), the wrong tradeoff for a user-facing toggle. The atomic costs one Relaxed load per record.
 - **Stdout chain chains stderr, not stdout**: devs who pipe stdout for parsing don't get logs in their pipe.

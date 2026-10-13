@@ -3,7 +3,7 @@
 //! ## Why
 //!
 //! The file chain writes every record synchronously (fern flushes after each one, and
-//! `file-rotate` writes straight to an unbuffered `File`). That synchronous, unbuffered
+//! `RotatingFile` writes straight to an unbuffered `File`). That synchronous, unbuffered
 //! path is exactly what makes the crash tail complete: every line a crashing run logged
 //! is already on disk when the next launch bundles it. We keep that property.
 //!

@@ -1400,7 +1400,6 @@ dependencies = [
  "encoding_rs",
  "env_logger",
  "fern",
- "file-rotate",
  "filetime",
  "flate2",
  "freedesktop-icons",
@@ -3132,16 +3131,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1fc6a637b6dc58414714eddd9170ff187ecb0933d4c7024d1abbd23a3cc26e9"
 dependencies = [
  "windows-sys 0.60.2",
-]
-
-[[package]]
-name = "file-rotate"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e8e2fa049328a1f3295991407a88585805d126dfaadf74b9fe8c194c730aafc"
-dependencies = [
- "chrono",
- "flate2",
 ]
 
 [[package]]

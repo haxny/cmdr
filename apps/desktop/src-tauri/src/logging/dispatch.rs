@@ -17,7 +17,7 @@
 //! │                                          // stdout free for piped output)
 //! └── file chain
 //!       .level(Debug)                      // always, regardless of RUST_LOG/verbose
-//!       .chain(<file_rotate writer>)       // 50 MB per file, KeepN
+//!       .chain(<RotatingFile writer>)      // 50 MB per file, KeepN
 //! ```
 //!
 //! Both chains render `HH:MM:SS.mmm LEVEL target  message`. The terminal chain adds ANSI
@@ -28,7 +28,7 @@
 //!
 //! - **Stdout level** flips between Info and Debug via [`set_stdout_threshold`]. An `AtomicU8`
 //!   consulted by the chain's filter, no dispatch rebuild, no log lines lost.
-//! - **File rotation cap** is fixed at startup (file-rotate doesn't expose a live reconfigure).
+//! - **File rotation cap** is fixed at startup (the `RotatingFile` is built once).
 //!   `set_keep_count` + `eager_prune` in the parent module already covered this. Same
 //!   restart-required envelope as the plugin had.
 
@@ -37,8 +37,6 @@ use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, Ordering};
-
-use file_rotate::{ContentLimit, FileRotate, compression::Compression, suffix::AppendCount};
 
 /// Stdout threshold packed into one byte. `0..=5` matches the integer values of
 /// `log::LevelFilter` (`Off=0`, `Error=1`, ..., `Trace=5`). Default = `Info`.
@@ -86,7 +84,7 @@ pub struct InitOptions {
     /// Where rotated log files live. `None` disables the file chain entirely
     /// (matches `advanced.maxLogStorageMb = 0`).
     pub log_dir: Option<PathBuf>,
-    /// `KeepSome(N)` equivalent for file-rotate (`ceil(cap_mb / 50)`).
+    /// Total log files kept, live one included (`ceil(cap_mb / 50)`).
     pub keep_count: usize,
     /// Optional `RUST_LOG` value. When `None` we apply our defaults
     /// (Info on stdout, Debug on the file chain) plus the noise overrides.
@@ -168,22 +166,15 @@ pub fn init(opts: InitOptions) -> Result<(), fern::InitError> {
     // Build the root.
     let mut root = fern::Dispatch::new().level(log::LevelFilter::Trace).chain(stdout_chain);
 
-    // File chain: always Debug, plain text (no ANSI), rotation managed by file-rotate.
+    // File chain: always Debug, plain text (no ANSI), rotated by `RotatingFile`.
     if let Some(dir) = opts.log_dir.as_ref()
         && opts.keep_count > 0
     {
         std::fs::create_dir_all(dir).ok();
         let log_path = dir.join("cmdr.log");
-        // 50 MB per file, AppendCount(N-1) keeps the live file + N-1 rotated copies = N total.
-        // file-rotate's count is "extras beyond the live file"; we want N total.
+        // 50 MB per file: the live file + N-1 rotated copies = N total.
         let rotated_extras = opts.keep_count.saturating_sub(1).max(1);
-        let rotator = FileRotate::new(
-            log_path,
-            AppendCount::new(rotated_extras),
-            ContentLimit::Bytes(50_000_000),
-            Compression::None,
-            None,
-        );
+        let rotator = super::rotating_file::RotatingFile::new(log_path, rotated_extras, 50_000_000);
         // The coalescing writer prepends the ISO timestamp itself (so the dedup key stays
         // timestamp-free) and collapses identical-line floods so a runaway loop can't peg a
         // core through the log file. It needs no interior mutex: fern serializes every

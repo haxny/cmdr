@@ -172,10 +172,6 @@ log = "0.4"
 # (which routes everything through a single global level). The crate was already in the
 # tree as a transitive of tauri-plugin-log; pinned at 0.7.1 (latest stable, ~17 months old).
 fern = "0.7.1"
-# file-rotate: size+count log rotation behind a `Write` impl. Dropped tauri-plugin-log,
-# so we own the rotation now. 0.8.0 (latest stable, ~14 months old, MIT). Pulls in
-# `chrono`/`filetime`/`flate2` are all already in our dep tree.
-file-rotate = "0.8.0"
 # HTTP client for API server validation and AI downloads. Every client is built through
 # `cmdr_http::client_builder()`, which owns proxy routing (system settings, PAC, bypass list),
 # so reqwest's own `system-proxy` reader is no longer what decides. `cookies` is `cmdr-webdav`'s

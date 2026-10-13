@@ -808,9 +808,8 @@ fn build_bundle_window_scope_drops_an_old_records_continuations() {
     );
 }
 
-/// Sets the file's mtime to `now - age` via the `filetime` crate (already in our dep
-/// tree via `file-rotate`). Cross-platform; tests stay dependency-free relative to
-/// what the production crate already pulls in.
+/// Sets the file's mtime to `now - age` via the `filetime` crate (a dependency the
+/// production crate already declares). Cross-platform.
 fn set_mtime_to_age(path: &Path, age: Duration) {
     let target = SystemTime::now()
         .checked_sub(age)

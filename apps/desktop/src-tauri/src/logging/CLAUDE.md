@@ -14,9 +14,10 @@ filtering**: the file is locked at Debug, the terminal defaults to Info.
 - **`target_style.rs`**: the terminal target column: head width, per-head color, ANSI on/off (DETAILS § "Terminal
   target column")
 - **`ram_gauge.rs`**: optional per-line RAM prefix, `CMDR_LOG_RAM_USE=1` (DETAILS § "RAM gauge")
+- **`rotating_file.rs`**: `RotatingFile`, the size rotation under `CoalescingWriter` (DETAILS § "Rotation")
 - **`tests.rs`**: pruner / listing helper unit tests
 
-Dispatch-tree shape, why fern + file-rotate, timestamp formats, and decisions: `DETAILS.md`.
+Dispatch-tree shape, why fern, timestamp formats, and decisions: `DETAILS.md`.
 
 ## Adding log calls
 
@@ -45,12 +46,12 @@ Dispatch-tree shape, why fern + file-rotate, timestamp formats, and decisions: `
   ever-changing number lands in the file dedup key, so floods coalesce less: accepted debug-mode tradeoff.
 - **Cap = 0 disables the file chain entirely** (`init` skips it). The terminal and the verbose toggle still work; the
   error bundle ships an empty `logs/`.
-- **`file-rotate` bakes keep-N at startup.** `set_keep_count` / `eager_prune` act now; restart-to-apply stands (DETAILS §
-  "Cap changes at runtime"). ❌ So `keep_count()` never means "this session writes a file": `debug_log_path()` does.
-- **Trust mtime, not the filename, for log ordering**: `file-rotate` uses `.1`, `.2`, … suffixes, not timestamps.
-  Anything off the active-file pattern, legacy `Cmdr_<timestamp>.log` included, is swept at startup (DETAILS § "What
-  lives in `mod.rs`").
-- **`eager_prune(dir, 0)` wipes everything including the live file** (file-rotate re-creates it on the next write).
-  That's correct when the user just disabled logging: stop capturing now, not at the next restart.
+- **`RotatingFile` never panics or caches the directory's state**: logging runs on every thread, and other processes
+  change the files (a panic there killed the index writer, CRASH-EC4QS). It bakes keep-N at startup; `set_keep_count` /
+  `eager_prune` act now (DETAILS § "Cap changes at runtime"). ❌ `keep_count()` never means "this session writes a
+  file": `debug_log_path()` does.
+- **Trust mtime, not the filename, for log ordering** (`.1`, `.2`, … suffixes). Files off the active pattern are swept
+  at startup.
+- **`eager_prune(dir, 0)` wipes everything, the live file included**: right when the user just disabled logging.
 - **Log-dir resolution is mirrored in `settings::loader`'s `early_load_*` helpers**; a bundle-id change touches both
   (DETAILS § "Startup sequence").
