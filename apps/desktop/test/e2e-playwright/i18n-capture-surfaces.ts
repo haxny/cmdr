@@ -597,7 +597,7 @@ export async function captureWhatsNew(
   // close it (the dialog isn't in the OVERLAY_SELECTORS set).
   await main
     .evaluate(`(function(){
-      var btns = document.querySelectorAll('#whats-new-body .footer .btn');
+      var btns = document.querySelectorAll('[data-dialog-id="whats-new"] .modal-footer-actions .btn');
       if (btns.length > 0) btns[btns.length - 1].click();
     })()`)
     .catch(() => {})

@@ -248,7 +248,41 @@
         }
     }
 
+    // The dead end: nothing to amend, or the organization turned reports off.
+    const amendDeadEnd = $derived(isAmend && (amendUnavailable || reportsOff))
+    // Amend mode builds no local bundle, so there's nothing on disk to save.
+    const showDevSave = $derived(isDev && !isAmend && !reportsOff)
 </script>
+
+{#snippet devSave()}
+    <Button variant="secondary" onclick={() => void handleSaveToDisk()} disabled={sending}>
+        {tString('errorReporter.dialog.saveToDisk')}
+    </Button>
+{/snippet}
+
+{#snippet actions()}
+    {#if amendDeadEnd}
+        <Button variant="primary" onclick={handleClose}>{tString('errorReporter.amend.close')}</Button>
+    {:else}
+        <Button variant="secondary" onclick={handleClose} disabled={sending}
+            >{tString('errorReporter.dialog.cancel')}</Button
+        >
+        {#if reportsOff}
+            <!-- Saving needs the previewed bundle's id, so the file holds the report the person saw. -->
+            <Button variant="primary" onclick={() => void handleSaveToDisk()} disabled={preview === null}>
+                {tString('errorReporter.dialog.saveToDiskManaged')}
+            </Button>
+        {:else}
+            <Button variant="primary" onclick={() => void handleSend()} disabled={!canSend}>
+                {#if isAmend}
+                    {sending ? tString('errorReporter.amend.submitting') : tString('errorReporter.amend.submit')}
+                {:else}
+                    {sending ? tString('errorReporter.dialog.sending') : tString('errorReporter.dialog.send')}
+                {/if}
+            </Button>
+        {/if}
+    {/if}
+{/snippet}
 
 <ModalDialog
     titleId="error-report-dialog-title"
@@ -258,23 +292,21 @@
     onclose={handleClose}
     ariaDescribedby="error-report-body"
     containerStyle="width: 540px"
+    footer={actions}
+    footerLeading={showDevSave ? devSave : undefined}
 >
     {#snippet title()}{isAmend
             ? tString('errorReporter.amend.title')
             : tString('errorReporter.dialog.title')}{/snippet}
 
-    {#if isAmend && (amendUnavailable || reportsOff)}
-        <div>
+    {#if amendDeadEnd}
+        <div class="report-body">
             <p id="error-report-body" class="description">
                 {reportsOff ? tString('errorReporter.dialog.managedOff') : tString('errorReporter.amend.unavailable')}
             </p>
-            <div class="button-row">
-                <span class="spacer"></span>
-                <Button variant="primary" onclick={handleClose}>{tString('errorReporter.amend.close')}</Button>
-            </div>
         </div>
     {:else}
-    <div>
+    <div class="report-body">
         <p id="error-report-body" class="description">
             {#if reportsOff}
                 {tString('errorReporter.dialog.managedOff')}
@@ -372,33 +404,6 @@
                 >
             </div>
         {/if}
-
-        <div class="button-row">
-            <!-- Amend mode builds no local bundle, so there's nothing on disk to save. -->
-            {#if isDev && !isAmend && !reportsOff}
-                <Button variant="secondary" onclick={() => void handleSaveToDisk()} disabled={sending}>
-                    {tString('errorReporter.dialog.saveToDisk')}
-                </Button>
-            {/if}
-            <span class="spacer"></span>
-            <Button variant="secondary" onclick={handleClose} disabled={sending}
-                >{tString('errorReporter.dialog.cancel')}</Button
-            >
-            {#if reportsOff}
-                <!-- Saving needs the previewed bundle's id, so the file holds the report the person saw. -->
-                <Button variant="primary" onclick={() => void handleSaveToDisk()} disabled={preview === null}>
-                    {tString('errorReporter.dialog.saveToDiskManaged')}
-                </Button>
-            {:else}
-                <Button variant="primary" onclick={() => void handleSend()} disabled={!canSend}>
-                    {#if isAmend}
-                        {sending ? tString('errorReporter.amend.submitting') : tString('errorReporter.amend.submit')}
-                    {:else}
-                        {sending ? tString('errorReporter.dialog.sending') : tString('errorReporter.dialog.send')}
-                    {/if}
-                </Button>
-            {/if}
-        </div>
     </div>
     {/if}
 </ModalDialog>
@@ -569,13 +574,8 @@
         margin: 0;
     }
 
-    .button-row {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-    }
-
-    .spacer {
-        flex: 1;
+    /* Whichever section ends the body, the footer's own inset is the gap below it. */
+    .report-body > :global(:last-child) {
+        margin-bottom: 0;
     }
 </style>

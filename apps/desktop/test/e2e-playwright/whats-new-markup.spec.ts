@@ -27,16 +27,8 @@
 import { waitBudget } from './wait-budget.js'
 import { test, expect } from './fixtures.js'
 import { ensureAppReady, dismissOverlay } from './helpers.js'
+import { openGalleryState, skipWithoutGallery } from './dialog-gallery-helpers.js'
 import type { TauriPage } from '@srsholmes/tauri-playwright'
-
-/** Opens one gallery state exactly the way Debug > Soft dialogs does. */
-function openGalleryState(page: TauriPage, dialogId: string, stateId: string): Promise<void> {
-  const payload = JSON.stringify({ dialogId, stateId, fixtures: null })
-  return page.evaluate(`window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
-        event: 'debug-open-gallery-dialog',
-        payload: ${payload}
-    })`)
-}
 
 /** One measured inline element: what it is, what it says, and its box. */
 interface MarkupBox {
@@ -99,16 +91,9 @@ test.describe("What's new inline markup", () => {
   test('a code span or a bold run stays on the entry’s own line', async ({ tauriPage }) => {
     const page = tauriPage as TauriPage
 
-    await openGalleryState(page, 'whats-new', 'several-releases')
-    const galleryLive = await page
-      .waitForSelector('#whats-new-body', 4000)
-      .then(() => true)
-      .catch(() => false)
-    const noGallery =
-      'This binary carries no dialog gallery (`CMDR_E2E_BUILD=1` sets the ' +
-      '`__CMDR_E2E_BUILD__` define). Rebuild with `pnpm test:e2e:playwright:build`.'
-    if (!galleryLive && process.env.CI) throw new Error(noGallery)
-    test.skip(!galleryLive, noGallery)
+    await skipWithoutGallery(page)
+    await openGalleryState(page, 'whats-new', 'several-releases', null)
+    await page.waitForSelector('#whats-new-body', 4000)
 
     await expandEveryRelease(page)
     // The disclosure animates a 0fr → 1fr grid row, so the entries reach their real

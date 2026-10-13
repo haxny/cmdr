@@ -8,7 +8,8 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
   state, 300 ms glow/zoom on activation, pre-selects the filename excluding the extension.
 - **RenameConflictDialog.svelte**: side-by-side file comparison (size, modified) when a conflict is detected. Options:
   "Overwrite and trash old file" (`NSFileManager.trashItem`), "Overwrite and delete old file" (permanent), "Cancel",
-  "Continue renaming".
+  "Continue renaming". The two ways out sit in `ModalDialog`'s `footerLeading`, the two overwrites in its `footer` with
+  the Enter one (trash, when offered) rightmost.
 - **ExtensionChangeDialog.svelte**: confirmation when the extension changed and policy is "ask". Buttons: "Keep .{old}",
   "Use .{new}". Checkbox: "Always allow extension changes" (sets policy to "yes").
 - **rename-state.svelte.ts**: reactive `$state` for active/target/currentName/validation/shaking/focusTrigger. Must be

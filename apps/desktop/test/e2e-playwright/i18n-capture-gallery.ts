@@ -55,6 +55,7 @@ import {
 import { DEFAULT_UI_ZOOM, isOverflowPass, overflowLocale } from './i18n-capture-config.js'
 import { scanForClipping } from './i18n-capture-frame.js'
 import { DIALOG_GALLERY_ENTRIES } from '../../src/lib/dialog-gallery/gallery-registry.js'
+import { openGalleryState, type FixtureDirPayload } from './dialog-gallery-helpers.js'
 
 /**
  * Gallery states DROPPED on review, each with the surface that already carries
@@ -73,15 +74,6 @@ const DROPPED_GALLERY_STATES: Record<string, string | undefined> = {
   'commercial-reminder-default': 'the license pass captures the real commercial-reminder modal',
 }
 
-/** The landmark set `create_dialog_gallery_fixtures` returns (camelCase over IPC). */
-interface FixtureDirPayload {
-  root: string
-  destinationDir: string
-  existingFolderName: string
-  existingFileName: string
-  nestedPath: string
-}
-
 /**
  * Creates (idempotently) the throwaway directory the disk-backed dialogs work
  * against and returns its landmarks, mirroring what the Debug panel does before
@@ -94,25 +86,6 @@ interface FixtureDirPayload {
  */
 async function createFixtureDir(main: TauriPage): Promise<FixtureDirPayload> {
   return main.evaluate<FixtureDirPayload>(`window.__TAURI_INTERNALS__.invoke('create_dialog_gallery_fixtures', {})`)
-}
-
-/**
- * Asks the main window to open one gallery state, the same way the Debug panel
- * does: emit `debug-open-gallery-dialog` and let the main window's own listener
- * resolve fixtures, seed stores, or dispatch the app command, depending on how
- * that dialog is built (`openedBy` in the registry).
- */
-async function openGalleryState(
-  main: TauriPage,
-  dialogId: string,
-  stateId: string,
-  fixtures: FixtureDirPayload | null,
-): Promise<void> {
-  const payload = JSON.stringify({ dialogId, stateId, fixtures })
-  await main.evaluate(`window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
-    event: 'debug-open-gallery-dialog',
-    payload: ${payload}
-  })`)
 }
 
 /**

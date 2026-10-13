@@ -551,6 +551,42 @@
     const recentEntries = $derived(config.historyStore.getList())
 </script>
 
+<!-- The action row is `ModalDialog`'s footer, which keeps it on one line by widening the
+     panel: this dialog is resizable, and a drag toward the 360 px floor would otherwise
+     squeeze a long translation of "Show all in main window" onto two lines. -->
+{#snippet actions()}
+    <div class="query-dialog__actions" role="group" aria-label={tString('queryUi.dialog.actionsAria')}>
+        {#if config.secondaryAction}
+            <Button
+                variant="secondary"
+                disabled={config.inputsDisabled || results.length === 0}
+                onclick={() => {
+                    activateSecondaryAtCursor(config)
+                }}
+                aria-label={config.secondaryAction.ariaLabel ?? config.secondaryAction.label}
+                tooltipContent={config.secondaryAction.tooltip}
+                keyHint={enterAction === 'go-to-file' ? config.secondaryAction.shortcutHint : undefined}
+            >
+                {config.secondaryAction.label}
+            </Button>
+        {/if}
+        {#if config.primaryAction}
+            <Button
+                variant="primary"
+                disabled={config.inputsDisabled || results.length === 0}
+                onclick={() => {
+                    activatePrimary(config)
+                }}
+                aria-label={config.primaryAction.ariaLabel ?? config.primaryAction.label}
+                tooltipContent={config.primaryAction.tooltip}
+                keyHint={config.primaryAction.shortcutHint}
+            >
+                {config.primaryAction.label}
+            </Button>
+        {/if}
+    </div>
+{/snippet}
+
 <!--
   The dialog chrome (radius, panel edge, shadow, title bar, ×, focus trap, MCP
   registry, focus restore) is `ModalDialog`'s. We opt into:
@@ -572,6 +608,7 @@
     containerStyle="width: min(100%, {config.width}); max-height: 80vh;"
     onkeydown={handleKeyDown}
     onclose={config.onClose}
+    footer={config.secondaryAction || config.primaryAction ? actions : undefined}
 >
     <!-- The title text keeps its own `<span>`: the badge is a sibling, so consumers'
          tests (and anyone styling the two apart) can address the words alone. -->
@@ -719,43 +756,6 @@
             {@render config.resultsExtra()}
         {/if}
 
-        <div class="dialog-footer">
-            <div class="footer-right">
-                {#if config.secondaryAction || config.primaryAction}
-                    <div class="query-dialog__actions" role="group" aria-label={tString('queryUi.dialog.actionsAria')}>
-                        {#if config.secondaryAction}
-                            <Button
-                                variant="secondary"
-                                disabled={config.inputsDisabled || results.length === 0}
-                                onclick={() => {
-                                    activateSecondaryAtCursor(config)
-                                }}
-                                aria-label={config.secondaryAction.ariaLabel ?? config.secondaryAction.label}
-                                tooltipContent={config.secondaryAction.tooltip}
-                                keyHint={enterAction === 'go-to-file' ? config.secondaryAction.shortcutHint : undefined}
-                            >
-                                {config.secondaryAction.label}
-                            </Button>
-                        {/if}
-                        {#if config.primaryAction}
-                            <Button
-                                variant="primary"
-                                disabled={config.inputsDisabled || results.length === 0}
-                                onclick={() => {
-                                    activatePrimary(config)
-                                }}
-                                aria-label={config.primaryAction.ariaLabel ?? config.primaryAction.label}
-                                tooltipContent={config.primaryAction.tooltip}
-                                keyHint={config.primaryAction.shortcutHint}
-                            >
-                                {config.primaryAction.label}
-                            </Button>
-                        {/if}
-                    </div>
-                {/if}
-            </div>
-        </div>
-
         <!-- The recent-items dropdown hangs off the query field, so it reads as the field's
              own list rather than a second surface elsewhere in the dialog. -->
         {#if queryFieldElement}
@@ -782,12 +782,14 @@
     /* The body's own column. `ModalDialog`'s `fillBody` gives us a flex-column
        `.modal-body` with a definite height, so this stack can hand all the slack to
        `.results-container` (the only `flex: 1 1 auto` descendant) and keep every strip
-       at its intrinsic height. */
+       at its intrinsic height. Its bottom hairline closes the results well from below,
+       above `ModalDialog`'s footer. */
     .query-dialog-body {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         min-height: 0;
+        border-bottom: 1px solid var(--color-border-subtle);
     }
 
     /* Zone-1 control grid, a real 2×2: query field + Search button on row 1, mode chips
@@ -832,23 +834,11 @@
         flex-shrink: 0;
     }
 
-    /* The footer is the action row now: recent items live in the query field's dropdown. */
-    .dialog-footer {
-        display: flex;
-        align-items: stretch;
-        justify-content: flex-end;
-        border-top: 1px solid var(--color-border-subtle);
-        flex-shrink: 0;
-    }
-
-    .footer-right {
-        flex: 0 0 auto;
-    }
-
+    /* One group inside `ModalDialog`'s footer row (for its `role="group"` label), spaced
+       like the footer's own buttons. */
     .query-dialog__actions {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm) 0;
+        gap: var(--spacing-md);
     }
 </style>

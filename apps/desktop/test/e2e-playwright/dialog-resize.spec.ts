@@ -21,7 +21,10 @@
  *
  * The same dialog proves the footer floor: with the longest translation of every
  * button swapped in, the panel widens and the row stays one line (`ModalDialog`'s
- * `footerRowWidth`, which jsdom can only check as arithmetic).
+ * `footerRowWidth`, which jsdom can only check as arithmetic). The dialogs whose
+ * buttons moved into the footer from a hand-built body row get the same check, each
+ * opened through the dialog gallery (`dialog-gallery-helpers.ts`), so those tests need
+ * a gallery-carrying build.
  */
 
 import fs from 'fs'
@@ -42,6 +45,7 @@ import {
   TRANSFER_DIALOG,
 } from './helpers.js'
 import { clickTransferStart } from './conflict-helpers.js'
+import { closeGallerySurface, openGalleryState, skipWithoutGallery } from './dialog-gallery-helpers.js'
 import type { TauriPage } from '@srsholmes/tauri-playwright'
 
 /** Sub-pixel slack only: a real drift here is tens of pixels. */
@@ -296,32 +300,97 @@ function longestFooterLabels(): Record<string, string> {
   return longest
 }
 
+/**
+ * Every English UI string mapped to its longest translation in any shipped catalog, for a
+ * dialog whose button keys aren't worth listing by hand. A label with an ICU argument
+ * never matches its rendered text, so it keeps its English: the sweep measures the rest.
+ */
+function longestTranslationsByEnglish(): Record<string, string> {
+  const catalogs = path.join(import.meta.dirname, '..', '..', 'src', 'lib', 'intl', 'messages')
+  const longest: Record<string, string> = {}
+  for (const file of fs.readdirSync(path.join(catalogs, 'en'))) {
+    const english = JSON.parse(fs.readFileSync(path.join(catalogs, 'en', file), 'utf8')) as Record<string, unknown>
+    for (const locale of fs.readdirSync(catalogs)) {
+      const localized = path.join(catalogs, locale, file)
+      if (!fs.existsSync(localized)) continue
+      const catalog = JSON.parse(fs.readFileSync(localized, 'utf8')) as Record<string, unknown>
+      for (const [key, source] of Object.entries(english)) {
+        const label = catalog[key]
+        if (typeof source !== 'string' || typeof label !== 'string') continue
+        if (label.length > (longest[source] ?? source).length) longest[source] = label
+      }
+    }
+  }
+  return longest
+}
+
+/** Swaps each footer button's English text nodes for `longest`'s; returns how many it swapped. */
+function swapInLongest(page: TauriPage, dialogId: string, longest: Record<string, string>): Promise<number> {
+  return page.evaluate<number>(`(function () {
+        var longest = ${JSON.stringify(longest)}
+        var swapped = 0
+        var buttons = document.querySelectorAll('[data-dialog-id="${dialogId}"] .modal-footer button')
+        ;[].forEach.call(buttons, function (button) {
+            var walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT)
+            var node
+            while ((node = walker.nextNode())) {
+                var word = node.textContent.trim()
+                if (longest[word]) {
+                    node.textContent = longest[word]
+                    swapped++
+                }
+            }
+        })
+        return swapped
+    })()`)
+}
+
 interface FooterBox {
   /** Each button's vertical middle: one row puts them all on one line (the F2 chip makes Background taller). */
   middles: number[]
   heights: number[]
   rightmost: number
+  /** The `footerLeading` buttons, which sit beside the row or on a line above it. */
+  leadingHeights: number[]
+  leadingRightmost: number
   footerContentRight: number
   panelWidth: number
 }
 
-function measureFooter(page: TauriPage): Promise<FooterBox> {
+function measureFooter(page: TauriPage, dialogId: string): Promise<FooterBox> {
   return page.evaluate<FooterBox>(`(function () {
-        var root = document.querySelector('[data-dialog-id="${TRANSFER_PROGRESS}"]')
+        var root = document.querySelector('[data-dialog-id="${dialogId}"]')
         var footer = root.querySelector('.modal-footer')
-        var rects = [].map.call(root.querySelectorAll('.modal-footer-actions button'), function (b) {
-            return b.getBoundingClientRect()
-        })
+        function rectsOf(selector) {
+            return [].map.call(root.querySelectorAll(selector), function (b) { return b.getBoundingClientRect() })
+        }
+        var rects = rectsOf('.modal-footer-actions button')
+        var leading = rectsOf('.modal-footer-leading button')
         var f = footer.getBoundingClientRect()
         return {
             middles: rects.map(function (r) { return Math.round(r.top + r.height / 2) }),
             heights: rects.map(function (r) { return Math.round(r.height) }),
             rightmost: Math.max.apply(null, rects.map(function (r) { return r.right })),
+            leadingHeights: leading.map(function (r) { return Math.round(r.height) }),
+            leadingRightmost: Math.max.apply(null, leading.map(function (r) { return r.right }).concat([0])),
             footerContentRight: f.right - parseFloat(getComputedStyle(footer).paddingRight),
             panelWidth: root.querySelector('.modal-dialog').getBoundingClientRect().width
         }
     })()`)
 }
+
+/**
+ * The dialogs whose buttons moved from a hand-built body row into `ModalDialog`'s footer,
+ * each in the gallery state that shows the most buttons. One test each: a sweep in one
+ * test would blow the per-test duration budget.
+ */
+const GALLERY_FOOTERS: { dialogId: string; stateId: string }[] = [
+  { dialogId: 'rename-conflict', stateId: 'newer-and-larger' },
+  { dialogId: 'license', stateId: 'default' },
+  { dialogId: 'error-report', stateId: 'blank' },
+  { dialogId: 'whats-new', stateId: 'one-release' },
+  { dialogId: 'selection-add', stateId: 'mixed-folder' },
+]
 
 test.describe('Dialog footer', () => {
   test.describe.configure({ timeout: waitBudget(30000) })
@@ -351,7 +420,7 @@ test.describe('Dialog footer', () => {
       await clickTransferStart(page)
       await page.waitForSelector(SETTLED[TRANSFER_PROGRESS], waitBudget(10000))
 
-      const before = await measureFooter(page)
+      const before = await measureFooter(page, TRANSFER_PROGRESS)
       expect(before.middles).toHaveLength(4)
 
       // Every button takes its longest translation at once: French's "Revenir en arrière"
@@ -370,10 +439,10 @@ test.describe('Dialog footer', () => {
             })
         })()`)
       await expect
-        .poll(async () => (await measureFooter(page)).panelWidth, { timeout: waitBudget(2000) })
+        .poll(async () => (await measureFooter(page, TRANSFER_PROGRESS)).panelWidth, { timeout: waitBudget(2000) })
         .toBeGreaterThan(before.panelWidth)
 
-      const after = await measureFooter(page)
+      const after = await measureFooter(page, TRANSFER_PROGRESS)
       expect(Math.max(...after.middles) - Math.min(...after.middles), 'every button on one row').toBeLessThanOrEqual(1)
       expect(after.heights, 'every label on one line').toEqual(before.heights)
       expect(after.rightmost).toBeLessThanOrEqual(after.footerContentRight + TOLERANCE_PX)
@@ -389,4 +458,43 @@ test.describe('Dialog footer', () => {
       restoreFixtureTree(fixtureRoot)
     }
   })
+
+  for (const { dialogId, stateId } of GALLERY_FOOTERS) {
+    test(`${dialogId} keeps its footer buttons on one row with each one's longest translation`, async ({
+      tauriPage,
+    }) => {
+      const page = tauriPage as TauriPage
+      await ensureAppReady(page)
+      await skipWithoutGallery(page)
+
+      await openGalleryState(page, dialogId, stateId, null)
+      try {
+        await page.waitForSelector(`[data-dialog-id="${dialogId}"] .modal-footer-actions button`, waitBudget(8000))
+        const before = await measureFooter(page, dialogId)
+
+        const swapped = await swapInLongest(page, dialogId, longestTranslationsByEnglish())
+        expect(swapped, 'no footer label had a longer translation').toBeGreaterThan(0)
+        // The floor follows the row through a `ResizeObserver`, a frame or so behind the swap.
+        await expect
+          .poll(
+            async () => {
+              const box = await measureFooter(page, dialogId)
+              return box.rightmost <= box.footerContentRight + TOLERANCE_PX
+            },
+            { timeout: waitBudget(2000) },
+          )
+          .toBeTruthy()
+
+        const after = await measureFooter(page, dialogId)
+        expect(Math.max(...after.middles) - Math.min(...after.middles), 'every button on one row').toBeLessThanOrEqual(
+          1,
+        )
+        expect(after.heights, 'every label on one line').toEqual(before.heights)
+        expect(after.leadingHeights, 'every leading label on one line').toEqual(before.leadingHeights)
+        expect(after.leadingRightmost).toBeLessThanOrEqual(after.footerContentRight + TOLERANCE_PX)
+      } finally {
+        expect(await closeGallerySurface(page, dialogId), `${dialogId} stayed open`).toBe(true)
+      }
+    })
+  }
 })

@@ -102,7 +102,33 @@
         </div>
     </div>
 
-    <div class="button-row">
+    <!-- The ways out sit left, the two overwrites right with Enter's (the primary) last. When
+         a long translation can't fit both pairs on one line, the overwrites drop to a row of
+         their own, and the panel widens to keep them on one line (`ModalDialog`'s footer floor). -->
+    {#snippet footerLeading()}
+        <div class="leading-buttons">
+            <Button
+                variant="secondary"
+                onclick={() => {
+                    onResolve('cancel')
+                }}>{tString('fileExplorer.renameConflict.cancel')}</Button
+            >
+            <Button
+                variant="secondary"
+                onclick={() => {
+                    onResolve('continue')
+                }}>{tString('fileExplorer.renameConflict.continueRenaming')}</Button
+            >
+        </div>
+    {/snippet}
+
+    {#snippet footer()}
+        <Button
+            variant="danger"
+            onclick={() => {
+                onResolve('overwrite-delete')
+            }}>{tString('fileExplorer.renameConflict.overwriteDelete')}</Button
+        >
         {#if supportsTrash}
             <Button
                 variant="primary"
@@ -111,27 +137,7 @@
                 }}>{tString('fileExplorer.renameConflict.overwriteTrash')}</Button
             >
         {/if}
-        <Button
-            variant="danger"
-            onclick={() => {
-                onResolve('overwrite-delete')
-            }}>{tString('fileExplorer.renameConflict.overwriteDelete')}</Button
-        >
-    </div>
-    <div class="button-row secondary-row">
-        <Button
-            variant="secondary"
-            onclick={() => {
-                onResolve('cancel')
-            }}>{tString('fileExplorer.renameConflict.cancel')}</Button
-        >
-        <Button
-            variant="secondary"
-            onclick={() => {
-                onResolve('continue')
-            }}>{tString('fileExplorer.renameConflict.continueRenaming')}</Button
-        >
-    </div>
+    {/snippet}
 </ModalDialog>
 
 <style>
@@ -142,10 +148,10 @@
         color: var(--color-text-secondary);
     }
 
+    /* The body's last section: the footer's own inset supplies the gap below it. */
     .file-comparison {
         display: flex;
         gap: var(--spacing-md);
-        padding-bottom: var(--spacing-lg);
     }
 
     .file-card {
@@ -195,15 +201,9 @@
         font-weight: 600;
     }
 
-    .button-row {
+    .leading-buttons {
         display: flex;
         gap: var(--spacing-md);
-        justify-content: flex-end;
-        padding-bottom: var(--spacing-sm);
-    }
-
-    /* The last row: the body's footerless inset supplies the gap below it. */
-    .secondary-row {
-        padding-bottom: 0;
+        white-space: nowrap;
     }
 </style>

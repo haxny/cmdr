@@ -167,3 +167,56 @@ describe('RenameConflictDialog trash gate', () => {
     expect(resolutions).toEqual(['overwrite-delete'])
   })
 })
+
+/**
+ * Every button sits in `ModalDialog`'s footer, which keeps a row on one line in every
+ * language by widening the panel: the ways out on the left, the overwrites on the right
+ * with Enter's last. A row hand-built in the body has no such floor.
+ */
+describe('RenameConflictDialog footer', () => {
+  const mounted: HTMLElement[] = []
+
+  afterEach(() => {
+    for (const target of mounted.splice(0)) target.remove()
+  })
+
+  async function mountDialog(supportsTrash: boolean) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mounted.push(target)
+    const resolutions: RenameConflictResolution[] = []
+    mount(RenameConflictDialog, {
+      target,
+      props: {
+        renamedFile: { name: 'report.md', size: 2048, modifiedAt: undefined },
+        existingFile: { name: 'report.md', size: 1024, modifiedAt: undefined },
+        supportsTrash,
+        onResolve: (resolution: RenameConflictResolution) => resolutions.push(resolution),
+      },
+    })
+    await tick()
+    return { target, resolutions }
+  }
+
+  const labels = (target: HTMLElement, selector: string) =>
+    [...target.querySelectorAll(`${selector} button`)].map((b) => b.textContent.trim())
+
+  it('puts the ways out in the leading slot and the overwrites in the row, Enter’s last', async () => {
+    const { target } = await mountDialog(true)
+
+    expect(labels(target, '.modal-footer-leading')).toEqual(['Cancel', 'Continue renaming'])
+    expect(labels(target, '.modal-footer-actions')).toEqual([
+      'Overwrite and delete old file',
+      'Overwrite and trash old file',
+    ])
+    expect(target.querySelectorAll('.modal-body button')).toHaveLength(0)
+  })
+
+  it('answers each button with its own resolution', async () => {
+    const { target, resolutions } = await mountDialog(true)
+
+    for (const button of target.querySelectorAll<HTMLButtonElement>('.modal-footer button')) button.click()
+
+    expect(resolutions).toEqual(['cancel', 'continue', 'overwrite-delete', 'overwrite-trash'])
+  })
+})

@@ -144,8 +144,9 @@ panel's own `--color-bg-dialog`, and the separation comes from spacing plus sing
 1. **What to look for and how** — the `.query-grid`, then the `AiPromptStrip` / notice banner when present.
 2. **The filters** — `FilterChips`. No band fill; one bottom hairline, which is the seam into the results.
 3. **The results** — `QueryResults` (header + rows + states + status bar) on `--color-bg-primary`, a recessed well
-   against the panel. That flip is what separates "how do I narrow this" from "here's what I found"; the footer's top
-   hairline closes the well from below.
+   against the panel. That flip is what separates "how do I narrow this" from "here's what I found"; the body's bottom
+   hairline closes the well from below, above `ModalDialog`'s `footer`, which holds the action row (so a long
+   translation widens the panel instead of wrapping, however narrow a drag leaves it).
 
 Don't reintroduce per-strip backgrounds. Three surfaces in one panel is the look this replaced, and the well only reads
 as a well while it's the only surface flip in the dialog.
@@ -589,10 +590,11 @@ The bar's run button reads `Search ⏎` only when `enterAction === 'run-search'`
 
 The policy: footer actions render unconditionally; when there are no results (or the index isn't ready) they render
 disabled instead of hidden, so the layout stays still while the user types. `QueryDialog.svelte` renders the
-primary/secondary footer actions itself, from `config.primaryAction` / `config.secondaryAction`, as standard
-`#lib/ui/Button`s (`variant="primary" | "secondary"`, `size="regular"`) with the shortcut hint on a `ShortcutChip`.
-Search wires "Show all in main window" (primary, ⌥⏎) + "Go to file" (secondary, ⏎) through that config; Selection wires
-"Select these files" (primary, ⏎). There's no separate per-consumer footer component.
+primary/secondary footer actions itself, into `ModalDialog`'s `footer` (one `role="group"`), from `config.primaryAction`
+/ `config.secondaryAction`, as standard `#lib/ui/Button`s (`variant="primary" | "secondary"`, `size="regular"`) with the
+shortcut hint on a `ShortcutChip`. Search wires "Show all in main window" (primary, ⌥⏎) + "Go to file" (secondary, ⏎)
+through that config; Selection wires "Select these files" (primary, ⏎). There's no separate per-consumer footer
+component.
 
 The Content chip is visible-disabled with a "Coming soon" tooltip. It has **no** shortcut. Wiring a shortcut to a
 disabled control is hostile UX; reserving `⌘4` is the better contract. When Content ships, it claims `⌘3` and Regex

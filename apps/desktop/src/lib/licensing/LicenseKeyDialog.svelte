@@ -322,6 +322,39 @@
     >
 {/snippet}
 
+<!-- One footer for the three views; none while the license loads, so no empty row shows. -->
+{#snippet actions()}
+    {#if hasExistingLicense && !isConfirmingReset}
+        <Button variant="secondary" onclick={() => (isConfirmingReset = true)}
+            >{tString('licensing.dialog.useDifferentKey')}</Button
+        >
+        <Button variant="primary" onclick={onClose}>{tString('licensing.dialog.close')}</Button>
+    {:else if isConfirmingReset}
+        <Button variant="secondary" onclick={() => (isConfirmingReset = false)}
+            >{tString('licensing.dialog.cancel')}</Button
+        >
+        <Button variant="primary" onclick={handleResetConfirm}>{tString('licensing.dialog.continue')}</Button>
+    {:else if isServerInvalidError}
+        <Button variant="secondary" onclick={handleCancelAfterInvalid}
+            >{tString('licensing.dialog.cancelButton')}</Button
+        >
+        <Button variant="primary" onclick={handleActivate} disabled={isActivating}>
+            {#if isActivating}<Spinner size="sm" />{/if}
+            {isActivating ? tString('licensing.dialog.checking') : tString('licensing.dialog.tryAgain')}
+        </Button>
+    {:else}
+        <Button variant="secondary" onclick={handleClose}>{tString('licensing.dialog.cancelButton')}</Button>
+        <Button variant="primary" onclick={handleActivate} disabled={isActivating || !cleanedKey}>
+            {#if isActivating}<Spinner size="sm" />{/if}
+            {isActivating
+                ? tString('licensing.dialog.activating')
+                : hasError
+                  ? tString('licensing.dialog.tryAgain')
+                  : tString('licensing.dialog.activate')}
+        </Button>
+    {/if}
+{/snippet}
+
 <ModalDialog
     titleId="dialog-title"
     onkeydown={handleKeydown}
@@ -329,6 +362,7 @@
     dialogId="license"
     onclose={handleClose}
     containerStyle="min-width: 400px; max-width: 500px"
+    footer={isLoading ? undefined : actions}
 >
     {#snippet title()}
         {#if isLoading}
@@ -391,22 +425,8 @@
                     </div>
                 {/if}
             </div>
-
-            <div class="button-row">
-                <Button variant="secondary" onclick={() => (isConfirmingReset = true)}
-                    >{tString('licensing.dialog.useDifferentKey')}</Button
-                >
-                <Button variant="primary" onclick={onClose}>{tString('licensing.dialog.close')}</Button>
-            </div>
         {:else if !isLoading && isConfirmingReset}
             <p class="description">{tString('licensing.dialog.resetConfirm')}</p>
-
-            <div class="button-row">
-                <Button variant="secondary" onclick={() => (isConfirmingReset = false)}
-                    >{tString('licensing.dialog.cancel')}</Button
-                >
-                <Button variant="primary" onclick={handleResetConfirm}>{tString('licensing.dialog.continue')}</Button>
-            </div>
         {:else if !isLoading}
             <p class="description">
                 <Trans key="licensing.dialog.enterPrompt" snippets={{ getLicense }} />
@@ -454,30 +474,6 @@
                     {/if}
                 </p>
             {/if}
-
-            <div class="button-row">
-                {#if isServerInvalidError}
-                    <Button variant="secondary" onclick={handleCancelAfterInvalid}
-                        >{tString('licensing.dialog.cancelButton')}</Button
-                    >
-                    <Button variant="primary" onclick={handleActivate} disabled={isActivating}>
-                        {#if isActivating}<Spinner size="sm" />{/if}
-                        {isActivating ? tString('licensing.dialog.checking') : tString('licensing.dialog.tryAgain')}
-                    </Button>
-                {:else}
-                    <Button variant="secondary" onclick={handleClose}
-                        >{tString('licensing.dialog.cancelButton')}</Button
-                    >
-                    <Button variant="primary" onclick={handleActivate} disabled={isActivating || !cleanedKey}>
-                        {#if isActivating}<Spinner size="sm" />{/if}
-                        {isActivating
-                            ? tString('licensing.dialog.activating')
-                            : hasError
-                              ? tString('licensing.dialog.tryAgain')
-                              : tString('licensing.dialog.activate')}
-                    </Button>
-                {/if}
-            </div>
         {/if}
     </div>
 </ModalDialog>
@@ -583,9 +579,8 @@
         line-height: var(--font-line-height-prose);
     }
 
-    .button-row {
-        display: flex;
-        gap: var(--spacing-md);
-        justify-content: flex-end;
+    /* Whichever section ends the view, the footer's own inset is the gap below it. */
+    .dialog-body > :global(:last-child) {
+        margin-bottom: 0;
     }
 </style>

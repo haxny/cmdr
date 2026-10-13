@@ -169,12 +169,12 @@
                 }}>{tString('whatsNew.dialog.seeFullChangelog')}</LinkButton
             >
         </p>
-
-        <div class="footer">
-            <Button variant="secondary" onclick={handleOptOut}>{tString('whatsNew.dialog.optOut')}</Button>
-            <Button variant="primary" onclick={handleClose}>{tString('whatsNew.dialog.close')}</Button>
-        </div>
     </div>
+
+    {#snippet footer()}
+        <Button variant="secondary" onclick={handleOptOut}>{tString('whatsNew.dialog.optOut')}</Button>
+        <Button variant="primary" onclick={handleClose}>{tString('whatsNew.dialog.close')}</Button>
+    {/snippet}
 </ModalDialog>
 
 <style>
@@ -454,13 +454,5 @@
     .full-changelog {
         margin: var(--spacing-md) 0 0;
         font-size: var(--font-size-md);
-    }
-
-    .footer {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: var(--spacing-md);
-        margin-top: var(--spacing-lg);
     }
 </style>

@@ -60,7 +60,7 @@ function popupOpen(page: TauriPage): Promise<boolean> {
 function clickOptOut(page: TauriPage): Promise<void> {
   return page.evaluate(`
     (function () {
-      const buttons = document.querySelectorAll('#whats-new-body .footer .btn')
+      const buttons = document.querySelectorAll('[data-dialog-id="whats-new"] .modal-footer-actions .btn')
       for (const button of buttons) {
         if ((button.textContent || '').trim() === 'Not interested in changelogs') {
           button.click()
