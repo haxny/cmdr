@@ -180,6 +180,23 @@ func TestDisabledChecksClaimNoLane(t *testing.T) {
 	}
 }
 
+// Every Astro command that syncs content rewrites `apps/website/.astro/` and
+// `node_modules/.astro/data-store.json` through a fixed `<name>.tmp` + rename, so
+// two of them at once rename each other's temp file away and one dies on ENOENT.
+// The sync → eslint → typecheck → build chain is serial by dependency, but the
+// analytics build has none, so only a shared resource keeps it off the others.
+func TestAstroWritingLanesNeverOverlap(t *testing.T) {
+	for _, id := range []string{"website-astro-sync", "website-typecheck", "website-build", "website-analytics-injection"} {
+		c := GetCheckByID(id)
+		if c == nil {
+			t.Fatalf("check %q not found", id)
+		}
+		if c.Exclusive != ResourceAstroGeneratedDir {
+			t.Errorf("check %q runs an Astro sync but holds Exclusive=%q, want %q", id, c.Exclusive, ResourceAstroGeneratedDir)
+		}
+	}
+}
+
 func idsOf(defs []CheckDefinition) []string {
 	ids := make([]string, 0, len(defs))
 	for _, d := range defs {

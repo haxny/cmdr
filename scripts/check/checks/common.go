@@ -206,6 +206,15 @@ type CheckDefinition struct {
 // (see `desktop-rust-rustdoc.go`).
 const ResourceCargoBuildDir = "cargo-build-dir"
 
+// ResourceAstroGeneratedDir is the `Exclusive` resource for the website's
+// generated Astro state (`apps/website/.astro/` and
+// `apps/website/node_modules/.astro/`). Every Astro command that syncs content
+// (`astro sync`, `astro check`, `astro build`) rewrites those files through a
+// FIXED `<name>.tmp` + rename, so two at once rename each other's temp file away
+// and the loser dies on `ENOENT ... content-assets.mjs.tmp`. Declare it on any
+// lane that runs one of those commands.
+const ResourceAstroGeneratedDir = "astro-generated-dir"
+
 // EffectiveCpuWeight returns the scheduling weight clamped to [1, capacity], so
 // an unset weight counts as light (1) and an over-budget weight can still run
 // once nothing else holds the budget (it never deadlocks the admission gate).

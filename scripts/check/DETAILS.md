@@ -309,15 +309,22 @@ same one never overlap, whatever the weight budget allows. It sits between the d
 every other lane. It can't deadlock: a check takes at most one resource and holds it only between its own start and
 finish.
 
-The one resource today is `ResourceCargoBuildDir`, held by every lane that COMPILES against the shared `target/`
-(`clippy`, `rust-tests`, `integration-tests`, `bindings-fresh`, `cargo-udeps`, the `<provider>-smoke` lanes). Cargo
-takes an exclusive lock on its build directory for a whole command, so those lanes were always serial; undeclared, the
-loser sat on `Blocking waiting for file lock on build directory` while still holding 6-8 weight, so a quiet run looked
-hung and the reserved cores went unused. Declaring it costs no wall clock and hands that weight back. Metadata-only
-commands (`cargo metadata`, `about`, `deny`, `machete`) take the package-cache lock instead and stay undeclared;
-`clippy-linux` and `rust-tests-linux` build on their per-worktree Docker volume (one `DependsOn` the other, so they
-never overlap), and `rustdoc` owns a private target dir. Measurements: `docs/notes/check-cpu-contention.md` § "Cargo's
-build-directory lock".
+There are two resources. `ResourceAstroGeneratedDir` is held by every website lane that runs an Astro command which
+syncs content (`astro-sync`, `typecheck`, `build`, `analytics-injection`): each rewrites `apps/website/.astro/` and
+`node_modules/.astro/data-store.json` through a fixed `<name>.tmp` + rename, so two at once rename each other's temp
+file away and one dies on `ENOENT ... content-assets.mjs.tmp`. The first three are serial by dependency already; the
+analytics build has no dependency (it must not wait on the env-free build), so before the resource it overlapped them
+(seen 2026-10-12 and 2026-10-13, passing on rerun).
+
+`ResourceCargoBuildDir` is held by every lane that COMPILES against the shared `target/` (`clippy`, `rust-tests`,
+`integration-tests`, `bindings-fresh`, `cargo-udeps`, the `<provider>-smoke` lanes). Cargo takes an exclusive lock on
+its build directory for a whole command, so those lanes were always serial; undeclared, the loser sat on
+`Blocking waiting for file lock on build directory` while still holding 6-8 weight, so a quiet run looked hung and the
+reserved cores went unused. Declaring it costs no wall clock and hands that weight back. Metadata-only commands
+(`cargo metadata`, `about`, `deny`, `machete`) take the package-cache lock instead and stay undeclared; `clippy-linux`
+and `rust-tests-linux` build on their per-worktree Docker volume (one `DependsOn` the other, so they never overlap), and
+`rustdoc` owns a private target dir. Measurements: `docs/notes/check-cpu-contention.md` § "Cargo's build-directory
+lock".
 
 **Slow checks:** `IsSlow: true` marks checks excluded by default (currently: `clippy-linux`, `rust-tests-linux`,
 `desktop-e2e-linux`, `desktop-e2e-playwright`, `desktop-rust-webdav-nextcloud`, `desktop-rust-disk-images`). Naming a

@@ -1217,6 +1217,7 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🚀 Astro",
 		NotInCI:     "CI's website job runs `pnpm exec astro sync` directly as a setup step",
 		DependsOn:   []string{"oxfmt"},
+		Exclusive:   ResourceAstroGeneratedDir,
 		Inputs:      websiteInputs,
 		Run:         RunWebsiteAstroSync,
 	},
@@ -1237,6 +1238,7 @@ var AllChecks = []CheckDefinition{
 		App:         AppWebsite,
 		Tech:        "🚀 Astro",
 		DependsOn:   []string{"website-eslint"},
+		Exclusive:   ResourceAstroGeneratedDir, // `astro check` syncs content first
 		Inputs:      websiteInputs,
 		Run:         RunWebsiteTypecheck,
 	},
@@ -1258,6 +1260,7 @@ var AllChecks = []CheckDefinition{
 		App:         AppWebsite,
 		Tech:        "🚀 Astro",
 		DependsOn:   []string{"website-typecheck"},
+		Exclusive:   ResourceAstroGeneratedDir,
 		Inputs:      websiteInputs,
 		Run:         RunWebsiteBuild,
 	},
@@ -1317,8 +1320,10 @@ var AllChecks = []CheckDefinition{
 		// Its own env-injecting build (separate dist-analytics/ outDir), so it
 		// runs standalone — the default website-build deliberately omits the
 		// PUBLIC_* env and must keep doing so (fast no-env build), so this can't
-		// depend on it.
+		// depend on it. Its Astro build still rewrites the shared `.astro/` state,
+		// so the resource keeps it off the sync → typecheck → build chain.
 		DependsOn: nil,
+		Exclusive: ResourceAstroGeneratedDir,
 		Inputs:    websiteInputs,
 		Run:       RunWebsiteAnalyticsInjection,
 	},
