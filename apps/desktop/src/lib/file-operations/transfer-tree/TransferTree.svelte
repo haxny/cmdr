@@ -4,8 +4,8 @@
     dialog and the queue window's running rows.
 
     It pulls one window from its operation (or a fixture's `source`) on mount
-    and again on every `tick` (the operation's `write-progress`), at most one
-    request in flight (`transfer-tree-view.svelte.ts`). It follows the work
+    and again on each `tick` (the operation's `write-progress`), at most five a
+    second and one request in flight (`transfer-tree-view.svelte.ts`). It follows the work
     until the user scrolls, wheels, or moves by keyboard; the Follow button (or
     F) resumes. The open folders scrolled past stay pinned at the top. It's as
     tall as its rows, up to `defaultRows`, and grows with a host that gives it

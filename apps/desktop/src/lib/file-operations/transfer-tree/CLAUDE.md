@@ -17,7 +17,8 @@ over a virtual window. The progress dialog and the queue window embed `TransferT
 
 - **❌ No tree model here.** The backend owns expansion, compaction, windows, and folder state; a view sends only its
   hand toggles and where it's scrolled. `fixtures/scripted-transfer.ts` mirrors the contract for tests only.
-- **Pull on push, one request in flight** (`createCoalesced`): on mount and on each `tick`, ❌ never a timer.
+- **Pull on push, one request in flight** (`createCoalesced`): on mount and on each `tick`, ❌ never a polling timer.
+  Ticks pull at most every 200 ms (a clock, ❌ never animation frames: the E2E app gets none), the last one always.
   `unknown_operation` means "finished" (keep the last rows, stop asking); `not_a_transfer` renders nothing.
 - **A scroll alone never pauses following**: the tree's own follow scrolls and the browser clamping a shrunk list fire
   the same event. INTENT pauses it: a wheel, a scrollbar press, a keyboard move.

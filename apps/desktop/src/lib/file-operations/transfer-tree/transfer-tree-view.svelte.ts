@@ -14,7 +14,7 @@ import type {
   TransferTreeViewRequest,
 } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
-import { createCoalesced } from '#lib/utils/timing.js'
+import { createCoalesced, createThrottle } from '#lib/utils/timing.js'
 import type { TransferTreeSource } from './transfer-tree-source'
 import { MAX_PINNED } from './pinned-headers'
 
@@ -35,6 +35,13 @@ export const MAX_TOGGLES = 2_000
 /** The most rows one response carries: the backend's own cap. */
 const MAX_LIMIT = 200
 
+/**
+ * The least time between two tick-driven pulls: at most five a second per view. The
+ * local engine ticks once per file, so a run of tiny files would otherwise pull back
+ * to back. A clock, ❌ not an animation frame: the E2E app gets no frames.
+ */
+export const TICK_PULL_INTERVAL_MS = 200
+
 /** Why the view stopped asking: the operation ended, or it never builds a tree. */
 export type TransferTreeEnded = 'finished' | 'notATransfer'
 
@@ -48,7 +55,7 @@ export interface TransferTreeViewState {
   readonly followTop: number | null
   readonly expanded: readonly number[]
   readonly collapsed: readonly number[]
-  /** The operation advanced: pull a fresh window. */
+  /** The operation advanced: pull a fresh window, at most every {@link TICK_PULL_INTERVAL_MS}. */
   refresh: () => void
   setViewportRows: (rows: number) => void
   /**
@@ -75,6 +82,8 @@ export interface TransferTreeViewState {
 export interface TransferTreeViewOptions {
   /** Runs scroll-driven work once per frame. Defaults to `requestAnimationFrame`. */
   schedule?: (run: () => void) => void
+  /** The least time between two tick-driven pulls. Defaults to {@link TICK_PULL_INTERVAL_MS}. */
+  tickPullIntervalMs?: number
 }
 
 function defaultSchedule(run: () => void): void {
@@ -91,7 +100,7 @@ function withNewest(ids: readonly number[], id: number): number[] {
 
 export function createTransferTreeViewState(
   source: TransferTreeSource,
-  { schedule = defaultSchedule }: TransferTreeViewOptions = {},
+  { schedule = defaultSchedule, tickPullIntervalMs = TICK_PULL_INTERVAL_MS }: TransferTreeViewOptions = {},
 ): TransferTreeViewState {
   let view = $state.raw<TransferTreeView | null>(null)
   let ended = $state<TransferTreeEnded | null>(null)
@@ -143,6 +152,10 @@ export function createTransferTreeViewState(
   function pull(): void {
     void pulls.call(null)
   }
+
+  // Ticks pull at once, then at most once per interval, and the last tick of a burst
+  // always gets its pull (`createThrottle`'s trailing call), so the final state lands.
+  const tickPulls = createThrottle(pull, tickPullIntervalMs)
 
   /** The top row that puts the work `FOLLOW_LEAD` rows down (more under a deep stack), clamped so the viewport stays full. */
   function followPosition(): number | null {
@@ -203,7 +216,9 @@ export function createTransferTreeViewState(
     get collapsed() {
       return collapsed
     },
-    refresh: pull,
+    refresh: () => {
+      tickPulls.call()
+    },
     setViewportRows(rows) {
       if (rows === viewportRows || rows <= 0) return
       viewportRows = rows
@@ -240,6 +255,7 @@ export function createTransferTreeViewState(
     },
     dispose() {
       disposed = true
+      tickPulls.cancel()
       pulls.cancel()
     },
     ancestorsOf,

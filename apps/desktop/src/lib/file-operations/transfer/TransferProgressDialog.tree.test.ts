@@ -191,7 +191,10 @@ describe('TransferProgressDialog’s transfer tree', () => {
     await send(event('copying', 1))
     const before = getTransferTreeView.mock.calls.length
     await send(event('copying', 2))
-    expect(getTransferTreeView.mock.calls.length).toBeGreaterThan(before)
+    // A tick this close to the last one pulls once the rate limit allows.
+    await vi.waitFor(() => {
+      expect(getTransferTreeView.mock.calls.length).toBeGreaterThan(before)
+    })
     void unmount(component)
   })
 

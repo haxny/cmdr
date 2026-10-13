@@ -55,6 +55,12 @@ the pinned headers cover and a short scroll up are loaded; paused, it asks `At {
 viewport's rows plus 10 above and below. Scroll-driven pulls wait for a frame. Hand toggles are capped at the backend's
 2,000 each way; past that the oldest drops (`withNewest`).
 
+Ticks pull through a 200 ms throttle (`TICK_PULL_INTERVAL_MS`, `createThrottle`): the first at once, then at most one
+per interval, and the last tick of a burst always gets its trailing pull, so the final state lands. **Why**: the local
+engine ticks once per file, so a run of tiny files pulled back to back, past the five pulls a second per view the budget
+allows. **Why a clock**: the E2E app gets no animation frames, so a frame-gated pull never came there. Toggles, Follow,
+and scrolls skip the throttle: they're a person's, and rare.
+
 **Decision: no tree event; each view pulls on the operation's own `write-progress`.** **Why**: a broadcast tick can't
 know what each view expanded or scrolled to, so it would either flood every window with rows nobody shows or need
 per-view backend registrations that leak when a window closes. Pulling keeps the backend stateless per view, bounds

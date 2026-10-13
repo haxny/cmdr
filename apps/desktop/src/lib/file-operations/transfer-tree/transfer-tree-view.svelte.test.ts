@@ -71,7 +71,8 @@ beforeEach(() => {
 })
 
 function create() {
-  const state = createTransferTreeViewState(src.source, { schedule: immediately })
+  // No rate limit here: these cells pin what each pull asks, the rate has its own.
+  const state = createTransferTreeViewState(src.source, { schedule: immediately, tickPullIntervalMs: 0 })
   state.setViewportRows(8)
   return state
 }
@@ -108,6 +109,40 @@ describe('the request coalescer', () => {
     expect(state.view?.revision).toBe(7)
     state.refresh()
     expect(src.requests).toHaveLength(2)
+  })
+
+  it('pulls at most five times a second however fast the ticks come, and always once after the last', async () => {
+    vi.useFakeTimers()
+    try {
+      const sentAt: number[] = []
+      const state = createTransferTreeViewState(
+        {
+          view: (request) => {
+            sentAt.push(Date.now())
+            return src.source.view(request)
+          },
+        },
+        { schedule: immediately },
+      )
+      // A run of tiny files: the local engine ticks per file, here every 10 ms for a second.
+      let lastTick = 0
+      for (let at = 0; at < 1_000; at += 10) {
+        state.refresh()
+        lastTick = Date.now()
+        // Answered at once, so only the rate limit holds pulls back, never the one in flight.
+        while (src.inFlight > 0) await src.answer(view())
+        await vi.advanceTimersByTimeAsync(10)
+      }
+      await vi.advanceTimersByTimeAsync(1_000)
+      while (src.inFlight > 0) await src.answer(view())
+
+      expect(sentAt.length).toBeLessThanOrEqual(6)
+      expect(sentAt.length).toBeGreaterThanOrEqual(5)
+      expect(sentAt.at(-1)).toBeGreaterThanOrEqual(lastTick)
+      state.dispose()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('says when the operation never builds a tree', async () => {

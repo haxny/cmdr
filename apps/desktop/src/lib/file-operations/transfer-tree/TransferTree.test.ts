@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushSync } from 'svelte'
 import TransferTree from './TransferTree.svelte'
 import { TRANSFER_TREE_FIXTURES } from './fixtures/catalog'
 import { createFixturePlayer } from './fixtures/fixture-player.svelte'
+import { TICK_PULL_INTERVAL_MS } from './transfer-tree-view.svelte'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'decimal',
@@ -12,11 +13,16 @@ let target: HTMLElement
 
 beforeEach(() => {
   document.body.innerHTML = ''
+  vi.useFakeTimers()
 })
 
-/** Lets a frame pass (a scroll's pull waits for one), then every answer land. */
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+/** Lets the tick rate limit pass (a frame too: a scroll's pull waits for one), then every answer land. */
 async function settle(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  await vi.advanceTimersByTimeAsync(TICK_PULL_INTERVAL_MS)
   for (let i = 0; i < 10; i++) {
     await Promise.resolve()
     flushSync()
