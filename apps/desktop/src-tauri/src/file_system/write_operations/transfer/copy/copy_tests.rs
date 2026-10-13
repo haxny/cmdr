@@ -967,6 +967,14 @@ fn a_write_the_destination_refuses_marks_the_row_it_was_writing() {
     use crate::file_system::write_operations::transfer_tree::test_support::row_states;
     use std::os::unix::fs::PermissionsExt;
 
+    // Root writes through a read-only folder, so the refusal never happens. The CI
+    // Linux suite runs as root in Docker, like the other permission tests skip for.
+    // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail — it just
+    // returns the caller's effective uid. We compare the returned integer to 0 to detect root.
+    if unsafe { libc::geteuid() } == 0 {
+        return;
+    }
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
