@@ -211,8 +211,8 @@ export async function ensureAppReady(
   // remove/create diffs queued in the notify-debouncer; they land AFTER the
   // files-present poll above and either briefly empty the pane (breaking the
   // first cursor/selection read of the test) or, mid-drain, consume error-pane's
-  // single-shot injected error. `flush_file_watcher` re-reads every active
-  // listing now and flushes the coalescer, so the app is quiescent by return;
+  // single-shot injected error. `flush_file_watcher` re-reads both panes'
+  // listings (and every armed watch) now and flushes the coalescer, so the app is quiescent by return;
   // the re-confirm proves the left pane settled populated (not mid-reload).
   // Feature-gated to `playwright-e2e`, present in the E2E binary.
   await flushFileWatcher(tauriPage)

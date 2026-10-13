@@ -544,15 +544,26 @@ export async function isStateClean(tauriPage: PageLike, localVolumeName: string)
  * Forces the backend file watcher to flush any pending events.
  *
  * The debouncer + FSEvents/inotify add up to seconds of latency per FS
- * mutation under E2E. After this returns, every active watch has been
- * re-read and the frontend has received the corresponding `directory-diff`
- * event. See `commands/e2e.rs::flush_file_watcher` for the Rust side.
+ * mutation under E2E. After this returns, every listing a pane shows (and every
+ * other armed watch) has been re-read and the frontend has received the
+ * corresponding `directory-diff` event. See `commands/e2e.rs::flush_file_watcher`
+ * for the Rust side.
+ *
+ * The panes' listing ids ride along because the backend arms a listing's watch
+ * detached, seconds late under load: flushing armed watches alone skipped the
+ * listing the test had just opened, and the write was never seen.
  *
  * Compiled only with the `playwright-e2e` Cargo feature; not in typed
  * bindings, so we call it via raw `__TAURI_INTERNALS__.invoke`.
  */
 export async function flushFileWatcher(tauriPage: PageLike): Promise<void> {
-  await tauriPage.evaluate(`window.__TAURI_INTERNALS__.invoke('flush_file_watcher')`)
+  await tauriPage.evaluate(`(function() {
+        var listingIds = Array.prototype.slice
+            .call(document.querySelectorAll('.file-pane'))
+            .map(function(pane) { return pane.dataset.listingId; })
+            .filter(function(id) { return !!id; });
+        return window.__TAURI_INTERNALS__.invoke('flush_file_watcher', { listingIds: listingIds });
+    })()`)
 }
 
 /**

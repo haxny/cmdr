@@ -196,17 +196,27 @@ fn stage_rollup(folder: &str) {
 /// window, so a single FS mutation can take 1–10 s to land in the UI. For
 /// tests, that's pure waste.
 ///
-/// This command sidesteps the debouncer: it iterates every active listing and
-/// calls `handle_directory_change` (re-reads via the Volume trait, computes
-/// the diff, updates the listing cache, emits `directory-diff`). After it
-/// returns, the frontend has the full delta.
+/// This command sidesteps the debouncer: it re-reads each of `listing_ids` (the
+/// listings the panes show) and every listing with an armed watch through
+/// `handle_directory_change` (re-reads via the Volume trait, computes the diff,
+/// updates the listing cache, emits `directory-diff`). After it returns, the
+/// frontend has the full delta.
+///
+/// The pane's listings are named explicitly because the watch arms DETACHED
+/// (`watcher::start_watching_detached`), seconds after the listing opens under
+/// fseventsd load. Flushing only armed watches skipped a fresh listing outright,
+/// and the late watch, starting "since now", never reported the write either:
+/// that's what failed every external-change test in `file-watching.spec.ts`.
 ///
 /// Feature-gated to `playwright-e2e` so production builds can't accidentally
 /// bypass the debouncer (which exists to prevent thrash on bursts of events).
 #[cfg(feature = "playwright-e2e")]
 #[tauri::command]
 #[specta::specta]
-pub async fn flush_file_watcher() -> Result<(), String> {
+pub async fn flush_file_watcher(listing_ids: Vec<String>) -> Result<(), String> {
+    for listing_id in &listing_ids {
+        crate::file_system::watcher::handle_directory_change(listing_id).await;
+    }
     crate::file_system::flush_all_watchers().await;
     Ok(())
 }

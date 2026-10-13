@@ -1291,6 +1291,14 @@ focused-yet-empty. `ensureAppReady` calls `flush_file_watcher` then re-confirms 
 is quiescent by return; `moveCursorToFile` polls for the target rather than reading once. Don't revert either to a
 one-shot read (see the comments at both sites in `helpers/app-lifecycle.ts` and `helpers/cursor.ts`).
 
+**Gotcha**: `flushFileWatcher` names the panes' listing ids, ❌ don't reduce it to "flush every armed watch". **Why**:
+the backend arms a listing's FSEvents watch detached, and under fseventsd load that lands 4–10 s after the listing opens
+(verified on macOS 27, release E2E build, load ~7–18, `start_watching_detached: … ended while arming` in the app's debug
+file log, 2026-10-13). A spec writes right after `ensureAppReady`, so a flush that only walked `WATCHER_MANAGER` re-read
+nothing ("flushing 0 watches"), and the watch, starting "since now", never reported the write. That failed every
+external-change test in `file-watching.spec.ts` and the `moveCursorToFile` step of both `compress-basic.spec.ts` tests
+that write their own source file.
+
 **Gotcha**: "Rows appeared" does NOT prove a live walk. **Why**: the E2E instance indexes its fixture tree at launch
 (`CMDR_E2E_START_PATH` narrows the scope, so the tree is covered within seconds), and a search over covered ground reads
 the index instead of walking. A spec asserting rows is satisfied either way, silently, which is how two walk specs once
