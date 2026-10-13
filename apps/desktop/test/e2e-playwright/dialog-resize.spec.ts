@@ -297,7 +297,8 @@ function longestFooterLabels(): Record<string, string> {
 }
 
 interface FooterBox {
-  tops: number[]
+  /** Each button's vertical middle: one row puts them all on one line (the F2 chip makes Background taller). */
+  middles: number[]
   heights: number[]
   rightmost: number
   footerContentRight: number
@@ -313,7 +314,7 @@ function measureFooter(page: TauriPage): Promise<FooterBox> {
         })
         var f = footer.getBoundingClientRect()
         return {
-            tops: rects.map(function (r) { return Math.round(r.top) }),
+            middles: rects.map(function (r) { return Math.round(r.top + r.height / 2) }),
             heights: rects.map(function (r) { return Math.round(r.height) }),
             rightmost: Math.max.apply(null, rects.map(function (r) { return r.right })),
             footerContentRight: f.right - parseFloat(getComputedStyle(footer).paddingRight),
@@ -351,7 +352,7 @@ test.describe('Dialog footer', () => {
       await page.waitForSelector(SETTLED[TRANSFER_PROGRESS], waitBudget(10000))
 
       const before = await measureFooter(page)
-      expect(before.tops).toHaveLength(4)
+      expect(before.middles).toHaveLength(4)
 
       // Every button takes its longest translation at once: French's "Revenir en arrière"
       // dropped to a second row beside its neighbours before the panel learned to widen.
@@ -373,11 +374,8 @@ test.describe('Dialog footer', () => {
         .toBeGreaterThan(before.panelWidth)
 
       const after = await measureFooter(page)
-      expect(new Set(after.tops).size, 'every button on one row').toBe(1)
-      expect(
-        after.heights.every((height) => height === before.heights[0]),
-        'every label on one line',
-      ).toBe(true)
+      expect(Math.max(...after.middles) - Math.min(...after.middles), 'every button on one row').toBeLessThanOrEqual(1)
+      expect(after.heights, 'every label on one line').toEqual(before.heights)
       expect(after.rightmost).toBeLessThanOrEqual(after.footerContentRight + TOLERANCE_PX)
 
       await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] .modal-footer button`, longest.Cancel)
