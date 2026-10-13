@@ -18,6 +18,10 @@
  * menu command, so no gallery-carrying build is needed. The copy progress dialog
  * is the one that turns resizable mid-life: both axes once its file tree shows,
  * and the tree, not dead space, takes the height a drag adds.
+ *
+ * The same dialog proves the footer floor: with the longest translation of every
+ * button swapped in, the panel widens and the row stays one line (`ModalDialog`'s
+ * `footerRowWidth`, which jsdom can only check as arithmetic).
  */
 
 import fs from 'fs'
@@ -252,6 +256,131 @@ test.describe('Dialog edge resizing', () => {
       expect(Math.abs(after.height - (before.height + 80))).toBeLessThan(TOLERANCE_PX)
       expect(Math.abs((await treeHeight()) - (treeBefore + 80))).toBeLessThan(TOLERANCE_PX)
       await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] button`, 'Cancel')
+      await expect
+        .poll(async () => !(await page.isVisible(`[data-dialog-id="${TRANSFER_PROGRESS}"]`)), {
+          timeout: waitBudget(10000),
+        })
+        .toBeTruthy()
+    } finally {
+      await page.evaluate(`window.__TAURI_INTERNALS__.invoke('set_test_throttle', { ms: null })`)
+      restoreFixtureTree(fixtureRoot)
+    }
+  })
+})
+
+// ── A footer's buttons stay on one line, in any language ────────────────────
+
+/** Each progress-dialog button's English label, and every key its label can come from. */
+const PROGRESS_FOOTER_LABELS: Record<string, string[]> = {
+  Pause: ['fileOperations.transferProgress.pause', 'fileOperations.transferProgress.resume'],
+  Background: ['fileOperations.transferProgress.background', 'fileOperations.transferProgress.queue'],
+  Cancel: ['fileOperations.button.cancel', 'fileOperations.transferProgress.close'],
+  Rollback: ['fileOperations.transferProgress.conflictRollback'],
+}
+
+/** The longest translation any shipped catalog has for each of those buttons. */
+function longestFooterLabels(): Record<string, string> {
+  const catalogs = path.join(import.meta.dirname, '..', '..', 'src', 'lib', 'intl', 'messages')
+  const longest: Record<string, string> = {}
+  for (const locale of fs.readdirSync(catalogs)) {
+    const file = path.join(catalogs, locale, 'fileOperations.json')
+    if (!fs.existsSync(file)) continue
+    const catalog = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>
+    for (const [english, keys] of Object.entries(PROGRESS_FOOTER_LABELS)) {
+      for (const key of keys) {
+        const label = catalog[key]
+        if (typeof label === 'string' && label.length > (longest[english] ?? '').length) longest[english] = label
+      }
+    }
+  }
+  return longest
+}
+
+interface FooterBox {
+  tops: number[]
+  heights: number[]
+  rightmost: number
+  footerContentRight: number
+  panelWidth: number
+}
+
+function measureFooter(page: TauriPage): Promise<FooterBox> {
+  return page.evaluate<FooterBox>(`(function () {
+        var root = document.querySelector('[data-dialog-id="${TRANSFER_PROGRESS}"]')
+        var footer = root.querySelector('.modal-footer')
+        var rects = [].map.call(root.querySelectorAll('.modal-footer-actions button'), function (b) {
+            return b.getBoundingClientRect()
+        })
+        var f = footer.getBoundingClientRect()
+        return {
+            tops: rects.map(function (r) { return Math.round(r.top) }),
+            heights: rects.map(function (r) { return Math.round(r.height) }),
+            rightmost: Math.max.apply(null, rects.map(function (r) { return r.right })),
+            footerContentRight: f.right - parseFloat(getComputedStyle(footer).paddingRight),
+            panelWidth: root.querySelector('.modal-dialog').getBoundingClientRect().width
+        }
+    })()`)
+}
+
+test.describe('Dialog footer', () => {
+  test.describe.configure({ timeout: waitBudget(30000) })
+
+  test.afterEach(async ({ tauriPage }) => {
+    await dismissOverlay(tauriPage).catch(() => {})
+    await dismissAllToasts(tauriPage).catch(() => {})
+  })
+
+  test('the progress dialog widens for the longest translation of each button, and the row stays on one line', async ({
+    tauriPage,
+  }) => {
+    const page = tauriPage as TauriPage
+    const fixtureRoot = getFixtureRoot()
+    recreateFixtures(fixtureRoot)
+    const folder = path.join(fixtureRoot, 'left', 'footer-labels')
+    fs.mkdirSync(folder, { recursive: true })
+    for (let i = 0; i < 12; i++) fs.writeFileSync(path.join(folder, `file-${String(i)}.txt`), 'x'.repeat(1024))
+    await ensureAppReady(page)
+    await flushFileWatcher(page)
+    // Paced per file, so the dialog stays up long enough to measure.
+    await page.evaluate(`window.__TAURI_INTERNALS__.invoke('set_test_throttle', { ms: 400 })`)
+    try {
+      expect(await moveCursorToFile(page, 'footer-labels')).toBe(true)
+      await dispatchMenuCommand(page, 'file.copy')
+      await page.waitForSelector(TRANSFER_DIALOG, 5000)
+      await clickTransferStart(page)
+      await page.waitForSelector(SETTLED[TRANSFER_PROGRESS], waitBudget(10000))
+
+      const before = await measureFooter(page)
+      expect(before.tops).toHaveLength(4)
+
+      // Every button takes its longest translation at once: French's "Revenir en arrière"
+      // dropped to a second row beside its neighbours before the panel learned to widen.
+      const longest = longestFooterLabels()
+      await page.evaluate(`(function () {
+            var longest = ${JSON.stringify(longest)}
+            var buttons = document.querySelectorAll('[data-dialog-id="${TRANSFER_PROGRESS}"] .modal-footer-actions button')
+            ;[].forEach.call(buttons, function (button) {
+                var walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT)
+                var node
+                while ((node = walker.nextNode())) {
+                    var word = node.textContent.trim()
+                    if (longest[word]) node.textContent = longest[word]
+                }
+            })
+        })()`)
+      await expect
+        .poll(async () => (await measureFooter(page)).panelWidth, { timeout: waitBudget(2000) })
+        .toBeGreaterThan(before.panelWidth)
+
+      const after = await measureFooter(page)
+      expect(new Set(after.tops).size, 'every button on one row').toBe(1)
+      expect(
+        after.heights.every((height) => height === before.heights[0]),
+        'every label on one line',
+      ).toBe(true)
+      expect(after.rightmost).toBeLessThanOrEqual(after.footerContentRight + TOLERANCE_PX)
+
+      await clickButtonByText(page, `[data-dialog-id="${TRANSFER_PROGRESS}"] .modal-footer button`, longest.Cancel)
       await expect
         .poll(async () => !(await page.isVisible(`[data-dialog-id="${TRANSFER_PROGRESS}"]`)), {
           timeout: waitBudget(10000),

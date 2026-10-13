@@ -118,24 +118,30 @@ and its padded background hangs below the words.
 **Layout convention (macOS-style).** Title and body text are LEFT-aligned; action buttons are RIGHT-aligned with the
 primary action last (rightmost). Pass buttons via the `footer` snippet — `ModalDialog` renders them in a `.modal-footer`
 that owns the right-alignment, gap, and the dialog's bottom padding, so callers don't hand-roll a button-row. The
-buttons sit in one `.modal-footer-actions` group whose labels never wrap: when the row can't hold a `footerLeading`
-control beside them (a third button, a longer translation), the whole group drops to its own row below it, still
-right-aligned, instead of squeezing each label onto two lines (the trash dialog's switch + Cancel + Background + "Move
-to trash" did). The title bar's padding, the footer's, and the body's side inset all come from ONE token
-(`--spacing-dialog`), so title, body, and buttons line up flush at the same inset and nothing crowds the title or the
-action row. **The body inset is not opt-outable**: there is no `padded` prop, and a body section must never re-add a
-horizontal inset of its OWN, in any token (that's a double inset; the offenders that drifted in all paid it with
-`--spacing-xl`, which is why grepping for `--spacing-dialog` found none of them). A block that genuinely needs to reach
-the panel edge cancels the inset locally with a negative inline margin, so the exception is visible at the one place it
-applies instead of the rule being off for the whole dialog. `dialog-inset.spec.ts` measures it: it walks the dialog
-gallery and compares the CONTENT edges (rect + border + padding, so a padded `<p>` can't pass on its box alone) of each
-title and its first body section.
+buttons sit in one `.modal-footer-actions` row that never wraps, in any language: neither a label nor a button drops to
+a second line. Instead the panel's `min-width` rises to the row's width (`modal-resize.ts::panelMinWidth` over
+`footerRowWidth`, re-measured by a `ResizeObserver` on the row, since a label can change while the dialog is open), so a
+long translation widens the dialog. A `min-width` beats the caller's `width` and `max-width`, so this holds against any
+`containerStyle` and any drag. **Why**: French's "Revenir en arrière" dropped the progress dialog's Rollback onto a row
+of its own under the fixed 580 px. When the footer can't also hold a `footerLeading` control beside them, the whole
+group drops to its own row below it, still right-aligned (the trash dialog's switch + Cancel + Background + "Move to
+trash" squeezed each label onto two lines before). A dialog that hand-rolls its buttons in `children` gets none of this,
+so put them in `footer`. Pinned by `ModalDialog.svelte.test.ts` § "footer floor" (the arithmetic) and
+`dialog-resize.spec.ts` § "Dialog footer" (the progress dialog with every button's longest translation). The title bar's
+padding, the footer's, and the body's side inset all come from ONE token (`--spacing-dialog`), so title, body, and
+buttons line up flush at the same inset and nothing crowds the title or the action row. **The body inset is not
+opt-outable**: there is no `padded` prop, and a body section must never re-add a horizontal inset of its OWN, in any
+token (that's a double inset; the offenders that drifted in all paid it with `--spacing-xl`, which is why grepping for
+`--spacing-dialog` found none of them). A block that genuinely needs to reach the panel edge cancels the inset locally
+with a negative inline margin, so the exception is visible at the one place it applies instead of the rule being off for
+the whole dialog. `dialog-inset.spec.ts` measures it: it walks the dialog gallery and compares the CONTENT edges (rect +
+border + padding, so a padded `<p>` can't pass on its box alone) of each title and its first body section.
 
 **The body wraps unbreakable tokens** (`overflow-wrap: anywhere`). A path, a URL, or a long filename has no break
 opportunity inside its last segment, so without it the string overflows the inset and runs to the panel edge. A dialog
 with a custom button layout (multiple rows, a left-side helper, equal-width buttons) keeps its buttons in `children` and
-right-aligns them itself; genuinely centered content (spinners, progress bars, numeric readouts, hero panels like
-`AboutWindow`) stays centered.
+right-aligns them itself, and keeps them from wrapping itself too (the clash prompt's grid sizes to `max-content`);
+genuinely centered content (spinners, progress bars, numeric readouts, hero panels like `AboutWindow`) stays centered.
 
 **The panel must never become a containing block for `position: fixed`.** The drag offset rides on `left` / `top`
 against the panel's own `position: relative`. ❌ Don't move it to a `transform`, and don't add `filter`,
@@ -174,8 +180,9 @@ also what keeps the height content-driven. A dialog never remembers the size it 
   is `containerStyle`'s, and re-rendering it mid-drag would snap the panel back to its opening size on the next pointer
   frame. The effect only ever SETS width and height — removing them would take `containerStyle`'s own sizing with them.
 - **The floors are the panel's `min-width` (360px, raised in `containerStyle` when content needs more, as the progress
-  readout's fixed columns do) and a measured height floor**: the title bar plus footer plus 60px of body. The panel
-  carries no CSS `min-height`, so every dialog still opens at its natural height instead of padding out to a number.
+  readout's fixed columns do, and by the footer's button row; all three meet in `panelMinWidth`) and a measured height
+  floor**: the title bar plus footer plus 60px of body. The panel carries no CSS `min-height`, so every dialog still
+  opens at its natural height instead of padding out to a number.
 - **Withdrawing vertical resizing sets the dragged height aside.** When `resizable` stops being `true` (the progress
   dialog's tree giving way to a conflict prompt), the panel goes back to its natural height (`containerStyle`'s own, if
   it has one, read back through a detached element's style, never parsed by hand), and the user's height returns with

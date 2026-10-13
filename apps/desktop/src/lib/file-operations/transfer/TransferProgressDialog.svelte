@@ -371,6 +371,74 @@
     })
 </script>
 
+<!-- The action buttons, in `ModalDialog`'s footer, which keeps them on one row in any
+     language (the panel widens to fit them). Withdrawn while a clash is up: its body
+     carries its own buttons for every way out.
+     Once `operationSettled` is true (write-complete / write-cancelled / write-error
+     arrived) the backend state is gone, so a Rollback click can't be honored; disable
+     both buttons during the MIN_DISPLAY_MS hold-open window. Without this, the user can
+     click Rollback after the copy completed and silently get nothing. -->
+{#snippet actions()}
+    <!-- Manage controls: Pause/Resume keeps the op alive but parked;
+         Queue sends it to the background and opens the queue window (also
+         F2 while this dialog is focused). Both show only during the active
+         copy/move/delete phases (`canPauseOrQueue`). -->
+    {#if canPauseOrQueue}
+        <!-- Offered during the scan as much as during the write: the
+             walk parks on the same gate the drivers do
+             (`write_operations/scan_bridge.rs`), and the scan is where
+             somebody realizes they picked the wrong destination. -->
+        <Button
+            variant="secondary"
+            onclick={progress.handlePauseResume}
+            disabled={pauseInFlight}
+            aria-label={isPaused
+                ? tString('fileOperations.transferProgress.resumeAria')
+                : tString('fileOperations.transferProgress.pauseAria')}
+        >
+            <span class="btn-inner">
+                <Icon name={isPaused ? 'play' : 'pause'} size={14} />
+                {isPaused
+                    ? tString('fileOperations.transferProgress.resume')
+                    : tString('fileOperations.transferProgress.pause')}
+            </span>
+        </Button>
+        <!-- One button, two words: "Queue" when there's something to
+             queue behind, "Background" when there isn't. The action, the
+             tooltip, and F2 are the same either way. No aria-label: the
+             name is the visible word (WCAG 2.5.3, label in name). -->
+        <span use:tooltip={tString('fileOperations.transferProgress.queueTooltip')}>
+            <Button variant="secondary" onclick={progress.handleQueue} keyHint="F2" aria-keyshortcuts="F2">
+                <span class="btn-inner">
+                    <Icon name="list" size={14} />
+                    {queueHasOtherWork
+                        ? tString('fileOperations.transferProgress.queue')
+                        : tString('fileOperations.transferProgress.background')}
+                </span>
+            </Button>
+        </span>
+    {/if}
+    <Button
+        variant="secondary"
+        onclick={() => progress.handleCancel(false)}
+        disabled={isCancelling || operationSettled}>{tString('fileOperations.button.cancel')}</Button
+    >
+    <!-- The escape hatch. Once cancelling is under way the backend can
+         take its bounded wind-down time, and the person must never be
+         stuck watching it: force-quit was the only way out of the
+         2026-07-31 wedge, and that's what cost two files. -->
+    {#if isCancelling || cancelEventReceived}
+        <Button variant="secondary" onclick={progress.dismiss}>{tString('fileOperations.transferProgress.close')}</Button>
+    {/if}
+    <!-- ❌ No Rollback affordance on a reversal, not even the disabled
+         one: this operation IS the undo, and its registry row says
+         `supportsRollback: false`. A red button here would offer to
+         re-apply what the person just chose to undo. -->
+    {#if (isCopy || isMove) && reversalVariant === null}
+        <TransferRollbackControls {rollback} {isRollingBack} disabled={isCancelling || operationSettled || isScanning} />
+    {/if}
+{/snippet}
+
 <ModalDialog
     titleId="progress-dialog-title"
     onkeydown={handleKeydown}
@@ -388,6 +456,7 @@
           }}
     containerStyle={conflictEvent ? conflictDialogWidthStyle(DIALOG_WIDTH_PX) : DIALOG_WIDTH_STYLE}
     resizable={treeOperationId !== null && !conflictEvent ? true : 'horizontal'}
+    footer={!isDeleteOrTrash && conflictEvent ? undefined : actions}
 >
     {#snippet title()}
         {#if reversalVariant !== null}
@@ -565,78 +634,6 @@
         {#if showStall && stall}
             <TransferStallNotice {stall} {operationType} />
         {/if}
-
-        <!-- Action buttons -->
-        <!-- Once `operationSettled` is true (write-complete / write-cancelled / write-error
-             arrived) the backend state is gone, so a Rollback click can't be honored; disable
-             both buttons during the MIN_DISPLAY_MS hold-open window. Without this, the user can
-             click Rollback after the copy completed and silently get nothing. -->
-        <div class="button-row">
-            <!-- Manage controls: Pause/Resume keeps the op alive but parked;
-                 Queue sends it to the background and opens the queue window (also
-                 F2 while this dialog is focused). Both show only during the active
-                 copy/move/delete phases (`canPauseOrQueue`). -->
-            {#if canPauseOrQueue}
-                <!-- Offered during the scan as much as during the write: the
-                     walk parks on the same gate the drivers do
-                     (`write_operations/scan_bridge.rs`), and the scan is where
-                     somebody realizes they picked the wrong destination. -->
-                <Button
-                    variant="secondary"
-                    onclick={progress.handlePauseResume}
-                    disabled={pauseInFlight}
-                    aria-label={isPaused
-                        ? tString('fileOperations.transferProgress.resumeAria')
-                        : tString('fileOperations.transferProgress.pauseAria')}
-                >
-                    <span class="btn-inner">
-                        <Icon name={isPaused ? 'play' : 'pause'} size={14} />
-                        {isPaused
-                            ? tString('fileOperations.transferProgress.resume')
-                            : tString('fileOperations.transferProgress.pause')}
-                    </span>
-                </Button>
-                <!-- One button, two words: "Queue" when there's something to
-                     queue behind, "Background" when there isn't. The action, the
-                     tooltip, and F2 are the same either way. No aria-label: the
-                     name is the visible word (WCAG 2.5.3, label in name). -->
-                <span use:tooltip={tString('fileOperations.transferProgress.queueTooltip')}>
-                    <Button variant="secondary" onclick={progress.handleQueue} keyHint="F2" aria-keyshortcuts="F2">
-                        <span class="btn-inner">
-                            <Icon name="list" size={14} />
-                            {queueHasOtherWork
-                                ? tString('fileOperations.transferProgress.queue')
-                                : tString('fileOperations.transferProgress.background')}
-                        </span>
-                    </Button>
-                </span>
-            {/if}
-            <Button
-                variant="secondary"
-                onclick={() => progress.handleCancel(false)}
-                disabled={isCancelling || operationSettled}>{tString('fileOperations.button.cancel')}</Button
-            >
-            <!-- The escape hatch. Once cancelling is under way the backend can
-                 take its bounded wind-down time, and the person must never be
-                 stuck watching it: force-quit was the only way out of the
-                 2026-07-31 wedge, and that's what cost two files. -->
-            {#if isCancelling || cancelEventReceived}
-                <Button variant="secondary" onclick={progress.dismiss}
-                    >{tString('fileOperations.transferProgress.close')}</Button
-                >
-            {/if}
-            <!-- ❌ No Rollback affordance on a reversal, not even the disabled
-                 one: this operation IS the undo, and its registry row says
-                 `supportsRollback: false`. A red button here would offer to
-                 re-apply what the person just chose to undo. -->
-            {#if (isCopy || isMove) && reversalVariant === null}
-                <TransferRollbackControls
-                    {rollback}
-                    {isRollingBack}
-                    disabled={isCancelling || operationSettled || isScanning}
-                />
-            {/if}
-        </div>
         </div>
     {/if}
 </ModalDialog>
@@ -699,7 +696,7 @@
         border-radius: var(--radius-sm);
     }
 
-    /* Buttons */
+    /* Native SMB note */
     .smb-native-note {
         margin: 0;
         padding: var(--spacing-xs) var(--spacing-sm);
@@ -707,15 +704,6 @@
         color: var(--color-warning-text);
         background: var(--color-warning-bg);
         border-radius: var(--radius-sm);
-    }
-
-    .button-row {
-        display: flex;
-        gap: var(--spacing-md);
-        justify-content: flex-end;
-        flex-wrap: wrap;
-        /* Last row in a footerless body: the body's own inset supplies the gap below. */
-        padding: var(--spacing-lg) 0 0;
     }
 
     /* Icon + label inside the Pause/Resume and Queue buttons. */

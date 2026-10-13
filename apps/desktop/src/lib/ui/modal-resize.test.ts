@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { declaredHeight, resizeDirectionsFor, resizeStep, type ResizeStepInput } from './modal-resize'
+import { declaredStyle, panelMinWidth, resizeDirectionsFor, resizeStep, type ResizeStepInput } from './modal-resize'
 
 const NO_LIMITS = { minWidth: 0, maxWidth: Infinity, minHeight: 60, maxHeight: Infinity }
 
@@ -57,9 +57,27 @@ describe('resizeDirectionsFor', () => {
   })
 })
 
-describe('declaredHeight', () => {
-  it('reads the height a style string declares, and nothing when it declares none', () => {
-    expect(declaredHeight('width: 500px; height: 280px')).toBe('280px')
-    expect(declaredHeight('width: 500px')).toBe('')
+describe('declaredStyle', () => {
+  it('reads what a style string declares, and nothing when it declares none', () => {
+    expect(declaredStyle('width: 500px; height: 280px', 'height')).toBe('280px')
+    expect(declaredStyle('width: 500px', 'height')).toBe('')
+    expect(declaredStyle('width: 500px; min-width: 460px', 'min-width')).toBe('460px')
+  })
+})
+
+describe('panelMinWidth', () => {
+  it('takes the larger of the caller’s floor and the footer’s button row', () => {
+    expect(panelMinWidth('width: 580px; min-width: 580px', true, 640)).toBe('max(580px, 640px)')
+    expect(panelMinWidth('width: 400px', false, 430)).toBe('430px')
+  })
+
+  it('gives a resizable panel its own floor when the caller sets none', () => {
+    expect(panelMinWidth('width: 400px', true, 0)).toBe('360px')
+    expect(panelMinWidth('width: 400px', true, 430)).toBe('max(360px, 430px)')
+  })
+
+  it('leaves a footerless panel the caller’s floor, or none', () => {
+    expect(panelMinWidth('min-width: 460px; max-width: 560px', false, 0)).toBe('460px')
+    expect(panelMinWidth('width: 400px', false, 0)).toBe('')
   })
 })

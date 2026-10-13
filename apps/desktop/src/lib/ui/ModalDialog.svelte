@@ -5,7 +5,9 @@
     import { focusFirstField, trapFocus } from './focus-trap'
     import { anchoredTopFor } from './modal-anchor'
     import {
-        declaredHeight,
+        declaredStyle,
+        observeFooterRow,
+        panelMinWidth,
         resizeDirectionsFor,
         resizeLimitsOf,
         resizeStep,
@@ -165,6 +167,24 @@
 
     const resizeDirections = $derived(resizeDirectionsFor(resizable))
 
+    let footerActionsElement: HTMLDivElement | undefined = $state()
+    /** How wide the panel must be to hold the footer's buttons on one row; `0` with no footer. */
+    let footerRowPx = $state(0)
+
+    /**
+     * A footer's buttons never wrap, in any language: the panel's `min-width` rises to the
+     * width they take on one row (`panelMinWidth`, written below), so a long translation
+     * widens the dialog instead. Observed: a label can change while the dialog is open.
+     */
+    $effect(() => {
+        const [panel, actions] = [dialogElement, footerActionsElement]
+        if (!panel || !actions) {
+            footerRowPx = 0
+            return
+        }
+        return observeFooterRow(panel, actions, (px) => (footerRowPx = px))
+    })
+
     /**
      * The drag offset rides on `left` / `top` against the panel's own `position: relative`,
      * NOT on a `transform`.
@@ -203,6 +223,7 @@
         if (resizedSize.height !== null) el.style.height = `${String(resizedSize.height)}px`
         el.style.left = `${String(dialogPosition.x)}px`
         el.style.top = `${String(dialogPosition.y)}px`
+        el.style.minWidth = panelMinWidth(containerStyle, resizable !== false, footerRowPx)
         if (anchoredTop === null) {
             el.style.removeProperty('align-self')
             el.style.removeProperty('margin-top')
@@ -232,7 +253,7 @@
                 resizedSize = { ...resizedSize, height: null }
                 // Back to what `containerStyle` says (nothing, for most): the drag's
                 // height shares that one inline declaration.
-                el.style.height = declaredHeight(containerStyle)
+                el.style.height = declaredStyle(containerStyle, 'height')
             } else if (vertical && parkedHeight !== null) {
                 const height = parkedHeight
                 parkedHeight = null
@@ -521,7 +542,7 @@
             {#if footer}
                 <div class="modal-footer">
                     {#if footerLeading}<div class="modal-footer-leading">{@render footerLeading()}</div>{/if}
-                    <div class="modal-footer-actions">{@render footer()}</div>
+                    <div class="modal-footer-actions" bind:this={footerActionsElement}>{@render footer()}</div>
                 </div>
             {/if}
         </div>
@@ -609,19 +630,16 @@
        and the panel can't be dragged into a band of empty space above the footer.
        Flex column so the body owns the slack and scrolls while title bar and
        footer keep their intrinsic height.
-       min-* keep the dialog usable when dragged small; max-* keep it inside the
-       viewport (the overlay starts below the OS title bar). The caller's
-       `containerStyle` still sets the initial width/height, and raises `min-width`
-       there when its content needs a wider floor than 360px (a progress readout,
-       a multi-column table). */
+       max-* keep it inside the viewport (the overlay starts below the OS title bar).
+       The width floor is the script's (`panelMinWidth`: 360px, the caller's own, or
+       the footer's button row), since it has to take the larger of them. There's
+       deliberately no `min-height`: every dialog opens at its natural height instead
+       of padding itself out to a number, and the drag floors itself on the measured
+       chrome (see `minimumPanelHeight`). The caller's `containerStyle` still sets the
+       initial width/height. */
     .modal-dialog.resizable {
         display: flex;
         flex-direction: column;
-        /* No design token for this floor; it's a layout minimum, not spacing. There's
-           deliberately no `min-height` twin: every dialog opens at its natural height
-           instead of padding itself out to a number, and the drag floors itself on the
-           measured chrome (see `minimumPanelHeight`). */
-        min-width: 360px;
         max-width: calc(100vw - 2 * var(--spacing-xl));
         max-height: calc(100vh - var(--titlebar-height) - 2 * var(--spacing-xl));
     }
@@ -867,16 +885,16 @@
         min-width: 0;
     }
 
-    /* The buttons are one unit that never shrinks and never wraps a label: when the
-       row can't hold the leading control beside them (a longer translation, a third
-       button), the whole button group drops to a row of its own, still hard right,
-       rather than squeezing each label onto two lines. */
+    /* The buttons are one row that never shrinks, never wraps, and never wraps a
+       label: the panel's floor rises to fit it (`footerRowPx` in the script). When
+       the footer can't also hold the leading control beside them (a longer
+       translation, a third button), the whole group drops to a row of its own, still
+       hard right, rather than squeezing each label onto two lines. */
     .modal-footer-actions {
         display: flex;
         flex-shrink: 0;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
-        max-width: 100%;
         align-items: center;
         gap: var(--spacing-md);
         margin-left: auto;

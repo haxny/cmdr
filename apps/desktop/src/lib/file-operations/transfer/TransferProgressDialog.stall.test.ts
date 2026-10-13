@@ -205,7 +205,7 @@ describe('TransferProgressDialog stall notice', () => {
 
     const notice = target.querySelector('.stall-notice')
     const tree = target.querySelector('.transfer-tree')
-    const buttons = target.querySelector('.button-row')
+    const buttons = target.querySelector('.modal-footer-actions')
     expect(notice && tree && buttons, 'all three blocks render').toBeTruthy()
     if (!notice || !tree || !buttons) throw new Error('missing blocks')
     // `DOCUMENT_POSITION_FOLLOWING` reads "the argument comes after this node".

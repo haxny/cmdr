@@ -120,9 +120,52 @@ export function resizeStep(input: ResizeStepInput): { size: DraggedSize; positio
   return { size: { width, height }, position }
 }
 
-/** The height a style string declares, `''` for none: parsed by the browser, never by hand. */
-export function declaredHeight(style: string): string {
+/** The value a style string declares for `property`, `''` for none: parsed by the browser, never by hand. */
+export function declaredStyle(style: string, property: 'height' | 'min-width'): string {
   const probe = document.createElement('div')
   probe.style.cssText = style
-  return probe.style.height
+  return probe.style.getPropertyValue(property)
+}
+
+/**
+ * How wide the panel must be to hold its footer's action buttons on one row: the row's
+ * own width, the footer's side padding, and the panel's border. The row never wraps
+ * or shrinks (`.modal-footer-actions`), so its width is its content's whatever the
+ * panel's is, and raising the panel to this can't change it.
+ */
+export function footerRowWidth(panel: HTMLElement, actions: HTMLElement): number {
+  const footer = actions.parentElement
+  const padding = footer
+    ? cssLength(getComputedStyle(footer).paddingLeft, 0) + cssLength(getComputedStyle(footer).paddingRight, 0)
+    : 0
+  return Math.ceil(actions.offsetWidth + padding + panel.offsetWidth - panel.clientWidth)
+}
+
+/** How narrow a resizable panel can get when the caller sets no floor of its own. */
+export const RESIZABLE_MIN_WIDTH_PX = 360
+
+/**
+ * The panel's `min-width`: the caller's floor (`containerStyle`'s, else
+ * `RESIZABLE_MIN_WIDTH_PX` for a resizable panel), raised to the footer's button row
+ * (`footerRowWidth`, `0` with no footer) when that's wider. A `min-width` beats both
+ * `width` and `max-width`, so it holds against any size the caller or a drag sets.
+ */
+export function panelMinWidth(style: string, resizable: boolean, footerRowPx: number): string {
+  const declared = declaredStyle(style, 'min-width')
+  const floor = declared !== '' ? declared : resizable ? `${String(RESIZABLE_MIN_WIDTH_PX)}px` : ''
+  if (footerRowPx <= 0) return floor
+  return floor === '' ? `${String(footerRowPx)}px` : `max(${floor}, ${String(footerRowPx)}px)`
+}
+
+/** Calls `onWidth` with `footerRowWidth` now and whenever the row resizes; returns the teardown. */
+export function observeFooterRow(panel: HTMLElement, actions: HTMLElement, onWidth: (px: number) => void): () => void {
+  const measure = () => {
+    onWidth(footerRowWidth(panel, actions))
+  }
+  measure()
+  const observer = new ResizeObserver(measure)
+  observer.observe(actions)
+  return () => {
+    observer.disconnect()
+  }
 }

@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, unmount, tick, createRawSnippet } from 'svelte'
 import ModalDialog from './ModalDialog.svelte'
 import { closeDialogById } from './dialog-close-registry'
+import { installLayoutMock } from '#lib/test-layout.js'
 
 // Avoid Tauri IPC side-effects from notifyDialogOpened / notifyDialogClosed.
 vi.mock('#lib/tauri-commands/index.js', () => ({
@@ -567,6 +568,56 @@ describe('ModalDialog Escape', () => {
 
     expect(onclose).toHaveBeenCalledOnce()
     expect(event.defaultPrevented).toBe(true)
+
+    void unmount(component)
+    target.remove()
+  })
+})
+
+// A footer button row never wraps: the panel's floor rises to whatever the buttons need
+// on one line, over the caller's own floor, so a longer translation widens the dialog
+// instead (`dialog-resize.spec.ts` measures it in a real engine).
+describe('ModalDialog footer floor', () => {
+  async function mountWithFooter(containerStyle: string, resizable = false) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const component = mount(ModalDialog, {
+      target,
+      props: {
+        titleId: 't',
+        title: titleSnippet,
+        children: bodySnippet,
+        footer: footerSnippet,
+        containerStyle,
+        resizable,
+      },
+    })
+    await tick()
+    const panel = target.querySelector<HTMLElement>('.modal-dialog')
+    if (!panel) throw new Error('the panel never mounted')
+    return { target, panel, component }
+  }
+
+  it('raises the panel’s floor to the button row’s width, over the caller’s own floor', async () => {
+    const layout = installLayoutMock({ '.modal-footer-actions': { offsetWidth: 520 } })
+    const { target, panel, component } = await mountWithFooter('width: 300px; min-width: 280px')
+
+    expect(panel.style.minWidth).toBe('max(280px, 520px)')
+
+    // A label that grows (Pause turning into a longer Resume, a language switch) moves it.
+    layout.resize('.modal-footer-actions', { offsetWidth: 610 })
+    await tick()
+    expect(panel.style.minWidth).toBe('max(280px, 610px)')
+
+    void unmount(component)
+    target.remove()
+  })
+
+  it('keeps a resizable panel’s own floor when the caller sets none', async () => {
+    installLayoutMock({ '.modal-footer-actions': { offsetWidth: 320 } })
+    const { target, panel, component } = await mountWithFooter('width: 300px', true)
+
+    expect(panel.style.minWidth).toBe('max(360px, 320px)')
 
     void unmount(component)
     target.remove()
