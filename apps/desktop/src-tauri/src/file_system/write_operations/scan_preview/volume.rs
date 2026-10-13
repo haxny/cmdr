@@ -200,7 +200,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
             // Cache results: volume scans don't produce per-file FileInfo, but
             // the cache stores aggregate stats AND per-path scan results so
             // copy_between_volumes can reuse both without re-statting.
-            let tree = recorder.map(|recorder| recorder.finish(&TreeOrder::active()));
+            let tree = recorder.and_then(|recorder| recorder.finish(&TreeOrder::active()));
             settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,

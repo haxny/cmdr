@@ -911,3 +911,48 @@ fn a_local_copy_starts_its_files_in_tree_order() {
     }
     assert_eq!(landed, ["mmm.txt", "zzz.txt", "aaa.txt", "Y.txt", "z.txt"]);
 }
+
+/// A bug while building the tree costs the tree, never the copy: every file
+/// lands, in the walk's own order (the order a copy without a tree would take),
+/// and the operation has no tree, so its views say there's none.
+#[test]
+fn a_tree_that_fails_to_build_leaves_the_local_copy_as_it_would_run_without_one() {
+    use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src = tmp.path().join("src");
+    let dst = tmp.path().join("dst");
+    fs::create_dir_all(src.join("b")).unwrap();
+    fs::create_dir_all(&dst).unwrap();
+    fs::write(src.join("z.txt"), b"1").unwrap();
+    fs::write(src.join("b").join(TREE_BUG_NAME), b"2").unwrap();
+    fs::write(src.join("Y.txt"), b"3").unwrap();
+    let events = CollectorEventSink::new();
+    let state = make_state(0);
+
+    copy_files_with_progress_inner(
+        &events,
+        "op-local-copy-tree-bug",
+        &state,
+        &[src.join("z.txt"), src.join("b"), src.join("Y.txt")],
+        &dst,
+        &WriteOperationConfig::default(),
+    )
+    .expect("the copy succeeds");
+
+    let mut landed: Vec<String> = Vec::new();
+    let mut files_done = 0;
+    for event in events.progress.lock().unwrap().iter() {
+        if event.phase == WriteOperationPhase::Copying && event.files_done > files_done {
+            files_done = event.files_done;
+            landed.push(event.current_file.clone().unwrap_or_default());
+        }
+    }
+    // Tree order would be `b/…`, `Y.txt`, `z.txt`; the walk takes the sources as given.
+    assert_eq!(landed, ["z.txt", TREE_BUG_NAME, "Y.txt"]);
+    assert_eq!(fs::read(dst.join("b").join(TREE_BUG_NAME)).unwrap(), b"2");
+    assert!(
+        state.transfer_tree.get().is_none(),
+        "no tree, so views answer `ready: false`"
+    );
+}

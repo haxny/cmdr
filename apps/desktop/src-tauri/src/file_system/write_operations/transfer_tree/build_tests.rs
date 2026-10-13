@@ -24,7 +24,7 @@ fn a_recorded_scan_builds_the_selection_in_tree_order_with_folder_totals() {
     recorder.file(Path::new("/src/photos/a.jpg"), 10);
     recorder.file(Path::new("/src/notes.txt"), 3);
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -50,7 +50,7 @@ fn children_are_one_contiguous_id_range_in_tree_order() {
         recorder.file(&Path::new("/src/top").join(name), 1);
     }
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     let top = node_at(&model, &["top"]);
     let ids: Vec<u32> = (0..3).map(|index| model.child_at(top, index).get()).collect();
@@ -69,7 +69,7 @@ fn entries_arriving_before_their_folder_still_land_under_it() {
     recorder.dir(Path::new("/src/top"));
     recorder.dir(Path::new("/src/top/deep/er"));
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -89,7 +89,7 @@ fn sources_under_different_parents_hang_off_their_common_ancestor_as_relative_la
     recorder.dir(Path::new("/a/y/z/two"));
     recorder.file(Path::new("/a/y/z/two/inner.txt"), 2);
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -139,7 +139,7 @@ fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
     recorder.subtree(Path::new("/src/opaque"), &folder);
     recorder.subtree(Path::new("/src/single"), &file);
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     assert_eq!(outline(&model), vec!["opaque/? 12 files 1200 B", "single 9 B"]);
     assert_eq!(model.kind(node_at(&model, &["opaque"])), NodeKind::Opaque);
@@ -152,7 +152,7 @@ fn an_entry_outside_every_source_is_dropped() {
     recorder.file(Path::new("/elsewhere/stray.txt"), 5);
     recorder.file(Path::new("/src/sibling.txt"), 5);
 
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
 
     assert_eq!(outline(&model), vec!["top/ 0 files 0 B"]);
 }
@@ -172,7 +172,8 @@ fn the_local_walk_builds_the_same_tree_and_maps_every_file_to_its_node() {
         &dirs,
         files.iter().map(|(path, size)| (path.as_path(), *size)),
         &english(),
-    );
+    )
+    .expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -206,7 +207,7 @@ fn a_compress_plan_builds_from_its_root_relative_entry_names() {
         ("loose.txt", false, 3),
     ];
 
-    let (model, nodes) = from_archive_plan(entries.iter().copied(), &english());
+    let (model, nodes) = from_archive_plan(entries.iter().copied(), &english()).expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -220,4 +221,30 @@ fn a_compress_plan_builds_from_its_root_relative_entry_names() {
     );
     let names: Vec<&str> = nodes.iter().map(|node| model.name(*node)).collect();
     assert_eq!(names, vec!["top", "sub", "b.txt", "a.txt", "loose.txt"]);
+}
+
+/// A recorder that hits a bug stops recording and builds nothing, and the scan
+/// feeding it never sees the panic.
+#[test]
+fn a_recorder_that_hits_a_bug_records_nothing_more_and_builds_no_tree() {
+    use super::super::test_support::TREE_BUG_NAME;
+
+    let recorder = TreeRecorder::new(&paths(&["/src/top"]));
+    recorder.dir(Path::new("/src/top"));
+    recorder.file(&Path::new("/src/top").join(TREE_BUG_NAME), 1);
+    recorder.file(Path::new("/src/top/after.txt"), 1);
+
+    assert!(recorder.finish(&english()).is_none());
+}
+
+#[test]
+fn every_builder_answers_none_for_a_tree_bug() {
+    use super::super::test_support::TREE_BUG_NAME;
+    use super::{from_per_path, from_sources};
+
+    let bug = PathBuf::from("/src").join(TREE_BUG_NAME);
+    assert!(from_sources(std::slice::from_ref(&bug), |_| false, &english()).is_none());
+    assert!(from_per_path(std::slice::from_ref(&bug), &[], &english()).is_none());
+    assert!(from_local_scan(std::slice::from_ref(&bug), &[], [(bug.as_path(), 1)], &english()).is_none());
+    assert!(from_archive_plan([(TREE_BUG_NAME, false, 1)], &english()).is_none());
 }

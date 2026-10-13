@@ -26,7 +26,7 @@ fn grid(folders: usize, files: usize, loose: usize) -> TreeModel {
     for file in 0..loose {
         recorder.file(&PathBuf::from(format!("/src/loose_{file:05}")), 10);
     }
-    recorder.finish(&english())
+    recorder.finish(&english()).expect("the tree builds")
 }
 
 fn sources(folders: usize, loose: usize) -> Vec<PathBuf> {
@@ -178,7 +178,7 @@ fn a_single_child_folder_chain_is_one_row_keyed_by_its_deepest_folder() {
     recorder.file(Path::new("/src/a/b/c/1"), 1);
     recorder.file(Path::new("/src/a/b/c/2"), 1);
     recorder.file(Path::new("/src/z.txt"), 1);
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
     let c = node_at(&model, &["a", "b", "c"]);
 
     let window = flatten(&model, &at(0, 10));
@@ -212,7 +212,7 @@ fn a_window_names_the_open_rows_above_its_first_row() {
         recorder.file(&PathBuf::from(format!("/src/a/b/c/d/f_{file:02}")), 1);
     }
     recorder.file(Path::new("/src/z.txt"), 1);
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
     let c = node_at(&model, &["a", "b", "c"]);
     let d = node_at(&model, &["a", "b", "c", "d"]);
     let mut open = at(0, 3);
@@ -256,7 +256,7 @@ fn a_file_never_compacts_into_its_folder() {
     let recorder = TreeRecorder::new(&[PathBuf::from("/src/a")]);
     recorder.dir(Path::new("/src/a"));
     recorder.file(Path::new("/src/a/only.txt"), 1);
-    let model = recorder.finish(&english());
+    let model = recorder.finish(&english()).expect("the tree builds");
     let mut open = at(0, 10);
     open.expanded = vec![node_at(&model, &["a"]).get()];
 
@@ -331,7 +331,7 @@ fn settled_rows_say_how_they_ended() {
 fn an_empty_folder_is_done_once_created() {
     let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")]);
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
     let empty = node_at(&model, &["empty"]);
     assert_eq!(flatten(&model, &at(0, 1)).rows[0].state, TreeRowState::Waiting);
 

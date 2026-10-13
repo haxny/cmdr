@@ -503,3 +503,37 @@ async fn a_cross_volume_move_reports_each_source_twice_and_the_sweep_has_the_las
         vec!["keep/ done", "  a.txt skipped", "  b.txt done", "solo.txt done"]
     );
 }
+
+/// A bug while recording the scan's tree costs the tree, never the copy: the
+/// scan goes on past it, every file lands, and the operation has no tree.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_tree_that_fails_to_build_leaves_a_volume_copy_as_it_would_run_without_one() {
+    use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
+
+    let (source, dest) = make_volumes();
+    let bug = format!("/a/{TREE_BUG_NAME}");
+    put(&source, "/a/1.bin", b"one").await;
+    put(&source, &bug, b"two").await;
+    put(&source, "/b.bin", b"three").await;
+    let events = Arc::new(CollectorEventSink::new());
+    let state = make_state();
+
+    copy(
+        &events,
+        &state,
+        &source,
+        &["/a", "/b.bin"],
+        &dest,
+        &VolumeCopyConfig::default(),
+    )
+    .await
+    .expect("the copy succeeds");
+
+    for path in ["/a/1.bin", bug.as_str(), "/b.bin"] {
+        assert!(dest.exists(Path::new(path)).await, "{path} landed");
+    }
+    assert!(
+        state.transfer_tree.get().is_none(),
+        "no tree, so views answer `ready: false`"
+    );
+}

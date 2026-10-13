@@ -233,13 +233,18 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             events.emit_cancelled(ScanPreviewCancelledEvent { preview_id });
         }
         Ok(()) => {
-            let tree = (purpose == ScanPreviewPurpose::Transfer).then(|| {
-                let (tree, nodes) = from_local_scan(
-                    &sources,
-                    &dirs,
-                    files.iter().map(|file| (file.path.as_path(), file.size)),
-                    &TreeOrder::active(),
-                );
+            // A tree bug builds none, and the operation builds its own (or none) later.
+            let built = (purpose == ScanPreviewPurpose::Transfer)
+                .then(|| {
+                    from_local_scan(
+                        &sources,
+                        &dirs,
+                        files.iter().map(|file| (file.path.as_path(), file.size)),
+                        &TreeOrder::active(),
+                    )
+                })
+                .flatten();
+            let tree = built.map(|(tree, nodes)| {
                 for (file, node) in files.iter_mut().zip(nodes) {
                     file.tree_node = node;
                 }

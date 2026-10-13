@@ -170,6 +170,13 @@ A tree bug must never fail, slow, or alter a transfer:
   logged, still reaches the crash reporter's hook as the bug it is, and turns the tree off for the rest of the
   operation; the driver that reported never sees it. Views then answer `ready: false`. Pinned by
   `report_tests.rs::a_report_that_panics_turns_the_tree_off_and_the_driver_carries_on`.
+- Building is guarded the same way, by `built` in `mod.rs`: every public builder answers `Option`, a `TreeRecorder`
+  that panics on an entry goes quiet (the scan walks on) and finishes to `None`, `sort_sources` keeps the given order,
+  and `ScanResult::order_by_transfer_tree` leaves the local file list in walk order with no nodes (it reorders nothing
+  until every rank is known). `TransferTreeSlot::install(None)` installs nothing, so views answer `ready: false` and
+  every report is a no-op: the transfer runs exactly as it would with no tree. Test builds inject the bug by name
+  (`test_support::TREE_BUG_NAME`, which `TreeBuilder::child` panics on); the local copy, the volume copy, the compress,
+  and the preview each pin it (`*tree_that_fails_to_build*`).
 - One uncontended mutex per file boundary, never per chunk (below).
 
 ### What a report costs

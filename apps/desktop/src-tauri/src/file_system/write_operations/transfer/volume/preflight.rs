@@ -262,7 +262,7 @@ pub(super) async fn scan_volume_sources(
         let tree = cached
             .tree
             .take()
-            .unwrap_or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active()));
+            .or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active()));
         state.transfer_tree.install(tree);
         let mut source_hints = HashMap::with_capacity(cached.per_path.len());
         for (path, scan) in cached.per_path {

@@ -19,7 +19,7 @@ fn small() -> TreeModel {
     recorder.file(Path::new("/src/top/b.bin"), 20);
     recorder.dir(Path::new("/src/top/sub"));
     recorder.file(Path::new("/src/top/sub/c.bin"), 30);
-    recorder.finish(&english())
+    recorder.finish(&english()).expect("the tree builds")
 }
 
 fn live() -> Arc<AtomicU64> {
@@ -147,7 +147,7 @@ fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
             top_level_created_at: None,
         },
     );
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
     let opaque = node_at(&model, &["opaque"]);
 
     let inner = model.discover(opaque, "inner", NodeKind::Folder, 0);
@@ -170,7 +170,7 @@ fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
 fn an_empty_folder_waits_until_the_driver_creates_it() {
     let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")]);
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
     let empty = node_at(&model, &["empty"]);
     assert_eq!(model.folder_state(empty, false), TreeRowState::Waiting);
 
@@ -243,7 +243,7 @@ fn a_whole_subtree_landing_at_once_counts_an_opaque_folders_unwalked_files() {
         },
     );
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
     let opaque = node_at(&model, &["opaque"]);
     let found = model.discover(opaque, "found.bin", NodeKind::File, 30);
     model.complete(found);
@@ -287,7 +287,7 @@ fn empty_folders_finish_together_and_folders_with_files_keep_their_counts() {
     recorder.dir(Path::new("/src/top"));
     recorder.dir(Path::new("/src/top/empty"));
     recorder.file(Path::new("/src/top/a.bin"), 10);
-    let mut model = recorder.finish(&english());
+    let mut model = recorder.finish(&english()).expect("the tree builds");
 
     model.empty_folders_created();
 

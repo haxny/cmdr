@@ -111,6 +111,25 @@ impl TransferTree {
     }
 }
 
+/// Runs one step of building a tree (a builder, a recorded scan entry, the
+/// local engine's sort by tree order), or answers `None` if it panicked.
+///
+/// ❗ The building half of "observation only": every way a tree is built goes
+/// through here, so a tree bug costs the tree, never the transfer. The panic
+/// still reaches the crash reporter's hook (it's a bug); the caller carries on
+/// exactly as it would with no tree.
+pub(super) fn built<R>(what: &str, build: impl FnOnce() -> R) -> Option<R> {
+    match catch_unwind(AssertUnwindSafe(build)) {
+        Ok(result) => Some(result),
+        Err(_) => {
+            crate::log_error!(
+                "transfer tree: building it panicked ({what}), so this operation shows no tree (the transfer carries on)"
+            );
+            None
+        }
+    }
+}
+
 /// Where an operation keeps its tree (`WriteOperationState::transfer_tree`):
 /// empty while the scan runs, set once after.
 // DEFAULT-OK: an empty slot is exactly "this operation has no tree yet".
@@ -120,8 +139,11 @@ pub(crate) struct TransferTreeSlot(OnceLock<Arc<TransferTree>>);
 impl TransferTreeSlot {
     /// Hands the operation the tree its scan built. Once: a later call (no
     /// operation scans twice today) keeps the first tree, whose ids views may
-    /// already hold.
-    pub(crate) fn install(&self, model: TreeModel) {
+    /// already hold. `None` is a tree whose building panicked ([`built`],
+    /// logged there): the operation runs without one, and views answer
+    /// `ready: false`.
+    pub(crate) fn install(&self, tree: Option<TreeModel>) {
+        let Some(model) = tree else { return };
         let nodes = model.len();
         let kib = model.heap_bytes() / 1024;
         if self.0.set(Arc::new(TransferTree::new(model))).is_ok() {

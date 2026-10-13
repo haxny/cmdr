@@ -698,3 +698,47 @@ async fn compress_out_of_range_level_clamps_instead_of_failing() {
         "level 42 must clamp to level 9"
     );
 }
+
+/// A bug while building the compress's tree costs the tree, never the zip.
+#[tokio::test]
+async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_one() {
+    use crate::file_system::volume::backends::LocalPosixVolume;
+    use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let src_root = tmp.path().join("src");
+    std::fs::create_dir_all(src_root.join("project")).expect("mkdir");
+    std::fs::write(src_root.join("project/readme.txt"), b"top").expect("w1");
+    std::fs::write(src_root.join("project").join(TREE_BUG_NAME), b"bug").expect("w2");
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+
+    let dest = tmp.path().join("project.zip");
+    let events = Arc::new(CollectorEventSink::new());
+    compress_start(
+        Arc::clone(&events) as Arc<dyn OperationEventSink>,
+        source_volume,
+        vec![PathBuf::from("project")],
+        dest.clone(),
+        unique_lane_id(),
+        ConflictResolution::Overwrite,
+        0,
+        None,
+        None,
+        crate::operation_log::types::Initiator::User,
+    )
+    .await
+    .expect("start compress");
+
+    wait_until_async(Duration::from_secs(5), "the write-complete event", || {
+        !events.complete.lock_ignore_poison().is_empty()
+    })
+    .await;
+    assert_eq!(
+        read_entry(&dest, "project/readme.txt").as_deref(),
+        Some(b"top".as_slice())
+    );
+    assert_eq!(
+        read_entry(&dest, &format!("project/{TREE_BUG_NAME}")).as_deref(),
+        Some(b"bug".as_slice())
+    );
+}

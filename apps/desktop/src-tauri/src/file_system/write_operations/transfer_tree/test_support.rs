@@ -5,6 +5,10 @@ use super::model::{NodeId, NodeKind, TreeModel};
 use super::order::TreeOrder;
 use cmdr_listing::testing::collator_for;
 
+/// A name the tree's builder panics on (test builds only): a stand-in for a
+/// tree bug, to pin that one costs the tree and never the transfer.
+pub(crate) const TREE_BUG_NAME: &str = "cmdr-test-tree-bug";
+
 pub(crate) fn english() -> TreeOrder {
     TreeOrder::with_collator(collator_for("en"))
 }

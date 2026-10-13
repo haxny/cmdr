@@ -299,16 +299,19 @@ async fn run(
     // The plan's entries are the compress's rows: entry names are already
     // relative to the selection's parent. Each entry's row pairs with the
     // entry index `produce` reports (`CompressRows`).
+    // A tree bug builds none: no rows, and the compress runs as it would without them.
     let (tree, entry_rows) = from_archive_plan(
         plan.entries
             .iter()
             .map(|entry| (entry.name.as_str(), entry.is_directory, entry.size)),
         &TreeOrder::active(),
-    );
+    )
+    .unzip();
     state.transfer_tree.install(tree);
     let rows = CompressRows::new(
         state.transfer_tree.reporter(),
         entry_rows
+            .unwrap_or_default()
             .into_iter()
             .zip(plan.entries.iter().map(|entry| entry.is_directory))
             .collect(),

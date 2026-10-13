@@ -16,9 +16,9 @@ fn compress_rows_follow_the_producers_ticks_entry_by_entry() {
         ("top/empty.txt", false, 0),
         ("top/z.txt", false, 30),
     ];
-    let (model, entry_rows) = from_archive_plan(plan.iter().copied(), &TreeOrder::active());
+    let (model, entry_rows) = from_archive_plan(plan.iter().copied(), &TreeOrder::active()).expect("the tree builds");
     let slot = TransferTreeSlot::default();
-    slot.install(model);
+    slot.install(Some(model));
     let rows = CompressRows::new(
         slot.reporter(),
         entry_rows

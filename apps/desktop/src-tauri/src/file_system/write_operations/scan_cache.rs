@@ -36,7 +36,7 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::Notify;
 
-use super::transfer_tree::{NodeId, TreeModel, TreeOrder, from_local_scan};
+use super::transfer_tree::{NodeId, TreeModel, TreeOrder, built, from_local_scan};
 use super::types::WriteOperationError;
 use crate::file_system::volume::{CopyScanResult, ScannedFile};
 use crate::ignore_poison::RwLockIgnorePoison;
@@ -732,27 +732,55 @@ impl ScanResult {
     /// put in its order: the order the copy starts them in, so the rows below
     /// the active one really are next. The tree is the preview's, or built here
     /// from `files` and `dirs`, every file learning its node.
-    pub(super) fn order_by_transfer_tree(&mut self, sources: &[PathBuf]) -> TreeModel {
-        let tree = match self.tree.take() {
-            Some(tree) => tree,
-            None => {
-                let (tree, nodes) = from_local_scan(
+    ///
+    /// ❗ A tree bug (`transfer_tree::built`) answers `None` and leaves `files`
+    /// in the walk's order with no nodes: the copy a tree-less transfer makes.
+    /// Nothing is reordered until every rank is known, so a panic midway can't
+    /// leave the list half sorted.
+    pub(super) fn order_by_transfer_tree(&mut self, sources: &[PathBuf]) -> Option<TreeModel> {
+        let preview_tree = self.tree.take();
+        let (files, dirs) = (&self.files, &self.dirs);
+        let ordered = built("ordering a local walk", || {
+            let (tree, nodes): (TreeModel, Vec<Option<NodeId>>) = match preview_tree {
+                Some(tree) => (tree, files.iter().map(|file| file.tree_node).collect()),
+                None => from_local_scan(
                     sources,
-                    &self.dirs,
-                    self.files.iter().map(|file| (file.path.as_path(), file.size)),
+                    dirs,
+                    files.iter().map(|file| (file.path.as_path(), file.size)),
                     &TreeOrder::active(),
-                );
-                for (file, node) in self.files.iter_mut().zip(nodes) {
-                    file.tree_node = node;
-                }
-                tree
+                )?,
+            };
+            let ranks = tree.tree_order_ranks();
+            // Every walked file has a node; one without would go last, not nowhere.
+            let keys: Vec<u32> = nodes
+                .iter()
+                .map(|node| node.map_or(u32::MAX, |node| ranks.of(node)))
+                .collect();
+            Some((tree, nodes, keys))
+        })
+        .flatten();
+        let Some((tree, nodes, keys)) = ordered else {
+            log::warn!(
+                target: "cmdr_lib::write_operations",
+                "transfer tree: none for this copy, so its files go in the walk's order"
+            );
+            for file in &mut self.files {
+                file.tree_node = None;
             }
+            return None;
         };
-        let ranks = tree.tree_order_ranks();
-        // Every walked file has a node; one without would go last, not nowhere.
-        self.files
-            .sort_by_key(|file| file.tree_node.map_or(u32::MAX, |node| ranks.of(node)));
-        tree
+        let mut keyed: Vec<(u32, FileInfo)> = keys
+            .into_iter()
+            .zip(self.files.drain(..))
+            .zip(nodes)
+            .map(|((key, mut file), node)| {
+                file.tree_node = node;
+                (key, file)
+            })
+            .collect();
+        keyed.sort_by_key(|(key, _)| *key);
+        self.files = keyed.into_iter().map(|(_, file)| file).collect();
+        Some(tree)
     }
 }
 

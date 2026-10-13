@@ -8,13 +8,18 @@
 //!
 //! All three end in [`TreeBuilder::finish`], which sorts every folder's
 //! children into tree order and lays the arena out breadth-first.
+//!
+//! ❗ Every public way in runs under [`built`] and answers `None` for a tree
+//! bug, so a caller can't build a tree that fails its transfer.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use cmdr_fs::volume::{CopyScanResult, ScanRecorder};
 
+use super::built;
 use super::model::{NodeId, NodeKind, NodeSeed, TreeModel, clip_name};
 use super::order::TreeOrder;
 use crate::ignore_poison::IgnorePoison;
@@ -60,6 +65,8 @@ impl TreeBuilder {
     }
 
     pub(super) fn child(&mut self, parent: BuilderId, name: &str, kind: NodeKind, size: u64) -> BuilderId {
+        #[cfg(test)]
+        assert_ne!(name, super::test_support::TREE_BUG_NAME, "an injected tree bug");
         let name = clip_name(name);
         let name_offset = self.names.len() as u32;
         self.names.push_str(name);
@@ -305,20 +312,25 @@ fn source_label<'a>(root: &Path, source: &'a Path) -> std::borrow::Cow<'a, str> 
 /// Puts a selection's sources in tree order, the order its top-level rows list
 /// in: ranked by the same labels, folders first. `is_folder` says what the scan
 /// found each one to be; a source it knows nothing about ranks as the file row
-/// it shows as. Sources with one label keep their given order.
+/// it shows as. Sources with one label keep their given order, and all of them
+/// do if ranking them panics.
 pub(crate) fn sort_sources(sources: &mut [PathBuf], is_folder: impl Fn(&Path) -> bool, order: &TreeOrder) {
-    let root = common_ancestor(sources);
-    let mut ranked: Vec<(bool, String, PathBuf)> = sources
-        .iter()
-        .map(|source| {
-            (
-                is_folder(source),
-                source_label(&root, source).into_owned(),
-                source.clone(),
-            )
-        })
-        .collect();
-    order.sort(&mut ranked, |(is_folder, label, _)| (*is_folder, label.as_str()));
+    let ranked = built("ranking the selection", || {
+        let root = common_ancestor(sources);
+        let mut ranked: Vec<(bool, String, PathBuf)> = sources
+            .iter()
+            .map(|source| {
+                (
+                    is_folder(source),
+                    source_label(&root, source).into_owned(),
+                    source.clone(),
+                )
+            })
+            .collect();
+        order.sort(&mut ranked, |(is_folder, label, _)| (*is_folder, label.as_str()));
+        ranked
+    });
+    let Some(ranked) = ranked else { return };
     for (slot, (_, _, source)) in sources.iter_mut().zip(ranked) {
         *slot = source;
     }
@@ -353,40 +365,71 @@ fn file_name(path: &Path) -> std::borrow::Cow<'_, str> {
 /// An entry the recorder can't place under one of the sources is dropped with
 /// a debug line: that's a backend reporting a path form the caller doesn't
 /// use, and a tree with a hole beats a tree that lies.
+///
+/// ❗ The scan calls in from its own walk, so an entry that panics is caught
+/// here ([`built`]): the recorder goes quiet, the scan walks on, and
+/// [`finish`](Self::finish) builds no tree.
 pub(crate) struct TreeRecorder {
     tree: Mutex<PathTree>,
+    /// An entry panicked: record nothing more, build nothing.
+    broken: AtomicBool,
 }
 
 impl TreeRecorder {
     pub(crate) fn new(sources: &[PathBuf]) -> Self {
+        let tree = built("placing the selection", || PathTree::new(sources));
         Self {
-            tree: Mutex::new(PathTree::new(sources)),
+            broken: AtomicBool::new(tree.is_none()),
+            // An empty tree places nothing, so it can't panic.
+            tree: Mutex::new(tree.unwrap_or_else(|| PathTree::new(&[]))),
         }
     }
 
-    /// The tree of everything recorded so far. Takes it: the recorder is empty
-    /// afterwards, so call it once the scan has returned.
-    pub(crate) fn finish(&self, order: &TreeOrder) -> TreeModel {
+    /// The tree of everything recorded so far, or `None` after a tree bug.
+    /// Takes it: the recorder is empty afterwards, so call it once the scan
+    /// has returned.
+    pub(crate) fn finish(&self, order: &TreeOrder) -> Option<TreeModel> {
+        if self.broken.load(Ordering::Relaxed) {
+            return None;
+        }
         let tree = std::mem::replace(&mut *self.tree.lock_ignore_poison(), PathTree::new(&[]));
-        tree.finish(order).0
+        built("finishing a scan's tree", || tree.finish(order).0)
+    }
+
+    /// Records one entry, unless an earlier one broke the recorder.
+    fn record(&self, entry: impl FnOnce(&mut PathTree)) {
+        if self.broken.load(Ordering::Relaxed) {
+            return;
+        }
+        if built("recording a scanned entry", || {
+            entry(&mut self.tree.lock_ignore_poison())
+        })
+        .is_none()
+        {
+            self.broken.store(true, Ordering::Relaxed);
+        }
     }
 }
 
 impl ScanRecorder for TreeRecorder {
     fn file(&self, path: &Path, size: u64) {
-        if self.tree.lock_ignore_poison().file(path, size).is_none() {
-            log_unplaced(path);
-        }
+        self.record(|tree| {
+            if tree.file(path, size).is_none() {
+                log_unplaced(path);
+            }
+        });
     }
 
     fn dir(&self, path: &Path) {
-        if self.tree.lock_ignore_poison().dir(path).is_none() {
-            log_unplaced(path);
-        }
+        self.record(|tree| {
+            if tree.dir(path).is_none() {
+                log_unplaced(path);
+            }
+        });
     }
 
     fn subtree(&self, path: &Path, scan: &CopyScanResult) {
-        self.tree.lock_ignore_poison().subtree(path, scan);
+        self.record(|tree| tree.subtree(path, scan));
     }
 }
 
@@ -405,7 +448,7 @@ pub(crate) fn from_per_path(
     sources: &[PathBuf],
     per_path: &[(PathBuf, CopyScanResult)],
     order: &TreeOrder,
-) -> TreeModel {
+) -> Option<TreeModel> {
     let recorder = TreeRecorder::new(sources);
     for (path, scan) in per_path {
         recorder.subtree(path, scan);
@@ -417,12 +460,18 @@ pub(crate) fn from_per_path(
 /// folder. A rename takes a whole item in one call and walks nothing, so the
 /// item IS the unit of work, the same unit its progress counts; a folder row
 /// is done the moment its rename lands (`TreeModel::complete_subtree`).
-pub(crate) fn from_sources(sources: &[PathBuf], is_folder: impl Fn(&Path) -> bool, order: &TreeOrder) -> TreeModel {
-    let mut tree = PathTree::new(sources);
-    for source in sources.iter().filter(|source| is_folder(source)) {
-        tree.dir(source);
-    }
-    tree.finish(order).0
+pub(crate) fn from_sources(
+    sources: &[PathBuf],
+    is_folder: impl Fn(&Path) -> bool,
+    order: &TreeOrder,
+) -> Option<TreeModel> {
+    built("a rename move's items", || {
+        let mut tree = PathTree::new(sources);
+        for source in sources.iter().filter(|source| is_folder(source)) {
+            tree.dir(source);
+        }
+        tree.finish(order).0
+    })
 }
 
 /// The local walk's tree: `dirs` (every folder it entered, the sources among
@@ -434,18 +483,20 @@ pub(crate) fn from_local_scan<'a>(
     dirs: &[PathBuf],
     files: impl IntoIterator<Item = (&'a Path, u64)>,
     order: &TreeOrder,
-) -> (TreeModel, Vec<Option<NodeId>>) {
-    let mut tree = PathTree::new(sources);
-    for dir in dirs {
-        tree.dir(dir);
-    }
-    let file_ids: Vec<Option<BuilderId>> = files.into_iter().map(|(path, size)| tree.file(path, size)).collect();
-    let (model, final_ids) = tree.finish(order);
-    let nodes = file_ids
-        .into_iter()
-        .map(|id| id.map(|id| final_ids[id.0 as usize]))
-        .collect();
-    (model, nodes)
+) -> Option<(TreeModel, Vec<Option<NodeId>>)> {
+    built("a local walk", || {
+        let mut tree = PathTree::new(sources);
+        for dir in dirs {
+            tree.dir(dir);
+        }
+        let file_ids: Vec<Option<BuilderId>> = files.into_iter().map(|(path, size)| tree.file(path, size)).collect();
+        let (model, final_ids) = tree.finish(order);
+        let nodes = file_ids
+            .into_iter()
+            .map(|id| id.map(|id| final_ids[id.0 as usize]))
+            .collect();
+        (model, nodes)
+    })
 }
 
 /// A compress plan's tree, from its entries' root-relative names (`top/a.txt`,
@@ -453,28 +504,30 @@ pub(crate) fn from_local_scan<'a>(
 pub(crate) fn from_archive_plan<'a>(
     entries: impl IntoIterator<Item = (&'a str, bool, u64)>,
     order: &TreeOrder,
-) -> (TreeModel, Vec<NodeId>) {
-    let mut builder = TreeBuilder::new();
-    let mut folders: HashMap<&'a str, BuilderId> = HashMap::new();
-    let mut entry_ids = Vec::new();
-    for (name, is_directory, size) in entries {
-        let trimmed = name.trim_end_matches('/');
-        let (parent, leaf) = match trimmed.rsplit_once('/') {
-            Some((parent, leaf)) => (folder_for(&mut builder, &mut folders, parent), leaf),
-            None => (BuilderId::ROOT, trimmed),
-        };
-        let id = if is_directory {
-            *folders
-                .entry(trimmed)
-                .or_insert_with(|| builder.child(parent, leaf, NodeKind::Folder, 0))
-        } else {
-            builder.child(parent, leaf, NodeKind::File, size)
-        };
-        entry_ids.push(id);
-    }
-    let (model, final_ids) = builder.finish(order);
-    let nodes = entry_ids.into_iter().map(|id| final_ids[id.0 as usize]).collect();
-    (model, nodes)
+) -> Option<(TreeModel, Vec<NodeId>)> {
+    built("a compress plan", || {
+        let mut builder = TreeBuilder::new();
+        let mut folders: HashMap<&'a str, BuilderId> = HashMap::new();
+        let mut entry_ids = Vec::new();
+        for (name, is_directory, size) in entries {
+            let trimmed = name.trim_end_matches('/');
+            let (parent, leaf) = match trimmed.rsplit_once('/') {
+                Some((parent, leaf)) => (folder_for(&mut builder, &mut folders, parent), leaf),
+                None => (BuilderId::ROOT, trimmed),
+            };
+            let id = if is_directory {
+                *folders
+                    .entry(trimmed)
+                    .or_insert_with(|| builder.child(parent, leaf, NodeKind::Folder, 0))
+            } else {
+                builder.child(parent, leaf, NodeKind::File, size)
+            };
+            entry_ids.push(id);
+        }
+        let (model, final_ids) = builder.finish(order);
+        let nodes = entry_ids.into_iter().map(|id| final_ids[id.0 as usize]).collect();
+        (model, nodes)
+    })
 }
 
 /// The folder at `path` in a compress plan, created with its ancestors when the

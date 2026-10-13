@@ -91,7 +91,7 @@ async fn a_transfer_preview_of_a_local_selection_carries_its_tree_and_each_files
     let mut result = local_preview("local", &sources, ScanPreviewPurpose::Transfer).await;
     assert!(result.tree.is_some(), "a transfer's preview builds the tree");
 
-    let tree = result.order_by_transfer_tree(&sources);
+    let tree = result.order_by_transfer_tree(&sources).expect("the tree builds");
     assert_eq!(outline(&tree), EXPECTED);
     assert_eq!(file_order(&result, &dir), TREE_ORDER);
     for file in &result.files {
@@ -122,7 +122,7 @@ async fn an_operation_without_a_preview_tree_builds_one_from_the_walk() {
     let sources = seed(&dir);
     let mut result = local_preview("fallback", &sources, ScanPreviewPurpose::Delete).await;
 
-    let tree = result.order_by_transfer_tree(&sources);
+    let tree = result.order_by_transfer_tree(&sources).expect("the tree builds");
 
     assert_eq!(outline(&tree), EXPECTED);
     assert!(result.files.iter().all(|file| file.tree_node.is_some()));
@@ -162,4 +162,24 @@ async fn a_transfer_preview_of_a_volume_records_its_tree() {
         outline(&result.tree.expect("a transfer's preview builds the tree")),
         EXPECTED
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_tree_that_fails_to_build_leaves_the_preview_and_its_walk_order_as_they_were() {
+    use super::transfer_tree::test_support::TREE_BUG_NAME;
+
+    let dir = TestDir::new("preview_tree_bug");
+    let src = dir.join("src");
+    fs::create_dir_all(src.join("b")).unwrap();
+    fs::write(src.join("z.txt"), b"1").unwrap();
+    fs::write(src.join("b").join(TREE_BUG_NAME), b"2").unwrap();
+    let sources = vec![src.join("z.txt"), src.join("b")];
+
+    let mut result = local_preview("bug", &sources, ScanPreviewPurpose::Transfer).await;
+    assert!(result.tree.is_none(), "the preview completes, without a tree");
+    let walk_order = file_order(&result, &dir);
+
+    assert!(result.order_by_transfer_tree(&sources).is_none());
+    assert_eq!(file_order(&result, &dir), walk_order, "the files keep the walk's order");
+    assert!(result.files.iter().all(|file| file.tree_node.is_none()));
 }
