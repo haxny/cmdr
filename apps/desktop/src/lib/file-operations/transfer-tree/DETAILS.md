@@ -125,9 +125,12 @@ pauses following.
 - Count line, joined by middle dots: a folder at work "312 / 1,000 files · 1.2 GB / 4.0 GB", a waiting or finished one
   "1,000 files · 4.0 GB", plus "3 skipped" and a red "1 failed". A file: its size, "1.0 MB / 4.0 MB" at work, "Skipped",
   or its failure's typed title in red. A failed folder keeps the progress form, so "999 / 1,000" says what's missing.
-- Accessible name: `formatUnitList([label, state, …facts])`, "Photos 2024, Copying, 312 of 1,000 files, 1.2 GB of 4.0
-  GB". Each item is a standalone catalog phrase, so no key is a sentence fragment. No `aria-live`: the header readout
-  speaks; a 5 Hz tree would talk over everything.
+- Accessible name: `formatUnitList([label, …the count line's segments, state])`, "Photos 2024, 312 / 1,000 files, 1.2 GB
+  / 4.0 GB, Copying": the visible text first, verbatim and in order, then the state (left out when a segment already
+  says it, as a skipped file's "Skipped" does). **Why**: WCAG 2.5.3 (label in name). Speech control finds a row by the
+  words on screen, so an "of" form of a visible "/" missed it; axe can only mark the rule incomplete in jsdom, so
+  `row-format.test.ts` pins it. Each item is a standalone catalog phrase, so no key is a sentence fragment. No
+  `aria-live`: the header readout speaks; a 5 Hz tree would talk over everything.
 - The bar: folders along the view's `axis` (`Files` or `Size` progress as its name), files by bytes, drawn only on rows
   at work, without the shimmer (eight shimmering bars in a parallel SMB copy were busy).
 - The label middle-truncates (`useShortenMiddle`) and hovers its full relative path, rebuilt by `rowPaths` from the

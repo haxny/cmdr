@@ -105,20 +105,45 @@ describe('countSegments', () => {
 })
 
 describe('accessibleName', () => {
-  it('says what the row is, what’s happening to it, and how far it got, worded per operation', () => {
-    expect(accessibleName(folder(), 'copy')).toBe('Photos 2024, Copying, 312 of 1,000 files, 1.2 GB of 4.0 GB')
-    expect(accessibleName(file(), 'move')).toBe('IMG_0001.jpg, Moving, 1.0 MB of 4.0 MB')
-    expect(accessibleName(file({ state: 'active' }), 'compress')).toBe('IMG_0001.jpg, Compressing, 1.0 MB of 4.0 MB')
+  it('reads the row as it shows, label first and counts in order, then says what’s happening, worded per operation', () => {
+    expect(accessibleName(folder(), 'copy')).toBe('Photos 2024, 312 / 1,000 files, 1.2 GB / 4.0 GB, Copying')
+    expect(accessibleName(file(), 'move')).toBe('IMG_0001.jpg, 1.0 MB / 4.0 MB, Moving')
+    expect(accessibleName(file({ state: 'active' }), 'compress')).toBe('IMG_0001.jpg, 1.0 MB / 4.0 MB, Compressing')
   })
 
-  it('names settled rows by their totals and their outcome', () => {
+  it('names settled rows by their totals and their outcome, once', () => {
     expect(accessibleName(folder({ state: 'waiting', filesDone: 0, bytesDone: 0 }), 'copy')).toBe(
-      'Photos 2024, Waiting, 1,000 files, 4.0 GB',
+      'Photos 2024, 1,000 files, 4.0 GB, Waiting',
     )
     expect(accessibleName(folder({ state: 'done', filesDone: 1_000, bytesDone: 4 * GB, skipped: 2 }), 'copy')).toBe(
-      'Photos 2024, Done, 1,000 files, 4.0 GB, 2 skipped',
+      'Photos 2024, 1,000 files, 4.0 GB, 2 skipped, Done',
     )
-    expect(accessibleName(file({ state: 'skipped' }), 'copy')).toBe('IMG_0001.jpg, Skipped, 4.0 MB')
+    expect(accessibleName(file({ state: 'skipped' }), 'copy')).toBe('IMG_0001.jpg, Skipped')
+  })
+
+  // WCAG 2.5.3 (label in name): speech control finds a row by the words it shows, so
+  // the name holds the visible text in its order. Axe can only flag it incomplete in jsdom.
+  it('holds every row’s visible text, in the order it shows', () => {
+    const rows = [
+      folder(),
+      folder({ state: 'waiting', filesDone: 0, bytesDone: 0 }),
+      folder({ state: 'failed', filesDone: 999, bytesDone: 4 * GB, failed: 1, skipped: 3 }),
+      file(),
+      file({ state: 'done', bytesDone: 4_000_000 }),
+      file({ state: 'skipped' }),
+      file({ state: 'failed', failure: { type: 'source_not_found', path: '/src/IMG_0001.jpg' } }),
+    ]
+    for (const row of rows) {
+      const name = accessibleName(row, 'copy')
+      const visible = [row.label, ...countSegments(row, 'copy').map((segment) => segment.text)]
+      expect(name.startsWith(row.label), name).toBe(true)
+      let from = 0
+      for (const text of visible) {
+        const at = name.indexOf(text, from)
+        expect(at, `${text} in ${name}`).toBeGreaterThanOrEqual(from)
+        from = at + text.length
+      }
+    }
   })
 })
 

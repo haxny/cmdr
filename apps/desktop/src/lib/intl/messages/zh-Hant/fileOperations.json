@@ -1103,14 +1103,6 @@
   "@fileOperations.transferTree.filesProgress": {
     "sourceHash": "48675a6"
   },
-  "fileOperations.transferTree.filesProgressAria": "{totalText} 個{total, plural, other {檔案}}中已完成 {doneText} 個",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "sourceHash": "0597d05"
-  },
-  "fileOperations.transferTree.sizeProgressAria": "{total} 中已完成 {done}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "sourceHash": "e7a467e"
-  },
   "fileOperations.transferTree.skippedCount": "{count, plural, other {已略過 {countText} 個}}",
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"

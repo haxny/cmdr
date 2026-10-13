@@ -1972,30 +1972,11 @@
 
   "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, one {file} other {files}}",
   "@fileOperations.transferTree.filesProgress": {
-    "description": "How far a folder’s files have got, in the small gray count text at the end of a folder’s row in the live file tree of a copy/move/compress, for example “312 / 1,000 files”. The slash reads as “out of”; keep it as a slash. A size like “1.2 / 4.0 GB” may follow after a middle dot. Tight space: keep it short.",
+    "description": "How far a folder’s files have got, in the small gray count text at the end of a folder’s row in the live file tree of a copy/move/compress, for example “312 / 1,000 files”. The slash reads as “out of”; keep it as a slash. A size like “1.2 / 4.0 GB” may follow after a middle dot. Screen readers hear it exactly as shown, as one item of the row’s comma-separated description (speech control finds the row by these words), so it has to read on its own. Tight space: keep it short.",
     "placeholders": {
       "doneText": "how many of the folder’s files are finished, already formatted (e.g. 312)",
       "totalText": "how many files the folder holds, already formatted (e.g. 1,000)",
       "total": "the same total number (drives the singular/plural form of the noun)"
-    }
-  },
-
-  "fileOperations.transferTree.filesProgressAria": "{doneText} of {totalText} {total, plural, one {file} other {files}}",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "description": "Screen-reader-only form of fileOperations.transferTree.filesProgress: how far a folder’s files have got, read as part of the folder’s row in the live file tree of a copy/move/compress, for example “312 of 1,000 files”. It’s one item of a comma-separated list that also names the folder, what’s happening to it (fileOperations.transferTree.state.copying and its siblings), and its size, so it has to read on its own. It names no visible control, so any natural “X of Y” frame works, a colon or a slash frame included.",
-    "placeholders": {
-      "doneText": "how many of the folder’s files are finished, already formatted (e.g. 312)",
-      "totalText": "how many files the folder holds, already formatted (e.g. 1,000)",
-      "total": "the same total number (drives the singular/plural form of the noun)"
-    }
-  },
-
-  "fileOperations.transferTree.sizeProgressAria": "{done} of {total}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "description": "Screen-reader-only: how much of a file or folder has been transferred so far, by size, read as part of its row in the live file tree of a copy/move/compress, for example “1.2 GB of 4.0 GB”. One item of a comma-separated list (see fileOperations.transferTree.filesProgressAria), so it has to read on its own. It names no visible control, and the sizes come with their units, so pick a frame that needs no case ending on them (a colon or a slash frame is fine).",
-    "placeholders": {
-      "done": "the size transferred so far, with its unit (e.g. 1.2 GB)",
-      "total": "the full size, with its unit (e.g. 4.0 GB)"
     }
   },
 
@@ -2019,22 +2000,22 @@
 
   "fileOperations.transferTree.state.waiting": "Waiting",
   "@fileOperations.transferTree.state.waiting": {
-    "description": "State of a file or folder in the live file tree of a copy/move/compress that hasn’t started yet. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+    "description": "State of a file or folder in the live file tree of a copy/move/compress that hasn’t started yet. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows."
   },
 
   "fileOperations.transferTree.state.copying": "Copying",
   "@fileOperations.transferTree.state.copying": {
-    "description": "State of a file or folder being copied right now, in the live file tree of a copy. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name. Siblings: fileOperations.transferTree.state.moving and fileOperations.transferTree.state.compressing for the other two operations."
+    "description": "State of a file or folder being copied right now, in the live file tree of a copy. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows. Siblings: fileOperations.transferTree.state.moving and fileOperations.transferTree.state.compressing for the other two operations."
   },
 
   "fileOperations.transferTree.state.moving": "Moving",
   "@fileOperations.transferTree.state.moving": {
-    "description": "State of a file or folder being moved right now, in the live file tree of a move. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+    "description": "State of a file or folder being moved right now, in the live file tree of a move. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows."
   },
 
   "fileOperations.transferTree.state.compressing": "Compressing",
   "@fileOperations.transferTree.state.compressing": {
-    "description": "State of a file or folder being added to a new zip right now, in the live file tree of a compress. Screen-reader only: read as one item of the row’s comma-separated description, right after the file or folder name."
+    "description": "State of a file or folder being added to a new zip right now, in the live file tree of a compress. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows."
   },
 
   "fileOperations.transferTree.state.done": "Done",

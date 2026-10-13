@@ -177,7 +177,7 @@ describe('TransferProgressDialog’s transfer tree', () => {
 
     await send(event('copying'))
     expect(target.querySelector('[role="tree"] [role="treeitem"]')?.getAttribute('aria-label')).toMatch(
-      /^holiday\.mov, Copying/,
+      /^holiday\.mov, .+, Copying$/,
     )
     expect(target.querySelector('.current-file')).toBeNull()
     // The tree is what absorbs extra height, so the dialog grows both ways now.

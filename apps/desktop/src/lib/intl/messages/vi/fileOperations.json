@@ -1104,14 +1104,6 @@
   "@fileOperations.transferTree.filesProgress": {
     "sourceHash": "48675a6"
   },
-  "fileOperations.transferTree.filesProgressAria": "{doneText} trên {totalText} {total, plural, other {tệp}}",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "sourceHash": "0597d05"
-  },
-  "fileOperations.transferTree.sizeProgressAria": "{done} trên {total}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "sourceHash": "e7a467e"
-  },
   "fileOperations.transferTree.skippedCount": "{count, plural, other {đã bỏ qua {countText}}}",
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"

@@ -108,7 +108,7 @@ describe('TransferTree', () => {
     expect(track.getAttribute('aria-level')).toBe('2')
     expect(track.getAttribute('aria-setsize')).toBe('1000')
     expect(track.getAttribute('aria-expanded')).toBeNull()
-    expect(track.getAttribute('aria-label')).toMatch(/^track_0001\.flac, (Moving|Done), /)
+    expect(track.getAttribute('aria-label')).toMatch(/^track_0001\.flac, .+, (Moving|Done)$/)
   })
 
   it('names a compact folder chain as one row and hovers each row’s full path', async () => {

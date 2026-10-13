@@ -90,32 +90,20 @@ function failureReason(row: TransferTreeRow, operation: TransferTreeOperation): 
 }
 
 /**
- * The row's accessible name: "Photos 2024, Copying, 312 of 1,000 files, 1.2 GB
- * of 4.0 GB". Each item is a phrase of its own, listed the UI language's way,
- * so no catalog string is a sentence fragment.
+ * The row's accessible name: what it shows, in the order it shows it, then its
+ * state: "Photos 2024, 312 / 1,000 files, 1.2 GB / 4.0 GB, Copying". Each item
+ * is a phrase of its own, listed the UI language's way, so no catalog string is
+ * a sentence fragment.
+ *
+ * ❗ The visible text comes first and verbatim (WCAG 2.5.3, label in name):
+ * speech control finds a row by the words on screen, so "312 of 1,000" for a
+ * visible "312 / 1,000" would miss it. The state is last, and only when no
+ * visible segment already says it (a skipped file shows "Skipped").
  */
 export function accessibleName(row: TransferTreeRow, operation: TransferTreeOperation): string {
-  const parts = [row.label, stateWord(row.state, operation)]
-  if (row.kind === 'folder') {
-    const inProgress = showsProgress(row)
-    parts.push(
-      inProgress
-        ? tString('fileOperations.transferTree.filesProgressAria', {
-            doneText: formatInteger(row.filesDone),
-            totalText: formatInteger(row.filesTotal),
-            total: row.filesTotal,
-          })
-        : filesTotalText(row.filesTotal),
-    )
-    if (row.bytesTotal > 0) parts.push(sizeText(inProgress ? row.bytesDone : null, row.bytesTotal))
-    if (row.skipped > 0) parts.push(skippedText(row.skipped))
-    if (row.failed > 0) parts.push(failedText(row.failed))
-  } else if (row.state === 'failed') {
-    parts.push(failureReason(row, operation))
-  } else {
-    parts.push(sizeText(row.state === 'active' ? row.bytesDone : null, row.bytesTotal))
-  }
-  return formatUnitList(parts)
+  const visible = countSegments(row, operation).map((segment) => segment.text)
+  const state = stateWord(row.state, operation)
+  return formatUnitList([row.label, ...visible, ...(visible.includes(state) ? [] : [state])])
 }
 
 /** A row's state as a word, the active one worded by operation. */
@@ -167,11 +155,6 @@ function plainSize(bytes: number): string {
 /** The visible size: "4.0 MB", or "1.2 GB / 4.0 GB" while it's at work. */
 function sizeLine(done: number | null, total: number): string {
   return done === null ? plainSize(total) : `${plainSize(done)} / ${plainSize(total)}`
-}
-
-function sizeText(done: number | null, total: number): string {
-  if (done === null) return plainSize(total)
-  return tString('fileOperations.transferTree.sizeProgressAria', { done: plainSize(done), total: plainSize(total) })
 }
 
 /**

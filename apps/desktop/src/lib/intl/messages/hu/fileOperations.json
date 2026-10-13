@@ -1105,14 +1105,6 @@
   "@fileOperations.transferTree.filesProgress": {
     "sourceHash": "48675a6"
   },
-  "fileOperations.transferTree.filesProgressAria": "{doneText} kész ennyiből: {totalText} {total, plural, one {fájl} other {fájl}}",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "sourceHash": "0597d05"
-  },
-  "fileOperations.transferTree.sizeProgressAria": "{done} kész ennyiből: {total}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "sourceHash": "e7a467e"
-  },
   "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} kihagyva} other {{countText} kihagyva}}",
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"

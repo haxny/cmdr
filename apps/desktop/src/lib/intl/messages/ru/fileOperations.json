@@ -1104,14 +1104,6 @@
   "@fileOperations.transferTree.filesProgress": {
     "sourceHash": "48675a6"
   },
-  "fileOperations.transferTree.filesProgressAria": "{doneText} из {totalText} {total, plural, one {файла} few {файлов} many {файлов} other {файла}}",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "sourceHash": "0597d05"
-  },
-  "fileOperations.transferTree.sizeProgressAria": "{done} из {total}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "sourceHash": "e7a467e"
-  },
   "fileOperations.transferTree.skippedCount": "{count, plural, one {пропущено: {countText}} few {пропущено: {countText}} many {пропущено: {countText}} other {пропущено: {countText}}}",
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"

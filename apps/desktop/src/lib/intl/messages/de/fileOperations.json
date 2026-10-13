@@ -1108,14 +1108,6 @@
   "@fileOperations.transferTree.filesProgress": {
     "sourceHash": "48675a6"
   },
-  "fileOperations.transferTree.filesProgressAria": "{doneText} von {totalText} {total, plural, one {Datei} other {Dateien}}",
-  "@fileOperations.transferTree.filesProgressAria": {
-    "sourceHash": "0597d05"
-  },
-  "fileOperations.transferTree.sizeProgressAria": "{done} von {total}",
-  "@fileOperations.transferTree.sizeProgressAria": {
-    "sourceHash": "e7a467e"
-  },
   "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} übersprungen} other {{countText} übersprungen}}",
   "@fileOperations.transferTree.skippedCount": {
     "sourceHash": "3cb9b95"
