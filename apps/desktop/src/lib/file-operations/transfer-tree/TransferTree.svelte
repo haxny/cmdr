@@ -581,11 +581,16 @@
         color: var(--color-text-tertiary);
     }
 
+    /* Floats over the rows, so it's opaque (a secondary button is see-through, and the
+       row under it, its cursor and its checkmark, showed through) and stacks above the
+       pinned headers. The capsule matches the button's, so the shadow hugs it. */
     .follow {
         position: absolute;
+        z-index: 2;
         inset-block-end: var(--spacing-sm);
         inset-inline-end: var(--spacing-md);
-        border-radius: var(--radius-input);
+        border-radius: var(--radius-full);
+        background: var(--color-bg-primary);
         box-shadow: var(--shadow-sm);
     }
 </style>

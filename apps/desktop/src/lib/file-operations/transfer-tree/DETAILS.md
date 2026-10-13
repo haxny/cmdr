@@ -80,8 +80,9 @@ clamping `scrollTop` when a folder above shut, and a user's drag all fire the sa
 programmatic ones still loses the clamp. A wheel, a press on the scroller itself (its scrollbar), and a keyboard move
 are unambiguous. A wheel counts only when the rows overflow: over a tree that fits, it scrolls the page around it (the
 queue window), and pausing there would pop up Follow for nothing. The Follow button (a mini `Button` floating
-bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and no glyph) and the F key (the physical
-`KeyF`, untranslated like the decision prompts' letters) resume.
+bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and no glyph; opaque and stacked above the
+rows and the pinned headers, since a secondary button is see-through and the row under it showed through) and the F key
+(the physical `KeyF`, untranslated like the decision prompts' letters) resume.
 
 ## Rendering and focus
 
@@ -97,10 +98,10 @@ bottom-right, in Tab order after the tree, its word plus an F `keyHint` chip and
 - Roving `tabindex`: the cursor's row, else the row at work, else the first drawn row. The tree element itself is a tab
   stop only when no row is drawn.
 - **The cursor is drawn like the file list's and the queue's** (`is-under-cursor`: `--color-cursor-inactive` plus the
-  accent hairline, `--color-cursor-active` while the tree has focus, so an unfocused tree dims it like a pane). It IS the
-  focus indicator, so a row has no outline. **Why**: a `:focus-visible` ring never shows for a click, so a clicked row
-  (in the queue window above all) gave no sign of where the cursor was, and keyboard work couldn't pick up from there.
-  It shows only once a click or a key placed the cursor; the row at work is not the cursor.
+  accent hairline, `--color-cursor-active` while the tree has focus, so an unfocused tree dims it like a pane). It IS
+  the focus indicator, so a row has no outline. **Why**: a `:focus-visible` ring never shows for a click, so a clicked
+  row (in the queue window above all) gave no sign of where the cursor was, and keyboard work couldn't pick up from
+  there. It shows only once a click or a key placed the cursor; the row at work is not the cursor.
 
 ## Pinned headers
 
@@ -132,8 +133,8 @@ of sight too: `reveal` scrolls it to just below the headers its own folders will
 moves to its first child when open. Left shuts an open folder, or moves to the parent: an earlier row in the window one
 level up, or, when the parent is above the window, the view's `ancestors` entry for that depth (`ancestorsOf`). F
 resumes following while paused. A click on the chevron toggles; a double-click on a folder row toggles. A toggle never
-pauses following. A click anywhere else on a row puts the cursor there and pauses following, so the row it picked
-stays in sight.
+pauses following. A click anywhere else on a row puts the cursor there and pauses following, so the row it picked stays
+in sight.
 
 ## What a row says (`row-format.ts`)
 
