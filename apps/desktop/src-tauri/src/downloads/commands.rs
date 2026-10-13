@@ -270,7 +270,7 @@ mod tests {
         let tempdir = unhidden_tempdir();
         let (tx, _rx) = mpsc::channel::<DownloadDetectedEvent>();
         let sink: Arc<dyn EventSink> = Arc::new(ChannelSink(tx));
-        let watcher = DownloadsWatcher::start_at(tempdir.path().to_path_buf(), sink).expect("watcher start");
+        let watcher = DownloadsWatcher::scripted_at(tempdir.path().to_path_buf(), sink);
         let _guard = install_for_test(watcher);
 
         let err = block_on(go_to_latest_download()).expect_err("expected error");
@@ -291,7 +291,7 @@ mod tests {
 
         let (tx, _rx) = mpsc::channel::<DownloadDetectedEvent>();
         let sink: Arc<dyn EventSink> = Arc::new(ChannelSink(tx));
-        let watcher = DownloadsWatcher::start_at(canonical_root.clone(), sink).expect("watcher start");
+        let watcher = DownloadsWatcher::scripted_at(canonical_root.clone(), sink);
         let _guard = install_for_test(watcher);
 
         let latest = block_on(go_to_latest_download()).expect("expected Ok");

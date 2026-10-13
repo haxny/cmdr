@@ -122,34 +122,33 @@ add visible toast latency. Revisit if real-world feedback says CLI downloads mat
 Both tiers share the same `is_eligible` filter (hidden and partial-suffix files excluded; a regular file or a symlink to
 one accepted), so an event-detected "latest" and a scanned "latest" can't disagree.
 
-## Real-FSEvents test determinism
+## Testing
 
-`watcher_test.rs`'s five integration tests drive a real `notify` watch on a temp dir, so they inherit FSEvents' two
-under-load failure modes: a mutation landing in the just-registered-watch arming window is dropped outright (not
-delayed), and even a live watch can coalesce or drop a lone create/rename. Both are unrecoverable by waiting, so the
-tests **self-heal** rather than wait-and-hope:
+**One real-delivery cell, everything else scripted.** `DownloadsWatcher::scripted_at(root, sink)` builds the same
+watcher minus the OS watch, and `deliver(batch)` hands it a debounced batch through the SAME closure the debouncer
+calls, synchronously. Suppression, the partial→final rename, the ring, the scan fallback, and the `commands.rs` /
+`runtime.rs` tests all run that way, in milliseconds, and assert exact emits (an unregistered control file in the same
+batch is what makes "the own write stayed silent" a real proof). Only `dropping_a_file_emits_one_event` arms real
+FSEvents, to pin the OS half: that delivery happens at all, and that FSEvents names paths canonically
+(`/private/var/…` for a `/var/…` tempdir), which the root canonicalization in `start_at` exists to match.
 
-- `observe_mutation` primes the watch (`prime_watch` writes throwaway creates until one is observed, proving the stream
-  armed), then redoes the real mutation on a fresh name until a matching emit — all inside one 15 s budget so priming
-  and the redo never stack a second budget past the 20 s nextest cap. `matches` accepts ANY attempt's emit, so a
-  merely-slow event is never discarded as a spurious failure. Used by the create and partial→final-rename tests.
-- `note_pending_write_suppresses_matching_event` redoes a registered-write + unregistered-control pair until the control
-  emits (proving the watch is live THIS round, so it can't pass vacuously on a watch that never armed), then asserts the
-  registered sibling stayed silent. FSEvents' per-stream ordering plus writing the control after the registered file
-  means a broken suppression surfaces the registered event first — caught, not masked.
+Why: arming a real stream is a round trip to the host-wide `fseventsd`, and delivery can lag seconds or vanish under
+load. With five real cells serialized in `real-notify`, they logged ~370 timeouts and starvation failures across
+2026-08/10 whenever the suite ran at load 20+, while passing alone. ❌ Don't add a second real cell; a behavior that
+needs testing goes through `deliver`. (The same split as the git portal's `with_scripted_watcher`.)
 
-**Two serialization layers, one per test runner.** Concurrent live watches multiply each other's starvation, so only one
-runs at a time: under `cargo nextest` (process-per-test) the `real-notify` group in
-`.config/nextest.toml` caps the group at one thread; under plain `cargo test` (the
-whole `#[cfg(test)]` module shares one process) a `WATCH_SERIAL` mutex the five tests hold for their duration does the
-equivalent. The self-heal above is what actually defeats the residual single-watch arming/coalescing; serialization just
-removes the mutual interference.
+**The real cell self-heals rather than waits.** FSEvents has two under-load failure modes: a mutation landing in the
+just-registered-watch arming window is dropped outright (not delayed), and even a live watch can coalesce or drop a lone
+create. Both are unrecoverable by waiting, so `observe_mutation` primes the watch (`prime_watch` writes throwaway
+creates until one is observed, proving the stream armed), then redoes the real create on a fresh name until a matching
+emit, all inside one 15 s budget so priming and the redo never stack past the 20 s nextest cap. `matches` accepts ANY
+attempt's emit, so a merely-slow event is never discarded as a spurious failure.
+
 
 **What the self-heal CANNOT cover: a stream that stops delivering outright.** The redo loops assume the watch is still
 alive, so they beat a dropped or coalesced event but not a dead stream. That third failure mode is real on macOS:
-`dropping_a_file_emits_one_event` fails at the full 15 s budget on 5 of 12 runs, and
-`latest_download_returns_ring_value_after_event` on 6 of 10, both measured on `main` with NO local changes (2026-08-12,
-M-series, moderate load). A raw-event dump of a failing run shows the stream delivering the tempdir's own create plus
+`dropping_a_file_emits_one_event` failed at the full 15 s budget on 5 of 12 runs, measured on `main` with NO local
+changes (2026-08-12, M-series, moderate load). A raw-event dump of a failing run shows the stream delivering the tempdir's own create plus
 two priming sentinels, then NOTHING for the remaining 15 s while the test writes a fresh file every second — the events
 never reach the debouncer, so no in-test retry can rescue them. Under a full-suite run the same tests fail earlier
 still, at `prime_watch`'s "arming never completed".

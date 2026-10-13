@@ -408,9 +408,6 @@ filter = '''
     test(listing_host::tests::caching_reaper_test::)
   + test(listing_host::tests::archive_watch_integration_test::)
   + test(file_system::volume::backends::local_posix_test::test_listing_watch_coverage_flips_with_watcher_lifecycle)
-  + test(downloads::commands::tests::go_to_latest_)
-  + test(downloads::runtime::tests::note_pending_write_for_cmdr_)
-  + test(downloads::watcher_test::note_pending_write_never_resolves_the_path)
 '''
 slow-timeout = { period = "20s", terminate-after = 1 }
 
@@ -448,15 +445,12 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 # 15 s budget (no second budget stacks). A real regression — the watcher stops
 # emitting — therefore surfaces immediately here instead of being masked by a
 # retry. Mechanisms:
-#   - `downloads/watcher_test.rs` tests: `observe_mutation` redoes the real
-#     create/rename on a fresh name until a matching emit; `prime_watch` proves
-#     the watch live before the ring-order mutation;
-#     `note_pending_write_suppresses_matching_event` redoes a
-#     registered-write + unregistered-control pair until the control emits, then
-#     asserts the registered sibling stayed silent (proves suppression against a
-#     provably-live watch, no vacuous pass); `scan_latest_fallback_...` is
-#     delivery-independent but opens a live watch, so it's grouped to not add to
-#     the others' starvation.
+#   - `downloads::watcher_test::dropping_a_file_emits_one_event`, the downloads
+#     watcher's ONE real-delivery cell: `observe_mutation` primes the watch, then
+#     redoes the real create on a fresh name until a matching emit. Every other
+#     downloads test feeds `DownloadsWatcher::scripted_at` by hand and needs no
+#     override; ❌ don't add a second real cell (they timed out ~300 times under
+#     load across 2026-08/10, `downloads/DETAILS.md` § "Testing").
 #   - `cmdr-archive`'s `watch::host_seam_test` rewrite tests: `drive_until_refreshed`
 #     redoes the zip rewrite (in place, or via temp+rename) until the watch reaches
 #     the host's archive-refresh seam. ❌ These names are crate-relative and carry no
@@ -465,14 +459,8 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 #     the 8 s global cap, under their own 15 s budget.
 # They still need this override: the redo/continuous loops can run ~11 s under
 # saturation, past the global 8 s cap, and `real-notify` serialization keeps
-# their live watches from multiplying each other's starvation. NOTE this group
-# only serializes under `cargo nextest` (process-per-test); under plain
-# `cargo test` the whole module shares one process, where a `WATCH_SERIAL` mutex
-# in `downloads::watcher_test` does the equivalent. Proof: 10/10 saturated
-# full-suite `cargo nextest run` loops green at `retries = 0`, and 10/10
-# `cargo test --lib downloads::watcher_test` loops green (verified 2026-07 on a
-# 16-core M-series; baseline before the in-test fix was ~2/3 runs failing).
-filter = 'test(downloads::watcher_test::dropping_a_file_emits_one_event) + test(downloads::watcher_test::partial_rename_to_final_emits_for_final_path) + test(downloads::watcher_test::latest_download_returns_ring_value_after_event) + test(downloads::watcher_test::note_pending_write_suppresses_matching_event) + test(downloads::watcher_test::scan_latest_fallback_finds_file_with_no_events) + test(watch::host_seam_test::a_rewrite_asks_the_host_to_refresh_the_archive_listings) + test(watch::host_seam_test::a_temp_rename_swap_still_asks_for_a_refresh)'
+# their live watches from multiplying each other's starvation.
+filter = 'test(downloads::watcher_test::dropping_a_file_emits_one_event) + test(watch::host_seam_test::a_rewrite_asks_the_host_to_refresh_the_archive_listings) + test(watch::host_seam_test::a_temp_rename_swap_still_asks_for_a_refresh)'
 test-group = 'real-notify'
 slow-timeout = { period = "20s", terminate-after = 1 }
 

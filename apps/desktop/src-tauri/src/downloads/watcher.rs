@@ -264,14 +264,22 @@ pub(crate) fn translate_debounced(event: &DebouncedEvent) -> Vec<EventSummary> {
     }
 }
 
+/// What the debouncer calls with each batch, and what a scripted test watcher
+/// calls by hand: one closure, so both reach exactly the same handling.
+type BatchHandler = Arc<dyn Fn(DebounceEventResult) + Send + Sync>;
+
 /// Handle to the running watcher. Drop to stop watching.
 pub struct DownloadsWatcher {
-    // Held to keep the OS watch alive; never read directly.
+    // Held to keep the OS watch alive; never read directly. `None` only for a
+    // scripted test watcher, which arms nothing with the OS.
     #[allow(dead_code, reason = "Debouncer must outlive the watcher to keep notify alive")]
-    debouncer: Debouncer<RecommendedWatcher, RecommendedCache>,
+    debouncer: Option<Debouncer<RecommendedWatcher, RecommendedCache>>,
     ignore_set: Arc<IgnoreSet>,
     latest_ring: Arc<LatestRing>,
     downloads_root: PathBuf,
+    /// The handler [`Self::deliver`] feeds. Only a scripted watcher has one.
+    #[cfg(test)]
+    scripted: Option<BatchHandler>,
 }
 
 impl DownloadsWatcher {
@@ -298,6 +306,59 @@ impl DownloadsWatcher {
     /// and `parent_dir == downloads_root` checks would compare a
     /// user-facing path against a canonical one and silently miss.
     pub fn start_at(downloads_root: PathBuf, sink: Arc<dyn EventSink>) -> Result<Self, WatcherError> {
+        let (mut watcher, handler) = Self::unarmed(downloads_root, sink);
+
+        let mut debouncer = new_debouncer(
+            Duration::from_millis(DEBOUNCE_MS),
+            None,
+            move |result: DebounceEventResult| handler(result),
+        )
+        .map_err(WatcherError::Debouncer)?;
+
+        debouncer
+            .watch(&watcher.downloads_root, RecursiveMode::Recursive)
+            .map_err(WatcherError::Watch)?;
+
+        log::info!(
+            target: "downloads::watcher",
+            "Started watching Downloads at {}",
+            watcher.downloads_root.display(),
+        );
+
+        watcher.debouncer = Some(debouncer);
+        Ok(watcher)
+    }
+
+    /// A watcher on `downloads_root` that arms nothing with the OS: a test
+    /// hands it event batches through [`Self::deliver`], and they run through
+    /// the same handler a real FSEvents batch does.
+    ///
+    /// Use this for everything that isn't "does the OS deliver?". Arming a real
+    /// FSEvents stream is itself a slow `fseventsd` round trip under load, and
+    /// a delivery can take seconds or vanish, so every real-watch test is a
+    /// timeout waiting for a busy host. `watcher_test.rs` keeps exactly one
+    /// real-delivery cell for the wiring.
+    #[cfg(test)]
+    pub fn scripted_at(downloads_root: PathBuf, sink: Arc<dyn EventSink>) -> Self {
+        let (mut watcher, handler) = Self::unarmed(downloads_root, sink);
+        watcher.scripted = Some(handler);
+        watcher
+    }
+
+    /// Hand a scripted watcher one debounced batch, as the debouncer would.
+    /// Synchronous: the sink has seen every emit by the time this returns.
+    #[cfg(test)]
+    pub fn deliver(&self, events: Vec<DebouncedEvent>) {
+        let handler = self
+            .scripted
+            .as_ref()
+            .expect("deliver() needs a watcher from scripted_at(); a real one takes its events from the OS");
+        handler(Ok(events));
+    }
+
+    /// Everything but the OS watch: the root resolved, the ignore set and ring
+    /// built, and the batch handler that routes into them.
+    fn unarmed(downloads_root: PathBuf, sink: Arc<dyn EventSink>) -> (Self, BatchHandler) {
         // The ignore set resolves the root (it has to know both spellings to
         // match a registration against an event), so take its answer rather
         // than resolving a second time.
@@ -308,46 +369,26 @@ impl DownloadsWatcher {
         let ignore_for_cb = Arc::clone(&ignore_set);
         let ring_for_cb = Arc::clone(&latest_ring);
         let root_for_cb = downloads_root.clone();
-        let sink_for_cb = Arc::clone(&sink);
-
-        let mut debouncer = new_debouncer(
-            Duration::from_millis(DEBOUNCE_MS),
-            None,
-            move |result: DebounceEventResult| match result {
-                Ok(events) => {
-                    handle_events(
-                        &events,
-                        &ignore_for_cb,
-                        &ring_for_cb,
-                        &root_for_cb,
-                        sink_for_cb.as_ref(),
-                    );
+        let handler: BatchHandler = Arc::new(move |result: DebounceEventResult| match result {
+            Ok(events) => {
+                handle_events(&events, &ignore_for_cb, &ring_for_cb, &root_for_cb, sink.as_ref());
+            }
+            Err(errors) => {
+                for err in errors {
+                    log::warn!(target: "downloads::watcher", "Watch error: {err}");
                 }
-                Err(errors) => {
-                    for err in errors {
-                        log::warn!(target: "downloads::watcher", "Watch error: {err}");
-                    }
-                }
-            },
-        )
-        .map_err(WatcherError::Debouncer)?;
+            }
+        });
 
-        debouncer
-            .watch(&downloads_root, RecursiveMode::Recursive)
-            .map_err(WatcherError::Watch)?;
-
-        log::info!(
-            target: "downloads::watcher",
-            "Started watching Downloads at {}",
-            downloads_root.display(),
-        );
-
-        Ok(Self {
-            debouncer,
+        let watcher = Self {
+            debouncer: None,
             ignore_set,
             latest_ring,
             downloads_root,
-        })
+            #[cfg(test)]
+            scripted: None,
+        };
+        (watcher, handler)
     }
 
     /// Stop watching. Equivalent to dropping the handle; explicit version

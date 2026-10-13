@@ -402,27 +402,41 @@ mod tests {
         let downloads_root = unhidden_tempdir();
         let (tx, rx) = mpsc::channel::<DownloadDetectedEvent>();
         let sink: Arc<dyn EventSink> = Arc::new(ChannelSink(tx));
-        let watcher = DownloadsWatcher::start_at(downloads_root.path().to_path_buf(), sink)
-            .expect("watcher must start against tempdir");
+        let watcher = DownloadsWatcher::scripted_at(downloads_root.path().to_path_buf(), sink);
         let _guard = install_for_test(watcher);
 
         // Canonicalize parent so the recorded path matches what `notify`
         // delivers (macOS firmlinks: /var → /private/var).
         let canonical_root = std::fs::canonicalize(downloads_root.path()).expect("canonicalize");
         let dest = canonical_root.join("cmdr-wrote-this.bin");
+        let control = canonical_root.join("browser-wrote-this.bin");
 
         // Hook → write. Production write-op call sites follow this order.
         note_pending_write_for_cmdr(&dest);
         std::fs::write(&dest, b"payload").expect("write");
+        std::fs::write(&control, b"payload").expect("write");
 
-        // Nothing should ever arrive, so the assertion is a window: the debouncer's 200 ms plus a
-        // generous margin. Blocking on the channel rather than sleeping then peeking means a
-        // suppression leak fails the instant it lands.
-        match rx.recv_timeout(Duration::from_millis(700)) {
-            Err(mpsc::RecvTimeoutError::Timeout) => { /* expected */ }
-            Ok(ev) => panic!("expected suppression, got event: {ev:?}"),
-            Err(mpsc::RecvTimeoutError::Disconnected) => panic!("sink disconnected"),
-        }
+        // The batch FSEvents would report, handed to the INSTALLED watcher: the
+        // hook has to have reached the same instance the events go through.
+        let created = |path: &Path| {
+            let event = notify::Event {
+                kind: notify::EventKind::Create(notify::event::CreateKind::File),
+                paths: vec![path.to_path_buf()],
+                attrs: Default::default(),
+            };
+            notify_debouncer_full::DebouncedEvent::new(event, std::time::Instant::now())
+        };
+        RUNTIME
+            .lock()
+            .expect("downloads runtime poisoned")
+            .as_ref()
+            .expect("the test watcher is installed")
+            .deliver(vec![created(&dest), created(&control)]);
+
+        // The unregistered sibling surfacing proves the batch was handled, so
+        // the Cmdr-own write's silence is suppression, not a watch that saw nothing.
+        let surfaced: Vec<String> = rx.try_iter().map(|e| e.file_name).collect();
+        assert_eq!(surfaced, vec!["browser-wrote-this.bin"]);
     }
 
     #[test]
@@ -464,7 +478,7 @@ mod tests {
         let downloads_root = unhidden_tempdir();
         let (tx, _rx) = mpsc::channel::<DownloadDetectedEvent>();
         let sink: Arc<dyn EventSink> = Arc::new(ChannelSink(tx));
-        let watcher = DownloadsWatcher::start_at(downloads_root.path().to_path_buf(), sink).expect("watcher start");
+        let watcher = DownloadsWatcher::scripted_at(downloads_root.path().to_path_buf(), sink);
         let _guard = install_for_test(watcher);
 
         // Path outside the watched tempdir: helper must succeed silently.
