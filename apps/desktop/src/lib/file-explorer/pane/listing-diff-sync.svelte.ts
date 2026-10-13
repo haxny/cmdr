@@ -6,11 +6,14 @@ import {
   onDirectoryDiff,
   onListingRespelled,
   onWriteSourceItemDone,
+  type WriteSourceItemDoneEvent,
 } from '#lib/tauri-commands/index.js'
 import { resolveValidPath } from '../navigation/path-resolution'
 import { movesByPreviousIndex, remapIndicesAcrossDiff } from '../operations/adjust-selection-indices'
 import { buildFrontendIndices, extractFilename } from '../operations/selection-adjustment'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { getForegroundOperationId, isForegroundClaimPending } from '#lib/file-operations/foreground-operation.svelte'
+import { untrack } from 'svelte'
 import { createThrottle } from '#lib/utils/timing.js'
 import type { DiffChange } from '../types'
 import type { createSelectionState } from './selection-state.svelte'
@@ -126,7 +129,8 @@ export interface ListingDiffSyncDeps {
 /**
  * Registers the three file-watcher listeners that keep a `FilePane` in sync with
  * external directory changes: the `directory-diff` reconciliation (cursor +
- * selection), the `write-source-item-done` gradual deselection during a write op,
+ * selection), the `write-source-item-done` gradual deselection during the write op
+ * this pane started (filtered by its id),
  * and the `directory-deleted` navigate-to-parent fallback.
  *
  * Each registers its `listen` once inside a `$effect` and returns the unsubscribe
@@ -229,30 +233,41 @@ export function initListingDiffSync(deps: ListingDiffSyncDeps): void {
     }
   })
 
-  // Listen for write-source-item-done events (gradual deselection as each source completes).
-  // No operationId filter needed: only one write op runs at a time, and only the pane with
-  // an active snapshot (operationSelectedNames) processes events.
-  $effect(() => {
-    const listenerPromise = onWriteSourceItemDone((payload) => {
-      // Only process when we have an active operation with explicit name tracking
-      if (!Array.isArray(deps.getOperationSelectedNames())) return
+  // Gradual deselection: each source of the operation THIS pane started leaves the
+  // selection as `write-source-item-done` reports it finished. Only the pane holding an
+  // operation snapshot listens, and that operation is the one its foreground progress
+  // dialog owns, so its id is `getForegroundOperationId()`. ❌ Never unfiltered: the queue
+  // runs operations on other lanes at once, and one finishing a same-named file would
+  // deselect this pane's row. An event that beats the start command's answer (the claim
+  // is still pending, so the operation has no name here yet) waits for it.
+  let unnamed: WriteSourceItemDoneEvent[] = []
 
-      const token = deps.rowState.capture()
-      const names = deps.getOperationSelectedNames()
-      const endWork = deps.rowState.beginAsyncWork()
-      const filename = extractFilename(payload.sourcePath)
-      const includeHidden = deps.getIncludeHidden()
-      void findFileIndex(token.listingId, filename, includeHidden)
-        .then(async (backendIndex) => {
-          await getSelectionSnapshot(token.listingId, includeHidden, [], token.sequence)
-          if (backendIndex === null || !deps.rowState.matches(token) || deps.getOperationSelectedNames() !== names)
-            return
-          const frontendIndex = deps.getHasParent() ? backendIndex + 1 : backendIndex
-          deps.selection.selectedIndices.delete(frontendIndex)
-        })
-        .catch(() => {})
-        .finally(endWork)
+  function deselectFinished(payload: WriteSourceItemDoneEvent): void {
+    // Only process when we have an active operation with explicit name tracking
+    if (!Array.isArray(deps.getOperationSelectedNames())) return
+    const owner = getForegroundOperationId()
+    if (payload.operationId !== owner) {
+      if (isForegroundClaimPending()) unnamed.push(payload)
+      return
+    }
+    deselectSource(payload)
+  }
+
+  // The claim settled: what waited for the name either was this pane's or wasn't.
+  $effect(() => {
+    const owner = getForegroundOperationId()
+    if (isForegroundClaimPending()) return
+    const waiting = unnamed
+    unnamed = []
+    untrack(() => {
+      for (const payload of waiting) {
+        if (payload.operationId === owner && Array.isArray(deps.getOperationSelectedNames())) deselectSource(payload)
+      }
     })
+  })
+
+  $effect(() => {
+    const listenerPromise = onWriteSourceItemDone(deselectFinished)
 
     return () => {
       void listenerPromise
@@ -262,6 +277,23 @@ export function initListingDiffSync(deps: ListingDiffSyncDeps): void {
         .catch(() => {})
     }
   })
+
+  function deselectSource(payload: WriteSourceItemDoneEvent): void {
+    const token = deps.rowState.capture()
+    const names = deps.getOperationSelectedNames()
+    const endWork = deps.rowState.beginAsyncWork()
+    const filename = extractFilename(payload.sourcePath)
+    const includeHidden = deps.getIncludeHidden()
+    void findFileIndex(token.listingId, filename, includeHidden)
+      .then(async (backendIndex) => {
+        await getSelectionSnapshot(token.listingId, includeHidden, [], token.sequence)
+        if (backendIndex === null || !deps.rowState.matches(token) || deps.getOperationSelectedNames() !== names) return
+        const frontendIndex = deps.getHasParent() ? backendIndex + 1 : backendIndex
+        deps.selection.selectedIndices.delete(frontendIndex)
+      })
+      .catch(() => {})
+      .finally(endWork)
+  }
 
   // Listen for listing-respelled events: after the kernel mount hands a share to a
   // direct SMB connection, the backend re-reads open listings in the share's own

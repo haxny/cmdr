@@ -96,7 +96,11 @@ fallback contract, and the snapshot-pane note.
   view; an ordinary index shift leaves the row where it already was on screen. Rust's side of the contract:
   `src-tauri/src/file_system/DETAILS.md` § "Reordered rows".
 - **Source-item-done deselection**: `write-source-item-done` events individually deselect completed items (for copy and
-  other ops that don't trigger diffs)
+  other ops that don't trigger diffs), but only the events of the operation this pane started: the one its foreground
+  progress dialog owns (`getForegroundOperationId()`), the only operation a pane snapshot exists for. **Why**: the queue
+  runs operations on other lanes at once, and one finishing a same-named file deselected this pane's row. An event that
+  beats the start command's answer (`isForegroundClaimPending()`) waits for the name, then is kept or dropped
+  (`pane/listing-diff-sync.svelte.ts`).
 - **Clear on complete/error**: safety net clears all selection on the source pane
 - **Cancel behavior**: selection reflects survivors. For `'all'` sentinel: calls `selectAll()` (move/delete/trash) or
   leaves untouched (copy)
