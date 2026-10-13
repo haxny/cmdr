@@ -126,22 +126,29 @@ long translation widens the dialog. A `min-width` beats the caller's `width` and
 of its own under the fixed 580 px. When the footer can't also hold a `footerLeading` control beside them, the whole
 group drops to its own row below it, still right-aligned (the trash dialog's switch + Cancel + Background + "Move to
 trash" squeezed each label onto two lines before). A dialog that hand-rolls its buttons in `children` gets none of this,
-so put them in `footer`. Pinned by `ModalDialog.svelte.test.ts` § "footer floor" (the arithmetic) and
-`dialog-resize.spec.ts` § "Dialog footer" (the progress dialog with every button's longest translation). The title bar's
-padding, the footer's, and the body's side inset all come from ONE token (`--spacing-dialog`), so title, body, and
-buttons line up flush at the same inset and nothing crowds the title or the action row. **The body inset is not
-opt-outable**: there is no `padded` prop, and a body section must never re-add a horizontal inset of its OWN, in any
-token (that's a double inset; the offenders that drifted in all paid it with `--spacing-xl`, which is why grepping for
-`--spacing-dialog` found none of them). A block that genuinely needs to reach the panel edge cancels the inset locally
-with a negative inline margin, so the exception is visible at the one place it applies instead of the rule being off for
-the whole dialog. `dialog-inset.spec.ts` measures it: it walks the dialog gallery and compares the CONTENT edges (rect +
-border + padding, so a padded `<p>` can't pass on its box alone) of each title and its first body section.
+so put them in `footer`, and a left-side group (the rename conflict's Cancel + Continue renaming, the error report's
+dev-only Save to disk) in `footerLeading`; the floor covers the `footer` row only, so keep a leading group short.
+`cmdr/dialog-buttons-in-footer` enforces it: inside a `ModalDialog` body, two or more full-size `Button`s in one parent
+(seeing through `{#if}` / `{#each}`) are a hand-built row. `size="mini"` toolbars and a lone in-body button pass. A
+layout the footer can't express opts out per element with its reason (`SuggestedOpsDialog`'s per-card actions,
+`CommercialReminderModal`'s equal-width pair). Pinned by `ModalDialog.svelte.test.ts` § "footer floor" (the arithmetic)
+and `dialog-resize.spec.ts` § "Dialog footer" (the progress dialog, plus each dialog whose row moved into the footer,
+opened through the gallery, with every button's longest translation). The title bar's padding, the footer's, and the
+body's side inset all come from ONE token (`--spacing-dialog`), so title, body, and buttons line up flush at the same
+inset and nothing crowds the title or the action row. **The body inset is not opt-outable**: there is no `padded` prop,
+and a body section must never re-add a horizontal inset of its OWN, in any token (that's a double inset; the offenders
+that drifted in all paid it with `--spacing-xl`, which is why grepping for `--spacing-dialog` found none of them). A
+block that genuinely needs to reach the panel edge cancels the inset locally with a negative inline margin, so the
+exception is visible at the one place it applies instead of the rule being off for the whole dialog.
+`dialog-inset.spec.ts` measures it: it walks the dialog gallery and compares the CONTENT edges (rect + border + padding,
+so a padded `<p>` can't pass on its box alone) of each title and its first body section.
 
 **The body wraps unbreakable tokens** (`overflow-wrap: anywhere`). A path, a URL, or a long filename has no break
 opportunity inside its last segment, so without it the string overflows the inset and runs to the panel edge. A dialog
-with a custom button layout (multiple rows, a left-side helper, equal-width buttons) keeps its buttons in `children` and
-right-aligns them itself, and keeps them from wrapping itself too (the clash prompt's grid sizes to `max-content`);
-genuinely centered content (spinners, progress bars, numeric readouts, hero panels like `AboutWindow`) stays centered.
+with a button layout the footer can't express (a grid of choices, equal-width buttons) keeps its buttons in `children`
+behind the rule's opt-out, right-aligns them itself, and keeps them from wrapping itself too (the clash prompt's grid
+sizes to `max-content`); genuinely centered content (spinners, progress bars, numeric readouts, hero panels like
+`AboutWindow`) stays centered.
 
 **The panel must never become a containing block for `position: fixed`.** The drag offset rides on `left` / `top`
 against the panel's own `position: relative`. ❌ Don't move it to a `transform`, and don't add `filter`,

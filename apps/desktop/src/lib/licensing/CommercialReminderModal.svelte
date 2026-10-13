@@ -40,6 +40,7 @@
 
         <p class="info">{tString('licensing.commercialReminder.priceInfo')}</p>
 
+        <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- two equal-width choices (`flex: 1`), the decline one broken onto two lines on purpose (`declinePersonal`'s `<break/>`); the footer's right-aligned, never-wrapping row can't hold that shape -->
         <div class="actions">
             <Button variant="secondary" onclick={handleDismiss}>
                 <Trans key="licensing.commercialReminder.declinePersonal" snippets={{ break: lineBreak }} />

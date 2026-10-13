@@ -153,6 +153,7 @@
                             </p>
                         {/if}
 
+                        <!-- eslint-disable-next-line cmdr/dialog-buttons-in-footer -- each suggestion card's own Review / Approve / Reject, one row per group in the list; the dialog's actions are in its footer -->
                         <div class="group-actions">
                             {#if g.groupId === suggestedOpsState.openGroupId}
                                 <Button variant="secondary" onclick={collapseGroup}>
