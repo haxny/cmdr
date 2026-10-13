@@ -107,6 +107,11 @@ compacts every deeper scrolled-past folder into one header (`a/b/c`), so the row
 in sight. `ancestorsOf` answers a row's chain from the loaded rows, then the view's `ancestors` (whole rows from the
 backend, counts included) for whatever sits above the window.
 
+The top row comes from `scrollTop` with a pixel of slack (`rowAtTop`). **Why**: the row height is fractional and WebKit
+keeps `scrollTop` in whole pixels, so a scroll to row 1 read back a hair short; flooring that said row 0, and a flat
+folder vanished (neither pinned nor drawn) whenever Up brought the cursor to its second child. `TransferTree.test.ts`
+pins it with a whole-pixel scroller.
+
 The stack is a zero-height `position: sticky` layer at the scroller's top, so the rows start under it and its headers
 float over the rows they cover. A click on a header moves the cursor to its folder's row (revealed just below the
 headers its own folders make); a click on its chevron shuts the folder.

@@ -107,7 +107,16 @@
         if (wanted > untrack(() => contentRows)) contentRows = wanted
     })
 
-    const topRow = $derived(measured ? Math.floor(scrollTop / rowHeight) : 0)
+    /**
+     * The row at the viewport's top. A pixel of slack: the row height is fractional and WebKit
+     * keeps `scrollTop` in whole pixels, so a scroll to row 1 reads back a hair short of it, and
+     * flooring that said row 0 (a folder just above then showed neither pinned nor drawn).
+     */
+    function rowAtTop(top: number): number {
+        return Math.floor((top + 1) / rowHeight)
+    }
+
+    const topRow = $derived(measured ? rowAtTop(scrollTop) : 0)
     /** The open folders scrolled past, pinned at the top (none before there's a layout). */
     const pinned = $derived(
         measured && ready ? pinnedHeaders(topRow, total, (index) => tree.ancestorsOf(index)) : [],
@@ -241,7 +250,7 @@
     function onScroll(): void {
         if (!scroller) return
         scrollTop = scroller.scrollTop
-        if (rowHeight > 0) tree.scrolledTo(Math.floor(scrollTop / rowHeight))
+        if (rowHeight > 0) tree.scrolledTo(rowAtTop(scrollTop))
     }
 
     /** A wheel over rows that all fit scrolls the page around the tree (the queue window), not the tree. */
@@ -277,7 +286,7 @@
             scroller.scrollTop = next
             scrollTop = scroller.scrollTop
         }
-        tree.scrolledTo(Math.floor(scrollTop / rowHeight))
+        tree.scrolledTo(rowAtTop(scrollTop))
     }
 
     function moveTo(index: number): void {

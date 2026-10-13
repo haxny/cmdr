@@ -65,6 +65,43 @@ function key(name: string, init: KeyboardEventInit = {}): void {
   flushSync()
 }
 
+/**
+ * A layout for jsdom, which has none: the probe measures `rowHeight`, the scroller shows
+ * `viewportRows` of them, and its `scrollTop` keeps whole pixels as WebKit's does. Returns
+ * the undo.
+ */
+function fakeLayout({ rowHeight, viewportRows }: { rowHeight: number; viewportRows: number }): () => void {
+  // Shadows jsdom's own on `Element.prototype`; deleting these brings them back.
+  const proto = HTMLElement.prototype
+  const tops = new WeakMap<Element, number>()
+  const isScroller = (el: Element) => el.classList.contains('scroller')
+  Object.defineProperty(proto, 'getBoundingClientRect', {
+    configurable: true,
+    value(this: HTMLElement) {
+      const height = this.classList.contains('probe') ? rowHeight : 0
+      return { x: 0, y: 0, top: 0, left: 0, right: 1, bottom: height, width: 1, height, toJSON: () => ({}) }
+    },
+  })
+  Object.defineProperty(proto, 'clientHeight', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return isScroller(this) ? Math.floor(viewportRows * rowHeight) : 0
+    },
+  })
+  Object.defineProperty(proto, 'scrollTop', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return tops.get(this) ?? 0
+    },
+    set(this: HTMLElement, value: number) {
+      tops.set(this, Math.max(0, Math.trunc(value)))
+    },
+  })
+  return () => {
+    for (const name of ['getBoundingClientRect', 'clientHeight', 'scrollTop']) Reflect.deleteProperty(proto, name)
+  }
+}
+
 function followButton(): HTMLButtonElement | null {
   return target.querySelector('.follow button')
 }
@@ -198,6 +235,36 @@ describe('TransferTree', () => {
     wheel()
     await settle()
     expect(followButton()).not.toBeNull()
+  })
+
+  // Regression: in a flat folder, Up from row 15 lost the folder at row 2 (neither pinned nor
+  // drawn) until the cursor reached it. The row height is fractional (small text times its
+  // leading, plus padding) and WebKit keeps `scrollTop` in whole pixels, so a scroll to row 1
+  // read back a hair short of it, and flooring that said row 0 was still the top.
+  it('keeps the folder in sight while Up walks its children toward it, at a fractional row height', async () => {
+    const restore = fakeLayout({ rowHeight: 24.8, viewportRows: 8 })
+    try {
+      await render('folders-5x1000', 3)
+      const scroller = target.querySelector<HTMLElement>('.scroller')
+      if (!scroller) throw new Error('no scroller')
+      rowNamed('Album 1').focus()
+      for (let i = 0; i < 15; i++) {
+        key('ArrowDown')
+        await settle()
+      }
+      expect(document.activeElement?.getAttribute('data-index')).toBe('15')
+
+      const folderInSight = () =>
+        target.querySelector('.pinned [data-pinned-index="0"]') !== null || scroller.scrollTop < 1
+      for (let at = 14; at >= 1; at--) {
+        key('ArrowUp')
+        await settle()
+        expect(document.activeElement?.getAttribute('data-index')).toBe(String(at))
+        expect(folderInSight(), `cursor on row ${String(at)}`).toBe(true)
+      }
+    } finally {
+      restore()
+    }
   })
 
   it('keeps the tab stop on one row, the work’s while nobody has moved', async () => {
