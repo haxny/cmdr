@@ -54,7 +54,7 @@ var bannedProps = map[string]bool{
 // btnClasses are the canonical class names the `<Button>` component declares.
 // Restyling any of these from a scoped feature component is the regression we
 // want to catch.
-var btnClasses = []string{"btn", "btn-primary", "btn-secondary", "btn-danger", "btn-danger-plain"}
+var btnClasses = []string{"btn", "btn-primary", "btn-secondary", "btn-danger"}
 
 // btnSelectorRE matches any of the canonical button classes as a CSS class
 // reference. The negative lookbehind is approximated with a leading boundary

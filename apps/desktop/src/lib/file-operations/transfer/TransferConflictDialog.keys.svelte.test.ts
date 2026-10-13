@@ -203,6 +203,20 @@ describe('Enter and Escape', () => {
 })
 
 describe('the way out', () => {
+  // Real buttons in the choices' own grid, so they take its column width and the
+  // eight's height; red outlined, so they still read as the destructive ones.
+  it('draws Cancel and Rollback as full-size danger buttons in the choices’ grid', () => {
+    const target = render()
+    const grid = target.querySelector('.conflict-buttons')?.parentElement
+    const exits = [...target.querySelectorAll('.conflict-cancel button')]
+    expect(exits.map((b) => buttonLabel(b))).toEqual(['Cancel', 'Rollback'])
+    for (const exit of exits) {
+      expect(exit.classList.contains('btn-danger')).toBe(true)
+      expect(exit.classList.contains('btn-mini')).toBe(false)
+      expect(exit.closest('.conflict-choices')).toBe(grid)
+    }
+  })
+
   it('B asks to roll back a copy (the host asks first)', () => {
     const target = render()
     arm()

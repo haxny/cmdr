@@ -591,8 +591,7 @@ is module state that outlives a single test.
 
 ## Button
 
-Variants: `primary` | `secondary` (default) | `danger` | `danger-plain` (the danger color with no border or fill, for a
-quieter way out beside louder choices: the clash prompt's Cancel and Rollback). Sizes: `regular` (default) | `mini`.
+Variants: `primary` | `secondary` (default) | `danger`. Sizes: `regular` (default) | `mini`.
 
 **The key that presses it: `keyHint`.** A fixed key (`keyHint="F2"`) or a command's live binding
 (`keyHint={{ commandId: 'nav.back' }}`, which draws nothing while the command has no binding). The button then lays out

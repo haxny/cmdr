@@ -4,8 +4,7 @@
     import type { CommandId } from '#lib/commands/index.js'
     import ShortcutChip from './ShortcutChip.svelte'
 
-    /** `danger-plain`: the danger color with no border or fill, for a quieter way out beside louder choices. */
-    type Variant = 'primary' | 'secondary' | 'danger' | 'danger-plain'
+    type Variant = 'primary' | 'secondary' | 'danger'
     type Size = 'regular' | 'mini'
     /** A fixed key (`"F2"`, `"S"`, `"⏎"`), or a command whose live binding shows (nothing while it has none). */
     type KeyHint = string | { commandId: CommandId }
@@ -220,16 +219,5 @@
 
     .btn-danger:hover:not(:disabled, [aria-disabled='true']) {
         background: color-mix(in srgb, var(--color-error), transparent 90%);
-    }
-
-    /* === Variant: danger-plain === */
-    .btn-danger-plain {
-        background: transparent;
-        color: var(--color-error-text);
-        border: 1px solid transparent;
-    }
-
-    .btn-danger-plain:hover:not(:disabled, [aria-disabled='true']) {
-        text-decoration: underline;
     }
 </style>

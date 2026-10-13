@@ -150,6 +150,8 @@ const CONFLICT_BUTTON_KEYS = [
   'conflictOverwriteAllOlder',
   'conflictOverwriteFolderWithFile',
   'conflictOverwriteFoldersWithFiles',
+  'conflictCancel',
+  'conflictRollback',
 ].map((key) => `fileOperations.transferProgress.${key}`)
 
 /** The longest clash-button label any shipped catalog has. */
@@ -178,7 +180,7 @@ interface ButtonGridBox {
 
 async function measureButtonGrid(tauriPage: PageLike): Promise<ButtonGridBox> {
   return tauriPage.evaluate<ButtonGridBox>(`(function(){
-      var buttons = Array.prototype.slice.call(document.querySelectorAll('.conflict-buttons button'));
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('.conflict-choices button'));
       var rects = buttons.map(function(b){ return b.getBoundingClientRect(); });
       var dialog = document.querySelector('${PROGRESS_DIALOG}').getBoundingClientRect();
       return {
@@ -201,7 +203,8 @@ test.describe('Clash prompt layout', () => {
     await startCopyAskForEach(tauriPage, ['doc.txt'])
 
     const before = await measureButtonGrid(tauriPage)
-    expect(before.widths).toHaveLength(8)
+    // The eight answers, then Cancel and Rollback: a copy offers both ways out, as big as the answers.
+    expect(before.widths).toHaveLength(10)
     expect(new Set(before.widths).size).toBe(1)
     expect(new Set(before.heights).size).toBe(1)
 

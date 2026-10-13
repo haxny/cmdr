@@ -428,9 +428,12 @@ the F2 on Background), which is `aria-hidden`, with `aria-keyshortcuts` on the b
 instead (Skip and Close also name `Enter`). The chip is inside the button, so a test reads a label through `buttonLabel`
 and the E2E `clickButtonByText` drops `aria-hidden` text the same way.
 
-**The clash prompt's buttons never wrap, in any locale.** The eight answers are one grid (`.conflict-buttons`) of two
-`1fr` columns sized to `max-content`, so every button takes the widest label's width, and a label can't wrap (the key
-slot is `nowrap`). The grid alone sets the prompt's width: both hosts size the dialog with `conflictDialogWidthStyle`
+**The clash prompt's buttons never wrap, in any locale.** The eight answers (`.conflict-buttons`) and, under a divider,
+the ways out (`.conflict-cancel`: Cancel, plus Rollback on a copy or move) are cells of ONE grid (`.conflict-choices`;
+both groups are `display: contents`) of two `1fr` columns sized to `max-content`, so every button takes the widest
+label's width and the same height, and a label can't wrap (the key slot is `nowrap`). The ways out are full-size
+`danger` buttons: they're decisions like the rest, and Rollback undoes work. A lone Cancel spans the grid, one column
+wide, centered. The grid alone sets the prompt's width: both hosts size the dialog with `conflictDialogWidthStyle`
 (`width: max-content` above their floor, capped at the window) and every text block in the body (filename, folder,
 warning, comparison, the queue host's context line) takes `contain: inline-size`, so a long path truncates or wraps
 inside that width instead of widening the dialog. A longer translation widens the dialog; nothing wraps. **Why**: fixed

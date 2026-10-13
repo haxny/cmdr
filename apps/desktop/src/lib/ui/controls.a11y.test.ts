@@ -97,13 +97,6 @@ describe('Button a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  it('danger-plain variant has no a11y violations', async () => {
-    const target = container()
-    mount(Button, { target, props: { variant: 'danger-plain', children: snip('Cancel') } })
-    await tick()
-    await expectNoA11yViolations(target)
-  })
-
   it('a key hint stays out of the name and has no a11y violations', async () => {
     const target = container()
     mount(Button, {

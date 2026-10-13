@@ -266,13 +266,14 @@
         </div>
     </div>
 
-    <!-- Buttons. One grid, two columns: left = this-item, right = apply-to-all,
-         every button as wide as the widest label (CSS below). Last row holds
-         the conditional bulk variants: `Overwrite all
-         smaller` only works when the destination size is known
-         (a folder dest with no index size disables it with a tooltip);
-         `Overwrite all older` always stays enabled (mtime is always
-         available even for folder destinations). -->
+    <!-- Buttons. One grid, two columns, every button (the ways out too) as wide
+         as the widest label and as tall as the rest (CSS below). The answers:
+         left = this-item, right = apply-to-all. Their last row holds the
+         conditional bulk variants: `Overwrite all smaller` only works when the
+         destination size is known (a folder dest with no index size disables
+         it with a tooltip); `Overwrite all older` always stays enabled (mtime
+         is always available even for folder destinations). -->
+    <div class="conflict-choices">
     <div class="conflict-buttons">
             <Button
                 variant="secondary"
@@ -350,14 +351,15 @@
             </Button>
     </div>
 
-    <!-- The ways out, at the bottom. A plain Cancel (stop, keep what's
+    <!-- The ways out, under a divider, in the same grid: as big as the answers,
+         and red, since one of them undoes work. A plain Cancel (stop, keep what's
          written) is always there, so the user can always back out. A copy or
          move adds Rollback beside it; one the backend can't reverse shows
          Rollback DISABLED, with a tooltip saying why. -->
+    <hr class="conflict-divider" />
     <div class="conflict-cancel">
         <Button
-            variant="danger-plain"
-            size="mini"
+            variant="danger"
             onclick={cancel}
             disabled={exitLocked}
             keyHint={CONFLICT_KEYS.cancel}
@@ -369,18 +371,12 @@
             <!-- Blocked, not `disabled`: the reason is worth reading, and a
                  disabled button leaves the tab order with its tooltip. No click
                  handler, so pressing it does nothing. -->
-            <Button
-                variant="danger-plain"
-                size="mini"
-                ariaDisabled
-                tooltipContent={ROLLBACK_UNAVAILABLE_TOOLTIP}
-            >
+            <Button variant="danger" ariaDisabled tooltipContent={ROLLBACK_UNAVAILABLE_TOOLTIP}>
                 {tString('fileOperations.transferProgress.conflictRollback')}
             </Button>
         {:else if offersRollback}
             <Button
-                variant="danger-plain"
-                size="mini"
+                variant="danger"
                 onclick={rollBack}
                 disabled={exitLocked}
                 keyHint={CONFLICT_KEYS.rollback}
@@ -389,6 +385,7 @@
                 {tString('fileOperations.transferProgress.conflictRollback')}
             </Button>
         {/if}
+    </div>
     </div>
 </div>
 
@@ -553,24 +550,40 @@
        sized to its content, `1fr` columns each resolve to the widest cell's
        max-content, so both match it and every button fills its cell. A longer
        translation widens the grid, and with it the dialog (the section's comment
-       above); a label itself can't wrap (`Button`'s key slot is `nowrap`). */
-    .conflict-buttons {
+       above); a label itself can't wrap (`Button`'s key slot is `nowrap`). The
+       answers and the ways out are two groups in markup but cells of this ONE
+       grid (`display: contents`), so Cancel and Rollback can't drift from the
+       answers' width. */
+    .conflict-choices {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: var(--spacing-sm);
         width: max-content;
-        margin: 0 auto var(--spacing-lg);
+        margin: 0 auto;
     }
 
-    .conflict-buttons > :global(button) {
+    .conflict-buttons,
+    .conflict-cancel {
+        display: contents;
+    }
+
+    .conflict-choices :global(button) {
         width: 100%;
     }
 
-    .conflict-cancel {
-        display: flex;
-        justify-content: center;
-        gap: var(--spacing-md);
-        padding-top: var(--spacing-md);
+    /* Copy and move always pair Cancel with Rollback; anything else gets Cancel
+       alone, one column wide and centered under the pair above it. */
+    .conflict-cancel > :global(button:only-child) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: calc((100% - var(--spacing-sm)) / 2);
+    }
+
+    .conflict-divider {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin: var(--spacing-sm) 0;
+        border: none;
         border-top: 1px solid var(--color-border-strong);
     }
 </style>
