@@ -24,9 +24,10 @@
 //! `COPY_THROTTLE_OVERRIDE` static below is the canonical shape, set via the
 //! `set_test_throttle` IPC command from a test, read on every copy loop tick.
 
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::sync::atomic::{AtomicI64, AtomicU8, Ordering};
+use std::sync::{Condvar, LazyLock, Mutex};
 
 /// Runtime override for the per-file copy throttle, settable via the
 /// `set_test_throttle` IPC command (feature-gated to `playwright-e2e`).
@@ -448,6 +449,58 @@ pub fn set_scan_preview_delay_override(ms: Option<u64>) {
         None => -1,
     };
     SCAN_PREVIEW_DELAY_OVERRIDE.store(v, Ordering::Relaxed);
+}
+
+/// The listing-arm latch, set by the `set_test_arm_hold` IPC command (feature-gated to
+/// `playwright-e2e`). No env var: only a spec about the read-to-arm gap wants it.
+#[derive(Default)]
+struct ListingArmHold {
+    /// While set, every listing watch's arm parks before starting its stream.
+    held: bool,
+    /// How many arms are parked right now.
+    parked: usize,
+}
+
+static LISTING_ARM_HOLD: Mutex<ListingArmHold> = Mutex::new(ListingArmHold { held: false, parked: 0 });
+static LISTING_ARM_RELEASED: Condvar = Condvar::new();
+
+/// Holds (`true`) or releases (`false`) every listing watch's arm. Releasing wakes every
+/// parked arm.
+pub fn set_listing_arm_hold(held: bool) {
+    log::debug!("listing arm hold: {}", if held { "held" } else { "released" });
+    LISTING_ARM_HOLD.lock_ignore_poison().held = held;
+    LISTING_ARM_RELEASED.notify_all();
+}
+
+/// How many listing arms are parked on the latch.
+pub fn parked_listing_arms() -> usize {
+    LISTING_ARM_HOLD.lock_ignore_poison().parked
+}
+
+/// Parks the calling listing arm while the latch is held; returns at once otherwise.
+///
+/// Under fseventsd load an arm lands seconds after the listing read, and a change in
+/// that window is caught only by `watcher::arm_and_reconcile`'s mtime check. On a quiet
+/// machine the window is too short to land a write in, so `file-watching.spec.ts` holds
+/// it open, writes once [`parked_listing_arms`] says the arm is waiting, then releases.
+/// A no-op outside `CMDR_E2E_MODE`, so production never waits. Runs on the blocking
+/// pool, where parking a thread is fine.
+pub fn wait_for_listing_arm_release() {
+    if !is_e2e_mode() {
+        return;
+    }
+    let mut hold = LISTING_ARM_HOLD.lock_ignore_poison();
+    if !hold.held {
+        return;
+    }
+    hold.parked += 1;
+    log::debug!("listing arm parked ({} parked)", hold.parked);
+    while hold.held {
+        hold = LISTING_ARM_RELEASED
+            .wait(hold)
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+    }
+    hold.parked -= 1;
 }
 
 #[cfg(test)]

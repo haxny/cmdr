@@ -1299,6 +1299,17 @@ nothing ("flushing 0 watches"), and the watch, starting "since now", never repor
 external-change test in `file-watching.spec.ts` and the `moveCursorToFile` step of both `compress-basic.spec.ts` tests
 that write their own source file.
 
+The flush re-reading the panes outright also hides the app's own recovery for that gap (`arm_and_reconcile`'s mtime
+check, `src-tauri/src/file_system/DETAILS.md`). So `file-watching.spec.ts`'s "a write that lands before the watch
+starts" test never flushes. It parks the arm on the E2E-only `set_test_arm_hold` latch, writes once the pane shows the
+listing AND `parked_listing_arms` is above zero (so the write is provably in the gap), waits until the spec's own
+`fs.watch` (an FSEvents stream on macOS) has seen the write, releases, waits for `listing_watch_armed` with the test's
+whole timeout (the real arm is fseventsd's to time), then expects the file within 2 s. Every step is a signal, none a
+duration. The `fs.watch` wait matters: released right after a bare write, fseventsd still holds the fresh event and
+hands it to the new "since now" stream, so the spec went green with the recovery disabled. Seen red 4 of 4 with the
+recovery re-read disabled, 2026-10-13. ❌ Don't add a flush to it, and release the latch in `finally` and `afterEach`,
+or later arms park forever.
+
 **Gotcha**: "Rows appeared" does NOT prove a live walk. **Why**: the E2E instance indexes its fixture tree at launch
 (`CMDR_E2E_START_PATH` narrows the scope, so the tree is covered within seconds), and a search over covered ground reads
 the index instead of walking. A spec asserting rows is satisfied either way, silently, which is how two walk specs once

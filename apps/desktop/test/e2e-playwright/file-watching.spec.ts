@@ -30,6 +30,68 @@ import {
   TRANSFER_DIALOG,
 } from './helpers.js'
 
+import type { TauriPage, BrowserPageAdapter } from '@srsholmes/tauri-playwright'
+
+type PageLike = TauriPage | BrowserPageAdapter
+
+/** Parks (`true`) or releases (`false`) every listing watch's arm before it starts its
+ *  stream. E2E-only backend command (`commands/e2e.rs::set_test_arm_hold`), not in
+ *  typed bindings, so raw `invoke`. */
+async function setTestArmHold(tauriPage: PageLike, hold: boolean): Promise<void> {
+  await tauriPage.evaluate(`window.__TAURI_INTERNALS__.invoke('set_test_arm_hold', { hold: ${String(hold)} })`)
+}
+
+async function parkedListingArms(tauriPage: PageLike): Promise<number> {
+  return tauriPage.evaluate<number>(`window.__TAURI_INTERNALS__.invoke('parked_listing_arms')`)
+}
+
+/**
+ * Writes `dir/name`, then waits until the OS's own notifier has dispatched that write to
+ * a watcher in THIS process, so the event is history before the app's stream starts.
+ *
+ * Releasing the arm right after a bare write is not enough on macOS: fseventsd still
+ * holds the fresh event when the new "since now" stream starts, delivers it anyway, and
+ * the spec passes with the app's recovery broken (seen 2026-10-13: green with the
+ * reconcile re-read disabled). Node's `fs.watch` on a directory is an FSEvents stream
+ * there (inotify on Linux), so seeing the write on it is the signal. A probe file proves
+ * that watcher is live first, because its stream also starts "since now" and could miss
+ * a write that raced its own start.
+ */
+async function writeAndWaitForFsEventsToDispatch(dir: string, name: string): Promise<void> {
+  const seen = new Set<string>()
+  const watcher = fs.watch(dir, (_kind, file) => {
+    if (file) seen.add(file.toString())
+  })
+  try {
+    const probe = path.join(dir, 'watch-probe.txt')
+    // `timeout: 0` (the test's whole timeout) on both: how long a stream takes to start
+    // and dispatch is fseventsd's, not ours to budget (seen past 5 s under load).
+    await expect
+      .poll(
+        () => {
+          fs.writeFileSync(probe, String(Date.now()))
+          return seen.has('watch-probe.txt')
+        },
+        { timeout: 0 },
+      )
+      .toBeTruthy()
+    fs.writeFileSync(path.join(dir, name), 'written before the watch started')
+    await expect.poll(() => seen.has(name), { timeout: 0 }).toBeTruthy()
+  } finally {
+    watcher.close()
+  }
+}
+
+/** Whether the pane at `paneIndex` shows a listing whose watch has armed. */
+async function paneListingWatchArmed(tauriPage: PageLike, paneIndex: number): Promise<boolean> {
+  return tauriPage.evaluate<boolean>(`(function() {
+        var pane = document.querySelectorAll('.file-pane')[${String(paneIndex)}];
+        var listingId = pane && pane.dataset.listingId;
+        if (!listingId) return false;
+        return window.__TAURI_INTERNALS__.invoke('listing_watch_armed', { listingId: listingId });
+    })()`)
+}
+
 // Putting the shared `left/` + `right/` tree back is this spec's job: the
 // post-test leak guard fails whoever leaves it dirty, and the restore is
 // surgical, so it only rewrites what actually drifted.
@@ -45,7 +107,10 @@ test.describe('File watching', () => {
     recreateFixtures(getFixtureRoot())
   })
 
-  test.afterEach(() => {
+  test.afterEach(async ({ tauriPage }) => {
+    // The arm-gap test releases the latch in a `finally` too; this covers a test that
+    // died before reaching it, so no arm stays parked for the rest of the run.
+    await setTestArmHold(tauriPage, false)
     for (const p of extraPaths) {
       try {
         fs.rmSync(p, { recursive: true, force: true })
@@ -260,6 +325,54 @@ test.describe('File watching', () => {
     await tauriPage.keyboard.press('Tab')
     await tauriPage.keyboard.press('Tab')
     expect(await fileExistsInPane(tauriPage, 'file-a.txt', 0)).toBe(true)
+  })
+
+  // The one test here that does NOT flush: `flushFileWatcher` re-reads the panes'
+  // listings outright, which would hide a regression in the app's own recovery. A
+  // listing's watch starts "since now", so a write between the listing read and the
+  // arm reaches the pane only through `arm_and_reconcile`'s mtime check. Under
+  // fseventsd load that gap is seconds wide in production; the latch parks the arm
+  // inside it here, so the write provably lands in the gap on any machine.
+  test('a write that lands before the watch starts still reaches the pane', async ({ tauriPage }) => {
+    // Two FSEvents stream starts sit on this test's path (the dispatch probe's and the
+    // app's real arm), and each took 4–10 s under fseventsd load in E2E (2026-10-13).
+    test.setTimeout(waitBudget(45_000))
+    await ensureAppReady(tauriPage)
+    const fixtureRoot = getFixtureRoot()
+
+    const gapDir = path.join(fixtureRoot, 'arm-gap-target')
+    fs.mkdirSync(gapDir)
+    fs.writeFileSync(path.join(gapDir, 'seed.txt'), 'seed')
+    extraPaths.push(gapDir)
+
+    try {
+      await setTestArmHold(tauriPage, true)
+      await tauriPage.evaluate(`window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
+            event: 'mcp-nav-to-path',
+            payload: { pane: 'right', path: ${JSON.stringify(gapDir)} }
+        })`)
+      // The listing is read (the pane shows it) and its arm is parked before the stream
+      // exists: a write now is inside the gap, never after it.
+      await expect
+        .poll(
+          async () => (await fileExistsInPane(tauriPage, 'seed.txt', 1)) && (await parkedListingArms(tauriPage)) > 0,
+          { timeout: waitBudget(5000) },
+        )
+        .toBeTruthy()
+
+      await writeAndWaitForFsEventsToDispatch(gapDir, 'late.txt')
+      await setTestArmHold(tauriPage, false)
+
+      // `timeout: 0` hands this poll the test's whole scaled timeout: the real arm's
+      // duration is fseventsd's, not ours to budget. Once it has landed, the reconcile
+      // re-read is one local readdir away, so the file must follow promptly.
+      await expect.poll(async () => paneListingWatchArmed(tauriPage, 1), { timeout: 0 }).toBeTruthy()
+      await expect
+        .poll(async () => fileExistsInPane(tauriPage, 'late.txt', 1), { timeout: waitBudget(2000) })
+        .toBeTruthy()
+    } finally {
+      await setTestArmHold(tauriPage, false)
+    }
   })
 
   test('updates both panes when both watch the same directory', async ({ tauriPage }) => {

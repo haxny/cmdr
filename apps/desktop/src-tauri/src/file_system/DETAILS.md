@@ -596,7 +596,9 @@ an unconditional re-read doubles the I/O of opening a 100k-entry folder. Known g
 doesn't touch the directory's mtime, so a size change in the window waits for that file's next event; and a volume
 clock running more than a tick behind ours can hide a same-tick change (one running ahead only costs re-reads). Pinned
 by `watcher_test::a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight` (the arm closure writes the file)
-and `an_arm_rereads_only_when_the_directory_mtime_cannot_rule_out_a_change`.
+and `an_arm_rereads_only_when_the_directory_mtime_cannot_rule_out_a_change`. End to end, `file-watching.spec.ts`
+parks the arm on the E2E-only `set_test_arm_hold` latch (`test_mode::wait_for_listing_arm_release`, called in
+`arm_listing_watch` after the first stat, a no-op outside E2E mode) and lands a write in the gap without flushing.
 
 `watcher_start_ms` in the `stall_probe::listing` line now measures only the dispatch, so it should read ~0. A
 regression that puts arming back on the critical path shows up there first.

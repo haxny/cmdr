@@ -102,6 +102,39 @@ pub fn set_test_scan_preview_delay(ms: Option<u64>) -> Result<(), String> {
     Ok(())
 }
 
+/// Holds (`true`) or releases (`false`) every listing watch's arm before it starts its
+/// FSEvents stream.
+///
+/// Holds open the read-to-arm gap that `watcher::arm_and_reconcile`'s mtime check
+/// covers, so a spec can land a write in it deterministically instead of hoping
+/// fseventsd is slow that day. Pair with [`parked_listing_arms`] to know an arm is
+/// waiting, and always release in a `finally`. Feature-gated to `playwright-e2e` so the
+/// command isn't available in production binaries.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+#[specta::specta]
+pub fn set_test_arm_hold(hold: bool) -> Result<(), String> {
+    crate::test_mode::set_listing_arm_hold(hold);
+    Ok(())
+}
+
+/// How many listing arms are parked on [`set_test_arm_hold`]'s latch.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+#[specta::specta]
+pub fn parked_listing_arms() -> usize {
+    crate::test_mode::parked_listing_arms()
+}
+
+/// Whether `listing_id` has a live watch, so a spec can wait for the arm to land before
+/// expecting what its reconcile re-read brings in.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+#[specta::specta]
+pub fn listing_watch_armed(listing_id: String) -> bool {
+    crate::file_system::watcher::coverage_for_listings(&[listing_id]) != cmdr_fs::volume::WatchCoverage::None
+}
+
 /// Stages one folder's activity for the proactive agent, then makes it act NOW.
 ///
 /// Verifying the wake loop otherwise means sitting out a deadline (five seconds at the

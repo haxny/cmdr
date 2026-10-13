@@ -235,7 +235,16 @@ pub fn start_watching_detached(listing_id: &str, path: &Path) {
     // not sit on a runtime worker. `tauri::async_runtime` rather than `tokio` because
     // the sync `list_directory_start` path calls this from the IPC handler thread,
     // which has no Tokio runtime context.
-    tauri::async_runtime::spawn_blocking(move || arm_and_reconcile(&listing_id, &path, opened_at, start_watching));
+    tauri::async_runtime::spawn_blocking(move || arm_and_reconcile(&listing_id, &path, opened_at, arm_listing_watch));
+}
+
+/// [`start_watching`], after the latch an E2E spec may hold
+/// (`test_mode::wait_for_listing_arm_release`, a no-op outside E2E mode). The latch sits
+/// inside the arm, after `arm_and_reconcile`'s first stat, which is exactly where a slow
+/// fseventsd handshake puts the gap in production.
+fn arm_listing_watch(listing_id: &str, path: &Path) -> Result<(), String> {
+    crate::test_mode::wait_for_listing_arm_release();
+    start_watching(listing_id, path)
 }
 
 /// The coarsest directory mtime a volume Cmdr watches can keep: FAT and some SMB
