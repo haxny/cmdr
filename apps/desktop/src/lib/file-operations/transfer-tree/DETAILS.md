@@ -89,6 +89,11 @@ resume (§ "The F key").
 - The probe element carries the row-height token (`--spacing-tree-row`: one line of small text plus padding), so the
   virtual window divides by the real pixel height and follows the text size. Before there's a layout (first frame,
   jsdom) the tree draws the loaded window instead (`range`).
+- **The viewport is measured in a task after a resize, ❌ never inside the `ResizeObserver` callback.** Measuring
+  re-windows the rows, which mounts rows (each label with its own observer) while WebKit is still delivering the round:
+  a dialog drag logged "ResizeObserver loop completed with undelivered notifications" on almost every frame (112 in 120
+  frames, release build, a real WKWebView probe, 2026-10-13; 0 after). A task, not an animation frame: a window behind
+  another gets no frames. `TransferTree.test.ts` pins that the callback renders nothing.
 - Rows sit in absolutely placed slots keyed by flat index (`role="none"`, so the treeitems stay the tree's children). A
   slot's row changes in place as the tree changes; ❌ keying by id would MOVE the focused element, which blurs it.
 - The keyboard cursor is a flat index plus the row id it holds. When an answer puts that id at another index (a folder

@@ -70,7 +70,14 @@ function key(name: string, init: KeyboardEventInit = {}): void {
  * `viewportRows` of them, and its `scrollTop` keeps whole pixels as WebKit's does. Returns
  * the undo.
  */
-function fakeLayout({ rowHeight, viewportRows }: { rowHeight: number; viewportRows: number }): () => void {
+function fakeLayout({
+  rowHeight,
+  viewportRows,
+}: {
+  rowHeight: number
+  viewportRows: number | (() => number)
+}): () => void {
+  const rowsTall = () => (typeof viewportRows === 'number' ? viewportRows : viewportRows())
   // Shadows jsdom's own on `Element.prototype`; deleting these brings them back.
   const proto = HTMLElement.prototype
   const tops = new WeakMap<Element, number>()
@@ -85,7 +92,7 @@ function fakeLayout({ rowHeight, viewportRows }: { rowHeight: number; viewportRo
   Object.defineProperty(proto, 'clientHeight', {
     configurable: true,
     get(this: HTMLElement) {
-      return isScroller(this) ? Math.floor(viewportRows * rowHeight) : 0
+      return isScroller(this) ? Math.floor(rowsTall() * rowHeight) : 0
     },
   })
   Object.defineProperty(proto, 'scrollTop', {
@@ -315,6 +322,48 @@ describe('TransferTree', () => {
       }
     } finally {
       restore()
+    }
+  })
+
+  // Regression: dragging the progress dialog taller logged "ResizeObserver loop completed with
+  // undelivered notifications" on nearly every frame. The observer re-windowed the rows inside
+  // its own callback, mounting rows (each with its own label observer) while WebKit was still
+  // delivering that round. The callback now only schedules the measurement.
+  it('re-windows after a resize outside the observer callback, never inside it', async () => {
+    let treeObserver: ResizeObserverCallback | undefined
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        private readonly callback: ResizeObserverCallback
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback
+        }
+        observe(el: Element): void {
+          if (el.classList.contains('scroller')) treeObserver = this.callback
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    let rowsTall = 4
+    const restore = fakeLayout({ rowHeight: 20, viewportRows: () => rowsTall })
+    try {
+      await render('flat-5000', 3)
+      const drawn = () => rows().length
+      const before = drawn()
+      rowsTall = 12
+      if (!treeObserver) throw new Error('the tree never observed its viewport')
+      treeObserver([], {} as ResizeObserver)
+      for (let i = 0; i < 5; i++) {
+        await Promise.resolve()
+        flushSync()
+      }
+      expect(drawn(), 'nothing re-rendered while the observer was delivering').toBe(before)
+      await settle()
+      expect(drawn()).toBeGreaterThan(before)
+    } finally {
+      restore()
+      vi.unstubAllGlobals()
     }
   })
 

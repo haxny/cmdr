@@ -172,11 +172,23 @@
         }
         read()
         if (typeof ResizeObserver === 'undefined') return
-        const observer = new ResizeObserver(read)
+        // ❌ Never measure inside the callback. The measurement re-windows the rows, which mounts
+        // rows (each label with its own observer) while WebKit is still delivering this round, and
+        // it reports "ResizeObserver loop completed with undelivered notifications" on every frame
+        // of a dialog drag. A task after the round is one frame late at worst, and, unlike an
+        // animation frame, still comes in a window that's behind another (the E2E app's case).
+        let pending: ReturnType<typeof setTimeout> | null = null
+        const observer = new ResizeObserver(() => {
+            pending ??= setTimeout(() => {
+                pending = null
+                read()
+            }, 0)
+        })
         observer.observe(viewport)
         observer.observe(row)
         return () => {
             observer.disconnect()
+            if (pending !== null) clearTimeout(pending)
         }
     })
 
