@@ -60,11 +60,11 @@ async function parkedListingArms(tauriPage: PageLike): Promise<number> {
 async function writeAndWaitForFsEventsToDispatch(dir: string, name: string): Promise<void> {
   const seen = new Set<string>()
   const watcher = fs.watch(dir, (_kind, file) => {
-    if (file) seen.add(file.toString())
+    if (file) seen.add(file)
   })
   try {
     const probe = path.join(dir, 'watch-probe.txt')
-    // `timeout: 0` (the test's whole timeout) on both: how long a stream takes to start
+    // A zero budget (the test's whole timeout) on both: how long a stream takes to start
     // and dispatch is fseventsd's, not ours to budget (seen past 5 s under load).
     await expect
       .poll(
@@ -72,11 +72,11 @@ async function writeAndWaitForFsEventsToDispatch(dir: string, name: string): Pro
           fs.writeFileSync(probe, String(Date.now()))
           return seen.has('watch-probe.txt')
         },
-        { timeout: 0 },
+        { timeout: waitBudget(0) },
       )
       .toBeTruthy()
     fs.writeFileSync(path.join(dir, name), 'written before the watch started')
-    await expect.poll(() => seen.has(name), { timeout: 0 }).toBeTruthy()
+    await expect.poll(() => seen.has(name), { timeout: waitBudget(0) }).toBeTruthy()
   } finally {
     watcher.close()
   }
@@ -363,10 +363,10 @@ test.describe('File watching', () => {
       await writeAndWaitForFsEventsToDispatch(gapDir, 'late.txt')
       await setTestArmHold(tauriPage, false)
 
-      // `timeout: 0` hands this poll the test's whole scaled timeout: the real arm's
+      // A zero budget hands this poll the test's whole scaled timeout: the real arm's
       // duration is fseventsd's, not ours to budget. Once it has landed, the reconcile
       // re-read is one local readdir away, so the file must follow promptly.
-      await expect.poll(async () => paneListingWatchArmed(tauriPage, 1), { timeout: 0 }).toBeTruthy()
+      await expect.poll(async () => paneListingWatchArmed(tauriPage, 1), { timeout: waitBudget(0) }).toBeTruthy()
       await expect
         .poll(async () => fileExistsInPane(tauriPage, 'late.txt', 1), { timeout: waitBudget(2000) })
         .toBeTruthy()
