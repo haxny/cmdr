@@ -8,13 +8,13 @@ import (
 )
 
 // fakeCheckRunner stands in for `scripts/check`: it logs every invocation, rewrites
-// the notices when asked for them, and fails the budget checks while the file named
-// by FAKE_BUDGET_FAIL exists.
+// the notices when asked for them, and fails the fast lane while the file named by
+// FAKE_BUDGET_FAIL exists.
 const fakeCheckRunner = `#!/bin/sh
 echo "$*" >> "$FAKE_RUNNER_LOG"
 case "$*" in
   *desktop-third-party-notices*) printf 'regenerated\n' > THIRD-PARTY-NOTICES.md ;;
-  *file-length*) if [ -f "$FAKE_BUDGET_FAIL" ]; then echo "file-length FAILED: a.go is over budget"; exit 1; fi ;;
+  *--fast*) if [ -f "$FAKE_BUDGET_FAIL" ]; then echo "file-length FAILED: a.go is over budget"; exit 1; fi ;;
 esac
 exit 0
 `
@@ -132,8 +132,11 @@ func TestPrePushStopsAPushThatBreaksABudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.git("push", "-q", "origin", "main")
-	if !strings.Contains(f.calls(t), "--ci --check file-length --check claude-md-length") {
-		t.Errorf("the hook didn't ask CI's question:\n%s", f.calls(t))
+	if !strings.Contains(f.calls(t), "--fast --ci") {
+		t.Errorf("the hook didn't run the fast lane in CI mode:\n%s", f.calls(t))
+	}
+	if strings.Contains(out, "uncommitted") {
+		t.Errorf("a clean tree's stop message blames uncommitted changes:\n%s", out)
 	}
 }
 
@@ -265,9 +268,10 @@ func TestPrePushLeavesADeletionAlone(t *testing.T) {
 	}
 }
 
-// The budget scanners read files on disk, so uncommitted or untracked work would
-// stand in for the pushed commit. The hook skips them then, and CI stays the gate.
-func TestPrePushSkipsTheBudgetsOnADirtyTree(t *testing.T) {
+// The fast lane reads files on disk, so uncommitted or untracked work stands in for
+// the pushed commit. Skipping it there was a hole, so it runs anyway, and a failure
+// says the uncommitted work may be the cause.
+func TestPrePushRunsTheFastLaneOnADirtyTree(t *testing.T) {
 	f := useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
@@ -279,9 +283,31 @@ func TestPrePushSkipsTheBudgetsOnADirtyTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r.git("push", "-q", "origin", "main")
+	out, err := r.tryGit("push", "origin", "main")
+	if err == nil {
+		t.Fatalf("a dirty tree's push went through a failing fast lane:\n%s", out)
+	}
+	if !strings.Contains(out, "uncommitted") {
+		t.Errorf("the stop message doesn't say uncommitted changes may be the cause:\n%s", out)
+	}
+}
 
-	if strings.Contains(f.calls(t), "file-length") {
-		t.Errorf("the hook ran the budgets over uncommitted work:\n%s", f.calls(t))
+// A check runner that doesn't build can't answer, and the hooks never stand in the
+// way when they can't run: the push goes on, saying the lane was skipped.
+func TestPrePushLetsThePushThroughWhenTheRunnerDoesNotBuild(t *testing.T) {
+	r := newTestRepo(t)
+	r.write("scripts/check/go.mod", "module broken\n\ngo 1.22\n")
+	r.write("scripts/check/main.go", "package main\n\nfunc main() { not go }\n")
+	if err := os.MkdirAll(filepath.Join(r.dir, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hookRepo := repo{root: r.dir}
+	var stderr strings.Builder
+	stop, err := checkFastLane(hookRepo, newCheckRunner(hookRepo), &stderr)
+	if err != nil || stop {
+		t.Fatalf("a runner that doesn't build stopped the push (stop=%v, err=%v):\n%s", stop, err, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "skipped") {
+		t.Errorf("the hook didn't say it skipped the fast lane:\n%s", stderr.String())
 	}
 }

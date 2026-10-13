@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const (
@@ -32,17 +34,47 @@ var noticesInputs = map[string]bool{
 // checkRunner runs the repo's check runner with args and returns its combined output.
 type checkRunner func(args ...string) (string, error)
 
-// newCheckRunner returns the worktree's check runner, or nil when it has none (a
-// checkout from before `scripts/check` existed), which makes the checks below skip.
-func newCheckRunner(root string) checkRunner {
+// errRunnerUnavailable means the check runner couldn't start because it doesn't
+// build. That's the hooks' "can't run" case, never a reason to stop a push.
+var errRunnerUnavailable = errors.New("the check runner doesn't build")
+
+// newCheckRunner returns the worktree's check runner, or nil when it can't have one:
+// a checkout from before `scripts/check` existed, or one without `node_modules`,
+// which most lanes need. Either makes the checks below skip.
+func newCheckRunner(r repo) checkRunner {
 	if fake := os.Getenv(checkRunnerEnv); fake != "" {
-		return commandRunner(root, fake)
+		return commandRunner(r.root, fake)
 	}
-	dir := filepath.Join(root, "scripts", "check")
-	if !isDir(dir) {
+	dir := filepath.Join(r.root, "scripts", "check")
+	if !isDir(dir) || !isDir(filepath.Join(r.root, "node_modules")) {
 		return nil
 	}
-	return commandRunner(dir, "go", "run", ".")
+	return builtRunner(r, dir)
+}
+
+// builtRunner builds the check runner once, into the worktree's git directory the
+// way `.githooks/run-hook` builds this program, then runs the binary. Building
+// first is what tells "the runner doesn't build" (skip) apart from "a check
+// failed" (stop the push), which `go run` reports with the same exit code.
+func builtRunner(r repo, dir string) checkRunner {
+	var once sync.Once
+	var bin, buildOut string
+	var buildErr error
+	return func(args ...string) (string, error) {
+		once.Do(func() {
+			if bin, buildErr = r.gitPath("cmdr-check-runner"); buildErr != nil {
+				return
+			}
+			cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, ".")
+			cmd.Dir = dir
+			out, err := cmd.CombinedOutput()
+			buildOut, buildErr = string(out), err
+		})
+		if buildErr != nil {
+			return buildOut, fmt.Errorf("%w: %v", errRunnerUnavailable, buildErr)
+		}
+		return commandRunner(dir, bin)(args...)
+	}
 }
 
 func commandRunner(dir, name string, prefix ...string) checkRunner {
@@ -71,7 +103,7 @@ func regenerateNotices(r repo, check checkRunner, pushed pushedRef, stderr io.Wr
 	fmt.Fprintln(stderr, "This push moves a lockfile, so the hook is regenerating THIRD-PARTY-NOTICES.md (about a minute)...")
 	// `--fresh`: a cache hit would skip the very rewrite this is for. `--allow-main`:
 	// the main clone is where pushes happen.
-	if out, err := check("--check", "desktop-third-party-notices", "--fresh", "--allow-main", "--no-log"); err != nil {
+	if out, err := check("--check", "desktop-third-party-notices", "--exact", "--fresh", "--allow-main", "--no-log"); err != nil {
 		fmt.Fprintf(stderr, "notices hook: skipped, the check runner didn't finish:\n%s", out)
 		return false, nil
 	}
@@ -117,31 +149,33 @@ func touchesNoticesInputs(r repo, pushed pushedRef) bool {
 	return false
 }
 
-// checkBudgets runs CI's two whole-repo size limits, `file-length` and
-// `claude-md-length`. Two commits can each sit under a limit and cross it together,
-// which only a run over the combined tree sees. They take milliseconds, so they run
-// on every push, in `--ci` mode so they report without rewriting their allowlists.
+// checkFastLane runs the whole `--fast` lane (about 6 s), in `--ci` mode so it
+// reports without rewriting files or allowlists. It catches what each commit's
+// own checks can't: two commits that each sit under a limit and cross it together,
+// a doc link a later commit broke, a scoped run that never reached a whole-repo lane.
+// Unlike the steps above there's nothing to commit: a failure stops the push and
+// shows why.
 //
-// They read the working tree, so they skip it when uncommitted or untracked work
-// would stand in for the pushed commit. Unlike the steps above there's nothing to
-// commit: a failure stops the push and shows why.
-func checkBudgets(r repo, check checkRunner, stderr io.Writer) (stopPush bool, err error) {
+// It reads the working tree, so uncommitted or untracked work stands in for the
+// pushed commit. It runs anyway (skipping it there let failures through), and a
+// failure on a dirty tree says that work may be the cause.
+func checkFastLane(r repo, check checkRunner, stderr io.Writer) (stopPush bool, err error) {
 	if check == nil {
+		fmt.Fprintln(stderr, "fast-lane hook: skipped, this checkout can't run the check runner (no scripts/check or node_modules). CI still checks.")
 		return false, nil
 	}
-	dirty, err := r.git("status", "--porcelain")
-	if err != nil {
-		return false, err
-	}
-	if strings.TrimSpace(dirty) != "" {
-		fmt.Fprintln(stderr, "budget hook: skipped file-length and claude-md-length, the working tree has uncommitted changes. CI still checks them.")
+	out, err := check("--fast", "--ci")
+	if errors.Is(err, errRunnerUnavailable) {
+		fmt.Fprintf(stderr, "fast-lane hook: skipped, %v. CI still checks.\n%s", err, out)
 		return false, nil
 	}
-	out, err := check("--ci", "--check", "file-length", "--check", "claude-md-length")
 	if err == nil {
 		return false, nil
 	}
-	fmt.Fprintf(stderr, "%s\nThis push would fail CI's size limits, so it stopped. Split or trim the file (or bump its allowlist entry with a reason), "+
-		"then push again. `git push --no-verify` sends it anyway.\n", strings.TrimRight(out, "\n"))
+	fmt.Fprintf(stderr, "%s\nThis push would fail CI, so it stopped. Fix what the fast lane reported, then push again.\n", strings.TrimRight(out, "\n"))
+	if dirty, statusErr := r.git("status", "--porcelain"); statusErr == nil && strings.TrimSpace(dirty) != "" {
+		fmt.Fprintln(stderr, "The working tree has uncommitted changes, and the checks read it, so those changes may be the cause.")
+	}
+	fmt.Fprintln(stderr, "`git push --no-verify` sends it anyway.")
 	return true, nil
 }

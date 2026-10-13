@@ -15,7 +15,7 @@ const formatCommitSubject = "style: apply formatter output"
 // resolution, a `--no-verify` commit, a generated file. It runs the same
 // whole-repo checks as CI's formatting lanes, and when they'd fail it formats,
 // commits, and stops the push. Then it does the same for the license notices a
-// dependency push makes stale, and runs CI's size limits (`prepush_checks.go`).
+// dependency push makes stale, and runs the `--fast` check lane (`prepush_checks.go`).
 //
 // Stopping is not a choice. Git settles which commits a push sends before it runs
 // this hook, so a commit made here can't join the push in flight; letting the push
@@ -30,7 +30,7 @@ func prePush(r repo, fs []formatter, check checkRunner, stdin io.Reader, stderr 
 	}
 	ref, skipped := describesPush(r, pushed)
 	if skipped != "" {
-		fmt.Fprintf(stderr, "pre-push: skipped formatting, license notices, and size limits, %s. CI still checks them.\n", skipped)
+		fmt.Fprintf(stderr, "pre-push: skipped formatting, license notices, and the fast lane, %s. CI still checks them.\n", skipped)
 		return false, nil
 	}
 
@@ -40,7 +40,7 @@ func prePush(r repo, fs []formatter, check checkRunner, stdin io.Reader, stderr 
 	if stop, err := regenerateNotices(r, check, ref, stderr); stop || err != nil {
 		return stop, err
 	}
-	return checkBudgets(r, check, stderr)
+	return checkFastLane(r, check, stderr)
 }
 
 // commitFormatting formats what CI's formatting lanes would flag, commits it, and
