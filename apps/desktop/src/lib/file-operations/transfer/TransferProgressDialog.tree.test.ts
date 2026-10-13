@@ -11,6 +11,7 @@ import type {
   OperationSnapshot,
   TransferTreeAnswer,
   TransferTreeViewRequest,
+  WriteConflictEvent,
   WriteProgressEvent,
 } from '#lib/tauri-commands/index.js'
 import type { TransferOperationType } from '#lib/file-explorer/types.js'
@@ -21,8 +22,10 @@ import {
   initOperationSessions,
 } from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
 import TransferProgressDialog from './TransferProgressDialog.svelte'
+import { buttonLabel } from '../test-button-label'
 
 let progressCb: ((e: WriteProgressEvent) => void) | null = null
+let conflictCb: ((e: WriteConflictEvent) => void) | null = null
 let operationType: TransferOperationType = 'copy'
 
 const getTransferTreeView = vi.hoisted(() =>
@@ -48,7 +51,12 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   onWriteError: vi.fn(() => Promise.resolve(() => {})),
   onWriteCancelled: vi.fn(() => Promise.resolve(() => {})),
   onWriteSettled: vi.fn(() => Promise.resolve(() => {})),
-  onWriteConflict: vi.fn(() => Promise.resolve(() => {})),
+  onWriteConflict: vi.fn((cb: (e: WriteConflictEvent) => void) => {
+    conflictCb = cb
+    return Promise.resolve(() => {
+      conflictCb = null
+    })
+  }),
   onWriteConflictResolved: vi.fn(() => Promise.resolve(() => {})),
   resolveWriteConflict: vi.fn(() => Promise.resolve('resolved')),
   cancelOperation: vi.fn(() => Promise.resolve()),
@@ -125,6 +133,7 @@ function event(phase: WriteProgressEvent['phase'], filesDone = 1): WriteProgress
 
 beforeEach(async () => {
   progressCb = null
+  conflictCb = null
   operationType = 'copy'
   getTransferTreeView.mockReset()
   getTransferTreeView.mockResolvedValue(oneCopyingFile)
@@ -205,6 +214,45 @@ describe('TransferProgressDialog’s transfer tree', () => {
     expect(getTransferTreeView).not.toHaveBeenCalled()
     expect(target.querySelector('.current-file')?.textContent).toContain('holiday.mov')
     expect(bands(target)).toEqual(['w', 'e'])
+    void unmount(component)
+  })
+
+  // The conflict prompt takes the body's place, so the tree goes and comes back: it must
+  // come back as the user left it, not following from the top with their folders shut.
+  it('brings the tree back as the user left it after a conflict prompt', async () => {
+    const { component, target, send } = await mountDialog('copy')
+    await send(event('copying'))
+    const row = target.querySelector<HTMLElement>('[role="treeitem"]')
+    if (!row) throw new Error('no tree row')
+    row.focus()
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+    await flushPromises()
+
+    if (!conflictCb) throw new Error('conflict subscriber never registered')
+    conflictCb({
+      operationId: 'op-1',
+      conflictId: 1,
+      sourcePath: '/Users/test/holiday.mov',
+      destinationPath: '/Users/test/dest/holiday.mov',
+      sourceSize: 2048,
+      destinationSize: 1024,
+      sourceModified: 1_710_000_000,
+      destinationModified: 1_700_000_000,
+      destinationIsNewer: false,
+      sizeDifference: -1024,
+      sourceIsDirectory: false,
+      destinationIsDirectory: false,
+    })
+    await flushPromises()
+    expect(target.querySelector('.transfer-tree')).toBeNull()
+    const before = getTransferTreeView.mock.calls.length
+    const skip = [...target.querySelectorAll<HTMLButtonElement>('button')].find((b) => buttonLabel(b) === 'Skip')
+    skip?.click()
+    await flushPromises()
+    await send(event('copying', 2))
+    expect(target.querySelector('.transfer-tree')).not.toBeNull()
+    expect(getTransferTreeView.mock.calls.length).toBeGreaterThan(before)
+    expect(getTransferTreeView.mock.calls.at(-1)?.[1].window.kind).toBe('at')
     void unmount(component)
   })
 

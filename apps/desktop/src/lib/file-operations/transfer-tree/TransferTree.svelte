@@ -21,7 +21,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import TransferTreeRow from './TransferTreeRow.svelte'
-    import { createTransferTreeViewState } from './transfer-tree-view.svelte'
+    import { createTransferTreeViewState, type TransferTreeMemory } from './transfer-tree-view.svelte'
     import { MAX_PINNED, pinnedHeaders } from './pinned-headers'
     import { rowPaths, type TransferTreeOperation } from './row-format'
     import { ipcTransferTreeSource, type TransferTreeSource } from './transfer-tree-source'
@@ -36,13 +36,16 @@
         /** Whether Tab reaches the tree (its cursor row, then Follow). The queue clears it on every
          *  row but the grid's cursor row, so the grid stays one Tab stop plus that row's tree. */
         tabbable?: boolean
+        /** Where the host keeps this tree while it's away (the dialog's conflict prompt takes its
+         *  place), so the tree that comes back is the one the user left. */
+        memory?: TransferTreeMemory
     }
 
     /** A running operation by id, or a scripted fixture. Either is fixed for the tree's life. */
     type Props = CommonProps &
         ({ operationId: string; source?: never } | { source: TransferTreeSource; operationId?: never })
 
-    const { tick, operation, defaultRows = 8, tabbable = true, operationId, source }: Props = $props()
+    const { tick, operation, defaultRows = 8, tabbable = true, operationId, source, memory }: Props = $props()
 
     /** The physical key that resumes following (like the decision prompts' letters, never translated). */
     const FOLLOW_KEY_CODE = 'KeyF'
@@ -54,9 +57,15 @@
         return source ?? ipcTransferTreeSource(operationId)
     }
 
-    const tree = createTransferTreeViewState(untrack(initialSource))
+    /** What this tree views, fixed for its life: the key it's remembered by. */
+    const memoryKey: unknown = untrack(() => operationId ?? source)
+    const remembered = untrack(() => memory?.recall(memoryKey) ?? null)
+    const tree = createTransferTreeViewState(untrack(initialSource), { initial: remembered?.view })
     tree.setViewportRows(untrack(() => defaultRows))
+    /** A paused tree's scroll position, put back once there's a layout (following puts its own). */
+    let restoreTop: number | null = remembered && !remembered.view.following ? remembered.view.topRow : null
     onDestroy(() => {
+        untrack(() => memory)?.keep(memoryKey, { view: tree.snapshot(), contentRows })
         tree.dispose()
     })
 
@@ -92,7 +101,7 @@
      *  arrive but never shrinks back, so a folder shutting as the work moves on doesn't
      *  bounce the host's layout on every tick. */
     const maxRows = $derived(Math.max(3, defaultRows))
-    let contentRows = $state(1)
+    let contentRows = $state(remembered?.contentRows ?? 1)
     $effect(() => {
         const wanted = Math.min(Math.max(total, 1), maxRows)
         if (wanted > untrack(() => contentRows)) contentRows = wanted
@@ -159,6 +168,18 @@
         return () => {
             observer.disconnect()
         }
+    })
+
+    // Paused when it went away: back to where the user had scrolled.
+    $effect(() => {
+        const viewport = scroller
+        if (restoreTop === null || !ready || rowHeight <= 0 || !viewport) return
+        const target = restoreTop * rowHeight
+        restoreTop = null
+        untrack(() => {
+            viewport.scrollTop = target
+            scrollTop = viewport.scrollTop
+        })
     })
 
     // Following: put the work where it belongs on every answer.

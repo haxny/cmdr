@@ -24,6 +24,7 @@
     import KeyHint from '#lib/ui/KeyHint.svelte'
     import TransferProgressReadout from '../TransferProgressReadout.svelte'
     import TransferTree from '../transfer-tree/TransferTree.svelte'
+    import { createTransferTreeMemory } from '../transfer-tree/transfer-tree-view.svelte'
     import { treeOperationFor } from '../transfer-tree/tree-operation'
     import RollbackConfirmDialog from '../RollbackConfirmDialog.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -127,6 +128,10 @@
 
     /** The tree's height before the user resizes the dialog, in rows. */
     const TREE_ROWS = 8
+
+    /** The conflict prompt and a reversal take the tree's place; this brings it back as the
+     *  user left it (toggles, following, scroll, height) rather than fresh. */
+    const treeMemory = createTransferTreeMemory()
 
     /** Wide enough that the shared readout's fixed columns (amount, percent,
      *  rate, time left) still leave the bars a readable width. It's also the
@@ -534,6 +539,7 @@
                     tick={progress.progressTick}
                     operation={treeOperation}
                     defaultRows={TREE_ROWS}
+                    memory={treeMemory}
                 />
             {/key}
         {/if}

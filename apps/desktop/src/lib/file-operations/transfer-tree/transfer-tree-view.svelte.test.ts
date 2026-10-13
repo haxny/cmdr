@@ -145,6 +145,31 @@ describe('the request coalescer', () => {
     }
   })
 
+  it('picks up where a view over the same operation left off: its hand toggles, following, and scroll', async () => {
+    const first = create()
+    first.toggle(42, false)
+    first.toggle(7, true)
+    first.pauseFollowing()
+    first.scrolledTo(120)
+    const left = first.snapshot()
+    first.dispose()
+
+    const second = createTransferTreeViewState(src.source, {
+      schedule: immediately,
+      tickPullIntervalMs: 0,
+      initial: left,
+    })
+    second.setViewportRows(8)
+    second.refresh()
+
+    expect(second.following).toBe(false)
+    expect(src.requests.at(-1)).toMatchObject({
+      expanded: [42],
+      collapsed: [7],
+      window: { kind: 'at', offset: 120 - OVERSCAN_ROWS },
+    })
+  })
+
   it('says when the operation never builds a tree', async () => {
     const state = create()
     state.refresh()

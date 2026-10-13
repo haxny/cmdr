@@ -1124,10 +1124,13 @@ session's progress tick (`progress.progressTick`), 8 rows tall at most before a 
 - **The dialog is fully resizable only while the tree shows** (`resizable={… ? true : 'horizontal'}`): the tree is the
   one child that absorbs extra height. The non-conflict body is a `.progress-body` column filling the body, so a taller
   dialog hands its slack to the tree's `flex: 1 1 auto`; at its natural height the dialog is exactly as tall as its
-  content. The size isn't persisted.
+  content. The size isn't persisted. While a clash or a reversal hides the tree, `ModalDialog` sets the user's height
+  aside and the dialog takes its natural height; the height comes back with the tree if the window still fits it
+  (`../../ui/DETAILS.md` § ModalDialog).
 - **The tree takes the current-file line's place**: it names every file at work, the line only one of them.
 - **❌ No tree during a reversal** (an in-flight rollback or an adopted undo): its rows would still say "done" about
-  files that are going away. A clash replaces the body as before, so the tree remounts after it, losing hand toggles.
+  files that are going away. A clash replaces the body as before, so the tree remounts after it; `treeMemory`
+  (`createTransferTreeMemory`) brings it back as the user left it: hand toggles, following, scroll, and height.
 
 ## Pause, Queue, and auto-queue (progress dialog)
 

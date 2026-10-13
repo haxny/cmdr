@@ -45,6 +45,43 @@ export const TICK_PULL_INTERVAL_MS = 200
 /** Why the view stopped asking: the operation ended, or it never builds a tree. */
 export type TransferTreeEnded = 'finished' | 'notATransfer'
 
+/** What a view leaves for the next one over the same operation (`TransferTreeMemory`). */
+export interface TransferTreeViewSnapshot {
+  readonly expanded: readonly number[]
+  readonly collapsed: readonly number[]
+  readonly following: boolean
+  /** The viewport's top row, which matters only while not following. */
+  readonly topRow: number
+}
+
+/** One tree as it was when it went away: its view, and how tall it had grown. */
+export interface RememberedTree {
+  readonly view: TransferTreeViewSnapshot
+  readonly contentRows: number
+}
+
+/**
+ * Where a host keeps its tree while the tree is away: the progress dialog's conflict
+ * prompt and reversal take the tree's place, and the tree that comes back picks up the
+ * user's toggles, following, scroll, and height. One slot, keyed by what the tree views
+ * (an operation id, or a fixture's source), so a host that starts another operation
+ * gets a fresh tree, ❌ never the last one's toggles on ids from another arena.
+ */
+export interface TransferTreeMemory {
+  recall: (key: unknown) => RememberedTree | null
+  keep: (key: unknown, tree: RememberedTree) => void
+}
+
+export function createTransferTreeMemory(): TransferTreeMemory {
+  let slot: { key: unknown; tree: RememberedTree } | null = null
+  return {
+    recall: (key) => (slot !== null && slot.key === key ? slot.tree : null),
+    keep: (key, tree) => {
+      slot = { key, tree }
+    },
+  }
+}
+
 export interface TransferTreeViewState {
   /** The last window the backend answered, `null` before the first. */
   readonly view: TransferTreeView | null
@@ -75,6 +112,8 @@ export interface TransferTreeViewState {
   ancestorsOf: (index: number) => TransferTreeAncestor[]
   /** The flat index of a row's parent row, `null` for a top-level row or one the window doesn't know. */
   parentIndexOf: (index: number) => number | null
+  /** What this view leaves for the next one over the same operation. */
+  snapshot: () => TransferTreeViewSnapshot
   /** The view went away: answer nothing more, ask nothing more. */
   dispose: () => void
 }
@@ -84,6 +123,8 @@ export interface TransferTreeViewOptions {
   schedule?: (run: () => void) => void
   /** The least time between two tick-driven pulls. Defaults to {@link TICK_PULL_INTERVAL_MS}. */
   tickPullIntervalMs?: number
+  /** Where an earlier view over the same operation left off. */
+  initial?: TransferTreeViewSnapshot
 }
 
 function defaultSchedule(run: () => void): void {
@@ -100,15 +141,15 @@ function withNewest(ids: readonly number[], id: number): number[] {
 
 export function createTransferTreeViewState(
   source: TransferTreeSource,
-  { schedule = defaultSchedule, tickPullIntervalMs = TICK_PULL_INTERVAL_MS }: TransferTreeViewOptions = {},
+  { schedule = defaultSchedule, tickPullIntervalMs = TICK_PULL_INTERVAL_MS, initial }: TransferTreeViewOptions = {},
 ): TransferTreeViewState {
   let view = $state.raw<TransferTreeView | null>(null)
   let ended = $state<TransferTreeEnded | null>(null)
-  let following = $state(true)
-  let expanded = $state.raw<number[]>([])
-  let collapsed = $state.raw<number[]>([])
+  let following = $state(initial?.following ?? true)
+  let expanded = $state.raw<number[]>([...(initial?.expanded ?? [])])
+  let collapsed = $state.raw<number[]>([...(initial?.collapsed ?? [])])
   let viewportRows = $state(8)
-  let topRow = 0
+  let topRow = initial?.topRow ?? 0
 
   let framePending = false
   let disposed = false
@@ -252,6 +293,9 @@ export function createTransferTreeViewState(
     rowAt(index) {
       if (view === null) return undefined
       return view.rows[index - view.offset]
+    },
+    snapshot() {
+      return { expanded, collapsed, following, topRow }
     },
     dispose() {
       disposed = true

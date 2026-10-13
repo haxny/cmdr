@@ -37,6 +37,10 @@ landed. These are the product calls (David, 2026-10-11) the code holds:
   root is a `flex: 1 1 auto` column with that height as its basis and `min(rows, 3)` rows as its floor, so a resizable
   dialog's growing child stretches it and a squeezed one keeps three rows.
 
+- `memory` (optional, `createTransferTreeMemory()`): where the host keeps the tree while something else takes its place.
+  The tree leaves its hand toggles, following, scroll position, and grown height there when it unmounts, and the next
+  tree over the same operation (or fixture) picks them up; a different operation starts fresh. The dialog passes one,
+  since its conflict prompt and reversals replace the body.
 - `tabbable` (default true): whether Tab reaches the tree (its tab-stop row, then Follow). The queue clears it on every
   row but its grid's cursor row, so the grid stays one Tab stop plus that row's tree (`../queue/DETAILS.md` § "The
   inline tree"). Click and code still focus a row.
