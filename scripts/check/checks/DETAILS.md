@@ -70,7 +70,9 @@ CheckDefinition{
   the check. Use for E2E suites, full eslint with type-aware rules, etc.
 - **`IsFast: true`** opts the check into the curated `--fast` pre-commit lane. The lane is editorially picked, not
   derived from timings — only check this if the check is genuinely cheap on a warm cache _and_ unlikely to spike on a
-  cold one.
+  cold one. The lane's budget is 5–10 s under `--fresh`, so a check that boots a compiler, test runner, or formatter
+  stays out (`../DETAILS.md` § "Key decisions"). A setup step a fast check `DependsOn` must be `IsFast` too, or the
+  dependent starts without it.
 - **`CIOnly: true`** runs the check only under `--ci` (or when named explicitly). Two uses: the slow-but-authoritative
   variant of a check whose fast local variant lives elsewhere (`cargo-udeps` paired with `cargo-machete`), and a check
   whose cost per catch doesn't justify a place in the local loop (`jscpd-rust`, the five `<provider>-smoke` lanes).

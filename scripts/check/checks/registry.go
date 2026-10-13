@@ -12,7 +12,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppOther,
 		Tech:        "📐 Format",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      wholeRepoInputs, // formats markdown, JSON, YAML, JS/TS across every app
 		Run:         RunOxfmt,
 	},
@@ -25,7 +24,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      inputs(rustCompileInputs, []string{"rustfmt.toml"}),
 		Run:         RunRustfmt,
 	},
@@ -230,7 +228,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      macOSSymbolFloorInputs,
 		Run:         RunMacOSSymbolFloor,
 	},
@@ -433,7 +430,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunDesktopMessageKeysFresh,
 	},
@@ -490,7 +486,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunDesktopMessageKeysUnused,
 	},
@@ -604,7 +599,6 @@ var AllChecks = []CheckDefinition{
 		// ratchet-down baseline. Its CI step sits in `hygiene` next to i18n-citations,
 		// since the termbase lives under `docs/i18n/`, which the `svelte` filter can't see.
 		DependsOn: nil,
-		IsFast:    true,
 		Inputs: inputs([]string{
 			"docs/i18n/**",
 			"apps/desktop/src/lib/intl/messages/**",
@@ -1135,7 +1129,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunKnip,
 	},
@@ -1179,7 +1172,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunDesktopE2ELinuxTypecheck,
 	},
@@ -1348,12 +1340,8 @@ var AllChecks = []CheckDefinition{
 		App:         AppApiServer,
 		Tech:        "⸆⸉ TS",
 		DependsOn:   []string{"oxfmt"},
-		// IsFast for the same reason as `dashboard-svelte-kit-sync`: `--fast` keeps only fast
-		// entries, and `api-server-typecheck` is one. Left out, the fast lane would typecheck
-		// against a missing `worker-configuration.d.ts` and fail on every Worker global.
-		IsFast: true,
-		Inputs: apiServerInputs,
-		Run:    RunApiServerWorkerTypes,
+		Inputs:      apiServerInputs,
+		Run:         RunApiServerWorkerTypes,
 	},
 	{
 		ID:          "api-server-eslint",
@@ -1370,10 +1358,9 @@ var AllChecks = []CheckDefinition{
 		DisplayName: "typecheck",
 		App:         AppApiServer,
 		Tech:        "⸆⸉ TS",
-		// Names the generator as well as the linter: `--fast` drops `api-server-eslint`, and
-		// without a second edge this check would start before the types exist.
+		// Names the generator as well as the linter: it reads `worker-configuration.d.ts`, so the
+		// edge mustn't hinge on the linter sharing its lane.
 		DependsOn: []string{"api-server-eslint", "api-server-worker-types"},
-		IsFast:    true,
 		Inputs:    apiServerInputs,
 		Run:       RunApiServerTypecheck,
 	},
@@ -1383,7 +1370,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppApiServer,
 		Tech:        "⸆⸉ TS",
 		DependsOn:   []string{"api-server-typecheck"},
-		IsFast:      true,
 		Inputs:      apiServerInputs,
 		Run:         RunApiServerTests,
 	},
@@ -1396,14 +1382,8 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🎨 Svelte",
 		NotInCI:     "CI's dashboard job runs `pnpm exec svelte-kit sync` directly as a setup step",
 		DependsOn:   []string{"oxfmt"},
-		// IsFast because both its dependents are, and `FilterFastChecks` keeps only fast entries:
-		// left out, `--fast` drops this one and runs `dashboard-svelte-check` / `dashboard-knip`
-		// against a `.svelte-kit/` that a fresh worktree hasn't generated yet. Neither degrades
-		// gracefully there — they fail on the missing `tsconfig.json` and nine unresolved
-		// `./$types` imports. It's a sub-second generate step, so the lane pays almost nothing.
-		IsFast: true,
-		Inputs: dashboardInputs,
-		Run:    RunDashboardSvelteKitSync,
+		Inputs:      dashboardInputs,
+		Run:         RunDashboardSvelteKitSync,
 	},
 	{
 		ID:          "dashboard-eslint",
@@ -1431,7 +1411,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"dashboard-svelte-kit-sync"},
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardSvelteCheck,
 	},
@@ -1454,7 +1433,6 @@ var AllChecks = []CheckDefinition{
 		// once `svelte-kit sync` has run. Without the edge, a fresh worktree races it and knip reports
 		// nine unresolved imports.
 		DependsOn: []string{"dashboard-svelte-kit-sync"},
-		IsFast:    true,
 		Inputs:    dashboardInputs,
 		Run:       RunDashboardKnip,
 	},
@@ -1464,7 +1442,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"dashboard-svelte-check"},
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardTests,
 	},
@@ -1497,7 +1474,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppScripts,
 		Tech:        "🐹 Go",
 		DependsOn:   []string{"scripts-go-gofmt"},
-		IsFast:      true,
 		Inputs:      goSourceInputs,
 		Run:         RunGoVet,
 	},
@@ -1508,7 +1484,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppScripts,
 		Tech:        "🐹 Go",
 		DependsOn:   []string{"scripts-go-gofmt"},
-		IsFast:      true,
 		Inputs:      goSourceInputs,
 		Run:         RunStaticcheck,
 	},
@@ -1576,7 +1551,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppScripts,
 		Tech:        "🐹 Go",
 		DependsOn:   []string{"scripts-go-vet"},
-		IsFast:      true,
 		Inputs:      goTestsInputs,
 		Run:         RunGoTests,
 	},
@@ -1599,7 +1573,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppOther,
 		Tech:        "🐹 Go",
 		DependsOn:   nil,
-		IsFast:      true,
 		// Reads .mise.toml, every go.mod, and any file a Go version could hide
 		// in, so it takes the whole tree.
 		Inputs: wholeRepoInputs,
