@@ -19,11 +19,11 @@
   ],
   "customManagers": [
     {
-      "description": "The Go analyzers the check runner shells out to are pinned as `@vX.Y.Z` string literals inside `EnsureGoTool(...)` calls, so no manager sees them. They went stale silently until a Go 1.27 bump broke CI: staticcheck 2026.1 can't decode Go 1.27 export data, and the toolchain PR had no way to know the pin needed to move with it. `packageName` captures the module root (`honnef.co/go/tools`) because the goproxy 404s on a package path (`honnef.co/go/tools/cmd/staticcheck`), while `depName` keeps the full install path so `autoReplaceStringTemplate` can write the line back verbatim.",
+      "description": "The Go analyzers the check runner shells out to are pinned as `@vX.Y.Z` string literals inside `EnsureGoTool(...)` calls, so no manager sees them. They went stale silently until a Go 1.27 bump broke CI: staticcheck 2026.1 can't decode Go 1.27 export data, and the toolchain PR had no way to know the pin needed to move with it. `packageName` captures the module root (`honnef.co/go/tools`) because the goproxy 404s on a package path (`honnef.co/go/tools/cmd/staticcheck`), while `depName` keeps the full install path so `autoReplaceStringTemplate` can write the line back verbatim. The first argument is skipped as `[^,]+` because every call passes `ctx.RootDir` there; a pattern expecting a quoted string matched nothing.",
       "customType": "regex",
       "managerFilePatterns": ["scripts/check/checks/*.go"],
       "matchStrings": [
-        "EnsureGoTool\\(\\s*\"[^\"]*\",\\s*\"(?<depName>(?<packageName>[^\"@]+?)(?:/cmd/[^\"@/]+)?)@(?<currentValue>v[^\"]+)\""
+        "EnsureGoTool\\(\\s*[^,]+,\\s*\"[^\"]*\",\\s*\"(?<depName>(?<packageName>[^\"@]+?)(?:/cmd/[^\"@/]+)?)@(?<currentValue>v[^\"]+)\""
       ],
       "autoReplaceStringTemplate": "{{{depName}}}@{{{newValue}}}",
       "datasourceTemplate": "go",
