@@ -242,6 +242,27 @@ pull", the million-file budget in `write_operations/transfer_tree/DETAILS.md`, t
   behind every later shot. `pnpm i18n:couple` found no stale couplings to clear.
 - **Not done**: filing the follow-up issues below; that belongs to the spec's wipe.
 
+## Built after review (2026-10-13)
+
+A final review's items, each in its own commit, docs beside the code:
+
+- **Pull rate**: ticks pull through a 200 ms throttle (leading and trailing, a clock, never frames), under the
+  one-in-flight coalescer (`file-operations/transfer-tree/DETAILS.md` § "The pull").
+- **Building can't fail a transfer**: every builder, recorded entry, and the local sort runs under
+  `transfer_tree::built`; a panic installs no tree (`ready: false`) and the local files keep walk order
+  (`write_operations/transfer_tree/DETAILS.md` § "Observation only, structurally").
+- **Accessible names** read the visible text first, verbatim and in order, then the state (WCAG 2.5.3); the `*Aria`
+  count keys are gone.
+- **Wording**: "Couldn't finish" and "{n} couldn't finish" replace "Failed" / "{n} failed", re-translated.
+- **Dialog height**: `ModalDialog` parks a dragged height while vertical resizing is withdrawn (a clash, a reversal) and
+  restores it if it fits; the tree comes back from a clash as the user left it (`createTransferTreeMemory`).
+- **Destination-side failures** mark their row through `TreeLanding` (where the sources land); a local staged write's
+  failure names its target, never the temp.
+- **Pane deselection** filters by the pane's own operation (the foreground one). The unfiltered listener predated this
+  branch; the volume drivers' new events widened it.
+- **Discovery** happens per listed level, before any child lands, and a folder never reads done with work in flight
+  below. A budget cell covers a tree filled by discovery (52.4 B/node).
+
 ## Backend data model
 
 New module `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/` (colocated `CLAUDE.md` +
