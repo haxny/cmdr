@@ -13,7 +13,7 @@
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { ConflictResolution } from '#lib/file-explorer/types.js'
-    import TransferConflictDialog from './transfer/TransferConflictDialog.svelte'
+    import TransferConflictDialog, { conflictDialogWidthStyle } from './transfer/TransferConflictDialog.svelte'
     import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
     import { getFolderName } from './transfer/transfer-dialog-utils'
     import { inFlightRollbackVariant } from './reversal-wording'
@@ -26,10 +26,10 @@
         resolveConflictPrompt,
     } from './operation-conflict.svelte'
 
-    /** Roomier than the buttons need (two 200 px columns), narrower than the
-     *  progress dialog: that one is 580 px for its fixed-width readout columns,
-     *  which this body doesn't have. */
-    const DIALOG_WIDTH_STYLE = 'width: 520px; min-width: 520px'
+    /** At least 520 px, narrower than the progress dialog (580 px for its fixed-width
+     *  readout columns, which this body doesn't have), and wider when a translation's
+     *  buttons need it. */
+    const DIALOG_WIDTH_STYLE = conflictDialogWidthStyle(520)
 
     /** Rollback undoes everything the operation has written or moved, and a file
      *  it overwrote has no backup either way, so the click raises the question
@@ -134,9 +134,11 @@
 <style>
     /* Sits between the title and the filename the body leads with, so the eye
        reads "which operation" before "which file". Matches the body's own
-       horizontal padding. */
+       horizontal padding. Contained, so a long folder name wraps instead of widening the
+       dialog past what its buttons need (`conflictDialogWidthStyle`). */
     .context {
         margin: 0;
+        contain: inline-size;
         padding: var(--spacing-md) var(--spacing-xl) 0;
         text-align: center;
         font-size: var(--font-size-sm);

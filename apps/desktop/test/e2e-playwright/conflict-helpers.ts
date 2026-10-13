@@ -513,7 +513,7 @@ export function createOrderedPairFixture(fixtureRoot: string, options: { normalN
  * disambiguates `Skip` from `Skip all` by exact text.
  */
 export async function resolveConflict(tauriPage: PageLike, buttonText: string): Promise<void> {
-  await clickButtonByText(tauriPage, '.conflict-buttons-row button', buttonText)
+  await clickButtonByText(tauriPage, '.conflict-buttons button', buttonText)
 }
 
 /**

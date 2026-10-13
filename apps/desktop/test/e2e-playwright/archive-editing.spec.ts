@@ -437,7 +437,7 @@ test.describe('Archive editing', () => {
     // The prompt appearing is the point of this test. Resolve it (overwrite) so
     // the op settles and the dialog closes, then clear the completion toast.
     await tauriPage.evaluate(`(function(){
-        var btns = Array.prototype.slice.call(document.querySelectorAll('.conflict-buttons-row button'));
+        var btns = Array.prototype.slice.call(document.querySelectorAll('.conflict-buttons button'));
         // O is Overwrite's answer key (decision-keys.ts); its text also holds the letter chip.
         var pick = btns.find(function(b){ return b.getAttribute('aria-keyshortcuts') === 'O'; }) || btns[0];
         if (pick) pick.click();

@@ -51,6 +51,7 @@ import path from 'path'
 import { test, expect } from './fixtures.js'
 import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { recreateFixtures } from '../e2e-shared/fixtures.js'
+import { waitBudget } from './wait-budget.js'
 import {
   dispatchMenuCommand,
   ensureAppReady,
@@ -133,6 +134,96 @@ test.beforeEach(() => {
 // surgical, so it only rewrites what actually drifted.
 test.afterEach(() => {
   restoreFixtureTree(getFixtureRoot())
+})
+
+// ── Layout: the buttons never wrap, in any locale ───────────────────────────
+
+/** Every clash button's label key: the grid holds these, in whichever variant the clash shows. */
+const CONFLICT_BUTTON_KEYS = [
+  'conflictSkip',
+  'conflictSkipAll',
+  'conflictRename',
+  'conflictRenameAll',
+  'conflictOverwrite',
+  'conflictOverwriteAll',
+  'conflictOverwriteAllSmaller',
+  'conflictOverwriteAllOlder',
+  'conflictOverwriteFolderWithFile',
+  'conflictOverwriteFoldersWithFiles',
+].map((key) => `fileOperations.transferProgress.${key}`)
+
+/** The longest clash-button label any shipped catalog has. */
+function longestConflictLabel(): string {
+  const catalogs = path.join(import.meta.dirname, '..', '..', 'src', 'lib', 'intl', 'messages')
+  let longest = ''
+  for (const locale of fs.readdirSync(catalogs)) {
+    const file = path.join(catalogs, locale, 'fileOperations.json')
+    if (!fs.existsSync(file)) continue
+    const catalog = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>
+    for (const key of CONFLICT_BUTTON_KEYS) {
+      const label = catalog[key]
+      if (typeof label === 'string' && label.length > longest.length) longest = label
+    }
+  }
+  return longest
+}
+
+interface ButtonGridBox {
+  widths: number[]
+  heights: number[]
+  rightmost: number
+  dialogRight: number
+  dialogWidth: number
+}
+
+async function measureButtonGrid(tauriPage: PageLike): Promise<ButtonGridBox> {
+  return tauriPage.evaluate<ButtonGridBox>(`(function(){
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('.conflict-buttons button'));
+      var rects = buttons.map(function(b){ return b.getBoundingClientRect(); });
+      var dialog = document.querySelector('${PROGRESS_DIALOG}').getBoundingClientRect();
+      return {
+        widths: rects.map(function(r){ return Math.round(r.width); }),
+        heights: rects.map(function(r){ return Math.round(r.height); }),
+        rightmost: Math.max.apply(null, rects.map(function(r){ return r.right; })),
+        dialogRight: dialog.right,
+        dialogWidth: dialog.width,
+      };
+  })()`)
+}
+
+test.describe('Clash prompt layout', () => {
+  test('every button takes the widest one’s width on one line, and the longest translation widens the dialog', async ({
+    tauriPage,
+  }) => {
+    const fixtureRoot = getFixtureRoot()
+    createFileOverFileFixture(fixtureRoot, 'doc.txt')
+    await ensureAppReady(tauriPage, { leftPane: expectedLeftPaneEntries(fixtureRoot) })
+    await startCopyAskForEach(tauriPage, ['doc.txt'])
+
+    const before = await measureButtonGrid(tauriPage)
+    expect(before.widths).toHaveLength(8)
+    expect(new Set(before.widths).size).toBe(1)
+    expect(new Set(before.heights).size).toBe(1)
+
+    // Swap the longest label any locale ships (French, today) into "Overwrite all smaller", the
+    // one that wrapped its key chip, and let the layout settle.
+    const longest = longestConflictLabel()
+    await tauriPage.evaluate(`(function(){
+        document.querySelectorAll('.conflict-buttons button .btn-label')[6].textContent = ${JSON.stringify(longest)};
+    })()`)
+    await expect
+      .poll(async () => (await measureButtonGrid(tauriPage)).widths[0], { timeout: waitBudget(2000) })
+      .toBeGreaterThan(before.widths[0])
+
+    const after = await measureButtonGrid(tauriPage)
+    expect(new Set(after.widths).size).toBe(1)
+    expect(after.heights.every((height) => height === before.heights[0])).toBe(true)
+    expect(after.rightmost).toBeLessThanOrEqual(after.dialogRight)
+    expect(after.dialogWidth).toBeGreaterThanOrEqual(before.dialogWidth)
+
+    await resolveConflict(tauriPage, 'Skip')
+    await finishCopy(tauriPage, 'Copy complete: file already at the target, not copied.')
+  })
 })
 
 // ── Axis 1: single clash × choice × clash type ───────────────────────────────

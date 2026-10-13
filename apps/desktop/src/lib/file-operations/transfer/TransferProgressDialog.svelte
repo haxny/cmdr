@@ -13,7 +13,7 @@
     import DirectionIndicator from './DirectionIndicator.svelte'
     import { deriveTransferLabel } from './transfer-dialog-utils'
     import ScanPhaseBody from './ScanPhaseBody.svelte'
-    import TransferConflictDialog from './TransferConflictDialog.svelte'
+    import TransferConflictDialog, { conflictDialogWidthStyle } from './TransferConflictDialog.svelte'
     import { createTransferProgressState } from './transfer-progress-state.svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
@@ -136,7 +136,8 @@
      *  rate, time left) still leave the bars a readable width. It's also the
      *  resize floor: the columns don't shrink, so anything narrower squeezes the
      *  bars out of existence rather than the numbers. */
-    const DIALOG_WIDTH_STYLE = 'width: 580px; min-width: 580px'
+    const DIALOG_WIDTH_PX = 580
+    const DIALOG_WIDTH_STYLE = `width: ${String(DIALOG_WIDTH_PX)}px; min-width: ${String(DIALOG_WIDTH_PX)}px`
 
     /** The select discriminator the catalog's gerund/verb messages key on. */
     const gerundKind = $derived(operationType)
@@ -379,7 +380,7 @@
               // operation; only the Cancel button asks the operation to stop.
               progress.detach()
           }}
-    containerStyle={DIALOG_WIDTH_STYLE}
+    containerStyle={conflictEvent ? conflictDialogWidthStyle(DIALOG_WIDTH_PX) : DIALOG_WIDTH_STYLE}
     resizable={treeOperationId !== null && !conflictEvent ? true : 'horizontal'}
 >
     {#snippet title()}

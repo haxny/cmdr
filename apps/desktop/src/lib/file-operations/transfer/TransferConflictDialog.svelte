@@ -1,3 +1,14 @@
+<script lang="ts" module>
+    /**
+     * The host dialog's `containerStyle` while this body shows: as wide as the button
+     * grid asks (a label never wraps, so a long translation widens the dialog), at least
+     * `floorPx`, and inside the window. Only the grid sets that width (the style block).
+     */
+    export function conflictDialogWidthStyle(floorPx: number): string {
+        return `width: max-content; min-width: ${String(floorPx)}px; max-width: calc(100vw - 2 * var(--spacing-xl))`
+    }
+</script>
+
 <script lang="ts">
     import { untrack } from 'svelte'
     import Icon from '#lib/ui/Icon.svelte'
@@ -266,14 +277,14 @@
         </div>
     </div>
 
-    <!-- Buttons. Two columns: left = this-item, right = apply-to-all.
-         Last row holds the conditional bulk variants: `Overwrite all
+    <!-- Buttons. One grid, two columns: left = this-item, right = apply-to-all,
+         every button as wide as the widest label (CSS below). Last row holds
+         the conditional bulk variants: `Overwrite all
          smaller` only works when the destination size is known
          (a folder dest with no index size disables it with a tooltip);
          `Overwrite all older` always stays enabled (mtime is always
          available even for folder destinations). -->
     <div class="conflict-buttons">
-        <div class="conflict-buttons-row">
             <Button
                 variant="secondary"
                 onclick={skip}
@@ -292,8 +303,6 @@
             >
                 {tString('fileOperations.transferProgress.conflictSkipAll')}
             </Button>
-        </div>
-        <div class="conflict-buttons-row">
             <Button
                 variant="secondary"
                 onclick={rename}
@@ -312,8 +321,6 @@
             >
                 {tString('fileOperations.transferProgress.conflictRenameAll')}
             </Button>
-        </div>
-        <div class="conflict-buttons-row">
             <Button
                 variant="secondary"
                 onclick={overwrite}
@@ -332,8 +339,6 @@
             >
                 {overwriteAllLabel}
             </Button>
-        </div>
-        <div class="conflict-buttons-row">
             <span use:tooltip={smallerDisabledTooltip} class="conflict-button-wrap">
                 <Button
                     variant="secondary"
@@ -354,7 +359,6 @@
             >
                 {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}
             </Button>
-        </div>
     </div>
 
     <!-- The ways out, at the bottom. A plain Cancel (stop, keep what's
@@ -402,9 +406,18 @@
 {#snippet strong(children: import('svelte').Snippet)}<strong>{@render children()}</strong>{/snippet}
 
 <style>
-    /* Conflict section */
+    /* Conflict section. Its width comes from the button grid alone: the host dialog
+       sizes to `max-content` (above its own floor), and every text block here takes
+       `contain: inline-size`, so a long filename, path, or warning wraps or truncates
+       inside whatever width the buttons asked for instead of widening the dialog. */
     .conflict-section {
         padding: var(--spacing-md) var(--spacing-xl) var(--spacing-xl);
+    }
+
+    .conflict-subject,
+    .conflict-comparison,
+    .conflict-warning {
+        contain: inline-size;
     }
 
     /* Focused only to catch the answer keys when the dialog's own focus was
@@ -500,19 +513,14 @@
     }
 
     /* Wrap so the tooltip has a host element when the inner Button is
-       disabled (disabled buttons don't fire pointer events themselves).
-       The inner button still gets `flex: 1` via the existing
-       `.conflict-buttons :global(button)` rule below, so this wrap matches
-       button-row width. */
+       disabled (disabled buttons don't fire pointer events themselves). It's
+       the grid cell, so its button fills it like the others. */
     .conflict-button-wrap {
         display: flex;
-        flex: 1;
-        max-width: 200px;
     }
 
     .conflict-button-wrap > :global(button) {
         flex: 1;
-        max-width: none;
     }
 
     .conflict-file {
@@ -552,22 +560,21 @@
         color: var(--color-size-mb);
     }
 
+    /* Every button as wide as the widest, and never a wrapped label: in a grid
+       sized to its content, `1fr` columns each resolve to the widest cell's
+       max-content, so both match it and every button fills its cell. A longer
+       translation widens the grid, and with it the dialog (the section's comment
+       above); a label itself can't wrap (`Button`'s key slot is `nowrap`). */
     .conflict-buttons {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-lg);
+        width: max-content;
+        margin: 0 auto var(--spacing-lg);
     }
 
-    .conflict-buttons-row {
-        display: flex;
-        gap: var(--spacing-sm);
-        justify-content: center;
-    }
-
-    .conflict-buttons :global(button) {
-        flex: 1;
-        max-width: 200px;
+    .conflict-buttons > :global(button) {
+        width: 100%;
     }
 
     .conflict-cancel {

@@ -428,6 +428,17 @@ the F2 on Background), which is `aria-hidden`, with `aria-keyshortcuts` on the b
 instead (Skip and Close also name `Enter`). The chip is inside the button, so a test reads a label through `buttonLabel`
 and the E2E `clickButtonByText` drops `aria-hidden` text the same way.
 
+**The clash prompt's buttons never wrap, in any locale.** The eight answers are one grid (`.conflict-buttons`) of two
+`1fr` columns sized to `max-content`, so every button takes the widest label's width, and a label can't wrap (the key
+slot is `nowrap`). The grid alone sets the prompt's width: both hosts size the dialog with `conflictDialogWidthStyle`
+(`width: max-content` above their floor, capped at the window) and every text block in the body (filename, folder,
+warning, comparison, the queue host's context line) takes `contain: inline-size`, so a long path truncates or wraps
+inside that width instead of widening the dialog. A longer translation widens the dialog; nothing wraps. **Why**: fixed
+200 px buttons wrapped "Overwrite all smaller" under its `M` in English already, and French's "Écraser les dossiers avec
+les fichiers" is half as long again. `conflict-dialog-matrix.spec.ts` swaps the longest label any catalog ships into the
+grid and checks the widths, heights, and the dialog edge. Edge: a dialog the user dragged narrower before the clash
+keeps that width, and a grid wider than it overflows rather than wraps.
+
 ## Rollback asks first
 
 Every Rollback raises `RollbackConfirmDialog` and deletes nothing until the user answers it. Cancel, its neighbour on
