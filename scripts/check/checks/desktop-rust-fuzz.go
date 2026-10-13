@@ -26,20 +26,9 @@ type fuzzTargetOverride struct {
 	asanOptions string
 }
 
-// fuzzTargetOverrides: `archive_index`, because `lzma-rust2` 0.21.0 reserves an
-// xz index's record count before checking it, so 23 bytes reserve gigabytes of
-// address space that are never touched and are freed on the error that follows.
-// Lifting the per-allocation cap, and letting an impossible size come back null the
-// way the system allocator does (`try_reserve_exact` then errors cleanly), stops
-// counting that reservation; the default RSS limit (2 GiB) still fails any real
-// memory use. Drop it once `lzma-rust2` caps the reservation (`fuzz/DETAILS.md` §
-// Findings).
-var fuzzTargetOverrides = map[string]fuzzTargetOverride{
-	"archive_index": {
-		libFuzzerArgs: []string{"-malloc_limit_mb=1048576"},
-		asanOptions:   "allocator_may_return_null=1",
-	},
-}
+// fuzzTargetOverrides: empty. Every target runs with the default per-allocation
+// and RSS limits.
+var fuzzTargetOverrides = map[string]fuzzTargetOverride{}
 
 // RunFuzz builds the targets in `fuzz/` on the pinned nightly, then runs each one
 // for `CMDR_FUZZ_SECONDS` (default 60) over its committed seeds plus a local,

@@ -2033,7 +2033,7 @@
     },
     {
       "name": "lzma-rust2",
-      "version": "0.21.0",
+      "version": "0.22.0",
       "license": "Apache-2.0",
       "url": "https://github.com/hasenbanck/lzma-rust2/"
     },
@@ -3053,7 +3053,7 @@
     },
     {
       "name": "ruzstd",
-      "version": "0.9.0",
+      "version": "0.9.1",
       "license": "MIT",
       "url": "https://github.com/KillingSpark/zstd-rs"
     },
@@ -3227,7 +3227,7 @@
     },
     {
       "name": "sevenz-rust2",
-      "version": "0.23.0",
+      "version": "0.24.0",
       "license": "Apache-2.0",
       "url": "https://github.com/hasenbanck/sevenz-rust"
     },
