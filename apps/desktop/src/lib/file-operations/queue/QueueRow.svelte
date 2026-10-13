@@ -69,7 +69,7 @@
     const domId = $props.id()
     let rowEl: HTMLDivElement | undefined = $state()
     /** The row's live tree, which hears F from anywhere in the row (`resumeTreeFollowing`). */
-    let treeView: TransferTree | undefined = $state()
+    let treeView: { handleFollowKey(event: KeyboardEvent): boolean } | undefined = $state()
 
     const snapshot = $derived(row.snapshot)
     const progress = $derived(row.progress)
@@ -402,7 +402,6 @@
      buttons, and the row's name is its summary plus its status. Every button
      leaves the Tab order (`tabindex={-1}`), so the list is one Tab stop.
      DETAILS § Keyboard has the grid-over-listbox call. -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
     bind:this={rowEl}
     class="queue-row"

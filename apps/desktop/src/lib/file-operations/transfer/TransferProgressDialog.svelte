@@ -132,7 +132,7 @@
      *  user left it (toggles, following, scroll, height) rather than fresh. */
     const treeMemory = createTransferTreeMemory()
     /** The tree on screen, which hears the dialog's F (`handleKeydown`). */
-    let treeView: TransferTree | undefined = $state()
+    let treeView: { handleFollowKey(event: KeyboardEvent): boolean } | undefined = $state()
 
     /** Wide enough that the shared readout's fixed columns (amount, percent,
      *  rate, time left) still leave the bars a readable width. It's also the
