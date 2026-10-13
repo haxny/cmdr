@@ -10,7 +10,7 @@
 use std::collections::BTreeSet;
 use std::sync::atomic::Ordering;
 
-use super::super::faulty_volume::{FaultyOp, FaultyVolume};
+use super::super::faulty_volume::{FaultyOp, FaultyVolume, forward_volume_methods};
 use super::tests::{make_state, make_volumes};
 use super::wedge_test_support::*;
 use super::*;
@@ -388,6 +388,73 @@ async fn a_same_volume_move_shows_one_row_per_item_and_reports_each_rename() {
             verdict("/src/folder", SourceItemOutcome::Done, true),
             verdict("/src/file.txt", SourceItemOutcome::Done, true),
         ]
+    );
+}
+
+/// A backend whose `exists` is the trait default (a stat, any failure "gone",
+/// as on ADB, MTP, and SFTP), and whose stat of the source folder starts
+/// failing the moment a rename-merge tries to remove it.
+struct StatFailsAfterCleanup {
+    inner: Arc<InMemoryVolume>,
+}
+
+impl Volume for StatFailsAfterCleanup {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, is_directory, create_file, create_directory,
+        create_directory_all, rename, get_space_info, supports_streaming, supports_export,
+        operations_are_local, max_concurrent_ops, scan_for_copy, supports_unknown_length_writes,
+        write_from_stream, open_read_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let result = self.inner.delete(path).await;
+            if path == Path::new("/src/keep") {
+                self.inner.set_stat_failing(path);
+            }
+            result
+        })
+    }
+}
+
+/// A rename-merge that left a skipped child behind keeps its source folder,
+/// and a stat that can't answer afterwards is ❌ never evidence it's gone: a
+/// wrong `source_removed` drops the folder's whole subtree from search
+/// snapshots (`../../DETAILS.md` § "Per-source outcomes").
+#[tokio::test]
+async fn a_same_volume_merge_that_kept_its_source_never_reports_it_removed_on_a_failed_stat() {
+    let inner = Arc::new(InMemoryVolume::new("Volume").with_space_info(10_000_000, 10_000_000));
+    let plain: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
+    put(&plain, "/src/keep/a.txt", b"incoming").await;
+    put(&plain, "/src/keep/b.txt", b"incoming").await;
+    put(&plain, "/dest/keep/a.txt", b"theirs").await;
+    let volume: Arc<dyn Volume> = Arc::new(StatFailsAfterCleanup { inner });
+    let events = Arc::new(CollectorEventSink::new());
+    let state = make_state();
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Skip,
+        ..VolumeCopyConfig::default()
+    };
+
+    super::super::move_same::move_within_same_volume_with_progress(
+        Arc::clone(&events) as Arc<dyn OperationEventSink>,
+        "op-tree-rows-merge-stat",
+        &state,
+        volume,
+        &[PathBuf::from("/src/keep")],
+        Path::new("/dest"),
+        &config,
+    )
+    .await
+    .expect("the move succeeds");
+
+    assert_eq!(
+        verdicts(&events),
+        vec![verdict("/src/keep", SourceItemOutcome::Done, false)]
     );
 }
 

@@ -787,7 +787,12 @@ pub(crate) async fn move_within_same_volume_with_progress(
                             row_size,
                             buffered_leaves.as_ref(),
                         );
-                        let source_removed = !volume.exists(&source_path).await;
+                        // Only a NotFound says it's gone: `exists` reads any
+                        // failure as "gone" on most backends, and "we couldn't
+                        // look" is no evidence (`../../DETAILS.md` §
+                        // "Per-source outcomes").
+                        let source_removed =
+                            matches!(volume.get_metadata(&source_path).await, Err(VolumeError::NotFound(_)));
                         landed_whole(&state, &*events, &operation_id, &source_path, source_removed);
                         // A rename moves no bytes: the item counts 1 (driver's
                         // milestone), the byte axis stays at 0.
