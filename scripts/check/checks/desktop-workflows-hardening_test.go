@@ -251,6 +251,65 @@ jobs: {}
 	}
 }
 
+func TestCheckCodeQLRunsOnPullRequests(t *testing.T) {
+	const analyze = `jobs:
+  analyze:
+    steps:
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+`
+	cases := []struct {
+		name    string
+		content string
+		want    []string // substrings expected in each violation
+	}{
+		{
+			name:    "push-only CodeQL flagged",
+			content: "name: x\non:\n  push:\n    branches:\n      - main\n  schedule:\n    - cron: '1 2 * * 3'\n" + analyze,
+			want:    []string{"runs CodeQL but not on 'pull_request'"},
+		},
+		{
+			name:    "block-form pull_request accepted",
+			content: "name: x\non:\n  push:\n  pull_request:\n    branches:\n      - main\n" + analyze,
+			want:    nil,
+		},
+		{
+			name:    "inline pull_request accepted",
+			content: "name: x\non: [push, pull_request]\n" + analyze,
+			want:    nil,
+		},
+		{
+			name:    "pull_request_target doesn't count",
+			content: "name: x\non: [push, pull_request_target]\n" + analyze,
+			want:    []string{"runs CodeQL but not on 'pull_request'"},
+		},
+		{
+			name:    "a nested pull_request key doesn't count",
+			content: "name: x\non:\n  workflow_run:\n    types:\n      pull_request:\n" + analyze,
+			want:    []string{"runs CodeQL but not on 'pull_request'"},
+		},
+		{
+			name:    "workflow without CodeQL analysis ignored",
+			content: "name: x\non:\n  push:\njobs:\n  up:\n    steps:\n      - uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d\n",
+			want:    nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := checkCodeQLRunsOnPullRequests(strings.Split(tc.content, "\n"), "test.yml")
+			if len(got) != len(tc.want) {
+				t.Errorf("got %d violations, want %d:\n  got: %v\n  want: %v", len(got), len(tc.want), got, tc.want)
+				return
+			}
+			for i, w := range tc.want {
+				if !strings.Contains(got[i], w) {
+					t.Errorf("violation %d: got %q, want substring %q", i, got[i], w)
+				}
+			}
+		})
+	}
+}
+
 func TestIsExemptUsesRef(t *testing.T) {
 	cases := []struct {
 		ref  string

@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// RunWorkflowsHardening enforces three GitHub Actions invariants that protect
-// against the wave-4 (TanStack, May 2026) class of supply-chain attack:
+// RunWorkflowsHardening enforces GitHub Actions invariants. The first four
+// protect against the wave-4 (TanStack, May 2026) class of supply-chain attack:
 //
 //  1. Every third-party action `uses:` reference must be SHA-pinned (40 hex
 //     chars), not tag- or branch-pinned. Tag refs are mutable; a malicious
@@ -38,6 +38,9 @@ import (
 // All four classes are silent in normal review: tag pins look identical to
 // SHA pins, `pull_request_target` looks like a typo of `pull_request`, and
 // permissions blocks are usually skimmed. The check makes them loud.
+//
+//  5. A workflow that runs CodeQL analysis also triggers on `pull_request`, or
+//     Scorecard's SAST check scores every merged (Renovate) PR as unchecked.
 func RunWorkflowsHardening(ctx *CheckContext) (CheckResult, error) {
 	wfDir := filepath.Join(ctx.RootDir, ".github", "workflows")
 	entries, err := os.ReadDir(wfDir)
@@ -73,7 +76,9 @@ func RunWorkflowsHardening(ctx *CheckContext) (CheckResult, error) {
 			return CheckResult{}, fmt.Errorf("failed to read workflow: %w", err)
 		}
 		rel, _ := filepath.Rel(ctx.RootDir, f)
-		violations = append(violations, checkWorkflowPermissions(strings.Split(string(content), "\n"), rel)...)
+		lines := strings.Split(string(content), "\n")
+		violations = append(violations, checkWorkflowPermissions(lines, rel)...)
+		violations = append(violations, checkCodeQLRunsOnPullRequests(lines, rel)...)
 		scanned++
 	}
 
@@ -213,6 +218,61 @@ func checkWorkflowPermissions(lines []string, rel string) []string {
 			fmt.Sprintf("%s: no workflow-level 'permissions:' (add 'permissions:\\n  contents: read')", rel))
 	}
 	return violations
+}
+
+var (
+	codeqlAnalyzeRE = regexp.MustCompile(`^\s*(?:-\s+)?uses:\s+github/codeql-action/analyze@`)
+	// `pull_request` as a whole word, so `pull_request_target` doesn't count.
+	pullRequestWordRE = regexp.MustCompile(`\bpull_request\b`)
+)
+
+// checkCodeQLRunsOnPullRequests enforces invariant 5: a workflow that runs CodeQL analysis also
+// triggers on `pull_request`. OpenSSF Scorecard's SAST check scores the merged PRs in its window
+// by whether CodeQL checked their head commit, and Renovate's PRs land as merged PRs, so a
+// push-only CodeQL scores 0 on them however clean the code is.
+func checkCodeQLRunsOnPullRequests(lines []string, rel string) []string {
+	runsCodeQL := false
+	for _, line := range lines {
+		if codeqlAnalyzeRE.MatchString(line) {
+			runsCodeQL = true
+			break
+		}
+	}
+	if !runsCodeQL || triggersOnPullRequest(lines) {
+		return nil
+	}
+	return []string{fmt.Sprintf("%s: runs CodeQL but not on 'pull_request' (Scorecard's SAST check scores merged PRs by it)", rel)}
+}
+
+// triggersOnPullRequest reports whether the top-level `on:` names `pull_request`, in either the
+// inline form (`on: [push, pull_request]`) or as a key at the block's first indent.
+func triggersOnPullRequest(lines []string) bool {
+	inOn, onIndent := false, -1
+	for _, line := range lines {
+		trimmed := strings.TrimRight(line, " \t")
+		if m := onInlineRE.FindStringSubmatch(trimmed); m != nil {
+			return pullRequestWordRE.MatchString(m[1])
+		}
+		if onIntroRE.MatchString(trimmed) {
+			inOn = true
+			continue
+		}
+		if !inOn || trimmed == "" || strings.HasPrefix(strings.TrimSpace(trimmed), "#") {
+			continue
+		}
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			return false
+		}
+		if m := triggerKeyRE.FindStringSubmatch(line); m != nil {
+			if onIndent == -1 {
+				onIndent = len(m[1])
+			}
+			if len(m[1]) == onIndent && m[2] == "pull_request" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // onBlockTracker walks the top-level `on:` block to flag pull_request_target

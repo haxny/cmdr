@@ -8,10 +8,16 @@ name: CodeQL
 #
 # Rust takes far longer than the other two (8.5 min against ~1.5 min for JS/TS and 10 s for Actions
 # with the CodeQL 2.27.1 CLI on an M-series Mac, 2026-10-08; expect 2–3x that on a runner), so a
-# push analyzes it only when Rust sources changed. The weekly run and a manual
+# push or PR analyzes it only when Rust sources changed. The weekly run and a manual
 # dispatch always cover all three, which also picks up new queries from CodeQL releases.
+#
+# PRs run it so OpenSSF Scorecard's SAST check sees CodeQL on every merged PR (Renovate's included);
+# `workflows-hardening` fails if the trigger goes missing.
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
   schedule:
@@ -26,6 +32,10 @@ jobs:
     name: Pick languages
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # A job-level block replaces the workflow-level one, so it restates the reads it needs.
+    permissions:
+      contents: read # check out the code
+      pull-requests: read # paths-filter lists a PR's changed files through the API
     outputs:
       list: ${{ steps.pick.outputs.list }}
     steps:
@@ -35,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: Detect Rust changes
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -54,7 +64,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           RUST_CHANGED: ${{ steps.filter.outputs.rust }}
         run: |
-          if [ "$EVENT" != "push" ] || [ "$RUST_CHANGED" = "true" ]; then
+          if { [ "$EVENT" != "push" ] && [ "$EVENT" != "pull_request" ]; } || [ "$RUST_CHANGED" = "true" ]; then
             echo 'list=["actions","javascript-typescript","rust"]' >> "$GITHUB_OUTPUT"
           else
             echo 'list=["actions","javascript-typescript"]' >> "$GITHUB_OUTPUT"

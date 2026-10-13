@@ -2107,7 +2107,7 @@ doubles as production code.
 - **Other / Go**: go-version-single-source (errors when anything but `.mise.toml` names a Go toolchain version, when the
   `go.mod` floors disagree with each other, or when a floor exceeds the pinned toolchain)
 - **Other / Security**: workflows-hardening (SHA-pinning, no `pull_request_target`, job-scoped `id-token: write`,
-  read-only workflow-level `permissions:`)
+  read-only workflow-level `permissions:`, CodeQL also on `pull_request`)
 
 ## The single source for the Go version
 
@@ -2218,7 +2218,7 @@ release and sets `unmaintained = "workspace"`, so any RUSTSEC vulnerability in a
 transitive unmaintained noise doesn't. `cargo-audit` (the six-day CI lane) still reads the whole lockfile: a hit there
 but not in deny means "real, but nothing we ship links it". See `deny.toml` and `docs/maintenance.md`.
 
-**Decision**: `workflows-hardening` check enforces four GitHub Actions invariants and acts as a regression guard.
+**Decision**: `workflows-hardening` check enforces five GitHub Actions invariants and acts as a regression guard.
 **Why**: cmdr's workflows are already correctly hardened (every third-party action is SHA-pinned with a comment, no
 `pull_request_target` triggers, no workflow-scoped `id-token: write`). Without an automated guard, a future PR or a
 Renovate misconfiguration could silently regress any of those without anyone noticing in review. The check fails on
@@ -2227,7 +2227,9 @@ tag/branch-pinned third-party actions, on `pull_request_target` triggers (wave-4
 The fourth: every workflow declares a workflow-level `permissions:` that grants no write (jobs ask for write in their
 own block). A missing block inherits the repo's default token setting, which a settings click can widen without a
 commit, and it's exactly what OpenSSF Scorecard's Token-Permissions check scores (`docs/tooling/ci.md` § OpenSSF
-Scorecard).
+Scorecard). The fifth: a workflow running CodeQL analysis also triggers on `pull_request`. Scorecard's SAST check scores
+each merged PR by whether CodeQL checked its head commit, and Renovate's PRs land as merged PRs, so a push-only CodeQL
+quietly took SAST from 10 to 7.
 
 **Decision**: `govulncheck` runs against every Go module. **Why**: cargo-audit covers Rust deps; nothing covered Go
 until now. `govulncheck` is static-analysis-based, so it only flags vulns actually reachable from the code (low false
