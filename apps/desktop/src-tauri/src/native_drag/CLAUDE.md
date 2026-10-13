@@ -48,6 +48,9 @@ each in `DETAILS.md`.
   thread, so the delegate must be usable off-main. The one main-thread-only method (`fileNameForType:`) gets its
   `MainThreadMarker` from the protocol signature; ivars are all `Send + Sync` (queue via the `SendQueue` wrapper). The
   drag SOURCE (`source.rs`) IS `MainThreadOnly` (`NSDraggingSource` requires it).
+- **`initWithFileType:delegate:` RAISES on a fileType AppKit doesn't accept**, and an uncaught Objective-C exception
+  aborts the app (CRASH-K35S2). Build providers only through `new_provider`, which catches it and falls back to
+  `public.data`; pinned by `a_file_type_appkit_rejects_falls_back_instead_of_aborting`.
 - **`session_key` is a monotonic counter, NOT the drag sequence number**: delegates register BEFORE the drag begins, and
   `draggingSequenceNumber` exists only AFTER. The source stashes the key and reads it back in its end callback.
 - **Completion toasts**: Finder shows nothing while a promise downloads, so typed

@@ -74,6 +74,7 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -86,6 +87,7 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use super::session_summary::{ItemOutcome, SessionSummary, summarize};
+use super::uti::FALLBACK_FILE_UTI;
 use crate::ignore_poison::IgnorePoison;
 use crate::system_events::{SessionCompleteEvent, SessionStartedEvent};
 
@@ -499,10 +501,7 @@ pub(super) fn build_session_providers(
             session_key,
             queue.clone(),
         );
-        let uti = NSString::from_str(item.uti);
-        let delegate_proto = ProtocolObject::from_ref(&*delegate);
-        let provider =
-            NSFilePromiseProvider::initWithFileType_delegate(NSFilePromiseProvider::alloc(), &uti, delegate_proto);
+        let provider = new_provider(item.uti, &delegate);
 
         providers.push(provider);
         delegates.push(delegate);
@@ -526,6 +525,39 @@ pub(super) fn build_session_providers(
     });
 
     providers
+}
+
+/// One promise provider for `uti`, or for [`FALLBACK_FILE_UTI`] when AppKit refuses `uti`.
+///
+/// `initWithFileType:delegate:` RAISES (`NSInvalidArgumentException: … is not a valid UTI`) for a
+/// type it doesn't recognize, and an Objective-C exception that reaches Rust aborts the app
+/// (CRASH-K35S2 / CRASH-7MAMY, 0.50.0 on macOS 27.0.1). Which of our table's UTIs that Mac
+/// rejected is unknown; every one passes on macOS 27.0 (verified 2026-10-13 with a standalone
+/// probe), so the fallback is what keeps an unforeseen LaunchServices state from costing a crash.
+fn new_provider(uti: &str, delegate: &PromiseDelegate) -> Retained<NSFilePromiseProvider> {
+    match try_new_provider(uti, delegate) {
+        Ok(provider) => provider,
+        Err(exception) => {
+            log::warn!(
+                target: "drag_out",
+                "AppKit refused file type {uti} for a promise, using {FALLBACK_FILE_UTI}: {exception}"
+            );
+            try_new_provider(FALLBACK_FILE_UTI, delegate)
+                .expect("AppKit accepts public.data, the root UTI of every file type, as a promise file type")
+        }
+    }
+}
+
+fn try_new_provider(uti: &str, delegate: &PromiseDelegate) -> Result<Retained<NSFilePromiseProvider>, String> {
+    let uti = NSString::from_str(uti);
+    objc2::exception::catch(AssertUnwindSafe(|| {
+        NSFilePromiseProvider::initWithFileType_delegate(
+            NSFilePromiseProvider::alloc(),
+            &uti,
+            ProtocolObject::from_ref(delegate),
+        )
+    }))
+    .map_err(|exception| format!("{exception:?}"))
 }
 
 // ============================================================================
@@ -614,6 +646,23 @@ mod tests {
         let any_type = NSString::from_str("public.jpeg");
         let name = proto.filePromiseProvider_fileNameForType(&provider, &any_type, mtm);
         assert_eq!(name.to_string(), "sunset 2.jpg");
+    }
+
+    // ---- A fileType AppKit rejects must not abort the app ----
+
+    /// Regression anchor for CRASH-K35S2 / CRASH-7MAMY (0.50.0, macOS 27.0.1): AppKit raised an
+    /// Objective-C exception inside `initWithFileType:delegate:`, and an uncaught one aborts.
+    #[test]
+    fn a_file_type_appkit_rejects_falls_back_instead_of_aborting() {
+        let delegate = PromiseDelegate::new(
+            "photo.jpg".to_string(),
+            "phone".to_string(),
+            PathBuf::from("/DCIM/photo.jpg"),
+            4243,
+            fresh_serial_queue(),
+        );
+        let provider = new_provider("not a uti", &delegate);
+        assert_eq!(provider.fileType().to_string(), FALLBACK_FILE_UTI);
     }
 
     // ---- NSError mapping ----
