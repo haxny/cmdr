@@ -53,7 +53,6 @@ Full lifecycle, scope rationale, and v1 limits: `DETAILS.md`.
   are typed by the plugin's error ARM (`Unavailable`), never its message.
 - **No `println!` / `eprintln!` / `dbg!`** (clippy denies crate-wide). Use `log::debug!(target: "downloads::watcher", …)`
   so `RUST_LOG=cmdr_lib::downloads=debug` filters this subsystem. See `logging/CLAUDE.md`.
-- **Tests use `DownloadsWatcher::scripted_at(tempdir, sink)` and feed batches with `deliver()`**: same handler, no OS
-  watch, no waiting. ❌ Only `dropping_a_file_emits_one_event` arms real FSEvents (`start_at`); a second real cell is a
-  timeout under load. Tests use `unhidden_tempdir()` so `is_eligible`'s hidden-component check doesn't shadow positive
-  assertions on macOS. § "Testing".
+- **Tests use `DownloadsWatcher::scripted_at` + `deliver()`**: same handler, no OS watch. ❌ Only
+  `dropping_a_file_emits_one_event` arms real FSEvents; a second real cell times out under load. `unhidden_tempdir()`
+  keeps `is_eligible`'s hidden check off positive assertions. § "Testing".
