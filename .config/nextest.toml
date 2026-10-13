@@ -91,6 +91,13 @@ vision-model = { max-threads = 1 }
 # every one killed; at four at a time, every one green). Four at a time keeps the
 # stack busy without starving it; the 30 s cap below is the hang backstop.
 s3-fixture = { max-threads = 4 }
+# The Nextcloud cells. The fixture keeps its database in SQLite, which takes one
+# writer at a time, so parallel cells only queue on each other: serial, the ten ran
+# in 10.9 s total (~1 s each); in parallel the module took 9.5 s, with every cell
+# waiting out the others. On a freshly started container the overlap goes further:
+# SQLite answers "database is locked" and Nextcloud turns it into a 503, which failed
+# two cells in each of three cold runs (measured 2026-10-13, Nextcloud 35).
+nextcloud-fixture = { max-threads = 1 }
 
 [[profile.default.overrides]]
 # Disk-image fixtures: hdiutil create+attach+detach plus, for the FSEvents
@@ -542,8 +549,15 @@ slow-timeout = { period = "30s", terminate-after = 1 }
 # ❌ Don't read 30 s as a runtime — idle they fit inside the global 8 s cap, which
 # is why they were only ever red under load. It is a hang backstop with enough
 # headroom that a busy host doesn't decide the verdict.
+#
+# Each request used to cost ~150 ms of password hashing on the server, ~300 ms
+# under load, because the client sent back no session cookie; it keeps one now
+# (`crates/cmdr-webdav/DETAILS.md` § "Session cookies"), and the slowest cell went
+# from 11.2 s alone (14–22 s in the suite) to 1.5 s (2026-10-13). They run one at a
+# time (the `nextcloud-fixture` group above has why).
 filter = 'test(volume::nextcloud_test::)'
 slow-timeout = { period = "30s", terminate-after = 1 }
+test-group = 'nextcloud-fixture'
 
 [[profile.default.overrides]]
 # Gemini alone, ahead of the general provider-smoke cap below so it wins (nextest: the first
