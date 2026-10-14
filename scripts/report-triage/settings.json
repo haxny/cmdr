@@ -1,0 +1,55 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "network": { "allowedDomains": ["api.github.com", "*.r2.cloudflarestorage.com"] },
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.config",
+        "~/.zshenv",
+        "~/.zshenv.local",
+        "~/.zshrc",
+        "~/.gnupg",
+        "~/Library",
+        "~/projects-git"
+      ]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh issue list *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue comment *)",
+      "Bash(gh issue edit *)",
+      "Bash(gh search issues *)",
+      "Bash(./fetch-bundle.sh *)",
+      "Bash(rg *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(jq *)",
+      "Read(./**)",
+      "Grep(./**)",
+      "Glob(./**)"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "Bash(gh issue close *)",
+      "Bash(gh issue delete *)",
+      "Bash(gh issue reopen *)",
+      "Bash(gh issue lock *)",
+      "Bash(gh issue transfer *)",
+      "Bash(gh api *)",
+      "Bash(git push *)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/**)",
+      "Read(~/.zshenv*)",
+      "Read(~/.zshrc)",
+      "Read(~/.gnupg/**)",
+      "Read(~/Library/**)",
+      "Read(~/projects-git/**)"
+    ]
+  }
+}
