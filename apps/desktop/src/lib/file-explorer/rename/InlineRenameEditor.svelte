@@ -216,11 +216,20 @@
         user-select: text;
         -webkit-user-select: text;
         cursor: text;
-        animation: rename-glow 300ms ease-out;
     }
 
-    .rename-input.shaking {
-        animation: rename-shake 300ms ease-in-out;
+    /* Both animations move the field, so Reduce motion drops them. The severity border and the
+       live validation message still say what's wrong. With no animation, `animationend` never
+       fires, so `shaking` stays set until the next keystroke clears it: harmless, since a
+       re-trigger has nothing to replay. */
+    @media (prefers-reduced-motion: no-preference) {
+        .rename-input {
+            animation: rename-glow 300ms ease-out;
+        }
+
+        .rename-input.shaking {
+            animation: rename-shake 300ms ease-in-out;
+        }
     }
 
     /* Glow animation uses only transform (box-shadow set via inline style) */

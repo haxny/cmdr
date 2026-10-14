@@ -414,7 +414,13 @@
         height: 8px;
         border-radius: var(--radius-full);
         background: var(--color-border);
-        transition: background var(--transition-base), transform var(--transition-base);
+        transition: background var(--transition-base);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .step-dot {
+            transition: background var(--transition-base), transform var(--transition-base);
+        }
     }
 
     .step-dot.active {

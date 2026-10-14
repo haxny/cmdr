@@ -231,7 +231,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform var(--transition-base);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .toggle-icon {
+            transition: transform var(--transition-base);
+        }
     }
 
     .toggle-icon.expanded {

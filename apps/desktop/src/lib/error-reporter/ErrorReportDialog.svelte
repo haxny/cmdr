@@ -495,7 +495,12 @@
 
     .toggle-arrow {
         display: inline-block;
-        transition: transform var(--transition-base);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .toggle-arrow {
+            transition: transform var(--transition-base);
+        }
     }
 
     .toggle-arrow.expanded {

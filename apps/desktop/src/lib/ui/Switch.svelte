@@ -122,8 +122,14 @@
            reads against the accent track. */
         background: white;
         border-radius: var(--radius-full);
-        transition: transform var(--transition-base);
         box-shadow: var(--shadow-sm);
+    }
+
+    /* The thumb slides only when motion is welcome; under Reduce motion it jumps. */
+    @media (prefers-reduced-motion: no-preference) {
+        :global(.switch-thumb) {
+            transition: transform var(--transition-base);
+        }
     }
 
     :global(.switch-control[data-state='checked'] .switch-thumb) {

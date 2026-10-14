@@ -221,7 +221,7 @@
                 // to avoid scrolling the entire window
                 contentElement.scrollTo({
                     top: element.offsetTop - 16, // 16px padding from top
-                    behavior: 'smooth',
+                    behavior: scrollBehavior(),
                 })
             }
         }

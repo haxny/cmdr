@@ -176,7 +176,6 @@
         cursor: default;
         padding: 0;
         display: inline-block;
-        transition: transform var(--transition-fast);
     }
 
     .trigger:hover {
@@ -214,11 +213,18 @@
         padding: 0;
         cursor: default;
         position: relative;
-        transition: transform var(--transition-fast);
     }
 
     .swatch:hover {
         transform: scale(1.15);
+    }
+
+    /* The hover grow eases in only when motion is welcome; under Reduce motion it snaps. */
+    @media (prefers-reduced-motion: no-preference) {
+        .trigger,
+        .swatch {
+            transition: transform var(--transition-fast);
+        }
     }
 
     .swatch:focus-visible {

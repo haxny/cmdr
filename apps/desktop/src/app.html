@@ -213,6 +213,14 @@
           spin 0.8s linear infinite;
       }
 
+      /* Reduce motion: a still ring, like `.spinner` in `app-utilities.css`. The accent top
+         border still reads as busy. */
+      @media (prefers-reduced-motion: reduce) {
+        .app-loader {
+          animation: fade-in 500ms ease-out forwards;
+        }
+      }
+
       @keyframes fade-in {
         from {
           opacity: 0;
