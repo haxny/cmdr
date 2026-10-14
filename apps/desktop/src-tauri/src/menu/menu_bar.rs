@@ -11,6 +11,7 @@
 //! - `macos(…)` accelerators, which Linux leaves out. For the F-keys, Tab, Space, and `Cmd+Equal` /
 //!   `Cmd+Minus` that's because GTK intercepts them before the webview (and `is_focused()` fails
 //!   there), so the frontend's keydown dispatch handles them.
+//! - `cmd_or_ctrl!(…)` accelerators: ⌘ on macOS, the same chord on Ctrl on Linux.
 //! - `split(…)` accelerators and `Label::PerPlatformKey` labels, spelled per platform.
 //! - Top-level menu IDs, which reach macOS alone (`menu_spec::menu`).
 //! - GTK `&` mnemonics on Linux, allocated per submenu from the translated labels
@@ -23,17 +24,16 @@
 //! never `Opt`, which cost Copy path and Show in Finder their accelerators in every release until
 //! 2026-09-16. `accelerators.rs` guards its own output with a real parse.
 //!
-//! ❗ The `Cmd+…` accelerators both platforms share bind to SUPER on Linux, not Ctrl: muda maps
-//! `"CMD"` to `Modifiers::META`, which is Super on GTK, and only `CmdOrCtrl` resolves to Ctrl off
-//! macOS. So the Linux menu prints Super chords. Users still get Ctrl because the frontend keydown
-//! layer accepts `metaKey || ctrlKey`; it's the LABEL that's wrong. Switching to `CmdOrCtrl` also
-//! changes the macOS binding, so it needs a check on both platforms rather than a blind sweep. See
-//! `docs/notes/linux-gaps-2026-08-10.md`.
+//! ❗ A ⌘ chord is `cmd_or_ctrl!`, ❌ never a `Cmd+…` string on Linux: muda maps `"CMD"` to
+//! `Modifiers::META`, which GTK binds and prints as the Super key (#284). `both` and `split` refuse
+//! one at compile time, and `menu_bar_test.rs` pins it. Users got Ctrl regardless, because the
+//! frontend keydown layer accepts `metaKey || ctrlKey`; it was the label (and the Super binding)
+//! that was wrong.
 
 use super::menu_spec::{
     Accelerator, BarMenu, CheckRole, Entry, EntryKind, Label, NONE, Pane, PerPlatform, Platform, Predefined, SEPARATOR,
-    SubmenuRole, SubmenuSpec, both, check, displayed_item, item, labeled_item, linux_only, macos, macos_menu,
-    macos_only, menu, predefined, split, submenu,
+    SubmenuRole, SubmenuSpec, both, check, cmd_or_ctrl, displayed_item, item, labeled_item, linux_only, macos,
+    macos_menu, macos_only, menu, predefined, split, submenu,
 };
 use super::{
     ABOUT_ID, ACKNOWLEDGEMENTS_ID, APP_MENU_ID, ASK_CMDR_ID, CALCULATE_FOLDER_SIZES_ID, CHANGELOG_ID,
@@ -57,7 +57,7 @@ use super::{
 /// "Copy path", matching Finder's "Copy as Pathname". Must stay in sync with the `file.copyPath`
 /// default in `src/lib/commands/sources/file-list.ts` (`⌘⌥C`), which is what the frontend
 /// dispatcher listens for. The file context menu uses it too.
-pub(crate) const COPY_PATH_ACCELERATOR: Accelerator = split("Cmd+Alt+C", "Ctrl+Alt+C");
+pub(crate) const COPY_PATH_ACCELERATOR: Accelerator = cmd_or_ctrl!("Alt+C");
 
 /// "Show in Finder" / "Show in file manager", here and in the file context menu.
 ///
@@ -76,19 +76,31 @@ pub(crate) const SHOW_IN_FILE_MANAGER_ACCELERATOR: Accelerator = split("Alt+Cmd+
 /// label with while the user hasn't rebound the command. `MenuState.display_accelerators` overrides
 /// it once they have; ❗ read that FIRST, or a rebind's glyph reverts on the next label change.
 pub(crate) fn spec_display_accelerator(menu_id: &str) -> Option<&'static str> {
-    fn in_submenu(spec: &SubmenuSpec, menu_id: &str) -> Option<&'static str> {
-        for entry in spec.entries_on(Platform::current()) {
-            match entry {
-                EntryKind::Item(item) if item.id == menu_id => return item.display_accelerator,
-                EntryKind::Submenu(nested) => {
-                    if let Some(shortcut) = in_submenu(nested, menu_id) {
-                        return Some(shortcut);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
+    match spec_entry(menu_id)? {
+        EntryKind::Item(item) => item.display_accelerator,
+        _ => None,
+    }
+}
+
+/// The accelerator `MENU_BAR` registers `menu_id` with on this platform, if any. `MenuState` seeds
+/// the view-mode pair's from it, so a rebuild can't put back a chord the bar never had.
+pub(crate) fn spec_accelerator(menu_id: &str) -> Option<&'static str> {
+    match spec_entry(menu_id)? {
+        EntryKind::Item(item) => item.accelerator.current(),
+        EntryKind::Check(check) => check.accelerator.current(),
+        _ => None,
+    }
+}
+
+/// The item or check `MENU_BAR` builds as `menu_id` on this platform, nested ones included.
+fn spec_entry(menu_id: &str) -> Option<&'static EntryKind> {
+    fn in_submenu(spec: &'static SubmenuSpec, menu_id: &str) -> Option<&'static EntryKind> {
+        spec.entries_on(Platform::current()).find_map(|entry| match entry {
+            EntryKind::Item(item) if item.id == menu_id => Some(entry),
+            EntryKind::Check(check) if check.id == menu_id => Some(entry),
+            EntryKind::Submenu(nested) => in_submenu(nested, menu_id),
+            _ => None,
+        })
     }
 
     MENU_BAR
@@ -106,7 +118,7 @@ const LICENSE: Entry = labeled_item(ENTER_LICENSE_KEY_ID, Label::License, NONE).
 const CHECK_FOR_UPDATES: Entry = item(CHECK_FOR_UPDATES_ID, "menu.app.checkForUpdates", NONE);
 /// Opens the What's new popup with the latest releases, the same command as Help > What's new.
 const CHANGELOG: Entry = item(CHANGELOG_ID, "menu.app.changelog", NONE);
-const SETTINGS: Entry = item(SETTINGS_ID, "menu.app.settings", both("Cmd+,"));
+const SETTINGS: Entry = item(SETTINGS_ID, "menu.app.settings", cmd_or_ctrl!(","));
 
 pub(crate) const MENU_BAR: &[BarMenu] = &[
     macos_menu(
@@ -175,7 +187,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                 "menu.file.openTerminalHere",
                 macos("Alt+Cmd+T"),
             )),
-            item(GET_INFO_ID, "menu.file.getInfo", both("Cmd+I")),
+            item(GET_INFO_ID, "menu.file.getInfo", cmd_or_ctrl!("I")),
             // Shift+Space, not plain Space: AppKit consumes modifier accelerators before the webview
             // can, so the menu fires. Plain Space was dead, eaten by the webview's selection toggle
             // before AppKit's menu dispatcher saw it.
@@ -192,9 +204,9 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             // Custom items rather than predefined ones, so ⌘X / ⌘C / ⌘V route through
             // `execute-command` and the frontend picks the text clipboard (an input has focus) or
             // the file clipboard. In other windows, `handle_menu_event` forwards the native selector.
-            item(EDIT_CUT_ID, "menu.edit.cut", split("Cmd+X", "Ctrl+X")),
-            item(EDIT_COPY_ID, "menu.edit.copy", split("Cmd+C", "Ctrl+C")),
-            item(EDIT_PASTE_ID, "menu.edit.paste", split("Cmd+V", "Ctrl+V")),
+            item(EDIT_CUT_ID, "menu.edit.cut", cmd_or_ctrl!("X")),
+            item(EDIT_COPY_ID, "menu.edit.copy", cmd_or_ctrl!("C")),
+            item(EDIT_PASTE_ID, "menu.edit.paste", cmd_or_ctrl!("V")),
             item(
                 EDIT_PASTE_MOVE_ID,
                 "menu.edit.moveHere",
@@ -204,7 +216,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             item(COPY_PATH_ID, "menu.edit.copyPath", COPY_PATH_ACCELERATOR),
             item(COPY_FILENAME_ID, "menu.edit.copyFilename", NONE),
             SEPARATOR,
-            item(SEARCH_FILES_ID, "menu.edit.searchFiles", both("Cmd+F")),
+            item(SEARCH_FILES_ID, "menu.edit.searchFiles", cmd_or_ctrl!("F")),
             linux_only(SEPARATOR),
             linux_only(SETTINGS),
             linux_only(LICENSE),
@@ -219,8 +231,8 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
         SELECT_MENU_ID,
         "menu.bar.select",
         &[
-            item(SELECT_ALL_ID, "menu.select.all", both("Cmd+A")),
-            item(DESELECT_ALL_ID, "menu.select.deselectAll", both("Cmd+Shift+A")),
+            item(SELECT_ALL_ID, "menu.select.all", cmd_or_ctrl!("A")),
+            item(DESELECT_ALL_ID, "menu.select.deselectAll", cmd_or_ctrl!("Shift+A")),
             // Built with the neutral label; the frontend rewrites it to say what the cursor row
             // would select right now (`update_select_same_kind_menu`). `⌥⇧=` is the physical
             // spelling, the one honest on a layout where that key isn't `+`.
@@ -254,13 +266,13 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                     check(
                         VIEW_MODE_FULL_LEFT_ID,
                         "menu.view.fullView",
-                        both("Cmd+1"),
+                        cmd_or_ctrl!("1"),
                         CheckRole::ViewMode(Pane::Left, ViewMode::Full),
                     ),
                     check(
                         VIEW_MODE_BRIEF_LEFT_ID,
                         "menu.view.briefView",
-                        both("Cmd+2"),
+                        cmd_or_ctrl!("2"),
                         CheckRole::ViewMode(Pane::Left, ViewMode::Brief),
                     ),
                 ],
@@ -288,7 +300,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             check(
                 SHOW_HIDDEN_FILES_ID,
                 "menu.view.showHiddenFiles",
-                both("Cmd+Shift+."),
+                cmd_or_ctrl!("Shift+."),
                 CheckRole::ShowHiddenFiles,
             ),
             // GTK intercepts F-row keys but lets Cmd+digit chords through, so both platforms
@@ -299,10 +311,10 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                 "menu.view.sortBy",
                 SubmenuRole::SortBy,
                 &[
-                    item(SORT_BY_NAME_ID, "menu.sort.name", both("Cmd+3")),
-                    item(SORT_BY_EXTENSION_ID, "menu.sort.extension", both("Cmd+4")),
-                    item(SORT_BY_MODIFIED_ID, "menu.sort.dateModified", both("Cmd+5")),
-                    item(SORT_BY_SIZE_ID, "menu.sort.size", both("Cmd+6")),
+                    item(SORT_BY_NAME_ID, "menu.sort.name", cmd_or_ctrl!("3")),
+                    item(SORT_BY_EXTENSION_ID, "menu.sort.extension", cmd_or_ctrl!("4")),
+                    item(SORT_BY_MODIFIED_ID, "menu.sort.dateModified", cmd_or_ctrl!("5")),
+                    item(SORT_BY_SIZE_ID, "menu.sort.size", cmd_or_ctrl!("6")),
                     item(SORT_BY_CREATED_ID, "menu.sort.dateCreated", NONE).untracked(),
                     SEPARATOR,
                     item(SORT_ASCENDING_ID, "menu.sort.ascending", NONE).untracked(),
@@ -321,7 +333,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
                 SubmenuRole::Plain,
                 &[
                     item(VIEW_ZOOM_75_ID, "menu.zoom.percent75", NONE).untracked(),
-                    item(VIEW_ZOOM_100_ID, "menu.zoom.percent100", both("Cmd+0")).untracked(),
+                    item(VIEW_ZOOM_100_ID, "menu.zoom.percent100", cmd_or_ctrl!("0")).untracked(),
                     item(VIEW_ZOOM_125_ID, "menu.zoom.percent125", NONE).untracked(),
                     item(VIEW_ZOOM_150_ID, "menu.zoom.percent150", NONE).untracked(),
                     SEPARATOR,
@@ -332,44 +344,44 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             SEPARATOR,
             // Tab conflicts with GTK's own keyboard navigation, so Linux leaves it to JS dispatch.
             item(SWITCH_PANE_ID, "menu.view.switchPane", macos("Tab")),
-            item(SWAP_PANES_ID, "menu.view.swapPanes", both("Cmd+U")),
-            item(CLONE_PANE_ID, "menu.view.clonePane", both("Cmd+Shift+C")),
+            item(SWAP_PANES_ID, "menu.view.swapPanes", cmd_or_ctrl!("U")),
+            item(CLONE_PANE_ID, "menu.view.clonePane", cmd_or_ctrl!("Shift+C")),
             item(
                 CALCULATE_FOLDER_SIZES_ID,
                 "menu.view.calculateFolderSizes",
                 both("Alt+Shift+Enter"),
             ),
             SEPARATOR,
-            item(COMMAND_PALETTE_ID, "menu.view.commandPalette", both("Cmd+Shift+P")),
+            item(COMMAND_PALETTE_ID, "menu.view.commandPalette", cmd_or_ctrl!("Shift+P")),
             // The next four sync their accelerators from registry shortcuts (`queue.show`,
             // `log.operationLog`, `suggestedOps.show`, `askCmdr.toggle`), so these are the defaults.
             // The queue sits next to the log so the present-tense and past-tense views of the same
             // work read as a pair.
-            item(QUEUE_SHOW_ID, "menu.view.operationQueue", both("Cmd+Alt+Q")),
+            item(QUEUE_SHOW_ID, "menu.view.operationQueue", cmd_or_ctrl!("Alt+Q")),
             // ⌥⌘O, the first choice, is taken by Show in Finder.
-            item(OPERATION_LOG_ID, "menu.view.operationLog", both("Cmd+Alt+L")),
+            item(OPERATION_LOG_ID, "menu.view.operationLog", cmd_or_ctrl!("Alt+L")),
             // No default: the status-corner indicator is the everyday way in, and a suggestion waits
             // indefinitely, so this isn't a key anyone reaches for mid-task. A user who wants one
             // binds it.
             item(SUGGESTED_OPS_ID, "menu.view.suggestedOps", NONE),
-            item(ASK_CMDR_ID, "menu.view.askCmdr", both("Cmd+Alt+A")),
+            item(ASK_CMDR_ID, "menu.view.askCmdr", cmd_or_ctrl!("Alt+A")),
         ],
     ),
     menu(
         GO_MENU_ID,
         "menu.bar.go",
         &[
-            item(GO_BACK_ID, "menu.go.back", both("Cmd+[")),
-            item(GO_FORWARD_ID, "menu.go.forward", both("Cmd+]")),
+            item(GO_BACK_ID, "menu.go.back", cmd_or_ctrl!("[")),
+            item(GO_FORWARD_ID, "menu.go.forward", cmd_or_ctrl!("]")),
             SEPARATOR,
-            item(GO_PARENT_ID, "menu.go.parentFolder", both("Cmd+Up")),
-            item(GO_ROOT_ID, "menu.go.rootFolder", both("Cmd+/")),
+            item(GO_PARENT_ID, "menu.go.parentFolder", cmd_or_ctrl!("Up")),
+            item(GO_ROOT_ID, "menu.go.rootFolder", cmd_or_ctrl!("/")),
             // Shift+Cmd+H, not Cmd+H: AppKit owns Cmd+H for Hide Cmdr and swallows it before the
             // webview ever sees a keydown.
-            item(GO_HOME_ID, "menu.go.home", both("Shift+Cmd+H")),
+            item(GO_HOME_ID, "menu.go.home", cmd_or_ctrl!("Shift+H")),
             SEPARATOR,
-            item(GO_TO_PATH_ID, "menu.go.goToPath", both("Cmd+G")),
-            item(GO_LATEST_DOWNLOAD_ID, "menu.go.goToLatestDownload", both("Cmd+J")),
+            item(GO_TO_PATH_ID, "menu.go.goToPath", cmd_or_ctrl!("G")),
+            item(GO_LATEST_DOWNLOAD_ID, "menu.go.goToLatestDownload", cmd_or_ctrl!("J")),
             SEPARATOR,
             // No default: `favorites.add` ships without a shortcut, and the sync picks up whatever
             // the user binds in Settings > Keyboard shortcuts.
@@ -378,7 +390,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             item(FAVORITES_OPEN_ID, "menu.go.showFavorites", both("Ctrl+D")),
             SEPARATOR,
             // The servers pair. ⌘K is Finder's "Connect to Server…", and Finder keeps it in Go too.
-            item(SERVERS_CONNECT_ID, "menu.go.connectToServer", both("Cmd+K")),
+            item(SERVERS_CONNECT_ID, "menu.go.connectToServer", cmd_or_ctrl!("K")),
             // No default: `servers.show` ships without a shortcut.
             item(SERVERS_SHOW_ID, "menu.go.showServers", NONE),
         ],
@@ -387,10 +399,15 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
         TAB_MENU_ID,
         "menu.bar.tab",
         &[
-            item(NEW_TAB_ID, "menu.tab.newTab", both("Cmd+T")),
-            item(CLOSE_TAB_ID, "menu.tab.closeTab", both("Cmd+W")),
+            item(NEW_TAB_ID, "menu.tab.newTab", cmd_or_ctrl!("T")),
+            item(CLOSE_TAB_ID, "menu.tab.closeTab", cmd_or_ctrl!("W")),
             // Starts disabled; `set_reopen_closed_tab_enabled` turns it on after the first close.
-            item(REOPEN_CLOSED_TAB_ID, "menu.tab.reopenClosedTab", both("Cmd+Shift+T")).disabled(),
+            item(
+                REOPEN_CLOSED_TAB_ID,
+                "menu.tab.reopenClosedTab",
+                cmd_or_ctrl!("Shift+T"),
+            )
+            .disabled(),
             SEPARATOR,
             item(NEXT_TAB_ID, "menu.tab.nextTab", both("Ctrl+Tab")),
             item(PREV_TAB_ID, "menu.tab.previousTab", both("Ctrl+Shift+Tab")),

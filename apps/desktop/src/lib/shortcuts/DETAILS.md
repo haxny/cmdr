@@ -494,7 +494,8 @@ label. The `menuCommands` array in `shortcuts-store.ts` lists all ~40 commands t
 `initializeShortcuts` pushes any persisted customizations into the menu via the `notifyListeners` path. On the Rust
 side, `MenuState.items` is a `HashMap<String, MenuItemEntry>` that tracks regular `MenuItem`s by ID;
 `update_menu_item_accelerator()` handles the remove/recreate/reinsert cycle. View mode CheckMenuItems still use the
-separate `update_view_mode_accelerator()` path to preserve checked state.
+separate `update_view_mode_accelerator()` path to preserve checked state. The shortcut goes over in whichever form this
+platform stores (`⌘⇧P`, or `Ctrl+Shift+P` off macOS); `menu/accelerators.rs` reads both, and turns ⌘ into Ctrl on Linux.
 
 A menu-bar REBUILD (the UI language changed) throws every menu item away, so the customized accelerators are back at
 their registry defaults on brand-new objects. `resyncMenuAccelerators()` pushes them all again, driven by the

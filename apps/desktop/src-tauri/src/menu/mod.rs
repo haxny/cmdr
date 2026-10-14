@@ -365,7 +365,8 @@ pub struct MenuState<R: Runtime> {
     pub view_mode_left: Mutex<ViewMode>,
     pub view_mode_right: Mutex<ViewMode>,
     /// Cached view-mode shortcuts. Frontend pushes updates via `update_menu_accelerator`.
-    /// Defaults match the left pane's accelerators in `menu_bar.rs` (Cmd+1 / Cmd+2).
+    /// Defaults are the left pane's accelerators in `menu_bar.rs` on this platform
+    /// (`menu_bar::spec_accelerator`): Cmd+1 / Cmd+2 on macOS, Ctrl+1 / Ctrl+2 on Linux.
     pub view_mode_full_accel: Mutex<Option<String>>,
     pub view_mode_brief_accel: Mutex<Option<String>>,
     /// Pin/unpin tab menu item (label toggles based on active tab state)
@@ -455,8 +456,8 @@ impl<R: Runtime> Default for MenuState<R> {
             view_mode_active_pane: Mutex::new("left".to_string()),
             view_mode_left: Mutex::new(ViewMode::Brief),
             view_mode_right: Mutex::new(ViewMode::Brief),
-            view_mode_full_accel: Mutex::new(Some("Cmd+1".to_string())),
-            view_mode_brief_accel: Mutex::new(Some("Cmd+2".to_string())),
+            view_mode_full_accel: Mutex::new(menu_bar::spec_accelerator(VIEW_MODE_FULL_LEFT_ID).map(String::from)),
+            view_mode_brief_accel: Mutex::new(menu_bar::spec_accelerator(VIEW_MODE_BRIEF_LEFT_ID).map(String::from)),
             pin_tab: Mutex::new(None),
             reopen_closed_tab_enabled: AtomicBool::new(false),
             commands_refused_over_dialog: Mutex::new(HashSet::new()),

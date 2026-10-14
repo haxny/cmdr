@@ -27,6 +27,9 @@ Fix shape: add watches per directory and skip `EACCES` instead of aborting the w
 
 ## `Cmd+` menu accelerators bind to Super, not Ctrl
 
+Fixed by #284: every ⌘ chord is `cmd_or_ctrl!` in `menu/menu_bar.rs` (Ctrl on Linux), and `menu/accelerators.rs` turns a
+rebind's ⌘ into Ctrl there too. The finding as recorded:
+
 `menu/menu_bar.rs` gives Linux its accelerators as `Cmd+…` (`Cmd+F`, `Cmd+A`, `Cmd+I`, `Cmd+,`, `Cmd+1`, and the sort
 and zoom chords). muda maps `"COMMAND" | "CMD" | "SUPER"` to `Modifiers::META` unconditionally, and META is the Super
 key on GTK; `CmdOrCtrl` is the string that resolves to `CONTROL` off macOS (verified in muda 0.19.3,

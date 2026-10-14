@@ -126,7 +126,7 @@ menu menu.bar.go id=menu_go
   2 separator
   3 item go_parent menu.go.parentFolder [Cmd+Up] tracked
   4 item go_root menu.go.rootFolder [Cmd+/] tracked
-  5 item go_home menu.go.home [Shift+Cmd+H] tracked
+  5 item go_home menu.go.home [Cmd+Shift+H] tracked
   6 separator
   7 item go_to_path menu.go.goToPath [Cmd+G] tracked
   8 item go_latest_download menu.go.goToLatestDownload [Cmd+J] tracked
@@ -177,7 +177,7 @@ menu menu.bar.file
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
   15 separator
   16 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
-  17 item get_info menu.file.getInfo [Cmd+I] tracked
+  17 item get_info menu.file.getInfo [Ctrl+I] tracked
   18 item quick_look menu.file.quickLook tracked
 menu menu.bar.edit
   0 item edit_cut menu.edit.cut [Ctrl+X] tracked
@@ -188,15 +188,15 @@ menu menu.bar.edit
   5 item copy_path menu.edit.copyPath [Ctrl+Alt+C] tracked
   6 item copy_filename menu.edit.copyFilename tracked
   7 separator
-  8 item search_files menu.edit.searchFiles [Cmd+F] tracked
+  8 item search_files menu.edit.searchFiles [Ctrl+F] tracked
   9 separator
-  10 item settings menu.app.settings [Cmd+,] tracked
+  10 item settings menu.app.settings [Ctrl+,] tracked
   11 item enter_license_key menu.app.licenseEnter|menu.app.licenseDetails untracked
   12 item check_for_updates menu.app.checkForUpdates tracked
   13 item changelog menu.app.changelog tracked
 menu menu.bar.select
-  0 item select_all_files menu.select.all [Cmd+A] tracked
-  1 item deselect_all menu.select.deselectAll [Cmd+Shift+A] tracked
+  0 item select_all_files menu.select.all [Ctrl+A] tracked
+  1 item deselect_all menu.select.deselectAll [Ctrl+Shift+A] tracked
   2 item select_same_kind menu.select.sameKind (⌥⇧=) tracked
   3 item invert_selection menu.select.invert (*) tracked
   4 separator
@@ -206,25 +206,25 @@ menu menu.bar.select
   8 item compare_directories menu.select.compareDirectories tracked
 menu menu.bar.view
   0 submenu menu.view.leftPane pane:left
-      0 check view_mode_full_left menu.view.fullView [Cmd+1] view-mode:left:full
-      1 check view_mode_brief_left menu.view.briefView [Cmd+2] view-mode:left:brief
+      0 check view_mode_full_left menu.view.fullView [Ctrl+1] view-mode:left:full
+      1 check view_mode_brief_left menu.view.briefView [Ctrl+2] view-mode:left:brief
   1 submenu menu.view.rightPane pane:right
       0 check view_mode_full_right menu.view.fullView view-mode:right:full
       1 check view_mode_brief_right menu.view.briefView view-mode:right:brief
   2 separator
-  3 check show_hidden_files menu.view.showHiddenFiles [Cmd+Shift+.] show-hidden-files
+  3 check show_hidden_files menu.view.showHiddenFiles [Ctrl+Shift+.] show-hidden-files
   4 submenu menu.view.sortBy id=menu_sort_by sort-by
-      0 item sort_by_name menu.sort.name [Cmd+3] tracked
-      1 item sort_by_extension menu.sort.extension [Cmd+4] tracked
-      2 item sort_by_modified menu.sort.dateModified [Cmd+5] tracked
-      3 item sort_by_size menu.sort.size [Cmd+6] tracked
+      0 item sort_by_name menu.sort.name [Ctrl+3] tracked
+      1 item sort_by_extension menu.sort.extension [Ctrl+4] tracked
+      2 item sort_by_modified menu.sort.dateModified [Ctrl+5] tracked
+      3 item sort_by_size menu.sort.size [Ctrl+6] tracked
       4 item sort_by_created menu.sort.dateCreated untracked
       5 separator
       6 item sort_ascending menu.sort.ascending untracked
       7 item sort_descending menu.sort.descending untracked
   5 submenu menu.view.zoom nested
       0 item view_zoom_75 menu.zoom.percent75 untracked
-      1 item view_zoom_100 menu.zoom.percent100 [Cmd+0] untracked
+      1 item view_zoom_100 menu.zoom.percent100 [Ctrl+0] untracked
       2 item view_zoom_125 menu.zoom.percent125 untracked
       3 item view_zoom_150 menu.zoom.percent150 untracked
       4 separator
@@ -232,35 +232,35 @@ menu menu.bar.view
       6 item view_zoom_out menu.zoom.out untracked
   6 separator
   7 item switch_pane menu.view.switchPane tracked
-  8 item swap_panes menu.view.swapPanes [Cmd+U] tracked
-  9 item clone_pane menu.view.clonePane [Cmd+Shift+C] tracked
+  8 item swap_panes menu.view.swapPanes [Ctrl+U] tracked
+  9 item clone_pane menu.view.clonePane [Ctrl+Shift+C] tracked
   10 item calculate_folder_sizes menu.view.calculateFolderSizes [Alt+Shift+Enter] tracked
   11 separator
-  12 item command_palette menu.view.commandPalette [Cmd+Shift+P] tracked
-  13 item queue_show menu.view.operationQueue [Cmd+Alt+Q] tracked
-  14 item operation_log menu.view.operationLog [Cmd+Alt+L] tracked
+  12 item command_palette menu.view.commandPalette [Ctrl+Shift+P] tracked
+  13 item queue_show menu.view.operationQueue [Ctrl+Alt+Q] tracked
+  14 item operation_log menu.view.operationLog [Ctrl+Alt+L] tracked
   15 item suggested_ops menu.view.suggestedOps tracked
-  16 item ask_cmdr menu.view.askCmdr [Cmd+Alt+A] tracked
+  16 item ask_cmdr menu.view.askCmdr [Ctrl+Alt+A] tracked
 menu menu.bar.go
-  0 item go_back menu.go.back [Cmd+[] tracked
-  1 item go_forward menu.go.forward [Cmd+]] tracked
+  0 item go_back menu.go.back [Ctrl+[] tracked
+  1 item go_forward menu.go.forward [Ctrl+]] tracked
   2 separator
-  3 item go_parent menu.go.parentFolder [Cmd+Up] tracked
-  4 item go_root menu.go.rootFolder [Cmd+/] tracked
-  5 item go_home menu.go.home [Shift+Cmd+H] tracked
+  3 item go_parent menu.go.parentFolder [Ctrl+Up] tracked
+  4 item go_root menu.go.rootFolder [Ctrl+/] tracked
+  5 item go_home menu.go.home [Ctrl+Shift+H] tracked
   6 separator
-  7 item go_to_path menu.go.goToPath [Cmd+G] tracked
-  8 item go_latest_download menu.go.goToLatestDownload [Cmd+J] tracked
+  7 item go_to_path menu.go.goToPath [Ctrl+G] tracked
+  8 item go_latest_download menu.go.goToLatestDownload [Ctrl+J] tracked
   9 separator
   10 item favorites_add menu.go.addToFavorites tracked
   11 item favorites_open menu.go.showFavorites [Ctrl+D] tracked
   12 separator
-  13 item servers_connect menu.go.connectToServer [Cmd+K] tracked
+  13 item servers_connect menu.go.connectToServer [Ctrl+K] tracked
   14 item servers_show menu.go.showServers tracked
 menu menu.bar.tab
-  0 item new_tab menu.tab.newTab [Cmd+T] tracked
-  1 item close_tab menu.tab.closeTab [Cmd+W] tracked
-  2 item reopen_closed_tab menu.tab.reopenClosedTab [Cmd+Shift+T] disabled tracked
+  0 item new_tab menu.tab.newTab [Ctrl+T] tracked
+  1 item close_tab menu.tab.closeTab [Ctrl+W] tracked
+  2 item reopen_closed_tab menu.tab.reopenClosedTab [Ctrl+Shift+T] disabled tracked
   3 separator
   4 item next_tab menu.tab.nextTab [Ctrl+Tab] tracked
   5 item prev_tab menu.tab.previousTab [Ctrl+Shift+Tab] tracked
@@ -378,6 +378,41 @@ fn no_item_both_registers_and_displays_a_shortcut() {
     }
 }
 
+/// muda reads `Cmd` / `Command` / `Super` as `Modifiers::META`, which GTK draws and binds as the
+/// Super key: the window manager's, and never the chord a Linux user reaches for. So every Linux
+/// accelerator says Ctrl where the Mac says ⌘ (`menu_spec::cmd_or_ctrl!`). #284.
+#[test]
+fn no_linux_accelerator_holds_the_super_key() {
+    for (id, accelerator) in registered_accelerators(Platform::Linux) {
+        let super_token = accelerator
+            .split('+')
+            .find(|token| ["CMD", "COMMAND", "SUPER", "META"].contains(&token.to_ascii_uppercase().as_str()));
+        assert_eq!(
+            super_token, None,
+            "`{id}` registers `{accelerator}` on Linux, which binds the Super key there, not Ctrl"
+        );
+    }
+}
+
+/// Two items on one chord: the menu fires whichever registered last, and the other one's label
+/// lies. The likeliest source is a Linux bar where a `⌘X` turned into `Ctrl+X` beside an existing
+/// `⌃X`, so this compares what muda parses rather than the strings.
+#[test]
+fn no_two_items_share_an_accelerator() {
+    for platform in PLATFORMS {
+        let mut seen: Vec<(muda::accelerator::Accelerator, &str)> = Vec::new();
+        for (id, accelerator) in registered_accelerators(platform) {
+            let parsed: muda::accelerator::Accelerator = accelerator
+                .parse()
+                .expect("the bar's accelerators parse (`accelerators.rs` pins it)");
+            if let Some((_, taken_by)) = seen.iter().find(|(other, _)| *other == parsed) {
+                panic!("`{id}` and `{taken_by}` both register `{accelerator}` on {platform:?}");
+            }
+            seen.push((parsed, id));
+        }
+    }
+}
+
 /// `MenuState.items` is keyed by ID, so a second item with an ID already taken would silently
 /// replace the first one's registration.
 #[test]
@@ -482,6 +517,18 @@ fn every_entry(platform: Platform) -> Vec<&'static EntryKind> {
         walk(&bar_menu.submenu, platform, &mut out);
     }
     out
+}
+
+/// Every accelerator `platform`'s bar registers, with the ID of the item it sits on.
+fn registered_accelerators(platform: Platform) -> Vec<(&'static str, &'static str)> {
+    every_entry(platform)
+        .into_iter()
+        .filter_map(|entry| match entry {
+            EntryKind::Item(item) => Some((item.id, item.accelerator.on(platform)?)),
+            EntryKind::Check(check) => Some((check.id, check.accelerator.on(platform)?)),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The catalog key, or both keys joined by `|` for a label that depends on the license.

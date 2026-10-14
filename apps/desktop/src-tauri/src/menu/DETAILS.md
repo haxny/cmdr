@@ -269,7 +269,8 @@ Shared state managed via `tauri::State<MenuState<Wry>>`. Holds:
   `rebuild_view_mode_items` to remove/recreate/reinsert items when accelerators move on focus change.
 - Cached view-mode state (`view_mode_active_pane`, `view_mode_left`, `view_mode_right`,
   `view_mode_full_accel`, `view_mode_brief_accel`) used by `rebuild_view_mode_items` to
-  attach the keyboard accelerator only to the currently-active pane's pair
+  attach the keyboard accelerator only to the currently-active pane's pair. The two accels start as the left pane's
+  spec accelerators on this platform (`menu_bar::spec_accelerator`), so a rebuild can't put a macOS chord on Linux.
 - `items: HashMap<String, MenuItemEntry>` for every `Tracking::Tracked` row in `menu_bar.rs`, the items
   that need accelerator updates and enable/disable
 - `context: MenuContext` for right-click context menu: `path` (primary right-clicked file),
@@ -1020,7 +1021,11 @@ Every difference is marked on its row in `menu_bar.rs`, and `menu_bar_test.rs` s
   Help, Settings and License under Edit.
 - **Predefined items**: macOS has Hide, Hide Others, Show All, Quit, the Window items, and Undo/Redo. Linux has none (GTK
   has no equivalent).
-- **Accelerators**: macOS has the full set. Linux omits F2 (Rename) and the others GTK intercepts.
+- **Accelerators**: macOS has the full set. Linux omits F2 (Rename) and the others GTK intercepts. Every ⌘ chord is
+  the same chord on Ctrl there (`cmd_or_ctrl!`), because muda reads `Cmd` as META, the Super key on GTK (#284). `both`
+  and `split` refuse a Linux `Cmd` / `Super` at compile time, and `frontend_shortcut_to_accelerator` maps a rebind's ⌘
+  to Ctrl (and ⌃ to Shift when both are held, as `toPlatformShortcut` does). It also reads the `+`-joined words a Linux
+  capture stores (`Ctrl+Shift+P`).
 - **Mnemonics**: macOS doesn't use them. Linux gives `&` prefixes for GTK keyboard navigation, unique per submenu.
 - **Help search**: macOS has the native NSMenu search field via `setHelpMenu:`. Linux has none.
 - **System cleanup**: on macOS, objc2 strips the injected Edit items. Linux needs none.
@@ -1162,7 +1167,7 @@ focus-gain (see "Per-window menu activation" above).
 **Decision**: Accelerator updates via remove/recreate/reinsert instead of in-place mutation.
 **Why**: it is what the code does, and `MenuState` tracks both the `Submenu` reference and the positional index for every updatable item to make it possible. ⚠️ The reason recorded for it — that Tauri's menu API has no `set_accelerator()` — is false, and the simplification it blocks is described under "Accelerator sync". Read that before extending this machinery.
 
-**Decision**: one menu bar for both platforms, written as data (`menu_bar.rs`) and built by one generic builder (`menu_bar_builder.rs`), with every platform difference marked on the row it changes: `macos_only` / `linux_only` rows and menus, `macos(…)` / `split(…)` accelerators, per-platform label keys, and top-level IDs that reach macOS alone.
+**Decision**: one menu bar for both platforms, written as data (`menu_bar.rs`) and built by one generic builder (`menu_bar_builder.rs`), with every platform difference marked on the row it changes: `macos_only` / `linux_only` rows and menus, `macos(…)` / `split(…)` / `cmd_or_ctrl!(…)` accelerators, per-platform label keys, and top-level IDs that reach macOS alone.
 **Why**: per-platform builders write each item's ID, label, and accelerator twice, so a new item is two edits in lockstep and a drift between them goes unnoticed. As data, a new item is one row, its registration position is its index among the rows its submenu shows, and the table carries no `cfg`, so `menu_bar_test.rs` pins BOTH bars as text on any host. That's the only way to check the Linux bar on a Mac (a real `muda::Menu` panics off the main thread), and the snapshot doubles as the review surface: a menu change reads as a diff of the bar. Sort by, Zoom, and the pane view-mode submenus are rows too, so nothing about the bar lives in a helper.
 
 A few asymmetries look accidental, and each is one row edit away: macOS keeps About and Settings out of `MenuState.items` while Linux tracks them, the Help menu's separator sits after `Keyboard shortcuts` on macOS but after the About group on Linux, and Duplicate's `Cmd+D` is macOS-only.

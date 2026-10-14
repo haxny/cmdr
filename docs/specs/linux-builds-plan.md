@@ -17,11 +17,11 @@ that detects Linux visitors and offers them the right download.
 Building for Linux and supporting Linux are different jobs, and this plan only covers the first. A Linux download button
 advertises a build with known functional gaps, recorded in `docs/notes/linux-gaps-2026-08-10.md`: **the live file
 watcher never starts** (one unreadable directory anywhere under the root aborts the whole recursive inotify watch, which
-is the common case, not an edge case), the `Cmd+` menu accelerators print as Super chords, and the English catalog
-carries hundreds of macOS-specific strings ("your Mac", `⌘`, "Finder"). Closing those is a prerequisite for advertising
-Linux, and they are Milestone 0 below. ❗ Milestone 0 gates Milestone 2 (the website's download button), not Milestone
-1: publishing artifacts a self-builder can find is fine while the gaps are open, since that is what the roadmap already
-promises with "Linux in alpha (self-build for now)".
+is the common case, not an edge case), the `Cmd+` menu accelerators printed as Super chords (fixed, #284), and the
+English catalog carries hundreds of macOS-specific strings ("your Mac", `⌘`, "Finder"). Closing those is a prerequisite
+for advertising Linux, and they are Milestone 0 below. ❗ Milestone 0 gates Milestone 2 (the website's download button),
+not Milestone 1: publishing artifacts a self-builder can find is fine while the gaps are open, since that is what the
+roadmap already promises with "Linux in alpha (self-build for now)".
 
 **Goal:** When a Linux user visits getcmdr.com, they see a Linux download button (AppImage by default, .deb as
 alternative). macOS users continue to see exactly what they see today. The updater works for both platforms.
@@ -344,8 +344,8 @@ three has been scoped.
       real home directory almost always ends up with no watcher at all. Without it a pane never notices a change
       anything outside Cmdr made. Watch out for `max_user_watches` too; GitHub #151 covers what happens when the limit
       runs out.
-- [ ] Rebind the menu accelerators. `Cmd+` bindings print as Super chords, which is not what a Linux user's muscle
-      memory or their window manager expects.
+- [x] Rebind the menu accelerators. `Cmd+` bindings printed as Super chords, which is not what a Linux user's muscle
+      memory or their window manager expects. Every ⌘ chord is now the same Ctrl chord on Linux (#284).
 - [ ] Sweep the macOS-specific strings in the English catalog ("your Mac", `⌘`, "Finder"; about 600 lines match
       `⌘|Finder|macOS|your Mac` under `messages/en/`, 2026-09-23). ⚠️ This is user-facing copy in 12 more locales, so it
       needs David's review and a re-translation pass, which makes it the long-lead item of the three.

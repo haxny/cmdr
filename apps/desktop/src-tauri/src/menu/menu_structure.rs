@@ -481,7 +481,12 @@ mod tests {
     #[test]
     fn a_rebound_command_shows_the_new_key() {
         let shortcuts = shortcuts(&[("file.copy", "⌘⇧K")]);
-        assert_eq!(shortcuts.for_menu_item(FILE_COPY_ID), Some("Cmd+Shift+K".to_string()));
+        let expected = if cfg!(target_os = "macos") {
+            "Cmd+Shift+K"
+        } else {
+            "Ctrl+Shift+K"
+        };
+        assert_eq!(shortcuts.for_menu_item(FILE_COPY_ID).as_deref(), Some(expected));
     }
 
     /// A bare key stays a real label here, where the menu bar would refuse one: a

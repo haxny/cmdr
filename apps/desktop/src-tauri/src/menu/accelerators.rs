@@ -2,10 +2,11 @@
 //! accelerator strings, and swapping the accelerator on a live menu item.
 //!
 //! The conversion is the seam between two vocabularies. The frontend speaks macOS
-//! glyphs and canonical key words (`⌘⇧P`, `Backspace`); Tauri wants `Cmd+Shift+P`.
-//! Anything unrecognized passes through as-is, so a glyph that leaks in here
-//! produces a garbage accelerator rather than an error, which is what the
-//! canonical-key-names test guards.
+//! glyphs and canonical key words (`⌘⇧P`, `Backspace`), or off macOS the `+`-joined
+//! words it captures there (`Ctrl+Shift+P`); Tauri wants `Cmd+Shift+P`, and on Linux
+//! `Ctrl+Shift+P` for a ⌘ (#284). Anything unrecognized passes through as-is, so a
+//! glyph that leaks in here produces a garbage accelerator rather than an error,
+//! which is what the canonical-key-names test guards.
 //!
 //! Two ways out, because a menu BAR accelerator is registered with the app and a
 //! POPUP's is only drawn: [`frontend_shortcut_to_menu_text`] converts,
@@ -19,18 +20,22 @@ use crate::ignore_poison::IgnorePoison;
 use super::menu_spec::{Platform, display_accelerator_label};
 use super::{MenuItemEntry, MenuState};
 
-/// Convert frontend shortcut format (⌘2) to the text a menu item shows (Cmd+2).
+/// Convert frontend shortcut format (⌘2) to the text a menu item shows (Cmd+2, Ctrl+2 on Linux).
 /// Returns None if the shortcut is empty.
 ///
 /// No floor of any kind: a popup menu's key equivalents are never registered with the
 /// app, so a bare `Space` or `F5` there is display text and can't swallow anything.
 /// ❌ The menu bar must not use this — [`frontend_shortcut_to_accelerator`] is its door.
 pub fn frontend_shortcut_to_menu_text(shortcut: &str) -> Option<String> {
-    convert(shortcut).map(|(accelerator, _)| accelerator)
+    to_menu_text(shortcut, Platform::current())
+}
+
+fn to_menu_text(shortcut: &str, platform: Platform) -> Option<String> {
+    convert(shortcut, platform).map(|(accelerator, _)| accelerator)
 }
 
 /// Convert frontend shortcut format (⌘2) to a Tauri accelerator the menu BAR may
-/// register (Cmd+2). Returns None if the shortcut is empty, carries no ⌘ / ⌃ / ⌥, or names a
+/// register (Cmd+2, Ctrl+2 on Linux). Returns None if the shortcut is empty, carries no ⌘ / ⌃ / ⌥ / Super, or names a
 /// key muda has no `Code` for.
 ///
 /// ❗ The modifier floor is what keeps a bare key out of the menu bar. AppKit fires a
@@ -46,7 +51,11 @@ pub fn frontend_shortcut_to_menu_text(shortcut: &str) -> Option<String> {
 /// (`menu_spec::ItemSpec::display_accelerator`), drawn beside the item while the file pane's
 /// keydown handler does the work.
 pub fn frontend_shortcut_to_accelerator(shortcut: &str) -> Option<String> {
-    match convert(shortcut)? {
+    to_accelerator(shortcut, Platform::current())
+}
+
+fn to_accelerator(shortcut: &str, platform: Platform) -> Option<String> {
+    match convert(shortcut, platform)? {
         (accelerator, true) => Some(accelerator),
         (_, false) => None,
     }
@@ -77,122 +86,136 @@ fn is_codeable_key(key: &str) -> bool {
     only.is_ascii_alphanumeric() || CODEABLE_PUNCTUATION.contains(only)
 }
 
-/// The converted accelerator, plus whether the menu bar may register it: it needs a command
-/// modifier (⌘, ⌃, or ⌥) AND a key muda can name.
-fn convert(shortcut: &str) -> Option<(String, bool)> {
-    if shortcut.is_empty() {
-        return None;
-    }
+/// A modifier, whichever way the frontend spelled it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Modifier {
+    Command,
+    Control,
+    Alt,
+    Shift,
+    Super,
+}
 
-    let mut result = String::new();
-    let mut registerable = false;
-    let mut chars = shortcut.chars().peekable();
+/// Every modifier prefix the frontend writes, in both of its spellings: macOS glyphs (`⌘⇧P`, which
+/// is how the registry ships its defaults and how a Mac captures a rebind), and the `+`-joined words
+/// `formatKeyCombo` captures off macOS (`Ctrl+Alt+Shift+Super+P`).
+const MODIFIER_PREFIXES: [(&str, Modifier); 8] = [
+    ("⌘", Modifier::Command),
+    ("⌃", Modifier::Control),
+    ("⌥", Modifier::Alt),
+    ("⇧", Modifier::Shift),
+    ("Ctrl+", Modifier::Control),
+    ("Alt+", Modifier::Alt),
+    ("Shift+", Modifier::Shift),
+    ("Super+", Modifier::Super),
+];
 
-    while let Some(c) = chars.next() {
-        match c {
-            '⌘' => {
-                registerable = true;
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Cmd");
-            }
-            '⌃' => {
-                registerable = true;
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Ctrl");
-            }
-            '⌥' => {
-                registerable = true;
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                // ❗ `Alt`, ❌ never `Opt`: muda accepts `OPTION` and `ALT` and nothing else
-                // (`muda-0.20.0/src/accelerator/mod.rs:249`), and Tauri throws the parse error away
-                // (`normal.rs:65` is `.parse().ok()`), so `Opt` built items with NO accelerator at
-                // all, silently. `an_accelerator_muda_refuses_is_dropped_without_a_word` guards it.
-                result.push_str("Alt");
-            }
-            '⇧' => {
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Shift");
-            }
-            '↑' => {
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Up");
-            }
-            '↓' => {
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Down");
-            }
-            '←' => {
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Left");
-            }
-            '→' => {
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                result.push_str("Right");
-            }
-            _ => {
-                // Regular character (letter, number, etc.)
-                if !result.is_empty() {
-                    result.push('+');
-                }
-                // Handle special key names
-                let remaining: String = std::iter::once(c).chain(chars.by_ref()).collect();
-                if remaining.eq_ignore_ascii_case("enter") {
-                    result.push_str("Enter");
-                } else if remaining.eq_ignore_ascii_case("space") {
-                    result.push_str("Space");
-                } else if remaining.eq_ignore_ascii_case("tab") {
-                    result.push_str("Tab");
-                } else if remaining.eq_ignore_ascii_case("escape") {
-                    result.push_str("Escape");
-                } else if remaining.eq_ignore_ascii_case("backspace") {
-                    result.push_str("Backspace");
-                } else if remaining.eq_ignore_ascii_case("delete") {
-                    result.push_str("Delete");
-                } else if remaining.eq_ignore_ascii_case("insert") {
-                    result.push_str("Insert");
-                } else if remaining.starts_with('F') || remaining.starts_with('f') {
-                    // Function keys like F1, F4
-                    result.push_str(&remaining.to_uppercase());
-                } else if remaining.eq_ignore_ascii_case("pageup") {
-                    result.push_str("PageUp");
-                } else if remaining.eq_ignore_ascii_case("pagedown") {
-                    result.push_str("PageDown");
-                } else if remaining.eq_ignore_ascii_case("home") {
-                    result.push_str("Home");
-                } else if remaining.eq_ignore_ascii_case("end") {
-                    result.push_str("End");
-                } else {
-                    // Single character or unknown - use as-is (uppercase for letters)
-                    if !is_codeable_key(&remaining) {
-                        registerable = false;
-                    }
-                    result.push_str(&remaining.to_uppercase());
-                }
-                break;
+/// The modifiers `shortcut` opens with, in its own order, and the key after them.
+fn split_modifiers(shortcut: &str) -> (Vec<Modifier>, &str) {
+    let mut modifiers = Vec::new();
+    let mut rest = shortcut;
+    'strip: loop {
+        for (prefix, modifier) in MODIFIER_PREFIXES {
+            if let Some(after) = rest
+                .get(..prefix.len())
+                .filter(|head| head.eq_ignore_ascii_case(prefix))
+                .map(|_| &rest[prefix.len()..])
+            {
+                modifiers.push(modifier);
+                rest = after;
+                continue 'strip;
             }
         }
+        return (modifiers, rest);
     }
+}
 
-    if result.is_empty() {
+/// The accelerator tokens for `modifiers` on `platform`.
+///
+/// ❗ On Linux ⌘ is Ctrl, ❌ never `Cmd`: muda maps `Cmd` to `Modifiers::META`, which GTK binds and
+/// prints as the Super key (#284). It's the chord the frontend dispatches ⌘ as there too
+/// (`toPlatformShortcut`), and like it, a combo holding ⌃ as well spends that one on Shift, so
+/// the two don't collapse into one Ctrl.
+fn modifier_tokens(modifiers: &[Modifier], platform: Platform) -> Vec<&'static str> {
+    let holds_command = modifiers.contains(&Modifier::Command);
+    let mut tokens: Vec<&'static str> = Vec::new();
+    for modifier in modifiers {
+        let token = match (modifier, platform) {
+            (Modifier::Command, Platform::MacOs) => "Cmd",
+            (Modifier::Command, Platform::Linux) => "Ctrl",
+            (Modifier::Control, Platform::Linux) if holds_command => "Shift",
+            (Modifier::Control, _) => "Ctrl",
+            // ❗ `Alt`, ❌ never `Opt`: muda accepts `OPTION` and `ALT` and nothing else
+            // (`muda-0.20.0/src/accelerator/mod.rs:249`), and Tauri throws the parse error away
+            // (`normal.rs:65` is `.parse().ok()`), so `Opt` built items with NO accelerator at
+            // all, silently. `every_accelerator_this_converter_emits_is_one_muda_can_parse` guards it.
+            (Modifier::Alt, _) => "Alt",
+            (Modifier::Shift, _) => "Shift",
+            (Modifier::Super, _) => "Super",
+        };
+        if !tokens.contains(&token) {
+            tokens.push(token);
+        }
+    }
+    tokens
+}
+
+/// The accelerator's name for `key`, plus whether muda can turn it into a `Code`.
+fn key_token(key: &str) -> (String, bool) {
+    const NAMED: [&str; 11] = [
+        "Enter",
+        "Space",
+        "Tab",
+        "Escape",
+        "Backspace",
+        "Delete",
+        "Insert",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+    ];
+    let arrow = match key {
+        "↑" => Some("Up"),
+        "↓" => Some("Down"),
+        "←" => Some("Left"),
+        "→" => Some("Right"),
+        _ => None,
+    };
+    if let Some(arrow) = arrow {
+        return (arrow.to_string(), true);
+    }
+    if let Some(named) = NAMED.iter().find(|named| named.eq_ignore_ascii_case(key)) {
+        return ((*named).to_string(), true);
+    }
+    let is_function_key =
+        key.len() > 1 && key.starts_with(['F', 'f']) && key[1..].bytes().all(|byte| byte.is_ascii_digit());
+    if is_function_key {
+        return (key.to_uppercase(), true);
+    }
+    (key.to_uppercase(), is_codeable_key(key))
+}
+
+/// The converted accelerator, plus whether the menu bar may register it: it needs a command
+/// modifier (⌘, ⌃, ⌥, or Super) AND a key muda can name.
+fn convert(shortcut: &str, platform: Platform) -> Option<(String, bool)> {
+    let (modifiers, key) = split_modifiers(shortcut);
+    let mut tokens: Vec<String> = modifier_tokens(&modifiers, platform)
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+    let mut registerable = modifiers.iter().any(|modifier| *modifier != Modifier::Shift);
+    if key.is_empty() {
+        registerable = false;
+    } else {
+        let (key, codeable) = key_token(key);
+        registerable &= codeable;
+        tokens.push(key);
+    }
+    if tokens.is_empty() {
         None
     } else {
-        Some((result, registerable))
+        Some((tokens.join("+"), registerable))
     }
 }
 
@@ -254,37 +277,37 @@ mod tests {
     #[test]
     fn test_frontend_shortcut_to_accelerator_simple() {
         // Basic modifier + key combinations
-        assert_eq!(frontend_shortcut_to_accelerator("⌘1"), Some("Cmd+1".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌘2"), Some("Cmd+2".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌘⇧P"), Some("Cmd+Shift+P".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌥⌘O"), Some("Alt+Cmd+O".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌃⌘C"), Some("Ctrl+Cmd+C".to_string()));
+        assert_eq!(to_accelerator("⌘1", Platform::MacOs), Some("Cmd+1".to_string()));
+        assert_eq!(to_accelerator("⌘2", Platform::MacOs), Some("Cmd+2".to_string()));
+        assert_eq!(to_accelerator("⌘⇧P", Platform::MacOs), Some("Cmd+Shift+P".to_string()));
+        assert_eq!(to_accelerator("⌥⌘O", Platform::MacOs), Some("Alt+Cmd+O".to_string()));
+        assert_eq!(to_accelerator("⌃⌘C", Platform::MacOs), Some("Ctrl+Cmd+C".to_string()));
     }
 
     #[test]
     fn test_frontend_shortcut_to_accelerator_arrows() {
-        assert_eq!(frontend_shortcut_to_accelerator("⌘↑"), Some("Cmd+Up".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌘↓"), Some("Cmd+Down".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌘["), Some("Cmd+[".to_string()));
-        assert_eq!(frontend_shortcut_to_accelerator("⌘]"), Some("Cmd+]".to_string()));
+        assert_eq!(to_accelerator("⌘↑", Platform::MacOs), Some("Cmd+Up".to_string()));
+        assert_eq!(to_accelerator("⌘↓", Platform::MacOs), Some("Cmd+Down".to_string()));
+        assert_eq!(to_accelerator("⌘[", Platform::MacOs), Some("Cmd+[".to_string()));
+        assert_eq!(to_accelerator("⌘]", Platform::MacOs), Some("Cmd+]".to_string()));
     }
 
     /// The key words a popup menu spells out. Every one of them is bare, so the menu
     /// bar refuses them and only the popup path sees them.
     #[test]
     fn test_frontend_shortcut_to_menu_text_special_keys() {
-        assert_eq!(frontend_shortcut_to_menu_text("Tab"), Some("Tab".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("Enter"), Some("Enter".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("Space"), Some("Space".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("F4"), Some("F4".to_string()));
+        assert_eq!(to_menu_text("Tab", Platform::MacOs), Some("Tab".to_string()));
+        assert_eq!(to_menu_text("Enter", Platform::MacOs), Some("Enter".to_string()));
+        assert_eq!(to_menu_text("Space", Platform::MacOs), Some("Space".to_string()));
+        assert_eq!(to_menu_text("F4", Platform::MacOs), Some("F4".to_string()));
         assert_eq!(
-            frontend_shortcut_to_menu_text("Backspace"),
+            to_menu_text("Backspace", Platform::MacOs),
             Some("Backspace".to_string())
         );
-        assert_eq!(frontend_shortcut_to_menu_text("Delete"), Some("Delete".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("Insert"), Some("Insert".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("PageUp"), Some("PageUp".to_string()));
-        assert_eq!(frontend_shortcut_to_menu_text("Escape"), Some("Escape".to_string()));
+        assert_eq!(to_menu_text("Delete", Platform::MacOs), Some("Delete".to_string()));
+        assert_eq!(to_menu_text("Insert", Platform::MacOs), Some("Insert".to_string()));
+        assert_eq!(to_menu_text("PageUp", Platform::MacOs), Some("PageUp".to_string()));
+        assert_eq!(to_menu_text("Escape", Platform::MacOs), Some("Escape".to_string()));
     }
 
     /// ❗ The modifier floor. AppKit fires a menu-bar accelerator app-wide, ahead of the
@@ -294,12 +317,12 @@ mod tests {
     fn a_combo_with_no_command_modifier_is_no_menu_bar_accelerator() {
         for bare in ["*", "+", "-", "⇧8", "⇧-", "Space", "Tab", "F4", "Backspace", "↑"] {
             assert_eq!(
-                frontend_shortcut_to_accelerator(bare),
+                to_accelerator(bare, Platform::MacOs),
                 None,
                 "`{bare}` carries no ⌘ / ⌃ / ⌥, so the menu bar must not register it"
             );
             assert!(
-                frontend_shortcut_to_menu_text(bare).is_some(),
+                to_menu_text(bare, Platform::MacOs).is_some(),
                 "`{bare}` is still fine as menu TEXT, which is what a popup shows"
             );
         }
@@ -310,11 +333,11 @@ mod tests {
     fn one_command_modifier_is_enough_to_register() {
         for combo in ["⌘K", "⌃Enter", "⌥⇧=", "⇧⌘A"] {
             assert_eq!(
-                frontend_shortcut_to_accelerator(combo),
-                frontend_shortcut_to_menu_text(combo),
+                to_accelerator(combo, Platform::MacOs),
+                to_menu_text(combo, Platform::MacOs),
                 "`{combo}` carries a command modifier, so both paths spell it the same way"
             );
-            assert!(frontend_shortcut_to_accelerator(combo).is_some(), "`{combo}`");
+            assert!(to_accelerator(combo, Platform::MacOs).is_some(), "`{combo}`");
         }
     }
 
@@ -328,7 +351,7 @@ mod tests {
     fn a_key_muda_cannot_name_is_no_menu_bar_accelerator_either() {
         for uncodeable in ["⌘+", "⌘*", "⌥(", "⌃_"] {
             assert_eq!(
-                frontend_shortcut_to_accelerator(uncodeable),
+                to_accelerator(uncodeable, Platform::MacOs),
                 None,
                 "`{uncodeable}` names a key muda has no `Code` for, so registering it would \
                  silently produce a menu item with no accelerator"
@@ -338,7 +361,7 @@ mod tests {
         // specific rather than a blanket refusal of punctuation.
         for codeable in ["⌘=", "⌘-", "⌘[", "⌘,", "⌘.", "⌘/", "⌘;", "⌘'", "⌘`"] {
             assert!(
-                frontend_shortcut_to_accelerator(codeable).is_some(),
+                to_accelerator(codeable, Platform::MacOs).is_some(),
                 "`{codeable}` sits on a key muda names, so it registers"
             );
         }
@@ -351,19 +374,85 @@ mod tests {
     #[test]
     fn test_frontend_shortcut_to_accelerator_canonical_key_names() {
         assert_eq!(
-            frontend_shortcut_to_accelerator("⌘Backspace"),
+            to_accelerator("⌘Backspace", Platform::MacOs),
             Some("Cmd+Backspace".to_string())
         );
         assert_eq!(
-            frontend_shortcut_to_accelerator("⌘⌥Escape"),
+            to_accelerator("⌘⌥Escape", Platform::MacOs),
             Some("Cmd+Alt+Escape".to_string())
         );
     }
 
+    /// #284: muda reads `Cmd` as Super on GTK, so a Linux menu must never say it. ⌘ there is the
+    /// Ctrl chord the frontend dispatches it as (`toPlatformShortcut`), on the bar and in popups.
+    #[test]
+    fn on_linux_a_command_glyph_becomes_ctrl() {
+        for (combo, expected) in [
+            ("⌘F", "Ctrl+F"),
+            ("⌘⇧P", "Ctrl+Shift+P"),
+            ("⌥⌘O", "Alt+Ctrl+O"),
+            ("⌘↑", "Ctrl+Up"),
+            ("⌘Backspace", "Ctrl+Backspace"),
+            ("⌃D", "Ctrl+D"),
+        ] {
+            assert_eq!(
+                to_accelerator(combo, Platform::Linux).as_deref(),
+                Some(expected),
+                "`{combo}`"
+            );
+            assert_eq!(
+                to_menu_text(combo, Platform::Linux).as_deref(),
+                Some(expected),
+                "`{combo}`"
+            );
+        }
+    }
+
+    /// ⌃ and ⌘ both land on Ctrl off macOS, so a combo holding both spends ⌃ on Shift, exactly
+    /// as `toPlatformShortcut` does: the menu has to say the chord the frontend really binds.
+    #[test]
+    fn on_linux_a_combo_holding_both_command_glyphs_mirrors_the_frontend() {
+        assert_eq!(to_accelerator("⌃⌘C", Platform::Linux).as_deref(), Some("Shift+Ctrl+C"));
+    }
+
+    /// What a rebind captured on Linux stores (`formatKeyCombo` off macOS: `+`-joined words,
+    /// Ctrl+Alt+Shift+Super order). It has to register as the same chord, ❌ not fall through to
+    /// the "unknown key" branch, which once made every Linux rebind display-only.
+    #[test]
+    fn a_combo_captured_on_linux_registers_as_typed() {
+        for (combo, expected) in [
+            ("Ctrl+F", "Ctrl+F"),
+            ("Ctrl+Shift+P", "Ctrl+Shift+P"),
+            ("Ctrl+Alt+Shift+Super+A", "Ctrl+Alt+Shift+Super+A"),
+            ("Alt+F5", "Alt+F5"),
+            ("Ctrl+↑", "Ctrl+Up"),
+            ("Ctrl+Backspace", "Ctrl+Backspace"),
+            ("Ctrl+=", "Ctrl+="),
+            // A Super chord the user really pressed stays one.
+            ("Super+E", "Super+E"),
+        ] {
+            assert_eq!(
+                to_accelerator(combo, Platform::Linux).as_deref(),
+                Some(expected),
+                "`{combo}`"
+            );
+        }
+    }
+
+    /// The two refusals hold for the Linux form too: Shift alone isn't a command modifier, and `+`
+    /// (the key, after the `Ctrl+` separator) has no muda `Code`. Both stay labels.
+    #[test]
+    fn a_combo_captured_on_linux_keeps_both_refusals() {
+        for (combo, text) in [("Shift+F4", "Shift+F4"), ("Ctrl++", "Ctrl++"), ("F2", "F2")] {
+            assert_eq!(to_accelerator(combo, Platform::Linux), None, "`{combo}`");
+            assert_eq!(to_menu_text(combo, Platform::Linux).as_deref(), Some(text), "`{combo}`");
+        }
+    }
+
     #[test]
     fn test_frontend_shortcut_to_accelerator_empty() {
-        assert_eq!(frontend_shortcut_to_accelerator(""), None);
-        assert_eq!(frontend_shortcut_to_menu_text(""), None);
+        assert_eq!(to_accelerator("", Platform::MacOs), None);
+        assert_eq!(to_menu_text("", Platform::MacOs), None);
     }
 
     /// ❗ The test the other ones in this file couldn't be: it PARSES the output instead of
@@ -416,19 +505,31 @@ mod tests {
             "⌥Home",
             "⌥End",
             "⌥F4",
+            // The Linux capture form (`formatKeyCombo` off macOS).
+            "Ctrl+Shift+P",
+            "Ctrl+Alt+Shift+Super+A",
+            "Ctrl+↑",
+            "Ctrl+Backspace",
+            "Alt+F5",
+            "Super+E",
+            "Ctrl++",
+            "Ctrl+=",
             "",
         ];
-        for combo in combos {
+        for (combo, platform) in combos
+            .into_iter()
+            .flat_map(|combo| [(combo, Platform::MacOs), (combo, Platform::Linux)])
+        {
             // ❗ The contract, and the whole reason this test exists: whatever comes back has to
             // PARSE. `None` is a fine answer — it routes to the display path — but a `Some` that
             // muda refuses is the silent failure, because Tauri discards the parse error and
             // builds the item with no accelerator at all.
-            let Some(accelerator) = frontend_shortcut_to_accelerator(combo) else {
+            let Some(accelerator) = to_accelerator(combo, platform) else {
                 continue;
             };
             assert!(
                 accelerator.parse::<muda::accelerator::Accelerator>().is_ok(),
-                "`{combo}` converts to `{accelerator}`, which muda refuses — so Tauri would build \
+                "`{combo}` converts to `{accelerator}` on {platform:?}, which muda refuses — so Tauri would build \
                  the item with NO accelerator and say nothing"
             );
         }

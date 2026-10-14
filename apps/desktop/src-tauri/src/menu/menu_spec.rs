@@ -53,13 +53,32 @@ pub(crate) const NONE: Accelerator = PerPlatform {
     linux: None,
 };
 
-/// The same accelerator on both platforms.
+/// The same accelerator on both platforms. ❗ Refuses one that holds ⌘ at compile time:
+/// [`cmd_or_ctrl!`] is the spelling for that.
 pub(crate) const fn both(accelerator: &'static str) -> Accelerator {
+    assert!(
+        !holds_super(accelerator),
+        "a ⌘ chord is Ctrl on Linux: write it `cmd_or_ctrl!`, not `both`"
+    );
     PerPlatform {
         macos: Some(accelerator),
         linux: Some(accelerator),
     }
 }
+
+/// A ⌘ chord on macOS and the same chord on Ctrl on Linux: `cmd_or_ctrl!("Shift+P")` is
+/// `Cmd+Shift+P` / `Ctrl+Shift+P`.
+///
+/// ❗ Not one shared `Cmd+…` string, because muda reads `Cmd` as `Modifiers::META`, which GTK
+/// binds and prints as the Super key, so the Linux menu offered Super chords the window manager
+/// usually owns (#284). ❌ Not `CmdOrCtrl` either: it resolves by the HOST muda runs on, so
+/// `menu_bar_test.rs` couldn't pin the Linux bar from a Mac.
+macro_rules! cmd_or_ctrl {
+    ($chord:literal) => {
+        $crate::menu::menu_spec::split(concat!("Cmd+", $chord), concat!("Ctrl+", $chord))
+    };
+}
+pub(crate) use cmd_or_ctrl;
 
 /// An accelerator only the macOS bar registers.
 pub(crate) const fn macos(accelerator: &'static str) -> Accelerator {
@@ -69,12 +88,40 @@ pub(crate) const fn macos(accelerator: &'static str) -> Accelerator {
     }
 }
 
-/// One accelerator per platform.
+/// One accelerator per platform. ❗ The Linux one can't hold Super, at compile time (#284).
 pub(crate) const fn split(on_macos: &'static str, on_linux: &'static str) -> Accelerator {
+    assert!(
+        !holds_super(on_linux),
+        "`Cmd` / `Super` binds the Super key on Linux: spell the Linux chord with Ctrl"
+    );
     PerPlatform {
         macos: Some(on_macos),
         linux: Some(on_linux),
     }
+}
+
+/// Whether one of `accelerator`'s `+`-separated tokens is a modifier muda maps to
+/// `Modifiers::META` (`Cmd`, `Command`, `Super`, case-insensitive), the Super key on Linux.
+/// `const`, so [`both`] and [`split`] can refuse one while `MENU_BAR` compiles.
+const fn holds_super(accelerator: &str) -> bool {
+    let bytes = accelerator.as_bytes();
+    let mut start = 0;
+    let mut end = 0;
+    while end <= bytes.len() {
+        if end == bytes.len() || bytes[end] == b'+' {
+            let (_, tail) = bytes.split_at(start);
+            let (token, _) = tail.split_at(end - start);
+            if token.eq_ignore_ascii_case(b"cmd")
+                || token.eq_ignore_ascii_case(b"command")
+                || token.eq_ignore_ascii_case(b"super")
+            {
+                return true;
+            }
+            start = end + 1;
+        }
+        end += 1;
+    }
+    false
 }
 
 /// How a display-only shortcut reaches the user, which is the one place the two platforms
