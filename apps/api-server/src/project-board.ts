@@ -13,8 +13,10 @@
  *
  * The token here carries `project` scope ALONE. Verified against the live API on 2026-09-19: it
  * resolves public issues and cannot resolve a private repo's issue at all ("Could not resolve to a
- * node"). So a leak of this secret exposes the ability to rearrange project boards and nothing
- * else: no repository contents, no private data, no user reports. ❌ Never widen it to `repo` to
+ * node") through GraphQL. But the REST project-items endpoint DOES return private issue bodies to
+ * the same token (verified 2026-10-14 with a `project`-only token: full `cmdr-reports` card bodies,
+ * user reports included). So a leak of this secret exposes every board the account can reach: their
+ * structure, and the bodies of private issues on them. No repository contents. ❌ Never widen it to `repo` to
  * make private issues work here; the right answer for those is the built-in workflow, or moving the
  * project to an organization where a fine-grained token can be scoped properly.
  *
