@@ -417,3 +417,63 @@ async fn the_capability_answers_match_a_routed_read_only_volume() {
 
     cleanup(&dir);
 }
+
+// ── The commit log: progress and counts filled in later ───────────────────
+
+/// A portal over a fresh `commits`-commit repo, and the portal itself so a cell
+/// can ask it for rows directly.
+fn portal_over_history(name: &str, commits: usize) -> (PathBuf, Arc<GitPortal>, GitPortalVolume) {
+    let (dir, _fixture) = crate::test_fixtures::build_simple_repo(name, commits);
+    let portal = Arc::new(GitPortal::new(
+        VolumeHost::detached(),
+        crate::state_sink::no_git_state_sink(),
+    ));
+    let parent: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Parent"));
+    let volume = GitPortalVolume::new(Arc::clone(&portal), dir.clone(), parent);
+    (dir, portal, volume)
+}
+
+#[tokio::test]
+async fn the_commit_listing_reports_every_commit_as_progress() {
+    let (dir, _portal, volume) = portal_over_history("commit_progress", 4);
+    let seen = std::sync::Mutex::new(Vec::new());
+    let on_progress = |p: cmdr_fs::volume::ListingProgress| seen.lock().unwrap().push(p.dirs);
+
+    let entries = volume
+        .list_directory(&virtual_path(&dir, "commits"), Some(&on_progress))
+        .await
+        .unwrap();
+
+    assert_eq!(entries.len(), 4);
+    assert_eq!(
+        seen.lock().unwrap().last(),
+        Some(&4),
+        "the last tick is the exact count"
+    );
+    cleanup(&dir);
+}
+
+#[tokio::test]
+async fn the_portal_fills_in_counts_for_commit_rows_only() {
+    let (dir, portal, volume) = portal_over_history("commit_fill", 2);
+    let commits = volume
+        .list_directory(&virtual_path(&dir, "commits"), None)
+        .await
+        .unwrap();
+    let mut paths: Vec<PathBuf> = commits.iter().map(|e| PathBuf::from(&e.path)).collect();
+    paths.push(virtual_path(&dir, "branches/main"));
+    paths.push(dir.join("README.md"));
+
+    let filled = portal.commit_rows_with_counts(&paths);
+
+    assert_eq!(filled.len(), 2, "the branch row and the real file are left out");
+    for (row, listed) in filled.iter().zip(&commits) {
+        assert_eq!(row.path, listed.path);
+        assert!(
+            matches!(row.git_meta, Some(cmdr_fs::git_meta::GitEntryMeta::Count { .. })),
+            "{} came back without its count",
+            row.name
+        );
+    }
+    cleanup(&dir);
+}

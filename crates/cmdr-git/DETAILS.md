@@ -51,6 +51,9 @@ which:
   `list_status`.
 - **Reporting a change** (`file_system/git/wiring.rs`): the `GitStateSink` trait the app implements, and
   `no_git_state_sink` for a session with no window.
+- **Filling in commit counts** (`commands/file_system/git.rs::fill_git_commit_counts`):
+  `GitPortal::commit_rows_with_counts`, a method on the browsing type rather than a new root export (approved
+  2026-10-14), so the count stays 11 while the list names it.
 
 **A `pub` inside a private module isn't measured either**, which is exactly why one may not sit there waiting for a
 caller: nothing would ever notice. So a helper here earns its place from a caller that exists today, ❌ never from a
@@ -442,15 +445,17 @@ behind `origin/main`", and which branch that is depends on whether the branch ha
 `main` / `master`. Only the backend knows; carrying `vs` is what lets the frontend word the sentence without asking
 again.
 
-**Decision**: Eager-load ahead/behind for branches; eager-load files-changed for commits **Why**: Bench (release build,
-M-series): 100 branches with ahead/behind takes p50=33 ms / p95=36 ms, well under the 300 ms p95 budget the spec sets
-for the listing pipeline. Files-changed for 200 commits of the synthetic fixture: p50=37 ms / p95=40 ms (200 µs /
-commit). **A real repo costs about eight times that**: Cmdr's own 10,642 commits list in ~17 s with files-changed and
-~450 ms without (~1.6 ms vs ~42 µs per commit; release build, M-series, `list_commits` on the Cmdr repo, 2026-10-14).
-The listing pipeline runs the row build in `spawn_blocking`, so the UI stays responsive meanwhile, but the pane waits.
-The way out is lazy files-changed (a streamed IPC, or computing it only for the rows in view), at the price of a `…`
-placeholder in the cell while it resolves. The bench harness in `bench.rs` covers 1000 commits and
-`bench_list_commits_files_changed` covers 200.
+**Decision**: Eager-load ahead/behind for branches; files-changed eagerly for the newest 5,000 commits, lazily for the
+rest **Why**: Bench (release build, M-series): 100 branches with ahead/behind takes p50=33 ms / p95=36 ms, well under
+the 300 ms p95 budget the spec sets for the listing pipeline. A commit row costs ~230 µs WITH its files-changed diff and
+~11 µs without (Cmdr's own 10,646 commits: ~2.4 s of CPU time vs 116 ms; CPU time because the machine was under heavy
+load, release build, `list_commits` on the Cmdr repo, 2026-10-14). So the walk counts the newest `EAGER_FILES_CHANGED`
+(5,000) rows, which is what lets Size sort work for any repo up to that size, and marks the rest
+`GitEntryMeta::CountPending`. The frontend shows `…` there and asks `fill_git_commit_counts` for the pending rows a pane
+shows (`apps/desktop/src/lib/file-explorer/git/commit-count-fill.ts`); the counted rows are patched into the listing as
+`DirectoryChange::Modified`, so they re-sort and stay. Rows past 5,000 that nobody scrolled to sort as no Size. The
+patch goes to the listing engine alone, ❌ never `listing_host::directory_changed`, which would also feed virtual rows
+to the file index.
 
 ## Decisions
 
@@ -509,20 +514,19 @@ invisible rather than break the listing.
 `redirect_to_path` so the frontend opens the working dir directly. The submodule itself is a git repo so the portal
 experience cascades for free.
 
-**Decision**: Streaming log capped at 15,000 entries, silent cap **Why**: A hard cap keeps pathological monorepos from
-listing unbounded. 15,000 sits above Cmdr's own ~10,600 commits, so an active multi-year project lists whole; the cost
-per row is the files-changed diff (see "Modified + Size columns" above), which is what any higher cap has to fix first.
-When the cap is hit the walk stops silently (no "Load more" affordance, because tapping it would do nothing useful:
-pagination IPC isn't wired). When the first user reports hitting the cap, add the IPC + a real Load-more entry together
-so the affordance actually works.
+**Decision**: Commit log capped at 100,000 entries, silent cap **Why**: A hard cap keeps pathological monorepos from
+listing unbounded. With lazy files-changed (above) a row costs ~11 µs and ~576 bytes of listing cache, so the cap is ~1
+s plus the eager share and ~58 MB; 500,000 would be ~290 MB for one open pane. When the cap is hit the walk stops
+silently (no "Load more" affordance, because tapping it would do nothing useful: pagination IPC isn't wired). When the
+first user reports hitting the cap, add the IPC + a real Load-more entry together so the affordance actually works.
 
-**Decision**: A portal listing stays single-shot; cancellation via task abort + polled flag **Why**: The
-`Volume::list_directory` contract is "compute Vec, return", and the portal honours it – no `ListingEventSink` streaming
-here. Cancellation works two ways: (1) the listing pipeline's `spawn_blocking` task can be aborted on cancel, dropping
-the iterator; (2) we poll a per-process `AtomicBool` (`log::cancel_flag()`) inside the rev-walk callback every commit so
-a _cooperative_ cancel takes effect within one commit decode (microseconds). The flag is opt-in for tests and unused by
-production listings (which rely on task abort). Changing to streaming would require revisiting the trait contract
-everywhere.
+**Decision**: A portal listing stays single-shot, with progress and cancellation through a per-listing `WalkControl`
+**Why**: The `Volume::list_directory` contract is "compute Vec, return", and the portal honours it. The commit walk
+publishes how many rows it has into the listing's own `WalkControl`, which `list_directory` samples every 200 ms through
+`cmdr_fs::volume::listing_progress::report_while` (the local reader's helper too) and hands to the pane as progress. A
+`spawn_blocking` task can't be aborted, so dropping the listing future (the pane left) sets the control's "abandoned"
+flag through a drop guard, and the walk stops at the next commit instead of burning seconds for nobody. Per listing, ❌
+never a static: two listings must not cancel each other.
 
 **Decision**: One recursive watch on the whole gitdir, ❌ not a watch per state directory **Why**: each `watch` call
 restarts the macOS FSEvents stream, so one path is one start (§ "Watcher path set"). It also needs no glob and no

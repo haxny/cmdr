@@ -16,6 +16,7 @@ use std::sync::Arc;
 use cmdr_fs::volume::friendly_error::git::FriendlyGitError;
 use cmdr_fs::volume::host::VolumeHost;
 
+use crate::path::{self, Cat, VirtualGitPath};
 use crate::repo::{RepoCache, RepoHandle, RepoInfo};
 use crate::state_sink::GitStateSink;
 use crate::virtual_listing;
@@ -82,6 +83,31 @@ impl GitPortal {
     /// and canonical worktree root.
     pub fn discover(&self, path: &Path) -> Result<(RepoHandle, PathBuf), FriendlyGitError> {
         self.repos.discover(path)
+    }
+
+    /// The `.git/commits/<sha>` rows at `paths`, rebuilt WITH their
+    /// files-changed count, for a pane showing commit rows the walk left
+    /// uncounted (past `EAGER_FILES_CHANGED`). Paths may span repos; one that
+    /// isn't a commit row, or whose commit doesn't resolve, is left out.
+    ///
+    /// **Blocking**: one tree diff per row (~230 µs each). Run it on the host's
+    /// blocking pool.
+    pub fn commit_rows_with_counts(&self, paths: &[PathBuf]) -> Vec<FileEntry> {
+        let mut by_repo: Vec<(RepoHandle, PathBuf, Vec<PathBuf>)> = Vec::new();
+        for path in paths {
+            let Some((VirtualGitPath::Ref(Cat::Commits, _), handle, root)) = path::classify_in(&self.repos, path)
+            else {
+                continue;
+            };
+            match by_repo.iter_mut().find(|(_, r, _)| *r == root) {
+                Some((_, _, group)) => group.push(path.clone()),
+                None => by_repo.push((handle, root, vec![path.clone()])),
+            }
+        }
+        by_repo
+            .into_iter()
+            .flat_map(|(handle, root, group)| crate::log::commit_rows_with_counts(&handle, &root, &group))
+            .collect()
     }
 
     /// The six category rows for the repo whose worktree root is `worktree_root`,

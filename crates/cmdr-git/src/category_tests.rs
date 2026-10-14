@@ -17,6 +17,7 @@ use crate::test_fixtures::{
     git_cli_capture, temp_dir,
 };
 use crate::{log as git_log, stash, submodules, virtual_listing, worktrees};
+use cmdr_fs::git_meta::{GitCountKind, GitEntryMeta};
 
 // ── the six rows the landing page is built from ───────────────────────
 
@@ -75,7 +76,7 @@ fn list_tags_yields_v1() {
 fn list_commits_yields_entries_with_short_sha_and_subject() {
     let (dir, _f) = build_simple_repo("category", 3);
     let (handle, root) = discover_repo(&dir).unwrap();
-    let entries = git_log::list_commits(&handle, &root).unwrap();
+    let entries = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
     assert_eq!(entries.len(), 3, "fixture has exactly 3 commits");
     for fe in &entries {
         // Display name = "<short-sha> <subject>"
@@ -94,7 +95,7 @@ fn list_commits_yields_entries_with_short_sha_and_subject() {
 fn commit_tree_browsing_via_short_sha() {
     let (dir, _f) = build_simple_repo("category", 2);
     let (handle, root) = discover_repo(&dir).unwrap();
-    let entries = git_log::list_commits(&handle, &root).unwrap();
+    let entries = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
     let top = &entries[0];
     // The on-disk path segment is the bare 7-char short sha.
     let segment = top.path.split('/').next_back().unwrap().to_string();
@@ -115,27 +116,100 @@ fn commit_tree_browsing_via_short_sha() {
 
 #[test]
 fn commits_caps_listing_at_max() {
-    // Building 15,001 commits to reach the cap would add minutes to the suite, so
-    // this pins the two constants the walk stops on instead.
-    assert_eq!(git_log::MAX_COMMITS, 15_000);
-    assert_eq!(git_log::BATCH_SIZE, 200);
+    // Building 100,001 commits to reach the cap would take far too long, so this
+    // pins the constants the walk stops and stops counting on instead.
+    assert_eq!(git_log::MAX_COMMITS, 100_000);
+    assert_eq!(git_log::EAGER_FILES_CHANGED, 5_000);
 }
 
 #[test]
-fn commits_listing_cancellation_polls_atomic_flag() {
-    use std::sync::atomic::Ordering;
+fn only_the_newest_commits_get_their_files_changed_count_during_the_walk() {
     let (dir, _f) = build_simple_repo("category", 5);
     let (handle, root) = discover_repo(&dir).unwrap();
 
-    // Pre-set the cancel flag so the walk bails after 0 commits.
-    git_log::cancel_flag().store(true, Ordering::Relaxed);
-    let entries = git_log::list_commits(&handle, &root).unwrap();
-    git_log::cancel_flag().store(false, Ordering::Relaxed);
+    let entries = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 2).unwrap();
 
+    assert_eq!(entries.len(), 5, "every commit is still listed");
+    let counted: Vec<bool> = entries
+        .iter()
+        .map(|e| matches!(e.git_meta, Some(GitEntryMeta::Count { .. })))
+        .collect();
+    assert_eq!(counted, [true, true, false, false, false], "the newest two only");
+    for row in &entries[2..] {
+        assert_eq!(row.size, None, "an uncounted row has no Size to sort by");
+        assert_eq!(
+            row.git_meta,
+            Some(GitEntryMeta::CountPending {
+                counted: GitCountKind::FilesChanged
+            }),
+            "the pane words it as pending and knows to ask for it",
+        );
+    }
+    cleanup(&dir);
+}
+
+#[test]
+fn the_walk_publishes_how_many_commits_it_has_listed() {
+    let (dir, _f) = build_simple_repo("category", 5);
+    let (handle, root) = discover_repo(&dir).unwrap();
+    let control = git_log::WalkControl::default();
+
+    let entries = git_log::list_commits(&handle, &root, &control).unwrap();
+
+    assert_eq!(control.listed(), entries.len());
+    cleanup(&dir);
+}
+
+#[test]
+fn an_abandoned_walk_stops_instead_of_listing_for_nobody() {
+    let (dir, _f) = build_simple_repo("category", 5);
+    let (handle, root) = discover_repo(&dir).unwrap();
+    let control = git_log::WalkControl::default();
+    control.abandon();
+
+    let entries = git_log::list_commits(&handle, &root, &control).unwrap();
+
+    assert!(entries.is_empty(), "nobody is waiting for these rows");
+    cleanup(&dir);
+}
+
+#[test]
+fn a_commit_row_filled_in_later_matches_the_walk_with_its_count() {
+    let (dir, _f) = build_simple_repo("category", 3);
+    let (handle, root) = discover_repo(&dir).unwrap();
+    let counted = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 3).unwrap();
+    let uncounted = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 0).unwrap();
     assert!(
-        entries.len() < 5,
-        "cancellation should stop the walk before all 5 commits arrive"
+        uncounted
+            .iter()
+            .all(|e| matches!(e.git_meta, Some(GitEntryMeta::CountPending { .. })))
     );
+
+    let paths: Vec<PathBuf> = uncounted.iter().map(|e| PathBuf::from(&e.path)).collect();
+    let filled = git_log::commit_rows_with_counts(&handle, &root, &paths);
+
+    assert_eq!(filled.len(), 3);
+    for (filled, expected) in filled.iter().zip(&counted) {
+        assert_eq!(filled.path, expected.path);
+        assert_eq!(filled.name, expected.name);
+        assert_eq!(filled.size, expected.size);
+        assert_eq!(filled.git_meta, expected.git_meta);
+    }
+    cleanup(&dir);
+}
+
+#[test]
+fn filling_in_counts_skips_a_path_that_is_no_commit_row() {
+    let (dir, _f) = build_simple_repo("category", 1);
+    let (handle, root) = discover_repo(&dir).unwrap();
+
+    let filled = git_log::commit_rows_with_counts(
+        &handle,
+        &root,
+        &[root.join(".git/commits/zzzzzzz"), root.join(".git/branches/main")],
+    );
+
+    assert!(filled.is_empty());
     cleanup(&dir);
 }
 
@@ -182,7 +256,7 @@ fn commit_path_resolves_unreachable_sha() {
     // The commit is no longer HEAD-reachable. List_commits returns the
     // single main commit. But classify + resolve_commit_id still find it.
     let (handle, root) = discover_repo(&dir).unwrap();
-    let listing = git_log::list_commits(&handle, &root).unwrap();
+    let listing = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
     assert!(!listing.iter().any(|e| e.name.contains("side")));
 
     // Direct resolve from the orphaned SHA still works.

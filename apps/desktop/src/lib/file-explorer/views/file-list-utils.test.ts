@@ -43,8 +43,10 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
 vi.mock('#lib/settings/settings-store.js', () => ({
   getSetting: vi.fn().mockReturnValue(200),
 }))
+vi.mock('../git/commit-count-fill', () => ({ requestPendingCommitCounts: vi.fn() }))
 
 import { getFileRange, getDirStatsBatch } from '#lib/tauri-commands/index.js'
+import { requestPendingCommitCounts } from '../git/commit-count-fill'
 import { prefetchIcons } from '#lib/icon-cache.js'
 
 describe('getSyncIconPath', () => {
@@ -374,6 +376,22 @@ describe('fetchVisibleRange', () => {
     })
 
     expect(onSyncStatusRequest).toHaveBeenCalledWith(['/dir/file1.txt'])
+  })
+
+  it('asks for the pending commit counts of the rows it fetched', async () => {
+    vi.mocked(getFileRange).mockResolvedValue(mockEntries)
+
+    await fetchVisibleRange({
+      listingId: 'listing-1',
+      startItem: 10,
+      endItem: 20,
+      hasParent: false,
+      totalCount: 100,
+      includeHidden: false,
+      cachedRange: { start: 0, end: 5 },
+    })
+
+    expect(requestPendingCommitCounts).toHaveBeenCalledWith('listing-1', mockEntries)
   })
 })
 

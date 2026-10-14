@@ -7,7 +7,12 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
+use cmdr_fs::volume::DirectoryChange;
+use cmdr_listing::ListingId;
+
+use crate::deadline::{
+    BlockingBudget, TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag, timeout_detached_typed,
+};
 use crate::file_system::git::wiring::portal;
 use crate::file_system::git::{EntryStatus, FriendlyGitError, RepoInfo, list_status, repo_info};
 
@@ -22,6 +27,15 @@ const GIT_STATUS_TIMEOUT: Duration = Duration::from_secs(5);
 /// `discover_repo` + `repo_info` (the same `is_dirty` walk), so a hung repo
 /// could block the watcher registration without a timeout.
 const GIT_SUBSCRIBE_TIMEOUT: Duration = Duration::from_secs(2);
+/// A pane's worth of commit counts is ~100 tree diffs at ~230 µs each, so this
+/// only bounds a repo on a stalled mount; past it the cells keep their `…`.
+const GIT_FILL_COUNTS_TIMEOUT: Duration = Duration::from_secs(5);
+/// More rows than any pane shows at once, so one call can't queue minutes of
+/// diffs behind a runaway caller.
+const GIT_FILL_COUNTS_MAX_ROWS: usize = 500;
+/// Two at a time: both panes can be on a commit list, and a scroll re-asks
+/// faster than a batch of diffs finishes.
+static COMMIT_COUNT_FILLS: BlockingBudget = BlockingBudget::new(2);
 
 /// Returns the repo info for any path inside a worktree, or `None` if there's
 /// no repo above it.
@@ -117,4 +131,41 @@ pub async fn get_git_status_for_paths(repo_root: String, dir: String) -> TimedOu
         list_status(&handle, &scope).unwrap_or_default()
     })
     .await
+}
+
+/// Fills in the files-changed count for `.git/commits/` rows that the walk left
+/// uncounted (past `EAGER_FILES_CHANGED`) and a pane now shows, and patches them
+/// into `listing_id`'s listing. The cells fill, a Size sort places them, and
+/// scrolling back keeps them.
+///
+/// Fire-and-forget from the pane: the patched rows arrive as an ordinary
+/// `directory-diff`. Goes to the listing engine alone, ❌ never
+/// `listing_host::directory_changed`, which would also hand virtual git rows to
+/// the file index.
+#[tauri::command]
+#[specta::specta]
+pub async fn fill_git_commit_counts(listing_id: String, paths: Vec<String>) {
+    let listings = crate::listing_host::listings();
+    let Some((volume_id, parent)) = listings.location(&ListingId::new(listing_id)) else {
+        return;
+    };
+    let paths: Vec<PathBuf> = paths
+        .into_iter()
+        .take(GIT_FILL_COUNTS_MAX_ROWS)
+        .map(PathBuf::from)
+        .collect();
+    // Under the budget, so a fast scroll queues cheap futures instead of pool threads.
+    let counting = async move {
+        COMMIT_COUNT_FILLS
+            .run(move || portal().commit_rows_with_counts(&paths))
+            .await
+            .map_err(|_| ())
+    };
+    // A timeout leaves the cells on their `…`; nothing to report.
+    let Ok(rows) = timeout_detached_typed(GIT_FILL_COUNTS_TIMEOUT, || (), |_| (), counting).await else {
+        return;
+    };
+    for row in rows {
+        listings.directory_changed(&volume_id, &parent, DirectoryChange::Modified(row));
+    }
 }

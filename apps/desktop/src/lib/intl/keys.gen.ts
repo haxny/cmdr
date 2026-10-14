@@ -1449,6 +1449,7 @@ export type MessageKey =
   | 'fileExplorer.git.tooltip.branches'
   | 'fileExplorer.git.tooltip.commits'
   | 'fileExplorer.git.tooltip.filesChanged'
+  | 'fileExplorer.git.tooltip.filesChangedPending'
   | 'fileExplorer.git.tooltip.pinnedCommit'
   | 'fileExplorer.git.tooltip.stashedOnBranch'
   | 'fileExplorer.git.tooltip.taggedCommit'

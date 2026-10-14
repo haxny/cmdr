@@ -29,6 +29,15 @@ export function unsubscribeGitState(repoRoot: string): Promise<void> {
   return commands.unsubscribeGitState(repoRoot)
 }
 
+/**
+ * Asks the backend to count the files changed by the `.git/commits/` rows at
+ * `paths` and patch them into `listingId`'s listing; the rows come back as an
+ * ordinary `directory-diff`.
+ */
+export function fillGitCommitCounts(listingId: string, paths: string[]): Promise<void> {
+  return commands.fillGitCommitCounts(listingId, paths)
+}
+
 /** Returns the per-entry status for a worktree, scoped by `dir`. */
 export function getGitStatusForPaths(repoRoot: string, dir: string): Promise<TimedOut<EntryStatus[]>> {
   return commands.getGitStatusForPaths(repoRoot, dir)

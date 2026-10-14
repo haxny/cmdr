@@ -162,7 +162,7 @@ fn tags_listing_names_the_tagged_commit() {
 fn commits_listing_populates_files_changed() {
     let (dir, _f) = build_simple_repo("column_meta", 2);
     let (handle, root) = discover_repo(&dir).unwrap();
-    let entries = git_log::list_commits(&handle, &root).unwrap();
+    let entries = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
     let top = &entries[0];
     let n = top.size.expect("files-changed size set");
     assert!(n >= 1, "at least one file changed in the second commit");

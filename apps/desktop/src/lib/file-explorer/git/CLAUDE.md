@@ -19,6 +19,7 @@ error CLASSIFICATION; `apps/desktop/src-tauri/src/file_system/git/CLAUDE.md` for
   Pure, so the portal toggle is read by its callers, never here.
 - `git-portal-intro.ts` + `GitPortalIntroToastContent.svelte`: the once-ever `.git` portal intro toast. `DETAILS.md` §
   Portal intro.
+- `commit-count-fill.ts`: requests on-screen `countPending` commit counts (`crates/cmdr-git/DETAILS.md`).
 
 ## Must-knows
 

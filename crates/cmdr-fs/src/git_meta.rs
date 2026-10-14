@@ -32,6 +32,13 @@ pub enum GitEntryMeta {
         /// How many.
         n: u64,
     },
+    /// A [`Count`](Self::Count) not worked out yet. The commit log counts only
+    /// its newest rows during the walk, and the host fills the rest in once a
+    /// pane shows them. The row has no Size meanwhile, so it sorts as unknown.
+    CountPending {
+        /// What will be counted.
+        counted: GitCountKind,
+    },
     /// How far a branch has diverged from the branch it's compared against.
     AheadBehind {
         /// Commits on this branch that the comparison branch doesn't have.

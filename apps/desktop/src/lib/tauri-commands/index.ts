@@ -299,7 +299,14 @@ export {
 } from './networking'
 
 // Git browser commands and events
-export { getGitRepoInfo, subscribeGitState, unsubscribeGitState, getGitStatusForPaths, onGitStateChanged } from './git'
+export {
+  getGitRepoInfo,
+  subscribeGitState,
+  unsubscribeGitState,
+  fillGitCommitCounts,
+  getGitStatusForPaths,
+  onGitStateChanged,
+} from './git'
 
 // Write operations (copy, move, delete)
 export {

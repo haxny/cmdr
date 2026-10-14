@@ -25,6 +25,7 @@ use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 use cmdr_fs::volume::MountClass;
+use cmdr_fs::volume::listing_progress::report_while;
 use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use std::future::Future;
 use std::io;
@@ -341,37 +342,13 @@ impl Volume for LocalPosixVolume {
             // whole read. `volume/backends/DETAILS.md` § "The local reader".
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
-            let mut listing = spawn_blocking(move || {
+            let listing = spawn_blocking(move || {
                 list_directory_core_with_tally(&abs_path, &tally_for_listing, is_volume_root)
                     .map_err(|e| VolumeError::from_io_at(&e, &abs_path))
             });
-
-            let Some(on_progress) = on_progress else {
-                return listing
-                    .await
-                    .expect("spawn_blocking listing closure doesn't panic and the task is uncancelable");
-            };
-
-            loop {
-                tokio::select! {
-                    // Biased so a listing that finished during the tick reports its real
-                    // result instead of one more approximate count.
-                    biased;
-                    finished = &mut listing => {
-                        return finished
-                            .expect("spawn_blocking listing closure doesn't panic and the task is uncancelable");
-                    }
-                    () = tokio::time::sleep(PROGRESS_SAMPLE_INTERVAL) => {
-                        let progress = tally.snapshot();
-                        // Nothing stat'ed yet (the blocking pool hasn't picked the task up, or
-                        // this is a slow `read_dir` on a network path): a zero would render as
-                        // "Loaded 0 files...".
-                        if progress.entries() > 0 {
-                            on_progress(progress);
-                        }
-                    }
-                }
-            }
+            report_while(listing, PROGRESS_SAMPLE_INTERVAL, || tally.snapshot(), on_progress)
+                .await
+                .expect("spawn_blocking listing closure doesn't panic and the task is uncancelable")
         })
     }
 

@@ -30,7 +30,9 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
+use cmdr_fs::volume::listing_progress::report_while;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 
 use crate::path::{self, Cat, VirtualGitPath};
@@ -42,6 +44,20 @@ use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, ScanBoundary, SpaceInfo, Volume,
     VolumeError, VolumeReadStream,
 };
+
+/// How often a running commit walk reports how far it got: fast enough that a
+/// long walk visibly climbs, slow enough that the number stays readable. The
+/// local reader's cadence.
+const PROGRESS_SAMPLE_INTERVAL: Duration = Duration::from_millis(200);
+
+/// Tells a commit walk to stop when the listing that started it is dropped.
+struct AbandonOnDrop(Arc<log::WalkControl>);
+
+impl Drop for AbandonOnDrop {
+    fn drop(&mut self) {
+        self.0.abandon();
+    }
+}
 
 /// A read-only [`Volume`] over one repository's virtual `.git` trees.
 pub struct GitPortalVolume {
@@ -123,16 +139,26 @@ impl Volume for GitPortalVolume {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         let owned = path.to_path_buf();
         let portal = Arc::clone(&self.portal);
+        let control = Arc::new(log::WalkControl::default());
+        let walk_control = Arc::clone(&control);
         let listing = self.blocking(move || {
             let Some((virt, handle, root)) = path::classify_in(portal.repos(), &owned) else {
                 return Err(VolumeError::NotFound(owned.display().to_string()));
             };
-            found_or_not_found(listing_for(&virt, &handle, &root), &owned)
+            found_or_not_found(listing_for(&virt, &handle, &root, &walk_control), &owned)
         });
         Box::pin(async move {
-            let entries = listing.await?;
-            // One cumulative tick, as the trait asks: a snapshot listing is
-            // atomic, so there's nothing incremental to report.
+            // The blocking walk can't be aborted, so a pane that leaves (dropping
+            // this future) tells it to stop instead.
+            let _abandon_on_drop = AbandonOnDrop(Arc::clone(&control));
+            // Only the commit walk counts as it goes (every row is a folder); every
+            // other listing is quick and reports once, below.
+            let sample = || ListingProgress {
+                files: 0,
+                dirs: control.listed(),
+                bytes: 0,
+            };
+            let entries = report_while(listing, PROGRESS_SAMPLE_INTERVAL, sample, on_progress).await?;
             if let Some(callback) = on_progress {
                 callback(ListingProgress::of(&entries));
             }
@@ -252,7 +278,7 @@ impl Volume for GitPortalVolume {
 
     /// `None`: a snapshot's size doesn't move, so polling it would be pure
     /// churn (the trait default is every two seconds).
-    fn space_poll_interval(&self) -> Option<std::time::Duration> {
+    fn space_poll_interval(&self) -> Option<Duration> {
         None
     }
 
@@ -285,12 +311,17 @@ impl Volume for GitPortalVolume {
 
 /// What a classified path lists. A free function so the blocking closure needs
 /// only the classified triple, never the volume.
-fn listing_for(virt: &VirtualGitPath, handle: &RepoHandle, root: &Path) -> Lookup<Vec<FileEntry>> {
+fn listing_for(
+    virt: &VirtualGitPath,
+    handle: &RepoHandle,
+    root: &Path,
+    control: &log::WalkControl,
+) -> Lookup<Vec<FileEntry>> {
     match virt {
         VirtualGitPath::Root => Ok(Some(virtual_listing::list_categories(handle, root))),
         VirtualGitPath::Category(Cat::Branches) => virtual_listing::list_branches(handle, root).map(Some),
         VirtualGitPath::Category(Cat::Tags) => virtual_listing::list_tags(handle, root).map(Some),
-        VirtualGitPath::Category(Cat::Commits) => log::list_commits(handle, root).map(Some),
+        VirtualGitPath::Category(Cat::Commits) => log::list_commits(handle, root, control).map(Some),
         VirtualGitPath::Category(Cat::Stash) => stash::list_stashes(root).map(Some),
         VirtualGitPath::Category(Cat::Worktrees) => worktrees::list_worktrees(handle, root).map(Some),
         VirtualGitPath::Category(Cat::Submodules) => submodules::list_submodules(handle, root).map(Some),

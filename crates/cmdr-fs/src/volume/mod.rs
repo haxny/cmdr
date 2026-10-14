@@ -2020,6 +2020,7 @@ mod entry_kind;
 mod error;
 mod ids;
 mod in_memory;
+pub mod listing_progress;
 pub mod liveness;
 pub mod mkdir_all;
 pub mod mtp_ids;
@@ -2097,6 +2098,8 @@ mod in_memory_scan_test;
 mod in_memory_stream_test;
 #[cfg(test)]
 mod in_memory_test;
+#[cfg(test)]
+mod listing_progress_test;
 #[cfg(test)]
 mod retirement_test;
 #[cfg(test)]

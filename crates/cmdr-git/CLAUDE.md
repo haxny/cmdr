@@ -37,7 +37,7 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
 - **Every `gix` call runs on `VolumeHost::runtime().spawn_blocking`**, ❌ never on the caller's async worker.
 - **Anything a CONSUMER's test needs takes `any(test, feature = "testing")`, ❌ never `cfg(test)`**, which is off when
   the app compiles this crate as a dependency. `cfg(test)` alone is for doors only this crate's own cells open
-  (`snapshot_dates::clear_cache`, `log::cancel_flag`).
+  (`snapshot_dates::clear_cache`).
 - **The `.git` watcher is ONE recursive gitdir watch (a linked worktree's is the common dir, for the shared refs), ❌
   never per path or on `HEAD`/`index`, and drops READs.** Each extra path restarts the macOS FSEvents stream, git's
   lockfile rename kills an inotify FILE watch, and a passed-on `IN_OPEN` makes each recompute trigger the next.

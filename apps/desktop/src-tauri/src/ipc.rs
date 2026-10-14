@@ -207,6 +207,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::get_git_repo_info,
                     crate::commands::file_system::subscribe_git_state,
                     crate::commands::file_system::unsubscribe_git_state,
+                    crate::commands::file_system::fill_git_commit_counts,
                     crate::commands::file_system::get_git_status_for_paths,
                     crate::commands::rename::check_rename_permission,
                     crate::commands::rename::check_rename_validity,

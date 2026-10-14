@@ -1354,6 +1354,19 @@ export const commands = {
    */
   unsubscribeGitState: (repoRoot: string) => __TAURI_INVOKE<void>('unsubscribe_git_state', { repoRoot }),
   /**
+   *  Fills in the files-changed count for `.git/commits/` rows that the walk left
+   *  uncounted (past `EAGER_FILES_CHANGED`) and a pane now shows, and patches them
+   *  into `listing_id`'s listing. The cells fill, a Size sort places them, and
+   *  scrolling back keeps them.
+   *
+   *  Fire-and-forget from the pane: the patched rows arrive as an ordinary
+   *  `directory-diff`. Goes to the listing engine alone, ❌ never
+   *  `listing_host::directory_changed`, which would also hand virtual git rows to
+   *  the file index.
+   */
+  fillGitCommitCounts: (listingId: string, paths: string[]) =>
+    __TAURI_INVOKE<void>('fill_git_commit_counts', { listingId, paths }),
+  /**
    *  Returns the per-entry status for a worktree. The `dir` argument scopes the
    *  caller's interest; gix currently returns the whole worktree and the
    *  frontend filters, but the parameter is here so the backend can start
@@ -8654,6 +8667,16 @@ export type GitEntryMeta =
       counted: GitCountKind
       // How many.
       n: number
+    }
+  /**
+   *  A [`Count`](Self::Count) not worked out yet. The commit log counts only
+   *  its newest rows during the walk, and the host fills the rest in once a
+   *  pane shows them. The row has no Size meanwhile, so it sorts as unknown.
+   */
+  | {
+      kind: 'countPending'
+      // What will be counted.
+      counted: GitCountKind
     }
   // How far a branch has diverged from the branch it's compared against.
   | {

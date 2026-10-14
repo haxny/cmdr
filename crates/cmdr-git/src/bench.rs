@@ -360,11 +360,11 @@ fn bench_list_commits_files_changed() {
     }
 
     let (handle, root) = discover_repo(&dir).expect("discover");
-    let _ = log::list_commits(&handle, &root);
+    let _ = log::list_commits(&handle, &root, &log::WalkControl::default());
     let mut samples_us = Vec::with_capacity(RUNS);
     for _ in 0..RUNS {
         let start = Instant::now();
-        let _entries = log::list_commits(&handle, &root).expect("list_commits");
+        let _entries = log::list_commits(&handle, &root, &log::WalkControl::default()).expect("list_commits");
         samples_us.push(start.elapsed().as_micros());
     }
     let p95_us = percentile(samples_us.clone(), 95.0);

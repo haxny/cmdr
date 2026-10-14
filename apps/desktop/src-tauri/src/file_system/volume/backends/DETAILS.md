@@ -222,10 +222,11 @@ mkdir, mkfile, and paste-as-file goes through it too.
 
 - `list_directory_core_with_tally` publishes into a `ListingTally` as it stats, one relaxed atomic bump per entry,
   unthrottled. That's free next to the `stat` it accompanies.
-- `LocalPosixVolume::list_directory` samples the tally every `PROGRESS_SAMPLE_INTERVAL` from a `tokio::select!` against
-  the `JoinHandle`, and calls `on_progress` from there. The callback never leaves the async task that owns it.
+- `LocalPosixVolume::list_directory` samples the tally every `PROGRESS_SAMPLE_INTERVAL` through
+  `cmdr_fs::volume::listing_progress::report_while`, and calls `on_progress` from there. The callback never leaves the
+  async task that owns it. The git portal's commit walk uses the same helper.
 
-Two details the loop depends on. The `select!` is `biased` so a listing that finished during a tick returns its real
+Two details the helper depends on. Its `select!` is `biased` so a listing that finished during a tick returns its real
 result rather than spending another sample on an approximate count. And a snapshot of zero is dropped rather than
 emitted, because the blocking pool may not have picked the task up yet and "Loaded 0 files..." is worse than the
 "Opening folder..." it would replace.

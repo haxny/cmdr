@@ -158,6 +158,12 @@ describe('pickSizeDisplay', () => {
     expect(pick.tooltip).toBe('1 commit ahead, 0 commits behind “main”')
   })
 
+  it('shows a pending count as an ellipsis, with a tooltip saying it’s on its way', () => {
+    const pick = pickSizeDisplay(makeEntry({ gitMeta: { kind: 'countPending', counted: 'filesChanged' } }))
+    expect(pick.override).toBe('…')
+    expect(pick.tooltip).toBe('Counting the files this commit changed…')
+  })
+
   it('words each count kind on its own noun', () => {
     const cell = (counted: GitCountKind, n: number) =>
       pickSizeDisplay(makeEntry({ gitMeta: { kind: 'count', counted, n } })).override

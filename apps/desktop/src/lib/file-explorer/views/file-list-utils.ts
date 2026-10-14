@@ -19,6 +19,7 @@ import { formatInteger } from '#lib/intl/number-format.js'
 import type { IconName } from '#lib/ui/icons/icon-map.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { TranslationParams } from '#lib/intl/messages.svelte.js'
+import { requestPendingCommitCounts } from '../git/commit-count-fill'
 
 export type { DirStats } from '#lib/tauri-commands/index.js'
 
@@ -289,6 +290,9 @@ export async function fetchVisibleRange(params: FetchRangeParams): Promise<Fetch
   // folders stay generic; packages already arrive as `pkg:` ids above.
   const visibleDirPaths = entries.filter((e) => e.isDirectory && !e.isSymlink).map((e) => e.path)
   void prefetchCustomFolderIcons(visibleDirPaths, useAppIcons)
+
+  // Commit rows past the newest 5,000 arrive uncounted; count the ones on screen.
+  requestPendingCommitCounts(listingId, entries)
 
   // Request sync status + image-index status for visible paths
   const paths = entries.map((e) => e.path)
