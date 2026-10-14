@@ -126,6 +126,12 @@ The tables, the lifecycle machine, the claim transaction, and their DDL rational
 DB's usual pattern — nullable and `ON DELETE SET NULL`, where `messages` and `cost_meter` cascade — because a decision
 record has to outlive the chat thread that produced it.
 
+## v10: `proposals.thread_line_id`
+
+The `messages` row a decided group's thread line lives in, so an approval's "running" line can be rewritten in place
+when it settles. `ON DELETE SET NULL`. Its rationale and the writes that use it: `proposals/DETAILS.md` § A decided
+group's thread line.
+
 ## No auto-retention in v1
 
 Transcripts are small (spec §3), so there's no pruning yet. When real sizes exist, the operation log's

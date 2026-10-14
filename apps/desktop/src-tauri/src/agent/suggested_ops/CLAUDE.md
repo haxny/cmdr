@@ -35,7 +35,8 @@ the lifecycle machine, and the claim transaction are `../store/proposals/CLAUDE.
 - **The agent hears every answer** (`../outcomes.rs`). A rejection fires in `reject`'s `Rejected` arm, which the
   conditional UPDATE makes once-per-group across restarts; an APPROVAL fires at SETTLE, in the decorator, because
   `approve` is only a claim and a claimed group can still skip every file. ❌ Never move that one, or the approval
-  METRIC (`started`, since a refused start gives the group back), to the claim.
+  METRIC (`started`, since a refused start gives the group back), to the claim. The thread's "running" line is written
+  at the bridge's START and rewritten in place at settle (`DETAILS.md` § What the user's answer teaches the agent).
 - **A dismissed dialog is not a rejection.** `cancel_bulk_rename_proposal` passes `RejectSource::DialogDismissed`, so
   nothing is learned and no turn is asked for: that sweep's `conversation_id` is the user's active RAIL thread.
 - **The execution binding is a LIVE stat at preflight**, ❌ never the stored snapshot: the two answer different

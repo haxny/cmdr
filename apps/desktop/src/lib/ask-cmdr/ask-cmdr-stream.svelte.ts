@@ -194,13 +194,18 @@ export function settleDecisionsHeardWhileLoading(): void {
   }
 }
 
-/** Add a decision's line unless the thread already shows that row: the row is written before
- * its event is emitted, so a load can deliver it first and the event still follow. It goes
- * above a bubble that is still streaming, which has to stay last for the next chunk to find. */
+/** Add a decision's line, or patch it where it stands when the thread already shows that row.
+ * An approval's row is announced twice: "running" at the start, then rewritten with its outcome
+ * when it settles. The two come off different threads, and a load can deliver the settled row
+ * first, so a late "running" never replaces an outcome. A new line goes above a bubble that is
+ * still streaming, which has to stay last for the next chunk to find. */
 function showDecision({ messageId, decision }: HeardDecision): void {
-  const shown = askCmdrState.messages.some((m) => m.kind === 'proposalDecisions' && m.id === messageId)
-  if (shown) return
   const line: RailMessage = { kind: 'proposalDecisions', id: messageId, decisions: [decision] }
+  const at = askCmdrState.messages.findIndex((m) => m.kind === 'proposalDecisions' && m.id === messageId)
+  if (at !== -1) {
+    if (decision.outcome.kind !== 'running') askCmdrState.messages[at] = line
+    return
+  }
   const assistant = currentAssistant()
   if (assistant?.streaming) {
     askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, line)

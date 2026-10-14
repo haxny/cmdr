@@ -62,6 +62,25 @@ describe('AskCmdrProposalDecisions', () => {
     expect(target.textContent).toContain('2 done, 1 skipped, 0 failed')
   })
 
+  /** #345: the line appears the moment the user approves, long before a big copy settles. */
+  it('says an approved run is still going', async () => {
+    const target = render([decision({ verb: 'copy', ops: 1_204, outcome: { kind: 'running' } })])
+    await tick()
+
+    expect(target.textContent).toContain('You approved copying 1,204 items')
+    expect(target.textContent).toContain('Running…')
+  })
+
+  /** The app quit before the run settled. The next launch says so, never "running…" forever. */
+  it('says when the app quit before an approved run finished', async () => {
+    const target = render([decision({ verb: 'copy', ops: 3, outcome: { kind: 'interrupted' } })])
+    await tick()
+
+    expect(target.textContent).toContain('You approved copying 3 items')
+    expect(target.textContent).toContain('Cmdr quit before this finished')
+    expect(target.textContent).not.toContain('Running')
+  })
+
   /** A rejection never ran, so there is nothing to report about it. */
   it('says nothing about a run for a suggestion that was turned down', async () => {
     const target = render([decision()])

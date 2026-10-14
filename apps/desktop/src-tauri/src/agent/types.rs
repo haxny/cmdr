@@ -146,6 +146,10 @@ token_enum! {
 /// claim is only a claim: a group can be approved and then skip every file behind a fingerprint
 /// mismatch, and an outcome recorded at claim time would teach the agent that the user wanted
 /// something they never got. `suggested_ops/bridge/decorator.rs` is where the real answer lands.
+///
+/// `Running` and `Interrupted` are the thread line's states BEFORE (or instead of) that answer,
+/// and only the thread line's: ❌ neither ever reaches the memory ring, which learns from
+/// `Ran` and `Rejected` alone (`agent/outcomes.rs`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ProposalOutcomeKind {
@@ -153,6 +157,12 @@ pub enum ProposalOutcomeKind {
     Rejected,
     /// The user approved it and the operation has since finished, however it finished.
     Ran { done: u32, skipped: u32, failed: u32 },
+    /// The user approved it and the operation is running. The thread line is rewritten in
+    /// place when it settles.
+    Running,
+    /// The user approved it and the app quit before the operation settled. Written by the
+    /// next launch, so a line never reads "running" after the run it named is gone.
+    Interrupted,
 }
 
 /// One answered proposal group: what was asked, over how much, and what the user did.
@@ -193,6 +203,8 @@ impl ProposalOutcomeKind {
         match self {
             ProposalOutcomeKind::Rejected => "rejected",
             ProposalOutcomeKind::Ran { .. } => "ran",
+            ProposalOutcomeKind::Running => "running",
+            ProposalOutcomeKind::Interrupted => "interrupted",
         }
     }
 }
@@ -209,6 +221,13 @@ impl ProposalDecision {
             ProposalOutcomeKind::Rejected => format!("turned down: {verb} {ops} item(s) under {}", self.what),
             ProposalOutcomeKind::Ran { done, skipped, failed } => format!(
                 "approved: {verb} {ops} item(s) under {} ({done} done, {skipped} skipped, {failed} failed)",
+                self.what
+            ),
+            ProposalOutcomeKind::Running => {
+                format!("approved, still running: {verb} {ops} item(s) under {}", self.what)
+            }
+            ProposalOutcomeKind::Interrupted => format!(
+                "approved, cut short by an app restart: {verb} {ops} item(s) under {}",
                 self.what
             ),
         }

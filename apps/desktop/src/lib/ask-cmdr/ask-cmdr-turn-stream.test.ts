@@ -270,6 +270,34 @@ describe('an answer to a suggestion', () => {
     expect(getMock).not.toHaveBeenCalled()
   })
 
+  /** #345: an approval's line says "running" from the start, and the settle rewrites that same
+   *  row. The thread keeps one line per decision, patched where it stands. */
+  it('turns a running approval into its outcome in place', () => {
+    const running: ProposalDecision = { ...turnedDown, outcome: { kind: 'running' } }
+    const ran: ProposalDecision = { ...turnedDown, outcome: { kind: 'ran', done: 3, skipped: 0, failed: 0 } }
+    askCmdrState.conversationId = OPEN_THREAD
+
+    fire(OPEN_THREAD, decided(50, running))
+    fire(OPEN_THREAD, decided(51))
+    fire(OPEN_THREAD, decided(50, ran))
+
+    expect(askCmdrState.messages).toEqual([decisionLine(50, ran), decisionLine(51)])
+    expect(getMock).not.toHaveBeenCalled()
+  })
+
+  /** The two announcements come off different threads, and a load can deliver the settled row
+   *  before a late "running" is heard. Whichever order they land in, the outcome stays. */
+  it('never rolls an outcome back to running', () => {
+    const running: ProposalDecision = { ...turnedDown, outcome: { kind: 'running' } }
+    const ran: ProposalDecision = { ...turnedDown, outcome: { kind: 'ran', done: 3, skipped: 0, failed: 0 } }
+    askCmdrState.conversationId = OPEN_THREAD
+
+    fire(OPEN_THREAD, decided(50, ran))
+    fire(OPEN_THREAD, decided(50, running))
+
+    expect(askCmdrState.messages).toEqual([decisionLine(50, ran)])
+  })
+
   /** "Reject all" over a sweep is one decision per group, and each writes its own row. */
   it('shows every answer of a sweep turned down at once, without re-reading the thread', () => {
     askCmdrState.conversationId = OPEN_THREAD

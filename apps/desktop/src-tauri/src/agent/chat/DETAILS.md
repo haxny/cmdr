@@ -624,7 +624,8 @@ Two variants map from no runtime event, because the runtime neither creates nor 
 re-reading, since there is nothing to read).
 
 A third, `ProposalDecided`, is not part of a turn at all. `agent/outcomes.rs` emits it as it writes
-a decision's timeline row, usually with no turn running, and it rides here because this is the
+a decision's timeline row (and again, under the same row id, when an approval's "running" line is
+rewritten with its outcome), usually with no turn running, and it rides here because this is the
 transport keyed by conversation (`../suggested_ops/DETAILS.md` § What the user's answer teaches the
 agent). ⚠️ A subscriber must not read it as proof a turn is live.
 

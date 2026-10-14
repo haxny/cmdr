@@ -154,6 +154,8 @@ pub async fn approve_and_execute(
     match start_for(&claimed.group, sources, &ops, expected, sink).await {
         Ok(operation) => {
             super::started(&claimed);
+            // The thread says "running" now, and the decorator's settle rewrites that line.
+            crate::agent::outcomes::record_running(conn, group_id, now);
             Ok(ApprovalOutcome::Started(ApprovedGroup { group_id, operation }))
         }
         Err(refusal) => {

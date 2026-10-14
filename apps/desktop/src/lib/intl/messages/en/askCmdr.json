@@ -944,7 +944,7 @@
   },
   "askCmdr.decision.approved": "You approved {verbName} {countText} {count, plural, one {item} other {items}}",
   "@askCmdr.decision.approved": {
-    "description": "A line in the Ask Cmdr chat rail recording what the person answered when the agent suggested doing something to a batch of their files. It appears in the thread the suggestion came from, and the file path or pattern it refers to is shown beside it rather than inside this sentence. This is the wording for a suggestion the person approved and that has since finished running; what actually happened to each file is said on the next line, askCmdr.decision.result. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
+    "description": "A line in the Ask Cmdr chat rail recording what the person answered when the agent suggested doing something to a batch of their files. It appears in the thread the suggestion came from, and the file path or pattern it refers to is shown beside it rather than inside this sentence. This is the wording for a suggestion the person approved; the next line says where the run is or what it actually did: askCmdr.decision.running while it runs, askCmdr.decision.result once it finished, or askCmdr.decision.interrupted when the app quit first. Sentence case, no full stop. Address the person directly, in the informal register this app uses throughout.",
     "placeholders": {
       "countText": "How many files or folders the suggestion covered, already formatted with thousands separators, like 1,234.",
       "count": "The same count as a raw integer, used only to pick the singular or plural word.",
@@ -959,6 +959,14 @@
       "skippedText": "How many files the run passed over, already formatted with thousands separators, like 1,234.",
       "failedText": "How many files the run could not finish, already formatted with thousands separators, like 1,234."
     }
+  },
+  "askCmdr.decision.running": "Running…",
+  "@askCmdr.decision.running": {
+    "description": "A line in the Ask Cmdr chat rail recording what the person answered when the agent suggested doing something to a batch of their files. This second line follows an approved suggestion (askCmdr.decision.approved) whose operation has started and hasn't finished yet, which for a big copy can take minutes. When it finishes, this line is replaced in place by what the run actually did (askCmdr.decision.result). Short status, sentence case, ends with an ellipsis character (…), not three dots."
+  },
+  "askCmdr.decision.interrupted": "Cmdr quit before this finished",
+  "@askCmdr.decision.interrupted": {
+    "description": "A line in the Ask Cmdr chat rail recording what the person answered when the agent suggested doing something to a batch of their files. This second line follows an approved suggestion (askCmdr.decision.approved) whose operation was still running when the app quit or crashed, so nobody knows how far it got. Shown from the next launch on, in place of the askCmdr.decision.result line a finished run gets. Cmdr is the app's name; keep it untranslated. Sentence case, no full stop, and no words like error or failed: it states what happened, calmly."
   },
   "askCmdr.decision.verbMove": "moving",
   "@askCmdr.decision.verbMove": {

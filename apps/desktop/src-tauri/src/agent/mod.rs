@@ -86,6 +86,9 @@ pub fn start(app: &AppHandle) {
             if let Err(e) = store::proposals::recover_interrupted_groups(store.conn()) {
                 log::warn!(target: "agent::store", "interrupted-proposal sweep didn't run: {e}");
             }
+            // Right after it: a thread line still saying "running" outlived its operation, so it
+            // gets the ending it had. Never "running…" forever.
+            outcomes::settle_stale_thread_lines(store.conn());
             app.manage(AgentDb {
                 db_path: db_path.clone(),
             });

@@ -165,6 +165,19 @@ writes no row (a dismissal, a sweep with no thread, a thread deleted from under 
 look and find nothing. What the rail does with it: `apps/desktop/src/lib/ask-cmdr/DETAILS.md` § How an open thread
 stays current.
 
+**Decision: an approval's line says "running" from the start, and its settle rewrites that same row (#345).**
+**Why**: the line used to appear only at settle, so a long copy left the thread looking untouched for minutes right after
+the user acted. `outcomes::record_running` writes a `Running` line once the bridge's start succeeds (thread only, never
+the memory ring: nothing has happened yet to learn from), and `record_in_thread` rewrites it with the outcome through
+`proposals.thread_line_id` (v10, `../store/proposals/thread_line.rs`), announced under the same row id so the rail
+patches it. After the START, ❌ not the claim: a refused start gives the group back, and a "running" line would then be a
+lie. A quick operation can settle first; the store checks the pointer under one `BEGIN IMMEDIATE`, so a late "running"
+stays out. At launch, `settle_stale_thread_lines` (after the recovery sweep) turns every line still saying "running"
+into `Interrupted`, or into the outcome the op rows hold when the group did settle but its line write was lost, so no
+line reads "running" forever. ❌ The rename review's `apply_bulk_rename` writes no running line: it starts with a plain
+`TauriEventSink`, so its group never settles through the decorator and the line would read "running" until the next
+launch.
+
 What the follow-up turn itself does, and why it is coalesced per sweep: `../wake/DETAILS.md` § The turn a rejection
 earns.
 

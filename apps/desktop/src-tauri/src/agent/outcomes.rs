@@ -3,10 +3,13 @@
 //! An approval or a rejection the agent never hears about is a lesson it can't learn, and there
 //! are two channels here because neither one alone is enough:
 //!
-//! - **The user's timeline** is a typed [`ConversationEvent`]. ⚠️ Those never enter the LLM
-//!   transcript by design (`../store/events.rs`), so an outcome recorded only there teaches the
-//!   agent nothing. Writing the row also announces it on the turn transport, which is how a
-//!   rail with that thread open shows the line without re-reading the thread.
+//! - **The user's timeline** is a typed [`ConversationEvent`](super::store::ConversationEvent).
+//!   ⚠️ Those never enter the LLM transcript by design (`../store/events.rs`), so an outcome
+//!   recorded only there teaches the agent nothing. Writing the row also announces it on the
+//!   turn transport, which is how a rail with that thread open shows the line without
+//!   re-reading the thread. An approval's
+//!   line appears as "running" when its operation starts and is rewritten in place when it
+//!   settles ([`record_running`]), so a slow copy doesn't leave the thread looking untouched.
 //! - **The agent's lesson** is a line in the memory ring (`../memory/outcomes.rs`), written on
 //!   the ALWAYS-path with no model call. That is what covers approvals, which get no follow-up
 //!   turn at all. Without it, rejections would produce every lesson and approvals none, and
@@ -27,9 +30,12 @@ use rusqlite::Connection;
 
 use super::chat::stream::{AskCmdrStreamEvent, emit_turn_event};
 use super::memory::MemoryStore;
-use super::store::proposals::{ProposalGroup, count_ops, get_group, get_sweep};
-use super::store::{AgentStoreError, ConversationEvent, append_event};
-use super::types::{OpStatus, ProposalDecision, ProposalOutcomeKind};
+use super::store::AgentStoreError;
+use super::store::proposals::{
+    ProposalGroup, ThreadLine, count_ops, get_group, get_sweep, open_running_line, rewrite_line, running_lines,
+    settle_line,
+};
+use super::types::{OpStatus, ProposalDecision, ProposalOutcomeKind, ProposalStatus};
 use super::wake::{WakeControl, send_control};
 
 const LOG_TARGET: &str = "agent::outcomes";
@@ -72,7 +78,7 @@ pub fn record_rejection(
         ops,
         outcome: ProposalOutcomeKind::Rejected,
     };
-    record(conn, memory, group.set_id, decision, now, true);
+    record(conn, memory, group, decision, now, true);
 }
 
 /// Record what an approved group ACTUALLY did, once its operation has settled.
@@ -99,7 +105,86 @@ pub fn record_completion(conn: &Connection, memory: Option<&MemoryStore>, group_
             return;
         }
     };
-    record(conn, memory, group.set_id, decision, now, false);
+    record(conn, memory, &group, decision, now, false);
+}
+
+/// Put an approved group's "running" line in its thread, once its operation has started.
+///
+/// Thread only: ❌ nothing here reaches the memory ring, because nothing has happened yet that
+/// the agent could learn from ([`record_completion`] is that). The settle rewrites this same
+/// row, and a settle that got there first keeps its outcome: the store checks under one lock.
+///
+/// Called by the bridge, whose decorator is what settles the group. ❌ Not from the rename
+/// review's own start: that path never settles through the decorator, so its line would say
+/// "running" until the next launch.
+pub fn record_running(conn: &Connection, group_id: i64, now: i64) {
+    let group = match get_group(conn, group_id) {
+        Ok(Some(group)) => group,
+        Ok(None) => return,
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "group {group_id} started with no line in its thread: {e}");
+            return;
+        }
+    };
+    let Some(conversation_id) = thread_of(conn, group.set_id) else {
+        return;
+    };
+    let decision = match accepted_ops(conn, &group) {
+        Ok(ops) => ProposalDecision {
+            verb: group.verb,
+            what: group.display_name.clone(),
+            ops,
+            outcome: ProposalOutcomeKind::Running,
+        },
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "group {group_id} started with no line in its thread: {e}");
+            return;
+        }
+    };
+    match open_running_line(conn, group_id, conversation_id, decision.clone(), now) {
+        Ok(Some(line)) => announce(conversation_id, line, decision),
+        Ok(None) => {}
+        Err(e) => log::warn!(target: LOG_TARGET, "group {group_id} started with no line in its thread: {e}"),
+    }
+}
+
+/// Give every line still saying "running" the ending it actually had. Once per launch, from
+/// `agent::start`, AFTER `recover_interrupted_groups`: nothing runs at launch, so each such line
+/// outlived its operation.
+///
+/// A group the sweep froze reads `Interrupted`. One that settled but whose line never landed
+/// gets the outcome its op rows hold. No announcement: no rail is open yet.
+pub fn settle_stale_thread_lines(conn: &Connection) {
+    let lines = match running_lines(conn) {
+        Ok(lines) => lines,
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "couldn't look for thread lines left running: {e}");
+            return;
+        }
+    };
+    for line in lines {
+        let settled = match line.status {
+            ProposalStatus::Completed => match get_group(conn, line.group_id) {
+                Ok(Some(group)) => completed_decision(conn, &group),
+                Ok(None) => continue,
+                Err(e) => Err(e),
+            },
+            _ => Ok(ProposalDecision {
+                outcome: ProposalOutcomeKind::Interrupted,
+                ..line.decision
+            }),
+        };
+        if let Err(e) = settled.and_then(|decision| rewrite_line(conn, line.message_id, decision)) {
+            log::warn!(target: LOG_TARGET, "group {}'s thread line still says running: {e}", line.group_id);
+        }
+    }
+}
+
+/// The ops the user accepted: every row minus the ones they deselected at review.
+fn accepted_ops(conn: &Connection, group: &ProposalGroup) -> Result<u32, AgentStoreError> {
+    let total = count_ops(conn, group.id, None)?;
+    let excluded = count_ops(conn, group.id, Some(OpStatus::Excluded))?;
+    Ok(total.saturating_sub(excluded) as u32)
 }
 
 /// The per-op tallies the engine wrote back, plus the accepted set they came out of.
@@ -108,12 +193,10 @@ pub fn record_completion(conn: &Connection, memory: Option<&MemoryStore>, group_
 /// cancelled group reads honestly: the three tallies simply don't add up to it, which is the
 /// truth about a run that stopped partway.
 fn completed_decision(conn: &Connection, group: &ProposalGroup) -> Result<ProposalDecision, AgentStoreError> {
-    let total = count_ops(conn, group.id, None)?;
-    let excluded = count_ops(conn, group.id, Some(OpStatus::Excluded))?;
     Ok(ProposalDecision {
         verb: group.verb,
         what: group.display_name.clone(),
-        ops: total.saturating_sub(excluded) as u32,
+        ops: accepted_ops(conn, group)?,
         outcome: ProposalOutcomeKind::Ran {
             done: count_ops(conn, group.id, Some(OpStatus::Done))? as u32,
             skipped: count_ops(conn, group.id, Some(OpStatus::Skipped))? as u32,
@@ -128,7 +211,7 @@ fn completed_decision(conn: &Connection, group: &ProposalGroup) -> Result<Propos
 fn record(
     conn: &Connection,
     memory: Option<&MemoryStore>,
-    set_id: i64,
+    group: &ProposalGroup,
     decision: ProposalDecision,
     now: i64,
     follow_up: bool,
@@ -136,47 +219,53 @@ fn record(
     if let Some(memory) = memory {
         memory.record_outcome(&format!("{} {}", day_of(now), decision.render()));
     }
-    // Nullable, and NULLed when a thread is deleted, so a sweep whose thread is gone still
-    // teaches the agent; it just has no timeline to say so on.
-    match get_sweep(conn, set_id) {
-        Ok(Some(sweep)) => {
-            if let Some(conversation_id) = sweep.conversation_id {
-                record_in_thread(conn, conversation_id, decision, now);
-            }
-        }
-        Ok(None) => {}
-        Err(e) => log::warn!(target: LOG_TARGET, "a decision left no line in its thread: {e}"),
+    if let Some(conversation_id) = thread_of(conn, group.set_id) {
+        record_in_thread(conn, group.id, conversation_id, decision, now);
     }
     if follow_up {
         // ⚠️ A CONTROL message, so it can never be dropped for the rollup bound. The wake loop
         // coalesces per sweep and owns every gate; nothing here decides whether a turn runs.
-        send_control(WakeControl::SweepRejected { set_id });
+        send_control(WakeControl::SweepRejected { set_id: group.set_id });
     }
 }
 
-/// Write the decision's line into its thread, and tell whoever has that thread open.
+/// The thread a sweep came out of. Nullable, and NULLed when a thread is deleted, so a sweep
+/// whose thread is gone still teaches the agent; it just has no timeline to say so on.
+fn thread_of(conn: &Connection, set_id: i64) -> Option<i64> {
+    match get_sweep(conn, set_id) {
+        Ok(sweep) => sweep.and_then(|sweep| sweep.conversation_id),
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "a decision left no line in its thread: {e}");
+            None
+        }
+    }
+}
+
+/// Write the decision's final line into its thread (rewriting its "running" line when it has
+/// one), and tell whoever has that thread open.
 ///
 /// ⚠️ **The announcement is made HERE, where the row is written, and only once it is.** The
 /// rail shows a decision by hearing about this row, so the two have to be one fact: a line
-/// that failed to land announces nothing, a dismissal or a sweep with no thread never gets
-/// this far, and an approval is announced when it settles because that is when its line
-/// exists. ❌ Don't hang this on `suggestions-changed` instead: that one says `approved` at
-/// the CLAIM, before there is anything in the thread to show.
-fn record_in_thread(conn: &Connection, conversation_id: i64, decision: ProposalDecision, now: i64) {
-    let event = ConversationEvent::ProposalDecided {
-        decision: decision.clone(),
-    };
-    match append_event(conn, conversation_id, &event, now) {
-        Ok((message_id, seq)) => emit_turn_event(
-            conversation_id,
-            AskCmdrStreamEvent::ProposalDecided {
-                message_id,
-                seq,
-                decision,
-            },
-        ),
+/// that failed to land announces nothing, and a dismissal or a sweep with no thread never gets
+/// this far. A rewrite is announced under the row's existing id, which is how the rail knows
+/// to patch the line rather than add one. ❌ Don't hang this on `suggestions-changed` instead:
+/// that one says `approved` at the CLAIM, before the operation has even started.
+fn record_in_thread(conn: &Connection, group_id: i64, conversation_id: i64, decision: ProposalDecision, now: i64) {
+    match settle_line(conn, group_id, conversation_id, decision.clone(), now) {
+        Ok(line) => announce(conversation_id, line, decision),
         Err(e) => log::warn!(target: LOG_TARGET, "a decision left no line in its thread: {e}"),
     }
+}
+
+fn announce(conversation_id: i64, line: ThreadLine, decision: ProposalDecision) {
+    emit_turn_event(
+        conversation_id,
+        AskCmdrStreamEvent::ProposalDecided {
+            message_id: line.message_id,
+            seq: line.seq,
+            decision,
+        },
+    );
 }
 
 /// The local day a decision happened on, `YYYY-MM-DD`, for the memory line. The same shape the

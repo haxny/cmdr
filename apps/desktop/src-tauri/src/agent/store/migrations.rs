@@ -87,6 +87,11 @@ pub const MIGRATIONS: &[Migration] = &[
         description: "conversations.last_chat_memory for chat-memory-size events",
         up: migrate_v9_last_chat_memory,
     },
+    Migration {
+        version: 10,
+        description: "proposals.thread_line_id: the one thread line a decided group rewrites in place",
+        up: migrate_v10_proposal_thread_line,
+    },
 ];
 
 /// The meta key holding the integer schema version (as text). Absent ⇒ 0 (a fresh DB
@@ -493,4 +498,14 @@ fn migrate_v8_quiet_wakes_thread(tx: &Transaction<'_>) -> rusqlite::Result<()> {
 /// leave the gauge showing an old size against a new budget, which is a wrong percentage.
 fn migrate_v9_last_chat_memory(tx: &Transaction<'_>) -> rusqlite::Result<()> {
     tx.execute_batch("ALTER TABLE conversations ADD COLUMN last_chat_memory INTEGER;")
+}
+
+/// Version 10: `proposals.thread_line_id`, the `messages` row that says in the sweep's thread
+/// what became of the group. An approval writes it as "running" at the start and REWRITES it
+/// when the operation settles, so the thread keeps one line per decision; this column is how
+/// the settle finds it. NULL until a line exists, and NULLed with its thread.
+fn migrate_v10_proposal_thread_line(tx: &Transaction<'_>) -> rusqlite::Result<()> {
+    tx.execute_batch(
+        "ALTER TABLE proposals ADD COLUMN thread_line_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;",
+    )
 }

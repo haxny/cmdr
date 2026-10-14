@@ -2,7 +2,8 @@
   What the user answered when the agent suggested something, in the thread that suggested it.
 
   Two rows in the transcript render through here, deliberately as one block: a timeline event
-  carrying a single decision as it happens, and the opener of the follow-up turn a rejected
+  carrying a single decision as it happens (an approval's says "running" until its operation
+  settles, then the rail patches it with the outcome), and the opener of the follow-up turn a rejected
   sweep earns, carrying everything the user turned down at once.
 
   ⚠️ The backend hands this over as VERBS, COUNTS, and the group's own display text, never as
@@ -46,15 +47,24 @@
         })
     }
 
-    /** What the run actually did, which is not always what was approved. `null` for a
-     *  rejection, which never ran at all. */
+    /** Where the run is, or what it actually did, which is not always what was approved.
+     *  `null` for a rejection, which never ran at all. */
     function result(decision: ProposalDecision): string | null {
-        if (decision.outcome.kind !== 'ran') return null
-        return tString('askCmdr.decision.result', {
-            doneText: formatInteger(decision.outcome.done),
-            skippedText: formatInteger(decision.outcome.skipped),
-            failedText: formatInteger(decision.outcome.failed),
-        })
+        const outcome = decision.outcome
+        switch (outcome.kind) {
+            case 'rejected':
+                return null
+            case 'running':
+                return tString('askCmdr.decision.running')
+            case 'interrupted':
+                return tString('askCmdr.decision.interrupted')
+            case 'ran':
+                return tString('askCmdr.decision.result', {
+                    doneText: formatInteger(outcome.done),
+                    skippedText: formatInteger(outcome.skipped),
+                    failedText: formatInteger(outcome.failed),
+                })
+        }
     }
 </script>
 

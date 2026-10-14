@@ -127,9 +127,12 @@ pub enum AskCmdrStreamEvent {
     /// its timeline. The persisted event row's identity rides along, so a subscriber that also
     /// loaded the row shows it once.
     ///
+    /// An approval is announced twice under the same `message_id`: as "running" when its
+    /// operation starts, and with its outcome when the row is rewritten at settle.
+    ///
     /// ⚠️ **The one event here that is not part of a turn.** A decision lands when the user
-    /// says no, or when an approved operation settles, which is usually with no turn running
-    /// at all, so a subscriber must NOT read it as proof one is. It rides this transport
+    /// says no, or when an approved operation starts or settles, which is usually with no
+    /// turn running at all, so a subscriber must NOT read it as proof one is. It rides this transport
     /// anyway because this is the one keyed by conversation: emitted from the single place
     /// that writes the row (`agent/outcomes.rs`), it reaches exactly the thread the row went
     /// into, and a decision with no thread to land in emits nothing.

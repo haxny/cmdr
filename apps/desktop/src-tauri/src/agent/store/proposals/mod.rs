@@ -29,6 +29,7 @@ mod claim;
 mod complete;
 mod read;
 mod recovery;
+mod thread_line;
 mod write;
 
 #[cfg(test)]
@@ -44,6 +45,7 @@ pub use read::{
     rejected_groups_since,
 };
 pub use recovery::recover_interrupted_groups;
+pub use thread_line::{RunningLine, ThreadLine, open_running_line, rewrite_line, running_lines, settle_line};
 pub use write::{
     NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, create_group, create_sweep, repropose_group,
 };

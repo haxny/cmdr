@@ -8,10 +8,10 @@ one executor call, an **op** (`proposal_ops`) is one path that may be a whole di
 
 - `write.rs` — `create_sweep` / `create_group` (creation is where a proposal FREEZES) and `repropose_group`.
 - `read.rs` — group headers, `COUNT(*)` counts, and the one paged op reader.
-- `claim.rs` — preflight, the claim transaction, its release (an untouched claim the engine refused), rejection, and
-  the streaming binding.
+- `claim.rs` — preflight, the claim transaction and its release, rejection, and the streaming binding.
 - `complete.rs` — what execution writes back: per-op outcomes, and the group's own end.
 - `recovery.rs` — the `interrupted` startup sweep.
+- `thread_line.rs` — a group's one thread line (v10), rewritten in place.
 
 ## Must-knows
 

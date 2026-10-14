@@ -151,11 +151,12 @@ the conversation filter is the whole guard and there is nothing to arrive late.
 
 **Decision: the signal is its own event, ❌ not `suggestions-changed`.** **Why**: that event says the PENDING SET moved,
 which is a different fact at the one moment it matters. It says `approved` at the claim, while an approval's line is
-written when the operation settles (`agent/suggested_ops/DETAILS.md` § What the user's answer teaches the agent), so a
-rail listening to it would look before there is anything to see. It also fires for a dismissed review, which writes no
-line, and it goes to every window under a rule that it carries no display text. Emitting where the row is written makes
-the other cases fall out: a sweep with no thread (or a deleted one) writes no row and so announces nothing, and "reject
-all" over a sweep is one row and one line per group, in whichever thread each group's sweep belongs to.
+written when the operation starts and rewritten when it settles (`agent/suggested_ops/DETAILS.md` § What the user's
+answer teaches the agent), so a rail listening to it would look before there is anything to see. It also fires for a
+dismissed review, which writes no line, and it goes to every window under a rule that it carries no display text.
+Emitting where the row is written makes the other cases fall out: a sweep with no thread (or a deleted one) writes no
+row and so announces nothing, and "reject all" over a sweep is one row and one line per group, in whichever thread each
+group's sweep belongs to.
 
 What the reducer has to get right:
 
@@ -164,7 +165,9 @@ What the reducer has to get right:
 - **It goes above a bubble that is still streaming.** The streaming bubble has to stay last, or the next chunk opens a
   second one and splits the answer.
 - **One row is one line, by row id.** The row is written before the event is emitted, so a thread load can return the
-  row and the event still follow.
+  row and the event still follow. A row heard again REPLACES its line: an approval's says "running" at the start and is
+  rewritten with its outcome at settle (#345). ❌ A `running` decision never replaces a line already shown: the two
+  announcements come off different threads, and a load can return the settled row before a late "running" arrives.
 - **A decision heard during a thread load is held and put back when the load ends** (`endThreadLoad` →
   `settleDecisionsHeardWhileLoading`). The load's read can be a moment older than the decision, and it replaces the list
   the line was shown in, or the rail isn't on that thread yet.

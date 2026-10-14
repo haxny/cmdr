@@ -117,7 +117,9 @@ export const commands = {
    *  `Removed` / `Modified` events patched into the listing cache after every
    *  successful mutation), so a full `list_directory` re-read is pure redundancy
    *  and costs a lot on slow backends: a 1k-entry MTP folder takes ~17 s and holds
-   *  the USB session, colliding with the user's next op.
+   *  the USB session, colliding with the user's next op. A listing inside a local
+   *  zip qualifies too (its content watch claims `EveryWriter`); there the edit
+   *  driver re-reads it before the op completes (`archive_edit::engine::show_the_edit`).
    *
    *  `force: true` skips that check, because `EveryWriter` is a claim about the
    *  volume's OWN writes, not about everyone's: SMB's watcher misses writes made
@@ -5847,9 +5849,12 @@ export type AskCmdrStreamEvent =
    *  its timeline. The persisted event row's identity rides along, so a subscriber that also
    *  loaded the row shows it once.
    *
+   *  An approval is announced twice under the same `message_id`: as "running" when its
+   *  operation starts, and with its outcome when the row is rewritten at settle.
+   *
    *  ⚠️ **The one event here that is not part of a turn.** A decision lands when the user
-   *  says no, or when an approved operation settles, which is usually with no turn running
-   *  at all, so a subscriber must NOT read it as proof one is. It rides this transport
+   *  says no, or when an approved operation starts or settles, which is usually with no
+   *  turn running at all, so a subscriber must NOT read it as proof one is. It rides this transport
    *  anyway because this is the one keyed by conversation: emitted from the single place
    *  that writes the row (`agent/outcomes.rs`), it reaches exactly the thread the row went
    *  into, and a decision with no thread to land in emits nothing.
@@ -12751,12 +12756,26 @@ export type ProposalDecision = {
  *  claim is only a claim: a group can be approved and then skip every file behind a fingerprint
  *  mismatch, and an outcome recorded at claim time would teach the agent that the user wanted
  *  something they never got. `suggested_ops/bridge/decorator.rs` is where the real answer lands.
+ *
+ *  `Running` and `Interrupted` are the thread line's states BEFORE (or instead of) that answer,
+ *  and only the thread line's: ❌ neither ever reaches the memory ring, which learns from
+ *  `Ran` and `Rejected` alone (`agent/outcomes.rs`).
  */
 export type ProposalOutcomeKind =
   // The user said no in the review.
   | { kind: 'rejected' }
   // The user approved it and the operation has since finished, however it finished.
   | { kind: 'ran'; done: number; skipped: number; failed: number }
+  /**
+   *  The user approved it and the operation is running. The thread line is rewritten in
+   *  place when it settles.
+   */
+  | { kind: 'running' }
+  /**
+   *  The user approved it and the app quit before the operation settled. Written by the
+   *  next launch, so a line never reads "running" after the run it named is gone.
+   */
+  | { kind: 'interrupted' }
 
 /**
  *  Where a group sits in its lifecycle, stored in `proposals.status`.

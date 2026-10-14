@@ -28,6 +28,36 @@ pub(super) fn insert_message_row(
     now: i64,
 ) -> Result<(i64, i64), AgentStoreError> {
     let tx = conn.unchecked_transaction()?;
+    let written = insert_message_row_in(
+        &tx,
+        conversation_id,
+        role_token,
+        content_blocks,
+        text_for_search,
+        prompt_tokens,
+        completion_tokens,
+        now,
+    )?;
+    tx.commit()?;
+    Ok(written)
+}
+
+/// [`insert_message_row`] inside a transaction the CALLER holds, for a writer whose row has to
+/// commit together with a write of its own (`proposals/thread_line.rs`).
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the messages row's columns, passed through from insert_message_row"
+)]
+pub(super) fn insert_message_row_in(
+    tx: &Connection,
+    conversation_id: i64,
+    role_token: &str,
+    content_blocks: &str,
+    text_for_search: &str,
+    prompt_tokens: Option<u32>,
+    completion_tokens: Option<u32>,
+    now: i64,
+) -> Result<(i64, i64), AgentStoreError> {
     let seq: i64 = tx.query_row(
         "SELECT COALESCE(MAX(seq), -1) + 1 FROM messages WHERE conversation_id = ?1",
         rusqlite::params![conversation_id],
@@ -53,6 +83,5 @@ pub(super) fn insert_message_row(
         "UPDATE conversations SET updated_at = ?2 WHERE id = ?1",
         rusqlite::params![conversation_id, now],
     )?;
-    tx.commit()?;
     Ok((message_id, seq))
 }

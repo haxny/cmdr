@@ -312,6 +312,121 @@ fn an_approval_is_announced_when_it_settles_and_not_when_it_is_claimed() {
     );
 }
 
+/// Every decision row a thread's timeline holds, in order.
+fn decision_rows(conn: &Connection, conversation_id: i64) -> Vec<(i64, crate::agent::types::ProposalDecision)> {
+    crate::agent::store::list_messages(conn, conversation_id, 100, 0)
+        .expect("messages")
+        .into_iter()
+        .filter_map(|message| match message.content {
+            crate::agent::store::StoredContent::Event(crate::agent::store::ConversationEvent::ProposalDecided {
+                decision,
+            }) => Some((message.id, decision)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A trashable group in a fresh thread, approved (preflight plus claim) the way the bridge does.
+fn an_approved_group_in_a_thread(conn: &Connection) -> (i64, i64) {
+    let conversation_id = crate::agent::store::create_conversation(conn, "Downloads", 50, None).expect("thread");
+    let group_id = a_trashable_group_from(conn, Some(conversation_id));
+    record_acceptance(conn, group_id, &[], 150).expect("preflight");
+    let claim = approve(conn, group_id, 200).expect("approve");
+    assert!(matches!(claim, ClaimOutcome::Claimed(_)), "{claim:?}");
+    (conversation_id, group_id)
+}
+
+/// #345: a slow approved operation must not leave the thread looking untouched. Its line
+/// appears the moment it starts, saying it's running, and the settle turns THAT line into the
+/// outcome: one row per decision, announced twice under the same id so the rail patches it.
+#[test]
+fn an_approval_shows_running_at_start_and_settles_in_the_same_line() {
+    use crate::agent::types::ProposalOutcomeKind;
+    let conn = migrated_conn();
+    let (conversation_id, group_id) = an_approved_group_in_a_thread(&conn);
+    announced_decisions();
+
+    outcomes::record_running(&conn, group_id, 210);
+
+    let running = announced_decisions();
+    assert_eq!(running.len(), 1, "{running:?}");
+    assert_eq!(running[0].0, conversation_id);
+    assert_eq!(running[0].2.outcome, ProposalOutcomeKind::Running);
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].0, running[0].1, "the announcement names the row it wrote");
+
+    outcomes::record_completion(&conn, None, group_id, 300);
+
+    let settled = announced_decisions();
+    assert_eq!(settled.len(), 1, "{settled:?}");
+    assert_eq!(
+        settled[0].1, running[0].1,
+        "the settle patches the running line, it adds none"
+    );
+    assert!(
+        matches!(settled[0].2.outcome, ProposalOutcomeKind::Ran { .. }),
+        "{settled:?}"
+    );
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "still one line per decision: {rows:?}");
+    assert_eq!(rows[0].1, settled[0].2);
+}
+
+/// A quick operation can settle before its start is reported. The settle writes the line
+/// then, and the late "running" must not add a second one or roll the outcome back.
+#[test]
+fn a_settle_that_beats_the_running_line_keeps_the_outcome() {
+    use crate::agent::types::ProposalOutcomeKind;
+    let conn = migrated_conn();
+    let (conversation_id, group_id) = an_approved_group_in_a_thread(&conn);
+    crate::agent::store::proposals::mark_group_completed(&conn, group_id).expect("settle");
+    outcomes::record_completion(&conn, None, group_id, 300);
+    announced_decisions();
+
+    outcomes::record_running(&conn, group_id, 310);
+
+    assert_eq!(announced_decisions(), Vec::<Announced>::new());
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert!(matches!(rows[0].1.outcome, ProposalOutcomeKind::Ran { .. }), "{rows:?}");
+}
+
+/// The app quit (or crashed) between start and settle. The next launch must not show
+/// "running…" forever: the recovery sweep froze the group as interrupted, and its line says so.
+#[test]
+fn a_running_line_whose_app_died_reads_interrupted_at_the_next_launch() {
+    use crate::agent::types::ProposalOutcomeKind;
+    let conn = migrated_conn();
+    let (conversation_id, group_id) = an_approved_group_in_a_thread(&conn);
+    outcomes::record_running(&conn, group_id, 210);
+
+    crate::agent::store::proposals::recover_interrupted_groups(&conn).expect("sweep");
+    outcomes::settle_stale_thread_lines(&conn);
+
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].1.outcome, ProposalOutcomeKind::Interrupted);
+}
+
+/// The settle marked the group completed but its line never landed (a store hiccup). The
+/// launch pass gives the line the outcome the op rows already hold, never a stuck "running…".
+#[test]
+fn a_running_line_whose_settle_was_lost_gets_its_outcome_at_the_next_launch() {
+    use crate::agent::types::ProposalOutcomeKind;
+    let conn = migrated_conn();
+    let (conversation_id, group_id) = an_approved_group_in_a_thread(&conn);
+    outcomes::record_running(&conn, group_id, 210);
+    crate::agent::store::proposals::mark_group_completed(&conn, group_id).expect("settle");
+
+    crate::agent::store::proposals::recover_interrupted_groups(&conn).expect("sweep");
+    outcomes::settle_stale_thread_lines(&conn);
+
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert!(matches!(rows[0].1.outcome, ProposalOutcomeKind::Ran { .. }), "{rows:?}");
+}
+
 /// A sweep can have no thread behind it, and a thread can be deleted from under its sweep
 /// (the column is NULLed). Either way there is no timeline for a line to land in, so nothing
 /// is announced, and an event that doesn't exist can't match whatever thread happens to be

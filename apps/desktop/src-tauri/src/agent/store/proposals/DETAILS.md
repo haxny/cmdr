@@ -135,6 +135,16 @@ persistence layer.
 **Decision: `Completed` means execution FINISHED, not that every op succeeded.**
 **Why**: it is written when the operation settles, whatever the outcome, because the distinction the status carries is "no longer in flight" versus "we lost track of it". A cancelled group keeps `pending` rows for the ops nothing ever reached, and those rows are the honest record. The alternative — marking only on success — leaves a cancelled group `approved`, so the next launch calls it `interrupted` and asks the user to re-approve an operation they deliberately stopped. Pinned by `tests/completion.rs`.
 
+## A decided group's thread line
+
+`thread_line.rs`, over `proposals.thread_line_id` (migration v10, `ON DELETE SET NULL` so a deleted thread just drops
+the pointer). The row is an ordinary `role = 'event'` `ProposalDecided` row; the column is how a settle finds the
+"running" line its start wrote, so the thread keeps one line per decision. `open_running_line` writes only for a group
+still `approved` with no line yet, and `settle_line` rewrites the line it finds (keeping its id and `seq`) or appends
+one. Each checks the pointer and writes in one `BEGIN IMMEDIATE`, because start and settle run on different connections
+and a quick operation can settle first. `running_lines` (a `json_extract` over the joined rows) is the launch pass's read.
+Why the line exists at all: `../../suggested_ops/DETAILS.md` § What the user's answer teaches the agent.
+
 ## A destination a route serves is unrepresentable
 
 `WritableDestination` wraps the `Location` that `Move`, `Copy`, `Extract`, and `Compress` bind, and refuses one a ROUTE serves: a path continuing inside an archive, or one inside a repo's virtual `.git` trees. It asks `volume::manager::path_routes_over_its_parent`, so the check and the routing split at exactly the same place — they must agree, or the executor fence fires on a group this layer allowed.
