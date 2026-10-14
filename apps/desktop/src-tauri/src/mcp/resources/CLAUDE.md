@@ -17,9 +17,9 @@ dispatch, and the `cmdr://state` builder); the independently-evolving builders s
   30–120 s on a hung mount, and `cmdr://state` is read constantly. An unwatched volume omits both fields, ❌ never
   renders a zero that reads as a full disk.
 - **The user's paths and names render verbatim; raw diagnostic text is redacted.** A read-only agent is trusted and
-  must name the user's files to serve them, so panes, `favorites:`, and every `operations:` field stay as-is.
-  `recentErrors` and `cmdr://logs` go through unsalted `crate::redact::redact_line` (bare tokens, ❌ never a
-  `RedactionContext`); `logs` `filter` matches the RAW line. Why: `DETAILS.md` § "What renders verbatim".
+  must name the user's files to serve them, so panes, `volumes:` `mountPath`, `favorites:`, and every `operations:`
+  field stay as-is. `recentErrors` and `cmdr://logs` go through unsalted `crate::redact::redact_line` (bare tokens, ❌
+  never a `RedactionContext`); `logs` `filter` matches the RAW line. Why: `DETAILS.md` § "What renders verbatim".
 - **Builders are pure over an injected snapshot** (`snapshot_volumes`, `snapshot_indexing`, and friends, with `now_*`
   passed in), so formatting is unit-tested off fixtures without a live app. Keep new builders on that seam.
 - **A missing store reads as empty or unknown, ❌ never an error and ❌ never a `0`.** An absent index, an unscored

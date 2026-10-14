@@ -127,11 +127,6 @@ pub(crate) struct VolumeSummary {
     /// Where the volume is mounted, the path a search scope names to cover this
     /// drive. `None` for a volume with no filesystem path (MTP storages, the
     /// synthetic servers hub row), which is also exactly where a search can't reach.
-    ///
-    /// ❌ Not rendered into the `cmdr://state` YAML: that view redacts home paths,
-    /// and a favorite folder's mount path would come out redacted, so an AI client
-    /// would copy a scope that matches nothing. The agent's `list_volumes` reads it
-    /// unredacted instead.
     pub mount_path: Option<String>,
     /// What the volume reports about its room, from the space poller's cache.
     /// `None` when nothing is watching this volume — see [`space_summary`] for
@@ -230,6 +225,11 @@ fn push_volume(lines: &mut Vec<String>, v: &VolumeSummary) {
     lines.push(format!("  - name: {}", v.name));
     lines.push(format!("    id: {}", v.id));
     lines.push(format!("    kind: {}", v.kind.token()));
+    // Verbatim and quoted, like `favorites:` paths: a client copies it into a
+    // `search` scope.
+    if let Some(ref mount_path) = v.mount_path {
+        lines.push(format!("    mountPath: {mount_path:?}"));
+    }
     if let Some(ref fs) = v.filesystem {
         lines.push(format!("    filesystem: {}", fs));
     }
@@ -547,21 +547,22 @@ mod tests {
         let yaml = build_volumes_yaml(&[local("Macintosh HD", "root")]);
         assert_eq!(
             yaml,
-            "volumes:\n  - name: Macintosh HD\n    id: root\n    kind: local\n    \
+            "volumes:\n  - name: Macintosh HD\n    id: root\n    kind: local\n    mountPath: \"/\"\n    \
              filesystem: apfs\n    readOnly: false\n    ejectable: false\n    indexStatus: fresh\n"
         );
     }
 
     #[test]
-    fn the_mount_path_stays_out_of_the_yaml() {
-        // This view redacts home paths, so a favorite folder's mount path would render
-        // redacted and an AI client copying it into a search scope would match nothing.
-        // The agent reads the unredacted path from `list_volumes` instead.
+    fn the_mount_path_renders_verbatim() {
+        // An AI client copies it into a `search` scope, so a redacted
+        // `$HOME/<dir>` would be a scope that matches nothing.
         let mut v = local("Downloads", "favorite-downloads");
         v.mount_path = Some("/Users/someone/Downloads".to_string());
         let yaml = build_volumes_yaml(&[v]);
-        assert!(!yaml.contains("mountPath"));
-        assert!(!yaml.contains("/Users/someone/Downloads"));
+        assert!(
+            yaml.contains("    mountPath: \"/Users/someone/Downloads\"\n"),
+            "yaml: {yaml}"
+        );
     }
 
     #[test]
