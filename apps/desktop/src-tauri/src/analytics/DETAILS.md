@@ -60,7 +60,7 @@ the diag id later, at next-launch assembly, where the full stdlib is available.
 
 If two datasets *can* be joined, treat them as joined, so we make them genuinely unjoinable. With a separate `diag_` id,
 an attached email links only to the diagnostics stream; the analytics stream stays unjoinable to any identity. The
-`anal_`/`diag_` prefixes make the ids self-identifying in payloads, PostHog, and the D1 tables.
+`anal_`/`diag_` prefixes make the ids self-identifying in payloads and the D1 tables.
 
 ## The heartbeat: schedule, uptime, and what a 2xx settles
 
@@ -122,11 +122,11 @@ is dropped with a `warn`), stamps it, and appends one line to `analytics-events.
 blocking worker, so no call site waits on disk. It makes no request.
 
 - **The stamp** is an RFC 3339 UTC timestamp with milliseconds, a fresh v4 `id`, and this build's `appVersion`. The id
-  is what lets the Worker store a retried beat's events once (and PostHog dedupe on it as `uuid`). The version rides
-  the event because PostHog person properties are last-write-wins and an event spooled before an update can ship
-  after it: only the event's own copy says which release produced a number.
-- **Only the event's own props.** The Worker adds identity (`distinct_id` from `analId`, OS, arch,
-  `source: "desktop"`) and the config snapshot as `$set` when it forwards, so the client doesn't repeat them per event.
+  is what lets the Worker store a retried beat's events once. The version rides the event because an event spooled
+  before an update can ship after it, in a beat from the newer build: only the event's own copy says which release
+  produced a number.
+- **Only the event's own props.** The beat carries identity (`analId`, OS, arch) and the config snapshot once, and the
+  Worker stores them with the beat, so the client doesn't repeat them per event.
 - **Bounded, oldest first.** Past 5,000 events plus 10% slack, the front is cut back to 5,000. A line over 8 KB is
   refused at append.
 - **Acknowledgment is exact under concurrency.** `take_batch` copies from the front and removes nothing; `acknowledge`
@@ -143,9 +143,9 @@ blocking worker, so no call site waits on disk. It makes no request.
   they ride the shape with no allowlist change. The "Allow cloud AI" record itself lives in `main.db`'s `meta` table
   (`ai/DETAILS.md` § Cloud AI consent), is no setting, and doesn't ship.
 
-**Why the app doesn't call PostHog itself.** People who watch their network traffic notice a third-party analytics
-domain, and company policies block it. Everything goes to `api.getcmdr.com`, and dropping PostHog later is a
-server-side change.
+**Why everything goes to our own server.** People who watch their network traffic notice a third-party analytics
+domain, and company policies block it. Everything goes to `api.getcmdr.com` and stays in D1 (`analytics_event`); no
+third party sees the events.
 
 ## The `track_event` IPC
 
@@ -165,19 +165,19 @@ Open set, no enum, no schema:
 
 ## Reading a zero (before calling it a bug)
 
-An event with no data in PostHog is the normal way an instrumentation bug shows up, and also the normal way an unused
+An event with no rows in D1's `analytics_event` is the normal way an instrumentation bug shows up, and also the normal way an unused
 feature shows up. Walk these in order; each one is cheap and rules out a whole class. First, though, mind the lag: an
-event waits in the spool for the next beat, so it reaches PostHog up to 3 h after it fired, or at the next launch's
+event waits in the spool for the next beat, so it reaches D1 up to 3 h after it fired, or at the next launch's
 first beat after that if the app quit first. Its `timestamp` is still the moment it fired.
 
 1. **Did it ship?** An event only fires from a released binary. Compare the emitter's commit date against
    `git for-each-ref --sort=-creatordate refs/tags`, and confirm directly against the shipped app by looking for the
    event name in `strings -a /Applications/Cmdr.app/Contents/MacOS/Cmdr`. That reads the RUST binary only: a frontend
    event's name lives in the embedded webview bundle and won't appear there, so a hit proves presence and a miss only
-   means something for a backend event. `properties.app_version` rides every event, so PostHog can also answer "has
+   means something for a backend event. `app_version` rides every event, so D1 can also answer "has
    this ever fired from a build at or after X".
 2. **Is the feature reachable at all for most installs?** Anything under `agent/` needs a configured AI provider, and
-   the person-property split (`person.properties['ai.provider']`, `off` / `local` / `cloud` / unset) is a small
+   the config split (`ai.provider` in `heartbeat.config_json`, `off` / `local` / `cloud` / unset) is a small
    denominator. A tiny population plus a short window explains a lot of zeros honestly.
 3. **Is there a denominator event above it?** A feature whose funnel starts at its LAST step can't distinguish "unused"
    from "broken". That's why `ask_cmdr_turn` exists above the three `suggestion_group_*` events. If the layer you're

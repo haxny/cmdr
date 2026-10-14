@@ -1,4 +1,4 @@
-//! PII-free PostHog analytics for completed write operations.
+//! PII-free analytics for completed write operations.
 //!
 //! Two families, because the ops arrive by two different roads:
 //!
@@ -17,7 +17,7 @@ use super::types::{WriteCompleteEvent, WriteOperationType};
 use crate::analytics::item_count_bucket;
 use crate::operation_log::types::Initiator;
 
-/// Emits the PII-free PostHog event for a completed write operation. Copy/Move → `file_transfer_completed`
+/// Emits the PII-free analytics event for a completed write operation. Copy/Move → `file_transfer_completed`
 /// (with `op`, an item-count bucket, and a `had_conflicts` bool); Delete/Trash → `delete_used` (with
 /// a `trashed` bool and a count bucket). Every prop is categorical; no names or paths cross. The
 /// `had_conflicts` proxy is `files_skipped > 0` (skips happen only via conflict resolution, see

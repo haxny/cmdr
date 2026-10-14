@@ -441,7 +441,7 @@ including the ones that never reached a turn. Comparing the two is the point; me
 would lose it.
 
 `AgentErrorKind::as_token` is deliberately separate from the enum's serde wire form. The
-frontend's form follows the copy and the bindings; a metric a saved PostHog insight groups by
+frontend's form follows the copy and the bindings; a metric a saved analytics query groups by
 must not move when either changes.
 
 ### What a turn resolves from live app state (`session.rs`)

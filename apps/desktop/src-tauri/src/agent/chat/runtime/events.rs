@@ -133,7 +133,7 @@ pub enum AgentErrorKind {
 impl AgentErrorKind {
     /// The stable snake_case token this kind reports as in analytics. Separate from the
     /// serde wire form the frontend renders, so a copy or wire change can't silently
-    /// rename a metric that a saved PostHog insight groups by.
+    /// rename a metric that a saved analytics query groups by.
     pub fn as_token(self) -> &'static str {
         match self {
             AgentErrorKind::NoKey => "no_key",

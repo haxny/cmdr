@@ -20,7 +20,7 @@ use crate::testing::{device_lock, is_attached, recording_registrar};
 use crate::virtual_device::{setup_virtual_mtp_device, unregister_virtual_mtp_device};
 
 /// A device connecting is a thing a user did, so it earns one counter. It has to
-/// travel the `AnalyticsSink` seam rather than the app's PostHog client: the
+/// travel the `AnalyticsSink` seam rather than the app's analytics client: the
 /// backend must behave identically whether the counter goes anywhere or not, and
 /// a session layer that names the app's analytics module can't compile outside
 /// the app at all.

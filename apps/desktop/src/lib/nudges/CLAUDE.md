@@ -26,7 +26,7 @@ paid-for conditions.
   it.
 - **An unreadable or future stamp still counts as asked, but never blocks.** A bad clock must not re-offer a once-ever
   thing, and must not silence every remaining offer forever either.
-- **A stamp setting is `type: 'string'`, which keeps it OUT of PostHog.** `analytics/config_shape.rs` auto-ships every
-  bool and number setting; a string only ships if it's in `CATEGORICAL_STRING_KEYS`. ❌ Don't add one there.
+- **A stamp setting is `type: 'string'`, which keeps it OUT of the heartbeat.** `analytics/config_shape.rs` auto-ships
+  every bool and number setting; a string only ships if it's in `CATEGORICAL_STRING_KEYS`. ❌ Don't add one there.
 
 Why the ledger has no separate "last nudge" key, and the per-offer thresholds: `DETAILS.md`.

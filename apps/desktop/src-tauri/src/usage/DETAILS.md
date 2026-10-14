@@ -81,7 +81,7 @@ both stated at the top of `mod.rs` and in `CLAUDE.md`:
 
 - It never joins a crash report, an error-report bundle, or the feedback digest. Those bundles collect logs and
   diagnostics by explicit path; nothing globs the data dir today, and nothing should start.
-- It never becomes a setting. `analytics/config_shape.rs` builds its PostHog snapshot by walking every bool and number
+- It never becomes a setting. `analytics/config_shape.rs` builds its heartbeat snapshot by walking every bool and number
   setting, so a day count parked in `settings.json` would be uploaded without anyone deciding to upload it.
 
 The privacy policy names it under "In the desktop app" (`apps/website/src/pages/privacy-policy.astro`).

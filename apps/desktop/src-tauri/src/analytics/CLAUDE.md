@@ -2,7 +2,7 @@
 
 Anonymous beta usage analytics. Feature events land in an on-disk spool; a loop posts `/heartbeat` to our Worker at
 most every 3 h with a PII-free config snapshot, unreported uptime, and up to 500 spooled events, which the Worker
-forwards to PostHog. The app calls no third-party host. Install ids live in [`crate::install_id`].
+stores in D1. Neither the app nor the Worker sends them to a third party. Install ids live in [`crate::install_id`].
 
 ## Files
 
@@ -14,12 +14,12 @@ forwards to PostHog. The app calls no third-party host. Install ids live in [`cr
 - `events.rs`: the `capture` path (validate, timestamp, spool) and the debug-build PII net.
 - `volume_sink.rs`: `SpooledVolumeAnalytics`, the storage backends' counter seam, feeding `capture`.
 - `config_shape.rs`: the config-shape builder and `CATEGORICAL_STRING_KEYS` allowlist (the ONE place the PII-free rule
-  lives). The heartbeat ships it; the Worker reuses it as PostHog `$set`.
+  lives). The heartbeat ships it; the Worker stores it as `heartbeat.config_json`.
 
 ## Must-knows
 
 - **Two ids that never meet, by construction.** `anal_<uuid>` ([`install_id::analytics_id`]) is the heartbeat key (and
-  the Worker's PostHog `distinct_id`), NEVER on a crash/error report. `diag_<uuid>` ([`install_id::diagnostics_id`]) is ONLY on
+  every stored event's `anal_id`), NEVER on a crash/error report. `diag_<uuid>` ([`install_id::diagnostics_id`]) is ONLY on
   crash/error reports, NEVER through analytics. A tester can attach their email to a report, so a shared id would make
   email → usage-history joinable. Never cross them.
 - **The crash signal handler must NOT call `diagnostics_id()`** (it allocates and locks). The panic hook reads the
@@ -41,9 +41,9 @@ forwards to PostHog. The app calls no third-party host. Install ids live in [`cr
 - **One backend path.** Backend events call `events::capture` directly; frontend events go through the `track_event`
   IPC (`commands/analytics.rs`), a thin pass-through.
 - **Only a 2xx removes anything**, and exactly what that beat sent, so what's recorded mid-beat survives it.
-- **A spooled event carries its own props, id, and `appVersion`, nothing more.** The Worker adds identity (`source`,
-  OS, arch) and config when it forwards.
-- **Every PostHog prop value MUST be categorical, a count, or a bool, never a path, name, query, prompt, or hostname.**
+- **A spooled event carries its own props, id, and `appVersion`, nothing more.** The beat carries identity (OS, arch)
+  and config once, for all of its events.
+- **Every event prop value MUST be categorical, a count, or a bool, never a path, name, query, prompt, or hostname.**
   Enforced by review; `events::sanitize_props` only `warn!`s in debug builds: a smoke alarm, not a filter.
 - **Name events after the UI**: user-facing vocabulary (`pane_navigated`, `search_used`), categorical props
   (`volume_kind`, `mode`). The set is OPEN; a count goes through `item_count_bucket`.

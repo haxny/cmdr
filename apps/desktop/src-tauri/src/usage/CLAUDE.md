@@ -15,7 +15,7 @@ It's the gate for usage-gated hints, the first being the "add Cmdr to your Dock"
 
 - ❌ **The ledger never leaves the device.** It must not reach a crash report, an error-report bundle, or the feedback
   digest. The privacy policy discloses it as local-only, so an accidental upload would break a stated promise.
-- ❌ **It must not become a setting.** `analytics/config_shape.rs` auto-ships every bool and number setting to PostHog,
+- ❌ **It must not become a setting.** `analytics/config_shape.rs` auto-ships every bool and number setting to our server,
   so a day count stored there would silently turn into telemetry. Its own file is what keeps it out.
 - **Local calendar day, never UTC.** "Your third day using Cmdr" is a claim about the person's own calendar, and a
   late-evening session in Stockholm must not count as tomorrow.

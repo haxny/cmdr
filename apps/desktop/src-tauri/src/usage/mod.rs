@@ -9,7 +9,7 @@
 //! upload would be a broken promise, not a bug.
 //!
 //! ❌ **It must not become a setting.** `analytics/config_shape.rs` auto-ships every bool and
-//! number setting to PostHog, so a day count stored there would silently turn into telemetry. Its
+//! number setting to our server, so a day count stored there would silently turn into telemetry. Its
 //! own file is what keeps it out.
 //!
 //! Growth is unbounded on purpose: a decade of daily use is a few tens of KB.

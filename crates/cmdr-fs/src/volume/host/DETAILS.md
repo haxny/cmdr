@@ -388,7 +388,7 @@ the subsystem that can actually give it.
 - `HostKeys` ⇒ `network::sftp_host_keys::AppHostKeys`
 - `IndexNotifier` ⇒ `index_host::VolumeIndexNotifier`
 - `UserActivity` ⇒ `priority::host_policy::AppUserActivity`
-- `AnalyticsSink` ⇒ `analytics::volume_sink::PostHogVolumeAnalytics`
+- `AnalyticsSink` ⇒ `analytics::volume_sink::SpooledVolumeAnalytics`
 - `BackendSettings` ⇒ `file_system::backend_settings::AppBackendSettings`
 - the runtime ⇒ the app's own `tauri::async_runtime` handle, so there's one thread pool
 - the state directory ⇒ `<app data dir>/backend-state/`, set only by `install()`

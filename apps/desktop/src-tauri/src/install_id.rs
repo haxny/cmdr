@@ -3,7 +3,7 @@
 //! Two ids that never meet, by construction (see `analytics/CLAUDE.md` § "Two ids that never
 //! meet"):
 //!
-//! - [`analytics_id`] (`anal_<uuid>`): the heartbeat key and the PostHog `distinct_id`. Never
+//! - [`analytics_id`] (`anal_<uuid>`): the heartbeat and analytics-event key. Never
 //!   attached to a crash or error report.
 //! - [`diagnostics_id`] (`diag_<uuid>`): attached only to crash and error reports so sequential
 //!   reports from one install can be grouped. Never sent through the analytics pipeline.

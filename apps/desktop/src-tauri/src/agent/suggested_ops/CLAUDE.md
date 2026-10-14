@@ -9,7 +9,7 @@ the lifecycle machine, and the claim transaction are `../store/proposals/CLAUDE.
 - `bridge/` — approval to running operation: the claim, the executor call, and the sink decorator that writes
   outcomes back.
 - `selector.rs` — `OpSelector`, the `SelectorIndex` seam, and `DriveIndex`, the drive-index resolver.
-- `analytics.rs` — the three PostHog events. `changed.rs` — the one signal that the pending set moved.
+- `analytics.rs` — the three analytics events. `changed.rs` — the one signal that the pending set moved.
 
 ## Must-knows
 

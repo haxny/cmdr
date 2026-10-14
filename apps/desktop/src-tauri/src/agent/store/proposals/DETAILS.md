@@ -121,7 +121,7 @@ what a group missing its sidecar means, and fail closed — rename refuses to lo
 ## What lives a layer up
 
 Selector resolution, the analytics events, and the propose/approve/reject service are `agent/suggested_ops/`. This
-module keeps `rusqlite` as its only real dependency, so nothing about the drive index or PostHog can reach into the
+module keeps `rusqlite` as its only real dependency, so nothing about the drive index or analytics can reach into the
 persistence layer.
 
 ## What execution writes back

@@ -7,7 +7,7 @@ import { commands } from '#lib/ipc/bindings.js'
  *
  * The gate for usage-gated hints ("you've used Cmdr for a few days now"). The ledger never leaves
  * the Mac: it's not telemetry, and it isn't a setting either, so it can't be picked up by the
- * settings→PostHog auto-ship. See `src-tauri/src/usage/CLAUDE.md`.
+ * settings→heartbeat auto-ship. See `src-tauri/src/usage/CLAUDE.md`.
  *
  * A missing, unreadable, or slow ledger answers 0, which keeps a hint silent rather than firing it
  * on a guess.

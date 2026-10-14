@@ -1,5 +1,4 @@
-//! Builds the PII-free config-shape snapshot shipped with each heartbeat (and, later, mirrored as
-//! PostHog person properties).
+//! Builds the PII-free config-shape snapshot shipped with each heartbeat.
 //!
 //! This module owns the ONE rule for what's in the snapshot, by allowlist, never by redaction (see
 //! `analytics/CLAUDE.md` § "PII-free by allowlist"). Settings hold SMB hostnames, paths, recent

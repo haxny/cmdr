@@ -102,8 +102,8 @@ function killApp() {
  * master, or send somewhere it shouldn't. `isE2eRun()` is false by design in this run
  * (see the file header), and these are the suppressions that come back with it:
  *
- * - `analytics.enabled` off, because a release build points at the PRODUCTION PostHog
- *   project and a fresh data dir mints a new install id, i.e. a phantom user.
+ * - `analytics.enabled` off, because a release build points at the PRODUCTION analytics
+ *   server and a fresh data dir mints a new install id, i.e. a phantom user.
  * - `updates.autoCheck` off, because its poll loop can raise a "Restart to update"
  *   toast over a shot.
  * - `whatsNew.showOnUpdate` off and the upgrade nudge marked shown: on a fresh data dir

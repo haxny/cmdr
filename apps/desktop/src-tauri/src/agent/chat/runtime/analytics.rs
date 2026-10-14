@@ -1,4 +1,4 @@
-//! The PII-free PostHog event for one Ask Cmdr turn.
+//! The PII-free analytics event for one Ask Cmdr turn.
 //!
 //! Without this, the agent's funnel starts at the proposal layer, and a zero on the
 //! north-star acceptance rate (`agent/suggested_ops/analytics.rs`) can't be read: "nobody
@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn a_refusal_and_a_turn_report_the_same_prop_names() {
         // One event, one schema: a refusal must not invent a key a turn doesn't have, or a
-        // PostHog insight over `ask_cmdr_turn` breaks the moment it includes refusals.
+        // query over `ask_cmdr_turn` breaks the moment it includes refusals.
         let envelope = envelope();
         let p = params(Some(UserTurn::Text("hi")), ProviderTag::Anthropic, &envelope);
         let turn = turn_props(&p, &TurnResult::Cancelled, &TurnTally::default());

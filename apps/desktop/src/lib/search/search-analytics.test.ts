@@ -2,7 +2,7 @@
  * The search analytics vocabulary: buckets, the ending map, and the prop set.
  *
  * The PII rule is the load-bearing one here — a props object that ever carried a
- * query, a pattern, or a path would ship it to PostHog — so the last test asserts
+ * query, a pattern, or a path would ship it to our server — so the last test asserts
  * over the VALUES rather than the keys.
  */
 
