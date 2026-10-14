@@ -231,6 +231,12 @@ const crashIdentifierRetentionDays = 90
 const feedbackEmailRetentionDays = 730
 
 /**
+ * How long an error report's outbox row (and every amendment to it) lives: the R2 bundle's own 90
+ * days, because the row carries the same note and reply-to the bundle does.
+ */
+const errorReportRetentionDays = 90
+
+/**
  * How long raw heartbeat rows live. This is the one table keyed by a stable per-install id
  * (`anal_id`), so it's the one that needs an actual delete rather than a column clear: the id IS the
  * data. Two years covers every window the dashboard computes (DAU, new installs, D7 retention) with
@@ -349,6 +355,16 @@ async function handleRetentionSweep(env: Bindings): Promise<void> {
   await db
     .prepare(`UPDATE feedback SET email = NULL WHERE created_at < ?1 AND email IS NOT NULL`)
     .bind(cutoff(feedbackEmailRetentionDays))
+    .run()
+
+  // The error-report outbox rows carry the note and the reply-to, so they go whole with the bundle's
+  // 90 days. An amendment goes with the report it amends (`report_date`), never 90 days from itself.
+  await db.prepare(`DELETE FROM error_reports WHERE created_at < ?1`).bind(cutoff(errorReportRetentionDays)).run()
+  // `report_date` is a bare `YYYY-MM-DD`, which sorts BEFORE `YYYY-MM-DD 00:00:00`, so it's widened to
+  // the cutoff's shape first; compared bare, the cutoff day's amendments would go a day early.
+  await db
+    .prepare(`DELETE FROM error_report_amendments WHERE report_date || ' 00:00:00' < ?1`)
+    .bind(cutoff(errorReportRetentionDays))
     .run()
 
   await db.prepare(`DELETE FROM heartbeat WHERE created_at < ?1`).bind(cutoff(heartbeatRetentionDays)).run()

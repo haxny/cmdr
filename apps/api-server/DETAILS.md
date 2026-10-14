@@ -53,6 +53,9 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **`discord.ts`**: Discord webhook client (single retry on 429, drop-on-failure). Carries the cron failure alert as
   well as the error-report, feedback, beta-signup, and eviction notifications.
 - **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. § Cron alarms.
+- **`report-outbox.ts`**: the cron jobs that file every pending crash, error report, feedback message, and amendment as
+  a card on the reports board. § The reports repo. Tested against a REAL SQLite built from the migrations
+  (`sqlite-d1-test-helper.ts`), because the risk of an outbox is a row a WHERE clause quietly skips.
 - **`scheduled.ts`**: the cron jobs (crash notifications, feedback digest, license backup, daily aggregation, DB size,
   retention sweep, eviction sweep). Tests split by axis: `crash-notification-email.test.ts` and
   `feedback-notification-email.test.ts` cover the two jobs whose output is a document (query → row → rendered HTML and
@@ -448,6 +451,9 @@ triage value live in the other columns, and there's no privacy reason to lose th
   row is kept indefinitely for long-standing stability work. `hashed_ip` is no longer written at all (migration `0013`
   erased the historical values) because nothing ever read it.
 - **`feedback`**: the optional reply-to `email` cleared after two years; the message text stays.
+- **`error_reports`** and **`error_report_amendments`**: rows DELETED at the bundle's 90 days, because they carry the
+  same note and reply-to the bundle does. An amendment is aged by its report's `report_date`, never its own
+  `created_at`. Pinned against a real SQLite by `report-retention.test.ts`.
 - **`license_issuance`**: never swept. A fulfillment record with an end date is how a late redelivery mints a second set
   of licenses, and a manual row IS the license, so deleting it would revoke one by accident. It holds the buyer's or
   recipient's email and, for a hand-issued license, a free-text `note` naming who it's for; the privacy policy covers
@@ -516,18 +522,37 @@ it.
 
 ## The reports repo
 
-`github-issues.ts` files each in-app error report and feedback message as an issue in the PRIVATE repo named by
-`GITHUB_ISSUES_REPO` (`vdavid/cmdr-reports`), so triage happens on one board instead of split across Discord and an
-inbox. The token is the `GITHUB_ISSUES_TOKEN` secret: a fine-grained PAT scoped to that ONE repo with Issues read+write.
-With either unset the integration is off and nothing is filed.
+Every crash, error report, feedback message, and amendment becomes a card in the PRIVATE repo named by
+`GITHUB_ISSUES_REPO` (`vdavid/cmdr-reports`), so triage happens on one board. `github-issues.ts` decides what goes on a
+card; `report-outbox.ts` decides when. The token is the `GITHUB_ISSUES_TOKEN` secret: a fine-grained PAT scoped to that
+ONE repo with Issues read+write. With either unset the integration is off and nothing is filed.
 
-**What earns a card.** Hand-written error reports (`kind: 'user'`) and every feedback message, both only from `release`
-builds. Auto-sent reports stay Discord-only at upload for the reason the notification email already skips them: one bad
-install makes dozens. They earn a card the moment someone amends one with a note or an address (§ Amendments below),
-which is a person writing, not a machine repeating. Debug builds are our own E2E traffic. Each source gets 20 issues per
-UTC day (`gh_issue_count:` keys in `ERROR_REPORT_META`), because `kind` and `buildMode` come from the client's manifest
-and a mislabelling build must cost a bounded amount. Nothing is lost when a cap trips: Discord, R2, and D1 all still
-have the report.
+**The outbox.** Intake only writes a D1 row (`crash_reports`, `error_reports`, `feedback`, `error_report_amendments`;
+migration `0022_report_outbox.sql`). `issue_number IS NULL` means a card is still owed, `0` means never (rows that
+predate the outbox), and a positive number is the card. Every three-hour tick runs `fileCrashCards`,
+`fileErrorReportCards`, `fileFeedbackCards`, then `postAmendmentsToBoard`, each oldest first.
+
+- **Why the cron files, not intake**: a GitHub outage, an expired token, or a tripped cap leaves the row pending and a
+  later tick files it. Filing at intake was fire-and-forget, so any of those dropped the card for good.
+- **Why a job THROWS after a failed filing** (having tried the rest): `runCronJob` turns it into the alarm. "Cards
+  aren't reaching the board" must never be quiet. A tripped cap is not a failure; the rest wait for tomorrow.
+- **Why `error_reports` holds the note and the reply-to**: the cron can't read them back out of a zip, and a card's
+  personal comment needs them. The retention sweep deletes the row at the bundle's 90 days.
+
+**What earns a card.** Everything from a `release` build, hand-written and auto-sent alike. An auto-send flood is what
+the daily cap absorbs: 20 cards per source per UTC day (`gh_issue_count:{source}:{date}` keys in `ERROR_REPORT_META`),
+because `kind` and `buildMode` come from the client and a mislabelling build must cost a bounded amount. The morning
+triage agent marks duplicates. Debug builds are our own E2E traffic and never get a card; the queries filter them
+(`COALESCE(build_mode, 'release') != 'debug'`, since a NULL is an old release client).
+
+**Labels.** The source (`crash-report`, `error-report`, `in-app-feedback`), `unprocessed` on every new card, and
+`needs-reply` when the person attached an address (an amendment that brings one adds it). The triage agent takes
+`unprocessed` off once it has researched and renamed a card.
+
+**Titles are technical** (`Error report ERR-XXXXX: hand-written on 0.52.0 (macOS 27.0)`,
+`Crash CRASH-XXXXX in cmdr::x (SIGABRT) on …`, `Feedback #14 on …`) until the triage agent writes a better one. ❌ Never
+put a note or a feedback message in a title: GitHub keeps every earlier title in the issue's timeline, so it could never
+be deleted.
 
 **The two invariants.**
 
@@ -541,44 +566,41 @@ have the report.
    **Deleting the comment rather than editing the body is the whole point**: an edit leaves the original text in
    GitHub's revision history, so it would not be a deletion.
 
-The stamp travels with the comment, so one mechanism serves both promises: an error report's note and reply-to carry 90
-days, a feedback reply-to carries two years. Feedback's MESSAGE is the exception that proves the split, and it lives in
-the issue body, because the policy keeps feedback text so it can be acted on; only the address expires.
+The stamp travels with the comment, so one mechanism serves every promise: an error report's note and reply-to and a
+crash's reply-to carry 90 days, a feedback reply-to carries two years. ❗ Each counts from when the person SENT it
+(`expiryAfter(created_at, days)`), never from when the cron filed the card, which can be days later. Feedback's MESSAGE
+is the exception that proves the split, and it lives in the issue body, because the policy keeps feedback text so it can
+be acted on; only the address expires. A crash's technical facts (panic message, macOS exception, top frames) also go in
+the body: the client redacts them and the policy keeps them indefinitely.
 
-**Amendments land on the card they amend, or earn one.** A successful file writes `gh_issue:{ERR-XXXXX}` → the issue
-number (`rememberIssueNumber`), and `/error-report/:id/amend` reads it back through `recordAmendmentOnBoard` to comment
-on that issue. It is its OWN KV key rather than a field on the `report:{id}` index, because that entry is written before
-the 200 and carries the amend credential's hash: adding to it would be a read-modify-write against an
-eventually-consistent store with the credential as the thing at risk.
+**Amendments land on the card they amend.** `postAmendmentsToBoard` runs after the report jobs, so a note added minutes
+after its upload lands as a comment on the card filed just before it.
 
-A miss is where the interesting half is. An auto-send has no card, so before this the note a person typed into the
-auto-sent toast reached the inbox and Discord and nothing else, which is the opposite of what the auto-send suppression
-is for: it exists to keep MACHINE volume off the board, and a typed sentence is the highest-signal thing that arrives
-here. So a miss FILES the card, carrying the amendment as its personal comment, and remembers the number so the next
-amendment comments on it. The same path covers a capped day, an outage, and a report that predates the feature. The card
-says `amended auto report` in the title and `auto-sent, with a note the reporter added afterwards` in the body
-(`filedFromAmendment`), so nobody has to wonder why an auto-send has one.
+- The report's card exists: comment on it (`recordAmendmentOnBoard` with the outbox's `issueNumber`).
+- The report is in `error_reports` but its card is still owed: the amendment waits. Filing an "amended" card now would
+  make the report's own card a duplicate a tick later.
+- The report predates the outbox: `recordAmendmentOnBoard` asks the `gh_issue:{ERR-XXXXX}` KV pointer, and when there is
+  none, the amendment FILES the card (`filedFromAmendment`: the title says `note added later`). Its technical facts come
+  from the bundle's own `customMetadata`, read with one `head` (`readReportFacts` in `error-report-amend.ts`). No
+  bundle, no card: one that can't say what report it is about helps nobody.
 
-Its technical facts come from the bundle's own `customMetadata`, read with one `head` (`readReportFacts` in
-`error-report-amend.ts`), because the index entry knows only the key, the date, and the credential hash. `buildMode`
-comes from the key's `prod`/`dev` segment, which the upload route derives from exactly that field, so debug builds stay
-out here too. No bundle, no card: one that can't say what report it is about helps nobody. Filing spends the same
-`gh_issue_count:error-report:{date}` allowance as the upload path, for the same reason (`kind` comes from the client's
-manifest).
+The KV pointer is its OWN key rather than a field on the `report:{id}` index, because that entry is written before the
+200 and carries the amend credential's hash: adding to it would be a read-modify-write against an eventually-consistent
+store with the credential as the thing at risk. `fileErrorReportCards` still writes it, for amendments arriving via that
+third path.
 
-❗ **An amendment's comment carries the ORIGINAL report's expiry, never its own 90 days** (`reportExpiryDate`, from the
-index entry's upload date). A report amended on day 80 would otherwise keep a note on the board until day 170, outliving
-both its bundle and the policy's "anything you added to the report afterwards". `recordAmendmentOnBoard` also re-runs
-the privacy probe on both paths rather than trusting that the repo was private when the issue was filed: months can pass
-between an upload and its amendment, and the answer is allowed to have changed.
+❗ **An amendment's comment carries the ORIGINAL report's expiry, never its own 90 days** (from the row's
+`report_date`). A report amended on day 80 would otherwise keep a note on the board until day 170, outliving both its
+bundle and the policy's "anything you added to the report afterwards". `recordAmendmentOnBoard` also re-runs the privacy
+probe rather than trusting that the repo was private when the card was filed: months can pass between an upload and its
+amendment, and the answer is allowed to have changed.
 
 **Untrusted text is always fenced** (`fencedBlock`, with a fence longer than any backtick run inside it), so a note
 cannot become a heading, an `@mention` that would notify a stranger, or a cross-repo reference. Notes are truncated well
 under GitHub's 65,536-character ceiling; the full text is in the bundle manifest or the D1 row either way.
 
-A failure anywhere here is logged and dropped, never propagated: the report is already durable in R2 or D1 before any of
-this runs. The sweep is the exception and THROWS, so `runCronJob` raises the Discord alarm. A sweep that quietly stopped
-would leave personal data past its promise, which is exactly the failure that has to be loud.
+The personal-comment sweep THROWS on failure, so `runCronJob` raises the alarm. A sweep that quietly stopped would leave
+personal data past its promise, which is exactly the failure that has to be loud.
 
 ## Synthetic heartbeats
 

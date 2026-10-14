@@ -23,10 +23,9 @@ event relay), the `error-report*` quartet, and `feedback.ts`. File map: DETAILS 
   `content-length` is advisory, so those buffer up to 100 MB in a 128 MB isolate before any cap looks.
 - **Only hand-written error reports (`kind: 'user'`) are emailed**, from `postUploadWork`: one bad install makes dozens
   of auto-sends a day. `kind` is client-supplied, so the mail path caps itself daily. DETAILS § Notification email.
-- **Those reports and every feedback message also become issues** in the private reports repo (`../github-issues.ts`),
-  release builds only; an amendment comments on its card or files one. ❌ Never pass a note, reply-to, or bundle link
-  into an issue title or body, and ❌ stamp an amendment `reportExpiryDate(entry.date)`, never a fresh 90 days.
-  `apps/api-server/DETAILS.md` § The reports repo.
+- **Intake only queues a D1 row; the cron files the card** (`../report-outbox.ts`): `/error-report` writes
+  `error_reports` and `/error-report/:id/amend` writes `error_report_amendments`, both awaited before the response. ❌
+  Never file a GitHub issue from a route. `apps/api-server/DETAILS.md` § The reports repo.
 - **The `report:{id}` KV index write is AWAITED before the 200**, alone among this route's side effects: that same
   response hands out the amend credential, so a later index opens nothing. ❌ Never move it to `postUploadWork`; a
   failed put answers 200 with `amendKey: null`.

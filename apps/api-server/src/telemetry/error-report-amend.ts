@@ -29,7 +29,7 @@ import { amendSidecarKey } from './error-report-eviction'
 import { claimErrorReportEmailSlot, DAILY_ERROR_REPORT_EMAIL_CAP } from './error-report-intake'
 import { humanReportRecipient } from '../email/send'
 import { sendErrorReportAmendmentEmail, sendErrorReportsSuppressedEmail } from '../email/error-report'
-import { buildAmendmentComment, recordAmendmentOnBoard, type ErrorReportIssueInput } from '../github-issues'
+import type { ErrorReportIssueInput } from '../github-issues'
 
 const errorReportAmend = new Hono<{ Bindings: Bindings }>()
 
@@ -321,18 +321,18 @@ async function mailAmendment(
 }
 
 /**
- * The report's technical facts, read back off the bundle, for the card an amendment has to create.
- * Null when R2 no longer holds the object, which means no card: one that can't say what report it
- * is about helps nobody.
+ * The report's technical facts, read back off the bundle, for the card an amendment has to create
+ * (`report-outbox.ts`, for a report that predates the outbox). Null when R2 no longer holds the
+ * object, which means no card: one that can't say what report it is about helps nobody.
  *
  * The bundle's own `customMetadata` is where these live; the index entry carries only the key, the
  * date, and the credential hash. `buildMode` comes from the key's env segment, which the upload
  * route derives from exactly that field.
  */
-async function readReportFacts(
+export async function readReportFacts(
   bucket: R2Bucket,
-  entry: ReportIndexEntry,
-  args: { id: string; amendment: Amendment },
+  entry: Pick<ReportIndexEntry, 'env' | 'key'>,
+  args: { id: string; email: string | null },
 ): Promise<ErrorReportIssueInput | null> {
   const object = await bucket.head(entry.key)
   if (!object) return null
@@ -351,8 +351,34 @@ async function readReportFacts(
     r2Key: entry.key,
     uploadedUnixSeconds: Math.floor(object.uploaded.getTime() / 1000),
     // Drives the card's `needs-reply` label only. The address itself goes in the expiring comment.
-    email: args.amendment.email,
+    email: args.email,
   }
+}
+
+/**
+ * Queue one amendment for the cron (`report-outbox.ts` posts it to the board, the digest mails it).
+ * Awaited before the 200: the sidecar alone reaches nobody, so a failed write is a 502 the client
+ * can retry rather than a note that silently goes nowhere.
+ */
+async function queueAmendment(
+  db: D1Database,
+  args: { id: string; entry: ReportIndexEntry; amendment: Amendment; amendmentCount: number },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO error_report_amendments (short_id, report_date, env, r2_key, amendment_count, note, email)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      args.id,
+      args.entry.date,
+      args.entry.env,
+      args.entry.key,
+      args.amendmentCount,
+      args.amendment.note,
+      args.amendment.email,
+    )
+    .run()
 }
 
 errorReportAmend.post('/error-report/:id/amend', async (c) => {
@@ -393,40 +419,22 @@ errorReportAmend.post('/error-report/:id/amend', async (c) => {
 
   const sidecar = await appendAmendment(c.env.ERROR_REPORTS_BUCKET, entry.key, id, amendment)
 
-  // The sidecar is stored, so the amendment is safe; the mail and the card comment ride behind the
-  // 200 like the upload route's do, and a failure in either is ours rather than the reporter's. The
-  // daily byte budget is deliberately NOT charged: a note is bytes-tiny.
-  const notify = (async () => {
-    try {
-      await mailAmendment(c.env, { id, amendment, amendmentCount: sidecar.amendments.length })
-    } catch (e) {
-      console.error('Error report amend: notification email failed', e)
-    }
+  // The card comment is the cron's job (`report-outbox.ts`), on the tick after the report's own
+  // card is filed. The daily byte budget is deliberately NOT charged: a note is bytes-tiny.
+  try {
+    await queueAmendment(c.env.TELEMETRY_DB, { id, entry, amendment, amendmentCount: sidecar.amendments.length })
+  } catch (e) {
+    console.error('Error report amend: queueing the amendment failed', e)
+    return c.json({ error: "We couldn't save that right now. Try again in a minute." }, 502)
+  }
 
-    try {
-      await recordAmendmentOnBoard(c.env, {
-        id,
-        comment: buildAmendmentComment({
-          note: amendment.note,
-          email: amendment.email,
-          amendmentCount: sidecar.amendments.length,
-          // The ORIGINAL report's deletion date, from the index entry's upload date, so an
-          // amendment can't outlive the bundle it belongs to.
-          expiresOn: reportExpiryDate(entry.date),
-        }),
-        // An amendment is often exactly how someone supplies the reply-to they left out, and the
-        // card's `needs-reply` is the only thing that says somebody is waiting. Without this the
-        // board keeps reading "nobody to answer" while an address is sitting in the comment.
-        addLabels: amendment.email ? ['needs-reply'] : [],
-        // Only called when the report never got a card, which is every auto-send: then the
-        // amendment is what earns it one, and these facts are what the card is built from.
-        readReportFacts: () => readReportFacts(c.env.ERROR_REPORTS_BUCKET, entry, { id, amendment }),
-      })
-    } catch (e) {
-      console.error('Error report amend: the GitHub issue comment failed', e)
-    }
-  })()
-  await scheduleBackground(c, notify)
+  // The mail rides behind the 200 like the upload route's does; a failure is ours, not the reporter's.
+  await scheduleBackground(
+    c,
+    mailAmendment(c.env, { id, amendment, amendmentCount: sidecar.amendments.length }).catch((e: unknown) => {
+      console.error('Error report amend: notification email failed', e)
+    }),
+  )
 
   return c.json({ id, amendments: sidecar.amendments.length })
 })

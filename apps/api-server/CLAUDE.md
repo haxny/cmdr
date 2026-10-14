@@ -32,10 +32,10 @@ Areas depend on root leaves, never each other.
   Never a second scheme, ❌ never an IP-derived value no query reads.
 - **What we store is a promise**: `apps/website/src/pages/privacy-policy.astro` lists every column and retention. Change
   either side and the other follows, same commit. DETAILS § Data retention.
-- **Reports and feedback also become issues in a PRIVATE repo** (`github-issues.ts`), whose privacy is re-checked before
-  every write, failing closed. ❌ Never put a note, reply-to, or bundle link in an issue title or body; personal data
-  goes only in the `expires=`-stamped comment. ❌ Never widen `GITHUB_PROJECT_TOKEN` past `project` scope to get that
-  repo onto the backlog board either. DETAILS §§ The reports repo, The backlog board.
+- **Every report becomes a card in a PRIVATE repo**, filed by the cron from a D1 outbox (`report-outbox.ts`), never at
+  intake. Privacy is re-checked per write, failing closed. ❌ No note, reply-to, or bundle link in an issue title or
+  body: personal data goes only in the `expires=`-stamped comment. ❌ Never widen `GITHUB_PROJECT_TOKEN` past `project`.
+  DETAILS §§ The reports repo, The backlog board.
 - **Rate limits are per data center, not global** (`enforceIpRateLimit` gates every intake route), so they bound one
   abusive client, never a distributed flood. `/error-report` carries a global ceiling on top.
 - **A heartbeat install id is not proof of a person.** A fresh data dir mints a fresh `anal_` id, which left the table

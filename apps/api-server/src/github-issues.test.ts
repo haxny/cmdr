@@ -2,8 +2,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   buildAmendmentComment,
   recordAmendmentOnBoard,
-  fileErrorReportIssue,
-  fileFeedbackIssue,
+  buildCrashIssue,
+  claimIssueSlot,
+  expiryAfter,
   recallIssueNumber,
   rememberIssueNumber,
   PERSONAL_COMMENT_MARKER,
@@ -17,6 +18,7 @@ import {
   listExpiredPersonalComments,
   personalCommentExpiry,
   resolveIssueTarget,
+  type CrashIssueInput,
   type ErrorReportIssueInput,
   type FeedbackIssueInput,
   type IssueTarget,
@@ -126,22 +128,31 @@ describe('buildErrorReportIssue', () => {
       email: 'jane@example.com',
     })
 
-    expect(title).toBe('ERR-A2345: user report on 0.46.0 (macOS 15.3.1)')
+    expect(title).toBe('Error report ERR-A2345: hand-written on 0.46.0 (macOS 15.3.1)')
     expect(body).not.toContain('Jane')
     expect(body).not.toContain('jane@example.com')
     expect(body).not.toContain('taxes')
     expect(body).toContain('ERR-A2345')
     expect(body).toContain('error-reports/prod/2026-09-18/ERR-A2345-abc.zip')
-    expect(labels).toContain('error-report')
+    expect(labels).toEqual(['error-report', 'unprocessed', 'needs-reply'])
+  })
+
+  it('names an auto-sent report, and one that only earned its card through a later note', () => {
+    expect(buildErrorReportIssue({ ...errorReport, kind: 'auto' }).title).toBe(
+      'Error report ERR-A2345: auto-sent on 0.46.0 (macOS 15.3.1)',
+    )
+    expect(buildErrorReportIssue({ ...errorReport, kind: 'auto', filedFromAmendment: true }).title).toBe(
+      'Error report ERR-A2345: auto-sent, note added later on 0.46.0 (macOS 15.3.1)',
+    )
   })
 
   it('does not double the macOS prefix a client already sent', () => {
     // ERR-KVERS arrived titled "macOS macOS 10.15.8": some clients send the prefix, some don't.
     expect(buildErrorReportIssue({ ...errorReport, osVersion: 'macOS 10.15.8' }).title).toBe(
-      'ERR-A2345: user report on 0.46.0 (macOS 10.15.8)',
+      'Error report ERR-A2345: hand-written on 0.46.0 (macOS 10.15.8)',
     )
     expect(buildErrorReportIssue({ ...errorReport, osVersion: '15.3.1' }).title).toBe(
-      'ERR-A2345: user report on 0.46.0 (macOS 15.3.1)',
+      'Error report ERR-A2345: hand-written on 0.46.0 (macOS 15.3.1)',
     )
     expect(buildFeedbackIssue({ ...feedbackInput, osVersion: 'macOS 10.15.8' }).title).toBe(
       'Feedback #42 on 0.46.0 (macOS 10.15.8)',
@@ -167,7 +178,7 @@ describe('buildFeedbackIssue', () => {
     expect(title).toBe('Feedback #42 on 0.46.0 (macOS 15.3.1)')
     expect(body).toContain('please add tabs')
     expect(body).not.toContain('bob@example.com')
-    expect(labels).toEqual(['feedback', 'needs-reply'])
+    expect(labels).toEqual(['in-app-feedback', 'unprocessed', 'needs-reply'])
   })
 
   it('keeps the title free of the message, which is the part that could say anything', () => {
@@ -179,6 +190,54 @@ describe('buildFeedbackIssue', () => {
     const { body } = buildFeedbackIssue({ ...feedbackInput, feedback: 'ping @octocat\n```\nx\n```' })
     expect(body).toContain('````')
     expect(body).toContain('@octocat')
+  })
+})
+
+describe('buildCrashIssue', () => {
+  const crash: CrashIssueInput = {
+    rowId: 9,
+    shortId: 'CRASH-AB234',
+    createdAt: '2026-10-13T08:12:00Z',
+    appVersion: '0.52.0',
+    osVersion: '27.0',
+    arch: 'aarch64',
+    signal: 'SIGABRT',
+    topFunction: 'cmdr::listing::sort',
+    appFate: 'ended',
+    panicMessage: 'index out of bounds',
+    osException: 'EXC_CRASH (SIGABRT)',
+    osFrames: ['frame one', 'frame two'],
+    imageBase: '0x100000000',
+  }
+
+  it('titles a crash by id, site, and signal, and keeps the technical facts in the body', () => {
+    const { title, body, labels } = buildCrashIssue(crash)
+    expect(title).toBe('Crash CRASH-AB234 in cmdr::listing::sort (SIGABRT) on 0.52.0 (macOS 27.0)')
+    expect(body).toContain('index out of bounds')
+    expect(body).toContain('EXC_CRASH (SIGABRT)')
+    expect(body).toContain('frame two')
+    expect(labels).toEqual(['crash-report', 'unprocessed'])
+  })
+
+  it('says "panic" when the app survived, because that ranks lower than a crash', () => {
+    expect(buildCrashIssue({ ...crash, appFate: 'keptRunning' }).title).toMatch(/^Panic CRASH-AB234 /)
+  })
+
+  it('keeps the reply-to out of the title and body but labels the card for a reply', () => {
+    const { title, body, labels } = buildCrashIssue({ ...crash, email: 'tester@example.com' })
+    expect(title + body).not.toContain('tester@example.com')
+    expect(labels).toContain('needs-reply')
+  })
+
+  it('clips a very long crash site so the version still fits in the title', () => {
+    const { title } = buildCrashIssue({ ...crash, topFunction: 'x'.repeat(300) })
+    expect(title).toContain('on 0.52.0')
+    expect(title.length).toBeLessThan(160)
+  })
+
+  it('fences the panic message so it cannot become markup', () => {
+    const { body } = buildCrashIssue({ ...crash, panicMessage: 'ping @octocat ```' })
+    expect(body).toContain('````')
   })
 })
 
@@ -202,107 +261,22 @@ function configuredEnv(): Bindings {
   })
 }
 
-describe('fileErrorReportIssue', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    vi.restoreAllMocks()
-  })
-
-  it('files nothing at all when the integration is unconfigured', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
-    await expect(fileErrorReportIssue(env({ ERROR_REPORT_META: fakeKv() }), errorReport)).resolves.toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('skips auto-sent reports and debug builds without touching the network', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
-
-    await expect(fileErrorReportIssue(configuredEnv(), { ...errorReport, kind: 'auto' })).resolves.toBeNull()
-    await expect(fileErrorReportIssue(configuredEnv(), { ...errorReport, buildMode: 'debug' })).resolves.toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('files a hand-written release report, with the note in the comment only', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ private: true }))
-      .mockResolvedValueOnce(jsonResponse({ number: 3 }, 201))
-      .mockResolvedValueOnce(jsonResponse({ id: 1 }, 201))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const number = await fileErrorReportIssue(configuredEnv(), {
-      ...errorReport,
-      userNote: 'it died opening /Users/jane/photos',
-      email: 'jane@example.com',
-    })
-
-    expect(number).toBe(3)
-    const issueBody = requestBody(fetchMock.mock.calls[1])
-    expect(issueBody).not.toContain('jane')
-    expect(issueBody).not.toContain('photos')
-    const commentBody = requestBody(fetchMock.mock.calls[2])
-    expect(commentBody).toContain('jane@example.com')
-    expect(commentBody).toContain('photos')
-  })
-
-  it('stops filing once the daily cap is spent', async () => {
-    const sharedEnv = configuredEnv()
-    // A fresh Response per call: a Response body can only be read once, so a single shared
-    // instance would fail the second read rather than the assertion under test.
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ private: true, number: 1, id: 1 }))),
-    )
-
+describe('claimIssueSlot', () => {
+  it('allows 20 cards per source per day, and counts each source separately', async () => {
+    const kv = fakeKv()
     for (let i = 0; i < 20; i++) {
-      await expect(fileErrorReportIssue(sharedEnv, errorReport)).resolves.toBe(1)
+      await expect(claimIssueSlot(kv, 'crash-report', '2026-10-14')).resolves.toBe(true)
     }
-    await expect(fileErrorReportIssue(sharedEnv, errorReport)).resolves.toBeNull()
+    await expect(claimIssueSlot(kv, 'crash-report', '2026-10-14')).resolves.toBe(false)
+    await expect(claimIssueSlot(kv, 'feedback', '2026-10-14')).resolves.toBe(true)
+    await expect(claimIssueSlot(kv, 'crash-report', '2026-10-15')).resolves.toBe(true)
   })
 })
 
-describe('fileFeedbackIssue', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    vi.restoreAllMocks()
-  })
-
-  it('skips debug builds', async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
-    await expect(fileFeedbackIssue(configuredEnv(), { ...feedbackInput, buildMode: 'debug' })).resolves.toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('posts no comment when no reply-to was attached', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ private: true }))
-      .mockResolvedValueOnce(jsonResponse({ number: 5 }, 201))
-    vi.stubGlobal('fetch', fetchMock)
-
-    await expect(fileFeedbackIssue(configuredEnv(), { ...feedbackInput, feedback: 'nice app' })).resolves.toBe(5)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('stamps the reply-to comment with the two-year promise, not the ninety-day one', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ private: true }))
-      .mockResolvedValueOnce(jsonResponse({ number: 5 }, 201))
-      .mockResolvedValueOnce(jsonResponse({ id: 1 }, 201))
-    vi.stubGlobal('fetch', fetchMock)
-
-    await fileFeedbackIssue(configuredEnv(), { ...feedbackInput, feedback: 'hi', email: 'bob@example.com' })
-
-    const commentPayload = JSON.parse(requestBody(fetchMock.mock.calls[2])) as { body: string }
-    expect(daysUntilExpiry(commentPayload.body)).toBeGreaterThan(725)
+describe('expiryAfter', () => {
+  it('counts from the day the row was written, in either created_at shape', () => {
+    expect(expiryAfter('2026-10-01 10:00:00', 90)).toBe('2026-12-30')
+    expect(expiryAfter('2026-10-01T23:59:59Z', 90)).toBe('2026-12-30')
   })
 })
 
@@ -319,21 +293,6 @@ describe('remembering which issue a report got', () => {
     await expect(recallIssueNumber(kv, 'ERR-NONE1')).resolves.toBeNull()
     await kv.put('gh_issue:ERR-BAD11', 'not a number')
     await expect(recallIssueNumber(kv, 'ERR-BAD11')).resolves.toBeNull()
-  })
-
-  it('remembers the number after filing, so an amendment can find it later', async () => {
-    const sharedEnv = configuredEnv()
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(jsonResponse({ private: true }))
-        .mockResolvedValueOnce(jsonResponse({ number: 77 }, 201)),
-    )
-
-    await expect(fileErrorReportIssue(sharedEnv, errorReport)).resolves.toBe(77)
-    await expect(recallIssueNumber(sharedEnv.ERROR_REPORT_META, errorReport.id)).resolves.toBe(77)
-    vi.unstubAllGlobals()
   })
 })
 

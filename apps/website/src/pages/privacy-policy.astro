@@ -227,8 +227,9 @@ import LegalLayout from '../layouts/LegalLayout.astro'
         </li>
         <li>
             <strong>Cloudflare</strong> (hosting): runs our API server on its global CDN for license validation,
-            downloads, and crash, error report, and feedback intake. Download records, crash reports, feedback, and beta
-            usage stats live in Cloudflare D1 (SQLite); error report bundles live in Cloudflare R2.
+            downloads, and crash, error report, and feedback intake. Download records, crash reports, feedback, beta
+            usage stats, and the details of each error report (your note and email address, if you added them) live in
+            Cloudflare D1 (SQLite); error report bundles live in Cloudflare R2.
             <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer"
                 >Cloudflare's privacy policy</a
             >
@@ -242,9 +243,9 @@ import LegalLayout from '../layouts/LegalLayout.astro'
         <li>
             <strong>GitHub</strong> (download hosting and issue tracking): the app and its updates come from GitHub
             Releases, so GitHub sees your IP address when you download or update Cmdr, like any web server. We also
-            track our work there: an error report or feedback message you send becomes an issue in a private repository
-            only we can read. Your message, and your email address if you attached one, go in a separate comment that we
-            delete on the schedule below. GitHub is a US company.
+            track our work there: every crash report, error report, and feedback message becomes an issue in a private
+            repository only we can read. Your note on an error report, and your email address if you attached one, go
+            in a separate comment that we delete on the schedule below. GitHub is a US company.
             <a
                 href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
                 target="_blank"

@@ -1,7 +1,6 @@
 import { Hono, type Context } from 'hono'
 import { enforceIpRateLimit, hasEmailShape, type Bindings } from '../types'
 import { postFeedbackNotification } from '../discord'
-import { fileFeedbackIssue } from '../github-issues'
 
 const feedback = new Hono<{ Bindings: Bindings }>()
 
@@ -113,19 +112,16 @@ feedback.post('/feedback', async (c) => {
   const body = parsed as unknown as FeedbackBody
   const text = body.feedback.trim()
 
-  // D1 is the durable sink (Discord truncates long messages), so this write is awaited:
-  // the desktop app should surface a retry on failure rather than pretend it landed.
-  let rowId = 0
+  // D1 is the durable sink, so this write is awaited: the desktop app should surface a retry on
+  // failure rather than pretend it landed. The row is also the outbox entry: `issue_number` starts
+  // NULL and the cron files its card (`report-outbox.ts`).
   try {
-    const result = await c.env.TELEMETRY_DB.prepare(
+    await c.env.TELEMETRY_DB.prepare(
       `INSERT INTO feedback (feedback, email, app_version, os_version, build_mode)
          VALUES (?, ?, ?, ?, ?)`,
     )
       .bind(text, body.email ?? null, body.appVersion, body.osVersion, body.buildMode ?? null)
       .run()
-    // The triage card names this row so the two can be joined by hand. A result without an id
-    // costs the cross-reference, never the submission.
-    rowId = typeof result.meta.last_row_id === 'number' ? result.meta.last_row_id : 0
   } catch (e) {
     console.error('Feedback: D1 write failed', e)
     return c.json({ error: 'Could not save the feedback right now' }, 502)
@@ -148,21 +144,6 @@ feedback.post('/feedback', async (c) => {
       } catch (e) {
         console.error('Feedback: Discord notification failed', e)
       }
-    }
-
-    // The triage card. `fileFeedbackIssue` refuses unless the target repo is private, keeps the
-    // reply-to address in a comment that expires, and is a silent no-op when unconfigured.
-    try {
-      await fileFeedbackIssue(c.env, {
-        rowId,
-        buildMode: body.buildMode ?? 'release',
-        appVersion: body.appVersion,
-        osVersion: body.osVersion,
-        feedback: text,
-        email: body.email,
-      })
-    } catch (e) {
-      console.error('Feedback: filing the GitHub issue failed', e)
     }
   })()
 

@@ -10,6 +10,9 @@ import { buildMultipart, createBindings, createKv, createR2, todayUtc, validMeta
 import { amendSidecarKey } from './error-report-eviction'
 import { reportExpiryDate, reportIndexKey, type ReportIndexEntry } from './error-report-amend'
 import { dailyBytesKey } from './error-report-intake'
+import { createSqliteD1 } from '../sqlite-d1-test-helper'
+import { fileErrorReportCards, postAmendmentsToBoard } from '../report-outbox'
+import type { Bindings } from '../types'
 
 /** One amendment as the sidecar records it. */
 interface StoredAmendment {
@@ -363,80 +366,86 @@ describe('POST /error-report/:id/amend', () => {
   })
 })
 
-describe('the triage card an amendment earns', () => {
-  /** Bindings with the issues integration on, plus the GitHub calls the route makes. */
+describe('from the routes to the board', () => {
+  /** Bindings on a real SQLite D1 with the issues integration on, plus the GitHub calls made. */
   function configured(): { bindings: Record<string, unknown>; github: Mock } {
-    const github = vi.fn((url: string) => {
+    let next = 31
+    const github = vi.fn((url: string, init?: RequestInit) => {
       if (url.endsWith('/repos/vdavid/cmdr-reports')) return Promise.resolve(Response.json({ private: true }))
-      if (url.endsWith('/issues')) return Promise.resolve(Response.json({ number: 31 }, { status: 201 }))
+      if (url.endsWith('/issues') && init?.method === 'POST') {
+        return Promise.resolve(Response.json({ number: next++ }, { status: 201 }))
+      }
       return Promise.resolve(Response.json({ id: 7 }, { status: 201 }))
     })
     globalThis.fetch = github as unknown as typeof fetch
     return {
-      bindings: createBindings({ GITHUB_ISSUES_TOKEN: 'ghp_x', GITHUB_ISSUES_REPO: 'vdavid/cmdr-reports' }),
+      bindings: createBindings({
+        TELEMETRY_DB: createSqliteD1().d1,
+        GITHUB_ISSUES_TOKEN: 'ghp_x',
+        GITHUB_ISSUES_REPO: 'vdavid/cmdr-reports',
+      }),
       github,
     }
   }
 
-  /** The bodies of the GitHub POSTs, in order, ignoring the privacy probe. */
-  function postedBodies(github: Mock): string[] {
+  /** The bodies of the GitHub POSTs to `suffix`, in order. */
+  function posted(github: Mock, suffix: RegExp): string[] {
     return github.mock.calls
-      .filter((call) => (call[1] as RequestInit | undefined)?.method === 'POST')
-      .map((call) => {
+      .filter(([url, init]) => suffix.test(String(url)) && (init as RequestInit | undefined)?.method === 'POST')
+      .map(([, init]) => {
         // Every body we send is a JSON string we built.
-        const body = (call[1] as RequestInit).body
+        const body = (init as RequestInit).body
         return typeof body === 'string' ? body : ''
       })
   }
 
-  it('files one for an auto-sent report, because a person typed the note', async () => {
-    // The whole point: an auto-send earns no card, so without this the note reaches the inbox and
-    // Discord and never the board.
-    const { bindings, github } = configured()
-    const { id, amendKey } = await upload(bindings, { ...validMeta, kind: 'auto' })
+  /** One cron tick's board work, in the order `index.ts` runs it. */
+  async function tick(bindings: Record<string, unknown>): Promise<void> {
+    await fileErrorReportCards(bindings as unknown as Bindings)
+    await postAmendmentsToBoard(bindings as unknown as Bindings)
+  }
 
-    const res = await amend(bindings, id, { amendKey, note: 'it only happens on the NAS' })
-
-    expect(res.status).toBe(200)
-    const [issue, comment] = postedBodies(github)
-    expect(issue).toContain(id)
-    expect(issue).toContain('auto-sent')
-    // The note lives in the expiring comment, never in the body that outlives it.
-    expect(issue).not.toContain('only happens on the NAS')
-    expect(comment).toContain('only happens on the NAS')
-  })
-
-  it('describes the bundle it was built from', async () => {
+  it('files one card for an auto-sent report and puts a later note on it as a comment', async () => {
     const { bindings, github } = configured()
     const { id, amendKey } = await upload(bindings, { ...validMeta, kind: 'auto', appVersion: '0.46.1' })
 
-    await amend(bindings, id, { amendKey, note: 'a note' })
+    const res = await amend(bindings, id, { amendKey, note: 'it only happens on the NAS' })
+    expect(res.status).toBe(200)
+    // Intake files nothing; the board is the cron's job.
+    expect(posted(github, /\/issues$/)).toHaveLength(0)
 
-    const [issue] = postedBodies(github)
-    expect(issue).toContain('0.46.1')
-    expect(issue).toContain(`error-reports/prod/${todayUtc()}/${id}-`)
+    await tick(bindings)
+
+    const issues = posted(github, /\/issues$/)
+    expect(issues).toHaveLength(1)
+    expect(issues[0]).toContain(id)
+    expect(issues[0]).toContain('auto-sent')
+    expect(issues[0]).toContain(`error-reports/prod/${todayUtc()}/${id}-`)
+    // The note lives in the expiring comment, never in the body that outlives it.
+    expect(issues[0]).not.toContain('only happens on the NAS')
+    expect(posted(github, /\/comments$/).some((body) => body.includes('only happens on the NAS'))).toBe(true)
   })
 
-  it('comments on the card it already filed rather than filing a second one', async () => {
+  it('posts a second amendment on the same card on a later tick', async () => {
     const { bindings, github } = configured()
     const { id, amendKey } = await upload(bindings, { ...validMeta, kind: 'auto' })
-
     await amend(bindings, id, { amendKey, note: 'first thought' })
-    await amend(bindings, id, { amendKey, note: 'second thought' })
+    await tick(bindings)
 
-    const creates = github.mock.calls.filter(([url, init]) => {
-      return String(url).endsWith('/issues') && (init as RequestInit | undefined)?.method === 'POST'
-    })
-    expect(creates).toHaveLength(1)
-    expect(postedBodies(github).at(-1)).toContain('second thought')
+    await amend(bindings, id, { amendKey, note: 'second thought' })
+    await tick(bindings)
+
+    expect(posted(github, /\/issues$/)).toHaveLength(1)
+    expect(posted(github, /\/comments$/).at(-1)).toContain('second thought')
   })
 
   it('files nothing for a debug build, which is our own E2E traffic', async () => {
     const { bindings, github } = configured()
     const { id, amendKey } = await upload(bindings, { ...validMeta, kind: 'auto', buildMode: 'debug' })
-
     await amend(bindings, id, { amendKey, note: 'from a dev build' })
 
-    expect(github).not.toHaveBeenCalled()
+    await tick(bindings)
+
+    expect(posted(github, /\/issues$|\/comments$/)).toHaveLength(0)
   })
 })

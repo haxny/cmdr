@@ -29,6 +29,7 @@ import {
 } from './scheduled'
 import { postCronFailureNotification } from './discord'
 import { pingCronHealth } from './cron-health'
+import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -90,6 +91,13 @@ export default {
     const run = async (job: string, handler: () => Promise<void>): Promise<void> => {
       if (!(await runCronJob(env, job, when, handler))) failedJobs.push(job)
     }
+
+    // Cards first, so the emails below can link them. Amendments last: they comment on the cards
+    // the report jobs just filed.
+    await run('Crash cards', () => fileCrashCards(env))
+    await run('Error report cards', () => fileErrorReportCards(env))
+    await run('Feedback cards', () => fileFeedbackCards(env))
+    await run('Amendments on the board', () => postAmendmentsToBoard(env))
 
     await run('Crash notifications', () => handleCrashNotifications(env))
     await run('Feedback notifications', () => handleFeedbackNotifications(env))

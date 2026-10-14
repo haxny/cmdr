@@ -27,7 +27,6 @@ import {
   type IntakeRejection,
 } from './error-report-intake'
 import { hashAmendKey, mintAmendKey, writeReportIndex } from './error-report-amend'
-import { fileErrorReportIssue } from '../github-issues'
 import { humanReportRecipient } from '../email/send'
 import { sendErrorReportNotificationEmail, sendErrorReportsSuppressedEmail } from '../email/error-report'
 import {
@@ -56,7 +55,7 @@ const MAX_BODY_BYTES = MAX_BUNDLE_BYTES + 1024 * 1024
  * whoever holds it, and it sits in Discord, an email, and a GitHub issue. After it expires, fetch the
  * bundle through the Cloudflare API (`docs/tooling/feedback-and-error-digest.md`).
  */
-const PRESIGN_TTL_HOURS = 24
+export const PRESIGN_TTL_HOURS = 24
 const PRESIGN_TTL_SECONDS = PRESIGN_TTL_HOURS * 60 * 60
 const DEFAULT_BUCKET_NAME = 'cmdr-error-reports'
 
@@ -142,7 +141,7 @@ function buildR2Key(env: 'prod' | 'dev', datePrefix: string, id: string, uuid: s
  * Build a presigned GET URL, valid for {@link PRESIGN_TTL_HOURS} hours, using the R2 S3-compatible API.
  * Returns null if R2 credentials aren't configured.
  */
-async function buildPresignedUrl(env: Bindings, key: string): Promise<string | null> {
+export async function buildPresignedUrl(env: Bindings, key: string): Promise<string | null> {
   if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) return null
   const bucketName = env.R2_ERROR_REPORTS_BUCKET_NAME ?? DEFAULT_BUCKET_NAME
   const client = new AwsClient({
@@ -323,30 +322,33 @@ async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void
     } catch (e) {
       console.error('Error report: notification email failed', e)
     }
-
-    // The triage card. Its own try/catch for the same reason as every side effect here, and its own
-    // decision about what may be written: `fileErrorReportIssue` refuses unless the target repo is
-    // private, and splits the note and reply-to into a comment that expires on time.
-    try {
-      await fileErrorReportIssue(env, {
-        id: args.id,
-        kind: args.meta.kind,
-        buildMode: args.meta.buildMode ?? 'release',
-        appVersion: args.meta.appVersion,
-        osVersion: args.meta.osVersion,
-        arch: args.meta.arch,
-        sizeBytes: args.sizeBytes,
-        r2Key: args.key,
-        uploadedUnixSeconds: args.uploadedUnixSeconds,
-        userNote: args.meta.userNote,
-        email: args.meta.email,
-        downloadUrl: await presignedUrl(),
-        linkTtlHours: PRESIGN_TTL_HOURS,
-      })
-    } catch (e) {
-      console.error('Error report: filing the GitHub issue failed', e)
-    }
   }
+}
+
+/**
+ * The outbox row the cron files the card and the digest line from (`report-outbox.ts`). One row per
+ * bundle, hand-written or auto-sent; the note and the reply-to ride along because the cron can't
+ * read them back out of a zip, and the retention sweep deletes the row with the bundle's 90 days.
+ */
+async function queueErrorReport(db: D1Database, args: Omit<UploadedReport, 'uploadedUnixSeconds' | 'date'>) {
+  await db
+    .prepare(
+      `INSERT INTO error_reports (short_id, kind, build_mode, app_version, os_version, arch, size_bytes, r2_key, user_note, email)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      args.id,
+      args.meta.kind,
+      args.meta.buildMode ?? 'release',
+      args.meta.appVersion,
+      args.meta.osVersion,
+      args.meta.arch,
+      args.sizeBytes,
+      args.key,
+      args.meta.userNote?.trim() || null,
+      args.meta.email ?? null,
+    )
+    .run()
 }
 
 /**
@@ -518,6 +520,15 @@ errorReport.post('/error-report', async (c) => {
   } catch (e) {
     issuedAmendKey = null
     console.error('Error report: writeReportIndex failed; the report cannot be amended', e)
+  }
+
+  // Before the 200 too, so the row can't be lost to the isolate ending early. A failure costs the
+  // card and the digest line, never the report: the bundle is in R2, and the morning brief's R2
+  // count against this table is what would show the gap.
+  try {
+    await queueErrorReport(c.env.TELEMETRY_DB, { id, key, sizeBytes, meta })
+  } catch (e) {
+    console.error('Error report: queueing the report for the board failed', e)
   }
 
   await scheduleBackground(c, postUploadWork(c.env, { id, key, sizeBytes, meta, uploadedUnixSeconds, date: today }))

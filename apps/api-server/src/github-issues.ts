@@ -1,6 +1,6 @@
 /**
- * Files in-app error reports and feedback as issues in a PRIVATE GitHub repo, so triage happens on
- * one board instead of across Discord and an inbox.
+ * Files crashes, error reports, and feedback as issues in a PRIVATE GitHub repo, so triage happens on
+ * one board. The cron decides WHEN (`report-outbox.ts`); this module decides WHAT goes on a card.
  *
  * Two invariants hold this together, and both are load-bearing for the privacy policy
  * (`apps/website/src/pages/privacy-policy.astro`):
@@ -114,6 +114,19 @@ function expiryDate(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
 }
 
+/**
+ * `YYYY-MM-DD`, `days` after the day a row was written. Cards are filed by the cron, possibly days
+ * after intake when GitHub was down, so a promise counted from "now" would outlive the one the
+ * privacy policy makes, which counts from when the person sent it.
+ *
+ * Takes either `created_at` shape the tables use (`datetime('now')` or ISO 8601): only the day is read.
+ */
+export function expiryAfter(createdAt: string, days: number): string {
+  const day = Date.parse(`${createdAt.slice(0, 10)}T00:00:00Z`)
+  const base = Number.isNaN(day) ? Date.now() : day
+  return new Date(base + days * 86_400_000).toISOString().slice(0, 10)
+}
+
 /** Read the deletion date off a personal-data comment. Null when it carries no valid stamp. */
 export function personalCommentExpiry(commentBody: string): string | null {
   const match = /^<!-- cmdr:personal-data expires=(\d{4}-\d{2}-\d{2}) -->/.exec(commentBody)
@@ -186,6 +199,27 @@ export interface IssueContent {
   labels: string[]
 }
 
+/**
+ * Every new card starts here. The morning triage agent researches each one, renames it, and takes
+ * the label off, so an open card that still carries it is one nobody has looked at yet.
+ */
+export const UNPROCESSED_LABEL = 'unprocessed'
+
+/** A person attached an address and is waiting on an answer. */
+export const NEEDS_REPLY_LABEL = 'needs-reply'
+
+/** The labels every card gets: where it came from, `unprocessed`, and `needs-reply` when someone waits. */
+function cardLabels(source: IssueSource, email: string | null | undefined): string[] {
+  const labels: string[] = [source === 'feedback' ? 'in-app-feedback' : source, UNPROCESSED_LABEL]
+  if (email?.trim()) labels.push(NEEDS_REPLY_LABEL)
+  return labels
+}
+
+/** Cut a title fragment to `maxChars`, so one long symbol can't push the facts off the end. */
+function clip(text: string, maxChars: number): string {
+  return text.length <= maxChars ? text : `${text.slice(0, maxChars - 1)}…`
+}
+
 /** Technical facts about one uploaded bundle. Nothing here identifies a person. */
 export interface ErrorReportIssueInput {
   id: string
@@ -208,12 +242,13 @@ export interface ErrorReportIssueInput {
 
 /**
  * The issue for one error report. The note and the reply-to address are deliberately NOT here: they
- * belong in the expiring comment, because this body is kept for as long as the bug is.
+ * belong in the expiring comment, because this body is kept for as long as the bug is. That holds
+ * for the TITLE too, which is why it's technical until the triage agent writes a better one: GitHub
+ * keeps every earlier title in the issue's timeline, so a note in it could never be deleted.
  */
 export function buildErrorReportIssue(input: ErrorReportIssueInput): IssueContent {
-  const kindWord = input.kind === 'user' ? 'user' : 'auto'
-  const titlePrefix = input.filedFromAmendment ? 'amended ' : ''
   const kindLine = input.kind === 'user' ? 'hand-written' : 'auto-sent'
+  const titleKind = input.filedFromAmendment ? `${kindLine}, note added later` : kindLine
   const uploadedAt = new Date(input.uploadedUnixSeconds * 1000).toISOString().replace('T', ' ').slice(0, 16)
 
   const body = [
@@ -224,18 +259,84 @@ export function buildErrorReportIssue(input: ErrorReportIssueInput): IssueConten
     `**Bundle**: ${formatBytes(input.sizeBytes)}, uploaded ${uploadedAt} UTC`,
     `**R2 key**: \`${input.r2Key}\``,
     '',
-    'The note, the reply-to address, and the download link are in the first comment, which is deleted',
-    'after 90 days. To fetch the bundle after the link expires, see',
-    '`docs/tooling/feedback-and-error-digest.md`.',
+    'The note, the reply-to address, and the download link (when there are any) are in the first',
+    'comment, which is deleted 90 days after the upload. To fetch the bundle after the link expires,',
+    'see `docs/tooling/feedback-and-error-digest.md`.',
   ].join('\n')
 
-  const labels = ['error-report']
-  if (input.email?.trim()) labels.push('needs-reply')
+  return {
+    title: `Error report ${input.id}: ${titleKind} on ${input.appVersion} (${macOsLabel(input.osVersion)})`,
+    body,
+    labels: cardLabels('error-report', input.email),
+  }
+}
+
+/** One crash report, already in D1. Every field here is technical; the reply-to is the only personal one. */
+export interface CrashIssueInput {
+  rowId: number
+  /** `CRASH-XXXXX`, or null for clients older than the field. */
+  shortId: string | null
+  createdAt: string
+  appVersion: string
+  osVersion: string
+  arch: string
+  signal: string
+  topFunction: string
+  /** `app_fate`: `ended`, `keptRunning`, or null when the row claims nothing. */
+  appFate: string | null
+  /** Redacted on the user's Mac before it was sent; kept indefinitely like the rest of the row. */
+  panicMessage: string | null
+  osException: string | null
+  osFrames: string[]
+  imageBase: string | null
+  email?: string | null
+}
+
+/** Frames of the macOS stack a crash card shows. The full list is in the D1 row. */
+const CRASH_FRAMES_SHOWN = 12
+
+/**
+ * The issue for one crash. The row's technical facts go in the body (the privacy policy keeps them
+ * indefinitely, and they name nobody); only the reply-to, when there is one, goes in the comment.
+ */
+export function buildCrashIssue(input: CrashIssueInput): IssueContent {
+  const survived = input.appFate === 'keptRunning'
+  const fateLine = survived
+    ? 'a background panic; the app kept running'
+    : input.appFate === 'ended'
+      ? 'the app went down'
+      : 'unknown (the report says nothing either way)'
+  const idPart = input.shortId ? ` ${input.shortId}` : ''
+  const what = survived ? 'Panic' : 'Crash'
+
+  const lines = [
+    `**Crash id**: \`${input.shortId ?? 'none (older client)'}\` · D1 row \`${String(input.rowId)}\` in \`crash_reports\``,
+    `**What happened**: ${fateLine}`,
+    `**Where**: \`${input.topFunction}\` · **Signal**: ${input.signal}`,
+    `**App version**: ${input.appVersion}`,
+    `**OS**: ${macOsLabel(input.osVersion)} · **Arch**: ${input.arch}`,
+    `**Reported**: ${input.createdAt.replace('T', ' ').slice(0, 16)} UTC`,
+  ]
+  if (input.panicMessage) lines.push('', '**Panic message**', '', fencedBlock(input.panicMessage))
+  if (input.osException) lines.push('', '**macOS says**', '', fencedBlock(input.osException))
+  if (input.osFrames.length) {
+    const shown = input.osFrames.slice(0, CRASH_FRAMES_SHOWN)
+    const rest = input.osFrames.length - shown.length
+    const tail = rest > 0 ? `\n… ${String(rest)} more in the D1 row` : ''
+    lines.push('', '**Top of the stack**', '', fencedBlock(shown.join('\n') + tail))
+  }
+  if (!input.panicMessage && input.imageBase) lines.push('', `**Image base**: \`${input.imageBase}\``)
+  lines.push(
+    '',
+    input.email?.trim()
+      ? 'A reply-to address is in the first comment, which is deleted 90 days after the report.'
+      : 'No reply-to address was attached.',
+  )
 
   return {
-    title: `${input.id}: ${titlePrefix}${kindWord} report on ${input.appVersion} (${macOsLabel(input.osVersion)})`,
-    body,
-    labels,
+    title: `${what}${idPart} in ${clip(input.topFunction, 80)} (${input.signal}) on ${input.appVersion} (${macOsLabel(input.osVersion)})`,
+    body: truncate(lines.join('\n'), SAFE_TEXT_BUDGET),
+    labels: cardLabels('crash-report', input.email),
   }
 }
 
@@ -266,17 +367,14 @@ export function buildFeedbackIssue(input: FeedbackIssueInput): IssueContent {
     fencedBlock(truncate(message, SAFE_TEXT_BUDGET / 2)),
     '',
     input.email?.trim()
-      ? 'A reply-to address is in the first comment, which is deleted after two years.'
+      ? 'A reply-to address is in the first comment, which is deleted two years after it was sent.'
       : 'No reply-to address was attached.',
   ].join('\n')
-
-  const labels = ['feedback']
-  if (input.email?.trim()) labels.push('needs-reply')
 
   return {
     title: `Feedback #${String(input.rowId)} on ${input.appVersion} (${macOsLabel(input.osVersion)})`,
     body: truncate(body, SAFE_TEXT_BUDGET),
-    labels,
+    labels: cardLabels('feedback', input.email),
   }
 }
 
@@ -378,14 +476,13 @@ export async function fileIssue(target: IssueTarget, input: FileIssueInput): Pro
  * Issues one source may file per UTC day.
  *
  * Real volume is a handful, so this never touches legitimate traffic. It exists because `kind` and
- * `buildMode` come from the client's manifest: a buggy or hostile build that labels every auto-send
- * as hand-written costs 20 issues and then nothing. Nothing is lost when it trips, since Discord,
- * R2, and D1 all still have the report.
+ * `buildMode` come from the client's manifest: a buggy or hostile build costs 20 issues a day and
+ * then waits. Nothing is lost when it trips: the outbox row stays pending and a later day files it.
  */
-const DAILY_ISSUE_CAP = 20
+export const DAILY_ISSUE_CAP = 20
 
-/** Counted per source so a feedback burst can never silence error reports, or the other way round. */
-export type IssueSource = 'error-report' | 'feedback'
+/** Counted per source so a burst of one kind can never silence another. */
+export type IssueSource = 'crash-report' | 'error-report' | 'feedback'
 
 /** Day-scoped keys outlive their day, then expire on their own. Mirrors `error-report-intake.ts`. */
 const DAY_KEY_TTL_SECONDS = 48 * 60 * 60
@@ -394,7 +491,7 @@ const DAY_KEY_TTL_SECONDS = 48 * 60 * 60
  * Take one slot from a source's daily allowance. Racy like the other KV counters here, which at
  * worst shifts the cutoff by an issue or two.
  */
-async function claimIssueSlot(kv: KVNamespace, source: IssueSource, date: string): Promise<boolean> {
+export async function claimIssueSlot(kv: KVNamespace, source: IssueSource, date: string): Promise<boolean> {
   const key = `gh_issue_count:${source}:${date}`
   const count = parseInt((await kv.get(key)) ?? '0', 10) + 1
   await kv.put(key, String(count), { expirationTtl: DAY_KEY_TTL_SECONDS })
@@ -402,77 +499,8 @@ async function claimIssueSlot(kv: KVNamespace, source: IssueSource, date: string
 }
 
 /** Today in UTC, `YYYY-MM-DD`. */
-function todayUtc(): string {
+export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10)
-}
-
-/**
- * File one error report, applying the rules about which reports earn a card.
- *
- * Skipped without a word: auto-sends (one bad install makes dozens, and Discord absorbs those) and
- * debug builds (our own E2E traffic). Returns the issue number, or null when nothing was filed for
- * any reason.
- */
-export async function fileErrorReportIssue(
-  env: Bindings,
-  input: ErrorReportIssueInput & { downloadUrl?: string | null; linkTtlHours?: number },
-): Promise<number | null> {
-  const target = resolveIssueTarget(env)
-  if (!target) return null
-  if (input.kind !== 'user') return null
-  if (input.buildMode === 'debug') return null
-  if (!(await claimIssueSlot(env.ERROR_REPORT_META, 'error-report', todayUtc()))) {
-    console.error('GitHub issues: daily error-report cap reached; not filing')
-    return null
-  }
-
-  const content = buildErrorReportIssue(input)
-  const issueNumber = await fileIssue(target, {
-    ...content,
-    personalComment: buildPersonalComment({
-      userNote: input.userNote,
-      email: input.email,
-      downloadUrl: input.downloadUrl,
-      linkTtlHours: input.linkTtlHours,
-      retentionDays: ERROR_REPORT_RETENTION_DAYS,
-    }),
-  })
-
-  // Remembered so a later amendment lands on this same card. A failure here costs the amendment its
-  // comment, never the issue, so it's logged rather than propagated.
-  if (issueNumber !== null) {
-    try {
-      await rememberIssueNumber(env.ERROR_REPORT_META, input.id, issueNumber)
-    } catch (e) {
-      console.error('GitHub issues: remembering the issue number failed; amendments will not find it', e)
-    }
-  }
-
-  return issueNumber
-}
-
-/**
- * File one feedback message. Debug builds are skipped; everything else earns a card, because
- * feedback is hand-written by definition.
- */
-export async function fileFeedbackIssue(env: Bindings, input: FeedbackIssueInput): Promise<number | null> {
-  const target = resolveIssueTarget(env)
-  if (!target) return null
-  if (input.buildMode === 'debug') return null
-  if (!(await claimIssueSlot(env.ERROR_REPORT_META, 'feedback', todayUtc()))) {
-    console.error('GitHub issues: daily feedback cap reached; not filing')
-    return null
-  }
-
-  const content = buildFeedbackIssue(input)
-  return fileIssue(target, {
-    ...content,
-    // Only the reply-to address expires; the message itself lives in the body above.
-    personalComment: buildPersonalComment({
-      email: input.email,
-      retentionDays: FEEDBACK_EMAIL_RETENTION_DAYS,
-    }),
-  })
 }
 
 /**
@@ -547,6 +575,8 @@ export interface AmendmentOnBoardInput {
    * read any more, which means no card: a card that can't say what it is about helps nobody.
    */
   readReportFacts: () => Promise<ErrorReportIssueInput | null>
+  /** The report's card, when the caller already knows it. Skips the KV lookup. */
+  issueNumber?: number
 }
 
 /** What happened to one amendment on the board. Every failure is a `skipped`. */
@@ -555,10 +585,10 @@ export type AmendmentOnBoardResult = 'commented' | 'filed' | 'skipped'
 /**
  * Put one amendment on the board.
  *
- * Usually the report already has a card and the amendment is a comment on it. When it has none —
- * an auto-send, a day that hit the cap, an outage — the amendment IS the card: a person typed a
- * sentence about their own report, and that is the one signal the auto-send suppression was never
- * meant to filter. Before this, those notes reached the inbox and Discord and nothing else.
+ * Usually the report already has a card and the amendment is a comment on it. The outbox passes
+ * that card's number when it knows it; otherwise the KV pointer is asked. When the report has no
+ * card at all (it predates the outbox, so it never got one), the amendment IS the card: a person
+ * typed a sentence about their own report, and that has to reach the board.
  *
  * Runs the privacy probe again through {@link fileIssue}'s own gate rather than trusting that the
  * repo was private when the issue was filed: months can pass between an upload and its amendment,
@@ -571,7 +601,7 @@ export async function recordAmendmentOnBoard(
   const target = resolveIssueTarget(env)
   if (!target) return 'skipped'
 
-  const issueNumber = await recallIssueNumber(env.ERROR_REPORT_META, input.id)
+  const issueNumber = input.issueNumber ?? (await recallIssueNumber(env.ERROR_REPORT_META, input.id))
   if (issueNumber === null) {
     return (await fileCardForAmendment(env, target, input)) ? 'filed' : 'skipped'
   }
@@ -676,12 +706,14 @@ async function addIssueLabels(target: IssueTarget, issueNumber: number, labels: 
 }
 
 /**
- * The two retention promises this module has to keep, from
+ * The retention promises the cards' personal comments keep, from
  * `apps/website/src/pages/privacy-policy.astro` § "How long we keep your data". They mirror the
  * constants the D1 retention sweep uses in `scheduled.ts`; change one and the other has to follow.
+ * A crash's reply-to shares the error report's 90 days.
  */
-const ERROR_REPORT_RETENTION_DAYS = 90
-const FEEDBACK_EMAIL_RETENTION_DAYS = 730
+export const ERROR_REPORT_RETENTION_DAYS = 90
+export const CRASH_EMAIL_RETENTION_DAYS = 90
+export const FEEDBACK_EMAIL_RETENTION_DAYS = 730
 
 /** The three fields we read off a GitHub comment, once it has been checked to actually have them. */
 interface GitHubComment {
