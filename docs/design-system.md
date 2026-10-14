@@ -114,30 +114,40 @@ Note: blog code blocks use a dark syntax theme regardless of page mode; they kee
 
 ### Semantic colors
 
-| Token                  | Light                   | Dark                       | Role                                                                                |
-| ---------------------- | ----------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
-| `--color-allow`        | `#2e7d32`               | `#66bb6a`                  | Success, granted                                                                    |
-| `--color-error`        | `#d32f2f`               | `#f44336`                  | Error, destructive (for borders, badges, icons)                                     |
-| `--color-error-text`   | `#b91c1c`               | `#fca5a5`                  | Error text, dark/light enough to meet 4.5:1 on `--color-error-bg` and similar tints |
-| `--color-error-bg`     | `#fef2f2`               | `#450a0a`                  | Error background fill                                                               |
-| `--color-error-border` | `#fecaca`               | `#7f1d1d`                  | Error container border                                                              |
-| `--color-warning`      | `#e65100`               | `#f5a623`                  | Caution (for borders, badges, icons)                                                |
-| `--color-warning-text` | `#9a3412`               | `#fdba74`                  | Warning text (see `--color-error-text` rationale)                                   |
-| `--color-warning-bg`   | `rgba(230, 81, 0, 0.1)` | `rgba(245, 166, 35, 0.15)` | Warning background fill                                                             |
-| `--color-selection-fg` | `#c9a227`               | `#d4a82a`                  | Selected file names (gold, distinct from accent)                                    |
+| Token                           | Light                   | Dark                       | Role                                                                                |
+| ------------------------------- | ----------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| `--color-allow`                 | `#2e7d32`               | `#66bb6a`                  | Success, granted                                                                    |
+| `--color-error`                 | `#d32f2f`               | `#f44336`                  | Error, destructive (for borders, badges, icons)                                     |
+| `--color-error-text`            | `#b91c1c`               | `#fca5a5`                  | Error text, dark/light enough to meet 4.5:1 on `--color-error-bg` and similar tints |
+| `--color-error-bg`              | `#fef2f2`               | `#450a0a`                  | Error background fill                                                               |
+| `--color-error-border`          | `#fecaca`               | `#7f1d1d`                  | Error container border                                                              |
+| `--color-warning`               | `#e65100`               | `#f5a623`                  | Caution (for borders, badges, icons)                                                |
+| `--color-warning-text`          | `#9a3412`               | `#fdba74`                  | Warning text (see `--color-error-text` rationale)                                   |
+| `--color-warning-bg`            | `rgba(230, 81, 0, 0.1)` | `rgba(245, 166, 35, 0.15)` | Warning background fill                                                             |
+| `--color-selection-fg-primary`  | `#cc0000`               | `#ffa0a0`                  | Selected (marked) file text                                                         |
+| `--color-selection-fg-cursor`   | `#a30000`               | `#ffb3b3`                  | Selected file text on the cursor row                                                |
+| `--color-selection-fg-fallback` | `--color-text-primary`  | `--color-text-primary`     | Selected cursor row in the one corner no red clears AA (see below)                  |
+| `--color-selection-bg`          | `rgba(0, 0, 0, 0.05)`   | `rgba(0, 0, 0, 0.33)`      | Selected-row darkening, translucent so a pane tint shows through                    |
 
 **When to use the `-text` variants:** use `--color-error-text` / `--color-warning-text` for `color:` on text rendered on
 a same-hue tinted bg (or any bg where 4.5:1 isn't guaranteed). Use `--color-error` / `--color-warning` for
 `border-color`, `background-color` of badges, and icon fills where no text sits directly on the brand color. If you need
 white text on a warning-colored badge, use `--color-accent-fg` (always dark in both themes) rather than `white`.
 
-The selection gold is intentional: it must be distinct from the accent color (which can be _any_ hue the user picks).
-Gold was chosen because it reads as "marked" rather than "active," and contrasts with every macOS accent option.
+**Selection is red**, after Total Commander: distinct from the default text (black on light, white on dark) by hue and
+luminance, and independent of the accent color, which can be _any_ hue the user picks. Components read only
+`--color-selection-fg`; it resolves to `-primary` on a selected row, to `-cursor` when the cursor sits on that row
+(`app-file-list.css`), and to `-fallback` in one corner: dark mode plus Increase contrast plus a pane tint plus the
+focused cursor, where the 25% tint lightens the cursor background so much that no red clears 4.5:1 (`app.css`,
+"selection-fg fallback"). Selected rows also get the `--color-selection-bg` darkening and a hairline between consecutive
+selected rows, so dense selections stay countable.
 
-**Contrast note:** `#c9a227` on `#ffffff` gives ~3.5:1, which passes WCAG AA for large text but not normal text. At 12px
-(`--font-size-sm`) this is borderline. Acceptable because selected file names are always accompanied by a secondary cue
-(the gold is applied only to names, never to standalone labels), but worth revisiting if we get accessibility
-complaints.
+**Contrast:** `#cc0000` is 5.89:1 on `#ffffff` and 5.26:1 on the selected-row background; `#ffa0a0` is 8.56:1 on
+`#1e1e1e` and 9.46:1 on the selected-row background. The worst case across every row state, pane tint, and accent is
+4.52:1 (light) and 4.71:1 (dark), all AA. `pnpm check a11y-contrast` gates the whole matrix (`row_state_matrix.go`
+mirrors the three-tier cascade), so a new selection color must pass it. Known limit: selection differs from normal text
+mostly by hue (red vs black is 2.96:1, `#ffa0a0` vs white text 1.59:1), so it leans on color (tracked in GitHub issue
+#440).
 
 **Automated contrast checks:** `scripts/check-a11y-contrast/` runs at build time via `pnpm check a11y-contrast`. It
 parses `app.css` design tokens and every scoped `<style>` block, resolves `var()` chains + `color-mix(in srgb, ...)` +
@@ -170,26 +180,17 @@ invisible.
 
 ### Size-tier colors
 
-File sizes are subtly color-coded by magnitude, a distinctive Cmdr feature. Colors are derived from
-`--color-text-secondary` via `color-mix` so they stay readable in both modes without separate light/dark values.
+File sizes can be color-coded by magnitude (`--color-size-bytes` … `--color-size-tb`). The `appearance.sizeColors`
+setting picks one of three palettes, applied as `data-size-colors` on `<html>`:
 
-The progression uses a single blue hue at increasing saturation: a "depth" metaphor where bigger = deeper. This avoids
-the yellow → red "heat" connotation (size isn't danger, it's volume) and complements the pure-gray neutral palette.
+- **None** (the default): every tier is `--color-text-secondary`.
+- **App**: a depth progression from `--color-text-secondary` toward the accent, so it follows the user's accent color.
+- **Rainbow**: green, yellow, orange, red, violet. Light mode uses saturated dark hexes (`#097309` … `#7a30b0`); dark
+  mode mixes 70% `--color-text-secondary` with bright hues. Every value clears AA on the surfaces sizes render on.
 
-```css
---color-size-bytes: color-mix(in srgb, var(--color-text-secondary) 85%, #88aacc); /* hint of blue */
---color-size-kb: color-mix(in srgb, var(--color-text-secondary) 60%, #88aacc); /* soft steel blue */
---color-size-mb: color-mix(in srgb, var(--color-text-secondary) 60%, #5599dd); /* medium blue */
---color-size-gb: color-mix(in srgb, var(--color-text-secondary) 60%, #2288ee); /* rich blue */
---color-size-tb: color-mix(in srgb, var(--color-text-secondary) 60%, #0066ff); /* vivid blue */
-```
-
-Bytes get a 15% blue tint (not plain gray) so even the smallest tier participates in the progression. The 60/40 mix for
-KB+ gives clear differentiation between adjacent tiers.
-
-When a file is **selected**, size tiers switch to a gold depth progression mirroring the blue one: bytes get a subtle
-gold tint, higher tiers get richer gold, TB uses the full `--color-selection-fg`. The date column also turns gold. This
-keeps the "selected = gold" language consistent across all columns (name, size, date).
+When a file is **selected**, the tiers mix `--color-text-secondary` toward `--color-selection-fg` (40% down to 0% gray,
+TB is the full selection red), and the date column turns `--color-selection-fg` too, so "selected = red" holds across
+name, size, and date. The None palette flattens every selected tier to `--color-selection-fg`.
 
 ### Header background
 
@@ -449,11 +450,14 @@ vertical rhythm.
 
 **Cursor highlight:**
 
-- Focused pane: `background: var(--color-accent-subtle)` (derived from system accent at ~15% opacity)
-- Unfocused pane: `background: var(--color-bg-tertiary)` (neutral, no accent)
+- Focused pane: `background: var(--color-cursor-active)` (the accent at 20% opacity)
+- Unfocused pane: `background: var(--color-cursor-inactive)` (neutral, no accent)
+- Both: a 1px inset `--color-cursor-outline` hairline (the accent at 35%) and `--radius-sm` corners
+  (`app-file-list.css`). The focused and unfocused fills differ by only about 1.09:1 in light mode, so which pane holds
+  focus is hard to see (GitHub issue #440).
 
-**Selection:** File names turn `var(--color-selection-fg)` (gold). No background change; color alone signals selection,
-keeping the list scannable.
+**Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and the row gets the
+translucent `--color-selection-bg`, with a hairline between consecutive selected rows.
 
 **Scrollbars:** Native macOS. No custom styling. This is deliberate: custom scrollbars immediately feel web-native.
 
