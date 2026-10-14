@@ -11,7 +11,8 @@ import { resolveStorePath } from './store-path'
 import { SCHEMA_VERSION, migrateSettings } from './settings-migrations'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { pluralize } from '#lib/utils/pluralize.js'
-import type { RestrictedWindowPersistableSetting, SettingValue } from '#lib/ipc/bindings.js'
+import type { SettingValue } from '#lib/ipc/bindings.js'
+import { restrictedPersistableVariant } from './restricted-persistable-settings'
 // Import from the specific submodule, not the `#lib/tauri-commands` barrel: the
 // barrel re-exports the entire IPC surface (mtp, search, indexing, licensing, …),
 // so pulling it in for three functions drags that whole graph into every
@@ -75,21 +76,6 @@ let crossWindowUnlisten: UnlistenFn | null = null
 // cross-window `settings:changed` events, and writes persist through the
 // `persist_restricted_window_setting` command (forwarded to the main window).
 let restrictedWindowMode = false
-
-/** The settings a restricted window may persist, mapped to the typed command
- *  enum. Must mirror `RestrictedWindowPersistableSetting` in
- *  `src-tauri/src/commands/settings.rs` — the backend enum is the enforced
- *  allowlist; this map only decides which `setSetting` calls are forwarded.
- *
- *  ❌ Shorter than the read snapshot below ON PURPOSE. A setting earns a place
- *  here only when a restricted window has a control that WRITES it (`W`, the
- *  binary-warning banner's button). One it merely reads — `viewer.showTextCursor`,
- *  every `appearance.*` — stays out, so the app's highest-risk webview never gets
- *  a write it has no use for. */
-const RESTRICTED_PERSISTABLE_SETTINGS: Partial<Record<SettingId, RestrictedWindowPersistableSetting>> = {
-  'viewer.wordWrap': 'viewerWordWrap',
-  'fileViewer.suppressBinaryWarning': 'fileViewerSuppressBinaryWarning',
-}
 
 // ============================================================================
 // Initialization
@@ -457,7 +443,7 @@ export function setSetting<K extends SettingId>(id: K, value: SettingsValues[K])
   if (restrictedWindowMode) {
     // No store in this window: persistence goes through the typed backend
     // command, which forwards to the main window's restricted-settings bridge.
-    const persistable = RESTRICTED_PERSISTABLE_SETTINGS[id]
+    const persistable = restrictedPersistableVariant(id)
     if (persistable !== undefined && typeof value === 'boolean') {
       void persistRestrictedWindowSetting(persistable, value)
         .then((result) => {
@@ -479,6 +465,10 @@ export function setSetting<K extends SettingId>(id: K, value: SettingsValues[K])
   // Notify local listeners
   notifyListeners(id, value)
 
+  // A restricted window may only LISTEN (`capabilities/viewer.json`): the main window
+  // re-broadcasts what it persists for it, in `persistSettingFromRestrictedWindow`.
+  if (restrictedWindowMode) return
+
   // Emit cross-window event so other windows get the update (and mirror the
   // explicit choice into their ledger).
   void emit(SETTING_CHANGED_EVENT, { id, value, explicit: true } satisfies SettingChangedPayload)
@@ -486,22 +476,23 @@ export function setSetting<K extends SettingId>(id: K, value: SettingsValues[K])
 }
 
 /**
- * Persists a value on behalf of a restricted window. Called by the main
- * window's restricted-settings bridge (see `restricted-settings-bridge.ts`)
+ * Persists a value on behalf of a restricted window, and broadcasts it. Called by
+ * the main window's restricted-settings bridge (see `restricted-settings-bridge.ts`)
  * after it allowlist-checks the forwarded change.
  *
- * Deliberately NOT `setSetting`: the restricted window's own cross-window
- * `settings:changed` emit has usually already synced this window's cache (and
- * notified listeners) by the time the persist request arrives, so `setSetting`
- * would hit the idempotency guard and skip the save. This writes the cache and
- * schedules the save unconditionally, and skips notify/emit to avoid echoing
- * the change back out a second time.
+ * The restricted window can't emit (its capability only listens), so this is
+ * where the change reaches every other window. Deliberately NOT `setSetting`: it
+ * saves and broadcasts even when this window's cache already holds the value,
+ * where `setSetting`'s idempotency guard would skip both.
  */
 export function persistSettingFromRestrictedWindow<K extends SettingId>(id: K, value: SettingsValues[K]): void {
   validateSettingValue(id, value)
+  const changedHere = !isUnchanged(settingsCache.get(id), value)
   settingsCache.set(id, value)
   explicitlySet.add(id)
   scheduleSave()
+  if (changedHere) notifyListeners(id, value)
+  void emit(SETTING_CHANGED_EVENT, { id, value, explicit: true } satisfies SettingChangedPayload)
 }
 
 /**
@@ -559,6 +550,7 @@ export function resetSetting(id: SettingId): void {
   }
 
   notifyListeners(id, defaultValue)
+  if (restrictedWindowMode) return // it may only listen, as in `setSetting`
   void emit(SETTING_CHANGED_EVENT, { id, value: defaultValue, explicit: false } satisfies SettingChangedPayload)
 }
 

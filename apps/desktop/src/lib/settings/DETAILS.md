@@ -198,16 +198,22 @@ which never touches the store plugin:
 - **Writes**: `setSetting` skips the store save and forwards allowlisted ids through the typed
   `persist_restricted_window_setting` command (enum-validated on the Rust side), which emits to the main window;
   `restricted-settings-bridge.ts` (mounted in the main layout) re-checks the allowlist and persists via
-  `persistSettingFromRestrictedWindow` — a deliberate `setSetting` bypass, because the viewer's own cross-window emit
-  has usually already synced the main cache and the idempotency guard would otherwise skip the save. Non-allowlisted
-  `setSetting` calls in restricted mode are session-only (debug log, no persistence).
+  `persistSettingFromRestrictedWindow`, which also broadcasts `settings:changed` so every other window follows.
+  Non-allowlisted `setSetting` calls in restricted mode are session-only (debug log, no persistence).
+- **A restricted window never emits `settings:changed`** (`setSetting` and `resetSetting` return before it): the
+  viewer's capability grants only `core:event:allow-listen` / `-unlisten`. Every window trusts that event and marks the
+  named id explicit, so an emit grant would let hostile file content persist ANY setting around the typed allowlist.
+  `capabilities.rs` pins the grant.
+- **The frontend's write allowlist is ONE map**, `RESTRICTED_PERSISTABLE_SETTINGS` in
+  `restricted-persistable-settings.ts`, keyed by the generated enum (`satisfies` makes a new variant a compile error)
+  and pinned to Rust's `setting_id` by its test. The store and the bridge both read it.
 - **Failures degrade to registry defaults with a `log.warn`**, never `log.error`: an error-level log here fires an auto
   error report on every viewer open, which is the regression that motivated this mode (the viewer used to call the
   store-backed init path and hit `plugin:store|load not allowed by ACL` every time).
 
 When a new setting needs to be readable or persistable from the viewer, extend the `RestrictedWindowSettings` struct /
-`RestrictedWindowPersistableSetting` enum in `src-tauri/src/commands/settings.rs` and the mirror maps in
-`settings-store.ts` + `restricted-settings-bridge.ts`. Never grant the viewer store permissions instead.
+`RestrictedWindowPersistableSetting` enum in `src-tauri/src/commands/settings.rs` and `RESTRICTED_PERSISTABLE_SETTINGS`.
+Never grant the viewer store permissions instead.
 
 ### Text size (`appearance.textSize`)
 

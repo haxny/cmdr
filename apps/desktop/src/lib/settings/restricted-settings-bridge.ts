@@ -11,9 +11,11 @@
  * (always alive) and persists through the normal store pipeline.
  *
  * The allowlist is enforced twice: the backend enum can only express the
- * permitted settings, and this handler re-checks the id (defense in depth —
- * any webview can emit arbitrary events, so the event payload alone is
- * untrusted).
+ * permitted settings, and this handler re-checks the id against the same list
+ * (`restricted-persistable-settings.ts`), as defense in depth: a webview with an
+ * emit grant could forge this event, so the payload alone is untrusted. The
+ * viewer has no emit grant, so this bridge's store is also what broadcasts the
+ * change to every other window.
  *
  * It is narrower than what a restricted window can READ, and stays that way: a
  * setting the viewer only displays (`viewer.showTextCursor`, `appearance.*`)
@@ -24,13 +26,11 @@ import { type UnlistenFn } from '@tauri-apps/api/event'
 import { onPersistRestrictedSetting } from '#lib/tauri-commands/index.js'
 import { persistSettingFromRestrictedWindow } from './settings-store'
 import { validateSettingValue } from './settings-registry'
+import { restrictedPersistableVariant } from './restricted-persistable-settings'
 import type { SettingId, SettingsValues } from './types'
 import { getAppLogger } from '#lib/logging/logger.js'
 
 const log = getAppLogger('restricted-settings-bridge')
-
-/** Mirrors the backend's `RestrictedWindowPersistableSetting` enum mapping. */
-const PERSIST_ALLOWLIST: ReadonlySet<string> = new Set(['viewer.wordWrap', 'fileViewer.suppressBinaryWarning'])
 
 interface PersistRestrictedSettingPayload {
   id: string
@@ -42,7 +42,7 @@ let unlisten: UnlistenFn | null = null
 /** Handles one forwarded persist request. Exported for unit tests. */
 export function handlePersistRestrictedSetting(payload: PersistRestrictedSettingPayload): void {
   const { id, value } = payload
-  if (!PERSIST_ALLOWLIST.has(id)) {
+  if (restrictedPersistableVariant(id) === undefined) {
     log.warn('Refusing to persist non-allowlisted setting {id} from a restricted window', { id })
     return
   }

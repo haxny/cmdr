@@ -29,8 +29,8 @@ window-creation perms are checked against the *calling* window.
   *commands* (`load`, `get`, `set`, `save`), not *filenames*, so any of them lets the webview `load('license.json')` and
   read or tamper with any store in the data dir. Viewer settings persist through the typed pair in
   `commands/settings.rs` instead (`get_restricted_window_settings` + `persist_restricted_window_setting`), whose enum
-  allowlist is the boundary: extend it and the `restricted-settings-bridge.ts` allowlist, never re-add store access,
-  never widen to a free-form id.
+  allowlist is the boundary: extend it and `RESTRICTED_PERSISTABLE_SETTINGS`, never re-add store access, never widen
+  to a free-form id. ❌ No event emit grant either: a forged `settings:changed` persists any id (`src/capabilities.rs`).
 - **A `store:default` change means updating `WINDOW_SETTINGS_ACCESS`**
   (`apps/desktop/src/lib/settings/window-settings.ts`), the frontend's store-backed vs restricted-snapshot map;
   `window-settings.test.ts` fails on drift.

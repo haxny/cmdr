@@ -13537,9 +13537,10 @@ export type RestrictedPathsChangedPayload = {
  *  The settings a restricted-capability window may persist. A typed enum (not a
  *  free-form id string) so the write allowlist is enforced at the IPC boundary:
  *  a compromised viewer webview can only flip the booleans listed here, never
- *  touch licensing, error-report opt-in, MCP, or any other store key. Mirrored
- *  by `RESTRICTED_PERSISTABLE_SETTINGS` in `src/lib/settings/settings-store.ts`
- *  and `PERSIST_ALLOWLIST` in `src/lib/settings/restricted-settings-bridge.ts`.
+ *  touch licensing, error-report opt-in, MCP, or any other store key. The
+ *  frontend's one copy is `RESTRICTED_PERSISTABLE_SETTINGS` in
+ *  `src/lib/settings/restricted-persistable-settings.ts`, whose test parses
+ *  [`Self::setting_id`] below, so keep its arms one `Self::X => "id"` each.
  *
  *  ❌ A setting belongs here ONLY when the viewer itself has a control that
  *  writes it: `W` for word wrap, the banner's "Never show this warning again"

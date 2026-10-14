@@ -147,6 +147,25 @@ describe('setSetting in restricted mode', () => {
     expect(ipc.calls.some((c) => c.command.startsWith('plugin:store|'))).toBe(false)
   })
 
+  it('never broadcasts from the viewer: its capability only listens, and the main window re-broadcasts', async () => {
+    // Pre-fix the viewer emitted `settings:changed` itself, which needs `core:event:allow-emit`. With
+    // that grant a hostile viewer could emit the event for ANY id, and every other window would mark
+    // it explicit and save it, walking around the typed persist allowlist.
+    ipc.mock('get_restricted_window_settings', () => snapshot)
+    ipc.mock('persist_restricted_window_setting', () => null)
+    const store = await importStore()
+    await store.initializeSettings({ restrictedWindow: true })
+
+    store.setSetting('viewer.wordWrap', false)
+    store.setSetting('appearance.textSize', 110)
+    store.resetSetting('appearance.textSize')
+    await Promise.resolve()
+
+    const { emit } = await import('@tauri-apps/api/event') // `test-setup.ts` mocks it
+    expect(emit).not.toHaveBeenCalled()
+    expect(ipc.callCount('persist_restricted_window_setting')).toBe(1)
+  })
+
   it('treats non-allowlisted settings as session-only (no persist call)', async () => {
     ipc.mock('get_restricted_window_settings', () => snapshot)
     const store = await importStore()
@@ -162,6 +181,21 @@ describe('setSetting in restricted mode', () => {
 })
 
 describe('restricted-settings bridge (main-window side)', () => {
+  it('re-broadcasts a forwarded setting, so other windows follow the viewer’s change', async () => {
+    vi.useFakeTimers() // the debounced save never fires; only the broadcast matters here
+    try {
+      const store = await importStore()
+
+      const { emit } = await import('@tauri-apps/api/event') // `test-setup.ts` mocks it
+
+      store.persistSettingFromRestrictedWindow('viewer.wordWrap', true)
+
+      expect(emit).toHaveBeenCalledWith('settings:changed', { id: 'viewer.wordWrap', value: true, explicit: true })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('persists allowlisted forwarded settings', async () => {
     vi.doMock('./settings-store', () => ({
       persistSettingFromRestrictedWindow: vi.fn(),

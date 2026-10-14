@@ -58,7 +58,10 @@ command pair in `commands/settings.rs`:
 types above, and `src/lib/settings/DETAILS.md` § "Restricted-window mode" for the frontend half.
 
 The enum is the boundary: a compromised viewer can flip the handful of view-preference booleans it names and nothing
-else — never licensing, error-report opt-in, MCP, or any other store key. Viewer tail mode stays deliberately
+else — never licensing, error-report opt-in, MCP, or any other store key. That holds only because the viewer can't
+EMIT events (`core:event:allow-listen` / `-unlisten`, no `core:event:default`): every window trusts `settings:changed`
+and persists the id it names, so an emit grant would walk around the enum. The main window's bridge re-broadcasts what
+it persists instead. `src/capabilities.rs` pins the grant. Viewer tail mode stays deliberately
 unpersisted (defaults off per session, see `routes/viewer/CLAUDE.md` § Tail mode).
 
 ## The E2E capability

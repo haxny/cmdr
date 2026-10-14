@@ -76,4 +76,27 @@ mod tests {
              so double-clicking the title bar rejects and auto-sends an error report: {offenders:?}"
         );
     }
+
+    /// The viewer renders possibly-hostile file content, so it may listen for events but never
+    /// emit one: other windows trust `settings:changed` and persist what it names, so an emit
+    /// grant would walk around the typed persist allowlist. Its setting writes go through
+    /// `persist_restricted_window_setting`, and the main window re-broadcasts them.
+    #[test]
+    fn the_viewer_can_listen_for_events_but_never_emit_one() {
+        let (_, viewer) = manifests()
+            .into_iter()
+            .find(|(name, _)| name == "viewer.json")
+            .expect("viewer.json exists");
+        let event_grants: Vec<&str> = viewer
+            .iter()
+            .map(String::as_str)
+            .filter(|p| p.starts_with("core:event:") || *p == "core:default")
+            .collect();
+
+        assert_eq!(
+            event_grants,
+            ["core:event:allow-listen", "core:event:allow-unlisten"],
+            "viewer.json must grant exactly listen and unlisten from core:event"
+        );
+    }
 }
