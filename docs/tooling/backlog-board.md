@@ -6,8 +6,12 @@ description too.
 
 Rule: an agent filing a card sets **Impact** and **Size**, plus **Severity** when it's a bug or a security issue.
 
-The morning report-triage agent sets them on every `vdavid/cmdr-reports` card it triages, through
-`scripts/report-triage/board.sh rate`, and points its prompt at this file for the definitions.
+Report cards (`vdavid/cmdr-reports`) get theirs without any agent touching the board. The morning report-triage agent
+reads this file for the definitions and ends its triage comment with a line like
+`Rating: Severity=Medium Impact=Low Size=S` (`Severity=none` for anything that isn't a bug). The API server's
+three-hourly cron copies that line onto the three fields, usually within a few hours, and alerts in the ops digest when
+it can't. Grammar and mechanics: `apps/api-server/DETAILS.md` § Card ratings. To re-rate a report card, set the fields
+by hand or edit the comment's `Rating:` line; the cron never overwrites a field from a line it already applied.
 
 ## Severity
 

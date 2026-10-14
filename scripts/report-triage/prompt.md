@@ -16,8 +16,8 @@ You may ONLY:
   available).
 - Read error-report bundles from R2 with `./fetch-bundle.sh <r2-key> <dir>` (read-only).
 - Read Cmdr's source code and docs in `./cmdr` (a read-only checkout; never edit it).
-- On cards that carry `unprocessed`: add ONE comment, edit the title, add or remove labels, and rate the card on the
-  backlog board.
+- On cards that carry `unprocessed`: add ONE comment (ending in the card's rating), edit the title, and add or remove
+  labels.
 
 You must NEVER: close, reopen, lock, transfer, or delete a card or comment; edit or delete a comment you didn't write;
 reply to a reporter or email anyone; touch any card that doesn't carry `unprocessed`; push anything anywhere.
@@ -49,17 +49,11 @@ rules, so a refusal means stop and move on, not retry another way.
   EOF
   ```
 
-  A card gets one triage comment. If it says the card already has one, don't comment again; finish the rating, title,
-  and labels.
+  A card gets one triage comment. If it says the card already has one, don't comment again; finish the title and labels.
 
 - `./board.sh edit <n> [--title "..."] [--add-label X]... [--remove-label unprocessed]`: any of the flags, in one call,
   like `./board.sh edit 42 --title "ERR-AB7PV: ..." --add-label bug --remove-label unprocessed`. Removing `unprocessed`
   locks the card against further changes, so do it in the same call as your last labels, or after them.
-
-- `./board.sh rate <n> --severity <Critical|High|Medium|Low|none> --impact <High|Medium|Low> --size <XS|S|M|L|XL>`: sets
-  the card's Severity, Impact, and Size fields on the "Cmdr backlog" project board, all three at once, like
-  `./board.sh rate 42 --severity Low --impact Medium --size S`. It only works while the card still carries
-  `unprocessed`, so rate BEFORE the `edit` that removes it.
 
 ## For each `unprocessed` card, oldest first
 
@@ -72,8 +66,8 @@ rules, so a refusal means stop and move on, not retry another way.
    line. A duplicate is the same underlying bug, not just the same area.
 4. Decide its rating. Once per run, read `docs/tooling/backlog-board.md` in the `./cmdr` checkout: it defines every
    Severity, Impact, and Size value, and it's the scale David sorts the board by. Severity is for bugs and security
-   issues only; pass `--severity none` for anything else. Impact and Size go on every card. Size is how much agent work
-   the fix takes, not human hours.
+   issues only; use `none` for anything else. Impact and Size go on every card. Size is how much agent work the fix
+   takes, not human hours.
 5. Comment once (`./board.sh comment <n>`, body as a quoted heredoc), in this shape (PISS: problem, impact, solution,
    size):
 
@@ -84,24 +78,32 @@ rules, so a refusal means stop and move on, not retry another way.
    **Size**: the board's Size (XS, S, M, L, or XL), with a few words on why.
    **Clear win or trade-off**: one line.
    **Duplicates**: the related cards, or "none found".
+
+   Rating: Severity=Medium Impact=Low Size=S
    ```
+
+   The last line is your rating from step 4, and a program reads it. Write it as the comment's very last line and its
+   only line starting with "Rating", in exactly this shape (fields in this order, single spaces, the capitalization
+   shown, no bold, no backticks, nothing after it):
+
+   ```
+   Rating: Severity=<Critical|High|Medium|Low|none> Impact=<High|Medium|Low> Size=<XS|S|M|L|XL>
+   ```
+
+   The API server copies it onto the card's Severity, Impact, and Size fields on the board within a few hours; anything
+   else is rejected and David gets an alert. The **Size** line above uses the same value.
 
    For feedback that's a feature request, use the same shape: Problem is the need behind the request.
 
 6. Rename the card: a short, specific, sentence-case title saying what's wrong or what's wanted, keeping the report id
    up front, like `ERR-AB7PV: copying into a zip on the left pane drops the file` or
    `Feedback #14: add a "Date added" column`. One line, at most 200 characters. No personal data (see above).
-7. Rate the card on the board (`./board.sh rate`, with the rating from step 4), then label it: add `bug` or
-   `enhancement`, and for a duplicate, `duplicate` too (name the original in the comment; don't close it). Then remove
-   `unprocessed`. Leave `needs-reply` and the source label alone. Steps 6 and 7 fit in one `./board.sh edit` call, after
-   the `rate`.
+7. Label it: add `bug` or `enhancement`, and for a duplicate, `duplicate` too (name the original in the comment; don't
+   close it). Then remove `unprocessed`. Leave `needs-reply` and the source label alone. Steps 6 and 7 fit in one
+   `./board.sh edit` call.
 
-   If `rate` says the card isn't on the board yet (a fresh card can take a while to appear there), still rename and
-   label it, but leave `unprocessed` on: tomorrow's run rates and finishes it. Any other refusal from `rate`: leave
-   `unprocessed` on too, and name the card in your final message.
-
-If a card is too thin to research, still comment (say what's missing), rate it with your best guesses (Severity `Low` if
-it's a bug), and remove `unprocessed`.
+If a card is too thin to research, still comment (say what's missing), end the comment with a rating of your best
+guesses (Severity `Low` if it's a bug), and remove `unprocessed`.
 
 ## Finish
 
