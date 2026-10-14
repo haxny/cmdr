@@ -1521,6 +1521,19 @@
     "forms": "a count of commits → 次提交 ({countText} 次提交); one commit as a thing → 這次提交; parent commit → 父提交",
     "sources": "catalog (提交 in 7 values: fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
   },
+  "git-tag": {
+    "chosen": "標籤",
+    "forms": "counted {countText} 個標籤; to tag → 加標籤, so a tagged commit → 已加標籤的提交",
+    "avoid": [
+      {
+        "form": "標記",
+        "why": "MS terminology’s generic marker sense; its git entry, Pro Git zh-TW, VS Code zh-Hant, and Gitea zh-TW all say 標籤"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 zh-TW (標籤, 列出你的標籤); MS terminology git sense (標籤); VS Code zh-Hant git extension (建立標籤, 標籤); Gitea zh-TW (標籤)",
+    "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
+  },
   "github-star": {
     "accept": ["星"],
     "chosen": "star",

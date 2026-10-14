@@ -1110,7 +1110,7 @@
   "@settings.fileExplorer.git.showVirtualGitPortal.label": {
     "sourceHash": "40d9fa1"
   },
-  "settings.fileExplorer.git.showVirtualGitPortal.description": "Khi vào `.git`, hiển thị các nhánh, thẻ, commit, và worktree dưới dạng thư mục ảo duyệt được. Tắt để xem nội dung `.git` thô thay vì vậy.",
+  "settings.fileExplorer.git.showVirtualGitPortal.description": "Khi vào `.git`, hiển thị các nhánh, tag, commit, và worktree dưới dạng thư mục ảo duyệt được. Tắt để xem nội dung `.git` thô thay vì vậy.",
   "@settings.fileExplorer.git.showVirtualGitPortal.description": {
     "sourceHash": "70eae72"
   },

@@ -1527,6 +1527,14 @@
     "confidence": "high",
     "sources": "en @key (keep git terms)"
   },
+  "git-tag": {
+    "chosen": "címke",
+    "accept": ["címk"],
+    "forms": "Tags → címkék; counted {countText} címke; tagged commit → megcímkézett commit",
+    "confidence": "high",
+    "sources": "MS terminology git sense (címke); Gitea hu-HU (Címkék, Címke neve); Hungarian git tutorials (git tag → címke létrehozása)",
+    "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
+  },
   "git-dirty": {
     "chosen": "piszkos állapot",
     "accept": ["piszkos", "módosít"],

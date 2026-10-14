@@ -1311,6 +1311,14 @@
       }
     ]
   },
+  "git-tag": {
+    "chosen": "etiqueta",
+    "accept": ["etiquetas", "etiquetado"],
+    "forms": "feminine (la etiqueta); tagged commit → commit etiquetado",
+    "confidence": "high",
+    "sources": "Pro Git 2 es (Etiquetado, Listar tus etiquetas); MS terminology git sense (etiqueta); VS Code es git extension (Crear etiqueta, Etiquetas); Gitea es-ES (Etiquetas)",
+    "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
+  },
   "github-star": {
     "chosen": "estrella",
     "forms": "Dale una estrella al repo en GitHub; the GitHub button is Estrella",

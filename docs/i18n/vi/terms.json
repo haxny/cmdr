@@ -1209,6 +1209,18 @@
     "confidence": "tentative",
     "sources": "dev loanword; no clean native UI source"
   },
+  "git-tag": {
+    "chosen": "tag",
+    "forms": "kept Latin and lowercase like commit and worktree; tagged commit → commit được gắn tag",
+    "avoid": [
+      {
+        "form": "thẻ",
+        "why": "the Finder color tag’s word (tag); Vietnamese git material keeps tag"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 1 vi (Liệt kê tag, Thêm tag mới); Viblo, ITviec, and DataCamp vi git tutorials (Git tag, đánh dấu commit); MS terminology has no vi git entry"
+  },
   "github-star": {
     "accept": ["gắn sao"],
     "avoid": [

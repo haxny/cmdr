@@ -1279,6 +1279,13 @@
     "forms": "incheckningen, incheckningar; parent commit → föräldraincheckningen",
     "sources": "MS terminology commit → incheckning / checka in; catalog fileExplorer.git.size.commits, tooltip.pinnedCommit"
   },
+  "git-tag": {
+    "chosen": "tagg",
+    "accept": ["taggar", "taggad"],
+    "forms": "en tagg, taggar; tagged commit → taggad incheckning",
+    "confidence": "high",
+    "sources": "Pro Git 2 sv (Att tagga, Lista taggar); MS terminology git sense (tagg); Gitea sv-SE (Taggar, Taggnamn)"
+  },
   "overall": {
     "chosen": "Totalt",
     "confidence": "high",

@@ -7,8 +7,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
-- The new `git-tag` concept has no ruling in any locale yet; vi and zh/zh-Hant reuse their Finder-tag word for it
-  (`fileExplorer.git.portalIntro.what`). A translator pass should settle it per language.
 - `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
   (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
 

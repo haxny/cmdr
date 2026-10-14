@@ -1057,7 +1057,7 @@
   "@fileExplorer.git.tooltip.aheadBehind": {
     "sourceHash": "6a24049"
   },
-  "fileExplorer.git.tooltip.taggedCommit": "被标记的提交 {id}",
+  "fileExplorer.git.tooltip.taggedCommit": "已打标签的提交 {id}",
   "@fileExplorer.git.tooltip.taggedCommit": {
     "sourceHash": "39e11d5"
   },

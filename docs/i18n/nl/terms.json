@@ -1300,6 +1300,19 @@
     "forms": "pl. commits; de commit; bovenliggende commit (parent commit)",
     "sources": "Dutch git community usage; catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
   },
+  "git-tag": {
+    "chosen": "tag",
+    "accept": ["tags", "getagd"],
+    "forms": "de tag, pl. tags; tagged commit → getagde commit",
+    "avoid": [
+      {
+        "form": "label",
+        "why": "Gitea nl’s outlier; MS terminology’s git entry and Pro Git nl keep tag"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 nl (Taggen, tags); MS terminology git sense (tag); Gitea nl-NL (Tagnaam, though its list says Labels)"
+  },
   "github-star": {
     "accept": ["stars"],
     "avoid": [

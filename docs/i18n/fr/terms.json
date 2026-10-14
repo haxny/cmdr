@@ -1376,6 +1376,23 @@
     "forms": "masculine (le commit parent); English revision → révision (Double Commander’s About box: Commit / Révision)",
     "sources": "catalog (fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit); Double Commander doublecmd.po"
   },
+  "git-tag": {
+    "chosen": "étiquette",
+    "accept": ["étiquettes", "étiqueté"],
+    "forms": "feminine (une étiquette, les étiquettes); tagged commit → commit étiqueté",
+    "avoid": [
+      {
+        "form": "tag",
+        "why": "the Finder color tag’s word (tag); every localized git source says étiquette"
+      },
+      {
+        "form": "balise",
+        "why": "MS terminology’s git entry, but it reads as a markup tag; Pro Git, VS Code, and Gitea say étiquette"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 fr (Étiquetage, Lister vos étiquettes); VS Code fr git extension (Créer une étiquette, Étiquette sur {0}); Gitea fr-FR (Étiquettes); MS terminology git sense says balise (outlier)"
+  },
   "github-issue": {
     "chosen": "ticket",
     "confidence": "tentative",

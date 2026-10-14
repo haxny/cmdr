@@ -1337,6 +1337,19 @@
     "forms": "counted {countText} 次提交; this commit 这次提交; the parent commit 父提交",
     "sources": "MS terminology (commit, code-repository sense → 提交); catalog"
   },
+  "git-tag": {
+    "chosen": "标签",
+    "forms": "counted {countText} 个标签; to tag → 打标签, so a tagged commit → 已打标签的提交",
+    "avoid": [
+      {
+        "form": "标记",
+        "why": "VS Code zh-Hans mixes it in, but Pro Git, MS terminology’s git entry, and Gitea say 标签; 标记 is also mark"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 zh (打标签, 列出标签); MS terminology git sense (标签); Gitea zh-CN (Git 标签); VS Code zh-Hans mixes 标记 and 标签",
+    "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
+  },
   "github-star": {
     "avoid": [
       {

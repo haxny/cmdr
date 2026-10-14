@@ -1249,6 +1249,19 @@
     "confidence": "high",
     "sources": "shipped pt catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit)"
   },
+  "git-tag": {
+    "chosen": "tag",
+    "accept": ["tags", "marcad"],
+    "forms": "feminine (a tag, as tags); the verb to tag → marcar, so a tagged commit → commit marcado (Pro Git pt-BR: marcar (tag))",
+    "avoid": [
+      {
+        "form": "etiqueta",
+        "why": "the Finder color tag’s word (tag); git users see tag"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 pt-BR (Criando Tags, Listando suas tags); MS terminology git sense (tag); Gitea pt-BR (Nome da tag); VS Code pt-BR mixes Marca and Tag"
+  },
   "github-star": {
     "chosen": "Adicionar aos favoritos",
     "accept": ["estrelas", "aos favoritos"],
@@ -2775,11 +2788,7 @@
       }
     ],
     "confidence": "confirmed",
-    "sources": "macOS Finder pt-BR (TG5, TG6)",
-    "exceptions": {
-      "fileExplorer.git.size.tags": "A git tag keeps the git term tag; etiqueta is only the Finder color tag.",
-      "fileExplorer.git.tooltip.tags": "A git tag keeps the git term tag; etiqueta is only the Finder color tag."
-    }
+    "sources": "macOS Finder pt-BR (TG5, TG6)"
   },
   "tail": {
     "chosen": "acompanhar",

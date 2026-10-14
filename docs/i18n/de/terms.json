@@ -3502,6 +3502,19 @@
     ],
     "sources": "Microsoft Terminology DE: commit → Commit (m.); catalog already uses Commit/Commits in every git string"
   },
+  "git-tag": {
+    "chosen": "Tag",
+    "accept": ["Tags", "getaggt"],
+    "forms": "der Tag (m.), plural Tags; tagged commit → getaggter Commit",
+    "avoid": [
+      {
+        "form": "Markierung",
+        "why": "MS terminology’s generic marker sense; its git entry, Pro Git, and VS Code all say Tag"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 de („Taggen“, „Tags auflisten“); MS terminology git sense (Tag); VS Code de git extension (Tag erstellen, Tags); Gitea de-DE (Tags)"
+  },
   "on-disk-size": {
     "chosen": "Auf dem Datenträger",
     "confidence": "high",

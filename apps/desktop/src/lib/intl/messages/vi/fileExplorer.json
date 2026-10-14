@@ -805,7 +805,7 @@
   "@fileExplorer.readOnly.gitPortalTitle": {
     "sourceHash": "d4bd9c1"
   },
-  "fileExplorer.readOnly.gitPortalMessage": "Các nhánh, thẻ và commit là ảnh chụp lịch sử git của bạn, nên bạn có thể duyệt và sao chép từ đó, nhưng không thay đổi được.",
+  "fileExplorer.readOnly.gitPortalMessage": "Các nhánh, tag và commit là ảnh chụp lịch sử git của bạn, nên bạn có thể duyệt và sao chép từ đó, nhưng không thay đổi được.",
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
@@ -817,7 +817,7 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Bạn có thể duyệt các nhánh, thẻ, worktree và commit cũ y như một thư mục.",
+  "fileExplorer.git.portalIntro.what": "Bạn có thể duyệt các nhánh, tag, worktree và commit cũ y như một thư mục.",
   "@fileExplorer.git.portalIntro.what": {
     "sourceHash": "440fe11"
   },
@@ -1002,9 +1002,10 @@
   "@fileExplorer.git.size.branches": {
     "sourceHash": "ea4d085"
   },
-  "fileExplorer.git.size.tags": "{count, plural, other {{countText} thẻ}}",
+  "fileExplorer.git.size.tags": "{count, plural, other {{countText} tag}}",
   "@fileExplorer.git.size.tags": {
-    "sourceHash": "f9c07cd"
+    "sourceHash": "f9c07cd",
+    "sameAsSourceJustification": "\"Tag\" is the git loanword Vietnamese developers use (Pro Git 1 vi: \"Liệt kê tag\", \"Thêm tag mới\"; Viblo and ITviec tutorials), kept like commit and worktree; \"thẻ\" is the Finder color tag. Vietnamese has no plural form, so the count row reads like English's singular."
   },
   "fileExplorer.git.size.commits": "{count, plural, other {{countText} commit}}",
   "@fileExplorer.git.size.commits": {
@@ -1040,7 +1041,7 @@
   "@fileExplorer.git.tooltip.branches": {
     "sourceHash": "a3372d8"
   },
-  "fileExplorer.git.tooltip.tags": "{count, plural, other {{countText} thẻ trong kho này}}",
+  "fileExplorer.git.tooltip.tags": "{count, plural, other {{countText} tag trong kho này}}",
   "@fileExplorer.git.tooltip.tags": {
     "sourceHash": "cac35ae"
   },
@@ -1060,7 +1061,7 @@
   "@fileExplorer.git.tooltip.aheadBehind": {
     "sourceHash": "6a24049"
   },
-  "fileExplorer.git.tooltip.taggedCommit": "Commit được gắn thẻ {id}",
+  "fileExplorer.git.tooltip.taggedCommit": "Commit được gắn tag {id}",
   "@fileExplorer.git.tooltip.taggedCommit": {
     "sourceHash": "39e11d5"
   },

@@ -1117,7 +1117,7 @@
   "@settings.fileExplorer.git.showVirtualGitPortal.label": {
     "sourceHash": "40d9fa1"
   },
-  "settings.fileExplorer.git.showVirtualGitPortal.description": "À l’entrée dans `.git`, affiche les branches, tags, commits et worktrees comme des dossiers virtuels navigables. Désactivez pour voir plutôt le contenu brut de `.git`.",
+  "settings.fileExplorer.git.showVirtualGitPortal.description": "À l’entrée dans `.git`, affiche les branches, étiquettes, commits et worktrees comme des dossiers virtuels navigables. Désactivez pour voir plutôt le contenu brut de `.git`.",
   "@settings.fileExplorer.git.showVirtualGitPortal.description": {
     "sourceHash": "70eae72"
   },

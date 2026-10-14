@@ -1370,7 +1370,7 @@
   "git-tag": {
     "distinct": ["tag", "git-branch", "git-commit"],
     "en": "tag (git)",
-    "match": ["git tag", "git tags", "branches, tags"],
+    "match": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
     "sense": "A git tag (a named pointer to a commit), browsable in the .git portal. Not a Finder color tag."
   },
   "github-issue": {
@@ -3263,7 +3263,7 @@
     "distinct": ["tab", "git-tag"],
     "en": "tag",
     "match": ["tag", "tags"],
-    "notMatch": ["git tag", "git tags", "branches, tags"],
+    "notMatch": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
     "sense": "A Finder color tag on a file."
   },
   "tail": {

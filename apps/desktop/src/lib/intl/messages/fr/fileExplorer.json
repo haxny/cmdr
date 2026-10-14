@@ -805,7 +805,7 @@
   "@fileExplorer.readOnly.gitPortalTitle": {
     "sourceHash": "d4bd9c1"
   },
-  "fileExplorer.readOnly.gitPortalMessage": "Les branches, tags et commits sont des instantanés de votre historique git : vous pouvez les parcourir et en copier des fichiers, mais pas les modifier.",
+  "fileExplorer.readOnly.gitPortalMessage": "Les branches, étiquettes et commits sont des instantanés de votre historique git : vous pouvez les parcourir et en copier des fichiers, mais pas les modifier.",
   "@fileExplorer.readOnly.gitPortalMessage": {
     "sourceHash": "87bc79d"
   },
@@ -817,7 +817,7 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Vous pouvez parcourir vos branches, tags, worktrees et anciens commits comme un dossier.",
+  "fileExplorer.git.portalIntro.what": "Vous pouvez parcourir vos branches, étiquettes, worktrees et anciens commits comme un dossier.",
   "@fileExplorer.git.portalIntro.what": {
     "sourceHash": "440fe11"
   },
@@ -1003,7 +1003,7 @@
   "@fileExplorer.git.size.branches": {
     "sourceHash": "ea4d085"
   },
-  "fileExplorer.git.size.tags": "{count, plural, one {{countText} tag} many {{countText} tags} other {{countText} tags}}",
+  "fileExplorer.git.size.tags": "{count, plural, one {{countText} étiquette} many {{countText} étiquettes} other {{countText} étiquettes}}",
   "@fileExplorer.git.size.tags": {
     "sourceHash": "f9c07cd",
     "sameAsSourceJustification": "\"Tag\" is the loanword French developers use, and the locale already ships it. The locale already ships this word untranslated for the same feature: the \"Show virtual git portal\" setting names the six categories with it."
@@ -1042,7 +1042,7 @@
   "@fileExplorer.git.tooltip.branches": {
     "sourceHash": "a3372d8"
   },
-  "fileExplorer.git.tooltip.tags": "{count, plural, one {{countText} tag dans ce dépôt} many {{countText} tags dans ce dépôt} other {{countText} tags dans ce dépôt}}",
+  "fileExplorer.git.tooltip.tags": "{count, plural, one {{countText} étiquette dans ce dépôt} many {{countText} étiquettes dans ce dépôt} other {{countText} étiquettes dans ce dépôt}}",
   "@fileExplorer.git.tooltip.tags": {
     "sourceHash": "cac35ae"
   },
@@ -1062,7 +1062,7 @@
   "@fileExplorer.git.tooltip.aheadBehind": {
     "sourceHash": "6a24049"
   },
-  "fileExplorer.git.tooltip.taggedCommit": "Commit taggé {id}",
+  "fileExplorer.git.tooltip.taggedCommit": "Commit étiqueté {id}",
   "@fileExplorer.git.tooltip.taggedCommit": {
     "sourceHash": "39e11d5"
   },

@@ -2026,6 +2026,19 @@
     "sources": "MS terminology (commit → фиксация, зафиксировать); Double Commander (Commit → Фиксация). коммит is the Russian developer norm for the snapshot itself",
     "decision": "Git words"
   },
+  "git-tag": {
+    "chosen": "тег",
+    "forms": "pl. {countText} тег / тега / тегов; tagged commit → коммит с тегом",
+    "avoid": [
+      {
+        "form": "метка",
+        "why": "MS terminology’s git entry, but Pro Git ru, VS Code, and Gitea all say тег"
+      }
+    ],
+    "confidence": "high",
+    "sources": "Pro Git 2 ru (Работа с тегами); VS Code ru git extension (Создать тег, Теги); Gitea ru-RU (Теги); MS terminology git sense says метка (outlier)",
+    "decision": "Git words"
+  },
   "git-dirty": {
     "chosen": "незафиксированные изменения",
     "accept": ["незафиксирован"],
