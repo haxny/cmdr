@@ -817,13 +817,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Você pode navegar pelos seus branches antigos, tags, worktrees e revisões antigas como em uma pasta.",
+  "fileExplorer.git.portalIntro.what": "Você pode navegar pelos seus branches, tags, worktrees e commits antigos como em uma pasta.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
-  "fileExplorer.git.portalIntro.where": "Você encontra isso na pasta oculta <code>.git</code>.",
+  "fileExplorer.git.portalIntro.where": "Tudo isso fica na pasta oculta <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Dispensar",
   "@fileExplorer.git.portalIntro.dismiss": {

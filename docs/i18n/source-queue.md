@@ -7,11 +7,8 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
-- `fileExplorer.git.portalIntro.what`: "your old branches, tags, worktrees, and old revisions" says "old" twice, and
-  every translator read the first one as a slip; "revisions" also differs from "commits" everywhere else. Confirm with
-  David.
-- `fileExplorer.git.portalIntro.where`: "You can find it" has no clear antecedent after a list; "You'll find them all
-  in…" would help pronoun-marking languages. `goToGitDir` / `showHidden`: give a width budget or a screenshot.
+- The new `git-tag` concept has no ruling in any locale yet; vi and zh/zh-Hant reuse their Finder-tag word for it
+  (`fileExplorer.git.portalIntro.what`). A translator pass should settle it per language.
 - `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
   (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
 

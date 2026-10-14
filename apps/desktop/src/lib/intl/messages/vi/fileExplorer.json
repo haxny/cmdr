@@ -817,13 +817,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Bạn có thể duyệt các nhánh cũ, thẻ, worktree và phiên bản cũ y như một thư mục.",
+  "fileExplorer.git.portalIntro.what": "Bạn có thể duyệt các nhánh, thẻ, worktree và commit cũ y như một thư mục.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
-  "fileExplorer.git.portalIntro.where": "Tất cả nằm trong thư mục ẩn <code>.git</code>.",
+  "fileExplorer.git.portalIntro.where": "Bạn sẽ thấy chúng trong thư mục ẩn <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Bỏ qua",
   "@fileExplorer.git.portalIntro.dismiss": {

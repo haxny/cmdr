@@ -816,13 +816,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "A régi ágakat, címkéket, worktree-eket és régi revíziókat pont úgy böngészheted, mint egy mappát.",
+  "fileExplorer.git.portalIntro.what": "Az ágakat, címkéket, worktree-eket és régi commitokat pont úgy böngészheted, mint egy mappát.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
-  "fileExplorer.git.portalIntro.where": "A rejtett <code>.git</code> mappában találod.",
+  "fileExplorer.git.portalIntro.where": "A rejtett <code>.git</code> mappában találod őket.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Elvetés",
   "@fileExplorer.git.portalIntro.dismiss": {

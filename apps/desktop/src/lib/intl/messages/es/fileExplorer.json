@@ -817,13 +817,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Puedes explorar tus ramas antiguas, etiquetas, worktrees y versiones antiguas como si fueran carpetas.",
+  "fileExplorer.git.portalIntro.what": "Puedes explorar tus ramas, etiquetas, worktrees y commits antiguos como si fueran carpetas.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
-  "fileExplorer.git.portalIntro.where": "Lo encontrarás todo en la carpeta oculta <code>.git</code>.",
+  "fileExplorer.git.portalIntro.where": "Los encontrarás en la carpeta oculta <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Descartar",
   "@fileExplorer.git.portalIntro.dismiss": {

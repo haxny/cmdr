@@ -815,13 +815,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "你的舊分支、標籤、worktree 和舊版本，都能像資料夾一樣瀏覽。",
+  "fileExplorer.git.portalIntro.what": "你的分支、標籤、worktree 和歷史提交，都能像資料夾一樣瀏覽。",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
   "fileExplorer.git.portalIntro.where": "它們都在隱藏的 <code>.git</code> 資料夾裡。",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "關閉",
   "@fileExplorer.git.portalIntro.dismiss": {

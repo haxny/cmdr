@@ -1196,13 +1196,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "description": "Bold first line of a one-time notification shown the first time the user opens the top folder of a git repository (a code project tracked by the git version-control tool). Playful, warm tone. \"git\" is a product name: don't translate it."
   },
-  "fileExplorer.git.portalIntro.what": "You can browse your old branches, tags, worktrees, and old revisions just like a folder.",
+  "fileExplorer.git.portalIntro.what": "You can browse your branches, tags, worktrees, and old commits just like a folder.",
   "@fileExplorer.git.portalIntro.what": {
-    "description": "Second line of the one-time git notification. Branches, tags, worktrees, and revisions are git terms; use the terms your language's git community uses (often left in English)."
+    "description": "Second line of the one-time git notification. Branches, tags, worktrees, and commits are git terms (a tag here is a git tag, not a Finder color tag); use the terms your language's git community uses (often left in English). \"old\" applies to commits only: past snapshots of the project."
   },
-  "fileExplorer.git.portalIntro.where": "You can find it in the <code>.git</code> (hidden) folder.",
+  "fileExplorer.git.portalIntro.where": "You can find them in the <code>.git</code> (hidden) folder.",
   "@fileExplorer.git.portalIntro.where": {
-    "description": "Third line of the one-time git notification. The <code>…</code> tags wrap the folder name .git, shown in a code font; keep the tags and never translate \".git\". \"hidden\": the folder is hidden unless the user shows hidden files."
+    "description": "Third line of the one-time git notification. \"them\" = everything the previous line lists (branches, tags, worktrees, and commits). The <code>…</code> tags wrap the folder name .git, shown in a code font; keep the tags and never translate \".git\". \"hidden\": the folder is hidden unless the user shows hidden files."
   },
   "fileExplorer.git.portalIntro.dismiss": "Dismiss",
   "@fileExplorer.git.portalIntro.dismiss": {

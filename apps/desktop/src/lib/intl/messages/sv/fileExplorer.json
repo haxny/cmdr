@@ -817,13 +817,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Du kan bläddra i dina gamla grenar, taggar, worktrees och gamla versioner precis som i en mapp.",
+  "fileExplorer.git.portalIntro.what": "Du kan bläddra i dina grenar, taggar, worktrees och gamla incheckningar precis som i en mapp.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
-  "fileExplorer.git.portalIntro.where": "Du hittar allt det här i den dolda mappen <code>.git</code>.",
+  "fileExplorer.git.portalIntro.where": "Du hittar dem i den dolda mappen <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Avfärda",
   "@fileExplorer.git.portalIntro.dismiss": {

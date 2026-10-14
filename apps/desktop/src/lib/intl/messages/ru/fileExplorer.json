@@ -816,13 +816,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Старые ветки, теги, worktree и прошлые ревизии можно просматривать как обычную папку.",
+  "fileExplorer.git.portalIntro.what": "Ветки, теги, worktree и старые коммиты можно просматривать как обычную папку.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
   "fileExplorer.git.portalIntro.where": "Найти их можно в скрытой папке <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Закрыть",
   "@fileExplorer.git.portalIntro.dismiss": {

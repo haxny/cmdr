@@ -817,13 +817,13 @@
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "Du kannst deine alten Branches, Tags, Worktrees und alten Revisionen genau wie einen Ordner durchsehen.",
+  "fileExplorer.git.portalIntro.what": "Du kannst deine Branches, Tags, Worktrees und alten Commits genau wie einen Ordner durchsehen.",
   "@fileExplorer.git.portalIntro.what": {
-    "sourceHash": "707011b"
+    "sourceHash": "440fe11"
   },
   "fileExplorer.git.portalIntro.where": "Du findest sie im verborgenen Ordner <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
-    "sourceHash": "4b88d8f"
+    "sourceHash": "ae450f3"
   },
   "fileExplorer.git.portalIntro.dismiss": "Schließen",
   "@fileExplorer.git.portalIntro.dismiss": {
