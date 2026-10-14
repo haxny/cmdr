@@ -276,14 +276,14 @@ filter), and everything the pane reads (count, rows, selection, diffs) is the fi
   once-ever toast (`quick-filter-intro.ts`, stamped on the way up) saying what happened, that Esc brings every file
   back, and offering Jump or the Settings row.
 
-**Active-jump key widening.** `isTypeToJumpChar` (letters/digits) STARTS a jump. Once one is active (`isJumpActive()` —
-buffer non-empty, before the reset-timeout empties it), the intercept widens to `isPrintableJumpContinuation` (any
-single printable key, Shift allowed), so `-`, Space, etc. extend the buffer instead of firing their own single-char
-command (deselect, toggle-selection). After the reset timeout the buffer empties and a lone `-` is a command again. Both
-the DOM intercept (`DualPaneExplorer.handleKeyDown`) and the Quick Look panel mirror (`pane-commands.ts`
-`routePanelKey`) apply the same widening — landmine L9, keep them identical. These two class-of-key matchers are the one
-exception to the whole-combo rule (`cmdr/no-raw-key-match`, parent `src/CLAUDE.md`): they classify a key, they don't
-test a combo.
+**Active-jump key widening.** `isTypeToJumpChar` (letters/digits in any script, `\p{L}\p{N}`) STARTS a jump. Once one is
+active (`isJumpActive()` — buffer non-empty, before the reset-timeout empties it), the intercept widens to
+`isPrintableJumpContinuation` (any single printable key, Shift allowed), so `-`, Space, etc. extend the buffer instead
+of firing their own single-char command (deselect, toggle-selection). After the reset timeout the buffer empties and a
+lone `-` is a command again. Both the DOM intercept (`DualPaneExplorer.handleKeyDown`) and the Quick Look panel mirror
+(`pane-commands.ts` `routePanelKey`) apply the same widening — landmine L9, keep them identical. These two class-of-key
+matchers are the one exception to the whole-combo rule (`cmdr/no-raw-key-match`, parent `src/CLAUDE.md`): they classify
+a key, they don't test a combo.
 
 **Open / parent keys are FilePane-local, not registry-dispatched.** `handleOpenOrParentKey` (in `FilePane`, above the
 view-mode split so every view inherits it) handles Enter/`⌘↓` → open and Backspace/`⌘↑` → parent. The `⌘`-variants are

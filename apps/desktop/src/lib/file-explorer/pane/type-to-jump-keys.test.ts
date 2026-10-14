@@ -30,6 +30,15 @@ describe('routeTypingKey in filter mode', () => {
     expect(p.appendQuickFilter).toHaveBeenCalledWith('a')
   })
 
+  // Regression anchor: cmdr-reports#56, a Russian layout couldn't start the filter at all.
+  it('starts the filter on a letter or digit from any script', () => {
+    for (const k of ['ф', 'Ж', 'й', 'ё', 'é', 'ß', 'α', 'あ', '中', '٣']) {
+      const p = pane('filter')
+      expect(routeTypingKey(p, key(k))).toBe(true)
+      expect(p.appendQuickFilter).toHaveBeenCalledWith(k)
+    }
+  })
+
   it('leaves punctuation, Backspace, and Esc alone while no filter is on', () => {
     const p = pane('filter')
     expect(routeTypingKey(p, key('-'))).toBe(false)
@@ -75,5 +84,13 @@ describe('routeTypingKey in jump mode', () => {
     expect(routeTypingKey(p, key('ArrowDown'))).toBe(false)
     expect(p.clearJumpState).toHaveBeenCalled()
     expect(p.appendQuickFilter).not.toHaveBeenCalled()
+  })
+
+  it('starts a jump on a non-Latin letter, and still leaves punctuation to its command', () => {
+    const p = pane('jump')
+    expect(routeTypingKey(p, key('д'))).toBe(true)
+    expect(p.handleJumpKeystroke).toHaveBeenCalledWith('д')
+    expect(routeTypingKey(p, key('-'))).toBe(false)
+    expect(routeTypingKey(p, key(' '))).toBe(false)
   })
 })

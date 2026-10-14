@@ -11,11 +11,15 @@
  * ⌘/⌃/⌥, so no modifier combo can be swallowed as typing.
  */
 
-/** True if a printable letter or digit with no command-modifier and not a fn key. */
+/**
+ * True if a letter or digit in ANY script (Cyrillic, Greek, CJK, …) with no
+ * command-modifier. Named keys (`Enter`, `Dead`, `F5`) are words, so they never
+ * match the one-character pattern. A Latin-only test here once left every
+ * non-Latin layout unable to jump or filter (cmdr-reports#56).
+ */
 export function isTypeToJumpChar(e: KeyboardEvent): boolean {
   if (e.metaKey || e.ctrlKey || e.altKey) return false
-  if (e.key.length !== 1) return false
-  return /^[a-zA-Z0-9]$/.test(e.key)
+  return /^[\p{L}\p{N}]$/u.test(e.key)
 }
 
 /**

@@ -38,6 +38,14 @@ fn no_matches_returns_none() {
 }
 
 #[test]
+fn a_cyrillic_query_matches_ignoring_case_and_unicode_form() {
+    let entries = vec![entry("README.md"), entry("Документы"), entry("Мои\u{306} файл.txt")];
+    assert_eq!(find_first_match(rows(&entries, true), "док"), Some(1));
+    // A composed "й" finds the name holding it decomposed (и + U+0306).
+    assert_eq!(find_first_match(rows(&entries, true), "мой"), Some(2));
+}
+
+#[test]
 fn single_match_returns_its_index() {
     let entries = vec![entry("README.md"), entry("AGENTS.md"), entry("Cargo.toml")];
     // Only "Cargo.toml" contains the subsequence "crg" / "cargo".

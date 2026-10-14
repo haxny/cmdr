@@ -39,6 +39,16 @@ fn a_pattern_ignores_unicode_form() {
 }
 
 #[test]
+fn a_cyrillic_pattern_ignores_case_and_unicode_form() {
+    assert!(matches("отч", "Годовой Отчёт.pdf"));
+    assert!(matches("ОТЧЁТ", "годовой отчёт.pdf"));
+    // Decomposed "й" (и + U+0306) and "ё" (е + U+0308) in the name, composed in the pattern.
+    assert!(matches("мой", "Мои\u{306} файл.txt"));
+    assert!(matches("отчё", "Отче\u{308}т.pdf"));
+    assert!(!matches("отчё", "Отчет.pdf"));
+}
+
+#[test]
 fn wildcards_stand_for_any_run_and_any_one_character() {
     assert!(matches("*.pdf", "report.pdf"));
     assert!(matches("r*t", "Annual report.pdf"));
