@@ -72,6 +72,11 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682",
+    "sameAsSourceJustification": "Dutch writes the acronym AI for artificial intelligence, as the catalog does (terms.json ai-feature: AI-functies; queryUi.empty.tipAi AI-zoekopdracht)."
+  },
   "queryUi.empty.tip": "Tip: <newKey>⌘N</newKey> begint opnieuw, <historyKey>⌘H</historyKey> toont recente zoekopdrachten.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

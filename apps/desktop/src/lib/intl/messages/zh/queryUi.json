@@ -71,6 +71,11 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682",
+    "sameAsSourceJustification": "Simplified Chinese UI writes AI for artificial intelligence, as the catalog does (terms.json ai-feature: AI 功能; search mode label AI; queryUi.empty.tipAi AI 搜索)."
+  },
   "queryUi.empty.tip": "提示：<newKey>⌘N</newKey> 重新开始，<historyKey>⌘H</historyKey> 显示最近的搜索。",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

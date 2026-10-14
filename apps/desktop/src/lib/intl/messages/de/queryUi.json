@@ -72,6 +72,10 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "KI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682"
+  },
   "queryUi.empty.tip": "Tipp: <newKey>⌘N</newKey> startet neu, <historyKey>⌘H</historyKey> zeigt letzte Suchen.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

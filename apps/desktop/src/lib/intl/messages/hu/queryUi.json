@@ -72,6 +72,11 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682",
+    "sameAsSourceJustification": "Hungarian writes the acronym AI for artificial intelligence, as the catalog does (terms.json ai-feature: AI-funkciók; queryUi.empty.tipAi AI-keresést)."
+  },
   "queryUi.empty.tip": "Tipp: a <newKey>⌘N</newKey> új keresést indít, a <historyKey>⌘H</historyKey> a legutóbbi kereséseket mutatja.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

@@ -72,6 +72,10 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "IA",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682"
+  },
   "queryUi.empty.tip": "Consejo: <newKey>⌘N</newKey> empieza de cero, <historyKey>⌘H</historyKey> muestra las búsquedas recientes.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

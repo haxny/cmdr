@@ -72,6 +72,10 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "ИИ",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682"
+  },
   "queryUi.empty.tip": "Совет: <newKey>⌘N</newKey> начинает новый поиск, <historyKey>⌘H</historyKey> показывает недавние запросы.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

@@ -72,6 +72,11 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682",
+    "sameAsSourceJustification": "Vietnamese tech UI keeps the acronym AI verbatim, as the catalog does (terms.json ai-feature: AI; queryUi.empty.tipAi tìm kiếm AI)."
+  },
   "queryUi.empty.tip": "Mẹo: <newKey>⌘N</newKey> bắt đầu lại, <historyKey>⌘H</historyKey> hiển thị các tìm kiếm gần đây.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"

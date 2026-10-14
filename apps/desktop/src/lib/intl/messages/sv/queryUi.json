@@ -72,6 +72,11 @@
   "@queryUi.empty.tryLine": {
     "sourceHash": "469fb7f"
   },
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "sourceHash": "11fb682",
+    "sameAsSourceJustification": "Swedish writes the acronym AI for artificial intelligence, as the catalog does (terms.json ai-feature: AI-funktioner; queryUi.empty.tipAi AI-sökning)."
+  },
   "queryUi.empty.tip": "Tips: <newKey>⌘N</newKey> börjar om, <historyKey>⌘H</historyKey> visar senaste sökningarna.",
   "@queryUi.empty.tip": {
     "sourceHash": "6d00976"
