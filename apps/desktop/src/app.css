@@ -359,8 +359,10 @@
   /* === Size tier colors ===
      * Three palettes selectable via the `appearance.sizeColors` setting,
      * applied as a `data-size-colors` attribute on `<html>` by the settings
-     * applier. The default block here is the Rainbow palette so first paint
-     * matches the default setting value.
+     * applier. The tokens declared here are the Rainbow palette; the setting
+     * defaults to None, applied by the `[data-size-colors='none']` block below.
+     * No flash at startup: the applier sets the attribute before a listing
+     * paints any sizes (checked by eye, 2026-10-14).
      *
      * Light mode uses saturated dark hues (no gray mix) so tiers stay visually
      * distinct against white surfaces. Every value clears WCAG AA against the
@@ -383,8 +385,8 @@
   /* === Date age tier colors ===
      * Three palettes selectable via the `appearance.dateColors` setting,
      * applied as a `data-date-colors` attribute on `<html>` by the settings
-     * applier. The default block here is the App palette (matches the default
-     * setting value, so first paint is correct even before the applier runs).
+     * applier. The tokens declared here are the App palette; the setting
+     * defaults to None, applied by the `[data-date-colors='none']` block below.
      * Four tiers (fresh / recent / aging / old) applied per date component
      * (year, month, day, time) by the formatter in
      * `lib/settings/format-utils.ts`.
