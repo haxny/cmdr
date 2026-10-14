@@ -1741,6 +1741,9 @@ is derived from the PATH while all I/O routing happens in `VolumeManager::resolv
   `--color-git-portal-text`.
 - **`effectiveVolumeRoot` needs no branch.** The portal volume's root is the repo's `.git`, which is always a strict
   ancestor of a portal path, so `..` shows and `navigateToParent` walks back out by plain path arithmetic.
+- **Size sort is refused on a `commits/` list past 5,000 commits**, with an info toast: most rows there never get a
+  files-changed count to sort by. `sort-operations.ts::refusesSizeSort` is the one choke point for keys, header clicks,
+  and MCP; it reads the backend's answer through `git/commit-count-fill.ts::commitSizeSortLimit`.
 
 Backend routing, the overlay that decorates the `.git/` root listing, and the repo cache: `crates/cmdr-git/DETAILS.md`
 and `apps/desktop/src-tauri/src/file_system/git/DETAILS.md`.
