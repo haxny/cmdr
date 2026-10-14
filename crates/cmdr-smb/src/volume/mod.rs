@@ -82,12 +82,12 @@ const BACKEND: BackendName = "smb";
 ///
 /// # Thread safety & concurrency
 ///
-/// The smb2 `SmbClient` is protected by a `tokio::sync::Mutex` because every
-/// `SmbClient` method takes `&mut self`. The `Tree` lives in a separate
-/// `tokio::sync::RwLock<Option<Arc<Tree>>>` so the hot read/write paths can
-/// hold an `Arc<Tree>` without touching the client mutex. Concurrent copies
-/// on a single volume briefly lock the client to clone its `Connection` (a
-/// cheap `Arc::clone`), release the lock, and drive `Tree::download` /
+/// The smb2 `SmbClient` and the share's `Tree` sit together behind one
+/// `tokio::sync::Mutex` (a [`session::MainSession`]) because every `SmbClient`
+/// method takes `&mut self`, and because a tree only works on the connection it
+/// was connected on. Concurrent copies on a single volume briefly lock the
+/// session to clone its `Connection` (a cheap `Arc::clone`) and its
+/// `Arc<Tree>`, release the lock, and drive `Tree::download` /
 /// `Tree::read_file_compound_sized` / `Tree::write_file_compound` on the cloned
 /// `Connection`, so N downloads run pipelined on one SMB session instead of
 /// serializing through the mutex. The `watcher_cancel` field uses
@@ -227,22 +227,19 @@ struct SmbVolumeInner {
     /// `attempt_reconnect` may update the credentials in place after a fresh
     /// secret-store lookup; reads (the watcher-restart path) are otherwise rare.
     params: Arc<tokio::sync::RwLock<SmbConnectionParams>>,
-    /// smb2 client (owns the Connection). `None` when disconnected.
+    /// The smb2 client (owns the `Connection`) and the share's `Tree`, as one
+    /// value. `None` when disconnected.
     ///
-    /// Most methods still lock this mutex and call `client.stat(tree, ...)`
-    /// etc. SmbClient's async methods need `&mut self` and these aren't
-    /// hot-path parallel. The hot copy path (compound read/write, download
-    /// stream) briefly locks just to clone the `Connection` (via
-    /// `client.connection_mut().clone()`), releases the lock, and drives the
-    /// op on the clone. This is what gives concurrency across files while the
-    /// underlying SMB session multiplexes the frames.
-    client: Arc<tokio::sync::Mutex<Option<SmbClient>>>,
-    /// Tree (share connection), wrapped as `Arc<Tree>` so concurrent hot-path
-    /// ops can hold a reference without serializing on the client mutex.
-    /// `None` when disconnected. The `RwLock` is essentially uncontended (we
-    /// only write on disconnect), so readers just clone the `Arc` out under a
-    /// read guard and drop the guard immediately.
-    tree: Arc<tokio::sync::RwLock<Option<Arc<Tree>>>>,
+    /// Every operation locks this only to clone the `Connection` and the
+    /// `Arc<Tree>` out ([`clone_session`](SmbVolume::clone_session)), then drives
+    /// the op on the clones with no lock held. That gives concurrency across
+    /// files while the underlying SMB session multiplexes the frames.
+    ///
+    /// ❗ One lock for both, so nothing can read a tree from one session and a
+    /// connection from another: smb2 refuses that pair with `HandleInvalidated`,
+    /// which reads as the session dying (`DETAILS.md` § "SMB live-reconnect
+    /// lifecycle").
+    session: Arc<tokio::sync::Mutex<Option<session::MainSession>>>,
     /// Current connection health.
     /// Wrapped in `Arc` so background tasks (streaming read producer) can update
     /// the state on mid-stream connection loss.
@@ -369,8 +366,7 @@ impl SmbVolume {
                     share_root,
                 )])),
                 params: Arc::new(tokio::sync::RwLock::new(params)),
-                client: Arc::new(tokio::sync::Mutex::new(Some(client))),
-                tree: Arc::new(tokio::sync::RwLock::new(Some(Arc::new(tree)))),
+                session: Arc::new(tokio::sync::Mutex::new(Some(session::MainSession::new(client, tree)))),
                 state: Arc::new(AtomicU8::new(ConnectionState::Direct as u8)),
                 watcher_cancel: std::sync::Mutex::new(None),
                 reconnect_lock: Arc::new(tokio::sync::Mutex::new(())),
@@ -523,8 +519,8 @@ impl SmbVolume {
     /// the scan would fail with `DeviceDisconnected` after this call.
     #[cfg(any(test, feature = "testing"))]
     pub async fn detach_session_for_test(&self) {
-        let mut client_guard = self.inner.client.lock().await;
-        *client_guard = None;
+        let mut session_guard = self.inner.session.lock().await;
+        *session_guard = None;
         self.inner.live_connection.replace(None);
     }
 }

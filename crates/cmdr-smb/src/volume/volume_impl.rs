@@ -785,22 +785,18 @@ impl Volume for SmbVolume {
         // when the last `Arc` drops (within one backoff step). See `scan_pool.rs`.
         self.close_scan_pool_sync();
 
-        // Drop the smb2 session. Uses blocking_lock() / blocking_write() since
-        // on_unmount is sync (called from FSEvents thread, no Tokio runtime).
-        // Safe because we just set state to Disconnected, so no async task
-        // will acquire either lock. Drop Tree first, then SmbClient: Tree
-        // holds a tree_id referenced by session-scoped server state, and we
-        // want it to go first so any lingering `FileDownload` clones finish
-        // before the client (which owns the Connection) vanishes. In
-        // practice all three just drop their Arc refcounts; the order is
-        // defensive.
-        {
-            let mut tree_guard = self.inner.tree.blocking_write();
-            *tree_guard = None;
-        }
-        {
-            let mut client_guard = self.inner.client.blocking_lock();
-            *client_guard = None;
+        // Drop the smb2 session. Uses blocking_lock() since on_unmount is sync
+        // (called from FSEvents thread, no Tokio runtime). Safe because we just
+        // set state to Disconnected, so no async task will acquire the lock.
+        // Drop Tree first, then SmbClient: Tree holds a tree_id referenced by
+        // session-scoped server state, and we want it to go first so any
+        // lingering `FileDownload` clones finish before the client (which owns
+        // the Connection) vanishes. In practice both just drop their Arc
+        // refcounts; the order is defensive.
+        let session = self.inner.session.blocking_lock().take();
+        if let Some(super::session::MainSession { client, tree }) = session {
+            drop(tree);
+            drop(client);
         }
         self.inner.live_connection.replace(None);
 

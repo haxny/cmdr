@@ -399,8 +399,11 @@ impl SmbVolume {
     /// off it, so a release build without `testing` leaves it out.
     #[cfg(any(test, feature = "testing"))]
     pub(super) async fn negotiated_max_write(&self) -> Option<u64> {
-        let guard = self.inner.client.lock().await;
-        guard.as_ref().and_then(|c| c.params()).map(|p| p.max_write_size as u64)
+        let guard = self.inner.session.lock().await;
+        guard
+            .as_ref()
+            .and_then(|s| s.client.params())
+            .map(|p| p.max_write_size as u64)
     }
 
     /// The largest write worth sending as one compound frame on the live
@@ -408,9 +411,10 @@ impl SmbVolume {
     /// [`fits_one_compound_write`]), or `None` when there isn't a session. Same
     /// no-clone, no-wire read as [`negotiated_max_write`](Self::negotiated_max_write).
     async fn quick_write_limit(&self) -> Option<u64> {
-        let guard = self.inner.client.lock().await;
+        let guard = self.inner.session.lock().await;
         guard
             .as_ref()
+            .map(|s| &s.client)
             .filter(|c| c.params().is_some())
             .map(|c| c.connection().quick_write_limit())
     }

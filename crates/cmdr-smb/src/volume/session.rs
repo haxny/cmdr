@@ -17,6 +17,26 @@ use std::time::Duration;
 
 pub(super) static CLIENT_LOCK_TICKET: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+/// The volume's main session: the client and the share's tree, which are only
+/// ever installed, read, and dropped together.
+///
+/// A tree works only on the connection it was connected on (smb2 refuses any
+/// other with `HandleInvalidated`), so holding them as one value is what keeps
+/// a reconnect from ever handing out the old tree with the new connection.
+pub(super) struct MainSession {
+    pub(super) client: SmbClient,
+    pub(super) tree: Arc<Tree>,
+}
+
+impl MainSession {
+    pub(super) fn new(client: SmbClient, tree: Tree) -> Self {
+        Self {
+            client,
+            tree: Arc::new(tree),
+        }
+    }
+}
+
 impl SmbVolume {
     /// Checks that the connection is in `Direct` state. Returns
     /// `DeviceDisconnected` for `Disconnected`.
@@ -29,26 +49,15 @@ impl SmbVolume {
         }
     }
 
-    /// Reads out a clone of `Arc<Tree>`. Cheap (`Arc::clone`).
-    pub(super) async fn tree_arc(&self) -> Result<Arc<Tree>, VolumeError> {
-        self.check_connection()?;
-        let guard = self.inner.tree.read().await;
-        guard
-            .as_ref()
-            .cloned()
-            .ok_or_else(|| VolumeError::DeviceDisconnected("SMB session not available".to_string()))
-    }
-
-    /// Briefly locks the client mutex, clones its `Connection` (cheap
-    /// `Arc::clone`; all clones multiplex frames over the same SMB session),
-    /// and releases the lock. Also reads out an `Arc<Tree>`. Returns both.
+    /// Briefly locks the session, clones its `Connection` (cheap `Arc::clone`;
+    /// all clones multiplex frames over the same SMB session) and its
+    /// `Arc<Tree>`, and releases the lock. Both come from the same session.
     ///
     /// Callers can then drive `Tree::download` / `Tree::read_file_compound_sized` /
     /// `Tree::write_file_compound` on the owned `Connection` without holding
     /// any lock, enabling multiple concurrent copies on a single `SmbVolume`.
     pub(super) async fn clone_session(&self) -> Result<(Arc<Tree>, smb2::client::Connection), VolumeError> {
         self.check_connection()?;
-        let tree = self.tree_arc().await?;
         let ticket = CLIENT_LOCK_TICKET.fetch_add(1, Ordering::Relaxed);
         let start = std::time::Instant::now();
         // TRACE: per-SMB-op mutex telemetry. At DEBUG it's the dominant scan-log source
@@ -60,8 +69,8 @@ impl SmbVolume {
             ticket,
             self.inner.share_name
         );
-        let conn = {
-            let mut guard = self.inner.client.lock().await;
+        let (tree, conn) = {
+            let mut guard = self.inner.session.lock().await;
             log::trace!(
                 "client-mutex: acquired ticket={} caller=clone_session share={:?} waited={:?}",
                 ticket,
@@ -69,7 +78,7 @@ impl SmbVolume {
                 start.elapsed()
             );
             let acquired_at = std::time::Instant::now();
-            let client = guard.as_mut().ok_or_else(|| {
+            let session = guard.as_mut().ok_or_else(|| {
                 log::trace!(
                     "client-mutex: released ticket={} caller=clone_session held_for={:?} (no-session-bail)",
                     ticket,
@@ -77,13 +86,13 @@ impl SmbVolume {
                 );
                 VolumeError::DeviceDisconnected("SMB session not available".to_string())
             })?;
-            let c = client.connection_mut().clone();
+            let pair = (Arc::clone(&session.tree), session.client.connection_mut().clone());
             log::trace!(
                 "client-mutex: released ticket={} caller=clone_session held_for={:?}",
                 ticket,
                 acquired_at.elapsed()
             );
-            c
+            pair
         };
         // Refresh what the credit window can carry, while a `Connection` is in
         // hand: `Volume::max_concurrent_ops` is sync and can't reach one, and

@@ -54,14 +54,7 @@ async fn smb_integration_attempt_reconnect_rebuilds_session() {
     // Simulate "the server hung up": drop the smb2 session and flip state.
     // We don't need to actually break the network; `attempt_reconnect`'s
     // job is to rebuild the session regardless of why state went down.
-    {
-        let mut client_guard = vol.inner.client.lock().await;
-        *client_guard = None;
-    }
-    {
-        let mut tree_guard = vol.inner.tree.write().await;
-        *tree_guard = None;
-    }
+    *vol.inner.session.lock().await = None;
     vol.inner.transition_to_disconnected();
     assert_eq!(vol.session_state(), ConnectionState::Disconnected);
 
@@ -107,10 +100,7 @@ async fn smb_integration_reconnect_repoints_the_liveness_reading() {
         "the handshake came in"
     );
 
-    {
-        let mut client_guard = vol.inner.client.lock().await;
-        *client_guard = None;
-    }
+    *vol.inner.session.lock().await = None;
     vol.inner.transition_to_disconnected();
     vol.inner
         .do_attempt_reconnect()
@@ -360,14 +350,7 @@ async fn smb_integration_superseded_volume_reconnects_without_reclaiming_the_id(
     );
 
     // "The server hung up mid-copy": drop the session under the holder.
-    {
-        let mut client_guard = vol.inner.client.lock().await;
-        *client_guard = None;
-    }
-    {
-        let mut tree_guard = vol.inner.tree.write().await;
-        *tree_guard = None;
-    }
+    *vol.inner.session.lock().await = None;
     vol.inner.transition_to_disconnected();
 
     vol.inner
@@ -493,4 +476,38 @@ async fn smb_integration_mount_unmount_cycles_leave_no_sockets_behind() {
         || tcp_peers_on_port(port).is_empty(),
     )
     .await;
+}
+
+/// A session installed while `clone_session` waits for the client is handed
+/// out WHOLE: the tree and the connection come from the same session.
+///
+/// Regression anchor: the tree and the client sat behind two locks, and
+/// `clone_session` read the tree before it locked the client, so a reconnect
+/// landing between the two handed out the OLD tree on the NEW connection. smb2
+/// 0.30 refuses that pairing with `HandleInvalidated` (a `ConnectionLost`), and
+/// the volume read it as its session dying: a spurious disconnect and a second
+/// reconnect, on a session that was healthy.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_session_swapped_mid_clone_is_handed_out_whole() {
+    let vol = Arc::new(make_docker_volume().await);
+    let params = vol.inner.params.read().await.clone();
+    let (new_client, new_tree) = build_session(&params).await.expect("a second session to install");
+
+    // Hold the session, the way a reconnect installing its own does, while
+    // `clone_session` starts.
+    let mut session_guard = vol.inner.session.lock().await;
+    let cloning = {
+        let vol = Arc::clone(&vol);
+        tokio::spawn(async move { vol.clone_session().await })
+    };
+    // Let it run as far as it can before the client lock stops it.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    *session_guard = Some(session::MainSession::new(new_client, new_tree));
+    drop(session_guard);
+
+    let (tree, mut conn) = cloning.await.unwrap().expect("a session to clone");
+    tree.stat(&mut conn, "")
+        .await
+        .expect("the tree and the connection belong to the same session");
 }

@@ -801,16 +801,17 @@ call sites read `supports_local_fs_access()` as "is this remote?", where `false`
 `paths_are_os_visible()` is `true` only while the mount is actually there — see § "Re-rooting a share" for how the
 registry tells the volume otherwise.
 
-**Decision**: `SmbVolume` splits session storage: `Arc<Mutex<Option<SmbClient>>>` + `Arc<RwLock<Option<Arc<Tree>>>>`
-**Why**: Keeping the session in one `Mutex<Option<(SmbClient, Tree)>>` would force the streaming-read producer and the
-compound read/write fast-paths to hold the mutex for the entire transfer, serializing every concurrent copy through it.
-`smb2::Connection` is `Clone` (cheap `Arc::clone`, all clones multiplex frames over one SMB session), so splitting the
-Tree out lets us briefly lock the client, clone its `Connection`, and release the lock, then drive `Tree::download` /
-`Tree::read_file_compound` / `Tree::write_file_compound` on the cloned `Connection` with no lock held. N concurrent
-copies on one `SmbVolume` pipeline N operations over the single session instead of queuing on the mutex. Tree lives in a
-`RwLock` because we only take read locks in the hot path (cloning an `Arc<Tree>`) and only write on disconnect. The
-streaming-write path uses the same clone-and-release shape (see the `write_from_stream` Decision below), so the client
-mutex is never held across I/O.
+**Decision**: the main session is one `Mutex<Option<MainSession>>` (`SmbClient` + `Arc<Tree>`), held only to clone
+**Why**: `smb2::Connection` is `Clone` (cheap `Arc::clone`, all clones multiplex frames over one SMB session) and the
+tree is an `Arc`, so `clone_session` locks just long enough to clone both out, then drives `Tree::download` /
+`Tree::read_file_compound` / `Tree::write_file_compound` on the clones with no lock held. N concurrent copies on one
+`SmbVolume` pipeline N operations over the single session instead of queuing on the mutex. The streaming-write path uses
+the same clone-and-release shape (see the `write_from_stream` Decision below), so the mutex is never held across I/O.
+The client and the tree share ONE lock because a tree only works on the connection it was connected on: they used to sit
+behind two, `clone_session` read the tree before it locked the client, and a reconnect landing between the two handed
+out the old tree with the new connection. smb2 0.30 refuses that pair with `HandleInvalidated`, which classifies as
+`ConnectionLost`, so the volume read a healthy session as dead and reconnected again. Pinned by
+`smb_integration_a_session_swapped_mid_clone_is_handed_out_whole`.
 
 **Decision**: `SmbVolume::local_path()` returns `None` **Why**: `local_path()` is checked in `volume/copy.rs` to decide
 whether to use native OS copy APIs. If SmbVolume returned `Some(mount_path)`, copies would go through the slow OS mount,
@@ -952,12 +953,12 @@ the leaked handle.
 
 **Decision**: `SmbVolume` overrides `scan_for_copy_batch` to pipeline per-path stats over a single SMB session **Why**:
 A naive scan phase that loops `scan_for_copy` per top-level source costs N sequential RTTs before the copy phase can
-start. For a 100-file copy over a ~60 ms Tailscale link that's ~5 s of serial stats. The override clones
-`smb2::Connection` per path under a brief client-mutex acquire (cheap `Arc::clone`, all clones multiplex over the same
-SMB session), releases the lock, then drives `tree.stat(&mut conn, path)` on each clone inside a `FuturesUnordered`.
-Empty root paths skip the stat. Single-path batches fall through to `scan_recursive` so one-file drag-drops don't pay
-the batch machinery cost. ⚠️ A single DIRECTORY path takes that same branch and walks its whole subtree: a batch of one
-is not a stat. A caller that only wants "what is this path?" stats it directly (the model:
+start. For a 100-file copy over a ~60 ms Tailscale link that's ~5 s of serial stats. The override takes one
+`clone_session`, clones its `smb2::Connection` per path (cheap `Arc::clone`, all clones multiplex over the same SMB
+session), then drives `tree.stat(&mut conn, path)` on each clone inside a `FuturesUnordered`. Empty root paths skip the
+stat. Single-path batches fall through to `scan_recursive` so one-file drag-drops don't pay the batch machinery cost. ⚠️
+A single DIRECTORY path takes that same branch and walks its whole subtree: a batch of one is not a stat. A caller that
+only wants "what is this path?" stats it directly (the model:
 `apps/desktop/src-tauri/src/commands/file_system/volume_copy.rs`'s `stat_source_paths`, one `get_metadata` per top-level
 path). Directories found during the stat phase recurse sequentially afterward; parallel directory recursion is a future
 enhancement. Measured 6.5× wall-clock win at 100 × 10 KB: 6.11 s → 947 ms. See `docs/notes/phase4-rtt-investigation.md`

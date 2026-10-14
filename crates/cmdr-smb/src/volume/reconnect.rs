@@ -3,7 +3,7 @@
 //! start/stop, and the backend-autonomous watcher-death reconnect loop.
 
 use super::mapping::map_smb_error;
-use super::session::{build_session, refresh_credentials_from_store};
+use super::session::{MainSession, build_session, refresh_credentials_from_store};
 use super::state::ConnectionState;
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
@@ -215,18 +215,14 @@ impl SmbVolumeInner {
             ));
         }
 
-        // Install the new session.
+        // Install the new session: the client and its tree in one swap.
         {
-            let mut tree_guard = self.tree.write().await;
-            *tree_guard = Some(Arc::new(tree));
-        }
-        {
-            let mut client_guard = self.client.lock().await;
-            // Under the client lock, so no reader sees the new client paired with
+            let mut session_guard = self.session.lock().await;
+            // Under the session lock, so no reader sees the new client paired with
             // the old connection's liveness or the reverse for longer than it takes
             // to swap a pointer.
             self.live_connection.replace(Some(client.connection().clone()));
-            *client_guard = Some(client);
+            *session_guard = Some(MainSession::new(client, tree));
         }
 
         // Restart the watcher with current params (which may include refreshed creds).

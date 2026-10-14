@@ -275,14 +275,15 @@ impl SmbVolume {
                 paths.len() - smb_paths.len()
             );
 
-            // Build N pipelined stats: one cloned `Connection` per path, no
-            // lock held across any stat. `Arc<Tree>` is shared cheaply. Empty
+            // Build N pipelined stats: one `Connection` clone per path, all off
+            // one `clone_session`, so every stat runs on the session its tree
+            // belongs to and no lock is held across any of them. Empty
             // paths (volume root) skip the stat: the root is always a
             // directory, and they route straight into the recursion list.
             use futures_util::StreamExt;
             use futures_util::stream::FuturesUnordered;
 
-            let tree_arc = self.tree_arc().await?;
+            let (tree_arc, session_conn) = self.clone_session().await?;
 
             // Index tracks original position so results can be reassembled in input order.
             enum StatOutcome {
@@ -309,15 +310,8 @@ impl SmbVolume {
                     ))));
                     continue;
                 }
-                // Briefly lock client to clone a Connection per path, then
-                // release. All clones multiplex over the single SMB session.
-                let conn = {
-                    let mut guard = self.inner.client.lock().await;
-                    let client = guard
-                        .as_mut()
-                        .ok_or_else(|| VolumeError::DeviceDisconnected("SMB session not available".to_string()))?;
-                    client.connection_mut().clone()
-                };
+                // All clones multiplex over the single SMB session.
+                let conn = session_conn.clone();
                 let tree = Arc::clone(&tree_arc);
                 let path_owned = smb_path.clone();
                 stat_futs.push(Box::pin(async move {

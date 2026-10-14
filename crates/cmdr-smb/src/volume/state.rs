@@ -121,8 +121,8 @@ impl SmbVolumeInner {
     /// Used by the debug-window SMB diagnostics dashboard. Safe to call
     /// at 1 Hz; cheap even at higher rates.
     pub(super) async fn diagnostics(&self) -> Option<smb2::Diagnostics> {
-        let guard = self.client.lock().await;
-        guard.as_ref().map(|c| c.diagnostics())
+        let guard = self.session.lock().await;
+        guard.as_ref().map(|s| s.client.diagnostics())
     }
 
     /// Flips state to `Disconnected` and emits `volume-connection-changed` if the
@@ -173,8 +173,8 @@ impl SmbVolume {
     /// as a slow bleed long before it stalls a read.
     #[cfg(any(test, feature = "testing"))]
     pub(super) async fn session_credits(&self) -> Option<u16> {
-        let guard = self.inner.client.lock().await;
-        guard.as_ref().map(|c| c.credits())
+        let guard = self.inner.session.lock().await;
+        guard.as_ref().map(|s| s.client.credits())
     }
 }
 
