@@ -1231,6 +1231,24 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR"
   },
+  "git-branch": {
+    "chosen": "branch",
+    "forms": "masculine: o branch, no branch “{branch}”",
+    "avoid": [
+      {
+        "form": "ramificação",
+        "why": "bookish; pt-BR git users and the shipped catalog say branch"
+      }
+    ],
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.git.size.branches, fileExplorer.git.tooltip.stashedOnBranch); MS terminology pt-BR keeps branch (2326918)"
+  },
+  "git-commit": {
+    "chosen": "commit",
+    "forms": "masculine: o commit, commit pai",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit)"
+  },
   "github-star": {
     "chosen": "Adicionar aos favoritos",
     "accept": ["estrelas", "aos favoritos"],
@@ -2760,9 +2778,7 @@
     "sources": "macOS Finder pt-BR (TG5, TG6)",
     "exceptions": {
       "fileExplorer.git.size.tags": "A git tag keeps the git term tag; etiqueta is only the Finder color tag.",
-      "fileExplorer.git.tooltip.tags": "A git tag keeps the git term tag; etiqueta is only the Finder color tag.",
-      "fileExplorer.readOnly.gitPortalMessage": "A git tag keeps the git term tag; etiqueta is only the Finder color tag.",
-      "settings.fileExplorer.git.showVirtualGitPortal.description": "A git tag keeps the git term tag; etiqueta is only the Finder color tag."
+      "fileExplorer.git.tooltip.tags": "A git tag keeps the git term tag; etiqueta is only the Finder color tag."
     }
   },
   "tail": {
@@ -3051,6 +3067,12 @@
     ],
     "confidence": "high",
     "sources": "MS terminology pt-BR"
+  },
+  "worktree": {
+    "chosen": "worktree",
+    "forms": "masculine: worktrees vinculados",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.git.size.linkedWorktrees); git's own command name, no pt-BR equivalent in the pile"
   },
   "write": {
     "chosen": "gravar",

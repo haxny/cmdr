@@ -252,17 +252,18 @@
   "@fileExplorer.functionKeyBar.deleteLabel": {
     "sourceHash": "e2d0a54"
   },
-  "fileExplorer.openingToast.withApp": "{fileName} is opening in {appName}…",
+  "fileExplorer.openingToast.withApp": "Öppnar {fileName} i {appName}…",
   "@fileExplorer.openingToast.withApp": {
     "sourceHash": "68aaf91"
   },
-  "fileExplorer.openingToast.noApp": "Opening {fileName}…",
+  "fileExplorer.openingToast.noApp": "Öppnar {fileName}…",
   "@fileExplorer.openingToast.noApp": {
     "sourceHash": "45d83ec"
   },
   "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
   "@fileExplorer.functionKeyBar.terminalLabel": {
-    "sourceHash": "e0926fd"
+    "sourceHash": "e0926fd",
+    "sameAsSourceJustification": "Swedish uses terminal for the app category and Apple keeps Terminal; matches settings.navigationAndFileOps.card.terminal (terms.json terminal)."
   },
   "fileExplorer.functionKeyBar.hiddenToast": "Funktionstangentsraden är nu dold. Du kan slå på den igen när som helst under <settingsLink>Inställningar</settingsLink>.",
   "@fileExplorer.functionKeyBar.hiddenToast": {
@@ -812,27 +813,27 @@
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
   },
-  "fileExplorer.git.portalIntro.title": "Cmdr has some git-related magic for you!",
+  "fileExplorer.git.portalIntro.title": "Cmdr har lite git-magi åt dig!",
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "You can browse your old branches, tags, worktrees, and old revisions just like a folder.",
+  "fileExplorer.git.portalIntro.what": "Du kan bläddra i dina gamla grenar, taggar, worktrees och gamla versioner precis som i en mapp.",
   "@fileExplorer.git.portalIntro.what": {
     "sourceHash": "707011b"
   },
-  "fileExplorer.git.portalIntro.where": "You can find it in the <code>.git</code> (hidden) folder.",
+  "fileExplorer.git.portalIntro.where": "Du hittar allt det här i den dolda mappen <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
     "sourceHash": "4b88d8f"
   },
-  "fileExplorer.git.portalIntro.dismiss": "Dismiss",
+  "fileExplorer.git.portalIntro.dismiss": "Avfärda",
   "@fileExplorer.git.portalIntro.dismiss": {
     "sourceHash": "48845bf"
   },
-  "fileExplorer.git.portalIntro.showHidden": "Show hidden files",
+  "fileExplorer.git.portalIntro.showHidden": "Visa dolda filer",
   "@fileExplorer.git.portalIntro.showHidden": {
     "sourceHash": "b5ede7f"
   },
-  "fileExplorer.git.portalIntro.goToGitDir": "Go to .git",
+  "fileExplorer.git.portalIntro.goToGitDir": "Gå till .git",
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
@@ -1046,7 +1047,7 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
-  "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
+  "fileExplorer.git.tooltip.filesChangedPending": "Räknar filerna som den här incheckningen ändrade…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
   },

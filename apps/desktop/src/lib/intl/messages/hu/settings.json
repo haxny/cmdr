@@ -1641,11 +1641,11 @@
   "@settings.behavior.openTerminalHereApp.checking": {
     "sourceHash": "0d6957f"
   },
-  "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
+  "settings.fileExplorer.git.portalIntroSeen.label": "A .git mappa bemutatója megjelent",
   "@settings.fileExplorer.git.portalIntroSeen.label": {
     "sourceHash": "8c1ae20"
   },
-  "settings.fileExplorer.git.portalIntroSeen.description": "Whether the one-time intro to browsing the .git folder has been shown.",
+  "settings.fileExplorer.git.portalIntroSeen.description": "Megjelent-e már az egyszeri bemutató a .git mappa böngészéséről.",
   "@settings.fileExplorer.git.portalIntroSeen.description": {
     "sourceHash": "623d981"
   },

@@ -7,6 +7,14 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `fileExplorer.git.portalIntro.what`: "your old branches, tags, worktrees, and old revisions" says "old" twice, and
+  every translator read the first one as a slip; "revisions" also differs from "commits" everywhere else. Confirm with
+  David.
+- `fileExplorer.git.portalIntro.where`: "You can find it" has no clear antecedent after a list; "You'll find them all
+  in…" would help pronoun-marking languages. `goToGitDir` / `showHidden`: give a width budget or a screenshot.
+- `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
+  (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
+
 - `fileExplorer.network.browser.removeHostConfirm`, `.hostRemoved`, `.hostRemoveFailed`: descriptions (and key names)
   still say "remove" while the English says "Forget". Say forget, and that the host is a saved server.
 - `fileExplorer.network.share.useGuest`: "Use guest" is terse and the description doesn't say whether it reconnects as

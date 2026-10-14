@@ -3064,6 +3064,12 @@
     "forms": "the View menu item → Tự ngắt dòng",
     "sources": "MS terminology (word wrap → Tự ngắt dòng)"
   },
+  "worktree": {
+    "chosen": "worktree",
+    "confidence": "tentative",
+    "forms": "linked worktrees → worktree liên kết",
+    "sources": "git's own command name, kept verbatim like commit; the pile has no hit (grep 2026-10-14); catalog already ships it (errors.git.orphanedWorktree.*, fileExplorer.git.size.linkedWorktrees)"
+  },
   "write": {
     "chosen": "ghi",
     "confidence": "high",

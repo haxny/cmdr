@@ -1501,6 +1501,26 @@
     "forms": "quoted in running text: 「取得資訊」",
     "sources": "catalog commands.fileGetInfo.mac.label, menu.file.getInfo"
   },
+  "git-branch": {
+    "chosen": "分支",
+    "confidence": "high",
+    "sources": "MS branch → 分支 (HKG, TWN); catalog (分支 in 7 values: fileExplorer.readOnly.gitPortalMessage, 建立於分支「{branch}」, {countText} 個分支)"
+  },
+  "git-commit": {
+    "avoid": [
+      {
+        "form": "認可",
+        "why": "MS's commit → 認可 is the database-transaction sense; the catalog's git strings say 提交"
+      }
+    ],
+    "chosen": "提交",
+    "confidence": "high",
+    "exceptions": {
+      "errors.git.shallowBoundary.message": "A git-plumbing error that keeps shallow clone in Latin; commit stays Latin beside it so the sentence reads as one jargon register."
+    },
+    "forms": "a count of commits → 次提交 ({countText} 次提交); one commit as a thing → 這次提交; parent commit → 父提交",
+    "sources": "catalog (提交 in 7 values: fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
+  },
   "github-star": {
     "accept": ["星"],
     "chosen": "star",
@@ -3851,6 +3871,12 @@
     "chosen": "自動換行",
     "confidence": "high",
     "sources": "MS (HKG, TWN), TC Lister, DC"
+  },
+  "worktree": {
+    "chosen": "worktree",
+    "confidence": "high",
+    "forms": "kept Latin and lowercase as git's own command noun, spaced from Han (關聯 worktree, 這個 worktree)",
+    "sources": "catalog (worktree in 4 values: fileExplorer.git.tooltip.worktreeOnBranch, .worktreeDetached); no Apple, MS, or file-manager entry"
   },
   "write": {
     "accept": ["寫", "記下"],

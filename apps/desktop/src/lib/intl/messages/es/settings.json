@@ -1643,11 +1643,11 @@
   "@settings.behavior.openTerminalHereApp.checking": {
     "sourceHash": "0d6957f"
   },
-  "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
+  "settings.fileExplorer.git.portalIntroSeen.label": "Introducción a la carpeta de git ya mostrada",
   "@settings.fileExplorer.git.portalIntroSeen.label": {
     "sourceHash": "8c1ae20"
   },
-  "settings.fileExplorer.git.portalIntroSeen.description": "Whether the one-time intro to browsing the .git folder has been shown.",
+  "settings.fileExplorer.git.portalIntroSeen.description": "Si ya se ha mostrado la introducción única sobre explorar la carpeta .git.",
   "@settings.fileExplorer.git.portalIntroSeen.description": {
     "sourceHash": "623d981"
   },

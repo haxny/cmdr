@@ -253,17 +253,18 @@
   "@fileExplorer.functionKeyBar.deleteLabel": {
     "sourceHash": "e2d0a54"
   },
-  "fileExplorer.openingToast.withApp": "{fileName} is opening in {appName}…",
+  "fileExplorer.openingToast.withApp": "{fileName} wordt geopend in {appName}…",
   "@fileExplorer.openingToast.withApp": {
     "sourceHash": "68aaf91"
   },
-  "fileExplorer.openingToast.noApp": "Opening {fileName}…",
+  "fileExplorer.openingToast.noApp": "{fileName} openen…",
   "@fileExplorer.openingToast.noApp": {
     "sourceHash": "45d83ec"
   },
   "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
   "@fileExplorer.functionKeyBar.terminalLabel": {
-    "sourceHash": "e0926fd"
+    "sourceHash": "e0926fd",
+    "sameAsSourceJustification": "Loanword: the generic name for this class of app is \"Terminal\" here too, and Apple keeps the app name English in its localized Finder (\"Open in Terminal\", key N67); same as settings.navigationAndFileOps.card.terminal."
   },
   "fileExplorer.functionKeyBar.hiddenToast": "De functietoetsbalk is nu verborgen. Zet hem op elk moment weer aan in <settingsLink>Instellingen</settingsLink>.",
   "@fileExplorer.functionKeyBar.hiddenToast": {
@@ -814,27 +815,27 @@
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
   },
-  "fileExplorer.git.portalIntro.title": "Cmdr has some git-related magic for you!",
+  "fileExplorer.git.portalIntro.title": "Cmdr heeft wat git-magie voor je!",
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "You can browse your old branches, tags, worktrees, and old revisions just like a folder.",
+  "fileExplorer.git.portalIntro.what": "Je kunt je oude branches, tags, worktrees en oude revisies doorbladeren, net als een map.",
   "@fileExplorer.git.portalIntro.what": {
     "sourceHash": "707011b"
   },
-  "fileExplorer.git.portalIntro.where": "You can find it in the <code>.git</code> (hidden) folder.",
+  "fileExplorer.git.portalIntro.where": "Je vindt het allemaal in de verborgen map <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
     "sourceHash": "4b88d8f"
   },
-  "fileExplorer.git.portalIntro.dismiss": "Dismiss",
+  "fileExplorer.git.portalIntro.dismiss": "Sluit",
   "@fileExplorer.git.portalIntro.dismiss": {
     "sourceHash": "48845bf"
   },
-  "fileExplorer.git.portalIntro.showHidden": "Show hidden files",
+  "fileExplorer.git.portalIntro.showHidden": "Toon verborgen bestanden",
   "@fileExplorer.git.portalIntro.showHidden": {
     "sourceHash": "b5ede7f"
   },
-  "fileExplorer.git.portalIntro.goToGitDir": "Go to .git",
+  "fileExplorer.git.portalIntro.goToGitDir": "Ga naar .git",
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
@@ -1053,7 +1054,7 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
-  "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
+  "fileExplorer.git.tooltip.filesChangedPending": "Tellen hoeveel bestanden deze commit heeft gewijzigd…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
   },

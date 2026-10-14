@@ -1364,6 +1364,18 @@
     "forms": "errors.json points at it as Finder (Lire les informations)",
     "sources": "macOS Finder"
   },
+  "git-branch": {
+    "chosen": "branche",
+    "confidence": "high",
+    "sources": "catalog (fileExplorer.git.size.branches, fileExplorer.git.tooltip.stashedOnBranch, fileExplorer.readOnly.gitPortalMessage)"
+  },
+  "git-commit": {
+    "accept": ["révision"],
+    "chosen": "commit",
+    "confidence": "high",
+    "forms": "masculine (le commit parent); English revision → révision (Double Commander’s About box: Commit / Révision)",
+    "sources": "catalog (fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit); Double Commander doublecmd.po"
+  },
   "github-issue": {
     "chosen": "ticket",
     "confidence": "tentative",
@@ -3418,6 +3430,12 @@
     "confidence": "high",
     "forms": "the setting and menu → Retour à la ligne automatique; the tight badge → retour ligne",
     "sources": "MS terminology FRA id 134158"
+  },
+  "worktree": {
+    "chosen": "worktree",
+    "confidence": "high",
+    "forms": "masculine (un worktree lié, worktrees liés); git’s command name, kept verbatim like branch’s neighbor tag",
+    "sources": "catalog (fileExplorer.git.size.linkedWorktrees, errors.git.orphanedWorktree.*)"
   },
   "write": {
     "accept": ["écrit", "écriture", "écriv"],

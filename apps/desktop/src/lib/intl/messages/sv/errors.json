@@ -819,7 +819,7 @@
   "@errors.git.shallowBoundary.title": {
     "sourceHash": "9fc0175"
   },
-  "errors.git.shallowBoundary.message": "Den här commiten ligger bortom gränsen för din grunda klon, så dess data finns inte på disk.",
+  "errors.git.shallowBoundary.message": "Den här incheckningen ligger bortom gränsen för din grunda klon, så dess data finns inte på disk.",
   "@errors.git.shallowBoundary.message": {
     "sourceHash": "66bac24"
   },

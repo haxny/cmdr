@@ -1649,11 +1649,11 @@
   "@settings.behavior.openTerminalHereApp.checking": {
     "sourceHash": "0d6957f"
   },
-  "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
+  "settings.fileExplorer.git.portalIntroSeen.label": "Einführung zum Git-Ordner gezeigt",
   "@settings.fileExplorer.git.portalIntroSeen.label": {
     "sourceHash": "8c1ae20"
   },
-  "settings.fileExplorer.git.portalIntroSeen.description": "Whether the one-time intro to browsing the .git folder has been shown.",
+  "settings.fileExplorer.git.portalIntroSeen.description": "Ob die einmalige Einführung zum Durchsehen des Ordners .git gezeigt wurde.",
   "@settings.fileExplorer.git.portalIntroSeen.description": {
     "sourceHash": "623d981"
   },

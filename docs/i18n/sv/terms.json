@@ -1272,6 +1272,13 @@
     "confidence": "tentative",
     "sources": "standard Swedish git usage; MS förgrena is the verb sense"
   },
+  "git-commit": {
+    "avoid": [{ "form": "commit", "why": "English loanword; the catalog uses incheckning nine times and more" }],
+    "chosen": "incheckning",
+    "confidence": "high",
+    "forms": "incheckningen, incheckningar; parent commit → föräldraincheckningen",
+    "sources": "MS terminology commit → incheckning / checka in; catalog fileExplorer.git.size.commits, tooltip.pinnedCommit"
+  },
   "overall": {
     "chosen": "Totalt",
     "confidence": "high",

@@ -252,17 +252,18 @@
   "@fileExplorer.functionKeyBar.deleteLabel": {
     "sourceHash": "e2d0a54"
   },
-  "fileExplorer.openingToast.withApp": "{fileName} is opening in {appName}…",
+  "fileExplorer.openingToast.withApp": "{fileName} se está abriendo en {appName}…",
   "@fileExplorer.openingToast.withApp": {
     "sourceHash": "68aaf91"
   },
-  "fileExplorer.openingToast.noApp": "Opening {fileName}…",
+  "fileExplorer.openingToast.noApp": "Abriendo {fileName}…",
   "@fileExplorer.openingToast.noApp": {
     "sourceHash": "45d83ec"
   },
   "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
   "@fileExplorer.functionKeyBar.terminalLabel": {
-    "sourceHash": "e0926fd"
+    "sourceHash": "e0926fd",
+    "sameAsSourceJustification": "Loanword: the generic name for this class of app is \"Terminal\" here too, and Apple keeps the app name English in its localized Finder (\"Abrir en Terminal\", key N67, verified against the macOS reference pile 2026-09-05). Byte-identical to settings.navigationAndFileOps.card.terminal."
   },
   "fileExplorer.functionKeyBar.hiddenToast": "La barra de teclas de función ahora está oculta. Puedes volver a activarla cuando quieras en <settingsLink>Ajustes</settingsLink>.",
   "@fileExplorer.functionKeyBar.hiddenToast": {
@@ -812,27 +813,27 @@
   "@fileExplorer.archive.useTransferToCopyOut": {
     "sourceHash": "3edbc36"
   },
-  "fileExplorer.git.portalIntro.title": "Cmdr has some git-related magic for you!",
+  "fileExplorer.git.portalIntro.title": "¡Cmdr tiene algo de magia de git para ti!",
   "@fileExplorer.git.portalIntro.title": {
     "sourceHash": "406c0d7"
   },
-  "fileExplorer.git.portalIntro.what": "You can browse your old branches, tags, worktrees, and old revisions just like a folder.",
+  "fileExplorer.git.portalIntro.what": "Puedes explorar tus ramas antiguas, etiquetas, worktrees y versiones antiguas como si fueran carpetas.",
   "@fileExplorer.git.portalIntro.what": {
     "sourceHash": "707011b"
   },
-  "fileExplorer.git.portalIntro.where": "You can find it in the <code>.git</code> (hidden) folder.",
+  "fileExplorer.git.portalIntro.where": "Lo encontrarás todo en la carpeta oculta <code>.git</code>.",
   "@fileExplorer.git.portalIntro.where": {
     "sourceHash": "4b88d8f"
   },
-  "fileExplorer.git.portalIntro.dismiss": "Dismiss",
+  "fileExplorer.git.portalIntro.dismiss": "Descartar",
   "@fileExplorer.git.portalIntro.dismiss": {
     "sourceHash": "48845bf"
   },
-  "fileExplorer.git.portalIntro.showHidden": "Show hidden files",
+  "fileExplorer.git.portalIntro.showHidden": "Mostrar archivos ocultos",
   "@fileExplorer.git.portalIntro.showHidden": {
     "sourceHash": "b5ede7f"
   },
-  "fileExplorer.git.portalIntro.goToGitDir": "Go to .git",
+  "fileExplorer.git.portalIntro.goToGitDir": "Ir a .git",
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
@@ -1048,7 +1049,7 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
-  "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
+  "fileExplorer.git.tooltip.filesChangedPending": "Contando los archivos que cambió este commit…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"
   },

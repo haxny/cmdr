@@ -819,7 +819,7 @@
   "@errors.git.shallowBoundary.title": {
     "sourceHash": "9fc0175"
   },
-  "errors.git.shallowBoundary.message": "这个 commit 在你浅克隆的边界之外，所以它的数据不在磁盘上。",
+  "errors.git.shallowBoundary.message": "这次提交在你浅克隆的边界之外，所以它的数据不在磁盘上。",
   "@errors.git.shallowBoundary.message": {
     "sourceHash": "66bac24"
   },

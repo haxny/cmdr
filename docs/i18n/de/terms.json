@@ -3472,6 +3472,36 @@
     "forms": "a linked worktree → Worktree (kept, git term)",
     "sources": "git term, kept verbatim as the @key descriptions ask"
   },
+  "git-branch": {
+    "chosen": "Branch",
+    "confidence": "high",
+    "accept": ["Branches"],
+    "forms": "der Branch (m.), plural Branches; Branch „{branch}“ ist ausgecheckt",
+    "avoid": [
+      {
+        "form": "Zweig",
+        "why": "German git docs know it, but the catalog and Microsoft both keep Branch"
+      }
+    ],
+    "sources": "Microsoft Terminology DE: branch → Branch (m., repository sense); catalog already uses Branch/Branches in every git string"
+  },
+  "git-commit": {
+    "chosen": "Commit",
+    "confidence": "high",
+    "accept": ["Commits", "Eltern-Commit"],
+    "forms": "der Commit (m.), plural Commits; dieser Commit",
+    "avoid": [
+      {
+        "form": "Einspielen",
+        "why": "Dolphin's old SVN verb, not the git noun"
+      },
+      {
+        "form": "Übertragen",
+        "why": "Double Commander's About label; reads as transfer"
+      }
+    ],
+    "sources": "Microsoft Terminology DE: commit → Commit (m.); catalog already uses Commit/Commits in every git string"
+  },
   "on-disk-size": {
     "chosen": "Auf dem Datenträger",
     "confidence": "high",

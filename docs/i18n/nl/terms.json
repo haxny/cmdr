@@ -1274,6 +1274,32 @@
     "note": "Not do-not-translate: Apple localizes it, whatever an old @key description says.",
     "sources": "macOS Finder (Get Info → Toon info; NE18 Kies 'Archief' > 'Toon info')"
   },
+  "git-branch": {
+    "accept": ["branches"],
+    "avoid": [
+      {
+        "form": "vertakking",
+        "why": "MS terminology uses it for a split email conversation; for a repository branch MS keeps branch"
+      }
+    ],
+    "chosen": "branch",
+    "confidence": "high",
+    "forms": "pl. branches; de branch; op {branch}",
+    "sources": "MS terminology (repository branch → branch, id 2306886); catalog (fileExplorer.git.size.branches, fileExplorer.readOnly.gitPortalMessage)"
+  },
+  "git-commit": {
+    "accept": ["commits"],
+    "avoid": [
+      {
+        "form": "doorvoeren",
+        "why": "MS terminology's database-transaction sense, not a git snapshot"
+      }
+    ],
+    "chosen": "commit",
+    "confidence": "high",
+    "forms": "pl. commits; de commit; bovenliggende commit (parent commit)",
+    "sources": "Dutch git community usage; catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
+  },
   "github-star": {
     "accept": ["stars"],
     "avoid": [
@@ -3276,6 +3302,13 @@
     "confidence": "high",
     "forms": "menu and setting Tekstterugloop; the terse viewer badge terugloop",
     "sources": "MS terminology (word wrap → tekstterugloop)"
+  },
+  "worktree": {
+    "accept": ["worktrees"],
+    "chosen": "worktree",
+    "confidence": "high",
+    "forms": "pl. worktrees; de worktree; linked worktree → gekoppelde worktree",
+    "sources": "git's own command name (git worktree), kept English by the Dutch git community; catalog (fileExplorer.git.size.linkedWorktrees, errors.git.orphanedWorktree.*)"
   },
   "write": {
     "accept": ["geschreven", "schrijft", "weggeschreven"],

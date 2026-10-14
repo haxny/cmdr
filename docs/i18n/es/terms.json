@@ -1292,6 +1292,25 @@
     "confidence": "high",
     "sources": "macOS Finder (N165, NE43 Selecciona Archivo > Obtener información)"
   },
+  "git-branch": {
+    "chosen": "rama",
+    "accept": ["ramas"],
+    "confidence": "high",
+    "sources": "Pro Git es (git-scm.com/book/es, Ramificaciones en Git); catalog ships rama/ramas 8 times (fileExplorer.git.tooltip.*, fileExplorer.readOnly.gitPortalMessage), 2026-10-14; the reference pile has no git vocabulary"
+  },
+  "git-commit": {
+    "chosen": "commit",
+    "accept": ["commits"],
+    "forms": "masculine loanword: el commit, el commit padre",
+    "confidence": "high",
+    "sources": "the loanword Spanish developers use; catalog ships it 24 times (fileExplorer.git.size.commits, fileExplorer.git.tooltip.*), 2026-10-14",
+    "avoid": [
+      {
+        "form": "confirmación",
+        "why": "Pro Git's translation, but nobody says it in practice, and the catalog already settled on commit"
+      }
+    ]
+  },
   "github-star": {
     "chosen": "estrella",
     "forms": "Dale una estrella al repo en GitHub; the GitHub button is Estrella",
@@ -3130,6 +3149,13 @@
     "forms": "the tight badge → ajuste",
     "confidence": "tentative",
     "sources": "MS terminology"
+  },
+  "worktree": {
+    "chosen": "worktree",
+    "accept": ["worktrees"],
+    "forms": "masculine: el worktree, worktree vinculado",
+    "confidence": "high",
+    "sources": "git's own command name (git worktree), untranslated in Pro Git es; catalog ships it 8 times (errors.git.orphanedWorktree.*, fileExplorer.git.size.linkedWorktrees), 2026-10-14"
   },
   "write": {
     "chosen": "escribir",

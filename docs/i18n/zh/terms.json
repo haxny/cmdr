@@ -1325,6 +1325,18 @@
     "forms": "quoted in prose: “显示简介”; a path: 显示简介 > 取消勾选“已锁定”",
     "sources": "macOS Finder"
   },
+  "git-branch": {
+    "chosen": "分支",
+    "confidence": "high",
+    "forms": "counted {countText} 个分支; a named one 分支“{branch}”",
+    "sources": "MS terminology (branch, repository sense → 分支); catalog"
+  },
+  "git-commit": {
+    "chosen": "提交",
+    "confidence": "high",
+    "forms": "counted {countText} 次提交; this commit 这次提交; the parent commit 父提交",
+    "sources": "MS terminology (commit, code-repository sense → 提交); catalog"
+  },
   "github-star": {
     "avoid": [
       {

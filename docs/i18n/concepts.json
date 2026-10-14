@@ -1367,6 +1367,12 @@
     "match": ["dirty"],
     "sense": "A git working tree with uncommitted changes."
   },
+  "git-tag": {
+    "distinct": ["tag", "git-branch", "git-commit"],
+    "en": "tag (git)",
+    "match": ["git tag", "git tags", "branches, tags"],
+    "sense": "A git tag (a named pointer to a commit), browsable in the .git portal. Not a Finder color tag."
+  },
   "github-issue": {
     "en": "issue (GitHub)",
     "match": ["github issue", "github issues", "open an issue", "file an issue"],
@@ -3254,9 +3260,10 @@
     "sense": "A tab in a pane (several folders per pane)."
   },
   "tag": {
-    "distinct": ["tab"],
+    "distinct": ["tab", "git-tag"],
     "en": "tag",
     "match": ["tag", "tags"],
+    "notMatch": ["git tag", "git tags", "branches, tags"],
     "sense": "A Finder color tag on a file."
   },
   "tail": {
