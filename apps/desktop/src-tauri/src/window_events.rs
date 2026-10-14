@@ -155,6 +155,15 @@ pub struct ViewerContextMenuAction {
     pub action: ViewerEditActionKind,
 }
 
+/// `queue-row-context-action`: an item was picked from a queue row's right-click menu. Emitted
+/// to the `queue` window, which runs it on the row it opened the menu over, through the same
+/// action that row's key runs.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct QueueRowContextAction {
+    pub action: crate::menu::QueueRowMenuAction,
+}
+
 /// `function-key-bar-hide-requested`: the function key bar's right-click context
 /// menu's "Hide function key bar" item was clicked. No payload: the frontend
 /// owns both the setting write and the confirmation toast. Emitted to the main

@@ -13,6 +13,8 @@ import type {
   ProgressAxis,
   QueueMoveDirection,
   QueueMoveOutcome,
+  QueueRowMenuAction,
+  QueueRowMenuEntry,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
   TransferTreeAncestor,
@@ -33,6 +35,8 @@ export type {
   ProgressAxis,
   QueueMoveDirection,
   QueueMoveOutcome,
+  QueueRowMenuAction,
+  QueueRowMenuEntry,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
   TransferTreeAncestor,
@@ -168,6 +172,24 @@ export async function retryFailedOperation(operationId: string): Promise<RetryOu
 export async function onQueueSelectAll(callback: () => void): Promise<UnlistenFn> {
   return events.queueSelectAll.listen(() => {
     callback()
+  })
+}
+
+/** Pops a queue row's native right-click menu at the pointer. `entries` is the
+ *  window's own list (`queue-row-menu.ts`); `shortcuts` labels each item with its
+ *  key, from `boundShortcuts()`. The pick arrives through `onQueueRowContextAction`. */
+export async function showQueueRowContextMenu(
+  entries: QueueRowMenuEntry[],
+  shortcuts: Record<string, string>,
+): Promise<void> {
+  const res = await commands.showQueueRowContextMenu(entries, shortcuts)
+  if (res.status === 'error') throwIpcError(res.error)
+}
+
+/** An item picked from a queue row's right-click menu. Returns an `UnlistenFn`. */
+export async function onQueueRowContextAction(callback: (action: QueueRowMenuAction) => void): Promise<UnlistenFn> {
+  return events.queueRowContextAction.listen((event) => {
+    callback(event.payload.action)
   })
 }
 

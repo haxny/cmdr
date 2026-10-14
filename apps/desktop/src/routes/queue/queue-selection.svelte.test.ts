@@ -13,7 +13,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
-import type { OperationSnapshot, QueueMoveOutcome, WriteProgressEvent } from '#lib/ipc/bindings.js'
+import type {
+  OperationSnapshot,
+  QueueMoveOutcome,
+  QueueRowMenuAction,
+  QueueRowMenuEntry,
+  WriteProgressEvent,
+} from '#lib/ipc/bindings.js'
 import { oneCopyingFile } from '#lib/file-operations/transfer-tree/fixtures/one-copying-file.js'
 
 const cancelOperations = vi.fn((_ids: string[]) => Promise.resolve())
@@ -21,12 +27,18 @@ const cancelOperation = vi.fn((_id: string) => Promise.resolve())
 const dismissFailedOperation = vi.fn((_id: string) => Promise.resolve())
 const requestForegroundOperation = vi.fn((_id: string) => Promise.resolve())
 const pauseOperation = vi.fn((_id: string) => Promise.resolve())
+const resumeOperation = vi.fn((_id: string) => Promise.resolve())
 const cancelWriteOperation = vi.fn((_id: string, _rollback: boolean) => Promise.resolve())
 const moveQueuedOperation = vi.fn((_id: string, _direction: string): Promise<QueueMoveOutcome> =>
   Promise.resolve({ kind: 'not_queued' }),
 )
 /** The ⌘A menu road's listener, as the page registers it. */
 let selectAllFromMenu: (() => void) | null = null
+const showQueueRowContextMenu = vi.fn((_entries: QueueRowMenuEntry[], _shortcuts: Record<string, string>) =>
+  Promise.resolve(),
+)
+/** The row menu's pick listener, as the page registers it. */
+let pickFromRowMenu: ((action: QueueRowMenuAction) => void) | null = null
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   cancelOperation: (id: string) => cancelOperation(id),
@@ -40,13 +52,19 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
     return Promise.resolve(() => {})
   },
   requestForegroundOperation: (id: string) => requestForegroundOperation(id),
+  showQueueRowContextMenu: (entries: QueueRowMenuEntry[], shortcuts: Record<string, string>) =>
+    showQueueRowContextMenu(entries, shortcuts),
+  onQueueRowContextAction: (callback: (action: QueueRowMenuAction) => void) => {
+    pickFromRowMenu = callback
+    return Promise.resolve(() => {})
+  },
   // B raises the row's rollback confirmation, a `ModalDialog`.
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
   pauseAll: vi.fn(() => Promise.resolve()),
   pauseOperation: (id: string) => pauseOperation(id),
   resumeAll: vi.fn(() => Promise.resolve()),
-  resumeOperation: vi.fn(() => Promise.resolve()),
+  resumeOperation: (id: string) => resumeOperation(id),
   // The store's own imports: it subscribes on `init()` and seeds from the list.
   listOperations: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
@@ -180,9 +198,12 @@ beforeEach(() => {
   dismissFailedOperation.mockClear()
   requestForegroundOperation.mockClear()
   pauseOperation.mockClear()
+  resumeOperation.mockClear()
   cancelWriteOperation.mockClear()
   moveQueuedOperation.mockClear()
   selectAllFromMenu = null
+  showQueueRowContextMenu.mockClear()
+  pickFromRowMenu = null
 })
 
 afterEach(() => {
@@ -521,6 +542,85 @@ async function renderWithTrees(running: string[], waiting: string[] = []): Promi
     for (const operationId of running) expect(rowFor(operationId)?.querySelector('[role="treeitem"]')).not.toBeNull()
   })
 }
+
+describe('queue window: a row’s right-click menu', () => {
+  function rightClick(operationId: string): void {
+    rowFor(operationId)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+    flushSync()
+  }
+
+  /** The menu the page asked for, as `action` / `action!` (greyed) / `-`. */
+  function openedMenu(): string[] {
+    const entries = showQueueRowContextMenu.mock.calls.at(-1)?.[0] ?? []
+    return entries.map((e) => {
+      if (e.kind === 'separator') return '-'
+      return `${e.action}${e.kind === 'check' && e.checked ? '✓' : ''}${e.enabled ? '' : '!'}`
+    })
+  }
+
+  it('puts the cursor on the row and opens its menu, labelled with the window’s keys', async () => {
+    await renderPage(three)
+    rightClick('op-2')
+    expect(cursorRowId()).toBe('op-2')
+    expect(openedMenu()).toEqual(['moveEarlier!', 'moveLater', '-', 'select', '-', 'cancel'])
+    expect(showQueueRowContextMenu.mock.calls[0][1]).toMatchObject({
+      'queue.cancel': 'C',
+      'queue.toggleSelected': 'Space',
+    })
+  })
+
+  it('offers a running row its own items', async () => {
+    await renderPage(three)
+    rightClick('op-1')
+    expect(openedMenu()).toEqual([
+      'show',
+      'pause',
+      '-',
+      'moveEarlier!',
+      'moveLater!',
+      '-',
+      'select',
+      '-',
+      'cancel',
+      'rollback',
+    ])
+  })
+
+  it('runs a pick through the same action as its key, on the row it opened over', async () => {
+    await renderPage(three)
+    rightClick('op-3')
+    pickFromRowMenu?.('moveEarlier')
+    expect(moveQueuedOperation).toHaveBeenCalledWith('op-3', 'earlier')
+
+    rightClick('op-1')
+    pickFromRowMenu?.('cancel')
+    await vi.waitFor(() => {
+      expect(cancelOperation).toHaveBeenCalledWith('op-1')
+    })
+  })
+
+  it('checks the row for "Cancel selected" on Select', async () => {
+    await renderPage(three)
+    rightClick('op-2')
+    pickFromRowMenu?.('select')
+    flushSync()
+    expect(selectedCountText()).toBe('1 selected')
+    rightClick('op-2')
+    expect(openedMenu()).toContain('select✓')
+  })
+
+  it('drops a pick the row no longer offers by the time it lands', async () => {
+    await renderPage(three)
+    rightClick('op-1')
+    applySnapshot([snapshot({ operationId: 'op-1', status: 'paused' }), three[1], three[2]])
+    expect(pickFromRowMenu).not.toBeNull()
+    pickFromRowMenu?.('pause')
+    await Promise.resolve()
+    // Toggling would RESUME the row the user meant to pause.
+    expect(resumeOperation).not.toHaveBeenCalled()
+    expect(pauseOperation).not.toHaveBeenCalled()
+  })
+})
 
 describe('queue window: a row’s live tree', () => {
   it('keeps the grid’s keys out of the tree: ⌫ there cancels nothing, and ↓ stays in it', async () => {

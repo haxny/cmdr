@@ -419,6 +419,16 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         return;
     }
 
+    // === A queue row's right-click menu: emit to the queue window, which knows the row ===
+    if let Some(action) = super::QueueRowMenuAction::from_menu_id(id) {
+        use tauri_specta::Event as _;
+        let event = crate::window_events::QueueRowContextAction { action };
+        if let Err(e) = event.emit_to(app, "queue") {
+            log::warn!(target: "menu", "failed to emit queue-row-context-action: {e}");
+        }
+        return;
+    }
+
     // === Viewer Edit > Cut / Paste: forward the native selector to the focused text field ===
     // The viewer's search box, the only editable thing in that window, which is also why
     // `apply_menu_item_states` greys these two out while it doesn't have focus. ❗ Never the

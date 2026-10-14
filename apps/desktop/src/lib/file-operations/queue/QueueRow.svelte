@@ -29,6 +29,7 @@
     import { rowTreeOperation } from './row-tree'
     import QueueRowSummary from './QueueRowSummary.svelte'
     import { queueKeyAction } from './queue-keys'
+    import type { QueueRowOwnMenuFacts } from './queue-row-menu'
     import { QUEUE_ROW_KEYS } from '../decision-keys'
     import { getAppLogger } from '#lib/logging/logger.js'
 
@@ -49,6 +50,8 @@
         /** Focus landed on the row or one of its buttons, so the cursor follows it there. */
         onFocusRow?: () => void
         onToggleSelect: () => void
+        /** A right-click on the row: the page opens its menu (`queue-row-menu.ts`). */
+        onContextMenu?: () => void
         /** Stop showing a retained failure. Not a command on the operation (it
          *  has none left): the page drops the row the backend retained. The only
          *  way one leaves the list — no timer, no window close, no next
@@ -64,6 +67,7 @@
         treeCollapsible = false,
         onFocusRow,
         onToggleSelect,
+        onContextMenu,
         onDismiss,
     }: Props = $props()
 
@@ -352,6 +356,18 @@
         return true
     }
 
+    /** What the right-click menu offers live, from the same state the guards above read,
+     *  so a greyed item is exactly a key that would do nothing here. */
+    export function menuFacts(): QueueRowOwnMenuFacts {
+        return {
+            active: isRunning || isPaused,
+            paused: isPaused,
+            canShow: canForeground,
+            canRollback,
+            canCancel: isActionable,
+        }
+    }
+
     /** ← / →: steps keyboard focus through the row's buttons, left to right, and
      *  from the first one back to the row. `false` when there's nowhere to go. */
     export function focusControl(step: -1 | 1): boolean {
@@ -416,6 +432,7 @@
     data-status={status}
     onfocusin={() => onFocusRow?.()}
     onclick={handleRowClick}
+    oncontextmenu={() => onContextMenu?.()}
     onkeydown={resumeTreeFollowing}
 >
     <div class="select-cell" role="gridcell">

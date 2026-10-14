@@ -498,6 +498,29 @@ move"). Only a waiting row moves; running and paused ones keep their place. The 
 `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". Drag-to-reorder and "Run
 next" are still #256.
 
+## The row's right-click menu
+
+A native muda menu (`apps/desktop/src-tauri/src/menu/queue_row_menu.rs`), per `docs/guides/building-ui.md` § Building a
+menu: plain rows, opened by a right-click on a backend object. Right-clicking puts the cursor on the row first, as in
+any list.
+
+- **Every row**: Move up (⌥↑), Move down (⌥↓), divider, Select (Space, ticked while the row is selected), divider,
+  Cancel (C). **A running or paused row** leads with Show (↩) and Pause or Resume (P), then a divider, and puts
+  Rollback… (B) beside Cancel: the two ways to stop it, at the bottom. Items that don't apply are greyed (Move up on the
+  first WAITING row, everything on a failure), never dropped, so the menu's shape stays put.
+- **The frontend lists the entries** (`queue-row-menu.ts`, pure, unit-tested); Rust only labels them and pops them up,
+  because every fact behind them lives in this window: the row's own (`QueueRow`'s `menuFacts()`, read off the same
+  derived state its buttons and key guards use), plus the selection and the line's order (`queuedNeighbors`).
+- **A pick runs the KEY's action** (`queueRowMenuKeyAction` → the page's `runGridAction`), on the row the menu opened
+  over (`menuRowId`), so the menu and the keys can't drift. It arrives as `queue-row-context-action` after the menu
+  closed, so the page re-reads the row and drops a pick it no longer offers live (`queueRowMenuOffers`): a Pause picked
+  off a row the toolbar paused meanwhile would otherwise toggle it back to running.
+- **The bare `C` / `Space` / `P` labels are safe.** A popup's key equivalents are never registered with the app (muda
+  builds the `NSMenu` per popup and never attaches it to the menu bar), so they can't eat the key while the window is
+  focused; while the menu is open, pressing one picks its item, which is AppKit's own behavior. Labels come from the
+  pushed `boundShortcuts()` (`menu/CLAUDE.md`), so they're the registry's keys, never literals. (Verified on muda
+  0.20.0's macOS backend by reading its source, 2026-10-14.)
+
 ## Title bar
 
 The heading ("Operations") sits on the traffic lights' own line, centered like a native window title, the way the main
@@ -563,6 +586,9 @@ the MAIN window, which already holds those perms — nothing to add there (see `
   default, `aria-expanded` / `aria-controls`), Tab reaching the tree only from the cursor row, and Escape back to the
   row. `queue-row-session.svelte.test.ts` pins the pull on each tick, and the page test the grid keys staying out of a
   tree.
+- `queue-row-menu.test.ts`: the right-click menu's entries per row state (order, dividers, greying, Select's tick,
+  Resume), each pick's keyboard action, a stale pick refused, and which waiting rows can move. `QueueRow.svelte.test.ts`
+  pins the row's `menuFacts()` against its buttons; the page test the right-click → menu → pick road end to end.
 - `queue-keys.test.ts`: which keypress means which action, whole-combo (⌥⇧↑ is neither a reorder nor an extend).
 - `queue-cursor.svelte.test.ts`: the cursor's steps and edges, following its operation through a reorder or a finish,
   Space / ⌘A, and the ⇧-arrow range (shrinking back toward the anchor, keeping what was checked before it, skipping a

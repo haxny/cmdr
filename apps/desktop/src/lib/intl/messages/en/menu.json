@@ -731,5 +731,37 @@
   "menu.file.multiRename": "Multi-rename…",
   "@menu.file.multiRename": {
     "description": "File menu item (Ctrl+M): opens the tool that renames many files at once with a name mask, like Total Commander's Multi-Rename Tool. The ellipsis says it opens a sheet."
+  },
+  "menu.queue.moveUp": "Move up",
+  "@menu.queue.moveUp": {
+    "description": "VERB phrase (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Moves a WAITING operation one place earlier in line, so it starts sooner. Greyed out on the first waiting one. Same action as the window's ⌥↑ key. No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.moveDown": "Move down",
+  "@menu.queue.moveDown": {
+    "description": "VERB phrase (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Moves a WAITING operation one place later in line. Greyed out on the last waiting one. Pair of menu.queue.moveUp. No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.select": "Select",
+  "@menu.queue.select": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Checks this operation's checkbox, adding it to the set the toolbar's \"Cancel selected\" (queue.toolbar.cancelSelected) acts on. Not the Select menu's title (menu.bar.select): this is a verb. A checkable item: macOS shows a checkmark beside it while the operation is checked, and picking it again unchecks it. No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.cancel": "Cancel",
+  "@menu.queue.cancel": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Stops the operation and keeps every file it already wrote. Must read the same as the row's Cancel button (queue.row.cancel), which does exactly this. No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.show": "Show",
+  "@menu.queue.show": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Brings the main window forward with this operation's progress dialog open. Must read the same as the row's Show button (queue.row.foreground). No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.pause": "Pause",
+  "@menu.queue.pause": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Pauses the running operation. Must read the same as the row's Pause button (queue.row.pause). No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.resume": "Resume",
+  "@menu.queue.resume": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Resumes a paused operation; shown instead of menu.queue.pause on a paused row. Must read the same as the row's Resume button (queue.row.resume). No capture can photograph a native menu, so this description is the whole translator aid."
+  },
+  "menu.queue.rollback": "Rollback…",
+  "@menu.queue.rollback": {
+    "description": "VERB phrase (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Stops the operation and undoes what it did so far (deletes the copies it made, or moves files back). It asks for confirmation first, which is what the ellipsis (the single character … U+2026) says; keep it. Same word as the row's Rollback button (fileOperations.transferProgress.conflictRollback). No capture can photograph a native menu, so this description is the whole translator aid."
   }
 }

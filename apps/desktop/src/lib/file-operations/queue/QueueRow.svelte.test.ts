@@ -6,6 +6,7 @@ import type { OperationRow } from './operations-store.svelte'
 import type { OperationSnapshot, WriteOperationError, WriteProgressEvent } from '#lib/ipc/bindings.js'
 import type { TransferTreeAnswer, TransferTreeViewRequest } from '#lib/tauri-commands/index.js'
 import { oneCopyingFile } from '../transfer-tree/fixtures/one-copying-file'
+import type { QueueRowMenuSource } from './queue-row-menu'
 import { requestForegroundOperation, retryFailedOperation } from '#lib/tauri-commands/index.js'
 
 // The component reads reactive settings (file-size format) deep in `<Size>`. The
@@ -517,6 +518,42 @@ describe('QueueRow', () => {
     render({ row: buildRow('queued') })
     expect(target.querySelector('[data-status="queued"]')).not.toBeNull()
     expect(target.querySelector('[data-operation-id="op-1"]')).not.toBeNull()
+  })
+})
+
+// The row's half of its right-click menu: the page opens the menu, the row says what's
+// live in it, read off the same state its buttons are (so a grey item = a missing button).
+describe('QueueRow right-click menu', () => {
+  function menuFacts() {
+    return (instance as unknown as QueueRowMenuSource).menuFacts()
+  }
+
+  it('asks the page to open its menu on a right-click', () => {
+    const onContextMenu = vi.fn()
+    render({ row: buildRow('queued'), onContextMenu })
+    target.querySelector('[role="row"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }))
+    expect(onContextMenu).toHaveBeenCalledOnce()
+  })
+
+  it('offers what a running row’s buttons offer', () => {
+    render({ row: buildRow('running', 'copy', null, true) })
+    expect(rollbackButton()).not.toBeNull()
+    expect(menuFacts()).toEqual({ active: true, paused: false, canShow: true, canRollback: true, canCancel: true })
+  })
+
+  it('says a paused row is paused, so the menu offers Resume', () => {
+    render({ row: buildRow('paused') })
+    expect(menuFacts()).toMatchObject({ active: true, paused: true })
+  })
+
+  it('offers only Cancel on a waiting row', () => {
+    render({ row: buildRow('queued', 'copy', null, true) })
+    expect(menuFacts()).toEqual({ active: false, paused: false, canShow: false, canRollback: false, canCancel: true })
+  })
+
+  it('offers nothing on a failure', () => {
+    render({ row: buildRow('failed') })
+    expect(menuFacts()).toEqual({ active: false, paused: false, canShow: false, canRollback: false, canCancel: false })
   })
 })
 

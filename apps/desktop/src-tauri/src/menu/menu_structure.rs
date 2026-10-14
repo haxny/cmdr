@@ -42,7 +42,7 @@ use super::{frontend_shortcut_to_menu_text, menu_id_to_command};
 /// is why the lookup goes through `frontend_shortcut_to_menu_text` and ❌ never
 /// `frontend_shortcut_to_accelerator`: the menu bar's modifier floor would drop a bare
 /// `Space` or `F5`, which is right there and wrong here.
-#[derive(Debug, Default, serde::Deserialize)]
+#[derive(Debug, Default, serde::Deserialize, specta::Type)]
 #[serde(transparent)]
 pub struct ContextMenuShortcuts(HashMap<String, String>);
 
@@ -58,6 +58,13 @@ impl ContextMenuShortcuts {
     /// missing label rather than a wrong one.
     pub fn for_menu_item(&self, menu_id: &str) -> Option<String> {
         let (command_id, _scope) = menu_id_to_command(menu_id)?;
+        self.for_command(command_id)
+    }
+
+    /// The accelerator to show for this COMMAND id, in Tauri's format. For a popup whose
+    /// items have no menu-bar twin to map through (the queue row's), so it binds its own
+    /// items to commands.
+    pub(super) fn for_command(&self, command_id: &str) -> Option<String> {
         frontend_shortcut_to_menu_text(self.0.get(command_id)?)
     }
 }

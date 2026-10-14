@@ -16,6 +16,8 @@
 //! - `menu_structure.rs`: the smaller context menus (breadcrumb, parent row, function key bar, tab,
 //!   network host, server row, volume row, favorite), the viewer menu, and the
 //!   `ContextMenuShortcuts` / `context_item` vocabulary they all share with the file one.
+//! - `queue_row_menu.rs`: a queue row's right-click menu in the operation queue window, built from
+//!   the entries the window lists (`QueueRowMenuEntry`); a pick goes back as `QueueRowContextAction`.
 //! - `item_states.rs`: `apply_menu_item_states` (the single writer of every main-menu item's
 //!   enabled state), `set_menu_context`, and the macOS app-menu-bar swap between main and viewer.
 //! - `menu_handlers.rs`: `handle_menu_event`, the `.on_menu_event` dispatcher wired into the Tauri
@@ -60,6 +62,7 @@ mod file_context_menu;
 mod file_provider_items;
 pub mod install;
 mod item_states;
+mod queue_row_menu;
 // `pub(crate)` for one helper: `dock::menu` builds its own `NSMenu` by hand (Tauri
 // exposes none) and puts SF Symbols on it with `set_sf_symbol`, so the same glyph
 // rules cover the menu bar and the Dock tile menu. Everything else here stays internal.
@@ -137,6 +140,7 @@ pub use menu_structure::{
     build_network_host_context_menu, build_parent_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
     build_viewer_menu,
 };
+pub use queue_row_menu::{QueueRowMenuAction, QueueRowMenuEntry, build_queue_row_context_menu};
 pub use rebuild::rebuild_menu_bar;
 #[cfg(target_os = "macos")]
 pub use services_context::lend_services_menu;

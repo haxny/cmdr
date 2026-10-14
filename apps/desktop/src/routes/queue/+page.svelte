@@ -14,11 +14,15 @@
         dismissAllFailedOperations,
         dismissFailedOperation,
         moveQueuedOperation,
+        onQueueRowContextAction,
         onQueueSelectAll,
         pauseAll,
         resumeAll,
+        showQueueRowContextMenu,
         type QueueMoveDirection,
+        type QueueRowMenuAction,
     } from '#lib/tauri-commands/index.js'
+    import { boundShortcuts } from '#lib/shortcuts/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import Button from '#lib/ui/Button.svelte'
     import Icon from '#lib/ui/Icon.svelte'
@@ -37,6 +41,14 @@
     } from '#lib/file-operations/queue/operations-store.svelte.js'
     import { treesCollapsible } from '#lib/file-operations/queue/row-tree.js'
     import {
+        queuedNeighbors,
+        queueRowMenuEntries,
+        queueRowMenuKeyAction,
+        queueRowMenuOffers,
+        type QueueRowMenuFacts,
+        type QueueRowMenuSource,
+    } from '#lib/file-operations/queue/queue-row-menu.js'
+    import {
         initOperationSessions,
         destroyOperationSessions,
     } from '#lib/file-operations/operation-session/window-operation-sessions.svelte.js'
@@ -50,6 +62,7 @@
     let unlistenRectTracking: (() => void) | undefined
     let unsubscribeLanguage: (() => void) | undefined
     let unlistenSelectAll: UnlistenFn | undefined
+    let unlistenRowMenu: UnlistenFn | undefined
 
     /** Ids the user has checked for "Cancel selected". A `SvelteSet` so toggling
      *  is O(1) AND reactive on in-place mutation (add/delete), per the project's
@@ -98,8 +111,8 @@
         },
     })
 
-    /** Each row's keyboard half (`QueueRow`'s exports), by operation id. */
-    const rowApis: Record<string, QueueRowApi | undefined> = {}
+    /** Each row's keyboard half and menu facts (`QueueRow`'s exports), by operation id. */
+    const rowApis: Record<string, (QueueRowApi & QueueRowMenuSource) | undefined> = {}
 
     let gridEl: HTMLDivElement | undefined = $state()
 
@@ -214,6 +227,58 @@
             case 'control':
                 return api.focusControl(action.step)
         }
+    }
+
+    // ── The row's right-click menu (DETAILS § "The row's right-click menu") ──
+    // A native menu whose every pick runs the keyboard action of the same item, on
+    // the row it opened over, so the menu and the keys can't drift.
+
+    /** The row the open (or last) menu belongs to. The pick arrives as an event
+     *  after the menu closed, so this is how it finds its row again. */
+    let menuRowId: string | null = null
+
+    /** Everything the menu asks about row `id`, or `null` once the row is gone. The
+     *  row answers for itself; the selection and the line's order are the page's. */
+    function rowMenuFacts(id: string): QueueRowMenuFacts | null {
+        const api = rowApis[id]
+        const row = rows.find((r) => r.snapshot.operationId === id)
+        if (!api || !row) return null
+        const line = rows.map((r) => ({ id: r.snapshot.operationId, status: r.snapshot.status }))
+        return {
+            ...api.menuFacts(),
+            selectable: !isTerminalStatus(row.snapshot.status),
+            selected: selectedIds.has(id),
+            ...queuedNeighbors(line, id),
+        }
+    }
+
+    /** A right-click puts the cursor on the row, as in any list, then opens its menu. */
+    async function openRowMenu(id: string): Promise<void> {
+        if (cursor.cursorId !== id) cursor.place(id)
+        rowApis[id]?.focusRow()
+        const facts = rowMenuFacts(id)
+        if (facts === null) return
+        menuRowId = id
+        try {
+            await showQueueRowContextMenu(queueRowMenuEntries(facts), boundShortcuts())
+        } catch (error) {
+            log.warn('Failed to open the menu of operation {operationId}: {error}', {
+                operationId: id,
+                error: String(error),
+            })
+        }
+    }
+
+    /** Runs a menu pick, if the row still offers it live: it may have finished, or
+     *  been paused from the toolbar, while the menu was up. */
+    function runRowMenuPick(action: QueueRowMenuAction): void {
+        const id = menuRowId
+        menuRowId = null
+        if (id === null) return
+        const facts = rowMenuFacts(id)
+        if (facts === null || !queueRowMenuOffers(facts, action)) return
+        if (cursor.cursorId !== id) cursor.place(id)
+        runGridAction(queueRowMenuKeyAction(action))
     }
 
     /** Whether the grid answers a key pressed on `target`. Inside the grid, yes;
@@ -356,6 +421,7 @@
             unlistenSelectAll = await onQueueSelectAll(() => {
                 cursor.selectAll()
             })
+            unlistenRowMenu = await onQueueRowContextAction(runRowMenuPick)
         } catch (error) {
             log.error('Failed to initialize operation-queue window: {error}', { error })
         }
@@ -365,6 +431,7 @@
         unlistenFocusSelf?.()
         unlistenRectTracking?.()
         unlistenSelectAll?.()
+        unlistenRowMenu?.()
         unsubscribeLanguage?.()
         store.dispose()
         destroyOperationSessions()
@@ -445,6 +512,7 @@
                         onToggleSelect={() => {
                             toggleSelect(id)
                         }}
+                        onContextMenu={() => void openRowMenu(id)}
                         onDismiss={() => void dismissRow(id)}
                     />
                 {/each}

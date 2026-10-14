@@ -345,6 +345,8 @@ export {
   retryFailedOperation,
   onOperationsChanged,
   onQueueSelectAll,
+  onQueueRowContextAction,
+  showQueueRowContextMenu,
   onWriteSourcesGone,
   continueWithoutGoneSources,
 } from './operations'
@@ -353,6 +355,8 @@ export type {
   OperationsChanged,
   QueueMoveDirection,
   QueueMoveOutcome,
+  QueueRowMenuAction,
+  QueueRowMenuEntry,
   RetryOutcome,
   SourcesGoneAnswerOutcome,
   WriteSourcesGoneEvent,

@@ -1,5 +1,5 @@
 //! The context-menu popups: file, breadcrumb, parent row, tab, network host, the function key
-//! bar, and the viewer's text. (A volume switcher row's and a favorite's actions are the in-app `Menu`'s, not a popup
+//! bar, the viewer's text, and a queue row. (A volume switcher row's and a favorite's actions are the in-app `Menu`'s, not a popup
 //! here: `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`.)
 //!
 //! The pushes that keep the menu BAR in step with the frontend (view mode, hidden files, pin tab,
@@ -14,7 +14,7 @@ use crate::menu::context_menu_facts;
 use crate::menu::{
     ContextMenuPaneFacts, ContextMenuShortcuts, DetachWord, MenuState, SameKindTarget, build_breadcrumb_context_menu,
     build_context_menu, build_function_key_bar_context_menu, build_network_host_context_menu,
-    build_parent_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
+    build_parent_row_context_menu, build_queue_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
 };
 use tauri::menu::ContextMenu;
 use tauri::{AppHandle, Manager, Runtime, Window};
@@ -453,6 +453,21 @@ pub fn show_function_key_bar_context_menu(window: Window<tauri::Wry>) -> Result<
 #[specta::specta]
 pub fn show_viewer_context_menu(window: Window<tauri::Wry>, has_selection: bool) -> Result<(), String> {
     let menu = build_viewer_context_menu(window.app_handle(), has_selection).map_err(|e| e.to_string())?;
+    popup_context_menu(&menu, window, None)
+}
+
+/// Shows a queue row's right-click menu (fire-and-forget), at the pointer. The window lists the
+/// entries (`entries`, with each item's enabled state), since every fact behind them lives there;
+/// the pick comes back as `QueueRowContextAction` to the `queue` window, same shape as
+/// [`show_tab_context_menu`].
+#[tauri::command]
+#[specta::specta]
+pub fn show_queue_row_context_menu(
+    window: Window<tauri::Wry>,
+    entries: Vec<crate::menu::QueueRowMenuEntry>,
+    shortcuts: ContextMenuShortcuts,
+) -> Result<(), String> {
+    let menu = build_queue_row_context_menu(window.app_handle(), &entries, &shortcuts).map_err(|e| e.to_string())?;
     popup_context_menu(&menu, window, None)
 }
 

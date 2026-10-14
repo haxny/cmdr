@@ -1816,6 +1816,14 @@ export const commands = {
    */
   showViewerContextMenu: (hasSelection: boolean) =>
     typedError<null, string>(__TAURI_INVOKE('show_viewer_context_menu', { hasSelection })),
+  /**
+   *  Shows a queue row's right-click menu (fire-and-forget), at the pointer. The window lists the
+   *  entries (`entries`, with each item's enabled state), since every fact behind them lives there;
+   *  the pick comes back as `QueueRowContextAction` to the `queue` window, same shape as
+   *  [`show_tab_context_menu`].
+   */
+  showQueueRowContextMenu: (entries: QueueRowMenuEntry[], shortcuts: ContextMenuShortcuts) =>
+    typedError<null, string>(__TAURI_INVOKE('show_queue_row_context_menu', { entries, shortcuts })),
   // Show a file in Finder (reveal in parent folder)
   showInFinder: (path: string) => typedError<null, string>(__TAURI_INVOKE('show_in_finder', { path })),
   /**
@@ -5151,6 +5159,7 @@ export const events = {
   operationsChanged: makeEvent<OperationsChanged>('operations-changed'),
   osLocalesChanged: makeEvent<OsLocalesChanged>('os-locales-changed'),
   persistRestrictedSetting: makeEvent<PersistRestrictedSetting>('persist-restricted-setting'),
+  queueRowContextAction: makeEvent<QueueRowContextAction>('queue-row-context-action'),
   queueSelectAll: makeEvent<QueueSelectAll>('queue-select-all'),
   quickLookClosed: makeEvent<QuickLookClosed>('quick-look-closed'),
   quickLookKey: makeEvent<QuickLookKeyEvent>('quick-look-key'),
@@ -6721,6 +6730,24 @@ export type ConnectionState =
    *  switcher row with the hollow dot. Activating it dials.
    */
   | 'saved'
+
+/**
+ *  The user's keyboard shortcuts as they stand right now: command-registry id → the
+ *  combo in the frontend's canonical spelling (`⌘⇧C`, `F5`, `Space`). The frontend
+ *  pushes it with every popup, straight out of the shortcut registry, so a command
+ *  nobody has bound is simply absent.
+ *
+ *  This is how a popup menu's accelerator labels stay true after a rebind. They were
+ *  literals once, and a literal starts lying the moment the user changes a key in
+ *  Settings > Shortcuts.
+ *
+ *  ❗ These accelerators never FIRE. A popup's key equivalents are never registered
+ *  with the app (only the menu bar's are), so every one of them is display text. That
+ *  is why the lookup goes through `frontend_shortcut_to_menu_text` and ❌ never
+ *  `frontend_shortcut_to_accelerator`: the menu bar's modifier floor would drop a bare
+ *  `Space` or `F5`, which is right there and wrong here.
+ */
+export type ContextMenuShortcuts = { [key in string]: string }
 
 // A thread's last measured context usage, on the wire. Both figures are `chars/4` estimates.
 export type ContextUsageView = {
@@ -12992,6 +13019,40 @@ export type QueueMoveOutcome =
    *  waiting operation has a place in line to change.
    */
   | { kind: 'not_queued' }
+
+/**
+ *  `queue-row-context-action`: an item was picked from a queue row's right-click menu. Emitted
+ *  to the `queue` window, which runs it on the row it opened the menu over, through the same
+ *  action that row's key runs.
+ */
+export type QueueRowContextAction = {
+  action: QueueRowMenuAction
+}
+
+/**
+ *  One thing a queue row's menu can do. Pause and Resume share a key but are separate
+ *  actions, so the label can say which one this click is, and so a pick that went stale
+ *  while the menu was up can be told apart.
+ */
+export type QueueRowMenuAction =
+  | 'moveEarlier'
+  | 'moveLater'
+  | 'select'
+  | 'cancel'
+  | 'show'
+  | 'pause'
+  | 'resume'
+  | 'rollback'
+
+// One line of a queue row's menu, as the window lists it.
+export type QueueRowMenuEntry =
+  | { kind: 'item'; action: QueueRowMenuAction; enabled: boolean }
+  /**
+   *  An item that toggles, ticked while on: Select, ticked on a selected row, the way the
+   *  row's checkbox is.
+   */
+  | { kind: 'check'; action: QueueRowMenuAction; enabled: boolean; checked: boolean }
+  | { kind: 'separator' }
 
 /**
  *  `queue-select-all`: Edit > Select all (⌘A) while the operation queue window

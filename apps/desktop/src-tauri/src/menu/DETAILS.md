@@ -40,6 +40,9 @@ window focus context.
   `context_item` vocabulary every popup here shares. A volume switcher row's, a favorite's, and a servers-hub place's
   actions are NOT here: they're the in-app `Menu`'s, one list in
   `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`.
+- `queue_row_menu.rs`: a queue row's right-click menu (`build_queue_row_context_menu`), built from the entries the
+  queue window lists (`QueueRowMenuEntry`), each item's accelerator looked up by its own COMMAND id
+  (`ContextMenuShortcuts::for_command`), since these items have no menu-bar twin in `menu_id_to_command`.
 - `selection_submenu.rs`: the file context menu's `Selection >` submenu, its rows held as data (`SELECTION_ROWS`) so a
   unit test can pin their order without building a `muda::Menu`.
 - `install.rs`: `at_startup`, the single call `lib.rs` makes in `setup`: pin the UI language, build the bar,
@@ -191,6 +194,9 @@ Exceptions that do NOT use `"execute-command"`:
   `VIEWER_CONTEXT_*` ids, emitting `ViewerContextMenuAction` to the focused viewer (the popup focused it). ❗ Not the
   bar's `VIEWER_EDIT_COPY_ID` / `VIEWER_SELECT_ALL_ID`: those defer to the search box, this pair always acts on the file
   (`src/routes/viewer/DETAILS.md` § Gotchas)
+- **Queue row right-click menu**: `queue_row_*` ids (`QueueRowMenuAction::from_menu_id`), emitting
+  `QueueRowContextAction` to the `queue` window, which runs the pick on the row it opened the menu over
+  (`apps/desktop/src/lib/file-operations/queue/DETAILS.md` § "The row's right-click menu")
 - **Open with** (macOS): items have dynamic IDs like `open-with:com.apple.Xcode` that can't be
   enumerated in `menu_id_to_command`. `on_menu_event` prefix-matches `open-with:` and calls
   `open_with::launch_with`, looking up the app URL via
