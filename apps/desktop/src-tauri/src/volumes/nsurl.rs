@@ -156,7 +156,22 @@ fn get_u64_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<u64> {
 /// A mounted filesystem always has a capacity, so this is always
 /// [`SpaceInfo::Bounded`]. NSURL reports no used figure of its own, so
 /// [`SpaceInfo::bounded`] derives it.
+///
+/// ❗ A test build answers from `statvfs` instead (the same figure minus purgeable space): the
+/// first NSURL call in a process `readdir`s the test binary's own directory, which stalled
+/// parallel tests for seconds on a bloated `target/debug/deps` (#357). Tests of NSURL itself call
+/// `nsurl_volume_space`.
 pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
+    #[cfg(not(test))]
+    return nsurl_volume_space(path);
+    #[cfg(test)]
+    crate::file_system::volume::backends::get_space_info_statvfs(Path::new(path)).ok()
+}
+
+/// [`get_volume_space`]'s real answer, from NSURL.
+fn nsurl_volume_space(path: &str) -> Option<SpaceInfo> {
+    #[cfg(test)]
+    NSURL_SPACE_QUERIES.with(|n| n.set(n.get() + 1));
     use objc2::rc::autoreleasepool;
     use objc2_foundation::NSURL;
 
@@ -175,8 +190,25 @@ pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
 }
 
 #[cfg(test)]
+thread_local! {
+    /// How many NSURL space queries this thread made, so a test can prove it made none.
+    static NSURL_SPACE_QUERIES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    // Regression anchor for #357: the first NSURL call in a test process `readdir`s the test
+    // binary's own directory, which stalled parallel tests for seconds on a bloated
+    // `target/debug/deps`. A space query in a test build must never get that far.
+    #[test]
+    fn a_test_build_answers_a_space_query_without_nsurl() {
+        let space = get_volume_space("/").expect("the boot volume has a size");
+
+        assert!(space.total_bytes().is_some_and(|total| total > 0), "got {space:?}");
+        assert_eq!(NSURL_SPACE_QUERIES.with(std::cell::Cell::get), 0);
+    }
 
     #[test]
     fn the_boot_volume_reports_a_uuid() {
@@ -195,7 +227,7 @@ mod tests {
 
     #[test]
     fn the_boot_volume_reports_a_bounded_capacity_it_has_not_filled() {
-        let space = get_volume_space("/").expect("macOS reports space for the boot volume");
+        let space = nsurl_volume_space("/").expect("macOS reports space for the boot volume");
 
         let SpaceInfo::Bounded {
             total_bytes,
@@ -213,14 +245,14 @@ mod tests {
     #[test]
     fn test_get_volume_space_home() {
         let home = dirs::home_dir().expect("Should have home dir");
-        let space = get_volume_space(home.to_str().unwrap());
+        let space = nsurl_volume_space(home.to_str().unwrap());
         assert!(space.is_some(), "Should get space info for home directory");
     }
 
     #[test]
     fn test_get_volume_space_nonexistent() {
         // Nonexistent paths return None - the NSURL resource API doesn't resolve to ancestor volumes
-        let space = get_volume_space("/nonexistent/path/that/does/not/exist");
+        let space = nsurl_volume_space("/nonexistent/path/that/does/not/exist");
         assert!(space.is_none(), "Nonexistent paths should return None");
     }
 

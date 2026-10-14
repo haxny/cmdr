@@ -285,6 +285,15 @@ panes off ejected volumes.
 `get_volume_space(path)` uses `NSURLVolumeTotalCapacityKey` and `NSURLVolumeAvailableCapacityForImportantUsageKey`
 (falls back to `NSURLVolumeAvailableCapacityKey`). Returns `None` for non-existent paths.
 
+**Decision**: a test build answers from `statvfs` (`backends::get_space_info_statvfs`), and only the NSURL tests in
+`nsurl.rs` call the real `nsurl_volume_space`. **Why**: the first NSURL call in a process runs
+`CFBundleGetMainBundle`, which `readdir`s the test binary's own directory. On a bloated `target/debug/deps` (457k
+entries) with ~16 nextest processes doing that at once, transfer, archive move-out, and ADB tests reaching the copy
+pre-flight or `LocalPosixVolume::get_space_info` blew their 5 s waits (#357). Every space path (`get_space_info_for_path`,
+`live_volume_space`, the copy pre-flight, the IPC command) funnels through `get_volume_space`, so that one function is
+the seam. `nsurl::tests::a_test_build_answers_a_space_query_without_nsurl` pins it. Verified 2026-10-14 with a
+tripwire on every NSURL resource lookup: none of the 54 tests in the five suites #357 named reaches one.
+
 ## Live volume space
 
 `live_space.rs::live_volume_space(path)` is what the space poller reads every 2 s (through
@@ -612,7 +621,7 @@ IPC compatibility without a frontend migration.
 frontend trigger registration would open a race window where ops fail because the volume isn't registered yet. Direct
 registration ensures that by the time the frontend gets `volume-mounted`, the volume is usable.
 
-**Gotcha**: `get_main_volume`, `get_attached_volumes`, and `get_volume_space` wrap their bodies in
+**Gotcha**: `get_main_volume`, `get_attached_volumes`, and `nsurl_volume_space` wrap their bodies in
 `objc2::rc::autoreleasepool`.
 **Why**: Called from `spawn_blocking` threads. Without a pool, the per-call `NSFileManager`/`NSURL`/`NSString`/`NSNumber`
 objects accumulate in a default pool that's never drained, leaking memory over hours.

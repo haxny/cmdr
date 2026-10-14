@@ -19,6 +19,8 @@ pub use local_posix::LocalPosixVolume;
 /// `statvfs` on Linux). Re-exported so the indexing module can read the scanned
 /// volume's used bytes for tier-2 scan progress without re-implementing statfs.
 pub(crate) use local_posix::get_space_info_for_path;
+#[cfg(all(test, target_os = "macos"))]
+pub(crate) use local_posix::get_space_info_statvfs;
 pub(crate) use local_posix::rename_local_exclusive;
 pub(crate) use local_posix::rename_volume_error;
 // The local reader: the `std::fs` listing and stat that `LocalPosixVolume`, the
