@@ -65,7 +65,7 @@ export const conformanceTerms: { term: Conformance; meaning: string }[] = [
 
 export const report = {
   product: 'Cmdr for macOS',
-  version: '0.52.0',
+  version: '0.53.0',
   /** The evaluation date, also the page's "Last updated". */
   date: '2026-10-15',
   edition: 'VPAT® 2.5Rev INT (April 2025)',
