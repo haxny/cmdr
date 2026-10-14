@@ -22,7 +22,9 @@
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
 use cmdr_fs::staging::is_staging_temp_name;
 use cmdr_fs::volume::{SpaceInfo, StreamLength, Volume, VolumeError, VolumeReadStream};
 use reqwest::header::{CONTENT_TYPE, RANGE};
@@ -108,7 +110,7 @@ impl VolumeReadStream for BufferSource {
         self.at as u64
     }
 
-    fn modified_at(&self) -> Option<std::time::SystemTime> {
+    fn modified_at(&self) -> Option<SystemTime> {
         None
     }
 }
@@ -171,6 +173,158 @@ async fn the_write_path_lands_a_file_byte_exact_on_sabre_dav() {
         "the staging sibling has to be gone, found {:?}",
         siblings.iter().map(|e| &e.name).collect::<Vec<_>>()
     );
+
+    clean(&volume, &dir).await;
+}
+
+/// [`BufferSource`] carrying a modification and a creation date.
+struct DatedBuffer {
+    inner: BufferSource,
+    modified: SystemTime,
+    created: SystemTime,
+}
+
+impl VolumeReadStream for DatedBuffer {
+    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        self.inner.next_chunk()
+    }
+    fn total_size(&self) -> StreamLength {
+        self.inner.total_size()
+    }
+    fn bytes_read(&self) -> u64 {
+        self.inner.bytes_read()
+    }
+    fn modified_at(&self) -> Option<SystemTime> {
+        Some(self.modified)
+    }
+    fn metadata(&self, _wanted: MetadataClasses) -> CarriedMetadata {
+        CarriedMetadata {
+            created: Some(self.created),
+            ..CarriedMetadata::default()
+        }
+    }
+}
+
+/// The one chunked upload this cell started since the last call, by its
+/// uploads collection's name.
+fn the_upload_just_started() -> String {
+    let mut started = super::chunked_upload::STARTED.lock().unwrap();
+    assert_eq!(started.len(), 1, "one write, one chunked upload: {started:?}");
+    started.pop().unwrap()
+}
+
+/// Whether the uploads collection `id` is still on the server. ❗ Asked by
+/// name: Nextcloud refuses to list the uploads home.
+async fn upload_still_there(id: &str) -> bool {
+    let status = raw(
+        Method::from_bytes(b"PROPFIND").unwrap(),
+        &format!("/remote.php/dav/uploads/{FIXTURE_USER}/{id}/"),
+    )
+    .header("Depth", "0")
+    .send()
+    .await
+    .expect(FIXTURE)
+    .status();
+    assert!(
+        status == StatusCode::MULTI_STATUS || status == StatusCode::NOT_FOUND,
+        "PROPFIND on an upload answered {status}"
+    );
+    status == StatusCode::MULTI_STATUS
+}
+
+/// A file bigger than one chunk goes up through Nextcloud's chunked upload
+/// (issue #174: a proxy's per-request cap otherwise cuts it partway): it
+/// lands byte-exact with both dates, progress climbs to the whole size, and the
+/// uploads collection is gone after. A cancelled one leaves neither the target
+/// nor its chunks. Chunks shrink to 5 MiB, v2's floor, so three of them make
+/// a 12 MiB file.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the Nextcloud WebDAV fixture: apps/desktop/test/webdav-servers/start.sh nextcloud (webdav-fixture-nextcloud)"]
+async fn a_big_file_goes_up_in_chunks_and_a_cancelled_one_leaves_nothing() {
+    if not_for_your_own_server("the fixture account's uploads home") {
+        return;
+    }
+    const MIB: u64 = 1024 * 1024;
+    let (volume, dir) = nextcloud_with_scratch().await;
+    assert!(
+        volume.takes_chunked_uploads().await,
+        "the probe has to spot the Nextcloud"
+    );
+    volume.set_upload_chunk_size(5 * MIB);
+
+    let path = dir.join("big.bin");
+    let bytes = fixture_large_bytes((12 * MIB + 7) as usize);
+    let size = bytes.len() as u64;
+    let modified = UNIX_EPOCH + Duration::from_secs(1_611_909_015);
+    let created = UNIX_EPOCH + Duration::from_secs(1_425_168_000);
+    let reported = std::sync::Mutex::new(Vec::new());
+    let written = volume
+        .write_from_stream(
+            &path,
+            WriteMode::CreateOrReplace,
+            StreamLength::Known(size),
+            Box::new(DatedBuffer {
+                inner: BufferSource {
+                    bytes: bytes.clone(),
+                    at: 0,
+                },
+                modified,
+                created,
+            }),
+            &|sent| {
+                reported.lock().unwrap().push(sent.bytes_written);
+                ControlFlow::Continue(())
+            },
+        )
+        .await
+        .expect(FIXTURE);
+
+    assert_eq!(written.bytes, size);
+    assert_same_bytes(&read_whole(&volume, &path).await, &bytes, "a chunked upload");
+    let reported = reported.into_inner().unwrap();
+    assert!(
+        reported.windows(2).all(|pair| pair[0] <= pair[1]),
+        "progress only climbs"
+    );
+    assert_eq!(reported.last(), Some(&size));
+    let listed = volume.get_metadata(&path).await.expect(FIXTURE);
+    assert_eq!(
+        listed.modified_at,
+        Some(1_611_909_015),
+        "X-OC-Mtime rides the assembling MOVE"
+    );
+    assert_eq!(
+        listed.created_at,
+        Some(1_425_168_000),
+        "X-OC-CTime rides the assembling MOVE"
+    );
+    let assembled = the_upload_just_started();
+    assert!(
+        !upload_still_there(&assembled).await,
+        "the server drops the collection once assembled"
+    );
+
+    // Cancelled partway through the second chunk.
+    let cancelled_path = dir.join("cancelled.bin");
+    let cancelled = volume
+        .write_from_stream(
+            &cancelled_path,
+            WriteMode::CreateOrReplace,
+            StreamLength::Known(size),
+            Box::new(BufferSource { bytes, at: 0 }),
+            &|sent| {
+                if sent.bytes_written > 6 * MIB {
+                    ControlFlow::Break(())
+                } else {
+                    ControlFlow::Continue(())
+                }
+            },
+        )
+        .await;
+    assert!(matches!(cancelled, Err(VolumeError::Cancelled(_))), "{cancelled:?}");
+    assert!(!volume.exists(&cancelled_path).await, "the target never saw a byte");
+    let abandoned = the_upload_just_started();
+    assert!(!upload_still_there(&abandoned).await, "the chunks went with the cancel");
 
     clean(&volume, &dir).await;
 }
@@ -380,12 +534,7 @@ async fn nextcloud_a_copy_keeps_the_source_date() {
     let (volume, dir) = nextcloud_with_scratch().await;
     let dated = dir.join("dated.txt");
 
-    cmdr_fs::volume::conformance::assert_write_from_stream_keeps_the_source_date(
-        &volume,
-        &dated,
-        std::time::Duration::ZERO,
-    )
-    .await;
+    cmdr_fs::volume::conformance::assert_write_from_stream_keeps_the_source_date(&volume, &dated, Duration::ZERO).await;
     cmdr_fs::volume::conformance::assert_read_stream_reports_the_listed_date(&volume, &dated).await;
 
     clean(&volume, &dir).await;
@@ -422,7 +571,7 @@ async fn nextcloud_keeps_a_folders_dates() {
     let (volume, dir) = nextcloud_with_scratch().await;
 
     conformance::assert_apply_metadata_keeps(&volume, &dir.join("born")).await;
-    conformance::assert_apply_metadata_dates_a_folder(&volume, &dir.join("dated"), std::time::Duration::ZERO).await;
+    conformance::assert_apply_metadata_dates_a_folder(&volume, &dir.join("dated"), Duration::ZERO).await;
 
     clean(&volume, &dir).await;
 }

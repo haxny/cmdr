@@ -174,6 +174,8 @@ watch them go by. They need something only the seeded fixture has:
 - `quota_reports_the_accounts_own_numbers_not_the_servers_disk` and
   `an_account_with_no_quota_reports_no_free_space_at_all` — the Nextcloud fixture's two accounts and its exact 5 GiB
   quota.
+- `a_big_file_goes_up_in_chunks_and_a_cancelled_one_leaves_nothing` — the fixture account's uploads home, which it asks
+  by the fixture's user id, and a Nextcloud for the probe to spot.
 - `a_bounded_range_is_exact_even_when_the_server_ignores_the_header` and
   `a_resumed_stream_skips_locally_when_the_server_ignores_the_header` — `webdav-fixture-norange`, plus the seeded
   `large.bin`. Both assert the server answered 200 before they assert anything about the backend, and a server of your

@@ -17,12 +17,15 @@
 //! moment is invisible unless it was asked before its answer was needed.
 //! `DETAILS.md` § "Write staging" carries the two counters this costs and why
 //! they mean different things.
+//!
+//! On a Nextcloud, a file bigger than one chunk goes through its chunked
+//! upload instead (`chunked_upload.rs`), each chunk one of these same `PUT`s.
 
 use std::ops::ControlFlow;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use bytes::Bytes;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -146,7 +149,7 @@ const X_OC_CTIME: &str = "X-OC-CTime";
 
 /// `X-OC-Mtime`'s value for `modified_at`: whole Unix seconds, truncated.
 /// `None` before 1970, which the header can't say.
-fn mtime_header_value(modified_at: std::time::SystemTime) -> Option<u64> {
+fn mtime_header_value(modified_at: SystemTime) -> Option<u64> {
     modified_at
         .duration_since(std::time::UNIX_EPOCH)
         .ok()
@@ -163,8 +166,81 @@ fn accepted(response: &reqwest::Response, header: &str) -> bool {
         .is_some_and(|value| value.as_bytes().eq_ignore_ascii_case(b"accepted"))
 }
 
+/// The dates an upload carries to the server, read off the source before its
+/// first byte, and what the server said about them. They ride the request
+/// that gives the file its bytes: the `PUT`, or a chunked upload's assembling
+/// `MOVE`.
+pub(super) struct UploadDates {
+    modified_at: Option<SystemTime>,
+    /// Only where the server keeps one (`keeps_dates`).
+    created_at: Option<SystemTime>,
+}
+
+impl UploadDates {
+    pub(super) fn read(stream: &dyn VolumeReadStream, keeps_dates: bool) -> Self {
+        Self {
+            modified_at: stream.modified_at(),
+            created_at: if keeps_dates {
+                stream.metadata(MetadataClasses::CREATED).created
+            } else {
+                None
+            },
+        }
+    }
+
+    /// `request` with the date headers on it.
+    pub(super) fn on(&self, mut request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        if let Some(secs) = self.modified_at.and_then(mtime_header_value) {
+            request = request.header(X_OC_MTIME, secs);
+        }
+        if let Some(secs) = self.created_at.and_then(mtime_header_value) {
+            request = request.header(X_OC_CTIME, secs);
+        }
+        request
+    }
+
+    /// What became of the creation date, judged from the answer to the
+    /// request that carried it.
+    pub(super) fn judge(&self, response: &reqwest::Response, target: &str) -> ClassOutcome {
+        if self.modified_at.is_some() && !accepted(response, X_OC_MTIME) {
+            // Not a failure: a server without the ownCloud extension (plain
+            // `mod_dav`) has no way to store a date, and keeps its own.
+            debug!(
+                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date"
+            );
+        }
+        if self.created_at.is_none() {
+            return ClassOutcome::Absent;
+        }
+        if accepted(response, X_OC_CTIME) {
+            ClassOutcome::Kept
+        } else {
+            // A server that said at connect it keeps creation dates, then
+            // didn't take this one: the write's report carries it to the loss
+            // note.
+            log::warn!(
+                "WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date"
+            );
+            ClassOutcome::Refused
+        }
+    }
+
+    /// The write's result: `total` bytes, and what the dates came to.
+    pub(super) fn written(&self, total: u64, created: ClassOutcome) -> StreamWritten {
+        let carried = CarriedMetadata {
+            created: self.created_at,
+            ..CarriedMetadata::default()
+        };
+        let report = MetadataReport {
+            created,
+            ..MetadataReport::ABSENT
+        };
+        StreamWritten::with_report(total, &report, &carried, self.modified_at)
+    }
+}
+
 /// The source yielded a different byte count than `size` promised.
-fn size_mismatch(remote: &str, got: u64, size: u64) -> VolumeError {
+pub(super) fn size_mismatch(remote: &str, got: u64, size: u64) -> VolumeError {
     VolumeError::IoError {
         message: format!(
             "{remote}: the source promised {} and yielded {}",
@@ -228,11 +304,12 @@ impl WebdavVolume {
         }
     }
 
-    /// One streaming `PUT` of `stream` to `target`, `Content-Length: size`, with
-    /// progress and cancel. Returns the bytes written and the creation date the
-    /// server refused, if it did; ❗ every failure removes
-    /// whatever the `PUT` may have left at `target`, so the caller has nothing
-    /// to clean.
+    /// Uploads `stream` to `target`, with progress and cancel: one streaming
+    /// `PUT`, or on a Nextcloud a file bigger than one chunk goes through its
+    /// chunked upload (`chunked_upload.rs`). Returns the bytes written and the
+    /// creation date the server refused, if it did; ❗ every failure removes
+    /// whatever the upload may have left at `target`, so the caller has
+    /// nothing to clean.
     async fn put_streaming(
         &self,
         client: &Arc<WebdavClient>,
@@ -242,14 +319,45 @@ impl WebdavVolume {
         on_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     ) -> Result<StreamWritten, VolumeError> {
         // Read before the stream moves into the body. A source knows its dates
-        // from its open, so nothing is lost by asking before the first byte. The
-        // creation date only where the server keeps one (`keeps_dates`).
-        let modified_at = stream.modified_at();
-        let created_at = if self.keeps_dates() {
-            stream.metadata(MetadataClasses::CREATED).created
-        } else {
-            None
-        };
+        // from its open, so nothing is lost by asking before the first byte.
+        let dates = UploadDates::read(&*stream, self.keeps_dates());
+        if let Some(uploads) = client.chunked_uploads()
+            && size > self.upload_chunk_size()
+        {
+            return self
+                .upload_in_chunks(client, uploads, target, size, stream, &dates, on_progress)
+                .await;
+        }
+        let request = dates.on(client.request(Method::PUT, client.url_for(target, false)));
+        match self
+            .stream_put(client, request, target, size, stream, on_progress)
+            .await
+        {
+            Ok(response) => Ok(dates.written(size, dates.judge(&response, target))),
+            Err(e) => {
+                self.remove_best_effort(target).await;
+                Err(e)
+            }
+        }
+    }
+
+    /// One streaming `PUT` of exactly `size` bytes of `stream`: `request` is the
+    /// method and URL plus any headers of the caller's, and this adds the
+    /// length and the body. Progress goes to `on_progress` as `(sent, size)`
+    /// every tick and once at the end; a `Break` from it cancels.
+    ///
+    /// `Ok` only for a 2xx after which the source had yielded exactly `size`
+    /// bytes. ❗ Cleans up nothing: what a failure leaves on the server is the
+    /// caller's, which knows what it was writing.
+    pub(super) async fn stream_put(
+        &self,
+        client: &Arc<WebdavClient>,
+        request: reqwest::RequestBuilder,
+        target: &str,
+        size: u64,
+        stream: Box<dyn VolumeReadStream>,
+        on_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
+    ) -> Result<reqwest::Response, VolumeError> {
         let counts = BodyCounts::new();
         let stop = CancellationToken::new();
         let source_error: Arc<std::sync::Mutex<Option<VolumeError>>> = Arc::new(std::sync::Mutex::new(None));
@@ -292,17 +400,10 @@ impl WebdavVolume {
                 Some((Ok(Bytes::from(chunk)), source))
             },
         ));
-        let mut request = client
-            .request(Method::PUT, client.url_for(target, false))
+        let request = request
             .header(CONTENT_LENGTH, size)
-            .header(CONTENT_TYPE, "application/octet-stream");
-        if let Some(secs) = modified_at.and_then(mtime_header_value) {
-            request = request.header(X_OC_MTIME, secs);
-        }
-        if let Some(secs) = created_at.and_then(mtime_header_value) {
-            request = request.header(X_OC_CTIME, secs);
-        }
-        let request = request.body(body);
+            .header(CONTENT_TYPE, "application/octet-stream")
+            .body(body);
 
         // The block scopes the in-flight request: leaving it drops the
         // request, which is what aborts a cancelled upload on the wire.
@@ -334,29 +435,9 @@ impl WebdavVolume {
         // ❗ What came OUT of the source, never what hyper asked for. The two
         // differ by exactly the case this guard exists for.
         let total = counts.fetched.load(Ordering::Relaxed);
-        let outcome = outcome.map(|response| {
-            let mut created = ClassOutcome::Absent;
-            if modified_at.is_some() && !accepted(&response, X_OC_MTIME) {
-                // Not a failure: a server without the ownCloud extension (plain
-                // `mod_dav`) has no way to store a date, and keeps its own.
-                debug!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date");
-            }
-            if created_at.is_some() {
-                created = ClassOutcome::Kept;
-                if !accepted(&response, X_OC_CTIME) {
-                    // A server that said at connect it keeps creation dates,
-                    // then didn't take this one: the write's report carries it
-                    // to the loss note.
-                    log::warn!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date");
-                    created = ClassOutcome::Refused;
-                }
-            }
-            created
-        });
-        let created = match outcome {
-            Ok(created) => created,
+        let response = match outcome {
+            Ok(response) => response,
             Err(e) => {
-                self.remove_best_effort(target).await;
                 if stop.is_cancelled() {
                     return Err(VolumeError::Cancelled(self.volume_id().to_string()));
                 }
@@ -384,22 +465,12 @@ impl WebdavVolume {
             // `total` is the read-ahead's count: a source whose pieces divide
             // `size` exactly would otherwise agree with the promise and keep a
             // truncated file.
-            self.remove_best_effort(target).await;
             return Err(size_mismatch(target, total, size));
         }
         if on_progress(total, size).is_break() {
-            self.remove_best_effort(target).await;
             return Err(VolumeError::Cancelled(self.volume_id().to_string()));
         }
-        let carried = CarriedMetadata {
-            created: created_at,
-            ..CarriedMetadata::default()
-        };
-        let report = MetadataReport {
-            created,
-            ..MetadataReport::ABSENT
-        };
-        Ok(StreamWritten::with_report(total, &report, &carried, modified_at))
+        Ok(response)
     }
 
     /// Removes what a failed write left at `remote`, and says nothing if that

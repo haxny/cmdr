@@ -2,7 +2,7 @@
 //! translation and the state machine without a server.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64};
 
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
@@ -42,6 +42,7 @@ pub(super) fn make_test_volume_with(root: &str, host: VolumeHost) -> WebdavVolum
             auth_attempt_spent: AtomicBool::new(false),
             silence: std::sync::RwLock::new(Timings::PRODUCTION),
             keeps_dates: AtomicBool::new(false),
+            upload_chunk: AtomicU64::new(crate::chunking::CHUNK_SIZE),
             host,
         }),
     }

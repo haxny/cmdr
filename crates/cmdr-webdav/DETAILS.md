@@ -150,7 +150,8 @@ same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "L
 **Decision**: the transfer engine owns staging, and this backend doesn't stage a `CreateOrReplace` write again.
 `write_from_stream(CreateOrReplace)` is ONE streaming PUT to the path it's handed, with `Content-Length: size`, progress
 every 200 ms from a shared counter, and cancel by poisoning the body stream (the request aborts). Any failure DELETEs
-that path best-effort, the same contract SFTP's truncating open keeps. **Why**: the engine stages every write here
+that path best-effort, the same contract SFTP's truncating open keeps (on a Nextcloud, a big file goes up in chunks
+instead, still onto that one path: § "Chunked uploads (Nextcloud)"). **Why**: the engine stages every write here
 (`write_is_single_shot` keeps its `false` default,
 `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "File writes are staged"), so the path
 IS its `.cmdr-tmp-*` temp, and its landing MOVE (`rename(force = false)`, `Overwrite: F`) is what gives the bytes the
@@ -219,6 +220,51 @@ that here, and the app's `webdav_integration_a_cancelled_upload_leaves_nothing_b
 transfer pipeline. ❗ The crate cell's source is deliberately slow (16 pieces, 40 ms each): cancellation reaches this
 backend through the 200 ms progress tick, so a body that outruns one tick can only ever be cancelled before its first
 byte, which is not the case worth guarding.
+
+## Chunked uploads (Nextcloud)
+
+**Why**: a reverse proxy in front of a Nextcloud commonly caps one request's body (Cloudflare at 100 MB on its Free and
+Pro plans, an nginx at its `client_max_body_size`), so a big file sent as ONE `PUT` fails after the user waited through
+most of it (issue #174). Nextcloud's answer is its chunking API (developer manual, "Chunked file upload"), and this
+backend uses it for every file bigger than one chunk:
+
+1. `MKCOL <install>/remote.php/dav/uploads/<user id>/cmdr-<uuid>/`.
+2. `PUT` chunks `00001`, `00002`, … into it, each one of `writes.rs`'s streaming `PUT`s (`stream_put`) over a window of
+   the one source stream (`chunked_upload.rs`'s `SharedSource`), so the size guard, the read-ahead, progress, and cancel
+   hold per chunk exactly as for a whole file.
+3. `MOVE …/cmdr-<uuid>/.file` onto the target, which assembles the chunks; the server then drops the collection itself.
+
+- **v2, with v1 for free.** All three carry `Destination` (the target, as the `dav/files` endpoint spells it), which v2
+  requires, and the chunks carry `OC-Total-Length` so v2 checks the quota on the first chunk (507) rather than at the
+  `MOVE`. v2 runs only where the server has a distributed cache (Redis or Memcached); without one its plugin steps aside
+  and the same requests assemble the v1 way (read in `apps/dav/lib/Upload/ChunkingV2Plugin.php`, Nextcloud 35.0.0,
+  2026-10-14). The fixture has none, so its cell runs v1; the request shape is v2's.
+- **Detection: `X-User-Id` on the connect probe's 207**, plus a base URL on one of Nextcloud's account endpoints
+  (`remote.php/webdav/…` or `remote.php/dav/files/<user>/…`). Nextcloud's `UserIdHeaderPlugin` sets it on every
+  authenticated DAV answer (verified on `nextcloud:35.0.0-apache` by `curl`, both endpoints, 2026-10-14); it's also the
+  only reliable source of the USER ID the uploads home is filed under, which can differ from the login name (an email
+  login, LDAP). Zero extra requests. ❌ Not `d:current-user-principal`: the legacy `remote.php/webdav/` answers it 404.
+  No `OC-*` header appears on a plain DAV answer, and `status.php` would be a request per connect. A public share, the
+  DAV root, and every non-Nextcloud server upload in one piece. The answer lives on the `WebdavClient`, so each
+  reconnect asks again.
+- ❗ **The `Destination` must be on `remote.php/dav`.** sabre/dav resolves it against its own base, so a target on the
+  legacy `remote.php/webdav/` is re-spelled as `remote.php/dav/files/<user id>/…` (`chunking.rs`).
+- **Chunk size and threshold are one number, 64 MiB** (`CHUNK_SIZE`): under Cloudflare's cap, far above v2's 5 MB floor
+  for every chunk but the last, and a file that fits in one chunk keeps the single `PUT`. A file needing more than v2's
+  10,000 chunks (625 GiB) gets longer ones. Names are zero-padded to five digits so v1's name order is the number order.
+- **Dates ride the assembling `MOVE`** (`X-OC-Mtime`, `X-OC-CTime`), which answers `accepted` for each like a `PUT` does
+  (same server, by `curl` and the cell).
+- **The target sees nothing until the `MOVE`.** Any failure before it (a refused chunk, a cancel, a source of the wrong
+  length) DELETEs the collection, which also cancels a v2 backend write, and leaves the target alone; a failed `MOVE`
+  removes the target too. The server expires an abandoned collection after a day anyway. A source that runs dry is
+  reported as the whole file's short count; one with bytes left after the last chunk is refused before the `MOVE`.
+- **The `MOVE` budget grows with the file**: assembly copies every chunk, so past `MUTATION_BUDGET` it allows 10 MiB/s.
+- **Pause** parks in the source stream as it does for a single `PUT` (mid-chunk). A pause over a day loses the upload:
+  the server expires it, the next chunk fails, and the cleanup runs.
+- Pinned by `chunking_test.rs` (detection, URLs, the plan), `src/volume/chunked_upload_test.rs` (the windows), and
+  `nextcloud_test.rs::a_big_file_goes_up_in_chunks_and_a_cancelled_one_leaves_nothing` (byte-exact, dates, progress,
+  collections gone after success and after a cancel; it shrinks chunks to 5 MiB). Nextcloud refuses to LIST the uploads
+  home, so the cell asks for each collection by the name `chunked_upload::STARTED` recorded.
 
 ## What a real server answers
 

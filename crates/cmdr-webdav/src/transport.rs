@@ -1,9 +1,10 @@
 //! The HTTP client, and every request shape this backend sends.
 //!
 //! ❗ **`reqwest` is confined to this file, `errors.rs` (status codes and the
-//! typed error predicates), and `streams.rs` / `writes.rs` (the two bodies
-//! that stream).** Everything else works in `Url`s, status codes, and
-//! [`PropfindEntry`]s, so a client swap is at most four files' problem.
+//! typed error predicates), and `streams.rs` / `writes.rs` /
+//! `chunked_upload.rs` (the bodies that stream).** Everything else works in
+//! `Url`s, status codes, and [`PropfindEntry`]s, so a client swap is at most
+//! five files' problem.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,6 +15,7 @@ use reqwest::header::{HeaderValue, WWW_AUTHENTICATE};
 use reqwest::{Method, RequestBuilder, Response, StatusCode};
 use url::Url;
 
+use crate::chunking::ChunkedUploads;
 use crate::errors::{WebdavConnectError, classify_connect_error};
 use crate::propfind::{PropfindEntry, every_propstat_succeeded, parse_multistatus};
 use cmdr_fs::volume::liveness::Liveness;
@@ -57,7 +59,24 @@ pub(crate) const MUTATION_BUDGET: Duration = Duration::from_secs(10 * 60);
 
 /// Everything but the unreserved characters gets encoded in a path segment:
 /// spaces, `#`, `?`, `%`, and every other reserved byte included.
-const SEGMENT: &AsciiSet = &NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
+pub(crate) const SEGMENT: &AsciiSet = &NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
+
+/// `base` with a root-relative remote path like `/Photos/a b.jpg` appended,
+/// each segment percent-encoded. `collection` appends the trailing slash a
+/// collection is addressed with.
+pub(crate) fn join_remote(base: &Url, remote_path: &str, collection: bool) -> Url {
+    let mut url = base.clone();
+    let mut path = base.path().trim_end_matches('/').to_string();
+    for segment in remote_path.split('/').filter(|s| !s.is_empty()) {
+        path.push('/');
+        path.push_str(&utf8_percent_encode(segment, SEGMENT).to_string());
+    }
+    if collection || path.is_empty() {
+        path.push('/');
+    }
+    url.set_path(&path);
+    url
+}
 
 /// The methods HTTP itself doesn't name.
 pub(crate) fn method(name: &str) -> Method {
@@ -100,6 +119,12 @@ const PROBE_BODY: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <D:quota-available-bytes/><D:quota-used-bytes/><oc:size/><nc:creation_time/>
 </D:prop></D:propfind>"#;
 
+/// The header a Nextcloud answers every authenticated DAV request with, naming
+/// the account's user id (its `UserIdHeaderPlugin`; verified on
+/// `nextcloud:35.0.0-apache` by `curl` on both DAV endpoints, 2026-10-14).
+/// ❗ The user id, which can differ from the login name (an email login, LDAP).
+const USER_ID_HEADER: &str = "X-User-Id";
+
 /// The most a PROPPATCH answer may hold: one resource's handful of statuses.
 const MAX_PROPPATCH_BODY: usize = 64 * 1024;
 
@@ -117,6 +142,8 @@ pub(crate) struct WebdavClient {
     /// What the server has said lately (`cmdr_fs::volume::liveness`). Dies with this
     /// client: a reconnect builds a new one.
     liveness: Arc<Liveness>,
+    /// Set by the connect probe on a Nextcloud (`chunking.rs`).
+    chunked_uploads: Option<ChunkedUploads>,
 }
 
 impl WebdavClient {
@@ -157,6 +184,7 @@ impl WebdavClient {
             username: username.to_string(),
             password: password.to_string(),
             liveness: Arc::new(Liveness::new()),
+            chunked_uploads: None,
         })
     }
 
@@ -196,17 +224,14 @@ impl WebdavClient {
     /// segment percent-encoded. `collection` appends the trailing slash a
     /// collection is addressed with.
     pub(crate) fn url_for(&self, remote_path: &str, collection: bool) -> Url {
-        let mut url = self.base.clone();
-        let mut path = self.base.path().trim_end_matches('/').to_string();
-        for segment in remote_path.split('/').filter(|s| !s.is_empty()) {
-            path.push('/');
-            path.push_str(&utf8_percent_encode(segment, SEGMENT).to_string());
-        }
-        if collection || path.is_empty() {
-            path.push('/');
-        }
-        url.set_path(&path);
-        url
+        join_remote(&self.base, remote_path, collection)
+    }
+
+    /// Where this server takes a chunked upload, when it's a Nextcloud
+    /// (`chunking.rs`). Answered by the connect probe, so it dies with this
+    /// client and every reconnect asks again.
+    pub(crate) fn chunked_uploads(&self) -> Option<&ChunkedUploads> {
+        self.chunked_uploads.as_ref()
     }
 
     /// A request with this account's credentials on it.
@@ -316,8 +341,11 @@ impl WebdavClient {
     }
 
     /// The connect probe: PROPFIND `Depth: 0` on `root`, judged in connect
-    /// terms.
-    pub(crate) async fn probe(&self, root_url: Url) -> Result<Vec<PropfindEntry>, WebdavConnectError> {
+    /// terms. On a 207 it also notes whether the server takes chunked uploads:
+    /// a Nextcloud names the signed-in account in `X-User-Id` on every DAV
+    /// answer, which is both the tell and the id its uploads home is filed
+    /// under (`chunking.rs`).
+    pub(crate) async fn probe(&mut self, root_url: Url) -> Result<Vec<PropfindEntry>, WebdavConnectError> {
         debug!(target: "volume", "webdav probe: PROPFIND {}", root_url);
         let request = self
             .request(method("PROPFIND"), root_url)
@@ -329,6 +357,11 @@ impl WebdavClient {
         let status = response.status();
         match status {
             StatusCode::MULTI_STATUS => {
+                let user_id = response.headers().get(USER_ID_HEADER).and_then(|v| v.to_str().ok());
+                self.chunked_uploads = ChunkedUploads::detect(&self.base, user_id);
+                if self.chunked_uploads.is_some() {
+                    debug!(target: "volume", "webdav probe: a Nextcloud, so large files upload in chunks");
+                }
                 // A `Depth: 0` answer describes one resource; a body past the
                 // cap isn't a WebDAV server answering it.
                 let body = self

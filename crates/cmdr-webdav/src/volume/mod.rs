@@ -12,7 +12,7 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
@@ -23,11 +23,13 @@ use cmdr_fs::volume::{Retirement, VolumeError};
 use reqwest::{RequestBuilder, Response};
 use tokio_util::sync::CancellationToken;
 
+use crate::chunking::CHUNK_SIZE;
 use crate::errors::{Attempted, WebdavConnectError, map_status, map_transport_error};
 use crate::params::WebdavConnectionParams;
 use crate::transport::WebdavClient;
 use cmdr_fs::volume::liveness::Timings;
 
+mod chunked_upload;
 mod copy;
 mod mapping;
 mod mutation;
@@ -118,6 +120,10 @@ struct WebdavVolumeInner {
     /// Nextcloud), as its last connect probe said (`transport.rs`'s `PROBE_BODY`).
     /// Read by `metadata_caps`, which can't wait on the client's lock.
     keeps_dates: AtomicBool,
+    /// The chunk a big upload to a Nextcloud is cut into, and the size past
+    /// which it is (`crate::chunking::CHUNK_SIZE`). A field rather than the
+    /// constant so a cell can chunk a small file.
+    upload_chunk: AtomicU64,
     /// Everything this backend asks the app around it.
     host: VolumeHost,
 }
@@ -239,6 +245,27 @@ impl WebdavVolume {
         *self.inner.silence.write_ignore_poison() = timings;
     }
 
+    /// The chunk a big upload to a Nextcloud is cut into.
+    pub(super) fn upload_chunk_size(&self) -> u64 {
+        self.inner.upload_chunk.load(Ordering::Relaxed)
+    }
+
+    /// Shrinks the upload chunk, for a cell that sends a small file through
+    /// the chunked path. ❗ Nextcloud's v2 takes no chunk under 5 MB but the
+    /// last.
+    #[cfg(test)]
+    pub(super) fn set_upload_chunk_size(&self, bytes: u64) {
+        self.inner.upload_chunk.store(bytes, Ordering::Relaxed);
+    }
+
+    /// Whether the connect probe found a Nextcloud's chunked uploads.
+    #[cfg(test)]
+    pub(super) async fn takes_chunked_uploads(&self) -> bool {
+        self.clone_client()
+            .await
+            .is_ok_and(|client| client.chunked_uploads().is_some())
+    }
+
     /// A handle on the live client, for a cell asserting that nothing re-probed.
     ///
     /// A `Weak` keeps the allocation (not the client) alive, so two witnesses are
@@ -302,7 +329,7 @@ pub(super) async fn build_and_probe(
     password: &str,
     cancel: &CancellationToken,
 ) -> Result<(WebdavClient, bool), WebdavConnectError> {
-    let client = WebdavClient::new(params.base_url.clone(), &params.username, password)?;
+    let mut client = WebdavClient::new(params.base_url.clone(), &params.username, password)?;
     let root = paths::root_remote_path(&params.remote_root);
     let root_url = client.url_for(&root, true);
     let entries = tokio::select! {
@@ -342,6 +369,7 @@ impl WebdavVolume {
                 auth_attempt_spent: AtomicBool::new(false),
                 silence: std::sync::RwLock::new(Timings::PRODUCTION),
                 keeps_dates: AtomicBool::new(keeps_dates),
+                upload_chunk: AtomicU64::new(CHUNK_SIZE),
                 host,
             }),
         }
