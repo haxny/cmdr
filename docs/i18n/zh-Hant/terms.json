@@ -1501,6 +1501,13 @@
     "forms": "quoted in running text: 「取得資訊」",
     "sources": "catalog commands.fileGetInfo.mac.label, menu.file.getInfo"
   },
+  "git-ahead-behind": {
+    "accept": ["落後"],
+    "chosen": "領先",
+    "confidence": "high",
+    "forms": "ahead → 領先, behind → 落後; compared with a named branch → 比 {upstream} 領先 N 次提交，落後 N 次提交; the pair as a feature name → 領先/落後",
+    "sources": "git CLI zh_TW.po (ahead %d → 領先 %d, behind %d → 落後 %d, Your branch is ahead of → 您的分支領先); catalog fileExplorer.git.tooltip.aheadBehind; no Apple, MS, or file-manager entry"
+  },
   "git-branch": {
     "chosen": "分支",
     "confidence": "high",
@@ -1521,6 +1528,35 @@
     "forms": "a count of commits → 次提交 ({countText} 次提交); one commit as a thing → 這次提交; parent commit → 父提交",
     "sources": "catalog (提交 in 7 values: fileExplorer.readOnly.gitPortalMessage, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
   },
+  "git-detached": {
+    "avoid": [
+      {
+        "form": "已中斷連結",
+        "why": "VS Code zh-Hant's detached; reads as a dropped connection, and 中斷連線 is this catalog's Disconnect"
+      },
+      {
+        "form": "開頭指標分離",
+        "why": "git CLI's literal detached HEAD; too technical for a pill or tooltip"
+      }
+    ],
+    "chosen": "分離狀態",
+    "confidence": "high",
+    "forms": "detached at {id} → 分離狀態，位於 {id}; the narrow pill → （分離狀態）{id}",
+    "sources": "git CLI zh_TW.po (HEAD detached at → 開頭指標分離於, detached HEAD → 分離 HEAD 指標); catalog fileExplorer.git.tooltip.worktreeDetached (分離狀態，位於 {id})"
+  },
+  "git-dirty": {
+    "avoid": [
+      {
+        "form": "髒",
+        "why": "git CLI zh_TW's literal 髒工作區; reads as an insult, not a state"
+      }
+    ],
+    "accept": ["已變更"],
+    "chosen": "有改動",
+    "confidence": "high",
+    "forms": "the pill's state word → 有改動; uncommitted changes → 尚未提交的改動",
+    "sources": "catalog settings.fileExplorer.git.showRepoChip.description (dirty state → 有沒有改動) and fileExplorer.git.tooltip.filesChanged (改動了); MS dirty → 已變更; VS Code zh-Hant Uncommitted Changes → 未提交的變更"
+  },
   "git-tag": {
     "chosen": "標籤",
     "forms": "counted {countText} 個標籤; to tag → 加標籤, so a tagged commit → 已加標籤的提交",
@@ -1533,6 +1569,14 @@
     "confidence": "high",
     "sources": "Pro Git 2 zh-TW (標籤, 列出你的標籤); MS terminology git sense (標籤); VS Code zh-Hant git extension (建立標籤, 標籤); Gitea zh-TW (標籤)",
     "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
+  },
+  "git-unborn": {
+    "accept": ["尚無提交"],
+    "chosen": "未誕生的分支",
+    "confidence": "tentative",
+    "forms": "no commits yet → 尚無提交; the tooltip pairs both: 位於未誕生的分支 {branch}（尚無提交）",
+    "sources": "git CLI zh_TW.po (unborn branch → 未誕生的分支 / 未誕生分支, No commits yet → 尚無提交); no Apple, MS, VS Code, or file-manager entry",
+    "note": "Tentative: git's own coinage, literal and unfamiliar outside git; the 尚無提交 gloss carries the meaning."
   },
   "github-star": {
     "accept": ["星"],
@@ -3884,6 +3928,21 @@
     "chosen": "自動換行",
     "confidence": "high",
     "sources": "MS (HKG, TWN), TC Lister, DC"
+  },
+  "working-tree": {
+    "avoid": [
+      {
+        "form": "工作區",
+        "why": "git CLI zh_TW's working tree; collides with the general workspace sense"
+      },
+      {
+        "form": "工作樹",
+        "why": "VS Code zh-Hant uses it for BOTH worktree and working tree; this catalog keeps worktree Latin"
+      }
+    ],
+    "chosen": "工作目錄樹",
+    "confidence": "high",
+    "sources": "catalog (工作目錄樹 in 3 values: errors.git.bareRepo.message, errors.git.gitDirPermissionDenied.message, errors.git.blobTooLarge.suggestion); git CLI zh_TW 工作區; VS Code zh-Hant 工作樹狀目錄"
   },
   "worktree": {
     "chosen": "worktree",

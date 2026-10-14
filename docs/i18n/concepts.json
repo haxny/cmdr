@@ -1344,6 +1344,12 @@
     "note": "Apple localizes this label in every language, even where a @key description says to keep it English.",
     "sense": "Finder's Get Info command and window."
   },
+  "git-ahead-behind": {
+    "distinct": ["git-branch", "git-commit"],
+    "en": "ahead / behind",
+    "match": ["ahead/behind", "commits ahead", "commit ahead", "commits behind", "commit behind"],
+    "sense": "How far a git branch has moved apart from the branch it's compared with: ahead = commits only it has, behind = commits only the other has."
+  },
   "git-branch": {
     "distinct": ["git-commit", "repository"],
     "en": "branch",
@@ -1362,6 +1368,12 @@
     "match": ["commit", "commits"],
     "sense": "A git commit (a snapshot in the repo's history), as the .git portal lists it."
   },
+  "git-detached": {
+    "distinct": ["git-branch", "git-commit"],
+    "en": "detached",
+    "match": ["detached"],
+    "sense": "A git checkout sitting on one exact commit with no branch open (git's \"detached HEAD\")."
+  },
   "git-dirty": {
     "en": "dirty",
     "match": ["dirty"],
@@ -1372,6 +1384,12 @@
     "en": "tag (git)",
     "match": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
     "sense": "A git tag (a named pointer to a commit), browsable in the .git portal. Not a Finder color tag."
+  },
+  "git-unborn": {
+    "distinct": ["git-branch", "git-commit"],
+    "en": "unborn branch",
+    "match": ["unborn", "no commits yet"],
+    "sense": "A git branch in a freshly created repository that has no commits yet (git's \"unborn branch\")."
   },
   "github-issue": {
     "en": "issue (GitHub)",

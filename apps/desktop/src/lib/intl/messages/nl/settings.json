@@ -2082,6 +2082,14 @@
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
+  "settings.control.showValue": "Toon waarde",
+  "@settings.control.showValue": {
+    "sourceHash": "fad206e"
+  },
+  "settings.control.hideValue": "Verberg waarde",
+  "@settings.control.hideValue": {
+    "sourceHash": "381d9c1"
+  },
   "settings.control.unitItems": "onderdelen",
   "@settings.control.unitItems": {
     "sourceHash": "5f3c4f8"

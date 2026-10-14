@@ -2070,6 +2070,14 @@
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
+  "settings.control.showValue": "Показать значение",
+  "@settings.control.showValue": {
+    "sourceHash": "fad206e"
+  },
+  "settings.control.hideValue": "Скрыть значение",
+  "@settings.control.hideValue": {
+    "sourceHash": "381d9c1"
+  },
   "settings.control.unitItems": "шт.",
   "@settings.control.unitItems": {
     "sourceHash": "5f3c4f8"

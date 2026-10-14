@@ -31,6 +31,12 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **`Échap` vs `esc`** (`escape-key`, 8 keys incl. `settings.fileExplorer.typeToJump.mode.description`): the ruling
   follows MS and TC, but macOS 27 French says `la touche esc` in Setup Assistant, Screen Sharing and VoiceOver (the
   symbol name alone says `touche Échap`), and the Mac keycap reads esc. Decide whether to move the whole catalog.
+- **git dirty → `modifié`** (tentative, `fileExplorer.git.repoChip.dirty`): the masculine qualifies the working copy,
+  but it sits right after a feminine branch name in the pill (`main · modifié`); confirm it doesn’t read as a
+  misagreement with `branche`, or pick a noun (`modifications`).
+- **Uploading badge → `Chargement`** (`fileExplorer.fileIcon.sync.uploading`): copied from Finder’s own iCloud badge
+  (`AXBADGE7`/`NE88.6`), but the catalog also uses `Chargement` for "Loading"; confirm a screen-reader user hears it as
+  an upload next to the `Téléchargement` badge.
 
 ## Phrasing
 

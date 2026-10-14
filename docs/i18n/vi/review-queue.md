@@ -81,6 +81,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Transfer-tree folder counts** (`fileOperations.transferTree.skippedCount`, `.failedCount`): `đã bỏ qua 3` and
   `3 không thành công`, each picked for how it reads alone after a middle dot; the full status `Chưa hoàn tất được`
   (`.state.failed`) was too long for the tight count text. Alternatives: `3 bị bỏ qua`, `3 chưa hoàn tất`.
+- **Git branch pill** (`fileExplorer.git.repoChip.*`): git’s own vi catalog is literal and dated
+  (`nhánh mà nó chưa hề được sinh ra`, `lần chuyển giao`), so the pill carries the concepts with the catalog’s loanwords
+  instead: unborn → `chưa có commit`, dirty → `có thay đổi`, working tree kept Latin
+  (`Working tree có thay đổi chưa commit.`). A native developer should confirm `có thay đổi` reads as “dirty” after the
+  middle dot, and whether `cây làm việc` would beat the loanword.
 
 ## Layout
 

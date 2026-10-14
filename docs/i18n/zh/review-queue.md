@@ -81,3 +81,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **Operation queue keyboard rows** (`commands.queueExtendUp/Down.label`, `commands.queueToggleSelected.label`): extend
   the selection is `向上扩大选择范围` / `向下扩大选择范围` (no pile source: macOS, Microsoft, and the Linux catalogs
   have no "extend selection"); toggle is `把操作加入所选，或从所选中移除`. Confirm both read naturally as shortcut rows.
+- **Git branch pill** (`fileExplorer.git.repoChip.*`): dirty is `有改动` (Microsoft's git term `脏` rejected as an
+  unfriendly calque), detached is `（分离）{id}` (git zh_CN says `分离头指针`), and the unborn tooltip carries "unborn"
+  as `新分支` plus `（还没有提交）` instead of git's `尚未诞生的分支`. Confirm a git user reads all three at a glance.

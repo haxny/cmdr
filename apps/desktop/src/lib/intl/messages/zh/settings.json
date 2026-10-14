@@ -2072,6 +2072,14 @@
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
+  "settings.control.showValue": "显示值",
+  "@settings.control.showValue": {
+    "sourceHash": "fad206e"
+  },
+  "settings.control.hideValue": "隐藏值",
+  "@settings.control.hideValue": {
+    "sourceHash": "381d9c1"
+  },
   "settings.control.unitItems": "个项目",
   "@settings.control.unitItems": {
     "sourceHash": "5f3c4f8"

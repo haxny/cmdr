@@ -1325,6 +1325,12 @@
     "forms": "quoted in prose: “显示简介”; a path: 显示简介 > 取消勾选“已锁定”",
     "sources": "macOS Finder"
   },
+  "git-ahead-behind": {
+    "chosen": "领先",
+    "confidence": "high",
+    "forms": "比“{vs}”领先 {aheadText} 次提交，落后 {behindText} 次提交; the settings list 领先/落后",
+    "sources": "git zh_CN.po (您的分支领先 '%s' 共 %d 个提交); catalog (fileExplorer.git.tooltip.aheadBehind)"
+  },
   "git-branch": {
     "chosen": "分支",
     "confidence": "high",
@@ -1336,6 +1342,42 @@
     "confidence": "high",
     "forms": "counted {countText} 次提交; this commit 这次提交; the parent commit 父提交",
     "sources": "MS terminology (commit, code-repository sense → 提交); catalog"
+  },
+  "git-detached": {
+    "chosen": "分离",
+    "confidence": "high",
+    "forms": "tooltip 分离状态，位于 {id}; the narrow pill （分离）{id}",
+    "avoid": [
+      {
+        "form": "头指针分离",
+        "why": "git's own zh_CN wording, but HEAD jargon; the catalog already settled 分离状态 in fileExplorer.git.tooltip.worktreeDetached"
+      }
+    ],
+    "sources": "git zh_CN.po (detached HEAD → 分离头指针, HEAD detached at → 头指针分离于); catalog"
+  },
+  "git-dirty": {
+    "chosen": "有改动",
+    "confidence": "tentative",
+    "forms": "the pill state 有改动; tooltip 工作树中有未提交的改动",
+    "avoid": [
+      {
+        "form": "脏",
+        "why": "MS terminology's git entry, but a literal calque that reads as an insult in friendly UI copy; the catalog's settings description already says 有改动的状态"
+      }
+    ],
+    "sources": "MS terminology (dirty, working-tree sense → 脏, rejected); git zh_CN.po (uncommitted changes → 未提交的变更); catalog 改动 for changes"
+  },
+  "git-unborn": {
+    "chosen": "还没有提交",
+    "confidence": "high",
+    "forms": "pill {branch}（还没有提交）; tooltip 位于新分支“{branch}”（还没有提交）",
+    "avoid": [
+      {
+        "form": "尚未诞生的分支",
+        "why": "git's own zh_CN wording, but a bookish calque, and 尚未 is written register; carry the concept as a new branch with no commits"
+      }
+    ],
+    "sources": "git zh_CN.po (No commits yet → 尚无提交, unborn branch → 尚未诞生的分支)"
   },
   "git-tag": {
     "chosen": "标签",
@@ -3022,6 +3064,12 @@
     "chosen": "符号链接",
     "confidence": "high",
     "sources": "MS terminology"
+  },
+  "sync": {
+    "chosen": "同步",
+    "confidence": "high",
+    "forms": "the cloud badge 已同步; its in-flight siblings 正在上传 / 正在下载 (Finder's AX badges)",
+    "sources": "MS terminology (synced → 已同步); macOS Finder (AXBADGE7 正在上传, AXBADGE8 正在下载, AXBADGE11 不同步); catalog"
   },
   "system-integrity-protection": {
     "chosen": "系统完整性保护",

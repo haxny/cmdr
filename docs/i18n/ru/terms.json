@@ -2054,6 +2054,45 @@
     ],
     "confidence": "tentative",
     "sources": "MS terminology (uncommitted change → незафиксированное изменение; dirty → грязное)",
+    "exceptions": {
+      "fileExplorer.git.repoChip.dirty": "One-word state in the narrow branch pill («main · +2 / изменено»); the tooltip beside it spells out «незафиксированные изменения»."
+    },
+    "decision": "Git words"
+  },
+  "git-ahead-behind": {
+    "chosen": "впереди / позади",
+    "accept": ["впереди", "позади", "опережени", "отставани"],
+    "forms": "N commits ahead, M behind X → Впереди «X» на N коммитов, позади на M коммитов; settings prose → опережение и отставание",
+    "confidence": "high",
+    "sources": "git's own po/ru.po (ahead %d → впереди %d, behind %d → позади %d; Your branch is ahead of '%s' by %d commit → Ваша ветка опережает «%s» на %d коммит). No pile source has git",
+    "decision": "Git words"
+  },
+  "git-detached": {
+    "chosen": "отсоединенный HEAD",
+    "accept": ["отсоедин", "нет ветки"],
+    "forms": "tooltip Detached at {id} → Отсоединенный HEAD: {id}; narrow pill (detached) → (нет ветки), git's own label for the state",
+    "avoid": [
+      {
+        "form": "отделенный",
+        "why": "git's ru.po mixes отделённый and отсоединённый; the catalog already says отсоединенный"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "git's own po/ru.po (HEAD detached at → Отсоединённый указатель HEAD указывает на; detached HEAD → отделённый HEAD; (no branch) → (нет ветки)). No pile source has git",
+    "decision": "Git words"
+  },
+  "git-unborn": {
+    "chosen": "еще нет коммитов",
+    "accept": ["еще нет коммитов", "без коммитов", "не начавш"],
+    "forms": "pill {branch} (no commits yet) → {branch} (еще нет коммитов); tooltip → Текущая ветка: {branch} (еще нет коммитов).",
+    "avoid": [
+      {
+        "form": "нерожденная ветка",
+        "why": "a literal calque of git's jargon; git's ru.po says еще не начавшаяся ветка, and the plain «no commits yet» carries the concept"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "git's own po/ru.po (No commits yet → Еще нет коммитов; unborn branch → еще не начавшаяся ветка; On branch → Текущая ветка:). No pile source has git",
     "decision": "Git words"
   },
   "github-issue": {

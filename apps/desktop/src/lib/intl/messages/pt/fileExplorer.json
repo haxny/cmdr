@@ -861,6 +861,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
   },
+  "fileExplorer.rename.fieldAriaLabel": "Renomear {name}",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "sourceHash": "e84e258"
+  },
   "fileExplorer.rename.hiddenAfterRename": "Seu arquivo sumiu da tela porque os arquivos ocultos não estão sendo exibidos.",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "6258274"
@@ -1087,6 +1091,42 @@
   "@fileExplorer.git.tooltip.worktreeDetached": {
     "sourceHash": "8455479"
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch} (ainda sem commits)",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "sourceHash": "e36dc64"
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "(desanexado) {id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "sourceHash": "bb85fcf"
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "(desanexado)",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "sourceHash": "6cd215c"
+  },
+  "fileExplorer.git.repoChip.dirty": "modificado",
+  "@fileExplorer.git.repoChip.dirty": {
+    "sourceHash": "d0c92c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "No branch {branch}.",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "sourceHash": "ef69ca4"
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "No branch {branch}, que ainda não tem commits.",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "sourceHash": "b7b0611"
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "Desanexado em {id}.",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "sourceHash": "fa6e940"
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} many {{aheadText} commits} other {{aheadText} commits}} à frente, {behind, plural, one {{behindText} commit} many {{behindText} commits} other {{behindText} commits}} atrás de {upstream}.",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "sourceHash": "02815c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "A árvore de trabalho tem alterações sem commit.",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "sourceHash": "360c5e5"
+  },
   "fileExplorer.selectionTooltip.selected": "Selecionado",
   "@fileExplorer.selectionTooltip.selected": {
     "sourceHash": "57fd7a0"
@@ -1118,6 +1158,26 @@
   "fileExplorer.dateTooltip.lastModified": "Modificado pela última vez",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"
+  },
+  "fileExplorer.fileIcon.symlinkBadge": "Link simbólico",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "sourceHash": "fbd07df"
+  },
+  "fileExplorer.fileIcon.sync.synced": "Sincronizado",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "sourceHash": "5da22fe"
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "Somente online",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "sourceHash": "1500a6d"
+  },
+  "fileExplorer.fileIcon.sync.uploading": "Enviando",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "sourceHash": "8b898ca"
+  },
+  "fileExplorer.fileIcon.sync.downloading": "Baixando",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "sourceHash": "37b3455"
   },
   "fileExplorer.imageIndex.file.indexed": "Indexada para busca de imagens",
   "@fileExplorer.imageIndex.file.indexed": {
@@ -1208,9 +1268,9 @@
   "@fileExplorer.selectionInfo.noSelectionOfMatches": {
     "sourceHash": "4063c2b"
   },
-  "fileExplorer.tabBar.paneTabsAriaLabel": "Abas do painel {paneId}",
+  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {Abas do painel esquerdo} other {Abas do painel direito}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "sourceHash": "d641870"
+    "sourceHash": "3b08b68"
   },
   "fileExplorer.tabBar.unreachableAriaLabel": "Inacessível",
   "@fileExplorer.tabBar.unreachableAriaLabel": {

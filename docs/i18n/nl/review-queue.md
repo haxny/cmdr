@@ -181,3 +181,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   ruling; confirm which one Dutch macOS shows for scrolling.
 - `.state.copying` / `.moving` / `.compressing` take the infinitive (`Kopiëren`), byte-identical to
   `transferProgress.stageCompressing`, over the row form `Bezig met …`.
+
+## Git-chip en bestandsbadges (`fileExplorer.git.repoChip.*`, `fileExplorer.fileIcon.*`)
+
+- `.repoChip.dirty` `gewijzigd` for git's "dirty" and `.tooltip.unborn` `Op nieuwe branch {branch} (nog geen commits).`
+  for "unborn": no pile source names either; confirm against what Dutch git users actually say.
+- `fileIcon.sync.onlineOnly` `Alleen online beschikbaar` runs three words in a badge asking for one or two; Finder nl
+  has no badge label to copy.

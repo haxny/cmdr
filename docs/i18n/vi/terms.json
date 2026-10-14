@@ -1199,15 +1199,35 @@
     "forms": "the panel → cửa sổ Lấy thông tin; its Locked checkbox → Đã khóa; Sharing & Permissions → phần Chia sẻ & quyền",
     "sources": "macOS Finder (N165, TL22, Localizable.json Get Info → Lấy thông tin; AXNODE1 Đã khóa)"
   },
+  "git-ahead-behind": {
+    "accept": ["tụt sau", "đứng trước", "đứng sau"],
+    "chosen": "vượt trước",
+    "confidence": "tentative",
+    "forms": "N commits ahead, M behind X → Vượt trước N commit, tụt sau M commit so với X (fileExplorer.git.tooltip.aheadBehind, fileExplorer.git.repoChip.tooltip.aheadBehind share the frame)",
+    "sources": "catalog (fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description); git’s own vi catalog says đứng trước / đứng sau (Homebrew git.mo, ahead %d, behind %d, 2026-10-15); the pile has no git source"
+  },
   "git-branch": {
     "chosen": "nhánh",
     "confidence": "tentative",
-    "sources": "MS terminology (nhánh)"
+    "forms": "On branch X → Đang ở nhánh X (git vi: Trên nhánh)",
+    "sources": "MS terminology (nhánh); git’s own vi catalog (On branch → Trên nhánh, Homebrew git.mo, 2026-10-15)"
   },
   "git-commit": {
     "chosen": "commit",
     "confidence": "tentative",
     "sources": "dev loanword; no clean native UI source"
+  },
+  "git-detached": {
+    "chosen": "tách rời",
+    "confidence": "high",
+    "forms": "Detached at X → Tách rời tại X; the chip’s (detached) → (tách rời)",
+    "sources": "git’s own vi catalog (HEAD detached at → HEAD được tách rời tại, Homebrew git.mo, 2026-10-15); catalog (fileExplorer.git.tooltip.worktreeDetached)"
+  },
+  "git-dirty": {
+    "chosen": "có thay đổi",
+    "confidence": "tentative",
+    "forms": "the chip state after the branch name → có thay đổi (lowercase); uncommitted changes → thay đổi chưa commit",
+    "sources": "catalog (settings.fileExplorer.git.showRepoChip.description: trạng thái có thay đổi); git’s vi catalog leaves -dirty untranslated; the pile has no git source"
   },
   "git-tag": {
     "chosen": "tag",
@@ -1220,6 +1240,18 @@
     ],
     "confidence": "high",
     "sources": "Pro Git 1 vi (Liệt kê tag, Thêm tag mới); Viblo, ITviec, and DataCamp vi git tutorials (Git tag, đánh dấu commit); MS terminology has no vi git entry"
+  },
+  "git-unborn": {
+    "avoid": [
+      {
+        "form": "nhánh chưa sinh",
+        "why": "git’s vi catalog says nhánh mà nó chưa hề được sinh ra, which reads as a literal gloss; carry the concept (no commits yet) instead"
+      }
+    ],
+    "chosen": "chưa có commit",
+    "confidence": "tentative",
+    "forms": "an unborn branch is named by its state, with no coined adjective: On unborn branch X (no commits yet) → Đang ở nhánh X (chưa có commit nào); the chip → X (chưa có commit)",
+    "sources": "git’s own vi catalog (No commits yet → Vẫn chưa chuyển giao; You are on a branch yet to be born → Bạn tại nhánh mà nó chưa hề được sinh ra, Homebrew git.mo, 2026-10-15), recast with the catalog’s commit"
   },
   "github-star": {
     "accept": ["gắn sao"],
@@ -1872,7 +1904,8 @@
     "accept": ["trực tuyến"],
     "chosen": "chỉ có trực tuyến",
     "confidence": "tentative",
-    "sources": "catalog"
+    "forms": "the file-icon badge → Chỉ có trực tuyến",
+    "sources": "catalog (fileOperations.delete.cloudOnlineOnly*); macOS Finder has no Online-only badge in vi (closest: AXBADGE3 Không được tải về, NE88.3 Trên iCloud)"
   },
   "open": {
     "accept": ["beta"],
@@ -2722,6 +2755,13 @@
     "forms": "a link's target → đích; hardlink → liên kết cứng",
     "sources": "GNOME Nautilus (liên kết mềm, six strings)"
   },
+  "sync": {
+    "accept": ["đồng bộ"],
+    "chosen": "đồng bộ hóa",
+    "confidence": "high",
+    "forms": "Synced (badge) → Đã đồng bộ hóa; Uploading → Đang tải lên; Downloading → Đang tải về; running prose may use the shorter đồng bộ",
+    "sources": "macOS Finder (IC7 Đã đồng bộ hóa với ^0, N153.6_V1 Đồng bộ hóa, AXBADGE7 Đang tải lên, AXBADGE8 Đang tải về); MS terminology (synced → đã đồng bộ)"
+  },
   "system-integrity-protection": {
     "chosen": "Bảo vệ Toàn vẹn Hệ thống",
     "confidence": "high",
@@ -3075,6 +3115,13 @@
     "confidence": "high",
     "forms": "the View menu item → Tự ngắt dòng",
     "sources": "MS terminology (word wrap → Tự ngắt dòng)"
+  },
+  "working-tree": {
+    "accept": ["cây làm việc", "thư mục làm việc"],
+    "chosen": "working tree",
+    "confidence": "tentative",
+    "forms": "kept Latin like commit and worktree; sentence-initial → Working tree",
+    "sources": "catalog (errors.git.blobTooLarge.suggestion, errors.git.gitDirPermissionDenied.message, errors.git.bareRepo.message all ship working tree); git’s own vi catalog splits cây làm việc / thư mục làm việc (Homebrew git.mo, 2026-10-15); the pile has no git source"
   },
   "worktree": {
     "chosen": "worktree",

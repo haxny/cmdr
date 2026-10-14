@@ -1311,6 +1311,49 @@
       }
     ]
   },
+  "git-ahead-behind": {
+    "chosen": "por delante / por detrás",
+    "accept": ["por delante", "por detrás"],
+    "forms": "{n} commits por delante, {n} commits por detrás de {upstream}",
+    "confidence": "high",
+    "sources": "git's own es.po (Tu rama está adelantada a; delante %d, detrás %d); catalog (fileExplorer.git.tooltip.aheadBehind, fileExplorer.git.repoChip.tooltip.aheadBehind)",
+    "exceptions": {
+      "settings.fileExplorer.git.showRepoChip.description": "names the feature as a noun pair (el adelanto/retraso), mirroring English ahead/behind; the counts themselves say por delante / por detrás"
+    }
+  },
+  "git-detached": {
+    "chosen": "desacoplado",
+    "forms": "masculine, agreeing with the implied HEAD: Desacoplado en {id}; the pill → (desacoplado) {id}",
+    "confidence": "high",
+    "sources": "git's own es.po (HEAD desacoplado, ×6); catalog (fileExplorer.git.tooltip.worktreeDetached Desacoplado en {id})"
+  },
+  "git-dirty": {
+    "chosen": "con cambios",
+    "accept": ["sin confirmar"],
+    "forms": "the pill state → con cambios; prose → cambios sin confirmar (El árbol de trabajo tiene cambios sin confirmar)",
+    "confidence": "tentative",
+    "sources": "git's own es.po (cambios sin confirmar; árbol de trabajo sucio for the -dirty mark); catalog (settings.fileExplorer.git.showRepoChip.description el estado de cambios sin confirmar)",
+    "note": "sin confirmar is git's own Spanish for uncommitted and survives the git-commit ruling (which bans only the noun confirmación). sucio is git's literal but reads as a verdict on the user's files.",
+    "avoid": [
+      {
+        "form": "sucio",
+        "why": "git es.po's literal; reads as a judgment, not a state"
+      }
+    ]
+  },
+  "git-unborn": {
+    "chosen": "aún sin commits",
+    "forms": "{branch} (aún sin commits); tooltip → En la rama {branch} (aún sin commits).",
+    "confidence": "tentative",
+    "sources": "git's own es.po (No hay commits todavía for git status's No commits yet; rama no nacida in two internal messages)",
+    "note": "English glosses unborn with (no commits yet); Spanish carries the concept with the gloss alone.",
+    "avoid": [
+      {
+        "form": "rama no nacida",
+        "why": "git es.po's literal, opaque to a reader who doesn't know git's internals"
+      }
+    ]
+  },
   "git-tag": {
     "chosen": "etiqueta",
     "accept": ["etiquetas", "etiquetado"],
@@ -1851,9 +1894,9 @@
   },
   "online-only": {
     "chosen": "solo en línea",
-    "forms": "Parte de tu selección está solo en línea; leaving it available online only → lo deja disponible solo en línea",
+    "forms": "Parte de tu selección está solo en línea; leaving it available online only → lo deja disponible solo en línea; the file-icon badge → Solo en línea",
     "confidence": "tentative",
-    "sources": "catalog (fileOperations.delete.cloudOnlineOnly*); no pile hit (macOS es has neither form in the mined Finder/AppKit)",
+    "sources": "catalog (fileOperations.delete.cloudOnlineOnly*, commands.cloudRemoveDownload.description); no pile hit (macOS es has neither form in the mined Finder/AppKit; its nearest badge is AXBADGE3 Sin descargar, the iCloud state Not downloaded)",
     "decision": "El aviso de contenido solo en línea"
   },
   "on-device": {
@@ -2799,8 +2842,23 @@
   "symlink": {
     "chosen": "enlace simbólico",
     "accept": ["enlaces simbólicos"],
+    "forms": "the file-icon badge → Enlace simbólico",
     "confidence": "high",
-    "sources": "standard"
+    "sources": "standard; catalog (fileExplorer.entry.brokenSymlink, fileOperations.delete.symlinkNoticeMany)",
+    "avoid": [
+      {
+        "form": "vínculo simbólico",
+        "why": "MS terminology's form; the catalog and the Unix-family usage say enlace"
+      }
+    ]
+  },
+  "sync": {
+    "chosen": "sincronizar",
+    "accept": ["sincroniz"],
+    "forms": "the Synced file-icon badge → Sincronizado (masculine, like Finder's own status badges Descargado, Ignorado); noun → la sincronización",
+    "confidence": "high",
+    "sources": "macOS Finder es (IC1 Sincronización con iCloud, IC9 ^0 se está sincronizando, AXBADGE11 No sincronizar); MS terminology (synced → sincronizado); catalog (commands.helpOpenShortcuts.description sincronizada en vivo)",
+    "note": "The sibling cloud badges follow Finder es and es-419 word for word: Uploading → Cargando, Downloading → Descargando (AXBADGE7/8, NE88.6/7), over Subiendo / Bajando, even though Cargando also means loading."
   },
   "system-integrity-protection": {
     "chosen": "protección de la integridad del sistema",
@@ -3164,6 +3222,18 @@
     "forms": "masculine: el worktree, worktree vinculado",
     "confidence": "high",
     "sources": "git's own command name (git worktree), untranslated in Pro Git es; catalog ships it 8 times (errors.git.orphanedWorktree.*, fileExplorer.git.size.linkedWorktrees), 2026-10-14"
+  },
+  "working-tree": {
+    "chosen": "árbol de trabajo",
+    "forms": "masculine: el árbol de trabajo",
+    "confidence": "high",
+    "sources": "git's own es.po (el árbol de trabajo está limpio; Preparando árbol de trabajo); catalog ships it 3 times (errors.git.bareRepo.message, errors.git.blobTooLarge.suggestion, errors.git.gitDirPermissionDenied.message), 2026-10-15",
+    "avoid": [
+      {
+        "form": "directorio de trabajo",
+        "why": "MS terminology's working directory (a web server's install dir), a different concept"
+      }
+    ]
   },
   "write": {
     "chosen": "escribir",

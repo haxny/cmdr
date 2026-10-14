@@ -108,3 +108,7 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   `Nach vorn gerückt.`, `Jetzt Platz 2 von 5 in der Warteschlange.`): `rücken` for reordering keeps `bewegen` (the F6
   Move command) and Microsoft's `verschieben` out; `vorziehen` / `zurückstellen` is the alternative. The long labels (55
   vs 37 chars) need a fit check in the Keyboard shortcuts list.
+- `fileExplorer.fileIcon.sync.onlineOnly` (`Nur online`): follows the catalog's `nur online verfügbar` prose; Finder's
+  own badge for that state is `Nicht geladen`. `fileExplorer.fileIcon.sync.uploading` / `.downloading`
+  (`Wird hochgeladen` / `Wird heruntergeladen`): tied to the progress line by term consistency, where Finder speaks
+  `Upload …` / `Laden …`. A reviewer may prefer Finder's set.

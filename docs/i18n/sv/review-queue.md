@@ -47,6 +47,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   check the pair reads as a storage tier and not as a zip archive.
 - **path-style addressing → `sökvägsbaserad adressering (path-style)`** and **Google's Interoperability tab →
   `fliken Interoperabilitet`** (`servers.sheet.s3GcsKeyHelp`): unverified against Google Cloud's Swedish console.
+- **git dirty → `ändringar`** (`fileExplorer.git.repoChip.dirty`): a noun so it agrees with nothing; confirm
+  `main · ändringar` reads as a state. Uploading badge → `Skickar` (Finder's column) over `Överför` (Finder's badge).
 
 ## Phrasing and tone
 

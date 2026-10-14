@@ -2074,6 +2074,14 @@
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
+  "settings.control.showValue": "Érték megjelenítése",
+  "@settings.control.showValue": {
+    "sourceHash": "fad206e"
+  },
+  "settings.control.hideValue": "Érték elrejtése",
+  "@settings.control.hideValue": {
+    "sourceHash": "381d9c1"
+  },
   "settings.control.unitItems": "elem",
   "@settings.control.unitItems": {
     "sourceHash": "5f3c4f8"

@@ -1364,6 +1364,13 @@
     "forms": "errors.json points at it as Finder (Lire les informations)",
     "sources": "macOS Finder"
   },
+  "git-ahead-behind": {
+    "accept": ["avance", "retard"],
+    "chosen": "d’avance / de retard",
+    "confidence": "high",
+    "forms": "{n} commits d’avance, {n} commits de retard sur {upstream}; as a noun pair, l’avance ou le retard; git’s own CLI says en avance de / en retard de",
+    "sources": "catalog (fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description); git po/fr.po (ahead %d, behind %d → en avance de %d, en retard de %d; Your branch is ahead of → Votre branche est en avance sur), 2026-10-15"
+  },
   "git-branch": {
     "chosen": "branche",
     "confidence": "high",
@@ -1375,6 +1382,26 @@
     "confidence": "high",
     "forms": "masculine (le commit parent); English revision → révision (Double Commander’s About box: Commit / Révision)",
     "sources": "catalog (fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit); Double Commander doublecmd.po"
+  },
+  "git-detached": {
+    "accept": ["détachée"],
+    "chosen": "détaché",
+    "confidence": "high",
+    "forms": "Detached at {id} → Détaché sur {id}; the pill’s marker → (détaché) {id}; git’s CLI writes HEAD détachée sur (HEAD is feminine there), Cmdr drops HEAD so the bare state stays masculine",
+    "sources": "catalog (fileExplorer.git.tooltip.worktreeDetached); git po/fr.po (HEAD detached at → HEAD détachée sur), 2026-10-15; no file-manager source covers git"
+  },
+  "git-dirty": {
+    "chosen": "modifié",
+    "confidence": "tentative",
+    "forms": "the pill’s one-word state after the branch name → modifié (masculine: it qualifies the working copy, not la branche); the full sentence → L’arbre de travail contient des modifications non validées",
+    "avoid": [
+      {
+        "form": "sale",
+        "why": "git’s CLI literal (arbre de travail sale), but it reads as a judgment in UI copy"
+      }
+    ],
+    "note": "After a feminine branche the masculine modifié could read as a misagreement; see review-queue.md",
+    "sources": "catalog (settings.fileExplorer.git.showRepoChip.description: l’état modifié); git po/fr.po (dirty → sale; modifications non validées), 2026-10-15"
   },
   "git-tag": {
     "chosen": "étiquette",
@@ -1392,6 +1419,13 @@
     ],
     "confidence": "high",
     "sources": "Pro Git 2 fr (Étiquetage, Lister vos étiquettes); VS Code fr git extension (Créer une étiquette, Étiquette sur {0}); Gitea fr-FR (Étiquettes); MS terminology git sense says balise (outlier)"
+  },
+  "git-unborn": {
+    "accept": ["non née", "aucun commit"],
+    "chosen": "branche non née",
+    "confidence": "high",
+    "forms": "On unborn branch {branch} → Sur la branche non née {branch}; no commits yet → encore aucun commit (the short pill uses only this half)",
+    "sources": "git po/fr.po (new unborn branch → nouvelle branche non née; create unborn branch → créer une branche non née; No commits yet on → Encore aucun commit sur), 2026-10-15; no file-manager source covers git"
   },
   "github-issue": {
     "chosen": "ticket",
@@ -3045,6 +3079,13 @@
     "forms": "broken symlink → lien symbolique rompu",
     "sources": "Nautilus (liens symboliques)"
   },
+  "sync": {
+    "accept": ["synchronis"],
+    "chosen": "synchroniser",
+    "confidence": "high",
+    "forms": "synced (a cloud file’s badge) → Synchronisé; sync status → état de synchronisation",
+    "sources": "macOS Finder (IC7 Synchronisé avec ^0, Synchroniser les dossiers Bureau et Documents, Problème de synchronisation avec ^0)"
+  },
   "system-integrity-protection": {
     "chosen": "protection de l’intégrité du système",
     "confidence": "high",
@@ -3447,6 +3488,12 @@
     "confidence": "high",
     "forms": "the setting and menu → Retour à la ligne automatique; the tight badge → retour ligne",
     "sources": "MS terminology FRA id 134158"
+  },
+  "working-tree": {
+    "chosen": "arbre de travail",
+    "confidence": "high",
+    "forms": "masculine (l’arbre de travail est propre); distinct from worktree, which stays verbatim",
+    "sources": "catalog (errors.git.gitDirPermissionDenied.message, errors.git.bareRepo.message); git po/fr.po (working tree → arbre de travail), 2026-10-15"
   },
   "worktree": {
     "chosen": "worktree",

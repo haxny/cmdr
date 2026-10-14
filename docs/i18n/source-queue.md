@@ -304,3 +304,22 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   ("Copying 3 items"), but a case language wants the genitive after a verbal noun (ru `Копирование 3 объектов`) and the
   count also stands alone in the tooltip, so one form can't fit both. Consider a whole-row key with the counts inside,
   or say in the descriptions that the chunk reads as a separate column (ru ships nominative for now). (ru)
+- No `upload` concept: `fileExplorer.fileIcon.sync.uploading` had no ruling. Finder's own cloud-status badges
+  (`AXBADGE7`, `AXBADGE8` in `LocalizableMerged`) are the Tier-1 source for this whole badge set; add `upload`. (fr, hu,
+  pt, ru, vi, zh-Hant, es, de)
+- Term consistency ties the badge `fileExplorer.fileIcon.sync.downloading` ("Downloading") to the progress line
+  `settings.mediaIndex.clip.downloading` ("Downloading…"), since edge punctuation is stripped. Finder's own badge reads
+  differently (de `Laden …`, `AXBADGE8`), so a locale can't follow Finder there without an allowlist entry. Decide
+  whether the badge states split from that group or stay tied. (de)
+- `fileExplorer.git.repoChip.tooltip.aheadBehind` names the tracked branch bare (`behind {upstream}`), while its sibling
+  `fileExplorer.git.tooltip.aheadBehind` quotes it (`behind “{vs}”`). Same sentence, two quoting styles; pick one so
+  locales can share the frame byte for byte. Same split for `fileExplorer.git.repoChip.tooltip.onBranch` (bare
+  `{branch}`) vs `fileExplorer.git.tooltip.stashedOnBranch` (quoted). (hu, pt, ru, sv, vi, zh-Hant, es, de)
+- The reference pile has no git vocabulary (detached, unborn, ahead/behind, uncommitted changes): no tier names them.
+  git's own `po/<lang>.po` (github.com/git/git, `po/`) is the authoritative translation for ~20 languages; propose
+  adding it to the pile as a git-domain source. sv mined it live for `git-detached`, `git-unborn`, `git-dirty`. (sv, ru,
+  es, de)
+- `RepoChip.svelte` joins the `fileExplorer.git.repoChip.tooltip.*` sentences with a hard-coded space
+  (`lines.join(' ')`), so Chinese renders `…“main”。 比…` with a space after the full-width `。`, which zh typography
+  forbids (Japanese would hit the same). Consider a locale-owned join key (a new `sentenceJoin` key beside the tooltip
+  keys, `" "` in English, empty in zh) or `Intl`-aware joining. (zh, zh-Hant)

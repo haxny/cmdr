@@ -861,6 +861,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
   },
+  "fileExplorer.rename.fieldAriaLabel": "{name} umbenennen",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "sourceHash": "e84e258"
+  },
   "fileExplorer.rename.hiddenAfterRename": "Deine Datei ist aus der Ansicht verschwunden, weil verborgene Dateien nicht angezeigt werden.",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "6258274"
@@ -1084,6 +1088,42 @@
   "@fileExplorer.git.tooltip.worktreeDetached": {
     "sourceHash": "8455479"
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch} (noch keine Commits)",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "sourceHash": "e36dc64"
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "(losgelöst) {id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "sourceHash": "bb85fcf"
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "(losgelöst)",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "sourceHash": "6cd215c"
+  },
+  "fileExplorer.git.repoChip.dirty": "geändert",
+  "@fileExplorer.git.repoChip.dirty": {
+    "sourceHash": "d0c92c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Auf Branch {branch}.",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "sourceHash": "ef69ca4"
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "Auf ungeborenem Branch {branch} (noch keine Commits).",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "sourceHash": "b7b0611"
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "Losgelöst bei {id}.",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "sourceHash": "fa6e940"
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} Commit} other {{aheadText} Commits}} voraus, {behind, plural, one {{behindText} Commit} other {{behindText} Commits}} zurück gegenüber {upstream}.",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "sourceHash": "02815c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "Der Arbeitsbaum enthält nicht committete Änderungen.",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "sourceHash": "360c5e5"
+  },
   "fileExplorer.selectionTooltip.selected": "Ausgewählt",
   "@fileExplorer.selectionTooltip.selected": {
     "sourceHash": "57fd7a0"
@@ -1115,6 +1155,27 @@
   "fileExplorer.dateTooltip.lastModified": "Zuletzt geändert",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"
+  },
+  "fileExplorer.fileIcon.symlinkBadge": "Symlink",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "sourceHash": "fbd07df",
+    "sameAsSourceJustification": "German keeps the loanword Symlink for short labels (termbase symlink: short titles keep Symlink; catalog `fileExplorer.entry.brokenSymlink` „(defekter Symlink)“ and `errors.listing.symlinkLoopErrno.title` „Symlink-Schleife“)."
+  },
+  "fileExplorer.fileIcon.sync.synced": "Synchronisiert",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "sourceHash": "5da22fe"
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "Nur online",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "sourceHash": "1500a6d"
+  },
+  "fileExplorer.fileIcon.sync.uploading": "Wird hochgeladen",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "sourceHash": "8b898ca"
+  },
+  "fileExplorer.fileIcon.sync.downloading": "Wird heruntergeladen",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "sourceHash": "37b3455"
   },
   "fileExplorer.imageIndex.file.indexed": "Für die Bildersuche indiziert",
   "@fileExplorer.imageIndex.file.indexed": {
@@ -1204,9 +1265,9 @@
   "@fileExplorer.selectionInfo.noSelectionOfMatches": {
     "sourceHash": "4063c2b"
   },
-  "fileExplorer.tabBar.paneTabsAriaLabel": "Tabs im {paneId} Bereich",
+  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {Tabs im linken Bereich} other {Tabs im rechten Bereich}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "sourceHash": "d641870"
+    "sourceHash": "3b08b68"
   },
   "fileExplorer.tabBar.unreachableAriaLabel": "Nicht erreichbar",
   "@fileExplorer.tabBar.unreachableAriaLabel": {

@@ -860,6 +860,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
   },
+  "fileExplorer.rename.fieldAriaLabel": "Переименовать «{name}»",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "sourceHash": "e84e258"
+  },
   "fileExplorer.rename.hiddenAfterRename": "Файл исчез из списка, потому что показ скрытых файлов отключен.",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "6258274"
@@ -1082,6 +1086,42 @@
   "@fileExplorer.git.tooltip.worktreeDetached": {
     "sourceHash": "8455479"
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch} (еще нет коммитов)",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "sourceHash": "e36dc64"
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "(нет ветки) {id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "sourceHash": "bb85fcf"
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "(нет ветки)",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "sourceHash": "6cd215c"
+  },
+  "fileExplorer.git.repoChip.dirty": "изменено",
+  "@fileExplorer.git.repoChip.dirty": {
+    "sourceHash": "d0c92c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "Текущая ветка: {branch}.",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "sourceHash": "ef69ca4"
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "Текущая ветка: {branch} (еще нет коммитов).",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "sourceHash": "b7b0611"
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "Отсоединенный HEAD: {id}.",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "sourceHash": "fa6e940"
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "Впереди «{upstream}» на {ahead, plural, one {{aheadText} коммит} few {{aheadText} коммита} many {{aheadText} коммитов} other {{aheadText} коммита}}, позади на {behind, plural, one {{behindText} коммит} few {{behindText} коммита} many {{behindText} коммитов} other {{behindText} коммита}}.",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "sourceHash": "02815c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "В рабочем дереве есть незафиксированные изменения.",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "sourceHash": "360c5e5"
+  },
   "fileExplorer.selectionTooltip.selected": "Выделено",
   "@fileExplorer.selectionTooltip.selected": {
     "sourceHash": "57fd7a0"
@@ -1113,6 +1153,26 @@
   "fileExplorer.dateTooltip.lastModified": "Последнее изменение",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"
+  },
+  "fileExplorer.fileIcon.symlinkBadge": "Символическая ссылка",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "sourceHash": "fbd07df"
+  },
+  "fileExplorer.fileIcon.sync.synced": "Синхронизировано",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "sourceHash": "5da22fe"
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "Не загружено",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "sourceHash": "1500a6d"
+  },
+  "fileExplorer.fileIcon.sync.uploading": "Выгрузка",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "sourceHash": "8b898ca"
+  },
+  "fileExplorer.fileIcon.sync.downloading": "Загрузка",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "sourceHash": "37b3455"
   },
   "fileExplorer.imageIndex.file.indexed": "Проиндексировано для поиска изображений",
   "@fileExplorer.imageIndex.file.indexed": {
@@ -1204,7 +1264,7 @@
   },
   "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {Вкладки левой панели} other {Вкладки правой панели}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "sourceHash": "d641870"
+    "sourceHash": "3b08b68"
   },
   "fileExplorer.tabBar.unreachableAriaLabel": "Недоступно",
   "@fileExplorer.tabBar.unreachableAriaLabel": {

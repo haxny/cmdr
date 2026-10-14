@@ -207,7 +207,7 @@ working tree, so a bare repo is `репозиторий без рабочего 
 
 ## Detached HEAD (`fileExplorer.git.tooltip.worktreeDetached`)
 
-`Отсоединенный HEAD: {id}` over the literal `Отсоединено на {id}`, which means nothing to a Russian git user.
+`Отсоединенный HEAD: {id}` over the literal `Отсоединено на {id}`; pill: git's `(нет ветки)`.
 
 ## Toggle: name both states (`commands.selectionToggle.label`, `commands.selectionToggleAndDown.label`, `commands.sortToggleOrder.label`, `commands.tagsToggle*`)
 

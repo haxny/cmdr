@@ -859,6 +859,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
   },
+  "fileExplorer.rename.fieldAriaLabel": "重命名“{name}”",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "sourceHash": "e84e258"
+  },
   "fileExplorer.rename.hiddenAfterRename": "你的文件从视图中消失了，因为当前不显示隐藏文件。",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "6258274"
@@ -1081,6 +1085,42 @@
   "@fileExplorer.git.tooltip.worktreeDetached": {
     "sourceHash": "8455479"
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch}（还没有提交）",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "sourceHash": "e36dc64"
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "（分离）{id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "sourceHash": "bb85fcf"
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "（分离）",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "sourceHash": "6cd215c"
+  },
+  "fileExplorer.git.repoChip.dirty": "有改动",
+  "@fileExplorer.git.repoChip.dirty": {
+    "sourceHash": "d0c92c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "位于分支“{branch}”。",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "sourceHash": "ef69ca4"
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "位于新分支“{branch}”（还没有提交）。",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "sourceHash": "b7b0611"
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "分离状态，位于 {id}。",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "sourceHash": "fa6e940"
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "比“{upstream}”领先 {ahead, plural, other {{aheadText} 次提交}}，落后 {behind, plural, other {{behindText} 次提交}}。",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "sourceHash": "02815c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "工作树中有未提交的改动。",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "sourceHash": "360c5e5"
+  },
   "fileExplorer.selectionTooltip.selected": "已选",
   "@fileExplorer.selectionTooltip.selected": {
     "sourceHash": "57fd7a0"
@@ -1112,6 +1152,26 @@
   "fileExplorer.dateTooltip.lastModified": "上次修改",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"
+  },
+  "fileExplorer.fileIcon.symlinkBadge": "符号链接",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "sourceHash": "fbd07df"
+  },
+  "fileExplorer.fileIcon.sync.synced": "已同步",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "sourceHash": "5da22fe"
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "仅存在云端",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "sourceHash": "1500a6d"
+  },
+  "fileExplorer.fileIcon.sync.uploading": "正在上传",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "sourceHash": "8b898ca"
+  },
+  "fileExplorer.fileIcon.sync.downloading": "正在下载",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "sourceHash": "37b3455"
   },
   "fileExplorer.imageIndex.file.indexed": "已为图像搜索建立索引",
   "@fileExplorer.imageIndex.file.indexed": {
@@ -1201,9 +1261,9 @@
   "@fileExplorer.selectionInfo.noSelectionOfMatches": {
     "sourceHash": "4063c2b"
   },
-  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId} 窗格标签页",
+  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {左窗格标签页} other {右窗格标签页}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "sourceHash": "d641870"
+    "sourceHash": "3b08b68"
   },
   "fileExplorer.tabBar.unreachableAriaLabel": "无法访问",
   "@fileExplorer.tabBar.unreachableAriaLabel": {

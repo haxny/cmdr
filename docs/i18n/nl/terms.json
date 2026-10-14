@@ -1274,6 +1274,13 @@
     "note": "Not do-not-translate: Apple localizes it, whatever an old @key description says.",
     "sources": "macOS Finder (Get Info → Toon info; NE18 Kies 'Archief' > 'Toon info')"
   },
+  "git-ahead-behind": {
+    "accept": ["achter", "voor/achter"],
+    "chosen": "voor",
+    "confidence": "tentative",
+    "forms": "{n} commits voor, {n} commits achter op {upstream}; the short summary voor/achter",
+    "sources": "catalog (fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description); no pile source names git's ahead/behind (MS terminology and the file managers have no hit)"
+  },
   "git-branch": {
     "accept": ["branches"],
     "avoid": [
@@ -1300,6 +1307,19 @@
     "forms": "pl. commits; de commit; bovenliggende commit (parent commit)",
     "sources": "Dutch git community usage; catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.pinnedCommit, fileExplorer.git.tooltip.filesChanged)"
   },
+  "git-detached": {
+    "chosen": "losgekoppeld",
+    "confidence": "high",
+    "forms": "pill (losgekoppeld) {id}; tooltip Losgekoppeld op {id}.",
+    "sources": "MS terminology (detach → loskoppelen, id 238848); catalog (fileExplorer.git.tooltip.worktreeDetached: Losgekoppeld op {id})"
+  },
+  "git-dirty": {
+    "accept": ["wijzigingsstatus", "wijzigingen"],
+    "chosen": "gewijzigd",
+    "confidence": "tentative",
+    "forms": "pill state gewijzigd (lowercase, after the branch name); tooltip De working tree bevat wijzigingen die nog niet gecommit zijn.; the setting's summary wijzigingsstatus",
+    "sources": "catalog (settings.fileExplorer.git.showRepoChip.description: wijzigingsstatus); no pile source has git's dirty; Dutch git usage says niet-gecommitte wijzigingen, rephrased to a relative clause to dodge the awkward inflection"
+  },
   "git-tag": {
     "chosen": "tag",
     "accept": ["tags", "getagd"],
@@ -1312,6 +1332,14 @@
     ],
     "confidence": "high",
     "sources": "Pro Git 2 nl (Taggen, tags); MS terminology git sense (tag); Gitea nl-NL (Tagnaam, though its list says Labels)"
+  },
+  "git-unborn": {
+    "accept": ["nieuwe branch"],
+    "chosen": "nog geen commits",
+    "confidence": "tentative",
+    "forms": "pill {branch} (nog geen commits); tooltip Op nieuwe branch {branch} (nog geen commits).",
+    "note": "Dutch has no settled word for git's unborn; carry the concept with nieuwe branch plus the parenthetical, never a literal ongeboren.",
+    "sources": "no pile source (MS terminology and the file managers have no hit); built from the settled git-branch and git-commit rulings"
   },
   "github-star": {
     "accept": ["stars"],
@@ -1993,7 +2021,7 @@
     "chosen": "alleen online beschikbaar",
     "confidence": "tentative",
     "decision": "De waarschuwing voor alleen-online inhoud",
-    "forms": "predicate is alleen online beschikbaar; attributive through a relative clause (bestanden die alleen online beschikbaar zijn)",
+    "forms": "predicate is alleen online beschikbaar; attributive through a relative clause (bestanden die alleen online beschikbaar zijn); cloud-status badge Alleen online beschikbaar",
     "sources": "catalog (commands.cloudRemoveDownload.description: … zodat het alleen online beschikbaar blijft); Finder nl has no online-only label, MS terminology and the file managers have no hit"
   },
   "open": {
@@ -2953,8 +2981,15 @@
     "accept": ["symbolische koppelingen"],
     "chosen": "symbolische koppeling",
     "confidence": "high",
-    "forms": "a symlink's target → doel",
+    "forms": "a symlink's target → doel; file-list badge Symbolische koppeling",
     "sources": "macOS (koppeling)"
+  },
+  "sync": {
+    "accept": ["gesynchroniseerd", "synchroniseer", "synchronisatie", "synchronisatie-app", "synchronisatiestatus"],
+    "chosen": "synchroniseren",
+    "confidence": "high",
+    "forms": "cloud-status badge Gesynchroniseerd; sync status → synchronisatiestatus; live-synced → live gesynchroniseerd",
+    "sources": "macOS Finder (Je mappen ... worden gesynchroniseerd met %@; Synchroniseer mappen ... met iCloud); MS terminology (synced → gesynchroniseerd, id 2822164); catalog (commands.helpOpenShortcuts.description, errors.provider.appBased.needsAction)"
   },
   "system-integrity-protection": {
     "chosen": "System Integrity Protection",
@@ -3315,6 +3350,12 @@
     "confidence": "high",
     "forms": "menu and setting Tekstterugloop; the terse viewer badge terugloop",
     "sources": "MS terminology (word wrap → tekstterugloop)"
+  },
+  "working-tree": {
+    "chosen": "working tree",
+    "confidence": "high",
+    "forms": "de working tree; geen working tree",
+    "sources": "git's own term, kept English like worktree; catalog (errors.git.bareRepo.message, errors.git.blobTooLarge.suggestion, errors.git.gitDirPermissionDenied.message); no pile source has it (MS terminology and the file managers have no hit)"
   },
   "worktree": {
     "accept": ["worktrees"],

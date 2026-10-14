@@ -1249,6 +1249,46 @@
     "confidence": "high",
     "sources": "shipped pt catalog (fileExplorer.git.size.commits, fileExplorer.git.tooltip.filesChanged, fileExplorer.git.tooltip.pinnedCommit)"
   },
+  "git-ahead-behind": {
+    "chosen": "à frente",
+    "accept": ["atrás"],
+    "forms": "{n} commits à frente, {n} commits atrás de {upstream}; the pair in prose → à frente/atrás",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description); no pile hit (git terms absent from macOS and MS terminology)"
+  },
+  "git-detached": {
+    "chosen": "desanexado",
+    "accept": ["desanexad"],
+    "forms": "masculine, agreeing with the implied HEAD: Desanexado em {id}; the pill → (desanexado) {id}",
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (detached HEAD → HEAD desanexado, 3106244); shipped pt catalog (fileExplorer.git.tooltip.worktreeDetached)"
+  },
+  "git-dirty": {
+    "chosen": "modificado",
+    "accept": ["modificad"],
+    "forms": "the pill state after the branch name → modificado (agrees with the implied repositório); in prose → estado modificado",
+    "avoid": [
+      {
+        "form": "sujo",
+        "why": "MS terminology's literal (3106247) reads as a judgment in a UI pill; the shipped catalog already says estado modificado"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "shipped pt catalog (settings.fileExplorer.git.showRepoChip.description estado modificado; settings.fileExplorer.git.showStatusColumn.description modificado); MS terminology pt-BR says sujo (3106247)"
+  },
+  "git-unborn": {
+    "chosen": "ainda sem commits",
+    "accept": ["sem commits", "não tem commits"],
+    "forms": "the pill → {branch} (ainda sem commits); the tooltip carries the concept descriptively → No branch {branch}, que ainda não tem commits.",
+    "avoid": [
+      {
+        "form": "não nascido",
+        "why": "a calque of git's jargon that no pt-BR source uses; the descriptive form says the same thing plainly"
+      }
+    ],
+    "confidence": "tentative",
+    "sources": "no pile hit (git's unborn absent from macOS, MS terminology, and the file managers); descriptive rendering built from the git-commit ruling"
+  },
   "git-tag": {
     "chosen": "tag",
     "accept": ["tags", "marcad"],
@@ -1814,6 +1854,12 @@
     "confidence": "high",
     "sources": "catalog (askCmdr.cost.free grátis, no dispositivo; ai.local.notInstalled roda inteiramente no seu dispositivo); no pile hit in the mined macOS pt-BR Finder / System Settings",
     "decision": "What your organization manages (MDM)"
+  },
+  "online-only": {
+    "chosen": "somente online",
+    "forms": "the cloud badge → Somente online; prose → está somente online, disponível somente online",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileOperations.delete.cloudOnlineOnlyMixedWarning, fileOperations.delete.cloudOnlineOnlyAllWarning, fileOperations.delete.cloudOnlineOnlyHandedBack); somente is the pt-BR form (somente leitura); macOS Finder pt-BR has no badge for it (its nearest is NE88.3 No iCloud)"
   },
   "open": {
     "chosen": "Abrir",
@@ -2743,6 +2789,13 @@
     "sources": "standard tech pt-BR",
     "note": "Finder's atalho is an alias, not a symlink."
   },
+  "sync": {
+    "chosen": "sincronizar",
+    "accept": ["sincroniz"],
+    "forms": "the cloud badge → Sincronizado (masculine, like Finder's Baixado badge); its siblings Enviando / Baixando are Finder's own accessibility badges",
+    "confidence": "high",
+    "sources": "macOS Finder pt-BR (IC1 Sincronizado com o iCloud; AXBADGE7 Enviando, AXBADGE8 Baixando, AXBADGE0 Baixado); MS terminology pt-BR (synced → sincronizado, 2821355)"
+  },
   "system-integrity-protection": {
     "chosen": "Proteção de Integridade do Sistema",
     "confidence": "confirmed",
@@ -3076,6 +3129,12 @@
     ],
     "confidence": "high",
     "sources": "MS terminology pt-BR"
+  },
+  "working-tree": {
+    "chosen": "árvore de trabalho",
+    "forms": "feminine: a árvore de trabalho",
+    "confidence": "high",
+    "sources": "shipped pt catalog (errors.git.bareRepo.message, errors.git.blobTooLarge.suggestion, errors.git.gitDirPermissionDenied.message); no pile hit (git terms absent from macOS and MS terminology)"
   },
   "worktree": {
     "chosen": "worktree",

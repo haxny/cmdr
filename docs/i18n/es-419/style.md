@@ -112,6 +112,9 @@ is evidence, not a verdict. Considered and deliberately NOT forked:
 - **Pin: `fijar` vs `anclar`.** Apple writes `Anclar pestaña` in both es and es-419, so it's an `es` question, not a
   regional one (`docs/i18n/es/review-queue.md`).
 - **Move: `Transferir al basurero`.** Finder es-419 says `Transferir`; Cmdr keeps `es`'s `Mover` for every move.
+- **The cloud badges and the git branch pill** (`fileExplorer.fileIcon.sync.*`, `fileExplorer.git.repoChip.*`). Finder
+  es_419 names the iCloud badges exactly as es does (`Cargando`, `Descargando`, AXBADGE7/8, pile, 2026-10-15), and the
+  git wording (`desacoplado`, `cambios sin confirmar`, `aún sin commits`) carries no regional word or tense.
 - **Quotes and typography.** es-419 macOS writes `“…”` like es (10,848 `“`, no `«`). No `mechanics.json` here: the
   overlay inherits `es`'s.
 - **`la Terminal`, `Vaya`, `ahora mismo`, `darte de alta`, `bastante`.** Understood across the region; see

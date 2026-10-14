@@ -1267,10 +1267,18 @@
     "forms": "the window: Finders fönster Visa info; non-macOS twin File properties → Filegenskaper",
     "sources": "macOS Finder (Get Info → Visa info)"
   },
+  "git-ahead-behind": {
+    "accept": ["efter", "före/efter"],
+    "chosen": "före",
+    "confidence": "high",
+    "forms": "{n} incheckningar före, {n} incheckningar efter {upstream}",
+    "sources": "git po/sv.po (Din gren ligger före ”%s” med %d incheckningar); catalog fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description (före/efter)"
+  },
   "git-branch": {
     "chosen": "gren",
-    "confidence": "tentative",
-    "sources": "standard Swedish git usage; MS förgrena is the verb sense"
+    "confidence": "high",
+    "forms": "På grenen {branch}",
+    "sources": "git po/sv.po (On branch → På grenen, (no branch) → (ingen gren)); MS förgrena is the verb sense"
   },
   "git-commit": {
     "avoid": [{ "form": "commit", "why": "English loanword; the catalog uses incheckning nine times and more" }],
@@ -1279,12 +1287,38 @@
     "forms": "incheckningen, incheckningar; parent commit → föräldraincheckningen",
     "sources": "MS terminology commit → incheckning / checka in; catalog fileExplorer.git.size.commits, tooltip.pinnedCommit"
   },
+  "git-detached": {
+    "accept": ["frånkopplad"],
+    "chosen": "frikopplad",
+    "confidence": "high",
+    "forms": "chip (frikopplad) {id}; tooltip Frikopplad vid {id}",
+    "note": "git po/sv.po says frånkopplad (HEAD frånkopplad vid); the catalog had Frikopplad first (fileExplorer.git.tooltip.worktreeDetached), and both are correct, so the catalog form wins.",
+    "sources": "catalog fileExplorer.git.tooltip.worktreeDetached; git po/sv.po (detached HEAD → frånkopplad HEAD); the pile has no git strings"
+  },
+  "git-dirty": {
+    "accept": ["ändringsstatus"],
+    "chosen": "ändringar",
+    "confidence": "tentative",
+    "forms": "chip state {branch} · ändringar; tooltip Arbetsträdet har ändringar som inte checkats in",
+    "avoid": [
+      { "form": "lortig", "why": "git po/sv.po’s jokey rendering of -dirty; reads as a slur on the user’s work" }
+    ],
+    "note": "A noun, not a participle: the chip names no row noun to agree with (grenen is en, repot is ett), so ändrad/ändrat would guess a gender.",
+    "sources": "git po/sv.po (uncommitted changes → ändringar som inte checkats in); catalog ändringsstatus (settings.fileExplorer.git.showRepoChip.description)"
+  },
   "git-tag": {
     "chosen": "tagg",
     "accept": ["taggar", "taggad"],
     "forms": "en tagg, taggar; tagged commit → taggad incheckning",
     "confidence": "high",
     "sources": "Pro Git 2 sv (Att tagga, Lista taggar); MS terminology git sense (tagg); Gitea sv-SE (Taggar, Taggnamn)"
+  },
+  "git-unborn": {
+    "accept": ["ofödda grenen", "inga incheckningar"],
+    "chosen": "ofödd gren",
+    "confidence": "high",
+    "forms": "På den ofödda grenen {branch}; no commits yet → inga incheckningar än",
+    "sources": "git po/sv.po (unborn branch → ofödd gren; No commits yet → Inga incheckningar ännu, with än as the everyday form)"
   },
   "overall": {
     "chosen": "Totalt",
@@ -2857,6 +2891,15 @@
     "confidence": "high",
     "forms": "(trasig symlänk); Symlänksloop",
     "sources": "standard Swedish; macOS symbolisk länk"
+  },
+  "sync": {
+    "accept": ["synkroniserad", "synkroniseras"],
+    "chosen": "synkronisera",
+    "confidence": "high",
+    "forms": "cloud badges: Synkroniserad, Skickar (uploading), Hämtar (downloading)",
+    "proseAccept": ["synka", "synkad", "synkat", "synkappen", "synkstatus"],
+    "note": "Uploading is Skickar from Finder’s sync-status column (NE88.6), paired with Hämtar; Finder’s spoken badge AXBADGE7 says Överför, which would clash with Cmdr’s transfer ruling.",
+    "sources": "macOS Finder (Sync → Synkronisera, Synced with ^0 → Synkroniserad med ^0, NE88.6/7 Skickar/Hämtar); MS terminology (synced → synkroniserad, sync → synka)"
   },
   "system-integrity-protection": {
     "chosen": "System Integrity Protection",

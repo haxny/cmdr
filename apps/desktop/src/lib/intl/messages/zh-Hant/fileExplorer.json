@@ -859,6 +859,10 @@
   "@fileExplorer.openWith.copyRefused.unreadable": {
     "sourceHash": "8af2399"
   },
+  "fileExplorer.rename.fieldAriaLabel": "重新命名「{name}」",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "sourceHash": "e84e258"
+  },
   "fileExplorer.rename.hiddenAfterRename": "你的檔案從畫面上消失了，因為現在沒有顯示隱藏檔案。",
   "@fileExplorer.rename.hiddenAfterRename": {
     "sourceHash": "6258274"
@@ -1081,6 +1085,42 @@
   "@fileExplorer.git.tooltip.worktreeDetached": {
     "sourceHash": "8455479"
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch}（尚無提交）",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "sourceHash": "e36dc64"
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "（分離狀態）{id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "sourceHash": "bb85fcf"
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "（分離狀態）",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "sourceHash": "6cd215c"
+  },
+  "fileExplorer.git.repoChip.dirty": "有改動",
+  "@fileExplorer.git.repoChip.dirty": {
+    "sourceHash": "d0c92c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "位於分支 {branch}。",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "sourceHash": "ef69ca4"
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "位於未誕生的分支 {branch}（尚無提交）。",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "sourceHash": "b7b0611"
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "分離狀態，位於 {id}。",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "sourceHash": "fa6e940"
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "比 {upstream} 領先 {ahead, plural, other {{aheadText} 次提交}}，落後 {behind, plural, other {{behindText} 次提交}}。",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "sourceHash": "02815c7"
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "工作目錄樹裡有尚未提交的改動。",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "sourceHash": "360c5e5"
+  },
   "fileExplorer.selectionTooltip.selected": "已選取",
   "@fileExplorer.selectionTooltip.selected": {
     "sourceHash": "57fd7a0"
@@ -1112,6 +1152,26 @@
   "fileExplorer.dateTooltip.lastModified": "上次修改",
   "@fileExplorer.dateTooltip.lastModified": {
     "sourceHash": "0fe1058"
+  },
+  "fileExplorer.fileIcon.symlinkBadge": "符號連結",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "sourceHash": "fbd07df"
+  },
+  "fileExplorer.fileIcon.sync.synced": "已同步",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "sourceHash": "5da22fe"
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "僅存在雲端",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "sourceHash": "1500a6d"
+  },
+  "fileExplorer.fileIcon.sync.uploading": "正在上傳",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "sourceHash": "8b898ca"
+  },
+  "fileExplorer.fileIcon.sync.downloading": "正在下載",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "sourceHash": "37b3455"
   },
   "fileExplorer.imageIndex.file.indexed": "已為影像搜尋建立索引",
   "@fileExplorer.imageIndex.file.indexed": {
@@ -1201,9 +1261,9 @@
   "@fileExplorer.selectionInfo.noSelectionOfMatches": {
     "sourceHash": "4063c2b"
   },
-  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId} 窗格的分頁",
+  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {左窗格的分頁} other {右窗格的分頁}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "sourceHash": "d641870"
+    "sourceHash": "3b08b68"
   },
   "fileExplorer.tabBar.unreachableAriaLabel": "無法連線",
   "@fileExplorer.tabBar.unreachableAriaLabel": {

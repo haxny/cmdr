@@ -1120,9 +1120,9 @@
   "download": {
     "chosen": "letöltés",
     "accept": ["letölt", "le kell tölt", "töltsd le", "le van töltve", "le kellene tölt"],
-    "forms": "the folder → Letöltések; Remove download → Letöltés eltávolítása",
+    "forms": "the folder → Letöltések; Remove download → Letöltés eltávolítása; the Downloading / Uploading cloud badge → Letöltés / Feltöltés (Finder’s own badge nouns)",
     "confidence": "high",
-    "sources": "macOS; ms"
+    "sources": "macOS (Finder AXBADGE8 Letöltés, AXBADGE7 Feltöltés); ms"
   },
   "drag": {
     "accept": ["húz", "húzd", "húzás", "behúz"],
@@ -1539,7 +1539,34 @@
     "chosen": "piszkos állapot",
     "accept": ["piszkos", "módosít"],
     "confidence": "tentative",
-    "sources": "literal"
+    "sources": "literal",
+    "forms": "the pill’s one-word state → piszkos; the tooltip sentence → A munkafában még nem commitolt módosítások vannak."
+  },
+  "git-ahead-behind": {
+    "chosen": "előrébb / lemaradva",
+    "accept": ["előrébb", "lemarad"],
+    "forms": "{n} commit előrébb, {m} commit lemaradva ehhez képest: {upstream} (the compared branch after a colon slot, so no suffix lands on it)",
+    "confidence": "tentative",
+    "sources": "catalog (fileExplorer.git.tooltip.aheadBehind, settings.fileExplorer.git.showRepoChip.description); no pile source has a git ahead/behind string (MS terminology, DC, Dolphin, Nautilus searched 2026-10-15)"
+  },
+  "git-detached": {
+    "chosen": "levált",
+    "forms": "Detached at {id} → Levált állapot itt: {id}; the pill → (levált) {id} / (levált)",
+    "confidence": "tentative",
+    "sources": "catalog (fileExplorer.git.tooltip.worktreeDetached); no pile source has detached HEAD (DC’s detached window → külön ablak is a different sense)"
+  },
+  "git-unborn": {
+    "chosen": "még nincs commit",
+    "forms": "the pill → {branch} (még nincs commit); the tooltip → Aktuális ág: {branch} (még nincs commit). The concept is carried by the parenthesis, never a literal születetlen.",
+    "confidence": "tentative",
+    "sources": "descriptive (the English pill’s own gloss, no commits yet); no pile source has unborn branch"
+  },
+  "sync": {
+    "chosen": "szinkronizálás",
+    "accept": ["szinkron"],
+    "forms": "Synced (a state badge) → Szinkronizálva",
+    "confidence": "high",
+    "sources": "macOS Finder (IC1 iClouddal szinkronizálva, N153.6_V1 Szinkronizálás, AXBADGE11 Szinkronizálás mellőzése); ms (synced → szinkronizált)"
   },
   "overall": {
     "chosen": "Összesen",
@@ -3398,9 +3425,9 @@
   "symlink": {
     "chosen": "szimbolikus link",
     "accept": ["szimbolikus"],
-    "forms": "broken symlink → törött szimbolikus link; symlink target → cél",
+    "forms": "broken symlink → törött szimbolikus link; symlink target → cél; the file-icon badge → Szimbolikus link",
     "confidence": "tentative",
-    "sources": "ms (symbolic link → szimbolikus hivatkozás/link)"
+    "sources": "ms (symbolic link → szimbolikus hivatkozás/link); DC (Symbolic link → Szimbolikus link)"
   },
   "system-integrity-protection": {
     "chosen": "Rendszerintegritás-védelem",
