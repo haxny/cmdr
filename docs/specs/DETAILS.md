@@ -14,6 +14,10 @@ Read this before adding, wiping, or reorganizing a spec.
 
 ## The specs
 
+- `a11y-file-list-focus-plan.md`: **The file list and in-app submenus say nothing to VoiceOver.** Focus moves onto the
+  focused pane's listbox (and into an entered submenu) so `aria-activedescendant` sits where focus is, plus marked
+  state, position, row kind, and a way to reach pane chrome without changing `Tab`. Issues:
+  [#437](https://github.com/vdavid/cmdr/issues/437), [#267](https://github.com/vdavid/cmdr/issues/267).
 - `saved-smb-shares.md`: **A saved SMB server holds only a host, not the user and share the person wants.** A share row
   under its server, recorded at mount time, pinnable and openable like an SFTP place. Issue:
   [cmdr-reports#7](https://github.com/vdavid/cmdr-reports/issues/7).
