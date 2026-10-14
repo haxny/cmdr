@@ -30,7 +30,10 @@ The layers, outermost first (schema verified against code.claude.com docs, 2026-
    `allowRead`), and `permissions.deny` blocks the Read tool from the secret-bearing paths, because the sandbox doesn't
    cover Read. It also denies writing `board.sh` and `fetch-bundle.sh` in the working dir (`denyWrite`), which `run.sh`
    copies in fresh and read-only each run: the sandbox can write the rest of the working dir, and `fetch-bundle.sh`
-   unzips a stranger's bundle wherever it's told to, so without that a crafted bundle could swap in its own `board.sh`.
+   unzips a stranger's bundle there, so without that a crafted bundle could swap in its own `board.sh`.
+   `fetch-bundle.sh` always unpacks into `./bundles/` (no caller-chosen folder), and `run.sh` empties it before the run
+   and on exit: a bundle holds the reporter's note and email, and none may outlive the run on this box (the privacy
+   policy's 90 days applies to R2, not to copies). Found on the first live run, 2026-10-14, which left one behind.
 6. **The board tool**: the agent reaches GitHub only through `board.sh` (`Bash(gh *)` and `Bash(curl *)` are denied
    outright), which enforces in code what the prompt asks for:
    - Five subcommands (`list`, `view`, `search`, `comment`, `edit`), host `api.github.com`, repo `vdavid/cmdr-reports`,

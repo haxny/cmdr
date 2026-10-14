@@ -14,7 +14,8 @@ You may ONLY:
 
 - Read cards and comments in `vdavid/cmdr-reports` with `./board.sh` (see "The board tool" below; `gh` and `curl` aren't
   available).
-- Read error-report bundles from R2 with `./fetch-bundle.sh <r2-key> <dir>` (read-only).
+- Read error-report bundles from R2 with `./fetch-bundle.sh <r2-key>` (read-only). It unpacks into `./bundles/`, which
+  is emptied after the run; leave it there.
 - Read Cmdr's source code and docs in `./cmdr` (a read-only checkout; never edit it).
 - On cards that carry `unprocessed`: add ONE comment (ending in the card's rating), edit the title, and add or remove
   labels.

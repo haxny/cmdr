@@ -44,11 +44,15 @@ prompt="$(cat "$here/prompt.md")"
 } >&2
 
 cd "$work"
+# Bundles hold the reporter's note and email, and the privacy policy promises they're gone within 90 days, so none may
+# outlive a run on this box: empty the folder before the run (in case one was killed) and after it (trap).
+rm -rf -- "$work/bundles"
+trap 'rm -rf -- "$work/bundles"' EXIT
 # SHELL + ZDOTDIR: Claude Code snapshots the user's shell setup (outside the sandbox) and replays it in every Bash
 # command, so without these the box's `~/.zshenv` re-exports its broad GH_TOKEN (over ours), CLOUDFLARE_API_TOKEN, and
 # the rest straight back into the agent's shell, undoing `env -i`. `/var/empty` is a root-owned empty dir, so zsh
 # finds no startup files to read (verified on the M1, Claude Code 2.1.299, 2026-10-14).
-exec env -i \
+env -i \
   HOME="$HOME" \
   SHELL=/bin/zsh \
   ZDOTDIR=/var/empty \
