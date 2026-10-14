@@ -49,6 +49,7 @@ function row(
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
       ...over,
     },
     progress: progressEvent === null ? null : { ...progressEvent, operationId },

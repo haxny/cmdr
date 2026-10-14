@@ -98,6 +98,7 @@ function snapshot(id: string, status: OperationSnapshot['status'] = 'running'): 
     reverses: null,
     error: null,
     canRetry: false,
+    items: null,
   }
 }
 

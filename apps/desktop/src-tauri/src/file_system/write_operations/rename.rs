@@ -432,6 +432,7 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
     let summary = OperationSummaryText {
         source: Some(leaf(&from_inner)),
         destination: Some(leaf(&to_inner)),
+        items: None,
     };
     let request = ArchiveEditRequest {
         archive_path: from_archive,
@@ -489,6 +490,7 @@ fn rename_descriptor(from: &Path, to: &Path, volume_id: &str) -> OperationDescri
         summary: OperationSummaryText {
             source: Some(name(from)),
             destination: Some(name(to)),
+            items: None,
         },
         // An instant metadata op has no partial state, and no cancel path that
         // could catch it mid-flight.

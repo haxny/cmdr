@@ -65,6 +65,74 @@
     "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
   },
 
+  "queue.row.itemCount": "{countText} {count, plural, one {item} other {items}}",
+  "@queue.row.itemCount": {
+    "description": "What an operation row acts on when Cmdr doesn't know which of the items are files and which are folders, shown right after the row's action word, e.g. \"Copying 3 items Dropbox → Backup\". Lowercase: it continues the line.",
+    "placeholders": {
+      "countText": "how many top-level items, already formatted for display with grouping, e.g. 1,980",
+      "count": "the same number (drives the singular/plural noun)"
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.folderCount": "{countText} {count, plural, one {folder} other {folders}}",
+  "@queue.row.folderCount": {
+    "description": "The folders part of what an operation row acts on, e.g. the \"2 folders\" in \"Copying 2 folders and 1 file Dropbox → Backup\". Stands alone when every item is a folder, else joined with the files part by queue.row.foldersAndFiles. Lowercase: it continues the line.",
+    "placeholders": {
+      "countText": "how many folders, already formatted for display with grouping",
+      "count": "the same number (drives the singular/plural noun)"
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.fileCount": "{countText} {count, plural, one {file} other {files}}",
+  "@queue.row.fileCount": {
+    "description": "The files part of what an operation row acts on, e.g. the \"1 file\" in \"Copying 2 folders and 1 file Dropbox → Backup\". Stands alone when every item is a file, else joined with the folders part by queue.row.foldersAndFiles. Lowercase: it continues the line.",
+    "placeholders": {
+      "countText": "how many files, already formatted for display with grouping",
+      "count": "the same number (drives the singular/plural noun)"
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.foldersAndFiles": "{folders} and {files}",
+  "@queue.row.foldersAndFiles": {
+    "description": "Joins the two parts of what an operation row acts on, e.g. \"2 folders and 1 file\". Both parts arrive already worded (queue.row.folderCount and queue.row.fileCount). Reorder them if your language needs it.",
+    "placeholders": {
+      "folders": "the folders part, e.g. \"2 folders\"",
+      "files": "the files part, e.g. \"1 file\""
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.itemsMore": "{count, plural, other {… and {countText} more}}",
+  "@queue.row.itemsMore": {
+    "description": "Last line of the tooltip on an operation row's \"2 folders and 1 file\" part. The tooltip lists the first 20 item names, one per line; this line says how many more there are past them, e.g. \"… and 1,980 more\".",
+    "placeholders": {
+      "countText": "how many more items, already formatted for display with grouping",
+      "count": "the same number (for any agreement your language needs)"
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
+  "queue.row.itemsInFolder": "in {folder}",
+  "@queue.row.itemsInFolder": {
+    "description": "Names the folder a delete or trash row is clearing items from, right after what it acts on, e.g. \"Deleting 3 items in Downloads\". A copy or move names its source folder bare, with an arrow to the destination after it, so only a row without a destination needs the preposition. Keep it short: the full path is in the tooltip.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "Downloads"
+      }
+    },
+    "screenshot": "queue.png",
+    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+  },
+
   "queue.row.status": "{status, select, queued {Waiting} running {Running} paused {Paused} done {Done} cancelled {Canceled} failed {Couldn’t finish} other {Running}}",
   "@queue.row.status": {
     "description": "Short status word for an operation row in the operation queue. \"Waiting\" means it’s queued behind another operation on the same drive; \"Paused\" means the user paused it; \"Couldn’t finish\" is the gentle wording for a failed operation (avoid the words error/failed).",

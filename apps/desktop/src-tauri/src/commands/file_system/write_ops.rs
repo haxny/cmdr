@@ -13,7 +13,8 @@ use crate::file_system::write_operations::{
     trash_routing_for_selection as ops_trash_routing_for_selection,
 };
 use crate::file_system::write_operations::{
-    TransferTreeView, TransferTreeViewError, TransferTreeViewRequest, transfer_tree_view as ops_transfer_tree_view,
+    TransferTreeView, TransferTreeViewError, TransferTreeViewRequest, WriteProgressEvent,
+    transfer_tree_view as ops_transfer_tree_view,
 };
 use crate::file_system::{
     OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
@@ -21,7 +22,8 @@ use crate::file_system::{
     cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
     cancel_write_operation as ops_cancel_write_operation, delete_files_start as ops_delete_files_start,
     dismiss_all_failed_operations as ops_dismiss_all_failed_operations,
-    dismiss_failed_operation as ops_dismiss_failed_operation, list_operations as ops_list_operations,
+    dismiss_failed_operation as ops_dismiss_failed_operation,
+    latest_operation_progress as ops_latest_operation_progress, list_operations as ops_list_operations,
     move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
     pause_all as ops_pause_all, pause_operation as ops_pause_operation, resume_all as ops_resume_all,
     resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
@@ -466,6 +468,18 @@ pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerO
 #[specta::specta]
 pub fn list_operations() -> Vec<OperationSnapshot> {
     ops_list_operations()
+}
+
+/// The newest `write-progress` tick of every live operation that has emitted
+/// one, for a queue window that opens late. A paused operation emits nothing,
+/// so this is the only way that window can draw its bars and tree before the
+/// next Resume. Read once at mount; the event stream takes over from there.
+/// `async` so it never answers on the main thread: it takes each operation's
+/// progress lock, which an emitting driver holds for a moment at a time.
+#[tauri::command]
+#[specta::specta]
+pub async fn latest_operation_progress() -> Vec<WriteProgressEvent> {
+    ops_latest_operation_progress()
 }
 
 /// One window of an operation's live transfer tree, for the progress dialog and

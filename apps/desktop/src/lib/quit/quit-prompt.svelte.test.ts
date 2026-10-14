@@ -41,6 +41,7 @@ function operation(): OperationSnapshot {
     reverses: null,
     error: null,
     canRetry: false,
+    items: null,
   }
 }
 

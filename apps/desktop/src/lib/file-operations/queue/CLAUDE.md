@@ -6,7 +6,8 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 ## Module map
 
 - `queue-window.ts` opens the window (perms in `src-tauri/capabilities/queue.json`), `operations-store.svelte.ts` is the
-  single reactive source it renders from, `QueueRow.svelte` a row, shell (and keyboard) `routes/queue/+page.svelte`.
+  single reactive source it renders from, `QueueRow.svelte` a row (+ `QueueRowSummary.svelte`), shell (and keyboard)
+  `routes/queue/+page.svelte`.
 - Pure helpers: `failure-reason.ts` (a retained failure's title/explanation/suggestion), `queue-backlog.ts`
   (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label), `row-tree.ts` (which rows show the live
   transfer tree, and when they get a collapse toggle).
@@ -18,7 +19,7 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   `MIN_WIDTH`), every ESTIMATE comes from the row's session (`bindOperationSession`), ❌ never the raw tick, and ❌ no
   smoother in the store (membership and the latest tick only).
 - **Two streams, never poll**: `operations-changed` is the THIN membership + status snapshot (❌ don't fatten it),
-  `write-progress` drives the bars, pruned to snapshot membership.
+  `write-progress` drives the bars, pruned to membership, seeded at mount (a paused op emits nothing).
 - **Rows cover the instant ops too** (`rename` / `create_folder` / `create_file`): no `write-progress`, so a spinner +
   label. `operation-icon.ts` takes the SNAKE_CASE wire values.
 - **A row with `snapshot.reverses` is an UNDO: name it from `../reversal-wording.ts`, ❌ never `operationType`**

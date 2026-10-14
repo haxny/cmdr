@@ -80,6 +80,10 @@
         spaceShortfall?: SpaceShortfall
         /** Per-item sizes for trash progress (from scan or drive index, optional) */
         itemSizes?: number[]
+        /** Started only: the top-level files and folders among `sourcePaths`, so the
+         *  queue row can say "2 folders and 1 file". */
+        fileCount?: number
+        folderCount?: number
         /** Who triggered this operation (`aiClient` for MCP-originated writes). */
         initiator?: Initiator
         /** Rename mode: the one source moves into `destinationPath` under this name. */
@@ -116,6 +120,8 @@
         preKnownConflicts,
         spaceShortfall,
         itemSizes,
+        fileCount,
+        folderCount,
         initiator,
         newName,
         onComplete,
@@ -207,6 +213,8 @@
         preKnownConflicts,
         spaceShortfall,
         itemSizes,
+        fileCount,
+        folderCount,
         initiator,
         newName,
         onComplete,

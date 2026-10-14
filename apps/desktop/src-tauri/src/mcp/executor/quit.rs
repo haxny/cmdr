@@ -151,6 +151,7 @@ mod tests {
             reverses: None,
             error: None,
             can_retry: false,
+            items: None,
         }
     }
 

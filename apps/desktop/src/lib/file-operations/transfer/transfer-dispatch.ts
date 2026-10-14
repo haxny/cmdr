@@ -27,7 +27,7 @@ import { emit } from '@tauri-apps/api/event'
 import type { ConflictResolution, TransferOperationType, WriteOperationError } from '#lib/file-explorer/types.js'
 import { getSetting } from '#lib/settings/index.js'
 import { pathCrossesArchiveBoundary, pathInsideArchive } from '#lib/file-explorer/pane/archive-paths.js'
-import type { SpaceShortfall } from '#lib/ipc/bindings.js'
+import type { ItemKinds, SpaceShortfall } from '#lib/ipc/bindings.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { pluralize } from '#lib/utils/pluralize.js'
 
@@ -62,6 +62,17 @@ export interface TransferDispatchConfig {
   /** Rename mode: a move of the ONE source into `destinationPath` under this name
    *  (F2 on a big S3 folder, confirmed in the Move dialog). */
   newName?: string
+  /** Top-level files among `sourcePaths`, as the pane saw them. With `folderCount`,
+   *  it lets the queue row say "2 folders and 1 file"; absent, it says "3 items". */
+  fileCount?: number
+  /** Top-level folders among `sourcePaths`. See `fileCount`. */
+  folderCount?: number
+}
+
+/** The sources split by kind for the backend's queue summary, when the caller knew. */
+function sourceKindsOf(config: TransferDispatchConfig): ItemKinds | undefined {
+  if (config.fileCount === undefined || config.folderCount === undefined) return undefined
+  return { files: config.fileCount, folders: config.folderCount }
 }
 
 /**
@@ -176,19 +187,20 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
   // archive); the backend clamps it to 1..=9 and ignores it for non-archive
   // copies.
   const compressionLevel = getSetting('behavior.archiveCompressionLevel')
+  const sourceKinds = sourceKindsOf(config)
 
   if (config.operationType === 'trash') {
     return trashFiles(
       config.sourcePaths,
       config.itemSizes,
-      { progressIntervalMs, previewId: config.previewId },
+      { progressIntervalMs, previewId: config.previewId, sourceKinds },
       config.initiator,
     )
   }
   if (config.operationType === 'delete') {
     return deleteFiles(
       config.sourcePaths,
-      { progressIntervalMs, previewId: config.previewId },
+      { progressIntervalMs, previewId: config.previewId, sourceKinds },
       config.sourceVolumeId,
       config.initiator,
     )
@@ -202,6 +214,7 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
       previewId: config.previewId,
       preKnownConflicts: config.preKnownConflicts ?? [],
       compressionLevel,
+      sourceKinds,
     }
     // A rename that copies, confirmed in the Move dialog: one source, one volume.
     if (config.newName !== undefined) {
@@ -236,6 +249,7 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
         previewId: config.previewId,
         preKnownConflicts: config.preKnownConflicts ?? [],
         destinationName: config.destinationName,
+        sourceKinds,
       },
       config.initiator,
     )
@@ -243,7 +257,7 @@ export function dispatchTransferOperation(config: TransferDispatchConfig): Promi
   if (config.operationType === 'compress') {
     return dispatchCompress(config, progressIntervalMs, maxConflictsToShow, compressionLevel)
   }
-  return dispatchCopy(config, progressIntervalMs, maxConflictsToShow, compressionLevel)
+  return dispatchCopy(config, progressIntervalMs, maxConflictsToShow, compressionLevel, sourceKinds)
 }
 
 /** Copy: always via `copyBetweenVolumes`; the backend optimizes local-to-local. */
@@ -252,6 +266,7 @@ function dispatchCopy(
   progressIntervalMs: number,
   maxConflictsToShow: number,
   compressionLevel: number,
+  sourceKinds: ItemKinds | undefined,
 ): Promise<{ operationId: string }> {
   return copyBetweenVolumes(
     config.sourceVolumeId,
@@ -267,6 +282,7 @@ function dispatchCopy(
       compressionLevel,
       destinationName: config.destinationName,
       spaceShortfall: config.spaceShortfall ?? 'refuse',
+      sourceKinds,
     },
     config.initiator,
   )

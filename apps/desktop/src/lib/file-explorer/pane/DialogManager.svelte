@@ -240,6 +240,8 @@
             preKnownConflicts={transferProgressProps.preKnownConflicts}
             spaceShortfall={transferProgressProps.spaceShortfall}
             itemSizes={transferProgressProps.itemSizes}
+            fileCount={transferProgressProps.fileCount}
+            folderCount={transferProgressProps.folderCount}
             mcpRequestId={transferProgressProps.mcpRequestId}
             initiator={transferProgressProps.initiator}
             newName={transferProgressProps.newName}

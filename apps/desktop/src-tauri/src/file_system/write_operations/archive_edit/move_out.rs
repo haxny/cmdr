@@ -15,6 +15,7 @@ use super::super::OperationEventSink;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::operation_intent::is_cancelled;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
+use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
 use super::super::types::{
     CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent, WriteOperationError,
@@ -109,6 +110,12 @@ pub(crate) async fn route_archive_move_out(
     let summary = OperationSummaryText {
         source: Some(source_volume.name().to_string()),
         destination: Some(dest_volume.name().to_string()),
+        items: Some(volume_items(
+            &*source_volume,
+            &source_paths,
+            config.source_kinds,
+            Some((&*dest_volume, &dest_path)),
+        )),
     };
     let descriptor = OperationDescriptor {
         operation_id: operation_id.clone(),

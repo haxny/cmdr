@@ -7,10 +7,12 @@ import type { OperationSnapshot, WriteProgressEvent } from '#lib/ipc/bindings.js
 // its `_test*` seams instead.
 vi.mock('#lib/tauri-commands/index.js', () => ({
   listOperations: vi.fn(() => Promise.resolve([])),
+  latestOperationProgress: vi.fn(() => Promise.resolve([])),
   onOperationsChanged: vi.fn(() => Promise.resolve(() => {})),
   onWriteProgress: vi.fn(() => Promise.resolve(() => {})),
 }))
 
+import { latestOperationProgress, listOperations } from '#lib/tauri-commands/index.js'
 import { createOperationsStore, isHiddenSettledStatus, isTerminalStatus } from './operations-store.svelte'
 
 function snapshot(
@@ -28,6 +30,7 @@ function snapshot(
     reverses: null,
     error: null,
     canRetry: false,
+    items: null,
     ...over,
   }
 }
@@ -145,6 +148,32 @@ describe('operations store reducers', () => {
       flushSync()
       expect(store.failureCount).toBe(1)
     })
+    cleanup()
+  })
+})
+
+describe('opening while an operation is paused', () => {
+  it('seeds each row with the tick its operation last emitted, so a paused copy opens with its bars and tree', async () => {
+    // A paused operation emits nothing, so without the seed the row has no
+    // progress until somebody presses Resume, and it opens folded to one line.
+    vi.mocked(listOperations).mockResolvedValueOnce([snapshot('a', 'paused'), snapshot('b', 'queued')])
+    vi.mocked(latestOperationProgress).mockResolvedValueOnce([progress('a', { bytesDone: 40 }), progress('ghost')])
+    const store = createOperationsStore()
+    let rows: ReturnType<typeof createOperationsStore>['operations'] = []
+    const cleanup = $effect.root(() => {
+      $effect(() => {
+        rows = store.operations
+      })
+    })
+
+    await store.init()
+    flushSync()
+
+    expect(rows.map((r) => [r.snapshot.operationId, r.progress?.bytesDone ?? null])).toEqual([
+      ['a', 40],
+      ['b', null],
+    ])
+    store.dispose()
     cleanup()
   })
 })

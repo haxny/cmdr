@@ -27,6 +27,7 @@
     import { offersRetry } from '../transfer/transfer-error-messages'
     import TransferTree from '../transfer-tree/TransferTree.svelte'
     import { rowTreeOperation } from './row-tree'
+    import QueueRowSummary from './QueueRowSummary.svelte'
     import { queueKeyAction } from './queue-keys'
     import { QUEUE_ROW_KEYS } from '../decision-keys'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -290,28 +291,6 @@
         isPaused ? tString('queue.row.resumeAria') : tString('queue.row.pauseAria'),
     )
 
-    // Source / destination basenames for a compact summary; the full paths sit in
-    // the tooltip. Delete / trash have no destination.
-    function basename(path: string | null): string {
-        if (!path) return ''
-        const trimmed = path.replace(/\/+$/, '')
-        const idx = trimmed.lastIndexOf('/')
-        return idx >= 0 ? trimmed.slice(idx + 1) : trimmed
-    }
-    const sourceName = $derived(basename(snapshot.source))
-    const destName = $derived(basename(snapshot.destination))
-
-    /** A removal reversal has no destination, so the arrow that gives every other
-     *  row its direction never renders and the lone folder name sits against
-     *  "Deleting what it created" reading as the thing about to go. The preposition
-     *  is what puts it back where it belongs: the reversal clears files INSIDE that
-     *  folder. Only this shape needs it; every other row already has its arrow. */
-    const sourcePhrase = $derived(
-        reversalVariant === 'undoByDeleting' && snapshot.destination === null
-            ? tString('queue.row.reversalInFolder', { folder: sourceName })
-            : sourceName,
-    )
-
     /** Rollback is one click from unrecoverable (a file it overwrote has no
      *  backup), and it sits beside a Cancel that keeps everything. So the click
      *  raises the question instead of the deletion. `../DETAILS.md` §
@@ -457,16 +436,7 @@
         <Icon name={typeIcon} size={16} />
     </span>
 
-    <div class="summary-row" role="gridcell" id="{domId}-summary">
-        <span class="op-label">{label}</span>
-        {#if snapshot.source}
-            <span class="path" use:tooltip={{ text: snapshot.source, overflowOnly: true }}>{sourcePhrase}</span>
-        {/if}
-        {#if snapshot.destination}
-            <span class="arrow" aria-hidden="true">&#x2192;</span>
-            <span class="path dest" use:tooltip={{ text: snapshot.destination, overflowOnly: true }}>{destName}</span>
-        {/if}
-    </div>
+    <QueueRowSummary id="{domId}-summary" {label} {snapshot} {reversalVariant} />
 
     <span
         id="{domId}-status"
@@ -758,8 +728,10 @@
 
     /* Under the cursor's tint the muted tones read at full contrast, as in
        `ColumnList` (secondary and tertiary drop below AA on the lighter accent
-       tints). The status colors that carry meaning keep theirs. */
-    .queue-row.is-under-cursor :is(.path, .arrow, .type-cell, .reason-message, .reason-suggestion),
+       tints). The status colors that carry meaning keep theirs. The summary's
+       paths and arrow live in `QueueRowSummary`, hence the `:global`. */
+    .queue-row.is-under-cursor :is(.type-cell, .reason-message, .reason-suggestion),
+    .queue-row.is-under-cursor :global(:is(.queue-summary .path, .queue-summary .arrow)),
     .queue-row.is-under-cursor .status-cell:not(.running, .failed, .awaiting-answer) {
         color: var(--color-text-primary);
     }
@@ -773,14 +745,6 @@
         display: flex;
         align-items: center;
         color: var(--color-text-secondary);
-    }
-
-    .summary-row {
-        display: flex;
-        align-items: baseline;
-        gap: var(--spacing-xs);
-        min-width: 0;
-        font-size: var(--font-size-sm);
     }
 
     .readout-cell {
@@ -822,29 +786,6 @@
         user-select: text;
         -webkit-user-select: text;
         cursor: text;
-    }
-
-    .op-label {
-        font-weight: 500;
-        color: var(--color-text-primary);
-        flex-shrink: 0;
-    }
-
-    .path {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: var(--color-text-secondary);
-        min-width: 0;
-    }
-
-    .path.dest {
-        color: var(--color-accent-text);
-    }
-
-    .arrow {
-        flex-shrink: 0;
-        color: var(--color-text-tertiary);
     }
 
     .status-cell {

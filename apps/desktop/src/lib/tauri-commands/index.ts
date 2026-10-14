@@ -331,6 +331,7 @@ export type { Event, UnlistenFn } from './write-operations'
 // Operation manager (queue window): list + pause/resume/cancel + reordering the
 // line + dismissing a retained failure + the thin `operations-changed` membership/status event.
 export {
+  latestOperationProgress,
   listOperations,
   cancelOperation,
   cancelOperations,

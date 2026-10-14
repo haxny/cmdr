@@ -15,6 +15,7 @@ use super::super::event_sinks::OperationEventSink;
 use super::super::manager::{self, OperationDescriptor};
 use super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
 use super::super::state::{WriteOperationState, WriteSettledGuard};
+use super::super::summary::volume_items;
 use super::super::transfer::volume::{PathRole, unregistered_volume_error};
 use super::super::types::{
     WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, WriteOperationType,
@@ -45,17 +46,24 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
         config.progress_interval_ms,
     )));
 
-    let lane = get_volume_manager()
-        .get(&volume_id)
+    let volume = get_volume_manager().get(&volume_id);
+    let lane = volume
+        .as_ref()
         .map(|volume| volume.lane_key())
         .unwrap_or_else(|| LaneKey::new(volume_id.clone()));
+    let mut summary = path_summary(&sources, None, config.source_kinds);
+    // The volume names where the items are, the way a person reads it; an
+    // unregistered one (it surfaces as not-found on admission) keeps the raw path.
+    if let Some(volume) = &volume {
+        summary.items = Some(volume_items(&**volume, &sources, config.source_kinds, None));
+    }
 
     let descriptor = OperationDescriptor {
         operation_id: operation_id.clone(),
         operation_type: WriteOperationType::Delete,
         lanes: vec![lane],
         volume_ids: vec![volume_id.clone()],
-        summary: path_summary(&sources, None),
+        summary,
         // Deleted is deleted; there's nothing for a rollback to put back.
         supports_rollback: false,
         preview_id: config.preview_id.clone(),

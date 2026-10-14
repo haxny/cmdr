@@ -20,6 +20,7 @@ function snapshot(error: WriteOperationError | null, over: Partial<OperationSnap
     reverses: null,
     error,
     canRetry: false,
+    items: null,
     ...over,
   }
 }

@@ -10,8 +10,8 @@
  * Cloned from `lib/settings/settings-window.ts`: open-or-focus a singleton
  * `queue` window, position via the shared `#lib/window-positioning` helpers,
  * apply `NSVisualEffectView` vibrancy (with the reduce-transparency opaque
- * fallback), and use an overlay title bar with the traffic lights inset into
- * our own header. The opener runs on the MAIN window, which already holds the
+ * fallback), and use an overlay title bar whose line our own title shares with
+ * the traffic lights. The opener runs on the MAIN window, which already holds the
  * window-creation / monitor perms (`adding-a-window.md`); the queue window's own
  * capability file (`capabilities/queue.json`) grants only what its page calls.
  */
@@ -44,13 +44,18 @@ const log = getAppLogger('queue')
  *  pseudo-locale (measured in the queue webview at `--font-size-sm`; macOS
  *  15.5, 2026-08-09). 80 px covers the worst of those with room to spare.
  *
+ *  On top of the readout's floor, the minimum leaves the summary line room to
+ *  say what a row acts on and where ("Copying 2 folders and 1 file Dropbox →
+ *  cmdr-s3-test/…/folder"), and the initial width shows a typical destination
+ *  whole.
+ *
  *  The height fits one running transfer with its six-row live tree (about 245 px
- *  with its readout) under the ~105 px header, and still shows five or so waiting
- *  rows below it, so the line behind the work stays in view (measured in a dev
- *  build at the default text size, 2026-10-12). */
-const BASE_WIDTH = 740
+ *  with its readout) under the header (the title-bar line plus the toolbar), and
+ *  still shows five or so waiting rows below it, so the line behind the work
+ *  stays in view (measured in a dev build at the default text size, 2026-10-12). */
+const BASE_WIDTH = 960
 const BASE_HEIGHT = 560
-const MIN_WIDTH = 620
+const MIN_WIDTH = 744
 const MIN_HEIGHT = 280
 
 /** The backend's (NSWorkspace) answer, opaque when it can't be read. */
@@ -132,11 +137,12 @@ export async function openQueueWindow(): Promise<void> {
     // `tauri/macos-private-api` (enabled in `Cargo.toml`).
     transparent: !reduceTransparency,
     backgroundColor,
-    // Overlay title bar so the traffic lights tuck into our own header row.
+    // Overlay title bar with the traffic lights where the main window has them,
+    // so the page paints its title on their line like a native window title.
     // `hiddenTitle` keeps the OS from painting the window title text.
     titleBarStyle: 'overlay',
     hiddenTitle: true,
-    trafficLightPosition: new LogicalPosition(14, 18),
+    trafficLightPosition: new LogicalPosition(9, 17),
   })
 
   // A refused creation doesn't throw here: it arrives afterwards as `tauri://error`,

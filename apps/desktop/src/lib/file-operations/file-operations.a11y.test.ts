@@ -103,6 +103,7 @@ describe('OperationConflictDialog a11y', () => {
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     }
     const event: WriteConflictEvent = {
       operationId: 'op-1',
@@ -254,6 +255,7 @@ describe('SourcesGonePrompt a11y', () => {
           reverses: null,
           error: null,
           canRetry: false,
+          items: null,
         },
         answering: true,
         onContinue: () => {},

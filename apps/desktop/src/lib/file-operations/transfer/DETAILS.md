@@ -1035,6 +1035,10 @@ it's the wrong verb.
 ends when an `operationId` exists. **The view** is everything after: it binds the session for that id
 (`bindOperationSession`) and renders it, commands through it, and owns only what belongs to a piece of UI.
 
+Birth also hands the backend the top-level split it confirmed (`fileCount` / `folderCount` → `sourceKinds` on every
+command but compress), which is how the queue row says "2 folders and 1 file" without a `stat` per source; a start that
+doesn't know it (MCP) sends nothing and the row says "3 items".
+
 What the view owns, and why each one is genuinely view-scoped:
 
 - `MIN_DISPLAY_MS`, the anti-flicker floor, measured from when THIS VIEW appeared rather than when the operation

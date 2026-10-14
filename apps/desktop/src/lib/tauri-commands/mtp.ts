@@ -6,6 +6,7 @@ import {
   events,
   type DestinationRootEcho,
   type Initiator,
+  type ItemKinds,
   type MtpDeviceConnected,
   type MtpDeviceDisconnected,
   type MtpExclusiveAccessError,
@@ -195,6 +196,8 @@ export interface VolumeCopyConfig {
   compressionLevel?: number | null
   /** What the copy does when the destination looks too small (`"proceed"` after "Copy anyway"). */
   spaceShortfall?: SpaceShortfall
+  /** The top-level sources split into files and folders, for the queue row's "2 folders and 1 file". */
+  sourceKinds?: ItemKinds
 }
 
 /** Input for source item in conflict scanning. */

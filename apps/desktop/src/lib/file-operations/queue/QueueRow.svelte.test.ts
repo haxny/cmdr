@@ -54,6 +54,7 @@ function buildRow(
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     },
     progress,
   }
@@ -363,6 +364,47 @@ describe('QueueRow', () => {
     expect(target.querySelector('.summary-row')?.textContent.replace(/\s+/g, ' ').trim()).toBe(
       'Deleting what it created in Backup',
     )
+  })
+
+  it('says what a copy acts on and where it goes, so two copies read apart', () => {
+    const base = buildRow('queued')
+    render({
+      row: {
+        ...base,
+        snapshot: {
+          ...base.snapshot,
+          items: {
+            count: 3,
+            kinds: { files: 1, folders: 2 },
+            names: ['a', 'b', 'c'],
+            from: '~/Dropbox',
+            to: 'cmdr-s3-test/target/folder',
+          },
+        },
+      },
+    })
+    expect(target.querySelector('.op-label')?.textContent.trim()).toBe('Copying')
+    expect(target.querySelector('.items')?.textContent.trim()).toBe('2 folders and 1 file')
+    expect(target.querySelector('.path.from')?.textContent.trim()).toBe('Dropbox')
+    expect(target.querySelector('.path.dest')?.textContent.trim()).toBe('cmdr-s3-test/target/folder')
+  })
+
+  it('puts a delete IN its folder, since there is no arrow to say which way', () => {
+    const base = buildRow('queued', 'delete')
+    render({
+      row: {
+        ...base,
+        snapshot: {
+          ...base.snapshot,
+          destination: null,
+          items: { count: 3, kinds: null, names: ['a', 'b', 'c'], from: '~/Downloads', to: null },
+        },
+      },
+    })
+    expect(target.querySelector('.summary-row')?.textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Deleting 3 items in Downloads',
+    )
+    expect(target.querySelector('.arrow')).toBeNull()
   })
 
   it('leaves a restoring reversal its arrow, which already says which way the files go', () => {

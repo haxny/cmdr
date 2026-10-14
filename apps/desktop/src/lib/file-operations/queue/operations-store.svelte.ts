@@ -10,7 +10,9 @@
  *    longer in the snapshot is dropped.
  *
  * A row is `OperationSnapshot` (the membership/status fact) plus the latest
- * `WriteProgressEvent` for that op (or `null` before the first tick). The window
+ * `WriteProgressEvent` for that op (or `null` before the first tick). `init()`
+ * seeds that tick once from `latest_operation_progress`, so a row whose
+ * operation is paused (and so emits nothing) still opens with its bars. The window
  * reads `getOperations()`; the progress dialog's auto-queue surfacing reads the same store.
  *
  * ## What this store may hold, and what it may not
@@ -33,6 +35,7 @@
  */
 
 import {
+  latestOperationProgress,
   listOperations,
   onOperationsChanged,
   type OperationSnapshot,
@@ -155,6 +158,12 @@ export function createOperationsStore() {
       // A snapshot tick may have already populated `snapshots` while we awaited;
       // only seed if it hasn't, so we don't clobber fresher data with the seed.
       if (snapshots.length === 0) applySnapshot(initial)
+      // A paused operation emits nothing, so its row would have no bars and no
+      // tree until the next Resume. Its last tick fills in, where no live tick
+      // landed meanwhile (that one is newer).
+      for (const event of await latestOperationProgress()) {
+        if (!(event.operationId in progressById)) applyProgress(event)
+      }
     } catch (error) {
       // Perms / IPC failures must surface as a log line, not a dead window.
       log.warn('Failed to initialize operations store: {error}', { error: String(error) })

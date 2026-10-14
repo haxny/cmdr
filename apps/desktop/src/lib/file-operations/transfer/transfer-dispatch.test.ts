@@ -363,6 +363,27 @@ it('forwards a Move target name to the volume engine', async () => {
  * background (which has no dialog at all). So the two things every start owes
  * live here: the MCP round-trip's answer, and one typed error shape.
  */
+describe('dispatchTransferOperation: what the queue row names', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('tells a copy which of its sources are files and which folders', async () => {
+    await dispatchTransferOperation(makeConfig({ fileCount: 1, folderCount: 2 }))
+    expect(vi.mocked(copyBetweenVolumes).mock.calls[0][4]).toMatchObject({ sourceKinds: { files: 1, folders: 2 } })
+  })
+
+  it('tells a trash the same, from the delete dialog', async () => {
+    await dispatchTransferOperation(makeConfig({ operationType: 'trash', fileCount: 3, folderCount: 0 }))
+    expect(vi.mocked(trashFiles).mock.calls[0][2]).toMatchObject({ sourceKinds: { files: 3, folders: 0 } })
+  })
+
+  it('says nothing when the split is unknown, so the row counts items instead', async () => {
+    await dispatchTransferOperation(makeConfig({ operationType: 'move', fileCount: 2 }))
+    expect(vi.mocked(moveFiles).mock.calls[0][2]?.sourceKinds).toBeUndefined()
+  })
+})
+
 describe('startTransferOperation', () => {
   it('names the operation and answers the MCP round-trip with its id', async () => {
     const result = await startTransferOperation({ ...makeConfig(), mcpRequestId: 'req-1' })

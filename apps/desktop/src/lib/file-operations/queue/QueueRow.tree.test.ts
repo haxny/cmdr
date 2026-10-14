@@ -52,6 +52,7 @@ function row(
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
       ...over,
     },
     progress: phase === null ? null : progress(phase),

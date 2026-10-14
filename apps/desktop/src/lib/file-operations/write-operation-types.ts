@@ -8,7 +8,7 @@
  * form an import cycle back into `file-explorer/`.
  */
 
-import type { ArchiveNameRefusal, TrashRefusalKind } from '#lib/ipc/bindings.js'
+import type { ArchiveNameRefusal, ItemKinds, TrashRefusalKind } from '#lib/ipc/bindings.js'
 
 // ============================================================================
 // Write operation types
@@ -69,6 +69,8 @@ export interface WriteOperationConfig {
    *  bulk-skips these upfront so the progress bar reflects them immediately. Ignored
    *  for other resolution modes. */
   preKnownConflicts?: string[]
+  /** The top-level sources split into files and folders, for the queue row's "2 folders and 1 file". */
+  sourceKinds?: ItemKinds
 }
 
 /** Result of starting a write operation. */

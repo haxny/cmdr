@@ -21,6 +21,7 @@ function row(operationId: string, operationType: OperationSnapshot['operationTyp
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     },
     progress: null,
   }

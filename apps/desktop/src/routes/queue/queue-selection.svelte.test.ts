@@ -112,6 +112,7 @@ function snapshot(over: Partial<OperationSnapshot> = {}): OperationSnapshot {
     reverses: null,
     error: null,
     canRetry: false,
+    items: null,
     ...over,
   }
 }
@@ -125,6 +126,7 @@ function failed(operationId: string): OperationSnapshot {
     reverses: null,
     error: { type: 'io_error', path: '/Users/me/Documents/report.pdf', message: 'disk went away' },
     canRetry: false,
+    items: null,
   })
 }
 

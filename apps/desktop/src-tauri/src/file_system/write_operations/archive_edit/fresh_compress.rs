@@ -14,6 +14,7 @@ use super::super::OperationEventSink;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
+use super::super::summary::volume_items;
 use super::super::transfer::StagedWrite;
 use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
@@ -140,6 +141,13 @@ pub(super) async fn start(
         summary: OperationSummaryText {
             source: summary_source,
             destination: Some(archive_path.display().to_string()),
+            // The archive is where the items go, so the row reads "→ ~/x.zip".
+            items: Some(volume_items(
+                &*source_volume,
+                &source_paths,
+                None,
+                Some((&*dest_volume, &archive_path)),
+            )),
         },
         supports_rollback: net_new,
         preview_id,

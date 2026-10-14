@@ -99,6 +99,7 @@ function runningCopy(): OperationRow {
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     },
     progress: null,
   }

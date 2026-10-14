@@ -63,6 +63,8 @@ mod scratch_dir;
 mod source_binding;
 mod state;
 mod status_cache;
+mod summary;
+pub(crate) use summary::path_summary;
 mod target_names;
 mod transfer;
 mod transfer_sides;
@@ -136,6 +138,8 @@ pub use state::{
     VolumesBusyChanged, busy_volume_ids, cancel_all_write_operations, cancel_write_operation, get_operation_status,
     init_busy_volume_emitter, pending_write_conflict, resolve_write_conflict,
 };
+// A queue window that opens late seeds its rows from this (a paused operation emits nothing).
+pub use state::latest_operation_progress;
 // The hard-abort tier. Exactly one legitimate caller: the quit deadline
 // (`crate::quit`), which fires it only after the cooperative cancel has had its
 // window. ❌ Never reach for it from anything a person clicked — it skips the
@@ -200,7 +204,7 @@ pub(crate) use source_binding::retain_bound_sources;
 pub(crate) use state::{register_external_volume_op, release_external_volume_op};
 #[allow(unused_imports, reason = "Public API re-exports for consumers of this module")]
 pub use types::{
-    ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
+    ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, ItemKinds, LifecycleStatus,
     MoveLeftoversKeptEvent, OperationStatus, ProgressAxis, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
     ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
     ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome,
@@ -480,25 +484,6 @@ fn local_lanes(volume_ids: &[String]) -> Vec<LaneKey> {
     }
 }
 
-/// Best-effort `source → destination` summary for the queue window: the source
-/// items' display names joined, and the destination's. Cheap; no I/O.
-pub(super) fn path_summary(sources: &[PathBuf], destination: Option<&std::path::Path>) -> OperationSummaryText {
-    fn name(p: &std::path::Path) -> String {
-        p.file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| p.to_string_lossy().into_owned())
-    }
-    let source = match sources {
-        [] => None,
-        [one] => Some(name(one)),
-        many => Some(format!("{} ({} items)", name(&many[0]), many.len())),
-    };
-    OperationSummaryText {
-        source,
-        destination: destination.map(name),
-    }
-}
-
 /// Starts a copy operation in the background.
 ///
 /// `volume_ids` lists the volumes this copy touches (source + destination), so
@@ -535,7 +520,7 @@ pub async fn copy_files_start(
     );
 
     let lanes = lanes.unwrap_or_else(|| local_lanes(&volume_ids));
-    let summary = path_summary(&sources, Some(&destination));
+    let summary = path_summary(&sources, Some(&destination), config.source_kinds);
     start_write_operation(
         events,
         WriteOperationType::Copy,
@@ -603,7 +588,7 @@ pub async fn move_files_start(
     );
 
     let lanes = lanes.unwrap_or_else(|| local_lanes(&volume_ids));
-    let summary = path_summary(&sources, Some(&destination));
+    let summary = path_summary(&sources, Some(&destination), config.source_kinds);
     start_write_operation(
         events,
         WriteOperationType::Move,
@@ -705,7 +690,7 @@ pub async fn delete_files_start(
     }
     {
         // Local same-`root` delete: no ejectable volume involved.
-        let summary = path_summary(&sources, None);
+        let summary = path_summary(&sources, None, config.source_kinds);
         start_write_operation(
             events,
             WriteOperationType::Delete,
@@ -769,7 +754,7 @@ pub async fn trash_files_start(
     }
 
     // Trash always targets the local macOS Trash; no ejectable volume involved.
-    let summary = path_summary(&sources, None);
+    let summary = path_summary(&sources, None, config.source_kinds);
     start_write_operation(
         events,
         WriteOperationType::Trash,

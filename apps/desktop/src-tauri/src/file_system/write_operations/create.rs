@@ -264,6 +264,7 @@ async fn route_archive_create(
         summary: OperationSummaryText {
             source: Some(name.to_string()),
             destination: None,
+            items: None,
         },
         skipped_count: 0,
         // No scan preview: nothing walked a tree to plan this edit.
@@ -301,6 +302,7 @@ pub(super) fn instant_descriptor(
         summary: OperationSummaryText {
             source: Some(name.to_string()),
             destination: None,
+            items: None,
         },
         // An instant metadata op has no partial state, and no cancel path that
         // could catch it mid-flight.

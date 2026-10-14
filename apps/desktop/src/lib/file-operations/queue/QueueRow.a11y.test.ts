@@ -34,6 +34,7 @@ function row(
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     },
     progress,
   }

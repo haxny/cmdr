@@ -177,6 +177,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::resolve_write_conflict,
                     crate::commands::file_system::continue_without_gone_sources,
                     crate::commands::file_system::list_operations,
+                    crate::commands::file_system::latest_operation_progress,
                     crate::commands::file_system::get_transfer_tree_view,
                     crate::commands::file_system::cancel_operation,
                     crate::commands::file_system::cancel_operations,

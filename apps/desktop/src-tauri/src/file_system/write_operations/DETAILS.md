@@ -30,12 +30,14 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
 The full top-level inventory is here:
 
 - `mod.rs` (public API + the `start_write_operation` lifecycle), `manager.rs` (registry + lane admission; its wire types in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
-  (`WriteOperationRegistry`, `WriteOperationState`, the settle guard, plus `state/controls.rs`:
+  (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
+  `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
   `state/activity.rs`: the one wait classifier, § "Naming a wait"), `outage_slot.rs` (which volume the operation waits
   on to come back, and how patiently: `transfer/DETAILS.md` § "Waiting out a volume that went away"),
   `status_cache.rs` (the status cache, the busy-volumes set it derives, the external drag-out seam, and
-  `get_operation_status`), `operation_intent.rs` (`OperationIntent`, `PauseGate`), `human_wait.rs` (how long a person, or
+  `get_operation_status`), `summary.rs` (what the queue row says an operation acts on, § "What a row says it acts
+  on"), `operation_intent.rs` (`OperationIntent`, `PauseGate`), `human_wait.rs` (how long a person, or
   a volume that left, has kept the operation waiting),
   `metadata_losses.rs` (per-class counts of the metadata a destination couldn't keep, for the completion's note:
   `transfer/volume/DETAILS.md` § "Copies keep the source's metadata"),
@@ -358,7 +360,7 @@ An operation waiting on a person emits nothing: it is holding still on purpose, 
 - **The wait is classified for every operation, not just the ones with an in-flight table.** `WriteOperationState::activity` asks the transfer probe first (`activity_for`); an operation with no probe — a local copy, a delete, a trash — answers from its own pause gate and conflict slot (`decision_wait`), in the same order `transfer_probe::wait_reason` uses, and reports no in-flight count and no stillness that isn't the answerer's. A local copy therefore says `waiting_on: Conflict` exactly as a volume copy does, which is what lets the frontend decide once, in one place, that a parked operation has no honest speed (`apps/desktop/src/lib/file-operations/operation-session/DETAILS.md` § "Read surface"). § "Naming a wait" for who reads it.
 - **Both edges of the wait re-send the last tick.** `announce_human_wait(sink)` re-emits `last_progress` (§ below), counters untouched because nothing moved, and `enrich_progress` re-classifies it on the way out. Called from both Stop-mode dispatchers (`conflict.rs`, `transfer/volume/conflict.rs`) right after `arm` and right after the answer lands. ❌ Arm first, then announce, then prompt: a surface can answer synchronously from inside `emit_conflict`, and an announcement after the emit would describe a wait that is already over.
 - **A pause needs no announcement**, because a pause changes the registry snapshot's `LifecycleStatus` and `operations-changed` carries that to every window on its own. A clash leaves the operation `Running`, which is exactly why it needs a voice.
-- **`last_progress` is the one copy of "the newest tick", and it is stored WITHOUT its activity.** The transfer probe's stall heartbeat reads the same field (filtering to the phases where a stall means anything) rather than keeping a second one. Activity is stripped on the way in because a re-send exists precisely because what the operation is doing has changed: a stored `waiting_on: Conflict` replayed after the answer would hide the speed for the rest of the transfer.
+- **`last_progress` is the one copy of "the newest tick", and it is stored WITHOUT its activity.** The transfer probe's stall heartbeat reads the same field (filtering to the phases where a stall means anything) rather than keeping a second one. So does `latest_operation_progress`, which classifies the wait afresh on the way out. Activity is stripped on the way in because a re-send exists precisely because what the operation is doing has changed: a stored `waiting_on: Conflict` replayed after the answer would hide the speed for the rest of the transfer.
 
 ❌ A new way to park an operation on a person must open the human-wait clock (§ "ETA + throughput") AND announce itself. Miss the first and the estimate collapses on resume; miss the second and every surface lies about the speed until the person answers. Pinned by `conflict_stop_tests.rs`.
 
@@ -786,7 +788,7 @@ Independently, the archive-edit tests still give each op its OWN lane (`archive_
 ### Lifecycle status and `operations-changed`
 
 `LifecycleStatus` (Queued/Running/Paused/Done/Cancelled/Failed) lives on the manager record. The snapshot also carries
-`supports_rollback` (see below) and `error` (see [Retained failures](#retained-failures)). Admission and settle set Queued/Running and removal-on-terminal; the pause/resume path sets the `Paused`↔`Running` flip (see [Pause / resume](#pause--resume)). It is distinct from `WriteOperationPhase` (the progress phase) and `OperationIntent` (the cancel/rollback machine). The `operations-changed` typed event carries a THIN snapshot (`Vec<OperationSnapshot>`: id, type, status, source/dest summary), emitted from `spawn_managed` / `on_settled` / `cancel_if_queued` / `set_paused` / the two dismiss commands. It deliberately excludes 200 ms progress — the queue window reads the per-file `write-progress` stream for live bars. `init_operation_event_emitter(app)` wires the emitter at startup (`lib.rs`), mirroring `init_busy_volume_emitter`.
+`supports_rollback` (see below), `error` (see [Retained failures](#retained-failures)), and `items` (see [What a row says it acts on](#what-a-row-says-it-acts-on-items)). Admission and settle set Queued/Running and removal-on-terminal; the pause/resume path sets the `Paused`↔`Running` flip (see [Pause / resume](#pause--resume)). It is distinct from `WriteOperationPhase` (the progress phase) and `OperationIntent` (the cancel/rollback machine). The `operations-changed` typed event carries a THIN snapshot (`Vec<OperationSnapshot>`: id, type, status, source/dest summary), emitted from `spawn_managed` / `on_settled` / `cancel_if_queued` / `set_paused` / the two dismiss commands. It deliberately excludes 200 ms progress — the queue window reads the per-file `write-progress` stream for live bars. `init_operation_event_emitter(app)` wires the emitter at startup (`lib.rs`), mirroring `init_busy_volume_emitter`.
 
 A live RECORD only ever holds `Queued` / `Running` / `Paused`: `Done` and `Cancelled` are declared but never assigned, because `on_settled` deletes the record before anything could set them. `Failed` is the one terminal status that reaches a snapshot, and only through the retained-failure list below, never on a record.
 
@@ -795,6 +797,23 @@ A live RECORD only ever holds `Queued` / `Running` / `Paused`: `Done` and `Cance
 `lifecycle_status(id)` reads live RECORDS only, so `None` means one thing: the manager no longer tracks this id. It deliberately does not consult retained failures, which it cannot reach anyway — a failure is retained from the same cleanup that unregisters the status-cache row, so `get_operation_status` has already returned `None` by then. `snapshot()` is the one place the two sources are joined.
 
 ⚠️ **Lock order**: `get_operation_status` asks the manager BEFORE taking the status-cache read lock. That is the only place the two locks meet, and the busy-volume recompute already runs cache-lock-then-out, so nesting the manager lock inside the cache lock would close a cycle through data-safety code.
+
+### What a row says it acts on (`items`)
+
+`OperationSummaryText::items` (an `OperationItems`, riding to `OperationSnapshot::items`) is what lets the queue row say
+"Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder": the top-level `count`, its split into files and
+folders (`kinds`), the first 20 names for the row's tooltip, and the `from` / `to` folders in display form. Built once at
+registration by `summary.rs` (`path_summary` for local ops, `volume_items` for volume ones), with no I/O.
+
+- **Display form**: a path on the Mac's own disk with the home folder as `~`; a path on any other volume as
+  `<volume name>/<path inside it>`, stripped of the volume's `root()` by whole components (`location_on`).
+- **Decision: the file/folder split rides the start config (`ItemKinds`, `source_kinds` on both configs), it isn't
+  stat'ed here.** **Why**: only the starter knows it for free (the pane's listing), and a `stat` per source is a
+  network round trip each on a share. A caller that doesn't say (MCP, compress) gets `None`, and the row says
+  "3 items". A split that doesn't add up to `count` is dropped rather than shown.
+- **Why it's allowed on the thin snapshot**: it's static for the operation's life and bounded (20 names), so it changes
+  only when membership does, like `reverses`. `None` on a rename, a create, a reversal, and an edit inside a zip, where
+  the row keeps the two short names.
 
 ### Retained failures
 
@@ -857,7 +876,7 @@ sweep reverses nothing and only stops the sweep. The frontend names that window 
 
 ### IPC
 
-`list_operations` (the thin snapshot), `cancel_operation(id)`, `cancel_operations(ids)` (the queue window's "Cancel selected"), `pause_operation(id)` / `resume_operation(id)`, and `pause_all` / `resume_all`. Cancel routes through `cancel_operation`: a Queued op is dropped from the registry without ever spawning (`cancel_if_queued`); a Running/Paused op falls through to the existing `cancel_write_operation(id, rollback=false)` keep-partials path. Pause/resume flip BOTH the live `WriteOperationState` pause gate (so the driver parks) AND the manager record's `LifecycleStatus` (so the UI shows Paused), via `set_paused`, and both RETURN a `PauseOutcome` (`Applied` / `AlreadyInState` / `NotApplicable`) that rides out through `bindings.ts` ([Pause / resume](#pause--resume)). Plus `dismiss_failed_operation(id)` / `dismiss_all_failed_operations()`, which drop retained failures and re-emit, and `retry_failed_operation(id)`, which starts one again and answers a `RetryOutcome` ([Retained failures](#retained-failures)). And `move_queued_operation(id, direction)`, which reorders the line and returns a `QueueMoveOutcome` ([Reordering the line](#reordering-the-line-move_queued)). Registered in the `ipc.rs` manifest; `OperationSnapshot` / `LifecycleStatus` / `OperationsChanged` ride into `bindings.ts`. No capability change: manager commands go through the invoke handler, not the ACL.
+`list_operations` (the thin snapshot), `cancel_operation(id)`, `cancel_operations(ids)` (the queue window's "Cancel selected"), `pause_operation(id)` / `resume_operation(id)`, and `pause_all` / `resume_all`. Cancel routes through `cancel_operation`: a Queued op is dropped from the registry without ever spawning (`cancel_if_queued`); a Running/Paused op falls through to the existing `cancel_write_operation(id, rollback=false)` keep-partials path. Pause/resume flip BOTH the live `WriteOperationState` pause gate (so the driver parks) AND the manager record's `LifecycleStatus` (so the UI shows Paused), via `set_paused`, and both RETURN a `PauseOutcome` (`Applied` / `AlreadyInState` / `NotApplicable`) that rides out through `bindings.ts` ([Pause / resume](#pause--resume)). Plus `dismiss_failed_operation(id)` / `dismiss_all_failed_operations()`, which drop retained failures and re-emit, and `retry_failed_operation(id)`, which starts one again and answers a `RetryOutcome` ([Retained failures](#retained-failures)). And `move_queued_operation(id, direction)`, which reorders the line and returns a `QueueMoveOutcome` ([Reordering the line](#reordering-the-line-move_queued)). And `latest_operation_progress()`, the newest `write-progress` tick of every live operation that has emitted one (`state/registry.rs`), its wait classified at read time: a queue window that opens while an operation is paused seeds its rows from it, since a parked operation emits nothing. Registered in the `ipc.rs` manifest; `OperationSnapshot` / `LifecycleStatus` / `OperationsChanged` ride into `bindings.ts`. No capability change: manager commands go through the invoke handler, not the ACL.
 
 `get_transfer_tree_view(id, request)` answers one window of a running copy's, move's, or compress's live tree
 (`tree_view.rs` over `transfer_tree/`; no new event: views pull it on each `write-progress` tick). Its typed refusal is
@@ -1371,7 +1390,7 @@ running beside it have in flight. That failure lands in the victim, not the culp
 co-scheduling. It reads exactly like environment flake, which is how it survived: mis-blamed on load starvation once
 and on a dependency upgrade once.
 
-**The fix is a registry the test owns, not a lock around the tests.** `WriteOperationRegistry` (in `state.rs`) holds the
+**The fix is a registry the test owns, not a lock around the tests.** `WriteOperationRegistry` (in `state/registry.rs`) holds the
 map and owns `cancel_all`; `WRITE_OPERATION_STATE` is one instance of it and `cancel_all_write_operations()` is a
 one-line delegation. A test constructs its own `WriteOperationRegistry`, registers states in it, and calls
 `cancel_all()` — the same production code, on a registry nothing else can see. Serializing the two suites behind a

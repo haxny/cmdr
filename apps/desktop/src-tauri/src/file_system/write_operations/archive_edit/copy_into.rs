@@ -617,6 +617,7 @@ async fn archive_copy_into_start(
         summary: OperationSummaryText {
             source: summary_source,
             destination: None,
+            items: None,
         },
         // A zip edit is a whole-archive temp+rename rewrite: it either lands or
         // it doesn't, so there's no half-written state to reverse.

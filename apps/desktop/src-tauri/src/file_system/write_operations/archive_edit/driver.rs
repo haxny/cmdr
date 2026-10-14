@@ -91,6 +91,7 @@ pub(crate) async fn route_archive_delete(
         summary: OperationSummaryText {
             source: summary_source,
             destination: None,
+            items: None,
         },
         skipped_count: 0,
         preview_id,

@@ -45,6 +45,7 @@ const snapshot: OperationSnapshot = {
   reverses: null,
   error: null,
   canRetry: false,
+  items: null,
 }
 
 let component: ReturnType<typeof mount> | null = null

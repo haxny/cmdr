@@ -6,7 +6,7 @@
 
 use crate::operation_log::types::OpKind;
 
-use super::super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
+use super::super::types::{ItemKinds, LifecycleStatus, WriteOperationError, WriteOperationType};
 
 /// What a pause or resume request actually did, so every caller can say so
 /// instead of assuming it worked. Pause and resume share it: the three outcomes
@@ -122,6 +122,34 @@ pub enum QueueMoveOutcome {
 pub struct OperationSummaryText {
     pub source: Option<String>,
     pub destination: Option<String>,
+    /// What the operation acts on, spelled out for the queue row. `None` where
+    /// the starter has no top-level items to name (a rename, a new folder, an
+    /// edit inside an archive): the row falls back to the two names above.
+    pub items: Option<OperationItems>,
+}
+
+/// The items an operation acts on and where they go, for the queue row's
+/// "Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder".
+///
+/// Static for the op's whole life and bounded (at most
+/// [`ITEM_NAMES_SHOWN`](super::super::summary::ITEM_NAMES_SHOWN) names), which
+/// is why it rides the thin snapshot: it changes only when membership does.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationItems {
+    /// How many top-level items, files and folders together.
+    pub count: u32,
+    /// The same items split by kind, when the starter said; `None` reads as
+    /// "3 items". Dropped when it doesn't add up to `count`.
+    pub kinds: Option<ItemKinds>,
+    /// The first top-level names, in order, for the row's tooltip. The rest is
+    /// `count` minus these.
+    pub names: Vec<String>,
+    /// The folder they come from, as a person reads it (`~/Dropbox`,
+    /// `cmdr-s3-test/photos`). `None` when the sources share no parent.
+    pub from: Option<String>,
+    /// The folder they go to, in the same form. `None` for a delete or trash.
+    pub to: Option<String>,
 }
 
 /// One thin registry snapshot row (membership + lifecycle status, NOT 200 ms
@@ -151,6 +179,8 @@ pub struct OperationSnapshot {
     /// `false` on every live row. Whether the ERROR is worth retrying is the
     /// frontend's call (`offersRetry`), the same one the error dialog makes.
     pub can_retry: bool,
+    /// See [`OperationSummaryText::items`].
+    pub items: Option<OperationItems>,
 }
 
 /// Typed `operations-changed` Tauri event carrying the thin registry snapshot

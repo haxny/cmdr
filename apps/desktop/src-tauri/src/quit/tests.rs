@@ -129,6 +129,7 @@ fn operation(operation_type: WriteOperationType, status: LifecycleStatus) -> Ope
         reverses: None,
         error: None,
         can_retry: false,
+        items: None,
     }
 }
 

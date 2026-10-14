@@ -80,8 +80,8 @@ use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
 mod reorder;
 mod wire;
 pub use wire::{
-    OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
-    QueueMoveOutcome,
+    OperationItems, OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome,
+    QueueMoveDirection, QueueMoveOutcome,
 };
 
 // How a retained failure starts again (the queue window's Retry): the
@@ -228,6 +228,7 @@ impl ManagerInner {
                 reverses: rec.descriptor.reverses,
                 error: None,
                 can_retry: false,
+                items: rec.descriptor.summary.items.clone(),
             });
         let settled_failures = self
             .failures
@@ -749,18 +750,16 @@ impl OperationManager {
             // Prefer the live record's descriptor, so the failed row reads like the
             // running row it replaces. It's gone only if the op settled before its
             // own error event landed, and then the event's own type is all there is.
-            let (operation_type, source, destination, reverses, retry, record_gone) =
-                match inner.records.get(operation_id) {
-                    Some(rec) => (
-                        rec.descriptor.operation_type,
-                        rec.descriptor.summary.source.clone(),
-                        rec.descriptor.summary.destination.clone(),
-                        rec.descriptor.reverses,
-                        rec.retry.clone(),
-                        false,
-                    ),
-                    None => (operation_type, None, None, None, None, true),
-                };
+            let (operation_type, summary, reverses, retry, record_gone) = match inner.records.get(operation_id) {
+                Some(rec) => (
+                    rec.descriptor.operation_type,
+                    rec.descriptor.summary.clone(),
+                    rec.descriptor.reverses,
+                    rec.retry.clone(),
+                    false,
+                ),
+                None => (operation_type, OperationSummaryText::default(), None, None, true),
+            };
 
             if inner.failures.len() == FAILURE_CAPACITY {
                 inner.failures.pop_front();
@@ -770,8 +769,8 @@ impl OperationManager {
                     operation_id: operation_id.to_string(),
                     operation_type,
                     status: LifecycleStatus::Failed,
-                    source,
-                    destination,
+                    source: summary.source,
+                    destination: summary.destination,
                     // A settled failure offers no rollback from this row: the op is over,
                     // and there's no live intent machine left to reverse it.
                     supports_rollback: false,
@@ -781,6 +780,7 @@ impl OperationManager {
                     error: Some(error.clone()),
                     // Filled in by `RetainedFailure::row` from the recipe it holds.
                     can_retry: false,
+                    items: summary.items,
                 },
                 retry,
             ));

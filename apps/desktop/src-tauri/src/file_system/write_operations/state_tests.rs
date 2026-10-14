@@ -727,3 +727,46 @@ fn guard_unregisters_its_state_even_when_the_test_body_panics() {
         "Drop must unregister on unwind, not only on the happy path"
     );
 }
+
+// ---- the newest tick, for a window that opens late -------------------------
+
+#[test]
+fn latest_progress_hands_a_late_window_the_tick_a_paused_operation_last_emitted() {
+    // A paused operation emits nothing, so a queue window opened while it's
+    // parked would have no bars and no tree until somebody pressed Resume. This
+    // is the one tick that window can start from, with the wait named NOW: the
+    // stored tick was measured while the copy was still moving.
+    let op = install_state("latest-progress-paused", OperationIntent::Running);
+    let mut event = copying_event(op.id());
+    op.state().enrich_progress(&mut event);
+    op.state().pause_gate.pause();
+
+    let latest = WRITE_OPERATION_STATE.latest_progress();
+    let tick = latest
+        .iter()
+        .find(|tick| tick.operation_id == op.id())
+        .expect("a paused operation that emitted a tick hands it over");
+
+    assert_eq!(
+        (tick.files_done, tick.bytes_done),
+        (5, 83_650_000),
+        "the counters are the last ones it emitted"
+    );
+    assert_eq!(
+        tick.activity.as_ref().map(|activity| activity.waiting_on),
+        Some(TransferWaitReason::Paused),
+        "the wait is classified at read time, not replayed"
+    );
+}
+
+#[test]
+fn latest_progress_skips_an_operation_that_has_emitted_nothing_yet() {
+    let op = install_state("latest-progress-silent", OperationIntent::Running);
+
+    let latest = WRITE_OPERATION_STATE.latest_progress();
+
+    assert!(
+        latest.iter().all(|tick| tick.operation_id != op.id()),
+        "no tick, no row to seed"
+    );
+}

@@ -31,9 +31,10 @@ The window renders from `createOperationsStore()`, which merges:
 
 1. **`operations-changed`** (`onOperationsChanged`): the thin registry snapshot the backend emits whenever an operation
    is registered, admitted, paused, resumed, or settles. Payload is `{ operations: OperationSnapshot[] }`, where each
-   `OperationSnapshot` is `{ operationId, operationType, status, source, destination, supportsRollback, error }` —
-   membership, lifecycle status, whether the row may offer Rollback, and (on a retained failure only) the typed
-   `WriteOperationError` that stopped it. No 200 ms progress. This decides which rows exist and each row's status.
+   `OperationSnapshot` is `{ operationId, operationType, status, source, destination, supportsRollback, error, items }`
+   — membership, lifecycle status, whether the row may offer Rollback, (on a retained failure only) the typed
+   `WriteOperationError` that stopped it, and what the row says the operation acts on (§ "Row layout"). No 200 ms
+   progress. This decides which rows exist and each row's status.
 2. **`write-progress`** (`onWriteProgress`, the existing per-file stream): drives the live per-row progress bars. The
    store keys the latest `WriteProgressEvent` by `operationId`.
 
@@ -43,6 +44,12 @@ membership source of truth.
 
 This split keeps `operations-changed` cheap (no progress fattening it every 200 ms) while still giving each row a live
 bar — the design the plan mandates under "subscribe, don't poll" and "thin snapshot".
+
+**A paused operation opens expanded.** A parked operation emits no `write-progress`, so a window opened during the pause
+would hold no tick for it: no readout, no tree, one folded line until somebody pressed Resume. `init()` therefore reads
+`latest_operation_progress` once, after the snapshot seed, and fills in each row that no live tick reached meanwhile (a
+live one is newer). It's a one-time read at mount, not a poll; the stream takes over from there. The session gets no
+copy, so a freshly opened paused row shows no ETA until it moves again.
 
 ### What the store may hold, and what belongs to the session
 
@@ -341,14 +348,27 @@ with the progress dialog). The row HIDES rather than blocking with an explanatio
 compact list of live operations is not where a reason gets read, and the dialog one Show away is the surface that
 explains itself. Same verdict either way, so the two can't contradict each other.
 
-The summary beside the label is `basename(source)`, then an arrow and `basename(destination)` when there is one, with
-the full paths in tooltips. A REMOVAL reversal (undoing a copy, a new file or folder, or a compress) has no destination,
-so no arrow renders and its single folder name lands right against "Deleting what it created", reading as though that
-folder is the thing about to go. So that one shape wraps the name in `queue.row.reversalInFolder` ("in {folder}"), which
-puts it back where it belongs: the reversal is clearing files INSIDE it. Only that shape needs it; every other row
-already has the arrow to say which way things move, and "Putting files back in report.pdf" would be a fresh nonsense.
-The Rust side of the summary is `InverseSummary` / `summarize_inverse` (`src-tauri/src/operation_log/rollback.rs`),
-which fills `from` for a removal and both `from` and `to` for a restore.
+The summary (`QueueRowSummary.svelte`, wording in `row-items.ts`) says what the operation acts on and where it goes:
+"Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder", from the snapshot's `items` (backend
+`write_operations/DETAILS.md` § "What a row says it acts on").
+
+- **What it acts on is always on display** (`flex-shrink: 0`), because it's what tells two copies to different places
+  apart. "2 folders and 1 file" when the starter said which is which, "3 items" when it didn't (MCP, compress). Its
+  tooltip lists the first 20 names, then "… and 1,980 more": the names are known at registration, so it costs nothing.
+- **The source folder is its last segment**, the full path on hover, and gives way first (capped at 40% of the line).
+- **The destination is elided in the MIDDLE** (`useShortenMiddle`, breaking at `/`), so both the drive and the last
+  folder stay readable; the full path is on hover and in an `sr-only` twin, since the elided span is `aria-hidden`.
+- **A delete or trash has no arrow**, so its folder takes `queue.row.itemsInFolder` ("Deleting 3 items in Downloads").
+
+A row without `items` (a rename, a create, a reversal, an edit inside a zip) keeps the older shape: `basename(source)`,
+then an arrow and `basename(destination)` when there is one, with the full paths in tooltips. A REMOVAL reversal
+(undoing a copy, a new file or folder, or a compress) has no destination, so no arrow renders and its single folder name
+lands right against "Deleting what it created", reading as though that folder is the thing about to go. So that one
+shape wraps the name in `queue.row.reversalInFolder` ("in {folder}"), which puts it back where it belongs: the reversal
+is clearing files INSIDE it. Only that shape needs it; every other row already has the arrow to say which way things
+move, and "Putting files back in report.pdf" would be a fresh nonsense. The Rust side of the summary is `InverseSummary`
+/ `summarize_inverse` (`src-tauri/src/operation_log/rollback.rs`), which fills `from` for a removal and both `from` and
+`to` for a restore.
 
 A row is a five-column grid whose chrome (select, type icon, source→dest summary, status, actions) sits on line 1, with
 the shared `../TransferProgressReadout.svelte` spanning line 2 from the summary column to the end. The readout gets the
@@ -375,7 +395,7 @@ binds nothing of its own: it asks `get_transfer_tree_view` for this row's operat
   Shut is the row's own `$state`; with a lone tree left, it's open again whatever that says. The toggle is last in the
   row's ← / → walk, with no key work.
 - **The window's size** (`queue-window.ts`) leaves room for one running row with its tree plus a few waiting rows; more
-  scroll.
+  scroll. Its width leaves the summary line room to name the items and an elided destination.
 
 **Decision: focus reaches the tree by Tab from its row, and Escape hands it back.** **Why**: the tree is a widget of its
 own (arrows, Home / End, Left / Right, F), so it can't share keys with the grid: ⌫ inside it must not cancel the whole
@@ -478,6 +498,14 @@ move"). Only a waiting row moves; running and paused ones keep their place. The 
 `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". Drag-to-reorder and "Run
 next" are still #256.
 
+## Title bar
+
+The heading ("Operations") sits on the traffic lights' own line, centered like a native window title, the way the main
+window's title bar does it: the lights at the main window's `trafficLightPosition` (9, 17), the strip
+`--titlebar-height` tall and a drag region, its text too (Tauri reads the attribute off the element under the cursor).
+The toolbar starts right below it, so no row of the window is spent on a title alone. The `h1` stays `sr-only` and
+carries the window title for a screen reader.
+
 ## Vibrancy + reduce-transparency
 
 `new WebviewWindow(...)` doesn't throw when creation is refused (a missing grant, a label clash): the refusal arrives
@@ -516,7 +544,9 @@ the MAIN window, which already holds those perms — nothing to add there (see `
 ## Tests
 
 - `operations-store.svelte.test.ts`: the reducers (snapshot → rows, progress merge + unknown-op drop, prune on leave,
-  running/paused presence) and `isTerminalStatus`.
+  running/paused presence), `isTerminalStatus`, and a paused operation's row seeded from `latest_operation_progress`.
+- `row-items.test.ts`: the summary's wording ("2 folders and 1 file", "2,000 items", the tooltip's "… and 1,998 more", a
+  display path's last folder). `QueueRow.svelte.test.ts` pins the rendered line, a copy's and a delete's.
 - `main-window-operations.svelte.test.ts`: the main window's lifecycle (subscribe once, idempotent init, both listeners
   dropped on destroy, a re-init after destroy yielding a LIVE instance, and a destroy mid-init leaving nothing
   subscribed).

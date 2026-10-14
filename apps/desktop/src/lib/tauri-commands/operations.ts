@@ -23,6 +23,7 @@ import type {
   TreeRowKind,
   TreeRowState,
   TreeWindow,
+  WriteProgressEvent,
   WriteSourcesGoneEvent,
 } from '#lib/ipc/bindings.js'
 
@@ -49,6 +50,13 @@ export type {
  *  paused, and recently-terminal until it's pruned). */
 export async function listOperations(): Promise<OperationSnapshot[]> {
   return commands.listOperations()
+}
+
+/** The newest `write-progress` tick of every live operation that has emitted
+ *  one. A paused operation emits nothing, so a window opening during the pause
+ *  seeds its rows from this rather than waiting for the next Resume. */
+export async function latestOperationProgress(): Promise<WriteProgressEvent[]> {
+  return commands.latestOperationProgress()
 }
 
 /** A window of an operation's live transfer tree, or the backend's typed reason

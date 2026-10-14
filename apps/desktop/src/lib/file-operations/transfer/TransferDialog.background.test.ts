@@ -81,6 +81,7 @@ function liveRow(): { snapshot: OperationSnapshot } {
       reverses: null,
       error: null,
       canRetry: false,
+      items: null,
     },
   }
 }

@@ -506,7 +506,17 @@ export function createDialogState(deps: DialogStateDeps) {
       .map((item) => (item.isDirectory ? item.recursiveSize : item.size))
       .filter((s): s is number => s != null)
     const itemSizes = sizes.length === deleteDialogProps.sourceItems.length ? sizes : undefined
+    // The split the queue row names ("2 folders and 1 file"), when every path has its item.
+    const items = deleteDialogProps.sourceItems
+    const counts =
+      items.length === deleteDialogProps.sourcePaths.length
+        ? {
+            folderCount: items.filter((item) => item.isDirectory).length,
+            fileCount: items.filter((item) => !item.isDirectory).length,
+          }
+        : {}
     return {
+      ...counts,
       operationType,
       sourcePaths: deleteDialogProps.sourcePaths,
       sourceFolderPath: deleteDialogProps.sourceFolderPath,

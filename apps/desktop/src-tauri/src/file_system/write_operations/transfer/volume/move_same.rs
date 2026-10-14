@@ -13,6 +13,8 @@
 
 use std::collections::HashMap;
 use std::future::Future;
+
+use crate::file_system::write_operations::summary::volume_items;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
@@ -118,6 +120,12 @@ pub(super) async fn move_within_same_volume(
     let summary = manager::OperationSummaryText {
         source: Some(volume.name().to_string()),
         destination: Some(volume.name().to_string()),
+        items: Some(volume_items(
+            &*volume,
+            &source_paths,
+            config.source_kinds,
+            Some((&*volume, &dest_path)),
+        )),
     };
     let descriptor = manager::OperationDescriptor {
         operation_id: operation_id.clone(),

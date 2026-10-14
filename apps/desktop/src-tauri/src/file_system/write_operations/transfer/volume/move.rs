@@ -15,6 +15,8 @@
 //! three-module cycle. `DETAILS.md` § Files.
 
 use std::future::Future;
+
+use crate::file_system::write_operations::summary::volume_items;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -113,6 +115,7 @@ pub async fn move_between_volumes(
             preview_id: config.preview_id,
             pre_known_conflicts: config.pre_known_conflicts,
             destination_name: config.destination_name,
+            source_kinds: config.source_kinds,
             ..Default::default()
         };
 
@@ -178,6 +181,12 @@ pub async fn move_between_volumes(
     let summary = manager::OperationSummaryText {
         source: Some(source_volume.name().to_string()),
         destination: Some(dest_volume.name().to_string()),
+        items: Some(volume_items(
+            &*source_volume,
+            &source_paths,
+            config.source_kinds,
+            Some((&*dest_volume, &dest_path)),
+        )),
     };
     let descriptor = manager::OperationDescriptor {
         operation_id: operation_id.clone(),

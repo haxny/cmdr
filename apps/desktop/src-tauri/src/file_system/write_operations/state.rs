@@ -2,11 +2,11 @@
 //!
 //! Contains state tracking for in-progress operations and status caches for query APIs.
 
-use crate::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
+use crate::ignore_poison::IgnorePoison;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, LazyLock, RwLock};
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
@@ -659,116 +659,6 @@ impl Drop for WriteSettledGuard {
     }
 }
 
-/// The live [`WriteOperationState`] of every registered operation, keyed by
-/// operation id.
-///
-/// A struct with methods rather than a bare `static` map, because
-/// [`cancel_all`](Self::cancel_all) is a WALK: it touches every entry at once.
-/// A walk is only honestly testable against a registry the caller OWNS — driving
-/// the process-global one from a test cancels whatever operations OTHER tests
-/// have in flight at that moment. DETAILS § "Test isolation".
-pub(super) struct WriteOperationRegistry {
-    entries: RwLock<HashMap<String, Arc<WriteOperationState>>>,
-}
-
-impl WriteOperationRegistry {
-    fn new() -> Self {
-        Self {
-            entries: RwLock::new(HashMap::new()),
-        }
-    }
-
-    /// Registers `state` under `operation_id`, so cancel / pause / conflict
-    /// resolution can reach it by id.
-    pub(super) fn insert(&self, operation_id: String, state: Arc<WriteOperationState>) {
-        self.entries.write_ignore_poison().insert(operation_id, state);
-    }
-
-    /// The live state for `operation_id`, if it's still registered. Returns an
-    /// `Arc` rather than a guard so callers don't hold the registry lock while
-    /// they touch the operation.
-    pub(super) fn get(&self, operation_id: &str) -> Option<Arc<WriteOperationState>> {
-        Some(Arc::clone(self.entries.read_ignore_poison().get(operation_id)?))
-    }
-
-    /// Whether `operation_id` still has a state entry.
-    ///
-    /// ❌ Test-only, and it must stay that way: this is presence in the state
-    /// map, ❌ never "is it running". A paused operation keeps its entry and a
-    /// queued one has none yet, so answering a lifecycle question with this got
-    /// both backwards. `manager().lifecycle_status()` is that answer; the tests
-    /// here use this to pin the difference.
-    #[cfg(test)]
-    pub(super) fn contains(&self, operation_id: &str) -> bool {
-        self.entries
-            .read()
-            .is_ok_and(|entries| entries.contains_key(operation_id))
-    }
-
-    /// Drops `operation_id`'s state, ending its liveness first.
-    ///
-    /// ❌ Every removal goes through here. Removing the entry alone would leave a
-    /// wedged operation's staged temps hidden forever (a task the driver
-    /// abandoned still holds an `Arc` to the state, so the map entry going away
-    /// doesn't drop it): `WriteOperationState::end_liveness`.
-    pub(super) fn forget(&self, operation_id: &str) {
-        let mut entries = self.entries.write_ignore_poison();
-        if let Some(state) = entries.remove(operation_id) {
-            state.end_liveness();
-        }
-    }
-
-    /// Stops every registered operation, keeping partials.
-    ///
-    /// Transitions each to `Stopped` (never `RollingBack`: teardown must not
-    /// silently delete files with no visual feedback), flips `backend_cancel` so
-    /// in-flight backend I/O bails, drops any pending conflict sender to unblock
-    /// its waiter, and wakes a paused op so it observes the cancel. Already-
-    /// `Stopped` operations are left alone.
-    pub(super) fn cancel_all(&self) {
-        let entries = self.entries.read_ignore_poison();
-        for (id, state) in entries.iter() {
-            let current = load_intent(&state.intent);
-            if current != OperationIntent::Stopped {
-                log::info!("cancel_all_write_operations: stopping op={id}");
-                state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
-                state.backend_cancel.cancel();
-                // Drop the conflict resolution sender to unblock any waiting receiver
-                state.conflict_slot.abandon();
-                state.sources_gone.abandon();
-                // Wake a paused, parked op so teardown's cancel is observed.
-                state.pause_gate.wake();
-            }
-        }
-    }
-
-    /// Stops every registered operation and stops WAITING for the ones that
-    /// don't answer. See [`abort_all_write_operations`].
-    pub(super) fn abort_all(&self) {
-        // Tier 1 first, and unconditionally: an abort is a cancel that ran out
-        // of patience, so an operation must never observe tier 2 without the
-        // cooperative signal that gives its backends the chance to wind down
-        // cleanly in the moments before the process goes.
-        self.cancel_all();
-        let entries = self.entries.read_ignore_poison();
-        for (id, state) in entries.iter() {
-            if !state.backend_abort.is_cancelled() {
-                log::info!("abort_all_write_operations: no longer waiting for op={id}");
-                state.backend_abort.cancel();
-            }
-        }
-    }
-}
-
-/// Global registry of in-progress write operation states.
-pub(super) static WRITE_OPERATION_STATE: LazyLock<WriteOperationRegistry> = LazyLock::new(WriteOperationRegistry::new);
-
-/// Drops `operation_id`'s state, ending its liveness first. See
-/// [`WriteOperationRegistry::forget`].
-pub(super) fn forget_operation(operation_id: &str) {
-    WRITE_OPERATION_STATE.forget(operation_id);
-}
-
 // The operation status cache, the busy-volume set it drives, and the queries
 // over it live in `status_cache`. Re-exported here so the established
 // `state::register_operation_status`, `state::busy_volume_ids`, etc. paths keep
@@ -786,6 +676,8 @@ pub(super) use super::status_cache::{register_operation_status, unregister_opera
 // resolving for every caller.
 mod activity;
 mod controls;
+// The registry every by-id lookup goes through, and its walks over all of them.
+mod registry;
 #[cfg(test)]
 pub use controls::abort_write_operation;
 pub use controls::{
@@ -793,6 +685,10 @@ pub use controls::{
     resolve_write_conflict,
 };
 pub(super) use controls::{pause_write_operation, resume_write_operation};
+#[cfg(test)]
+use registry::WriteOperationRegistry;
+pub use registry::latest_operation_progress;
+pub(super) use registry::{WRITE_OPERATION_STATE, forget_operation};
 
 #[cfg(test)]
 #[path = "state_tests.rs"]

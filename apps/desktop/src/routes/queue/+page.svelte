@@ -378,13 +378,15 @@
 
 <main class="queue-window" tabindex="-1">
     <h1 class="sr-only">{tString('queue.windowTitle')}</h1>
-    <!-- Drag strip under the overlay traffic lights, like Settings/Shortcuts. -->
-    <div class="window-drag-region" data-tauri-drag-region aria-hidden="true"></div>
+    <!-- The title sits on the traffic lights' line, centered like a native window
+         title (the main window's title bar does the same), and the whole strip
+         drags the window. The text carries the attribute too: Tauri reads it off
+         the element under the cursor. -->
+    <div class="title-bar" data-tauri-drag-region>
+        <span class="title" data-tauri-drag-region aria-hidden="true">{tString('queue.heading')}</span>
+    </div>
 
     <header class="queue-header">
-        <div class="title-row">
-            <span class="title">{tString('queue.heading')}</span>
-        </div>
         <div class="toolbar" role="toolbar" aria-label={tString('queue.heading')}>
             <Button variant="secondary" size="mini" onclick={handlePauseAll} disabled={!store.hasRunning}>
                 <span class="btn-inner"><Icon name="pause" size={13} />{tString('queue.toolbar.pauseAll')}</span>
@@ -468,39 +470,28 @@
         position: relative;
     }
 
-    /* Drag strip over the overlay title-bar row (where the traffic lights sit). */
-    .window-drag-region {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
+    /* The overlay title bar's own line, shared with the traffic lights. */
+    .title-bar {
         height: var(--titlebar-height);
-        z-index: var(--z-sticky);
-    }
-
-    .queue-header {
-        /* Start below the overlay title-bar so the title and toolbar clear the
-           traffic lights and the drag strip above. */
-        padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm);
-        padding-top: calc(var(--titlebar-height) + var(--spacing-xs));
         display: flex;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-        border-bottom: 1px solid var(--color-border-glass);
-    }
-
-    .title-row {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: var(--spacing-md);
-        /* Leave room for the traffic lights on the left of the drag strip. */
-        padding-left: var(--spacing-xl);
+        align-items: center;
+        justify-content: center;
+        padding-top: var(--spacing-xxs);
+        flex-shrink: 0;
     }
 
     .title {
-        font-size: var(--font-size-lg);
-        font-weight: 600;
+        /* Capped like the main window's title, so a large text size can't
+           outgrow the fixed-height bar. */
+        font-size: min(var(--font-size-sm), 18px);
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        user-select: none;
+    }
+
+    .queue-header {
+        padding: 0 var(--spacing-md) var(--spacing-sm);
+        border-bottom: 1px solid var(--color-border-glass);
     }
 
     .toolbar {

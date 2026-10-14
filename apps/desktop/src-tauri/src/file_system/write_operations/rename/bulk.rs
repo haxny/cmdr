@@ -133,6 +133,7 @@ pub(crate) fn start_bulk_rename(
     let summary = OperationSummaryText {
         source: Some(format!("{} files", rows.len())),
         destination: None,
+        items: None,
     };
     let descriptor = OperationDescriptor {
         operation_id: operation_id.clone(),

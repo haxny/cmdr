@@ -220,6 +220,7 @@ export function snapshot(
     reverses: null,
     error: null,
     canRetry: false,
+    items: null,
   }
 }
 

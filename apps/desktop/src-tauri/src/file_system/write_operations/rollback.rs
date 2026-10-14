@@ -382,6 +382,7 @@ fn spawn_managed_inverse(
         summary: OperationSummaryText {
             source: plan.summary.from.clone(),
             destination: plan.summary.to.clone(),
+            items: None,
         },
         // This IS the reversal. Offering to roll back a rollback would ask the
         // engine to re-apply what the person just chose to undo.

@@ -420,6 +420,18 @@ pub struct WriteOperationStartResult {
 // Configuration
 // ============================================================================
 
+/// How many of an operation's top-level items are files and how many are
+/// folders, as the person who started it saw them in the pane. The queue row
+/// says "2 folders and 1 file" from it. Only the starter knows this without a
+/// `stat` per source (and a network source makes that a round trip each), so
+/// it rides the start config, and a caller that didn't say leaves it `None`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemKinds {
+    pub files: u32,
+    pub folders: u32,
+}
+
 /// Configuration for write operations.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -449,6 +461,10 @@ pub struct WriteOperationConfig {
     /// What a copy does when the destination looks too small. See [`SpaceShortfall`].
     #[serde(default)]
     pub space_shortfall: SpaceShortfall,
+    /// The top-level sources split into files and folders, for the queue row.
+    /// See [`ItemKinds`].
+    #[serde(default)]
+    pub source_kinds: Option<ItemKinds>,
 }
 
 impl Default for WriteOperationConfig {
@@ -462,6 +478,7 @@ impl Default for WriteOperationConfig {
             pre_known_conflicts: Vec::new(),
             destination_name: None,
             space_shortfall: SpaceShortfall::Refuse,
+            source_kinds: None,
         }
     }
 }
@@ -580,6 +597,10 @@ pub struct VolumeCopyConfig {
     /// What a copy does when the destination looks too small. See [`SpaceShortfall`].
     #[serde(default)]
     pub space_shortfall: SpaceShortfall,
+    /// The top-level sources split into files and folders, for the queue row.
+    /// See [`ItemKinds`].
+    #[serde(default)]
+    pub source_kinds: Option<ItemKinds>,
 }
 
 impl Default for VolumeCopyConfig {
@@ -593,6 +614,7 @@ impl Default for VolumeCopyConfig {
             destination_name: None,
             compression_level: None,
             space_shortfall: SpaceShortfall::Refuse,
+            source_kinds: None,
         }
     }
 }
@@ -610,6 +632,7 @@ impl From<&WriteOperationConfig> for VolumeCopyConfig {
             // routing rides it), so the level has no source here.
             compression_level: None,
             space_shortfall: config.space_shortfall,
+            source_kinds: config.source_kinds,
         }
     }
 }

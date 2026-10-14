@@ -37,6 +37,7 @@ fn snapshot(id: &str, status: LifecycleStatus) -> OperationSnapshot {
         reverses: None,
         error: None,
         can_retry: false,
+        items: None,
     }
 }
 

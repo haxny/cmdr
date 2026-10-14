@@ -729,6 +729,11 @@ export const commands = {
       destinationName?: string | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -764,6 +769,11 @@ export const commands = {
       destinationName?: string | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -796,6 +806,11 @@ export const commands = {
       destinationName?: string | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -896,6 +911,15 @@ export const commands = {
    *  `write-progress` stream; this snapshot stays thin.
    */
   listOperations: () => __TAURI_INVOKE<OperationSnapshot[]>('list_operations'),
+  /**
+   *  The newest `write-progress` tick of every live operation that has emitted
+   *  one, for a queue window that opens late. A paused operation emits nothing,
+   *  so this is the only way that window can draw its bars and tree before the
+   *  next Resume. Read once at mount; the event stream takes over from there.
+   *  `async` so it never answers on the main thread: it takes each operation's
+   *  progress lock, which an emitting driver holds for a moment at a time.
+   */
+  latestOperationProgress: () => __TAURI_INVOKE<WriteProgressEvent[]>('latest_operation_progress'),
   /**
    *  One window of an operation's live transfer tree, for the progress dialog and
    *  the queue. A view calls it on mount and again on each `write-progress` tick
@@ -1017,6 +1041,11 @@ export const commands = {
       compressionLevel?: number | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -1071,6 +1100,11 @@ export const commands = {
       compressionLevel?: number | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -1126,6 +1160,11 @@ export const commands = {
       compressionLevel?: number | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -1173,6 +1212,11 @@ export const commands = {
       compressionLevel?: number | null
       // What a copy does when the destination looks too small. See [`SpaceShortfall`].
       spaceShortfall?: SpaceShortfall
+      /**
+       *  The top-level sources split into files and folders, for the queue row.
+       *  See [`ItemKinds`].
+       */
+      sourceKinds?: ItemKinds | null
     } | null,
     initiator: 'user' | 'aiClient' | 'agent' | 'agentEdited' | null,
   ) =>
@@ -9371,6 +9415,18 @@ export type InvalidNameReason =
   | { type: 'reserved' }
 
 /**
+ *  How many of an operation's top-level items are files and how many are
+ *  folders, as the person who started it saw them in the pane. The queue row
+ *  says "2 folders and 1 file" from it. Only the starter knows this without a
+ *  `stat` per source (and a network source makes that a round trip each), so
+ *  it rides the start config, and a caller that didn't say leaves it `None`.
+ */
+export type ItemKinds = {
+  files: number
+  folders: number
+}
+
+/**
  *  The per-item outcome. A canceled/failed op keeps `Done` rows for what it
  *  reached — exactly what a rollback needs.
  */
@@ -12139,6 +12195,36 @@ export type OperationItemView = {
 }
 
 /**
+ *  The items an operation acts on and where they go, for the queue row's
+ *  "Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder".
+ *
+ *  Static for the op's whole life and bounded (at most
+ *  [`ITEM_NAMES_SHOWN`](super::super::summary::ITEM_NAMES_SHOWN) names), which
+ *  is why it rides the thin snapshot: it changes only when membership does.
+ */
+export type OperationItems = {
+  // How many top-level items, files and folders together.
+  count: number
+  /**
+   *  The same items split by kind, when the starter said; `None` reads as
+   *  "3 items". Dropped when it doesn't add up to `count`.
+   */
+  kinds: ItemKinds | null
+  /**
+   *  The first top-level names, in order, for the row's tooltip. The rest is
+   *  `count` minus these.
+   */
+  names: string[]
+  /**
+   *  The folder they come from, as a person reads it (`~/Dropbox`,
+   *  `cmdr-s3-test/photos`). `None` when the sources share no parent.
+   */
+  from: string | null
+  // The folder they go to, in the same form. `None` for a delete or trash.
+  to: string | null
+}
+
+/**
  *  A read of one `operations` row, tokens decoded to typed enums. Doubles as the
  *  IPC/MCP summary wire type (the query API returns it directly): it carries no
  *  interned `dir_id`s, only volume ids and typed fields the frontend can render,
@@ -12210,6 +12296,8 @@ export type OperationSnapshot = {
    *  frontend's call (`offersRetry`), the same one the error dialog makes.
    */
   canRetry: boolean
+  // See [`OperationSummaryText::items`].
+  items: OperationItems | null
 }
 
 /**
@@ -17333,6 +17421,11 @@ export type VolumeCopyConfig = {
   compressionLevel?: number | null
   // What a copy does when the destination looks too small. See [`SpaceShortfall`].
   spaceShortfall?: SpaceShortfall
+  /**
+   *  The top-level sources split into files and folders, for the queue row.
+   *  See [`ItemKinds`].
+   */
+  sourceKinds?: ItemKinds | null
 }
 
 /**
@@ -18153,6 +18246,11 @@ export type WriteOperationConfig = {
   destinationName?: string | null
   // What a copy does when the destination looks too small. See [`SpaceShortfall`].
   spaceShortfall?: SpaceShortfall
+  /**
+   *  The top-level sources split into files and folders, for the queue row.
+   *  See [`ItemKinds`].
+   */
+  sourceKinds?: ItemKinds | null
 }
 
 // Errors that can occur during write operations.
