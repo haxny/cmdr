@@ -6,6 +6,9 @@ description too.
 
 Rule: an agent filing a card sets **Impact** and **Size**, plus **Severity** when it's a bug or a security issue.
 
+The morning report-triage agent sets them on every `vdavid/cmdr-reports` card it triages, through
+`scripts/report-triage/board.sh rate`, and points its prompt at this file for the definitions.
+
 ## Severity
 
 Bugs and security issues only; leave it blank on everything else. A security card takes its severity from its CVSS v4.0
@@ -37,8 +40,3 @@ don't count.
 - **XL**: Needs 16 or more agents.
 
 For Cmdr, a card that asks for a plan, or one that spans many subsystems, is usually L or XL.
-
-## Known mismatch
-
-`scripts/report-triage/prompt.md` still sizes report cards with `size:S` / `size:M` / `size:L` labels in human hours
-("under an hour" and so on), and its `severity:*` labels are separate from the board's Severity field.

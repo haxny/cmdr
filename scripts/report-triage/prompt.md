@@ -15,8 +15,9 @@ You may ONLY:
 - Read cards and comments in `vdavid/cmdr-reports` with `./board.sh` (see "The board tool" below; `gh` and `curl` aren't
   available).
 - Read error-report bundles from R2 with `./fetch-bundle.sh <r2-key> <dir>` (read-only).
-- Read Cmdr's source code in `./cmdr` (a read-only checkout; never edit it).
-- On cards that carry `unprocessed`: add ONE comment, edit the title, and add or remove labels.
+- Read Cmdr's source code and docs in `./cmdr` (a read-only checkout; never edit it).
+- On cards that carry `unprocessed`: add ONE comment, edit the title, add or remove labels, and rate the card on the
+  backlog board.
 
 You must NEVER: close, reopen, lock, transfer, or delete a card or comment; edit or delete a comment you didn't write;
 reply to a reporter or email anyone; touch any card that doesn't carry `unprocessed`; push anything anywhere.
@@ -48,13 +49,17 @@ rules, so a refusal means stop and move on, not retry another way.
   EOF
   ```
 
-  A card gets one triage comment. If it says the card already has one, don't comment again; finish the title and labels.
+  A card gets one triage comment. If it says the card already has one, don't comment again; finish the rating, title,
+  and labels.
 
 - `./board.sh edit <n> [--title "..."] [--add-label X]... [--remove-label unprocessed]`: any of the flags, in one call,
-  like
-  `./board.sh edit 42 --title "ERR-AB7PV: ..." --add-label severity:low --add-label size:S --add-label bug --remove-label unprocessed`.
-  Removing `unprocessed` locks the card against further changes, so do it in the same call as your last labels, or after
-  them.
+  like `./board.sh edit 42 --title "ERR-AB7PV: ..." --add-label bug --remove-label unprocessed`. Removing `unprocessed`
+  locks the card against further changes, so do it in the same call as your last labels, or after them.
+
+- `./board.sh rate <n> --severity <Critical|High|Medium|Low|none> --impact <High|Medium|Low> --size <XS|S|M|L|XL>`: sets
+  the card's Severity, Impact, and Size fields on the "Cmdr backlog" project board, all three at once, like
+  `./board.sh rate 42 --severity Low --impact Medium --size S`. It only works while the card still carries
+  `unprocessed`, so rate BEFORE the `edit` that removes it.
 
 ## For each `unprocessed` card, oldest first
 
@@ -65,32 +70,40 @@ rules, so a refusal means stop and move on, not retry another way.
 2. Find the code involved in `./cmdr`. Name files and functions.
 3. Look for duplicates: `./board.sh search <signature words>`, using the crash site, the error kind, or the key log
    line. A duplicate is the same underlying bug, not just the same area.
-4. Comment once (`./board.sh comment <n>`, body as a quoted heredoc), in this shape (PISS: problem, impact, solution,
+4. Decide its rating. Once per run, read `docs/tooling/backlog-board.md` in the `./cmdr` checkout: it defines every
+   Severity, Impact, and Size value, and it's the scale David sorts the board by. Severity is for bugs and security
+   issues only; pass `--severity none` for anything else. Impact and Size go on every card. Size is how much agent work
+   the fix takes, not human hours.
+5. Comment once (`./board.sh comment <n>`, body as a quoted heredoc), in this shape (PISS: problem, impact, solution,
    size):
 
    ```
    **Problem**: what goes wrong, technically, in two or three sentences.
    **Impact**: who hits it and how badly (data loss, a crash, a wrong result, a cosmetic glitch), and how often it seems to happen.
    **Solution**: the likely fix, naming files and functions in the codebase. Say how sure you are.
-   **Size**: S (under an hour), M (a few hours), or L (a day or more).
+   **Size**: the board's Size (XS, S, M, L, or XL), with a few words on why.
    **Clear win or trade-off**: one line.
    **Duplicates**: the related cards, or "none found".
    ```
 
    For feedback that's a feature request, use the same shape: Problem is the need behind the request.
 
-5. Rename the card: a short, specific, sentence-case title saying what's wrong or what's wanted, keeping the report id
+6. Rename the card: a short, specific, sentence-case title saying what's wrong or what's wanted, keeping the report id
    up front, like `ERR-AB7PV: copying into a zip on the left pane drops the file` or
    `Feedback #14: add a "Date added" column`. One line, at most 200 characters. No personal data (see above).
-6. Labels: add exactly one of `severity:high` (data loss, a crash, or a broken core flow), `severity:medium`, or
-   `severity:low`; exactly one of `size:S`, `size:M`, or `size:L`; and `bug` or `enhancement`. For a duplicate, add
-   `duplicate` and name the original in the comment; don't close it. Then remove `unprocessed`. Leave `needs-reply` and
-   the source label alone. Steps 5 and 6 fit in one `./board.sh edit` call.
+7. Rate the card on the board (`./board.sh rate`, with the rating from step 4), then label it: add `bug` or
+   `enhancement`, and for a duplicate, `duplicate` too (name the original in the comment; don't close it). Then remove
+   `unprocessed`. Leave `needs-reply` and the source label alone. Steps 6 and 7 fit in one `./board.sh edit` call, after
+   the `rate`.
 
-If a card is too thin to research, still comment (say what's missing), set `severity:low` and your best-guess size, and
-remove `unprocessed`.
+   If `rate` says the card isn't on the board yet (a fresh card can take a while to appear there), still rename and
+   label it, but leave `unprocessed` on: tomorrow's run rates and finishes it. Any other refusal from `rate`: leave
+   `unprocessed` on too, and name the card in your final message.
+
+If a card is too thin to research, still comment (say what's missing), rate it with your best guesses (Severity `Low` if
+it's a bug), and remove `unprocessed`.
 
 ## Finish
 
-End with one message under ten lines: how many cards you processed, and one line per `severity:high` card. If there were
-no `unprocessed` cards, say so in one line.
+End with one message under ten lines: how many cards you processed, one line per card you rated Critical or High, and
+one line per card you left `unprocessed` and why. If there were no `unprocessed` cards, say so in one line.
