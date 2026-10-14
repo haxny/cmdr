@@ -21,6 +21,7 @@ import type { VolumeSelectOutcome } from '#lib/file-explorer/pane/volume-selecti
 import type { FavoriteOpenedEvent } from '#lib/file-explorer/navigation/favorites-analytics.js'
 import type { MultiRenameSelection } from '#lib/file-explorer/pane/pane-commands.js'
 import type { SelectedPathsRead } from '#lib/file-explorer/pane/selected-paths-read.js'
+import type { SplitDirection } from '#lib/file-explorer/pane/pane-split.js'
 import type {
   CopyPathBetweenPanesArgs,
   OpenDeleteDialogArgs,
@@ -56,6 +57,10 @@ export interface ExplorerAPI {
   refocus: () => void
   switchPane: () => void
   swapPanes: () => void
+  /** Nudge the pane divider one keyboard step (`pane-split.ts`). */
+  moveDivider: (direction: SplitDirection) => void
+  /** Put the pane divider back in the middle, like its double-click. */
+  resetDivider: () => void
   /** Compare directories (⇧F2): mark what differs between the two panes. */
   compareDirectories: (mode: CompareDirectoriesMode) => Promise<void>
   /** Calculate folder sizes in the focused pane (⌥⇧⏎); resolves when the count ends. */

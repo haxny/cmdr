@@ -1,5 +1,6 @@
 <script lang="ts">
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { clampSplitPercent } from './pane-split'
 
     interface Props {
         onResize: (widthPercent: number) => void
@@ -24,9 +25,7 @@
             const mouseX = moveEvent.clientX - rect.left
             const widthPercent = (mouseX / rect.width) * 100
 
-            // Clamp to 25-75%
-            const clampedPercent = Math.max(25, Math.min(75, widthPercent))
-            onResize(clampedPercent)
+            onResize(clampSplitPercent(widthPercent))
         }
 
         const handleMouseUp = () => {
@@ -43,7 +42,7 @@
     }
 </script>
 
-<!-- A known gap: no keyboard path resizes or resets the split yet (#407). Drop this ignore when it lands. -->
+<!-- The keys live in commands, not here: `pane.moveDividerLeft` / `Right` (⌃⌥← / ⌃⌥→) and `pane.resetDivider`. No Tab stop, since Tab switches panes. -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     class="pane-resizer"

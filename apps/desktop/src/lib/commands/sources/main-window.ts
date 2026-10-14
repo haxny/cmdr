@@ -347,6 +347,33 @@ export const mainWindowCommands: CommandSource[] = [
     shortcuts: ['⌘R'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
+  {
+    // Held or tapped quickly, the step grows; heading through the middle, it stops
+    // at 50% until a fresh press (`pane-split.ts`). ⌃← / ⌃→ alone are macOS Spaces.
+    id: 'pane.moveDividerLeft',
+    nameKey: 'commands.paneMoveDividerLeft.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: ['⌃⌥←'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
+  {
+    id: 'pane.moveDividerRight',
+    nameKey: 'commands.paneMoveDividerRight.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: ['⌃⌥→'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
+  {
+    // The divider's double-click, from the keyboard.
+    id: 'pane.resetDivider',
+    nameKey: 'commands.paneResetDivider.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
 
   // ============================================================================
   // Main window - Tab commands

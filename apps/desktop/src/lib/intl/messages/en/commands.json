@@ -330,6 +330,18 @@
     "description": "Command name for re-reading the focused pane, so the file list shows what is on disk right now. In the network browser it re-scans for hosts instead. Appears in the command palette and the keyboard-shortcuts list. \"Pane\" is one of the two side-by-side file lists.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.paneMoveDividerLeft.label": "Move pane divider left",
+  "@commands.paneMoveDividerLeft.label": {
+    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the left, so the left pane gets narrower and the right one wider. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse."
+  },
+  "commands.paneMoveDividerRight.label": "Move pane divider right",
+  "@commands.paneMoveDividerRight.label": {
+    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the right, so the left pane gets wider and the right one narrower. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse."
+  },
+  "commands.paneResetDivider.label": "Reset pane divider",
+  "@commands.paneResetDivider.label": {
+    "description": "Command name that puts the vertical line between the two side-by-side file lists (\"panes\") back in the middle, so both panes are equally wide. Same as double-clicking the line. Appears in the command palette and the keyboard-shortcuts list. \"Reset\" is a verb here: put back to the even split."
+  },
   "commands.tabNew.label": "New tab",
   "@commands.tabNew.label": {
     "description": "Command name that opens a new tab in the focused pane. Appears in the command palette.",

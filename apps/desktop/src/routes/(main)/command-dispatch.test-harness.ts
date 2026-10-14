@@ -118,6 +118,8 @@ export function makeExplorerSpy(): Record<string, ReturnType<typeof vi.fn>> {
     'setViewModeFromMenu',
     'switchPane',
     'swapPanes',
+    'moveDivider',
+    'resetDivider',
     'compareDirectories',
     'calculateFolderSizes',
     'toggleVolumeChooser',
@@ -337,6 +339,24 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     id: 'pane.refresh',
     expect: (e) => {
       expect(e.refreshPane).toHaveBeenCalledOnce()
+    },
+  },
+  {
+    id: 'pane.moveDividerLeft',
+    expect: (e) => {
+      expect(e.moveDivider).toHaveBeenCalledExactlyOnceWith('left')
+    },
+  },
+  {
+    id: 'pane.moveDividerRight',
+    expect: (e) => {
+      expect(e.moveDivider).toHaveBeenCalledExactlyOnceWith('right')
+    },
+  },
+  {
+    id: 'pane.resetDivider',
+    expect: (e) => {
+      expect(e.resetDivider).toHaveBeenCalledOnce()
     },
   },
 

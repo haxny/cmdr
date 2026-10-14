@@ -15,14 +15,20 @@ import { describe, it, expect } from 'vitest'
 import { getAllConflicts } from './conflict-detector'
 
 /**
- * The one conflict the defaults DO carry, and only off macOS: `toPlatformShortcut` maps
+ * The conflicts the defaults DO carry, and only off macOS: `toPlatformShortcut` maps
  * both `⌘` and `⌃` onto `Ctrl`, so `⌘D` (`file.duplicate`) and `⌃D` (`favorites.open`)
  * arrive here as one combo. Cmdr ships on macOS, where they stay distinct, so this is
- * parked rather than solved — hence subtracting exactly this pair from a real run, ❌ never
- * skipping the check. ❌ Don't grow the set to quiet a new conflict: a second entry means
- * the mapping itself needs fixing.
+ * parked rather than solved — hence subtracting exactly these combos from a real run, ❌ never
+ * skipping the check. ❌ Don't grow the set to quiet a new conflict without David's OK: each
+ * entry is a reason to fix the mapping itself.
  */
-const PLATFORM_COLLAPSED_COMBOS = new Set(['Ctrl+D'])
+const PLATFORM_COLLAPSED_COMBOS = new Set([
+  'Ctrl+D',
+  // The same collapse: the divider's `⌃⌥←` / `⌃⌥→` (`pane.moveDividerLeft` / `Right`, #407)
+  // meet the tab keys `⌘⌥←` / `⌘⌥→` off macOS. David picked the chord for macOS, where it's free.
+  'Ctrl+Alt+←',
+  'Ctrl+Alt+→',
+])
 
 describe('conflict-detector over the real registry (default bindings)', () => {
   it('reports no conflicts for the shipped defaults', () => {

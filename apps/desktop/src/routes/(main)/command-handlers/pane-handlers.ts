@@ -1,7 +1,7 @@
 /**
  * Pane handlers: switch / swap the active pane, clone the focused pane into the
- * other, toggle each pane's volume chooser, copy a path between panes, and refresh the focused pane (⌘R and the
- * MCP `refresh` tool).
+ * other, toggle each pane's volume chooser, copy a path between panes, refresh the focused pane (⌘R and the
+ * MCP `refresh` tool), and move or center the divider between the panes.
  */
 import type { CommandHandlerRecord } from './types'
 
@@ -43,5 +43,17 @@ export const paneHandlers = {
     // try/catch. The ⌘R path absorbs that rejection in `dispatchFromUi`, after the
     // toast `refreshPane` already raised.
     await explorerRef?.refreshPane()
+  },
+
+  'pane.moveDividerLeft': ({ explorerRef }) => {
+    explorerRef?.moveDivider('left')
+  },
+
+  'pane.moveDividerRight': ({ explorerRef }) => {
+    explorerRef?.moveDivider('right')
+  },
+
+  'pane.resetDivider': ({ explorerRef }) => {
+    explorerRef?.resetDivider()
   },
 } satisfies Partial<CommandHandlerRecord>

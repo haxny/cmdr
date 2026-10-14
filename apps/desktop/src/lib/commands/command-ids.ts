@@ -128,6 +128,9 @@ export const COMMAND_IDS = [
   'pane.copyPathRightToLeft',
   // Re-list the focused pane, carried by the MCP `refresh` tool.
   'pane.refresh',
+  'pane.moveDividerLeft',
+  'pane.moveDividerRight',
+  'pane.resetDivider',
 
   // Tab commands
   'tab.new',

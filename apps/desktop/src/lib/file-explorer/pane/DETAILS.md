@@ -1297,8 +1297,9 @@ Two values can't be derived from a store snapshot, so they come in as explicit h
 single module — A5 is per concern, not per call shape):
 
 - **Layout split** (`leftPaneWidthPercent`): persisted drag-END only via `persistLayout(percent)`, called from the
-  resize-end / reset handlers. A reactive effect would persist on every drag FRAME (`handlePaneResize` sets the width
-  per frame); the 200 ms debounce would still leak intermediate widths on a slow drag.
+  resize-end / reset handlers and from each keyboard step (§ "Pane divider from the keyboard"; the debounce collapses a
+  held key's steps). A reactive effect would persist on every drag FRAME (`handlePaneResize` sets the width per frame);
+  the 200 ms debounce would still leak intermediate widths on a slow drag.
 - **Last-used-path** (the `volumeId → path` map): a DELTA, not a snapshot — on a volume switch the OLD path of the OLD
   volume is recorded, a value the store no longer holds by the time an effect could read it. `navigate()` owns that
   delta (it has the old value before the swap) and forwards it through its `persist` callback →
@@ -1859,6 +1860,25 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
     is exactly when a label a frame behind would be read as truth.
 - ❗ **The command itself never reads any of this.** It re-reads the cursor row and the listing snapshot when it runs,
   so a stale label can't change what gets selected. This is a label, not a decision.
+
+## Pane divider from the keyboard
+
+`pane.moveDividerLeft` / `pane.moveDividerRight` (`⌃⌥←` / `⌃⌥→`) and `pane.resetDivider` (no default key; the divider's
+double-click) move the split from the keyboard and the palette. The divider isn't a Tab stop: `Tab` switches panes.
+`pane-split.ts` holds the rules (`stepSplit`, pure, time injected) and the drag's 25–75% clamp, so `PaneResizer.svelte`
+and the keys can't disagree.
+
+- **Acceleration**: the first step is 1%, then ×1.5 per press up to 8%, while the key is held (auto-repeat) or tapped
+  within 150 ms of the previous press. A slower re-press, or the other direction, starts at 1% again.
+- **The middle is a detent**: a burst heading through 50% (toward the bigger pane) stops at exactly 50% and stays there
+  for the rest of the burst. Only a FRESH press, meaning the key went up in between, moves past it.
+- ❗ **A held key is told apart by `keyup`, not by the gap.** macOS waits 225 ms at the shortest (InitialKeyRepeat 15;
+  the default is longer) before the first auto-repeat, so a gap rule alone would read every hold as a re-press right
+  after the first step, and the detent would leak. Commands reach the handler without their key event, so
+  `createSplitNudger` marks a release on any `keyup` (capture phase) or window `blur`, installed in `DualPaneExplorer`'s
+  `onMount`. Repeat cadence itself is 30 ms at the fastest (KeyRepeat 2), well inside the gap. (verified on macOS 27 via
+  `defaults read -g KeyRepeat` / `InitialKeyRepeat` and the System Settings slider ranges, 2026-10-14)
+- Each step persists through `persistLayout`, which `saveAppStatus` debounces, so a held key writes once.
 
 ## Keyboard context menu
 

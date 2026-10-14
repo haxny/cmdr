@@ -96,6 +96,7 @@
     import type { SelectedPathsRead } from './selected-paths-read'
     import { createSortOperations } from './sort-operations'
     import { createSwapPanes } from './swap-panes'
+    import { createSplitNudger, type SplitDirection } from './pane-split'
     import { createVolumeSelection, type VolumeSelectOutcome } from './volume-selection'
     import type { FavoriteOpenedEvent } from '../navigation/favorites-analytics'
     import { goToRootFolder } from '../navigation/root-folder'
@@ -561,6 +562,8 @@
     }
 
     onMount(async () => {
+        stopSplitKeyReleaseListener = splitNudger.listenForKeyRelease(window)
+
         // Start font metrics measurement in background (non-blocking)
         void ensureFontMetricsLoaded()
 
@@ -672,6 +675,7 @@
         cleanupNetworkDiscovery()
         dragDrop.cleanup()
         tabDrag.destroy()
+        stopSplitKeyReleaseListener?.()
         window.removeEventListener('resize', handleResizeForDevTools) // No-op in non-dev, safe to always call
     })
 
@@ -685,9 +689,26 @@
         persistence.persistLayout(leftPaneWidthPercent)
     }
 
+    const splitNudger = createSplitNudger({
+        now: () => performance.now(),
+        getPercent: () => leftPaneWidthPercent,
+        setPercent: (percent) => { explorerState.setLeftPaneWidthPercent(percent); },
+        persist: (percent) => { persistence.persistLayout(percent); },
+    })
+    let stopSplitKeyReleaseListener: (() => void) | undefined
+
     function handlePaneResizeReset() {
-        explorerState.setLeftPaneWidthPercent(50)
-        persistence.persistLayout(50)
+        splitNudger.center()
+    }
+
+    /** Nudges the pane divider from the keyboard (⌃⌥← / ⌃⌥→), `pane-split.ts`. */
+    export function moveDivider(direction: SplitDirection): void {
+        splitNudger.nudge(direction)
+    }
+
+    /** Puts the pane divider back in the middle, like its double-click. */
+    export function resetDivider(): void {
+        splitNudger.center()
     }
 
     /** Activates inline rename on the focused pane's cursor item. */
