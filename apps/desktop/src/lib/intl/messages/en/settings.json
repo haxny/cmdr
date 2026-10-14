@@ -2513,6 +2513,14 @@
   "@settings.control.backToPresetsAriaLabel": {
     "description": "Accessibility label and tooltip for the small icon-only button that leaves the custom-value text input and returns to the preset dropdown in a settings picker. Shown as a back-arrow (corner-down-left) icon; keep it short."
   },
+  "settings.control.showValue": "Show value",
+  "@settings.control.showValue": {
+    "description": "Accessibility label and tooltip for the small eye-icon button beside a masked secret field in Settings (an AI provider’s API key, for example). Pressing it reveals the whole value as plain text. VERB phrase; keep it short. Its pair is settings.control.hideValue."
+  },
+  "settings.control.hideValue": "Hide value",
+  "@settings.control.hideValue": {
+    "description": "Accessibility label and tooltip for the same eye-icon button as settings.control.showValue, while the secret is revealed: pressing it masks the value again. VERB phrase; keep it short and parallel to settings.control.showValue."
+  },
   "settings.control.unitItems": "items",
   "@settings.control.unitItems": {
     "description": "Unit word shown right after a number input in Settings > Advanced, for the list buffer sizes (how many file-list items or rows to prepare ahead, like '200 items'). The number is whatever the person typed and changes as they edit, so use a form that reads right after any number (the general plural). Keep it short, lowercase unless your language capitalizes nouns."
@@ -3096,7 +3104,7 @@
   },
   "settings.window.title": "Settings",
   "@settings.window.title": {
-    "description": "Name of Cmdr's own Settings window, rendered as its screen-reader-only page heading. A NOUN, the name of the window. This is the word the rest of the app uses whenever it points the user at Cmdr's preferences (\"Edit shortcuts in Settings\"), so match whatever a Mac app's own preferences window is called in your language. It is NOT macOS's System Settings app, which has its own localized name Cmdr reads from the OS.",
+    "description": "Name of Cmdr's own Settings window: the operating-system window title (shown in the window list and the Window menu) and the window's screen-reader-only page heading. A NOUN, the name of the window. This is the word the rest of the app uses whenever it points the user at Cmdr's preferences (\"Edit shortcuts in Settings\"), so match whatever a Mac app's own preferences window is called in your language. It is NOT macOS's System Settings app, which has its own localized name Cmdr reads from the OS.",
     "screenshot": "settings-appearance.png"
   },
   "settings.window.loading": "Loading settings…",

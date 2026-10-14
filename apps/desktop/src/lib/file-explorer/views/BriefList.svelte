@@ -1007,7 +1007,9 @@
                                         value={renameState.currentName}
                                         severity={renameState.validation.severity}
                                         shaking={renameState.shaking}
-                                        ariaLabel={`Rename ${renameState.target?.originalName ?? ''}`}
+                                        ariaLabel={tString('fileExplorer.rename.fieldAriaLabel', {
+                                            name: renameState.target?.originalName ?? '',
+                                        })}
                                         ariaInvalid={renameState.validation.severity === 'error'}
                                         validationMessage={renameState.validation.message}
                                         focusTrigger={renameState.focusTrigger}

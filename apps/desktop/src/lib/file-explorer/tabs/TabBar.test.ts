@@ -39,18 +39,20 @@ interface MountOptions {
   controller?: TabDragController
   onTabSwitch?: (tabId: string) => void
   onPaneFocus?: () => void
+  paneId?: 'left' | 'right'
 }
 
 function mountTabBar(target: HTMLElement, opts: MountOptions = {}) {
   const tabs = opts.tabs ?? [makeTab('t1', '/Users/test/one'), makeTab('t2', '/Users/test/two')]
+  const paneId = opts.paneId ?? 'left'
   mount(TabBar, {
     target,
     props: {
       tabs,
       activeTabId: 't1',
-      paneId: 'left',
+      paneId,
       maxTabs: 10,
-      drag: (opts.controller ?? dragControllerFor(tabs)).forPane('left'),
+      drag: (opts.controller ?? dragControllerFor(tabs)).forPane(paneId),
       onTabSwitch: opts.onTabSwitch ?? noop,
       onTabClose: noop,
       onTabMiddleClick: noop,
@@ -60,6 +62,25 @@ function mountTabBar(target: HTMLElement, opts: MountOptions = {}) {
     },
   })
 }
+
+/** The tablist's name speaks the side in copy, never the raw `left` / `right` id. */
+describe('TabBar tablist name', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it.each([
+    ['left', 'Left pane tabs'],
+    ['right', 'Right pane tabs'],
+  ] as const)('names the %s pane’s tablist “%s”', async (paneId, expected) => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mountTabBar(target, { paneId })
+    await tick()
+
+    expect(target.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe(expected)
+  })
+})
 
 describe('TabBar narrow tabs', () => {
   let target: HTMLElement

@@ -19,6 +19,7 @@ import { LogicalPosition } from '@tauri-apps/api/dpi'
 import { emitTo } from '@tauri-apps/api/event'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
 import {
   centerOnMain,
@@ -76,7 +77,7 @@ export async function openShortcutsWindow(): Promise<void> {
 
   const win = new WebviewWindow('shortcuts', {
     url: '/shortcuts',
-    title: decorateChildWindowTitle('Keyboard shortcuts'),
+    title: decorateChildWindowTitle(tString('shortcuts.window.title')),
     width: rect?.width ?? width,
     height: rect?.height ?? height,
     minWidth: MIN_WIDTH * scale,

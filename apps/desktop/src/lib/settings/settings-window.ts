@@ -24,6 +24,7 @@ import { Effect, EffectState } from '@tauri-apps/api/window'
 import { getShouldReduceTransparency, trackEvent } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { getEffectiveScale } from '#lib/text-size.svelte.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 import { decorateChildWindowTitle, isE2eRun, orderChildWindowToBackInE2e } from '#lib/app-mode.js'
 import { readMainRect, readMonitors, readSavedRect, resolveChildPosition } from '#lib/window-positioning.js'
 import type { SettingId } from './types'
@@ -199,7 +200,7 @@ export async function openSettingsWindow(surface: SettingsSurface, section?: str
 
   const win = new WebviewWindow('settings', {
     url: settingsUrl,
-    title: decorateChildWindowTitle('Settings'),
+    title: decorateChildWindowTitle(tString('settings.window.title')),
     // Open at max width so the content-area starts at its scaled cap; user can
     // shrink down to `settingsMinWidth(scale)`.
     width,

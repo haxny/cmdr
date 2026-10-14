@@ -7,7 +7,8 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
 - **InlineRenameEditor.svelte**: input field that replaces the static name cell. Green/yellow/red border by validation
   state, 300 ms glow/zoom on activation, pre-selects the filename excluding the extension. The zoom and the invalid-name
   shake run only under `prefers-reduced-motion: no-preference`; with Reduce motion on, the border and the live
-  validation message carry it, and `shaking` stays set until the next keystroke (no `animationend` ever fires).
+  validation message carry it, and `shaking` stays set until the next keystroke (no `animationend` ever fires). Its
+  `aria-label` is `fileExplorer.rename.fieldAriaLabel` ("Rename {name}").
 - **RenameConflictDialog.svelte**: side-by-side file comparison (size, modified) when a conflict is detected. Options:
   "Overwrite and trash old file" (`NSFileManager.trashItem`), "Overwrite and delete old file" (permanent), "Cancel",
   "Continue renaming". The two ways out sit in `ModalDialog`'s `footerLeading`, the two overwrites in its `footer` with

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getSetting, setSetting, onSpecificSettingChange, type SettingId, type SettingsValues } from '#lib/settings/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import Icon from '#lib/ui/Icon.svelte'
     import TextInput from '#lib/ui/TextInput.svelte'
     import { onMount } from 'svelte'
@@ -74,7 +75,7 @@
     const inputType = $derived(focused && !revealed ? 'password' : 'text')
     const displayValue = $derived(revealed || focused ? internalValue : maskValue(internalValue))
 
-    const toggleTooltip = $derived(revealed ? 'Hide value' : 'Show value')
+    const toggleTooltip = $derived(tString(revealed ? 'settings.control.hideValue' : 'settings.control.showValue'))
 </script>
 
 <TextInput

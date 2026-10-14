@@ -1262,6 +1262,13 @@
       "appName": "the app the user picked, e.g. Preview. Never translate it"
     }
   },
+  "fileExplorer.rename.fieldAriaLabel": "Rename {name}",
+  "@fileExplorer.rename.fieldAriaLabel": {
+    "description": "Accessibility label of the inline text field that replaces a file’s name in the file list while the user renames it (F2). Screen readers announce it when the field gets focus. VERB phrase: “Rename” is the action, followed by the file’s current name.",
+    "placeholders": {
+      "name": "the file’s or folder’s current name, e.g. report.pdf. Never translate it"
+    }
+  },
   "fileExplorer.rename.hiddenAfterRename": "Your file disappeared from view because hidden files aren’t shown.",
   "@fileExplorer.rename.hiddenAfterRename": {
     "description": "Info toast after renaming a file to a name starting with a dot, which hides it because hidden files aren’t currently shown. Reassures the user the file still exists."
@@ -1771,11 +1778,11 @@
       "count": "the same total (drives the singular/plural form)"
     }
   },
-  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId} pane tabs",
+  "fileExplorer.tabBar.paneTabsAriaLabel": "{paneId, select, left {Left pane tabs} other {Right pane tabs}}",
   "@fileExplorer.tabBar.paneTabsAriaLabel": {
-    "description": "Accessibility label for one pane’s tab strip. {paneId} is the side, \"left\" or \"right\".",
+    "description": "Accessibility label for one pane’s tab strip, read out by screen readers. Cmdr shows two file panes side by side, and each has its own row of browser-style tabs; this names which pane’s row it is. Translate both whole phrases, using the same words for “pane” and “tab” as the rest of Cmdr (menu.view.leftPane, menu.view.rightPane).",
     "placeholders": {
-      "paneId": "which pane’s tabs these are: the value is left or right"
+      "paneId": "which pane’s tabs these are: picks the left or the right phrase. Never shown itself"
     },
     "screenshot": "main-window.png"
   },

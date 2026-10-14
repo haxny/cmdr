@@ -395,7 +395,7 @@
 
   "shortcuts.window.title": "Keyboard shortcuts",
   "@shortcuts.window.title": {
-    "description": "Name of the standalone, read-only Keyboard shortcuts help window, which lists every command and its keys. Rendered twice in that window: as the visible heading in the header, and as a screen-reader-only page heading. A NOUN phrase naming the window's content, never an instruction. The same words as the Keyboard shortcuts section inside Settings (shortcuts.section.title); keep the two identical, since a user moves between them.",
+    "description": "Name of the standalone, read-only Keyboard shortcuts help window, which lists every command and its keys. Also the operating-system window title (shown in the window list and the Window menu), and rendered twice inside the window: as the visible heading in the header, and as a screen-reader-only page heading. A NOUN phrase naming the window's content, never an instruction. The same words as the Keyboard shortcuts section inside Settings (shortcuts.section.title); keep the two identical, since a user moves between them.",
     "screenshot": "shortcuts.png"
   },
 
