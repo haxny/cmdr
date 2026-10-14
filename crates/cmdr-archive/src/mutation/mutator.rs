@@ -337,9 +337,9 @@ pub fn apply(archive_path: &Path, changeset: &Changeset, hooks: &dyn MutationHoo
 
     // Flush the central directory and make the bytes durable. A rewrite yields
     // a fresh inode, so the original's xattrs (Finder tags, quarantine), mode,
-    // and creation and modification dates then go onto the temp, so an edit
-    // doesn't strip what a plain copy keeps. Best-effort: metadata loss never
-    // fails a data-safe edit.
+    // and creation date then go onto the temp, so an edit doesn't strip what a
+    // plain copy keeps; the modification date becomes the edit's. Best-effort:
+    // metadata loss never fails a data-safe edit.
     //
     // ❗ The flush goes first, through `sync_file_data`: on a Finder-mounted
     // SMB share, `F_FULLFSYNC` (std's `sync_all`) answers `ENOTSUP`, which
@@ -730,8 +730,12 @@ fn carry_archive_metadata(original: &Path, temp: &File) -> LandedMetadata {
     };
     let (file, meta) = source;
     let carried = CarriedMetadata::of_local_file(&file, &meta);
+    // The birth date is the archive's own, but the modification date is the
+    // edit's: the contents just changed, so sorting by date surfaces it and a
+    // size + mtime backup check (rsync's default) can't skip it. Set here, in
+    // the one dates call, so a Finder-mounted SMB share keeps it too.
     let times = StagedTimes {
-        modified: meta.modified().ok(),
+        modified: Some(std::time::SystemTime::now()),
         accessed: meta.accessed().ok(),
     };
     let report = apply_staged(StagedItem::File(temp), &carried, times);

@@ -349,14 +349,15 @@ fn raw_entry_bytes(path: &Path, name: &str) -> Vec<u8> {
 // ---- Data-safety: metadata preservation --------------------------------------
 
 #[test]
-fn an_edit_preserves_the_archive_mode_mtime_and_xattrs() {
+fn an_edit_keeps_the_archive_mode_and_xattrs_and_dates_it_now() {
     use std::os::unix::fs::PermissionsExt;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = write_zip(tmp.path(), "a", &build_zip(&[stored("keep.txt", b"keep".to_vec())]));
 
-    // Stamp identity metadata a plain copy would keep: a non-default mode, an old
-    // mtime, and (macOS) a real Finder-tag xattr.
+    // Stamp identity metadata a plain copy would keep: a non-default mode and
+    // (macOS) a real Finder-tag xattr. Plus an old mtime, which the edit must
+    // REPLACE: the contents changed, so "Date Modified" says when (#412).
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).expect("chmod");
     let old_mtime = filetime::FileTime::from_unix_time(1_600_000_000, 0);
     filetime::set_file_mtime(&path, old_mtime).expect("set mtime");
@@ -369,6 +370,7 @@ fn an_edit_preserves_the_archive_mode_mtime_and_xattrs() {
     // preservation when the stamp itself took.
     let xattr_stamped = xattr::set(&path, tag_xattr, &tag_value).is_ok();
 
+    let before_edit = filetime::FileTime::now().unix_seconds();
     apply(
         &path,
         &Changeset {
@@ -385,10 +387,11 @@ fn an_edit_preserves_the_archive_mode_mtime_and_xattrs() {
         0o640,
         "mode preserved across the edit"
     );
-    assert_eq!(
-        filetime::FileTime::from_last_modification_time(&meta),
-        old_mtime,
-        "mtime preserved across the edit"
+    let new_mtime = filetime::FileTime::from_last_modification_time(&meta);
+    assert_ne!(new_mtime, old_mtime, "the edit dates the archive anew");
+    assert!(
+        new_mtime.unix_seconds() >= before_edit,
+        "mtime is the edit time: {new_mtime} vs {before_edit}"
     );
     if xattr_stamped {
         assert_eq!(
@@ -429,14 +432,16 @@ mod archive_file_metadata {
     }
 
     #[test]
-    fn an_edit_keeps_the_archives_birth_time() {
+    fn an_edit_keeps_the_archives_birth_time_and_dates_it_now() {
         let fixture = MetadataFixture::new("mutator_birth");
         let path = dated_zip(&fixture);
 
+        let before_edit = filetime::FileTime::now().unix_seconds();
         edit(&path).expect("apply edit");
 
         assert_eq!(birth_secs(&path), BIRTH_SECS);
-        assert_eq!(modified_secs(&path), MODIFIED_SECS);
+        assert_ne!(modified_secs(&path), MODIFIED_SECS);
+        assert!(modified_secs(&path) >= before_edit, "mtime is the edit time");
     }
 
     /// Replacing a `deny delete` archive means removing it, which its ACL forbids

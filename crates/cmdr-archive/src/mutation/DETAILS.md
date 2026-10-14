@@ -54,14 +54,17 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
 - **Metadata preservation (the archive FILE, not the entries).** A rewrite yields a fresh inode, so the original
   `.zip`'s metadata goes through the shared helper (`crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and
   when it goes on"): the temp's flush first (`cmdr_fs::durable::sync_file_data`), then xattrs, mode, and birth + mtime
-  in one call on its fd, then the ACL and user flags on the archive after the swap. Flush first and through that helper:
-  on a Finder-mounted SMB share, std's `sync_all` (`F_FULLFSYNC`) answers `ENOTSUP`, which failed every edit there, and
-  dates set before the flush lose the mtime to the server's close (verified against the Docker Samba guest share via
-  `mount_smbfs`, macOS 27.0, 2026-10-12; no automated cell, since no lane mounts a share for this crate). xattrs include
-  Finder tags, quarantine, and `com.apple.FinderInfo` VERBATIM (a faithful copy that keeps the custom-icon flag, so the
-  `tags.rs` FinderInfo gotcha doesn't apply). Best-effort: metadata loss never fails a data-safe edit.
-  `copyfile(COPYFILE_STAT)` never set birth on a non-clone copy, so this is what keeps it
-  (`mutator_test.rs::archive_file_metadata`).
+  in one call on its fd, then the ACL and user flags on the archive after the swap. **The mtime is the EDIT time, not
+  the original's** (birth stays the original's): the contents changed, so "Date Modified" must say so, the way a
+  folder's does when you add to it, and a size + mtime backup check (rsync's default) mustn't skip a changed zip whose
+  size happens to match. It's still set explicitly in that one call, so a share's close can't restamp it. Flush first
+  and through that helper: on a Finder-mounted SMB share, std's `sync_all` (`F_FULLFSYNC`) answers `ENOTSUP`, which
+  failed every edit there, and dates set before the flush lose the mtime to the server's close (verified against the
+  Docker Samba guest share via `mount_smbfs`, macOS 27.0, 2026-10-12; no automated cell, since no lane mounts a share
+  for this crate). xattrs include Finder tags, quarantine, and `com.apple.FinderInfo` VERBATIM (a faithful copy that
+  keeps the custom-icon flag, so the `tags.rs` FinderInfo gotcha doesn't apply). Best-effort: metadata loss never fails
+  a data-safe edit. `copyfile(COPYFILE_STAT)` never set birth on a non-clone copy, so this is what keeps it
+  (`mutator_test.rs::archive_file_metadata`, which also pins the edit-time mtime).
 - **Entries' xattrs ride AppleDouble sidecars, the shape Finder's Compress writes** (`__MACOSX/<parent>/._<name>`, codec
   in `../apple_double.rs`). An added local file's sidecar is read off the fd the add already holds
   (`local_file_sidecar`), a sourced mkdir's off its local folder (`Changeset::mkdir_sources`, `local_folder_sidecar`),
