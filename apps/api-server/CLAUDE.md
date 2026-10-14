@@ -35,9 +35,9 @@ DETAILS § Root files). ❌ Areas depend on root leaves, never each other.
 - **Every report becomes a card in a PRIVATE repo**, filed by the cron from a D1 outbox (`report-outbox.ts`), never at
   intake. Privacy is re-checked per write, failing closed. ❌ No note, reply-to, or bundle link in an issue title or
   body: personal data goes only in the `expires=`-stamped comment. ❌ Never widen `GITHUB_PROJECT_TOKEN` past `project`.
-  DETAILS §§ The reports repo, The backlog board.
-- **Rate limits are per data center, not global** (`enforceIpRateLimit` gates every intake route), so they bound one
-  abusive client, never a distributed flood. `/error-report` carries a global ceiling on top.
+  DETAILS §§ The reports repo, The backlog board, Card ratings.
+- **Rate limits are per data center, not global** (`enforceIpRateLimit`), so they bound one abusive client, never a
+  distributed flood. `/error-report` adds a global ceiling.
 - **A heartbeat install id is not proof of a person.** A fresh data dir mints a fresh `anal_` id, which left the table
   6x over-counted. `handleSyntheticHeartbeatSweep` deletes ids that never persisted a setting and have been quiet a
   week; ❌ never shorten that grace period, a brand-new real user looks identical for their first minutes. DETAILS §

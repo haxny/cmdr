@@ -97,7 +97,8 @@ export type Bindings = {
   GITHUB_ISSUES_TOKEN?: string
   // The Cmdr backlog project board, fed by `POST /webhook/github` when an issue opens in the PUBLIC
   // repo. `GITHUB_PROJECT_TOKEN` is a classic PAT carrying `project` scope ALONE: it can rearrange
-  // project boards and cannot read a private repo at all, which is what makes it safe to hold here.
+  // project boards and set report cards' rating fields. It reads no repo contents, but it does reach every
+  // board the account can, private issue bodies on them included, so it lives here and nowhere else.
   // ❌ Never widen it to `repo`; see `project-board.ts`. `GITHUB_WEBHOOK_SECRET` is the HMAC secret
   // GitHub signs deliveries with. All optional: with any of them unset the route answers 204 and
   // adds nothing. The field and option ids are vars (they're not secret); the two tokens are secrets.
@@ -106,6 +107,9 @@ export type Bindings = {
   GITHUB_PROJECT_STATUS_FIELD_ID?: string
   GITHUB_PROJECT_TRIAGE_OPTION_ID?: string
   GITHUB_WEBHOOK_SECRET?: string
+  // The login the report-triage agent's token posts as. Only its comments that start with the triage
+  // marker are read for a `Rating:` line (`report-ratings.ts`); unset turns the rating job off.
+  GITHUB_TRIAGE_AUTHOR?: string
   // R2 S3-compatible credentials, used to mint presigned bundle download URLs
   // for the digest and the card comment. Bindings can't presign on their own, but the S3 API can.
   R2_ACCOUNT_ID?: string

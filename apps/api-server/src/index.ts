@@ -29,6 +29,7 @@ import { cronFailureMessage, recordOpsEvent } from './ops-events'
 import { pingCronHealth } from './cron-health'
 import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
 import { handleReportDigest } from './report-digest'
+import { applyCardRatings } from './report-ratings'
 import { MORNING_CRON, handleMorningBrief, isMorningBriefTick } from './morning-brief'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -105,6 +106,8 @@ export default {
     await run('Error report cards', () => fileErrorReportCards(env))
     await run('Feedback cards', () => fileFeedbackCards(env))
     await run('Amendments on the board', () => postAmendmentsToBoard(env))
+    // Before the digest, so a rating that failed on this tick is in it.
+    await run('Card ratings', () => applyCardRatings(env))
     await run('Report digest', () => handleReportDigest(env))
 
     // Daily jobs: only run on the 00:00 UTC invocation

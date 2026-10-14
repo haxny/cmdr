@@ -56,12 +56,14 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   a card on the reports board. § The reports repo.
 - **`report-cards.ts`**: what goes ON a card (titles, bodies, labels, the expiring personal comment); pure, no network.
   **`github-issues.ts`** is the GitHub transport (the privacy probe, filing, comments, labels, listing, the sweep).
+- **`report-ratings.ts`**: the cron job that copies the triage agent's `Rating:` line onto a report card's Severity,
+  Impact, and Size fields on the backlog board. § Card ratings.
 - **`report-digest.ts`**: the cron job that mails the three-hour digest and stamps what it sent. § Cron handler.
 - **`morning-brief.ts`**: the 06:30 Stockholm brief: who's waiting on a reply, unprocessed cards, the last day's
   arrivals, and the tripwires. § Cron handler job 10.
-- The four are tested against a REAL SQLite built from the migrations (`sqlite-d1-test-helper.ts`), because the risk of
+- The five are tested against a REAL SQLite built from the migrations (`sqlite-d1-test-helper.ts`), because the risk of
   an outbox is a row a WHERE clause quietly skips: `report-outbox.test.ts`, `report-digest.test.ts`,
-  `report-retention.test.ts`, `morning-brief.test.ts`.
+  `report-retention.test.ts`, `morning-brief.test.ts`, `report-ratings.test.ts`.
 - **`scheduled.ts`**: the other cron jobs (license backup, daily aggregation, DB size, retention sweep, eviction sweep,
   personal-comment sweep). `scheduled.test.ts` covers the DB-writing jobs, `cron-alarm.test.ts` the handler's alarm
   wiring, and `email-path-probe.test.ts` the daily liveness check, with the D1/env fakes in `cron-test-helpers.ts`.
@@ -199,9 +201,9 @@ other namespaces).
 ### Ops events
 
 `ops-events.ts` writes the operational notices to the D1 `ops_events` table: `cron-failure`, `board-add-failed`,
-`csp-violation`, `eviction`, `eviction-blocked`, `intake-rejected`, and the two signup kinds. The three-hour digest
-mails the alerts (§ Cron handler job 2) and leaves the signups for the morning brief to count. Nothing else watches a
-channel: there is no Discord integration.
+`board-rating-failed`, `csp-violation`, `eviction`, `eviction-blocked`, `intake-rejected`, and the two signup kinds. The
+three-hour digest mails the alerts (§ Cron handler job 2) and leaves the signups for the morning brief to count. Nothing
+else watches a channel: there is no Discord integration.
 
 - **`recordOpsEvent` never throws**: it sits inside the paths whose failures it reports, so a broken D1 costs that
   alert, never the caller. A cron failure has healthchecks.io as its second, independent channel (§ Cron alarms).
@@ -251,17 +253,17 @@ back to the OAuth login).
 
 **D1 for telemetry and fulfillment:** crash reports, downloads, update checks, heartbeats, relayed feature events,
 feedback, and the `license_issuance` record all live in D1 (binding `TELEMETRY_DB`, database `cmdr-telemetry`).
-Migrations live in `migrations/` (latest: `0022_report_outbox.sql`, the report outbox: `error_reports`,
-`error_report_amendments`, `ops_events`, and `issue_number` on crashes and feedback, § The reports repo;
-`0021_license_adjustments.sql` is the refund and chargeback record `/webhook/paddle` keeps beside the ledger
-(`src/licensing/DETAILS.md` § Refunds); `0020_heartbeat_uptime_and_events.sql` is `heartbeat.uptime_seconds` and the
-`analytics_event` table `/heartbeat` relays feature events into; `0017_manual_licenses.sql` is the `source` /
-`organization_name` / `expires_at` / `revoked_at` / `note` columns that turn `license_issuance` into the ledger for
-hand-issued licenses as well as purchases; `0016_feedback_notified_at.sql` is the `feedback.notified_at` column the
-report digest reads, which also stamps the pre-existing rows so the first tick doesn't mail the backlog;
-`0015_crash_app_fate.sql` adds the nullable `app_fate` column the crash email ranks rows by;
-`0014_downloads_daily_unique.sql` is the distinct-downloader rollup the retention sweep writes;
-`0013_minimize_stored_identifiers.sql` adds `downloads.ua_family` and erases the crash-table IP hashes;
+Migrations live in `migrations/` (latest: `0023_card_ratings.sql`, the triage comments the rating job has applied or
+flagged, § Card ratings; `0022_report_outbox.sql`, the report outbox: `error_reports`, `error_report_amendments`,
+`ops_events`, and `issue_number` on crashes and feedback, § The reports repo; `0021_license_adjustments.sql` is the
+refund and chargeback record `/webhook/paddle` keeps beside the ledger (`src/licensing/DETAILS.md` § Refunds);
+`0020_heartbeat_uptime_and_events.sql` is `heartbeat.uptime_seconds` and the `analytics_event` table `/heartbeat` relays
+feature events into; `0017_manual_licenses.sql` is the `source` / `organization_name` / `expires_at` / `revoked_at` /
+`note` columns that turn `license_issuance` into the ledger for hand-issued licenses as well as purchases;
+`0016_feedback_notified_at.sql` is the `feedback.notified_at` column the report digest reads, which also stamps the
+pre-existing rows so the first tick doesn't mail the backlog; `0015_crash_app_fate.sql` adds the nullable `app_fate`
+column the crash email ranks rows by; `0014_downloads_daily_unique.sql` is the distinct-downloader rollup the retention
+sweep writes; `0013_minimize_stored_identifiers.sql` adds `downloads.ua_family` and erases the crash-table IP hashes;
 `0012_license_issuance.sql` is the fulfillment record; `0011_crash_panic_message.sql` adds the nullable `panic_message`
 column; `0007_feedback.sql` adds the `feedback` table; `0006_crash_diag_email.sql` adds the nullable `diag_id` + `email`
 columns; `0005_heartbeat.sql` adds the `heartbeat` table). Apply with `wrangler d1 migrations apply cmdr-telemetry`
@@ -298,7 +300,8 @@ A single `scheduled` handler serves two triggers: every 3 hours (`0 */3 * * *`, 
 failure from the rest and raises the alarm for it (§ Cron alarms):
 
 1. **The board** (every invocation, first): `fileCrashCards`, `fileErrorReportCards`, `fileFeedbackCards`, then
-   `postAmendmentsToBoard` file every pending report as a card. § The reports repo.
+   `postAmendmentsToBoard` file every pending report as a card. § The reports repo. Then `applyCardRatings` sets the
+   Severity, Impact, and Size the triage agent wrote on each card it triaged (§ Card ratings).
 2. **Report digest** (every invocation, right after the board, so it can link the cards just filed):
    `handleReportDigest` (`report-digest.ts`) sends ZERO OR ONE email covering every release-build crash, error report
    (hand-written and auto-sent), amendment, and feedback message whose `notified_at` is NULL, then stamps exactly those
@@ -437,6 +440,8 @@ triage value live in the other columns, and there's no privacy reason to lose th
   of licenses, and a manual row IS the license, so deleting it would revoke one by accident. It holds the buyer's or
   recipient's email and, for a hand-issued license, a free-text `note` naming who it's for; the privacy policy covers
   both under the license sections.
+- **`card_ratings`**: never swept. GitHub comment and issue numbers, the applied `Rating:` line, and timestamps; no
+  personal data, so the privacy policy has nothing to promise about it.
 - **`license_adjustments`**: never swept, for the same audit reason; it's how we know a license was revoked by a refund.
   It holds no personal data (ids, amount, Paddle's reason), only purchase details the policy already covers.
 - **`heartbeat`**: rows DELETED after two years. Two years covers every window the dashboard computes (DAU, new
@@ -486,8 +491,10 @@ to collapse these two paths: it would put a credential with full access to every
 subsystem exists to keep narrow. The real fix, if the split ever becomes a problem, is moving the project to an
 organization, where a fine-grained token scoped to that org's projects plus read on one repo does everything.
 
-**What the token can do**, and why it is safe in a Worker secret: `project` scope alone rearranges project boards. It
-reads no repository contents, no private data, and no user reports.
+**What the token can do**: `project` scope alone reads and rewrites every board the account can reach, and the REST
+project-items endpoint returns the bodies of private issues on them, `cmdr-reports` cards included (verified
+2026-10-14). It reads no repository contents. That reach is why it lives only here, in a Worker secret, and never on the
+triage box, whose agent reads stranger-written text (§ Card ratings).
 
 **Failures are loud.** A classic PAT expires, and the failure mode is issues quietly not arriving. `addIssueToBoard`
 returns false on every failure and the route records a `board-add-failed` ops alert, naming the issue and pointing at
@@ -581,6 +588,39 @@ under GitHub's 65,536-character ceiling; the full text is in the bundle manifest
 
 The personal-comment sweep THROWS on failure, so `runCronJob` raises the alarm. A sweep that quietly stopped would leave
 personal data past its promise, which is exactly the failure that has to be loud.
+
+## Card ratings
+
+The morning triage agent (`scripts/report-triage/CLAUDE.md`) rates each report card it triages, but it holds no board
+token: the only token that can write a user-owned board is a classic `project` PAT, which reaches every board the
+account can (private issue bodies included), and the agent reads stranger-written text. So it ends its one triage
+comment with a line, and `applyCardRatings` (`report-ratings.ts`) copies that onto the board with
+`GITHUB_PROJECT_TOKEN`. The board fields stay the only home of the values; there are no severity or size labels.
+
+- **The grammar** (the module comment is canonical): the comment's last non-blank line, and its only rating-like one, is
+  exactly `Rating: Severity=<Critical|High|Medium|Low|none> Impact=<High|Medium|Low> Size=<XS|S|M|L|XL>`. Fixed order,
+  single spaces, case-sensitive. `Severity=none` clears the field. Anything else is rejected, never guessed at; a
+  mangled attempt (`**Rating**:`, `rating:`) counts as rejected, not as absent.
+- **Which comments count**: authored by `GITHUB_TRIAGE_AUTHOR` (a var, `vdavid`) AND starting with `board.sh`'s
+  `<!-- cmdr:triage -->` marker. The agent's fine-grained token is David's, so it posts as him, and so does the Worker's
+  issues token, whose personal-data comments carry a stranger's note: the marker is what keeps a `Rating:` line typed
+  into a note from counting. David's own comments count only with the marker. Strangers can't comment on the private
+  repo. Triage comments created before `RATING_LINES_SINCE` (2026-10-15) predate the line and are skipped.
+- **Finding the card**: issue comments edited in the last 14 days (`sort=updated&since=`), then, only when something is
+  due, the board's layout over GraphQL (field and option ids by NAME, so a renamed option fails loudly) and its
+  `repo:vdavid/cmdr-reports` items over REST, matched on issue number and repository URL. REST because GraphQL shows a
+  private issue's item as `content: null` to a `project`-only token. All three fields go in one mutation, ids as
+  variables.
+- **Idempotent**: `card_ratings` (migration `0023`) keeps the line last applied per comment id. A rerun is a no-op that
+  makes no board calls at all; an edit that changes the line re-applies, any other edit doesn't (so a field David
+  changed by hand stays changed), and a new rated comment applies on its own.
+- **Loud**: a comment with no line, a rejected line, an option the board lacks, or a card not on the board yet becomes a
+  `board-rating-failed` ops event, at most once a UTC day per comment (or sooner when the reason changes), and retries
+  every tick until 14 days after the comment's last edit. A refused mutation or a failed listing throws, so `runCronJob`
+  raises `cron-failure` and healthchecks.io.
+- **Bounded**: five comment pages and 25 ratings per tick, 20 pages of board items; the rest wait a tick.
+- **Cadence**: every three-hour tick, after the amendments and before the digest (so a failure from this tick is in it).
+  The agent runs at 05:30 Stockholm, so a rating lands on the next tick, 06:00 UTC: about 1.5–2.5 hours later.
 
 ## Synthetic heartbeats
 

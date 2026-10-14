@@ -479,3 +479,52 @@ export async function deleteComment(target: IssueTarget, commentId: number): Pro
     throw new Error(`GitHub issues: deleting comment ${String(commentId)} returned ${String(response.status)}`)
   }
 }
+
+/** One comment as the rating job reads it. */
+export interface CardComment {
+  id: number
+  issueNumber: number
+  /** The GitHub login that posted it. */
+  author: string
+  body: string
+  /** ISO 8601. */
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Every comment in the repo created or edited at or after `since` (ISO 8601), least recently
+ * updated first, up to `maxPages` pages of 100. Throws on a failed page, so the caller can tell an
+ * unreachable repo from a quiet one. A read, so no privacy probe: nothing is written.
+ */
+export async function listCommentsUpdatedSince(
+  target: IssueTarget,
+  since: string,
+  maxPages: number,
+): Promise<{ comments: CardComment[]; truncated: boolean }> {
+  const comments: CardComment[] = []
+  const perPage = 100
+
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `${GITHUB_API}/repos/${target.owner}/${target.repo}/issues/comments?sort=updated&direction=asc&since=${encodeURIComponent(since)}&per_page=${String(perPage)}&page=${String(page)}`
+    const response = await fetch(url, { headers: githubHeaders(target.token) })
+    if (!response.ok) {
+      throw new Error(`GitHub issues: listing comments returned ${String(response.status)}`)
+    }
+    const payload: unknown = await response.json()
+    const raws: unknown[] = Array.isArray(payload) ? payload : []
+    for (const raw of raws) {
+      if (!isRecord(raw)) continue
+      const { id, body, issue_url: issueUrl, user, created_at: createdAt, updated_at: updatedAt } = raw
+      const author = isRecord(user) ? user['login'] : undefined
+      if (typeof id !== 'number' || typeof body !== 'string' || typeof author !== 'string') continue
+      if (typeof issueUrl !== 'string' || typeof createdAt !== 'string' || typeof updatedAt !== 'string') continue
+      const issueNumber = issueNumberFromUrl(issueUrl)
+      if (issueNumber <= 0) continue
+      comments.push({ id, issueNumber, author, body, createdAt, updatedAt })
+    }
+    if (raws.length < perPage) return { comments, truncated: false }
+  }
+
+  return { comments, truncated: true }
+}

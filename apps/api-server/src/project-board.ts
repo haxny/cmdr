@@ -1,5 +1,7 @@
 /**
- * Puts newly opened issues from the PUBLIC repo onto the Cmdr backlog project board.
+ * The Cmdr backlog project board, through the `project`-only token: puts newly opened issues from
+ * the PUBLIC repo onto it, and sets the Severity, Impact, and Size fields on report cards
+ * (`report-ratings.ts` decides which).
  *
  * ## Why a webhook rather than the project's own workflow
  *
@@ -30,7 +32,8 @@
 import { constantTimeEqual } from './licensing/paddle'
 import type { Bindings } from './types'
 
-const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
+const GITHUB_API = 'https://api.github.com'
+const GITHUB_GRAPHQL = `${GITHUB_API}/graphql`
 
 /** GitHub rejects API requests without a User-Agent. */
 const USER_AGENT = 'cmdr-api-server'
@@ -91,7 +94,11 @@ export async function verifyGitHubWebhook(body: string, signature: string, secre
 }
 
 /** One GraphQL call. Returns the parsed data, or null when the call or the query failed. */
-async function graphql(token: string, query: string): Promise<Record<string, unknown> | null> {
+async function graphql(
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
   try {
     const response = await fetch(GITHUB_GRAPHQL, {
       method: 'POST',
@@ -100,7 +107,7 @@ async function graphql(token: string, query: string): Promise<Record<string, unk
         'content-type': 'application/json',
         'user-agent': USER_AGENT,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify(variables ? { query, variables } : { query }),
     })
     if (!response.ok) {
       console.error(`Project board: GraphQL returned ${String(response.status)}`)
@@ -153,4 +160,175 @@ export async function addIssueToBoard(target: BoardTarget, issueNodeId: string):
   }
 
   return true
+}
+
+/** One single-select field on the board: its id, and its option ids by option name. */
+export interface BoardSelectField {
+  id: string
+  options: Map<string, string>
+}
+
+/** What a rating needs to know about the board, read once per tick that has work. */
+export interface BoardLayout {
+  /** The user who owns the board, for the REST items path. */
+  ownerLogin: string
+  number: number
+  /** Single-select fields by name. */
+  fields: Map<string, BoardSelectField>
+}
+
+/**
+ * Read the board's owner, number, and single-select fields, so ratings resolve option NAMES to ids
+ * at run time: a renamed option then fails loudly rather than setting a guessed one. Throws when the
+ * board can't be read, which `runCronJob` turns into the alarm.
+ */
+export async function readBoardLayout(target: BoardTarget): Promise<BoardLayout> {
+  const data = await graphql(
+    target.token,
+    `
+      query ($id: ID!) {
+        node(id: $id) {
+          ... on ProjectV2 {
+            number
+            owner {
+              __typename
+              ... on User {
+                login
+              }
+            }
+            fields(first: 50) {
+              nodes {
+                ... on ProjectV2SingleSelectField {
+                  id
+                  name
+                  options {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `,
+    { id: target.projectId },
+  )
+  const node = data?.['node'] as
+    | {
+        number?: unknown
+        owner?: { __typename?: unknown; login?: unknown }
+        fields?: { nodes?: { id?: unknown; name?: unknown; options?: { id?: unknown; name?: unknown }[] }[] }
+      }
+    | undefined
+  if (!node || typeof node.number !== 'number') {
+    throw new Error('Project board: the board could not be read (wrong GITHUB_PROJECT_ID, or an expired token)')
+  }
+  // The REST items path differs for an organization's board; this one is user-owned.
+  if (node.owner?.__typename !== 'User' || typeof node.owner.login !== 'string') {
+    throw new Error('Project board: the board is not owned by a user, so its items path is unknown')
+  }
+
+  return { ownerLogin: node.owner.login, number: node.number, fields: selectFieldsByName(node.fields?.nodes ?? []) }
+}
+
+/** The single-select fields among a board's field nodes (other kinds come back as `{}`), by name. */
+function selectFieldsByName(
+  nodes: { id?: unknown; name?: unknown; options?: { id?: unknown; name?: unknown }[] }[],
+): Map<string, BoardSelectField> {
+  const fields = new Map<string, BoardSelectField>()
+  for (const field of nodes) {
+    if (typeof field.id !== 'string' || typeof field.name !== 'string') continue
+    const options = new Map<string, string>()
+    for (const option of field.options ?? []) {
+      if (typeof option.id === 'string' && typeof option.name === 'string') options.set(option.name, option.id)
+    }
+    fields.set(field.name, { id: field.id, options })
+  }
+  return fields
+}
+
+/** Pages of 100 the items listing may read: 2,000 items, far past this board's size. */
+const ITEM_PAGES = 20
+
+/**
+ * The board items holding `repo`'s issues, as issue number → item node id.
+ *
+ * Over REST rather than GraphQL: with `project` scope alone, GraphQL shows a private repo's issue on
+ * the board as `content: null`, while REST returns it whole (verified against the live API,
+ * 2026-10-14), and the number and repo URL are what identify it. Pages follow GitHub's `Link`
+ * header, and only to api.github.com. Throws on any failed page.
+ */
+export async function listBoardItemsForRepo(
+  target: BoardTarget,
+  layout: BoardLayout,
+  repo: string,
+): Promise<Map<number, string>> {
+  const repositoryUrl = `${GITHUB_API}/repos/${repo}`
+  const items = new Map<number, string>()
+  let url: string | null =
+    `${GITHUB_API}/users/${layout.ownerLogin}/projectsV2/${String(layout.number)}/items?per_page=100&q=${encodeURIComponent(`repo:${repo}`)}`
+
+  for (let page = 0; url && page < ITEM_PAGES; page++) {
+    const response = await fetch(url, {
+      headers: {
+        authorization: `Bearer ${target.token}`,
+        accept: 'application/vnd.github+json',
+        'x-github-api-version': '2022-11-28',
+        'user-agent': USER_AGENT,
+      },
+    })
+    if (!response.ok) {
+      throw new Error(`Project board: listing the board's items returned ${String(response.status)}`)
+    }
+    const payload: unknown = await response.json()
+    for (const raw of Array.isArray(payload) ? payload : []) {
+      const item = raw as { node_id?: unknown; content_type?: unknown; content?: Record<string, unknown> | null }
+      if (item.content_type !== 'Issue' || typeof item.node_id !== 'string') continue
+      const number = item.content?.['number']
+      if (typeof number !== 'number' || item.content?.['repository_url'] !== repositoryUrl) continue
+      items.set(number, item.node_id)
+    }
+    url = nextPageUrl(response.headers.get('link'))
+  }
+  return items
+}
+
+/** The `rel="next"` URL from a GitHub `Link` header, or null. Never a host other than the API's. */
+function nextPageUrl(link: string | null): string | null {
+  const next = /<([^>]+)>;\s*rel="next"/.exec(link ?? '')?.[1]
+  return next?.startsWith(`${GITHUB_API}/`) ? next : null
+}
+
+/** One field to set on an item: an option id, or null to clear it. */
+export interface ItemFieldValue {
+  fieldId: string
+  optionId: string | null
+}
+
+/**
+ * Set several single-select fields on one item in ONE request, so a card's rating changes all
+ * together or not at all. Ids go in as variables, never spliced into the query. Returns whether
+ * GitHub accepted it; the reason is in the Workers logs.
+ */
+export async function setItemFields(target: BoardTarget, itemId: string, values: ItemFieldValue[]): Promise<boolean> {
+  const declarations = ['$project: ID!', '$item: ID!']
+  const mutations: string[] = []
+  const variables: Record<string, unknown> = { project: target.projectId, item: itemId }
+  values.forEach((value, i) => {
+    declarations.push(`$field${String(i)}: ID!`)
+    variables[`field${String(i)}`] = value.fieldId
+    const scope = `projectId: $project, itemId: $item, fieldId: $field${String(i)}`
+    if (value.optionId === null) {
+      mutations.push(`f${String(i)}: clearProjectV2ItemFieldValue(input: {${scope}}) { clientMutationId }`)
+    } else {
+      declarations.push(`$option${String(i)}: String!`)
+      variables[`option${String(i)}`] = value.optionId
+      mutations.push(
+        `f${String(i)}: updateProjectV2ItemFieldValue(input: {${scope}, value: {singleSelectOptionId: $option${String(i)}}}) { clientMutationId }`,
+      )
+    }
+  })
+  const data = await graphql(target.token, `mutation(${declarations.join(', ')}) { ${mutations.join(' ')} }`, variables)
+  return data !== null
 }

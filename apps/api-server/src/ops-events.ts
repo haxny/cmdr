@@ -14,6 +14,7 @@ import { formatBytes } from './types'
 export type OpsEventKind =
   | 'cron-failure'
   | 'board-add-failed'
+  | 'board-rating-failed'
   | 'csp-violation'
   | 'eviction'
   | 'eviction-blocked'

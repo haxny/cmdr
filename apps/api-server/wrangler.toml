@@ -241,6 +241,11 @@ GITHUB_PROJECT_ID = "PVT_kwHOACbxyc4BiPbZ"
 GITHUB_PROJECT_STATUS_FIELD_ID = "PVTSSF_lAHOACbxyc4BiPbZzhhIMOg"
 GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 
+# The login the report-triage agent posts as (its fine-grained token is David's, so it acts as him).
+# The cron applies the `Rating:` line from that author's triage-marked comments to the board's
+# Severity, Impact, and Size fields; src/report-ratings.ts says why the marker is required too.
+GITHUB_TRIAGE_AUTHOR = "vdavid"
+
 # Secrets (set via `wrangler secret put <NAME>`):
 # - PADDLE_WEBHOOK_SECRET_LIVE     (from Paddle live dashboard)
 # - PADDLE_WEBHOOK_SECRET_SANDBOX  (from Paddle sandbox dashboard)
@@ -276,9 +281,10 @@ GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 # - R2_ACCESS_KEY_ID               (R2 S3-compatible access key; read-only suffices)
 # - R2_SECRET_ACCESS_KEY           (paired secret for R2_ACCESS_KEY_ID)
 # - GITHUB_PROJECT_TOKEN          (classic PAT carrying `project` scope ALONE, for the backlog board.
-#                                   Verified 2026-09-19: it resolves PUBLIC issues and cannot resolve
-#                                   a private repo's issue at all, so a leak costs project boards and
-#                                   nothing else. ❌ Never add `repo` to make private issues work;
+#                                   It adds public issues and sets report cards' rating fields. A leak
+#                                   reaches every board the account can, and the bodies of private
+#                                   issues on them (REST, verified 2026-10-14), but no repo contents.
+#                                   ❌ Never add `repo` to make private issues work;
 #                                   src/project-board.ts says what to do instead. Classic PATs expire,
 #                                   and the route records an ops alert when an add fails, which is what an
 #                                   expired token looks like.)
