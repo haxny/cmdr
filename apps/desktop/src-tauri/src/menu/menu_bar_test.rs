@@ -57,7 +57,7 @@ menu menu.bar.file id=menu_file
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
   15 separator
   16 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
-  17 item open_terminal_here menu.file.openTerminalHere [Alt+Cmd+T] tracked
+  17 item open_terminal_here menu.file.openTerminalHere [F9] tracked
   18 item get_info menu.file.getInfo [Cmd+I] tracked
   19 item quick_look menu.file.quickLook [Shift+Space] tracked
 menu menu.bar.edit id=menu_edit

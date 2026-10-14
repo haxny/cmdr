@@ -18,4 +18,5 @@ export const fnKeyToCommand = {
   newFolder: 'file.newFolder',
   delete: 'file.delete',
   deletePermanently: 'file.deletePermanently',
+  terminal: 'file.openTerminalHere',
 } as const satisfies Record<string, CommandId>

@@ -1427,6 +1427,7 @@ export type MessageKey =
   | 'fileExplorer.functionKeyBar.noShiftAction'
   | 'fileExplorer.functionKeyBar.permanentlyLabel'
   | 'fileExplorer.functionKeyBar.renameLabel'
+  | 'fileExplorer.functionKeyBar.terminalLabel'
   | 'fileExplorer.functionKeyBar.toolbarAriaLabel'
   | 'fileExplorer.functionKeyBar.viewLabel'
   | 'fileExplorer.git.size.aheadBehind'

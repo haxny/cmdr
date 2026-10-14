@@ -353,13 +353,14 @@ export const fileListCommands: CommandSource[] = [
   {
     // macOS only: the known-terminals table and its launch recipes are a macOS
     // vocabulary, and there's no Linux module behind the command yet.
-    // ⌘⌥T, Command-then-Option, because that's the order `formatKeyCombo` emits;
-    // macOS still renders it ⌥⌘T in the native menu.
+    // F9 first: it's the F-key bar's slot, so the bar chip, the palette, and the
+    // menu all show it. ⌘⌥T stays as a second binding, written Command-then-Option
+    // because that's the order `formatKeyCombo` emits.
     id: 'file.openTerminalHere',
     nameKey: 'commands.fileOpenTerminalHere.label',
     scope: 'Main window/File list',
     showInPalette: isMacOS(),
-    shortcuts: isMacOS() ? ['⌘⌥T'] : [],
+    shortcuts: isMacOS() ? ['F9', '⌘⌥T'] : [],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.fileOpenTerminalHere.description',
     keywords: ['terminal', 'shell', 'console', 'cd', 'iterm', 'ghostty', 'warp'],

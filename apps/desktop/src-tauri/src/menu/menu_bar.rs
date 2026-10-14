@@ -182,11 +182,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             // Next to Show in Finder: the same gesture aimed at another app. macOS only, like the
             // launch module behind it. Built enabled; `set_open_terminal_here_enabled` greys it out
             // while the focused pane sits somewhere a shell can't `cd` into.
-            macos_only(item(
-                OPEN_TERMINAL_HERE_ID,
-                "menu.file.openTerminalHere",
-                macos("Alt+Cmd+T"),
-            )),
+            macos_only(item(OPEN_TERMINAL_HERE_ID, "menu.file.openTerminalHere", macos("F9"))),
             item(GET_INFO_ID, "menu.file.getInfo", cmd_or_ctrl!("I")),
             // Shift+Space, not plain Space: AppKit consumes modifier accelerators before the webview
             // can, so the menu fires. Plain Space was dead, eaten by the webview's selection toggle

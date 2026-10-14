@@ -364,6 +364,11 @@
     "description": "Button label on the function-key bar for deleting the selected files (to the trash). Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
+  "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
+  "@fileExplorer.functionKeyBar.terminalLabel": {
+    "description": "Button label on the function-key bar (macOS only) that opens the user's terminal app in the folder shown in the focused pane. Space is tight; keep it short.",
+    "screenshot": "main-window.png"
+  },
   "fileExplorer.functionKeyBar.hiddenToast": "Function key bar is now hidden. Re-enable it any time later in <settingsLink>Settings</settingsLink>.",
   "@fileExplorer.functionKeyBar.hiddenToast": {
     "description": "Self-dismissing INFO toast shown after picking \"Hide function key bar\" from the bar's own right-click context menu. The <settingsLink>…</settingsLink> tag wraps the clickable link text, which names the Settings location; deep-links to the \"Show function key bar\" row in Settings > Appearance."

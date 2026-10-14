@@ -1,12 +1,13 @@
 <script lang="ts">
     import { explorerState } from './explorer-state.svelte'
     import { getActiveTab } from '../tabs/tab-state-manager.svelte'
-    import { capabilitiesForPane } from './volume-capabilities'
+    import { capabilitiesFor, capabilitiesForPane } from './volume-capabilities'
     import {
         getFirstShiftShortcutReactive,
         getFirstShortcutReactive,
     } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
-    import { toAriaKeyShortcut, toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
+    import { isMacOS, toAriaKeyShortcut, toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
+    import { canOpenTerminalIn } from '#lib/open-terminal/terminal-target.js'
     import { fnKeyToCommand } from './function-key-commands'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { CommandId } from '#lib/commands/index.js'
@@ -57,6 +58,13 @@
     const canRename = $derived(caps.canWrite || caps.kind === 'network')
     /** Source-side actions (copy/move/delete). The snapshot pane's rows are real files. */
     const canSourceOps = $derived(caps.canBeSource)
+    /**
+     * "Open terminal here" is macOS-only, like its command, so the F9 slot exists only
+     * there. Enabled by the same rule as the File menu item (`open-terminal/menu-gate`):
+     * the VOLUME's kind, so an archive pane still reaches the folder holding it.
+     */
+    const hasTerminalSlot = isMacOS()
+    const canTerminal = $derived(canOpenTerminalIn(capabilitiesFor(activeTab.volumeId).kind))
 
     let shiftHeld = $state(false)
 
@@ -94,7 +102,7 @@
     }
 
     /**
-     * The nine actions the bar can offer, without a chip: the two rows below compose
+     * The ten actions the bar can offer, without a chip: the two rows below compose
      * them, each supplying the binding that belongs to IT.
      */
     const actions = $derived({
@@ -143,10 +151,15 @@
             label: tString('fileExplorer.functionKeyBar.permanentlyLabel'),
             enabled: canSourceOps,
         },
+        terminal: {
+            id: fnKeyToCommand.terminal,
+            label: tString('fileExplorer.functionKeyBar.terminalLabel'),
+            enabled: canTerminal,
+        },
     })
 
     /**
-     * The plain row, F2…F8. Each chip shows its command's live effective FIRST
+     * The plain row, F2…F8, plus F9 Terminal on macOS. Each chip shows its command's live effective FIRST
      * shortcut, never the hardcoded F-key: rebinding `file.copy` to `⌘C` in Settings
      * re-renders the F5 chip as `⌘C` immediately, so the bar can't lie about what the
      * keys do. The chip keeps the bar's quiet `<kbd>` look (a boxed `ShortcutChip` pill
@@ -161,17 +174,27 @@
             actions.move,
             actions.newFolder,
             actions.delete,
+            ...(hasTerminalSlot ? [actions.terminal] : []),
         ].map((action) => ({ ...action, shortcut: getFirstShortcutReactive(action.id) })),
     )
 
     /**
-     * The Shift row, same seven fixed slots. WHICH slots carry a command is fixed; a
+     * The Shift row, same fixed slots (an empty ⇧F9 on macOS). WHICH slots carry a command is fixed; a
      * `null` slot is an F-key with no Shift action, and reads its label off its
      * POSITION so the row always spells one ⇧F2…⇧F8 ladder. A command slot reads its
      * command's SHIFTED binding, so Rename shows `⇧F6` here and `F2` in the plain row.
      */
     const shiftRow = $derived<(Slot | null)[]>(
-        [null, null, actions.newFile, null, actions.rename, null, actions.deletePermanently].map(
+        [
+            null,
+            null,
+            actions.newFile,
+            null,
+            actions.rename,
+            null,
+            actions.deletePermanently,
+            ...(hasTerminalSlot ? [null] : []),
+        ].map(
             (action) =>
                 action === null
                     ? null

@@ -1263,7 +1263,7 @@ class of bug.
   `MenuState.reopen_closed_tab_enabled` and recomputes the items (§ Dialog refusals), so the menu always reflects the
   focused pane's closed-tab stack.
 - **Open terminal here item** (`OPEN_TERMINAL_HERE_ID` → `file.openTerminalHere`, macOS only): sits in the File menu
-  right after Show in Finder (⌥⌘T), and in the file context menu next to it. It's the one item whose enabled state
+  right after Show in Finder (F9, with ⌥⌘T as a second binding), and in the file context menu next to it. It's the one item whose enabled state
   follows the FOCUSED PANE rather than the window: a pane on MTP or ADB has no path a shell can `cd` into. The verdict
   arrives through `set_open_terminal_here_enabled` and is STORED in `MenuState.open_terminal_here_enabled`, not just
   applied, because every recompute derives the item from all its inputs at once (§ Dialog refusals). That is also what
