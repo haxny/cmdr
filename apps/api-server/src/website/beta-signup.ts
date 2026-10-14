@@ -15,7 +15,6 @@ betaSignup.post('/beta-signup', (c) =>
     list: 'beta',
     listmonkUrl: c.env.LISTMONK_API_URL,
     listUuid: c.env.LISTMONK_BETA_LIST_UUID,
-    listId: c.env.LISTMONK_BETA_LIST_ID,
   }),
 )
 

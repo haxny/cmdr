@@ -3,7 +3,7 @@
 What getcmdr.com, the blog, and the app call: `beta-signup.ts` (`POST /beta-signup`, the app) and `newsletter-signup.ts`
 (`POST /newsletter-signup`, getcmdr.com's form), both thin over `listmonk-signup.ts`; `likes.ts` (`/likes/:slug` blog
 hearts in KV), `link-codes.ts` (`GET /r-codes.json` plus the `/admin/r-codes` CRUD behind it), and `csp-report.ts`
-(`POST /csp-report`, the site's CSP violations, alerted to Discord).
+(`POST /csp-report`, the site's CSP violations, raised as ops alerts).
 
 ## Must-knows
 
@@ -14,8 +14,8 @@ hearts in KV), `link-codes.ts` (`GET /r-codes.json` plus the `/admin/r-codes` CR
 - **Every signup outcome returns an identical empty 204** (new, re-sent, already confirmed), so the response can't
   enumerate addresses. The exceptions carry no such signal: 400 (bad address), 429, and a soft 502 when the confirmation
   mail didn't go out.
-- **`/beta-signup` reads ONLY the email**: no `anal_`, no `diag_`, not in the request and not in the Discord ping. The
-  email and the analytics ids never co-occur on our servers. No Discord ping carries an email.
+- **`/beta-signup` reads ONLY the email**: no `anal_`, no `diag_`, not in the request and not in the signup count. The
+  email and the analytics ids never co-occur on our servers. The signup ops event carries no email.
 - **`/likes/:slug` validates the slug BEFORE any KV touch.** `POST` is unauthenticated and creates the key it writes, so
   the blog's charset plus an 80-char cap plus `LIKES_LIMITER` are the only bound on KV growth (and on the bill).
 - **The likes pseudonym is salted with the post SLUG, ❌ never the daily salt telemetry uses**: it has to stay stable

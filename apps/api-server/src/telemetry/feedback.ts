@@ -1,6 +1,5 @@
 import { Hono, type Context } from 'hono'
 import { enforceIpRateLimit, hasEmailShape, type Bindings } from '../types'
-import { postFeedbackNotification } from '../discord'
 
 const feedback = new Hono<{ Bindings: Bindings }>()
 
@@ -8,8 +7,8 @@ const feedback = new Hono<{ Bindings: Bindings }>()
  * In-app "Send feedback" ingestion. JSON body (no log bundle, unlike `/error-report`):
  * required `feedback` text plus `appVersion` / `osVersion`, optional reply-to `email` and
  * `buildMode`. The row is written to the D1 `feedback` table (the durable sink; the
- * write is awaited so a failure surfaces as a retryable soft 502, not a silent drop),
- * then a Discord ping goes out in the background with a truncated preview.
+ * write is awaited so a failure surfaces as a retryable soft 502, not a silent drop).
+ * The cron files its card and mails it in the next digest.
  *
  * Abuse guards mirror the other public ingestion routes: an IP-keyed rate limiter
  * (the IP is never stored), a body byte cap, and strict shape validation.
@@ -125,33 +124,6 @@ feedback.post('/feedback', async (c) => {
   } catch (e) {
     console.error('Feedback: D1 write failed', e)
     return c.json({ error: 'Could not save the feedback right now' }, 502)
-  }
-
-  // Both notifications ride in the background after the 204 has shipped, and neither can sink the
-  // other or the request. A dedicated feedback webhook (separate channel) wins when configured;
-  // otherwise reuse the error-report one.
-  const webhookUrl = c.env.DISCORD_FEEDBACK_WEBHOOK_URL ?? c.env.DISCORD_WEBHOOK_URL
-  const notify = (async () => {
-    if (webhookUrl) {
-      try {
-        await postFeedbackNotification(webhookUrl, {
-          buildMode: body.buildMode ?? 'release',
-          appVersion: body.appVersion,
-          osVersion: body.osVersion,
-          hasReplyTo: Boolean(body.email),
-          feedback: text,
-        })
-      } catch (e) {
-        console.error('Feedback: Discord notification failed', e)
-      }
-    }
-  })()
-
-  try {
-    c.executionCtx.waitUntil(notify)
-  } catch {
-    // executionCtx unavailable (for example, in tests); await inline as fallback
-    await notify
   }
 
   return c.body(null, 204)

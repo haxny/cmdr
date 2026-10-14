@@ -50,8 +50,8 @@ export const EMAIL_PROBE_RECIPIENT = 'delivered@resend.dev'
  * the key's scope to make them work would test the wrong capability AND hand a leaked key the
  * power to delete our sending domain.
  *
- * Throws through `sendViaResend` when Resend rejects, which is what the cron alarm turns into a
- * Discord message.
+ * Throws through `sendViaResend` when Resend rejects, which is what raises the cron alarm
+ * (healthchecks.io plus an ops event).
  */
 export async function sendEmailPathProbe(params: { resendApiKey: string }): Promise<void> {
   const resend = new Resend(params.resendApiKey)

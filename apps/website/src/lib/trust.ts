@@ -253,13 +253,7 @@ export const dataLocations: DataLocation[] = [
   },
   {
     name: 'GitHub',
-    what: "Source code, release downloads and updates (GitHub sees the IP address), and a private issue tracker where error reports and feedback become issues. The email address and message sit in a separate comment that's deleted on a schedule.",
-    where: 'United States.',
-    inEu: 'no',
-  },
-  {
-    name: 'Discord',
-    what: 'A private notification channel for new error reports, feedback, and signups. Never includes an email address. Can include a note the user wrote and a download link to an error report that expires after 24 hours.',
+    what: "Source code, release downloads and updates (GitHub sees the IP address), and a private issue tracker where crash reports, error reports, and feedback become issues. The email address and an error report's note sit in a separate comment that's deleted on a schedule.",
     where: 'United States.',
     inEu: 'no',
   },

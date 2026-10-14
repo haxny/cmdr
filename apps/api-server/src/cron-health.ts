@@ -1,7 +1,7 @@
 /**
  * Dead-man's switch for the cron handler, backed by healthchecks.io.
  *
- * The Discord alert in `index.ts` covers a tick that RAN and threw. It structurally cannot cover a
+ * The ops-event alert in `index.ts` covers a tick that RAN and threw. It structurally cannot cover a
  * tick that never ran: no code executed, so nothing posted, and silence looks exactly like health.
  * This closes that half. healthchecks.io expects a ping on a schedule and alerts when one doesn't
  * arrive, so a removed cron trigger, a failed deploy, or a Worker dying before the first job all

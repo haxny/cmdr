@@ -15,12 +15,12 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **`link-codes.ts`**: `GET /r-codes.json` (public, edge-cached) plus `/admin/r-codes` CRUD. The pure `sanitizeUtmValue`
   and `isValidCode` are unit-tested.
 - **`csp-report.ts`**: `POST /csp-report` (plus its `OPTIONS` preflight) — getcmdr.com's CSP violation reports, our own
-  breakage alerted to Discord.
+  breakage raised as a `csp-violation` ops alert.
 - Tests: `csp-report.test.ts` (both report formats, the noise filter, the daily dedupe, query stripping, the size cap,
   the rate limit, CORS), `listmonk-signup.test.ts` (both signup routes: the Listmonk call, the failed-send 502, no
-  enumeration, the no-install-id invariant, rate limit, Discord, the newsletter CORS), `likes.test.ts` (the slug gate,
-  the rate limit, the salt requirement, and the pseudonym's per-salt/per-slug/per-IP separation), `link-codes.test.ts`
-  (the public map, CORS, cache, admin CRUD auth, and the validators).
+  enumeration, the no-install-id invariant, rate limit, the signup count, the newsletter CORS), `likes.test.ts` (the
+  slug gate, the rate limit, the salt requirement, and the pseudonym's per-salt/per-slug/per-IP separation),
+  `link-codes.test.ts` (the public map, CORS, cache, admin CRUD auth, and the validators).
 
 ## Signups (beta and newsletter)
 
@@ -35,28 +35,27 @@ by reading listmonk v6.2.0's `CreateSubscriber`, `processSubForm`, and `InsertSu
 
 - The admin `POST /api/subscribers` inserts with `assertOptin=false`: when the opt-in mail fails to send, it logs and
   still answers 200. From 2026-06 to 2026-10, Listmonk's Resend SMTP key was invalid, so every beta signup got a 204 and
-  a Discord ping saying the confirmation went out, while nothing was sent. The public endpoint asserts the send and
-  answers 500, which we turn into a soft 502.
+  a ping saying the confirmation went out, while nothing was sent. The public endpoint asserts the send and answers 500,
+  which we turn into a soft 502.
 - On an existing address, the public endpoint adds the list itself and mails a confirmation for every still-unconfirmed
   double-opt-in list (`UpdateSubscriberWithLists`). That covers what a hand-rolled 409 lookup + list-add + `optin` call
   used to do, and also re-sends to someone stuck as unconfirmed, whom the old "already on the list" branch silenced.
 - It has no `preconfirm` field, so a prank signup can't subscribe someone else's address, and it needs no API token.
 - It refuses `private` lists, so both lists must stay `public` in Listmonk (they are double opt-in either way).
 
-**Outcomes.** `{data: {has_optin: true}}` means Listmonk mailed a confirmation: 204 plus a Discord ping.
-`has_optin: false` means there was nothing to confirm (already confirmed): the same empty 204, no ping. A Listmonk 400
-(its email check is stricter than ours) is a 400. A 5xx or a network failure is a soft 502, which the app and the
-website form both show as a gentle "try again". A missing URL or list UUID is a 500. Every success looks identical, so
-the response never reveals whether an address existed.
+**Outcomes.** `{data: {has_optin: true}}` means Listmonk mailed a confirmation: 204 plus a signup count.
+`has_optin: false` means there was nothing to confirm (already confirmed): the same empty 204, nothing counted. A
+Listmonk 400 (its email check is stricter than ours) is a 400. A 5xx or a network failure is a soft 502, which the app
+and the website form both show as a gentle "try again". A missing URL or list UUID is a 500. Every success looks
+identical, so the response never reveals whether an address existed.
 
 **The beta privacy invariant:** `/beta-signup` carries NO install id of any kind, so the email and the analytics ids
-never co-occur on our servers (guarded by `listmonk-signup.test.ts`, including the outbound Discord payload).
+never co-occur on our servers (guarded by `listmonk-signup.test.ts`, including the signup event it writes).
 
-**Discord ping:** sent only when Listmonk mailed a confirmation, to `DISCORD_BETA_SIGNUP_WEBHOOK_URL` (both lists; the
-name predates the newsletter route), falling back to `DISCORD_WEBHOOK_URL`, in `waitUntil` after the 204 ships,
-drop-on-failure. The embed names the list, the signup time, and a Listmonk admin link. It carries no email and no
-install id, by construction: `ListSignupNotification` has no field for either (`apps/api-server/DETAILS.md` § Discord
-webhooks).
+**The signup count:** only when Listmonk mailed a confirmation, a `beta-signup` or `newsletter-signup` ops event (the
+list and the time, nothing else) goes into D1 in `waitUntil` after the 204 ships; the morning brief counts them. It
+carries no email and no install id, and a failed write costs the count, never the signup (`apps/api-server/DETAILS.md` §
+Ops events).
 
 ## Blog likes
 
@@ -99,12 +98,12 @@ font is self-hosted, so a blocked one is always an extension's or a browser's (P
 some arrive attributed to our own PostHog recorder, which re-applies injected styles. Paddle Retain's `profitwell.js`
 never alerts either (only that script URL, only under `script-src*`): Paddle.js loads it on every live checkout page
 with no setting to stop it, we pass no `pwCustomer` so Retain has no work there, and allowing it would add a tracker the
-privacy policy doesn't cover. The Discord alert then fires once per `(directive, blocked origin)` a day, deduped in
-`CSP_ALERTS`. Every actionable report also goes to the Workers log (`console.warn`), so the count is there even when
-Discord stays quiet.
+privacy policy doesn't cover. The ops alert then fires once per `(directive, blocked origin)` a day, deduped in
+`CSP_ALERTS`. Every actionable report also goes to the Workers log (`console.warn`), so the count is there even when the
+alert stays quiet.
 
 **Privacy:** nothing about the visitor is stored. The KV key holds a directive and an origin, the IP only feeds the rate
-limiter, and page and blocked URLs lose their query strings before they reach the log or Discord.
+limiter, and page and blocked URLs lose their query strings before they reach the log or the alert.
 
 The route always answers 204 (a malformed body too: a browser never sends one and there's nothing to tell the sender),
 except 413 over the 32 KB cap and 429 from `CSP_REPORT_LIMITER`. `OPTIONS` answers the Reporting API's CORS preflight

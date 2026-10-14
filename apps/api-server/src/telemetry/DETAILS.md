@@ -10,15 +10,15 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **`telemetry.ts`**: routes `/crash-report`, `/update-check/:version`, `/download/:version/:arch`, plus
   `extractTopFunction`, `validateOptionalEnum` / `validateOptionalPattern`, `versionPattern`, and the sanitizers.
 - **`heartbeat.ts`**: `POST /heartbeat`: the beat, its uptime, and the feature events it relays.
-- **`error-report.ts`**: `POST /error-report` (multipart upload to R2, the KV index write, presigned Discord
-  notification, and an email for hand-written reports).
+- **`error-report.ts`**: `POST /error-report` (multipart upload to R2, the KV index write, the `error_reports` outbox
+  row) and `buildPresignedUrl`, which the cron uses for bundle links.
 - **`error-report-amend.ts`**: `POST /error-report/:id/amend`, plus the `report:{id}` KV index and the amend credential
   both routes share.
-- **`error-report-intake.ts`**: admission control — daily byte budget, intake pause flag, once-a-day alert claims,
-  notification fan-out cap.
+- **`error-report-intake.ts`**: admission control — daily byte budget, intake pause flag, the once-a-day budget alert
+  claim.
 - **`error-report-eviction.ts`**: 8/6 GB watermarks, the 60-day age floor, the KV lock, `extractDateSegment`, and the
   recompute helper.
-- **`feedback.ts`**: `POST /feedback` (in-app feedback → D1 + Discord).
+- **`feedback.ts`**: `POST /feedback` (in-app feedback → the D1 `feedback` row, which is also its outbox entry).
 - Tests: `crash-report.test.ts` (incl. § "top_function derivation" over real backtraces), `heartbeat.test.ts`,
   `heartbeat-sql.test.ts` (the INSERTs against a real SQLite with the real migrations),
   `download-and-update-check.test.ts`, `error-report.test.ts`, `error-report-intake.test.ts`,
@@ -30,13 +30,13 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 ```
 Crash report: POST /crash-report → rate-limit by IP (CRASH_REPORT_LIMITER, 429 if over) → validate payload (size + required fields + optional buildMode/appFate membership + diagId/email shape) → hash IP with daily salt → write to D1 incl. nullable diag_id + email + app_fate (fire-and-forget via waitUntil) → 204
 
-Error report: POST /error-report → rate-limit by IP (ERROR_REPORT_LIMITER, 429 if over) → global intake gates (intake_paused, then the day's byte budget; 503 + Retry-After if either trips, plus one Discord ping the day the budget runs out) → read the body under MAX_BODY_BYTES, cancelling past it (413) → parse multipart, validate bundle + meta (400/413) → stream the bundle to R2 under error-reports/{prod|dev}/{date}/{id}-{uuid}.zip → AWAITED: mint an amend key and write report:{id} to KV → in waitUntil: bump total_bytes, charge the daily budget, tryEvict, a Discord embed (capped at DAILY_NOTIFICATION_CAP/day), then for kind: user only, a notification email (capped at DAILY_ERROR_REPORT_EMAIL_CAP/day) → 200 {id, amendKey}
+Error report: POST /error-report → rate-limit by IP (ERROR_REPORT_LIMITER, 429 if over) → global intake gates (intake_paused, then the day's byte budget; 503 + Retry-After if either trips, plus one ops alert the day the budget runs out) → read the body under MAX_BODY_BYTES, cancelling past it (413) → parse multipart, validate bundle + meta (400/413) → stream the bundle to R2 under error-reports/{prod|dev}/{date}/{id}-{uuid}.zip → AWAITED: mint an amend key and write report:{id} to KV, then the error_reports outbox row → in waitUntil: bump total_bytes, charge the daily budget, tryEvict (an ops alert when it evicted or paused) → 200 {id, amendKey} → the 3-hourly cron files the card and mails it in the report digest
 
 Error report amendment: POST /error-report/:id/amend → rate-limit by IP (ERROR_REPORT_AMEND_LIMITER, 429 if over) → validate :id shape (400) → read the JSON body under 512 KB (400/413) → validate amendKey + note/email, at least one of the two (400) → read report:{id} from KV (404 if gone) → SHA-256 the presented key, constantTimeEqual against amendKeyHash (401) → read-modify-write the {bundle}.amend.json sidecar in R2 → in waitUntil: an amendment email on the shared DAILY_ERROR_REPORT_EMAIL_CAP allowance → 200 {id, amendments}
 
 Heartbeat: POST /heartbeat → rate-limit by IP (HEARTBEAT_LIMITER, 429 if over) → read the body under 256 KB (400) → validate the beat (required fields + analId/version shape + config-size cap + uptimeSeconds + events is an array; 400) → keep the first 500 events, drop malformed ones (counted, logged) → AWAITED: ONE D1 batch writing the heartbeat row + the events (failure → soft 502), no IP stored → in waitUntil: forward the events to PostHog (skipped without POSTHOG_PROJECT_KEY; failure logged, never surfaced) → 204
 
-Feedback: POST /feedback → rate-limit by IP (FEEDBACK_LIMITER, 429 if over) → validate shape (required feedback text ≤ 100k code points + appVersion/osVersion, optional email/buildMode) → AWAITED D1 write to `feedback` (failure → soft 502 so the app offers a retry) → Discord ping in waitUntil (DISCORD_FEEDBACK_WEBHOOK_URL, falls back to DISCORD_WEBHOOK_URL; never the email, only `hasReplyTo`: `../../DETAILS.md` § Discord webhooks) → 204 → the 3-hourly cron files its card and mails it in the report digest (`../../DETAILS.md` § Cron handler)
+Feedback: POST /feedback → rate-limit by IP (FEEDBACK_LIMITER, 429 if over) → validate shape (required feedback text ≤ 100k code points + appVersion/osVersion, optional email/buildMode) → AWAITED D1 write to `feedback` (failure → soft 502 so the app offers a retry) → 204 → the 3-hourly cron files its card and mails it in the report digest (`../../DETAILS.md` § Cron handler)
 
 Download redirect: GET /download/:version/:arch → write to D1 (fire-and-forget) → 302 to GitHub Releases
 
@@ -233,13 +233,10 @@ parser text. The amend route reads its JSON body the same way, under its own 512
 `parseBody` problem, and counting bytes rather than `String.length` keeps the budget from running ~1.5x loose on
 multi-byte text.
 
-**Discord notifications:** every upload triggers an embed with a presigned R2 GET URL valid for 24 hours
-(`PRESIGN_TTL_HOURS`), minted through the R2 S3-compatible API via `aws4fetch` (`AwsClient.sign` with
-`signQuery: true` + `X-Amz-Expires`). The short window is deliberate: the same link sits in Discord, the notification
-email, and the triage issue, and anyone holding it gets the whole bundle; after it lapses, fetch through the Cloudflare
-API. The link stays at all because only the maintainer reads `#error-reports`. The three R2 secrets and their rotation
-runbook: `../../DETAILS.md` § R2 presigned URLs. `createPresigner` memoizes the URL per upload, so the email and the
-embed hand out the same link and an upload that notifies neither signs nothing.
+**Bundle links:** the cron mints a presigned R2 GET URL valid for 24 hours (`PRESIGN_TTL_HOURS`) for the digest and the
+card's personal comment, through the R2 S3-compatible API via `aws4fetch` (`AwsClient.sign` with `signQuery: true` +
+`X-Amz-Expires`). The short window is deliberate: anyone holding the link gets the whole bundle; after it lapses, fetch
+through the Cloudflare API. The three R2 secrets and their rotation runbook: `../../DETAILS.md` § R2 presigned URLs.
 
 ### The report index and the amend credential
 
@@ -344,12 +341,13 @@ genuine) reports. Eviction's real job is only to pull the 90-day lifecycle forwa
 deletes should already be near its natural end.
 
 Eviction is therefore **all-or-nothing**: when the eligible bundles can't free enough on their own, `tryEvict` deletes
-NOTHING, sets `intake_paused`, and returns `{ outcome: 'paused' }` so the caller alerts Discord. Half-evicting would
-destroy real reports AND leave the bucket over its watermark. A flood of fresh junk finds nothing eligible and costs
-zero deletions; reaching eligibility would take 60 days of sustained flooding, alerting daily along the way. A pause
-reads as one of two things: a flood filled the bucket with fresh bundles, or real traffic outgrew the watermarks (raise
-them, or shorten the lifecycle). The daily sweep clears the flag once the bucket is back under 6 GB; resuming at the
-HIGH watermark would reopen intake straight into the level that paused it.
+NOTHING, sets `intake_paused`, and returns `{ outcome: 'paused' }`, which `recordEvictionOutcome` turns into an
+`eviction-blocked` ops alert for the next digest. Half-evicting would destroy real reports AND leave the bucket over its
+watermark. A flood of fresh junk finds nothing eligible and costs zero deletions; reaching eligibility would take 60
+days of sustained flooding, alerting daily along the way. A pause reads as one of two things: a flood filled the bucket
+with fresh bundles, or real traffic outgrew the watermarks (raise them, or shorten the lifecycle). The daily sweep
+clears the flag once the bucket is back under 6 GB; resuming at the HIGH watermark would reopen intake straight into the
+level that paused it.
 
 ### Intake admission (`error-report-intake.ts`)
 
@@ -357,15 +355,11 @@ The global ceiling the per-colo rate limiter can't give. Both gates run before t
 costs no parsing and no storage.
 
 - **Daily byte budget** (`DAILY_INTAKE_BUDGET_BYTES`, 2 GB/UTC day): past it, `/error-report` returns 503 +
-  `Retry-After` for the rest of the day and pings Discord ONCE (`budget_alert:{date}` claim). Legitimate traffic is
-  orders of magnitude below this, so the ping is as much the point as the rejection. It also means filling the 8 GB
-  watermark takes days of flooding, alerting each day.
+  `Retry-After` for the rest of the day and records ONE `intake-rejected` ops alert (`budget_alert:{date}` claim).
+  Legitimate traffic is orders of magnitude below this, so the alert is as much the point as the rejection. It also
+  means filling the 8 GB watermark takes days of flooding, alerting each day.
 - **Intake pause** (`intake_paused`): 503 while set. Written by eviction, cleared by the daily sweep, and settable by
   hand for an incident (`wrangler kv key put --binding ERROR_REPORT_META intake_paused 1`).
-- **Notification cap** (`DAILY_NOTIFICATION_CAP`, 50/day): per-upload Discord embeds stop after 50, with one notice
-  saying so, then silence until tomorrow. A webhook takes 30 messages/min, and a channel that goes quiet without
-  explanation reads as "no reports". Bundles remain in R2 and in `/admin/error-reports` regardless. Eviction and budget
-  alerts are NOT capped.
 
 Every counter here is a racy read-then-write (KV has no atomic increment), so a concurrent burst can overshoot by
 roughly the in-flight amount. Deliberate: these are coarse circuit breakers, and the 10 MB bundle cap keeps a single
@@ -377,9 +371,8 @@ overshoot small.
 Unicode code points; the cap matches the desktop dialog and the Rust validator) plus `appVersion` / `osVersion`,
 optional reply-to `email` (loose shape check) and `buildMode`. Body capped at 512 KB. The D1 `feedback` table is the
 durable sink, so unlike the other telemetry writes this one is AWAITED: a D1 failure returns a soft 502 the desktop app
-surfaces as a gentle retry. The Discord ping (truncated preview, `[DEV]`/`[PROD]` title prefix from `buildMode`) rides
-`waitUntil` after the 204. No install id of any kind is read or stored, so feedback can't be joined to the analytics
-stream. Rate-limited at 5/min/IP via `FEEDBACK_LIMITER` (the IP is never stored).
+surfaces as a gentle retry. Nothing else happens at intake. No install id of any kind is read or stored, so feedback
+can't be joined to the analytics stream. Rate-limited at 5/min/IP via `FEEDBACK_LIMITER` (the IP is never stored).
 
 The row is also the outbox entry: the cron files its card (`feedback.issue_number`, NULL means owed) and mails it in the
 three-hour digest (`feedback.notified_at`, NULL means unsent); the intake path writes neither column. How the digest

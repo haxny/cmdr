@@ -140,14 +140,13 @@ retention layers, in order of aggressiveness:
 3. **R2 lifecycle rule.** 90-day expiration at the bucket level (third safety net if both layers above fail). This is
    also the retention the privacy policy states for error reports, so it's a promise now, not only a safety net.
 
-### Discord deep links
+### Bundle download links
 
-Each upload triggers a one-line Discord notification to the private `#error-reports` channel with a presigned R2 GET URL
-embedded; the notification email and the triage issue carry the same link. **TTL: 24 hours** (`PRESIGN_TTL_HOURS` in
-`apps/api-server/src/telemetry/error-report.ts`). The link grants the whole bundle to whoever holds it, and it sits in
-three places, so it lives only long enough for a same-day click. Older bundles come through the Cloudflare API
-(`docs/tooling/feedback-and-error-digest.md`). If a click-later link is ever needed, add an admin re-mint endpoint
-rather than lengthening the TTL.
+The digest email and the triage card's personal comment each carry a presigned R2 GET URL for the bundle. **TTL: 24
+hours** (`PRESIGN_TTL_HOURS` in `apps/api-server/src/telemetry/error-report.ts`). The link grants the whole bundle to
+whoever holds it, and it sits in two places, so it lives only long enough for a same-day click. Older bundles come
+through the Cloudflare API (`docs/tooling/feedback-and-error-digest.md`). If a click-later link is ever needed, add an
+admin re-mint endpoint rather than lengthening the TTL.
 
 ## Folder-importance visit signal
 

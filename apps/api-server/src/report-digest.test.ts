@@ -390,6 +390,39 @@ describe('the error report and amendment sections', () => {
   })
 })
 
+describe('ops alerts', () => {
+  function insertOpsEvent(kind: string, message: string): void {
+    db.sqlite.prepare(`INSERT INTO ops_events (kind, message) VALUES (?, ?)`).run(kind, message)
+  }
+
+  it('carries the ops alerts, and counts them in the subject', async () => {
+    insertOpsEvent('eviction-blocked', 'Error report intake is PAUSED.')
+    insertFeedback()
+
+    await handleReportDigest(testEnv())
+
+    const { subject, html } = lastEmail()
+    expect(subject).toBe('Cmdr digest: 1 feedback, 1 ops alert in the past 3h')
+    expect(html).toContain('Error report intake is PAUSED.')
+    expect(unnotified('ops_events')).toBe(0)
+  })
+
+  it('leaves signups for the morning brief: no email for them alone, and no stamp', async () => {
+    insertOpsEvent('beta-signup', 'beta')
+
+    await handleReportDigest(testEnv())
+
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(unnotified('ops_events')).toBe(1)
+  })
+
+  it('escapes an alert message, which can quote a URL a stranger chose', async () => {
+    insertOpsEvent('csp-violation', 'blocked https://x.test/<script>')
+    await handleReportDigest(testEnv())
+    expect(lastEmail().html).not.toContain('<script>')
+  })
+})
+
 describe('the feedback section', () => {
   it('keeps the line breaks, escapes HTML, and carries non-Latin text intact', async () => {
     insertFeedback({ feedback: 'Line one\nLine two <b>bold</b> — köszönöm, 谢谢' })

@@ -1,6 +1,6 @@
 import type { Context } from 'hono'
 import { type Bindings, enforceIpRateLimit, isValidEmail, readCappedBody, redactEmail } from '../types'
-import { postListSignupNotification, type SignupList } from '../discord'
+import { recordOpsEvent } from '../ops-events'
 
 /**
  * The one way an email joins a Listmonk list: `/beta-signup` (the desktop app) and
@@ -22,12 +22,13 @@ import { postListSignupNotification, type SignupList } from '../discord'
 /** A signup body is just an email; nothing else is read, so an install id can never sneak through. */
 const maxSignupBytes = 1024
 
+/** Which Listmonk list a signup joined. */
+export type SignupList = 'beta' | 'newsletter'
+
 export interface ListSignupConfig {
   list: SignupList
   listmonkUrl: string | undefined
   listUuid: string | undefined
-  /** Only for the Discord deep link into the Listmonk admin. */
-  listId: number | undefined
 }
 
 /** What Listmonk did with the signup. */
@@ -84,23 +85,22 @@ async function readSignupEmail(c: Context<{ Bindings: Bindings }>): Promise<stri
 }
 
 /**
- * Fire the Discord ping after the response ships: `waitUntil` when the execution context exists,
- * inline as a test fallback. Drop-on-failure lives in `postListSignupNotification`.
+ * Count the signup for the morning brief, after the response ships: `waitUntil` when the execution
+ * context exists, inline as a test fallback. Never throws (`recordOpsEvent`).
+ *
+ * No identity at all in the event: just which list and when. The email stays in Listmonk, and no
+ * install id ever reaches these routes.
  */
-async function pingDiscord(c: Context<{ Bindings: Bindings }>, cfg: ListSignupConfig, listmonkUrl: string) {
-  const webhookUrl = c.env.DISCORD_BETA_SIGNUP_WEBHOOK_URL ?? c.env.DISCORD_WEBHOOK_URL
-  if (!webhookUrl) return
-  // No identity at all in the notification: the email stays out of Discord, and no install id
-  // ever reaches these routes. The Listmonk link is how to see who signed up.
-  const notify = postListSignupNotification(webhookUrl, {
-    list: cfg.list,
-    signupUnixSeconds: Math.floor(Date.now() / 1000),
-    listAdminUrl: `${listmonkUrl}/admin/subscribers${cfg.listId === undefined ? '' : `?lists=${String(cfg.listId)}`}`,
-  })
+async function countSignup(c: Context<{ Bindings: Bindings }>, cfg: ListSignupConfig) {
+  const record = recordOpsEvent(
+    c.env.TELEMETRY_DB,
+    `${cfg.list}-signup`,
+    `A new ${cfg.list} signup; Listmonk mailed the confirmation.`,
+  )
   try {
-    c.executionCtx.waitUntil(notify)
+    c.executionCtx.waitUntil(record)
   } catch {
-    await notify
+    await record
   }
 }
 
@@ -129,7 +129,7 @@ export async function handleListSignup(c: Context<{ Bindings: Bindings }>, cfg: 
   if (outcome.kind === 'failed') return c.json({ error: 'Could not sign up right now' }, 502)
 
   // Only a mailed confirmation is news: a quiet re-signup of a confirmed address stays quiet.
-  if (outcome.kind === 'confirmation-sent') await pingDiscord(c, cfg, listmonkUrl)
+  if (outcome.kind === 'confirmation-sent') await countSignup(c, cfg)
 
   return c.body(null, 204)
 }

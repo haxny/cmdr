@@ -21,7 +21,7 @@
  * ## Fail loudly
  *
  * A classic PAT expires. The failure mode is issues quietly not reaching the board, so every
- * failure returns false and the route alerts Discord, per the CLAUDE.md rule that a failure has to
+ * failure returns false and the route records an ops event, per the CLAUDE.md rule that a failure has to
  * leave the Worker.
  */
 

@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono'
 import { enforceIpRateLimit, readCappedBody, scheduleBackground, type Bindings } from '../types'
-import { postCspViolationNotification } from '../discord'
+import { cspViolationMessage, recordOpsEvent } from '../ops-events'
 
 /**
  * `POST /csp-report`: where getcmdr.com's Content-Security-Policy sends its violation reports
@@ -13,7 +13,7 @@ import { postCspViolationNotification } from '../discord'
  * Browsers send violations from every visitor, including ones caused by extensions, so only
  * violations that look like OUR breakage alert, and each (directive, blocked origin) pair alerts at
  * most once a day. Nothing about the visitor is stored: the dedupe key holds only the directive and
- * an origin, and URLs lose their query strings before they reach Discord.
+ * an origin, and URLs lose their query strings before they reach the ops event.
  */
 const cspReport = new Hono<{ Bindings: Bindings }>()
 
@@ -135,9 +135,8 @@ async function alertActionable(env: Bindings, violations: CspViolation[]): Promi
       sourceFile: v.sourceFile ? withoutQuery(v.sourceFile) : undefined,
     }
     console.warn('CSP violation on getcmdr.com', clean)
-    if (!env.DISCORD_WEBHOOK_URL) continue
     if (!(await claimAlert(env.CSP_ALERTS, v))) continue
-    await postCspViolationNotification(env.DISCORD_WEBHOOK_URL, clean)
+    await recordOpsEvent(env.TELEMETRY_DB, 'csp-violation', cspViolationMessage(clean))
   }
 }
 

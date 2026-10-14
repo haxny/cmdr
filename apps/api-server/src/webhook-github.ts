@@ -10,7 +10,7 @@
 import { Hono, type Context } from 'hono'
 import { readCappedBody, scheduleBackground, type Bindings } from './types'
 import { addIssueToBoard, resolveBoardTarget, verifyGitHubWebhook } from './project-board'
-import { postCronFailureNotification } from './discord'
+import { recordOpsEvent } from './ops-events'
 
 const webhookGitHub = new Hono<{ Bindings: Bindings }>()
 
@@ -118,14 +118,12 @@ webhookGitHub.post('/webhook/github', async (c) => {
     addIssueToBoard(target, issue.nodeId).then(async (added) => {
       if (added) return
       // A classic PAT expires, and the failure mode is issues quietly not reaching the board. This
-      // is the alarm that makes that loud, on the same channel a failed cron job uses.
-      if (c.env.DISCORD_WEBHOOK_URL) {
-        await postCronFailureNotification(c.env.DISCORD_WEBHOOK_URL, {
-          job: 'Add issue to project board',
-          when: new Date().toISOString(),
-          detail: `${issue.ref} did not reach the board. Check whether GITHUB_PROJECT_TOKEN has expired.`,
-        })
-      }
+      // is the alarm that makes that loud, in the next report digest.
+      await recordOpsEvent(
+        c.env.TELEMETRY_DB,
+        'board-add-failed',
+        `${issue.ref} did not reach the backlog board. Check whether GITHUB_PROJECT_TOKEN has expired.`,
+      )
     }),
   )
 

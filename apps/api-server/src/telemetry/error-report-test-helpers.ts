@@ -146,7 +146,7 @@ export function createBindings(overrides: Record<string, unknown> = {}) {
     PRODUCT_NAME: 'Cmdr',
     SUPPORT_EMAIL: 'test@example.com',
     ADMIN_API_TOKEN: 'test-admin-token-secret',
-    // Discord webhook and notification recipient intentionally unset → no network calls, no email
+    // No notification recipient → no email
     ...overrides,
   }
 }

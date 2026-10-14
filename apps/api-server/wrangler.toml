@@ -35,7 +35,7 @@ binding = "LINK_CODES"
 id = "6dbba67c8ece475daf3e8c0406d242c9"
 
 # KV namespace for CSP-violation alert dedupe: one `csp:<directive>:<blocked origin>` key per
-# alert, expiring after 24 h, so a broken fetch pings Discord once a day instead of once per visit.
+# alert, expiring after 24 h, so a broken fetch raises one ops alert a day instead of one per visit.
 # Created with `wrangler kv namespace create`.
 [[kv_namespaces]]
 binding = "CSP_ALERTS"
@@ -103,7 +103,7 @@ limit = 5
 period = 60
 
 # Rate limit for POST /error-report, keyed by the caller IP (transient, never stored). The tightest
-# of the set: each accepted request stores up to 10 MB in R2 and posts a Discord embed. Real
+# of the set: each accepted request stores up to 10 MB in R2 and queues a card. Real
 # reporting is a handful per user per day, and the client's auto-dispatcher throttles itself, so
 # 3/min/IP is far above legitimate use. `period` must be 10 or 60. `namespace_id` is a per-account
 # integer id. NOTE: these limits count per data center, not globally, so this bounds one abusive
@@ -195,7 +195,7 @@ crons = ["0 */3 * * *"]
 
 # Retained, searchable Workers logs. Without this, `console.error` goes nowhere: the only way to see
 # a cron failure was to happen to be running `wrangler tail` at that second, which is how a broken
-# job could repeat every three hours indefinitely with no trace. The Discord alert in `index.ts` is
+# job could repeat every three hours indefinitely with no trace. The cron alarm (`index.ts`) is
 # what wakes someone up; this is what they read once they're awake.
 [observability]
 enabled = true
@@ -221,8 +221,8 @@ LISTMONK_BETA_LIST_UUID = "8ad332ca-ef4d-4663-b38f-933ec7e857c9"
 LISTMONK_NEWSLETTER_LIST_ID = 3
 LISTMONK_NEWSLETTER_LIST_UUID = "160d5cda-88f3-4f87-a8b3-82677f0b9157"
 
-# The PRIVATE GitHub repo that in-app error reports and feedback are filed into as issues, so triage
-# happens on one board instead of across Discord and an inbox. `owner/name`.
+# The PRIVATE GitHub repo every crash, error report, and feedback message is filed into, so triage
+# happens on one board. `owner/name`.
 #
 # ❗ This repo MUST stay private. `github-issues.ts` asks GitHub whether it is private before every
 # single write and writes nothing if the answer is anything but yes, so flipping it public disables
@@ -269,17 +269,9 @@ GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 # - FEEDBACK_NOTIFICATION_EMAIL    (optional: recipient for the report digest; the cron job
 #                                   falls back to CRASH_NOTIFICATION_EMAIL when unset, so the digest
 #                                   email needs no new secret)
-# - DISCORD_WEBHOOK_URL            (Discord webhook for #error-reports; also carries the cron
-#                                   failure alerts, so a broken cron job reaches a channel that
-#                                   doesn't depend on email working)
 # - HEALTHCHECKS_PING_URL          (optional: healthchecks.io ping URL for the cron dead-man's
-#                                   switch. Alerts when a tick DOESN'T arrive, which the Discord
-#                                   alert structurally can't do. A capability URL, hence a secret.)
-# - DISCORD_FEEDBACK_WEBHOOK_URL   (optional: dedicated webhook for in-app feedback;
-#                                   POST /feedback falls back to DISCORD_WEBHOOK_URL when unset)
-# - DISCORD_BETA_SIGNUP_WEBHOOK_URL (optional: dedicated webhook for #beta-signups; POST /beta-signup
-#                                   falls back to DISCORD_WEBHOOK_URL, so pings land in #error-reports
-#                                   until the channel + webhook exist)
+#                                   switch, and the cron alarm that works without D1 or Resend. Alerts
+#                                   when a tick fails or never arrives. A capability URL, hence a secret.)
 # - R2_ACCOUNT_ID                  (for minting presigned R2 GET URLs)
 # - R2_ACCESS_KEY_ID               (R2 S3-compatible access key; read-only suffices)
 # - R2_SECRET_ACCESS_KEY           (paired secret for R2_ACCESS_KEY_ID)
@@ -288,7 +280,7 @@ GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 #                                   a private repo's issue at all, so a leak costs project boards and
 #                                   nothing else. ❌ Never add `repo` to make private issues work;
 #                                   src/project-board.ts says what to do instead. Classic PATs expire,
-#                                   and the route alerts Discord when an add fails, which is what an
+#                                   and the route records an ops alert when an add fails, which is what an
 #                                   expired token looks like.)
 # - GITHUB_WEBHOOK_SECRET          (HMAC secret GitHub signs `issues` deliveries with; the webhook on
 #                                   vdavid/cmdr holds the same value. Unset disables the route.)

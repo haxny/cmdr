@@ -4,12 +4,12 @@ import type { Bindings } from './types'
 import {
   recomputeTotal,
   tryEvict,
+  recordEvictionOutcome,
   EVICTION_HIGH_WATERMARK,
   EVICTION_LOW_WATERMARK,
 } from './telemetry/error-report-eviction'
 import { isIntakePaused, resumeIntake } from './telemetry/error-report-intake'
 import { backupLicenseLedger } from './licensing/license-backup'
-import { postEvictionBlockedNotification, postEvictionNotification } from './discord'
 import { deleteComment, listExpiredPersonalComments, resolveIssueTarget } from './github-issues'
 
 const dbSizeThresholdBytes = 100 * 1024 * 1024 // 100 MB
@@ -17,7 +17,7 @@ const dbSizeThresholdBytes = 100 * 1024 * 1024 // 100 MB
 /**
  * Send one throwaway email a day so a dead `RESEND_API_KEY` surfaces on its own schedule rather
  * than at the moment something important needs to send. Recipient is Resend's simulator address,
- * so nobody receives it. A rejection throws, and `runCronJob` turns that into a Discord alert.
+ * so nobody receives it. A rejection throws, and `runCronJob` raises the alarm (healthchecks.io).
  */
 async function handleEmailPathProbe(env: Bindings): Promise<void> {
   if (!env.RESEND_API_KEY) return
@@ -236,7 +236,7 @@ async function handleRetentionSweep(env: Bindings): Promise<void> {
  * text in GitHub's revision history, so it would not be a deletion at all.
  *
  * A no-op when the integration is unconfigured. Failures throw, so `runCronJob` turns them into the
- * Discord alarm: a sweep that quietly stopped running would leave personal data past its promise,
+ * alarm: a sweep that quietly stopped running would leave personal data past its promise,
  * which is exactly the failure that has to be loud.
  */
 async function handlePersonalCommentSweep(env: Bindings): Promise<void> {
@@ -332,19 +332,7 @@ async function handleDailyEvictionSweep(env: Bindings): Promise<void> {
 
   if (recomputed <= EVICTION_HIGH_WATERMARK) return
 
-  const result = await tryEvict(env)
-  if (!env.DISCORD_WEBHOOK_URL) return
-
-  if (result.outcome === 'evicted' && result.evictedCount > 0) {
-    await postEvictionNotification(env.DISCORD_WEBHOOK_URL, {
-      evictedCount: result.evictedCount,
-      freedBytes: result.freedBytes,
-      newTotalBytes: result.newTotal,
-    })
-  }
-  if (result.outcome === 'paused') {
-    await postEvictionBlockedNotification(env.DISCORD_WEBHOOK_URL, result)
-  }
+  await recordEvictionOutcome(env.TELEMETRY_DB, await tryEvict(env))
 }
 
 export {

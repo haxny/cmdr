@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { app } from '../index'
-import { DAILY_INTAKE_BUDGET_BYTES, DAILY_NOTIFICATION_CAP, dailyBytesKey, pauseIntake } from './error-report-intake'
+import { DAILY_INTAKE_BUDGET_BYTES, dailyBytesKey, pauseIntake } from './error-report-intake'
+import { createSqliteD1 } from '../sqlite-d1-test-helper'
 import {
   buildMultipart,
   createBindings,
@@ -90,7 +91,7 @@ function streamingMultipart(bundleBytes: number): {
 }
 
 beforeEach(() => {
-  // Swallow Discord webhook calls if one somehow gets through
+  // No route under test should reach the network; answer anything that does with a bare 204.
   globalThis.fetch = () => Promise.resolve(new Response(null, { status: 204 }))
 })
 
@@ -403,45 +404,34 @@ describe('POST /error-report', () => {
     expect(bucket._store.size).toBe(0)
   })
 
-  it('stops pinging Discord per upload once the daily notification cap is passed', async () => {
-    const kv = createKv()
-    // Start one slot below the cap so the run is short: one more ping, then the single suppression
-    // notice, then silence however many uploads follow.
-    await kv.put(`notify_count:${todayUtc()}`, String(DAILY_NOTIFICATION_CAP - 1))
-    const posts: string[] = []
-    globalThis.fetch = ((_url: string, init: { body: string }) => {
-      posts.push(init.body)
-      return Promise.resolve(new Response(null, { status: 204 }))
-    }) as unknown as typeof fetch
-    const bindings = createBindings({
-      ERROR_REPORT_META: kv,
-      DISCORD_WEBHOOK_URL: 'https://discord.example/webhook',
-    })
+  it('queues an outbox row for every upload, hand-written or auto-sent', async () => {
+    const { d1, sqlite } = createSqliteD1()
+    const bindings = createBindings({ TELEMETRY_DB: d1 })
 
-    for (let i = 0; i < 4; i++) {
-      const fd = buildMultipart(new Uint8Array([1]), validMeta)
-      const res = await app.request('/error-report', { method: 'POST', body: fd }, bindings)
+    for (const kind of ['user', 'auto'] as const) {
+      const meta = { ...validMeta, kind, userNote: kind === 'user' ? 'a note' : undefined }
+      const res = await app.request(
+        '/error-report',
+        { method: 'POST', body: buildMultipart(new Uint8Array([1]), meta) },
+        bindings,
+      )
       expect(res.status).toBe(200)
     }
 
-    // Upload 1 pings, upload 2 posts the suppression notice, uploads 3 and 4 post nothing.
-    expect(posts).toHaveLength(2)
-    expect(posts[0]).toContain('ERR-A2345')
-    expect(posts[1]).toContain('suppressed')
+    const rows = sqlite
+      .prepare(`SELECT kind, user_note, issue_number, notified_at FROM error_reports ORDER BY id`)
+      .all()
+    expect(rows).toEqual([
+      { kind: 'user', user_note: 'a note', issue_number: null, notified_at: null },
+      { kind: 'auto', user_note: null, issue_number: null, notified_at: null },
+    ])
   })
 
-  it('pings Discord once when the budget runs out, not once per rejected upload', async () => {
+  it('raises ONE ops alert when the budget runs out, not one per rejected upload', async () => {
     const kv = createKv()
     await kv.put(dailyBytesKey(todayUtc()), String(DAILY_INTAKE_BUDGET_BYTES))
-    const posts: string[] = []
-    globalThis.fetch = ((url: string) => {
-      posts.push(url)
-      return Promise.resolve(new Response(null, { status: 204 }))
-    }) as unknown as typeof fetch
-    const bindings = createBindings({
-      ERROR_REPORT_META: kv,
-      DISCORD_WEBHOOK_URL: 'https://discord.example/webhook',
-    })
+    const { d1, sqlite } = createSqliteD1()
+    const bindings = createBindings({ ERROR_REPORT_META: kv, TELEMETRY_DB: d1 })
 
     for (let i = 0; i < 3; i++) {
       const fd = buildMultipart(new Uint8Array([1]), validMeta)
@@ -449,6 +439,6 @@ describe('POST /error-report', () => {
       expect(res.status).toBe(503)
     }
 
-    expect(posts).toHaveLength(1)
+    expect(sqlite.prepare(`SELECT kind FROM ops_events`).all()).toEqual([{ kind: 'intake-rejected' }])
   })
 })

@@ -57,7 +57,7 @@ describe('handleEmailPathProbe', () => {
     expect(lastEmailCall().subject.toLowerCase()).toContain('probe')
   })
 
-  it('throws when Resend rejects the key, which is what raises the Discord alert', async () => {
+  it('throws when Resend rejects the key, which is what raises the cron alarm', async () => {
     mockSend.mockImplementationOnce(() => Promise.resolve({ error: { message: 'API key is invalid' } }))
 
     await expect(handleEmailPathProbe(createBaseEnv() as never)).rejects.toThrow('API key is invalid')

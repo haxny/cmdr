@@ -49,8 +49,8 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   - **Every sender has a real-runtime lane.** `email-runtime.test.ts` drives them through the actual Worker and asserts
     the Resend payload off the wire; `src/licensing/webhook-runtime.test.ts` does `sendLicenseEmail`. Adding a sender
     means adding it there too, or it ships untested against the runtime it deploys to. § Test runtimes.
-- **`discord.ts`**: Discord webhook client (single retry on 429, drop-on-failure). Carries the cron failure alert as
-  well as the error-report, feedback, beta-signup, and eviction notifications.
+- **`ops-events.ts`**: the operational notices (cron failures, eviction, CSP violations, signups) as D1 rows the digest
+  mails. § Ops events.
 - **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. § Cron alarms.
 - **`report-outbox.ts`**: the cron jobs that file every pending crash, error report, feedback message, and amendment as
   a card on the reports board. § The reports repo.
@@ -92,17 +92,17 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 | GET     | `/download/:version/:arch` | none          | Log download to D1 (bots skipped, source + `ref` tagged), 302 → GitHub; `:version` takes `latest`  |
 | POST    | `/crash-report`            | IP rate-limit | Ingest crash report to D1                                                                          |
 | POST    | `/heartbeat`               | IP rate-limit | Usage heartbeat + relayed feature events (anonymous `anal_id`) to D1                               |
-| POST    | `/error-report`            | IP rate-limit | Multipart upload (zip + meta) → R2, Discord notify. Also gated by the global intake budget         |
+| POST    | `/error-report`            | IP rate-limit | Multipart upload (zip + meta) → R2 + an outbox row. Also gated by the global intake budget         |
 | POST    | `/error-report/:id/amend`  | amend key     | Add a note or reply-to address to a report already in R2 (`.amend.json` sidecar + email)           |
 | POST    | `/beta-signup`             | IP rate-limit | Subscribe a contact email to the Listmonk beta list (NO install id)                                |
 | POST    | `/newsletter-signup`       | IP rate-limit | getcmdr.com's newsletter form → the Listmonk newsletter list (CORS: getcmdr.com)                   |
-| POST    | `/feedback`                | IP rate-limit | Ingest in-app feedback to D1, Discord notify                                                       |
+| POST    | `/feedback`                | IP rate-limit | Ingest in-app feedback to D1 (the outbox row)                                                      |
 | GET     | `/update-check/:version`   | none          | Log update check to D1 (deduped), 302 → latest.json                                                |
 | GET     | `/likes/:slug`             | none          | Blog-post like count + whether this caller already liked it                                        |
 | POST    | `/likes/:slug`             | IP rate-limit | Like a blog post (idempotent per caller pseudonym)                                                 |
 | DELETE  | `/likes/:slug`             | IP rate-limit | Unlike a blog post                                                                                 |
 | OPTIONS | `/likes/:slug`             | none          | CORS preflight (204), getcmdr.com origins only                                                     |
-| POST    | `/csp-report`              | IP rate-limit | getcmdr.com CSP violation reports; our own breakage alerts Discord once a day per origin           |
+| POST    | `/csp-report`              | IP rate-limit | getcmdr.com CSP violation reports; our own breakage raises an ops alert once a day per origin      |
 | OPTIONS | `/csp-report`              | none          | CORS preflight (204) for Reporting API batches, getcmdr.com origins only                           |
 | GET     | `/r-codes.json`            | none          | Public `?r=<code>` → UTM map (note stripped), edge-cached 5 min, `Access-Control-Allow-Origin: *`  |
 | OPTIONS | `/r-codes.json`            | none          | CORS preflight (204)                                                                               |
@@ -134,8 +134,6 @@ Decisions.
 | `RESEND_API_KEY`                   | Resend key                       | Same Resend key                     |
 | `CRASH_NOTIFICATION_EMAIL`         | `david@getcmdr.com`              | Report digest + ops alert recipient |
 | `FEEDBACK_NOTIFICATION_EMAIL`      | unset (falls back)               | Optional report digest recipient    |
-| `DISCORD_WEBHOOK_URL`              | Same webhook URL                 | Discord webhook for error reports   |
-| `DISCORD_BETA_SIGNUP_WEBHOOK_URL`  | Optional (falls back)            | Optional signups webhook (both)     |
 | `R2_ACCOUNT_ID`                    | Same account ID                  | For minting presigned R2 URLs       |
 | `R2_ACCESS_KEY_ID`                 | Same access key                  | R2 S3-compat access key (read OK)   |
 | `R2_SECRET_ACCESS_KEY`             | Same secret                      | Paired secret for R2 access key     |
@@ -183,10 +181,7 @@ where a flood is expensive.
 - `eviction_in_progress`: 60-s TTL lock preventing concurrent eviction.
 - `bytes_today:{yyyy-mm-dd}`: accepted bundle bytes for the day, against `DAILY_INTAKE_BUDGET_BYTES`. 48-h TTL.
 - `intake_paused`: kill switch. Present = `/error-report` returns 503.
-- `budget_alert:{yyyy-mm-dd}`: claimed by the one caller that sends the day's "budget exhausted" ping. 48-h TTL.
-- `notify_count:{yyyy-mm-dd}`: per-upload Discord pings sent today, against `DAILY_NOTIFICATION_CAP`. 48-h TTL.
-- `error_email_count:{yyyy-mm-dd}`: notification emails sent today (reports and amendments share this one), against
-  `DAILY_ERROR_REPORT_EMAIL_CAP`. 48-h TTL.
+- `budget_alert:{yyyy-mm-dd}`: claimed by the one caller that records the day's "budget exhausted" alert. 48-h TTL.
 - `report:{ERR-XXXXX}`: `{ env, date, key, amendKeyHash }` for one uploaded report, so an id is addressable without
   walking the bucket, and `/error-report/:id/amend` has something to authenticate against. 90-day TTL, matching the R2
   lifecycle. Only the credential's SHA-256 is here, never the credential. `src/telemetry/DETAILS.md` § The report index.
@@ -197,57 +192,25 @@ other namespaces).
 
 **Paddle dashboards**: [sandbox](https://sandbox-vendors.paddle.com) | [live](https://vendors.paddle.com)
 
-### Discord webhooks
+### Ops events
 
-`DISCORD_WEBHOOK_URL` posts notifications to the `#error-reports` channel of the **Cmdr** Discord server. The URL is the
-secret (anyone holding it can post to that channel), so it lives only as a wrangler secret, never in the repo.
+`ops-events.ts` writes the operational notices to the D1 `ops_events` table: `cron-failure`, `board-add-failed`,
+`csp-violation`, `eviction`, `eviction-blocked`, `intake-rejected`, and the two signup kinds. The three-hour digest
+mails the alerts (§ Cron handler job 2) and leaves the signups for the morning brief to count. Nothing else watches a
+channel: there is no Discord integration.
 
-**No email address ever goes to Discord** (the privacy policy and `/trust` promise it). The notification types in
-`discord.ts` have no email field: feedback sends only `hasReplyTo` (the address stays in D1 and the reports-repo
-comment), and a signup sends the list, the time, and the Listmonk link. Pinned by `feedback.test.ts` and
-`listmonk-signup.test.ts` on the outbound webhook body. The error-report embed carries the user's free-text note and a
-24-hour bundle link, and the bundle's manifest can hold a reply-to, so that link is personal data while it lives.
-
-**To create or rotate the webhook:**
-
-1. Open the Cmdr Discord server → right-click `#error-reports` → **Edit Channel** → **Integrations** → **Webhooks**.
-2. To rotate: click the existing webhook → **Delete Webhook**, then **New Webhook**. To create fresh: just **New
-   Webhook**. Name it "Cmdr error reports".
-3. Click **Copy Webhook URL**. URL shape: `https://discord.com/api/webhooks/<id>/<token>`.
-4. Store it as a wrangler secret (run from anywhere in the repo):
-   ```sh
-   pnpm --filter @cmdr/api-server exec wrangler secret put DISCORD_WEBHOOK_URL
-   ```
-5. Smoke-test it landed correctly:
-   ```sh
-   curl -H "Content-Type: application/json" -d '{"content":"webhook test"}' "<webhook-url>"
-   ```
-
-Rate limit: 30 messages/min per webhook. The Worker should retry once on `Retry-After`, then drop with a `console.error`
-We don't run our own queue infra for an internal channel.
-
-**Optional dedicated webhooks (`#beta-signups`, `#feedback`):** both signup routes post to
-`DISCORD_BETA_SIGNUP_WEBHOOK_URL` and `POST /feedback` to `DISCORD_FEEDBACK_WEBHOOK_URL`. Both fall back to
-`DISCORD_WEBHOOK_URL` when unset, so the feature works before the dedicated channel exists (pings just land in
-`#error-reports`). To split signup pings into their own channel:
-
-1. Create the channel `#beta-signups` in the Cmdr Discord server.
-2. Right-click `#beta-signups` → **Edit Channel** → **Integrations** → **Webhooks** → **New Webhook**. Name it "Cmdr
-   beta signups". **Copy Webhook URL** (shape `https://discord.com/api/webhooks/<id>/<token>`).
-3. Store it as a wrangler secret:
-   ```sh
-   pnpm --filter @cmdr/api-server exec wrangler secret put DISCORD_BETA_SIGNUP_WEBHOOK_URL
-   ```
-4. Smoke-test it landed:
-   ```sh
-   curl -H "Content-Type: application/json" -d '{"content":"beta-signups webhook test"}' "<webhook-url>"
-   ```
+- **`recordOpsEvent` never throws**: it sits inside the paths whose failures it reports, so a broken D1 costs that
+  alert, never the caller. A cron failure has healthchecks.io as its second, independent channel (§ Cron alarms).
+- **No personal data, ever**: no address, no note, no IP. A signup event is the list and the time; a CSP event carries
+  URLs with their query strings stripped. Pinned by `listmonk-signup.test.ts` and `csp-report.test.ts`.
+- Rare alerts are deduped where they could flood: CSP once a day per `(directive, blocked origin)` (`CSP_ALERTS` KV),
+  the intake budget once a day (`budget_alert:` key).
 
 ### R2 presigned URLs (for error-report download links)
 
-The error-report route mints 24-hour presigned GET URLs for the zip bundles in R2 and embeds them in Discord
-notifications. R2 bindings can't presign on their own, so the Worker uses the S3-compatible API via `aws4fetch` and
-three secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
+The cron mints 24-hour presigned GET URLs for the zip bundles in R2 for the digest and the card's personal comment. R2
+bindings can't presign on their own, so the Worker uses the S3-compatible API via `aws4fetch` and three secrets:
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
 
 Current values: stored in David's password store (Bitwarden). The secrets also live as Cloudflare Worker secrets
 (`wrangler secret list` to confirm).
@@ -393,18 +356,15 @@ The cron jobs are the whole notification pipeline: the board, the report digest,
 stops working, nothing downstream complains, because "no crash email" and "no crashes" look identical. Three layers
 cover that, and they cover different failures.
 
-1. **Discord, for a tick that ran and threw.** `runCronJob` (`index.ts`) catches, then posts through
-   `postCronFailureNotification` to `DISCORD_WEBHOOK_URL` (`#error-reports`). The alert names the job, the tick's
-   `scheduledTime`, and the stringified error. Plain `content`, never an embed: this is the message that carries the
-   news that something is broken, so it must not have a failure mode of its own. The post never throws (`postWithRetry`
-   swallows), so a dead webhook costs the alert and nothing else. Deliberately NOT an email: email is one of the things
-   that can be broken here, and an alarm routed through the broken path can't fire.
-2. **healthchecks.io, for a tick that never ran** (`cron-health.ts`, `HEALTHCHECKS_PING_URL`). Layer 1 structurally
-   cannot see this: if no code executes, nothing posts. The switch pings after the last job, so a removed cron trigger,
-   a bad deploy, or a Worker dying before the first job all surface when the expected ping doesn't arrive. A tick with
-   failures pings `/fail` instead, which trips the check immediately and names the jobs in the body. That makes it a
-   second, independent channel for layer 1's case too: healthchecks.io alerts through its own infrastructure, not
-   Resend.
+1. **An ops event, for a tick that ran and threw.** `runCronJob` (`index.ts`) catches, then writes a `cron-failure` ops
+   event naming the job, the tick's `scheduledTime`, and the stringified error, so the next digest says what broke.
+   `recordOpsEvent` never throws, so a broken D1 costs this layer and nothing else. It can't be the only layer: D1 and
+   Resend are both things that can be broken here, and an alarm routed through the broken path can't fire.
+2. **healthchecks.io, for a tick that never ran AND for one that threw** (`cron-health.ts`, `HEALTHCHECKS_PING_URL`).
+   The switch pings after the last job, so a removed cron trigger, a bad deploy, or a Worker dying before the first job
+   all surface when the expected ping doesn't arrive. A tick with failures pings `/fail` instead, which trips the check
+   immediately and names the jobs in the body. healthchecks.io emails through its own infrastructure, not Resend, so
+   this is the layer that still works when D1 or the Resend key is dead.
 3. **Workers logs, for reading the stack afterwards.** `[observability] enabled = true` in `wrangler.toml`. Without it
    `console.error` is written nowhere and is visible only to a live `wrangler tail`, which is how a job could throw
    every three hours indefinitely and leave no trace. Layers 1 and 2 wake someone; this is what they read.
@@ -510,9 +470,9 @@ organization, where a fine-grained token scoped to that org's projects plus read
 reads no repository contents, no private data, and no user reports.
 
 **Failures are loud.** A classic PAT expires, and the failure mode is issues quietly not arriving. `addIssueToBoard`
-returns false on every failure and the route posts to the Discord alarm channel, naming the issue and pointing at the
-token. The status update is deliberately NOT part of that answer: an item in the wrong column is cosmetic, an item that
-never arrived is not.
+returns false on every failure and the route records a `board-add-failed` ops alert, naming the issue and pointing at
+the token. The status update is deliberately NOT part of that answer: an item in the wrong column is cosmetic, an item
+that never arrived is not.
 
 **The signature is the only thing that refuses.** Everything the route understands answers 204, including ignored
 events, because a 4xx on a normal delivery is a red cross in GitHub's webhook UI forever. Renovate and Dependabot are
@@ -739,7 +699,7 @@ pnpm test         # vitest unit tests, node + workerd projects
 `apps/api-server/` use `npx wrangler …`; from the repo root (no `cd` needed) use the pnpm filter form:
 
 ```sh
-pnpm --filter @cmdr/api-server exec wrangler secret put DISCORD_WEBHOOK_URL
+pnpm --filter @cmdr/api-server exec wrangler secret put HEALTHCHECKS_PING_URL
 pnpm --filter @cmdr/api-server exec wrangler deploy
 ```
 

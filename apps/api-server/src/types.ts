@@ -84,18 +84,10 @@ export type Bindings = {
   ERROR_REPORTS_BUCKET: R2Bucket
   // KV namespace for error report bookkeeping (total bytes counter, eviction lock flag)
   ERROR_REPORT_META: KVNamespace
-  // Discord webhook URL for #error-reports channel notifications
-  DISCORD_WEBHOOK_URL?: string
-  // Optional dedicated Discord webhook for in-app feedback notifications. When unset,
-  // POST /feedback falls back to DISCORD_WEBHOOK_URL so feedback works with no new secret.
-  DISCORD_FEEDBACK_WEBHOOK_URL?: string
   // healthchecks.io ping URL for the cron dead-man's switch (https://hc-ping.com/<uuid>). Optional:
   // when unset the cron runs exactly as before, minus the ping. A capability URL, so it's a secret
-  // rather than a var. See `cron-health.ts` for why this exists alongside the Discord alert.
+  // rather than a var. See `cron-health.ts` for why this exists alongside the ops-event alert.
   HEALTHCHECKS_PING_URL?: string
-  // Optional dedicated Discord webhook for signup notifications (beta and newsletter both; the name
-  // predates the newsletter route). When unset, the signup routes fall back to DISCORD_WEBHOOK_URL.
-  DISCORD_BETA_SIGNUP_WEBHOOK_URL?: string
   // The PRIVATE GitHub repo error reports and feedback are filed into, as `owner/name`, plus its
   // fine-grained token (Issues: read and write on that one repo). Both optional: with either unset
   // the integration is off and nothing is filed. `github-issues.ts` re-checks on EVERY write that
@@ -114,8 +106,8 @@ export type Bindings = {
   GITHUB_PROJECT_STATUS_FIELD_ID?: string
   GITHUB_PROJECT_TRIAGE_OPTION_ID?: string
   GITHUB_WEBHOOK_SECRET?: string
-  // R2 S3-compatible credentials, used to mint long-TTL presigned download URLs
-  // for the Discord embed. Bindings can't presign on their own, but the S3 API can.
+  // R2 S3-compatible credentials, used to mint presigned bundle download URLs
+  // for the digest and the card comment. Bindings can't presign on their own, but the S3 API can.
   R2_ACCOUNT_ID?: string
   R2_ACCESS_KEY_ID?: string
   R2_SECRET_ACCESS_KEY?: string
@@ -124,8 +116,8 @@ export type Bindings = {
   // Listmonk (the beta-tester and newsletter lists), at its base URL (for example
   // https://mail.getcmdr.com). The signup routes subscribe by list UUID through the public endpoint,
   // which needs no credentials; the API user and token (sent as `Authorization: token <user>:<token>`)
-  // are only for GET /admin/funnel. The numeric ids feed the funnel's per-day signups column and the
-  // Discord deep links. All optional so tests and incomplete envs omit them; a signup route answers
+  // are only for GET /admin/funnel. The numeric ids feed the funnel's per-day signups column.
+  // All optional so tests and incomplete envs omit them; a signup route answers
   // 500 when its list UUID is absent, and the funnel defaults the newsletter id to 3.
   LISTMONK_API_URL?: string
   LISTMONK_API_USER?: string

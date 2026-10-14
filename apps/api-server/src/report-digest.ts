@@ -14,6 +14,7 @@ import { sendReportDigestEmail, digestSize, type DigestContent } from './email/d
 import type { CrashFate } from './email/crash'
 import type { BoardCard } from './email/layout'
 import { humanReportRecipient } from './email/send'
+import { SIGNUP_KINDS } from './ops-events'
 import { parseOsFrames } from './report-outbox'
 import { PRESIGN_TTL_HOURS, buildPresignedUrl } from './telemetry/error-report'
 import type { Bindings } from './types'
@@ -87,13 +88,24 @@ interface FeedbackRow {
   issue_number: number | null
 }
 
+interface OpsRow {
+  id: number
+  created_at: string
+  kind: string
+  message: string
+}
+
 /** The rows one digest carries, by table, so the stamp touches exactly these and nothing newer. */
 interface PendingRows {
   crashes: CrashRow[]
   errorReports: ErrorReportRow[]
   amendments: AmendmentRow[]
   feedback: FeedbackRow[]
+  opsAlerts: OpsRow[]
 }
+
+/** Signups are the morning brief's to count, never an alert, so the digest neither mails nor stamps them. */
+const NOT_A_SIGNUP = `kind NOT IN (${SIGNUP_KINDS.map((kind) => `'${kind}'`).join(', ')})`
 
 async function readPending(db: D1Database): Promise<PendingRows> {
   const crashes = await db
@@ -121,12 +133,19 @@ async function readPending(db: D1Database): Promise<PendingRows> {
          FROM feedback WHERE notified_at IS NULL AND ${RELEASE_ONLY} ORDER BY created_at DESC`,
     )
     .all<FeedbackRow>()
+  const opsAlerts = await db
+    .prepare(
+      `SELECT id, created_at, kind, message FROM ops_events
+         WHERE notified_at IS NULL AND ${NOT_A_SIGNUP} ORDER BY id DESC`,
+    )
+    .all<OpsRow>()
 
   return {
     crashes: crashes.results,
     errorReports: errorReports.results,
     amendments: amendments.results,
     feedback: feedback.results,
+    opsAlerts: opsAlerts.results,
   }
 }
 
@@ -188,6 +207,7 @@ async function toContent(env: Bindings, rows: PendingRows): Promise<DigestConten
       email: row.email,
       card: cardFor(env, row.issue_number),
     })),
+    opsAlerts: rows.opsAlerts.map((row) => ({ when: row.created_at, kind: row.kind, message: row.message })),
   }
 }
 
@@ -234,6 +254,12 @@ export async function handleReportDigest(env: Bindings): Promise<void> {
     env.TELEMETRY_DB,
     'feedback',
     rows.feedback.map((row) => row.id),
+    now,
+  )
+  await stamp(
+    env.TELEMETRY_DB,
+    'ops_events',
+    rows.opsAlerts.map((row) => row.id),
     now,
   )
 }

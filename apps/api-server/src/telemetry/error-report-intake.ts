@@ -6,7 +6,7 @@
  *
  * - **Daily byte budget** (`bytes_today:{yyyy-mm-dd}`): a running total of accepted bundle bytes
  *   for the UTC day. Past {@link DAILY_INTAKE_BUDGET_BYTES}, intake returns 503 for the rest of
- *   the day and pings Discord once. This bounds a distributed flood, which `ERROR_REPORT_LIMITER`
+ *   the day and raises one ops alert. This bounds a distributed flood, which `ERROR_REPORT_LIMITER`
  *   cannot: Cloudflare counts rate limits per data center, not globally (see `enforceIpRateLimit`).
  * - **Intake pause** (`intake_paused`): a manual/automatic kill switch. Eviction sets it when the
  *   bucket is over its high watermark and nothing is old enough to evict, so the answer to a full
@@ -22,7 +22,7 @@
 /**
  * Accepted bundle bytes allowed per UTC day. Legitimate traffic is orders of magnitude below this
  * (a handful of reports per user per day, each a few MB), so hitting it means something is wrong;
- * the Discord ping is the point as much as the rejection. It is also low enough that filling the
+ * the alert is the point as much as the rejection. It is also low enough that filling the
  * 8 GB eviction high watermark takes days of sustained flooding, each day alerting.
  */
 export const DAILY_INTAKE_BUDGET_BYTES = 2 * 1024 ** 3 // 2 GB
@@ -35,20 +35,6 @@ export const DAILY_BYTES_PREFIX = 'bytes_today:'
 
 /** KV key prefix for the once-per-day "budget exhausted" alert claim. */
 const BUDGET_ALERT_PREFIX = 'budget_alert:'
-
-/** KV key prefix for the per-day count of error-report Discord notifications. */
-const NOTIFY_COUNT_PREFIX = 'notify_count:'
-
-/**
- * Error-report Discord pings allowed per UTC day, after which the channel gets one "suppressing
- * the rest" notice and nothing more.
- *
- * A Discord webhook accepts 30 messages/min, and this endpoint posts one embed per accepted upload.
- * Without a cap, a burst that clears the per-IP limiter and the byte budget still drowns the
- * channel, and the notification that mattered scrolls away. Nothing is lost when this trips: every
- * bundle is still in R2 and listed by `GET /admin/error-reports`.
- */
-export const DAILY_NOTIFICATION_CAP = 50
 
 /**
  * Day-scoped keys outlive their day by a margin so a late-arriving request still lands on the
@@ -109,38 +95,10 @@ export async function recordIntakeBytes(kv: KVNamespace, date: string, bytes: nu
 }
 
 /**
- * What to do with the Discord ping for one accepted upload:
- * - `notify`: post the embed as usual.
- * - `suppress-notice`: post one line saying the rest of today's pings are suppressed.
- * - `silent`: post nothing.
- */
-export type NotificationDecision = 'notify' | 'suppress-notice' | 'silent'
-
-/**
- * Take one slot from a day's allowance on `key`. Exactly one caller per day gets `suppress-notice`,
- * so the channel learns it stopped hearing about uploads instead of going quiet without
- * explanation. Racy like the other KV counters, which at worst shifts the cutoff by a message or
- * two.
- */
-async function claimDailySlot(kv: KVNamespace, key: string, cap: number): Promise<NotificationDecision> {
-  const count = parseInt((await kv.get(key)) ?? '0', 10) + 1
-  await kv.put(key, String(count), { expirationTtl: DAY_KEY_TTL_SECONDS })
-
-  if (count <= cap) return 'notify'
-  if (count === cap + 1) return 'suppress-notice'
-  return 'silent'
-}
-
-/** Take one slot from the day's Discord-ping allowance ({@link DAILY_NOTIFICATION_CAP}). */
-export async function claimNotificationSlot(kv: KVNamespace, date: string): Promise<NotificationDecision> {
-  return claimDailySlot(kv, `${NOTIFY_COUNT_PREFIX}${date}`, DAILY_NOTIFICATION_CAP)
-}
-
-/**
- * Claim the right to send today's "budget exhausted" Discord ping. Returns true to exactly one
+ * Claim the right to record today's "budget exhausted" ops alert. Returns true to exactly one
  * caller per day under normal conditions, so a sustained flood produces one alert rather than one
- * per rejected request. Racy like every KV counter here: a tie can produce two pings, which is a
- * far better failure than a silent drop or a webhook flood.
+ * per rejected request. Racy like every KV counter here: a tie can produce two alerts, which is a
+ * far better failure than a silent drop or a flood of them.
  */
 export async function claimBudgetAlert(kv: KVNamespace, date: string): Promise<boolean> {
   const key = `${BUDGET_ALERT_PREFIX}${date}`

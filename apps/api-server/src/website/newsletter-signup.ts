@@ -29,7 +29,6 @@ newsletterSignup.post('/newsletter-signup', async (c) => {
     list: 'newsletter',
     listmonkUrl: c.env.LISTMONK_API_URL,
     listUuid: c.env.LISTMONK_NEWSLETTER_LIST_UUID,
-    listId: c.env.LISTMONK_NEWSLETTER_LIST_ID,
   })
 })
 

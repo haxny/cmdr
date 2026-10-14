@@ -1,5 +1,6 @@
 import type { Bindings } from '../types'
 import { pauseIntake } from './error-report-intake'
+import { evictionBlockedMessage, evictionMessage, recordOpsEvent } from '../ops-events'
 
 /**
  * Error report bundle eviction.
@@ -74,6 +75,28 @@ export type TryEvictResult =
    * would need. Nothing was deleted and intake is now paused. See {@link EVICTION_MIN_AGE_DAYS}.
    */
   | { outcome: 'paused'; totalBytes: number; evictableBytes: number; neededBytes: number }
+
+/**
+ * Put an eviction that DID something into the next digest: bundles deleted, or intake paused because
+ * nothing was old enough. Skips are silent. Shared by the upload path and the daily sweep, and never
+ * throws (`recordOpsEvent`).
+ */
+export async function recordEvictionOutcome(db: D1Database, result: TryEvictResult): Promise<void> {
+  if (result.outcome === 'evicted' && result.evictedCount > 0) {
+    await recordOpsEvent(
+      db,
+      'eviction',
+      evictionMessage({
+        evictedCount: result.evictedCount,
+        freedBytes: result.freedBytes,
+        newTotalBytes: result.newTotal,
+      }),
+    )
+  }
+  if (result.outcome === 'paused') {
+    await recordOpsEvent(db, 'eviction-blocked', evictionBlockedMessage(result))
+  }
+}
 
 /**
  * Atomically-ish add `deltaBytes` to the running total.

@@ -12,26 +12,19 @@ import {
   ERROR_REPORT_PREFIX,
   incrementTotalBytes,
   tryEvict,
+  recordEvictionOutcome,
   EVICTION_HIGH_WATERMARK,
   EVICTION_LOW_WATERMARK,
 } from './error-report-eviction'
 import {
   DAILY_INTAKE_BUDGET_BYTES,
-  DAILY_NOTIFICATION_CAP,
   checkIntakeAllowed,
   claimBudgetAlert,
-  claimNotificationSlot,
   recordIntakeBytes,
   type IntakeRejection,
 } from './error-report-intake'
 import { hashAmendKey, mintAmendKey, writeReportIndex } from './error-report-amend'
-import {
-  postErrorReportNotification,
-  postEvictionBlockedNotification,
-  postEvictionNotification,
-  postIntakeRejectedNotification,
-  postNotificationsSuppressedNotification,
-} from '../discord'
+import { intakeRejectedMessage, recordOpsEvent } from '../ops-events'
 
 const errorReport = new Hono<{ Bindings: Bindings }>()
 
@@ -48,7 +41,7 @@ const MAX_BODY_BYTES = MAX_BUNDLE_BYTES + 1024 * 1024
 
 /**
  * How long a bundle's download link works. Short on purpose: the link grants the whole bundle to
- * whoever holds it, and it sits in Discord, an email, and a GitHub issue. After it expires, fetch the
+ * whoever holds it, and it sits in the digest email and a GitHub issue comment. After it expires, fetch the
  * bundle through the Cloudflare API (`docs/tooling/feedback-and-error-digest.md`).
  */
 export const PRESIGN_TTL_HOURS = 24
@@ -72,8 +65,8 @@ export interface ErrorReportMeta {
   kind: 'user' | 'auto'
   /**
    * Set by the desktop client from `cfg!(debug_assertions)`. `'debug'` reports
-   * come from a dev build of the app; the Discord notification gets a `[DEV]`
-   * prefix so triage can keep them apart from production traffic. Optional for
+   * come from a dev build of the app, and they stay off the board and out of the
+   * digest, which are for production traffic. Optional for
    * backwards compatibility with older clients that didn't set it; unset is
    * treated as `'release'`.
    */
@@ -153,89 +146,22 @@ export async function buildPresignedUrl(env: Bindings, key: string): Promise<str
   return signed.url
 }
 
-/**
- * A lazy, memoized presigned GET URL for one bundle. Both notification channels hand out the same
- * link, an upload that notifies neither mints none, and a failure to sign is logged once and
- * reported as `null` rather than sinking the notification.
- */
-function createPresigner(env: Bindings, key: string): () => Promise<string | null> {
-  let attempted = false
-  let url: string | null = null
-  return async () => {
-    if (attempted) return url
-    attempted = true
-    try {
-      url = await buildPresignedUrl(env, key)
-    } catch (e) {
-      console.error('Error report: presign failed', e)
-    }
-    return url
-  }
-}
-
 /** What `postUploadWork` and its helpers know about the upload they're following up on. */
 interface UploadedReport {
   id: string
   key: string
   sizeBytes: number
   meta: ErrorReportMeta
-  uploadedUnixSeconds: number
   date: string
 }
 
 /**
- * Everything `#error-reports` hears about one upload: the per-upload embed (capped for the day)
- * and the eviction alerts, which are not capped because they are rare and are the ones worth
- * waking up for.
- */
-async function notifyDiscord(
-  env: Bindings,
-  webhookUrl: string,
-  args: UploadedReport,
-  presignedUrl: () => Promise<string | null>,
-  evictionResult: Awaited<ReturnType<typeof tryEvict>> | null,
-): Promise<void> {
-  const decision = await claimNotificationSlot(env.ERROR_REPORT_META, args.date)
-  if (decision === 'suppress-notice') {
-    await postNotificationsSuppressedNotification(webhookUrl, { cap: DAILY_NOTIFICATION_CAP, date: args.date })
-  }
-  if (decision === 'notify') {
-    await postErrorReportNotification(webhookUrl, {
-      id: args.id,
-      kind: args.meta.kind,
-      buildMode: args.meta.buildMode ?? 'release',
-      appVersion: args.meta.appVersion,
-      osVersion: args.meta.osVersion,
-      arch: args.meta.arch,
-      sizeBytes: args.sizeBytes,
-      uploadedUnixSeconds: args.uploadedUnixSeconds,
-      downloadUrl: (await presignedUrl()) ?? '(presign unavailable; fetch via admin)',
-      linkTtlHours: PRESIGN_TTL_HOURS,
-      userNote: args.meta.userNote,
-    })
-  }
-
-  if (evictionResult?.outcome === 'evicted' && evictionResult.evictedCount > 0) {
-    await postEvictionNotification(webhookUrl, {
-      evictedCount: evictionResult.evictedCount,
-      freedBytes: evictionResult.freedBytes,
-      newTotalBytes: evictionResult.newTotal,
-    })
-  }
-  if (evictionResult?.outcome === 'paused') {
-    await postEvictionBlockedNotification(webhookUrl, evictionResult)
-  }
-}
-
-/**
  * Background work that runs after the 200 has already shipped: update the bytes counter, maybe
- * evict, post the Discord notification. The card and the email are the cron's job
+ * evict (and say so in the next digest). The card and the email are the cron's job
  * (`report-outbox.ts`, `report-digest.ts`). Wrapped to never throw; failures are logged, not
  * propagated.
  */
 async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void> {
-  const presignedUrl = createPresigner(env, args.key)
-
   try {
     await incrementTotalBytes(env.ERROR_REPORT_META, args.sizeBytes)
   } catch (e) {
@@ -248,21 +174,10 @@ async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void
     console.error('Error report: recordIntakeBytes failed', e)
   }
 
-  let evictionResult: Awaited<ReturnType<typeof tryEvict>> | null = null
   try {
-    evictionResult = await tryEvict(env)
+    await recordEvictionOutcome(env.TELEMETRY_DB, await tryEvict(env))
   } catch (e) {
     console.error('Error report: tryEvict failed', e)
-  }
-
-  if (env.DISCORD_WEBHOOK_URL) {
-    // Own try/catch like every other side effect here, so a KV or webhook hiccup can't take the
-    // email below down with it.
-    try {
-      await notifyDiscord(env, env.DISCORD_WEBHOOK_URL, args, presignedUrl, evictionResult)
-    } catch (e) {
-      console.error('Error report: Discord notification failed', e)
-    }
   }
 }
 
@@ -271,7 +186,7 @@ async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void
  * bundle, hand-written or auto-sent; the note and the reply-to ride along because the cron can't
  * read them back out of a zip, and the retention sweep deletes the row with the bundle's 90 days.
  */
-async function queueErrorReport(db: D1Database, args: Omit<UploadedReport, 'uploadedUnixSeconds' | 'date'>) {
+async function queueErrorReport(db: D1Database, args: Omit<UploadedReport, 'date'>) {
   await db
     .prepare(
       `INSERT INTO error_reports (short_id, kind, build_mode, app_version, os_version, arch, size_bytes, r2_key, user_note, email)
@@ -315,21 +230,21 @@ type UploadContext = Context<{ Bindings: Bindings }>
 
 /**
  * Run the global admission gates (daily byte budget + intake pause) and, when the budget is what
- * ran out, claim the day's single Discord ping. Returns the 503 to send, or null to continue.
+ * ran out, claim the day's single ops alert. Returns the 503 to send, or null to continue.
  */
 async function enforceIntakeGates(c: UploadContext, today: string): Promise<Response | null> {
   const decision = await checkIntakeAllowed(c.env.ERROR_REPORT_META, today)
   if (decision.accept) return null
 
   console.error(`Error report: intake rejected (${decision.reason})`)
-  const webhookUrl = c.env.DISCORD_WEBHOOK_URL
-  if (decision.reason === 'daily_budget' && webhookUrl) {
-    // One ping per day, not one per rejected upload; a flood is exactly when this fires.
+  if (decision.reason === 'daily_budget') {
+    // One alert per day, not one per rejected upload; a flood is exactly when this fires.
     await scheduleBackground(
       c,
       claimBudgetAlert(c.env.ERROR_REPORT_META, today).then(async (claimed) => {
         if (claimed) {
-          await postIntakeRejectedNotification(webhookUrl, { budgetBytes: DAILY_INTAKE_BUDGET_BYTES, date: today })
+          const message = intakeRejectedMessage({ budgetBytes: DAILY_INTAKE_BUDGET_BYTES, date: today })
+          await recordOpsEvent(c.env.TELEMETRY_DB, 'intake-rejected', message)
         }
       }),
     )
@@ -398,7 +313,7 @@ async function readReportUpload(c: UploadContext): Promise<Response | { bundle: 
 
 errorReport.post('/error-report', async (c) => {
   // Rate-limit by the caller IP before touching the body: every accepted request stores up to
-  // 10 MB in R2 and posts a Discord notification, so an ungated flood is expensive.
+  // 10 MB in R2 and queues a card, so an ungated flood is expensive.
   const limited = await enforceIpRateLimit(c.env.ERROR_REPORT_LIMITER, c.req)
   if (limited) return limited
 
@@ -427,7 +342,6 @@ errorReport.post('/error-report', async (c) => {
     key = buildR2Key(env, datePrefix, id, crypto.randomUUID())
   }
   const sizeBytes = bundle.size
-  const uploadedUnixSeconds = Math.floor(Date.now() / 1000)
 
   // R2 supports streaming directly from the File body. No buffering needed.
   await c.env.ERROR_REPORTS_BUCKET.put(key, bundle.stream(), {
@@ -472,7 +386,7 @@ errorReport.post('/error-report', async (c) => {
     console.error('Error report: queueing the report for the board failed', e)
   }
 
-  await scheduleBackground(c, postUploadWork(c.env, { id, key, sizeBytes, meta, uploadedUnixSeconds, date: today }))
+  await scheduleBackground(c, postUploadWork(c.env, { id, key, sizeBytes, meta, date: today }))
 
   return c.json({ id, amendKey: issuedAmendKey })
 })

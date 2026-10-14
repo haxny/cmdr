@@ -19,7 +19,7 @@ address. Their ids and UUIDs are wrangler `[vars]` on the api-server (`LISTMONK_
 Both surfaces POST only the email to the api-server: the app via the `beta_signup` Tauri command to `/beta-signup`, the
 website form to `/newsletter-signup`. The Worker subscribes it through Listmonk's public endpoint and answers a soft 502
 when the confirmation mail didn't go out. Call shape, outcomes, why it's the public endpoint and not the admin API, and
-the Discord ping: `apps/api-server/src/website/DETAILS.md` § Signups.
+the signup count: `apps/api-server/src/website/DETAILS.md` § Signups.
 
 The api-server's `LISTMONK_API_USER` / `LISTMONK_API_TOKEN` secrets are only for `GET /admin/funnel`'s per-day signup
 counts; the signup routes need no credentials.

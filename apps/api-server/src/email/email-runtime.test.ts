@@ -20,7 +20,7 @@ import { EMAIL_PROBE_RECIPIENT } from './send'
  * outbound request with the route, the SDK, and the runtime untouched. See
  * `../../DETAILS.md` § Test runtimes for the two gotchas in reading an intercepted body.
  *
- * `DISCORD_WEBHOOK_URL` is deliberately left unset: the Discord posts share these paths, and
+ * `GITHUB_ISSUES_TOKEN` is deliberately left unset: the board jobs share these ticks, and
  * leaving them off keeps the assertion "what reached the wire is the email" exact.
  */
 

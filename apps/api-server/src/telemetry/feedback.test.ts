@@ -35,7 +35,6 @@ function createBindings(overrides: Record<string, unknown> = {}) {
     RESEND_API_KEY: 'test-resend-key',
     PRODUCT_NAME: 'Cmdr',
     SUPPORT_EMAIL: 'test@example.com',
-    // Discord webhooks intentionally unset by default → no network calls
     ...overrides,
   }
 }
@@ -234,56 +233,11 @@ describe('POST /feedback', () => {
     expect(res.status).toBe(502)
   })
 
-  it('pings the Discord webhook with the feedback text', async () => {
-    const { db } = createRecordingD1()
-    const bindings = createBindings({
-      TELEMETRY_DB: db,
-      DISCORD_WEBHOOK_URL: 'https://discord.example/webhook',
-    })
-
-    const res = await postFeedback(validBody, bindings)
-
-    expect(res.status).toBe(204)
-    expect(fetchMock).toHaveBeenCalledOnce()
-    const [url, init] = fetchMock.mock.calls[0] as [string, { body: string }]
-    expect(url).toBe('https://discord.example/webhook')
-    expect(init.body).toContain(validBody.feedback)
-  })
-
-  it('keeps the reply-to address out of the Discord ping, saying only that one was attached', async () => {
-    const { db } = createRecordingD1()
-    const bindings = createBindings({
-      TELEMETRY_DB: db,
-      DISCORD_WEBHOOK_URL: 'https://discord.example/webhook',
-    })
-
-    await postFeedback({ ...validBody, email: 'reply-me@example.com' }, bindings)
-
-    expect(fetchMock).toHaveBeenCalledOnce()
-    const [, init] = fetchMock.mock.calls[0] as [string, { body: string }]
-    expect(init.body).not.toContain('reply-me@example.com')
-    expect(init.body).toContain('Reply-to attached')
-  })
-
-  it('prefers the dedicated feedback webhook over the error-report one', async () => {
-    const { db } = createRecordingD1()
-    const bindings = createBindings({
-      TELEMETRY_DB: db,
-      DISCORD_WEBHOOK_URL: 'https://discord.example/error-reports',
-      DISCORD_FEEDBACK_WEBHOOK_URL: 'https://discord.example/feedback',
-    })
-
-    await postFeedback(validBody, bindings)
-
-    expect(fetchMock).toHaveBeenCalledOnce()
-    expect(fetchMock.mock.calls[0][0]).toBe('https://discord.example/feedback')
-  })
-
-  it('still returns 204 when no Discord webhook is configured', async () => {
+  it("talks to nobody at intake: the card and the email are the cron's job", async () => {
     const { db } = createRecordingD1()
     const bindings = createBindings({ TELEMETRY_DB: db })
 
-    const res = await postFeedback(validBody, bindings)
+    const res = await postFeedback({ ...validBody, email: 'reply-me@example.com' }, bindings)
 
     expect(res.status).toBe(204)
     expect(fetchMock).not.toHaveBeenCalled()

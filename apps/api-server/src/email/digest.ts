@@ -17,7 +17,22 @@ import {
   type ErrorReportEmailRow,
 } from './error-report'
 import { renderFeedbackCard, type FeedbackEmailRow } from './feedback'
-import { CARD_BODY_STYLE, documentShell, escapeHtml, signoffParagraph } from './layout'
+import {
+  CARD_BODY_STYLE,
+  CARD_HEADER_STYLE,
+  CARD_PROSE_STYLE,
+  CARD_STYLE,
+  documentShell,
+  escapeHtml,
+  signoffParagraph,
+} from './layout'
+
+/** One operational notice (`ops-events.ts`): a cron job that threw, eviction, a CSP violation, and so on. */
+export interface OpsAlertRow {
+  when: string
+  kind: string
+  message: string
+}
 
 /** Everything one digest covers. Each list is newest first. */
 export interface DigestContent {
@@ -25,11 +40,26 @@ export interface DigestContent {
   errorReports: ErrorReportEmailRow[]
   amendments: ErrorReportAmendmentRow[]
   feedback: FeedbackEmailRow[]
+  opsAlerts: OpsAlertRow[]
 }
 
 /** How many entries the digest holds. Zero means no email at all. */
 export function digestSize(content: DigestContent): number {
-  return content.crashes.length + content.errorReports.length + content.amendments.length + content.feedback.length
+  return (
+    content.crashes.length +
+    content.errorReports.length +
+    content.amendments.length +
+    content.feedback.length +
+    content.opsAlerts.length
+  )
+}
+
+function renderOpsAlert(alert: OpsAlertRow): string {
+  return `
+    <div style="${CARD_STYLE}">
+        <div style="${CARD_HEADER_STYLE}">${escapeHtml(alert.when)} UTC &middot; ${escapeHtml(alert.kind)}</div>
+        <div style="${CARD_PROSE_STYLE}">${escapeHtml(alert.message)}</div>
+    </div>`
 }
 
 function counted(count: number, singular: string, plural: string): string | null {
@@ -53,6 +83,7 @@ export function digestSubject(content: DigestContent): string {
     counted(content.errorReports.length, 'error', 'errors'),
     counted(content.amendments.length, 'note added', 'notes added'),
     counted(content.feedback.length, 'feedback', 'feedback'),
+    counted(content.opsAlerts.length, 'ops alert', 'ops alerts'),
   ].filter((part): part is string => part !== null)
   return `Cmdr digest: ${parts.join(', ')} in the past 3h`
 }
@@ -87,6 +118,7 @@ function renderBody(subject: string, content: DigestContent): string {
     sections.push(section('Notes added to earlier reports', content.amendments.map(renderAmendmentCard).join('\n')))
   }
   if (content.feedback.length) sections.push(section('Feedback', content.feedback.map(renderFeedbackCard).join('\n')))
+  if (content.opsAlerts.length) sections.push(section('Ops alerts', content.opsAlerts.map(renderOpsAlert).join('\n')))
 
   return documentShell(
     `    <h2 style="color: #111827;">${escapeHtml(subject)}</h2>

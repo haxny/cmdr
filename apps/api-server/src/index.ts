@@ -25,7 +25,7 @@ import {
   handlePersonalCommentSweep,
   handleSyntheticHeartbeatSweep,
 } from './scheduled'
-import { postCronFailureNotification } from './discord'
+import { cronFailureMessage, recordOpsEvent } from './ops-events'
 import { pingCronHealth } from './cron-health'
 import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
 import { handleReportDigest } from './report-digest'
@@ -60,9 +60,10 @@ export { app }
  * Run one cron job, keeping its failure off the other jobs and onto a channel someone watches.
  *
  * `console.error` alone is where cron failures used to go, and Workers logs weren't retained, so a
- * job could throw every three hours forever with nothing to show for it. The Discord post is the
- * alarm; it deliberately uses `DISCORD_WEBHOOK_URL` (the #error-reports channel) rather than an
- * email, because email is one of the things that can be broken here.
+ * job could throw every three hours forever with nothing to show for it. Two channels carry the
+ * alarm now, and they fail independently: the caller reports the failed job to healthchecks.io,
+ * which emails through its OWN infrastructure (so a dead Resend key or a broken D1 still alerts),
+ * and an ops event puts the cause in the next report digest.
  *
  * Returns whether the job finished, so the caller can report the tick to the dead-man's switch.
  */
@@ -72,11 +73,8 @@ async function runCronJob(env: Bindings, job: string, when: string, run: () => P
     return true
   } catch (e) {
     console.error(`${job} failed:`, e)
-    if (env.DISCORD_WEBHOOK_URL) {
-      // `postCronFailureNotification` swallows its own failures, so a dead webhook costs us the
-      // alert and nothing else.
-      await postCronFailureNotification(env.DISCORD_WEBHOOK_URL, { job, when, detail: String(e) })
-    }
+    // Never throws, so a broken D1 costs this half of the alarm and nothing else.
+    await recordOpsEvent(env.TELEMETRY_DB, 'cron-failure', cronFailureMessage({ job, when, detail: String(e) }))
     return false
   }
 }

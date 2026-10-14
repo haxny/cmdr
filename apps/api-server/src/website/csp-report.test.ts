@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { app } from '../index'
 import { parseCspReports, isActionableViolation } from './csp-report'
+import { createSqliteD1 } from '../sqlite-d1-test-helper'
 
 function createKv() {
   const store = new Map<string, string>()
@@ -15,12 +16,23 @@ function createKv() {
 }
 
 function createBindings(overrides: Record<string, unknown> = {}) {
+  const db = createSqliteD1()
   return {
     CSP_ALERTS: createKv().kv,
-    DISCORD_WEBHOOK_URL: 'https://discord.test/webhook',
+    TELEMETRY_DB: db.d1,
     LICENSE_CODES: {} as KVNamespace,
+    /** Test-only handle on the engine behind `TELEMETRY_DB`, for reading the ops events back. */
+    sqlite: db.sqlite,
     ...overrides,
   }
+}
+
+/** The CSP alerts the next digest would carry. */
+function cspAlerts(bindings: ReturnType<typeof createBindings>): string[] {
+  const rows = bindings.sqlite.prepare(`SELECT message FROM ops_events WHERE kind = 'csp-violation'`).all() as {
+    message: string
+  }[]
+  return rows.map((row) => row.message)
 }
 
 /** The legacy `report-uri` shape Firefox and Safari send. */
@@ -157,9 +169,7 @@ describe('isActionableViolation', () => {
 })
 
 describe('POST /csp-report', () => {
-  it('alerts Discord once per directive and blocked origin, and answers 204', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
-    vi.stubGlobal('fetch', fetchMock)
+  it('raises one ops alert per directive and blocked origin, and answers 204', async () => {
     const { kv, store } = createKv()
     const bindings = createBindings({ CSP_ALERTS: kv })
 
@@ -171,21 +181,18 @@ describe('POST /csp-report', () => {
 
     expect(first.status).toBe(204)
     expect(second.status).toBe(204)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('https://discord.test/webhook')
-    const content = (JSON.parse(init.body as string) as { content: string }).content
-    expect(content).toContain('connect-src')
-    expect(content).toContain('https://api.getcmdr.com/likes/total-commander-for-macos')
-    expect(content).toContain('https://getcmdr.com/blog/total-commander-for-macos/')
-    // Query strings can carry anything (tracking params, tokens), so they never reach Discord.
-    expect(content).not.toContain('utm_source')
+    const alerts = cspAlerts(bindings)
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0]).toContain('connect-src')
+    expect(alerts[0]).toContain('https://api.getcmdr.com/likes/total-commander-for-macos')
+    expect(alerts[0]).toContain('https://getcmdr.com/blog/total-commander-for-macos/')
+    // Query strings can carry anything (tracking params, tokens), so they never reach the alert.
+    expect(alerts[0]).not.toContain('utm_source')
     expect([...store.keys()]).toEqual(['csp:connect-src:https://api.getcmdr.com'])
   })
 
   it('accepts the Reporting API content type', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
-    vi.stubGlobal('fetch', fetchMock)
+    const bindings = createBindings()
 
     const res = await post(
       reportingApiReport({
@@ -193,12 +200,12 @@ describe('POST /csp-report', () => {
         blockedURL: 'https://api.getcmdr.com/r-codes.json',
         effectiveDirective: 'connect-src',
       }),
-      createBindings(),
+      bindings,
       'application/reports+json',
     )
 
     expect(res.status).toBe(204)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(cspAlerts(bindings)).toHaveLength(1)
   })
 
   it('stays quiet for noise and still answers 204', async () => {

@@ -326,9 +326,9 @@ const toc = [
     <ul>
         <li>Downloads and updates come from GitHub (United States), which sees the IP address.</li>
         <li>
-            Error reports, feedback, and signups create notifications in Discord, and error reports and feedback
-            become issues on GitHub (both United States). An email address the user attached goes to GitHub only, in
-            a comment that's deleted on a schedule, and never to Discord.
+            Crash reports, error reports, and feedback become issues in a private GitHub repository (United States).
+            An email address the user attached, and an error report's note, go in a comment that's deleted on a
+            schedule.
         </li>
         <li>
             Emails with license keys, and notification emails about reports and feedback, pass through Resend (a United
@@ -413,8 +413,7 @@ const toc = [
         }
     </ul>
     <p>
-        Nothing in Cmdr's code deletes old Discord notifications, emails in the @getcmdr.com inbox, or Resend's and
-        SMTP2Go's delivery logs.
+        Nothing in Cmdr's code deletes emails in the @getcmdr.com inbox, or Resend's and SMTP2Go's delivery logs.
     </p>
     <DevTodo>
         Confirm Cmdr is on PostHog's free plan (events kept one year; a paid plan keeps them seven).

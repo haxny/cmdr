@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { app } from '../index'
+import { createSqliteD1 } from '../sqlite-d1-test-helper'
 
 /** Mock the Workers rate-limit binding. Defaults to allowing every request. */
 function createMockRateLimiter(success = true): { limiter: RateLimit; limitMock: Mock } {
@@ -10,28 +11,34 @@ function createMockRateLimiter(success = true): { limiter: RateLimit; limitMock:
 const betaUuid = 'beta-list-uuid'
 const newsletterUuid = 'newsletter-list-uuid'
 const publicSubscriptionUrl = 'https://mail.getcmdr.com/api/public/subscription'
-const discordWebhook = 'https://discord.example/signups'
 
 function createBindings(overrides: Record<string, unknown> = {}) {
+  const db = createSqliteD1()
   return {
     SIGNUP_LIMITER: createMockRateLimiter().limiter,
     LISTMONK_API_URL: 'https://mail.getcmdr.com',
-    LISTMONK_BETA_LIST_ID: 7,
     LISTMONK_BETA_LIST_UUID: betaUuid,
-    LISTMONK_NEWSLETTER_LIST_ID: 3,
     LISTMONK_NEWSLETTER_LIST_UUID: newsletterUuid,
+    TELEMETRY_DB: db.d1,
+    /** Test-only handle on the engine behind `TELEMETRY_DB`, for reading the signup count back. */
+    sqlite: db.sqlite,
     ...overrides,
   }
 }
 
-/** Both signup routes share every behavior below; only the list and the Discord title differ. */
+/** The signup events the morning brief would count, as written. */
+function signupEvents(bindings: ReturnType<typeof createBindings>): { kind: string; message: string }[] {
+  return bindings.sqlite.prepare(`SELECT kind, message FROM ops_events`).all() as { kind: string; message: string }[]
+}
+
+/** Both signup routes share every behavior below; only the list and the event kind differ. */
 const routes = [
-  { path: '/beta-signup', listUuid: betaUuid, uuidVar: 'LISTMONK_BETA_LIST_UUID', title: 'New beta-tester signup' },
+  { path: '/beta-signup', listUuid: betaUuid, uuidVar: 'LISTMONK_BETA_LIST_UUID', kind: 'beta-signup' },
   {
     path: '/newsletter-signup',
     listUuid: newsletterUuid,
     uuidVar: 'LISTMONK_NEWSLETTER_LIST_UUID',
-    title: 'New newsletter signup',
+    kind: 'newsletter-signup',
   },
 ] as const
 
@@ -57,7 +64,7 @@ function listmonkOk(hasOptin: boolean): Response {
   return new Response(JSON.stringify({ data: { has_optin: hasOptin } }), { status: 200 })
 }
 
-/** The Listmonk fetch is the one network boundary (plus Discord); stub it per test. */
+/** The Listmonk fetch is the one network boundary; stub it per test. */
 let fetchMock: Mock
 
 beforeEach(() => {
@@ -75,13 +82,7 @@ function listmonkCalls(): [string, RequestInit][] {
   return fetchMock.mock.calls.filter(([url]) => url === publicSubscriptionUrl) as [string, RequestInit][]
 }
 
-function findDiscordCall(url = discordWebhook): { body: Record<string, unknown> } | undefined {
-  const call = fetchMock.mock.calls.find(([u]) => String(u) === url)
-  if (!call) return undefined
-  return { body: JSON.parse((call[1] as RequestInit).body as string) as Record<string, unknown> }
-}
-
-describe.each(routes)('POST $path', ({ path, listUuid, uuidVar, title }) => {
+describe.each(routes)('POST $path', ({ path, listUuid, uuidVar, kind }) => {
   it('returns an empty 204 for a valid email', async () => {
     const res = await post(path, { email: 'tester@example.com' }, createBindings())
     expect(res.status).toBe(204)
@@ -113,13 +114,10 @@ describe.each(routes)('POST $path', ({ path, listUuid, uuidVar, title }) => {
           : new Response('ok'),
       ),
     )
-    const res = await post(
-      path,
-      { email: 'tester@example.com' },
-      createBindings({ DISCORD_WEBHOOK_URL: discordWebhook }),
-    )
+    const bindings = createBindings()
+    const res = await post(path, { email: 'tester@example.com' }, bindings)
     expect(res.status).toBe(502)
-    expect(findDiscordCall()).toBeUndefined()
+    expect(signupEvents(bindings)).toEqual([])
   })
 
   it('returns a soft 502 when the Listmonk fetch throws', async () => {
@@ -163,68 +161,49 @@ describe.each(routes)('POST $path', ({ path, listUuid, uuidVar, title }) => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('pings Discord, with no email in it, when Listmonk sent a confirmation', async () => {
-    const res = await post(
-      path,
-      { email: 'tester@example.com' },
-      createBindings({ DISCORD_WEBHOOK_URL: discordWebhook }),
-    )
+  it('counts the signup for the morning brief, with no email in it, when Listmonk sent a confirmation', async () => {
+    const bindings = createBindings()
+    const res = await post(path, { email: 'tester@example.com' }, bindings)
     expect(res.status).toBe(204)
 
-    const discord = findDiscordCall()
-    expect(discord).toBeDefined()
-    const embed = (discord?.body.embeds as { title: string; description: string }[])[0]
-    expect(embed.title).toBe(title)
-    expect(embed.description).toContain('Listmonk sent them the confirmation email')
-    expect(JSON.stringify(discord?.body)).not.toContain('tester@example.com')
+    const events = signupEvents(bindings)
+    expect(events.map((event) => event.kind)).toEqual([kind])
+    expect(JSON.stringify(events)).not.toContain('tester@example.com')
   })
 
   it('stays quiet, with the same empty 204, when there was nothing to confirm (no enumeration)', async () => {
     fetchMock.mockResolvedValueOnce(listmonkOk(false))
-    const res = await post(
-      path,
-      { email: 'tester@example.com' },
-      createBindings({ DISCORD_WEBHOOK_URL: discordWebhook }),
-    )
+    const bindings = createBindings()
+    const res = await post(path, { email: 'tester@example.com' }, bindings)
     expect(res.status).toBe(204)
     expect(await res.text()).toBe('')
-    expect(findDiscordCall()).toBeUndefined()
+    expect(signupEvents(bindings)).toEqual([])
   })
 
-  it('prefers the dedicated signups webhook over the shared one', async () => {
-    await post(
-      path,
-      { email: 'tester@example.com' },
-      createBindings({
-        DISCORD_BETA_SIGNUP_WEBHOOK_URL: discordWebhook,
-        DISCORD_WEBHOOK_URL: 'https://discord.example/x',
-      }),
-    )
-    expect(findDiscordCall()).toBeDefined()
-    expect(findDiscordCall('https://discord.example/x')).toBeUndefined()
-  })
-
-  it('still returns 204 when the Discord ping fails', async () => {
-    fetchMock.mockImplementation((url: string) =>
-      Promise.resolve(url === publicSubscriptionUrl ? listmonkOk(true) : new Response('discord down', { status: 500 })),
-    )
-    const res = await post(
-      path,
-      { email: 'tester@example.com' },
-      createBindings({ DISCORD_WEBHOOK_URL: discordWebhook }),
-    )
+  it('still returns 204 when the count cannot be written', async () => {
+    const broken = {
+      prepare: () => {
+        throw new Error('D1 is down')
+      },
+    }
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const res = await post(path, { email: 'tester@example.com' }, createBindings({ TELEMETRY_DB: broken }))
     expect(res.status).toBe(204)
   })
 })
 
 describe('POST /beta-signup privacy invariant', () => {
-  it('lets no install id reach Listmonk or Discord', async () => {
+  it('lets no install id reach Listmonk or the signup count', async () => {
+    const bindings = createBindings()
     await post(
       '/beta-signup',
       { email: 'tester@example.com', analId: 'anal_should-be-ignored', diagId: 'diag_should-be-ignored' },
-      createBindings({ DISCORD_WEBHOOK_URL: discordWebhook }),
+      bindings,
     )
-    const outbound = JSON.stringify(fetchMock.mock.calls.map(([, init]) => (init as RequestInit).body))
+    const outbound = JSON.stringify([
+      ...fetchMock.mock.calls.map(([, init]) => (init as RequestInit).body),
+      ...signupEvents(bindings),
+    ])
     expect(outbound).not.toContain('anal_')
     expect(outbound).not.toContain('diag_')
   })

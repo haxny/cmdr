@@ -76,8 +76,8 @@ Ranked by what losing them costs a user.
   prompt injection through file names and contents is in scope.
 - **A compromised update channel or maintainer account**: the GitHub account, the release workflow, the website host
   serving `latest.json`, or a signing key.
-- **The backend and its subprocessors** (Cloudflare, PostHog, GitHub, Discord, Resend, Google, AWS SES, Paddle,
-  Hetzner): hold report and telemetry data, never file contents.
+- **The backend and its subprocessors** (Cloudflare, PostHog, GitHub, Resend, Google, AWS SES, Paddle, Hetzner): hold
+  report and telemetry data, never file contents.
 - **A malicious dependency or contributor.** One maintainer, AI-assisted development, outside PRs accepted
   (`docs/guides/handling-prs.md`).
 
@@ -325,8 +325,8 @@ risk.
     Paddle webhook signed more than five minutes off is refused, so a captured one can't be replayed later; admin
     endpoints need a bearer token compared in constant time; error-report storage is size-capped; retention sweeps run
     daily (`apps/api-server/DETAILS.md`).
-  - **Toward subprocessors**: Discord never gets an email address, and error-report links expire after 24 hours
-    (`docs/security.md` § Discord deep links).
+  - **Toward subprocessors**: no report data goes to Discord, and error-report links expire after 24 hours
+    (`docs/security.md` § Bundle download links).
 - **Residual risk**:
   - **The redactor is path-shaped**: it covers every path and a name repeated on its path's line, but a name logged with
     no path on its line can pass (`apps/desktop/src-tauri/src/redact/DETAILS.md` § "Names in prose"). Listed on

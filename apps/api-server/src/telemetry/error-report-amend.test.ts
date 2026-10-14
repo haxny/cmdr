@@ -104,7 +104,7 @@ function streamingAmendBody(padBytes: number): {
 }
 
 beforeEach(() => {
-  // Swallow Discord webhook calls if one somehow gets through.
+  // No route under test should reach the network; answer anything that does with a bare 204.
   globalThis.fetch = () => Promise.resolve(new Response(null, { status: 204 }))
 })
 

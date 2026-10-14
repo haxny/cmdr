@@ -14,9 +14,9 @@ Five areas own their code, tests, and `C+D.md`; read an area's docs before worki
 - `src/admin/` — the dashboard's read-only aggregations, including `/admin/funnel`.
 - `src/s3-prices/` — `/s3-prices/v1`, the app's S3 price table.
 
-Root holds the assembly and the shared leaves (`index.ts`, `types.ts`, `email/`, `discord.ts`, `github-issues.ts`,
-`project-board.ts` + `webhook-github.ts`, `scheduled.ts`, `cron-health.ts`, `user-agent.ts`; DETAILS § Root files). ❌
-Areas depend on root leaves, never each other.
+Root holds the assembly and the shared leaves (`index.ts`, `types.ts`, `email/`, `ops-events.ts`, `github-issues.ts`,
+`report-outbox.ts` + `report-digest.ts`, `project-board.ts` + `webhook-github.ts`, `scheduled.ts`, `cron-health.ts`,
+`user-agent.ts`; DETAILS § Root files). ❌ Areas depend on root leaves, never each other.
 
 `email/` is one module per audience: `send.ts` (the Resend door), `layout.ts` (HTML chrome), then `crash.ts`,
 `feedback.ts`, `error-report.ts`, `ops-alerts.ts`, `license.ts`. Import the specific one; no barrel.
@@ -42,9 +42,9 @@ Areas depend on root leaves, never each other.
   6x over-counted. `handleSyntheticHeartbeatSweep` deletes ids that never persisted a setting and have been quiet a
   week; ❌ never shorten that grace period, a brand-new real user looks identical for their first minutes. DETAILS §
   Synthetic heartbeats.
-- **A cron job's failure has to leave the Worker.** Every job goes through `runCronJob` (`index.ts`), which alerts
-  Discord, and the tick reports to healthchecks.io. ❌ Never let `console.error` be a job's only failure path: that's
-  how a dead credential ran silently for weeks. DETAILS § Cron alarms.
+- **A cron job's failure has to leave the Worker.** `runCronJob` (`index.ts`) writes an ops event for the digest, and
+  the tick reports to healthchecks.io. ❌ Never let `console.error` be a job's only failure path: that's how a dead
+  credential ran silently for weeks. DETAILS § Cron alarms.
 - **D1 rejects SQL that SQLite accepts, and mocked tests can't see it**: a dialect rejection (`SQLITE_AUTH` on
   `pragma_*` functions) passes CI and throws daily in production. Run a new query shape through
   `wrangler d1 execute --remote` once. DETAILS § Cron jobs, job 4.

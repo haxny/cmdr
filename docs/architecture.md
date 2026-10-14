@@ -580,7 +580,8 @@ first (see `security.md` for the privacy posture):
   error reporter's Flow B; the split is in `apps/desktop/src-tauri/src/crash_reporter/DETAILS.md`.
 - **Error reporter** (`error_reporter/` + `error-reporter/`): everything else (MTP weirdness, network glitches, generic
   failures), user-initiated (**Help > Send error report…**) or auto-send opt-in. Bundles a redacted debug-log tail,
-  uploads to R2 via `POST /error-report`, returns a short `ERR-XXXXX` ID, and pings a private Discord channel.
+  uploads to R2 via `POST /error-report`, and returns a short `ERR-XXXXX` ID; the API server files it on the private
+  reports board and mails it in its three-hour digest.
 
 Detail in the colocated `CLAUDE.md` files.
 
