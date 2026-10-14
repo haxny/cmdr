@@ -1,0 +1,314 @@
+---
+// Cmdr's accessibility conformance report, in the order and terms of ITI's VPAT 2.5Rev INT
+// edition, for procurement and accessibility reviewers. Linked from `/trust` § Accessibility. Every
+// row, the screen-reader checks still to run, and the product facts live in
+// `src/lib/accessibility-report.ts`; the evidence behind each row is
+// `docs/notes/accessibility-audit-2026-10.md`. "VPAT" is ITI's registered service mark: name the
+// template only as "based on VPAT® 2.5Rev INT", never call this page a VPAT. Never claim WCAG
+// conformance while any row says "Partially supports".
+import LegalLayout from '../../layouts/LegalLayout.astro'
+import {
+    conformanceLabel,
+    conformanceTerms,
+    gapIssues,
+    report,
+    standards,
+    voiceOverChecks,
+    type CriterionRow,
+} from '../../lib/accessibility-report'
+
+const repo = 'https://github.com/vdavid/cmdr'
+const issueUrl = (n: number) => `${repo}/issues/${n}`
+
+const allRows = standards.flatMap((standard) => standard.tables.flatMap((table) => table.rows))
+const notEvaluatedCount = allRows.filter((row) => row.conformance === 'not-evaluated').length
+const pendingCount = allRows.filter((row) => row.pending?.length).length
+
+const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** The remarks cell: the remark, the pending-test note, and links to the issues behind it. One string, so no stray whitespace lands before the commas. */
+const remarkHtml = (row: CriterionRow) => {
+    const parts = [escapeHtml(row.remark)]
+    if (row.pending?.length) parts.push('A screen-reader test is pending.')
+    if (row.issues?.length) {
+        const links = row.issues.map((n) => `<a href="${issueUrl(n)}">#${n}</a>`).join(', ')
+        parts.push(`Tracked in ${links}.`)
+    }
+    return parts.join(' ')
+}
+
+const levelText = (row: CriterionRow) =>
+    row.conformance === 'see-other' && row.seeLabel ? row.seeLabel : conformanceLabel[row.conformance]
+
+const toc = [
+    { id: 'details', label: 'Product and report' },
+    { id: 'notes', label: 'Notes' },
+    { id: 'methods', label: 'Evaluation methods' },
+    { id: 'applicable-standards', label: 'Applicable standards' },
+    { id: 'terms', label: 'Terms' },
+    ...standards.map((standard) => ({ id: standard.id, label: standard.title })),
+    { id: 'pending', label: 'Screen-reader test still to run' },
+    { id: 'legal', label: 'Legal' },
+]
+---
+
+<LegalLayout
+    title="Accessibility conformance report"
+    description="How Cmdr meets WCAG 2.2 Level A and AA, Revised Section 508, and EN 301 549, criterion by criterion, with known gaps. Based on VPAT® 2.5Rev INT, for procurement and accessibility reviewers."
+    lastUpdated={report.date}
+>
+    <p>
+        This is Cmdr's accessibility conformance report, based on {report.edition}. It's for procurement and
+        accessibility teams who need to know how Cmdr works with assistive technology, criterion by criterion. Gaps
+        link to their public GitHub issue, so you can follow each fix. For security, privacy, and IT questions, see the
+        main <a href="/trust">trust and security page</a>.
+    </p>
+
+    <nav aria-label="On this page">
+        <ul>
+            {
+                toc.map((item) => (
+                    <li>
+                        <a href={`#${item.id}`}>{item.label}</a>
+                    </li>
+                ))
+            }
+        </ul>
+    </nav>
+
+    <h2 id="details">Product and report</h2>
+    <ul>
+        <li><strong>Name of product and version</strong>: {report.product}, version {report.version}</li>
+        <li><strong>Report date</strong>: {report.date}</li>
+        <li>
+            <strong>Product description</strong>: Cmdr is a keyboard-first, two-pane file manager for macOS 12 Monterey
+            and later. Its interface runs in Apple's WebKit web engine inside a native app, and reaches VoiceOver and
+            other assistive technology through the macOS accessibility interface.
+        </li>
+        <li>
+            <strong>Contact information</strong>: <a href="mailto:hello@getcmdr.com">hello@getcmdr.com</a>, or Help &gt;
+            Send feedback in the app. Accessibility questions and reports are welcome.
+        </li>
+    </ul>
+
+    <h2 id="notes">Notes</h2>
+    <ul>
+        <li>
+            <strong>Cmdr doesn't conform to WCAG 2.2 Level AA yet.</strong> Many criteria are "Partially supports", and
+            the open issues below track the gaps.
+        </li>
+        <li>
+            <strong>The biggest gap is screen-reader use of the file list</strong>, the core of the product. Dialogs,
+            Settings, menus, and forms are built for screen readers, but the file list likely doesn't announce which
+            file the cursor is on or which files are marked.
+        </li>
+        <li>
+            <strong>What works well today</strong>: everything core runs from the keyboard (every action has a
+            remappable shortcut and a command palette entry); dialogs keep and return focus correctly; text contrast is
+            checked automatically in light and dark mode with every macOS accent color; Cmdr follows the macOS text
+            size, light and dark mode, accent color, Reduce motion, and Reduce transparency settings; menus are native
+            macOS menus; and there's no audio, video, or flashing content.
+        </li>
+        <li>
+            <strong>{notEvaluatedCount} rows say "Not evaluated yet"</strong>: the code review found them supported, but
+            only a screen-reader test can confirm it. {pendingCount} rows in total wait on that test, and some
+            "Partially supports" rows may drop to "Does not support" after it. This report will be updated with the
+            results.
+        </li>
+        <li>
+            <strong>WCAG applied to software</strong>: Cmdr is a desktop app, so WCAG is applied as the W3C's
+            <a href="https://www.w3.org/TR/wcag2ict-22/">WCAG2ICT</a> guidance describes. Criteria that apply only to
+            web pages or to sets of software are "Not applicable".
+        </li>
+    </ul>
+    <p>Open issues behind the gaps:</p>
+    <ul>
+        {
+            gapIssues.map((issue) => (
+                <li>
+                    <a href={issueUrl(issue.number)}>#{issue.number}</a>: {issue.title}
+                </li>
+            ))
+        }
+    </ul>
+
+    <h2 id="methods">Evaluation methods used</h2>
+    <ul>
+        <li>
+            <strong>Code review</strong> of every part of the app: file panes, dialogs, notifications, forms, Settings,
+            Search, the file viewer, and the queue.
+        </li>
+        <li>
+            <strong>Automated accessibility tests</strong>: about 920 axe-core test cases over the app's user interface
+            components (WCAG 2.0, 2.1, and 2.2 Level A and AA rules), a check that every component has such a test, and
+            11 end-to-end axe tests of the running app in light and dark mode. They run during development and again on
+            GitHub after each change.
+        </li>
+        <li>
+            <strong>Contrast computation</strong>: an automated check computes the contrast of every text and
+            background color pair in light and dark mode, with all nine macOS accent colors, every pane tint, and every
+            file-list row state.
+        </li>
+        <li>
+            <strong>Keyboard review</strong>: every action checked for a keyboard path, plus focus order, focus traps,
+            and focus return in dialogs.
+        </li>
+        <li>
+            <strong>Not done yet</strong>: a test with a screen reader (VoiceOver). <a href="#pending">What it will
+            cover</a>.
+        </li>
+    </ul>
+
+    <h2 id="applicable-standards">Applicable standards and guidelines</h2>
+    <div class="table-scroll" role="region" aria-label="Applicable standards" tabindex="0">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Standard or guideline</th>
+                    <th scope="col">Included in report</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Web Content Accessibility Guidelines 2.0, 2.1, and 2.2</td>
+                    <td>Level A: yes. Level AA: yes. Level AAA: no.</td>
+                </tr>
+                <tr>
+                    <td>Revised Section 508 standards, published by the US Access Board (2017)</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>EN 301 549 Accessibility requirements for ICT products and services, V3.1.1 (2019-11) and V3.2.1 (2021-03)</td>
+                    <td>Yes</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="terms">Terms</h2>
+    <ul>
+        {
+            conformanceTerms.map(({ term, meaning }) => (
+                <li>
+                    <strong>{conformanceLabel[term]}</strong>: {meaning}
+                </li>
+            ))
+        }
+    </ul>
+
+    {
+        standards.map((standard) => (
+            <section aria-labelledby={standard.id}>
+                <h2 id={standard.id}>{standard.title}</h2>
+                {standard.tables.map((table) => (
+                    <>
+                        <h3 id={table.id}>{table.title}</h3>
+                        {table.note && <p>{table.note}</p>}
+                        {table.rows.length > 0 && (
+                            <div class="table-scroll" role="region" aria-labelledby={table.id} tabindex="0">
+                                <table class="criteria">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Criteria</th>
+                                            <th scope="col">Conformance level</th>
+                                            <th scope="col">Remarks and explanations</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {table.rows.map((row) => (
+                                            <tr>
+                                                <th scope="row">
+                                                    {row.id} {row.name}
+                                                    {row.level && ` (Level ${row.level})`}
+                                                </th>
+                                                <td>{levelText(row)}</td>
+                                                <td set:html={remarkHtml(row)} />
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
+                ))}
+            </section>
+        ))
+    }
+
+    <h2 id="pending">Screen-reader test still to run</h2>
+    <p>
+        These VoiceOver checks will fill in the rows marked "Not evaluated yet" and confirm or lower the
+        "Partially supports" rows that wait on them:
+    </p>
+    <ul>
+        {voiceOverChecks.map((check) => <li>{check.what}</li>)}
+    </ul>
+
+    <h2 id="legal">Legal</h2>
+    <p>
+        This report describes Cmdr version {report.version} as of {report.date}, to the best of our knowledge. It isn't a
+        warranty, and later versions may differ. The VPAT® name and template are registered service marks of the
+        Information Technology Industry Council (ITI). This report follows the structure of ITI's VPAT® 2.5Rev INT
+        template; ITI didn't review or endorse it.
+    </p>
+</LegalLayout>
+
+<style>
+    .table-scroll {
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+        border: 1px solid var(--color-border);
+        border-radius: 0.5rem;
+    }
+
+    .table-scroll:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    table {
+        width: 100%;
+        min-width: 36rem;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: var(--color-text-secondary);
+    }
+
+    th,
+    td {
+        padding: 0.625rem 0.75rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    thead th {
+        font-weight: 600;
+        color: var(--color-text-primary);
+        background: var(--color-surface);
+    }
+
+    .criteria tbody th {
+        width: 30%;
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    .criteria td:nth-child(2) {
+        width: 9rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    td a {
+        color: var(--color-accent-text);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+</style>

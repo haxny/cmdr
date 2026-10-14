@@ -32,6 +32,7 @@ const toc = [
     { id: 'permissions', label: 'Sandbox and permissions' },
     { id: 'ai', label: 'AI features and your files' },
     { id: 'development', label: 'How Cmdr is built' },
+    { id: 'accessibility', label: 'Accessibility' },
     { id: 'company', label: 'Company, license, and continuity' },
     { id: 'report', label: 'Report a vulnerability' },
     { id: 'gaps', label: 'Not in place yet' },
@@ -603,6 +604,16 @@ const toc = [
     <p>
         Data safety (how Cmdr avoids losing files during copies and deletes) has its own page:
         <a href="/data-safety">How Cmdr protects your files</a>.
+    </p>
+
+    <h2 id="accessibility">Accessibility</h2>
+    <p>
+        How Cmdr works with assistive technology, criterion by criterion for WCAG 2.2 Level A and AA, Revised Section
+        508, and EN 301 549, is in the
+        <a href="/trust/accessibility">accessibility conformance report</a> (based on VPAT® 2.5Rev INT). In short:
+        everything core works from the keyboard and text contrast is checked automatically, but Cmdr doesn't conform to
+        WCAG 2.2 Level AA yet. The biggest gap is screen-reader use of the file list, and each gap links to its public
+        GitHub issue.
     </p>
 
     <h2 id="company">Company, license, and continuity</h2>

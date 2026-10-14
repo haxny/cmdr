@@ -22,6 +22,7 @@ const pages = [
   { name: 'Data safety', path: '/data-safety' },
   { name: 'Trust and security', path: '/trust' },
   { name: 'How Cmdr is built', path: '/trust/development' },
+  { name: 'Accessibility conformance report', path: '/trust/accessibility' },
   { name: 'Renew', path: '/renew' },
 ]
 
