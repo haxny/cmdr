@@ -16,6 +16,7 @@
  */
 
 import { setLocale } from '#lib/intl/messages.svelte.js'
+import { followWindowTitle } from '#lib/intl/window-title.svelte.js'
 import { loadSystemLocales, pickUiLocale, watchSystemLocales } from '#lib/intl/os-locales.js'
 import { noteStartupLanguage } from '#lib/intl/language-analytics.js'
 import { refreshSystemStrings } from '#lib/system-strings.svelte.js'
@@ -102,9 +103,14 @@ export async function initWindowSettings(pathname?: string): Promise<void> {
  * CURRENT region, so a switch in System Settings re-localizes the window
  * without a restart).
  *
- * @returns a teardown that stops following both
+ * Pass `title` for a window whose OS title is localized: the title bar and the
+ * Window menu entry are a native write that no re-render reaches, so
+ * `followWindowTitle()` re-writes it on every change too.
+ *
+ * @param options.title builds the undecorated window title, or `null` to leave it alone for now
+ * @returns a teardown that stops following all of it
  */
-export function initWindowLanguageSync(): () => void {
+export function initWindowLanguageSync(options: { title?: () => string | null } = {}): () => void {
   const apply = (value: string): void => {
     setLocale(pickUiLocale(value))
   }
@@ -139,9 +145,12 @@ export function initWindowLanguageSync(): () => void {
     apply(value)
   })
 
+  const stopTitle = options.title ? followWindowTitle(options.title) : undefined
+
   return () => {
     stopped = true
     unlistenOsLocale?.()
     unsubscribeSetting()
+    stopTitle?.()
   }
 }

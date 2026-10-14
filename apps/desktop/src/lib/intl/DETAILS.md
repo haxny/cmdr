@@ -365,6 +365,16 @@ rather than stack: ❌ no serialized round-trip, and no paint gate — `routes/(
 removed the last one). Secondary windows use `initWindowLanguageSync()` from `#lib/settings/window-settings`, which
 applies the persisted value synchronously and re-applies when the OS answer lands, so nothing gates a first paint.
 
+**A localized window title follows a switch too.** The OS title (title bar, Window menu, what VoiceOver reads for the
+window) is a native `setTitle` write that no re-render reaches, so the opener's constructor title would stay in the
+launch language. **Decision**: `initWindowLanguageSync({ title })` hands the getter to `followWindowTitle()`
+(`window-title.svelte.ts`), an `$effect.root` that re-writes the title whenever the copy it reads moves. **Why**: the
+language sync is the one call every secondary window already makes, so opting a window in is one argument, not a
+per-window listener. It awaits `initAppMode()` first so the E2E and capture title markers survive the write, skips a
+write when a region-only bump leaves the copy unchanged, and treats a `null` title as "leave it" (the viewer, until its
+file loads). Every window passing `title` needs `core:window:allow-set-title` in its capability file; the Settings,
+Keyboard shortcuts, queue, and viewer windows do. The dev-only Debug window stays English and passes none.
+
 **`'system'` means the language the user reads NOW, not the one they read at launch.** Rust observes the macOS language
 preferences and pushes `os-locales-changed` when the resolved catalog moves (`src-tauri/src/intl/DETAILS.md` has the
 observer, the burst collapsing, and why Linux gets nothing). Every window subscribes through `watchSystemLocales()`,

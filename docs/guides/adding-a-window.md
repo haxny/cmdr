@@ -16,9 +16,11 @@ A window is four pieces plus one decision:
 - **A capability file**: `src-tauri/capabilities/<name>.json`, listing the window label and the minimal Tauri perms the
   window's own code calls. See `src-tauri/capabilities/CLAUDE.md`. Grant only what it uses.
 - **The route shell wiring** (in `+page.svelte`): init the stores it reads (`initializeSettings`, plus feature stores),
-  `initAccentColor`, `initTextSize` (so it tracks the font-size setting), `trackOwnRect('<name>')` to remember
-  position/size in-session, and an Escape handler that closes via `setTimeout(0)` (NOT `requestAnimationFrame`, which is
-  throttled in unfocused windows on macOS). Hide the `loading-screen` element on mount.
+  `initAccentColor`, `initTextSize` (so it tracks the font-size setting), `initWindowLanguageSync({ title })` (the
+  language, plus a localized OS title that follows a switch; grant `core:window:allow-set-title`),
+  `trackOwnRect('<name>')` to remember position/size in-session, and an Escape handler that closes via `setTimeout(0)`
+  (NOT `requestAnimationFrame`, which is throttled in unfocused windows on macOS). Hide the `loading-screen` element on
+  mount.
 
 ## The capability gotcha: perms are checked against the _calling_ window
 

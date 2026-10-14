@@ -52,7 +52,7 @@
             await Promise.all([initWindowSettings(), initializeShortcuts()])
             // Own webview, own i18n runtime: without this the window renders its
             // chrome in English under a Hungarian UI and never follows a switch.
-            unsubscribeLanguage = initWindowLanguageSync()
+            unsubscribeLanguage = initWindowLanguageSync({ title: () => tString('shortcuts.window.title') })
             await initAccentColor()
             await initGlassMaterial()
             await initTextSize()

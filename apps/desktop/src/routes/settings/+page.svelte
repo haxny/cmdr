@@ -279,7 +279,7 @@
             await installE2eFlushHook()
 
             // Apply + live-sync the UI language for this window (own i18n runtime).
-            unsubscribeLanguage = initWindowLanguageSync()
+            unsubscribeLanguage = initWindowLanguageSync({ title: () => tString('settings.window.title') })
 
             // Read system accent color from macOS and listen for changes
             await initAccentColor()

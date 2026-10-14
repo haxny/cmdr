@@ -393,7 +393,7 @@
             // events, mirroring the viewer, and non-throwing so a perm failure can't
             // leave the body unrendered.
             await initWindowSettings()
-            unsubscribeLanguage = initWindowLanguageSync()
+            unsubscribeLanguage = initWindowLanguageSync({ title: () => tString('queue.windowTitle') })
             await initAccentColor()
             await initGlassMaterial()
             await initTextSize()

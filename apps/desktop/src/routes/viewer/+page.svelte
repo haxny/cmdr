@@ -69,7 +69,6 @@
     import Spinner from '#lib/ui/Spinner.svelte'
     import type { EncodingChoice, FileEncoding } from '#lib/ipc/bindings.js'
     import { viewerSetEncoding, viewerSetTailMode, viewerGetEncodingOptions } from '#lib/tauri-commands/index.js'
-    import { initAppMode, decorateChildWindowTitle } from '#lib/app-mode.js'
     import { categorizeForViewerWarning } from '#lib/file-viewer/binary-warning.js'
     import { isMediaKind } from './media-view'
     import { createViewerMedia } from './viewer-media.svelte'
@@ -791,11 +790,6 @@
             }
         }
 
-        await initAppMode()
-        getCurrentWindow()
-            .setTitle(decorateChildWindowTitle(tString('viewer.window.titleSuffix', { fileName: result.fileName })))
-            .catch(() => {})
-
         await setupMcpListeners(path)
 
         const windowLabel = getCurrentWindow().label
@@ -951,7 +945,10 @@
         // This webview has its own i18n runtime, so it needs its own language and
         // formatting sync: without it the viewer sits on the webview's tag and
         // formats sizes and dates differently from the main pane.
-        unsubscribeLanguage = initWindowLanguageSync()
+        // Until the file loads, the opener's bare file name stays the title.
+        unsubscribeLanguage = initWindowLanguageSync({
+            title: () => (fileName ? tString('viewer.window.titleSuffix', { fileName }) : null),
+        })
         scroll.wordWrap = getSetting('viewer.wordWrap')
         warningSuppressed = getSetting('fileViewer.suppressBinaryWarning')
 

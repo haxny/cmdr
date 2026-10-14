@@ -13,15 +13,15 @@ for numbers, sizes, dates.
   (`src-tauri/src/analytics/DETAILS.md`).
 - `number-format.ts`: memoized `Intl.NumberFormat` factory (`getNumberFormatter`), `formatInteger`, `formatMoney`, and
   `getGroupSeparator` (the byte-triad separator). `list-format.ts`: memoized `Intl.ListFormat` joins (and, or, unit), UI
-  locale. `sentence-join.ts`: `joinSentences()`, whole sentences joined by the catalog's `common.sentenceJoin` (no
-  space in Chinese), ❌ never `.join(' ')`. `duration-format.ts`: narrow durations ("8min 12s"), UI locale, no
+  locale. `sentence-join.ts`: `joinSentences()`, whole sentences joined by the catalog's `common.sentenceJoin` (no space
+  in Chinese), ❌ never `.join(' ')`. `duration-format.ts`: narrow durations ("8min 12s"), UI locale, no
   `Intl.DurationFormat` (too new).
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,
   `resolvedCatalogLocale()`, the fallback chain, the locale-version rune. `document-language.ts`: the `<html lang>`
-  write. `locale-display-names.ts`: the picker's row labels. `Trans.svelte`: inline-component sentences. `keys.gen.ts`:
-  the generated `MessageKey` union (never hand-edit). `messages/`: the catalogs (`messages/CLAUDE.md`).
+  write. `locale-display-names.ts`: picker row labels. `Trans.svelte`: inline-component sentences. `keys.gen.ts`: the
+  generated `MessageKey` union (never hand-edit). `messages/`: the catalogs (`messages/CLAUDE.md`).
 
 ## Must-knows
 
@@ -38,9 +38,9 @@ for numbers, sizes, dates.
 - **Picker labels take the WHOLE shipped list**: `zh` reads `简体中文` only because `zh-Hant` ships. ❌ Never decorate
   unconditionally; keep rows distinct.
 - **Both locale answers come from Rust, ❌ never the webview tag**, which drops the region override. Go through
-  `pickUiLocale()`; secondary windows call `initWindowLanguageSync()` (`routes/window-route-coverage.test.ts`).
-  `watchSystemLocales()` takes ONE subscriber per window (the first adopts): hang new reactions off it. Depth:
-  `DETAILS.md`, `apps/desktop/src-tauri/src/intl/DETAILS.md`.
+  `pickUiLocale()`; secondary windows call `initWindowLanguageSync()` (`routes/window-route-coverage.test.ts`; `title`
+  re-localizes the OS title). `watchSystemLocales()` takes ONE subscriber per window (the first adopts): hang new
+  reactions off it. Depth: `DETAILS.md`, `apps/desktop/src-tauri/src/intl/DETAILS.md`.
 - **Error copy uses `getMessage()` (raw), NOT `t()`/ICU**: the pipeline's `{system_settings}` tokens and `esc()` HTML
   entities collide with ICU grammar. Only plural/select sentences go through `t()`.
 - **English apostrophes are `’`; a straight `'` in an ICU value is doubled (`''`)**: `messages/CLAUDE.md`.
@@ -59,4 +59,4 @@ for numbers, sizes, dates.
   by (locale, options)**: they run per visible entry in render AND the column fold, so per-call construction regresses
   scroll.
 
-Depth (runtime design, the ICU split, `'system'`, language vs region, grouping, Chinese list spacing): `DETAILS.md`.
+Depth (runtime design, ICU split, `'system'`, language vs region, grouping, window titles): `DETAILS.md`.
