@@ -188,6 +188,8 @@ reconnect manager listens for this event and runs a per-volume backoff cycle (ti
 1. Acquires `reconnect_lock` (single-flight: concurrent FE-cycle and lazy-nav callers wait here).
 2. If state is already `Direct`, returns Ok cheaply.
 3. Tries `build_session()` with the cached `SmbConnectionParams` (the credentials that worked at original connect).
+   Every wait in it is bounded (§ "deadline and keepalive defaults"), so a server that accepts TCP and never answers
+   fails it in ~10 s and the lock is released; no caller queued on `reconnect_lock` waits forever.
 4. If that fails with an auth error, calls `refresh_credentials_from_store` (which re-reads through
    `host.credentials()`, share-level first then server-level) and retries once with the fresh creds. On success, the new
    credentials replace the cached ones via `params.write()`.
@@ -818,26 +820,44 @@ on a bounded backoff. One reconnect path, one source of truth — now triggered 
 hot-path op / FE backoff tick. See § "Backend-autonomous reconnect and index resume" for why the kick marks the volume
 `Disconnected` first.
 
-**Decision**: we run `smb2`'s deadline and keepalive defaults unchanged, and read none of them as a liveness verdict
-**Why**: every wait a request can make is bounded by the crate, so Cmdr needs no timeout layer of its own. A frame gets
-20 s to reach the socket (`Error::SendTimeout`); once out, the server gets 30 s of SILENCE (not elapsed time — every
-interim `STATUS_PENDING` restarts the clock, so a multi-minute write to a loaded NAS is never cut off), stretched to 6×
-that on a connection an ECHO probe has just proven alive. A breach tears the connection down, which is why `retry.rs`
-sees a typed `DeviceDisconnected` / `ConnectionTimeout` instead of a hang. The ECHO keepalive (5 s, on by default) only
-probes when the wire has gone quiet with work outstanding, so a busy transfer pays nothing for it. ❌ **A missed probe
-is NOT evidence of death** and nothing here may treat it as such: a QNAP TS-464 drops probes precisely while it writes
-(measured 2026-08-02: 1 of 3 dropped under write load, 0 of 3 idle). The crate agrees — its only death verdict,
-`Error::ServerUnresponsive`, needs a request to burn its whole deadline AND the connection to have put nothing at all on
-the wire meanwhile, the bytes of a response still arriving counted as they land (0.23.0+). **One gap: NEGOTIATE has no
-response deadline.** `Connection::negotiate` awaits its waiter directly instead of through `await_response_in_place`, so
-a server that accepts the TCP connection and never answers (a NAS whose `smbd` is still starting, a middlebox that
-swallows the frame) holds `build_session` forever, and with it `do_attempt_reconnect` and its `reconnect_lock` (verified
-on smb2 0.28.0 against a loopback listener that accepts and stays silent: no return in 70 s, 2026-10-14). The fix
-belongs in smb2. Until then the transfer bounds its own attempts (`write_operations/transfer/DETAILS.md` § "Waiting out
-a volume that went away"); the frontend's reconnect tick and the watcher-death loop don't.
-`SmbVolume::connection_liveness()` reads that same verdict as pollable state (`Connection::liveness()`), before any
-request has paid for it, off a handle swapped in lockstep with the client (`src/volume/liveness.rs`, which owns the
-mapping). What the transfer watchdog does with it: `write_operations/transfer/DETAILS.md` § "The watchdog ACTS".
+**Decision**: we run `smb2`'s deadline and keepalive defaults unchanged (the handshake aside, below), and read none of
+them as a liveness verdict **Why**: every wait a request can make is bounded by the crate, so Cmdr needs no timeout
+layer of its own. A frame gets 20 s to reach the socket (`Error::SendTimeout`); once out, the server gets 30 s of
+SILENCE (not elapsed time — every interim `STATUS_PENDING` restarts the clock, so a multi-minute write to a loaded NAS
+is never cut off), stretched to 6× that on a connection an ECHO probe has just proven alive. A breach tears the
+connection down, which is why `retry.rs` sees a typed `DeviceDisconnected` / `ConnectionTimeout` instead of a hang. The
+ECHO keepalive (5 s, on by default) only probes when the wire has gone quiet with work outstanding, so a busy transfer
+pays nothing for it. ❌ **A missed probe is NOT evidence of death** and nothing here may treat it as such: a QNAP TS-464
+drops probes precisely while it writes (measured 2026-08-02: 1 of 3 dropped under write load, 0 of 3 idle). The crate
+agrees — its only death verdict, `Error::ServerUnresponsive`, needs a request to burn its whole deadline AND the
+connection to have put nothing at all on the wire meanwhile, the bytes of a response still arriving counted as they land
+(0.23.0+).
+
+**The handshake is the one place we pick a number** (`connection::HANDSHAKE_RESPONSE_TIMEOUT`, 10 s, via
+`connect_volume_client`, used by `build_session` and the watcher's session). smb2 bounds NEGOTIATE only through
+`ClientConfig::response_timeout` (0.29.0+; before that a server that accepts TCP and never answers, like a NAS whose
+`smbd` is still starting or a middlebox swallowing the frame, held `build_session` and its `reconnect_lock` forever:
+`#406`, verified on 0.28.0 against a silent loopback listener, 2026-10-14). That knob is per connection, so we set 10 s
+for NEGOTIATE and SESSION_SETUP, then restore smb2's 30 s default before TreeConnect and everything after.
+
+- **Why 10 s**: both are answered from the server's memory, so 10 s is generous for a slow or busy NAS; a spun-down disk
+  is woken by TreeConnect or the first CREATE, which keep the full 30 s. A give-up that was too eager costs one retry
+  against a server that's warm by then.
+- **Why it has to be under 15 s**: the transfer's outage wait drops any attempt past `OutagePolicy::attempt_timeout` (15
+  s). With the TCP connect at 10 s and NEGOTIATE at 10 s, a dead host and a silent server each end the attempt on their
+  own with a typed error, so the outer bound is a safety net (a slow TCP accept followed by silence can still reach it).
+  A test in `connection.rs` pins the 10 s under that 15 s.
+- **What it closes**: the frontend's reconnect tick and the watcher-death loop both go through `do_attempt_reconnect`,
+  which had no outer bound of its own. Its worst case is now bounded (TCP 10 s, NEGOTIATE and each SESSION_SETUP leg 10
+  s of silence, TreeConnect 30 s), so `reconnect_lock` can no longer be held forever. Pinned by `connection.rs`'s
+  `a_volume_connect_to_a_silent_server_gives_up_at_the_handshake_deadline`.
+- The one-shot probes (`try_list_shares_*`, `try_open_share`) pass their caller's `timeout` as the response deadline, so
+  every step there ends in a typed `Error::Timeout`, under the caller's own outer bound.
+
+`SmbVolume::connection_liveness()` reads the `ServerUnresponsive` verdict as pollable state (`Connection::liveness()`),
+before any request has paid for it, off a handle swapped in lockstep with the client (`src/volume/liveness.rs`, which
+owns the mapping). What the transfer watchdog does with it: `write_operations/transfer/DETAILS.md` § "The watchdog
+ACTS".
 
 **The numbers stay as they are, and the case for widening them is closed.** The base deadline no longer has to be sized
 for the slowest healthy case, because the ECHO stretch already covers a connection that is alive but busy; and a breach

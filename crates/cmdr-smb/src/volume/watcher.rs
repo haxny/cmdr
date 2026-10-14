@@ -23,7 +23,7 @@ use cmdr_fs::volume::host::indexing::WatchGap;
 use cmdr_fs::volume::{DirectoryChange, SelfHandle, Volume};
 use futures_util::StreamExt;
 use log::{debug, info, warn};
-use smb2::{ClientConfig, FileNotifyAction, SmbClient};
+use smb2::{ClientConfig, FileNotifyAction};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -344,7 +344,7 @@ pub(super) async fn run_smb_watcher(
         host.indexing().watch_gap(&volume_id, WatchGap::WatcherStopped);
     };
 
-    let mut client = match SmbClient::connect(config).await {
+    let mut client = match crate::connection::connect_volume_client(config).await {
         Ok(c) => c,
         Err(e) => {
             warn!(

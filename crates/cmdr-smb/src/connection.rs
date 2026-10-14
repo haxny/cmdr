@@ -15,6 +15,43 @@ pub fn build_smb_addr(hostname: &str, port: u16) -> String {
     format!("{}:{}", host, port)
 }
 
+/// How long NEGOTIATE and SESSION_SETUP may stay silent before a volume's connect
+/// gives up with a typed `Error::Timeout`.
+///
+/// Both are answered from the server's memory, so 10 s is generous for a busy or
+/// slow NAS; a spun-down disk is woken by the first CREATE or TreeConnect, which
+/// run on smb2's own 30 s deadline (see [`connect_volume_client`]). It's sized
+/// against the transfer outage wait's 15 s per-attempt bound: a server that
+/// accepts TCP and never answers fails here at ~10 s, and a dead host fails the
+/// 10 s TCP connect, so either way the attempt ends on its own with a real error
+/// and the outer bound stays a safety net. A give-up that was too eager costs one
+/// retry against a server that's warm by then. The ordering is pinned by
+/// `tests::the_handshake_deadline_ends_an_attempt_before_the_transfer_abandons_it`.
+pub(crate) const HANDSHAKE_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Connects a volume's long-lived client with the handshake bounded by
+/// [`HANDSHAKE_RESPONSE_TIMEOUT`], then hands the session smb2's default request
+/// deadline for everything after, TreeConnect included.
+///
+/// smb2 has one deadline knob per connection, and `ClientConfig::response_timeout`
+/// is the only way to reach the NEGOTIATE inside `SmbClient::connect`, hence the
+/// swap. Without it, a server that accepts the TCP connection and never answers
+/// holds the caller (and a reconnect's `reconnect_lock`) for the full 30 s.
+pub(crate) async fn connect_volume_client(config: ClientConfig) -> Result<SmbClient, smb2::Error> {
+    connect_volume_client_within(config, HANDSHAKE_RESPONSE_TIMEOUT).await
+}
+
+/// [`connect_volume_client`] with the handshake deadline as a parameter, so a test
+/// can drive it in milliseconds.
+async fn connect_volume_client_within(mut config: ClientConfig, handshake: Duration) -> Result<SmbClient, smb2::Error> {
+    config.response_timeout = Some(handshake);
+    let client = SmbClient::connect(config).await?;
+    client
+        .connection()
+        .set_response_timeout(ClientConfig::default().response_timeout);
+    Ok(client)
+}
+
 /// Determines the server address string for smb2, preferring an IP over a hostname.
 ///
 /// An IP needs no `.local` handling, so it's formatted directly; a hostname goes
@@ -49,6 +86,10 @@ pub async fn try_list_shares_as_guest(
         // it.
         dfs_enabled: false,
         dfs_target_overrides: Default::default(),
+        // The listing has no session to keep, so `timeout` bounds every step,
+        // the handshake and `NetShareEnum` included, and a silent server ends
+        // in a typed `Error::Timeout` before the caller's own bound cuts it.
+        response_timeout: Some(timeout),
         ..Default::default()
     };
 
@@ -76,9 +117,11 @@ pub async fn try_list_shares_authenticated(
         domain: String::new(),
         auto_reconnect: false,
         compression: false,
-        // Same as the guest listing above: `IPC$` only, nothing to resolve.
+        // Same as the guest listing above: `IPC$` only, nothing to resolve,
+        // and `timeout` bounds every step.
         dfs_enabled: false,
         dfs_target_overrides: Default::default(),
+        response_timeout: Some(timeout),
         ..Default::default()
     };
 
@@ -114,6 +157,9 @@ pub async fn try_open_share(params: &SmbConnectionParams, timeout: Duration) -> 
         // about a share the caller can actually open.
         dfs_enabled: true,
         dfs_target_overrides: Default::default(),
+        // What makes "`timeout` bounds each protocol step" hold for the
+        // handshake and TreeConnect, not only the TCP connect.
+        response_timeout: Some(timeout),
         ..Default::default()
     };
 
@@ -166,5 +212,50 @@ mod tests {
     #[test]
     fn test_build_addr_non_standard_port() {
         assert_eq!(build_addr("nas.local", Some("10.0.0.5"), 9445), "10.0.0.5:9445");
+    }
+
+    /// Regression anchor for `#406`: a server that accepts the TCP connection and
+    /// never answers NEGOTIATE (a NAS whose `smbd` is still starting, a middlebox
+    /// swallowing the frame) used to hold `build_session` forever, and with it
+    /// `reconnect_lock` for every caller queued behind it. The connect has to give
+    /// up ON ITS OWN, with a typed error, at the handshake deadline.
+    #[tokio::test]
+    async fn a_volume_connect_to_a_silent_server_gives_up_at_the_handshake_deadline() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+        // Accept and hold every connection open without a byte of reply.
+        let silent = tokio::spawn(async move {
+            let mut held = Vec::new();
+            while let Ok((socket, _)) = listener.accept().await {
+                held.push(socket);
+            }
+        });
+
+        let config = ClientConfig {
+            addr,
+            ..Default::default()
+        };
+        let outcome = tokio::time::timeout(
+            Duration::from_secs(5),
+            connect_volume_client_within(config, Duration::from_millis(300)),
+        )
+        .await;
+        silent.abort();
+
+        match outcome {
+            Ok(Err(e)) => assert!(matches!(e, smb2::Error::Timeout), "expected a typed timeout, got {e:?}"),
+            Ok(Ok(_)) => panic!("a server that never answers can't produce a session"),
+            Err(_) => panic!("the connect was still waiting on a silent server after 5 s"),
+        }
+    }
+
+    /// The transfer's outage wait abandons a reconnect attempt after 15 s
+    /// (`OutagePolicy::attempt_timeout` in the app). The handshake deadline has to
+    /// end a silent-server attempt first, so the wait sees a real error and its
+    /// own bound stays a safety net.
+    #[test]
+    fn the_handshake_deadline_ends_an_attempt_before_the_transfer_abandons_it() {
+        const TRANSFER_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(15);
+        assert!(HANDSHAKE_RESPONSE_TIMEOUT < TRANSFER_ATTEMPT_TIMEOUT);
     }
 }

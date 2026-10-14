@@ -182,7 +182,7 @@ pub(super) async fn build_session(params: &SmbConnectionParams) -> Result<(SmbCl
         dfs_target_overrides: Default::default(),
         ..Default::default()
     };
-    let mut client = SmbClient::connect(config).await?;
+    let mut client = crate::connection::connect_volume_client(config).await?;
     let tree = client.connect_share(&params.share_name).await?;
     Ok((client, tree))
 }

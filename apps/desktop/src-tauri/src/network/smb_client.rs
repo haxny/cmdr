@@ -167,10 +167,11 @@ async fn list_shares_smb2(
         credentials.is_some()
     );
 
-    // Outer timeout as safety net (smb2's config timeout covers TCP connect,
-    // but not the full RPC exchange)
+    // Outer timeout as safety net: the listing also hands smb2 its own deadline
+    // for every step, but a step that keeps sending interim answers can outlast it.
     let outer_timeout = timeout;
-    // smb2's config timeout: slightly shorter so its typed Error::Timeout fires first
+    // smb2's TCP connect and per-step deadline: slightly shorter so its typed
+    // Error::Timeout fires first
     let connect_timeout = timeout.saturating_sub(Duration::from_secs(2));
 
     if guest.given_credentials(credentials.is_some()) == GuestAttempt::Skip {
@@ -189,11 +190,9 @@ async fn list_shares_smb2(
     }
 
     // Try guest access first, then authenticated. BOTH attempts take the outer
-    // timeout: smb2's config timeout covers the TCP connect only, so a server that
-    // completes the handshake and then never answers `NetShareEnum` hangs the
-    // attempt for as long as anyone waits. The authenticated leg below has always
-    // been wrapped; the guest leg runs first and is what an unauthenticated browse
-    // reaches.
+    // timeout, so no leg can wait past the caller's budget even if smb2's own
+    // per-step deadline doesn't end it (each step restarts that clock). The guest
+    // leg runs first and is what an unauthenticated browse reaches.
     let guest_attempt = tokio::time::timeout(
         outer_timeout,
         try_list_shares_as_guest(hostname, ip_address, port, connect_timeout),

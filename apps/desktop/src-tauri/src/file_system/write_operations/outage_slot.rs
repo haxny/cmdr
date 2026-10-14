@@ -52,6 +52,11 @@ const RECONNECT_CADENCE: [Duration; 5] = [
 /// connect timeout plus a handshake on a slow link, and stays well under the
 /// cadence's 30 s step. Dropping the attempt is safe: every backend's reconnect
 /// is single-flight and rebuilds from scratch on the next call.
+///
+/// It's the safety net, not the usual end of an attempt: SMB's own handshake
+/// deadline is shorter (10 s, `cmdr-smb`'s `HANDSHAKE_RESPONSE_TIMEOUT`, which a
+/// test there pins under this 15 s), so a silent server comes back as a typed
+/// error from the backend first. Lowering this below 10 s turns that around.
 const ATTEMPT_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// How often a wait looks up between attempts: for a reconnect someone else made

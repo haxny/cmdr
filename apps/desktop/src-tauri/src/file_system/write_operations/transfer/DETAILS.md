@@ -983,9 +983,11 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   reported as the cancel it is.
 - **No single attempt holds the wait.** Each `attempt_reconnect` gets `OutagePolicy::attempt_timeout` (15 s, under the
   cadence's 30 s step); one that hasn't returned is dropped and counts as still down, and the next tick dials afresh.
-  Without it, one SMB handshake that never returned held a copy for the whole budget after the NAS was back (`#406`;
-  smb2 0.28's NEGOTIATE has no response deadline, `crates/cmdr-smb/DETAILS.md` § "deadline and keepalive defaults").
-  Dropping an attempt is safe: every backend's reconnect is single-flight and rebuilds from scratch.
+  Without it, one SMB handshake that never returned held a copy for the whole budget after the NAS was back (`#406`).
+  It's a safety net now: SMB's own handshake deadline (`HANDSHAKE_RESPONSE_TIMEOUT` in `cmdr-smb`, 10 s) ends a
+  silent-server attempt first with a typed error, pinned under 15 s by a `cmdr-smb` test
+  (`crates/cmdr-smb/DETAILS.md` § "deadline and keepalive defaults"). Dropping an attempt is safe: every backend's
+  reconnect is single-flight and rebuilds from scratch.
 - **Pausable.** A pause parks the wait on the pause gate and dials nothing; a Resume is a person's action, so the wait
   gets a fresh budget from there.
 - **One outage per lane**, shared by every waiter on it (`OUTAGES`): the concurrent window's tasks all meet the drop at
