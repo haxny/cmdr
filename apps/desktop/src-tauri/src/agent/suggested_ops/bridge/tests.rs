@@ -528,3 +528,98 @@ async fn approving_a_group_on_a_volume_that_left_is_refused_as_no_longer_connect
     );
     assert_eq!(group_status(&conn, group_id), ProposalStatus::Pending);
 }
+
+/// The rename review starts its batch itself (`apply_bulk_rename`), from rows it built out of
+/// the plan the user saw. Its group must settle like any other approval: started through a
+/// plain sink, it stayed `approved`, never got a line in its thread, and came back
+/// `interrupted` at the next launch, asking the user to re-approve renames that already ran.
+#[tokio::test]
+async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
+    use crate::agent::store::proposals::{ClaimOutcome, NewRename, record_acceptance};
+    use crate::agent::store::{ConversationEvent, StoredContent, create_conversation, list_messages};
+    use crate::agent::types::ProposalOutcomeKind;
+
+    ensure_root_volume();
+    let dir = TestDir::new("bridge_reviewed_rename_settles");
+    let db_path = dir.join("main.db");
+    let conn = open_write_connection(&db_path).expect("open");
+    let reader = open_write_connection(&db_path).expect("a connection to read back with");
+    let conversation_id = create_conversation(&conn, "Shots", 50, None).expect("thread");
+    let sweep = NewSweep {
+        conversation_id: Some(conversation_id),
+        ..NewSweep::default()
+    };
+    let set_id = create_sweep(&conn, &sweep, 100).expect("sweep");
+    let parent = dir.join("shots").display().to_string();
+    std::fs::create_dir_all(dir.join("shots")).expect("parent");
+    std::fs::write(dir.join("shots").join("old.png"), b"pixels").expect("seed");
+    let group_id = create_group(
+        &conn,
+        set_id,
+        &NewGroup {
+            intent: GroupIntent::Rename {
+                parent: parent.clone(),
+                renames: vec![NewRename {
+                    source_path: format!("{parent}/old.png"),
+                    new_name: "renamed.png".to_string(),
+                    snapshot: None,
+                }],
+            },
+            source_volume_id: "root".to_string(),
+            display_name: "one screenshot".to_string(),
+            rationale: None,
+            selector: None,
+        },
+        100,
+    )
+    .expect("group");
+    record_acceptance(&conn, group_id, &[], 150).expect("preflight");
+    let ops = page_ops(&conn, group_id, 10, 0).expect("ops");
+    let sources: Vec<PathBuf> = ops.iter().map(|op| PathBuf::from(&op.source_path)).collect();
+    let volume = crate::file_system::volume::manager::get_volume_manager()
+        .get("root")
+        .expect("root volume");
+    let expected = super::capture_expected_sources(volume.as_ref(), &sources).await;
+    let rows = super::rename_rows(&parent, &ops, &expected).expect("rows");
+    let ClaimOutcome::Claimed(claimed) = crate::agent::suggested_ops::approve(&conn, group_id, 200).expect("approve")
+    else {
+        panic!("the claim is refused");
+    };
+    let reporting = open_write_connection(&db_path).expect("second connection");
+
+    super::start_reviewed_renames(
+        conn,
+        reporting,
+        Arc::new(CollectorEventSink::new()),
+        claimed,
+        "root".to_string(),
+        rows,
+        crate::operation_log::types::Initiator::Agent,
+        None,
+        210,
+    )
+    .await
+    .expect("the batch starts");
+
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the group settles", || {
+        group_status(&reader, group_id) == ProposalStatus::Completed
+    })
+    .await;
+    let lines: Vec<_> = list_messages(&reader, conversation_id, 100, 0)
+        .expect("messages")
+        .into_iter()
+        .filter_map(|message| match message.content {
+            StoredContent::Event(ConversationEvent::ProposalDecided { decision }) => Some(decision.outcome),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        lines,
+        [ProposalOutcomeKind::Ran {
+            done: 1,
+            skipped: 0,
+            failed: 0
+        }],
+        "one line, saying what ran"
+    );
+}

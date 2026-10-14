@@ -166,7 +166,7 @@ pub(crate) use look_alike::held_in_another_spelling;
 #[cfg(target_os = "macos")]
 pub(crate) use paste_clipboard::write_payload_replying;
 pub(crate) use rename::{
-    BulkRenameRow, RenameStartError, RenameValidityResult, check_rename_permission_for_volume,
+    BulkRenameRow, RenameStartError, RenameValidityResult, RenamesStarted, check_rename_permission_for_volume,
     check_rename_validity_impl, rename_managed, same_local_file, start_renames,
 };
 // How a backend caller outside the engine words a source volume nothing has registered.

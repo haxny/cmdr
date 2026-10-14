@@ -86,7 +86,7 @@ said no.
 **Every cross-volume verb goes through the ROUTED entry points** (`start_volume_{copy, move, compress}`), the same ones the transfer commands use, so an approved transfer resolves its volumes and anchors its destination exactly as a clicked one does. Extract needs no arm of its own: its sources resolve to an `ArchiveVolume` inside that routing, which is why extract has no operation type.
 
 **Decision: an approval that refuses to start gives its group back to `pending`.**
-**Why**: the claim must come before the engine is asked (it is what makes a group un-replayable), so an engine refusal lands after it. Left `approved`, the group dropped off the review list with nothing running and no word (#184). Nothing ran, so `give_back` (`release_claim` plus a `GivenBack` announcement) returns it and the dialog shows the refusal under it. A refusal before the claim (the source volume isn't registered, a stale or changed group) never left `pending`. Nothing was counted either: the approval metric waits for a start (§ The metric). The rename review's `apply_bulk_rename` gives back the same way.
+**Why**: the claim must come before the engine is asked (it is what makes a group un-replayable), so an engine refusal lands after it. Left `approved`, the group dropped off the review list with nothing running and no word (#184). Nothing ran, so `give_back` (`release_claim` plus a `GivenBack` announcement) returns it and the dialog shows the refusal under it. A refusal before the claim (the source volume isn't registered, a stale or changed group) never left `pending`. Nothing was counted either: the approval metric waits for a start (§ The metric). The rename review's `apply_bulk_rename` gives back the same way, through `bridge::start_reviewed_renames`.
 
 **The refusals are typed, never sentences.** A source volume nothing registered is classified by `crate::unregistered_volumes` through `write_operations::unregistered_source_error`, so a suggestion about a phone or server nobody connected reads `SourceNotConnected` and one about a drive that left reads `SourceNoLongerConnected`, exactly as a clicked copy off it would. Engine refusals stay the `WriteOperationError` they are, and the rename batch's own are `RenameStartError`. The IPC view (`commands/agent/suggested_ops.rs::ApprovalResultView`) carries the error itself, so the dialog words it through the transfer dialogs' copy.
 
@@ -174,9 +174,10 @@ patches it. After the START, ❌ not the claim: a refused start gives the group 
 lie. A quick operation can settle first; the store checks the pointer under one `BEGIN IMMEDIATE`, so a late "running"
 stays out. At launch, `settle_stale_thread_lines` (after the recovery sweep) turns every line still saying "running"
 into `Interrupted`, or into the outcome the op rows hold when the group did settle but its line write was lost, so no
-line reads "running" forever. ❌ The rename review's `apply_bulk_rename` writes no running line: it starts with a plain
-`TauriEventSink`, so its group never settles through the decorator and the line would read "running" until the next
-launch.
+line reads "running" forever. Both approval paths get it: the rename review's `apply_bulk_rename` builds its own rows
+but hands them to `bridge::start_reviewed_renames`, which wraps the same decorator. ❌ Never start an approved group
+through a plain sink: it never settles, so it reads `interrupted` at the next launch and its thread never says what
+ran.
 
 What the follow-up turn itself does, and why it is coalesced per sweep: `../wake/DETAILS.md` § The turn a rejection
 earns.

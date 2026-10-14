@@ -114,9 +114,9 @@ pub fn record_completion(conn: &Connection, memory: Option<&MemoryStore>, group_
 /// the agent could learn from ([`record_completion`] is that). The settle rewrites this same
 /// row, and a settle that got there first keeps its outcome: the store checks under one lock.
 ///
-/// Called by the bridge, whose decorator is what settles the group. ❌ Not from the rename
-/// review's own start: that path never settles through the decorator, so its line would say
-/// "running" until the next launch.
+/// Called by the bridge, whose decorator is what settles the group: both approval paths start
+/// there (`approve_and_execute`, and `start_reviewed_renames` for the rename review). ❌ Never
+/// from a start without that decorator, or the line says "running" until the next launch.
 pub fn record_running(conn: &Connection, group_id: i64, now: i64) {
     let group = match get_group(conn, group_id) {
         Ok(Some(group)) => group,

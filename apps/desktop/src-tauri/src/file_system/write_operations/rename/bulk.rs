@@ -30,7 +30,7 @@ use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, ItemOut
 mod by_move;
 mod plan;
 
-pub(crate) use by_move::start_renames;
+pub(crate) use by_move::{RenamesStarted, start_renames};
 
 use plan::{
     RenamePlanStep, build_execution_plan, settle_local_conflicts, settle_remote_conflicts, spelled_destinations,

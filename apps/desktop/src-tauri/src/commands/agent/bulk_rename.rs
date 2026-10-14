@@ -185,37 +185,27 @@ pub async fn apply_bulk_rename(
     };
 
     let initiator = bulk_rename_initiator(&applied_rows);
+    // A second connection, MOVED into the sink decorator: the operation outlives this call.
+    let reporting = db.open_write_connection().map_err(|_| review_is_over())?;
+    let memory = crate::agent::memory::store_for(&app);
     // Routed: where a rename copies (an S3 folder), the batch runs as one move.
-    let started = crate::file_system::write_operations::start_renames(
+    let started = crate::agent::suggested_ops::bridge::start_reviewed_renames(
+        conn,
+        reporting,
         Arc::new(crate::file_system::write_operations::TauriEventSink::new(app)),
+        claimed,
         volume_id,
         rows,
         initiator,
+        memory,
+        now_secs(),
     )
-    .await;
-    match started {
-        Ok(started) => {
-            crate::agent::suggested_ops::started(&claimed);
-            Ok(BulkRenameStarted {
-                operation_id: started.operation.operation_id,
-                swaps_left_out: u32::try_from(started.swaps_left_out).unwrap_or(u32::MAX),
-            })
-        }
-        Err(reason) => {
-            // Nothing ran, so the claim goes back: the review re-reads the plan, and a group left
-            // `approved` would read as expired with no operation behind it.
-            match crate::agent::suggested_ops::give_back(&conn, group_id) {
-                Ok(true) => {}
-                Ok(false) => {
-                    log::warn!(target: "agent::propose", "rename group {group_id} didn't start ({reason}) and is no longer a claim to give back")
-                }
-                Err(e) => {
-                    log::warn!(target: "agent::propose", "rename group {group_id} didn't start ({reason}) and couldn't go back to pending: {e}")
-                }
-            }
-            Err(BulkRenameError::CouldntStart { reason })
-        }
-    }
+    .await
+    .map_err(|reason| BulkRenameError::CouldntStart { reason })?;
+    Ok(BulkRenameStarted {
+        operation_id: started.operation.operation_id,
+        swaps_left_out: u32::try_from(started.swaps_left_out).unwrap_or(u32::MAX),
+    })
 }
 
 fn group_id_of(proposal_id: &str) -> Result<i64, BulkRenameError> {

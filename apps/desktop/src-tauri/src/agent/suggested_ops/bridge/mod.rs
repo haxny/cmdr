@@ -32,15 +32,16 @@ use decorator::ProposalReportingSink;
 use super::super::memory::MemoryStore;
 use super::super::store::AgentStoreError;
 use super::super::store::proposals::{
-    AcceptanceOutcome, ClaimOutcome, ClaimRefusal, ProposalGroup, ProposalOp, get_group, page_ops, record_acceptance,
+    AcceptanceOutcome, ClaimOutcome, ClaimRefusal, ClaimedGroup, ProposalGroup, ProposalOp, get_group, page_ops,
+    record_acceptance,
 };
 use super::super::types::{OpStatus, ProposalVerb};
 use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::{
-    BulkRenameRow, ExpectedSources, OperationEventSink, RenameStartError, SourceFingerprint, VolumeCopyConfig,
-    WriteOperationConfig, WriteOperationError, WriteOperationStartResult, delete_files_start, resolve_source_volume,
-    start_renames, start_volume_compress, start_volume_copy, start_volume_move, trash_files_start,
-    unregistered_source_error,
+    BulkRenameRow, ExpectedSources, OperationEventSink, RenameStartError, RenamesStarted, SourceFingerprint,
+    VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, delete_files_start,
+    resolve_source_volume, start_renames, start_volume_compress, start_volume_copy, start_volume_move,
+    trash_files_start, unregistered_source_error,
 };
 use crate::operation_log::types::Initiator;
 
@@ -161,6 +162,69 @@ pub async fn approve_and_execute(
         Err(refusal) => {
             give_back_after(conn, group_id, &refusal);
             Ok(ApprovalOutcome::Refused(refusal))
+        }
+    }
+}
+
+/// Start the rows a rename review approved, for a group its caller already claimed.
+///
+/// The rename review (`commands/agent/bulk_rename.rs`) builds its own rows from the plan the
+/// user saw, so it can't go through [`approve_and_execute`]. Everything after the claim is the
+/// same hand-off, though, and lives here so the two approval paths can't drift: the reporting
+/// decorator (without it the group never settles, so it reads `interrupted` at the next launch
+/// and its thread never says what ran), the start count, the "running" thread line, or giving
+/// the group back when the batch refuses to start.
+///
+/// **Takes its connections by value**, so the caller's future stays `Send` across the await.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the approval hand-off; every one of these outlives the caller and has to be moved in"
+)]
+pub(crate) async fn start_reviewed_renames(
+    conn: Connection,
+    reporting_conn: Connection,
+    events: Arc<dyn OperationEventSink>,
+    claimed: ClaimedGroup,
+    volume_id: String,
+    rows: Vec<BulkRenameRow>,
+    initiator: Initiator,
+    memory: Option<MemoryStore>,
+    now: i64,
+) -> Result<RenamesStarted, RenameStartError> {
+    let group_id = claimed.group.id;
+    // Each row's id IS its op id: the review's rows come straight off the group's ops.
+    let op_ids: HashMap<PathBuf, i64> = rows
+        .iter()
+        .filter_map(|row| row.row_id.parse().ok().map(|op_id| (row.source.clone(), op_id)))
+        .collect();
+    let sink: Arc<dyn OperationEventSink> = Arc::new(ProposalReportingSink::new(
+        events,
+        group_id,
+        op_ids,
+        reporting_conn,
+        memory,
+    ));
+    match start_renames(sink, volume_id, rows, initiator).await {
+        Ok(started) => {
+            super::started(&claimed);
+            crate::agent::outcomes::record_running(&conn, group_id, now);
+            Ok(started)
+        }
+        Err(reason) => {
+            // Nothing ran, so the claim goes back: the review re-reads the plan, and a group
+            // left `approved` would read as expired with no operation behind it.
+            match super::give_back(&conn, group_id) {
+                Ok(true) => {}
+                Ok(false) => log::warn!(
+                    target: "agent::propose",
+                    "rename group {group_id} didn't start ({reason}) and is no longer a claim to give back"
+                ),
+                Err(e) => log::warn!(
+                    target: "agent::propose",
+                    "rename group {group_id} didn't start ({reason}) and couldn't go back to pending: {e}"
+                ),
+            }
+            Err(reason)
         }
     }
 }
