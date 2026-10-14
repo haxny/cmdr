@@ -29,6 +29,7 @@ import { cronFailureMessage, recordOpsEvent } from './ops-events'
 import { pingCronHealth } from './cron-health'
 import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
 import { handleReportDigest } from './report-digest'
+import { MORNING_CRON, handleMorningBrief, isMorningBriefTick } from './morning-brief'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -87,6 +88,15 @@ export default {
 
     const run = async (job: string, handler: () => Promise<void>): Promise<void> => {
       if (!(await runCronJob(env, job, when, handler))) failedJobs.push(job)
+    }
+
+    // The morning trigger runs the brief and nothing else. Its healthcheck report is failure-only:
+    // the check's period is the three-hour tick, and a success ping here would only blur that.
+    if (event.cron === MORNING_CRON) {
+      if (!isMorningBriefTick(new Date(event.scheduledTime))) return
+      await run('Morning brief', () => handleMorningBrief(env))
+      if (env.HEALTHCHECKS_PING_URL && failedJobs.length) await pingCronHealth(env.HEALTHCHECKS_PING_URL, failedJobs)
+      return
     }
 
     // Cards first, so the emails below can link them. Amendments last: they comment on the cards

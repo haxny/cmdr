@@ -19,7 +19,7 @@ import { Hono, type Context } from 'hono'
 import { enforceIpRateLimit, hasEmailShape, isAbsent, readCappedBody, type Bindings } from '../types'
 import { constantTimeEqual } from '../licensing/paddle'
 import { amendSidecarKey } from './error-report-eviction'
-import type { ErrorReportIssueInput } from '../github-issues'
+import type { ErrorReportIssueInput } from '../report-cards'
 
 const errorReportAmend = new Hono<{ Bindings: Bindings }>()
 

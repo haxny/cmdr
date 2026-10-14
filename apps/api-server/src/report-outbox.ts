@@ -12,6 +12,15 @@
  */
 
 import {
+  claimIssueSlot,
+  fileIssue,
+  recordAmendmentOnBoard,
+  rememberIssueNumber,
+  resolveIssueTarget,
+  todayUtc,
+  type FileIssueInput,
+} from './github-issues'
+import {
   CRASH_EMAIL_RETENTION_DAYS,
   ERROR_REPORT_RETENTION_DAYS,
   FEEDBACK_EMAIL_RETENTION_DAYS,
@@ -20,16 +29,9 @@ import {
   buildErrorReportIssue,
   buildFeedbackIssue,
   buildPersonalComment,
-  claimIssueSlot,
   expiryAfter,
-  fileIssue,
-  recordAmendmentOnBoard,
-  rememberIssueNumber,
-  resolveIssueTarget,
-  todayUtc,
-  type FileIssueInput,
   type IssueSource,
-} from './github-issues'
+} from './report-cards'
 import { readReportFacts } from './telemetry/error-report-amend'
 import { PRESIGN_TTL_HOURS, buildPresignedUrl } from './telemetry/error-report'
 import type { Bindings } from './types'

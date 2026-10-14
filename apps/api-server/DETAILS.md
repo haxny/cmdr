@@ -54,10 +54,14 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. § Cron alarms.
 - **`report-outbox.ts`**: the cron jobs that file every pending crash, error report, feedback message, and amendment as
   a card on the reports board. § The reports repo.
+- **`report-cards.ts`**: what goes ON a card (titles, bodies, labels, the expiring personal comment); pure, no network.
+  **`github-issues.ts`** is the GitHub transport (the privacy probe, filing, comments, labels, listing, the sweep).
 - **`report-digest.ts`**: the cron job that mails the three-hour digest and stamps what it sent. § Cron handler.
-- Both are tested against a REAL SQLite built from the migrations (`sqlite-d1-test-helper.ts`), because the risk of an
-  outbox is a row a WHERE clause quietly skips: `report-outbox.test.ts`, `report-digest.test.ts`,
-  `report-retention.test.ts`.
+- **`morning-brief.ts`**: the 06:30 Stockholm brief: who's waiting on a reply, unprocessed cards, the last day's
+  arrivals, and the tripwires. § Cron handler job 10.
+- The four are tested against a REAL SQLite built from the migrations (`sqlite-d1-test-helper.ts`), because the risk of
+  an outbox is a row a WHERE clause quietly skips: `report-outbox.test.ts`, `report-digest.test.ts`,
+  `report-retention.test.ts`, `morning-brief.test.ts`.
 - **`scheduled.ts`**: the other cron jobs (license backup, daily aggregation, DB size, retention sweep, eviction sweep,
   personal-comment sweep). `scheduled.test.ts` covers the DB-writing jobs, `cron-alarm.test.ts` the handler's alarm
   wiring, and `email-path-probe.test.ts` the daily liveness check, with the D1/env fakes in `cron-test-helpers.ts`.
@@ -289,8 +293,9 @@ Rerun `pnpm --filter @cmdr/api-server types:gen` after editing bindings or vars 
 
 ## Cron handler
 
-A single `scheduled` handler runs every 3 hours (`0 */3 * * *`). Every job goes through `runCronJob`, which isolates one
-job's failure from the rest and raises the alarm for it (§ Cron alarms):
+A single `scheduled` handler serves two triggers: every 3 hours (`0 */3 * * *`, jobs 1–9) and the morning one
+(`30 4,5 * * *`, job 10 only, dispatched on `event.cron`). Every job goes through `runCronJob`, which isolates one job's
+failure from the rest and raises the alarm for it (§ Cron alarms):
 
 1. **The board** (every invocation, first): `fileCrashCards`, `fileErrorReportCards`, `fileFeedbackCards`, then
    `postAmendmentsToBoard` file every pending report as a card. § The reports repo.
@@ -346,6 +351,21 @@ job's failure from the rest and raises the alarm for it (§ Cron alarms):
      mint its own keys.
    - Covers the Worker's Resend API path only. Listmonk authenticates to the same service over SMTP with a **separate**
      credential, so one can be dead while the other works. `src/website/DETAILS.md` owns the signup path.
+
+10. **Morning brief** (the morning trigger, on the tick that is 06:xx in Stockholm): `handleMorningBrief`
+    (`morning-brief.ts`, rendered by `src/email/morning-brief.ts`) sends one email every day, quiet days included, an
+    hour after the triage agent runs. Subject:
+    `Cmdr morning: 2 waiting on a reply, 1 unprocessed; in the last day 1 crash, 2 errors`.
+    - **Why two UTC times**: Cloudflare crons are UTC and Stockholm moves between UTC+1 and UTC+2, so the trigger fires
+      at 04:30 AND 05:30 UTC and `isMorningBriefTick` keeps the one that is 06:30 local. `morning-brief.test.ts` pins
+      both seasons and that `MORNING_CRON` matches `wrangler.toml`.
+    - **What it reads**: open `needs-reply` and `unprocessed` cards (`listOpenCards`), and the last 24 hours of release
+      rows (crashes, error reports by kind, amendments, feedback, signups, ops alerts).
+    - **The tripwires** ("Look closer"): reports still owed a card after six hours (filing is failing), yesterday's prod
+      bundles in R2 outnumbering yesterday's `error_reports` rows (a failed outbox insert, which only logs), and a board
+      GitHub wouldn't list. These are what make "nothing is lost" checkable rather than hoped for.
+    - Its healthcheck report is failure-only: the check's period is the three-hour tick, and a success ping from the
+      morning trigger would only blur it.
 
 The default export uses the object form (`{ fetch, scheduled }`) required for cron support. The Hono `app` is also
 exported as a named export so tests can use `app.request()`.
@@ -482,9 +502,10 @@ it.
 ## The reports repo
 
 Every crash, error report, feedback message, and amendment becomes a card in the PRIVATE repo named by
-`GITHUB_ISSUES_REPO` (`vdavid/cmdr-reports`), so triage happens on one board. `github-issues.ts` decides what goes on a
-card; `report-outbox.ts` decides when. The token is the `GITHUB_ISSUES_TOKEN` secret: a fine-grained PAT scoped to that
-ONE repo with Issues read+write. With either unset the integration is off and nothing is filed.
+`GITHUB_ISSUES_REPO` (`vdavid/cmdr-reports`), so triage happens on one board. `report-cards.ts` decides what goes on a
+card, `github-issues.ts` writes it, and `report-outbox.ts` decides when. The token is the `GITHUB_ISSUES_TOKEN` secret:
+a fine-grained PAT scoped to that ONE repo with Issues read+write. With either unset the integration is off and nothing
+is filed.
 
 **The outbox.** Intake only writes a D1 row (`crash_reports`, `error_reports`, `feedback`, `error_report_amendments`;
 migration `0022_report_outbox.sql`). `issue_number IS NULL` means a card is still owed, `0` means never (rows that

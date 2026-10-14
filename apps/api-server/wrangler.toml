@@ -191,7 +191,7 @@ limit = 60
 period = 60
 
 [triggers]
-crons = ["0 */3 * * *"]
+crons = ["0 */3 * * *", "30 4,5 * * *"]
 
 # Retained, searchable Workers logs. Without this, `console.error` goes nowhere: the only way to see
 # a cron failure was to happen to be running `wrangler tail` at that second, which is how a broken

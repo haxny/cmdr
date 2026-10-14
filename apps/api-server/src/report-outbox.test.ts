@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { applyMigration, createSqliteD1, type SqliteD1 } from './sqlite-d1-test-helper'
 import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
-import { personalCommentExpiry } from './github-issues'
+import { personalCommentExpiry } from './report-cards'
 import type { Bindings } from './types'
 
 interface CreatedIssue {
