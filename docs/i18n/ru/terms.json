@@ -5501,7 +5501,10 @@
       }
     ],
     "confidence": "high",
-    "sources": "Live macOS (password unlock): Enter your password to unlock “%@” → Чтобы разблокировать доступ …, введите пароль; password you use to unlock Mac → для разблокировки Mac; MS: unlock → разблокировать; DC: Unlock → Разблокировать; AppKit Document: Unlock → Снять защиту (the Locked-file sense)"
+    "sources": "Live macOS (password unlock): Enter your password to unlock “%@” → Чтобы разблокировать доступ …, введите пароль; password you use to unlock Mac → для разблокировки Mac; MS: unlock → разблокировать; DC: Unlock → Разблокировать; AppKit Document: Unlock → Снять защиту (the Locked-file sense)",
+    "exceptions": {
+      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes снять защиту, per the locked ruling"
+    }
   },
   "unplug": {
     "chosen": "отсоединить",

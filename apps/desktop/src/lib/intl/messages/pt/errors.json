@@ -1453,6 +1453,14 @@
   "@errors.write.trashRefused.message.notPermitted": {
     "sourceHash": "57a38d7"
   },
+  "errors.write.trashRefused.message.locked": "O macOS não move itens bloqueados, então deixou no lugar {count} dos itens que você escolheu.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "5733f47"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "O Cmdr deixou no lugar {count} dos itens que você escolheu, porque não tem permissão para alterar a pasta em que eles estão.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "d2f7954"
+  },
   "errors.write.trashRefused.message.noTrashForVolume": "O macOS não encontrou um Lixo para {count} dos itens que você escolheu.",
   "@errors.write.trashRefused.message.noTrashForVolume": {
     "sourceHash": "702ae17"
@@ -1461,9 +1469,17 @@
   "@errors.write.trashRefused.message.other": {
     "sourceHash": "6f71e12"
   },
-  "errors.write.trashRefused.suggestion.notPermitted": "Os itens podem estar bloqueados, ou podem estar em um lugar que o macOS guarda para si. Você ainda pode apagá-los permanentemente com Shift+F8.",
+  "errors.write.trashRefused.suggestion.notPermitted": "Os itens podem estar em um lugar que o macOS guarda para si.",
   "@errors.write.trashRefused.suggestion.notPermitted": {
-    "sourceHash": "ff40f4b"
+    "sourceHash": "f544942"
+  },
+  "errors.write.trashRefused.suggestion.locked": "Para movê-los, desbloqueie-os primeiro no Finder: Obter Informações e depois desmarque Bloqueado.",
+  "@errors.write.trashRefused.suggestion.locked": {
+    "sourceHash": "ece70f5"
+  },
+  "errors.write.trashRefused.suggestion.folderNotWritable": "Para movê-los, você precisa de permissão para alterar a pasta em que eles estão. O Finder mostra quem pode em Obter Informações da pasta, na seção Compartilhamento e Permissões.",
+  "@errors.write.trashRefused.suggestion.folderNotWritable": {
+    "sourceHash": "8614665"
   },
   "errors.write.trashRefused.suggestion.noTrashForVolume": "Alguns lugares não têm um Lixo próprio, entre eles as pastas na nuvem e a maioria dos discos de rede. Você ainda pode apagar os itens permanentemente com Shift+F8.",
   "@errors.write.trashRefused.suggestion.noTrashForVolume": {

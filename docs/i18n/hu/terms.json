@@ -115,7 +115,10 @@
     "accept": ["engedélyez", "engedély"],
     "forms": "button Engedélyezés; Allow all → Összes engedélyezése; switch label Felhő-AI engedélyezése; imperative engedélyezd; Android's own dialog button quoted in prose: koppints az „Engedélyezés” gombra",
     "confidence": "high",
-    "sources": "macOS AppKit (Engedélyezés, Engedélyezés mindenképp); AOSP SystemUI usb_debugging_allow = Engedélyezés; ms (allow → engedélyez)"
+    "sources": "macOS AppKit (Engedélyezés, Engedélyezés mindenképp); AOSP SystemUI usb_debugging_allow = Engedélyezés; ms (allow → engedélyez)",
+    "exceptions": {
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes the -hat/-het potential (nem módosíthatja)"
+    }
   },
   "already-exists": {
     "chosen": "már létezik",

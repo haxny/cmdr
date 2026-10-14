@@ -152,7 +152,8 @@
     "confidence": "high",
     "decision": "The cloud AI toggle",
     "exceptions": {
-      "search.coverage.denied": "Wasn't allowed to look inside (a macOS permission refusal) → 沒有權限."
+      "search.coverage.denied": "Wasn't allowed to look inside (a macOS permission refusal) → 沒有權限.",
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes 沒有權限"
     },
     "forms": "toggle 允許使用雲端 AI; Android's own dialog button is quoted 「允許」",
     "sources": "AP-TW = AP-HK TCC REQUEST_ACCESS_ALLOW; AOSP SystemUI usb_debugging_allow = 允許"
@@ -3128,6 +3129,12 @@
     "note": "Apple itself swaps the words (TW 共享與權限： vs HK 分享與權限：), so 分享 is the safer single choice for handing a file to another app; an SMB share is 共享資料夾.",
     "sources": "AP-TW (#N166), MS"
   },
+  "sharing-and-permissions": {
+    "chosen": "共享與權限",
+    "forms": "quoted in prose: 在「共享與權限」底下 (zh_TW; zh_HK says 分享與權限, Taiwan wins)",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label 共享與權限：)"
+  },
   "shortcut": {
     "avoid": [
       {
@@ -3145,7 +3152,10 @@
     "chosen": "顯示",
     "confidence": "high",
     "forms": "Show all → 顯示全部; Show favorites → 顯示喜好項目 (never 開啟); a prompt it shows → 跳出的提示; shows up → 出現",
-    "sources": "AP Finder MenuBar 300730.title; catalog commands.serversShow.label"
+    "sources": "AP Finder MenuBar 300730.title; catalog commands.serversShow.label",
+    "exceptions": {
+      "errors.write.trashRefused.suggestion.folderNotWritable": "English sense: Finder showing information, not a Show command, so it takes 可以看到"
+    }
   },
   "show-in-finder": {
     "chosen": "在 Finder 中顯示",

@@ -2753,6 +2753,12 @@
     "forms": "share options → options de partage; No share options → Aucune option de partage",
     "sources": "macOS Finder (Partager…)"
   },
+  "sharing-and-permissions": {
+    "chosen": "Partage et permissions",
+    "forms": "unquoted in prose: section Partage et permissions",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Partage et permissions :)"
+  },
   "shortcut": {
     "chosen": "raccourci",
     "confidence": "high",
@@ -2764,7 +2770,8 @@
     "chosen": "Afficher",
     "confidence": "high",
     "exceptions": {
-      "indexing.staleDialog.body": "The status always signals this (le signale toujours); show here means indicate."
+      "indexing.staleDialog.body": "The status always signals this (le signale toujours); show here means indicate.",
+      "errors.write.trashRefused.suggestion.folderNotWritable": "English sense: Finder showing information, not a Show command, so it takes indiquer"
     },
     "forms": "Show all → Tout afficher; a toggle writes both verbs with ou (Afficher ou masquer …)",
     "sources": "macOS AppKit (Show All → Tout afficher)"

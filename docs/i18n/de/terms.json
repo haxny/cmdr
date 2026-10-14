@@ -108,7 +108,10 @@
     "confidence": "high",
     "decision": "Wörter, die auseinandergelaufen sind, ohne dass ein Check es sehen konnte",
     "forms": "Allow all → Alle erlauben; Android's own button → „Erlauben“ (AOSP usb_debugging_allow); switch name Cloud-KI erlauben, as a sentence verb Erlaube … Cloud-KI",
-    "sources": "macOS Finder (Allow Anyway → Trotzdem erlauben); AOSP SystemUI de (usb_debugging_allow = Erlauben)"
+    "sources": "macOS Finder (Allow Anyway → Trotzdem erlauben); AOSP SystemUI de (usb_debugging_allow = Erlauben)",
+    "exceptions": {
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes dürfen (nicht ändern darf)"
+    }
   },
   "already-exists": {
     "accept": ["gibt es schon", "bereits", "schon"],
@@ -1384,6 +1387,12 @@
     "confidence": "high",
     "forms": "the S3 form label → Geheimer Zugriffsschlüssel; acc./dat. → den / dem geheimen Zugriffsschlüssel",
     "sources": "catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved; pairs with access-key-id (Zugriffsschlüssel-ID); MS access key → Zugriffsschlüssel"
+  },
+  "sharing-and-permissions": {
+    "chosen": "Teilen & Zugriffsrechte",
+    "forms": "quoted in prose: unter „Teilen & Zugriffsrechte“ (the panel header adds a colon)",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Teilen & Zugriffsrechte:)"
   },
   "size-unit-gibibyte": {
     "chosen": "GiB",
@@ -3279,7 +3288,10 @@
     "accept": ["entsperr"],
     "chosen": "Entsperren",
     "confidence": "high",
-    "sources": "macOS AppKit (locked-item button Entsperren)"
+    "sources": "macOS AppKit (locked-item button Entsperren)",
+    "exceptions": {
+      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes the locked ruling’s den Schutz aufheben"
+    }
   },
   "unplug": {
     "accept": ["abgezogen", "Zieh", "getrennt", "angeschlossen", "herausgezogen", "verbunden"],

@@ -1586,6 +1586,12 @@
     "confidence": "tentative",
     "sources": "catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved; MS access key → khóa truy cập; no AWS console ships Vietnamese"
   },
+  "sharing-and-permissions": {
+    "chosen": "Chia sẻ & quyền",
+    "forms": "in prose: ở phần Chia sẻ & quyền",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Chia sẻ & quyền:)"
+  },
   "size-unit-gibibyte": {
     "chosen": "GiB",
     "confidence": "high",
@@ -2540,7 +2546,10 @@
     "confidence": "high",
     "decision": "Rà soát trôi thuật ngữ toàn catalog",
     "forms": "Show X → Hiển thị X; show up / appear → xuất hiện; Show less → Thu gọn; bring up → hiện … lên",
-    "sources": "macOS vi (Hiển thị ×147, zero hiện as show)"
+    "sources": "macOS vi (Hiển thị ×147, zero hiện as show)",
+    "exceptions": {
+      "errors.write.trashRefused.suggestion.folderNotWritable": "English sense: Finder showing information, not a Show command, so it takes cho biết"
+    }
   },
   "show-in-finder": {
     "chosen": "Hiển thị trong Finder",

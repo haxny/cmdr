@@ -435,6 +435,14 @@
   "@errors.write.trashRefused.message.notPermitted": {
     "sourceHash": "3987197"
   },
+  "errors.write.trashRefused.message.locked": "macOS no mueve elementos bloqueados, así que dejó en su lugar {count} de los elementos que elegiste.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "98e8ac6"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "Cmdr dejó en su lugar {count} de los elementos que elegiste porque no tiene permiso para cambiar su carpeta.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "4034e16"
+  },
   "errors.write.trashRefused.message.noTrashForVolume": "macOS no encontró un basurero para {count} de los elementos que elegiste.",
   "@errors.write.trashRefused.message.noTrashForVolume": {
     "sourceHash": "e7da662"
@@ -443,9 +451,9 @@
   "@errors.write.trashRefused.message.other": {
     "sourceHash": "866cfc2"
   },
-  "errors.write.trashRefused.suggestion.notPermitted": "Puede que los elementos estén bloqueados, o que estén en un lugar que macOS se reserva. Aun así puedes eliminarlos permanentemente con Shift+F8.",
+  "errors.write.trashRefused.suggestion.notPermitted": "Puede que los elementos estén en un lugar que macOS se reserva.",
   "@errors.write.trashRefused.suggestion.notPermitted": {
-    "sourceHash": "ec5f6c0"
+    "sourceHash": "39161ee"
   },
   "errors.write.trashRefused.suggestion.noTrashForVolume": "Algunos lugares no tienen basurero propio, como las carpetas en la nube y la mayoría de las unidades de red. Aun así puedes eliminar los elementos permanentemente con Shift+F8.",
   "@errors.write.trashRefused.suggestion.noTrashForVolume": {

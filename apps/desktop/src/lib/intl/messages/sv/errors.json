@@ -1453,6 +1453,14 @@
   "@errors.write.trashRefused.message.notPermitted": {
     "sourceHash": "57a38d7"
   },
+  "errors.write.trashRefused.message.locked": "macOS flyttar inte låsta objekt, så {count} av objekten du valde stannade där de var.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "5733f47"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "Cmdr får inte ändra mappen där {count} av objekten du valde ligger, så de stannade där de var.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "d2f7954"
+  },
   "errors.write.trashRefused.message.noTrashForVolume": "macOS hittade ingen papperskorg för {count} av objekten du valde.",
   "@errors.write.trashRefused.message.noTrashForVolume": {
     "sourceHash": "702ae17"
@@ -1461,9 +1469,17 @@
   "@errors.write.trashRefused.message.other": {
     "sourceHash": "6f71e12"
   },
-  "errors.write.trashRefused.suggestion.notPermitted": "Objekten kan vara låsta, eller ligga på ett ställe som macOS håller för sig själv. Du kan ändå radera dem permanent med Shift+F8.",
+  "errors.write.trashRefused.suggestion.notPermitted": "Objekten kan ligga på ett ställe som macOS håller för sig själv.",
   "@errors.write.trashRefused.suggestion.notPermitted": {
-    "sourceHash": "ff40f4b"
+    "sourceHash": "f544942"
+  },
+  "errors.write.trashRefused.suggestion.locked": "För att flytta dem låser du först upp dem i Finder: välj Visa info och avmarkera Låst.",
+  "@errors.write.trashRefused.suggestion.locked": {
+    "sourceHash": "ece70f5"
+  },
+  "errors.write.trashRefused.suggestion.folderNotWritable": "För att flytta dem behöver du behörighet att ändra deras mapp. Finder visar vem som får det i mappens Visa info, under Delning och behörigheter.",
+  "@errors.write.trashRefused.suggestion.folderNotWritable": {
+    "sourceHash": "8614665"
   },
   "errors.write.trashRefused.suggestion.noTrashForVolume": "Vissa ställen har ingen egen papperskorg, till exempel molnmappar och de flesta nätverksenheter. Du kan ändå radera objekten permanent med Shift+F8.",
   "@errors.write.trashRefused.suggestion.noTrashForVolume": {

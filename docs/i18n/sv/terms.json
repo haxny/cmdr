@@ -97,7 +97,8 @@
     "decision": "Android over ADB",
     "exceptions": {
       "fileOperations.validation.extensionChangeBlocked": "A rule, not a grant: Det går inte att ändra filtillägget.",
-      "search.coverage.denied": "Wasn't allowed to is fick inte in Swedish; tillåta would need a passive construction."
+      "search.coverage.denied": "Wasn't allowed to is fick inte in Swedish; tillåta would need a passive construction.",
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes få (får inte ändra)"
     },
     "forms": "button Tillåt / Tillåt alla; switch label Tillåt moln-AI; Android's own button quoted bare: tryck på Tillåt",
     "sources": "macOS TCC.framework (REQUEST_ACCESS_ALLOW = Tillåt), MS terminology (allow → tillåta), AOSP SystemUI usb_debugging_allow = Tillåt"
@@ -2635,6 +2636,12 @@
     "forms": "submenu Dela; share options → delningsalternativ (tentative)",
     "sources": "macOS"
   },
+  "sharing-and-permissions": {
+    "chosen": "Delning och behörigheter",
+    "forms": "unquoted in prose: under Delning och behörigheter",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Delning och behörigheter:)"
+  },
   "shortcut": {
     "chosen": "genväg",
     "confidence": "high",
@@ -3038,7 +3045,10 @@
     "accept": ["låsa upp", "låser upp", "upplåst", "låste inte upp"],
     "chosen": "lås upp",
     "confidence": "high",
-    "sources": "macOS AppKit (Lås upp)"
+    "sources": "macOS AppKit (Lås upp)",
+    "exceptions": {
+      "errors.write.trashRefused.suggestion.locked": "English sense: removing Finder’s Locked flag (the locked concept), not an archive password, so it takes the Finder checkbox Låst; lås upp is the shared verb"
+    }
   },
   "unplug": {
     "accept": [

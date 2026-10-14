@@ -102,7 +102,10 @@
     "chosen": "Sta toe",
     "confidence": "high",
     "forms": "button Sta toe / Sta alles toe; settings label <object> toestaan (Cloud-AI toestaan); Android's own dialog button is quoted as ‘Toestaan’; finite separable verb in prose: je organisatie staat … (niet) toe",
-    "sources": "macOS Finder (Allow Anyway → Sta toch toe), MS (allow → toestaan), AOSP SystemUI usb_debugging_allow = Toestaan"
+    "sources": "macOS Finder (Allow Anyway → Sta toch toe), MS (allow → toestaan), AOSP SystemUI usb_debugging_allow = Toestaan",
+    "exceptions": {
+      "errors.write.trashRefused.message.folderNotWritable": "English sense: “isn’t allowed to change” is a file-system permission, not granting consent, so it takes mogen (mag … niet wijzigen)"
+    }
   },
   "already-exists": {
     "accept": ["staat al", "bestaan al", "al bestaat", "al bestaan"],
@@ -2702,6 +2705,12 @@
     "decision": "Wachtregels in \"Open met\" en \"Deel\"",
     "forms": "share options → deelopties (tentative); No share options → Geen deelopties",
     "sources": "macOS Share submenu"
+  },
+  "sharing-and-permissions": {
+    "chosen": "Delen en bevoegdheden",
+    "forms": "quoted in prose: onder ‘Delen en bevoegdheden’",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Delen en bevoegdheden:)"
   },
   "shortcut": {
     "accept": ["sneltoetsen", "toets"],

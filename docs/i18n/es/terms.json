@@ -2540,6 +2540,12 @@
       "fileExplorer.networkMount.shareFallback": "The bare noun share is a network share here (recurso compartido), not the Share submenu."
     }
   },
+  "sharing-and-permissions": {
+    "chosen": "Compartir y permisos",
+    "forms": "quoted in prose: la sección “Compartir y permisos”",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Compartir y permisos:)"
+  },
   "shortcut": {
     "chosen": "atajo",
     "accept": ["atajos"],

@@ -2491,6 +2491,12 @@
     "confidence": "high",
     "sources": "macOS pt-BR (Compartilhar)"
   },
+  "sharing-and-permissions": {
+    "chosen": "Compartilhamento e Permissões",
+    "forms": "keeps Apple’s capitals: na seção Compartilhamento e Permissões",
+    "confidence": "high",
+    "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Compartilhamento e Permissões:)"
+  },
   "shortcut": {
     "chosen": "atalho",
     "forms": "keyboard shortcuts → Atalhos de teclado",

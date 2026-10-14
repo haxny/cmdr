@@ -1453,6 +1453,14 @@
   "@errors.write.trashRefused.message.notPermitted": {
     "sourceHash": "57a38d7"
   },
+  "errors.write.trashRefused.message.locked": "macOS no mueve elementos bloqueados, así que ha dejado en su sitio {count} de los elementos que has elegido.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "5733f47"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "Cmdr ha dejado en su sitio {count} de los elementos que has elegido porque no tiene permiso para cambiar su carpeta.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "d2f7954"
+  },
   "errors.write.trashRefused.message.noTrashForVolume": "macOS no ha encontrado una papelera para {count} de los elementos que has elegido.",
   "@errors.write.trashRefused.message.noTrashForVolume": {
     "sourceHash": "702ae17"
@@ -1461,9 +1469,17 @@
   "@errors.write.trashRefused.message.other": {
     "sourceHash": "6f71e12"
   },
-  "errors.write.trashRefused.suggestion.notPermitted": "Puede que los elementos estén bloqueados, o que estén en un sitio que macOS se reserva. Aun así puedes eliminarlos permanentemente con Shift+F8.",
+  "errors.write.trashRefused.suggestion.notPermitted": "Puede que los elementos estén en un sitio que macOS se reserva.",
   "@errors.write.trashRefused.suggestion.notPermitted": {
-    "sourceHash": "ff40f4b"
+    "sourceHash": "f544942"
+  },
+  "errors.write.trashRefused.suggestion.locked": "Para moverlos, desbloquéalos primero en el Finder: Obtener información y, después, desmarca Bloqueado.",
+  "@errors.write.trashRefused.suggestion.locked": {
+    "sourceHash": "ece70f5"
+  },
+  "errors.write.trashRefused.suggestion.folderNotWritable": "Para moverlos, necesitas permiso para cambiar su carpeta. El Finder muestra quién puede hacerlo en Obtener información de la carpeta, en la sección “Compartir y permisos”.",
+  "@errors.write.trashRefused.suggestion.folderNotWritable": {
+    "sourceHash": "8614665"
   },
   "errors.write.trashRefused.suggestion.noTrashForVolume": "Algunos sitios no tienen papelera propia, como las carpetas en la nube y la mayoría de las unidades de red. Aun así puedes eliminar los elementos permanentemente con Shift+F8.",
   "@errors.write.trashRefused.suggestion.noTrashForVolume": {

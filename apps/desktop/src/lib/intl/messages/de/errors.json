@@ -1453,6 +1453,14 @@
   "@errors.write.trashRefused.message.notPermitted": {
     "sourceHash": "57a38d7"
   },
+  "errors.write.trashRefused.message.locked": "macOS bewegt keine geschützten Objekte und hat deshalb {count} der ausgewählten Objekte an Ort und Stelle gelassen.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "5733f47"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "Cmdr hat {count} der ausgewählten Objekte an Ort und Stelle gelassen, weil es deren Ordner nicht ändern darf.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "d2f7954"
+  },
   "errors.write.trashRefused.message.noTrashForVolume": "macOS hat für {count} der ausgewählten Objekte keinen Papierkorb gefunden.",
   "@errors.write.trashRefused.message.noTrashForVolume": {
     "sourceHash": "702ae17"
@@ -1461,9 +1469,17 @@
   "@errors.write.trashRefused.message.other": {
     "sourceHash": "6f71e12"
   },
-  "errors.write.trashRefused.suggestion.notPermitted": "Die Objekte sind vielleicht geschützt, oder sie liegen an einem Ort, den macOS für sich behält. Endgültig löschen kannst du sie trotzdem mit Shift+F8.",
+  "errors.write.trashRefused.suggestion.notPermitted": "Die Objekte liegen vielleicht an einem Ort, den macOS für sich behält.",
   "@errors.write.trashRefused.suggestion.notPermitted": {
-    "sourceHash": "ff40f4b"
+    "sourceHash": "f544942"
+  },
+  "errors.write.trashRefused.suggestion.locked": "Um sie zu bewegen, hebe zuerst den Schutz im Finder auf: „Informationen“, dann das Häkchen bei „Geschützt“ entfernen.",
+  "@errors.write.trashRefused.suggestion.locked": {
+    "sourceHash": "ece70f5"
+  },
+  "errors.write.trashRefused.suggestion.folderNotWritable": "Um sie zu bewegen, brauchst du die Berechtigung, ihren Ordner zu ändern. Wer das darf, zeigt der Finder in den „Informationen“ des Ordners unter „Teilen & Zugriffsrechte“.",
+  "@errors.write.trashRefused.suggestion.folderNotWritable": {
+    "sourceHash": "8614665"
   },
   "errors.write.trashRefused.suggestion.noTrashForVolume": "Manche Orte haben keinen eigenen Papierkorb, darunter Cloud-Ordner und die meisten Netzlaufwerke. Endgültig löschen kannst du die Objekte trotzdem mit Shift+F8.",
   "@errors.write.trashRefused.suggestion.noTrashForVolume": {
