@@ -280,6 +280,18 @@
   "@commands.paneRefresh.label": {
     "sourceHash": "42ce075"
   },
+  "commands.paneMoveDividerLeft.label": "Mover divisor dos painéis para a esquerda",
+  "@commands.paneMoveDividerLeft.label": {
+    "sourceHash": "863b17a"
+  },
+  "commands.paneMoveDividerRight.label": "Mover divisor dos painéis para a direita",
+  "@commands.paneMoveDividerRight.label": {
+    "sourceHash": "d3e8092"
+  },
+  "commands.paneResetDivider.label": "Restaurar divisor dos painéis",
+  "@commands.paneResetDivider.label": {
+    "sourceHash": "eab918a"
+  },
   "commands.tabNew.label": "Nova aba",
   "@commands.tabNew.label": {
     "sourceHash": "1e08fda"

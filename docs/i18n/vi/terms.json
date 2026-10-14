@@ -591,6 +591,12 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Mở menu); catalog Menu mục ưa thích"
   },
+  "pane-divider": {
+    "chosen": "thanh phân cách",
+    "confidence": "tentative",
+    "forms": "pane divider → thanh phân cách khung",
+    "sources": "Total Commander (phần phân cách), Microsoft (divider → thanh chia, split bar → thanh chia tách)"
+  },
   "provider-console": {
     "chosen": "bảng điều khiển",
     "confidence": "high",

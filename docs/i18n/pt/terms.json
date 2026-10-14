@@ -603,6 +603,18 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Abrir Menu, sentence-cased here); catalog Menu de favoritos, menu de contexto"
   },
+  "pane-divider": {
+    "accept": ["divisor"],
+    "avoid": [
+      {
+        "form": "separador",
+        "why": "Total Commander pt-BR only; DC and Microsoft agree on divisor"
+      }
+    ],
+    "chosen": "divisor dos painéis",
+    "confidence": "high",
+    "sources": "Double Commander pt-BR (divisor), Microsoft pt-BR (divider, splitter → divisor)"
+  },
   "provider-console": {
     "chosen": "console",
     "confidence": "high",

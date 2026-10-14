@@ -280,6 +280,18 @@
   "@commands.paneRefresh.label": {
     "sourceHash": "42ce075"
   },
+  "commands.paneMoveDividerLeft.label": "Flytta panelavdelaren åt vänster",
+  "@commands.paneMoveDividerLeft.label": {
+    "sourceHash": "863b17a"
+  },
+  "commands.paneMoveDividerRight.label": "Flytta panelavdelaren åt höger",
+  "@commands.paneMoveDividerRight.label": {
+    "sourceHash": "d3e8092"
+  },
+  "commands.paneResetDivider.label": "Återställ panelavdelaren",
+  "@commands.paneResetDivider.label": {
+    "sourceHash": "eab918a"
+  },
   "commands.tabNew.label": "Ny flik",
   "@commands.tabNew.label": {
     "sourceHash": "1e08fda"

@@ -706,6 +706,12 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Ouvrir le menu); catalog Menu des favoris, menu contextuel"
   },
+  "pane-divider": {
+    "accept": ["séparateur"],
+    "chosen": "séparateur de panneaux",
+    "confidence": "high",
+    "sources": "Total Commander and Double Commander (séparateur de panneau), Microsoft (divider, splitter → séparateur)"
+  },
   "provider-console": {
     "chosen": "console",
     "confidence": "high",

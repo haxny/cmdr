@@ -744,6 +744,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "进行中…",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr 在这项操作完成前退出了",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "移动",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

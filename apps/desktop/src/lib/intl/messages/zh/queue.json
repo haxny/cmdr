@@ -35,6 +35,30 @@
   "@queue.row.reversalInFolder": {
     "sourceHash": "da9d7fa"
   },
+  "queue.row.itemCount": "{countText} 个{count, plural, other {项目}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} 个{count, plural, other {文件夹}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} 个{count, plural, other {文件}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders}和 {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, other {…还有 {countText} 个}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "位于 {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa"
+  },
   "queue.row.status": "{status, select, queued {等待中} running {进行中} paused {已暂停} done {已完成} cancelled {已取消} failed {无法完成} other {进行中}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"

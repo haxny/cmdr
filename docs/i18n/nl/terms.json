@@ -633,6 +633,12 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Open menu); catalog Favorietenmenu, contextmenu"
   },
+  "pane-divider": {
+    "accept": ["scheiding"],
+    "chosen": "paneelscheiding",
+    "confidence": "tentative",
+    "sources": "Total Commander (de scheiding tussen de bestandsvensters), Microsoft (divider → scheidingslijn), compounded with the pane ruling paneel; Double Commander says splitser"
+  },
   "provider-console": {
     "chosen": "console",
     "confidence": "high",

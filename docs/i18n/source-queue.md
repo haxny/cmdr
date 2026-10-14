@@ -297,3 +297,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   or sits mid-line, so de (`noch`), nl (`nog`), and vi (`còn`) ship it lowercase while es and ru capitalize. Now that
   `filesLeft` / `itemsLeft` start the same line opposite it (capitalized: `Noch …`, `Nog …`, `Còn …`), say where the ETA
   lands (the readout cell and the queue chip) so those three can realign to sentence case. (de, nl, vi)
+- `queue.row.itemCount`, `.folderCount`, `.fileCount`: the row splices them after the `queue.row.label` action word
+  ("Copying 3 items"), but a case language wants the genitive after a verbal noun (ru `Копирование 3 объектов`) and the
+  count also stands alone in the tooltip, so one form can't fit both. Consider a whole-row key with the counts inside,
+  or say in the descriptions that the chunk reads as a separate column (ru ships nominative for now). (ru)

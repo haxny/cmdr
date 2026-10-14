@@ -665,6 +665,18 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → 打开菜单); catalog 个人收藏菜单, 右键菜单"
   },
+  "pane-divider": {
+    "accept": ["分隔条"],
+    "avoid": [
+      {
+        "form": "分隔符",
+        "why": "Double Commander; reads as a separator character"
+      }
+    ],
+    "chosen": "窗格分隔条",
+    "confidence": "high",
+    "sources": "Microsoft (divider → 分隔条), Total Commander (文件面板分隔条), with the pane ruling 窗格"
+  },
   "provider-console": {
     "chosen": "控制台",
     "confidence": "high",

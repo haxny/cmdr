@@ -2222,6 +2222,12 @@
     "note": "A System Settings pane (\"the Privacy & Security pane\") is Apple's term, not this concept.",
     "sense": "One of Cmdr's two side-by-side file panels."
   },
+  "pane-divider": {
+    "distinct": ["pane"],
+    "en": "pane divider",
+    "match": ["pane divider", "divider"],
+    "sense": "The vertical line between the two panes that the user drags, or moves and resets with a command, to change how the width is split."
+  },
   "parent-folder": {
     "distinct": ["current-folder", "root-folder"],
     "en": "parent folder",

@@ -622,6 +622,18 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Abrir menú); catalog Menú de favoritos, menú contextual"
   },
+  "pane-divider": {
+    "accept": ["separador"],
+    "avoid": [
+      {
+        "form": "barra de división",
+        "why": "Microsoft split bar, a Windows window term"
+      }
+    ],
+    "chosen": "separador de paneles",
+    "confidence": "high",
+    "sources": "Total Commander (Separador de paneles), Microsoft (splitter → separador)"
+  },
   "provider-console": {
     "chosen": "consola",
     "confidence": "high",

@@ -746,6 +746,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "En cours…",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr a quitté avant la fin de l’opération",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "déplacer",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

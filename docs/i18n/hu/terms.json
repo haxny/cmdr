@@ -783,6 +783,18 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Menü megnyitása); catalog Kedvencek menü, Helyi menü"
   },
+  "pane-divider": {
+    "accept": ["elválasztó"],
+    "avoid": [
+      {
+        "form": "ablakelválasztó",
+        "why": "ablak is a window, not a pane"
+      }
+    ],
+    "chosen": "panelelválasztó",
+    "confidence": "high",
+    "sources": "Microsoft (divider → elválasztó), Double Commander (Elválasztó), Total Commander (ablakelválasztó), compounded with the pane ruling panel"
+  },
   "provider-console": {
     "chosen": "konzol",
     "confidence": "high",

@@ -746,6 +746,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "Läuft …",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr wurde beendet, bevor der Vorgang fertig war",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "das Bewegen von",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

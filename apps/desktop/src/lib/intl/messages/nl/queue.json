@@ -36,6 +36,31 @@
     "sourceHash": "da9d7fa",
     "sameAsSourceJustification": "Dutch shares the preposition \"in\" with English for a folder location (macOS nl Finder: \"Search in ^1\" -> \"Zoek in '^1'\", \"items in ^0\" -> \"onderdelen in '^0'\"); the rest of the string is the placeholder. Nearby nl catalog strings keep it bare and unquoted too (\"Bezig in {destination}\", \"Selectie bewaard in {name}\")."
   },
+  "queue.row.itemCount": "{countText} {count, plural, one {onderdeel} other {onderdelen}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} {count, plural, one {map} other {mappen}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} {count, plural, one {bestand} other {bestanden}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders} en {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, one {… en nog {countText}} other {… en nog {countText}}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "in {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa",
+    "sameAsSourceJustification": "Dutch shares the preposition \"in\" with English for a folder location (macOS nl Finder: \"Search in ^1\" -> \"Zoek in '^1'\", \"items in ^0\" -> \"onderdelen in '^0'\"); the rest of the string is the placeholder. Nearby nl catalog strings keep it bare and unquoted too (\"Bezig in {destination}\", \"Selectie bewaard in {name}\")."
+  },
   "queue.row.status": "{status, select, queued {Wachten} running {Bezig} paused {Gepauzeerd} done {Gereed} cancelled {Geannuleerd} failed {Niet voltooid} other {Bezig}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"

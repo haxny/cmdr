@@ -724,6 +724,18 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Menü öffnen); catalog Kontextmenü, Favoritenmenü"
   },
+  "pane-divider": {
+    "accept": ["Trennlinie"],
+    "avoid": [
+      {
+        "form": "Fensterteiler",
+        "why": "Double Commander and Microsoft split bar; Fenster is a window, not a pane"
+      }
+    ],
+    "chosen": "Bereichstrennlinie",
+    "confidence": "high",
+    "sources": "Microsoft (divider → Trennlinie), Total Commander (Dateifenster-Trennlinie), compounded with the pane ruling Bereich"
+  },
   "provider-console": {
     "chosen": "Konsole",
     "confidence": "high",

@@ -744,6 +744,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "進行中⋯",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr 在這項操作完成前就結束了",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "移到別的資料夾",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

@@ -748,6 +748,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "Bezig…",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr is gestopt voordat de bewerking klaar was",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "verplaatsen",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

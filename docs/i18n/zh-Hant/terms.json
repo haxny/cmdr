@@ -772,6 +772,12 @@
     "forms": "a button or status → 連線 (已連線, 正在連線⋯); the verb in a sentence or command name → 連接 (連接伺服器⋯); casual → 連上 / 連著 / 連不上; a network connection → 網路連線",
     "sources": "AP-TW = AP-HK (Connect → 連線; Connect to Server… → 連接伺服器⋯), MS"
   },
+  "pane-divider": {
+    "accept": ["分隔線"],
+    "chosen": "窗格分隔線",
+    "confidence": "high",
+    "sources": "Microsoft (divider → 分隔線), Total Commander zh-TW (中間分隔線), with the pane ruling 窗格"
+  },
   "provider-console": {
     "chosen": "主控台",
     "confidence": "high",

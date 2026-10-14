@@ -647,6 +647,12 @@
     "confidence": "high",
     "sources": "macOS 27.0.1 live (AXAction Open Menu → Öppna meny); catalog Favoritmeny, snabbmeny"
   },
+  "pane-divider": {
+    "accept": ["avdelare"],
+    "chosen": "panelavdelare",
+    "confidence": "tentative",
+    "sources": "Total Commander (filpanelens avdelare), compounded with the pane ruling panel; Microsoft splits it three ways (divider avgränsare, splitter delare, split bar delningslist)"
+  },
   "provider-console": {
     "chosen": "konsol",
     "confidence": "high",

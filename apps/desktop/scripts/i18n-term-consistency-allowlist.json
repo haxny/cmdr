@@ -474,6 +474,10 @@
       {
         "source": "Running",
         "reason": "A local AI server that is up «Работает»; an operation in progress «Выполняется». Different senses of the same English word."
+      },
+      {
+        "source": "{countText} {count, plural, one {folder} other {folders}}",
+        "reason": "Two grammatical slots. `fileOperations.delete.foldersPart` and `fileOperations.transferDialog.foldersPart` are objects of a verb in their host sentence (`Удалить …`, `Скопировать …`), so the singular is accusative `папку`. `queue.row.folderCount` stands as its own chunk after the queue row action noun (`Удаление`, `Копирование`) and in the row tooltip, where an accusative `1 папку` reads wrong; it takes the nominative `папка`, like the chip tooltip's `{countText} объект`."
       }
     ]
   },

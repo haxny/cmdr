@@ -745,6 +745,14 @@
   "@askCmdr.decision.result": {
     "sourceHash": "13d97c7"
   },
+  "askCmdr.decision.running": "Fut…",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "A Cmdr bezárult, mielőtt a művelet befejeződött volna",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
   "askCmdr.decision.verbMove": "áthelyezését",
   "@askCmdr.decision.verbMove": {
     "sourceHash": "6e86294"

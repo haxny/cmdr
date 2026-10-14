@@ -280,6 +280,18 @@
   "@commands.paneRefresh.label": {
     "sourceHash": "42ce075"
   },
+  "commands.paneMoveDividerLeft.label": "Переместить разделитель панелей влево",
+  "@commands.paneMoveDividerLeft.label": {
+    "sourceHash": "863b17a"
+  },
+  "commands.paneMoveDividerRight.label": "Переместить разделитель панелей вправо",
+  "@commands.paneMoveDividerRight.label": {
+    "sourceHash": "d3e8092"
+  },
+  "commands.paneResetDivider.label": "Сбросить положение разделителя панелей",
+  "@commands.paneResetDivider.label": {
+    "sourceHash": "eab918a"
+  },
   "commands.tabNew.label": "Новая вкладка",
   "@commands.tabNew.label": {
     "sourceHash": "1e08fda"

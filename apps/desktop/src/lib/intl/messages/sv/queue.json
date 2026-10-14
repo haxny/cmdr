@@ -35,6 +35,30 @@
   "@queue.row.reversalInFolder": {
     "sourceHash": "da9d7fa"
   },
+  "queue.row.itemCount": "{countText} {count, plural, one {objekt} other {objekt}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} {count, plural, one {mapp} other {mappar}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} {count, plural, one {fil} other {filer}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders} och {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, one {… och {countText} till} other {… och {countText} till}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "i {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa"
+  },
   "queue.row.status": "{status, select, queued {Väntar} running {Pågår} paused {Pausad} done {Klar} cancelled {Avbruten} failed {Gick inte att slutföra} other {Pågår}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"

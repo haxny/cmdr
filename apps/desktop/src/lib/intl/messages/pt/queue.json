@@ -35,6 +35,30 @@
   "@queue.row.reversalInFolder": {
     "sourceHash": "da9d7fa"
   },
+  "queue.row.itemCount": "{countText} {count, plural, one {item} many {itens} other {itens}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} {count, plural, one {pasta} many {pastas} other {pastas}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} {count, plural, one {arquivo} many {arquivos} other {arquivos}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders} e {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, one {… e mais {countText}} many {… e mais {countText}} other {… e mais {countText}}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "em {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa"
+  },
   "queue.row.status": "{status, select, queued {Aguardando} running {Em andamento} paused {Pausado} done {Concluído} cancelled {Cancelado} failed {Não foi possível concluir} other {Em andamento}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"

@@ -35,6 +35,30 @@
   "@queue.row.reversalInFolder": {
     "sourceHash": "da9d7fa"
   },
+  "queue.row.itemCount": "{countText} {count, plural, other {mục}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} {count, plural, other {thư mục}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} {count, plural, other {tệp}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders} và {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, other {… và {countText} mục khác}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "trong {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa"
+  },
   "queue.row.status": "{status, select, queued {Đang chờ} running {Đang chạy} paused {Đã tạm dừng} done {Xong} cancelled {Đã hủy} failed {Chưa hoàn tất được} other {Đang chạy}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"

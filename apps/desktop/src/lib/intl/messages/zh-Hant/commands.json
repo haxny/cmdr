@@ -280,6 +280,18 @@
   "@commands.paneRefresh.label": {
     "sourceHash": "42ce075"
   },
+  "commands.paneMoveDividerLeft.label": "向左移動窗格分隔線",
+  "@commands.paneMoveDividerLeft.label": {
+    "sourceHash": "863b17a"
+  },
+  "commands.paneMoveDividerRight.label": "向右移動窗格分隔線",
+  "@commands.paneMoveDividerRight.label": {
+    "sourceHash": "d3e8092"
+  },
+  "commands.paneResetDivider.label": "重設窗格分隔線",
+  "@commands.paneResetDivider.label": {
+    "sourceHash": "eab918a"
+  },
   "commands.tabNew.label": "新增分頁",
   "@commands.tabNew.label": {
     "sourceHash": "1e08fda"
