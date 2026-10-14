@@ -343,6 +343,36 @@ async fn smb_integration_a_forced_case_only_rename_keeps_the_file() {
     vol.delete(Path::new(&dir)).await.unwrap();
 }
 
+/// Renaming a file to the same name in another case is what the pane does on
+/// a case-only edit (without force, since nothing else is in the way). On a
+/// case-insensitive share the destination "exists" (it's the source), and that
+/// must not read as a taken name.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_case_only_rename_isnt_refused_as_taken() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+    let lower = format!("{dir}/report.txt");
+    let upper = format!("{dir}/Report.txt");
+    vol.create_file(Path::new(&lower), b"keep me").await.unwrap();
+
+    vol.rename(Path::new(&lower), Path::new(&upper), false).await.unwrap();
+
+    let names: Vec<String> = vol
+        .list_directory_impl(Path::new(&dir))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert_eq!(names, vec!["Report.txt".to_string()]);
+
+    vol.delete(Path::new(&upper)).await.unwrap();
+    vol.delete(Path::new(&dir)).await.unwrap();
+}
+
 /// smb2's replacing rename refuses a directory at either end, so a forced
 /// rename onto an empty directory still clears it first and lands, as it did
 /// before the rename could replace in one step.

@@ -1077,6 +1077,11 @@ replaced cost three (pinned on the wire by `smb_integration_a_forced_rename_repl
   `Report.txt` lost the file. The replacing rename handles a case-only change in place; `same_name_ignoring_case` keeps
   the fallback from ever reaching it. Pinned by `smb_integration_a_forced_case_only_rename_keeps_the_file` (red before:
   `NotFound` after the source was deleted).
+- **A plain rename sends no stat first.** The server refuses a taken name itself (smb2 sends `ReplaceIfExists = false`,
+  answered `STATUS_OBJECT_NAME_COLLISION`), so the wire is the no-clobber guarantee and a stat beside it bought nothing
+  but a round trip and one bug: on a case-insensitive share it found the source under a case-only new name, so renaming
+  `report.txt` to `Report.txt` in a pane was refused as taken. Pinned by
+  `smb_integration_a_case_only_rename_isnt_refused_as_taken` (red before) and the shared no-clobber conformance cell.
 
 **Gotcha/Why**: a test that means to exercise the streaming writer MUST size its file off `negotiated_max_write()`, not
 a literal. The fixture Samba negotiates a `max_write` far above any round number you would reach for, so a "4 MiB,

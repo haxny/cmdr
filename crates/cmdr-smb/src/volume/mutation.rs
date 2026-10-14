@@ -153,14 +153,6 @@ impl SmbVolume {
         if force {
             self.replacing_rename(&smb_from, &smb_to).await?;
         } else {
-            // Check if dest exists and return AlreadyExists if so
-            let dest_exists = {
-                let (tree, mut conn) = self.clone_session().await?;
-                tree.stat(&mut conn, &smb_to).await.is_ok()
-            };
-            if dest_exists {
-                return Err(VolumeError::AlreadyExists(to.display().to_string()));
-            }
             self.plain_rename(&smb_from, &smb_to).await?;
         }
 
@@ -168,7 +160,10 @@ impl SmbVolume {
         Ok(())
     }
 
-    /// One rename that refuses a taken name.
+    /// One rename that refuses a taken name. The server is what refuses it
+    /// (smb2 sends `ReplaceIfExists = false`), with `AlreadyExists` naming the
+    /// destination. No stat goes out first: on a case-insensitive share it finds
+    /// the SOURCE under a case-only new name and refused that rename as taken.
     async fn plain_rename(&self, smb_from: &str, smb_to: &str) -> Result<(), VolumeError> {
         let (tree, mut conn) = self.clone_session().await?;
         let r = tree.rename(&mut conn, smb_from, smb_to).await;
