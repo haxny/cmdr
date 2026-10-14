@@ -323,10 +323,12 @@ already supplied a name. Backend landing and safety:
    - **A refused trash words itself from its typed `TrashRefusalKind`, and never says "try again".** `trash_refused`
      exists precisely because the flattened `io_error` version said "Try again. If the problem persists, check the
      technical details below" over a permission refusal that retrying cannot change, with the OS's actual reason folded
-     away behind a disclosure. Each reason gets its own explanation and its own way through (permanent delete for the
-     two that have one). When this Mac is ALSO missing Full Disk Access and the reason is permission-shaped, one extra
-     line offers that — additive, never a replacement, and never on a reason Cmdr couldn't classify. The rule and why
-     it's narrow: `#lib/onboarding/DETAILS.md` § "What an error message may add about it".
+     away behind a disclosure. Each reason gets its own explanation and its own way through: permanent delete only for
+     `noTrashForVolume`, ❌ never for a permission-shaped reason, since a permanent delete needs the same permission the
+     trash was refused (ERR-JQK62 sent a user from one refusal into the next). When this Mac is ALSO missing Full Disk
+     Access and the reason is permission-shaped, one extra line offers that — additive, never a replacement, and never
+     on a reason Cmdr couldn't classify. The rule and why it's narrow: `#lib/onboarding/DETAILS.md` § "What an error
+     message may add about it".
 
 ## Archive-password prompt
 

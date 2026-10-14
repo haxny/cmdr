@@ -124,6 +124,14 @@ is one, comes from sizes computed before the batch started, never from the trash
 - **Some taken, some refused** → `write-complete` with `refused: Some(TrashRefusedItems { item_count, reason })`, the
   same `strongest_refusal`, so the mixed ending explains itself exactly as the total one does.
 
+**A permission refusal is narrowed by the item, at the refusal** (`trash.rs::refine_permission_refusal`). A Locked item
+and an item in a folder we can't write both come back as the same 513 a TCC-protected spot does (verified on macOS 27.0
+with `trashItemAtURL` on a `chflags uchg` file and on a file in a `0555` folder, 2026-10-14), so the `NSError` can't
+tell them apart, but the item can: a lock flag makes it `Locked`, else a parent failing `access(W_OK)` makes it
+`FolderNotWritable`, else it stays `NotPermitted`. Each gets its own fix-it advice, and none of the three is offered a
+permanent delete, which the same permission refuses. Rank in `strongest_refusal`: `NotPermitted` (may be a grant away),
+`Locked`, `FolderNotWritable`, `NoTrashForVolume`, `Other`. Regression anchor: ERR-JQK62.
+
 **Why `refused` exists as its own field.** The mixed ending used to emit a bare completion with `files_skipped: 0` and
 nothing else: two items in, one trashed, and the terminal event said "1 file, 0 skipped" while the refused one sat
 untouched in the pane (a Dropbox online-only file beside an ordinary one, 2026-09-17). ❌ It can't ride `files_skipped`:

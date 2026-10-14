@@ -371,6 +371,102 @@ fn a_batch_reports_the_reason_that_offers_the_user_the_most() {
     );
 }
 
+/// Sets or clears an item's Finder Locked flag (`uchg`) the way a user would.
+#[cfg(target_os = "macos")]
+fn set_locked(path: &Path, locked: bool) {
+    let flag = if locked { "uchg" } else { "nouchg" };
+    let done = std::process::Command::new("chflags").arg(flag).arg(path).status();
+    assert!(done.is_ok_and(|status| status.success()), "chflags {flag}");
+}
+
+/// A Locked item refuses with the same 513 as any permission refusal, and the
+/// "permission" advice was a dead end for it: a permanent delete is refused too.
+/// Regression anchor: ERR-JQK62 (cmdr-reports#54).
+#[cfg(target_os = "macos")]
+#[test]
+fn a_locked_item_refuses_as_locked() {
+    let tmp = create_test_dir("trash_locked_item");
+    let file = tmp.join("locked.pdf");
+    fs::write(&file, "content").unwrap();
+    set_locked(&file, true);
+
+    let result = move_to_trash_sync(&file);
+    set_locked(&file, false);
+
+    assert!(
+        matches!(
+            result,
+            Err(MutationError::TrashRefused {
+                reason: TrashRefusalKind::Locked,
+                ..
+            })
+        ),
+        "expected a Locked refusal, got {result:?}"
+    );
+    assert!(file.exists(), "a refused item stays where it was");
+}
+
+/// Same 513 for an item whose folder takes no writes, which no permanent delete can
+/// get past either, so it gets its own reason and advice.
+#[cfg(target_os = "macos")]
+#[test]
+fn an_item_in_a_folder_that_takes_no_writes_refuses_as_folder_not_writable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let tmp = create_test_dir("trash_folder_not_writable");
+    let folder = tmp.join("read-only");
+    fs::create_dir(&folder).unwrap();
+    let file = folder.join("report.pdf");
+    fs::write(&file, "content").unwrap();
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o555)).unwrap();
+
+    let result = move_to_trash_sync(&file);
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o755)).unwrap();
+
+    assert!(
+        matches!(
+            result,
+            Err(MutationError::TrashRefused {
+                reason: TrashRefusalKind::FolderNotWritable,
+                ..
+            })
+        ),
+        "expected a FolderNotWritable refusal, got {result:?}"
+    );
+    assert!(file.exists(), "a refused item stays where it was");
+}
+
+/// The two refusals read from the item outrank only the reasons that offer less: a
+/// plain permission refusal still wins, because it may be a grant away.
+#[test]
+fn a_batch_ranks_the_item_level_refusals_between_permission_and_no_trash() {
+    let item = |reason| TrashItemError {
+        path: PathBuf::from("/some/file.txt"),
+        message: String::new(),
+        reason,
+        online_only: false,
+    };
+
+    assert_eq!(
+        strongest_refusal(&[
+            item(TrashRefusalKind::NoTrashForVolume),
+            item(TrashRefusalKind::FolderNotWritable)
+        ]),
+        TrashRefusalKind::FolderNotWritable
+    );
+    assert_eq!(
+        strongest_refusal(&[
+            item(TrashRefusalKind::FolderNotWritable),
+            item(TrashRefusalKind::Locked)
+        ]),
+        TrashRefusalKind::Locked
+    );
+    assert_eq!(
+        strongest_refusal(&[item(TrashRefusalKind::Locked), item(TrashRefusalKind::NotPermitted)]),
+        TrashRefusalKind::NotPermitted
+    );
+}
+
 #[test]
 fn test_cancellation_flag_checked_by_state() {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));

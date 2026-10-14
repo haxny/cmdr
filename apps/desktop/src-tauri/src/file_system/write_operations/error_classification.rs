@@ -112,7 +112,7 @@ impl From<std::io::Error> for WriteOperationError {
 /// system and append-only kinds): a fact about the item, read with `lstat`, never a
 /// guess from a path or a message.
 #[cfg(target_os = "macos")]
-fn is_locked_item(path: &Path) -> bool {
+pub(super) fn is_locked_item(path: &Path) -> bool {
     use std::os::macos::fs::MetadataExt;
 
     const LOCKS: u32 = libc::UF_IMMUTABLE | libc::UF_APPEND | libc::SF_IMMUTABLE | libc::SF_APPEND;
@@ -120,7 +120,7 @@ fn is_locked_item(path: &Path) -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn is_locked_item(_path: &Path) -> bool {
+pub(super) fn is_locked_item(_path: &Path) -> bool {
     false
 }
 

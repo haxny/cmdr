@@ -26,7 +26,7 @@ vi.mock('#lib/onboarding/fda-status.svelte.js', () => ({
 
 import { getUserFriendlyMessage, mayBeAPermissionGrantAway } from './transfer-error-messages'
 
-const ALL_REASONS: TrashRefusalKind[] = ['notPermitted', 'noTrashForVolume', 'other']
+const ALL_REASONS: TrashRefusalKind[] = ['notPermitted', 'locked', 'folderNotWritable', 'noTrashForVolume', 'other']
 
 function refused(reason: TrashRefusalKind, itemCount = 7, onlineOnly = false) {
   return getUserFriendlyMessage({ type: 'trash_refused', itemCount, reason, message: 'os words', onlineOnly }, 'trash')
@@ -62,9 +62,20 @@ describe('a refused trash', () => {
     }
   })
 
-  it('offers a permanent delete for the two reasons where that is the way through', () => {
-    expect(refused('notPermitted').suggestion).toContain('Shift+F8')
+  it('offers a permanent delete only where the location, not a permission, is what refused', () => {
     expect(refused('noTrashForVolume').suggestion).toContain('Shift+F8')
+  })
+
+  // A permanent delete needs the same permission the trash was refused, so offering it
+  // there sends the user into a second refusal. Regression anchor: ERR-JQK62.
+  it('never offers a permanent delete for a permission refusal', () => {
+    for (const reason of ['notPermitted', 'locked', 'folderNotWritable'] as const) {
+      expect(refused(reason).suggestion).not.toContain('Shift+F8')
+    }
+  })
+
+  it('tells the user how to unlock a Locked item', () => {
+    expect(refused('locked').suggestion).toContain('Get Info')
   })
 
   describe('the Full Disk Access line', () => {

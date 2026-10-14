@@ -62,7 +62,7 @@ pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError>
         file_manager
             .trashItemAtURL_resultingItemURL_error(&url, Some(&mut resulting))
             .map_err(|e| MutationError::TrashRefused {
-                reason: classify_trash_refusal(&e),
+                reason: refine_permission_refusal(path, classify_trash_refusal(&e)),
                 detail: e.to_string(),
             })?;
         let in_trash = resulting.and_then(|u| u.path()).map(|p| PathBuf::from(p.to_string()));
@@ -104,6 +104,33 @@ fn classify_trash_refusal(error: &objc2_foundation::NSError) -> TrashRefusalKind
         },
         _ => TrashRefusalKind::Other,
     }
+}
+
+/// Narrow a [`TrashRefusalKind::NotPermitted`] down to what the item and its folder
+/// say about themselves, since the `NSError` can't: a Locked item and an item in a
+/// folder that takes no writes both refuse as 513 (verified on macOS 27.0 with
+/// `trashItemAtURL` on a `chflags uchg` file and on a file in a `0555` folder,
+/// 2026-10-14). Neither is a grant away, and a permanent delete refuses them too, so
+/// each gets its own advice. Asked right after the refusal: `trashItemAtURL` is
+/// atomic, so the item is still where it was.
+#[cfg(target_os = "macos")]
+fn refine_permission_refusal(path: &Path, reason: TrashRefusalKind) -> TrashRefusalKind {
+    use super::super::error_classification::is_locked_item;
+    use super::super::validation::folder_write_refusal;
+
+    if reason != TrashRefusalKind::NotPermitted {
+        return reason;
+    }
+    if is_locked_item(path) {
+        return TrashRefusalKind::Locked;
+    }
+    if path
+        .parent()
+        .is_some_and(|folder| folder_write_refusal(folder).is_some())
+    {
+        return TrashRefusalKind::FolderNotWritable;
+    }
+    reason
 }
 
 #[cfg(target_os = "linux")]
@@ -562,15 +589,20 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
 ///
 /// Takes the one that opens the most doors for the user rather than the most common:
 /// a batch of nine items where one was refused for permission is still a batch where
-/// granting a permission might help, and the majority answer would hide that.
+/// granting a permission might help, and the majority answer would hide that. The
+/// two reasons read from the item itself (Locked, a folder that takes no writes) come
+/// next: each names a concrete fix the user can make.
 fn strongest_refusal(errors: &[TrashItemError]) -> TrashRefusalKind {
-    if errors.iter().any(|e| e.reason == TrashRefusalKind::NotPermitted) {
-        return TrashRefusalKind::NotPermitted;
-    }
-    if errors.iter().any(|e| e.reason == TrashRefusalKind::NoTrashForVolume) {
-        return TrashRefusalKind::NoTrashForVolume;
-    }
-    TrashRefusalKind::Other
+    const RANKED: [TrashRefusalKind; 4] = [
+        TrashRefusalKind::NotPermitted,
+        TrashRefusalKind::Locked,
+        TrashRefusalKind::FolderNotWritable,
+        TrashRefusalKind::NoTrashForVolume,
+    ];
+    RANKED
+        .into_iter()
+        .find(|kind| errors.iter().any(|e| e.reason == *kind))
+        .unwrap_or(TrashRefusalKind::Other)
 }
 
 /// One top-level item this trash could not take.

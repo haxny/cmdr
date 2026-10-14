@@ -84,8 +84,9 @@ read as "already deleting" while the scan was still counting.
 
 - **Dangling symlinks**: `symlink_metadata()` instead of `path.exists()`. A dangling symlink (target deleted) is still a
   valid item to trash/delete.
-- **Locked files**: `trashItemAtURL` handles locked files on APFS. Permanent delete fails on locked files with a message
-  suggesting unlocking via Finder.
+- **Locked files**: `trashItemAtURL` refuses a Locked item, and so does a permanent delete. Both say so and suggest
+  unlocking via Finder; the trash reads it as `TrashRefusalKind::Locked` (backend `delete/DETAILS.md` § "What a batch
+  trash reports").
 - **No-trash volumes**: detected proactively via `supportsTrash`. The dialog forces permanent mode and shows a warning.
   If `trashItemAtURL` unexpectedly fails on a "supports trash" volume, the per-item error suggests Shift+F8.
 - **Partial failures**: the operation continues; successful items stay deleted/trashed, and a batch trash whose items

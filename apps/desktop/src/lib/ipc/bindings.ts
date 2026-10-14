@@ -16659,6 +16659,18 @@ export type TrashRefusalKind =
    */
   | 'notPermitted'
   /**
+   *  A permission refusal where the item itself carries a lock flag (Finder's
+   *  Locked, `chflags uchg`). macOS answers it with the same 513 as any other
+   *  permission refusal, so it's read from the item, at the refusal.
+   */
+  | 'locked'
+  /**
+   *  A permission refusal where the item isn't locked but the folder holding it
+   *  takes no writes from us (`access(W_OK)` on the parent), which a move to the
+   *  Trash needs. Same 513 again; read from the folder, at the refusal.
+   */
+  | 'folderNotWritable'
+  /**
    *  macOS couldn't find a Trash for the item's volume
    *  (`NSFeatureUnsupportedError`). It reads as "this volume doesn't have one",
    *  and that is what it says for a File Provider folder the app can't reach,
