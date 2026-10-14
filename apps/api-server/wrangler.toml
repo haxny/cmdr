@@ -265,9 +265,9 @@ GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 #                                   every license bought under it with it. Archive the price in
 #                                   Paddle rather than deleting it.)
 # - ADMIN_API_TOKEN                (dedicated token for /admin/stats)
-# - CRASH_NOTIFICATION_EMAIL      (recipient for crash alert emails)
-# - FEEDBACK_NOTIFICATION_EMAIL    (optional: recipient for the in-app feedback digest; the cron job
-#                                   falls back to CRASH_NOTIFICATION_EMAIL when unset, so feedback
+# - CRASH_NOTIFICATION_EMAIL      (recipient for the report digest and the ops alerts)
+# - FEEDBACK_NOTIFICATION_EMAIL    (optional: recipient for the report digest; the cron job
+#                                   falls back to CRASH_NOTIFICATION_EMAIL when unset, so the digest
 #                                   email needs no new secret)
 # - DISCORD_WEBHOOK_URL            (Discord webhook for #error-reports; also carries the cron
 #                                   failure alerts, so a broken cron job reaches a channel that

@@ -20,23 +20,23 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   `scheduleBackground`, `redactEmail`, `activationCountKey`, `formatBytes`. The last four live here rather than beside
   one route precisely so a second route can't reimplement them: a hand-rolled body read is how a size cap becomes
   decorative.
-- **`email/`**: Resend delivery, split one module per audience so a sender is read and changed without the other six in
+- **`email/`**: Resend delivery, split one module per audience so a sender is read and changed without the others in
   view.
   - **`send.ts`**: the only door out. `sendViaResend` (every sender goes through it), `humanReportRecipient` (the one
-    place the `FEEDBACK_NOTIFICATION_EMAIL ?? CRASH_NOTIFICATION_EMAIL` rule lives, shared by the feedback digest and
-    error-report mail so neither needs a new secret), and `sendEmailPathProbe` (the daily liveness check, § Cron handler
-    job 9).
+    place the `FEEDBACK_NOTIFICATION_EMAIL ?? CRASH_NOTIFICATION_EMAIL` rule lives), and `sendEmailPathProbe` (the daily
+    liveness check, § Cron handler job 9).
   - **`layout.ts`**: the HTML vocabulary. `escapeHtml`, `documentShell` (the `<!DOCTYPE>`…`<body>` wrapper),
-    `bodyStyle`, the card constants, `notificationPage`, `replyToLine`, `envChip`, and the table cell styles
+    `bodyStyle`, the card constants, `replyToLine`, `boardLine` (an entry's link to its card), and the table cell styles
     (`CELL_STYLE`, `headCellStyle`, `TABLE_STYLE`). Everything is inline style with explicit hex: mail clients strip
     `<style>` blocks and their `prefers-color-scheme` support is a coin flip, so the pages commit to one light palette.
-  - **`crash.ts`**, **`feedback.ts`**, **`error-report.ts`** (the report, its amendments, and the daily-cap suppression
-    notice), **`ops-alerts.ts`** (DB size, device count), **`license.ts`** (key delivery).
-  - **Decision: two visual families, deliberately.** The human-facing channels (feedback, error reports) render cards on
-    `#1f2937` over an explicit white ground; the older ops alerts (crash digest, DB size, device count) render tables on
-    `#333` over the client's default ground. `bodyStyle` takes the color and width rather than hiding the difference,
-    because converging them changes what lands in a human inbox and so belongs to a copy-and-design pass, not a
-    refactor.
+  - **`digest.ts`**: the three-hour report digest, the one email reports produce (§ Cron handler job 2). It composes the
+    renderers in **`crash.ts`** (a table: machine facts scanned down a column), **`error-report.ts`** (report and
+    amendment cards), and **`feedback.ts`** (cards: prose would shred in a table column). Then **`ops-alerts.ts`** (DB
+    size, device count) and **`license.ts`** (key delivery).
+  - **Decision: two visual families, deliberately.** The digest renders on `#1f2937` over an explicit white ground; the
+    ops alerts (DB size, device count) render tables on `#333` over the client's default ground. `bodyStyle` takes the
+    color and width rather than hiding the difference, because converging them changes what lands in a human inbox and
+    so belongs to a copy-and-design pass, not a refactor.
   - `license.ts` exports its two copy builders (`getLicenseDescription`, `getIntroText`) so the three validity sentences
     and the two openers are pinned by `license.test.ts` rather than reviewed by eye. `src/licensing/DETAILS.md` § Manual
     licenses says why a dated license must never read as renewing.
@@ -44,23 +44,23 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
     plain-text alternative (it carries a key the reader has to copy, so it must survive an HTML-refusing client), and
     the one styled by a `<head>` `<style>` block with class names. Forcing it onto the ops chrome would trade a real
     difference for a false symmetry.
-  - There is no barrel file: importers name the module they need (`./email/crash`, `../email/ops-alerts`), so an import
+  - There is no barrel file: importers name the module they need (`./email/digest`, `../email/ops-alerts`), so an import
     says which family of mail a route touches.
-  - **Every sender has a real-runtime lane.** `email-runtime.test.ts` drives seven of them through the actual Worker and
-    asserts the Resend payload off the wire; `src/licensing/webhook-runtime.test.ts` does the eighth
-    (`sendLicenseEmail`). Adding a sender means adding it there too, or it ships untested against the runtime it deploys
-    to. § Test runtimes.
+  - **Every sender has a real-runtime lane.** `email-runtime.test.ts` drives them through the actual Worker and asserts
+    the Resend payload off the wire; `src/licensing/webhook-runtime.test.ts` does `sendLicenseEmail`. Adding a sender
+    means adding it there too, or it ships untested against the runtime it deploys to. § Test runtimes.
 - **`discord.ts`**: Discord webhook client (single retry on 429, drop-on-failure). Carries the cron failure alert as
   well as the error-report, feedback, beta-signup, and eviction notifications.
 - **`cron-health.ts`**: `pingCronHealth`, the healthchecks.io dead-man's switch for the cron tick. § Cron alarms.
 - **`report-outbox.ts`**: the cron jobs that file every pending crash, error report, feedback message, and amendment as
-  a card on the reports board. § The reports repo. Tested against a REAL SQLite built from the migrations
-  (`sqlite-d1-test-helper.ts`), because the risk of an outbox is a row a WHERE clause quietly skips.
-- **`scheduled.ts`**: the cron jobs (crash notifications, feedback digest, license backup, daily aggregation, DB size,
-  retention sweep, eviction sweep). Tests split by axis: `crash-notification-email.test.ts` and
-  `feedback-notification-email.test.ts` cover the two jobs whose output is a document (query → row → rendered HTML and
-  subject), `scheduled.test.ts` the DB-writing jobs, `cron-alarm.test.ts` the handler's alarm wiring, and
-  `email-path-probe.test.ts` the daily liveness check, with the D1/env fakes in `cron-test-helpers.ts`.
+  a card on the reports board. § The reports repo.
+- **`report-digest.ts`**: the cron job that mails the three-hour digest and stamps what it sent. § Cron handler.
+- Both are tested against a REAL SQLite built from the migrations (`sqlite-d1-test-helper.ts`), because the risk of an
+  outbox is a row a WHERE clause quietly skips: `report-outbox.test.ts`, `report-digest.test.ts`,
+  `report-retention.test.ts`.
+- **`scheduled.ts`**: the other cron jobs (license backup, daily aggregation, DB size, retention sweep, eviction sweep,
+  personal-comment sweep). `scheduled.test.ts` covers the DB-writing jobs, `cron-alarm.test.ts` the handler's alarm
+  wiring, and `email-path-probe.test.ts` the daily liveness check, with the D1/env fakes in `cron-test-helpers.ts`.
 - **`user-agent.ts`**: `classifyUaFamily` / `resolveUaFamily`, shared by the download write path and the funnel read
   path so neither area imports the other.
 - **`scripts/generate-keys.js`**: Ed25519 key pair generation (run once at setup).
@@ -121,30 +121,30 @@ Decisions.
 
 ### Configuration
 
-| Secret / var                       | `.dev.vars` (local dev)          | Wrangler secret (deployed worker)  |
-| ---------------------------------- | -------------------------------- | ---------------------------------- |
-| `PADDLE_ENVIRONMENT`               | `"sandbox"` (from wrangler.toml) | `"live"`                           |
-| `PADDLE_WEBHOOK_SECRET_SANDBOX`    | Sandbox secret                   | Sandbox secret (for safety)        |
-| `PADDLE_WEBHOOK_SECRET_LIVE`       | n/a                              | Live secret                        |
-| `PADDLE_API_KEY_SANDBOX`           | Sandbox API key                  | n/a                                |
-| `PADDLE_API_KEY_LIVE`              | n/a                              | Live API key                       |
-| `PRICE_ID_COMMERCIAL_SUBSCRIPTION` | Sandbox price ID                 | Live price ID                      |
-| `PRICE_ID_COMMERCIAL_PERPETUAL`    | Sandbox price ID                 | Live price ID                      |
-| `ED25519_PRIVATE_KEY`              | DEV private key hex              | PRODUCTION private key hex         |
-| `RESEND_API_KEY`                   | Resend key                       | Same Resend key                    |
-| `CRASH_NOTIFICATION_EMAIL`         | `david@getcmdr.com`              | Recipient email for crash alerts   |
-| `FEEDBACK_NOTIFICATION_EMAIL`      | unset (falls back)               | Optional feedback digest recipient |
-| `DISCORD_WEBHOOK_URL`              | Same webhook URL                 | Discord webhook for error reports  |
-| `DISCORD_BETA_SIGNUP_WEBHOOK_URL`  | Optional (falls back)            | Optional signups webhook (both)    |
-| `R2_ACCOUNT_ID`                    | Same account ID                  | For minting presigned R2 URLs      |
-| `R2_ACCESS_KEY_ID`                 | Same access key                  | R2 S3-compat access key (read OK)  |
-| `R2_SECRET_ACCESS_KEY`             | Same secret                      | Paired secret for R2 access key    |
-| `LISTMONK_API_URL`                 | `https://mail.getcmdr.com`       | Same base URL                      |
-| `LISTMONK_API_USER`                | Listmonk API user                | Funnel only (signups need none)    |
-| `LISTMONK_API_TOKEN`               | Listmonk API token               | Funnel only (signups need none)    |
-| `LISTMONK_*_LIST_ID` / `_UUID`     | Beta + newsletter list ids/UUIDs | Same ([vars], not secrets)         |
-| `IP_HASH_PEPPER`                   | Any random string                | Makes every stored IP hash one-way |
-| `HEALTHCHECKS_PING_URL`            | unset (skips the ping)           | healthchecks.io cron ping URL      |
+| Secret / var                       | `.dev.vars` (local dev)          | Wrangler secret (deployed worker)   |
+| ---------------------------------- | -------------------------------- | ----------------------------------- |
+| `PADDLE_ENVIRONMENT`               | `"sandbox"` (from wrangler.toml) | `"live"`                            |
+| `PADDLE_WEBHOOK_SECRET_SANDBOX`    | Sandbox secret                   | Sandbox secret (for safety)         |
+| `PADDLE_WEBHOOK_SECRET_LIVE`       | n/a                              | Live secret                         |
+| `PADDLE_API_KEY_SANDBOX`           | Sandbox API key                  | n/a                                 |
+| `PADDLE_API_KEY_LIVE`              | n/a                              | Live API key                        |
+| `PRICE_ID_COMMERCIAL_SUBSCRIPTION` | Sandbox price ID                 | Live price ID                       |
+| `PRICE_ID_COMMERCIAL_PERPETUAL`    | Sandbox price ID                 | Live price ID                       |
+| `ED25519_PRIVATE_KEY`              | DEV private key hex              | PRODUCTION private key hex          |
+| `RESEND_API_KEY`                   | Resend key                       | Same Resend key                     |
+| `CRASH_NOTIFICATION_EMAIL`         | `david@getcmdr.com`              | Report digest + ops alert recipient |
+| `FEEDBACK_NOTIFICATION_EMAIL`      | unset (falls back)               | Optional report digest recipient    |
+| `DISCORD_WEBHOOK_URL`              | Same webhook URL                 | Discord webhook for error reports   |
+| `DISCORD_BETA_SIGNUP_WEBHOOK_URL`  | Optional (falls back)            | Optional signups webhook (both)     |
+| `R2_ACCOUNT_ID`                    | Same account ID                  | For minting presigned R2 URLs       |
+| `R2_ACCESS_KEY_ID`                 | Same access key                  | R2 S3-compat access key (read OK)   |
+| `R2_SECRET_ACCESS_KEY`             | Same secret                      | Paired secret for R2 access key     |
+| `LISTMONK_API_URL`                 | `https://mail.getcmdr.com`       | Same base URL                       |
+| `LISTMONK_API_USER`                | Listmonk API user                | Funnel only (signups need none)     |
+| `LISTMONK_API_TOKEN`               | Listmonk API token               | Funnel only (signups need none)     |
+| `LISTMONK_*_LIST_ID` / `_UUID`     | Beta + newsletter list ids/UUIDs | Same ([vars], not secrets)          |
+| `IP_HASH_PEPPER`                   | Any random string                | Makes every stored IP hash one-way  |
+| `HEALTHCHECKS_PING_URL`            | unset (skips the ping)           | healthchecks.io cron ping URL       |
 
 `ED25519_PRIVATE_KEY` is two different keys, unlike the rows marked "Same". The production signer can mint a license
 every shipped build accepts, so it exists only as a wrangler secret; `.dev.vars` gets its own pair, and the desktop app
@@ -284,14 +284,16 @@ back to the OAuth login).
 
 **D1 for telemetry and fulfillment:** crash reports, downloads, update checks, heartbeats, relayed feature events,
 feedback, and the `license_issuance` record all live in D1 (binding `TELEMETRY_DB`, database `cmdr-telemetry`).
-Migrations live in `migrations/` (latest: `0021_license_adjustments.sql`, the refund and chargeback record
-`/webhook/paddle` keeps beside the ledger (`src/licensing/DETAILS.md` § Refunds); `0020_heartbeat_uptime_and_events.sql`
-is `heartbeat.uptime_seconds` and the `analytics_event` table `/heartbeat` relays feature events into;
-`0017_manual_licenses.sql` is the `source` / `organization_name` / `expires_at` / `revoked_at` / `note` columns that
-turn `license_issuance` into the ledger for hand-issued licenses as well as purchases; `0016_feedback_notified_at.sql`
-is the `feedback.notified_at` column the feedback digest reads, which also stamps the pre-existing rows so the first
-tick doesn't mail the backlog; `0015_crash_app_fate.sql` adds the nullable `app_fate` column the crash email ranks rows
-by; `0014_downloads_daily_unique.sql` is the distinct-downloader rollup the retention sweep writes;
+Migrations live in `migrations/` (latest: `0022_report_outbox.sql`, the report outbox: `error_reports`,
+`error_report_amendments`, `ops_events`, and `issue_number` on crashes and feedback, § The reports repo;
+`0021_license_adjustments.sql` is the refund and chargeback record `/webhook/paddle` keeps beside the ledger
+(`src/licensing/DETAILS.md` § Refunds); `0020_heartbeat_uptime_and_events.sql` is `heartbeat.uptime_seconds` and the
+`analytics_event` table `/heartbeat` relays feature events into; `0017_manual_licenses.sql` is the `source` /
+`organization_name` / `expires_at` / `revoked_at` / `note` columns that turn `license_issuance` into the ledger for
+hand-issued licenses as well as purchases; `0016_feedback_notified_at.sql` is the `feedback.notified_at` column the
+report digest reads, which also stamps the pre-existing rows so the first tick doesn't mail the backlog;
+`0015_crash_app_fate.sql` adds the nullable `app_fate` column the crash email ranks rows by;
+`0014_downloads_daily_unique.sql` is the distinct-downloader rollup the retention sweep writes;
 `0013_minimize_stored_identifiers.sql` adds `downloads.ua_family` and erases the crash-table IP hashes;
 `0012_license_issuance.sql` is the fulfillment record; `0011_crash_panic_message.sql` adds the nullable `panic_message`
 column; `0007_feedback.sql` adds the `feedback` table; `0006_crash_diag_email.sql` adds the nullable `diag_id` + `email`
@@ -327,33 +329,30 @@ Rerun `pnpm --filter @cmdr/api-server types:gen` after editing bindings or vars 
 A single `scheduled` handler runs every 3 hours (`0 */3 * * *`). Every job goes through `runCronJob`, which isolates one
 job's failure from the rest and raises the alarm for it (§ Cron alarms):
 
-1. **Crash notifications** (every invocation): queries `crash_reports WHERE notified_at IS NULL`, sorted newest-first,
-   sends an email via Resend with one row per crash report (When, Env, Fate, ID, Site, Signal, Version, Reply to) plus a
-   full-width sub-row carrying the redacted `panic_message` (an em-dash when the row has none), then marks the rows
-   notified. Requires `CRASH_NOTIFICATION_EMAIL` and `RESEND_API_KEY`.
-   - **Stamps `notified_at` AFTER the send**, matching the feedback digest. `sendViaResend` throws on a rejected send,
-     so a failure leaves every row NULL and the next tick retries. Stamping first drops the alert permanently, and the
-     credential failure that would cause it is exactly when crash reports matter most. The cost is a duplicate email
-     when a send succeeds and the `UPDATE` then fails, or a batch re-mailed every three hours while Resend stays
-     unhappy; both are visible (§ Cron alarms) and bounded by the cron interval, which a silent drop is not.
-   - **Fate is the severity ranking**, and the reason the email is worth reading row by row: `crashed` (red) for
-     `app_fate = 'ended'`, `kept running` (amber) for `'keptRunning'`, `?` (gray) for a NULL or `'unconfirmed'` row that
-     claims nothing. Two rows that both read `signal: panic` are otherwise indistinguishable, though one killed the app
-     and one didn't. The subject carries it too, since that's all you see without opening: the plain count when nothing
-     survived, `, the app kept running` when every report did, and `(N kept running)` for a mix. Only survivors are
-     counted there — a NULL fate is never tallied as a crash.
-2. **Feedback digest** (every invocation): queries `feedback WHERE notified_at IS NULL`, sorted newest-first, and sends
-   one email with a card per message (header strip with the UTC timestamp, app version, OS version, and a `prod`/`dev`
-   chip; then the message body with `white-space: pre-wrap` so the sender's line breaks survive; then the reply-to
-   line). Recipient is `FEEDBACK_NOTIFICATION_EMAIL ?? CRASH_NOTIFICATION_EMAIL`, so it ships with no new secret.
-   - **Stamps `notified_at` AFTER the send**, same as the crash job: a rejected send leaves the rows NULL and the next
-     tick retries them. Feedback is a person talking to us and this email is the only surface it gets read on, so a
-     duplicate costs seconds while a drop costs a conversation. ❌ Don't stamp before the send in either job.
-   - **`replyTo` is set only when exactly one message in the batch carries an address**, which makes answering that
-     person a plain reply. With none or several there's no single right answer, so the header stays off and the per-card
-     `mailto:` links carry it.
-   - `0016_feedback_notified_at.sql` stamps the pre-existing rows as notified, so the first tick after the migration
-     doesn't mail the whole backlog.
+1. **The board** (every invocation, first): `fileCrashCards`, `fileErrorReportCards`, `fileFeedbackCards`, then
+   `postAmendmentsToBoard` file every pending report as a card. § The reports repo.
+2. **Report digest** (every invocation, right after the board, so it can link the cards just filed):
+   `handleReportDigest` (`report-digest.ts`) sends ZERO OR ONE email covering every release-build crash, error report
+   (hand-written and auto-sent), amendment, and feedback message whose `notified_at` is NULL, then stamps exactly those
+   rows. Rendering is `src/email/digest.ts`, composing `crash.ts` (a table), `error-report.ts` and `feedback.ts`
+   (cards). Recipient is `FEEDBACK_NOTIFICATION_EMAIL ?? CRASH_NOTIFICATION_EMAIL` (`david@getcmdr.com`).
+   - **The subject IS the alert**: `Cmdr digest: 1 crash, 2 errors, 1 note added, 4 feedback in the past 3h`, naming
+     only the kinds that arrived. A phone notification shows nothing else, so it's built for "is anything urgent?".
+   - **One email for all four kinds, on purpose**: per-kind emails at intake trained David to ignore them, and an
+     instant mail per report meant a flood of auto-sends would bury the one that needs an answer. Three hours is fine
+     because the board, not the inbox, is where a report waits.
+   - **Stamps `notified_at` AFTER the send.** `sendViaResend` throws on a rejected send, so a failure leaves every row
+     NULL and the next tick retries in a bigger digest. Stamping first drops the alert permanently, and the credential
+     failure that would cause it is exactly when reports matter most. The cost is a duplicate when a send succeeds and
+     an `UPDATE` then fails; it's bounded by the cron interval, which a silent drop is not. ❌ Don't stamp before the
+     send.
+   - **Fate is the crash severity ranking**: `crashed` (red) for `app_fate = 'ended'`, `kept running` (amber) for
+     `'keptRunning'`, `?` (gray) for a NULL or `'unconfirmed'` row that claims nothing. The subject names the mix
+     (`2 crashes (1 kept running)`); a NULL fate is never tallied as a survivor.
+   - **`replyTo` is set only when exactly one distinct address appears in the whole digest**, which makes answering that
+     person a plain reply. With several there's no single right answer, so the per-entry `mailto:` links carry them.
+   - Every entry links its card, or says it isn't on the board yet. Debug builds are left out entirely (and never
+     stamped, which costs nothing).
 3. **License backup** (00:00 UTC only, and FIRST in the daily block, so a snapshot precedes anything that mutates):
    `handleLicenseBackup` writes every license and every stored key into one R2 object. What's in it and how a restore
    would read it: `src/licensing/DETAILS.md` § License backups.
@@ -375,8 +374,8 @@ job's failure from the rest and raises the alarm for it (§ Cron alarms):
    then triggers `tryEvict` if still over 8 GB. Idempotent, and it catches drift from concurrent uploads or a Worker
    dying mid-eviction.
 9. **Email path probe** (00:00 UTC only): `handleEmailPathProbe` sends one throwaway email through Resend so a dead
-   `RESEND_API_KEY` surfaces within a day instead of at the moment a crash alert, a feedback digest, or a buyer's
-   license key needs it. Recipient is `delivered@resend.dev`, Resend's simulator address, so nobody receives it.
+   `RESEND_API_KEY` surfaces within a day instead of at the moment a report digest or a buyer's license key needs it.
+   Recipient is `delivered@resend.dev`, Resend's simulator address, so nobody receives it.
    - **It has to be a real send.** The key is scoped to sending only, so `GET /domains`, `/api-keys`, and `/emails` all
      return 401 however healthy the key is (verified against the live key, 2026-09-02); a check built on them would
      alarm constantly. ❌ Don't widen the key to "Full access" to make them work: it would test the wrong capability (a
@@ -390,8 +389,8 @@ exported as a named export so tests can use `app.request()`.
 
 ## Cron alarms
 
-The cron jobs are the whole notification pipeline: crash alerts, the feedback digest, retention, eviction. When one of
-them stops working, nothing downstream complains, because "no crash email" and "no crashes" look identical. Three layers
+The cron jobs are the whole notification pipeline: the board, the report digest, retention, eviction. When one of them
+stops working, nothing downstream complains, because "no crash email" and "no crashes" look identical. Three layers
 cover that, and they cover different failures.
 
 1. **Discord, for a tick that ran and threw.** `runCronJob` (`index.ts`) catches, then posts through
@@ -669,9 +668,9 @@ Worker for a third party:
 - `src/licensing/production-runtime.test.ts` — minting through `/admin/generate`, manual validation, revocation.
 - `src/licensing/webhook-runtime.test.ts` — `/webhook/paddle` including `sendLicenseEmail`, the route the `Buffer` bug
   actually broke.
-- `src/email/email-runtime.test.ts` — the other seven senders in `email/`: the error report, its amendment, and the
-  suppression notice (over `/error-report` and `/error-report/:id/amend`), the crash and feedback digests and the daily
-  path probe (over a cron tick), the device count alert (over `/validate`), and the DB size alert.
+- `src/email/email-runtime.test.ts` — the other senders in `email/`: the report digest (a report and its amendment
+  through `/error-report` and `/error-report/:id/amend`, plus a crash and feedback, mailed on one cron tick), the daily
+  path probe, the device count alert (over `/validate`), and the DB size alert.
 
 Bring another risky path under it by adding a request rather than by widening the pool project. ❌ Never hand the
 harness its own compatibility settings.

@@ -1,7 +1,7 @@
 /**
  * The daily liveness probe for the Resend send path. Sends are sporadic (a handful a month), so
  * without this a revoked or rotated `RESEND_API_KEY` stays invisible until the moment it costs us
- * something: a crash alert, a feedback digest, or a buyer's license key.
+ * something: a report digest or a buyer's license key.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { handleEmailPathProbe } from './index'

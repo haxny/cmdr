@@ -75,10 +75,10 @@ export type Bindings = {
   PRICE_ID_COMMERCIAL_PERPETUAL?: string
   // Dedicated admin API token for /admin/stats (separate from Paddle secrets)
   ADMIN_API_TOKEN?: string
-  // Crash notification email recipient (for cron-based crash alerts)
+  // Recipient of the three-hour report digest and the ops alerts
   CRASH_NOTIFICATION_EMAIL?: string
-  // Optional dedicated recipient for the in-app feedback digest. When unset, the cron job falls
-  // back to CRASH_NOTIFICATION_EMAIL, so feedback email works with no new secret.
+  // Optional dedicated recipient for the report digest. When unset, the digest falls
+  // back to CRASH_NOTIFICATION_EMAIL, so it needs no new secret.
   FEEDBACK_NOTIFICATION_EMAIL?: string
   // R2 bucket for error report bundles (zips of redacted logs + manifest)
   ERROR_REPORTS_BUCKET: R2Bucket

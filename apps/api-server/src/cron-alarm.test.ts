@@ -45,7 +45,19 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-/** A non-midnight tick, so only the two every-invocation jobs run. */
+/** With the board configured, every every-tick job touches D1, so each one fails on a broken D1. */
+const withBoard = { GITHUB_ISSUES_TOKEN: 'ghp_x', GITHUB_ISSUES_REPO: 'vdavid/cmdr-reports' }
+
+/** The jobs every tick runs, in order, as `index.ts` names them. */
+const everyTickJobs = [
+  'Crash cards',
+  'Error report cards',
+  'Feedback cards',
+  'Amendments on the board',
+  'Report digest',
+]
+
+/** A non-midnight tick, so only the every-invocation jobs run. */
 const threeAm = { scheduledTime: Date.parse('2026-09-02T03:00:00.000Z') } as ScheduledEvent
 
 function discordPosts() {
@@ -60,35 +72,38 @@ describe('scheduled alarm wiring', () => {
   it('posts one Discord alert per job that threw, naming the job and the cause', async () => {
     const env = createBaseEnv({
       TELEMETRY_DB: brokenD1(),
+      ...withBoard,
       DISCORD_WEBHOOK_URL: 'https://discord.test/hook',
     })
 
     await worker.scheduled(threeAm, env as never)
 
     const alerts = discordPosts()
-    expect(alerts).toHaveLength(2)
+    expect(alerts).toHaveLength(everyTickJobs.length)
     const content = alerts.map((a) => (JSON.parse(a.body) as { content: string }).content)
-    expect(content[0]).toContain('Crash notifications')
+    expect(content[0]).toContain('Crash cards')
     expect(content[0]).toContain('no such table: crash_reports')
     expect(content[0]).toContain('2026-09-02T03:00:00.000Z')
-    expect(content[1]).toContain('Feedback notifications')
+    expect(content.at(-1)).toContain('Report digest')
   })
 
   it('keeps running the later jobs after an earlier one throws', async () => {
     const env = createBaseEnv({
       TELEMETRY_DB: brokenD1(),
+      ...withBoard,
       DISCORD_WEBHOOK_URL: 'https://discord.test/hook',
     })
 
     await worker.scheduled(threeAm, env as never)
 
-    // The second alert only exists if the second job ran at all.
-    expect(discordPosts()).toHaveLength(2)
+    // The later alerts only exist if the later jobs ran at all.
+    expect(discordPosts()).toHaveLength(everyTickJobs.length)
   })
 
   it('fails the healthcheck and names the jobs when a job threw', async () => {
     const env = createBaseEnv({
       TELEMETRY_DB: brokenD1(),
+      ...withBoard,
       HEALTHCHECKS_PING_URL: 'https://hc-ping.com/abc',
     })
 
@@ -97,7 +112,7 @@ describe('scheduled alarm wiring', () => {
     const pings = healthPings()
     expect(pings).toHaveLength(1)
     expect(pings[0]?.url).toBe('https://hc-ping.com/abc/fail')
-    expect(pings[0]?.body).toContain('Crash notifications')
+    for (const job of everyTickJobs) expect(pings[0]?.body).toContain(job)
   })
 
   it('pings the healthcheck clean when every job finished', async () => {
@@ -127,6 +142,7 @@ describe('scheduled alarm wiring', () => {
     )
     const env = createBaseEnv({
       TELEMETRY_DB: brokenD1(),
+      ...withBoard,
       DISCORD_WEBHOOK_URL: 'https://discord.test/hook',
       HEALTHCHECKS_PING_URL: 'https://hc-ping.com/abc',
     })

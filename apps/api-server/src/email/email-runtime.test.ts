@@ -1,6 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createTestHarness } from 'wrangler'
-import { DAILY_ERROR_REPORT_EMAIL_CAP, errorReportEmailCountKey } from '../telemetry/error-report-intake'
 import { EMAIL_PROBE_RECIPIENT } from './send'
 
 /**
@@ -9,7 +8,7 @@ import { EMAIL_PROBE_RECIPIENT } from './send'
  * cron job) and the Resend call throws here exactly as it throws in production.
  *
  * `webhook-runtime.test.ts` already covers `sendLicenseEmail` over the purchase path; this file is
- * the other seven. The reason they need a runtime lane at all, when `eslint.config.js` already
+ * the rest. The reason they need a runtime lane at all, when `eslint.config.js` already
  * bans Node globals in our own source, is the layer lint structurally can't see: a DEPENDENCY
  * reaching for `Buffer` or `process` on a path we exercise. `resend` and the layout helpers are
  * only proven safe by being run.
@@ -158,9 +157,7 @@ async function tick(utcHour: number): Promise<void> {
   expect(result.outcome, `Worker logs:\n${workerLogs()}`).toBe('ok')
 }
 
-const today = new Date().toISOString().slice(0, 10)
-
-describe('mailing a hand-written error report from the Worker runtime', () => {
+describe('mailing the report digest from the Worker runtime', () => {
   /** Upload one report the way the desktop client does, and keep the amend credential it hands back. */
   async function upload(meta: Record<string, unknown>): Promise<{ id: string; amendKey: string }> {
     const form = new FormData()
@@ -190,10 +187,8 @@ describe('mailing a hand-written error report from the Worker runtime', () => {
     })
   }
 
-  let uploaded: { id: string; amendKey: string }
-
-  it('mails the report, with the note and the reply-to the reporter attached', async () => {
-    uploaded = await upload({
+  it('mails ONE digest for a report, its amendment, a crash, and feedback, then stamps them all', async () => {
+    const uploaded = await upload({
       id: 'ERR-2345A',
       kind: 'user',
       appVersion: '0.9.1',
@@ -203,95 +198,49 @@ describe('mailing a hand-written error report from the Worker runtime', () => {
       email: 'reporter@example.com',
       generatedAt: new Date().toISOString(),
     })
-
-    const email = await awaitEmail()
-
-    expect(email.to).toBe(crashRecipient)
-    expect(email.subject).toBe('Cmdr: someone sent error report ERR-2345A')
-    expect(email.reply_to).toBe('reporter@example.com')
-    expect(email.html).toContain('Copying to the NAS stalls at 99%')
-    expect(email.html).toContain('ERR-2345A')
-  })
-
-  it('mails an amendment onto the report it lands on', async () => {
-    const response = await amend(uploaded.id, {
+    const amended = await amend(uploaded.id, {
       amendKey: uploaded.amendKey,
       note: 'It also stalls on a local disk',
       email: 'reporter@example.com',
     })
-    expect(response.status, `Worker logs:\n${workerLogs()}`).toBe(200)
+    expect(amended.status, `Worker logs:\n${workerLogs()}`).toBe(200)
 
-    const email = await awaitEmail()
-
-    expect(email.to).toBe(crashRecipient)
-    expect(email.subject).toBe(`Cmdr: someone added to error report ${uploaded.id}`)
-    expect(email.reply_to).toBe('reporter@example.com')
-    expect(email.html).toContain('It also stalls on a local disk')
-  })
-
-  it("mails the suppression notice once the day's allowance is spent", async () => {
-    // Spend the day's allowance outright rather than by sending ten reports: the cap is what's
-    // under test, and the counter is the only thing the route reads.
-    const env = await server.getWorker<HarnessEnv>().getEnv()
-    await env.ERROR_REPORT_META.put(errorReportEmailCountKey(today), String(DAILY_ERROR_REPORT_EMAIL_CAP))
-
-    const response = await amend(uploaded.id, { amendKey: uploaded.amendKey, note: 'one too many' })
-    expect(response.status).toBe(200)
-
-    const email = await awaitEmail()
-
-    expect(email.subject).toBe(`Cmdr: error report emails are suppressed for the rest of ${today}`)
-    expect(email.html).toContain(String(DAILY_ERROR_REPORT_EMAIL_CAP))
-    expect(email.html).not.toContain('one too many')
-  })
-})
-
-describe('mailing the cron digests from the Worker runtime', () => {
-  it('mails the crash digest, then stamps the rows it reported', async () => {
     const env = await server.getWorker<HarnessEnv>().getEnv()
     await env.TELEMETRY_DB.prepare(
       `INSERT INTO crash_reports
          (hashed_ip, backtrace, app_version, os_version, arch, signal, top_function, build_mode,
-          short_id, email, panic_message, app_fate)
+          short_id, panic_message, app_fate)
        VALUES ('', 'cmdr_fs::copy::stream', '0.9.1', 'macOS 26.0', 'aarch64', 'SIGSEGV',
-               'cmdr_fs::copy::stream', 'release', 'CRASH-7KQ2M', 'tester@example.com',
+               'cmdr_fs::copy::stream', 'release', 'CRASH-7KQ2M',
                'assertion failed: chunk.len() > 0', 'ended')`,
     ).run()
-
-    await tick(3)
-    const email = await awaitEmail()
-
-    expect(email.to).toBe(crashRecipient)
-    expect(email.subject).toBe('Cmdr: 1 new crash report')
-    expect(email.html).toContain('CRASH-7KQ2M')
-    expect(email.html).toContain('cmdr_fs::copy::stream')
-    expect(email.html).toContain('assertion failed: chunk.len() &gt; 0')
-
-    const stamped = await env.TELEMETRY_DB.prepare(
-      `SELECT notified_at FROM crash_reports WHERE short_id = 'CRASH-7KQ2M'`,
-    ).first<{ notified_at: string | null }>()
-    expect(stamped?.notified_at).toBeTruthy()
-  })
-
-  it('mails the feedback digest, replying to the one person who left an address', async () => {
-    const env = await server.getWorker<HarnessEnv>().getEnv()
     await env.TELEMETRY_DB.prepare(
-      `INSERT INTO feedback (feedback, email, app_version, os_version, build_mode)
-       VALUES ('The dual pane finally makes sense to me', 'happy@example.com', '0.9.1', 'macOS 26.0', 'release')`,
+      `INSERT INTO feedback (feedback, app_version, os_version, build_mode)
+       VALUES ('The dual pane finally makes sense to me', '0.9.1', 'macOS 26.0', 'release')`,
     ).run()
 
+    // Intake mails nothing on its own: the digest is the one email.
+    expect(resend.sent).toHaveLength(0)
+
     await tick(3)
     const email = await awaitEmail()
 
+    expect(resend.sent).toHaveLength(1)
     expect(email.to).toBe(crashRecipient)
-    expect(email.subject).toBe('Cmdr: 1 new feedback message')
-    expect(email.reply_to).toBe('happy@example.com')
+    expect(email.subject).toBe('Cmdr digest: 1 crash, 1 error, 1 note added, 1 feedback in the past 3h')
+    // One person left an address (twice), so a plain reply reaches them.
+    expect(email.reply_to).toBe('reporter@example.com')
+    expect(email.html).toContain('Copying to the NAS stalls at 99%')
+    expect(email.html).toContain('It also stalls on a local disk')
+    expect(email.html).toContain('assertion failed: chunk.len() &gt; 0')
     expect(email.html).toContain('The dual pane finally makes sense to me')
 
-    const stamped = await env.TELEMETRY_DB.prepare(
-      `SELECT notified_at FROM feedback WHERE email = 'happy@example.com'`,
-    ).first<{ notified_at: string | null }>()
-    expect(stamped?.notified_at).toBeTruthy()
+    for (const table of ['crash_reports', 'error_reports', 'error_report_amendments', 'feedback']) {
+      const pending = await env.TELEMETRY_DB.prepare(
+        `SELECT COUNT(*) AS n FROM ${table} WHERE notified_at IS NULL`,
+      ).first<{ n: number }>()
+      expect(pending?.n, table).toBe(0)
+    }
   })
 
   it('sends the daily path probe, which is the only send that proves the key still works', async () => {

@@ -16,19 +16,15 @@ import {
   EVICTION_LOW_WATERMARK,
 } from './error-report-eviction'
 import {
-  DAILY_ERROR_REPORT_EMAIL_CAP,
   DAILY_INTAKE_BUDGET_BYTES,
   DAILY_NOTIFICATION_CAP,
   checkIntakeAllowed,
   claimBudgetAlert,
-  claimErrorReportEmailSlot,
   claimNotificationSlot,
   recordIntakeBytes,
   type IntakeRejection,
 } from './error-report-intake'
 import { hashAmendKey, mintAmendKey, writeReportIndex } from './error-report-amend'
-import { humanReportRecipient } from '../email/send'
-import { sendErrorReportNotificationEmail, sendErrorReportsSuppressedEmail } from '../email/error-report'
 import {
   postErrorReportNotification,
   postEvictionBlockedNotification,
@@ -232,55 +228,10 @@ async function notifyDiscord(
 }
 
 /**
- * Mail one hand-written report to whoever reads them. Auto-sends never reach here: one misbehaving
- * install produced 50+ auto bundles in three days, and that volume in an inbox buries everything
- * else, while Discord absorbs it. `kind` comes from the client's manifest, so a daily cap bounds
- * what a build that mislabels its auto-sends can cost.
- *
- * Silent no-op when no recipient or Resend key is configured.
- */
-async function mailUserErrorReport(
-  env: Bindings,
-  args: UploadedReport,
-  presignedUrl: () => Promise<string | null>,
-): Promise<void> {
-  const to = humanReportRecipient(env)
-  if (!to || !env.RESEND_API_KEY) return
-
-  const decision = await claimErrorReportEmailSlot(env.ERROR_REPORT_META, args.date)
-  if (decision === 'silent') return
-  if (decision === 'suppress-notice') {
-    await sendErrorReportsSuppressedEmail({
-      cap: DAILY_ERROR_REPORT_EMAIL_CAP,
-      date: args.date,
-      to,
-      resendApiKey: env.RESEND_API_KEY,
-    })
-    return
-  }
-
-  await sendErrorReportNotificationEmail({
-    report: {
-      id: args.id,
-      buildMode: args.meta.buildMode ?? 'release',
-      appVersion: args.meta.appVersion,
-      osVersion: args.meta.osVersion,
-      arch: args.meta.arch,
-      sizeBytes: args.sizeBytes,
-      userNote: args.meta.userNote,
-      email: args.meta.email,
-      downloadUrl: await presignedUrl(),
-      linkTtlHours: PRESIGN_TTL_HOURS,
-    },
-    to,
-    resendApiKey: env.RESEND_API_KEY,
-  })
-}
-
-/**
- * Background work that runs after the 200 has already shipped:
- * update the bytes counter, maybe evict, post Discord notification, mail a hand-written report.
- * Wrapped to never throw; failures here are logged, not propagated.
+ * Background work that runs after the 200 has already shipped: update the bytes counter, maybe
+ * evict, post the Discord notification. The card and the email are the cron's job
+ * (`report-outbox.ts`, `report-digest.ts`). Wrapped to never throw; failures are logged, not
+ * propagated.
  */
 async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void> {
   const presignedUrl = createPresigner(env, args.key)
@@ -311,16 +262,6 @@ async function postUploadWork(env: Bindings, args: UploadedReport): Promise<void
       await notifyDiscord(env, env.DISCORD_WEBHOOK_URL, args, presignedUrl, evictionResult)
     } catch (e) {
       console.error('Error report: Discord notification failed', e)
-    }
-  }
-
-  if (args.meta.kind === 'user') {
-    // A mail problem is ours, never the reporter's: the bundle is already stored and the client
-    // has its 200.
-    try {
-      await mailUserErrorReport(env, args, presignedUrl)
-    } catch (e) {
-      console.error('Error report: notification email failed', e)
     }
   }
 }

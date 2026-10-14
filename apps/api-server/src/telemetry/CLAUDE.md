@@ -21,11 +21,10 @@ event relay), the `error-report*` quartet, and `feedback.ts`. File map: DETAILS 
   primitive. DETAILS § Eviction.
 - **Capped bodies go through `readCappedBody` (`../types.ts`), ❌ never `c.req.parseBody()` / `c.req.text()`**:
   `content-length` is advisory, so those buffer up to 100 MB in a 128 MB isolate before any cap looks.
-- **Only hand-written error reports (`kind: 'user'`) are emailed**, from `postUploadWork`: one bad install makes dozens
-  of auto-sends a day. `kind` is client-supplied, so the mail path caps itself daily. DETAILS § Notification email.
-- **Intake only queues a D1 row; the cron files the card** (`../report-outbox.ts`): `/error-report` writes
-  `error_reports` and `/error-report/:id/amend` writes `error_report_amendments`, both awaited before the response. ❌
-  Never file a GitHub issue from a route. `apps/api-server/DETAILS.md` § The reports repo.
+- **Intake only queues a D1 row; the cron files the card and mails the digest** (`../report-outbox.ts`,
+  `../report-digest.ts`): `/error-report` writes `error_reports` and `/error-report/:id/amend` writes
+  `error_report_amendments`, both awaited before the response. ❌ Never file a GitHub issue from a route.
+  `apps/api-server/DETAILS.md` § The reports repo.
 - **The `report:{id}` KV index write is AWAITED before the 200**, alone among this route's side effects: that same
   response hands out the amend credential, so a later index opens nothing. ❌ Never move it to `postUploadWork`; a
   failed put answers 200 with `amendKey: null`.

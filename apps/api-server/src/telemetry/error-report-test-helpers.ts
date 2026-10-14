@@ -1,6 +1,6 @@
 /**
  * R2, KV, D1, and binding fakes shared by the `POST /error-report` route tests
- * (`error-report.test.ts` and `error-report-email.test.ts`). The Resend mock stays per-file:
+ * (`error-report.test.ts` and `error-report-amend.test.ts`). The Resend mock stays per-file:
  * `vi.mock` is hoisted into the file it appears in, so it can't be shared from here.
  */
 import { vi, type Mock } from 'vitest'

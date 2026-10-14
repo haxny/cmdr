@@ -16,19 +16,9 @@
  */
 
 import { Hono, type Context } from 'hono'
-import {
-  enforceIpRateLimit,
-  hasEmailShape,
-  isAbsent,
-  readCappedBody,
-  scheduleBackground,
-  type Bindings,
-} from '../types'
+import { enforceIpRateLimit, hasEmailShape, isAbsent, readCappedBody, type Bindings } from '../types'
 import { constantTimeEqual } from '../licensing/paddle'
 import { amendSidecarKey } from './error-report-eviction'
-import { claimErrorReportEmailSlot, DAILY_ERROR_REPORT_EMAIL_CAP } from './error-report-intake'
-import { humanReportRecipient } from '../email/send'
-import { sendErrorReportAmendmentEmail, sendErrorReportsSuppressedEmail } from '../email/error-report'
 import type { ErrorReportIssueInput } from '../github-issues'
 
 const errorReportAmend = new Hono<{ Bindings: Bindings }>()
@@ -279,48 +269,6 @@ async function appendAmendment(
 }
 
 /**
- * Mail one amendment, so a note added after the fact reaches the same inbox the report did.
- *
- * Shares the report allowance (`claimErrorReportEmailSlot`) rather than taking a second one: it is
- * the same inbox and the same conversation, and an amendment needs a credential minted by an
- * upload, so it can't be the cheaper way to flood. Silent no-op when nothing is configured.
- */
-async function mailAmendment(
-  env: Bindings,
-  args: { id: string; amendment: Amendment; amendmentCount: number },
-): Promise<void> {
-  // TODAY's allowance, never the report's upload date: a report can be amended months after it
-  // landed, and that day's counter key has long since expired, so charging it would reset the cap
-  // to zero on every amendment to an old report.
-  const today = new Date().toISOString().slice(0, 10)
-  const to = humanReportRecipient(env)
-  if (!to || !env.RESEND_API_KEY) return
-
-  const decision = await claimErrorReportEmailSlot(env.ERROR_REPORT_META, today)
-  if (decision === 'silent') return
-  if (decision === 'suppress-notice') {
-    await sendErrorReportsSuppressedEmail({
-      cap: DAILY_ERROR_REPORT_EMAIL_CAP,
-      date: today,
-      to,
-      resendApiKey: env.RESEND_API_KEY,
-    })
-    return
-  }
-
-  await sendErrorReportAmendmentEmail({
-    amendment: {
-      id: args.id,
-      note: args.amendment.note,
-      email: args.amendment.email,
-      amendmentCount: args.amendmentCount,
-    },
-    to,
-    resendApiKey: env.RESEND_API_KEY,
-  })
-}
-
-/**
  * The report's technical facts, read back off the bundle, for the card an amendment has to create
  * (`report-outbox.ts`, for a report that predates the outbox). Null when R2 no longer holds the
  * object, which means no card: one that can't say what report it is about helps nobody.
@@ -419,22 +367,14 @@ errorReportAmend.post('/error-report/:id/amend', async (c) => {
 
   const sidecar = await appendAmendment(c.env.ERROR_REPORTS_BUCKET, entry.key, id, amendment)
 
-  // The card comment is the cron's job (`report-outbox.ts`), on the tick after the report's own
-  // card is filed. The daily byte budget is deliberately NOT charged: a note is bytes-tiny.
+  // The card comment and the email are the cron's job (`report-outbox.ts`, `report-digest.ts`). The
+  // daily byte budget is deliberately NOT charged: a note is bytes-tiny.
   try {
     await queueAmendment(c.env.TELEMETRY_DB, { id, entry, amendment, amendmentCount: sidecar.amendments.length })
   } catch (e) {
     console.error('Error report amend: queueing the amendment failed', e)
     return c.json({ error: "We couldn't save that right now. Try again in a minute." }, 502)
   }
-
-  // The mail rides behind the 200 like the upload route's does; a failure is ours, not the reporter's.
-  await scheduleBackground(
-    c,
-    mailAmendment(c.env, { id, amendment, amendmentCount: sidecar.amendments.length }).catch((e: unknown) => {
-      console.error('Error report amend: notification email failed', e)
-    }),
-  )
 
   return c.json({ id, amendments: sidecar.amendments.length })
 })

@@ -21,10 +21,9 @@ const FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 /**
  * The `<body>` chrome, parameterized because the two families of email don't look alike yet: the
- * card emails (feedback, error reports) sit on an explicit white ground at `#1f2937` text, while
- * the older table alerts (crash digest, DB size, device count) are `#333` on the client's default
- * ground. Unifying them changes what lands in a human inbox, so it waits for a copy-and-design
- * pass rather than riding along with a refactor.
+ * report digest sits on an explicit white ground at `#1f2937` text, while the ops alerts (DB size,
+ * device count) are `#333` on the client's default ground. Unifying them changes what lands in a
+ * human inbox, so it waits for a copy-and-design pass rather than riding along with a refactor.
  */
 export function bodyStyle(options: { maxWidthPx: number; color: string; background?: string }): string {
   const background = options.background === undefined ? '' : ` background: ${options.background};`
@@ -99,33 +98,17 @@ export function replyToLine(email: string | null | undefined): string {
   return `Reply to <a href="mailto:${escapeHtml(email)}" style="color: #2563eb;">${escapeHtml(email)}</a>`
 }
 
-/** The friendly build-mode label a card shows, same vocabulary as the crash email's env column. */
-export type EmailEnv = 'prod' | 'dev' | '?'
-
-/** Chip colors per env: green for a shipped build, amber for a local one, gray for a row that says nothing. */
-const envChipColors: Record<EmailEnv, { background: string; text: string }> = {
-  prod: { background: '#ecfdf5', text: '#047857' },
-  dev: { background: '#fff7ed', text: '#c2410c' },
-  '?': { background: '#f3f4f6', text: '#6b7280' },
-}
-
-/** The `prod` / `dev` pill that tells shipped traffic from a local build at a glance. */
-export function envChip(env: EmailEnv): string {
-  const chip = envChipColors[env]
-  return `<span style="display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: ${chip.background}; color: ${chip.text};">${escapeHtml(env)}</span>`
+/** A report's card on the private reports board. */
+export interface BoardCard {
+  number: number
+  url: string
 }
 
 /**
- * The page every card-shaped notification email shares: the subject as a heading, the cards, and
- * one line saying what sent it.
+ * The line every digest entry ends on: a link to its card, or a plain statement that the cron hasn't
+ * filed one yet. The board is where a report waits to be dealt with, so the email always points there.
  */
-export function notificationPage(subject: string, cards: string, signoff: string): string {
-  return documentShell(
-    `    <h2 style="color: #111827;">${escapeHtml(subject)}</h2>
-
-    ${cards}
-
-    ${signoffParagraph(signoff)}`,
-    CARD_BODY_STYLE,
-  )
+export function boardLine(card: BoardCard | null): string {
+  if (!card) return 'Not on the board yet; the next run files it.'
+  return `On the board: <a href="${escapeHtml(card.url)}" style="color: #2563eb;">#${escapeHtml(String(card.number))}</a>`
 }

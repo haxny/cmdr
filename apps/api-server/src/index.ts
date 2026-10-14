@@ -16,9 +16,7 @@ import { cspReport } from './website/csp-report'
 import { s3Prices } from './s3-prices/s3-prices'
 import { webhookGitHub } from './webhook-github'
 import {
-  handleCrashNotifications,
   handleEmailPathProbe,
-  handleFeedbackNotifications,
   handleLicenseBackup,
   handleDailyAggregation,
   handleDbSizeCheck,
@@ -30,6 +28,7 @@ import {
 import { postCronFailureNotification } from './discord'
 import { pingCronHealth } from './cron-health'
 import { fileCrashCards, fileErrorReportCards, fileFeedbackCards, postAmendmentsToBoard } from './report-outbox'
+import { handleReportDigest } from './report-digest'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -98,9 +97,7 @@ export default {
     await run('Error report cards', () => fileErrorReportCards(env))
     await run('Feedback cards', () => fileFeedbackCards(env))
     await run('Amendments on the board', () => postAmendmentsToBoard(env))
-
-    await run('Crash notifications', () => handleCrashNotifications(env))
-    await run('Feedback notifications', () => handleFeedbackNotifications(env))
+    await run('Report digest', () => handleReportDigest(env))
 
     // Daily jobs: only run on the 00:00 UTC invocation
     if (new Date(event.scheduledTime).getUTCHours() === 0) {
@@ -124,9 +121,7 @@ export default {
 
 // Export handler functions for testing
 export {
-  handleCrashNotifications,
   handleEmailPathProbe,
-  handleFeedbackNotifications,
   handleDailyAggregation,
   handleDbSizeCheck,
   handleDailyEvictionSweep,

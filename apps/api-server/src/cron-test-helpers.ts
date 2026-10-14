@@ -1,6 +1,6 @@
 /**
- * D1 and env fakes shared by the cron-job tests (`scheduled.test.ts` and
- * `crash-notification-email.test.ts`). The Resend mock stays per-file: `vi.mock` is hoisted
+ * D1 and env fakes shared by the mock-D1 cron-job tests (`scheduled.test.ts`,
+ * `cron-alarm.test.ts`, and the probe). The Resend mock stays per-file: `vi.mock` is hoisted
  * into the file it appears in, so it can't be shared from here.
  */
 import { vi } from 'vitest'

@@ -1,6 +1,4 @@
-import { humanReportRecipient, sendEmailPathProbe } from './email/send'
-import { sendCrashNotificationEmail, type CrashEmailRow, type CrashFate } from './email/crash'
-import { sendFeedbackNotificationEmail, type FeedbackEmailRow } from './email/feedback'
+import { sendEmailPathProbe } from './email/send'
 import { sendDbSizeAlert } from './email/ops-alerts'
 import type { Bindings } from './types'
 import {
@@ -15,102 +13,6 @@ import { postEvictionBlockedNotification, postEvictionNotification } from './dis
 import { deleteComment, listExpiredPersonalComments, resolveIssueTarget } from './github-issues'
 
 const dbSizeThresholdBytes = 100 * 1024 * 1024 // 100 MB
-
-/** Map the DB `build_mode` column to the friendly `prod`/`dev` label users see. */
-function buildModeToEnv(buildMode: string | null | undefined): 'prod' | 'dev' | '?' {
-  if (buildMode === 'release') return 'prod'
-  if (buildMode === 'debug') return 'dev'
-  return '?'
-}
-
-/**
- * Map the DB `app_fate` column to the label the email shows. `keptRunning` is the one value that
- * says the app survived; everything else either says it went down or says nothing, and a row that
- * says nothing must not be rendered as a crash. `unconfirmed` shouldn't reach the DB at all (the
- * client resolves it at the next launch), and it claims nothing either way, so it reads as `'?'`.
- */
-function appFateToLabel(appFate: string | null | undefined): CrashFate {
-  if (appFate === 'ended') return 'crashed'
-  if (appFate === 'keptRunning') return 'kept running'
-  return '?'
-}
-
-/**
- * `os_frames` is stored as the JSON array the client sent, truncated to a byte budget at write
- * time, so a long stack can leave the column holding a partial array. A parse failure therefore
- * means "the stack didn't fit", not "something is broken": drop the frames and let the rest of the
- * row render. ❌ Never let this throw; it runs inside the cron job that mails every crash.
- */
-function parseOsFrames(stored: string | null | undefined): string[] {
-  if (!stored) return []
-  try {
-    const parsed: unknown = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed.filter((frame): frame is string => typeof frame === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-async function handleCrashNotifications(env: Bindings): Promise<void> {
-  if (!env.CRASH_NOTIFICATION_EMAIL || !env.RESEND_API_KEY) return
-
-  // One row per crash, newest first. No grouping: the email shows every report.
-  const { results } = await env.TELEMETRY_DB.prepare(
-    `SELECT id, app_version, os_version, arch, signal, top_function, created_at, build_mode, short_id, email, panic_message, app_fate, image_base, os_exception, os_frames
-         FROM crash_reports
-         WHERE notified_at IS NULL
-         ORDER BY created_at DESC`,
-  ).all<{
-    id: number
-    app_version: string
-    os_version: string
-    arch: string
-    signal: string
-    top_function: string
-    created_at: string
-    build_mode: string | null
-    short_id: string | null
-    email: string | null
-    panic_message: string | null
-    app_fate: string | null
-    image_base: string | null
-    os_exception: string | null
-    os_frames: string | null
-  }>()
-
-  if (results.length === 0) return
-
-  const crashes: CrashEmailRow[] = results.map((row) => ({
-    when: row.created_at,
-    env: buildModeToEnv(row.build_mode),
-    fate: appFateToLabel(row.app_fate),
-    id: row.short_id ?? '?',
-    site: row.top_function,
-    signal: row.signal,
-    version: row.app_version,
-    email: row.email,
-    message: row.panic_message,
-    imageBase: row.image_base,
-    osException: row.os_exception,
-    osFrames: parseOsFrames(row.os_frames),
-  }))
-
-  // Stamp AFTER the send, matching `handleFeedbackNotifications`. `sendViaResend` throws on a
-  // rejected send, so a failure leaves every row NULL and the next tick retries. Stamping first
-  // would drop the alert permanently, and a dead credential is exactly when that happens.
-  await sendCrashNotificationEmail({
-    crashes,
-    totalCount: results.length,
-    to: env.CRASH_NOTIFICATION_EMAIL,
-    resendApiKey: env.RESEND_API_KEY,
-  })
-
-  const ids = results.map((r) => r.id)
-  const placeholders = ids.map(() => '?').join(', ')
-  await env.TELEMETRY_DB.prepare(`UPDATE crash_reports SET notified_at = ? WHERE id IN (${placeholders})`)
-    .bind(new Date().toISOString(), ...ids)
-    .run()
-}
 
 /**
  * Send one throwaway email a day so a dead `RESEND_API_KEY` surfaces on its own schedule rather
@@ -132,58 +34,6 @@ async function handleEmailPathProbe(env: Bindings): Promise<void> {
 async function handleLicenseBackup(env: Bindings): Promise<void> {
   const backup = await backupLicenseLedger(env, new Date())
   console.log('License backup written:', backup.licenses.length, 'licenses,', Object.keys(backup.keys).length, 'keys')
-}
-
-/**
- * Mails every in-app feedback message that hasn't been mailed yet. D1 and Discord already hold
- * feedback, but neither is a surface David reads on a schedule, so without this the messages sit
- * unread.
- *
- * Recipient falls back to `CRASH_NOTIFICATION_EMAIL`, so this ships with no new secret;
- * `FEEDBACK_NOTIFICATION_EMAIL` splits it off later without a code change.
- */
-async function handleFeedbackNotifications(env: Bindings): Promise<void> {
-  const to = humanReportRecipient(env)
-  if (!to || !env.RESEND_API_KEY) return
-
-  const { results } = await env.TELEMETRY_DB.prepare(
-    `SELECT id, created_at, feedback, email, app_version, os_version, build_mode
-         FROM feedback
-         WHERE notified_at IS NULL
-         ORDER BY created_at DESC`,
-  ).all<{
-    id: number
-    created_at: string
-    feedback: string
-    email: string | null
-    app_version: string
-    os_version: string
-    build_mode: string | null
-  }>()
-
-  if (results.length === 0) return
-
-  const entries: FeedbackEmailRow[] = results.map((row) => ({
-    when: row.created_at,
-    env: buildModeToEnv(row.build_mode),
-    version: row.app_version,
-    osVersion: row.os_version,
-    message: row.feedback,
-    email: row.email,
-  }))
-
-  // Stamp AFTER the send, the opposite of `handleCrashNotifications`. `sendViaResend` throws on a
-  // rejected send, so a failure leaves every row NULL and the next tick retries. The two jobs
-  // differ because the cost of being wrong differs: a crash is one signal among many and its row
-  // persists either way, but feedback is a person talking to us and this email is the only surface
-  // it gets read on. A duplicate costs seconds; a drop costs a conversation.
-  await sendFeedbackNotificationEmail({ entries, to, resendApiKey: env.RESEND_API_KEY })
-
-  const ids = results.map((r) => r.id)
-  const placeholders = ids.map(() => '?').join(', ')
-  await env.TELEMETRY_DB.prepare(`UPDATE feedback SET notified_at = ? WHERE id IN (${placeholders})`)
-    .bind(new Date().toISOString(), ...ids)
-    .run()
 }
 
 async function handleDailyAggregation(env: Bindings): Promise<void> {
@@ -498,9 +348,7 @@ async function handleDailyEvictionSweep(env: Bindings): Promise<void> {
 }
 
 export {
-  handleCrashNotifications,
   handleEmailPathProbe,
-  handleFeedbackNotifications,
   handleLicenseBackup,
   handleDailyAggregation,
   handleDbSizeCheck,

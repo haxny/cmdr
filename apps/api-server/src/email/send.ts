@@ -9,8 +9,8 @@ import { Resend, type CreateEmailOptions } from 'resend'
 import type { Bindings } from '../types'
 
 /**
- * Where mail a person wrote lands: the in-app feedback digest and hand-written error reports.
- * `FEEDBACK_NOTIFICATION_EMAIL` when it's set, else the crash recipient, so neither channel needs
+ * Where the report digest lands (every crash, error report, amendment, and feedback message).
+ * `FEEDBACK_NOTIFICATION_EMAIL` when it's set, else the crash recipient, so the digest needs
  * a new secret to ship. `undefined` means nothing is configured and the caller stays quiet.
  */
 export function humanReportRecipient(
@@ -43,7 +43,7 @@ export const EMAIL_PROBE_RECIPIENT = 'delivered@resend.dev'
  * Prove the Resend send path still works, without waiting for something that matters to need it.
  *
  * Real sends are sporadic (a handful a month), so a rotated or revoked key would otherwise stay
- * invisible until a crash alert, a feedback digest, or a buyer's license key hit the dead
+ * invisible until a report digest or a buyer's license key hit the dead
  * credential. This is a REAL send through the real key: the key is scoped to sending only, so
  * every read endpoint (`/domains`, `/api-keys`, `/emails`) returns 401 no matter how healthy the
  * key is, which makes them useless as probes (verified against the live key, 2026-09-02). Widening

@@ -61,9 +61,8 @@ writing: clearing it re-sends the message, and setting it drops one.
 
 ### The digest email
 
-Every three hours the API server's cron mails David whatever is still un-notified, one card per message, with a
-`mailto:` link per card and a `Reply-To` header when the batch holds exactly one address. That's the channel that
-reaches him without being asked; D1 and Discord both need someone to go looking. Recipient is
+Every three hours the API server's cron mails David ONE digest of every crash, error report, amendment, and feedback
+message that arrived since the last one (none arrived, no email), each entry linking its card on the board. Recipient is
 `FEEDBACK_NOTIFICATION_EMAIL`, falling back to `CRASH_NOTIFICATION_EMAIL`. Rendering, the reply-to rule, and why the job
 stamps `notified_at` after the send rather than before: `apps/api-server/DETAILS.md` § Cron handler.
 
@@ -148,11 +147,16 @@ beside the bundle: the same key with `.zip` swapped for `.amend.json`, holding
 plain JSON, no unzip. Each amendment is also mailed when it arrives, so an inbox thread usually beats going to R2 for
 it. Most reports have no sidecar; a 404 there is the normal case, not a problem.
 
-### The notification email
+### The `error_reports` row
 
-A report someone wrote by hand (`kind: 'user'`) is also mailed to David the moment it lands, with the note, the machine
-facts, and the presigned download link. Auto-sent reports aren't: they go to Discord only. Recipient, cap, and why it
-sends at intake instead of on a cron: `apps/api-server/src/telemetry/DETAILS.md` § Notification email.
+Every upload, hand-written or auto-sent, also writes a row to the D1 `error_reports` table (short id, kind, versions, R2
+key, the note and reply-to, `issue_number`, `notified_at`), deleted with the bundle at 90 days. For a recent report it's
+the quickest way to its note and card:
+
+```bash
+npx wrangler d1 execute cmdr-telemetry --remote --json \
+  --command "SELECT short_id, created_at, kind, user_note, email, issue_number FROM error_reports WHERE short_id = 'ERR-ABXW4'"
+```
 
 Each zip holds `manifest.json` plus `logs/cmdr.log` (and any rotated logs), all PII-redacted. The manifest includes
 `kind` (`user`/`auto`), `appVersion`, `osVersion`, `arch`, `generatedAt`, `buildMode`, `userNote` (Flow A only), the

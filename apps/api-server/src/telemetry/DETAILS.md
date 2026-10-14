@@ -22,9 +22,8 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - Tests: `crash-report.test.ts` (incl. § "top_function derivation" over real backtraces), `heartbeat.test.ts`,
   `heartbeat-sql.test.ts` (the INSERTs against a real SQLite with the real migrations),
   `download-and-update-check.test.ts`, `error-report.test.ts`, `error-report-intake.test.ts`,
-  `error-report-eviction.test.ts`, `error-report-email.test.ts`, `error-report-amend.test.ts`, `feedback.test.ts`. The
-  route-level R2/KV/D1 fakes live in `error-report-test-helpers.ts`; the Resend mock can't (`vi.mock` is hoisted per
-  file).
+  `error-report-eviction.test.ts`, `error-report-amend.test.ts`, `feedback.test.ts`. The route-level R2/KV/D1 fakes live
+  in `error-report-test-helpers.ts`; the Resend mock can't (`vi.mock` is hoisted per file).
 
 ## Request flows
 
@@ -37,7 +36,7 @@ Error report amendment: POST /error-report/:id/amend → rate-limit by IP (ERROR
 
 Heartbeat: POST /heartbeat → rate-limit by IP (HEARTBEAT_LIMITER, 429 if over) → read the body under 256 KB (400) → validate the beat (required fields + analId/version shape + config-size cap + uptimeSeconds + events is an array; 400) → keep the first 500 events, drop malformed ones (counted, logged) → AWAITED: ONE D1 batch writing the heartbeat row + the events (failure → soft 502), no IP stored → in waitUntil: forward the events to PostHog (skipped without POSTHOG_PROJECT_KEY; failure logged, never surfaced) → 204
 
-Feedback: POST /feedback → rate-limit by IP (FEEDBACK_LIMITER, 429 if over) → validate shape (required feedback text ≤ 100k code points + appVersion/osVersion, optional email/buildMode) → AWAITED D1 write to `feedback` (failure → soft 502 so the app offers a retry) → Discord ping in waitUntil (DISCORD_FEEDBACK_WEBHOOK_URL, falls back to DISCORD_WEBHOOK_URL; never the email, only `hasReplyTo`: `../../DETAILS.md` § Discord webhooks) → 204 → the 3-hourly cron mails the row in the feedback digest (`../../DETAILS.md` § Cron handler)
+Feedback: POST /feedback → rate-limit by IP (FEEDBACK_LIMITER, 429 if over) → validate shape (required feedback text ≤ 100k code points + appVersion/osVersion, optional email/buildMode) → AWAITED D1 write to `feedback` (failure → soft 502 so the app offers a retry) → Discord ping in waitUntil (DISCORD_FEEDBACK_WEBHOOK_URL, falls back to DISCORD_WEBHOOK_URL; never the email, only `hasReplyTo`: `../../DETAILS.md` § Discord webhooks) → 204 → the 3-hourly cron files its card and mails it in the report digest (`../../DETAILS.md` § Cron handler)
 
 Download redirect: GET /download/:version/:arch → write to D1 (fire-and-forget) → 302 to GitHub Releases
 
@@ -301,42 +300,16 @@ the allowance rather than taking a second one is deliberate. It is the same inbo
 amendment needs a credential minted by an upload, so it is never the cheaper way to flood. It rides `waitUntil` after
 the 200, like every other side effect here: the sidecar is already stored, so a mail problem is ours.
 
-### Notification email (hand-written reports only)
+### The outbox row and the digest
 
-`kind: 'user'` reports (the ones written in the "Send error report" dialog) are mailed the moment they land, one report
-per email, alongside the Discord embed. `kind: 'auto'` never is.
+Every upload writes an `error_reports` row before the 200 (`queueErrorReport`), and every amendment an
+`error_report_amendments` row (`queueAmendment`, a 502 on failure since the sidecar alone reaches nobody). The routes
+mail nothing and file nothing: the three-hour cron files the card (`../report-outbox.ts`) and mails the one digest
+(`../report-digest.ts`), auto-sends included. A flood of auto-sends costs the board 20 cards a day and the inbox one
+longer digest per tick. `apps/api-server/DETAILS.md` §§ The reports repo, Cron handler.
 
-**Why at intake rather than on the cron:** a bundle lives in R2 with no D1 row, so there is no `notified_at` column a
-digest could drive, and a table for roughly four rows per two months earns nothing. Hand-written reports are rare and
-each already carries a presigned link, so `postUploadWork` sends directly.
-
-**Why auto-sends stay Discord-only:** one misbehaving install produced 50+ auto bundles in three days. Discord absorbs
-that volume; an inbox does not, and the hand-written report that needs an answer would be buried in it. Amending one is
-the exception on both channels: `mailAmendment` mails every amendment whatever the report's kind, and the amendment
-earns the report a triage card (`apps/api-server/DETAILS.md` § The reports repo). A note somebody typed is not the
-volume this rule defends against.
-
-**The cap** (`DAILY_ERROR_REPORT_EMAIL_CAP`, 10/UTC day, its own `error_email_count:{date}` KV key): `kind` is
-client-supplied, so a build that mislabels its auto-sends can aim the inbox at itself. Ten is ~150x the observed
-hand-written rate, so a genuinely bad day still arrives in full. Past it, one email says the rest of the day is
-suppressed, then silence until tomorrow. That notice goes to the same inbox rather than Discord: the inbox is the
-channel going quiet, and Discord is still getting every report anyway, so a notice there would explain a gap the reader
-can't see.
-
-**Failure isolation:** the send sits in its own try/catch inside `postUploadWork`, like every other side effect there.
-The bundle is stored and the client has its 200 before any of this runs, so a rejected send is logged and dropped, never
-surfaced to the reporter. Missing recipient or missing `RESEND_API_KEY` is a silent no-op.
-
-**Reply-To:** when the reporter ticked "Attach my email", `meta.email` becomes the message's `Reply-To`, so answering
-them is a plain reply. One report per email means there is always exactly one right address, unlike the feedback digest,
-which sets the header only when a batch carries exactly one. The address is also rendered as a `mailto:` in the card
-footer (`replyToLine`, shared with the feedback card).
-
-**What it says:** the short id, the note with `white-space: pre-wrap` so the writer's line breaks survive, app version,
-OS version, arch, bundle size, a `prod`/`dev` chip, the reply-to line, and the download link with its 24-hour expiry
-stated next to it (`linkTtlHours` is `PRESIGN_TTL_HOURS`, so the copy can't drift). Debug builds get a `[DEV]` subject
-mark; release builds get none, because a tag on every ordinary report is noise in an inbox list. Rendering lives in
-`../email/error-report.ts`.
+The row carries the note and the reply-to because the cron can't read them back out of a zip. The retention sweep
+deletes it, and its amendments, at the bundle's 90 days.
 
 ### Eviction (8/6 GB watermarks + 60-day age floor + lifecycle)
 
@@ -393,8 +366,6 @@ costs no parsing and no storage.
   saying so, then silence until tomorrow. A webhook takes 30 messages/min, and a channel that goes quiet without
   explanation reads as "no reports". Bundles remain in R2 and in `/admin/error-reports` regardless. Eviction and budget
   alerts are NOT capped.
-- **Email cap** (`DAILY_ERROR_REPORT_EMAIL_CAP`, 10/day): the same three-way decision on its own KV key, so neither
-  channel can silence the other. Both go through `claimDailySlot`. Sizing and routing: § Notification email above.
 
 Every counter here is a racy read-then-write (KV has no atomic increment), so a concurrent burst can overshoot by
 roughly the in-flight amount. Deliberate: these are coarse circuit breakers, and the 10 MB bundle cap keeps a single
@@ -410,10 +381,9 @@ surfaces as a gentle retry. The Discord ping (truncated preview, `[DEV]`/`[PROD]
 `waitUntil` after the 204. No install id of any kind is read or stored, so feedback can't be joined to the analytics
 stream. Rate-limited at 5/min/IP via `FEEDBACK_LIMITER` (the IP is never stored).
 
-Three sinks read the row: the `/admin/feedback` endpoint, the Discord `#feedback` channel, and the 3-hourly feedback
-digest email, which is the one that reaches David unprompted. The digest tracks what it has sent in
-`feedback.notified_at` (NULL means unsent); the intake path never writes that column. How the digest renders and when it
-stamps: `../../DETAILS.md` § Cron handler.
+The row is also the outbox entry: the cron files its card (`feedback.issue_number`, NULL means owed) and mails it in the
+three-hour digest (`feedback.notified_at`, NULL means unsent); the intake path writes neither column. How the digest
+renders and when it stamps: `../../DETAILS.md` § Cron handler.
 
 Frontend counterpart: `apps/desktop/src/lib/feedback/CLAUDE.md`.
 
