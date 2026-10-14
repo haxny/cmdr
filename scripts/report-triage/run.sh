@@ -3,8 +3,9 @@
 # server's morning brief. See CLAUDE.md here for what it does and how it's locked down.
 #
 # Secrets come from the M1 box's own `secret` store, resolved BEFORE `env -i`, so the agent's process holds exactly
-# two scoped credentials and nothing else from the box's environment:
+# three scoped credentials and nothing else from the box's environment:
 #   TRIAGE_GH_TOKEN           fine-grained PAT: vdavid/cmdr-reports ONLY, Issues read+write, Metadata read
+#   TRIAGE_PROJECT_TOKEN      classic PAT, `project` scope ONLY: board.sh `rate` sets the card's board fields with it
 #   TRIAGE_R2_ACCESS_KEY_ID   R2 API token: Object Read on the cmdr-error-reports bucket ONLY
 #   TRIAGE_R2_SECRET_ACCESS_KEY
 set -euo pipefail
@@ -29,6 +30,7 @@ for tool in board.sh fetch-bundle.sh; do
 done
 
 gh_token="$(secret TRIAGE_GH_TOKEN)"
+project_token="$(secret TRIAGE_PROJECT_TOKEN)"
 r2_key_id="$(secret TRIAGE_R2_ACCESS_KEY_ID)"
 r2_secret="$(secret TRIAGE_R2_SECRET_ACCESS_KEY)"
 # Claude Code's own login. Over SSH and under launchd the login keychain isn't reliably unlocked, so the headless
@@ -54,6 +56,7 @@ exec env -i \
   PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin" \
   CLAUDE_CODE_OAUTH_TOKEN="$claude_token" \
   GH_TOKEN="$gh_token" \
+  TRIAGE_PROJECT_TOKEN="$project_token" \
   TRIAGE_R2_ACCOUNT_ID="6a4433bf11c3cf86feda057f76f47991" \
   TRIAGE_R2_ACCESS_KEY_ID="$r2_key_id" \
   TRIAGE_R2_SECRET_ACCESS_KEY="$r2_secret" \
