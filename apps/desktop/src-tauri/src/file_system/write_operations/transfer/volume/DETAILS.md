@@ -603,7 +603,8 @@ copied silently. So the engine never decides it from paths or ids; it hands over
 **Nothing is staged for a pair that can't copy on the server.** `try_server_side_copy` first asks
 `Volume::may_copy_on_server_from(source)`, a pure predicate from the same concrete-type-and-identity test (default: the
 very same instance, on a backend that `supports_copy_within`; S3: any place of its account). `false` returns
-`Ok(None)` before the stage. That's nearly every transfer: anything to or from a local disk, SMB, or MTP. **Why**:
+`Ok(None)` before the stage. That's nearly every transfer: anything to or from a local disk or MTP, and anything
+between two SMB shares. **Why**:
 asking every pair cost a stage, two persisted ledger records, and a delete of a temp nobody wrote, per file, all on the
 async worker. In ERR-PTRGY (an SMB-to-local move of 44 PDFs, Cmdr 0.50.0) one of those per-file deletes sat for 100 s
 before its `stat` returned, under `streaming 0/0` with no stall verdict possible. The root cause of that 100 s is NOT
@@ -637,14 +638,15 @@ reason.
 
 **A pause lands at the backend's checkpoints.** The engine's `ServerCopyProgress` answers `checkpoint` with the
 operation's own `stop_or_park_async`, and S3 asks it before each part, so a paused multipart copy parks between parts
-while the parts already in flight finish. A backend that copies in one call (SFTP's `copy-data`) has no checkpoint, so
+while the parts already in flight finish. SMB asks it before each 16 MiB copychunk slice. A backend that copies in one call (SFTP's `copy-data`) has no checkpoint, so
 its pause lands at the next file, bounded by the walk above: `merge_level` parks per entry (§ "Pause in the volume
 walks"), at most the operation's `FileWindow` width of leaves still finishing.
 
 Cells: `strategy_server_side_copy_tests.rs` (who's asked, a pair that's never asked staging nothing, the probe phase,
 the fallback, staging, the final-name copy on a whole-publish
 destination, a sibling place of one account, cancel, and the checkpoint parking a paused copy) with counting doubles;
-`crates/cmdr-sftp/src/volume/copy_test.rs` and `crates/cmdr-s3/src/volume/copy_test.rs` for what real servers do;
+`crates/cmdr-sftp/src/volume/copy_test.rs`, `crates/cmdr-s3/src/volume/copy_test.rs`, and
+`crates/cmdr-smb/src/volume/copy_test.rs` for what real servers do;
 `backend_suites/s3_rename_integration_test.rs` for a cross-bucket copy through the engine, on the server or streamed.
 
 ## A same-volume move whose renames copy

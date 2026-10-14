@@ -23,6 +23,7 @@ use std::sync::RwLock as StdRwLock;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize};
 
 mod attributes;
+mod copy;
 mod foreground_yield;
 mod liveness;
 mod mapping;

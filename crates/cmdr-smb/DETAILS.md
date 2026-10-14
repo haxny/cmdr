@@ -653,6 +653,35 @@ behind, and the loss note says so (`METADATA_CAPS` claims no `XATTRS`). Tracked 
   `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Local copies stage"). The QNAP-shaped
   `vfs_fruit` answer is unverified until a `fruit` fixture exists, which comes with smb2#9.
 
+## Server-side copy (copychunk)
+
+`copy.rs` implements `Volume::copy_within` and `copy_on_server` with `FSCTL_SRV_COPYCHUNK`, so duplicating a file inside
+one share sends no bytes over the link. The engine asks only when both sides are the very same volume (the trait's
+default `may_copy_on_server_from`), so a copy between two shares, or two mount roots of one share, streams. The
+engine-side contract (staging, fallback, cancel): `crates/cmdr-fs/DETAILS.md` § "Server-side work".
+
+- **Shape**: `stat` and the source open in one round trip (the dates come from the stat), then the resume key, then the
+  destination open, then 16 MiB slices (`COPY_SLICE_BYTES`, one copychunk request at smb2's opening limits) through
+  `Tree::server_side_copy_range`, then the dates and Hidden on the copy's own handle before it closes (as `stamp_writer`
+  does). ❌ Never smb2's whole-file `server_side_copy_file`: one call has no progress and no place to stop.
+- **Cancel and pause**: `copy_on_server` asks `ServerCopyProgress::checkpoint` before each slice (a pause parks there,
+  holding both handles; a session lost meanwhile fails the copy, and the engine streams the file instead) and `advanced`
+  after it. `copy_within` wraps its bare callback as `ProgressOnly`, with no pause. Any failure or cancel closes the
+  handle and deletes the partial before answering.
+- **A server without copychunk refuses the resume key** (`NOT_SUPPORTED`, `INVALID_DEVICE_REQUEST`, smb2's
+  `ErrorKind::Unsupported`), before `to` is touched. `handle_copy_result` maps that to `NotSupported`, the engine's
+  "stream it", ❌ never an `IoError`. `map_smb_error` keeps `Unsupported` as `IoError` for every other operation.
+- **The destination is created or truncated**, per the trait: smb2's public read-write open (`open_file_readwrite`,
+  `FileOpenIf`) keeps what's there, so a non-empty one is emptied in place first (an empty `write_file_compound`, which
+  keeps the file's identity) and reopened. The engine's fresh staging temp never pays that.
+- **No FLUSH before the close**: smb2's `flush_handle` is crate-private, so the copy relies on the server committing
+  copychunk's writes, as SFTP's `copy-data` does. A streamed write's `finish()` does flush.
+- **Evidence** (verified on the Docker guest share, Samba 4.20.6, 2026-10-14): `copy_test.rs` pins byte-for-byte across
+  slices, one progress report and one checkpoint per slice, cancel and a stopped checkpoint leaving nothing, a longer
+  destination truncated, an empty file, both dates kept, and the shared `copy_within` handshake. No fixture lacks
+  copychunk, so the fallback is pinned by the refusal mapping's unit cells, plus the engine's
+  `strategy_server_side_copy_tests.rs` fallback cell with a double. The QNAP answer is unverified.
+
 ## Copy concurrency and the credit window
 
 Every SMB2 request spends credits from a budget the server grants (smb2 steers toward a ~512-credit window), and the

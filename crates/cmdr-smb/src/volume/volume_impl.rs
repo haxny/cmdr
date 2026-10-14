@@ -9,6 +9,7 @@
 //! lines of its own belongs there, not here; what stays here is the capability
 //! answers, whose whole content is the reasoning in their doc comments.
 
+use super::copy::ProgressOnly;
 use super::state::ConnectionState;
 use super::streams::{InlineReadStream, fits_one_compound_read};
 use super::{SmbVolume, foreground_yield};
@@ -17,8 +18,8 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, Metadata
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
-    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
-    VolumeRandomReader, VolumeReadStream, WatchCoverage, WriteMode,
+    ServerCopyProgress, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
+    VolumeError, VolumeRandomReader, VolumeReadStream, WatchCoverage, WriteMode,
 };
 use cmdr_fs::volume::{ListingProgress, Retirement};
 use log::debug;
@@ -399,6 +400,40 @@ impl Volume for SmbVolume {
     }
 
     fn supports_streaming(&self) -> bool {
+        true
+    }
+
+    /// The server copies for itself (copychunk, `copy.rs`); ❗ `NotSupported` on a
+    /// server without it, the caller's signal to stream the file instead.
+    fn copy_within<'a>(
+        &'a self,
+        from: &'a Path,
+        to: &'a Path,
+        on_progress: &'a (dyn Fn(u64, u64) -> std::ops::ControlFlow<()> + Sync),
+    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+        Box::pin(async move { self.copy_on_server_impl(from, to, &ProgressOnly(on_progress)).await })
+    }
+
+    /// The trait default's gate, but handing the engine's own progress to the
+    /// slice loop, so a pause parks between slices rather than at the next file.
+    fn copy_on_server<'a>(
+        &'a self,
+        source: &'a dyn Volume,
+        from: &'a Path,
+        to: &'a Path,
+        mode: WriteMode,
+        progress: &'a dyn ServerCopyProgress,
+    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            if mode.refuses_occupied() || !self.may_copy_on_server_from(source) {
+                return Err(VolumeError::NotSupported);
+            }
+            self.copy_on_server_impl(from, to, progress).await
+        })
+    }
+
+    /// "Ask": whether the server has copychunk shows only in its answer.
+    fn supports_copy_within(&self) -> bool {
         true
     }
 

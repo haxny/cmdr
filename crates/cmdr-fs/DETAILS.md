@@ -532,7 +532,7 @@ the stop: the call a backend already makes per entry is the one it can't forget,
 **`Volume::copy_on_server(source, from, to, mode, progress)`** is the transfer engine's one server-side copy, asked
 before every streamed file (`write_operations/transfer/volume/server_side_copy.rs::try_server_side_copy`). Some
 protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-data@openssh.com`, S3's `CopyObject` and
-`UploadPartCopy`; SMB's `FSCTL_SRV_COPYCHUNK` is unimplemented today). Contract points, all load-bearing:
+`UploadPartCopy`, SMB's `FSCTL_SRV_COPYCHUNK` within one share). Contract points, all load-bearing:
 
 - ❗ **The backend decides which sources it can copy from**, from `source`'s concrete type and identity
   (`as_any().downcast_ref`), ❌ never a path: two S3 places of one account are two instances that can copy between them,
@@ -541,7 +541,7 @@ protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-da
 - ❗ **`may_copy_on_server_from(source)` is the same test as a pure predicate**, asked before the engine stages anything
   (ERR-PTRGY: asking every pair cost a stage and a delete per file). `false` means `copy_on_server` would certainly say
   `NotSupported`; `true` only means "ask". Default: the same instance, on a backend that `supports_copy_within` (SFTP,
-  WebDAV, ADB); S3 overrides both from one helper (`same_account_peer`). A backend that overrides `copy_on_server`
+  WebDAV, ADB, SMB); S3 overrides both from one helper (`same_account_peer`). A backend that overrides `copy_on_server`
   overrides this too, or the engine never asks it; `conformance::assert_copy_within_matches_what_is_offered` catches the
   `copy_within` half of that.
 - **`NotSupported` means "stream it"**, never a failure: a backend with no such operation, a server lacking the
@@ -552,11 +552,13 @@ protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-da
   caller stages it exactly like a streamed write, ❌ never single-shot. The default refuses `CreateNew`, because
   `copy_within` truncates.
 - **Cancel and pause arrive through `ServerCopyProgress`**: `advanced` answers `Break` to stop (the backend removes its
-  partial, then answers `Cancelled`), and `checkpoint` is where a backend that copies in pieces (S3's parts) waits out a
-  pause before starting each one.
+  partial, then answers `Cancelled`), and `checkpoint` is where a backend that copies in pieces (S3's parts, SMB's
+  copychunk slices) waits out a pause before starting each one.
 
-**`Volume::copy_within(from, to, on_progress)`** is the older, same-volume-only form that SFTP, WebDAV, and ADB
-implement; the default `copy_on_server` calls it, so they need nothing more than `supports_copy_within() == true`.
+**`Volume::copy_within(from, to, on_progress)`** is the older, same-volume-only form that SFTP, WebDAV, ADB, and SMB
+implement; the default `copy_on_server` calls it, so they need nothing more than `supports_copy_within() == true`. SMB
+overrides `copy_on_server` too, keeping the default's gate, only so a pause reaches its slice checkpoints
+(`crates/cmdr-smb/DETAILS.md` § "Server-side copy (copychunk)").
 
 **`Volume::rename_work(path)`** answers whether renaming one ENTRY is one call (`RenameWork::OneCall`, the default, with
 no I/O) or a copy plus a delete (`CopyThenDelete`: an object store's folder or big file). Every `rename` caller asks it
