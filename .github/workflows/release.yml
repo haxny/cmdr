@@ -30,7 +30,7 @@ jobs:
       security-events: read # `ci-gate` lists open CodeQL alerts
       id-token: write # `attest` requests the Sigstore signing certificate
       attestations: write # `attest` stores the attestations
-    # The repo-level secrets (`DEPLOY_WEBHOOK_SECRET`, `HOMEBREW_TAP_TOKEN`, and the signing secrets
+    # The repo-level secrets (`DEPLOY_WEBHOOK_SECRET`, `HOMEBREW_TAP_DEPLOY_KEY`, and the signing secrets
     # still held at repo level). The `build` job's `release` environment secrets don't pass through
     # here; that job reads them itself, and they win over a same-named secret passed from here.
     secrets: inherit

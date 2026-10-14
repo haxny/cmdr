@@ -1106,17 +1106,17 @@ jobs:
     steps:
       - name: Bump the cask in vdavid/homebrew-tap
         env:
-          # Fine-grained PAT with contents read+write on vdavid/homebrew-tap only.
+          # SSH deploy key with write access to vdavid/homebrew-tap and nothing else.
           # When absent (e.g. a fork or before the secret is created), skip cleanly:
           # the tap is a fallback channel, not part of the release contract.
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
-          if [ -z "${HOMEBREW_TAP_TOKEN:-}" ]; then
-            echo "HOMEBREW_TAP_TOKEN absent; skipping tap bump (tap is a fallback channel)."
+          if [ -z "${HOMEBREW_TAP_DEPLOY_KEY:-}" ]; then
+            echo "HOMEBREW_TAP_DEPLOY_KEY absent; skipping tap bump (tap is a fallback channel)."
             exit 0
           fi
 
@@ -1130,8 +1130,16 @@ jobs:
           SHA256=$(shasum -a 256 "/tmp/tap-dmg/$DMG" | cut -d' ' -f1)
           echo "Universal DMG sha256: $SHA256"
 
-          # Clone the tap with the token and rewrite ONLY the version + sha256 lines.
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/vdavid/homebrew-tap.git" /tmp/homebrew-tap
+          # Clone the tap with the deploy key and rewrite ONLY the version + sha256 lines. GitHub's
+          # host keys come from its API over TLS, so the SSH connection is verified, not trusted on
+          # first use.
+          SSH_DIR="$RUNNER_TEMP/tap-ssh"
+          mkdir -m 700 "$SSH_DIR"
+          printf '%s\n' "$HOMEBREW_TAP_DEPLOY_KEY" > "$SSH_DIR/key"
+          chmod 600 "$SSH_DIR/key"
+          curl -fsS https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com " + .' > "$SSH_DIR/known_hosts"
+          export GIT_SSH_COMMAND="ssh -i $SSH_DIR/key -o IdentitiesOnly=yes -o UserKnownHostsFile=$SSH_DIR/known_hosts -o StrictHostKeyChecking=yes"
+          git clone git@github.com:vdavid/homebrew-tap.git /tmp/homebrew-tap
           CASK="/tmp/homebrew-tap/Casks/cmdr.rb"
 
           sed -i -E "s|^(  version \").*(\")|\1${VERSION}\2|" "$CASK"

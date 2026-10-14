@@ -30,18 +30,20 @@ The `bump-tap` job in `.github/workflows/release-pipeline.yml` runs after the re
 universal DMG release asset, computes its sha256, clones the tap, rewrites only the `version` + `sha256` lines in
 `Casks/cmdr.rb`, and pushes a `cmdr <version>` commit. Releases need zero extra work for brew.
 
-### `HOMEBREW_TAP_TOKEN` setup
+### `HOMEBREW_TAP_DEPLOY_KEY` setup
 
-The bump job authenticates to the tap with the `HOMEBREW_TAP_TOKEN` Actions secret (stored in `vdavid/cmdr`). It skips
-cleanly when the secret is absent, so a missing token never fails a release. To create it:
+The bump job pushes to the tap over SSH with the `HOMEBREW_TAP_DEPLOY_KEY` Actions secret (stored in `vdavid/cmdr`): the
+private half of a deploy key that can write to `vdavid/homebrew-tap` and nothing else. `smb2` and `mtp-rs` push their
+formulas with their own keys of the same kind. The job skips cleanly when the secret is absent, so a missing key never
+fails a release. To replace it:
 
-1. GitHub > Settings > Developer settings > Fine-grained personal access tokens > Generate new token.
-2. Resource owner: `vdavid`. Repository access: **Only select repositories** > `vdavid/homebrew-tap`.
-3. Permissions: **Contents** > **Read and write** (nothing else).
-4. Copy the token, then add it as an Actions secret named `HOMEBREW_TAP_TOKEN` in `vdavid/cmdr` (Settings > Secrets and
-   variables > Actions).
+1. `ssh-keygen -t ed25519 -f key -N "" -C "cmdr release workflow (tap bump)"`
+2. Add `key.pub` at `vdavid/homebrew-tap` > Settings > Deploy keys, with "Allow write access" on, and delete the old
+   one.
+3. `gh secret set HOMEBREW_TAP_DEPLOY_KEY -R vdavid/cmdr < key`, then delete both key files.
 
-Scope the token to `vdavid/homebrew-tap` only: the bump job needs no other repo.
+❌ Don't go back to a personal access token: even a fine-grained one is tied to your account, and a deploy key can only
+ever touch the tap.
 
 ## Why the cask looks the way it does
 
