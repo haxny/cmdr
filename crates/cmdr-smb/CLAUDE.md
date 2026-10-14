@@ -24,14 +24,13 @@ the keychain, mounts, and every human-facing word stay in the app's `network/`.
   neither hook on the replaced instance (both act on the SHARED session).
 - **`paths_are_os_visible()` tracks the MOUNT, not the backend kind** (latched off by `note_root_mount_gone`). ❌ Never
   hardcode `true`: smb2 browses on past a dead mount, so the drag it breaks fails silently.
-- **`write_from_stream` drives an OWNED `FileWriter` on a cloned `Connection`** (❌ never borrowed under the client
-  mutex: the QNAP deadlock); on error, `abort()` then delete the partial. Progress is the server-confirmed
-  `bytes_written()`.
+- **`write_from_stream` drives an OWNED `FileWriter` on a cloned `Connection`** (❌ never borrowed under the session
+  mutex: the QNAP deadlock); on error, `abort()` then delete the partial. Progress is server-confirmed.
 - **A copy's date stamps the writer's OWN handle before `finish()`**; ❌ never by path while it's open (its close
   re-stamps).
-- **Unknown-length writes always stream**; success includes `finish`'s server-confirmed count.
-- **A forced rename over a file is ONE `ReplaceIfExists` SET_INFO** (`supports_atomic_replace_rename` is true); only a
-  directory at either end clears first. ❌ Never clear a destination that names the source in another case.
+- **Unknown-length writes always stream**, succeeding on `finish`'s confirmed count.
+- **A forced file rename is one atomic `ReplaceIfExists` swap**; ❌ never clear a destination that's the source
+  re-cased.
 - **One-frame fast paths stop at smb2's quick limits**: a hinted read at `quick_read_limit()` (sized via
   `read_file_compound_sized`), the write promise at `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch
   name never streams (`one_frame_write_limit`).

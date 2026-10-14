@@ -497,12 +497,17 @@ async fn smb_integration_a_session_swapped_mid_clone_is_handed_out_whole() {
     // Hold the session, the way a reconnect installing its own does, while
     // `clone_session` starts.
     let mut session_guard = vol.inner.session.lock().await;
+    let tickets_before = client_lock_tickets_issued();
     let cloning = {
         let vol = Arc::clone(&vol);
         tokio::spawn(async move { vol.clone_session().await })
     };
-    // Let it run as far as it can before the client lock stops it.
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // Its lock ticket is drawn right before it waits for the lock, so a new one
+    // means it got as far as it can without it.
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "clone_session to queue for the lock", || {
+        client_lock_tickets_issued() > tickets_before
+    })
+    .await;
     *session_guard = Some(session::MainSession::new(new_client, new_tree));
     drop(session_guard);
 
