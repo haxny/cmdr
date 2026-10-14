@@ -496,7 +496,9 @@ async fn watcher_backed_listing_path(listing_id: &str) -> Option<PathBuf> {
 /// `Removed` / `Modified` events patched into the listing cache after every
 /// successful mutation), so a full `list_directory` re-read is pure redundancy
 /// and costs a lot on slow backends: a 1k-entry MTP folder takes ~17 s and holds
-/// the USB session, colliding with the user's next op.
+/// the USB session, colliding with the user's next op. A listing inside a local
+/// zip qualifies too (its content watch claims `EveryWriter`); there the edit
+/// driver re-reads it before the op completes (`archive_edit::engine::show_the_edit`).
 ///
 /// `force: true` skips that check, because `EveryWriter` is a claim about the
 /// volume's OWN writes, not about everyone's: SMB's watcher misses writes made

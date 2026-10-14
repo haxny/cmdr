@@ -3,8 +3,9 @@
 Pull-tier docs for the live content watch. Must-know invariants live in `CLAUDE.md`. Read this before any non-trivial
 work here: editing, planning, reorganizing, or advising.
 
-An external edit to the backing `.zip` (an editor rewriting it, a `cp` over it, the host's own mutation's final rename)
-refreshes any open listing inside the archive. The watch lives on the [`ArchiveVolume`](../volume.rs).
+An external edit to the backing `.zip` (an editor rewriting it, a `cp` over it) refreshes any open listing inside the
+archive. The watch lives on the [`ArchiveVolume`](../volume.rs). Cmdr's OWN edits don't count on it; see "Interaction
+with mutation" below.
 
 ## Watch the parent directory, not the file
 
@@ -90,16 +91,21 @@ correct-by-construction rather than a gap to close:
   `remote_backed_archive_never_reports_watch_coverage` pinning it). MTP: nothing forwards an out-of-band change to an
   open inner listing (MTP's `ObjectInfoChanged` is absent on many devices and hooking it isn't a clean few-liner), so an
   MTP-backed archive pane shows the zip as of its last read until the user re-navigates or refreshes (F5). For both, the
-  app's OWN edit refreshes the pane through the normal listing-cache path (the edit's driver invalidates the
-  `(parent_id, archive_path)` listing on completion), and the `(path, size, mtime)` cache key forces a re-parse on the
+  app's OWN edit refreshes the pane itself (below), and the `(path, size, mtime)` cache key forces a re-parse on the
   next read, so a stale render can never outlive a navigation.
 
-**Interaction with mutation.** A zip edit's FINAL atomic rename over `foo.zip` is a change event this watch catches —
-that IS the desired post-edit refresh. A concurrent browse in the other pane reading the archive mid-edit sees either
-the old-complete or the new-complete file, never a torn read, because the rename is atomic on one filesystem: the
-reader's `LocalFileSource` opens whichever inode the rename has published. The read isn't serialized on the edit's lane,
-but it doesn't need to be — atomicity, not lane serialization, is what prevents the torn read. The `(path, size, mtime)`
-key plus this watch's `cache.clear()` guarantee the post-rename read re-parses the new file.
+**Interaction with mutation.** A zip edit's FINAL atomic rename over `foo.zip` is a change event this watch sees, but it
+is NOT what refreshes the pane: FSEvents delivered it seconds late or not at all (a single rewrite never reached the
+seam within 8 s after a 3 s arming wait, while the round-based seam tests needed about 15 rewrites; macOS 27.0, a
+scratch test beside `host_seam_test.rs` under a busy machine, 2026-10-14), and the FE's post-op `refresh_listing` skips
+an archive listing. So the edit driver re-reads the open listings itself once the edit commits, before its terminal
+event, and drops the parsed index first (`archive_edit::engine::show_the_edit`, pinned by
+`driver_tests::an_open_listing_inside_the_zip`). Its watch-side refresh, if it comes, is a harmless no-op diff. A
+concurrent browse in the other pane reading the archive mid-edit sees either the old-complete or the new-complete file,
+never a torn read, because the rename is atomic on one filesystem: the reader's `LocalFileSource` opens whichever inode
+the rename has published. The read isn't serialized on the edit's lane, but it doesn't need to be — atomicity, not lane
+serialization, is what prevents the torn read. The `(path, size, mtime)` key plus this watch's `cache.clear()` guarantee
+the post-rename read re-parses the new file.
 
 ## Testing, split at the seam
 

@@ -42,6 +42,15 @@ local edit from a remote one. It sits in its own leaf because `engine` dispatche
 defining it in either one welds the two into a module cycle, which is exactly what a twin-enum-plus-`From` pair did
 before the two became one type.
 
+**A committed edit shows itself.** Once the dispatch returns `Ok`, `run_managed_edit` drops the archive's parsed index
+(`VolumeManager::forget_archive_index`) and re-reads every listing open at or inside the archive
+(`refresh_archive_listings`), all before the caller emits its terminal event, local and remote alike. Nothing else does
+it reliably: the FE's post-op `refresh_listing` skips an archive listing (not local, and its volume claims a watch), the
+local content watch rides FSEvents (late or dropped for the app's own swap; `crates/cmdr-archive/src/watch/DETAILS.md` §
+"Interaction with mutation"), and a remote parent has no watch at all. Living in the chokepoint, it covers copy and move
+into, delete, rename, mkdir, mkfile, and move out with no per-route call. Pinned by
+`driver_tests::an_open_listing_inside_the_zip` (vdavid/cmdr-reports#55).
+
 Because the local mutator's `raw_copy_file` needs a `Read + Seek` source (which async ranged reads can't give), a remote
 edit does NOT edit in place — it PULLS the `.zip` to a local temp, runs the ordinary local closure there, uploads the
 rewritten temp under a remote temp name, then swaps. This means a remote edit needs only streaming read + write + rename

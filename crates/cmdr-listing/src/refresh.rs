@@ -209,8 +209,9 @@ impl Inner {
     /// parent drive `volume_id`, re-reading each through the freshly re-resolved
     /// `ArchiveVolume`.
     ///
-    /// Two callers fire this when the backing `.zip` changes: the local archive
-    /// content watch (`archive::watch`, a `notify` watch on a LOCAL parent) and the
+    /// Three callers fire this when the backing `.zip` changes: the app's own archive
+    /// edit once it commits (`archive_edit::engine::show_the_edit`), the local archive
+    /// content watch (`archive::watch`, a `notify` watch on a LOCAL parent), and the
     /// SMB share watcher (`smb_watcher`, for a REMOTE parent that has no local
     /// `notify` transport — see `crates/cmdr-smb/DETAILS.md` § "SMB archive push-refresh").
     /// It deliberately does NOT go through `notify_directory_changed`: that

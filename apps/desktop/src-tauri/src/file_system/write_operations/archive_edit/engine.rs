@@ -37,7 +37,53 @@ use cmdr_archive::mutator::{MutationError, MutationHooks, MutationProgress};
 /// `parent_volume_id` is the drive holding the `.zip` (`"root"` for a local disk);
 /// an unregistered id falls back to the local path (a plain-file edit that will
 /// surface its own not-found).
+///
+/// A committed edit then refreshes every pane open inside the archive, before
+/// the caller emits its terminal event: see [`show_the_edit`].
 pub(super) async fn run_managed_edit<T, F>(
+    parent_volume_id: &str,
+    archive_path: PathBuf,
+    state: Arc<WriteOperationState>,
+    remote_progress: RemoteProgressObserver,
+    plan_and_apply: F,
+) -> Result<T, EditError>
+where
+    F: FnOnce(&Path) -> Result<T, EditError> + Send + 'static,
+    T: Send + 'static,
+{
+    let result = apply_local_or_remote(
+        parent_volume_id,
+        archive_path.clone(),
+        state,
+        remote_progress,
+        plan_and_apply,
+    )
+    .await;
+    if result.is_ok() {
+        show_the_edit(parent_volume_id, &archive_path).await;
+    }
+    result
+}
+
+/// Re-reads every listing open at or inside the archive, so a pane browsing the
+/// zip shows the edit the moment the op completes.
+///
+/// The edit has to do it itself. The FE's post-op `refresh_listing` skips an
+/// archive listing (its volume isn't local and claims a watch), and nothing else
+/// is reliable: the local content watch rides FSEvents, which delivered the
+/// app's own swap many seconds late or not at all (a pane stayed stale until
+/// re-entered, vdavid/cmdr-reports#55), and a remote parent has no watch at all.
+/// The parsed index goes first, since the cache key can miss the change.
+async fn show_the_edit(parent_volume_id: &str, archive_path: &Path) {
+    get_volume_manager().forget_archive_index(archive_path);
+    crate::listing_host::listings()
+        .refresh_archive_listings(parent_volume_id, archive_path)
+        .await;
+}
+
+/// [`run_managed_edit`]'s dispatch: the closure on the real file for a local
+/// parent, or pull-apply-upload-swap for a remote one.
+async fn apply_local_or_remote<T, F>(
     parent_volume_id: &str,
     archive_path: PathBuf,
     state: Arc<WriteOperationState>,

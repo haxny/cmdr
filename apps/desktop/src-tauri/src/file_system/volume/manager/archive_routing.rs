@@ -222,6 +222,17 @@ impl VolumeManager {
             self.unregister(&old);
         }
     }
+
+    /// Drops the parsed index of the archive registered over `zip_path`, if any,
+    /// so the next read sees an edit the app just committed. Nothing registered
+    /// means nothing cached: the next resolve parses afresh anyway.
+    pub fn forget_archive_index(&self, zip_path: &Path) {
+        if let Some(volume) = self.get(&archive_volume_id(zip_path))
+            && let Some(archive) = volume.as_any().downcast_ref::<ArchiveVolume>()
+        {
+            archive.forget_parsed_index();
+        }
+    }
 }
 
 /// Confirms a `.zip` candidate on a REMOTE parent (direct SMB / MTP) is a real,

@@ -1,8 +1,9 @@
 # Archive live content watch
 
-Refreshes any open listing inside an archive when the backing `.zip` changes on disk (an editor rewriting it, a `cp`
-over it, the host's own mutation's final rename). The watch handle lives on the [`ArchiveVolume`](../volume.rs); this
-module is the OS watch + event filter behind it.
+Refreshes any open listing inside an archive when ANOTHER app changes the backing `.zip` on disk (an editor rewriting
+it, a `cp` over it). ❌ Don't lean on it for Cmdr's own edits: FSEvents delivers them late or not at all, so the edit
+driver refreshes itself (`archive_edit::engine::show_the_edit`). The watch handle lives on the
+[`ArchiveVolume`](../volume.rs); this module is the OS watch + event filter behind it.
 
 ## Must-knows
 

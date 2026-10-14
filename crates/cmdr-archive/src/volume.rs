@@ -154,6 +154,14 @@ impl ArchiveVolume {
         *self.password.lock_ignore_poison() = None;
     }
 
+    /// Drops the parsed index, so the next read re-parses the archive. The host
+    /// calls it after its own edit: the cache key's `(size, mtime)` can come out
+    /// unchanged at its resolution (a same-length rename on a remote parent,
+    /// whose mtime is whole seconds), and a stale hit would show the old entries.
+    pub fn forget_parsed_index(&self) {
+        self.cache.clear();
+    }
+
     /// A cloned snapshot of the stored password to move into the blocking read
     /// closure. Cloning keeps it `Zeroizing`, so the transient copy is wiped when
     /// the closure ends.
