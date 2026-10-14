@@ -353,11 +353,9 @@ async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_o
 async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
     let source = Arc::new(InMemoryVolume::new("Source"));
     seed(&source, InMemoryVolume::REFERENCE_CAPS).await;
-    let dest = Arc::new(
-        InMemoryVolume::new("NAS")
-            .with_metadata_caps(LocalPosixVolume::METADATA_CAPS)
-            .with_write_refusing(MetadataClasses::CREATED),
-    );
+    // The double's own caps keep every class on every OS, so the runtime refusal
+    // is the only loss (Linux's local caps would add the flags to the note).
+    let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::CREATED));
     dest.create_directory(Path::new("/to")).await.unwrap();
 
     let complete = copy(source, &[PathBuf::from("/file.bin")], dest, Path::new("/to")).await;
@@ -375,6 +373,8 @@ async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
 
 /// A refusal counts only what the source had worth keeping: a creation date
 /// equal to the last edit is refused without a note.
+/// Refusing only the date keeps the test off the process umask, which decides
+/// whether the double's default file mode counts as worth keeping.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
     let source = Arc::new(InMemoryVolume::new("Source"));
@@ -388,7 +388,7 @@ async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
             ..CarriedMetadata::default()
         },
     );
-    let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::ALL));
+    let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::CREATED));
     dest.create_directory(Path::new("/to")).await.unwrap();
 
     let complete = copy(source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
