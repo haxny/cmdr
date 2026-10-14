@@ -88,7 +88,7 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 | GET     | `/admin/error-reports`     | Bearer token  | Per-bundle error-report metadata from the R2 prod prefix (`list` + custom metadata), newest first  |
 | GET     | `/download/:version/:arch` | none          | Log download to D1 (bots skipped, source + `ref` tagged), 302 → GitHub; `:version` takes `latest`  |
 | POST    | `/crash-report`            | IP rate-limit | Ingest crash report to D1                                                                          |
-| POST    | `/heartbeat`               | IP rate-limit | Usage heartbeat + relayed feature events (anonymous `anal_id`) to D1, events forwarded to PostHog  |
+| POST    | `/heartbeat`               | IP rate-limit | Usage heartbeat + relayed feature events (anonymous `anal_id`) to D1                               |
 | POST    | `/error-report`            | IP rate-limit | Multipart upload (zip + meta) → R2, Discord notify. Also gated by the global intake budget         |
 | POST    | `/error-report/:id/amend`  | amend key     | Add a note or reply-to address to a report already in R2 (`.amend.json` sidecar + email)           |
 | POST    | `/beta-signup`             | IP rate-limit | Subscribe a contact email to the Listmonk beta list (NO install id)                                |
@@ -142,7 +142,6 @@ Decisions.
 | `LISTMONK_*_LIST_ID` / `_UUID`     | Beta + newsletter list ids/UUIDs | Same ([vars], not secrets)         |
 | `IP_HASH_PEPPER`                   | Any random string                | Makes every stored IP hash one-way |
 | `HEALTHCHECKS_PING_URL`            | unset (skips the ping)           | healthchecks.io cron ping URL      |
-| `POSTHOG_PROJECT_KEY`              | unset (skips the forward)        | PostHog `phc_` key for the relay   |
 
 `ED25519_PRIVATE_KEY` is two different keys, unlike the rows marked "Same". The production signer can mint a license
 every shipped build accepts, so it exists only as a wrangler secret; `.dev.vars` gets its own pair, and the desktop app
@@ -459,7 +458,6 @@ triage value live in the other columns, and there's no privacy reason to lose th
   installs, D7 retention) with room to spare.
 - **`analytics_event`**: rows DELETED after two years, the same "desktop usage stats" promise as `heartbeat`. Aged by
   `received_at` (our clock), never `occurred_at`: that's the client's clock, and a wrong one would keep a row forever.
-  The copy forwarded to PostHog is under PostHog's own retention, which the privacy policy names separately.
 - **Error report bundles**: 90-day R2 lifecycle (`error-reports/` prefix only, rule details in
   `src/telemetry/DETAILS.md` § Eviction), plus capacity-driven eviction that never touches anything under 60 days
   (`src/telemetry/DETAILS.md` § Eviction). Not part of this sweep. The same 90 days covers every reply-to address an

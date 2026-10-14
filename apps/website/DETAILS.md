@@ -306,16 +306,15 @@ desktop app writes plain CSS and has no Tailwind.
 ## Analytics
 
 The website uses three analytics layers. The desktop app separately sends anonymous beta usage analytics: an
-`anal_`-keyed hourly heartbeat (true DAU) plus curated PII-free PostHog feature events, all behind a tri-state opt-out
-and stripped of file names, paths, queries, and prompts by allowlist. See
+`anal_`-keyed hourly heartbeat (true DAU) plus curated PII-free feature events stored in D1, all behind a tri-state
+opt-out and stripped of file names, paths, queries, and prompts by allowlist. See
 `apps/desktop/src-tauri/src/analytics/CLAUDE.md`.
 
 - **Umami** (`Layout.astro`): Cookieless page analytics (pageviews, referrers, geo, UTM). Self-hosted. Script served at
   `/u/mami` (proxied through Caddy to avoid adblockers).
 - **PostHog** (`public/scripts/posthog-init.js`): Session replay, heatmaps, click tracking. Configured with
   `persistence: 'memory'` (no cookies, no localStorage) and `person_profiles: 'identified_only'` (no anonymous person
-  profiles). This keeps PostHog fully cookieless. The same EU project also receives the desktop app's
-  `source: "desktop"` feature events.
+  profiles). This keeps PostHog fully cookieless. It gets website data only; the desktop app's events stay in D1.
 - **D1** (API server): Download redirect endpoint logs version, arch, country, source, a first-touch `ref` channel, and
   a daily-hashed IP (bot hits dropped). The download button carries `?src=website` so the endpoint can tag it as a
   website download (vs Homebrew or direct links). The `heartbeat` table holds the desktop DAU beats.

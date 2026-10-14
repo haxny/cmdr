@@ -58,7 +58,7 @@ export const networkConnections: NetworkConnection[] = [
     id: 'usage-stats',
     name: 'Usage stats',
     destination:
-      "<code>api.getcmdr.com/heartbeat</code>. The app doesn't contact PostHog: our server passes the feature events on to PostHog's EU cloud.",
+      '<code>api.getcmdr.com/heartbeat</code>. They stay in our own database there; no third party gets them.',
     when: 'At most once every three hours while the app is open. Feature events wait on the Mac and go with the next send.',
     sends:
       'A random install id created on the Mac (not linked to a name, email, or license), app version, macOS version, CPU architecture, the names of features used, and a fixed list of settings values (like light or dark mode). No file names, paths, file contents, search terms, or AI prompts. That list is enforced by code review, not by an automatic filter.',
@@ -241,7 +241,7 @@ export const dataLocations: DataLocation[] = [
   },
   {
     name: 'PostHog',
-    what: 'Usage stats from the app, which our API server passes on, and visit recordings and heatmaps from the website.',
+    what: 'Visit recordings and heatmaps from the website. No data from the app.',
     where: 'PostHog EU cloud (Frankfurt, according to PostHog).',
     inEu: 'yes',
   },
@@ -308,10 +308,6 @@ export const serverRetention: RetentionRule[] = [
   },
   { what: 'Feedback', rule: 'Email removed after two years. The message is kept.' },
   { what: 'Issued licenses', rule: 'Buyer email and license record kept with no time limit.' },
-  {
-    what: 'App feature events (PostHog)',
-    rule: "PostHog's free plan keeps them for at least one year and sets no end date. PostHog doesn't offer a shorter setting.",
-  },
   { what: 'Website visit recordings (PostHog)', rule: 'Deleted after 30 days.' },
   { what: 'Website visits (Umami)', rule: 'Deleted after two years.' },
   { what: 'Purchase records at Paddle', rule: 'Seven years, as Swedish accounting law requires. Paddle keeps these.' },

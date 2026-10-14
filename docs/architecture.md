@@ -116,7 +116,7 @@ All under `apps/desktop/src/lib/`.
 - `nudges/`: The rule every once-per-install offer obeys: the dated ledger of what's been asked, the three-day cooldown
   one offer puts on the next, and the toast body they share. See `apps/desktop/src/lib/nudges/CLAUDE.md`
 - `dock/`: macOS-only. The once-per-install "keep Cmdr in your Dock?" offer: when it's earned (the launch-day ledger
-  plus `get_dock_pin_state`), the toast that asks, and its three PostHog events. The machine-facing half is
+  plus `get_dock_pin_state`), the toast that asks, and its three analytics events. The machine-facing half is
   `src-tauri/src/dock/`. See `apps/desktop/src/lib/dock/CLAUDE.md`
 - `reveal/`: macOS-only. How "Reveal in Cmdr" reaches a person: the once-per-install offer to catch "Show in Finder",
   and the once-ever notice the first time one lands. The machine-facing half is `src-tauri/src/reveal/`. See

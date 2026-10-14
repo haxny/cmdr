@@ -15,7 +15,7 @@ event relay), the `error-report*` quartet, and `feedback.ts`. File map: DETAILS 
 - **`/feedback` and `/heartbeat` AWAIT their D1 writes** (failure → soft 502, the app retries); the rest are
   fire-and-forget. ❌ Don't flip either. A beat's 2xx lets the app clear its spool, so beat and events commit in ONE
   `batch`, and a malformed EVENT is dropped, never a 400 (it would block the spool forever). DETAILS § Heartbeat.
-- **PostHog lives only in `posthog-forward.ts` plus one call**, run after the D1 commit (earlier double-counts retries).
+- **Relayed events stay in D1**: ❌ never forward them to a third party; the privacy policy promises it.
 - **Eviction spares bundles under `EVICTION_MIN_AGE_DAYS` (60) and is all-or-nothing** (it pauses intake rather than
   half-evicting, resuming at the LOW watermark). Drop either and unauthenticated `/error-report` becomes a delete
   primitive. DETAILS § Eviction.

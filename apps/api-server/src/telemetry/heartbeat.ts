@@ -1,6 +1,5 @@
 import { Hono, type Context } from 'hono'
-import { enforceIpRateLimit, readCappedBody, scheduleBackground, type Bindings } from '../types'
-import { forwardEventsToPostHog } from './posthog-forward'
+import { enforceIpRateLimit, readCappedBody, type Bindings } from '../types'
 import { versionPattern } from './telemetry'
 
 const heartbeat = new Hono<{ Bindings: Bindings }>()
@@ -65,13 +64,11 @@ const insertHeartbeatSql = `INSERT INTO heartbeat (anal_id, app_version, os_vers
  * statement per event would put up to 500 statements in the batch, against D1's per-invocation query
  * limit, and a multi-row VALUES list would hit its 100-bound-parameter cap at 16 events. `OR IGNORE`
  * skips an event whose `event_id` is already stored: a retried beat whose first 204 got lost.
- * `RETURNING` names the rows actually inserted, which is what the PostHog forward sends.
  */
 const insertEventsSql = `INSERT OR IGNORE INTO analytics_event (anal_id, event, occurred_at, properties_json, app_version, event_id)
      SELECT ?1, json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]'),
             json_extract(value, '$[3]'), json_extract(value, '$[4]')
-     FROM json_each(?2)
-     RETURNING event_id`
+     FROM json_each(?2)`
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -196,19 +193,6 @@ function parseEvents(raw: unknown[] | null | undefined, beatAppVersion: string):
   return kept
 }
 
-/**
- * The events this beat actually inserted, per the event INSERT's `RETURNING`: every event without an
- * id (nothing can dedupe it, so it was always inserted), plus each id D1 names, once. Missing results
- * read as "nothing new", because forwarding an event twice is the failure this exists to prevent.
- */
-function newlyStored(events: RelayedEvent[], inserted: D1Result | undefined): RelayedEvent[] {
-  if (!inserted) return []
-  const fresh = new Set(
-    (inserted.results as { event_id: string | null }[]).flatMap((row) => (row.event_id ? [row.event_id] : [])),
-  )
-  return events.filter((e) => e.id === null || fresh.delete(e.id))
-}
-
 /** Read and parse the request body, enforcing the size cap. Returns the parsed object or an error. */
 async function readHeartbeatBody(c: Context<{ Bindings: Bindings }>): Promise<Record<string, unknown> | Response> {
   // A cheap fast-fail for an honest client; `readCappedBody` is the actual cap.
@@ -280,25 +264,12 @@ heartbeat.post('/heartbeat', async (c) => {
   // AWAITED, and one batch (D1 runs a batch as a transaction): a 2xx tells the client both the beat
   // and its events are stored, which is what lets it clear them from its spool. A failure answers a
   // soft 502 so the client keeps them for the next try.
-  let results: D1Result[]
   try {
-    results = await db.batch(statements)
+    await db.batch(statements)
   } catch (e) {
     console.error('Heartbeat: D1 write failed', e)
     return c.json({ error: 'Could not store the heartbeat right now' }, 502)
   }
-
-  // Only after D1 has them: the client retries a beat that failed, so forwarding earlier would send
-  // PostHog the same events twice. Never fails the beat; see `posthog-forward.ts`.
-  await scheduleBackground(
-    c,
-    forwardEventsToPostHog(
-      c.env.POSTHOG_PROJECT_KEY,
-      { analId: beat.analId, osVersion: beat.osVersion, arch: beat.arch },
-      newlyStored(events, results[1]),
-      config,
-    ),
-  )
 
   return c.body(null, 204)
 })

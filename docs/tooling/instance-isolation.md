@@ -148,7 +148,7 @@ Authoritative files: `apps/desktop/scripts/instance-id.ts`, `apps/desktop/src-ta
 
 ### Production analytics
 
-The heartbeat and PostHog pipelines are suppressed outright for any instance that carries `CMDR_INSTANCE_ID`,
+The heartbeat and its feature events are suppressed outright for any instance that carries `CMDR_INSTANCE_ID`,
 `CMDR_DATA_DIR`, `CMDR_E2E_MODE`, `CMDR_MOCK_FDA`, or `CI` (presence, not value), on top of the debug-build rule. That
 belongs in this doc's derivation story because it's the one resource where isolation ALONE is the bug: an isolated data
 dir has no `install-ids.json`, so it mints a fresh `anal_` id and the instance registers as a brand-new user on every

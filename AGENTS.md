@@ -182,6 +182,6 @@ inventory). Desktop-specific test, MCP, and E2E mechanics live in `apps/desktop/
   `Co-Authored-By`.
 - **The delivery pipeline is fully wired; don't re-audit it.** Releases are agent-automated end to end (tag → CI
   build/sign/notarize → `latest.json` → website deploy → FDA-preserving silent update), and the feedback loops are live
-  (crash → email cron, error → Discord, analytics → PostHog). `docs/guides/releasing.md`.
+  (crash → email cron, error → Discord, usage stats → D1). `docs/guides/releasing.md`.
 
 Happy coding! 🦀✨

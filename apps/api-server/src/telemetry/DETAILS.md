@@ -10,7 +10,6 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **`telemetry.ts`**: routes `/crash-report`, `/update-check/:version`, `/download/:version/:arch`, plus
   `extractTopFunction`, `validateOptionalEnum` / `validateOptionalPattern`, `versionPattern`, and the sanitizers.
 - **`heartbeat.ts`**: `POST /heartbeat`: the beat, its uptime, and the feature events it relays.
-- **`posthog-forward.ts`**: the relay's PostHog leg, the only code that knows PostHog exists.
 - **`error-report.ts`**: `POST /error-report` (multipart upload to R2, the KV index write, presigned Discord
   notification, and an email for hand-written reports).
 - **`error-report-amend.ts`**: `POST /error-report/:id/amend`, plus the `report:{id}` KV index and the amend credential
@@ -21,7 +20,7 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   recompute helper.
 - **`feedback.ts`**: `POST /feedback` (in-app feedback → D1 + Discord).
 - Tests: `crash-report.test.ts` (incl. § "top_function derivation" over real backtraces), `heartbeat.test.ts`,
-  `heartbeat-sql.test.ts` (the INSERTs against a real SQLite with the real migrations), `posthog-forward.test.ts`,
+  `heartbeat-sql.test.ts` (the INSERTs against a real SQLite with the real migrations),
   `download-and-update-check.test.ts`, `error-report.test.ts`, `error-report-intake.test.ts`,
   `error-report-eviction.test.ts`, `error-report-email.test.ts`, `error-report-amend.test.ts`, `feedback.test.ts`. The
   route-level R2/KV/D1 fakes live in `error-report-test-helpers.ts`; the Resend mock can't (`vi.mock` is hoisted per
@@ -131,17 +130,8 @@ statement per event puts up to 500 statements in the batch against D1's per-invo
 `VALUES` hits D1's 100-bound-parameter cap at 16 events. `json_each` in D1 was verified with a read-only
 `wrangler d1 execute --remote` (2026-09-24); `heartbeat-sql.test.ts` proves the columns land right on real SQLite.
 
-**The PostHog forward** (`posthog-forward.ts`). After the commit, `waitUntil` posts the stored events to
-`https://eu.i.posthog.com/batch/` in one request, so PostHog's history continues unbroken while nothing reads the D1
-copy yet. The body mirrors what the app used to send to `/capture/` per event: `distinct_id` = `analId`, the identity
-properties `source: desktop`, `app_version`, `os_version`, `arch` (set last, so an event property can't shadow them),
-and the config snapshot as `$set`. `app_version` is the event's own, not the carrying beat's. New because the sender
-changed: a per-event `timestamp`, the event id as `uuid` (PostHog dedupes on it too), and `$geoip_disable: true`, since
-the IP PostHog sees is the Worker's (we don't forward the user's). It runs only after D1 has the events, and sends only
-the ones this beat newly inserted: the event INSERT's `RETURNING event_id` names them (`newlyStored`), so a retried beat
-that was already stored forwards nothing twice. Events without an id are always inserted, so always forwarded. Without
-`POSTHOG_PROJECT_KEY` it's a silent no-op; a PostHog error is logged and never touches the beat. Dropping PostHog =
-delete that file, its test, the one call in `heartbeat.ts`, and the secret.
+**D1 is the only destination.** The relayed events stop at `analytics_event`; the Worker calls no third party for them
+(`heartbeat.test.ts` § "no third party" pins it). PostHog only sees the website's own in-browser events.
 
 **Rate limiting:** `HEARTBEAT_LIMITER` (`[[ratelimits]]` in `wrangler.toml`, type `RateLimit`, `.limit({ key })` →
 `{ success }`) keyed by `cf-connecting-ip` at 12 req/min/IP (`period` must be 10 or 60). Legit traffic is a beat per

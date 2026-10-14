@@ -297,12 +297,6 @@ GITHUB_PROJECT_TRIAGE_OPTION_ID = "6d6cdf53"
 #                                   ❌ Never a classic PAT: `repo` scope would make this Worker's env
 #                                   a write credential for every repo David owns. Unset simply turns
 #                                   issue filing off; nothing else changes.)
-# - POSTHOG_PROJECT_KEY            (optional: the PostHog project key, `phc_...`, the same public
-#                                   ingest key the release workflow bakes into the app as
-#                                   CMDR_POSTHOG_KEY. POST /heartbeat forwards the feature events it
-#                                   stored to PostHog with it (src/telemetry/posthog-forward.ts). Unset
-#                                   skips the forward; D1 still gets every event. Named apart from the
-#                                   dashboard's POSTHOG_API_KEY, a personal `phx_...` read key.)
 # - LISTMONK_API_TOKEN             (paired API token; sent as `token <user>:<token>`)
 #   (LISTMONK_API_URL / LISTMONK_API_USER / LISTMONK_BETA_LIST_ID are non-secret [vars] above.)
 #   For local dev, mirror these in .dev.vars (gitignored), for example:

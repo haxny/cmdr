@@ -52,7 +52,7 @@ and 1-hour TTL for 30d.
 | Cloudflare Analytics Engine | `cloudflare.ts` | Download counts, update check counts by version/arch/country                     |
 | Paddle                      | `paddle.ts`     | Completed transactions, subscriptions by status                                  |
 | GitHub                      | `github.ts`     | Release download counts per asset (cumulative, not time-ranged)                  |
-| PostHog                     | `posthog.ts`    | Pageview trends via the Trends API                                               |
+| PostHog                     | `posthog.ts`    | Pageview trends via the HogQL query API                                          |
 | License server              | `license.ts`    | Total activations, active devices                                                |
 
 ### Auth
