@@ -100,8 +100,9 @@ const BACKEND: BackendName = "smb";
 /// mount flow again. Credentials are kept in memory for the lifetime of the
 /// `SmbVolume` (no security concern: they're already in the process's
 /// address space, used on every smb2 call). On auth failure we
-/// re-pull from the secret store in case the user updated them.
-#[derive(Debug, Clone)]
+/// re-pull from the secret store in case the user updated them. `Debug` prints
+/// `***` for the password.
+#[derive(Clone)]
 pub struct SmbConnectionParams {
     /// Resolved server address (IP or hostname, ready to pass to
     /// [`build_smb_addr`](crate::build_smb_addr)).
@@ -553,6 +554,18 @@ pub async fn connect_smb_volume(
     Ok(vol)
 }
 
+impl std::fmt::Debug for SmbConnectionParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SmbConnectionParams")
+            .field("server", &self.server)
+            .field("share_name", &self.share_name)
+            .field("port", &self.port)
+            .field("username", &self.username)
+            .field("password", &"***")
+            .finish()
+    }
+}
+
 impl SmbConnectionParams {
     /// Builds the params struct for an optionally-authenticated connection.
     ///
@@ -584,7 +597,7 @@ impl SmbConnectionParams {
 }
 
 #[cfg(test)]
-mod params_normalization_test {
+mod params_test {
     use super::SmbConnectionParams;
 
     /// macOS `statfs` spells an accented share decomposed (NFD) while the server
@@ -614,6 +627,18 @@ mod params_normalization_test {
         assert_eq!(params.share_name, "R\u{e9}gi NAS");
         assert_eq!(params.server, "naspolya");
         assert_eq!(params.username, "david");
+    }
+
+    /// The password stays out of `{:?}`, the way smb2's own `ClientConfig` keeps
+    /// it out (0.30.0+): these params ride along on the volume for its whole
+    /// life, and one debug log line of them would put the secret in a log file a
+    /// user attaches to a report.
+    #[test]
+    fn debug_output_hides_the_password() {
+        let params = SmbConnectionParams::new("naspolya", "photos", 445, Some("david"), Some("hunter2-secret"));
+        let printed = format!("{params:?}");
+        assert!(!printed.contains("hunter2-secret"), "leaked: {printed}");
+        assert!(printed.contains("david") && printed.contains("photos"), "{printed}");
     }
 }
 
