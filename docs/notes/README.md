@@ -39,6 +39,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   and a keychain-trusted inspection CA, but ignored PAC and the bypass list and proxied loopback; the fixes verify all
   three on the real system settings.** Read it before changing how HTTP clients are built, or before answering a
   reviewer's proxy question on `/trust`.
+- `accessibility-audit-2026-10.md` — every WCAG 2.2 A/AA, Section 508, and EN 301 549 criterion of the ITI VPAT 2.5Rev
+  INT template, assessed against the desktop app on 2026-10-14 with a verdict, a buyer-readable remark, and the
+  evidence. **No criterion is "Does not support" yet, but the file list likely doesn't speak to VoiceOver**, and many
+  rows wait on 12 VoiceOver checks (David's guide in the vault). The gaps are #437–#443. It's the source for the
+  published conformance report on `/trust`; update both when a gap closes.
 - `rust-test-flake-analysis-2026-08-23.md` — what actually makes the Rust lanes go red, measured rather than assumed.
   **What predicts a starvation kill is a test's MARGIN (per-test cap ÷ idle runtime), not its duration**: every test two
   saturated full-suite runs killed sits at the thin end of that ratio, while three of the four causes found have no
