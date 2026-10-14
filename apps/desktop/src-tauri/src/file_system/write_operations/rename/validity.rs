@@ -7,8 +7,10 @@
 use std::path::{Path, PathBuf};
 
 use super::super::ScanCostFacts;
-use super::super::look_alike::{NewEntry, place_new_entry};
-use crate::file_system::volume::{RenameWork, SubtreeTally};
+use cmdr_fs::name_fold::fold_name;
+
+use super::super::look_alike::{ListedFolders, NewEntry, place_new_entry};
+use crate::file_system::volume::{RenameWork, SubtreeTally, Volume};
 use crate::s3_costs;
 
 /// Result of a rename validity check.
@@ -89,7 +91,8 @@ pub(crate) struct ConflictFileInfo {
 /// Validates a new filename and checks for conflicts in the same directory.
 /// Uses inode comparison to detect case-only renames (valid on case-insensitive
 /// APFS). When `volume_id` is not `"root"`, uses the Volume trait for conflict
-/// detection (needed for MTP and other non-local volumes). `data_dir` is where
+/// detection, and the folder's listing for a case-only rename on a volume that
+/// folds case ([`found_the_source_itself`]). `data_dir` is where
 /// the S3 price table is cached, for a rename that runs as a move.
 pub(crate) async fn check_rename_validity_impl(
     dir: String,
@@ -137,9 +140,8 @@ pub(crate) async fn check_rename_validity_impl(
             valid: true,
             error: None,
             has_conflict: conflict_info.0,
-            // MTP is case-sensitive, no case-only rename ambiguity
-            is_case_only_rename: false,
-            conflict: conflict_info.1,
+            is_case_only_rename: conflict_info.1,
+            conflict: conflict_info.2,
             by_move: rename_by_move_cost(&volume_id, &old_path, data_dir.as_deref()).await,
         }
     } else {
@@ -246,17 +248,19 @@ pub(crate) fn same_local_file(_left: &std::fs::Metadata, _right: &std::fs::Metad
 /// Checks if a file with `new_path` exists on a non-local volume using the Volume trait's
 /// `get_metadata`, or under another Unicode spelling of its name (`look_alike.rs`), which
 /// the rename itself would refuse too. `old_path` as that look-alike is a respell, not a clash.
+///
+/// Answers `(has_conflict, is_case_only_rename, conflict)`, like [`check_sibling_conflict`].
 async fn check_sibling_conflict_via_volume(
     volume_id: &str,
     old_path: &Path,
     new_path: &Path,
-) -> (bool, Option<ConflictFileInfo>) {
+) -> (bool, bool, Option<ConflictFileInfo>) {
     // Plain `get`, not `resolve`: renaming INTO an archive is rejected upstream, so
     // the target is always a normal sibling (incl. a `.zip` file), checked on its
     // own volume — routing to the ArchiveVolume would mis-consult the zip's index.
     let volume = match crate::file_system::volume::manager::get_volume_manager().get(volume_id) {
         Some(v) => v,
-        None => return (false, None),
+        None => return (false, false, None),
     };
 
     let entry = match volume.get_metadata(new_path).await {
@@ -269,16 +273,18 @@ async fn check_sibling_conflict_via_volume(
                 Ok(NewEntry::Free(spelled)) if spelled != new_path && spelled != old_path => {
                     match volume.get_metadata(&spelled).await {
                         Ok(entry) => entry,
-                        Err(_) => return (false, None),
+                        Err(_) => return (false, false, None),
                     }
                 }
                 // No conflict: nothing holds the name in any spelling. Several
                 // look-alikes leave the rename itself to refuse, by name.
-                _ => return (false, None),
+                _ => return (false, false, None),
             }
         }
-        Err(_) => return (false, None), // Couldn't tell; the rename answers for itself
+        Err(_) => return (false, false, None), // Couldn't tell; the rename answers for itself
     };
+
+    let is_case_only_rename = found_the_source_itself(volume.as_ref(), volume_id, old_path, new_path).await;
 
     let conflict = ConflictFileInfo {
         name: entry.name,
@@ -287,5 +293,42 @@ async fn check_sibling_conflict_via_volume(
         is_directory: entry.is_directory,
     };
 
-    (true, Some(conflict))
+    (true, is_case_only_rename, Some(conflict))
+}
+
+/// Whether a lookup of `new_path` that just answered found the entry being
+/// renamed, `old_path`, under its other spelling: a case-only rename on a
+/// case-insensitive volume (an SMB share, an exFAT stick). No inode to compare
+/// off the local disk, and the volume names the entry the way it was asked
+/// (`SmbVolume::get_metadata` does), so the folder's listing decides: it holds
+/// `old_path`'s name and not `new_path`'s, so the only entry the lookup could
+/// have found is the source. A case-sensitive volume holding both names lists
+/// both, and that's a real conflict.
+///
+/// Only for names that fold to one key (`fold_name`), so a plain conflict costs
+/// no listing. One that can't be read answers "a conflict", which the dialog
+/// shows rather than renaming over a file nobody looked at.
+async fn found_the_source_itself(volume: &dyn Volume, volume_id: &str, old_path: &Path, new_path: &Path) -> bool {
+    let (Some(dir), Some(old_name), Some(new_name)) = (
+        new_path.parent(),
+        old_path.file_name().and_then(|n| n.to_str()),
+        new_path.file_name().and_then(|n| n.to_str()),
+    ) else {
+        return false;
+    };
+    if old_path.parent() != Some(dir) || old_name == new_name || fold_name(old_name) != fold_name(new_name) {
+        return false;
+    }
+    match ListedFolders::with_pane_listings(volume, volume_id)
+        .entries_in(dir)
+        .await
+    {
+        Ok(entries) => {
+            entries.iter().any(|entry| entry.name == old_name) && !entries.iter().any(|entry| entry.name == new_name)
+        }
+        Err(e) => {
+            log::debug!(target: "volume", "couldn't list {} to tell a case-only rename: {e}", dir.display());
+            false
+        }
+    }
 }

@@ -181,6 +181,12 @@ impl<'v> ListedFolders<'v> {
         if name.is_ascii() || self.volume.matches_names_in_any_unicode_form() {
             return Ok(LookAlike::None);
         }
+        Ok(among(self.entries_in(dir).await?, name))
+    }
+
+    /// `dir`'s entries, from a pane's listing or one read, kept for the next
+    /// question about `dir`.
+    pub(crate) async fn entries_in(&mut self, dir: &Path) -> Result<&[FileEntry], VolumeError> {
         if !self.listed.contains_key(dir) {
             let entries = match self.pane_listing(dir) {
                 Some(entries) => entries,
@@ -188,10 +194,7 @@ impl<'v> ListedFolders<'v> {
             };
             self.listed.insert(dir.to_path_buf(), entries);
         }
-        Ok(self
-            .listed
-            .get(dir)
-            .map_or(LookAlike::None, |entries| among(entries, name)))
+        Ok(self.listed.get(dir).map_or(&[], Vec::as_slice))
     }
 
     /// `dir`'s entries as a pane's listing holds them, when the caller trusts

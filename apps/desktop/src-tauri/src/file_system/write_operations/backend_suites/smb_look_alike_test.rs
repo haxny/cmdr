@@ -15,7 +15,9 @@
 //! Unit twins: `transfer/volume/look_alike_tests.rs`.
 //!
 //! Case-only look-alikes aren't pinned here: the fixture runs `case sensitive =
-//! auto`, so Samba folds case itself and the twin can't be made.
+//! auto`, so Samba folds case itself and the twin can't be made. That folding is
+//! what `smb_integration_a_case_only_rename_asks_nothing_and_lands` pins: F2's
+//! check finds the source under its new case and mustn't call it a conflict.
 
 use super::network_archive_test_support::a_compress_replaces_a_look_alike_archive_in_place;
 use super::network_look_alike_test_support::{
@@ -87,4 +89,54 @@ async fn smb_integration_a_bulk_rename_skips_a_look_alike_and_names_new_ones_com
 async fn smb_integration_a_compress_replaces_a_look_alike_archive_in_place_and_names_new_ones_composed() {
     let (remote, dir) = fixture().await;
     a_compress_replaces_a_look_alike_archive_in_place(remote, dir).await;
+}
+
+/// QA 2026-10-14: F2 `c.txt` → `C.txt` on a share opened the "already exists"
+/// dialog comparing the file with itself, because Samba (like a QNAP) finds
+/// `C.txt` as `c.txt`. The pane's check has to see that the entry it found is the
+/// source, and the rename then lands with the new case and the same bytes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
+    use super::super::rename::check_rename_validity_impl;
+    use super::super::rename_managed;
+    use super::network_safety_test_support::Registered;
+    use super::network_semantics_test_support::{names_in, seed, try_read};
+    use super::network_transfer_test_support::clean_deep;
+    use crate::operation_log::types::Initiator;
+
+    let (remote, dir) = fixture().await;
+    seed(remote.as_ref(), &dir, &[("c.txt", b"abcd")]).await;
+    let registered = Registered::new(&remote, "case-only");
+
+    let check = check_rename_validity_impl(
+        dir.to_string_lossy().into_owned(),
+        "c.txt".into(),
+        "C.txt".into(),
+        registered.id.clone(),
+        None,
+    )
+    .await;
+    assert!(
+        !check.has_conflict || check.is_case_only_rename,
+        "the share's only `C.txt` is `c.txt` itself, so F2 asks nothing: {check:?}"
+    );
+
+    rename_managed(
+        dir.join("c.txt"),
+        dir.join("C.txt"),
+        false,
+        registered.id.clone(),
+        Initiator::User,
+    )
+    .await
+    .expect("the case-only rename lands");
+    assert_eq!(names_in(remote.as_ref(), &dir).await, vec!["C.txt".to_string()]);
+    assert_eq!(
+        try_read(remote.as_ref(), &dir.join("C.txt")).await.as_deref(),
+        Some(&b"abcd"[..])
+    );
+
+    clean_deep(remote.as_ref(), &dir).await;
+    registered.leave();
 }

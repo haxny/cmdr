@@ -517,3 +517,95 @@ async fn a_batch_the_executor_runs_leaves_no_swap_out() {
 
     assert_eq!(started.swaps_left_out, 0, "the executor swaps through a temporary name");
 }
+
+// ============================================================================
+// Case-only renames off the local disk
+// ============================================================================
+
+/// An SMB share's lookups, over an `InMemoryVolume`: a name finds its entry in
+/// any case, and the entry comes back named the way it was asked for, as
+/// `SmbVolume::get_metadata` names it. The listing keeps the stored spelling.
+struct CaseFoldingVolume {
+    inner: crate::file_system::volume::InMemoryVolume,
+}
+
+impl Volume for CaseFoldingVolume {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.inner.list_directory(path, on_progress)
+    }
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let (Some(dir), Some(asked)) = (path.parent(), path.file_name().and_then(|n| n.to_str())) else {
+                return self.inner.get_metadata(path).await;
+            };
+            let entries = self.inner.list_directory(dir, None).await?;
+            let found = entries
+                .into_iter()
+                .find(|entry| entry.name.eq_ignore_ascii_case(asked))
+                .ok_or_else(|| VolumeError::NotFound(path.display().to_string()))?;
+            Ok(FileEntry {
+                name: asked.to_string(),
+                ..found
+            })
+        })
+    }
+    fn lane_key(&self) -> LaneKey {
+        LaneKey::new(self.inner.name().to_string())
+    }
+}
+
+/// QA 2026-10-14: F2 `c.txt` → `C.txt` at a QNAP share's root opened "A file
+/// with this name already exists", comparing the file with itself. The stat of
+/// `C.txt` finds `c.txt` on a case-insensitive share, so the check has to tell
+/// that the entry it found IS the one being renamed, as the local disk does by
+/// inode.
+#[tokio::test]
+async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
+    let volume_id = unique("case-folding");
+    let inner = crate::file_system::volume::InMemoryVolume::new(&volume_id);
+    inner.create_directory(Path::new("/share")).await.unwrap();
+    inner.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
+    get_volume_manager().register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
+
+    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id, None).await;
+
+    assert!(check.valid, "{check:?}");
+    assert!(
+        !check.has_conflict || check.is_case_only_rename,
+        "the only `C.txt` there is `c.txt` itself, so the rename goes ahead: {check:?}"
+    );
+}
+
+/// The other half: a case-sensitive volume holding both `c.txt` and `C.txt`
+/// has a real conflict, and the dialog has to show it.
+#[tokio::test]
+async fn a_case_only_rename_onto_a_real_sibling_is_still_a_conflict() {
+    let volume_id = unique("case-sensitive");
+    let volume = Arc::new(crate::file_system::volume::InMemoryVolume::new(&volume_id));
+    volume.create_directory(Path::new("/share")).await.unwrap();
+    volume.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
+    volume.create_file(Path::new("/share/C.txt"), b"other!").await.unwrap();
+    get_volume_manager().register(&volume_id, volume as Arc<dyn Volume>);
+
+    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id, None).await;
+
+    assert!(check.has_conflict, "{check:?}");
+    assert!(!check.is_case_only_rename, "`C.txt` is a different file: {check:?}");
+    assert_eq!(check.conflict.map(|c| c.size), Some(6));
+}

@@ -598,7 +598,9 @@ identical-looking twin beside the user's entry.
   rename whose look-alike is the entry being renamed is a respell, which is free. The rename editor's live check
   (`check_rename_validity_impl`) reports the look-alike as the conflict, and so does a typed name whose composed
   spelling the folder holds exactly (the rename itself refuses that one with the backend's `AlreadyExists`). Local root
-  renames skip all of it.
+  renames skip all of it. A target that matched the SOURCE in another case (Samba and a QNAP fold case) is settled
+  from the same listing (`ListedFolders::entries_in`): source's name listed, target's not, so it's a case-only rename
+  of one file and F2 asks nothing.
 - **Respelling can land on an exact name.** `place_new_entry` answers `Free(spelled)` when the folder holds the SPELLED
   name byte for byte (`among` treats an exact entry as "no look-alike"); a create or rename then hears the backend's
   `AlreadyExists`. A write that would REPLACE silently instead must ask `look_alike_in` with the ASKED name, which
