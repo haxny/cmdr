@@ -156,14 +156,15 @@ export async function openQueueWindow(): Promise<void> {
   // reliable IPC path, gated by `core:window:allow-set-effects` in
   // `capabilities/queue.json`). UnderWindowBackground reads as a clean utility
   // "HUD-ish" panel — the macOS convention for a transfer/activity manager —
-  // and follows the window's active state. Radius matches `--radius-xxl`.
+  // and follows the window's active state. Radius matches `--radius-window`
+  // (the file viewer's stock corner), like every other child window.
   if (!reduceTransparency) {
     void win.once('tauri://created', () => {
       void win
         .setEffects({
           effects: [Effect.UnderWindowBackground],
           state: EffectState.FollowsWindowActiveState,
-          radius: 12,
+          radius: 16,
         })
         .catch((error: unknown) => {
           log.warn('Failed to apply queue window effects: {error}', { error: String(error) })

@@ -85,6 +85,9 @@
 
     .actions {
         display: flex;
+        /* A long locale moves a whole button to the next row instead of breaking
+           its label mid-word. */
+        flex-wrap: wrap;
         justify-content: flex-end;
         gap: var(--spacing-sm);
         margin-top: var(--spacing-lg);

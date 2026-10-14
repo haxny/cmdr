@@ -23,6 +23,9 @@ export const GIT_PORTAL_INTRO_SEEN_KEY = 'fileExplorer.git.portalIntroSeen'
 
 const TOAST_ID = 'git-portal-intro'
 
+/** Wide enough for the three action buttons on one line, longer locales included. */
+const INTRO_TOAST_WIDTH_PX = 480
+
 export interface GitPortalIntroArgs {
   /** The pane's canonical path (`~` expanded), or `null` before it's known. */
   panePath: string | null
@@ -48,6 +51,8 @@ export function maybeShowGitPortalIntro({ panePath, repoRoot, goToGitDir }: GitP
     level: 'info',
     dismissal: 'persistent',
     props: { goToGitDir },
+    // Three buttons in one row: at the default 360 px their labels wrapped mid-word.
+    widthPx: INTRO_TOAST_WIDTH_PX,
   })
   return true
 }

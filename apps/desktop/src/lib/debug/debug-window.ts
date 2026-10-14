@@ -88,14 +88,14 @@ export async function openDebugWindow(): Promise<void> {
   // transparency is allowed. Same reasoning as `settings-window.ts`:
   // `windowEffects` in the options dict was dropped on the way to the Rust
   // runtime in this Tauri version, so the explicit IPC path is the reliable
-  // one. Radius matches `--radius-xxl` in `app.css`.
+  // one. Radius matches `--radius-window` in `app.css`.
   if (!reduceTransparency) {
     void win.once('tauri://created', () => {
       void win
         .setEffects({
           effects: [Effect.Sidebar],
           state: EffectState.FollowsWindowActiveState,
-          radius: 29,
+          radius: 16,
         })
         .catch((error: unknown) => {
           log.debug('Failed to apply debug window effects: {error}', { error: String(error) })

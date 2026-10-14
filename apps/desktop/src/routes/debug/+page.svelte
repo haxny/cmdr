@@ -313,9 +313,9 @@
         display: flex;
         flex-direction: column;
         position: relative;
-        /* Match the OS window corner radius (29 px) so the webview clip
+        /* Match the OS window corner radius (16 px) so the webview clip
            lines up with the NSWindow's rounded corners. */
-        border-radius: var(--radius-xxl);
+        border-radius: var(--radius-window);
         outline: none;
     }
 
@@ -344,7 +344,8 @@
         display: flex;
         flex-direction: column;
         background: linear-gradient(135deg, var(--color-bg-sidebar-from), var(--color-bg-sidebar-to));
-        border-radius: var(--radius-xl);
+        /* Concentric with the window corner: 16px minus the 8px frame padding. */
+        border-radius: calc(var(--radius-window) - var(--spacing-sm));
         border: 1px solid var(--color-sidebar-border);
         box-shadow: var(--shadow-sidebar);
         /* Clears the traffic-light row (lights land at sidebar-local y ≈ 22 px). */

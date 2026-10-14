@@ -466,22 +466,15 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  /* Mid-large radius — used for "card" elements inside translucent windows
-     (e.g., the settings-window sidebar). */
-  --radius-xl: 20px;
   /* Menu surfaces (context menus, the volume selector, select lists): the rounder corner of
      a macOS 26+ menu, measured off a native context menu. */
   --radius-menu: 12px;
-  /* Window-level radius. Mirrors the `windowEffects.radius` set in
-     `settings-window.ts` so the webview's content clips at the same curve
-     the NSWindow does (no square-corner vibrancy leak). Matches Apple's
-     Sequoia/Tahoe stock material-panel window radius. */
-  --radius-xxl: 29px;
   /* A stock titled NSWindow's corner: what the file viewer gets from the OS, and
-     what the Settings window mirrors via `windowEffects.radius` in
-     `settings-window.ts` so the two read as the same kind of window
-     (verified on macOS 27.0, `NSWindow._cornerRadius` with and without
-     `fullSizeContentView` or a toolbar, 2026-10-14). */
+     what the Settings, queue, and debug windows mirror via `windowEffects.radius`
+     so every window reads as the same kind (verified on macOS 27.0,
+     `NSWindow._cornerRadius` with and without `fullSizeContentView` or a
+     toolbar, 2026-10-14). The webview clips at the same curve, so no
+     square-corner vibrancy leaks. */
   --radius-window: 16px;
   --radius-full: 9999px;
 
@@ -538,10 +531,10 @@
 
   /* === Dialog chrome (every `ModalDialog`) ===
      A modal's corner, inset, and edge read as one contract, so they're named
-     tokens instead of reaching into the generic scales. The radius sits
-     between a stock window's `--radius-window` and the material-panel
-     `--radius-xxl`; the inset is deliberately tighter
-     than `--spacing-xl`. macOS draws a panel's edge as TWO hairlines, a darker
+     tokens instead of reaching into the generic scales. The radius sits a
+     notch rounder than a stock window's `--radius-window`, so a dialog reads
+     as floating over the window; the inset is deliberately tighter than
+     `--spacing-xl`. macOS draws a panel's edge as TWO hairlines, a darker
      one outside and a lighter one just inside, which `ModalDialog` renders as a
      border plus an inset ring. Both are alpha, not solid colors, so the pair
      works over whatever surface the dialog sits on. */
