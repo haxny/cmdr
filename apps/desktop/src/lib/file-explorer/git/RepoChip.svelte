@@ -2,6 +2,7 @@
   import Icon from '#lib/ui/Icon.svelte'
   import { tooltip } from '#lib/tooltip/tooltip.js'
   import { tString } from '#lib/intl/messages.svelte.js'
+  import { joinSentences } from '#lib/intl/sentence-join.js'
   import { formatNumber } from '../selection/selection-info-utils'
   import type { RepoInfo } from './git-store.svelte'
 
@@ -58,7 +59,7 @@
       )
     }
     if (info.isDirty) lines.push(tString('fileExplorer.git.repoChip.tooltip.dirty'))
-    return lines.join(' ')
+    return joinSentences(lines)
   })
 </script>
 

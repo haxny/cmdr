@@ -1,4 +1,9 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74",
+    "sameAsSourceJustification": "Placeholder-only string: the single space between the two sentences is Russian's sentence separator, the same as English."
+  },
   "common.attachEmail": "Приложить мой адрес электронной почты ({emailAddress} – <change>изменить</change>), чтобы со мной можно было связаться",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

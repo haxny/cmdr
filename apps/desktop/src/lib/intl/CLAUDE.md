@@ -13,7 +13,9 @@ for numbers, sizes, dates.
   (`src-tauri/src/analytics/DETAILS.md`).
 - `number-format.ts`: memoized `Intl.NumberFormat` factory (`getNumberFormatter`), `formatInteger`, `formatMoney`, and
   `getGroupSeparator` (the byte-triad separator). `list-format.ts`: memoized `Intl.ListFormat` joins (and, or, unit), UI
-  locale. `duration-format.ts`: narrow durations ("8min 12s"), UI locale, no `Intl.DurationFormat` (too new).
+  locale. `sentence-join.ts`: `joinSentences()`, whole sentences joined by the catalog's `common.sentenceJoin` (no
+  space in Chinese), ❌ never `.join(' ')`. `duration-format.ts`: narrow durations ("8min 12s"), UI locale, no
+  `Intl.DurationFormat` (too new).
 - `locale-inheritance.ts`: which catalog a locale may inherit from (same language AND same script), shared with the i18n
   checks and Rust.
 - `messages.svelte.ts`: the runtime: `t()` (catalog + ICU), `getMessage()` (raw), `setLocale()`, `availableLocales()`,

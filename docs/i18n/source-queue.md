@@ -319,7 +319,3 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   git's own `po/<lang>.po` (github.com/git/git, `po/`) is the authoritative translation for ~20 languages; propose
   adding it to the pile as a git-domain source. sv mined it live for `git-detached`, `git-unborn`, `git-dirty`. (sv, ru,
   es, de)
-- `RepoChip.svelte` joins the `fileExplorer.git.repoChip.tooltip.*` sentences with a hard-coded space
-  (`lines.join(' ')`), so Chinese renders `…“main”。 比…` with a space after the full-width `。`, which zh typography
-  forbids (Japanese would hit the same). Consider a locale-owned join key (a new `sentenceJoin` key beside the tooltip
-  keys, `" "` in English, empty in zh) or `Intl`-aware joining. (zh, zh-Hant)

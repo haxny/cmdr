@@ -1,4 +1,9 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74",
+    "sameAsSourceJustification": "Placeholder-only string: the single space between the two sentences is Vietnamese's sentence separator, the same as English."
+  },
   "common.attachEmail": "Đính kèm địa chỉ email của tôi ({emailAddress} – <change>thay đổi</change>) để bạn có thể phản hồi",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

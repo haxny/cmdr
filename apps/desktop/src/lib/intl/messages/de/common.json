@@ -1,4 +1,9 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74",
+    "sameAsSourceJustification": "Placeholder-only string: the single space between the two sentences is German's sentence separator, the same as English."
+  },
   "common.attachEmail": "Meine E-Mail-Adresse ({emailAddress} – <change>ändern</change>) anhängen, damit du dich melden kannst",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

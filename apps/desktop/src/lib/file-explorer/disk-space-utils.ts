@@ -1,5 +1,6 @@
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatInteger } from '#lib/intl/number-format.js'
+import { joinSentences } from '#lib/intl/sentence-join.js'
 import type { SpaceInfo } from '#lib/ipc/bindings.js'
 import type { FileSizeFormat } from '#lib/settings/types.js'
 import { formatDriveFigure, formatFileSizeWithFormat } from '#lib/units/index.js'
@@ -120,7 +121,7 @@ export function formatSpaceNotes(space: SpaceInfo, mtpHint?: string): string {
   else if (bar.severity === 'critical') notes.push(tString('fileExplorer.diskSpace.lowNote'))
   else if (bar.severity === 'warning') notes.push(tString('fileExplorer.diskSpace.somewhatLowNote'))
   if (mtpHint) notes.push(mtpHint)
-  return notes.join(' ')
+  return joinSentences(notes)
 }
 
 /**

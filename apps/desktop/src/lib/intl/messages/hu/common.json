@@ -1,4 +1,9 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74",
+    "sameAsSourceJustification": "Placeholder-only string: the single space between the two sentences is Hungarian's sentence separator, the same as English."
+  },
   "common.attachEmail": "Csatold az e-mail-címemet ({emailAddress} – <change>módosítás</change>), hogy vissza tudj jelezni",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

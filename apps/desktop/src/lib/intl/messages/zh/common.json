@@ -1,4 +1,8 @@
 {
+  "common.sentenceJoin": "{first}{second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74"
+  },
   "common.attachEmail": "附上我的邮箱地址（{emailAddress} – <change>更改</change>），以便你回复",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

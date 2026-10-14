@@ -1,4 +1,9 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "sourceHash": "79f1c74",
+    "sameAsSourceJustification": "Placeholder-only string: the single space between the two sentences is Spanish's sentence separator, the same as English."
+  },
   "common.attachEmail": "Adjuntar mi correo electrónico ({emailAddress} – <change>cambiar</change>) para que puedas responderme",
   "@common.attachEmail": {
     "sourceHash": "6ce573e"

@@ -637,6 +637,7 @@ export type MessageKey =
   | 'common.attachEmailPlaceholder'
   | 'common.attachEmailPrompt'
   | 'common.downloadsFdaHint'
+  | 'common.sentenceJoin'
   | 'common.sizeUnit.byte'
   | 'common.sizeUnit.gibibyte'
   | 'common.sizeUnit.gigabyte'

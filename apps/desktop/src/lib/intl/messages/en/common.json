@@ -1,4 +1,13 @@
 {
+  "common.sentenceJoin": "{first} {second}",
+  "@common.sentenceJoin": {
+    "description": "How two complete sentences sit side by side when Cmdr strings them into one run of text, like the hover tooltip of the git branch pill (“On branch main. Working tree has uncommitted changes.”). Both parts are already translated sentences, each ending in its own punctuation. Write the separator your language puts between sentences: English uses one space; a language whose sentences end in a full-width stop and run on without a space writes the two parts back to back.",
+    "placeholders": {
+      "first": "the sentence (or sentences) that come first, already ending in its full stop",
+      "second": "the next sentence"
+    }
+  },
+
   "common.attachEmail": "Attach my email address ({emailAddress} – <change>change</change>) so you can follow up",
   "@common.attachEmail": {
     "description": "Label for an opt-in checkbox to include the user's email address so the team can follow up on their report. Shared verbatim by the crash-report, error-report, and feedback dialogs. \"You\" is the Cmdr team; the user is the one speaking. This variant appears when the app already has an address on file, shown in the parentheses; when it doesn't, common.attachEmailPrompt takes its place, so keep the two wordings parallel. <change> wraps the inline link that opens Settings on the field holding that address; keep its text short and lowercase, a verb the user acts on. The crash-report and feedback dialogs place the same checkbox above their Send button.",
