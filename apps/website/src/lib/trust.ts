@@ -321,7 +321,6 @@ export const notInPlaceYet: string[] = [
   '<strong>Usage stats and crash reports are on by default.</strong> Each user can turn them off, and IT can turn them off for everyone (<a href="#mdm">central management</a>).',
   "<strong>No update channels and no staged rollout.</strong> IT can turn updates off or hold Cmdr at a version, but can't install an older release through the updater.",
   '<strong>No managed preference turns off the remaining traffic</strong>: license checks, S3 prices, and the image-search model download (<a href="#mdm-not-covered">why each one stays</a>).',
-  "<strong>The Full Disk Access profile hasn't been tested on a real MDM yet.</strong> Its code requirement is checked against the released app.",
   "<strong>Data leaves the EU</strong> (see above), and Cloudflare storage isn't locked to the EU jurisdiction.",
   '<strong>No data processing agreement (DPA)</strong> ready to sign.',
   '<strong>Error-report cleaning has a known gap</strong>: a file name logged on its own, with no path on the same line, can be included.',

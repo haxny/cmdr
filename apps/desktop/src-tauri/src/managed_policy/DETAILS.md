@@ -1,7 +1,6 @@
 # Managed policy: details
 
-The canonical key catalog for Cmdr's MDM support. `/trust` and the sample profile mirror this file; the plan behind it
-is `docs/specs/mdm-managed-preferences-plan.md`.
+The canonical key catalog for Cmdr's MDM support. `/trust` and the sample profile mirror this file.
 
 ## The public mirror
 
@@ -179,9 +178,19 @@ download, and the user-initiated feedback and beta signup.
   read can catch half a plist (it reads as no policy, with a warning, until the next event). A missing file is no
   policy, quietly: the macOS E2E lane points every shard at one that doesn't exist, and `managed-policy.spec.ts` writes
   and removes it.
-- Real managed preferences need `sudo`, so an agent can't run them:
+- **A real MDM**: David's self-hosted Fleet test rig (the "fleet" NAS service in his private infra repo) pushes the published
+  `cmdr-managed-preferences.mobileconfig` and `cmdr-full-disk-access.mobileconfig` to an enrolled Mac (the M1). An agent
+  drives a run end to end from there, and checks the result without root: the profile lands in
+  `/Library/Managed Preferences/com.veszelovszki.cmdr.plist`, Cmdr's log prints `Managed policy at launch:
+  ManagedPolicy { … }`, and for Full Disk Access, `/Library/Application Support/com.apple.TCC/MDMOverrides.plist` names
+  the bundle and the `fda_probe` log line flips to `→ FDA granted` after a restart (TCC honors the grant about a minute
+  after the profile file appears). Verified on 2026-10-14: Cmdr 0.52.0 installed from its `.pkg`, macOS 27.0.1, both
+  profiles applied and read back exactly as published.
+- **Quicker, without an MDM** (needs `sudo`):
   `sudo defaults write "/Library/Managed Preferences/com.veszelovszki.cmdr" DisableUsageStats -bool true`, then
   re-activate Cmdr (or rely on the folder watch). If `IsForced` doesn't see it, make the file `root:wheel` `0644` like a
   profile-written one, then `sudo killall cfprefsd`. Undo with
-  `sudo defaults delete "/Library/Managed Preferences/com.veszelovszki.cmdr"`. Unverified until David runs it; record
-  which steps were needed here, dated.
+  `sudo defaults delete "/Library/Managed Preferences/com.veszelovszki.cmdr"`. Not run yet; the MDM run above covers
+  the same read path. On an MDM-enrolled Mac, `mdmclient` may rewrite that folder.
+- Opening a `.mobileconfig` by hand installs managed preferences (System Settings › General › Device Management), but
+  never a privacy (PPPC) profile: macOS applies those only from an MDM the Mac is enrolled in.
