@@ -57,8 +57,8 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     type: 'boolean',
     default: true,
     component: 'switch',
-    // A consent answer: only the person changes it, never an MCP client.
-    mcpSettable: false,
+    // A consent answer: an MCP client may help someone opt out, but only the person opts in.
+    mcpSettable: 'offOnly',
   },
   {
     id: 'analytics.email',
@@ -85,8 +85,8 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     // the whole reason only one of the two defaults on. ❌ Don't fold them into one default.
     default: true,
     component: 'switch',
-    // A consent answer: only the person changes it, never an MCP client.
-    mcpSettable: false,
+    // A consent answer: an MCP client may help someone opt out, but only the person opts in.
+    mcpSettable: 'offOnly',
   },
   {
     id: 'updates.errorReports',
@@ -98,7 +98,7 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     type: 'boolean',
     default: false,
     component: 'switch',
-    // A consent answer: only the person changes it, never an MCP client.
-    mcpSettable: false,
+    // A consent answer: an MCP client may help someone opt out, but only the person opts in.
+    mcpSettable: 'offOnly',
   },
 ]

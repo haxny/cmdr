@@ -162,10 +162,11 @@ provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this ti
 - App (3): `switch_pane`, `swap_panes`, `quit`
 - Search (2): `search` (structured file search across the drive index, optional `scope` for path/exclude filtering), `ai_search` (natural language search using configured LLM, optional `scope` merged with AI-inferred scope). `ai_search` resolves its backend like every LLM call (`ai/DETAILS.md` § Cloud AI consent), so on Cloud without "Allow cloud AI" it refuses with `invalid_params` and a typed `data.reason: "cloudAiNotAllowed"`, and under the organization's managed policy with the refusal's own name (`aiOff` / `cloudAiOff` / `hostNotAllowed`, `ai/DETAILS.md` § Managed policy); only the user can turn that on, in the app
 - Settings (1): `set_setting` (change a setting value via round-trip to frontend). A setting that records a person's
-  consent answer (usage stats, report sending, the terms acceptance, a held "no" to cloud AI or Ask Cmdr) is REFUSED with a typed
+  consent answer (the terms acceptance, a held "no" to cloud AI or Ask Cmdr) is REFUSED with a typed
   `notSettableOverMcp` refusal: the registry marks it `mcpSettable: false`, and the frontend bridge
   (`apps/desktop/src/lib/settings/mcp-main-bridge.ts`) reads that mark, ❌ never an id list. An AI client must never undo
-  a consent answer. `askCmdr.enabled` is marked too: it isn't consent, but on Local it starts a proactive loop, so a
+  a consent answer. The data-sharing switches (usage stats, crash and error reports) are `mcpSettable: 'offOnly'`: a
+  client may turn them off to help someone opt out, and turning one on is refused as `onlyOffOverMcp`. `askCmdr.enabled` is marked too: it isn't consent, but on Local it starts a proactive loop, so a
   client mustn't switch it on. A setting the organization's managed policy locks is refused in Rust BEFORE the round
   trip, with `data.reason: "managedByOrganization"` (`managed_policy::refuses_write`, which reads `locked_settings`: a
   `Fixed` lock refuses every write, a `DisallowedValues` lock only its values, so `ai.provider: "local"` still goes

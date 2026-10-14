@@ -79,8 +79,8 @@ function buildAllSettingsYaml(): string {
       if (def.constraints) {
         lines.push(`    constraints: ${JSON.stringify(def.constraints)}`)
       }
-      if (def.mcpSettable === false) {
-        lines.push('    mcpSettable: false')
+      if (def.mcpSettable !== undefined) {
+        lines.push(`    mcpSettable: ${String(def.mcpSettable)}`)
       }
       // `value` above is already what the setting READS as under the policy; this says why.
       if (isSettingManaged(id)) {
@@ -139,7 +139,7 @@ interface SetSettingPayload {
 }
 
 /** Why `set_setting` refused a write, carried in the response beside the sentence. */
-type SetSettingRefusal = 'notSettableOverMcp' | 'managedByOrganization'
+type SetSettingRefusal = 'notSettableOverMcp' | 'onlyOffOverMcp' | 'managedByOrganization'
 
 async function handleSetSetting(event: { payload: SetSettingPayload }): Promise<void> {
   const { requestId, settingId, value } = event.payload
@@ -147,7 +147,8 @@ async function handleSetSetting(event: { payload: SetSettingPayload }): Promise<
 
   // A setting that records a person's consent answer is theirs alone to change: an AI client
   // must never undo it. Decided by the registry's typed `mcpSettable`, ❌ never an id match.
-  if (getSettingDefinition(settingId)?.mcpSettable === false) {
+  const mcpSettable = getSettingDefinition(settingId)?.mcpSettable
+  if (mcpSettable === false) {
     const refusal: SetSettingRefusal = 'notSettableOverMcp'
     log.warn('Refused an MCP write to {settingId}: it records a consent answer', { settingId })
     await emit('mcp-response', {
@@ -155,6 +156,19 @@ async function handleSetSetting(event: { payload: SetSettingPayload }): Promise<
       ok: false,
       refusal,
       error: `'${settingId}' records a person's consent answer, so it can't be set over MCP. Only the person can change it, in Cmdr itself.`,
+    })
+    return
+  }
+
+  // A data-sharing switch: a client may help someone opt out, but only the person opts in.
+  if (mcpSettable === 'offOnly' && value !== false) {
+    const refusal: SetSettingRefusal = 'onlyOffOverMcp'
+    log.warn('Refused an MCP write to {settingId}: a client may only turn it off', { settingId })
+    await emit('mcp-response', {
+      requestId,
+      ok: false,
+      refusal,
+      error: `'${settingId}' records a person's data-sharing choice, so over MCP it can only be turned off (false). Only the person can turn it on, in Cmdr itself.`,
     })
     return
   }

@@ -210,13 +210,12 @@ export interface SettingDefinition {
    */
   macOSOnly?: true
   /**
-   * `false` for a setting that records a person's consent answer (usage stats, report sending,
-   * the terms acceptance, a held "no" to Ask Cmdr). MCP `set_setting` refuses it with a typed
-   * `notSettableOverMcp` refusal (`mcp-main-bridge.ts`), so an AI client can never undo the
-   * answer. ❌ The bridge reads this property, never an id list; a new consent-bearing setting
-   * sets it here. Absent means settable, hidden settings included.
+   * How far MCP `set_setting` may write this consent-bearing setting (`mcp-main-bridge.ts`), so an
+   * AI client never undoes a person's answer. `false`: never (the terms acceptance, a held "no").
+   * `'offOnly'`: a data-sharing switch a client may turn off, never on. ❌ The bridge reads this
+   * property, never an id list. Absent means settable, hidden settings included.
    */
-  mcpSettable?: false
+  mcpSettable?: false | 'offOnly'
 
   // UI hints
   component?:

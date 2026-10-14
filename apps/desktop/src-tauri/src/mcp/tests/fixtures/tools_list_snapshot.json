@@ -803,7 +803,7 @@
       "name": "ai_search"
     },
     {
-      "description": "Set a setting value. Use the cmdr://settings resource to discover available settings and their constraints.",
+      "description": "Set a setting value. Use the cmdr://settings resource to discover available settings and their constraints. A setting marked mcpSettable: false there is refused; one marked mcpSettable: offOnly accepts only false.",
       "inputSchema": {
         "properties": {
           "id": {

@@ -2,6 +2,7 @@
  * The MCP settings bridge's `set_setting` handler. An AI client drives it with no person
  * confirming anything, so a setting that records a person's consent answer is refused with a
  * typed refusal: the registry marks it (`mcpSettable: false`), the bridge never matches ids.
+ * A data-sharing switch (`mcpSettable: 'offOnly'`) lets a client help someone opt out, never in.
  * Every other setting, hidden ones included, stays settable, which harness flows rely on.
  */
 
@@ -55,12 +56,12 @@ const CONSENT_BEARING = [
   'ai.cloudConsentRevokePending',
   // Not consent itself, but on Local it starts a proactive loop, so a client mustn't switch it on.
   'askCmdr.enabled',
-  'analytics.enabled',
-  'updates.crashReports',
-  'updates.errorReports',
   'onboarding.termsAcceptedVersion',
   'onboarding.termsAcceptedAt',
 ] as const
+
+/** Data-sharing switches: a client may turn them off for someone, never on. */
+const OFF_ONLY = ['analytics.enabled', 'updates.crashReports', 'updates.errorReports'] as const
 
 async function setOverMcp(settingId: string, value: unknown): Promise<unknown> {
   const handler = handlers.get('mcp-set-setting')
@@ -100,6 +101,26 @@ describe('MCP set_setting', () => {
       expect(getSettingDefinition(id)?.mcpSettable, id).toBe(false)
       const response = await setOverMcp(id, true)
       expect(response, id).toMatchObject({ ok: false, refusal: 'notSettableOverMcp' })
+    }
+    expect(setSettingMock).not.toHaveBeenCalled()
+  })
+
+  it('turns a data-sharing switch off, so a client can help someone opt out', async () => {
+    for (const id of OFF_ONLY) {
+      expect(getSettingDefinition(id)?.mcpSettable, id).toBe('offOnly')
+      const response = await setOverMcp(id, false)
+      expect(response, id).toMatchObject({ ok: true })
+      expect(setSettingMock).toHaveBeenCalledWith(id, false)
+    }
+  })
+
+  it('refuses to turn a data-sharing switch on, with a typed refusal', async () => {
+    for (const id of OFF_ONLY) {
+      for (const value of [true, 'false', 0]) {
+        emitMock.mockClear() // each call reuses the request id
+        const response = await setOverMcp(id, value)
+        expect(response, `${id} = ${JSON.stringify(value)}`).toMatchObject({ ok: false, refusal: 'onlyOffOverMcp' })
+      }
     }
     expect(setSettingMock).not.toHaveBeenCalled()
   })
@@ -150,5 +171,13 @@ describe('MCP settings resource', () => {
 
     expect(block(yaml, 'analytics.enabled')).toContain('    managed: true\n')
     expect(block(yaml, 'updates.autoCheck')).not.toContain('managed:')
+  })
+
+  it('tells the client which settings it may only turn off, and which not at all', async () => {
+    const yaml = await readAllSettings()
+
+    expect(block(yaml, 'analytics.enabled')).toContain('    mcpSettable: offOnly\n')
+    expect(block(yaml, 'onboarding.termsAcceptedAt')).toContain('    mcpSettable: false\n')
+    expect(block(yaml, 'updates.autoCheck')).not.toContain('mcpSettable')
   })
 })

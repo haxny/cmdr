@@ -252,7 +252,8 @@ mcp_tools! {
 
     // ── Settings ────────────────────────────────────────────────────────────
     "set_setting" => {
-        desc: "Set a setting value. Use the cmdr://settings resource to discover available settings and their constraints.",
+        desc: "Set a setting value. Use the cmdr://settings resource to discover available settings and their constraints. \
+               A setting marked mcpSettable: false there is refused; one marked mcpSettable: offOnly accepts only false.",
         schema: schemas::set_setting_schema(),
         consumers: &[Consumer::AiClient],
         access: Access::Write,
