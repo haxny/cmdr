@@ -100,7 +100,7 @@ describe('RepoChip', () => {
     const chip = target.querySelector('.repo-chip') as HTMLElement
     const aria = chip.getAttribute('aria-label') ?? ''
     expect(aria).toContain('On branch main')
-    expect(aria).toContain('1 ahead')
+    expect(aria).toContain('1 commit ahead, 0 commits behind origin/main.')
     expect(aria).toContain('uncommitted')
   })
 })

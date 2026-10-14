@@ -1,6 +1,8 @@
 <script lang="ts">
   import Icon from '#lib/ui/Icon.svelte'
   import { tooltip } from '#lib/tooltip/tooltip.js'
+  import { tString } from '#lib/intl/messages.svelte.js'
+  import { formatNumber } from '../selection/selection-info-utils'
   import type { RepoInfo } from './git-store.svelte'
 
   interface Props {
@@ -20,34 +22,42 @@
   })
 
   const label = $derived.by((): string => {
-    if (info.unborn) return `${info.branch ?? 'main'} (no commits yet)`
-    if (info.detachedSha) return `(detached) ${info.detachedSha}`
-    return info.branch ?? '(detached)'
+    if (info.unborn) return tString('fileExplorer.git.repoChip.unbornLabel', { branch: info.branch ?? 'main' })
+    if (info.detachedSha) return tString('fileExplorer.git.repoChip.detachedLabel', { id: info.detachedSha })
+    return info.branch ?? tString('fileExplorer.git.repoChip.detachedLabelNoId')
   })
 
   const subtitle = $derived.by((): string => {
     const parts: string[] = []
-    if (info.ahead != null && info.ahead > 0) parts.push(`+${String(info.ahead)}`)
-    if (info.behind != null && info.behind > 0) parts.push(`-${String(info.behind)}`)
-    if (info.isDirty) parts.push('dirty')
+    if (info.ahead != null && info.ahead > 0) parts.push(`+${formatNumber(info.ahead)}`)
+    if (info.behind != null && info.behind > 0) parts.push(`-${formatNumber(info.behind)}`)
+    if (info.isDirty) parts.push(tString('fileExplorer.git.repoChip.dirty'))
     return parts.join(' / ')
   })
 
   const tooltipText = $derived.by((): string => {
     const lines: string[] = []
     if (info.unborn) {
-      lines.push(`On unborn branch ${info.branch ?? 'main'} (no commits yet).`)
+      lines.push(tString('fileExplorer.git.repoChip.tooltip.unborn', { branch: info.branch ?? 'main' }))
     } else if (info.detachedSha) {
-      lines.push(`Detached at ${info.detachedSha}.`)
+      lines.push(tString('fileExplorer.git.repoChip.tooltip.detached', { id: info.detachedSha }))
     } else if (info.branch) {
-      lines.push(`On branch ${info.branch}.`)
+      lines.push(tString('fileExplorer.git.repoChip.tooltip.onBranch', { branch: info.branch }))
     }
     if (info.upstream) {
-      const a = info.ahead ?? 0
-      const b = info.behind ?? 0
-      lines.push(`${String(a)} ahead, ${String(b)} behind ${info.upstream}.`)
+      const ahead = info.ahead ?? 0
+      const behind = info.behind ?? 0
+      lines.push(
+        tString('fileExplorer.git.repoChip.tooltip.aheadBehind', {
+          ahead,
+          aheadText: formatNumber(ahead),
+          behind,
+          behindText: formatNumber(behind),
+          upstream: info.upstream,
+        }),
+      )
     }
-    if (info.isDirty) lines.push('Working tree has uncommitted changes.')
+    if (info.isDirty) lines.push(tString('fileExplorer.git.repoChip.tooltip.dirty'))
     return lines.join(' ')
   })
 </script>

@@ -1614,6 +1614,64 @@
       "id": "the commit’s full identifier, a 40-character hexadecimal string"
     }
   },
+  "fileExplorer.git.repoChip.unbornLabel": "{branch} (no commits yet)",
+  "@fileExplorer.git.repoChip.unbornLabel": {
+    "description": "Text of the small branch pill at the right end of a pane’s path bar, shown while the pane is inside a git repository that has no commits yet (a freshly created one). Very short: the pill sits in a narrow header row.",
+    "placeholders": {
+      "branch": "the branch name, for example \"main\" (a name, never translated)"
+    }
+  },
+  "fileExplorer.git.repoChip.detachedLabel": "(detached) {id}",
+  "@fileExplorer.git.repoChip.detachedLabel": {
+    "description": "Text of the small branch pill at the right end of a pane’s path bar when the repository has no branch open, only one exact commit (git’s “detached HEAD”). Carry the concept of “detached” rather than the literal word if your language words it differently. Very short: the pill sits in a narrow header row.",
+    "placeholders": {
+      "id": "the commit’s shortened identifier, for example a1b2c3d"
+    }
+  },
+  "fileExplorer.git.repoChip.detachedLabelNoId": "(detached)",
+  "@fileExplorer.git.repoChip.detachedLabelNoId": {
+    "description": "Text of the small branch pill at the right end of a pane’s path bar in the rare case git reports neither a branch nor a commit. Same meaning as fileExplorer.git.repoChip.detachedLabel, without the identifier. Very short."
+  },
+  "fileExplorer.git.repoChip.dirty": "dirty",
+  "@fileExplorer.git.repoChip.dirty": {
+    "description": "One-word state shown after the branch name in the small branch pill of a pane’s path bar, when the repository has uncommitted changes. An adjective describing the working copy, lowercase in English because it follows the branch name after a dot. Very short."
+  },
+  "fileExplorer.git.repoChip.tooltip.onBranch": "On branch {branch}.",
+  "@fileExplorer.git.repoChip.tooltip.onBranch": {
+    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar: names the branch the repository has open. Other sentences (fileExplorer.git.repoChip.tooltip.*) may follow it, joined by a space.",
+    "placeholders": {
+      "branch": "the branch name, for example \"main\" (a name, never translated)"
+    }
+  },
+  "fileExplorer.git.repoChip.tooltip.unborn": "On unborn branch {branch} (no commits yet).",
+  "@fileExplorer.git.repoChip.tooltip.unborn": {
+    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, for a repository that has no commits yet. “Unborn” is git’s own word for a branch that has no commits; carry the concept if your language words it differently.",
+    "placeholders": {
+      "branch": "the branch name, for example \"main\" (a name, never translated)"
+    }
+  },
+  "fileExplorer.git.repoChip.tooltip.detached": "Detached at {id}.",
+  "@fileExplorer.git.repoChip.tooltip.detached": {
+    "description": "First sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar when no branch is open, only one exact commit. “Detached” is git’s own word for that state (a detached HEAD), so carry the concept rather than the literal word if your language words it differently.",
+    "placeholders": {
+      "id": "the commit’s shortened identifier, for example a1b2c3d"
+    }
+  },
+  "fileExplorer.git.repoChip.tooltip.aheadBehind": "{ahead, plural, one {{aheadText} commit} other {{aheadText} commits}} ahead, {behind, plural, one {{behindText} commit} other {{behindText} commits}} behind {upstream}.",
+  "@fileExplorer.git.repoChip.tooltip.aheadBehind": {
+    "description": "Sentence in the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, after the sentence naming the branch. Compares the open branch with the remote branch it tracks. “Ahead” means the local branch has commits the remote one doesn’t; “behind” means the remote one has commits the local branch doesn’t.",
+    "placeholders": {
+      "aheadText": "how many commits the local branch is ahead by, already formatted for display",
+      "ahead": "the same number (drives the singular/plural form)",
+      "behindText": "how many commits the local branch is behind by, already formatted for display",
+      "behind": "the same number (drives the singular/plural form)",
+      "upstream": "the tracked remote branch, for example \"origin/main\" (a name, never translated)"
+    }
+  },
+  "fileExplorer.git.repoChip.tooltip.dirty": "Working tree has uncommitted changes.",
+  "@fileExplorer.git.repoChip.tooltip.dirty": {
+    "description": "Last sentence of the hover tooltip (and screen-reader label) of the small branch pill in a pane’s path bar, when files in the repository changed since the last commit. “Working tree” is git’s term for the checked-out files on disk."
+  },
   "fileExplorer.selectionTooltip.selected": "Selected",
   "@fileExplorer.selectionTooltip.selected": {
     "description": "Label in the selection-summary size tooltip for the size of the selected items. Pairs with \"Of total\".",
