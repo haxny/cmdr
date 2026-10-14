@@ -144,6 +144,9 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
             budget: Duration::from_secs(60),
             cadence: CADENCE,
             poll_every: Duration::from_millis(20),
+            // Well inside `WAIT`, so one handshake that never returns can't
+            // outlast the network coming back (`#406`).
+            attempt_timeout: Duration::from_secs(5),
         }),
     );
     let op = TestOperationGuard::register_state("smb-outage", Arc::clone(&state));

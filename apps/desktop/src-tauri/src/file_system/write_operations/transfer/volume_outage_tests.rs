@@ -17,6 +17,7 @@ const QUICK: OutagePolicy = OutagePolicy {
     budget: Duration::from_millis(400),
     cadence: &[Duration::from_millis(10), Duration::from_millis(20)],
     poll_every: Duration::from_millis(5),
+    attempt_timeout: Duration::from_millis(50),
 };
 
 /// How long a test waits for something it caused to show.
@@ -99,6 +100,111 @@ async fn a_cancel_ends_the_wait_at_once() {
     assert!(
         started.elapsed() < Duration::from_secs(5),
         "a cancel can't wait out the budget (took {:?})",
+        started.elapsed()
+    );
+}
+
+/// One reconnect attempt that never returns (an SMB handshake the server
+/// accepted and never answered) must not hold the wait: it's abandoned at the
+/// attempt timeout, counted as "still down", and the next tick dials afresh
+/// (`#406`). Before, the copy sat on the hung attempt until the budget ran out.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reconnect_attempt_that_never_returns_is_abandoned_and_tried_again() {
+    let policy = OutagePolicy {
+        budget: Duration::from_secs(3),
+        ..QUICK
+    };
+    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(policy));
+    let op = TestOperationGuard::register_state("outage-hung-attempt", state);
+    let (nas, volume) = nas("outage-hung-attempt");
+    nas.go_away();
+    nas.hang_reconnects();
+    let control = Arc::clone(&nas);
+    tokio::spawn(async move {
+        // The first attempt hangs; a second one only starts if it was let go.
+        wait_until_async(WAIT, "a second attempt after a hung one", || {
+            control.reconnect_attempts() >= 2
+        })
+        .await;
+        control.answer_reconnects();
+        control.become_reachable();
+    });
+
+    let started = std::time::Instant::now();
+    let ended = wait_while_out(op.state(), &[&volume], None).await;
+
+    assert_eq!(ended, OutageEnd::Back, "the volume came back well within the budget");
+    assert!(
+        started.elapsed() < policy.budget,
+        "a hung attempt can't hold the wait to its budget (took {:?})",
+        started.elapsed()
+    );
+    assert!(
+        nas.abandoned_reconnects() >= 1,
+        "the hung attempt was dropped, not left running"
+    );
+}
+
+/// A Cancel ends the wait while an attempt hangs, and drops that attempt
+/// rather than leaving it dialing behind a finished operation.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_drops_a_hung_reconnect_attempt() {
+    let state = Arc::new(
+        WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(OutagePolicy {
+            budget: Duration::from_secs(60),
+            attempt_timeout: Duration::from_secs(60),
+            ..QUICK
+        }),
+    );
+    let op = TestOperationGuard::register_state("outage-cancel-hung", state);
+    let (nas, volume) = nas("outage-cancel-hung");
+    nas.go_away();
+    nas.hang_reconnects();
+    let op_id = op.id().to_owned();
+    let control = Arc::clone(&nas);
+    tokio::spawn(async move {
+        wait_until_async(WAIT, "an attempt to hang", || control.reconnect_attempts() >= 1).await;
+        crate::file_system::write_operations::state::cancel_write_operation(&op_id, false);
+    });
+
+    let started = std::time::Instant::now();
+    let ended = wait_while_out(op.state(), &[&volume], None).await;
+
+    assert_eq!(ended, OutageEnd::Cancelled);
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "a cancel doesn't wait out a hung attempt (took {:?})",
+        started.elapsed()
+    );
+    assert_eq!(
+        nas.abandoned_reconnects(),
+        nas.reconnect_attempts(),
+        "every attempt the cancel caught hanging was dropped"
+    );
+}
+
+/// The one look a job queued behind a give-up takes is bounded too: a hung
+/// attempt there would otherwise hold the job until someone cancels it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_one_look_after_a_give_up_is_bounded_too() {
+    let queued = TestOperationGuard::register_state("outage-hung-look-queued", quick_state());
+    let first = TestOperationGuard::register_state("outage-hung-look-first", quick_state());
+    let (nas, volume) = nas("outage-hung-look-lane");
+    nas.go_away();
+    assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
+
+    nas.hang_reconnects();
+    let started = std::time::Instant::now();
+    let ended = tokio::time::timeout(WAIT, wait_while_out(queued.state(), &[&volume], None)).await;
+
+    assert_eq!(
+        ended,
+        Ok(OutageEnd::GaveUp),
+        "the hung look is abandoned, and the job gives up"
+    );
+    assert!(
+        started.elapsed() < QUICK.budget,
+        "at the attempt timeout, not later (took {:?})",
         started.elapsed()
     );
 }

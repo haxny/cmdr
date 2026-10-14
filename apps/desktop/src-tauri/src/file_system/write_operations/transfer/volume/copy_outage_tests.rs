@@ -24,6 +24,7 @@ fn outage_state(budget: Duration) -> Arc<WriteOperationState> {
             budget,
             cadence: CADENCE,
             poll_every: Duration::from_millis(5),
+            attempt_timeout: Duration::from_secs(1),
         }),
     )
 }

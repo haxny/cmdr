@@ -8,7 +8,7 @@
 //!
 //! Now a transfer that meets a transport failure on a volume whose session reads
 //! [`ConnectionState::Disconnected`] waits for it instead: it reconnects the
-//! volume itself, on a growing cadence, for up to [`OutagePolicy::budget`](super::super::outage_slot::OutagePolicy::budget) (five
+//! volume itself, on a growing cadence, for up to [`OutagePolicy::budget`](super::super::outage_slot::OutagePolicy::budget) (fifteen
 //! minutes), and then runs the work again. If the volume isn't back by then, the
 //! transfer fails exactly as it did before.
 //!
@@ -30,7 +30,12 @@
 //!   the person cancels, or the backend says it can't come back on its own (a
 //!   changed password: [`ConnectionState::NeedsSignIn`] or an auth refusal).
 //! - **Cancelable at once.** Every await races `backend_cancel`; a Cancel never
-//!   waits out a reconnect attempt or a sleep.
+//!   waits out a reconnect attempt or a sleep, and drops the attempt in flight.
+//! - **No attempt holds the wait.** Each reconnect gets
+//!   [`OutagePolicy::attempt_timeout`](super::super::outage_slot::OutagePolicy::attempt_timeout)
+//!   (15 s); one that hasn't returned by then is dropped and counts as still
+//!   down. A single hung handshake once held a copy for the whole budget after
+//!   the NAS was back (`#406`).
 //! - **Pausable.** A Pause parks the wait on the pause gate and stops dialing.
 //!   A Resume is a person's action, so the wait gets a fresh budget from there.
 //! - **Shared per volume.** An outage record per lane ([`OUTAGES`]) gives every
@@ -318,7 +323,11 @@ enum Attempt {
     Cancelled,
 }
 
-/// One reconnect, raced against a cancel and (when given) the deadline.
+/// One reconnect, raced against a cancel and (when given) the deadline, and
+/// bounded by the policy's attempt timeout: an attempt that never returns (an
+/// SMB handshake a server accepted and never answered, `#406`) is dropped and
+/// counts as still down, so the next tick dials afresh instead of the whole
+/// wait sitting on it until the budget runs out.
 async fn attempt_once(
     state: &Arc<WriteOperationState>,
     volume: &Arc<dyn Volume>,
@@ -330,13 +339,25 @@ async fn attempt_once(
             None => std::future::pending().await,
         }
     };
+    let attempt_timeout = state.outage_policy.attempt_timeout;
     let result = tokio::select! {
         biased;
         () = state.backend_cancel.cancelled() => return Attempt::Cancelled,
         // The loop reads the deadline next and gives up; an attempt still
         // dialing then is dropped, which the backends' single-flight tolerates.
         () = until_deadline => return Attempt::Failed,
-        result = volume.attempt_reconnect() => result,
+        result = tokio::time::timeout(attempt_timeout, volume.attempt_reconnect()) => match result {
+            Ok(result) => result,
+            Err(_elapsed) => {
+                log::warn!(
+                    target: "copy",
+                    "volume outage: a reconnect attempt to {} didn't return within {attempt_timeout:?}; \
+                     dropping it and trying again on the next tick",
+                    volume.name(),
+                );
+                return Attempt::Failed;
+            }
+        },
     };
     match result {
         Ok(()) => Attempt::Reconnected,

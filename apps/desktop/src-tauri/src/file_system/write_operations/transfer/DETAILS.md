@@ -981,6 +981,11 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   ridden out at most `MAX_OUTAGES_PER_ITEM` (3) times per item.
 - **Cancelable at once.** Every await races `backend_cancel`, a reconnect attempt included; a cancel during the wait is
   reported as the cancel it is.
+- **No single attempt holds the wait.** Each `attempt_reconnect` gets `OutagePolicy::attempt_timeout` (15 s, under the
+  cadence's 30 s step); one that hasn't returned is dropped and counts as still down, and the next tick dials afresh.
+  Without it, one SMB handshake that never returned held a copy for the whole budget after the NAS was back (`#406`;
+  smb2 0.28's NEGOTIATE has no response deadline, `crates/cmdr-smb/DETAILS.md` § "deadline and keepalive defaults").
+  Dropping an attempt is safe: every backend's reconnect is single-flight and rebuilds from scratch.
 - **Pausable.** A pause parks the wait on the pause gate and dials nothing; a Resume is a person's action, so the wait
   gets a fresh budget from there.
 - **One outage per lane**, shared by every waiter on it (`OUTAGES`): the concurrent window's tasks all meet the drop at
@@ -1049,7 +1054,8 @@ the share was away, at a name that was free when the copy looked: we accept that
 reply a drop swallowed.
 
 Pinned by `volume_outage_tests.rs` (the state machine: back, give-up, cancel, pause, sign-in, a queued job after a
-give-up, a Retry after one, a shared deadline, `through_outages`'s cap) and `volume/copy_outage_tests.rs` (the real
+give-up, a Retry after one, a shared deadline, `through_outages`'s cap, a hung attempt abandoned, a cancel dropping
+one, and the queued job's one look bounded too) and `volume/copy_outage_tests.rs` (the real
 copy pipeline: both drivers, the give-up, a cancel during the wait, the start gate, a landing cut off before the server
 saw it, after it performed it, and after it performed it with the name then taken by someone else, and a single-shot
 write the drop swallowed, with the name then taken by a different-size and a same-size file).

@@ -11,7 +11,8 @@
 //! performed it but before its reply arrived (the landing a drop swallows). It
 //! can also land every write in one shot (SMB's compound write for a small
 //! file) and drop right after the Nth write completed, the same swallowed reply
-//! for a write that had no temp.
+//! for a write that had no temp. And its reconnect can hang, as an SMB handshake
+//! a server accepted and never answered does (`#406`).
 //!
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
@@ -42,6 +43,10 @@ pub(crate) struct OutageVolume {
     /// A reconnect is refused for its credentials, as after a password change.
     needs_sign_in: AtomicBool,
     reconnect_attempts: AtomicUsize,
+    /// A reconnect attempt never returns while this is set.
+    hang_reconnects: AtomicBool,
+    /// Reconnect attempts whose future was dropped while it hung.
+    abandoned_reconnects: AtomicUsize,
     writes: AtomicUsize,
     /// Drop the session at the start of this (0-based) write.
     drop_at_write: Mutex<Option<usize>>,
@@ -52,6 +57,16 @@ pub(crate) struct OutageVolume {
     renames: AtomicUsize,
     /// Drop the session around this (0-based) rename, and on which side of it.
     drop_at_rename: Mutex<Option<(usize, RenameDrop)>>,
+}
+
+/// Counts itself into its counter when dropped: held across an await that never
+/// resolves, it counts the futures that were abandoned there.
+struct CountOnDrop<'a>(&'a AtomicUsize);
+
+impl Drop for CountOnDrop<'_> {
+    fn drop(&mut self) {
+        self.0.fetch_add(1, Ordering::SeqCst);
+    }
 }
 
 /// Which side of a rename the session drops on.
@@ -72,6 +87,8 @@ impl OutageVolume {
             reachable: AtomicBool::new(true),
             needs_sign_in: AtomicBool::new(false),
             reconnect_attempts: AtomicUsize::new(0),
+            hang_reconnects: AtomicBool::new(false),
+            abandoned_reconnects: AtomicUsize::new(0),
             writes: AtomicUsize::new(0),
             drop_at_write: Mutex::new(None),
             drop_after_write: Mutex::new(None),
@@ -131,6 +148,23 @@ impl OutageVolume {
         self.reconnect_attempts.load(Ordering::SeqCst)
     }
 
+    /// Reconnect attempts started from now on never return, until
+    /// [`answer_reconnects`](Self::answer_reconnects). One already hanging
+    /// stays hung: only dropping its future ends it.
+    pub(crate) fn hang_reconnects(&self) {
+        self.hang_reconnects.store(true, Ordering::SeqCst);
+    }
+
+    /// Reconnect attempts started from now on answer again.
+    pub(crate) fn answer_reconnects(&self) {
+        self.hang_reconnects.store(false, Ordering::SeqCst);
+    }
+
+    /// How many hung reconnect attempts had their future dropped.
+    pub(crate) fn abandoned_reconnects(&self) -> usize {
+        self.abandoned_reconnects.load(Ordering::SeqCst)
+    }
+
     fn gate(&self) -> Result<(), VolumeError> {
         if self.up.load(Ordering::SeqCst) {
             Ok(())
@@ -173,6 +207,10 @@ impl Volume for OutageVolume {
     fn attempt_reconnect<'a>(&'a self) -> Fut<'a, Result<(), VolumeError>> {
         Box::pin(async move {
             self.reconnect_attempts.fetch_add(1, Ordering::SeqCst);
+            if self.hang_reconnects.load(Ordering::SeqCst) {
+                let _abandoned = CountOnDrop(&self.abandoned_reconnects);
+                std::future::pending::<()>().await;
+            }
             if self.needs_sign_in.load(Ordering::SeqCst) {
                 return Err(VolumeError::PermissionDenied {
                     path: "/".to_owned(),

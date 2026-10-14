@@ -42,6 +42,18 @@ const RECONNECT_CADENCE: [Duration; 5] = [
     Duration::from_secs(30),
 ];
 
+/// How long one reconnect attempt may take before the wait abandons it and
+/// counts it as "still down", to try again on the next tick.
+///
+/// A backend's attempt is expected to return promptly (connected, refused, or
+/// unreachable), but one that never returns would otherwise hold the whole wait
+/// until its budget runs out, long after the volume came back (`#406`: an SMB
+/// handshake that a server accepted and never answered). 15 s covers a TCP
+/// connect timeout plus a handshake on a slow link, and stays well under the
+/// cadence's 30 s step. Dropping the attempt is safe: every backend's reconnect
+/// is single-flight and rebuilds from scratch on the next call.
+const ATTEMPT_TIMEOUT: Duration = Duration::from_secs(15);
+
 /// How often a wait looks up between attempts: for a reconnect someone else made
 /// (a pane's own backoff, the watcher's loop) and for a pause.
 const POLL_EVERY: Duration = Duration::from_secs(1);
@@ -57,6 +69,8 @@ pub(crate) struct OutagePolicy {
     pub cadence: &'static [Duration],
     /// See [`POLL_EVERY`].
     pub poll_every: Duration,
+    /// See [`ATTEMPT_TIMEOUT`].
+    pub attempt_timeout: Duration,
 }
 
 impl Default for OutagePolicy {
@@ -65,6 +79,7 @@ impl Default for OutagePolicy {
             budget: OUTAGE_WAIT_BUDGET,
             cadence: &RECONNECT_CADENCE,
             poll_every: POLL_EVERY,
+            attempt_timeout: ATTEMPT_TIMEOUT,
         }
     }
 }

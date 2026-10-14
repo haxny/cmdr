@@ -827,7 +827,13 @@ probes when the wire has gone quiet with work outstanding, so a busy transfer pa
 is NOT evidence of death** and nothing here may treat it as such: a QNAP TS-464 drops probes precisely while it writes
 (measured 2026-08-02: 1 of 3 dropped under write load, 0 of 3 idle). The crate agrees — its only death verdict,
 `Error::ServerUnresponsive`, needs a request to burn its whole deadline AND the connection to have put nothing at all on
-the wire meanwhile, the bytes of a response still arriving counted as they land (0.23.0+).
+the wire meanwhile, the bytes of a response still arriving counted as they land (0.23.0+). **One gap: NEGOTIATE has no
+response deadline.** `Connection::negotiate` awaits its waiter directly instead of through `await_response_in_place`, so
+a server that accepts the TCP connection and never answers (a NAS whose `smbd` is still starting, a middlebox that
+swallows the frame) holds `build_session` forever, and with it `do_attempt_reconnect` and its `reconnect_lock` (verified
+on smb2 0.28.0 against a loopback listener that accepts and stays silent: no return in 70 s, 2026-10-14). The fix
+belongs in smb2. Until then the transfer bounds its own attempts (`write_operations/transfer/DETAILS.md` § "Waiting out
+a volume that went away"); the frontend's reconnect tick and the watcher-death loop don't.
 `SmbVolume::connection_liveness()` reads that same verdict as pollable state (`Connection::liveness()`), before any
 request has paid for it, off a handle swapped in lockstep with the client (`src/volume/liveness.rs`, which owns the
 mapping). What the transfer watchdog does with it: `write_operations/transfer/DETAILS.md` § "The watchdog ACTS".
