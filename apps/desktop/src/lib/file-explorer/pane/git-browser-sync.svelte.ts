@@ -18,6 +18,8 @@ import { getSetting, onSpecificSettingChange } from '#lib/settings/index.js'
 import { dependOn } from '#lib/utils/reactivity.js'
 import { isDeviceVolumeId } from '#lib/adb/adb-path-utils.js'
 import { pathCrossesArchiveBoundary } from './archive-paths'
+import { maybeShowGitPortalIntro } from '../git/git-portal-intro'
+import type { Location } from '#lib/tauri-commands/index.js'
 
 export interface GitBrowserSyncDeps {
   /** The pane's current directory path (reactive read). */
@@ -31,6 +33,13 @@ export interface GitBrowserSyncDeps {
    * over the MTP transport).
    */
   getHasBackendListing: () => boolean
+  /** `currentPath` with `~` expanded, to compare against `RepoInfo.repoRoot`. */
+  getCanonicalPath: () => string | null
+  /**
+   * Bubbles a location to the parent's `navigate()` for this pane. The intro
+   * toast's "Go to .git" uses it, so it keeps working after this pane remounts.
+   */
+  goToLocation: (location: Location) => void
 }
 
 export interface GitBrowserSync {
@@ -103,6 +112,16 @@ export function createGitBrowserSync(deps: GitBrowserSyncDeps): GitBrowserSync {
       }
       return
     }
+    // The once-ever `.git` portal intro (it decides whether this is its moment).
+    // The volume is read now: the toast may be answered after the pane moved on.
+    const volumeId = deps.getVolumeId()
+    maybeShowGitPortalIntro({
+      panePath: deps.getCanonicalPath(),
+      repoRoot: info.repoRoot,
+      goToGitDir: () => {
+        deps.goToLocation({ volumeId, path: `${info.repoRoot}/.git` })
+      },
+    })
     if (activeRepoRoot && activeRepoRoot !== info.repoRoot) {
       await unsubscribeFromRepo(activeRepoRoot)
       activeRepoRoot = null

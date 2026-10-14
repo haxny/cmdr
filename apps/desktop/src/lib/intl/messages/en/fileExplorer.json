@@ -381,8 +381,7 @@
   },
   "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
   "@fileExplorer.functionKeyBar.terminalLabel": {
-    "description": "Button label on the function-key bar (macOS only) that opens the user's terminal app in the folder shown in the focused pane. Space is tight; keep it short.",
-    "screenshot": "main-window.png"
+    "description": "Button label on the function-key bar (macOS only) that opens the user's terminal app in the folder shown in the focused pane. Space is tight; keep it short."
   },
   "fileExplorer.functionKeyBar.hiddenToast": "Function key bar is now hidden. Re-enable it any time later in <settingsLink>Settings</settingsLink>.",
   "@fileExplorer.functionKeyBar.hiddenToast": {
@@ -1192,6 +1191,30 @@
   "fileExplorer.archive.useTransferToCopyOut": "To copy files out of an archive, use F5 to copy or F6 to move.",
   "@fileExplorer.archive.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside an archive. The system clipboard can’t carry archive-inner paths, so it points them at the F5 (copy) and F6 (move) transfer keys instead. F5 and F6 are keyboard key names; keep them as-is."
+  },
+  "fileExplorer.git.portalIntro.title": "Cmdr has some git-related magic for you!",
+  "@fileExplorer.git.portalIntro.title": {
+    "description": "Bold first line of a one-time notification shown the first time the user opens the top folder of a git repository (a code project tracked by the git version-control tool). Playful, warm tone. \"git\" is a product name: don't translate it."
+  },
+  "fileExplorer.git.portalIntro.what": "You can browse your old branches, tags, worktrees, and old revisions just like a folder.",
+  "@fileExplorer.git.portalIntro.what": {
+    "description": "Second line of the one-time git notification. Branches, tags, worktrees, and revisions are git terms; use the terms your language's git community uses (often left in English)."
+  },
+  "fileExplorer.git.portalIntro.where": "You can find it in the <code>.git</code> (hidden) folder.",
+  "@fileExplorer.git.portalIntro.where": {
+    "description": "Third line of the one-time git notification. The <code>…</code> tags wrap the folder name .git, shown in a code font; keep the tags and never translate \".git\". \"hidden\": the folder is hidden unless the user shows hidden files."
+  },
+  "fileExplorer.git.portalIntro.dismiss": "Dismiss",
+  "@fileExplorer.git.portalIntro.dismiss": {
+    "description": "Button on the one-time git notification that closes it. Space is tight; keep it short."
+  },
+  "fileExplorer.git.portalIntro.showHidden": "Show hidden files",
+  "@fileExplorer.git.portalIntro.showHidden": {
+    "description": "Button on the one-time git notification that turns on showing hidden files (the same switch as in the View menu), so the .git folder appears in the list. Only shown while hidden files are hidden. Space is tight; keep it short."
+  },
+  "fileExplorer.git.portalIntro.goToGitDir": "Go to .git",
+  "@fileExplorer.git.portalIntro.goToGitDir": {
+    "description": "Primary button on the one-time git notification that opens the .git folder in the pane. Never translate \".git\". Space is tight; keep it short."
   },
   "fileExplorer.git.useTransferToCopyOut": "To copy files out of a git snapshot, use F5 to copy or F6 to move.",
   "@fileExplorer.git.useTransferToCopyOut": {

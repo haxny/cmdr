@@ -2210,6 +2210,7 @@
     "developer.mcpEnabled": false,
     "developer.mcpPort": 0,
     "developer.verboseLogging": false,
+    "fileExplorer.git.portalIntroSeen": false,
     "fileExplorer.git.showRepoChip": true,
     "fileExplorer.git.showStatusColumn": false,
     "fileExplorer.git.showVirtualGitPortal": true,

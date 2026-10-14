@@ -30,6 +30,8 @@ mutations.
 - **Reactive store backed by a `Map<string, RepoEntry>`, not per-pane Svelte stores.** Two panes on the same repo would
   otherwise pay for two watcher subscriptions and two IPC round-trips. Refcounting makes backend tear-down deterministic
   without a per-pane dance.
+- **Every portal Size count goes through the catalog's `plural`.** Each language picks its own categories: Hungarian
+  never pluralizes after a number, Chinese has one form, Portuguese carries a `many` English lacks.
 - **`RepoChip` is a passive state indicator, not an action surface.** It shows branch + ahead/behind/dirty; action
   affordances live in the navigation flow and Settings, not crammed into a header pill.
 - **`lookupRepoInfo` and `subscribeToRepo` are separate.** Lookup is cheap and runs on every path change; subscribe
@@ -53,6 +55,23 @@ mutations.
   is writable, identical everywhere else (real listing, `..` row, MCP sync, no own tint, no breadcrumb special case).
   The per-cell rationale and the guard sites live with the archive ones in `../pane/DETAILS.md` § "The virtual `.git`
   portal pane", so the two routed kinds stay legible side by side.
+
+## Portal intro
+
+`git-portal-intro.ts` raises `GitPortalIntroToastContent.svelte` once ever, the first time a pane lands on a repo ROOT
+(`pane/git-browser-sync.svelte.ts` asks after every repo lookup, comparing the pane's canonical path to `repoRoot`). The
+portal lives in a hidden folder, so most folks never find it on their own.
+
+- **Persistent**, like the open-terminal hint: it shows exactly once, so a timed toast would be a coin flip on anyone
+  reading it.
+- **The flag (`fileExplorer.git.portalIntroSeen`) is spent when RAISED, synchronously, before `addToast`** (the
+  `nudges/` rule). A crash mid-toast costs one intro, never a repeat; and two panes landing on two repos at startup
+  can't both raise it.
+- **Skipped** in an E2E or capture run (a persistent toast would sit over the next spec), while the portal toggle is
+  off, and when both the chip and the status column are off (the sync doesn't run then).
+- **"Show hidden files"** writes `listing.showHiddenFiles`, the same write as the View menu and the shortcut, and only
+  renders while that's off, following a change made elsewhere too. **"Go to .git"** bubbles through the pane's
+  `onGoToLocation`, with the volume read when the toast was raised, so it works after the pane remounts.
 
 ## Gotcha detail
 

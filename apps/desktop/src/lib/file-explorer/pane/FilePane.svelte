@@ -568,6 +568,8 @@
         getCurrentPath: () => currentPath,
         getVolumeId: () => volumeId,
         getHasBackendListing: () => caps.hasBackendListing,
+        getCanonicalPath: () => canonicalPath,
+        goToLocation: (location) => onGoToLocation?.(location),
     })
 
     // The path shown after the volume name (`~`-folded, volume-relative, MTP

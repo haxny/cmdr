@@ -2001,6 +2001,14 @@
     "description": "Placeholder shown in the \"Open terminal here uses\" dropdown for the moment before Cmdr has finished asking macOS which terminal apps are installed. The dropdown is disabled while it reads this. \"your apps\" = the apps on this Mac. Usually gone within a few milliseconds.",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
+  "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
+  "@settings.fileExplorer.git.portalIntroSeen.label": {
+    "description": "Internal, never shown in the UI: tracks whether the one-time notification introducing the browsable .git folder has appeared."
+  },
+  "settings.fileExplorer.git.portalIntroSeen.description": "Whether the one-time intro to browsing the .git folder has been shown.",
+  "@settings.fileExplorer.git.portalIntroSeen.description": {
+    "description": "Internal, never shown in the UI. Pairs with the git folder intro label."
+  },
   "settings.behavior.openTerminalHereToastSeen.label": "Open-terminal-here hint shown",
   "@settings.behavior.openTerminalHereToastSeen.label": {
     "description": "Internal, never shown in the UI: tracks whether the one-time \"Open terminal here\" hint notification has appeared."

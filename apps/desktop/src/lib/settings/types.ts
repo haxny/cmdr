@@ -375,6 +375,7 @@ export interface SettingsValues {
   'fileExplorer.git.showRepoChip': boolean
   'fileExplorer.git.showStatusColumn': boolean
   'fileExplorer.git.showVirtualGitPortal': boolean
+  'fileExplorer.git.portalIntroSeen': boolean
 
   // Type-to-jump
   'fileExplorer.typeToJump.mode': TypeToJumpMode

@@ -20,7 +20,8 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vite
 import { flushSync } from 'svelte'
 import type { RepoInfo } from '../git/git-store.svelte'
 
-const { gitStore, settingsListeners, settingsValues, isDeviceVolumeIdSpy } = vi.hoisted<{
+const { gitStore, settingsListeners, settingsValues, isDeviceVolumeIdSpy, intro } = vi.hoisted<{
+  intro: { maybeShowGitPortalIntro: Mock }
   gitStore: { lookupRepoInfo: Mock; subscribeToRepo: Mock; unsubscribeFromRepo: Mock }
   settingsListeners: Record<string, (v: boolean) => void>
   settingsValues: Record<string, boolean>
@@ -37,7 +38,10 @@ const { gitStore, settingsListeners, settingsValues, isDeviceVolumeIdSpy } = vi.
     'fileExplorer.git.showStatusColumn': true,
   },
   isDeviceVolumeIdSpy: vi.fn(),
+  intro: { maybeShowGitPortalIntro: vi.fn() },
 }))
+
+vi.mock('../git/git-portal-intro', () => ({ maybeShowGitPortalIntro: intro.maybeShowGitPortalIntro }))
 
 vi.mock('../git/git-store.svelte', () => ({
   lookupRepoInfo: gitStore.lookupRepoInfo,
@@ -67,6 +71,8 @@ function repo(over: Partial<RepoInfo>): RepoInfo {
 describe('createGitBrowserSync', () => {
   let dispose: (() => void) | undefined
 
+  const goToLocation = vi.fn()
+
   function create(opts: { path?: string; volumeId?: string; hasBackendListing?: boolean } = {}) {
     let currentPath = $state(opts.path ?? '/repo/src')
     let volumeId = $state(opts.volumeId ?? 'root')
@@ -75,6 +81,8 @@ describe('createGitBrowserSync', () => {
       getCurrentPath: () => currentPath,
       getVolumeId: () => volumeId,
       getHasBackendListing: () => hasBackendListing,
+      getCanonicalPath: () => currentPath,
+      goToLocation,
     }
     let sub!: ReturnType<typeof createGitBrowserSync>
     dispose = $effect.root(() => {
@@ -123,6 +131,22 @@ describe('createGitBrowserSync', () => {
     expect(gitStore.subscribeToRepo).toHaveBeenCalledWith('/repo')
     expect(sub.showRepoChip).toBe(true)
     expect(sub.showGitStatusColumn).toBe(true)
+  })
+
+  it('offers the .git portal intro with the pane path, and its button takes this pane to .git', async () => {
+    gitStore.lookupRepoInfo.mockResolvedValue(repo({ repoRoot: '/repo' }))
+    gitStore.subscribeToRepo.mockResolvedValue(repo({ repoRoot: '/repo' }))
+
+    create({ path: '/repo' })
+
+    await vi.waitFor(() => {
+      expect(intro.maybeShowGitPortalIntro).toHaveBeenCalledWith(
+        expect.objectContaining({ panePath: '/repo', repoRoot: '/repo' }),
+      )
+    })
+    const [{ goToGitDir }] = intro.maybeShowGitPortalIntro.mock.calls[0] as [{ goToGitDir: () => void }]
+    goToGitDir()
+    expect(goToLocation).toHaveBeenCalledWith({ volumeId: 'root', path: '/repo/.git' })
   })
 
   it('unsubscribes the old repo root before subscribing a new one', async () => {

@@ -17,6 +17,8 @@ error CLASSIFICATION; `apps/desktop/src-tauri/src/file_system/git/CLAUDE.md` for
 - `status-column.ts`: pure helpers `glyphFor`, `labelFor`, `fetchStatusMap` (no reactivity).
 - `path-detection.ts`: `isVirtualGitPath(path)`, a shared regex matching the backend's virtual `.git` portal segments.
   Pure, so the portal toggle is read by its callers, never here.
+- `git-portal-intro.ts` + `GitPortalIntroToastContent.svelte`: the once-ever `.git` portal intro toast. `DETAILS.md` §
+  Portal intro.
 
 ## Must-knows
 
@@ -46,13 +48,12 @@ error CLASSIFICATION; `apps/desktop/src-tauri/src/file_system/git/CLAUDE.md` for
   `GitEntryMeta` (a count, an ahead/behind pair, a pinned commit), and `views/full-list-utils.ts::wordGitMeta` turns it
   into cell text plus the tooltip that doubles as the aria-label, from the `fileExplorer.git.size.*` /
   `fileExplorer.git.tooltip.*` keys. ❌ Never let a variant carry a sentence: every count goes through the catalog's
-  `plural` so each language picks its own categories (Hungarian never pluralizes after a number, Chinese has one form,
-  Portuguese carries a `many` English lacks). The width measurer calls the same helper, so the two can't drift.
+  `plural` (`DETAILS.md` § Decisions). The width measurer calls the same helper.
 - **`FileEntry.redirectToPath`** is honored in `FilePane.svelte::handleNavigate`: when set, opening the entry navigates
   there directly instead of as a virtual subtree (used by `.git/worktrees/<name>` and `.git/submodules/<name>` → working
   dir). `FullList.svelte` shows an "Opens <path>" tooltip.
 
 Settings keys (all `fileExplorer.git.*`): `showRepoChip` (default `true`), `showStatusColumn` (default `false`),
-`showVirtualGitPortal` (default `true`).
+`showVirtualGitPortal` (default `true`), hidden `portalIntroSeen`.
 
 Full details (chip lifecycle, status-column lifecycle, decision rationale): `DETAILS.md`.
