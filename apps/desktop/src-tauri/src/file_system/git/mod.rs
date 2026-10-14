@@ -16,11 +16,14 @@
 //! the `git-state-changed` event, and the listing refreshes a repo change drives.
 
 pub mod arming;
+pub mod commit_counts;
 pub mod overlay;
 pub mod wiring;
 
 #[cfg(test)]
 mod arming_tests;
+#[cfg(test)]
+mod commit_counts_tests;
 #[cfg(test)]
 mod overlay_tests;
 #[cfg(test)]

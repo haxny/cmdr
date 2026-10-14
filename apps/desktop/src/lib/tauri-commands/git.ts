@@ -1,7 +1,14 @@
 // Git browser commands and event listeners
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { commands, events, type EntryStatus, type GitStateChangedPayload, type RepoInfo } from '#lib/ipc/bindings.js'
+import {
+  commands,
+  events,
+  type CommitCountPass,
+  type EntryStatus,
+  type GitStateChangedPayload,
+  type RepoInfo,
+} from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 import type { TimedOut } from './ipc-types'
 
@@ -36,6 +43,15 @@ export function unsubscribeGitState(repoRoot: string): Promise<void> {
  */
 export function fillGitCommitCounts(listingId: string, paths: string[]): Promise<void> {
   return commands.fillGitCommitCounts(listingId, paths)
+}
+
+/**
+ * Asks the backend to count every row of a `.git/commits/` listing short enough
+ * for Size sort. Answers at once: `counting` (rows arrive as `directory-diff`s),
+ * `tooMany` (count only what's on screen), or `nothingToCount`.
+ */
+export function countAllGitCommits(listingId: string): Promise<CommitCountPass> {
+  return commands.countAllGitCommits(listingId)
 }
 
 /** Returns the per-entry status for a worktree, scoped by `dir`. */

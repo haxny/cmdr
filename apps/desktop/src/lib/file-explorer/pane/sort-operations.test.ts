@@ -3,7 +3,16 @@ import type { FilePaneAPI } from './types'
 import type { ResortResult, SortColumn, SortOrder } from '../types'
 import { createPaneRowState } from './pane-row-state'
 
-const { resortListingSpy, getDirectorySortModeSpy, sortSnapshotSpy, getSnapshotSpy } = vi.hoisted(() => ({
+const {
+  resortListingSpy,
+  getDirectorySortModeSpy,
+  sortSnapshotSpy,
+  getSnapshotSpy,
+  commitSizeSortLimitSpy,
+  addToastForPaneSpy,
+} = vi.hoisted(() => ({
+  commitSizeSortLimitSpy: vi.fn<(listingId: string) => number | null>(),
+  addToastForPaneSpy: vi.fn(),
   resortListingSpy: vi.fn<(...args: unknown[]) => Promise<ResortResult>>(),
   getDirectorySortModeSpy: vi.fn<() => string>(),
   sortSnapshotSpy: vi.fn<() => Promise<void>>(),
@@ -11,6 +20,8 @@ const { resortListingSpy, getDirectorySortModeSpy, sortSnapshotSpy, getSnapshotS
 }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({ resortListing: resortListingSpy }))
+vi.mock('../git/commit-count-fill', () => ({ commitSizeSortLimit: commitSizeSortLimitSpy }))
+vi.mock('#lib/ui/toast/index.js', () => ({ addToastForPane: addToastForPaneSpy }))
 vi.mock('#lib/search/snapshot-sort.svelte.js', async () => {
   // The tri-state cycle itself is pinned in `snapshot-sort.svelte.test.ts`; here
   // we only assert the ROUTING, so the real cycle is kept and the mutator spied.
@@ -85,6 +96,7 @@ describe('createSortOperations', () => {
     getDirectorySortModeSpy.mockReturnValue('foldersFirst')
     sortSnapshotSpy.mockResolvedValue(undefined)
     getSnapshotSpy.mockReturnValue(undefined)
+    commitSizeSortLimitSpy.mockReturnValue(null)
   })
 
   it('gates comparison before the request and supplies the exact applied revision', async () => {
@@ -203,6 +215,35 @@ describe('createSortOperations', () => {
 
     expect(paneRef.cancelRename).toHaveBeenCalled()
     expect(paneRef.clearJumpState).toHaveBeenCalled()
+  })
+
+  it('refuses Size sort on a commit list too long to count, and says why', async () => {
+    commitSizeSortLimitSpy.mockReturnValue(5000)
+    const paneRef = makePaneRef()
+    const { deps, setPaneSort } = makeDeps(paneRef, { sortBy: 'name', sortOrder: 'ascending' })
+    const ops = createSortOperations(deps)
+
+    await ops.handleSortChange('left', 'size')
+    await ops.setSort('size', 'desc', 'left')
+
+    expect(resortListingSpy).not.toHaveBeenCalled()
+    expect(setPaneSort).not.toHaveBeenCalled()
+    expect(addToastForPaneSpy).toHaveBeenCalledWith(
+      'left',
+      'Sorting by size works for up to 5,000 commits, and this history has more.',
+      expect.objectContaining({ level: 'info' }),
+    )
+  })
+
+  it('still sorts the same long commit list by any other column', async () => {
+    commitSizeSortLimitSpy.mockReturnValue(5000)
+    const paneRef = makePaneRef()
+    const { deps } = makeDeps(paneRef, { sortBy: 'name', sortOrder: 'ascending' })
+
+    await createSortOperations(deps).handleSortChange('left', 'modified')
+
+    expect(resortListingSpy).toHaveBeenCalled()
+    expect(addToastForPaneSpy).not.toHaveBeenCalled()
   })
 
   it('handleSortChange with no listing id is a no-op (no re-sort)', async () => {

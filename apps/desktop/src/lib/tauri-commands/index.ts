@@ -304,6 +304,7 @@ export {
   subscribeGitState,
   unsubscribeGitState,
   fillGitCommitCounts,
+  countAllGitCommits,
   getGitStatusForPaths,
   onGitStateChanged,
 } from './git'

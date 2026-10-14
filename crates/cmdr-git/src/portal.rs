@@ -85,10 +85,16 @@ impl GitPortal {
         self.repos.discover(path)
     }
 
+    /// The longest commit listing the host counts in full after the walk, which
+    /// is what makes Size sort work there. ~230 µs of CPU per commit (Cmdr's own
+    /// repo, release build, 2026-10-14), so ~1.2 s at the limit. A longer listing
+    /// gets counts only for the rows a pane shows, and no Size sort.
+    pub const COUNT_ALL_LIMIT: usize = 5_000;
+
     /// The `.git/commits/<sha>` rows at `paths`, rebuilt WITH their
-    /// files-changed count, for a pane showing commit rows the walk left
-    /// uncounted (past `EAGER_FILES_CHANGED`). Paths may span repos; one that
-    /// isn't a commit row, or whose commit doesn't resolve, is left out.
+    /// files-changed count; the walk leaves every row uncounted. Paths may span
+    /// repos; one that isn't a commit row, or whose commit doesn't resolve, is
+    /// left out.
     ///
     /// **Blocking**: one tree diff per row (~230 µs each). Run it on the host's
     /// blocking pool.

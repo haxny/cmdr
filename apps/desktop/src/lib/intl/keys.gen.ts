@@ -1445,6 +1445,7 @@ export type MessageKey =
   | 'fileExplorer.git.size.stashEntries'
   | 'fileExplorer.git.size.submodules'
   | 'fileExplorer.git.size.tags'
+  | 'fileExplorer.git.sizeSortTooManyCommits'
   | 'fileExplorer.git.tooltip.aheadBehind'
   | 'fileExplorer.git.tooltip.branches'
   | 'fileExplorer.git.tooltip.commits'

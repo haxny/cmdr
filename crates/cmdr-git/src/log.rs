@@ -5,15 +5,16 @@
 //! `addedAt` and `createdAt` carry the author date so date-sort works out
 //! of the box.
 //!
-//! ## HEAD-reachable, capped silently, counts for the newest only
+//! ## HEAD-reachable, capped silently, counted afterwards
 //!
 //! `list_commits` walks the rev graph from HEAD by commit time (newest
-//! first) and stops silently at `MAX_COMMITS` (100,000). Only the newest
-//! `EAGER_FILES_CHANGED` (5,000) rows get their files-changed count during
-//! the walk: that diff is ~90% of a row's cost, and it's what makes Size
-//! sort work there. Rows past it arrive with no count, and the host fills
-//! in the ones a pane shows through `commit_rows_with_counts`. Numbers:
-//! `DETAILS.md` § "Modified + Size columns for virtual entries".
+//! first) and stops silently at `MAX_COMMITS` (100,000). It computes no
+//! files-changed count: that diff is ~90% of a row's cost, so every row
+//! arrives `CountPending` and the whole list shows at once. The host counts
+//! afterwards through `commit_rows_with_counts`: every row when the listing
+//! holds at most `GitPortal::COUNT_ALL_LIMIT` commits (so Size sort works),
+//! otherwise only the rows a pane shows. Numbers: `DETAILS.md` § "Modified +
+//! Size columns for virtual entries".
 //!
 //! ## Direct path entry to any commit
 //!
@@ -49,17 +50,10 @@ use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKin
 
 /// Hard cap on entries returned in a single `commits/` listing.
 ///
-/// Without the eager count a row costs ~11 µs and ~576 bytes (Cmdr's 10,646
-/// commits in 116 ms; release build, M-series, 2026-10-14), so the cap is
-/// ~1 s plus `EAGER_FILES_CHANGED`'s share, and ~58 MB of listing cache. The
-/// progress ticks keep that wait honest.
+/// A row costs ~11 µs and ~576 bytes without its count (Cmdr's 10,646 commits
+/// in 116 ms; release build, M-series, 2026-10-14), so the cap is ~1 s and
+/// ~58 MB of listing cache. The progress ticks keep that wait honest.
 pub const MAX_COMMITS: usize = 100_000;
-
-/// How many of the newest rows get their files-changed count during the walk,
-/// which is what Size sort orders them by. ~230 µs each on Cmdr's own repo
-/// (CPU time, so load can't inflate it; release build, M-series,
-/// 2026-10-14), so ~1.2 s for the whole budget.
-pub const EAGER_FILES_CHANGED: usize = 5_000;
 
 /// How many hex chars we display per short SHA. Matches `git log --oneline`.
 pub const SHORT_SHA_LEN: usize = 7;
@@ -114,24 +108,13 @@ pub fn resolve_commit_id(handle: &RepoHandle, prefix: &str) -> Result<ObjectId, 
 
 /// Lists HEAD-reachable commits as virtual directory entries.
 ///
-/// Up to `MAX_COMMITS` entries; on cap the walk stops silently. The newest
-/// `EAGER_FILES_CHANGED` carry their files-changed count. Reports progress
-/// and honors abandonment through `control`.
+/// Up to `MAX_COMMITS` entries; on cap the walk stops silently. Every row is
+/// `CountPending` (see the module docs). Reports progress and honors
+/// abandonment through `control`.
 pub fn list_commits(
     handle: &RepoHandle,
     repo_root: &Path,
     control: &WalkControl,
-) -> Result<Vec<FileEntry>, FriendlyGitError> {
-    walk_commits(handle, repo_root, control, EAGER_FILES_CHANGED)
-}
-
-/// [`list_commits`] with the eager-count budget as a parameter, so a test can
-/// put the boundary inside a five-commit fixture.
-pub(crate) fn walk_commits(
-    handle: &RepoHandle,
-    repo_root: &Path,
-    control: &WalkControl,
-    eager_counts: usize,
 ) -> Result<Vec<FileEntry>, FriendlyGitError> {
     let parent = repo_root.join(".git").join("commits");
     let repo = handle.to_thread_local();
@@ -157,7 +140,7 @@ pub(crate) fn walk_commits(
         }
         let info =
             info.map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?;
-        out.push(commit_row(&repo, &parent, info.id, count < eager_counts)?);
+        out.push(commit_row(&repo, &parent, info.id, false)?);
         control.listed.store(out.len(), Ordering::Relaxed);
     }
     // An abandoned walk's rows go nowhere; returning a part of them would
@@ -170,7 +153,7 @@ pub(crate) fn walk_commits(
 }
 
 /// The `.git/commits/<sha>` rows at `paths` rebuilt WITH their files-changed
-/// count, for the rows past `EAGER_FILES_CHANGED` that a pane shows. A path
+/// count, for the host's pass after the walk. A path
 /// that isn't a commit row of this repo, or whose commit doesn't resolve, is
 /// left out.
 pub fn commit_rows_with_counts(handle: &RepoHandle, repo_root: &Path, paths: &[PathBuf]) -> Vec<FileEntry> {

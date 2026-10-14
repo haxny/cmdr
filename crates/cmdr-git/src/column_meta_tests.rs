@@ -159,10 +159,11 @@ fn tags_listing_names_the_tagged_commit() {
 // ── Commits: files-changed count ────────────────────────────────────
 
 #[test]
-fn commits_listing_populates_files_changed() {
+fn a_filled_in_commit_row_carries_files_changed() {
     let (dir, _f) = build_simple_repo("column_meta", 2);
     let (handle, root) = discover_repo(&dir).unwrap();
-    let entries = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
+    let walked = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
+    let entries = git_log::commit_rows_with_counts(&handle, &root, &[std::path::PathBuf::from(&walked[0].path)]);
     let top = &entries[0];
     let n = top.size.expect("files-changed size set");
     assert!(n >= 1, "at least one file changed in the second commit");

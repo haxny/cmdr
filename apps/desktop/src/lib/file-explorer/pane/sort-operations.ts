@@ -21,6 +21,10 @@ import type { SortColumn, SortOrder } from '../types'
 import { defaultSortOrders } from '../types'
 import type { FilePaneAPI } from './types'
 import { getNewSortOrder, collectSortState } from './sorting-handlers'
+import { commitSizeSortLimit } from '../git/commit-count-fill'
+import { addToastForPane } from '#lib/ui/toast/index.js'
+import { tString } from '#lib/intl/messages.svelte.js'
+import { formatInteger } from '#lib/intl/number-format.js'
 
 export interface SortOperationsDeps {
   getPaneRef: (pane: 'left' | 'right') => FilePaneAPI | undefined
@@ -87,6 +91,22 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     return currentPath === undefined ? null : snapshotIdFromPanePath(currentPath)
   }
 
+  /**
+   * Whether `column` is Size on a commit list too long to count in full
+   * (`git/commit-count-fill.ts`), in which case it says so and the sort stays as it
+   * was: most rows there have no count to sort by.
+   */
+  function refusesSizeSort(pane: 'left' | 'right', column: SortColumn): boolean {
+    if (column !== 'size') return false
+    const listingId = deps.getPaneRef(pane)?.getListingId()
+    const limit = listingId ? commitSizeSortLimit(listingId) : null
+    if (limit === null) return false
+    addToastForPane(pane, tString('fileExplorer.git.sizeSortTooManyCommits', { limitText: formatInteger(limit) }), {
+      level: 'info',
+    })
+    return true
+  }
+
   async function handleSortChange(pane: 'left' | 'right', newColumn: SortColumn): Promise<void> {
     // Cancel any active rename on the affected pane (sort invalidates indices)
     deps.getPaneRef(pane)?.cancelRename()
@@ -105,6 +125,7 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     const paneRef = deps.getPaneRef(pane)
     const listingId = paneRef?.getListingId()
     if (!listingId) return
+    if (refusesSizeSort(pane, newColumn)) return
 
     const { sortBy, sortOrder } = deps.getPaneSort(pane)
     const newOrder = newColumn === sortBy ? getNewSortOrder(newColumn, sortBy, sortOrder) : defaultSortOrders[newColumn]
@@ -145,6 +166,7 @@ export function createSortOperations(deps: SortOperationsDeps): SortOperations {
     const paneRef = deps.getPaneRef(pane)
     const listingId = paneRef?.getListingId()
     if (!listingId) return
+    if (refusesSizeSort(pane, column)) return
 
     const newOrder: SortOrder = newOrderAsked
     await sortPane(pane, column, newOrder, true)

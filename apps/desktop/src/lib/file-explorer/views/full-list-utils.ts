@@ -242,7 +242,7 @@ const COUNT_KEYS: Record<GitCountKind, { cell: MessageKey; tooltip: MessageKey }
 export function wordGitMeta(meta: GitEntryMeta): SizeDisplayPick {
   switch (meta.kind) {
     case 'countPending':
-      // Commit rows past the newest 5,000, counted once a pane shows them
+      // Commit rows the walk left uncounted, filled in after it
       // (`git/commit-count-fill.ts`). Only commits are ever pending today.
       return { override: '…', tooltip: tString('fileExplorer.git.tooltip.filesChangedPending') }
     case 'count': {

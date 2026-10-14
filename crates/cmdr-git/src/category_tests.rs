@@ -117,25 +117,20 @@ fn commit_tree_browsing_via_short_sha() {
 #[test]
 fn commits_caps_listing_at_max() {
     // Building 100,001 commits to reach the cap would take far too long, so this
-    // pins the constants the walk stops and stops counting on instead.
+    // pins the constants the walk stops on and the whole-listing count stops at.
     assert_eq!(git_log::MAX_COMMITS, 100_000);
-    assert_eq!(git_log::EAGER_FILES_CHANGED, 5_000);
+    assert_eq!(crate::GitPortal::COUNT_ALL_LIMIT, 5_000);
 }
 
 #[test]
-fn only_the_newest_commits_get_their_files_changed_count_during_the_walk() {
+fn the_walk_leaves_every_files_changed_count_for_later() {
     let (dir, _f) = build_simple_repo("category", 5);
     let (handle, root) = discover_repo(&dir).unwrap();
 
-    let entries = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 2).unwrap();
+    let entries = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
 
-    assert_eq!(entries.len(), 5, "every commit is still listed");
-    let counted: Vec<bool> = entries
-        .iter()
-        .map(|e| matches!(e.git_meta, Some(GitEntryMeta::Count { .. })))
-        .collect();
-    assert_eq!(counted, [true, true, false, false, false], "the newest two only");
-    for row in &entries[2..] {
+    assert_eq!(entries.len(), 5, "every commit is listed");
+    for row in &entries {
         assert_eq!(row.size, None, "an uncounted row has no Size to sort by");
         assert_eq!(
             row.git_meta,
@@ -174,26 +169,27 @@ fn an_abandoned_walk_stops_instead_of_listing_for_nobody() {
 }
 
 #[test]
-fn a_commit_row_filled_in_later_matches_the_walk_with_its_count() {
+fn a_commit_row_filled_in_later_is_the_walked_row_plus_its_count() {
     let (dir, _f) = build_simple_repo("category", 3);
     let (handle, root) = discover_repo(&dir).unwrap();
-    let counted = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 3).unwrap();
-    let uncounted = git_log::walk_commits(&handle, &root, &git_log::WalkControl::default(), 0).unwrap();
-    assert!(
-        uncounted
-            .iter()
-            .all(|e| matches!(e.git_meta, Some(GitEntryMeta::CountPending { .. })))
-    );
+    let uncounted = git_log::list_commits(&handle, &root, &git_log::WalkControl::default()).unwrap();
 
     let paths: Vec<PathBuf> = uncounted.iter().map(|e| PathBuf::from(&e.path)).collect();
     let filled = git_log::commit_rows_with_counts(&handle, &root, &paths);
 
     assert_eq!(filled.len(), 3);
-    for (filled, expected) in filled.iter().zip(&counted) {
-        assert_eq!(filled.path, expected.path);
-        assert_eq!(filled.name, expected.name);
-        assert_eq!(filled.size, expected.size);
-        assert_eq!(filled.git_meta, expected.git_meta);
+    for (filled, walked) in filled.iter().zip(&uncounted) {
+        assert_eq!(filled.path, walked.path, "same row, so the listing patches it in place");
+        assert_eq!(filled.name, walked.name);
+        assert_eq!(filled.modified_at, walked.modified_at);
+        let Some(GitEntryMeta::Count {
+            counted: GitCountKind::FilesChanged,
+            n,
+        }) = filled.git_meta
+        else {
+            panic!("{} came back without its count", filled.name);
+        };
+        assert_eq!(filled.size, Some(n), "Size sorts by the count");
     }
     cleanup(&dir);
 }

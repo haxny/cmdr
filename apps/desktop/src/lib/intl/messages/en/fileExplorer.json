@@ -1542,6 +1542,13 @@
       "count": "the same number of commits (drives the singular/plural form)"
     }
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "Sorting by size works for up to {limitText} commits, and this history has more.",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "description": "Short self-dismissing notification shown when the user tries to sort the list of git commits (in the browsable .git folder) by Size, but the repository has more commits than Cmdr counts in full. Size here means how many files each commit changed. The list keeps its current order.",
+    "placeholders": {
+      "limitText": "the commit limit, already formatted with thousands separators, for example 5,000"
+    }
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "description": "Hover tooltip (and screen-reader label) for the Size cell of an older commit row in the virtual `.git` portal while its count of changed files is still being worked out. The cell itself shows an ellipsis meanwhile; usually gone within a second."

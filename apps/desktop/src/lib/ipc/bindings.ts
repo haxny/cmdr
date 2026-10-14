@@ -1354,18 +1354,19 @@ export const commands = {
    */
   unsubscribeGitState: (repoRoot: string) => __TAURI_INVOKE<void>('unsubscribe_git_state', { repoRoot }),
   /**
-   *  Fills in the files-changed count for `.git/commits/` rows that the walk left
-   *  uncounted (past `EAGER_FILES_CHANGED`) and a pane now shows, and patches them
-   *  into `listing_id`'s listing. The cells fill, a Size sort places them, and
-   *  scrolling back keeps them.
-   *
-   *  Fire-and-forget from the pane: the patched rows arrive as an ordinary
-   *  `directory-diff`. Goes to the listing engine alone, ❌ never
-   *  `listing_host::directory_changed`, which would also hand virtual git rows to
-   *  the file index.
+   *  Counts the files changed by the `.git/commits/` rows a pane shows and patches
+   *  them into `listing_id`'s listing; the pane asks only on a listing too long for
+   *  [`count_all_git_commits`]. Fire-and-forget: the rows arrive as an ordinary
+   *  `directory-diff`. `file_system/git/commit_counts.rs`.
    */
   fillGitCommitCounts: (listingId: string, paths: string[]) =>
     __TAURI_INVOKE<void>('fill_git_commit_counts', { listingId, paths }),
+  /**
+   *  Starts counting every row of a `.git/commits/` listing short enough for Size
+   *  sort, and says which way it went. Answers at once; the counting runs in the
+   *  background. `file_system/git/commit_counts.rs`.
+   */
+  countAllGitCommits: (listingId: string) => __TAURI_INVOKE<CommitCountPass>('count_all_git_commits', { listingId }),
   /**
    *  Returns the per-entry status for a worktree. The `dir` argument scopes the
    *  caller's interest; gix currently returns the whole worktree and the
@@ -6479,6 +6480,25 @@ export type CloudAiConsentWriteError =
   | { kind: 'storeUnavailable' }
   // `main.db` refused the write. `detail` is for logs only.
   | { kind: 'storeRefused'; detail: string }
+
+// What [`count_all`] decided for a listing.
+export type CommitCountPass =
+  /**
+   *  Every uncounted row is being counted in the background, a batch at a time;
+   *  each batch lands as an ordinary `directory-diff`.
+   */
+  | { type: 'counting' }
+  /**
+   *  The listing holds more commits than `limit`: only rows a pane shows get
+   *  counted, and Size sort isn't available there.
+   */
+  | {
+      type: 'tooMany'
+      // `GitPortal::COUNT_ALL_LIMIT`, for the pane's wording.
+      limit: number
+    }
+  // Nothing to count: the listing is gone, or every row already has its count.
+  | { type: 'nothingToCount' }
 
 // Why a comparison didn't answer. Typed, so the frontend never reads a message.
 export type CompareDirectoriesError =

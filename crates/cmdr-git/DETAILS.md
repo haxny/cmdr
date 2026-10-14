@@ -51,9 +51,9 @@ which:
   `list_status`.
 - **Reporting a change** (`file_system/git/wiring.rs`): the `GitStateSink` trait the app implements, and
   `no_git_state_sink` for a session with no window.
-- **Filling in commit counts** (`commands/file_system/git.rs::fill_git_commit_counts`):
-  `GitPortal::commit_rows_with_counts`, a method on the browsing type rather than a new root export (approved
-  2026-10-14), so the count stays 11 while the list names it.
+- **Filling in commit counts** (`apps/desktop/src-tauri/src/file_system/git/commit_counts.rs`):
+  `GitPortal::commit_rows_with_counts` and `GitPortal::COUNT_ALL_LIMIT`, a method and an associated const on the
+  browsing type rather than new root exports (approved 2026-10-14), so the count stays 11 while the list names them.
 
 **A `pub` inside a private module isn't measured either**, which is exactly why one may not sit there waiting for a
 caller: nothing would ever notice. So a helper here earns its place from a caller that exists today, ❌ never from a
@@ -445,17 +445,18 @@ behind `origin/main`", and which branch that is depends on whether the branch ha
 `main` / `master`. Only the backend knows; carrying `vs` is what lets the frontend word the sentence without asking
 again.
 
-**Decision**: Eager-load ahead/behind for branches; files-changed eagerly for the newest 5,000 commits, lazily for the
-rest **Why**: Bench (release build, M-series): 100 branches with ahead/behind takes p50=33 ms / p95=36 ms, well under
-the 300 ms p95 budget the spec sets for the listing pipeline. A commit row costs ~230 µs WITH its files-changed diff and
-~11 µs without (Cmdr's own 10,646 commits: ~2.4 s of CPU time vs 116 ms; CPU time because the machine was under heavy
-load, release build, `list_commits` on the Cmdr repo, 2026-10-14). So the walk counts the newest `EAGER_FILES_CHANGED`
-(5,000) rows, which is what lets Size sort work for any repo up to that size, and marks the rest
-`GitEntryMeta::CountPending`. The frontend shows `…` there and asks `fill_git_commit_counts` for the pending rows a pane
-shows (`apps/desktop/src/lib/file-explorer/git/commit-count-fill.ts`); the counted rows are patched into the listing as
-`DirectoryChange::Modified`, so they re-sort and stay. Rows past 5,000 that nobody scrolled to sort as no Size. The
-patch goes to the listing engine alone, ❌ never `listing_host::directory_changed`, which would also feed virtual rows
-to the file index.
+**Decision**: Eager-load ahead/behind for branches; count commits' files-changed AFTER the walk, in full only up to
+5,000 commits **Why**: Bench (release build, M-series): 100 branches with ahead/behind takes p50=33 ms / p95=36 ms, well
+under the 300 ms p95 budget the spec sets for the listing pipeline. A commit row costs ~230 µs WITH its files-changed
+diff and ~11 µs without (Cmdr's own 10,646 commits: ~2.4 s of CPU time vs 116 ms; CPU time because the machine was under
+heavy load, release build, `list_commits` on the Cmdr repo, 2026-10-14). So the walk counts nothing: every row is
+`GitEntryMeta::CountPending` (shown as `…`), and the list with its total lands at once. Then the pane asks for a
+whole-listing pass (`apps/desktop/src-tauri/src/file_system/git/commit_counts.rs`): at most `GitPortal::COUNT_ALL_LIMIT`
+(5,000) commits are counted in full, in 200-row batches, so the cells fill and Size sort works. A longer listing answers
+`TooMany`: only the rows a pane shows get counted, and Size sort is refused with a toast, since most rows would have
+nothing to sort by. Counted rows are patched into the listing as `DirectoryChange::Modified`, so they re-sort and stay,
+through the listing engine alone, ❌ never `listing_host::directory_changed`, which would also feed virtual rows to the
+file index.
 
 ## Decisions
 
