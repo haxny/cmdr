@@ -1863,7 +1863,8 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
 
 ## Pane divider from the keyboard
 
-`pane.moveDividerLeft` / `pane.moveDividerRight` (`⌃⌥←` / `⌃⌥→`) and `pane.resetDivider` (no default key; the divider's
+`pane.moveDividerLeft` / `pane.moveDividerRight` (`⌃⌥←` / `⌃⌥→` on macOS; Ctrl+Alt+Shift+←/→ elsewhere, since `⌃` and
+`⌘` both map to Ctrl there and Ctrl+Alt+←/→ are the tab keys) and `pane.resetDivider` (no default key; the divider's
 double-click) move the split from the keyboard and the palette. The divider isn't a Tab stop: `Tab` switches panes.
 `pane-split.ts` holds the rules (`stepSplit`, pure, time injected) and the drag's 25–75% clamp, so `PaneResizer.svelte`
 and the keys can't disagree.

@@ -5,6 +5,7 @@
  */
 import type { CommandSource } from '../types'
 import { getBadgeStatus } from '#lib/feature-status.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { BLOCKED_BY_DIALOGS, runsOverDialogs } from '../while-dialog-open'
 
 // Zoom scales the whole app, dialog included, and touches no pane.
@@ -349,12 +350,13 @@ export const mainWindowCommands: CommandSource[] = [
   },
   {
     // Held or tapped quickly, the step grows; heading through the middle, it stops
-    // at 50% until a fresh press (`pane-split.ts`). ⌃← / ⌃→ alone are macOS Spaces.
+    // at 50% until a fresh press (`pane-split.ts`). ⌃← / ⌃→ alone are macOS Spaces. Off macOS,
+    // ⌃ and ⌘ both map to Ctrl, so ⌃⌥← would land on the tab keys' Ctrl+Alt+←: Ctrl+Alt+Shift there.
     id: 'pane.moveDividerLeft',
     nameKey: 'commands.paneMoveDividerLeft.label',
     scope: 'Main window',
     showInPalette: true,
-    shortcuts: ['⌃⌥←'],
+    shortcuts: isMacOS() ? ['⌃⌥←'] : ['⌘⌥⇧←'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
   {
@@ -362,7 +364,7 @@ export const mainWindowCommands: CommandSource[] = [
     nameKey: 'commands.paneMoveDividerRight.label',
     scope: 'Main window',
     showInPalette: true,
-    shortcuts: ['⌃⌥→'],
+    shortcuts: isMacOS() ? ['⌃⌥→'] : ['⌘⌥⇧→'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
   {
