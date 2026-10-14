@@ -1641,6 +1641,14 @@
   "@settings.behavior.openTerminalHereApp.checking": {
     "sourceHash": "0d6957f"
   },
+  "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
+  "@settings.fileExplorer.git.portalIntroSeen.label": {
+    "sourceHash": "8c1ae20"
+  },
+  "settings.fileExplorer.git.portalIntroSeen.description": "Whether the one-time intro to browsing the .git folder has been shown.",
+  "@settings.fileExplorer.git.portalIntroSeen.description": {
+    "sourceHash": "623d981"
+  },
   "settings.behavior.openTerminalHereToastSeen.label": "A „Terminál megnyitása itt” tippje megjelent",
   "@settings.behavior.openTerminalHereToastSeen.label": {
     "sourceHash": "22f31aa"
