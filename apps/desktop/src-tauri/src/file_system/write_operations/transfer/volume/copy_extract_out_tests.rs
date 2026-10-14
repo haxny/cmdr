@@ -7,7 +7,7 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, StreamWritten};
+use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 
 // ========================================================================
@@ -266,6 +266,7 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
 #[cfg(target_os = "macos")]
 mod quarantine {
     use super::*;
+    use crate::file_system::volume::StreamWritten;
     use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
     use std::future::Future;
     use std::pin::Pin;
