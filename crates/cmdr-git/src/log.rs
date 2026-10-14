@@ -8,10 +8,10 @@
 //! ## Listing v1: HEAD-reachable, capped silently
 //!
 //! `list_commits` walks the rev graph from HEAD by commit time (newest
-//! first). We cap the listing at `MAX_COMMITS` (5000) and stop silently.
-//! Cmdr's own repo has ~3000 commits, so the cap is a safety net, not a UX
-//! entry point. Pagination ships when the cap is reached often enough to
-//! matter. `BATCH_SIZE` (200) only gates the cancellation-poll cadence.
+//! first). We cap the listing at `MAX_COMMITS` (15,000) and stop silently.
+//! Cmdr's own repo has ~10,600 commits, so the cap sits above an active
+//! multi-year project. Pagination ships when the cap is reached often enough
+//! to matter. `BATCH_SIZE` (200) only gates the cancellation-poll cadence.
 //!
 //! ## Direct path entry to any commit
 //!
@@ -43,10 +43,11 @@
 //!
 //! Decision: keep the volume hook single-shot for now. Building a parallel
 //! streaming pipeline through the existing `Volume::list_directory`
-//! contract would mean reworking the hook contract. The 5000-commit cap +
-//! task-abort cancellation gives us ≤30 ms typical walks even on
-//! medium-size repos (cmdr's own ~3000-commit history walks in ~7 ms);
-//! the budget plus the cap makes a streaming layer overkill. The batch
+//! contract would mean reworking the hook contract. The walk and decode
+//! alone are cheap (Cmdr's 10,642 commits in ~450 ms); the eager per-commit
+//! files-changed diff is what costs (~1.6 ms per commit on a real repo, so
+//! ~17 s for the same listing; release build, M-series, 2026-10-14).
+//! `DETAILS.md` § "Modified + Size columns for virtual entries" has the numbers. The batch
 //! constant (`BATCH_SIZE`) is exposed so a future streaming refactor can
 //! flip the switch without churning callers.
 
@@ -70,7 +71,7 @@ use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKin
 /// Per the plan: enough commits that 99% of users never page; small enough
 /// that a worst-case revwalk stays inside the listing pipeline's responsive
 /// window.
-pub const MAX_COMMITS: usize = 5000;
+pub const MAX_COMMITS: usize = 15_000;
 
 /// Batch size for chunked emission once streaming lands. Today this only
 /// gates the cancellation-poll cadence (we check `cancel` every BATCH).
@@ -85,7 +86,7 @@ pub const SHORT_SHA_LEN: usize = 7;
 /// Gated behind `#[cfg(test)]` so production builds don't carry a
 /// process-wide cancellation switch that two concurrent commit listings
 /// could interfere with. Production walks rely on `spawn_blocking` task
-/// abort for hard cancellation; that's enough because the cap (5000
+/// abort for hard cancellation; that's enough because the cap (15,000
 /// commits) keeps even pathological walks well inside the listing
 /// pipeline's responsive window.
 #[cfg(test)]

@@ -227,7 +227,7 @@ fn count_commits_capped(repo: &gix::Repository) -> u64 {
         }
         count = count.saturating_add(1);
         // Cap matches `log::MAX_COMMITS` so the `.git/commits/` Size cell
-        // ("5000 commits") matches what the user sees on entering.
+        // ("15,000 commits") matches what the user sees on entering.
         if count >= crate::log::MAX_COMMITS as u64 {
             break;
         }

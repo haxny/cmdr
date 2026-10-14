@@ -115,9 +115,9 @@ fn commit_tree_browsing_via_short_sha() {
 
 #[test]
 fn commits_caps_listing_at_max() {
-    // Building 5001 commits to reach the cap would add ~30 s to the suite, so
+    // Building 15,001 commits to reach the cap would add minutes to the suite, so
     // this pins the two constants the walk stops on instead.
-    assert_eq!(git_log::MAX_COMMITS, 5000);
+    assert_eq!(git_log::MAX_COMMITS, 15_000);
     assert_eq!(git_log::BATCH_SIZE, 200);
 }
 

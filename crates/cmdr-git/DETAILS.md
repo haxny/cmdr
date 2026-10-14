@@ -413,22 +413,22 @@ Every virtual entry carries a real `modified_at`, and most carry a typed `git_me
 it (`src/lib/file-explorer/views/full-list-utils.ts::wordGitMeta`), so every row reads in the user's language with that
 language's plural rules. ❌ Never put a sentence in a variant.
 
-| Path                           | `modified_at`                                                                        | `git_meta`                                              | `size` (sort key)             |
-| ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------- |
-| `.git/branches/`               | newest branch tip date                                                               | `Count { Branches }`                                    | branch count                  |
-| `.git/tags/`                   | newest tag/commit date                                                               | `Count { Tags }`                                        | tag count                     |
-| `.git/commits/`                | HEAD committer date                                                                  | `Count { Commits }`                                     | commit count (capped at 5000) |
-| `.git/stash/`                  | newest stash creation date                                                           | `Count { StashEntries }`                                | stash count                   |
-| `.git/worktrees/`              | newest linked worktree HEAD                                                          | `Count { LinkedWorktrees }`                             | worktree count                |
-| `.git/submodules/`             | newest pinned commit                                                                 | `Count { Submodules }`                                  | submodule count               |
-| `branches/<name>/`             | branch tip committer date                                                            | `AheadBehind` vs upstream (or fallback `main`/`master`) | ahead-count                   |
-| `tags/<name>/`                 | annotated tag date or commit date                                                    | `TaggedCommit`                                          | 0                             |
-| `commits/<sha>/`               | commit committer date                                                                | `Count { FilesChanged }`                                | files-changed count           |
-| `stash/<n>/`                   | stash creation date                                                                  | `StashedOnBranch` (parsed from the stash subject)       | 0                             |
-| `worktrees/<name>` (redirect)  | worktree HEAD date                                                                   | `WorktreeOnBranch` or `WorktreeDetachedAt`              | 0                             |
-| `submodules/<name>` (redirect) | pinned commit date                                                                   | `PinnedCommit`                                          | 0                             |
-| inside snapshots: files        | most recent commit that touched the file (fallback: snapshot commit date)            | None (blob bytes)                                       | blob bytes                    |
-| inside snapshots: subdirs      | most recent commit that touched any file underneath (fallback: snapshot commit date) | None (recursive bytes)                                  | recursive blob bytes          |
+| Path                           | `modified_at`                                                                        | `git_meta`                                              | `size` (sort key)               |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------------------------------- |
+| `.git/branches/`               | newest branch tip date                                                               | `Count { Branches }`                                    | branch count                    |
+| `.git/tags/`                   | newest tag/commit date                                                               | `Count { Tags }`                                        | tag count                       |
+| `.git/commits/`                | HEAD committer date                                                                  | `Count { Commits }`                                     | commit count (capped at 15,000) |
+| `.git/stash/`                  | newest stash creation date                                                           | `Count { StashEntries }`                                | stash count                     |
+| `.git/worktrees/`              | newest linked worktree HEAD                                                          | `Count { LinkedWorktrees }`                             | worktree count                  |
+| `.git/submodules/`             | newest pinned commit                                                                 | `Count { Submodules }`                                  | submodule count                 |
+| `branches/<name>/`             | branch tip committer date                                                            | `AheadBehind` vs upstream (or fallback `main`/`master`) | ahead-count                     |
+| `tags/<name>/`                 | annotated tag date or commit date                                                    | `TaggedCommit`                                          | 0                               |
+| `commits/<sha>/`               | commit committer date                                                                | `Count { FilesChanged }`                                | files-changed count             |
+| `stash/<n>/`                   | stash creation date                                                                  | `StashedOnBranch` (parsed from the stash subject)       | 0                               |
+| `worktrees/<name>` (redirect)  | worktree HEAD date                                                                   | `WorktreeOnBranch` or `WorktreeDetachedAt`              | 0                               |
+| `submodules/<name>` (redirect) | pinned commit date                                                                   | `PinnedCommit`                                          | 0                               |
+| inside snapshots: files        | most recent commit that touched the file (fallback: snapshot commit date)            | None (blob bytes)                                       | blob bytes                      |
+| inside snapshots: subdirs      | most recent commit that touched any file underneath (fallback: snapshot commit date) | None (recursive bytes)                                  | recursive blob bytes            |
 
 Cross-category Size sort is meaningless (ahead-count vs files-changed vs item count); that's an honest tradeoff. Each
 cell is self-explaining via its tooltip, which is also the aria-label.
@@ -444,12 +444,13 @@ again.
 
 **Decision**: Eager-load ahead/behind for branches; eager-load files-changed for commits **Why**: Bench (release build,
 M-series): 100 branches with ahead/behind takes p50=33 ms / p95=36 ms, well under the 300 ms p95 budget the spec sets
-for the listing pipeline. Files-changed for 200 commits: p50=37 ms / p95=40 ms (200 µs / commit), so the typical
-Cmdr-sized repo (~3000 commits) lands ~600 ms and the 5000-commit cap lands ~1 s. We accept the worst-case 1 s on the
-cap because (1) Cmdr's own repo never hits the cap, (2) the listing pipeline runs the row build in `spawn_blocking` so
-the UI stays responsive, and (3) the alternative (lazy-load via a streamed IPC) would mean another round-trip per row
-and a placeholder `…` in the cell while it resolves. Worth re-checking if a user reports the 5000-commit cap feeling
-slow; the bench harness in `bench.rs` covers 1000 commits and `bench_list_commits_files_changed` covers 200.
+for the listing pipeline. Files-changed for 200 commits of the synthetic fixture: p50=37 ms / p95=40 ms (200 µs /
+commit). **A real repo costs about eight times that**: Cmdr's own 10,642 commits list in ~17 s with files-changed and
+~450 ms without (~1.6 ms vs ~42 µs per commit; release build, M-series, `list_commits` on the Cmdr repo, 2026-10-14).
+The listing pipeline runs the row build in `spawn_blocking`, so the UI stays responsive meanwhile, but the pane waits.
+The way out is lazy files-changed (a streamed IPC, or computing it only for the rows in view), at the price of a `…`
+placeholder in the cell while it resolves. The bench harness in `bench.rs` covers 1000 commits and
+`bench_list_commits_files_changed` covers 200.
 
 ## Decisions
 
@@ -508,11 +509,12 @@ invisible rather than break the listing.
 `redirect_to_path` so the frontend opens the working dir directly. The submodule itself is a git repo so the portal
 experience cascades for free.
 
-**Decision**: Streaming log capped at 5000 entries, silent cap **Why**: Hard cap at 5000 keeps even pathological
-monorepos inside the listing pipeline's responsive window. Cmdr's own ~3000-commit history walks in ~7 ms, so the cap is
-a safety net, not a UX entry point. When the cap is hit the walk stops silently (no "Load more" affordance, because
-tapping it would do nothing useful: pagination IPC isn't wired). When the first user reports hitting the cap, add the
-IPC + a real Load-more entry together so the affordance actually works.
+**Decision**: Streaming log capped at 15,000 entries, silent cap **Why**: A hard cap keeps pathological monorepos from
+listing unbounded. 15,000 sits above Cmdr's own ~10,600 commits, so an active multi-year project lists whole; the cost
+per row is the files-changed diff (see "Modified + Size columns" above), which is what any higher cap has to fix first.
+When the cap is hit the walk stops silently (no "Load more" affordance, because tapping it would do nothing useful:
+pagination IPC isn't wired). When the first user reports hitting the cap, add the IPC + a real Load-more entry together
+so the affordance actually works.
 
 **Decision**: A portal listing stays single-shot; cancellation via task abort + polled flag **Why**: The
 `Volume::list_directory` contract is "compute Vec, return", and the portal honours it – no `ListingEventSink` streaming
