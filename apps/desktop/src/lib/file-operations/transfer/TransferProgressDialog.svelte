@@ -38,6 +38,7 @@
     import { opKindForTransferType } from '../op-kind'
     import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
     import { hasOtherQueuedWork } from '#lib/file-operations/queue/queue-backlog.js'
+    import { loadProgressDialogHeight, saveProgressDialogHeight } from '#lib/app-status-store.js'
 
     interface Props {
         /** An operation already running that this dialog WATCHES instead of
@@ -370,8 +371,23 @@
         }
     }
 
+    /** The height the user last dragged the dialog to while the tree showed (#428),
+     *  which the tree opens at again; `null` until one has been dragged. While the
+     *  tree is hidden the dialog keeps its natural height (`ModalDialog`). */
+    let rememberedHeight = $state<number | null>(null)
+
+    /** A drag that changed the height while the tree showed is the one worth keeping:
+     *  with the tree hidden the dialog has no height of its own to remember. */
+    function rememberHeight(size: { height: number | null }): void {
+        if (size.height === null || treeOperationId === null || conflictEvent) return
+        void saveProgressDialogHeight(size.height)
+    }
+
     onMount(() => {
         progress.start()
+        void loadProgressDialogHeight().then((height) => {
+            rememberedHeight = height
+        })
     })
 
     onDestroy(() => {
@@ -464,6 +480,8 @@
           }}
     containerStyle={conflictEvent ? conflictDialogWidthStyle(DIALOG_WIDTH_PX) : DIALOG_WIDTH_STYLE}
     resizable={treeOperationId !== null && !conflictEvent ? true : 'horizontal'}
+    restoreHeight={rememberedHeight}
+    onResizeEnd={rememberHeight}
     footer={!isDeleteOrTrash && conflictEvent ? undefined : actions}
 >
     {#snippet title()}

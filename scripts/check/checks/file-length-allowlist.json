@@ -177,8 +177,8 @@
       "reason": "A pure barrel: nothing but `export { … } from './x'` and `export type { … }` across about 40 domain sub-files, one line per re-exported symbol, with zero declarations, imports, or logic anywhere in it. `tauri-commands/CLAUDE.md` makes it the single stable import path precisely so sub-file layout can shift behind it, so its length tracks the IPC surface and cutting it would mean either fewer commands or breaking that contract."
     },
     "apps/desktop/src/lib/ui/ModalDialog.svelte": {
-      "lines": 823,
-      "reason": "The `Props` interface is ~120 script lines whose per-prop docs are this primitive's API contract and can't leave, and the `\u003cstyle\u003e` block (~305 lines) is one primitive's chrome that `ui/CLAUDE.md` pins several rules of. The separable pure part, the edge-and-corner resize geometry, already lives in `modal-resize.ts`; what stays is listener plumbing, focus, and the MCP close registry."
+      "lines": 934,
+      "reason": "The `Props` interface is ~130 script lines whose per-prop docs are this primitive's API contract and can't leave, and the `\u003cstyle\u003e` block (~305 lines) is one primitive's chrome that `ui/CLAUDE.md` pins several rules of. The separable pure part, the edge-and-corner resize geometry, already lives in `modal-resize.ts`; what stays is listener plumbing, focus, the MCP close registry, and the two height effects (parking the user's height while vertical resizing is withdrawn, and taking a caller's remembered one), which read and write the same `resizedSize` state as the drag handlers."
     },
     "apps/desktop/src/routes/(main)/+page.svelte": {
       "lines": 929,

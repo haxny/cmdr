@@ -63,6 +63,15 @@
          */
         resizable?: boolean | 'horizontal'
         /**
+         * A height the user dragged this dialog to before, which the caller kept
+         * (`onResizeEnd`). Taken once, the first time the dialog is vertically
+         * resizable and the user hasn't dragged it yet, and fitted to the window.
+         * May arrive after the dialog opened (it's usually read from disk).
+         */
+        restoreHeight?: number | null
+        /** A resize drag ended at this size (`null` on an axis it never set). */
+        onResizeEnd?: (size: DraggedSize) => void
+        /**
          * Pins the dialog's TOP edge where centering first put it, so a body that
          * grows (a mode switch revealing extra controls) extends downward instead
          * of pushing the title up. The dialog still slides up if it would otherwise
@@ -131,6 +140,8 @@
         ariaDescribedby,
         containerStyle = '',
         resizable = false,
+        restoreHeight = null,
+        onResizeEnd,
         growDownward = false,
         align = 'center',
         fillBody = false,
@@ -264,6 +275,23 @@
         })
     })
 
+    /** The caller's remembered height has been taken, or a drag made it moot. */
+    let restoredHeightTaken = false
+
+    /** The first time the dialog can take height, the one the caller remembered. */
+    $effect(() => {
+        const vertical = resizable === true
+        const height = restoreHeight
+        const el = dialogElement
+        if (!el || !vertical || height === null) return
+        untrack(() => {
+            if (restoredHeightTaken || resizedSize.height !== null || parkedHeight !== null) return
+            restoredHeightTaken = true
+            const limits = resizeLimitsOf(el)
+            resizedSize = { ...resizedSize, height: Math.max(limits.minHeight, Math.min(height, limits.maxHeight)) }
+        })
+    })
+
     /** Where flex centering puts the dialog's top right now. */
     function centeredTop(): number {
         if (!overlayElement || !dialogElement) return 0
@@ -368,6 +396,9 @@
             document.body.style.cursor = ''
             document.body.style.userSelect = ''
             stopActiveDrag = null
+            // The user's own size from here on, whatever the caller remembered.
+            restoredHeightTaken = true
+            onResizeEnd?.({ ...resizedSize })
         }
 
         document.addEventListener('pointermove', handlePointerMove)

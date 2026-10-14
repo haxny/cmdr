@@ -483,6 +483,38 @@ export async function saveLastSettingsSection(section: string[]): Promise<void> 
 }
 
 // ============================================================================
+// Progress dialog height persistence
+// ============================================================================
+
+const PROGRESS_DIALOG_HEIGHT_KEY = 'progressDialogHeight'
+
+/**
+ * The height, in px, the user last dragged the progress dialog to while its
+ * transfer tree showed, or `null` before they ever did. The dialog fits it to
+ * the window it opens in (`ModalDialog`'s `restoreHeight`).
+ */
+export async function loadProgressDialogHeight(): Promise<number | null> {
+  try {
+    const store = await getStore()
+    const height = await store.get(PROGRESS_DIALOG_HEIGHT_KEY)
+    return typeof height === 'number' && Number.isFinite(height) && height > 0 ? height : null
+  } catch {
+    return null
+  }
+}
+
+/** Remembers the height a resize drag of the progress dialog ended at. */
+export async function saveProgressDialogHeight(height: number): Promise<void> {
+  try {
+    const store = await getStore()
+    await store.set(PROGRESS_DIALOG_HEIGHT_KEY, Math.round(height))
+    await store.save()
+  } catch {
+    // Silently fail - persistence is nice-to-have
+  }
+}
+
+// ============================================================================
 // Tab persistence
 // ============================================================================
 

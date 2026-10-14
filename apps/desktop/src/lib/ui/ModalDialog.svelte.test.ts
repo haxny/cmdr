@@ -413,6 +413,83 @@ describe('ModalDialog edge resizing', () => {
     })
   })
 
+  // The progress dialog remembers the height the user dragged it to (#428): the caller
+  // keeps it, the dialog reports a finished drag and takes a remembered height back.
+  describe('with a remembered height', () => {
+    async function mountRemembering(initial: boolean | 'horizontal', restoreHeight: number | null) {
+      const target = document.createElement('div')
+      document.body.appendChild(target)
+      const props = $state<{ resizable: boolean | 'horizontal'; restoreHeight: number | null }>({
+        resizable: initial,
+        restoreHeight,
+      })
+      const onResizeEnd = vi.fn()
+      mount(ModalDialog, {
+        target,
+        props: {
+          titleId: 't',
+          title: titleSnippet,
+          children: bodySnippet,
+          onResizeEnd,
+          get resizable() {
+            return props.resizable
+          },
+          get restoreHeight() {
+            return props.restoreHeight
+          },
+        },
+      })
+      await tick()
+      const panel = target.querySelector<HTMLElement>('.modal-dialog')
+      if (!panel) throw new Error('the panel never mounted')
+      givePanelSize(panel, 400, 300)
+      return { target, panel, props, onResizeEnd }
+    }
+
+    it('opens at it once vertical resizing turns on, and not before', async () => {
+      const { target, panel, props } = await mountRemembering('horizontal', 420)
+      expect(panel.style.height).toBe('')
+
+      props.resizable = true
+      await tick()
+      expect(panel.style.height).toBe('420px')
+      target.remove()
+    })
+
+    it('takes one that arrives after the dialog opened, before any drag', async () => {
+      const { target, panel, props } = await mountRemembering(true, null)
+      props.restoreHeight = 420
+      await tick()
+      expect(panel.style.height).toBe('420px')
+      target.remove()
+    })
+
+    it('fits it to a window that shrank since', async () => {
+      const { target, panel, props } = await mountRemembering('horizontal', 420)
+      panel.style.maxHeight = '320px'
+      props.resizable = true
+      await tick()
+      expect(panel.style.height).toBe('320px')
+      target.remove()
+    })
+
+    it('reports the height a drag ends at', async () => {
+      const { target, onResizeEnd } = await mountRemembering(true, null)
+      await dragBand(target, 's', 0, 60)
+      expect(onResizeEnd).toHaveBeenCalledWith({ width: null, height: 360 })
+      target.remove()
+    })
+
+    it('keeps a height the user dragged to over the remembered one', async () => {
+      const { target, panel, props } = await mountRemembering(true, null)
+      await dragBand(target, 's', 0, 60)
+      props.restoreHeight = 420
+      await tick()
+      expect(panel.style.height).toBe('360px')
+      target.remove()
+    })
+  })
+
   // Dragged past the floor, the panel stops but the pointer doesn't: the offset has to stop
   // with it, or the panel keeps sliding while its size stands still.
   it('floors the height at the chrome plus a readable body', async () => {

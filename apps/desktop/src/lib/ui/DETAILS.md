@@ -99,6 +99,8 @@ Props:
 | `align`               | `'center'` \| `'top'`         | Default `'center'`. `'top'` drops the panel 10vh from the overlay top |
 | `fillBody`            | `boolean`                     | Default `false`. Fixed-height frame; the body absorbs the slack       |
 | `resizable`           | `boolean` \| `'horizontal'`   | Default `false`. Drag any edge or corner; `'horizontal'` locks height |
+| `restoreHeight`       | `number \| null`              | A height the caller remembered; taken once vertical resizing is on    |
+| `onResizeEnd`         | `(size: DraggedSize) => void` | A resize drag ended at this size (`null` on an axis it never set)     |
 | `ownsKeyboard`        | `boolean`                     | Default `false`. Forwards EVERY key to `onkeydown`, Escape included   |
 | `overlayClass`        | `string`                      | Extra class on the overlay, for a shared dialog's stable test hook    |
 | `closeOnOverlayClick` | `boolean`                     | Default `false`. Scrim click dismisses (see § "Scrim clicks")         |
@@ -195,6 +197,10 @@ also what keeps the height content-driven. A dialog never remembers the size it 
   it has one, read back through a detached element's style, never parsed by hand), and the user's height returns with
   `true` if the panel's current `max-height` still fits it. **Why**: the body that used the height is gone, and so are
   the bands that could undo a tall, mostly empty panel.
+- **A caller can remember a height across dialogs** (`onResizeEnd` out, `restoreHeight` in; the progress dialog keeps
+  one in `app-status.json`). It's taken ONCE, the first time the panel is vertically resizable and the user hasn't
+  dragged it yet, fitted between the panel's floor and its current `max-height`; it may arrive late (it's read from
+  disk). A drag in this dialog, or a height set aside above, always wins over it.
 
 The bands carry their direction in `data-direction`, not in a class per edge, so `.resize-band` stays statically
 matchable for Svelte's CSS scoping and the `css-unused` check. Their `cursor` is the single source for which arrow a
