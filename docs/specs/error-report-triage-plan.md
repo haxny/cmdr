@@ -1,5 +1,11 @@
 # Error report triage
 
+❗ **Partly superseded.** The daily email, the M1 agent, and the notification side shipped differently: every report is
+a card on the private reports board (`apps/api-server/DETAILS.md` § The reports repo), one three-hour digest replaces
+Discord, a 06:30 morning brief carries the numbers, and `scripts/report-triage/CLAUDE.md` is the agent. What's still
+open is the signature half below: stable signatures, the registry, regressions, flood dedup, and fix trailers. Build it
+on that pipeline; ignore the Discord and email design here.
+
 **The quest**: Auto-sent error reports land in `#error-reports` one by one, and nothing says whether a report is a bug
 we already fixed, a bug we know about, or something new. The 2026-09-12 pass over 94 Discord-only reports found about 25
 real bugs, about 13 noise sites, and one install's flood of 118, and it took a long manual session to get there. This
