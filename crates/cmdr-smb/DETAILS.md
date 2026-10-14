@@ -1042,10 +1042,23 @@ An unknown-length generated stream bypasses the compound drain. It feeds bounded
 writer, reports `StreamLength::Unknown` with server-confirmed bytes, and succeeds only after `FileWriter::finish` has
 drained, flushed, and closed the handle. Known-length decisions stay unchanged.
 
-SMB does not opt into `supports_atomic_replace_rename()`: `rename(force = true)` calls `clear_rename_destination` before
-the server rename. A validated-file publisher must therefore set the old target aside through the shared tracked
-recovery primitive and land with `force = false`; treating the force flag itself as an atomicity promise would leave the
-final name empty if the second step refused.
+**Decision**: `rename(force = true)` is smb2's `rename_with(replace_if_exists)`, so SMB answers
+`supports_atomic_replace_rename()` true **Why**: the server swaps the source in under the taken name in the same
+SET_INFO that renames it (`ReplaceIfExists`, MS-FSCC § 2.4.42.2), so the old file is never removed in a step of its own
+and a refusal leaves it intact. That's the promise a validated-file publisher needs to land generated output with one
+force rename rather than the tracked aside/restore. It also costs one round trip where the stat-delete-rename it
+replaced cost three (pinned on the wire by `smb_integration_a_forced_rename_replaces_the_file_in_one_frame`).
+
+- **A directory at either end is the one fallback.** smb2 replaces only a file: Samba refuses a directory with
+  `AlreadyExists`, Windows with `AccessDenied`. On either refusal `replacing_rename` stats both ends, and only when one
+  is a directory does it clear the destination (`clear_rename_destination`: delete the file, or the empty directory) and
+  rename plainly. That path isn't atomic and doesn't have to be: the capability promises a FILE. Any other refusal
+  stands as it came, with the original untouched.
+- ❌ **Never clear a destination that names the source under another case.** On a case-insensitive share the destination
+  stat finds the SOURCE, and the delete-first force path deleted it before the rename, so a forced `report.txt` →
+  `Report.txt` lost the file. The replacing rename handles a case-only change in place; `same_name_ignoring_case` keeps
+  the fallback from ever reaching it. Pinned by `smb_integration_a_forced_case_only_rename_keeps_the_file` (red before:
+  `NotFound` after the source was deleted).
 
 **Gotcha/Why**: a test that means to exercise the streaming writer MUST size its file off `negotiated_max_write()`, not
 a literal. The fixture Samba negotiates a `max_write` far above any round number you would reach for, so a "4 MiB,

@@ -113,6 +113,15 @@ fn supports_export_returns_true() {
     assert!(vol.supports_export());
 }
 
+/// A forced rename swaps the file in under its new name in one SET_INFO
+/// (`ReplaceIfExists`), so a publisher can land generated output over the old
+/// file without setting it aside first.
+#[test]
+fn supports_atomic_replace_rename_is_on() {
+    let vol = make_test_volume();
+    assert!(vol.supports_atomic_replace_rename());
+}
+
 /// The opt-in that makes a background SMB copy stand aside for navigation. A copy
 /// and the pane's listings share one SMB session, so without this the transfer
 /// never parks and the share stays sluggish for the whole copy.

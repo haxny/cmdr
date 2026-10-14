@@ -30,8 +30,8 @@ the keychain, mounts, and every human-facing word stay in the app's `network/`.
 - **A copy's date stamps the writer's OWN handle before `finish()`**; ❌ never by path while it's open (its close
   re-stamps).
 - **Unknown-length writes always stream**; success includes `finish`'s server-confirmed count.
-- **SMB force-rename deletes first**, so its atomic-replace capability stays false; publishers use tracked
-  aside/restore.
+- **A forced rename over a file is ONE `ReplaceIfExists` SET_INFO** (`supports_atomic_replace_rename` is true); only a
+  directory at either end clears first. ❌ Never clear a destination that names the source in another case.
 - **One-frame fast paths stop at smb2's quick limits**: a hinted read at `quick_read_limit()` (sized via
   `read_file_compound_sized`), the write promise at `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch
   name never streams (`one_frame_write_limit`).

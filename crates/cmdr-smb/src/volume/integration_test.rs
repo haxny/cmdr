@@ -191,6 +191,121 @@ async fn smb_integration_rename_force_overwrites() {
     vol.delete(Path::new(&dir)).await.unwrap();
 }
 
+/// `(requests_sent, compound_requests_sent)` on the volume's main connection.
+async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
+    let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
+    (
+        d.primary.metrics.requests_sent,
+        d.primary.metrics.compound_requests_sent,
+    )
+}
+
+/// A forced rename over a file is ONE compound frame (CREATE + SET_INFO with
+/// `ReplaceIfExists` + CLOSE) on the wire: the server swaps the file in under the name, so
+/// the destination never goes missing the way it does between a delete and a
+/// rename. That gap is what kept `supports_atomic_replace_rename` off.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_forced_rename_replaces_the_file_in_one_frame() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+    let src = format!("{dir}/notes.txt.tmp");
+    let dst = format!("{dir}/notes.txt");
+    vol.create_file(Path::new(&src), b"new contents").await.unwrap();
+    vol.create_file(Path::new(&dst), b"old contents").await.unwrap();
+
+    let (requests_before, compounds_before) = request_counts(&vol).await;
+    vol.rename(Path::new(&src), Path::new(&dst), true).await.unwrap();
+    let (requests_after, compounds_after) = request_counts(&vol).await;
+
+    // The rename is one CREATE + SET_INFO + CLOSE frame; the second frame is the
+    // stat `notify_mutation` patches the listing with (CREATE + two
+    // QUERY_INFOs + CLOSE). Before, a stat and a delete went out ahead of the
+    // rename: (4, 14).
+    assert_eq!(
+        (compounds_after - compounds_before, requests_after - requests_before),
+        (2, 7),
+        "the replacing rename plus the listing patch's stat, and no delete"
+    );
+    assert!(!vol.exists(Path::new(&src)).await);
+    let landed = drain(vol.open_read_stream(Path::new(&dst)).await.unwrap()).await;
+    assert_eq!(landed, b"new contents");
+
+    vol.delete(Path::new(&dst)).await.unwrap();
+    vol.delete(Path::new(&dir)).await.unwrap();
+}
+
+/// A forced rename that only changes case renames the file in place. Regression
+/// anchor: the force path used to stat the destination, find the SOURCE under
+/// its other spelling on a case-insensitive share, and delete it before the
+/// rename, so the file was gone and the rename then failed.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_forced_case_only_rename_keeps_the_file() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+    let lower = format!("{dir}/report.txt");
+    let upper = format!("{dir}/Report.txt");
+    vol.create_file(Path::new(&lower), b"keep me").await.unwrap();
+
+    vol.rename(Path::new(&lower), Path::new(&upper), true).await.unwrap();
+
+    let names: Vec<String> = vol
+        .list_directory_impl(Path::new(&dir))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert_eq!(names, vec!["Report.txt".to_string()]);
+    let kept = drain(vol.open_read_stream(Path::new(&upper)).await.unwrap()).await;
+    assert_eq!(kept, b"keep me");
+
+    // The same for an (empty) directory, where a refusal would reach the
+    // fallback that clears the destination: the source must survive it.
+    let album = format!("{dir}/album");
+    let album_upper = format!("{dir}/Album");
+    vol.create_directory(Path::new(&album)).await.unwrap();
+    vol.rename(Path::new(&album), Path::new(&album_upper), true)
+        .await
+        .unwrap();
+    assert!(vol.is_directory(Path::new(&album_upper)).await.unwrap());
+
+    vol.delete(Path::new(&album_upper)).await.unwrap();
+    vol.delete(Path::new(&upper)).await.unwrap();
+    vol.delete(Path::new(&dir)).await.unwrap();
+}
+
+/// smb2's replacing rename refuses a directory at either end, so a forced
+/// rename onto an empty directory still clears it first and lands, as it did
+/// before the rename could replace in one step.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_forced_rename_onto_an_empty_directory_still_lands() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    ensure_clean(&vol, &dir).await;
+    vol.create_directory(Path::new(&dir)).await.unwrap();
+    let src = format!("{dir}/photos-new");
+    let dst = format!("{dir}/photos");
+    vol.create_directory(Path::new(&src)).await.unwrap();
+    vol.create_file(Path::new(&format!("{src}/a.jpg")), b"a").await.unwrap();
+    vol.create_directory(Path::new(&dst)).await.unwrap();
+
+    vol.rename(Path::new(&src), Path::new(&dst), true).await.unwrap();
+
+    assert!(!vol.exists(Path::new(&src)).await);
+    assert!(vol.exists(Path::new(&format!("{dst}/a.jpg"))).await);
+
+    vol.delete(Path::new(&format!("{dst}/a.jpg"))).await.unwrap();
+    vol.delete(Path::new(&dst)).await.unwrap();
+    vol.delete(Path::new(&dir)).await.unwrap();
+}
+
 #[tokio::test]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_delete_directory() {

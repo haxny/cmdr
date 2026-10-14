@@ -265,10 +265,9 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   the stage's set comparison can't see it, because one entry shadows the other and both read back as one node. Two
   folders at one path merge and pass. The stage check stays as the backstop. SFTP validates through positioned reads; ADB uses bounded, safely quoted device-side Toybox `dd`
   windows, so neither downloads the staged archive. Cancellation or any mismatch abandons only the owned stage. Local
-  POSIX publishes with its declared atomic replace rename. SMB's force rename deletes first, so despite direct generation it uses the existing tracked
-  `DisplacedDestination`: set the original aside, land without force, restore on refusal, and surface
-  `OriginalsKeptAside` if the shared rescue had to keep it under a stable ` (recovered)` name. Other fallback backends
-  use the same aside path. Stage and aside recovery records carry the real destination volume ID and remain live until
+  POSIX and SMB publish with their declared atomic replace rename (SMB's is one `ReplaceIfExists` SET_INFO). Backends
+  without one use the existing tracked `DisplacedDestination`: set the original aside, land without force, restore on refusal, and surface
+  `OriginalsKeptAside` if the shared rescue had to keep it under a stable ` (recovered)` name. Stage and aside recovery records carry the real destination volume ID and remain live until
   landing, deletion, or rescue settles. No sole good copy remains in reapable temp space. After publication, the
   driver notifies the final archive path (never the hidden stage) and journals that same target.
 

@@ -323,7 +323,7 @@ At-a-glance view of which capabilities each current volume opts into. Use this w
 | `supports_streaming` | yes | yes | yes | yes | yes | yes |
 | `supports_unknown_length_writes` | yes | no | yes | no | no | yes: multipart, or one PUT for a short stream |
 | `publishes_writes_whole` | no | no | no | no (knob: `with_whole_publish`) | no | yes: PUT and multipart completion |
-| `supports_atomic_replace_rename` | yes | no | no | no | no | no |
+| `supports_atomic_replace_rename` | yes | no | yes: `ReplaceIfExists` | no | no | no |
 | `open_read_stream` | yes: spawn_blocking | yes: owned download | yes: channel-backed | yes: in-memory | yes: core `ArchiveEntryReader` | yes: ranged GET, body pulled per chunk |
 | `read_range` | yes: `pread` | yes: `GetPartialObject64` | yes: positioned READ | no | no | yes: ranged GET |
 | `supports_share_links` | no | no | no | no | no | yes: presigned GET, signed offline |

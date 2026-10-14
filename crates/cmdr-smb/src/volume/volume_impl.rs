@@ -403,6 +403,14 @@ impl Volume for SmbVolume {
         true
     }
 
+    /// A forced rename over a file is one `ReplaceIfExists` SET_INFO, so the
+    /// old file is never removed in a step of its own (`mutation.rs`
+    /// `replacing_rename`). Only a directory at either end falls back to
+    /// clearing first, and the promise is about files.
+    fn supports_atomic_replace_rename(&self) -> bool {
+        true
+    }
+
     /// The server copies for itself (copychunk, `copy.rs`); ❗ `NotSupported` on a
     /// server without it, the caller's signal to stream the file instead.
     fn copy_within<'a>(

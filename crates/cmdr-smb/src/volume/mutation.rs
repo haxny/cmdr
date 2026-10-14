@@ -139,8 +139,8 @@ impl SmbVolume {
         Ok(())
     }
 
-    /// Renames or moves an entry, optionally clearing the destination first,
-    /// then tells the panes about both ends.
+    /// Renames or moves an entry, replacing what's at the destination when
+    /// `force`, then tells the panes about both ends.
     pub(super) async fn rename_impl(&self, from: &Path, to: &Path, force: bool) -> Result<(), VolumeError> {
         let smb_from = self.to_smb_path(from)?;
         let smb_to = self.to_smb_path(to)?;
@@ -151,7 +151,7 @@ impl SmbVolume {
         );
 
         if force {
-            self.clear_rename_destination(&smb_to).await?;
+            self.replacing_rename(&smb_from, &smb_to).await?;
         } else {
             // Check if dest exists and return AlreadyExists if so
             let dest_exists = {
@@ -161,23 +161,79 @@ impl SmbVolume {
             if dest_exists {
                 return Err(VolumeError::AlreadyExists(to.display().to_string()));
             }
-        }
-
-        {
-            let (tree, mut conn) = self.clone_session().await?;
-            let r = tree.rename(&mut conn, &smb_from, &smb_to).await;
-            // `AlreadyExists` is about the DESTINATION, everything else about the
-            // source, the same split `local_posix.rs::rename_error` makes.
-            let path_at_fault = if matches!(r, Err(ref e) if e.kind() == smb2::ErrorKind::AlreadyExists) {
-                &smb_to
-            } else {
-                &smb_from
-            };
-            self.handle_smb_result("rename", path_at_fault, r)?;
+            self.plain_rename(&smb_from, &smb_to).await?;
         }
 
         self.notify_renamed(from, to).await;
         Ok(())
+    }
+
+    /// One rename that refuses a taken name.
+    async fn plain_rename(&self, smb_from: &str, smb_to: &str) -> Result<(), VolumeError> {
+        let (tree, mut conn) = self.clone_session().await?;
+        let r = tree.rename(&mut conn, smb_from, smb_to).await;
+        self.handle_rename_result(smb_from, smb_to, r)
+    }
+
+    /// A forced rename: the server swaps the source in under `smb_to` in the
+    /// same step that renames it (`ReplaceIfExists`), so a file at the
+    /// destination is never missing and never removed on its own. That's what
+    /// makes `supports_atomic_replace_rename` true.
+    ///
+    /// smb2 refuses a directory at either end (Samba with `AlreadyExists`,
+    /// Windows with `AccessDenied`), and only then does this fall back to
+    /// clearing the destination first, which is not atomic and doesn't have to
+    /// be: the trait promises atomicity for a FILE. A destination that names the
+    /// source itself under another case is never cleared: on a case-insensitive
+    /// share that would delete the source.
+    async fn replacing_rename(&self, smb_from: &str, smb_to: &str) -> Result<(), VolumeError> {
+        let replace = smb2::RenameOptions::new().replace_if_exists(true);
+        let r = {
+            let (tree, mut conn) = self.clone_session().await?;
+            tree.rename_with(&mut conn, smb_from, smb_to, replace).await
+        };
+        let refused_for_a_directory = match &r {
+            Err(e) if matches!(e.kind(), smb2::ErrorKind::AlreadyExists | smb2::ErrorKind::AccessDenied) => {
+                !same_name_ignoring_case(smb_from, smb_to) && self.either_end_is_a_directory(smb_from, smb_to).await
+            }
+            _ => false,
+        };
+        if !refused_for_a_directory {
+            return self.handle_rename_result(smb_from, smb_to, r);
+        }
+        self.clear_rename_destination(smb_to).await?;
+        self.plain_rename(smb_from, smb_to).await
+    }
+
+    /// Whether a stat says either end of a rename is a directory. A stat that
+    /// fails says no: the refusal then stands as it came.
+    async fn either_end_is_a_directory(&self, smb_from: &str, smb_to: &str) -> bool {
+        for path in [smb_from, smb_to] {
+            let (tree, mut conn) = match self.clone_session().await {
+                Ok(pair) => pair,
+                Err(_) => return false,
+            };
+            if tree.stat(&mut conn, path).await.is_ok_and(|info| info.is_directory) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// `AlreadyExists` is about the DESTINATION, everything else about the
+    /// source, the same split `local_posix.rs::rename_error` makes.
+    fn handle_rename_result(
+        &self,
+        smb_from: &str,
+        smb_to: &str,
+        r: Result<(), smb2::Error>,
+    ) -> Result<(), VolumeError> {
+        let path_at_fault = if matches!(r, Err(ref e) if e.kind() == smb2::ErrorKind::AlreadyExists) {
+            smb_to
+        } else {
+            smb_from
+        };
+        self.handle_smb_result("rename", path_at_fault, r)
     }
 
     /// Removes whatever sits at `smb_to`, so a forced rename can land on it.
@@ -329,4 +385,11 @@ impl SmbVolume {
             }
         }
     }
+}
+
+/// Whether two share paths name the same entry on a case-insensitive share.
+/// Folds case only, never Unicode form: SMB names are opaque bytes
+/// (`DETAILS.md` § "SMB names are opaque bytes").
+fn same_name_ignoring_case(a: &str, b: &str) -> bool {
+    a.to_lowercase() == b.to_lowercase()
 }
