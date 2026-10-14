@@ -34,11 +34,13 @@ automate it, and survives `oxfmt` (which collapses whitespace in regular markdow
   automatically now, but check anyway in case advisories slipped past it. Frequency: monthly with the dep sweep, plus
   immediately for any high-severity advisory.
 - **Two advisory scanners, on purpose different scopes**: `cargo-deny` (every `pnpm check`) reads the macOS-only graph
-  `deny.toml` pins, so it fails fast on a vulnerability that reaches a shipped binary and stays quiet about the Linux
-  GTK3 stack. `osv-scanner` (every `pnpm check`, `advisories.yml` daily, plus `slow-checks.yml`) sweeps EVERY tracked
-  lockfile, the same sweep OpenSSF Scorecard's Vulnerabilities check makes, so it's the one that surfaces Linux-only,
-  dev-only, and side-lockfile (`fuzz/`, `benchmarks/`) advisories. A finding in osv but not deny means "real, but
-  nothing we ship links it": upgrade it anyway when you can (Scorecard counts it), else ignore it with a reason.
+  `deny.toml` pins, so it flags a vulnerability that reaches a shipped binary and stays quiet about the Linux GTK3
+  stack. Both scanners (and `govulncheck`) warn while an advisory's fix is under six days old, then fail
+  (`scripts/check/checks/DETAILS.md`, the fix-age decision). `osv-scanner` (every `pnpm check`, `advisories.yml` daily,
+  plus `slow-checks.yml`) sweeps EVERY tracked lockfile, the same sweep OpenSSF Scorecard's Vulnerabilities check makes,
+  so it's the one that surfaces Linux-only, dev-only, and side-lockfile (`fuzz/`, `benchmarks/`) advisories. A finding
+  in osv but not deny means "real, but nothing we ship links it": upgrade it anyway when you can (Scorecard counts it),
+  else ignore it with a reason.
 - **Review the `osv-scanner.toml` ignores**: one beside each lockfile, each entry with its reason and removal condition.
   `RUSTSEC-2023-0071` (the Marvin timing attack in `rsa`, via `russh`) keeps its full analysis in the matching
   `deny.toml` ignore entry, so start there; if the upstream fix landed, remove both. Frequency: quarterly, batched with

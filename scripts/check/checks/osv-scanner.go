@@ -21,7 +21,7 @@ import (
 // keeps that score honest. Accepted advisories live in the `osv-scanner.toml` beside each
 // lockfile, each with its reason.
 //
-// It shares govulncheck's fix-age policy (`vuln-fix-age.go`): a new advisory warns while its fix
+// It shares govulncheck's and cargo-deny's fix-age policy (`vuln-fix-age.go`): a new advisory warns while its fix
 // is under six days old, then fails. A warning is never cached and a pass is trusted for a day
 // (`advisoryCacheTTL`), so a fresh advisory surfaces on the next daily run without failing CI
 // the morning it's published.
@@ -66,23 +66,9 @@ func RunOSVScanner(ctx *CheckContext) (CheckResult, error) {
 		}
 	}
 	sort.Strings(blockingLines)
-	waitingLines, waitingCount := formatPendingFixes(pending)
-
-	if len(blockingLines) > 0 {
-		lines := append(blockingLines,
-			"", "Upgrade past the fix, or, if it can't reach what we ship, ignore it with a reason in the osv-scanner.toml beside that lockfile.")
-		if len(waitingLines) > 0 {
-			lines = append(append(lines, "", "Also not failing yet:"), waitingLines...)
-		}
-		return CheckResult{}, fmt.Errorf("osv-scanner found vulnerabilities\n%s", indentOutput(strings.Join(lines, "\n")))
-	}
-	if waitingCount > 0 {
-		msg := fmt.Sprintf("%d %s whose fix is under six days old; upgrade once it's adoptable, before it fails\n%s",
-			waitingCount, Pluralize(waitingCount, "vulnerability", "vulnerabilities"),
-			indentOutput(strings.Join(waitingLines, "\n")))
-		return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: waitingCount, Changes: -1}, nil
-	}
-	return Success("No known vulnerabilities in any tracked lockfile"), nil
+	return vulnVerdict("osv-scanner", blockingLines,
+		"Upgrade past the fix, or, if it can't reach what we ship, ignore it with a reason in the osv-scanner.toml beside that lockfile.",
+		pending, "No known vulnerabilities in any tracked lockfile")
 }
 
 func stderrOf(err error) []byte {
@@ -195,6 +181,28 @@ func osvGroupAdvisory(pkg osvPackage, ids []string) vulnAdvisory {
 		}
 	}
 	return a
+}
+
+// osvFixFor fills in a's fix and publish date from its OSV record, read the same way an
+// osv-scanner finding is, so cargo-deny and osv-scanner agree on which upgrade clears it. a keeps
+// its own summary.
+func osvFixFor(a vulnAdvisory, v osvVulnerability) vulnAdvisory {
+	var pkg osvPackage
+	pkg.Package.Name, pkg.Package.Version, pkg.Package.Ecosystem = a.Module, a.Version, a.Ecosystem
+	pkg.Vulnerabilities = []osvVulnerability{v}
+	filled := osvGroupAdvisory(pkg, []string{a.ID})
+	a.FixedVersion, a.Published = filled.FixedVersion, filled.Published
+	return a
+}
+
+// osvFix looks a's ID up in the OSV database and fills in its fix (`osvFixFor`). A record it
+// can't fetch leaves a without one, which fails it: waiting is only for a fix that provably exists.
+func (r *registryReleaseTimes) osvFix(a vulnAdvisory) vulnAdvisory {
+	var v osvVulnerability
+	if !r.getJSON("https://api.osv.dev/v1/vulns/"+url.PathEscape(a.ID), &v) || v.ID != a.ID {
+		return a
+	}
+	return osvFixFor(a, v)
 }
 
 // osvFixedVersion is the fix for the affected range `version` falls in, or "" when no range

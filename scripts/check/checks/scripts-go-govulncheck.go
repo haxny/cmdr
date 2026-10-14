@@ -73,27 +73,10 @@ func RunGovulncheck(ctx *CheckContext) (CheckResult, error) {
 		}
 	}
 	sort.Strings(blockingLines)
-	waitingLines, waitingCount := formatPendingFixes(waiting)
-
-	if len(blockingLines) > 0 {
-		lines := blockingLines
-		if len(waitingLines) > 0 {
-			lines = append(append(lines, "", "Also not failing yet:"), waitingLines...)
-		}
-		return CheckResult{}, fmt.Errorf("govulncheck found vulnerabilities\n%s", indentOutput(strings.Join(lines, "\n")))
-	}
-
-	if waitingCount > 0 {
-		msg := fmt.Sprintf("%d %s whose fix is under six days old; upgrade once it's adoptable, before it fails\n%s",
-			waitingCount, Pluralize(waitingCount, "vulnerability", "vulnerabilities"),
-			indentOutput(strings.Join(waitingLines, "\n")))
-		return CheckResult{Code: ResultWarning, Message: msg, Total: modCount, Issues: waitingCount, Changes: -1}, nil
-	}
-
-	result := Success(fmt.Sprintf("%d %s, no vulns",
-		modCount, Pluralize(modCount, "module", "modules")))
+	result, err := vulnVerdict("govulncheck", blockingLines, "", waiting,
+		fmt.Sprintf("%d %s, no vulns", modCount, Pluralize(modCount, "module", "modules")))
 	result.Total = modCount
-	return result, nil
+	return result, err
 }
 
 type govulnMessage struct {

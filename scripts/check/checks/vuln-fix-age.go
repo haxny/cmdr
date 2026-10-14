@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// The fix-age policy the vulnerability lanes share (`govulncheck`, `osv-scanner`): an advisory
+// The fix-age policy the vulnerability lanes share (`govulncheck`, `osv-scanner`, `cargo-deny`): an advisory
 // warns while its fix is too fresh to adopt, keeps warning for a grace period once it's
 // adoptable, and fails after that. A warning is never cached, so the lane turns red on its own.
 
@@ -109,4 +109,31 @@ func splitByFixAge(
 		blocking = append(blocking, a)
 	}
 	return blocking, waiting
+}
+
+// vulnVerdict turns a lane's sorted blocking lines and its pending fixes into the shared
+// verdict: any blocking line fails (`remedy` says what to do about it, "" for nothing, and the
+// waiting ones ride along), a waiting one alone warns, and nothing at all passes with okMessage.
+func vulnVerdict(
+	tool string, blockingLines []string, remedy string,
+	pending map[vulnPendingFix]*vulnPendingGroup, okMessage string,
+) (CheckResult, error) {
+	waitingLines, waitingCount := formatPendingFixes(pending)
+	if len(blockingLines) > 0 {
+		lines := blockingLines
+		if remedy != "" {
+			lines = append(lines, "", remedy)
+		}
+		if len(waitingLines) > 0 {
+			lines = append(append(lines, "", "Also not failing yet:"), waitingLines...)
+		}
+		return CheckResult{}, fmt.Errorf("%s found vulnerabilities\n%s", tool, indentOutput(strings.Join(lines, "\n")))
+	}
+	if waitingCount > 0 {
+		msg := fmt.Sprintf("%d %s whose fix is under six days old; upgrade once it's adoptable, before it fails\n%s",
+			waitingCount, Pluralize(waitingCount, "vulnerability", "vulnerabilities"),
+			indentOutput(strings.Join(waitingLines, "\n")))
+		return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: waitingCount, Changes: -1}, nil
+	}
+	return Success(okMessage), nil
 }

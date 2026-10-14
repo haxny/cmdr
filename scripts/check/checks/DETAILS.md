@@ -2108,8 +2108,8 @@ doubles as production code.
   `go.mod` floors disagree with each other, or when a floor exceeds the pinned toolchain)
 - **Other / Security**: workflows-hardening (SHA-pinning, no `pull_request_target`, job-scoped `id-token: write`,
   read-only workflow-level `permissions:`, CodeQL also on `pull_request`), osv-scanner (every tracked lockfile against
-  OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck), scorecard-local (Scorecard's
-  file-based checks on the tracked tree, against `scorecard-local-baseline.json`)
+  OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck and cargo-deny),
+  scorecard-local (Scorecard's file-based checks on the tracked tree, against `scorecard-local-baseline.json`)
 
 ## The single source for the Go version
 
@@ -2260,18 +2260,22 @@ actually reachable from the code (low false positive rate), where `osv-scanner` 
 cmdr's Go modules are dep-free tooling scripts but still call into the Go stdlib, which gets its own CVEs; the check
 found 7 real reachable stdlib vulns the first time it ran (fixed by bumping mise's Go pin).
 
-**Decision**: a `govulncheck` or `osv-scanner` advisory whose fix is under six days old warns instead of failing,
-locally and in CI. The policy lives in `vuln-fix-age.go`; `osv-scanner` dates a crate, npm, or PyPI fix by its
-registry's publish time. **Why**: the repo holds every dependency to a three-day release-age window (pnpm's
+**Decision**: a `govulncheck`, `osv-scanner`, or `cargo-deny` advisory whose fix is under six days old warns instead of
+failing, locally and in CI. The policy and the shared verdict (`vulnVerdict`) live in `vuln-fix-age.go`; `osv-scanner`
+dates a crate, npm, or PyPI fix by its registry's publish time. `cargo-deny`'s JSON names no fix, so it looks each
+advisory up on `api.osv.dev` by ID, reads the fix exactly as an `osv-scanner` finding (`osvFixFor`), and dates it on
+crates.io; a record it can't fetch fails, and a license, ban, or source failure fails at once, with cargo-deny's human
+report. It joined the other two after `rustls` 0.23.46 (2026-10-14) turned it red on day zero while `osv-scanner` warned
+on the same four advisories (#433). **Why**: the repo holds every dependency to a three-day release-age window (pnpm's
 `minimum-release-age`, Renovate's `minimumReleaseAge`), so failing on day zero demands an upgrade the policy forbids,
 and turned `slow-checks` red for everyone (go1.27.2, 2026-10-08). Failing the moment the fix turns adoptable would leave
 no time to upgrade either, so the warning runs three more days (`vulnUpgradeGrace`, David's call, 2026-10-11); each line
 names when its fix is adoptable and when it fails. A stdlib fix is dated by its advisory's `published` (the Go team
 publishes them with the point release); the proxy's `golang.org/toolchain` times can't stand in, since they predate the
 release by days. A module fix is dated by the proxy's `.info` for the fixed version. No fix, or one the check can't
-date, still fails. Warnings are never cached, so the lane turns red by itself on the first run after the six days. It
-reads the `-format json` stream and counts only findings whose innermost frame names a function, the same bar text mode
-fails on.
+date, still fails. Warnings are never cached, so the lane turns red by itself on the first run after the six days.
+`govulncheck` reads the `-format json` stream and counts only findings whose innermost frame names a function, the same
+bar text mode fails on.
 
 **Decision**: `cfg-gate` check to catch ungated macOS-only imports. **Why**: Rust code naming something absent from the
 Linux build compiles fine on macOS and fails on Linux if the `use` isn't wrapped in `#[cfg(target_os = "macos")]`. CI
