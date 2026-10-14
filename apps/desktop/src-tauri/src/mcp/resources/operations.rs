@@ -116,15 +116,14 @@ pub(crate) fn build_operations_yaml(rows: &[OperationRow], now_ms: u64) -> Strin
             row.snapshot.operation_id
         ));
         // Source / destination summaries help the agent tell operations apart.
-        // Redacted like every other user path in `cmdr://state`.
+        // Verbatim: they're the names the queue window shows the user, and an
+        // agent must be able to name what's being copied when the user asks
+        // (`resources/DETAILS.md` § "What renders verbatim").
         if let Some(source) = &row.snapshot.source {
-            yaml.push_str(&format!("    source: {:?}\n", crate::redact::redact_line(source)));
+            yaml.push_str(&format!("    source: {source:?}\n"));
         }
         if let Some(destination) = &row.snapshot.destination {
-            yaml.push_str(&format!(
-                "    destination: {:?}\n",
-                crate::redact::redact_line(destination)
-            ));
+            yaml.push_str(&format!("    destination: {destination:?}\n"));
         }
         // Why a retained `failed` row stopped. The typed variant's own name, the
         // same one the frontend renders its wording from — ❌ never a sentence.
@@ -139,9 +138,9 @@ pub(crate) fn build_operations_yaml(rows: &[OperationRow], now_ms: u64) -> Strin
         if let Some(op) = &row.progress {
             yaml.push_str(&format!("    progress: {}\n", progress_line(op)));
             if let Some(file) = &op.current_file {
-                // Filenames can carry PII (device names, person names); same
-                // redaction contract as `recentErrors` and `cmdr://logs`.
-                yaml.push_str(&format!("    currentFile: {:?}\n", crate::redact::redact_line(file)));
+                // Verbatim, like the summaries above: "which file is it on?" is
+                // a question the user asks through the agent.
+                yaml.push_str(&format!("    currentFile: {file:?}\n"));
             }
             let elapsed_s = now_ms.saturating_sub(op.started_at) / 1000;
             if elapsed_s > 0 && op.bytes_done > 0 {
@@ -228,9 +227,8 @@ fn pending_conflict_yaml(conflict: &WriteConflictEvent) -> String {
     let mut yaml = String::from("    pendingConflict:\n");
     yaml.push_str(&format!("      conflictId: {}\n", conflict.conflict_id.0));
     // Verbatim, like the pane's own `path:` and `files:` in this same resource
-    // (`resources/mod.rs`), ❌ NOT redacted like the `source:` / `destination:`
-    // summaries above. `redact_line` turns a path into `/tmp/<dir>/<file>.txt`,
-    // and a clash an agent can't name is a clash it can't answer: it would be
+    // (`resources/mod.rs`) and the row's summaries above. `redact_line` turns a
+    // path into `/tmp/<dir>/<file>.txt`, and a clash an agent can't name is a clash it can't answer: it would be
     // choosing between skip and overwrite for a file it can't see, over a
     // decision that destroys data. Nothing is protected by hiding it either —
     // the same read already lists that directory by name.

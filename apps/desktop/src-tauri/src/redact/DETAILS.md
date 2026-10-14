@@ -72,7 +72,7 @@ unchanged.
 
 ## Decision: one policy; the context only salts tokens
 
-Unsalted `redact_line` (ordinary MCP logs, operation summaries, listing failures, the crash hook) and
+Unsalted `redact_line` (ordinary MCP logs, listing failures, the crash hook) and
 `RedactionContext::redact_line` (crash and error reports) run the same dispatch: complete remote references,
 structured identities, derived IDs, home roles, external-text fields and their cap. The only difference is the token:
 `<dir>` against `<dir:T>`. `unsalted_api_runs_the_report_policy_with_bare_tokens` asserts the two agree, modulo hashes.

@@ -29,8 +29,8 @@ stores (`resources/CLAUDE.md`).
   answer it.
 - **Action tools wait for a typed ack before returning `OK`**: it means the FE accepted the action, not that it
   finished; poll `await` for that.
-- **Resource builders redact with unsalted `crate::redact::redact_line`**, never report-local `RedactionContext`:
-  same policy, bare tokens. `../redact/DETAILS.md`.
+- **Resources render the user's paths verbatim and redact only raw diagnostic text** (logs, listing errors), with
+  unsalted `crate::redact::redact_line`, never report-local `RedactionContext`. `resources/CLAUDE.md`.
 - **Interactive rebinds bind-new-before-stop** (`rebind_interactive`, `BindMode::Exact`), so a busy port drops no
   in-flight request; startup uses `ProbeOnCollision`. Live MCP control only works from the settings window.
 

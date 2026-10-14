@@ -116,13 +116,14 @@ fn running_op_shows_status_progress_speed_and_eta() {
 }
 
 #[test]
-fn operation_paths_redact_remote_references_and_ids_with_bare_tokens() {
+fn operation_summaries_and_current_file_render_verbatim() {
+    // An agent answering "what is Cmdr copying right now?" has to be able to name
+    // it: `redact_line` would turn these into `<file>.pdf` and `<dir>`.
     let mut operation = snapshot("op-remote", LifecycleStatus::Running);
-    operation.source =
-        Some("sftp://ada:secret@files.example.test:2222/home/ada/report.pdf?token=secret#customer".to_string());
-    operation.destination = Some("webdav://nas.local/dav/ada/report.pdf?owner=ada@example.test#customer".to_string());
+    operation.source = Some("Ada Lovelace taxes 2025.pdf (3 items)".to_string());
+    operation.destination = Some("ada-nas.local".to_string());
     let mut live = progress("op-remote", LifecycleStatus::Running, 0, 0, 0, 0);
-    live.current_file = Some("smb-nas-private-445-client-0123456789abcdef".to_string());
+    live.current_file = Some("/Users/ada/Documents/Ada Lovelace taxes 2025.pdf".to_string());
     let yaml = build_operations_yaml(
         &[OperationRow {
             snapshot: operation,
@@ -141,10 +142,10 @@ fn operation_paths_redact_remote_references_and_ids_with_bare_tokens() {
             "  - operationId: op-remote\n",
             "    type: copy\n",
             "    status: running\n",
-            "    source: \"sftp://<user>:<credential>@<host>:2222/<dir>/<dir>/<file>.pdf?<query>=<query>#<fragment>\"\n",
-            "    destination: \"webdav://<host>.local/<dir>/<dir>/<file>.pdf?<query>=<query>#<fragment>\"\n",
+            "    source: \"Ada Lovelace taxes 2025.pdf (3 items)\"\n",
+            "    destination: \"ada-nas.local\"\n",
             "    progress: scanning\n",
-            "    currentFile: \"smb-<volume-id>\"\n",
+            "    currentFile: \"/Users/ada/Documents/Ada Lovelace taxes 2025.pdf\"\n",
             "    elapsedSeconds: 0\n",
         )
     );
