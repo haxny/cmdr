@@ -37,11 +37,13 @@ import {
   expectAndDismissToast,
   getFixtureRoot,
   moveCursorToFile,
+  openQueueWindow,
+  QUEUE_WINDOW_LABEL,
   TRANSFER_DIALOG,
 } from './helpers.js'
 import type { TauriPage } from '@srsholmes/tauri-playwright'
 
-const QUEUE_LABEL = 'queue'
+const QUEUE_LABEL = QUEUE_WINDOW_LABEL
 /** The progress dialog (NOT the destination picker `TRANSFER_DIALOG`). */
 const PROGRESS_DIALOG = '[data-dialog-id="transfer-progress"]'
 
@@ -149,16 +151,6 @@ async function readFailureReason(queuePage: TauriPage): Promise<string> {
     return reason ? reason.textContent.replace(/\\s+/g, ' ').trim() : '';
   })()`)
   return text as string
-}
-
-/** Opens (or raises) the queue window the way the menu and the palette do. */
-async function openQueueWindow(main: TauriPage): Promise<TauriPage> {
-  await main.evaluate(`(function() {
-    window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
-      event: 'execute-command', payload: { commandId: 'queue.show' }
-    });
-  })()`)
-  return main.waitForWindow((w) => w.label === QUEUE_LABEL, { timeout: waitBudget(10000) })
 }
 
 async function clickRowButton(queuePage: TauriPage, operationId: string, ariaLabel: string): Promise<void> {

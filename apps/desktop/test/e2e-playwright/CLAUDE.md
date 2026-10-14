@@ -20,8 +20,8 @@ Linux (Docker), so a modifier key comes from `CTRL_OR_META`, ❌ never a hardcod
   "The load-scaled wait budget".
 - **Close the onboarding wizard from a `finally`** (`closeOnboardingWizardIfOpen`), or it wedges the shard. Match its
   rows by `data-checklist-item`, ❌ never by label.
-- **Drive viewer and settings through the real multi-window flow** (`openViewerWindow`, `openSettingsWindowViaProd`,
-  `closeScopedWindow`), ❌ never by routing the main window there.
+- **Drive viewer, settings, and queue through the real multi-window flow** (`openViewerWindow`,
+  `openSettingsWindowViaProd`, `openQueueWindow`, `closeScopedWindow`), ❌ never by routing the main window there.
 - **`ensureAppReady()` resets route, volume, and directories.** File-op specs add `recreateFixtures()` and
   `expectedLeftPaneEntries(fixtureRoot)`. DETAILS § "Fixture-churn readiness".
 - **To focus a pane, click its `.file-pane` and read `.is-focused` back**, ❌ never `pane.switch` or `cmdr://state`'s

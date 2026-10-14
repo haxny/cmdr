@@ -53,6 +53,22 @@ export async function openSettingsWindowViaProd(tauriPage: TauriPage): Promise<T
   return tauriPage.waitForWindow((w) => w.label === 'settings', { timeout: waitBudget(10000) })
 }
 
+/** The operation-queue window's stable label. */
+export const QUEUE_WINDOW_LABEL = 'queue'
+
+/**
+ * Opens (or raises) the operation-queue window the way the menu and the command palette do
+ * (the `queue.show` command), and returns a TauriPage scoped to it.
+ */
+export async function openQueueWindow(tauriPage: TauriPage): Promise<TauriPage> {
+  await tauriPage.evaluate(`(function() {
+        window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
+            event: 'execute-command', payload: { commandId: 'queue.show' }
+        });
+    })()`)
+  return tauriPage.waitForWindow((w) => w.label === QUEUE_WINDOW_LABEL, { timeout: waitBudget(10000) })
+}
+
 /**
  * Closes a scoped window (viewer or settings) and waits for it to disappear
  * from the window list. `mainPage` is needed for the post-close `listWindows()`

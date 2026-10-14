@@ -25,8 +25,10 @@ import {
   ensureAppReady,
   executeViaCommandPalette,
   moveCursorToFile,
+  openQueueWindow,
   openSettingsWindowViaProd,
   openViewerWindow,
+  QUEUE_WINDOW_LABEL,
   pollUntil,
   sleep,
   CTRL_OR_META,
@@ -561,6 +563,23 @@ for (const mode of ['light', 'dark'] as const) {
         expect(all, `Found ${String(all.length)} violation(s) in file viewer (${mode})`).toHaveLength(0)
       } finally {
         await closeScopedWindow(tauriPage as TauriPage, viewer, viewerLabel)
+      }
+    })
+
+    test(`Operation queue window`, async ({ tauriPage }) => {
+      await ensureAppReady(tauriPage)
+
+      // The empty queue: toolbar, title, and empty state. The rows have their own tier-3
+      // audits (`QueueRow.a11y.test.ts`, `routes/queue/queue.a11y.test.ts`).
+      const queue = await openQueueWindow(tauriPage as TauriPage)
+      try {
+        await queue.waitForSelector('.queue-window', 3000)
+        await queue.waitForSelector('.empty-state', 3000)
+
+        const { all } = await runAxeAudit(queue, `Operation queue window (${mode})`)
+        expect(all, `Found ${String(all.length)} violation(s) in operation queue window (${mode})`).toHaveLength(0)
+      } finally {
+        await closeScopedWindow(tauriPage as TauriPage, queue, QUEUE_WINDOW_LABEL)
       }
     })
   })
