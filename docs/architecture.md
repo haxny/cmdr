@@ -613,6 +613,8 @@ re-sanitizes; clients sanitize to reject bad input before a round-trip.
 - `threat-model.md`: the whole-app view: assets, actors, trust boundaries with their mitigations, and the ranked
   residual risks
 - `security.md`: the per-area mechanisms the threat model points to (entitlements, redaction, cloud AI egress, keys)
+- `open-source-policy.md`: the public open source program (OpenChain license compliance and security assurance): policy,
+  procedures, roles, and the requirement map. Human-facing, so David reviews its wording
 
 ## Tooling and infrastructure
 
