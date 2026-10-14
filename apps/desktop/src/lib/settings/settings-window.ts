@@ -233,15 +233,15 @@ export async function openSettingsWindow(surface: SettingsSurface, section?: str
   // behind the translucent webview. `setEffects` is the explicit IPC path and
   // reliably installs the material; the `core:window:allow-set-effects`
   // permission is granted in `capabilities/settings.json`. Radius matches
-  // `--radius-xxl` in `app.css` so the NSWindow corner curve and the webview's
-  // CSS clip line up exactly.
+  // `--radius-window` in `app.css` (the file viewer's stock corner) so the
+  // NSWindow corner curve and the webview's CSS clip line up exactly.
   if (!reduceTransparency) {
     void win.once('tauri://created', () => {
       void win
         .setEffects({
           effects: [Effect.Sidebar],
           state: EffectState.FollowsWindowActiveState,
-          radius: 29,
+          radius: 16,
         })
         .catch((error: unknown) => {
           log.warn('Failed to apply window effects: {error}', { error: String(error) })

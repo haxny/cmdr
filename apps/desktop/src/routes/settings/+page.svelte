@@ -496,7 +496,7 @@
            `windowEffects.radius` in `settings-window.ts`. Without this the
            content's edges would square-clip against the rounded NSWindow
            corners and leak vibrancy through the gap. */
-        border-radius: var(--radius-xxl);
+        border-radius: var(--radius-window);
     }
 
     .settings-layout {
@@ -504,7 +504,8 @@
         flex: 1;
         overflow: hidden;
         /* 8 px of breathing room (`--spacing-sm`) on all four sides — the
-           sidebar's own `border-radius: var(--radius-xl)` makes it float
+           sidebar's own radius (the window's minus this padding, so the
+           gap keeps one thickness around the corner) makes it float
            visibly inside this padded frame. Vibrancy peeks through the gap.
            Padding lives here (not on `.settings-window`) so the drag-region
            strip can extend edge-to-edge over the window's top, including the

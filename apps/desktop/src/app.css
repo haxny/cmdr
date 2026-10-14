@@ -477,6 +477,12 @@
      the NSWindow does (no square-corner vibrancy leak). Matches Apple's
      Sequoia/Tahoe stock material-panel window radius. */
   --radius-xxl: 29px;
+  /* A stock titled NSWindow's corner: what the file viewer gets from the OS, and
+     what the Settings window mirrors via `windowEffects.radius` in
+     `settings-window.ts` so the two read as the same kind of window
+     (verified on macOS 27.0, `NSWindow._cornerRadius` with and without
+     `fullSizeContentView` or a toolbar, 2026-10-14). */
+  --radius-window: 16px;
   --radius-full: 9999px;
 
   /* === Text fields ===
@@ -532,13 +538,14 @@
 
   /* === Dialog chrome (every `ModalDialog`) ===
      A modal's corner, inset, and edge read as one contract, so they're named
-     tokens instead of reaching into the generic scales. The radius sits just
-     under the window-level `--radius-xxl`; the inset is deliberately tighter
+     tokens instead of reaching into the generic scales. The radius sits
+     between a stock window's `--radius-window` and the material-panel
+     `--radius-xxl`; the inset is deliberately tighter
      than `--spacing-xl`. macOS draws a panel's edge as TWO hairlines, a darker
      one outside and a lighter one just inside, which `ModalDialog` renders as a
      border plus an inset ring. Both are alpha, not solid colors, so the pair
      works over whatever surface the dialog sits on. */
-  --radius-dialog: 27px;
+  --radius-dialog: 22px;
   --spacing-dialog: 20px;
   /* The panel's own surface: the opaque twin of the settings window's backdrop
      (`--color-bg-settings-primary` composited over its Sidebar material). It sits

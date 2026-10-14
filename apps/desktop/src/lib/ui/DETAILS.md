@@ -218,7 +218,7 @@ dialogs) is a full-bleed, top-anchored, fixed-height panel whose results region 
 its intrinsic height, and it owns Enter (its `⏎` ownership swap) plus a capture-phase Escape that defers to an open
 filter popover. Those three props exist so it gets the standard chrome without forking it:
 
-- `fillBody` makes the panel a flex column whose `.modal-content` clips (so full-bleed bands clip to the 27px radius)
+- `fillBody` makes the panel a flex column whose `.modal-content` clips (so full-bleed bands clip to the 22px radius)
   and the body a flex column that takes the slack; the caller caps the height via `containerStyle`. `resizable` covers
   the same ground for a body that scrolls as a whole; combined, `fillBody` wins the body and `resizable` contributes
   only the bands and the size floors, so the inner region does the scrolling and there's never a scrollbar inside a
@@ -243,11 +243,11 @@ filter popover. Those three props exist so it gets the standard chrome without f
 wrapper, so the buttons stay hard right at any leading width). Use it for a modifier on the primary action, the way
 `DeleteDialog` rides its "Move to trash" switch beside the confirm button; it renders only when `footer` does.
 
-**Edge and corner.** The dialog's corner is `--radius-dialog` (27px, just under the window-level `--radius-xxl`), and
-its edge is TWO hairlines the way macOS draws a panel: a darker `border` outside plus a lighter `inset 0 0 0 1px` ring
-just inside it, both alpha so the pair works over any surface. The inset ring rides the padding-box corner, so it stays
-concentric with the border at any radius; keep it in the same `box-shadow` as the drop shadow rather than adding a
-second declaration.
+**Edge and corner.** The dialog's corner is `--radius-dialog` (22px, between a stock window's `--radius-window` and the
+material-panel `--radius-xxl`), and its edge is TWO hairlines the way macOS draws a panel: a darker `border` outside
+plus a lighter `inset 0 0 0 1px` ring just inside it, both alpha so the pair works over any surface. The inset ring
+rides the padding-box corner, so it stays concentric with the border at any radius; keep it in the same `box-shadow` as
+the drop shadow rather than adding a second declaration.
 
 The drop shadow is `--shadow-dialog`, three stacked layers (wide soft cast, mid falloff, tight contact shadow), all
 offset down only. It's separate from `--shadow-lg`, which is tuned for popovers and menus, and it goes much deeper in
@@ -2067,7 +2067,7 @@ transient completion toast). `ToastItem` restarts the transient clock on every r
 - The overlay starts at `inset: var(--titlebar-height) 0 0 0`, **not** `inset: 0`, so the scrim never covers the macOS
   overlay title bar — the OS window-drag region stays live while a dialog is open. Any new full-window backdrop (a
   bespoke overlay outside `ModalDialog`, like the command palette or query dialog) must do the same. `--titlebar-height`
-  is per-window (27px default in `app.css`; the viewer overrides it to its taller toolbar via a `display: contents`
+  is per-window (29px default in `app.css`; the viewer overrides it to its taller toolbar via a `display: contents`
   wrapper in `viewer/+layout.svelte`).
 - When the toast stack is full (5 toasts) and all are persistent, new toasts are silently dropped. This is intentional:
   persistent toasts represent important state (update ready, AI installing) and should not be evicted by transient

@@ -114,7 +114,7 @@ empty translation (nothing to apply, no toast) — distinct from a throw.
 
 ### Chrome: it's a `ModalDialog`
 
-Every bit of dialog chrome comes from `#lib/ui/ModalDialog`: the 27 px `--radius-dialog` corner, the two-hairline macOS
+Every bit of dialog chrome comes from `#lib/ui/ModalDialog`: the 22 px `--radius-dialog` corner, the two-hairline macOS
 panel edge, `--shadow-dialog`, the standard `<h2>` title bar with its × button and drag handle, `use:trapFocus`, the MCP
 `notifyDialogOpened` / `notifyDialogClosed` pair, the close registry entry, and focus restore on unmount. QueryDialog
 must NOT re-implement any of them; `config.dialogType` is already a `SoftDialogId`, so it maps straight onto `dialogId`.

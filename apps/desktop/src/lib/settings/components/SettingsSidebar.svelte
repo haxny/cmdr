@@ -289,8 +289,10 @@
            `routes/settings/+page.svelte`). Matching radius + thin border +
            subtle right-leaning shadow define its edge against the vibrant
            frame around it. The shadow token is `none` in dark mode where
-           the bg contrast alone separates the card. */
-        border-radius: var(--radius-xl);
+           the bg contrast alone separates the card. The radius is concentric
+           with the window corner: `--radius-window` (16px) minus the 8px
+           padding = 8px, so the gap keeps one thickness around the curve. */
+        border-radius: calc(var(--radius-window) - var(--spacing-sm));
         border: 1px solid var(--color-sidebar-border);
         box-shadow: var(--shadow-sidebar);
         /* Top padding leaves the traffic-light row clear of the search

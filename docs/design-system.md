@@ -310,7 +310,7 @@ Tailwind's spacing scale (base 4px). No custom tokens needed.
 
 The scale intentionally uses small values: large radii look web-native, not macOS-native. Two deliberate exceptions
 follow macOS itself: buttons and segmented controls are capsules (`--radius-full`), and a modal's corner is its own
-`--radius-dialog` (27px), just under the window-level `--radius-xxl`.
+`--radius-dialog` (22px), a notch rounder than a stock window's `--radius-window` (16px).
 
 ### Website
 
@@ -530,7 +530,7 @@ All dialogs use `ModalDialog.svelte`.
 | Body padding      | `0 var(--spacing-dialog)` (20px)                                            | Owned by `ModalDialog`; bottom comes from the footer or, when footerless, the same inset on the body |
 | Title             | 16px, weight 600, left-aligned, flex row                                    | Clear hierarchy; the row lets a `StatusBadge` sit beside the words without hanging off the baseline  |
 | Button row        | `flex, gap 12px, justify-content: flex-end`                                 | Right-aligned matches macOS convention (primary action right)                                        |
-| Border-radius     | 27px (`--radius-dialog`)                                                    | Matches the macOS alert-panel corner                                                                 |
+| Border-radius     | 22px (`--radius-dialog`)                                                    | A notch rounder than a stock window corner, tighter than the macOS alert panel                       |
 | Edge              | 1px `--color-dialog-border-outer` + inset 1px `--color-dialog-border-inner` | macOS draws a panel edge as two hairlines: darker outside, lighter inside                            |
 | Drop shadow       | `--shadow-dialog` (three layers, down-only)                                 | Lifts the panel off the app the way a floating macOS panel casts                                     |
 | Max content width | 480px                                                                       | Optimal line length (~60 chars at 14px body)                                                         |
