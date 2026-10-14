@@ -242,9 +242,12 @@ third: the index scanner's entry point, whose default is
   the bridge drops. That bails the per-handle `GetObjectInfo` loop within one
   USB roundtrip's latency.
 - `LocalPosixVolume` and `InMemoryVolume` inherit the default (ignore the
-  token); local listings are effectively atomic. `SmbVolume` overrides
-  `list_directory_for_scan` only, to draw from its per-scan connection pool, and
-  ignores the token there — SMB cancel propagation is a follow-up.
+  token); local listings are effectively atomic.
+- `SmbVolume` lists one server batch at a time (smb2's `DirectoryReader`) and
+  checks the token between batches, in `list_directory_with_cancel` and in
+  `list_directory_for_scan` (which also draws from its per-scan connection
+  pool). A cancelled reader closes in the background:
+  `crates/cmdr-smb/DETAILS.md` § "Listing a batch at a time".
 
 The write-op layer hands `Some(&state.backend_cancel)` (the same token
 `cancel_write_operation` cancels when intent leaves `Running`). Volumes that

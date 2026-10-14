@@ -11,8 +11,11 @@ use super::{SmbVolume, slow_calls};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ListingProgress, SpaceInfo, VolumeError};
 use log::{debug, trace};
+use smb2::client::{Connection, Tree};
 use std::path::Path;
 use std::time::Duration;
+use tokio::runtime::Handle;
+use tokio_util::sync::CancellationToken;
 
 /// The waits between `get_metadata` attempts that answered `STATUS_DELETE_PENDING`:
 /// three tries across 0.8 s. Long enough for the common case (another client's
@@ -25,10 +28,88 @@ const DELETE_PENDING_BACKOFF: [Duration; 2] = [Duration::from_millis(200), Durat
 /// the logging is.
 static SPACE_INFO_LOG: cmdr_fs::log_rollup::LogRollup = cmdr_fs::log_rollup::LogRollup::new(Duration::from_secs(60));
 
+/// Why [`read_listing`] stopped before the end of the folder.
+pub(super) enum ListingStop {
+    /// The server refused, or the connection went: classify it like any other
+    /// smb2 failure.
+    Smb(smb2::Error),
+    /// The caller's token fired between two batches.
+    Cancelled,
+}
+
+/// Lists `smb_path` one server batch at a time (smb2's `DirectoryReader`), so a
+/// big folder reports `on_progress` as each batch lands and a `cancel` stops it
+/// between batches. Entries are mapped as they arrive, so the raw smb2 entries
+/// of a 100,000-entry folder are never held at once.
+///
+/// A cancelled reader is closed on `runtime`, so the caller gets its answer
+/// without waiting out the batch in flight and the CLOSE behind it.
+pub(super) async fn read_listing(
+    tree: &Tree,
+    conn: Connection,
+    smb_path: &str,
+    display_path: &str,
+    on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+    cancel: Option<&CancellationToken>,
+    runtime: &Handle,
+) -> Result<Vec<FileEntry>, ListingStop> {
+    let mut reader = tree
+        .open_directory_reader(conn, smb_path)
+        .await
+        .map_err(ListingStop::Smb)?;
+    let mut entries = Vec::new();
+    let mut tally = ListingProgress::default();
+    loop {
+        let batch = match cancel {
+            Some(token) => tokio::select! {
+                biased;
+                () = token.cancelled() => {
+                    runtime.spawn(async move {
+                        if let Err(e) = reader.close().await {
+                            debug!("SmbVolume::list_directory: closing a cancelled listing: {e}");
+                        }
+                    });
+                    return Err(ListingStop::Cancelled);
+                }
+                batch = reader.next_batch() => batch,
+            },
+            None => reader.next_batch().await,
+        };
+        let Some(batch) = batch.map_err(ListingStop::Smb)? else {
+            return Ok(entries);
+        };
+        for raw in batch.iter().filter(|e| e.name != "." && e.name != "..") {
+            let entry = directory_entry_to_file_entry(raw, display_path);
+            if entry.is_directory {
+                tally.dirs += 1;
+            } else {
+                tally.files += 1;
+                tally.bytes += entry.size.unwrap_or(0);
+            }
+            entries.push(entry);
+        }
+        if let Some(on_progress) = on_progress {
+            on_progress(tally);
+        }
+    }
+}
+
 impl SmbVolume {
     /// Shared async implementation of list_directory used by both the trait method
     /// and internal helpers (which need to call it without going through the trait).
     pub(super) async fn list_directory_impl(&self, path: &Path) -> Result<Vec<FileEntry>, VolumeError> {
+        self.list_directory_with_cancel_impl(path, None, None).await
+    }
+
+    /// The listing, one server batch at a time ([`read_listing`]): `on_progress`
+    /// ticks per batch, and `cancel` stops it between batches with
+    /// `VolumeError::Cancelled`.
+    pub(super) async fn list_directory_with_cancel_impl(
+        &self,
+        path: &Path,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+        cancel: Option<&CancellationToken>,
+    ) -> Result<Vec<FileEntry>, VolumeError> {
         let smb_path = self.to_smb_path(path)?;
         let display_path = self.to_display_path(&smb_path);
 
@@ -43,18 +124,17 @@ impl SmbVolume {
 
         let start = std::time::Instant::now();
 
-        let result = {
-            let (tree, mut conn) = self.clone_session().await?;
-            let r = tree.list_directory(&mut conn, &smb_path).await;
-            slow_calls::note(&self.inner.share_name, "list_directory", start.elapsed());
-            self.handle_smb_result("list_directory", &smb_path, r)?
+        let (tree, conn) = self.clone_session().await?;
+        let runtime = self.inner.host().runtime();
+        let listed = read_listing(&tree, conn, &smb_path, &display_path, on_progress, cancel, &runtime).await;
+        slow_calls::note(&self.inner.share_name, "list_directory", start.elapsed());
+        let entries = match listed {
+            Ok(entries) => entries,
+            Err(ListingStop::Cancelled) => {
+                return Err(VolumeError::Cancelled("Listing cancelled".to_string()));
+            }
+            Err(ListingStop::Smb(e)) => return self.handle_smb_result("list_directory", &smb_path, Err(e)),
         };
-
-        let entries: Vec<FileEntry> = result
-            .iter()
-            .filter(|e| e.name != "." && e.name != "..")
-            .map(|e| directory_entry_to_file_entry(e, &display_path))
-            .collect();
 
         trace!(
             "SmbVolume::list_directory: completed in {:?}, {} entries",
@@ -62,32 +142,6 @@ impl SmbVolume {
             entries.len()
         );
 
-        Ok(entries)
-    }
-
-    /// `list_directory_impl` plus the one-shot progress report the scan dialog needs.
-    pub(super) async fn list_directory_with_progress_impl(
-        &self,
-        path: &Path,
-        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
-    ) -> Result<Vec<FileEntry>, VolumeError> {
-        let entries = self.list_directory_impl(path).await?;
-        // smb2's list_directory returns all entries at once, so report
-        // progress as a single batch after the call completes. Tally files
-        // / dirs / bytes from the returned entries so the FE scan dialog
-        // doesn't see "0 bytes, 0 dirs" climbing on Direct SMB scans.
-        if let Some(on_progress) = on_progress {
-            let mut tally = ListingProgress::default();
-            for e in &entries {
-                if e.is_directory {
-                    tally.dirs += 1;
-                } else {
-                    tally.files += 1;
-                    tally.bytes += e.size.unwrap_or(0);
-                }
-            }
-            on_progress(tally);
-        }
         Ok(entries)
     }
 

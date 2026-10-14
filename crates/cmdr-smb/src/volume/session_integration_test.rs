@@ -185,7 +185,7 @@ async fn smb_integration_scan_pool_opens_lists_and_closes() {
     // the two files, matching the main-session listing. Drives the pool acquire +
     // listing path end to end.
     let via_pool = vol
-        .list_directory_for_scan_impl(Path::new(&dir))
+        .list_directory_for_scan_impl(Path::new(&dir), None)
         .await
         .expect("listing the seeded dir through the pool should succeed");
     let via_main = vol
@@ -208,7 +208,7 @@ async fn smb_integration_scan_pool_opens_lists_and_closes() {
     // With the pool closed, a scan listing falls back to the main session and
     // still returns the same contents.
     let via_fallback = vol
-        .list_directory_for_scan_impl(Path::new(&dir))
+        .list_directory_for_scan_impl(Path::new(&dir), None)
         .await
         .expect("scan listing falls back to the main session once the pool is closed");
     assert_eq!(

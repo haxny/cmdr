@@ -87,20 +87,29 @@ impl Volume for SmbVolume {
         path: &'a Path,
         on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        Box::pin(self.list_directory_with_progress_impl(path, on_progress))
+        Box::pin(self.list_directory_with_cancel_impl(path, on_progress, None))
     }
 
+    /// One server batch at a time: `on_progress` ticks per batch and `cancel`
+    /// stops the listing between batches (`query.rs` `read_listing`).
+    fn list_directory_with_cancel<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+        cancel: Option<&'a tokio_util::sync::CancellationToken>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.list_directory_with_cancel_impl(path, on_progress, cancel))
+    }
+
+    /// Draws from the per-scan connection pool when one is active (`scan_pool.rs`),
+    /// and stops between server batches when `cancel` fires, like the pane's
+    /// listing.
     fn list_directory_for_scan<'a>(
         &'a self,
         path: &'a Path,
-        _cancel: Option<&'a tokio_util::sync::CancellationToken>,
+        cancel: Option<&'a tokio_util::sync::CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
-        // SMB ignores the token (there's no mid-listing SMB cancel today; the
-        // scanner's `LIST_TIMEOUT` on a detached task handles a wedged listing) —
-        // same as the default `list_directory_with_cancel` this used to fall through
-        // to. The override exists to draw from the per-scan connection pool when one
-        // is active; see `scan_pool.rs`.
-        Box::pin(async move { self.list_directory_for_scan_impl(path).await })
+        Box::pin(self.list_directory_for_scan_impl(path, cancel))
     }
 
     /// Walks a foreign path down against real listings, component by component

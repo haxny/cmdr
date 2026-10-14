@@ -48,7 +48,8 @@ use std::time::Duration;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
-use super::mapping::{directory_entry_to_file_entry, map_smb_error};
+use super::mapping::map_smb_error;
+use super::query::{ListingStop, read_listing};
 use super::session::build_session;
 use super::state::ConnectionState;
 use super::streams::{ASSUMED_MAX_READ, InlineReadStream};
@@ -448,7 +449,11 @@ impl SmbVolume {
     /// The `list_directory_for_scan` body: draw from the scan pool when one is
     /// active, else the main session. Retries a connection-lost listing on a
     /// sibling member; surfaces a genuine per-directory error unchanged.
-    pub(super) async fn list_directory_for_scan_impl(&self, path: &Path) -> Result<Vec<FileEntry>, VolumeError> {
+    pub(super) async fn list_directory_for_scan_impl(
+        &self,
+        path: &Path,
+        cancel: Option<&tokio_util::sync::CancellationToken>,
+    ) -> Result<Vec<FileEntry>, VolumeError> {
         let pool = { self.inner.scan_pool.read().await.clone() };
         if let Some(pool) = pool {
             let smb_path = self.to_smb_path(path)?;
@@ -456,19 +461,16 @@ impl SmbVolume {
             // At most one attempt per member: a sibling retry after each dead
             // member, bailing to the main-session fallback once all are exhausted.
             for _ in 0..pool.member_count() {
-                let Some((idx, tree, mut conn)) = pool.acquire().await else {
+                let Some((idx, tree, conn)) = pool.acquire().await else {
                     break;
                 };
-                match tree.list_directory(&mut conn, &smb_path).await {
-                    Ok(raw) => {
-                        let entries = raw
-                            .iter()
-                            .filter(|e| e.name != "." && e.name != "..")
-                            .map(|e| directory_entry_to_file_entry(e, &display_path))
-                            .collect();
-                        return Ok(entries);
+                let runtime = self.inner.host().runtime();
+                match read_listing(&tree, conn, &smb_path, &display_path, None, cancel, &runtime).await {
+                    Ok(entries) => return Ok(entries),
+                    Err(ListingStop::Cancelled) => {
+                        return Err(VolumeError::Cancelled("Listing cancelled".to_string()));
                     }
-                    Err(e) if is_pool_member_dead(&e) => {
+                    Err(ListingStop::Smb(e)) if is_pool_member_dead(&e) => {
                         log::debug!(
                             "smb scan pool: member {idx} died listing smb_path={smb_path:?} ({e}); retrying on a sibling"
                         );
@@ -479,14 +481,14 @@ impl SmbVolume {
                     // same on any connection, so surface it exactly like the main
                     // path. Don't transition the main session's state — this wasn't
                     // its connection.
-                    Err(e) => return Err(map_smb_error(e, &display_path)),
+                    Err(ListingStop::Smb(e)) => return Err(map_smb_error(e, &display_path)),
                 }
             }
             // Every member is momentarily dead: fall through to the main session,
             // which keeps the scan progressing and, if it too is dead, yields the
             // DeviceDisconnected the scanner's terminal-disconnect path expects.
         }
-        self.list_directory_impl(path).await
+        self.list_directory_with_cancel_impl(path, None, cancel).await
     }
 
     /// The `open_read_stream_for_scan` body: serve a SMALL hinted file from a scan-

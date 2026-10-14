@@ -325,6 +325,24 @@ listings, and media enrichment's parallel prefetch reads.
   all of them onto the main session the pane browses through. Its reasons (progress, not queuing ahead of the pane's
   listings) don't hold on a member.
 
+## Listing a batch at a time
+
+Every listing (the pane's, the scan's, and the pool members') goes through `query.rs::read_listing`, which reads smb2's
+`DirectoryReader` one QUERY_DIRECTORY answer at a time (about 64 KiB of entries, a few hundred names). Three things fall
+out of it, and the wire traffic is the same as smb2's own `list_directory`, which collects through the same reader:
+
+- **Progress per batch.** `on_progress` ticks once per batch with the running tally, so the pane's "Loaded N entries"
+  line climbs while a slow share lists a big folder. Per batch is per round trip, so it can't flood the IPC layer.
+- **Cancel between batches.** A fired token ends the listing with `VolumeError::Cancelled` at the next batch boundary,
+  so navigating away from a 100,000-entry folder stops reading it. The reader is closed on `host.runtime()` rather than
+  awaited: its CLOSE has to wait for the batch in flight (smb2 orders them), and the caller has already moved on.
+- **Mapped as it lands.** Each batch becomes `FileEntry` values before the next one is asked for, so the raw smb2
+  entries of a big folder are never held whole.
+
+Pinned by `smb_integration_a_listing_reports_progress_per_server_batch` and
+`smb_integration_a_cancelled_listing_stops_between_batches`, both seeding 600 long names so the folder spans several
+batches.
+
 ## SMB archive push-refresh
 
 The recursive share watcher already refreshes the DIRECTORY listing showing a changed `.zip` (its new size/mtime). On

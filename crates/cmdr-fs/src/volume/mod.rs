@@ -154,14 +154,14 @@ pub trait Volume: Send + Sync {
     /// Cancel-aware version of [`list_directory`](Self::list_directory).
     ///
     /// `cancel`, when `Some`, is consulted by backends that issue many small
-    /// USB or network roundtrips inside one listing (currently MTP — a 950-entry
-    /// folder is 950 `GetObjectInfo` calls). Once the token is cancelled,
+    /// USB or network roundtrips inside one listing (MTP, where a 950-entry
+    /// folder is 950 `GetObjectInfo` calls, and SMB, which lists a server batch
+    /// of a few hundred entries per round trip). Once the token is cancelled,
     /// the backend bails between roundtrips with `VolumeError::Cancelled`
     /// instead of running to completion.
     ///
     /// Local and in-memory backends ignore the token (their listings are
-    /// effectively atomic from the caller's perspective). SMB ignores it
-    /// today — adding SMB cancel propagation is a follow-up.
+    /// effectively atomic from the caller's perspective).
     ///
     /// Default impl delegates to `list_directory`, dropping the token.
     fn list_directory_with_cancel<'a>(

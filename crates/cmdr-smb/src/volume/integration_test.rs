@@ -191,6 +191,69 @@ async fn smb_integration_rename_force_overwrites() {
     vol.delete(Path::new(&dir)).await.unwrap();
 }
 
+/// Fills `dir` with `count` files whose long names spread the listing over
+/// several server batches (a QUERY_DIRECTORY answer holds about 64 KiB of
+/// entries, so 600 names of ~100 characters take three or more).
+async fn seed_a_multi_batch_directory(vol: &SmbVolume, dir: &str, count: usize) {
+    use futures_util::StreamExt;
+    vol.create_directory(Path::new(dir)).await.unwrap();
+    futures_util::stream::iter(0..count)
+        .for_each_concurrent(32, |i| async move {
+            let name = format!("{dir}/{i:04}-{}.txt", "a-long-name-that-fills-the-batch".repeat(3));
+            vol.create_file(Path::new(&name), b"x").await.unwrap();
+        })
+        .await;
+}
+
+/// A big folder reports its progress as each server batch arrives, so the
+/// pane's "Loaded N entries" line climbs while a slow share lists instead of
+/// jumping from nothing to everything at the end.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_listing_reports_progress_per_server_batch() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    seed_a_multi_batch_directory(&vol, &dir, 600).await;
+
+    let seen = std::sync::Mutex::new(Vec::new());
+    let on_progress = |p: cmdr_fs::volume::ListingProgress| seen.lock().unwrap().push(p.entries());
+    let entries = vol
+        .list_directory_with_cancel(Path::new(&dir), Some(&on_progress), None)
+        .await
+        .unwrap();
+
+    assert_eq!(entries.len(), 600);
+    let seen = seen.into_inner().unwrap();
+    assert!(seen.len() >= 2, "one tick per batch, got {seen:?}");
+    assert!(seen.windows(2).all(|w| w[0] < w[1]), "counts only climb: {seen:?}");
+    assert_eq!(seen.last(), Some(&600), "the last tick is the whole folder");
+
+    ensure_clean(&vol, &dir).await;
+}
+
+/// A cancelled listing stops between server batches and says so, rather than
+/// reading the rest of a folder nobody is waiting for. The pane cancels when
+/// the user navigates away; the share is free for the next listing right after.
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_cancelled_listing_stops_between_batches() {
+    let vol = make_docker_volume().await;
+    let dir = test_dir_name();
+    seed_a_multi_batch_directory(&vol, &dir, 600).await;
+
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let on_progress = |_: cmdr_fs::volume::ListingProgress| cancel.cancel();
+    let result = vol
+        .list_directory_with_cancel(Path::new(&dir), Some(&on_progress), Some(&cancel))
+        .await;
+    assert!(matches!(result, Err(VolumeError::Cancelled(_))), "got {result:?}");
+
+    let again = vol.list_directory_impl(Path::new(&dir)).await.unwrap();
+    assert_eq!(again.len(), 600, "the next listing of the folder is whole");
+
+    ensure_clean(&vol, &dir).await;
+}
+
 /// `(requests_sent, compound_requests_sent)` on the volume's main connection.
 async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
     let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
