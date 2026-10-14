@@ -96,7 +96,12 @@
     "description": "Small heading above the example-query chips in the search dialog's empty state, before the user has searched. Invites the user to try one of the example queries below it. Ends with an ellipsis.",
     "screenshot": "search-dialog.png"
   },
-  "queryUi.empty.tip": "Tip: <newKey>⌘N</newKey> starts fresh, <historyKey>⌘H</historyKey> shows recent searches.",
+  "queryUi.empty.aiBadge": "AI",
+  "@queryUi.empty.aiBadge": {
+    "description": "Tiny badge on an example-query chip in the search dialog's empty state, marking the example as an AI search (the other chips show a typographic “Aa” glyph instead). Use the language's usual abbreviation for artificial intelligence; keep it to two or three characters.",
+    "screenshot": "search-dialog.png"
+  },
+  "queryUi.empty.tip": "Tip:<newKey>⌘N</newKey> starts fresh, <historyKey>⌘H</historyKey> shows recent searches.",
   "@queryUi.empty.tip": {
     "description": "Keyboard tip at the bottom of the search dialog's empty state, when AI search is off. The <newKey> and <historyKey> tags wrap keyboard-shortcut glyphs (rendered as small key badges); keep them around the shortcut text and keep the surrounding sentence reading naturally. The glyphs ⌘N and ⌘H are macOS shortcuts and must stay as-is.",
     "screenshot": "search-dialog.png"

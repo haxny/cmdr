@@ -11,9 +11,17 @@
  * `no-raw-locale-format`, this rule keys on KNOWN sinks only:
  *
  *  - specific component/element props: `title`, `label`, `placeholder`,
- *    `aria-label` (string-literal attribute values in `.svelte` markup),
+ *    `aria-label`, `ariaLabel`, and the `use:tooltip` action,
  *  - `addToast(...)` first argument (the toast content), in `.ts`/`.svelte.ts`,
- *  - text nodes in `.svelte` markup (the rendered copy between tags).
+ *  - text in `.svelte` markup (literal text and `{expr}` between tags).
+ *
+ * A `{expr}` in a markup sink flags when it can evaluate to a raw literal:
+ * a string or template literal with words, either branch of a ternary or
+ * `||`/`??`, or a `const` holding one, through `$derived(...)` and a concise
+ * `$derived.by(() => ...)` (a raw show/hide label once slipped through a
+ * `$derived`). It can't see through a call (so `t('key')` is fine), a
+ * block-bodied `$derived.by`, a `let`/`$state`, a prop, or an object argument
+ * like `use:tooltip={{ text: '...' }}`.
  *
  * Everything else is left alone. A missed user-facing string in an
  * unrecognized position can slip through; this rule is a strong ratchet, not a
@@ -86,8 +94,12 @@ const excludedUnmigratedFiles = []
 // these two lists are kept apart rather than merged.
 const developerOnlyPathFragments = ['/routes/debug/', '/routes/dev/']
 
-// Element/component attributes that carry user-facing copy.
-const userFacingAttributes = new Set(['title', 'label', 'placeholder', 'aria-label'])
+// Element/component attributes that carry user-facing copy. `ariaLabel` is the
+// house primitives' prop spelling of `aria-label`.
+const userFacingAttributes = new Set(['title', 'label', 'placeholder', 'aria-label', 'ariaLabel'])
+
+// `use:<action>={...}` directives whose argument is user-facing copy.
+const userFacingActions = new Set(['tooltip'])
 
 // A string literal that's whitespace/punctuation-only isn't copy worth
 // flagging (a separator, a space). Require at least one letter.
@@ -119,6 +131,74 @@ function isInSvg(node) {
   return false
 }
 
+/** `$derived(x)` → `x`; `$derived.by(() => x)` → `x`; anything else → the init itself. */
+function unwrapDerived(init) {
+  if (init.type !== 'CallExpression') return init
+  const callee = init.callee
+  if (callee.type === 'Identifier' && callee.name === '$derived') return init.arguments[0]
+  const isDerivedBy =
+    callee.type === 'MemberExpression' &&
+    callee.object.type === 'Identifier' &&
+    callee.object.name === '$derived' &&
+    callee.property.type === 'Identifier' &&
+    callee.property.name === 'by'
+  if (!isDerivedBy) return init
+  const fn = init.arguments[0]
+  // Only a concise arrow body is followed; a block body is out of reach.
+  const isConciseArrow = fn && fn.type === 'ArrowFunctionExpression' && fn.body.type !== 'BlockStatement'
+  return isConciseArrow ? fn.body : undefined
+}
+
+/** The `const` initializer an identifier resolves to, or undefined. */
+function resolveConstInit(sourceCode, identifier) {
+  for (let scope = sourceCode.getScope(identifier); scope; scope = scope.upper) {
+    const variable = scope.set.get(identifier.name)
+    if (!variable) continue
+    const def = variable.defs[0]
+    const isConst =
+      def &&
+      def.type === 'Variable' &&
+      def.parent.kind === 'const' &&
+      def.node.id.type === 'Identifier' &&
+      def.node.init
+    return isConst ? def.node.init : undefined
+  }
+  return undefined
+}
+
+/**
+ * Whether an expression in a sink can evaluate to a raw English literal: a
+ * string or template literal with words, either branch of a ternary or `||` /
+ * `??`, or a `const` (`$derived`, `$derived.by`, or plain) whose value is one of
+ * those. A call (`t(...)`, `tString(...)`) is opaque, so its string arguments
+ * (catalog keys) never count. `depth` guards against const cycles.
+ */
+function isRawCopyExpression(sourceCode, expr, depth = 0) {
+  if (!expr || depth > 5) return false
+  switch (expr.type) {
+    case 'Literal':
+      return typeof expr.value === 'string' && looksLikeCopy(expr.value)
+    case 'TemplateLiteral':
+      return expr.quasis.some((quasi) => looksLikeCopy(quasi.value.cooked ?? ''))
+    case 'ConditionalExpression':
+      return (
+        isRawCopyExpression(sourceCode, expr.consequent, depth) ||
+        isRawCopyExpression(sourceCode, expr.alternate, depth)
+      )
+    case 'LogicalExpression':
+      return isRawCopyExpression(sourceCode, expr.left, depth) || isRawCopyExpression(sourceCode, expr.right, depth)
+    case 'TSAsExpression':
+    case 'TSNonNullExpression':
+      return isRawCopyExpression(sourceCode, expr.expression, depth)
+    case 'Identifier': {
+      const init = resolveConstInit(sourceCode, expr)
+      return init ? isRawCopyExpression(sourceCode, unwrapDerived(init), depth + 1) : false
+    }
+    default:
+      return false
+  }
+}
+
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
   meta: {
@@ -145,6 +225,8 @@ export default {
     if (!inEnforcedArea || isExcluded) {
       return {}
     }
+
+    const sourceCode = context.sourceCode
 
     function reportLiteral(node, value) {
       if (typeof value === 'string' && looksLikeCopy(value)) {
@@ -186,6 +268,30 @@ export default {
         if (isInNonCopyElement(node)) return
         if (isInSvg(node)) return
         reportLiteral(node, node.value)
+      },
+
+      // `{expr}` in a sink: an attribute value (`title={...}`) or rendered text
+      // (`<p>{...}</p>`). Flags expressions that resolve to raw copy, including
+      // through a `$derived`, which is how a show/hide label once slipped past.
+      SvelteMustacheTag(node) {
+        if (node.kind !== 'text') return
+        const parent = node.parent
+        if (parent.type === 'SvelteAttribute') {
+          if (parent.value.length !== 1 || !userFacingAttributes.has(parent.key.name)) return
+        } else if (/Attribute|Directive/.test(parent.type) || isInSvg(node)) {
+          return
+        }
+        if (isRawCopyExpression(sourceCode, node.expression)) {
+          context.report({ node: node.expression, messageId: 'rawUserFacingString' })
+        }
+      },
+
+      // `use:tooltip={...}`: the tooltip's text.
+      SvelteDirective(node) {
+        if (node.kind !== 'Action' || !userFacingActions.has(node.key.name.name)) return
+        if (isRawCopyExpression(sourceCode, node.expression)) {
+          context.report({ node: node.expression, messageId: 'rawUserFacingString' })
+        }
       },
     }
   },

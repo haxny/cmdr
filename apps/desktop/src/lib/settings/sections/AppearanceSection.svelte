@@ -48,8 +48,7 @@
     })
 
     // Fixed date-format token example, locale-independent (matches the registry
-    // default). Not user copy, so it isn't catalogued; the lint keys on literal
-    // `placeholder` attributes, so it lives in a named const here instead.
+    // default). Not user copy, so it isn't catalogued.
     const DATE_FORMAT_PLACEHOLDER = 'YYYY-MM-DD HH:mm'
 
     // Format-help rows: the TOKEN is a fixed, locale-independent code literal
@@ -246,7 +245,7 @@
                                     onValueChange={(value: string) => {
                                         customFormat = value
                                     }}
-                                    placeholder={DATE_FORMAT_PLACEHOLDER}
+                                    placeholder={DATE_FORMAT_PLACEHOLDER /* eslint-disable-line cmdr/no-raw-user-facing-string -- date-format tokens, the same in every language */}
                                     ariaLabel={tString('settings.appearance.dateTimeFormat.label')}
                                 />
                                 <div class="format-preview">

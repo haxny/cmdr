@@ -143,8 +143,11 @@ a typecheck error. It also reports keys used-in-code-but-missing (exit 1, a buil
 checks guard the rest: `desktop-message-keys-fresh` (regenerate-and-diff `keys.gen.ts`, fail if stale) and
 `desktop-message-key-naming` (the `area.feature.leaf` shape + a known first-segment area).
 `cmdr/no-raw-user-facing-string` (ESLint) stops new hardcoded copy in migrated areas (a closed sink set: `addToast`
-content, `title`/`label`/`placeholder`/ `aria-label` props, `.svelte` text nodes; an area allowlist widened per migrated
-area).
+content, `title`/`label`/`placeholder`/`aria-label`/`ariaLabel` props, `use:tooltip`, `.svelte` text; an area allowlist
+widened per migrated area). In a markup sink it follows the expression: a raw literal, template literal, either branch
+of a ternary or `||`/`??`, or a `const` (`$derived`, concise `$derived.by`, or plain) holding one. It can't see through
+a call, a block-bodied `$derived.by`, `let`/`$state`, props, or object args (`use:tooltip={{ text }}`). The rule file's
+header is canonical.
 
 Ask Cmdr tool labels are literal-keyed in `ask-cmdr-labels.ts`, so proposal status remains localized without dynamic
 message-key construction. New English keys require translated catalog entries and a regenerated `keys.gen.ts`.

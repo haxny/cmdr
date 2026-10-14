@@ -2910,6 +2910,7 @@ export type MessageKey =
   | 'queryUi.dialog.aiTranslateFailedToast'
   | 'queryUi.dialog.runQueryToast'
   | 'queryUi.dialog.runQueryUnknownReason'
+  | 'queryUi.empty.aiBadge'
   | 'queryUi.empty.indexReady'
   | 'queryUi.empty.tip'
   | 'queryUi.empty.tipAi'

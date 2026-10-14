@@ -22,6 +22,7 @@ const TRANSFER_SVELTE = 'src/lib/file-operations/transfer/CompletedTransferBanne
 const COMMAND_HANDLERS_SVELTE = 'src/routes/(main)/command-handlers/favorites-handlers.svelte'
 // A non-enforced area (dev-only catalog / pure infrastructure with no user
 // copy): identical raw strings here must NOT flag.
+const SETTINGS_SVELTE = 'src/lib/settings/components/SettingPasswordInput.svelte'
 const OTHER_SVELTE = 'src/routes/dev/components/sections/ButtonsSection.svelte'
 const OTHER_TS = 'src/lib/path/normalize.ts'
 
@@ -104,6 +105,23 @@ svelteTester.run('no-raw-user-facing-string (svelte sinks)', rule, {
       code: `<svg aria-hidden="true"><g><text x="6" y="46">tab</text></g></svg>`,
       filename: 'src/lib/downloads/GlobalShortcutAnimation.svelte',
     },
+    // A `$derived` that resolves through `t()` is the intended path, even when
+    // its key is picked by a ternary of key literals.
+    {
+      code: `<script>\n  const tip = $derived(tString(revealed ? 'settings.control.hideValue' : 'settings.control.showValue'))\n</script>\n<button aria-label={tip} use:tooltip={tip}></button>`,
+      filename: SETTINGS_SVELTE,
+    },
+    // A raw-string `$derived` that never reaches a sink (a CSS class, an input
+    // type) isn't copy.
+    {
+      code: `<script>\n  const kind = $derived(focused ? 'password' : 'text')\n</script>\n<input type={kind} class={kind} />`,
+      filename: SETTINGS_SVELTE,
+    },
+    // A template literal with no words (a separator join) isn't copy.
+    {
+      code: `<span title={\`\${a} – \${b}\`}></span>`,
+      filename: SETTINGS_SVELTE,
+    },
   ],
   invalid: [
     // Raw `title` attribute in an enforced area.
@@ -128,6 +146,30 @@ svelteTester.run('no-raw-user-facing-string (svelte sinks)', rule, {
     {
       code: `<button title="Cancel transfer"><Icon name="x" /></button>`,
       filename: COMMAND_HANDLERS_SVELTE,
+      errors: [{ messageId: 'rawUserFacingString' }],
+    },
+    // Regression anchor: a ternary of raw strings laundered through `$derived`
+    // reached `aria-label` and `use:tooltip` unseen (`SettingPasswordInput`).
+    {
+      code: `<script>\n  const tip = $derived(revealed ? 'Hide value' : 'Show value')\n</script>\n<button aria-label={tip} use:tooltip={tip}></button>`,
+      filename: SETTINGS_SVELTE,
+      errors: [{ messageId: 'rawUserFacingString' }, { messageId: 'rawUserFacingString' }],
+    },
+    // `$derived.by` with a concise body, rendered as text.
+    {
+      code: `<script>\n  const heading = $derived.by(() => (busy ? 'Saving' : 'Saved'))\n</script>\n<p>{heading}</p>`,
+      filename: SETTINGS_SVELTE,
+      errors: [{ messageId: 'rawUserFacingString' }],
+    },
+    // A raw ternary or template literal written straight into a sink.
+    {
+      code: `<button title={open ? 'Close' : 'Open'}></button>`,
+      filename: SETTINGS_SVELTE,
+      errors: [{ messageId: 'rawUserFacingString' }],
+    },
+    {
+      code: `<TextInput ariaLabel={\`Rename \${name}\`} />`,
+      filename: SETTINGS_SVELTE,
       errors: [{ messageId: 'rawUserFacingString' }],
     },
   ],

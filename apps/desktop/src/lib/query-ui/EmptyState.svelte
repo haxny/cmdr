@@ -78,6 +78,8 @@
     )
     const examples = $derived(aiBlocked ? baseExamples.filter((chip) => chip.mode !== 'ai') : baseExamples)
     const formattedCount = $derived(formatNumber(indexEntryCount))
+    // Typographic glyph marking a keyword (non-AI) example: the same in every language.
+    const KEYWORD_BADGE = 'Aa'
 </script>
 
 <!--
@@ -109,7 +111,9 @@
                     onPick(chip)
                 }}
             >
-                <span class="chip-badge">{chip.mode === 'ai' ? 'AI' : 'Aa'}</span>
+                <span class="chip-badge"
+                    >{chip.mode === 'ai' ? tString('queryUi.empty.aiBadge') : KEYWORD_BADGE /* eslint-disable-line cmdr/no-raw-user-facing-string -- a glyph, not copy */}</span
+                >
                 <span class="chip-label">{chip.label}</span>
             </button>
         {/each}
