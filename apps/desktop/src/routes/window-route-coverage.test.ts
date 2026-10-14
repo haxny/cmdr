@@ -190,6 +190,21 @@ describe('window route coverage', () => {
     ).toEqual([])
   })
 
+  it("owns the right-click in every window, so WebKit's Reload / Inspect Element menu never shows", () => {
+    // SvelteKit wraps EVERY page in the root layout (a `@` reset still lands on it),
+    // so installing the suppressor there covers each window, present and future. A
+    // window that installed its own instead is how the queue window went without one.
+    const rootLayout = readFileSync(path.join(routesRoot, '+layout.svelte'), 'utf8')
+    expect(rootLayout).toContain('installContextMenuOwnership(')
+
+    const ownInstalls = [...pages, ...pages.flatMap(ancestorLayouts).map((l) => path.relative(routesRoot, l))]
+      .filter((file) => file !== '+layout.svelte')
+      .filter((file) => readFileSync(path.join(routesRoot, file), 'utf8').includes('installContextMenuOwnership('))
+    expect(ownInstalls, 'Only the root layout installs it; a second install double-handles every right-click.').toEqual(
+      [],
+    )
+  })
+
   it('resolves a store-access classification for every window route', () => {
     // The root layout's `initWindowSettings()` reads this to pick the store path.
     // An unmapped route falls back to `'full'`, which throws in a window whose

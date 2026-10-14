@@ -12,8 +12,7 @@ via a typed API. Up: `apps/desktop/CLAUDE.md`, sibling: `../viewer/CLAUDE.md`.
   window holds for its lifetime.
 - Supporting modules: `startup-gates.ts`, `init-steps.ts` (the layout's startup steps, each failure isolated),
   `mcp-listeners.ts`, `mcp-nav-landing.ts`, `mcp-volume-select.ts`, `mcp-dialog-confirm.ts`, `explorer-api.ts`,
-  `dispatch-dedup.ts`, `dialog-command-gate.ts`, `global-keydown.ts`, `global-contextmenu.ts`,
-  `main-window-visibility.ts`.
+  `dispatch-dedup.ts`, `dialog-command-gate.ts`, `global-keydown.ts`, `main-window-visibility.ts`.
 
 ## Must-knows
 
@@ -54,7 +53,7 @@ via a typed API. Up: `apps/desktop/CLAUDE.md`, sibling: `../viewer/CLAUDE.md`.
 - **Native-menu accelerators fire before the webview keydown**, so a focused text input owns `edit.cut` / `edit.copy` /
   `edit.paste` / `selection.selectAll`. ❌ Don't refuse `execute-command` wholesale. DETAILS § Native-menu and
   input-focus interactions.
-- **Right-click is Cmdr's except in text fields**, and the predicate is the event TARGET, ❌ never focus. DETAILS §
+- **Right-click is Cmdr's except in text fields**, in every window, keyed on the event TARGET, ❌ never focus. DETAILS §
   Right-click ownership.
 
 Architecture, flows, and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,

@@ -29,8 +29,6 @@ here:
   outside a text field, with no foreground dialog closes an open panel while the main webview still owns the key event,
   so Space never toggles the selection instead. Native-panel keys are handled in `src-tauri/src/quick_look/DETAILS.md` §
   Opening and the close keys.
-- **`global-contextmenu.ts` is the same split for the right-click**: `resolveGlobalContextMenuAction(event)` is pure
-  (`native-text-menu` / `suppress`), `+page.svelte` runs `stopPropagation` or `preventDefault`. § Right-click ownership.
 - **`startup-gates.ts` owns what a launch SHOWS.** § Startup gates.
 - **`init-steps.ts` runs `+layout.svelte`'s startup as a list of named steps**: in order, each awaited before the next,
   each in its own catch that logs the step's name at error. A step handles its own outside failures, so reaching that
@@ -441,12 +439,24 @@ long since mounted.
 
 ## Right-click ownership
 
-Cmdr owns right-click in the main window: file rows, tabs, the breadcrumb, volume rows, query results, network rows, and
-the function key bar each build their own native macOS menu, so `+page.svelte` installs a document `contextmenu`
-listener that `preventDefault()`s WKWebView's menu. Without it every one of those clicks would show two menus.
+Cmdr owns right-click in EVERY window: file rows, tabs, the breadcrumb, volume rows, query results, network rows, the
+function key bar, and the queue's rows each build their own native macOS menu, and a surface with no menu shows none.
+WebKit's page menu ("Reload", plus "Inspect Element" in a dev build) must never appear: two menus for one click at best,
+and a Reload that wipes the window's state at worst. `#lib/context-menu-ownership.ts` installs a document `contextmenu`
+listener that `preventDefault()`s it; its decision, `resolveGlobalContextMenuAction(event)`, is pure (`native-text-menu`
+/ `suppress`).
 
-Because that suppressor runs on every non-text-field target, a surface's own `oncontextmenu` doesn't need to
-`preventDefault()` again; `FunctionKeyBar.svelte` skips it and only opens Cmdr's menu.
+- **The ROOT layout installs it** (`routes/+layout.svelte`), which SvelteKit wraps around every page, so every webview
+  gets it and a new window route can't forget. `routes/window-route-coverage.test.ts` fails if the root layout stops
+  installing it, or if a route installs a second copy. Regression anchor: the queue window once had none, so a
+  right-click on a row showed WebKit's menu (2026-10-14 QA).
+- **Release builds need it too.** wry turns on `developerExtrasEnabled` (the "Inspect Element" entry) only under
+  `debug_assertions` or its `devtools` feature, which our release `tauri` build doesn't enable; it doesn't override
+  WKWebView's `willOpenMenu`, so WebKit's own page menu ("Reload") stays in a release build. (Verified on wry 0.57.0 by
+  reading its "src/wkwebview/mod.rs", 2026-10-14; the release menu itself not observed.) ❌ Don't gate this on a dev
+  build.
+- **A surface's own `oncontextmenu` needn't `preventDefault()` again**; `FunctionKeyBar.svelte` skips it and only opens
+  Cmdr's menu.
 
 Text fields are the exception. WebKit's editing menu (Cut, Copy, Paste, Select All, plus the system Services and
 spelling entries) is exactly what a text field should offer, and it acts on the field through WebKit's own editing
@@ -460,12 +470,10 @@ Native-menu and input-focus interactions).
   can't open a Cmdr menu over the field: the inline rename editor sits inside a file row, and the volume switcher's
   favorite-rename field inside a volume row, and both rows have their own `oncontextmenu`. On everything else it
   `preventDefault()`s and lets the event keep bubbling, so those row handlers still open Cmdr's menu exactly as before.
-- **Dev builds show more.** WKWebView adds its inspector entry to the menu when the webview has devtools enabled, which
-  is Tauri's debug-build default; release builds don't enable them, so they show the editing items only. WKWebView gates
-  that itself, so ❌ don't add a dev-only branch here.
-- **Only the main window suppresses.** Settings, shortcuts, viewer, queue, and debug install no document-level
-  suppressor, so WebKit's menu is already live there. The viewer's media surface has its own element-level
-  `oncontextmenu` (`viewer-pointer-drag.svelte.ts`) because it opens an in-app menu at the pointer.
+- **Dev builds show more in a text field.** WKWebView adds its inspector entry to the editing menu when devtools are on;
+  release builds show the editing items only. WKWebView gates that itself, so ❌ don't add a dev-only branch.
+- **Selected non-editable text gets no menu** (no WebKit Copy / Look Up): the trade for owning every other right-click.
+  ⌘C still copies it where the surface supports that.
 
 ## Native-menu and input-focus interactions
 

@@ -18,8 +18,13 @@
     import { installClipboardShimIfE2e } from '#lib/clipboard-shim.js'
     import { initWindowSettings } from '#lib/settings/window-settings.js'
     import { initAppMode } from '#lib/app-mode.js'
+    import { installContextMenuOwnership } from '#lib/context-menu-ownership.js'
 
     onMount(() => {
+        // No WebKit page menu ("Reload", "Inspect Element") in ANY window: text fields
+        // keep their editing menu, everything else gets Cmdr's own menus or none.
+        // Here, not per window, so a new window route can't forget it.
+        const uninstallContextMenuOwnership = installContextMenuOwnership()
         void initLogger()
         // The run mode (E2E, screenshot capture) for EVERY window, not only the ones that
         // await it themselves: each window is its own JS context, so a Settings or queue
@@ -35,6 +40,7 @@
         // user picked SI, and so on). Promise-memoized, so a page that awaits
         // the same call in its own `onMount` shares this run.
         void initWindowSettings()
+        return uninstallContextMenuOwnership
     })
 </script>
 

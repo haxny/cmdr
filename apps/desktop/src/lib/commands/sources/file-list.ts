@@ -446,7 +446,7 @@ export const fileListCommands: CommandSource[] = [
     scope: 'Main window/File list',
     showInPalette: true,
     // Finder's own combo for the same thing. `⌃` is nearly unused here (only
-    // `⌃Tab` / `⌃⇧Tab`), and `global-contextmenu.ts` listens for the DOM
+    // `⌃Tab` / `⌃⇧Tab`), and `#lib/context-menu-ownership.ts` listens for the DOM
     // `contextmenu` event rather than a keydown, so nothing else wants it.
     shortcuts: ['⌃Enter'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,

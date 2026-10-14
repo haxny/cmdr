@@ -58,7 +58,6 @@
     import { navCommandForMouseButton } from './mouse-nav'
     import { resolveGlobalKeyAction, unclaimedDispatchWarning } from './global-keydown'
     import { exitFullScreenOnEscape, installEscapeStopClaims } from './escape-key'
-    import { resolveGlobalContextMenuAction } from './global-contextmenu'
     import { isMacOS } from '#lib/shortcuts/key-capture.js'
     import { getMessage, tString } from '#lib/intl/messages.svelte.js'
     import { showMainOnMount } from './show-main-on-mount'
@@ -169,7 +168,6 @@
     // Event handlers stored for cleanup
     let handleKeyDown: ((e: KeyboardEvent) => void) | undefined
     let handleQuickLookKey: ((e: KeyboardEvent) => void) | undefined
-    let handleContextMenu: ((e: MouseEvent) => void) | undefined
     let handleMouseDown: ((e: MouseEvent) => void) | undefined
     let handleMouseUp: ((e: MouseEvent) => void) | undefined
     let uninstallEscapeStopClaims: (() => void) | undefined
@@ -267,20 +265,6 @@
         closeFromMainWindowKey()
         e.preventDefault()
         e.stopPropagation()
-    }
-
-    /**
-     * Global right-click handler. The decision is `global-contextmenu.ts`'s (pure,
-     * unit-tested); this only runs the side effects. Registered in the CAPTURE
-     * phase so a text field can claim the click before the row / tab / chip
-     * handler underneath it opens a Cmdr menu.
-     */
-    function handleGlobalContextMenu(e: MouseEvent): void {
-        if (resolveGlobalContextMenuAction(e) === 'native-text-menu') {
-            e.stopPropagation()
-            return
-        }
-        e.preventDefault()
     }
 
     /**
@@ -427,13 +411,11 @@
 
         handleKeyDown = handleGlobalKeyDown
         handleQuickLookKey = handleQuickLookCloseKey
-        handleContextMenu = handleGlobalContextMenu
         handleMouseDown = handleGlobalMouseDown
         handleMouseUp = handleGlobalMouseUp
         document.addEventListener('keydown', handleKeyDown)
         uninstallEscapeStopClaims = installEscapeStopClaims()
         document.addEventListener('keydown', handleQuickLookKey, true)
-        document.addEventListener('contextmenu', handleContextMenu, true)
         document.addEventListener('mousedown', handleMouseDown)
         document.addEventListener('mouseup', handleMouseUp)
 
@@ -468,9 +450,6 @@
         }
         if (handleQuickLookKey) {
             document.removeEventListener('keydown', handleQuickLookKey, true)
-        }
-        if (handleContextMenu) {
-            document.removeEventListener('contextmenu', handleContextMenu, true)
         }
         if (handleMouseDown) {
             document.removeEventListener('mousedown', handleMouseDown)

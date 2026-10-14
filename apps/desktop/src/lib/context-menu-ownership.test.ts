@@ -1,13 +1,73 @@
 /**
- * The global right-click decision: a text field keeps WebKit's own editing menu
- * (Cut / Copy / Paste / Select All), everything else keeps Cmdr's menus only.
+ * The window-wide right-click decision: a text field keeps WebKit's own editing
+ * menu (Cut / Copy / Paste / Select All), everything else keeps Cmdr's menus only.
  *
  * The load-bearing case is the TARGET, not focus: a right-click lands on a field
  * that isn't focused yet, so `isTextInputFocused()` would say "no" and the field
  * would lose its menu.
  */
-import { describe, it, expect } from 'vitest'
-import { resolveGlobalContextMenuAction } from './global-contextmenu'
+import { describe, it, expect, afterEach } from 'vitest'
+import { installContextMenuOwnership, resolveGlobalContextMenuAction } from './context-menu-ownership'
+
+describe('installContextMenuOwnership', () => {
+  let uninstall: (() => void) | undefined
+
+  afterEach(() => {
+    uninstall?.()
+    uninstall = undefined
+    document.body.replaceChildren()
+  })
+
+  /** Dispatches a right-click on `el` and reports what the webview would do with it. */
+  function rightClick(el: Element): MouseEvent {
+    if (!el.isConnected) document.body.appendChild(el)
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    el.dispatchEvent(event)
+    return event
+  }
+
+  // Regression anchor: the queue window had no suppressor, so a right-click on a row
+  // showed WebKit's "Reload" / "Inspect Element" (2026-10-14 QA).
+  it("cancels WebKit's menu on a plain element", () => {
+    uninstall = installContextMenuOwnership()
+    expect(rightClick(document.createElement('div')).defaultPrevented).toBe(true)
+  })
+
+  it("leaves a text field's editing menu alone", () => {
+    uninstall = installContextMenuOwnership()
+    expect(rightClick(document.createElement('textarea')).defaultPrevented).toBe(false)
+  })
+
+  it("stops a text field's right-click before a row's own menu handler hears it", () => {
+    uninstall = installContextMenuOwnership()
+    const row = document.createElement('div')
+    const input = document.createElement('input')
+    row.appendChild(input)
+    document.body.appendChild(row)
+    let rowHeard = false
+    row.addEventListener('contextmenu', () => {
+      rowHeard = true
+    })
+    rightClick(input)
+    expect(rowHeard).toBe(false)
+  })
+
+  it("still lets a row's own handler open Cmdr's menu", () => {
+    uninstall = installContextMenuOwnership()
+    const row = document.createElement('div')
+    let rowHeard = false
+    row.addEventListener('contextmenu', () => {
+      rowHeard = true
+    })
+    rightClick(row)
+    expect(rowHeard).toBe(true)
+  })
+
+  it('stops suppressing once uninstalled', () => {
+    installContextMenuOwnership()()
+    expect(rightClick(document.createElement('div')).defaultPrevented).toBe(false)
+  })
+})
 
 /** A right-click whose target is `el`, as the document-level listener sees it. */
 function rightClickOn(el: Element): MouseEvent {
