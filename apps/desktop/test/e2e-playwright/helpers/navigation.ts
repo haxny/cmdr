@@ -18,9 +18,16 @@ import { type PageLike, CTRL_OR_META, pollUntil } from './core.js'
  * SvelteKit's navigation is async and there is no one readiness condition that
  * fits every route. So the caller waits for something only the target route
  * draws (`ensureAppReady` waits for `.file-entry`), never on this returning.
+ *
+ * ❗ A route the page is already on is skipped. SvelteKit still runs a same-URL
+ * navigation, and when it lands it blurs whatever has focus and focuses `<body>`,
+ * asynchronously, so it could land AFTER `ensureAppReady` had put focus in the
+ * explorer: the next synthetic key then went to `<body>` and did nothing (one
+ * flow in about 14 of `keyboard-focus.spec.ts`, measured 2026-10-15).
  */
 export async function navigateToRoute(tauriPage: PageLike, path: string): Promise<void> {
   await tauriPage.evaluate(`(function() {
+        if (location.pathname === ${JSON.stringify(path)}) return;
         var a = document.createElement('a');
         a.href = ${JSON.stringify(path)};
         document.body.appendChild(a);
