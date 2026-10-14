@@ -21,14 +21,12 @@ fn filetime_to_unix_secs_zero_returns_none() {
 
 #[test]
 fn directory_entry_to_file_entry_file() {
-    let entry = smb2::client::tree::DirectoryEntry {
-        name: "report.pdf".to_string(),
-        size: 1024,
-        is_directory: false,
-        created: smb2::pack::FileTime(133_485_408_000_000_000),
-        modified: smb2::pack::FileTime(133_485_408_000_000_000),
-        attributes: FileAttributes::default(),
-    };
+    // `DirectoryEntry` is `#[non_exhaustive]`, so a fixture starts from `default()`.
+    let mut entry = smb2::client::tree::DirectoryEntry::default();
+    entry.name = "report.pdf".to_string();
+    entry.size = 1024;
+    entry.created = smb2::pack::FileTime(133_485_408_000_000_000);
+    entry.modified = smb2::pack::FileTime(133_485_408_000_000_000);
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share/Documents");
     assert_eq!(fe.name, "report.pdf");
@@ -43,14 +41,9 @@ fn directory_entry_to_file_entry_file() {
 
 #[test]
 fn directory_entry_to_file_entry_directory() {
-    let entry = smb2::client::tree::DirectoryEntry {
-        name: "Photos".to_string(),
-        size: 0,
-        is_directory: true,
-        created: smb2::pack::FileTime::ZERO,
-        modified: smb2::pack::FileTime::ZERO,
-        attributes: FileAttributes::default(),
-    };
+    let mut entry = smb2::client::tree::DirectoryEntry::default();
+    entry.name = "Photos".to_string();
+    entry.is_directory = true;
 
     let fe = directory_entry_to_file_entry(&entry, "/Volumes/Share");
     assert_eq!(fe.name, "Photos");
@@ -164,6 +157,21 @@ fn map_smb_error_timeout() {
     let err = smb2::Error::Timeout;
     let ve = map_smb_error(err, "/Volumes/share/holiday.raw");
     assert!(matches!(ve, VolumeError::ConnectionTimeout(_)));
+}
+
+/// A tree or handle from a session that has ended reads as a lost connection:
+/// that's what sends the volume through its one reconnect path and lets the
+/// transfer layer retry the file on the rebuilt session, both of which heal it.
+/// As an `IoError` it would reach the user as a failed file with nothing to retry.
+#[test]
+fn map_smb_error_handle_invalidated_is_a_lost_connection() {
+    let err = smb2::Error::HandleInvalidated {
+        opened_on: 1,
+        current: 2,
+    };
+    assert_eq!(err.kind(), smb2::ErrorKind::ConnectionLost);
+    let ve = map_smb_error(err, "/Volumes/share/holiday.raw");
+    assert!(matches!(ve, VolumeError::DeviceDisconnected(_)), "got: {ve:?}");
 }
 
 #[test]
