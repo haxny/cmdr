@@ -89,6 +89,7 @@
             value: String(option.value),
             label: option.label,
             description: option.description,
+            lang: option.lang,
         }))
         if (allowCustom && isCustomValue) {
             items.push({

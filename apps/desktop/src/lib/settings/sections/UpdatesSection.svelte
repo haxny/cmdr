@@ -147,6 +147,9 @@
                         onkeydown={emailSignup.handleKeydown}
                         disabled={emailSignup.signupInFlight}
                         ariaLabel={emailDef.label}
+                        autocomplete="email"
+                        autocapitalize="off"
+                        spellcheck={false}
                     />
                 </SettingRow>
                 {#if emailSignup.signupFeedback?.kind === 'success'}

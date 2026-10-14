@@ -301,6 +301,12 @@ describe('StepBeta', () => {
     expect(getEmailInput(mounted.target)).not.toBeNull()
   })
 
+  it('marks the email field as the user’s own address, so autofill can offer it (WCAG 1.3.5)', async () => {
+    mounted = mountStep()
+    await waitForAsync()
+    expect(getEmailInput(mounted.target).getAttribute('autocomplete')).toBe('email')
+  })
+
   it('ticks a link row only after the delay, so the tick means "you had time to do it"', async () => {
     vi.useFakeTimers()
     try {

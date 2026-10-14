@@ -277,6 +277,10 @@ the way out for a user who can't read the current language.
 `locale-display-names.ts` takes the shipped set, not just one tag, because a label's only job is answering "which of
 these rows is mine?" and that question is about the list in front of the user.
 
+Each locale option also carries `lang: <tag>` (`settings/definitions/appearance.ts`), so a screen reader voices
+"Deutsch" as German rather than as an English word (WCAG 3.1.2). The System default option has none: its label is UI
+copy, which the page's own `lang` already covers.
+
 CLDR names a locale by DIALECT, which settles the REGION axis unaided: `en`, `en-GB`, and `en-AU` come back as
 "English", "British English", and "Australian English", three distinct strings with nothing added. It does not settle
 the SCRIPT axis. CLDR's endonym for bare `zh` is "中文", so next to "繁體中文" a Traditional reader had no way to tell

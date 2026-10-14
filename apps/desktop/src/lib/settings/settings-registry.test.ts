@@ -521,6 +521,14 @@ describe('appearance.language (the UI language picker)', () => {
     expect(en?.label).toBe('English')
   })
 
+  it('marks each locale option with its own language, so a screen reader voices the endonym right', () => {
+    const options = getSettingDefinition('appearance.language')?.constraints?.options ?? []
+    for (const option of options) {
+      // System default speaks the UI language, which the page's own `lang` already covers.
+      expect(option.lang).toBe(option.value === 'system' ? undefined : option.value)
+    }
+  })
+
   it('validates: accepts `system` and a loaded locale, rejects an unknown tag', () => {
     expect(() => {
       validateSettingValue('appearance.language', 'system')

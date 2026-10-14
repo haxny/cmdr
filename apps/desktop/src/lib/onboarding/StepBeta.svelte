@@ -300,6 +300,9 @@
             invalid={emailSignup.showInvalid}
             disabled={emailSignup.signupInFlight}
             ariaLabel={tString('onboarding.stepBeta.emailTitle')}
+            autocomplete="email"
+            autocapitalize="off"
+            spellcheck={false}
         />
         <Button
             variant="secondary"

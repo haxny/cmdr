@@ -23,6 +23,12 @@
          * by default), and it renders dimmed. Say why in `description`.
          */
         disabled?: boolean
+        /**
+         * BCP 47 tag of the language `label` is written in, when it isn't the UI's (a language
+         * picker's endonyms). Lands as `lang` on the row and on the trigger's value text while
+         * selected, so a screen reader switches voice for it.
+         */
+        lang?: string
     }
 </script>
 
@@ -115,7 +121,8 @@
     // not a given row has one. The trigger shows the selected item's icon for the same reason a
     // macOS pop-up button does: the button and the row it came from should read the same.
     const hasIcons = $derived(items.some((item) => item.iconUrl !== undefined))
-    const selectedIconUrl = $derived(items.find((item) => item.value === value)?.iconUrl)
+    const selectedItem = $derived(items.find((item) => item.value === value))
+    const selectedIconUrl = $derived(selectedItem?.iconUrl)
 
     function handleValueChange(details: SelectValueChangeDetails<SelectItem>): void {
         if (details.value.length > 0) onChange(details.value[0])
@@ -239,7 +246,7 @@
                 {#if selectedIconUrl}
                     <img class="select-item-icon" src={selectedIconUrl} alt="" width="16" height="16" />
                 {/if}
-                <Select.ValueText class="select-value" placeholder={resolvedPlaceholder} />
+                <Select.ValueText class="select-value" placeholder={resolvedPlaceholder} lang={selectedItem?.lang} />
                 <span class="select-indicator"><Icon name="chevrons-up-down" size={14} aria-hidden="true" /></span>
             </Select.Trigger>
         </Select.Control>
@@ -266,7 +273,7 @@
                                     </Select.ItemGroupLabel>
                                 {/if}
                                 {#each group.items as item (item.value)}
-                                    <Select.Item {item} class="select-item">
+                                    <Select.Item {item} class="select-item" lang={item.lang}>
                                         <Select.ItemIndicator class="item-indicator"
                                             ><Icon name="check" size={13} aria-hidden="true" /></Select.ItemIndicator
                                         >
@@ -292,7 +299,7 @@
                         {/each}
                     {:else}
                         {#each items as item (item.value)}
-                            <Select.Item {item} class="select-item">
+                            <Select.Item {item} class="select-item" lang={item.lang}>
                                 <Select.ItemIndicator class="item-indicator"
                                     ><Icon name="check" size={13} aria-hidden="true" /></Select.ItemIndicator
                                 >

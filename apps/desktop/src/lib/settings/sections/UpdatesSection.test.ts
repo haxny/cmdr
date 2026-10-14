@@ -178,6 +178,12 @@ describe('UpdatesSection', () => {
     return input
   }
 
+  it('marks the email field as the user’s own address, so autofill can offer it (WCAG 1.3.5)', async () => {
+    const target = render()
+    await tick()
+    expect(getEmailInput(target).getAttribute('autocomplete')).toBe('email')
+  })
+
   it('calls betaSignup on commit of a valid email and shows the success note', async () => {
     const target = render()
     await tick()

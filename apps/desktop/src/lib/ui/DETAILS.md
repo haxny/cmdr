@@ -692,7 +692,9 @@ Props:
   ONE item carries an icon every row reserves the slot, keeping labels in a single column, and the trigger shows the
   selected item's icon so the button reads like the row it came from. The one caller today is the settings row that
   picks a terminal app (`../settings/sections/TerminalAppSelect.svelte`), which hands over app icons the backend read
-  out of each `.app` bundle as base64 WebP data URLs.
+  out of each `.app` bundle as base64 WebP data URLs. `lang` (a BCP 47 tag) marks a label written in another language
+  than the UI's: it lands on the row and, while selected, on the trigger's value text, so a screen reader switches voice
+  (WCAG 3.1.2). The Language picker sets it on every endonym, through `EnumOption.lang` and `SettingSelect`.
 - `value: string` — the selected item's `value` (empty string → nothing selected, shows `placeholder`).
 - `onChange: (value: string) => void`.
 - `onHighlightChange?: (highlightedValue: string | null) => void` — fires on keyboard / pointer highlight.

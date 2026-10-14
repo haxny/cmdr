@@ -71,7 +71,8 @@ function languageOptions(): (EnumOptionSource | EnumOption)[] {
         return systemOptionLabel()
       },
     },
-    ...shipped.map((tag) => ({ value: tag, label: localeDisplayName(tag, shipped) })),
+    // `lang` so a screen reader voices "Deutsch" as German, not as an English word (WCAG 3.1.2).
+    ...shipped.map((tag) => ({ value: tag, label: localeDisplayName(tag, shipped), lang: tag })),
   ]
 }
 

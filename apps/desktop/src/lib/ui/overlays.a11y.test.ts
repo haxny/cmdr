@@ -531,6 +531,23 @@ describe('Select a11y', () => {
     await expectNoA11yViolations(target)
   })
 
+  it('an item in another language carries its `lang` on the row and, once picked, on the trigger', async () => {
+    const target = container()
+    const items: SelectItem[] = [
+      { value: 'en', label: 'English', lang: 'en' },
+      { value: 'de', label: 'Deutsch', lang: 'de' },
+    ]
+    mount(Select, { target, props: { items, value: 'de', onChange: () => {}, ariaLabel: 'Language' } })
+    await tick()
+    expect(target.querySelector('.select-value')?.getAttribute('lang')).toBe('de')
+    await expectNoA11yViolations(target)
+
+    // The rows mount only once the menu opens.
+    target.querySelector<HTMLButtonElement>('.select-trigger')?.click()
+    await tick()
+    expect(document.querySelector('.select-item[data-value="de"]')?.getAttribute('lang')).toBe('de')
+  })
+
   it('a disabled item stays listed but disabled, with no a11y violations', async () => {
     const target = container()
     const items: SelectItem[] = [

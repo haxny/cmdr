@@ -20,6 +20,7 @@ export interface EnumOption {
   description?: string
   /** Optional Lucide glyph rendered before the label (toggle-group options only). */
   icon?: IconName
+  lang?: string // BCP 47 tag of `label`'s language when it isn't the UI's (the language picker's endonyms)
 }
 
 // ============================================================================
