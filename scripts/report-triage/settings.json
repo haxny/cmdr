@@ -3,17 +3,39 @@
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "network": { "allowedDomains": ["api.github.com", "*.r2.cloudflarestorage.com"] },
+    "network": {
+      "allowedDomains": ["api.github.com", "6a4433bf11c3cf86feda057f76f47991.r2.cloudflarestorage.com"]
+    },
     "filesystem": {
-      "denyRead": [
-        "~/.ssh",
-        "~/.config",
-        "~/.zshenv",
-        "~/.zshenv.local",
-        "~/.zshrc",
-        "~/.gnupg",
-        "~/Library",
-        "~/projects-git"
+      "denyRead": ["~/"],
+      "allowRead": ["~/report-triage", "~/.local/share/mise/installs/gh"]
+    },
+    "credentials": {
+      "envVars": [
+        {
+          "name": "CLAUDE_CODE_OAUTH_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "CLOUDFLARE_API_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "GH_PROJECT_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "CARGO_REGISTRY_TOKEN",
+          "mode": "deny"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "mode": "deny"
+        },
+        {
+          "name": "SOPS_AGE_KEY_FILE",
+          "mode": "deny"
+        }
       ]
     }
   },
@@ -29,9 +51,7 @@
       "Bash(ls *)",
       "Bash(wc *)",
       "Bash(jq *)",
-      "Read(./**)",
-      "Grep(./**)",
-      "Glob(./**)"
+      "Read(./**)"
     ],
     "deny": [
       "WebFetch",
@@ -49,7 +69,11 @@
       "Read(~/.zshrc)",
       "Read(~/.gnupg/**)",
       "Read(~/Library/**)",
-      "Read(~/projects-git/**)"
+      "Read(~/projects-git/**)",
+      "Read(~/Dropbox/**)",
+      "Read(~/.claude/**)",
+      "Read(~/.gmail-mcp/**)",
+      "Read(~/.local/bin/**)"
     ]
   }
 }
