@@ -1050,6 +1050,10 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "Le tri par taille fonctionne jusqu’à {limitText} commits, et cet historique en compte plus.",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "sourceHash": "b3c0038"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Décompte des fichiers modifiés par ce commit…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"

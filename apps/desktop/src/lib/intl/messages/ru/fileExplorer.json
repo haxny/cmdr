@@ -1046,6 +1046,10 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "Сортировка по размеру работает, только если коммитов не больше {limitText}, а в этой истории их больше.",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "sourceHash": "b3c0038"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Подсчет файлов, измененных в этом коммите…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"

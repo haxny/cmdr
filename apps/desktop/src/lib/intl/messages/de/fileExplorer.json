@@ -1048,6 +1048,10 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "Das Sortieren nach Größe funktioniert bei bis zu {limitText} Commits, und dieser Verlauf hat mehr.",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "sourceHash": "b3c0038"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Dateien, die dieser Commit geändert hat, werden gezählt …",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"

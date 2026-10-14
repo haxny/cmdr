@@ -1045,6 +1045,10 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "按大小排序最多支持 {limitText} 次提交，而这段 git 历史的提交比这还多。",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "sourceHash": "b3c0038"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "正在统计这次提交改动的文件…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"

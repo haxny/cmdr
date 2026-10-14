@@ -1049,6 +1049,10 @@
   "@fileExplorer.git.tooltip.commits": {
     "sourceHash": "4d9cea8"
   },
+  "fileExplorer.git.sizeSortTooManyCommits": "Sắp xếp theo kích cỡ chỉ dùng được với tối đa {limitText} commit, còn lịch sử này có nhiều hơn thế.",
+  "@fileExplorer.git.sizeSortTooManyCommits": {
+    "sourceHash": "b3c0038"
+  },
   "fileExplorer.git.tooltip.filesChangedPending": "Đang đếm số tệp mà commit này đã thay đổi…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
     "sourceHash": "32a9a1d"

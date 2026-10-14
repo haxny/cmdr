@@ -1551,7 +1551,7 @@
   },
   "fileExplorer.git.tooltip.filesChangedPending": "Counting the files this commit changed…",
   "@fileExplorer.git.tooltip.filesChangedPending": {
-    "description": "Hover tooltip (and screen-reader label) for the Size cell of an older commit row in the virtual `.git` portal while its count of changed files is still being worked out. The cell itself shows an ellipsis meanwhile; usually gone within a second."
+    "description": "Hover tooltip (and screen-reader label) for the Size cell of a commit row in the virtual `.git` portal while its count of changed files is still being worked out. The cell itself shows an ellipsis meanwhile; usually gone within a second or two."
   },
   "fileExplorer.git.tooltip.filesChanged": "{count, plural, one {{countText} file} other {{countText} files}} changed compared to the parent commit",
   "@fileExplorer.git.tooltip.filesChanged": {
