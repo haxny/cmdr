@@ -22,6 +22,7 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { getDefaultValue } from './settings-registry'
+import { SCHEMA_VERSION } from './settings-migrations'
 
 // Shared backing store for the fake plugin-store, persisting across
 // `vi.resetModules()` to stand in for the on-disk `settings.json`.
@@ -304,7 +305,7 @@ describe('migration 5: the archive Enter blob unpacks into one setting per forma
     // Never in the blob (the format wasn't configurable), so it takes its registry default.
     expect(store.getSetting('behavior.archiveEnter.ooxml')).toBe('open')
     expect(disk.has('behavior.archiveEnterBehavior')).toBe(false)
-    expect(disk.get('_schemaVersion')).toBe(7)
+    expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 
   it('leaves a format the blob never mentioned on its default, with nothing on disk', async () => {
@@ -417,7 +418,7 @@ describe('migration 4: the onboarding keys move into the registry', () => {
     }
     // A run stamps the CURRENT schema version, not the one whose migration did the
     // work, so this number moves with every bump.
-    expect(disk.get('_schemaVersion')).toBe(7)
+    expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 
   it('survives a re-run: the second launch finds nothing to move and changes nothing', async () => {
@@ -470,7 +471,7 @@ describe('migration 6: the open FDA state renames to `unanswered`', () => {
     await store.initializeSettings()
 
     expect(store.getSetting('onboarding.fullDiskAccessChoice')).toBe('unanswered')
-    expect(disk.get('_schemaVersion')).toBe(7)
+    expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 
   it('leaves a real answer alone', async () => {
@@ -509,7 +510,7 @@ describe('migration 7: a stored one-hour update check interval takes the new def
 
     expect(disk.has('advanced.updateCheckInterval')).toBe(false)
     expect(store.getSetting('advanced.updateCheckInterval')).toBe(10_800_000)
-    expect(disk.get('_schemaVersion')).toBe(7)
+    expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 
   it('keeps any other interval, which somebody picked', async () => {
@@ -528,5 +529,22 @@ describe('migration 7: a stored one-hour update check interval takes the new def
     await store.initializeSettings()
 
     expect([...disk.keys()]).toEqual([])
+  })
+})
+
+/**
+ * Migration 8 drops the plaintext OpenAI key that releases before the Keychain move left in
+ * `settings.json`. Nothing reads it, and the delete never does either.
+ */
+describe('migration 8: a leftover plaintext OpenAI key is deleted', () => {
+  it('deletes the key, so no plaintext secret lingers on disk', async () => {
+    disk.set('ai.openaiApiKey', 'sk-leftover')
+    disk.set('_schemaVersion', 7)
+
+    const store = await loadStore()
+    await store.initializeSettings()
+
+    expect(disk.has('ai.openaiApiKey')).toBe(false)
+    expect(disk.get('_schemaVersion')).toBe(SCHEMA_VERSION)
   })
 })

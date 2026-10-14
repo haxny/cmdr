@@ -23,6 +23,8 @@ const MIGRATIONS: { to: number; run: (store: Store) => Promise<boolean> }[] = [
   { to: 5, run: migrateArchiveEnterBlobIntoPerFormatKeys },
   { to: 6, run: renameFdaOpenStateToUnanswered },
   { to: 7, run: dropOldHourlyUpdateCheckDefault },
+  // TODO(2027-01-14): delete `dropLeftoverOpenaiApiKey`, keeping this slot as `run: () => Promise.resolve(false)`.
+  { to: 8, run: dropLeftoverOpenaiApiKey },
 ]
 
 /** The schema version `settings.json` is at once every migration has run. */
@@ -77,6 +79,15 @@ async function dropOldHourlyUpdateCheckDefault(store: Store): Promise<boolean> {
   if ((await store.get<number>('advanced.updateCheckInterval')) !== 3_600_000) return false
   await store.delete('advanced.updateCheckInterval')
   return true
+}
+
+/**
+ * Migration 8: releases before AI keys moved to the Keychain kept the OpenAI key in plain text
+ * here, and an install that skipped every migrating release still has it, unused. Deleted blind:
+ * ❌ never read the value.
+ */
+async function dropLeftoverOpenaiApiKey(store: Store): Promise<boolean> {
+  return await store.delete('ai.openaiApiKey')
 }
 
 /**
