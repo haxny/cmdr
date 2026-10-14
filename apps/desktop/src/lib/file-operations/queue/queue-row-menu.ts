@@ -19,6 +19,8 @@ export interface QueueRowMenuFacts {
   canRollback: boolean
   /** The row offers its Cancel button: it's running, paused, or waiting. */
   canCancel: boolean
+  /** The row offers its Dismiss button: a retained failure. Dismiss takes Cancel's place. */
+  canDismiss: boolean
   /** The row has a checkbox for "Cancel selected" (a settled failure has none). */
   selectable: boolean
   selected: boolean
@@ -31,7 +33,7 @@ export interface QueueRowMenuFacts {
  *  (`QueueRow`'s `menuFacts`); the page adds the selection and the line's order. */
 export type QueueRowOwnMenuFacts = Pick<
   QueueRowMenuFacts,
-  'active' | 'paused' | 'canShow' | 'canRollback' | 'canCancel'
+  'active' | 'paused' | 'canShow' | 'canRollback' | 'canCancel' | 'canDismiss'
 >
 
 /** The row's export the menu reads, beside its keyboard half (`QueueRowApi`). */
@@ -63,7 +65,7 @@ export function queueRowMenuEntries(facts: QueueRowMenuFacts): QueueRowMenuEntry
     separator,
     selectItem(facts),
     separator,
-    item('cancel', facts.canCancel),
+    facts.canDismiss ? item('dismiss', true) : item('cancel', facts.canCancel),
   ]
   if (!facts.active) return middle
   return [
@@ -97,6 +99,8 @@ export function queueRowMenuKeyAction(action: QueueRowMenuAction): QueueKeyActio
       return { kind: 'toggleSelected' }
     case 'cancel':
       return { kind: 'cancel' }
+    case 'dismiss':
+      return { kind: 'cancelOrDismiss' }
     case 'show':
       return { kind: 'show' }
     case 'pause':

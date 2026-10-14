@@ -748,6 +748,10 @@
   "@menu.queue.cancel": {
     "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Stops the operation and keeps every file it already wrote. Must read the same as the row's Cancel button (queue.row.cancel), which does exactly this. No capture can photograph a native menu, so this description is the whole translator aid."
   },
+  "menu.queue.dismiss": "Dismiss",
+  "@menu.queue.dismiss": {
+    "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Shown only on an operation that couldn't finish, in the place Cancel has on the others: removes that failed operation from the list. Changes no files. Must read the same as the row's Dismiss button (queue.row.dismiss). No capture can photograph a native menu, so this description is the whole translator aid."
+  },
   "menu.queue.show": "Show",
   "@menu.queue.show": {
     "description": "VERB (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Brings the main window forward with this operation's progress dialog open. Must read the same as the row's Show button (queue.row.foreground). No capture can photograph a native menu, so this description is the whole translator aid."

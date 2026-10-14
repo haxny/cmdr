@@ -316,6 +316,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.network.pinToSwitcher", "Pin to switcher"),
             ("menu.network.unpin", "Unpin from switcher"),
             ("menu.queue.cancel", "Cancel"),
+            ("menu.queue.dismiss", "Dismiss"),
             ("menu.queue.moveDown", "Move down"),
             ("menu.queue.moveUp", "Move up"),
             ("menu.queue.pause", "Pause"),

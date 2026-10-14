@@ -13039,6 +13039,7 @@ export type QueueRowMenuAction =
   | 'moveLater'
   | 'select'
   | 'cancel'
+  | 'dismiss'
   | 'show'
   | 'pause'
   | 'resume'

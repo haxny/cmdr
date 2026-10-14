@@ -365,6 +365,7 @@
             canShow: canForeground,
             canRollback,
             canCancel: isActionable,
+            canDismiss: isFailed,
         }
     }
 

@@ -505,9 +505,9 @@ menu: plain rows, opened by a right-click on a backend object. Right-clicking pu
 any list.
 
 - **Every row**: Move up (⌥↑), Move down (⌥↓), divider, Select (Space, ticked while the row is selected), divider,
-  Cancel (C). **A running or paused row** leads with Show (↩) and Pause or Resume (P), then a divider, and puts
-  Rollback… (B) beside Cancel: the two ways to stop it, at the bottom. Items that don't apply are greyed (Move up on the
-  first WAITING row, everything on a failure), never dropped, so the menu's shape stays put.
+  Cancel (C), or Dismiss (⌫) on a failure. **A running or paused row** leads with Show (↩) and Pause or Resume (P), then
+  a divider, and puts Rollback… (B) beside Cancel: the two ways to stop it, at the bottom. Items that don't apply are
+  greyed (Move up on the first WAITING row, all but Dismiss on a failure), never dropped, so the menu's shape stays put.
 - **The frontend lists the entries** (`queue-row-menu.ts`, pure, unit-tested); Rust only labels them and pops them up,
   because every fact behind them lives in this window: the row's own (`QueueRow`'s `menuFacts()`, read off the same
   derived state its buttons and key guards use), plus the selection and the line's order (`queuedNeighbors`).

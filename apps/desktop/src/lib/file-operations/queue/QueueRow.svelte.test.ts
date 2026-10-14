@@ -538,7 +538,14 @@ describe('QueueRow right-click menu', () => {
   it('offers what a running row’s buttons offer', () => {
     render({ row: buildRow('running', 'copy', null, true) })
     expect(rollbackButton()).not.toBeNull()
-    expect(menuFacts()).toEqual({ active: true, paused: false, canShow: true, canRollback: true, canCancel: true })
+    expect(menuFacts()).toEqual({
+      active: true,
+      paused: false,
+      canShow: true,
+      canRollback: true,
+      canCancel: true,
+      canDismiss: false,
+    })
   })
 
   it('says a paused row is paused, so the menu offers Resume', () => {
@@ -548,12 +555,26 @@ describe('QueueRow right-click menu', () => {
 
   it('offers only Cancel on a waiting row', () => {
     render({ row: buildRow('queued', 'copy', null, true) })
-    expect(menuFacts()).toEqual({ active: false, paused: false, canShow: false, canRollback: false, canCancel: true })
+    expect(menuFacts()).toEqual({
+      active: false,
+      paused: false,
+      canShow: false,
+      canRollback: false,
+      canCancel: true,
+      canDismiss: false,
+    })
   })
 
-  it('offers nothing on a failure', () => {
+  it('offers only Dismiss on a failure', () => {
     render({ row: buildRow('failed') })
-    expect(menuFacts()).toEqual({ active: false, paused: false, canShow: false, canRollback: false, canCancel: false })
+    expect(menuFacts()).toEqual({
+      active: false,
+      paused: false,
+      canShow: false,
+      canRollback: false,
+      canCancel: false,
+      canDismiss: true,
+    })
   })
 })
 

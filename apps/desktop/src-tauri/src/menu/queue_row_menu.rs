@@ -24,6 +24,7 @@ pub enum QueueRowMenuAction {
     MoveLater,
     Select,
     Cancel,
+    Dismiss,
     Show,
     Pause,
     Resume,
@@ -31,11 +32,12 @@ pub enum QueueRowMenuAction {
 }
 
 impl QueueRowMenuAction {
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::MoveEarlier,
         Self::MoveLater,
         Self::Select,
         Self::Cancel,
+        Self::Dismiss,
         Self::Show,
         Self::Pause,
         Self::Resume,
@@ -50,6 +52,7 @@ impl QueueRowMenuAction {
             Self::MoveLater => "queue_row_move_later",
             Self::Select => "queue_row_select",
             Self::Cancel => "queue_row_cancel",
+            Self::Dismiss => "queue_row_dismiss",
             Self::Show => "queue_row_show",
             Self::Pause => "queue_row_pause",
             Self::Resume => "queue_row_resume",
@@ -68,6 +71,7 @@ impl QueueRowMenuAction {
             Self::MoveLater => "menu.queue.moveDown",
             Self::Select => "menu.queue.select",
             Self::Cancel => "menu.queue.cancel",
+            Self::Dismiss => "menu.queue.dismiss",
             Self::Show => "menu.queue.show",
             Self::Pause => "menu.queue.pause",
             Self::Resume => "menu.queue.resume",
@@ -83,6 +87,8 @@ impl QueueRowMenuAction {
             Self::MoveLater => "queue.moveLater",
             Self::Select => "queue.toggleSelected",
             Self::Cancel => "queue.cancel",
+            // ⌫ cancels a live row and dismisses a failure; on a failure's menu it's the Dismiss key.
+            Self::Dismiss => "queue.cancelOrDismiss",
             Self::Show => "queue.showInMainWindow",
             Self::Pause | Self::Resume => "queue.pauseOrResume",
             Self::Rollback => "queue.rollback",

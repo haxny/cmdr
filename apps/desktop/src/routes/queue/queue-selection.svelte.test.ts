@@ -609,6 +609,16 @@ describe('queue window: a row’s right-click menu', () => {
     expect(openedMenu()).toContain('select✓')
   })
 
+  it('offers Dismiss on a failure, and dismisses it like its button and ⌫', async () => {
+    await renderPage([three[0], failed('op-9')])
+    rightClick('op-9')
+    expect(openedMenu()).toEqual(['moveEarlier!', 'moveLater!', '-', 'select!', '-', 'dismiss'])
+    pickFromRowMenu?.('dismiss')
+    await vi.waitFor(() => {
+      expect(dismissFailedOperation).toHaveBeenCalledWith('op-9')
+    })
+  })
+
   it('drops a pick the row no longer offers by the time it lands', async () => {
     await renderPage(three)
     rightClick('op-1')

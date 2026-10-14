@@ -17,6 +17,7 @@ const waiting: QueueRowMenuFacts = {
   canShow: false,
   canRollback: false,
   canCancel: true,
+  canDismiss: false,
   selectable: true,
   selected: false,
   canMoveEarlier: true,
@@ -84,9 +85,16 @@ describe('queueRowMenuEntries', () => {
     expect(items).toContain('rollback!')
   })
 
-  it('greys everything on a row with nothing left to do (a failure)', () => {
-    const failed = { ...waiting, canCancel: false, selectable: false, canMoveEarlier: false, canMoveLater: false }
-    expect(picture(failed)).toEqual(['moveEarlier!', 'moveLater!', '-', 'select!', '-', 'cancel!'])
+  it('offers Dismiss in Cancel’s place on a failure, greying the rest', () => {
+    const failed = {
+      ...waiting,
+      canCancel: false,
+      canDismiss: true,
+      selectable: false,
+      canMoveEarlier: false,
+      canMoveLater: false,
+    }
+    expect(picture(failed)).toEqual(['moveEarlier!', 'moveLater!', '-', 'select!', '-', 'dismiss'])
   })
 })
 
@@ -97,6 +105,7 @@ describe('queueRowMenuKeyAction', () => {
     expect(queueRowMenuKeyAction('moveLater')).toEqual({ kind: 'move', direction: 'later' })
     expect(queueRowMenuKeyAction('select')).toEqual({ kind: 'toggleSelected' })
     expect(queueRowMenuKeyAction('cancel')).toEqual({ kind: 'cancel' })
+    expect(queueRowMenuKeyAction('dismiss')).toEqual({ kind: 'cancelOrDismiss' })
     expect(queueRowMenuKeyAction('show')).toEqual({ kind: 'show' })
     expect(queueRowMenuKeyAction('pause')).toEqual({ kind: 'pauseOrResume' })
     expect(queueRowMenuKeyAction('resume')).toEqual({ kind: 'pauseOrResume' })
