@@ -20,12 +20,13 @@ if [[ -d "$work/cmdr/.git" ]]; then
 else
   git clone --quiet --depth 1 https://github.com/vdavid/cmdr "$work/cmdr"
 fi
-cp "$here/fetch-bundle.sh" "$work/fetch-bundle.sh"
-chmod +x "$work/fetch-bundle.sh"
-# An empty gh config dir, fresh every run: gh refuses to start without a readable one, the sandbox denies the real
-# `~/.config/gh`, and GH_TOKEN is all it needs. Recreated so nothing (an alias, say) carries over between runs.
-rm -rf "$work/.gh-config"
-mkdir -p "$work/.gh-config"
+# The agent's two tools, fresh every run so nothing it did yesterday carries over. settings.json denies the sandbox
+# writes to both, so a run can't rewrite them (or unzip a bundle over them) mid-run.
+for tool in board.sh fetch-bundle.sh; do
+  rm -f "$work/$tool"
+  cp "$here/$tool" "$work/$tool"
+  chmod 0555 "$work/$tool"
+done
 
 gh_token="$(secret TRIAGE_GH_TOKEN)"
 r2_key_id="$(secret TRIAGE_R2_ACCESS_KEY_ID)"
@@ -36,14 +37,9 @@ r2_secret="$(secret TRIAGE_R2_SECRET_ACCESS_KEY)"
 claude_token="$(secret CLAUDE_CODE_OAUTH_TOKEN)"
 prompt="$(cat "$here/prompt.md")"
 
-# The real `gh` binary, not a mise shim: a shim runs mise, which reads `~/.config/mise`, and the sandbox denies the
-# whole home directory except the working dir and gh's install dir (settings.json).
-gh_bin="$(mise which gh 2>/dev/null || command -v gh)"
-gh_dir="$(dirname "$gh_bin")"
-
 {
   echo "=== report-triage run $(date '+%Y-%m-%d %H:%M:%S %Z') ==="
-  echo "claude $(claude --version 2>/dev/null), gh at $gh_bin"
+  echo "claude $(claude --version 2>/dev/null)"
 } >&2
 
 cd "$work"
@@ -55,12 +51,9 @@ exec env -i \
   HOME="$HOME" \
   SHELL=/bin/zsh \
   ZDOTDIR=/var/empty \
-  PATH="$gh_dir:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin" \
+  PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin" \
   CLAUDE_CODE_OAUTH_TOKEN="$claude_token" \
   GH_TOKEN="$gh_token" \
-  GH_REPO="vdavid/cmdr-reports" \
-  GH_CONFIG_DIR="$work/.gh-config" \
-  GH_NO_UPDATE_NOTIFIER=1 \
   TRIAGE_R2_ACCOUNT_ID="6a4433bf11c3cf86feda057f76f47991" \
   TRIAGE_R2_ACCESS_KEY_ID="$r2_key_id" \
   TRIAGE_R2_SECRET_ACCESS_KEY="$r2_secret" \

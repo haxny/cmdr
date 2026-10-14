@@ -8,7 +8,8 @@
     },
     "filesystem": {
       "denyRead": ["~/"],
-      "allowRead": ["~/report-triage", "~/.local/share/mise/installs/gh"]
+      "allowRead": ["~/report-triage"],
+      "denyWrite": ["~/report-triage/board.sh", "~/report-triage/fetch-bundle.sh"]
     },
     "credentials": {
       "envVars": [
@@ -41,11 +42,7 @@
   },
   "permissions": {
     "allow": [
-      "Bash(gh issue list *)",
-      "Bash(gh issue view *)",
-      "Bash(gh issue comment *)",
-      "Bash(gh issue edit *)",
-      "Bash(gh search issues *)",
+      "Bash(./board.sh *)",
       "Bash(./fetch-bundle.sh *)",
       "Bash(rg *)",
       "Bash(ls *)",
@@ -56,12 +53,8 @@
     "deny": [
       "WebFetch",
       "WebSearch",
-      "Bash(gh issue close *)",
-      "Bash(gh issue delete *)",
-      "Bash(gh issue reopen *)",
-      "Bash(gh issue lock *)",
-      "Bash(gh issue transfer *)",
-      "Bash(gh api *)",
+      "Bash(gh *)",
+      "Bash(curl *)",
       "Bash(git push *)",
       "Read(~/.ssh/**)",
       "Read(~/.config/**)",
