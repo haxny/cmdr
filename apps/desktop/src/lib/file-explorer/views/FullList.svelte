@@ -19,7 +19,7 @@
     import InlineRenameEditor from '../rename/InlineRenameEditor.svelte'
     import { shouldMountRenameEditor } from '../rename/rename-mount'
     import { glyphFor, labelFor } from '../git/status-column'
-    import { getSyncIconPath, getImageIndexBadge, getFolderCoverageBadge } from './file-list-utils'
+    import { getImageIndexBadge, getFolderCoverageBadge } from './file-list-utils'
     import { createFullListCache } from './full-list-cache.svelte'
     import { createGitStatusColumn } from './full-list-git-column.svelte'
     import { planRowMouseDown } from './full-list-mouse'
@@ -724,7 +724,6 @@
             <!-- Visible window positioned with translateY -->
             <div class="virtual-window" style="transform: translateY({virtualWindow.offset}px);">
                 {#each visibleFiles as { file, globalIndex } (file.path)}
-                    {@const syncIcon = getSyncIconPath(syncStatusMap[file.path])}
                     {@const imageIndexBadge = file.isDirectory
                         ? getFolderCoverageBadge(folderCoverageMap[file.path], tString)
                         : getImageIndexBadge(indexStatusMap[file.path])}
@@ -768,7 +767,12 @@
                         role="option"
                         aria-selected={globalIndex === cursorIndex}
                     >
-                        <FileIcon {file} {syncIcon} {imageIndexBadge} dimmed={rowIsHiddenDimmed} />
+                        <FileIcon
+                            {file}
+                            syncStatus={syncStatusMap[file.path]}
+                            {imageIndexBadge}
+                            dimmed={rowIsHiddenDimmed}
+                        />
                         {#if renameState?.active && shouldMountRenameEditor(renameState.target, { path: file.path })}
                             <div
                                 class="col-rename"

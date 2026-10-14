@@ -19,7 +19,6 @@
     import InlineRenameEditor from '../rename/InlineRenameEditor.svelte'
     import { shouldMountRenameEditor } from '../rename/rename-mount'
     import {
-        getSyncIconPath,
         getImageIndexBadge,
         getFolderCoverageBadge,
         createParentEntry,
@@ -962,7 +961,6 @@
                         style="width: {getColumnWidth(column.columnIndex)}px;"
                     >
                         {#each column.files as { file, globalIndex } (file.path)}
-                            {@const syncIcon = getSyncIconPath(syncStatusMap[file.path])}
                             {@const imageIndexBadge = file.isDirectory
                                 ? getFolderCoverageBadge(folderCoverageMap[file.path], tString)
                                 : getImageIndexBadge(indexStatusMap[file.path])}
@@ -1001,7 +999,12 @@
                                 role="option"
                                 aria-selected={globalIndex === cursorIndex}
                             >
-                                <FileIcon {file} {syncIcon} {imageIndexBadge} dimmed={rowIsHiddenDimmed} />
+                                <FileIcon
+                                    {file}
+                                    syncStatus={syncStatusMap[file.path]}
+                                    {imageIndexBadge}
+                                    dimmed={rowIsHiddenDimmed}
+                                />
                                 {#if renameState?.active && shouldMountRenameEditor(renameState.target, { path: file.path })}
                                     <InlineRenameEditor
                                         value={renameState.currentName}

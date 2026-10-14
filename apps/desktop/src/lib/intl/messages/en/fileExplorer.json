@@ -1649,6 +1649,26 @@
   "@fileExplorer.dateTooltip.lastModified": {
     "description": "Label in a file’s date tooltip for when its contents were last changed."
   },
+  "fileExplorer.fileIcon.symlinkBadge": "Symlink",
+  "@fileExplorer.fileIcon.symlinkBadge": {
+    "description": "Spoken name of the small link-arrow badge on a file or folder icon in the file list, marking the entry as a symbolic link (a pointer to another file or folder). Screen readers read it together with the row, next to the name, so keep it to one or two words. Use your platform’s usual word for a symbolic link."
+  },
+  "fileExplorer.fileIcon.sync.synced": "Synced",
+  "@fileExplorer.fileIcon.sync.synced": {
+    "description": "Spoken name of the small cloud-status badge on a file icon in the file list, for a file in a cloud-storage folder (iCloud Drive, Dropbox, …) whose local copy matches the cloud. Screen readers read it with the row, next to the file name, so keep it to one or two words. An adjective describing the file’s state."
+  },
+  "fileExplorer.fileIcon.sync.onlineOnly": "Online-only",
+  "@fileExplorer.fileIcon.sync.onlineOnly": {
+    "description": "Spoken name of the same cloud-status badge as fileExplorer.fileIcon.sync.synced, for a file whose contents live only in the cloud: the Mac holds a placeholder until it’s downloaded. “Online-only” is Apple’s Finder term, so use your platform’s own wording for it. Keep it to one or two words."
+  },
+  "fileExplorer.fileIcon.sync.uploading": "Uploading",
+  "@fileExplorer.fileIcon.sync.uploading": {
+    "description": "Spoken name of the same cloud-status badge as fileExplorer.fileIcon.sync.synced, while the cloud service is sending this file up to the cloud. A state, not a command. Keep it to one or two words."
+  },
+  "fileExplorer.fileIcon.sync.downloading": "Downloading",
+  "@fileExplorer.fileIcon.sync.downloading": {
+    "description": "Spoken name of the same cloud-status badge as fileExplorer.fileIcon.sync.synced, while the cloud service is fetching this file down to the Mac. A state, not a command. Keep it to one or two words."
+  },
   "fileExplorer.imageIndex.file.indexed": "Indexed for image search",
   "@fileExplorer.imageIndex.file.indexed": {
     "description": "Hover tooltip on a small badge over an image file’s icon in the file list. Means this image is fully indexed, so image search can find it by the text inside it."

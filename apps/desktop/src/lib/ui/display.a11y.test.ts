@@ -231,10 +231,10 @@ describe('DateLabel a11y', () => {
 /**
  * Tier 3 a11y tests for `Icon.svelte`.
  *
- * Icon renders an inline glyph from the shared registry. It carries no ARIA of its own: a
- * decorative glyph takes `aria-hidden`, a meaningful one takes `role="img"` + `aria-label`, both
- * passed through by the caller. axe confirms each shape produces clean markup. Contrast is a
- * wrapper concern (the glyph inherits `currentColor`), so there's none to validate here.
+ * Icon renders an inline glyph from the shared registry. It's decorative unless named: with no
+ * `aria-label` / `aria-labelledby` it's `aria-hidden`, and with one it's `role="img"`. axe
+ * confirms each shape produces clean markup. Contrast is a wrapper concern (the glyph inherits
+ * `currentColor`), so there's none to validate here.
  */
 describe('Icon a11y', () => {
   async function renderIcon(props: ComponentProps<typeof Icon>): Promise<HTMLElement> {
@@ -243,6 +243,20 @@ describe('Icon a11y', () => {
     await tick()
     return target
   }
+
+  it('hides an unnamed glyph from assistive tech by default', async () => {
+    const svg = (await renderIcon({ name: 'triangle-alert', size: 16 })).querySelector('svg')
+    expect(svg?.getAttribute('aria-hidden')).toBe('true')
+    expect(svg?.hasAttribute('role')).toBe(false)
+  })
+
+  it('exposes a named glyph as an image, and keeps it visible to assistive tech', async () => {
+    const target = await renderIcon({ name: 'bot', size: 12, 'aria-label': 'Open the wake thread' })
+    const svg = target.querySelector('svg')
+    expect(svg?.hasAttribute('aria-hidden')).toBe(false)
+    expect(svg?.getAttribute('role')).toBe('img')
+    await expectNoA11yViolations(target)
+  })
 
   it('decorative icon (aria-hidden) has no a11y violations', async () => {
     const target = await renderIcon({ name: 'triangle-alert', size: 16, 'aria-hidden': 'true' })

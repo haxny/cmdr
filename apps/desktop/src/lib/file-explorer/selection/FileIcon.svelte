@@ -1,17 +1,18 @@
 <script lang="ts">
-    import type { FileEntry } from '../types'
+    import type { FileEntry, SyncStatus } from '../types'
     import { getCachedIcon, getCachedCustomFolderIcon, iconCacheVersion } from '#lib/icon-cache.js'
     import { getIsCmdrGold } from '#lib/settings/reactive-settings.svelte.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import Icon from '#lib/ui/Icon.svelte'
     import type { IconName } from '#lib/ui/icons/icon-map.js'
-    import type { ImageIndexBadge } from '../views/file-list-utils'
+    import { getSyncIconPath, getSyncStatusLabelKey, type ImageIndexBadge } from '../views/file-list-utils'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         file: FileEntry
-        syncIcon?: string
+        /** The entry's cloud sync status; drawn as a named badge when it has one. */
+        syncStatus?: SyncStatus
         /** Resolved image-index overlay for this row (glyph + tooltip key), or null for none. */
         imageIndexBadge?: ImageIndexBadge | null
         /**
@@ -23,7 +24,12 @@
         dimmed?: boolean
     }
 
-    const { file, syncIcon, imageIndexBadge = null, dimmed = false }: Props = $props()
+    const { file, syncStatus, imageIndexBadge = null, dimmed = false }: Props = $props()
+
+    // The symlink and sync badges carry meaning the row's text doesn't, so each names itself.
+    // The row's accessible name is built from its content, which folds these names into it.
+    const syncIcon = $derived(getSyncIconPath(syncStatus))
+    const syncLabelKey = $derived(getSyncStatusLabelKey(syncStatus))
 
     // Subscribe to cache version - this makes getIconUrl reactive
     const _cacheVersion = $derived($iconCacheVersion)
@@ -112,10 +118,15 @@
         />
     {/if}
     {#if file.isSymlink}
-        <span class="symlink-badge" class:has-sync={!!syncIcon}><Icon name="link" size={10} /></span>
+        <span
+            class="symlink-badge"
+            class:has-sync={!!syncIcon}
+            role="img"
+            aria-label={tString('fileExplorer.fileIcon.symlinkBadge')}><Icon name="link" size={10} /></span
+        >
     {/if}
-    {#if syncIcon}
-        <img class="sync-badge" src={syncIcon} alt="" width="10" height="10" />
+    {#if syncIcon && syncLabelKey}
+        <img class="sync-badge" src={syncIcon} alt={tString(syncLabelKey)} width="10" height="10" />
     {/if}
     {#if imageIndexBadge}
         <!-- Folder badges carry an already-resolved `tooltip` (interpolated counts); file

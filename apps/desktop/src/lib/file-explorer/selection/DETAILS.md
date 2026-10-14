@@ -161,14 +161,20 @@ folders add up to far less than the space reported as used, which reads as a Cmd
 
 ## `FileIcon.svelte`
 
-Props: `file: FileEntry`, `syncIcon?: string` (URL for sync overlay badge).
+Props: `file: FileEntry`, `syncStatus?: SyncStatus` (picks the sync badge's image and name), `imageIndexBadge?`,
+`dimmed?`.
 
 - Primary: `<img>` from `getCachedIcon(file.iconId)`.
 - Fallback (cache miss only): bundled macOS default folder/file icon (`static/icons/default-folder.png` /
   `default-file.png`, extracted from the system `GenericFolderIcon`/`GenericDocumentIcon`), chosen by `isFolderIcon`.
 - Symlink badge: the `link` glyph via `<Icon>` (size 10, `--color-accent-pop`, a mode-aware higher-contrast accent),
-  bottom-right by default, moving to top-left when `syncIcon` is present.
-- Sync badge: 10×10px `<img>` at bottom-right.
+  bottom-right by default, moving to top-left when a sync badge is present.
+- Sync badge: 10×10px `<img>` at bottom-right; image and name come from `getSyncIconPath` / `getSyncStatusLabelKey`
+  (`../views/file-list-utils.ts`), which cover the same statuses.
+- **Both badges name themselves** (the symlink one `role="img"` + `aria-label`, the sync one its `alt`), since they say
+  something the row's text doesn't. A row's accessible name is built from its content, so the names fold into it
+  ("Symlink, Synced, report.md, …"; WCAG 1.1.1). The file-kind icon and the image-index badge stay unnamed: the first is
+  #437's job, the second's tooltip is a sentence too long to repeat on every row.
 - Reactivity: subscribes to `$iconCacheVersion`, re-renders when the cache is populated.
 
 ### Cmdr-gold folder recolor scope

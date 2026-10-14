@@ -41,6 +41,19 @@ export function getSyncIconPath(status: SyncStatus | undefined): string | undefi
   return iconMap[status]
 }
 
+/** The sync badge's spoken name, for exactly the statuses `getSyncIconPath` draws a badge for. */
+export function getSyncStatusLabelKey(status: SyncStatus | undefined): MessageKey | undefined {
+  if (!status) return undefined
+  const keyMap: Record<SyncStatus, MessageKey | undefined> = {
+    synced: 'fileExplorer.fileIcon.sync.synced',
+    online_only: 'fileExplorer.fileIcon.sync.onlineOnly',
+    uploading: 'fileExplorer.fileIcon.sync.uploading',
+    downloading: 'fileExplorer.fileIcon.sync.downloading',
+    unknown: undefined,
+  }
+  return keyMap[status]
+}
+
 /** The resolved top-right image-index badge for a file OR folder row: a glyph plus
  *  its tooltip. `null` means render no badge. The tooltip is EITHER a static i18n
  *  `tooltipKey` (file badges, one per state) OR an already-resolved `tooltip` string

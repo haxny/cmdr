@@ -137,9 +137,32 @@ describe('FileIcon a11y', () => {
   it('file with sync icon overlay has no a11y violations', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
-    mount(FileIcon, { target, props: { file: fileEntry, syncIcon: '/icons/sync-synced.svg' } })
+    mount(FileIcon, { target, props: { file: fileEntry, syncStatus: 'synced' } })
     await tick()
     await expectNoA11yViolations(target)
+  })
+
+  // The badges carry meaning the row's text doesn't, so they name themselves; the row's
+  // accessible name is built from its content, so the names fold into it.
+  it('names the symlink badge', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(FileIcon, { target, props: { file: symlinkEntry } })
+    await tick()
+    expect(target.querySelector('.symlink-badge')?.getAttribute('aria-label')).toBe('Symlink')
+  })
+
+  it.each([
+    ['synced', 'Synced'],
+    ['online_only', 'Online-only'],
+    ['uploading', 'Uploading'],
+    ['downloading', 'Downloading'],
+  ] as const)('names the %s sync badge “%s”', async (syncStatus, expected) => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(FileIcon, { target, props: { file: fileEntry, syncStatus } })
+    await tick()
+    expect(target.querySelector('.sync-badge')?.getAttribute('alt')).toBe(expected)
   })
 })
 

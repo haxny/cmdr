@@ -34,10 +34,14 @@ Render every glyph through the shared `Icon` component, never by importing `~ico
 <!-- Basic usage: inherits parent text color -->
 <Icon name="triangle-alert" size={16} />
 
-<!-- Decorative vs meaningful: a11y attributes pass through to the svg -->
-<Icon name="triangle-alert" size={16} aria-hidden="true" />
-<Icon name="hourglass" size={12} role="img" aria-label="Size updating" />
+<!-- Decorative by default: an unnamed glyph renders aria-hidden="true" -->
+<Icon name="triangle-alert" size={16} />
+<!-- Meaningful: an aria-label (or aria-labelledby) makes it role="img" with that name -->
+<Icon name="hourglass" size={12} aria-label="Size updating" />
 ```
+
+An explicit `aria-hidden` or `role` still passes through and wins. A glyph whose meaning nothing else on screen carries
+(a status badge, a lone marker) needs the label, or a screen reader never hears it.
 
 A dynamic glyph (chosen at runtime) takes a typed name:
 
