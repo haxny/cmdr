@@ -4844,6 +4844,16 @@ export const commands = {
   terminalAppDisplayName: (appChoice: string) =>
     __TAURI_INVOKE<string | null>('terminal_app_display_name', { appChoice }),
   /**
+   *  The name of the app a file opens in by default, for the "Opening in …" toast that
+   *  Enter and double-click raise.
+   *
+   *  Asked by the file's extension only (`macos_icons::default_app_path_for_extension`),
+   *  so a file on a slow share answers as fast as a local one. `None` when the file has
+   *  no extension, nothing claims it, or the lookup overran: the toast then words its
+   *  nameless variant.
+   */
+  defaultAppName: (path: string) => __TAURI_INVOKE<string | null>('default_app_name', { path }),
+  /**
    *  The text editors on this Mac, the system default, and which one `app_choice`
    *  names.
    *

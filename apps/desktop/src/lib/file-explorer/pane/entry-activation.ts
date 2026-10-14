@@ -9,7 +9,8 @@
  * 3. a directory or archive file browses in place;
  * 4. a file inside an archive goes to the viewer (its inner path doesn't exist
  *    on disk, so the OS open would be a silent no-op);
- * 5. anything else goes to its default app.
+ * 5. anything else goes to its default app, with a short "Opening…" toast
+ *    (`opening-toast.ts`).
  *
  * On a search-results pane every arm that would browse or launch instead LEAVES
  * the snapshot volume first: `resolveLocationOrToast` resolves the row's real
@@ -28,6 +29,7 @@ import { resolveEnterPolicy, enterBehaviorFromSettings } from './archive-enter-p
 import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 import { resolveLocationOrToast } from '../navigation/navigate-and-select'
 import type { LoadDirectoryArgs } from './types'
+import { announceOpening } from './opening-toast'
 
 export interface EntryActivationDeps {
   getCurrentPath: () => string
@@ -79,6 +81,9 @@ export function createEntryActivation(deps: EntryActivationDeps): EntryActivatio
    * archive tool, a `.app`/`.bundle` launches, any other file opens normally.
    */
   async function openEntryExternally(entry: FileEntry): Promise<void> {
+    // Side by side with the launch, never in front of it: the toast is the
+    // feedback a slow share otherwise lacks.
+    void announceOpening(entry)
     try {
       await openFile(entry.path)
     } catch {

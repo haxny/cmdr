@@ -769,6 +769,14 @@ macro_rules! ipc_command_manifest {
                 ]
                 dispatch_only: []
             }
+            // The app name for the "Opening in …" toast. macOS only: it's a LaunchServices
+            // lookup; elsewhere the frontend words the nameless variant.
+            cfg(target_os = "macos") {
+                typed: [
+                    crate::commands::file_actions::default_app_name,
+                ]
+                dispatch_only: []
+            }
             // The text editors F4 can open a file in. macOS only: the list is
             // LaunchServices' answer (`file_system/text_editor.rs`), while
             // `open_in_editor` itself answers on every platform.

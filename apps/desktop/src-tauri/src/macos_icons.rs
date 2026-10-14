@@ -93,6 +93,18 @@ fn get_app_url_for_bundle_id(bundle_id: &CFString) -> Option<PathBuf> {
     }
 }
 
+/// Where the app that opens files with this extension by default lives, or `None`
+/// when nothing claims it.
+///
+/// Asks by EXTENSION, never by a file's URL, so it never reads the file itself: on a
+/// slow share that read is the very wait the caller wants to explain. The price is
+/// that a per-file "Open with" override from Finder's Get Info isn't seen.
+pub(crate) fn default_app_path_for_extension(ext: &str) -> Option<PathBuf> {
+    let uti = get_uti_for_extension(ext)?;
+    let bundle_id = get_default_app_bundle_id(&uti)?;
+    get_app_url_for_bundle_id(&bundle_id)
+}
+
 /// Reads the app's Info.plist and finds the document icon for the given UTI.
 fn get_document_icon_name_from_bundle(app_path: &Path, uti: &str, use_app_icons_for_documents: bool) -> Option<String> {
     let plist_path = app_path.join("Contents/Info.plist");
@@ -228,6 +240,22 @@ mod tests {
                 println!("Default app for .txt: {bid}");
             }
         }
+    }
+
+    #[test]
+    fn default_app_for_an_extension_is_an_installed_app() {
+        // macOS always claims `.txt` (TextEdit ships with the OS), so this is a real answer.
+        let app = default_app_path_for_extension("txt").expect("some app opens .txt");
+        assert!(
+            app.extension().is_some_and(|e| e == "app"),
+            "not an app bundle: {app:?}"
+        );
+        assert!(app.exists(), "{app:?} isn't on disk");
+    }
+
+    #[test]
+    fn no_default_app_for_an_extension_nothing_claims() {
+        assert_eq!(default_app_path_for_extension("cmdr-no-such-extension-xyz"), None);
     }
 
     #[test]

@@ -364,6 +364,21 @@
     "description": "Button label on the function-key bar for deleting the selected files (to the trash). Space is tight; keep it short.",
     "screenshot": "main-window.png"
   },
+  "fileExplorer.openingToast.withApp": "{fileName} is opening in {appName}…",
+  "@fileExplorer.openingToast.withApp": {
+    "description": "Short self-dismissing toast (two seconds) shown right after the user presses Enter or double-clicks a file, while the file launches in its default app. Mostly useful on slow network drives, where the app takes a while to appear.",
+    "placeholders": {
+      "fileName": "the file's name, for example report.pdf (do not translate)",
+      "appName": "the app's name as macOS shows it, for example Preview (do not translate)"
+    }
+  },
+  "fileExplorer.openingToast.noApp": "Opening {fileName}…",
+  "@fileExplorer.openingToast.noApp": {
+    "description": "Short self-dismissing toast (two seconds) shown right after the user presses Enter or double-clicks a file, when Cmdr doesn't know which app will open it (or the item is an app itself).",
+    "placeholders": {
+      "fileName": "the file's name, for example notes or Safari.app (do not translate)"
+    }
+  },
   "fileExplorer.functionKeyBar.terminalLabel": "Terminal",
   "@fileExplorer.functionKeyBar.terminalLabel": {
     "description": "Button label on the function-key bar (macOS only) that opens the user's terminal app in the folder shown in the focused pane. Space is tight; keep it short.",

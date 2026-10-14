@@ -1658,6 +1658,8 @@ export type MessageKey =
   | 'fileExplorer.openWith.copyRefused.tooLarge'
   | 'fileExplorer.openWith.copyRefused.tooLargeInRepoHistory'
   | 'fileExplorer.openWith.copyRefused.unreadable'
+  | 'fileExplorer.openingToast.noApp'
+  | 'fileExplorer.openingToast.withApp'
   | 'fileExplorer.pane.connectedDirectlyToast'
   | 'fileExplorer.pane.dialogRenderFailedToast'
   | 'fileExplorer.pane.directConnectionBlockedByThisMacToast'

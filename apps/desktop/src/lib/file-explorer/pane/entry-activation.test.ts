@@ -16,8 +16,9 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { toCanonical, type CanonicalPath } from '#lib/path/canonical.js'
 import type { FileEntry } from '../types'
 
-const { ipc, settings, policy, viewer, navigate } = vi.hoisted<{
+const { ipc, settings, policy, viewer, navigate, opening } = vi.hoisted<{
   ipc: { openFile: Mock }
+  opening: { announceOpening: Mock }
   settings: { getSetting: Mock }
   policy: {
     resolveEnterPolicy: Mock
@@ -29,6 +30,7 @@ const { ipc, settings, policy, viewer, navigate } = vi.hoisted<{
   navigate: { resolveLocationOrToast: Mock }
 }>(() => ({
   ipc: { openFile: vi.fn() },
+  opening: { announceOpening: vi.fn() },
   settings: { getSetting: vi.fn() },
   policy: {
     resolveEnterPolicy: vi.fn(),
@@ -46,6 +48,7 @@ const { ipc, settings, policy, viewer, navigate } = vi.hoisted<{
 
 vi.mock('#lib/tauri-commands/index.js', () => ({ openFile: ipc.openFile }))
 vi.mock('#lib/settings/index.js', () => ({ getSetting: settings.getSetting }))
+vi.mock('./opening-toast', () => ({ announceOpening: opening.announceOpening }))
 vi.mock('./archive-enter-policy', () => ({
   resolveEnterPolicy: policy.resolveEnterPolicy,
   enterBehaviorFromSettings: policy.enterBehaviorFromSettings,
@@ -219,6 +222,17 @@ describe('createEntryActivation', () => {
     it('hands a plain file to the OS default app', async () => {
       await createEntryActivation(deps).handleNavigate(entryOf())
       expect(ipc.openFile).toHaveBeenCalledWith('/dir/a.txt')
+    })
+
+    it('says which file is opening, so a slow share doesn’t look like a dead keypress', async () => {
+      const entry = entryOf()
+      await createEntryActivation(deps).handleNavigate(entry)
+      expect(opening.announceOpening).toHaveBeenCalledWith(entry)
+    })
+
+    it('says nothing when the entry browses instead of launching', async () => {
+      await createEntryActivation(deps).handleNavigate(entryOf({ name: 'sub', path: '/dir/sub', isDirectory: true }))
+      expect(opening.announceOpening).not.toHaveBeenCalled()
     })
 
     it('stays silent when the OS refuses to open a file', async () => {

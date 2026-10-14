@@ -135,6 +135,7 @@ export {
   listTerminalApps,
   openTerminalHere,
   terminalAppDisplayName,
+  defaultAppName,
   OpenTerminalFailure,
   asOpenTerminalError,
   cloudMakeAvailableOffline,

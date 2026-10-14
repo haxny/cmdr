@@ -83,6 +83,9 @@ suite:
   one pane: a search-results pane counts its rows like any folder but reports no free space.
 - `pane-key-router.ts` / `pane-pointer.ts`: keyboard routing and mouse handling for a focused pane.
 - `entry-activation.ts`: what opening an entry does (redirect, archive Enter policy, browse, viewer, OS default app).
+  `opening-toast.ts`: the two-second "{file} is opening in {app}…" toast beside every OS-default-app launch. The app
+  name is a LaunchServices lookup by EXTENSION (`default_app_name`), never by the file's URL, so a slow share can't
+  delay it; the price is that a per-file Get Info "Open with" override isn't seen.
 - `breadcrumb-bar.ts`: the displayed path plus the segment-click, context-menu, and volume-switch handlers.
 - `deleted-dir-poll.ts` / `mtp-disconnect-watch.svelte.ts`: the two "what I'm showing is gone" recoveries.
 - `snapshot-selection-sync.svelte.ts`: a search-results pane's cursor and selection remapped by PATH whenever its

@@ -46,6 +46,11 @@ const TEXT_EDITORS_TIMEOUT: Duration = Duration::from_secs(2);
 #[cfg(target_os = "macos")]
 const OPEN_IN_EDITOR_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// The default-app name is a LaunchServices lookup plus a name read, no file I/O. The
+/// toast is worth a short wait at most, so it words the nameless variant past this.
+#[cfg(target_os = "macos")]
+const DEFAULT_APP_NAME_TIMEOUT: Duration = Duration::from_millis(500);
+
 /// Show a file in Finder (reveal in parent folder)
 #[tauri::command]
 #[specta::specta]
@@ -334,6 +339,26 @@ pub async fn open_terminal_here(
 #[cfg(target_os = "macos")]
 pub fn terminal_app_display_name(app_choice: String) -> Option<String> {
     crate::file_system::terminal::choice_display_name(&app_choice)
+}
+
+/// The name of the app a file opens in by default, for the "Opening in …" toast that
+/// Enter and double-click raise.
+///
+/// Asked by the file's extension only (`macos_icons::default_app_path_for_extension`),
+/// so a file on a slow share answers as fast as a local one. `None` when the file has
+/// no extension, nothing claims it, or the lookup overran: the toast then words its
+/// nameless variant.
+#[tauri::command]
+#[specta::specta]
+#[cfg(target_os = "macos")]
+pub async fn default_app_name(path: String) -> Option<String> {
+    blocking_with_timeout_flag(DEFAULT_APP_NAME_TIMEOUT, None, move || {
+        let ext = std::path::Path::new(&path).extension()?.to_str()?.to_owned();
+        let app_path = crate::macos_icons::default_app_path_for_extension(&ext)?;
+        Some(crate::file_system::open_with::read_app_display_name(&app_path))
+    })
+    .await
+    .data
 }
 
 /// Copy text to clipboard

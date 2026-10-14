@@ -437,6 +437,20 @@ export async function listTerminalApps(appChoice: string): Promise<TimedOut<Term
   return await commands.listTerminalApps(appChoice)
 }
 
+/**
+ * The name of the app `path` opens in by default, looked up by extension alone, so
+ * it answers as fast for a file on a slow share as for a local one. `null` when no
+ * app claims it, on a platform with no lookup (macOS only), or when it overran.
+ * @param path - The file about to be opened.
+ */
+export async function defaultAppName(path: string): Promise<string | null> {
+  try {
+    return await commands.defaultAppName(path)
+  } catch {
+    return null
+  }
+}
+
 /** A launch that never started, still carrying the backend's typed reason. */
 export class OpenTerminalFailure extends TypedFailure<OpenTerminalError> {
   constructor(failure: OpenTerminalError) {
