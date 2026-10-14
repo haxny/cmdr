@@ -113,23 +113,26 @@ slow-timeout = { period = "30s", terminate-after = 1 }
 [[profile.default.overrides]]
 # The APFS/HFS+ disk-image harness's own real-image tests (`cmdr_fs::testing::disk_images`,
 # macOS-only, `#[ignore]`d — run via `--run-ignored`). Serialized in the `disk-image`
-# group; ACROSS runs (two worktrees), the harness's session lock keeps them apart. 30 s
-# matches the harness's per-call SIGKILL deadline, so a wedged tool is killed by the
-# runner first and the cap stays a backstop.
+# group; ACROSS runs (two worktrees), the harness's session lock keeps them apart. The
+# runner SIGKILLs any single tool call at 30 s, so a wedged tool is caught there and this
+# cap is the backstop for the test as a whole. 90 s, like `unmount_approver::real_image`
+# below: building the two-partition image (a `partitionDisk` plus two remounts) overran a
+# 30 s cap under load even when run alone (2026-10-14, load ~110).
 # allowed-unmatched-nextest-filter: macos-only, hdiutil and diskutil have no Linux counterpart
 filter = 'test(testing::disk_images::real_images::)'
 test-group = 'disk-image'
-slow-timeout = { period = "30s", terminate-after = 1 }
+slow-timeout = { period = "90s", terminate-after = 1 }
 
 [[profile.default.overrides]]
 # The eject pins on real APFS/HFS+ images (`file_system::volume::eject::real_image`,
-# macOS-only, `#[ignore]`d): same group, same cap, same reason as the harness tests
-# above. A held-file refusal runs the production retries, about 3 s plus the daemon's
-# holder scan per attempt, inside the cap.
+# macOS-only, `#[ignore]`d): same group and cap as the harness tests above, for the
+# same two-partition build. A held-file refusal runs the production retries, about 3 s
+# plus the daemon's holder scan per attempt, on top (measured 54 s alone at load 38,
+# 2026-10-14).
 # allowed-unmatched-nextest-filter: macos-only, hdiutil and diskutil have no Linux counterpart
 filter = 'test(file_system::volume::eject::real_image::)'
 test-group = 'disk-image'
-slow-timeout = { period = "30s", terminate-after = 1 }
+slow-timeout = { period = "90s", terminate-after = 1 }
 
 [[profile.default.overrides]]
 # The index's vanish pin on a real HFS+ image (`indexing::tests::vanish_tests`,
