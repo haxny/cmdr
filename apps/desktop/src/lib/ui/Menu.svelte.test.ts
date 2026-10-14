@@ -11,6 +11,7 @@ import Menu from './Menu.svelte'
 import { createMenu, type MenuController } from './menu-controller.svelte'
 import { disclosureRowValue } from './menu-navigation'
 import type { MenuRowContext, MenuSection } from './menu-types'
+import { assertFocusModel } from '#lib/test-focus-model.js'
 
 function sections(): MenuSection[] {
   return [
@@ -383,6 +384,143 @@ describe('submenu rows', () => {
     await tick()
     await tick()
     expect(document.querySelector('[data-menu-submenu] [data-menu-row="forget"]')).not.toBeNull()
+  })
+})
+
+/**
+ * Characterization pins for the screen-reader focus work (#267, #437): the keyboard walk
+ * through a rendered menu and its submenu, driven by real keydowns dispatched on whatever
+ * holds focus (the menu catches them on its document capture listener), so a focus that
+ * fell to `<body>` would still get here and show up in the focus assertions.
+ *
+ * Focus is pinned as "on a live element inside the menu", not as the parent surface: when
+ * submenus learn to speak, focus moves INTO the submenu surface while it has a cursor.
+ */
+describe('the keyboard walk through a rendered submenu', () => {
+  function keepOpenSections(): MenuSection[] {
+    return [
+      {
+        id: 'volumes',
+        items: [
+          { value: 'hd', label: 'Macintosh HD' },
+          {
+            value: 'share',
+            label: 'Team share',
+            submenu: [
+              { value: 'eject', label: 'Eject', keepsMenuOpen: true },
+              { value: 'forget', label: 'Forget server' },
+            ],
+          },
+        ],
+      },
+    ]
+  }
+
+  /** Dispatches a keydown where a real one lands (on the focused element), then renders. */
+  async function press(key: string): Promise<void> {
+    const target = document.activeElement ?? document.body
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    await tick()
+    await tick()
+  }
+
+  function submenu(): HTMLElement | null {
+    return document.querySelector('[data-menu-submenu]')
+  }
+
+  function highlightedIn(el: Element | null): string | null {
+    return el?.querySelector('[data-menu-row][data-highlighted]')?.getAttribute('data-menu-row') ?? null
+  }
+
+  /** Focus sits on a connected element inside the menu, never on `<body>`. */
+  function expectFocusInMenu(): void {
+    const focused = document.activeElement
+    expect(focused).not.toBe(document.body)
+    expect(focused?.isConnected).toBe(true)
+    expect(focused?.closest('[data-menu], [data-menu-submenu]')).not.toBeNull()
+  }
+
+  /** Opens the menu, waits for the surface to take focus, and puts the cursor on `share`. */
+  async function openOnShare(deps: Record<string, unknown> = {}): Promise<{ menu: MenuController }> {
+    const opened = await open({}, deps)
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(surface())
+    })
+    opened.menu.highlight('share')
+    await tick()
+    return opened
+  }
+
+  it('takes focus on open, on a surface whose active descendant is its highlighted row', async () => {
+    await openOnShare()
+    assertFocusModel(surface())
+    expect(surface()?.getAttribute('aria-activedescendant')).toBe(row('share')?.id)
+  })
+
+  it('→ opens and enters the submenu, ↓ and ↑ walk it, ← leaves it on the parent row', async () => {
+    await openOnShare()
+
+    await press('ArrowRight')
+    expect(submenu()).not.toBeNull()
+    expect(highlightedIn(submenu())).toBe('connect')
+    expectFocusInMenu()
+
+    await press('ArrowDown')
+    expect(highlightedIn(submenu())).toBe('forget')
+    await press('ArrowUp')
+    expect(highlightedIn(submenu())).toBe('connect')
+    expectFocusInMenu()
+
+    await press('ArrowLeft')
+    expect(submenu()).toBeNull()
+    expect(highlightedIn(surface())).toBe('share')
+    expectFocusInMenu()
+  })
+
+  it('Enter picks the submenu row the cursor is on, closes, and restores focus once', async () => {
+    const onSelect = vi.fn()
+    const restoreFocus = vi.fn()
+    await openOnShare({ onSelect, restoreFocus })
+    await press('ArrowRight')
+    await press('ArrowDown')
+    await press('Enter')
+    expect(onSelect).toHaveBeenCalledTimes(1)
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ value: 'forget' }), 'keyboard')
+    expect(surface()).toBeNull()
+    expect(restoreFocus).toHaveBeenCalledTimes(1)
+  })
+
+  it('a keepsMenuOpen pick closes only the submenu, and focus stays on a live element in the menu', async () => {
+    const onSelect = vi.fn()
+    const restoreFocus = vi.fn()
+    await openOnShare({ getSections: keepOpenSections, onSelect, restoreFocus })
+    await press('ArrowRight')
+    expect(highlightedIn(submenu())).toBe('eject')
+    await press('Enter')
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ value: 'eject' }), 'keyboard')
+    expect(surface()).not.toBeNull()
+    expect(submenu()).toBeNull()
+    expect(highlightedIn(surface())).toBe('share')
+    expectFocusInMenu()
+    expect(restoreFocus).not.toHaveBeenCalled()
+  })
+
+  it('Escape closes the submenu first, then the menu, restoring focus once', async () => {
+    const restoreFocus = vi.fn()
+    await openOnShare({ restoreFocus })
+    await press('ArrowRight')
+    expect(submenu()).not.toBeNull()
+
+    await press('Escape')
+    expect(submenu()).toBeNull()
+    expect(surface()).not.toBeNull()
+    expect(highlightedIn(surface())).toBe('share')
+    expectFocusInMenu()
+    expect(restoreFocus).not.toHaveBeenCalled()
+
+    await press('Escape')
+    expect(surface()).toBeNull()
+    expect(restoreFocus).toHaveBeenCalledTimes(1)
   })
 })
 

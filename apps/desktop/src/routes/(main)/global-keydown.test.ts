@@ -99,6 +99,61 @@ describe('resolveGlobalKeyAction', () => {
     })
   })
 
+  /**
+   * Characterization pins for the screen-reader focus work (#437): the navigation keys
+   * resolve the same wherever focus sits in the explorer, because nothing here reads
+   * focus except `isTextInputFocused()`. The "button focused" column changes on purpose
+   * once a focused pane-chrome control keeps Enter, Space, the arrows, and Home/End for
+   * itself (#437 items 7–8); `Tab` and `⇧Tab` stay as they are.
+   */
+  describe('navigation keys, wherever focus sits in the explorer', () => {
+    const IGNORE = { kind: 'ignore' }
+    const NAV_KEYS: [string, KeyboardEventInit, unknown][] = [
+      ['Enter', { key: 'Enter' }, { kind: 'dispatch', commandId: 'nav.open' }],
+      ['Space', { key: ' ' }, { kind: 'dispatch', commandId: 'selection.toggle' }],
+      // The arrows aren't Tier 1 commands: the pane handles them on the container's keydown.
+      ['↑', { key: 'ArrowUp' }, IGNORE],
+      ['↓', { key: 'ArrowDown' }, IGNORE],
+      ['←', { key: 'ArrowLeft' }, IGNORE],
+      ['→', { key: 'ArrowRight' }, IGNORE],
+      ['Home', { key: 'Home' }, { kind: 'dispatch', commandId: 'nav.home' }],
+      ['End', { key: 'End' }, { kind: 'dispatch', commandId: 'nav.end' }],
+      ['Tab', { key: 'Tab' }, { kind: 'dispatch', commandId: 'pane.switch' }],
+      // Bound to nothing, so the browser keeps it.
+      ['⇧Tab', { key: 'Tab', shiftKey: true }, IGNORE],
+    ]
+
+    /** The explorer container holding focus, with a button inside it. */
+    function mountExplorer(): { container: HTMLElement; button: HTMLButtonElement } {
+      const container = document.createElement('div')
+      container.className = 'dual-pane-explorer'
+      container.tabIndex = 0
+      const button = document.createElement('button')
+      button.className = 'path-segment'
+      container.appendChild(button)
+      document.body.appendChild(container)
+      cleanupFocus = () => {
+        container.remove()
+      }
+      return { container, button }
+    }
+
+    it.each(NAV_KEYS)('%s resolves the same with the container focused', (_name, init, expected) => {
+      const { container } = mountExplorer()
+      container.focus()
+      expect(document.activeElement).toBe(container)
+      expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
+    })
+
+    // Changes on purpose for every key but Tab / ⇧Tab once pane chrome is reachable.
+    it.each(NAV_KEYS)('%s resolves the same with a button inside the explorer focused', (_name, init, expected) => {
+      const { button } = mountExplorer()
+      button.focus()
+      expect(document.activeElement).toBe(button)
+      expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
+    })
+  })
+
   // Keypresses as macOS reports them (Safari key log, 2026-10-05: US layout plus a
   // PC-layout keyboard), and the layouts the character rule exists for.
   describe('keys from any keyboard and layout', () => {

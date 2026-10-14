@@ -384,6 +384,11 @@ Only the layout facts that none of those carry live here:
   of reopening straight away, or the reopen races the 500 ms save debounce. It's an E2E at all because this is the only
   tier that runs the restricted-window settings path (typed commands + main-window bridge) under the real capability
   ACL, which vitest can't reproduce.
+- **`keyboard-focus.spec.ts` pins which pane the next ↓ moves after every focus-moving flow** (launch, `Tab`, view
+  toggle, rename, dialogs, menus, palette, a click, the servers hub). It asserts with `expectArrowDownMovesCursorIn`
+  (`helpers/cursor.ts`), ❌ never on which element holds focus or on `aria-selected`: both may change while keys may
+  not. `ask-cmdr.spec.ts` (rail Escape) and `search-open-in-pane.spec.ts` carry the same probe for their flows, and
+  `app.spec.ts`'s toast test pins the toast-close flow.
 - **Regression anchors worth not "simplifying" away**: `focus-trap.spec.ts` (the palette Tab-Tab keyboard lockout),
   `viewer-wordwrap-scroll.spec.ts` (the height map measured its wrap width off the first `.line-text` span, which
   shrink-wrapped to ~44px for "# Cmdr" and inflated scroll height ~7x, leaving the end of the file unreachable blank

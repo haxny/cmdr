@@ -8,7 +8,14 @@
 
 import { waitBudget } from './wait-budget.js'
 import { test, expect } from './fixtures.js'
-import { ensureAppReady, pollUntil, dispatchMenuCommand, LOCAL_VOLUME_NAME, getFixtureRoot } from './helpers.js'
+import {
+  ensureAppReady,
+  expectArrowDownMovesCursorIn,
+  pollUntil,
+  dispatchMenuCommand,
+  LOCAL_VOLUME_NAME,
+  getFixtureRoot,
+} from './helpers.js'
 import { ensureMcpClient, mcpReadResource } from '../e2e-shared/mcp-client.js'
 import {
   SEARCH_OVERLAY,
@@ -253,6 +260,24 @@ async function resetRightPaneToLocalIfNeeded(
     .toBeTruthy()
 }
 
+/** Whether the right pane has a row named `name` rendered. */
+async function rightPaneLists(tauriPage: PageLike, name: string): Promise<boolean> {
+  return tauriPage.evaluate<boolean>(
+    `!!document.querySelector('[aria-label="Right file pane"] .file-entry[data-filename=${JSON.stringify(name)}]')`,
+  )
+}
+
+/** Navigates the right pane to `folder` and waits for its fixture rows. */
+async function showFolderInRightPane(tauriPage: PageLike, folder: string): Promise<void> {
+  await tauriPage.evaluate(`(function(){
+        window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
+            event: 'mcp-nav-to-path',
+            payload: { pane: 'right', path: ${JSON.stringify(folder)} }
+        });
+    })()`)
+  await expect.poll(async () => rightPaneLists(tauriPage, 'file-a.txt'), { timeout: waitBudget(5000) }).toBeTruthy()
+}
+
 /**
  * Types into the search input and waits for results to land. The dialog
  * auto-applies on a 1 s debounce in filename / regex modes; the Run button is
@@ -344,12 +369,18 @@ test.describe('Search dialog: Open in pane', () => {
     // placeholder.
     const pathHeaderCount = await tauriPage.count(SNAPSHOT_PANE_PATH_HEADER)
     expect(pathHeaderCount).toBeGreaterThan(0)
+
+    // The results replaced the right pane's list, and the keys followed: the next ↓ walks
+    // the snapshot and leaves the left pane alone (`keyboard-focus.spec.ts` pins the rest).
+    await expectArrowDownMovesCursorIn(tauriPage, 'right')
   })
 
   test('⌘[ leaves the snapshot view, ⌘] returns to it', async ({ tauriPage }) => {
     await ensureAppReady(tauriPage)
     await ensureMcpClient(tauriPage)
     await resetRightPaneToLocalIfNeeded(tauriPage, LOCAL_VOLUME_NAME, `${getFixtureRoot()}/right`)
+    // A populated folder to come back to (`right/` is empty), so the keys can be probed there.
+    await showFolderInRightPane(tauriPage, `${getFixtureRoot()}/left`)
     await focusRightPane(tauriPage)
     await openSearchDialog(tauriPage)
     await typeAndRunSearch(tauriPage, 'file')
@@ -368,6 +399,10 @@ test.describe('Search dialog: Open in pane', () => {
     // path is direct and immune to that race.
     await dispatchMenuCommand(tauriPage, 'nav.back')
     await expectRightPaneVolumeId(tauriPage, { not: 'search-results' })
+
+    // The folder's list is back in place of the results, and the keys still land in it.
+    await expect.poll(async () => rightPaneLists(tauriPage, 'file-a.txt'), { timeout: waitBudget(5000) }).toBeTruthy()
+    await expectArrowDownMovesCursorIn(tauriPage, 'right')
 
     // ⌘] goes forward, back to the snapshot.
     await dispatchMenuCommand(tauriPage, 'nav.forward')

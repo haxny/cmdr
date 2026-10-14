@@ -16,6 +16,7 @@ import {
   closeScopedWindow,
   dispatchMenuCommand,
   ensureAppReady,
+  expectArrowDownMovesCursorIn,
   openSettingsWindowViaProd,
   CTRL_OR_META,
   waitForAskCmdrOnInBackend,
@@ -246,6 +247,8 @@ test.describe('Ask Cmdr rail', () => {
       `document.querySelector('.ask-cmdr-rail textarea')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`,
     )
     await expect.poll(() => paneFocused(page), { timeout: waitBudget(3000) }).toBe(true)
+    // And the keys land in the pane that had them (`keyboard-focus.spec.ts` pins the rest).
+    await expectArrowDownMovesCursorIn(page, 'left')
   })
 
   test('sends a message and streams the fake reply', async ({ tauriPage }) => {

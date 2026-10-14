@@ -116,6 +116,68 @@ export async function focusPane(tauriPage: PageLike, paneIndex: 0 | 1): Promise<
     .toBeTruthy()
 }
 
+/** Each pane's cursor row and whether a row follows it, read in one payload. */
+interface PaneCursors {
+  /** `data-filename` of the cursor row per pane, `''` where a pane shows none. */
+  names: [string, string]
+  /** Whether a rendered row follows the cursor, per pane. */
+  hasNext: [boolean, boolean]
+}
+
+async function readPaneCursors(tauriPage: PageLike): Promise<PaneCursors> {
+  return tauriPage.evaluate<PaneCursors>(`(function() {
+    var names = [], hasNext = [];
+    var panes = document.querySelectorAll('.file-pane');
+    for (var i = 0; i < 2; i++) {
+      var rows = panes[i] ? Array.prototype.slice.call(panes[i].querySelectorAll('.file-entry')) : [];
+      var at = rows.findIndex(function(r) { return r.classList.contains('is-under-cursor'); });
+      names.push(at >= 0 ? (rows[at].getAttribute('data-filename') || '') : '');
+      hasNext.push(at >= 0 && at < rows.length - 1);
+    }
+    return { names: names, hasNext: hasNext };
+  })()`)
+}
+
+/** `document.activeElement` as `<tag.class>`, for saying where a key landed. */
+async function describeActiveElement(tauriPage: PageLike): Promise<string> {
+  return tauriPage.evaluate<string>(`(function() {
+    var el = document.activeElement;
+    if (!el) return 'nothing';
+    if (el === document.body) return '<body>';
+    var cls = typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\\s+/).join('.') : '';
+    return '<' + el.tagName.toLowerCase() + cls + '>';
+  })()`)
+}
+
+/**
+ * Presses ↓ the way a keypress lands (dispatched on `document.activeElement`) and asserts
+ * that it moved the cursor in `pane` and ONLY there. That's the whole keyboard-focus
+ * contract in one probe: a key that lands on `<body>` after a focus loss moves nothing, and
+ * a focus model that drifted to the other pane moves the wrong cursor.
+ *
+ * ❗ Asserts on `.is-under-cursor` and `data-filename`, ❌ never `aria-selected` or which
+ * element holds DOM focus: both are free to change while the keyboard behavior is frozen.
+ */
+export async function expectArrowDownMovesCursorIn(tauriPage: PageLike, pane: 'left' | 'right'): Promise<void> {
+  const index = pane === 'left' ? 0 : 1
+  const other = 1 - index
+  const before = await readPaneCursors(tauriPage)
+  expect(before.names[index], `the ${pane} pane shows no cursor row before ↓`).not.toBe('')
+  expect(before.hasNext[index], `the ${pane} pane's cursor (${before.names[index]}) is on its last row`).toBe(true)
+
+  const pressedOn = await describeActiveElement(tauriPage)
+  await tauriPage.keyboard.press('ArrowDown')
+
+  await expect
+    .poll(async () => (await readPaneCursors(tauriPage)).names[index], {
+      timeout: waitBudget(3000),
+      message: `↓ (dispatched on ${pressedOn}) should move the ${pane} pane's cursor off ${before.names[index]}`,
+    })
+    .not.toBe(before.names[index])
+  const after = await readPaneCursors(tauriPage)
+  expect(after.names[other], `↓ must not move the other pane's cursor`).toBe(before.names[other])
+}
+
 /**
  * Moves the cursor to a specific file by name in the focused pane.
  *
