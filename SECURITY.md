@@ -35,6 +35,10 @@ email, use GitHub's private reporting above: only you and the maintainer can see
   for the rest. If a fix will take longer, we'll tell you why and agree on a date with you.
 - **Updates at least every 14 days** until the issue is closed.
 
+A report without a severity score gets one from us, with the
+[CVSS v4.0 calculator](https://www.first.org/cvss/calculator/4.0), and that score sets the fix deadline: critical and
+high within 30 days, the rest within 90.
+
 Once the fix has shipped, we note it in the `### Security` section of the [changelog](CHANGELOG.md) and, with your
 permission, credit you by name.
 
