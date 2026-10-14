@@ -705,5 +705,41 @@
   "menu.file.multiRename": "Đổi tên hàng loạt…",
   "@menu.file.multiRename": {
     "sourceHash": "36b1dc2"
+  },
+  "menu.queue.moveUp": "Đưa lên",
+  "@menu.queue.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "menu.queue.moveDown": "Đưa xuống",
+  "@menu.queue.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "menu.queue.select": "Chọn",
+  "@menu.queue.select": {
+    "sourceHash": "2a78025"
+  },
+  "menu.queue.cancel": "Hủy",
+  "@menu.queue.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "menu.queue.dismiss": "Bỏ qua",
+  "@menu.queue.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "menu.queue.show": "Hiển thị",
+  "@menu.queue.show": {
+    "sourceHash": "0df6f1c"
+  },
+  "menu.queue.pause": "Tạm dừng",
+  "@menu.queue.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "menu.queue.resume": "Tiếp tục",
+  "@menu.queue.resume": {
+    "sourceHash": "d640c74"
+  },
+  "menu.queue.rollback": "Hoàn tác…",
+  "@menu.queue.rollback": {
+    "sourceHash": "3a943f5"
   }
 }

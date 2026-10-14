@@ -702,5 +702,41 @@
   "menu.file.multiRename": "Massbyt namn…",
   "@menu.file.multiRename": {
     "sourceHash": "36b1dc2"
+  },
+  "menu.queue.moveUp": "Flytta upp",
+  "@menu.queue.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "menu.queue.moveDown": "Flytta ner",
+  "@menu.queue.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "menu.queue.select": "Markera",
+  "@menu.queue.select": {
+    "sourceHash": "2a78025"
+  },
+  "menu.queue.cancel": "Avbryt",
+  "@menu.queue.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "menu.queue.dismiss": "Avfärda",
+  "@menu.queue.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "menu.queue.show": "Visa",
+  "@menu.queue.show": {
+    "sourceHash": "0df6f1c"
+  },
+  "menu.queue.pause": "Pausa",
+  "@menu.queue.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "menu.queue.resume": "Återuppta",
+  "@menu.queue.resume": {
+    "sourceHash": "d640c74"
+  },
+  "menu.queue.rollback": "Ångra…",
+  "@menu.queue.rollback": {
+    "sourceHash": "3a943f5"
   }
 }

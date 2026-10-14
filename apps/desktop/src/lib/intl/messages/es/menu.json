@@ -706,5 +706,41 @@
   "menu.file.multiRename": "Renombrado múltiple…",
   "@menu.file.multiRename": {
     "sourceHash": "36b1dc2"
+  },
+  "menu.queue.moveUp": "Adelantar",
+  "@menu.queue.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "menu.queue.moveDown": "Retrasar",
+  "@menu.queue.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "menu.queue.select": "Seleccionar",
+  "@menu.queue.select": {
+    "sourceHash": "2a78025"
+  },
+  "menu.queue.cancel": "Cancelar",
+  "@menu.queue.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "menu.queue.dismiss": "Descartar",
+  "@menu.queue.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "menu.queue.show": "Mostrar",
+  "@menu.queue.show": {
+    "sourceHash": "0df6f1c"
+  },
+  "menu.queue.pause": "Pausar",
+  "@menu.queue.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "menu.queue.resume": "Reanudar",
+  "@menu.queue.resume": {
+    "sourceHash": "d640c74"
+  },
+  "menu.queue.rollback": "Revertir…",
+  "@menu.queue.rollback": {
+    "sourceHash": "3a943f5"
   }
 }

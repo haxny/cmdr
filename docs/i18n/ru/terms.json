@@ -4316,6 +4316,7 @@
       "commands.navDown.label": "Moves the cursor, marks nothing; say «Следующий файл».",
       "commands.navUp.label": "Moves the cursor, marks nothing; say «Предыдущий файл».",
       "queue.row.selectAria": "Checkbox picking operation rows to cancel together: choosing items in a list, not marking files in a pane, so «выбрать» stays.",
+      "menu.queue.select": "The queue row's right-click Select ticks the same checkbox as `queue.row.selectAria`: list-item choosing, so «Выбрать».",
       "queue.toolbar.cancelSelected": "Cancels the operation rows ticked by checkbox; list-item choosing, so «выбранные».",
       "queue.toolbar.selectedCount": "Count of ticked operation rows; list-item choosing, so «Выбрано: #».",
       "commands.queueExtendUp.label": "Shift-arrow extends the ticked queue rows that «Отменить выбранные» acts on; list-item choosing, so «Расширить выбор вверх»",

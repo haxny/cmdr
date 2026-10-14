@@ -1969,7 +1969,8 @@
       "move the waiting operation",
       "moved up",
       "moved down",
-      "operations can move"
+      "operations can move",
+      "move up"
     ],
     "sense": "Relocating files to another folder (F6)."
   },
