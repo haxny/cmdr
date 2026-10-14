@@ -16,6 +16,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   on. **Its numbers are provisional**: the machine was contended and the volume near-full throughout, so most readings
   are withdrawn and the note carries the procedure for re-taking them.
 
+**QA handoffs**, deleted once QA'd:
+
+- `smb2-030-qa-2026-10-14.md` — what the `smb2` 0.30.0 upgrade changed for a share user, how to see each change, and the
+  four proposals it didn't build (streamed rows, resumable uploads, atomic landing, rename detection).
+
 **Load-bearing for a decision that hasn't been made yet:**
 
 - `ipc-dead-code-audit.md`: every frontend wrapper and Tauri command nothing called, as of 2026-10-03, with why. **Three
