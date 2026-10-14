@@ -164,6 +164,10 @@ func main() {
 	plan := planSelectedChecks(ctx, flags, checksToRun)
 	checksToRun = plan.toRun
 
+	// After planning, so a run whose Rust lanes are all cache hits never scans
+	// `target/` (`rcgu_prune.go`).
+	pruneStaleRcguIfNeeded(rootDir, checksToRun)
+
 	ensurePnpmIfNeeded(ctx, checksToRun, flags.quiet)
 
 	// Quiet mode is the default: stacklease's routine decision log (adopt,

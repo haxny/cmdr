@@ -174,6 +174,7 @@ pnpm check [flags]
           LoadRunnerSources()        #   parse the checks package: which runner files each check reaches
         per check: FingerprintFor()  #   hash its Inputs ∪ GlobalInputs ∪ its own runner sources
         split selected -> toRun / cached  # cache hit = entry fingerprint matches
+    -> pruneStaleRcguIfNeeded()      # drop superseded debug objects in target/debug/deps (a cargo lane must run)
     -> ensurePnpmDependencies()      # pnpm install once at root (skipped if all node checks cached)
     -> setupStackOrchestratorIfNeeded() # fixture Docker up only if a NON-cached check NeedsContainers
     -> Runner.Run():
@@ -220,6 +221,8 @@ pnpm check [flags]
   auto-fixer rewrote (§ "The auto-fix notice")
 - **`torn_target_notice.go`**: Scans failed lanes for an inconsistent `target/` and, when it finds one, says so last so
   the reader doesn't revert a good change (§ "The inconsistent-`target/` notice")
+- **`rcgu_prune.go`**: Deletes superseded `.rcgu.o` generations from `target/debug/deps` before the cargo lanes (§ "The
+  stale-debug-object prune")
 - **`colors.go`**: ANSI color constants
 - **`utils.go`**: `findRootDir()` (walks up until `apps/desktop/src-tauri/Cargo.toml` is found)
 - **`stack_orchestrator.go`**: Runner-level Docker fixture lifecycle: acquires a machine-wide lease per stack (via
@@ -784,6 +787,29 @@ rules).
 **Decision**: names the problem, never auto-recovers. **Why**: lanes run concurrently, so a mid-run `cargo clean` pulls
 `target/` out from under lanes still building, and a post-run one silently spends a cold rebuild (12 minutes, measured
 2026-09-09) on a run the reader thinks is finishing.
+
+### The stale-debug-object prune
+
+On macOS the dev profile keeps debuginfo unpacked: a test binary carries only a debug map pointing at the `.rcgu.o`
+files beside it in `target/debug/deps`. Every recompile of a unit writes a full new generation of them under a new
+session suffix, and nothing ever deletes the old one. A worktree reached 457k entries there, and the Rust lanes stalled
+on it: the first NSURL call in each test process (`CFBundleGetMainBundle`) `readdir`s the binary's own directory, and
+~16 processes doing that at once blew 5 s test waits (vdavid/cmdr#357).
+
+`pruneStaleRcguIfNeeded` (`rcgu_prune.go`) runs after the cache plan, before any lane starts, and only when a cache-miss
+lane holds `ResourceCargoBuildDir`. It groups the objects by unit (`<crate>-<hash>`) and generation (the session suffix,
+or `<crate>.<hash>-cgu` for non-incremental units), and deletes every generation older than the newest one that has
+settled for 15 minutes. It stats only units holding two or more generations, so a clean dir costs one `readdir` (~8 ms
+on 43k entries), and prints one dim line when it freed anything.
+
+**Decision**: superseded generations, never an age cutoff. **Why**: a CGU that incremental compilation reused is a HARD
+LINK to its work product, so it keeps the mtime of the session that first wrote it; "older than N hours" deletes objects
+the live binary still points at and loses file:line in its backtraces. A generation's freshest member is its real write
+time. Verified 2026-10-14 against a 43k-entry worktree: 5,360 objects (4.9 GB) flagged stale, none among the 20,149 the
+dir's binaries reference (`nm -ap` `OSO` entries).
+
+**Decision**: a 15-minute grace after supersession. **Why**: a binary built from the old generation may still be running
+(a lane started before the rebuild, another run in the same worktree) and reads these objects to symbolize a backtrace.
 
 ## Troubleshooting
 

@@ -11,7 +11,8 @@ Authoring a check: `checks/CLAUDE.md`.
   `checks/inputs.go` (shared `Inputs` blocks), `checks/cargo-workspace.go` (the geometry Rust checks scope from).
 - `stack_orchestrator.go` + `stacklease/` (Docker fixture stacks), `graph.go` / `docs_graph_render.go` (renderers),
   `stats.go` + `unknown_selector_log.go` + `output_log.go` (the CSV logs, the saved outputs), `autofix_notice.go`,
-  `torn_target_notice.go`, `ensure_e2e_binary.go` (`--ensure-e2e-binary`, the E2E binary for i18n screenshots).
+  `torn_target_notice.go`, `rcgu_prune.go`, `ensure_e2e_binary.go` (`--ensure-e2e-binary`, the E2E binary for i18n
+  screenshots).
 
 ## Must-knows
 
