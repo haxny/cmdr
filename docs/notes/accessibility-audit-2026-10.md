@@ -18,7 +18,8 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
   `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`, `best-practice`; `apps/desktop/src/lib/test-a11y.ts`); the
   `a11y-coverage` gate (every `lib/**/*.svelte` has a test or a reasoned allowlist entry); the deterministic contrast
   checker `scripts/check-a11y-contrast/` (WCAG 2.2 plus an APCA Lc 45 floor, accent matrix, row-state matrix); and 11
-  E2E axe tests in light and dark mode (`apps/desktop/test/e2e-playwright/accessibility.spec.ts`, `color-contrast` off
+  E2E axe tests in light and dark mode (12 since #442 added the queue window, which also gained a tier-3 file,
+  `routes/queue/queue.a11y.test.ts`) (`apps/desktop/test/e2e-playwright/accessibility.spec.ts`, `color-contrast` off
   there because the static checker owns it). `docs/testing.md` still says 696 tests; the count above is from the files.
 - **Not done**: no screen reader run. Rows that depend on what VoiceOver actually says are marked "Pending VoiceOver
   check" with the check ID (V1–V12) from David's guide (vault, `projects/Cmdr/2026-10-14 Cmdr VoiceOver test guide.md`).
@@ -31,7 +32,8 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 Counts per table (rows marked "see WCAG section" aren't counted):
 
 - **WCAG 2.2 Level A (32)**: 18 Supports, 8 Partially supports, 0 Does not support, 6 Not applicable.
-- **WCAG 2.2 Level AA (24)**: 7 Supports, 12 Partially supports, 0 Does not support, 5 Not applicable.
+- **WCAG 2.2 Level AA (24)**: 9 Supports, 10 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
+  moved to Supports with #442, 2026-10-15).
 - **Section 508 chapter 3 (9)**: 4 Supports, 5 Partially supports.
 - **Section 508 chapter 5 (26)**: 8 Supports, 8 Partially supports, 10 Not applicable.
 - **Section 508 chapter 6 (5)**: 2 Supports, 2 Partially supports, 1 Not applicable.
@@ -60,8 +62,8 @@ Top gaps, each with its issue:
    under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, field borders 1.36:1.
 5. **Pointer and keyboard leftovers** (#441): tab reorder is drag-only, sub-24px targets, tooltips not hoverable, viewer
    bare-key shortcuts not remappable, zoom tops out at 150%.
-6. **Quick fixes** (#442): Reduce motion misses, hard-coded English labels and window titles, a missing `lang`, a
-   missing `autocomplete`, badges without text, no queue window a11y test.
+6. **Quick fixes** (#442, closed in code 2026-10-15): Reduce motion misses, hard-coded English labels and window titles,
+   a missing `lang`, a missing `autocomplete`, badges without text, no queue window a11y test.
 7. **No accessibility documentation** (#443): nothing lists the features, limits, or how to get help.
 8. Already tracked: in-app menus under VoiceOver (#267).
 
@@ -73,11 +75,12 @@ native menu bar and context menus.
 
 ## WCAG 2.2 Level A
 
-- **1.1.1 Non-text content**: Partially supports. Icon buttons are named and the viewer image uses the file name as alt
-  text, but file-kind icons are `alt=""`, so folders and files sound the same, and the sync and symlink badges have no
-  text. Evidence: `lib/file-explorer/selection/FileIcon.svelte` (`alt=""` at the icon and badge `img`s);
-  `routes/viewer/MediaImageView.svelte` (`alt={fileName}`); spot checks of `ModalDialog.svelte`, `TabBar.svelte`,
-  `SettingRow.svelte` aria-labels. #437, #442.
+- **1.1.1 Non-text content**: Partially supports. Icon buttons are named, the viewer image uses the file name as alt
+  text, and the sync and symlink badges name themselves into the row's accessible name (#442, 2026-10-15), but file-kind
+  icons are `alt=""`, so folders and files sound the same. `Icon` is `aria-hidden` unless given a label. Evidence:
+  `lib/file-explorer/selection/FileIcon.svelte` (`alt=""` at the kind icon; badge `aria-label` / `alt`);
+  `lib/ui/Icon.svelte`; `routes/viewer/MediaImageView.svelte` (`alt={fileName}`); spot checks of `ModalDialog.svelte`,
+  `TabBar.svelte`, `SettingRow.svelte` aria-labels. #437.
 - **1.2.1 Audio-only and video-only (prerecorded)**: Not applicable. Cmdr has no audio or video content; the viewer
   shows text, images, and PDFs only. Evidence: no `<audio>`/`<video>` in `apps/desktop/src`;
   `routes/viewer/media-view.ts`.
@@ -123,8 +126,10 @@ native menu bar and context menus.
 - **2.4.1 Bypass blocks**: Not applicable. Applies to web pages and sets of software; Cmdr is a single app (EN 11.2.4.1
   and 508 don't apply to software).
 - **2.4.2 Page titled**: Supports. Each window has a title: main "Cmdr", the viewer the file name, plus Settings,
-  Keyboard shortcuts, Queue, Debug. Settings, Keyboard shortcuts, and Debug titles aren't localized yet (#442). EN and
-  508 don't apply this to software. Evidence: `src-tauri/src/licensing/app_status.rs`, `routes/viewer/+page.svelte`,
+  Keyboard shortcuts, Queue, Debug. Every user-facing title comes from the catalog (Settings and Keyboard shortcuts
+  since #442, 2026-10-15); Debug is a dev-build-only window and stays English like the rest of it. A language switch
+  while a child window is open keeps its OS title until it reopens (no `set-title` capability there). EN and 508 don't
+  apply this to software. Evidence: `src-tauri/src/licensing/app_status.rs`, `routes/viewer/+page.svelte`,
   `settings-window.ts`, `shortcuts-window.ts`, `debug-window.ts`, `queue-window.ts`.
 - **2.4.3 Focus order**: Supports. Dialogs move focus in on open (child autofocus, first field, or the dialog), trap Tab
   in order, and restore focus to the trigger on close; the command palette does the same. Evidence: `ModalDialog.svelte`
@@ -172,10 +177,10 @@ native menu bar and context menus.
 - **1.2.4 Captions (live)**: Not applicable. No live media.
 - **1.2.5 Audio description (prerecorded)**: Not applicable. No video.
 - **1.3.4 Orientation**: Supports. Desktop windows don't lock orientation.
-- **1.3.5 Identify input purpose**: Partially supports. Server sign-in fields carry `autocomplete="username"` and
-  `current-password`, and the feedback email `email`; the onboarding email field doesn't. Evidence:
-  `ServerFormFields.svelte`, `SignInCredentialFields.svelte`, `AttachEmailCheckbox.svelte`,
-  `onboarding/StepBeta.svelte`. #442.
+- **1.3.5 Identify input purpose**: Supports. Server sign-in fields carry `autocomplete="username"` and
+  `current-password`, and all three email fields (attach-email, onboarding, Settings > Updates) `email` (the last two
+  since #442, 2026-10-15). Evidence: `ServerFormFields.svelte`, `SignInCredentialFields.svelte`,
+  `AttachEmailCheckbox.svelte`, `onboarding/StepBeta.svelte`, `settings/sections/UpdatesSection.svelte`.
 - **1.4.3 Contrast (minimum)**: Partially supports. Every text token pair is gated at 4.5:1 (3:1 large) in CI in light
   and dark mode under all nine accent variants and all pane tints; marked file names measure 4.52:1 worst case (light)
   and 4.71:1 (dark). Exceptions: with macOS Increase contrast on, light mode can fall to about 4.18:1 on a brown pane
@@ -221,8 +226,9 @@ native menu bar and context menus.
 - **2.5.8 Target size (minimum)**: Partially supports. Sort headers, function-key bar, and the new-tab button meet 24×24
   px. The tab close button is 14×14 px, breadcrumb segments are about 17 px tall with no padding, and the pane divider's
   hit area is 4 px wide. Evidence: `TabBar.svelte`, `FilePane.svelte` breadcrumb styles, `PaneResizer.svelte`. #441.
-- **3.1.2 Language of parts**: Partially supports. The language picker lists each language in its own name without a
-  per-option `lang`. Evidence: `intl/locale-display-names.ts`. #442.
+- **3.1.2 Language of parts**: Supports. The language picker lists each language in its own name, with a per-option
+  `lang` on the row and on the trigger while selected (#442, 2026-10-15). Evidence: `intl/locale-display-names.ts`,
+  `settings/definitions/appearance.ts` `languageOptions()`, `ui/Select.svelte`.
 - **3.2.3 Consistent navigation**: Not applicable. Applies to sets of web pages or software. (The menu bar is the same
   in every window.)
 - **3.2.4 Consistent identification**: Not applicable. Same as 3.2.3. (Commands keep one name everywhere through the
@@ -302,9 +308,11 @@ native menu bar and context menus.
 - **502.3.14 Event notification**: Partially supports. See WCAG 4.1.3. #438, #439.
 - **502.4 Platform accessibility features**: Not applicable. Applies to platforms.
 - **503.2 User preferences**: Partially supports. Honors system font, dark/light, accent color, Reduce transparency,
-  Reduce motion (with a few misses), and macOS text size. Increase contrast only changes pane tints; Differentiate
-  without color isn't read. Evidence: `app.css` (`--font-system`, `prefers-contrast` block),
-  `src-tauri/src/reduce_transparency.rs`, `src-tauri/src/text_size.rs`, `lib/accent-color.ts`. #440, #442.
+  Reduce motion, and macOS text size. The Reduce motion misses (settings sidebar jump, rename shake and zoom, boot
+  loader, switch thumb, disclosure chevrons, swatch and onboarding-dot grows) closed with #442 on 2026-10-15. Increase
+  contrast only changes pane tints; Differentiate without color isn't read. Evidence: `app.css` (`--font-system`,
+  `prefers-contrast` block), `src-tauri/src/reduce_transparency.rs`, `src-tauri/src/text_size.rs`,
+  `lib/accent-color.ts`. #440.
 - **503.3 Alternative user interfaces**: Not applicable. Cmdr provides no alternative UI acting as assistive tech.
 - **503.4.1 Caption controls**: Not applicable. No video.
 - **503.4.2 Audio description controls**: Not applicable. No video.
@@ -388,7 +396,7 @@ native menu bar and context menus.
 - **11.5.2.17 Modifications of values and text**: Supports. See 508 502.3.5 and 502.3.9.
 - **11.6.1 User control of accessibility features**: Not applicable. Cmdr isn't platform software.
 - **11.6.2 No disruption of accessibility features**: Supports. See 508 502.2.2.
-- **11.7 User preferences**: Partially supports. See 508 503.2. #440, #442.
+- **11.7 User preferences**: Partially supports. See 508 503.2. #440.
 - **11.8.1–11.8.5 Authoring tools**: Not applicable.
 
 ### Clause 12: documentation and support services

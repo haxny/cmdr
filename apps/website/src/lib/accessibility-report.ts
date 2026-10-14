@@ -67,7 +67,7 @@ export const report = {
   product: 'Cmdr for macOS',
   version: '0.52.0',
   /** The evaluation date, also the page's "Last updated". */
-  date: '2026-10-14',
+  date: '2026-10-15',
   edition: 'VPAT® 2.5Rev INT (April 2025)',
 }
 
@@ -111,8 +111,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Icon buttons have names, and the image viewer uses the file name as the image's text alternative. File-type icons have no text, so a folder and a file sound the same, and the sync-status and symlink badges have no text either.",
-    issues: [437, 442],
+      "Icon buttons have names, the image viewer uses the file name as the image's text alternative, and the sync-status and symlink badges on file icons are named. File-type icons have no text, so a folder and a file sound the same.",
+    issues: [437],
     pending: ['V1'],
   },
   {
@@ -235,8 +235,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'supports',
     remark:
-      'Every window has a title: "Cmdr" for the main window, the file name in the viewer, and a name for Settings, Keyboard shortcuts, and the queue. Some window titles stay in English when the app runs in another language.',
-    issues: [442],
+      'Every window has a title in the app\'s language: "Cmdr" for the main window, the file name in the viewer, and a name for Settings, Keyboard shortcuts, and the queue.',
   },
   {
     id: '2.4.3',
@@ -384,10 +383,8 @@ const wcagAA: CriterionRow[] = [
     id: '1.3.5',
     name: 'Identify input purpose',
     level: 'AA',
-    conformance: 'partially-supports',
-    remark:
-      "Server sign-in fields and the feedback email field declare their purpose, so autofill works. The email field in the first-launch setup doesn't.",
-    issues: [442],
+    conformance: 'supports',
+    remark: 'Server sign-in fields and every email field declare their purpose, so autofill works.',
   },
   {
     id: '1.4.3',
@@ -506,9 +503,9 @@ const wcagAA: CriterionRow[] = [
     id: '3.1.2',
     name: 'Language of parts',
     level: 'AA',
-    conformance: 'partially-supports',
-    remark: "The language picker shows each language in its own name, but doesn't mark which language each name is in.",
-    issues: [442],
+    conformance: 'supports',
+    remark:
+      'The language picker shows each language in its own name and marks which language that name is in, so a screen reader pronounces it right.',
   },
   {
     id: '3.2.3',
@@ -761,8 +758,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'User preferences',
     conformance: 'partially-supports',
     remark:
-      "Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, and Reduce motion (with a few animations that don't stop yet). Increase contrast only changes pane tints, and Differentiate without color isn't used.",
-    issues: [440, 442],
+      "Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, and Reduce motion. Increase contrast only changes pane tints, and Differentiate without color isn't used.",
+    issues: [440],
   },
   {
     id: '503.3',
@@ -1086,7 +1083,7 @@ const enClause11: CriterionRow[] = [
     name: 'User preferences',
     conformance: 'partially-supports',
     remark: 'See Section 508 503.2.',
-    issues: [440, 442],
+    issues: [440],
   },
   {
     id: '11.8.1–11.8.5',
@@ -1191,11 +1188,6 @@ export const gapIssues: { number: number; title: string }[] = [
     number: 441,
     title:
       "Tab reordering needs a drag, some click targets are small, tooltips can't be hovered, viewer keys can't be remapped, and app zoom stops at 150%",
-  },
-  {
-    number: 442,
-    title:
-      'Smaller fixes: a few animations ignore Reduce motion, some labels stay in English, a few missing attributes',
   },
   { number: 443, title: "No guide to Cmdr's accessibility features yet" },
   { number: 267, title: 'In-app menus (volume chooser, favorites) under VoiceOver' },
