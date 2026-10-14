@@ -126,6 +126,10 @@ No event of its own: a view calls it on mount and on each `write-progress` tick,
 view. The command is `async` so it never answers on the main thread: a window is microseconds, but it takes the tree's
 lock, which a subtree-at-once report holds for as long as the subtree is big.
 
+The other reader is `cmdr://state`: each running or paused operation row asks for
+`TransferTreeViewRequest::following_the_work()` (no toggles, `Follow { lead: 0 }`, `MAX_LIMIT` rows) and renders its
+active files grouped by folder (`mcp/resources/DETAILS.md`, the `activeFolders:` paragraph).
+
 ## How drivers report (`report.rs`)
 
 A driver holds a `TreeReporter` (`TransferTreeSlot::reporter`), cloned freely, silent when the operation has no tree.

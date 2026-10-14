@@ -97,6 +97,7 @@ fn running_op_shows_status_progress_speed_and_eta() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: Some(progress("op-1", LifecycleStatus::Running, 200 * mb, 1_024 * mb, 3, 10)),
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 14_000);
@@ -126,6 +127,7 @@ fn operation_paths_redact_remote_references_and_ids_with_bare_tokens() {
             snapshot: operation,
             progress: Some(live),
             pending_conflict: None,
+            tree: None,
             pending_sources_gone: None,
         }],
         10_500,
@@ -154,6 +156,7 @@ fn paused_op_keeps_its_progress_but_reports_paused() {
         snapshot: snapshot("op-2", LifecycleStatus::Paused),
         progress: Some(progress("op-2", LifecycleStatus::Paused, 100 * mb, 1_024 * mb, 1, 10)),
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -169,6 +172,7 @@ fn queued_op_has_status_but_no_progress_fields() {
         snapshot: snapshot("op-3", LifecycleStatus::Queued),
         progress: None,
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -189,18 +193,21 @@ fn a_running_paused_queued_mix_renders_every_row() {
             snapshot: snapshot("op-run", LifecycleStatus::Running),
             progress: Some(progress("op-run", LifecycleStatus::Running, 50 * mb, 100 * mb, 2, 4)),
             pending_conflict: None,
+            tree: None,
             pending_sources_gone: None,
         },
         OperationRow {
             snapshot: snapshot("op-pause", LifecycleStatus::Paused),
             progress: Some(progress("op-pause", LifecycleStatus::Paused, 10 * mb, 100 * mb, 1, 4)),
             pending_conflict: None,
+            tree: None,
             pending_sources_gone: None,
         },
         OperationRow {
             snapshot: snapshot("op-queue", LifecycleStatus::Queued),
             progress: None,
             pending_conflict: None,
+            tree: None,
             pending_sources_gone: None,
         },
     ];
@@ -224,6 +231,7 @@ fn an_operation_parked_on_a_clash_says_which_clash_and_how_to_answer_it() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: Some(progress("op-1", LifecycleStatus::Running, 50 * mb, 100 * mb, 2, 4)),
         pending_conflict: Some(clash(3, Some(4_096))),
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -250,6 +258,7 @@ fn a_look_alike_clash_says_the_names_only_look_the_same() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: None,
         pending_conflict: Some(conflict),
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -264,6 +273,7 @@ fn a_size_the_backend_could_not_read_says_unknown_rather_than_zero() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: None,
         pending_conflict: Some(clash(1, None)),
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -280,6 +290,7 @@ fn a_queued_operation_asking_about_sources_that_left_says_how_many_and_how_to_an
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: None,
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: Some(WriteSourcesGoneEvent {
             operation_id: "op-1".to_string(),
             operation_type: WriteOperationType::Move,
@@ -311,6 +322,7 @@ fn a_retained_failure_says_why_it_stopped() {
         snapshot: failed,
         progress: None,
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
@@ -324,6 +336,7 @@ fn a_live_operation_carries_no_error_line() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: None,
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("error:"));
@@ -335,6 +348,7 @@ fn an_operation_that_is_not_asking_anything_carries_no_conflict_block() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: None,
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("pendingConflict"));
@@ -354,6 +368,7 @@ fn stalled_row(waiting_on: TransferWaitReason, still_for_seconds: u32, in_flight
             in_flight,
         )),
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }]
 }
@@ -430,6 +445,7 @@ fn a_backend_that_cannot_classify_its_wait_says_nothing_rather_than_moving() {
         snapshot: snapshot("op-1", LifecycleStatus::Running),
         progress: Some(progress("op-1", LifecycleStatus::Running, 50 * mb, 100 * mb, 2, 4)),
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     assert!(!build_operations_yaml(&rows, 12_000).contains("waitingOn"));
@@ -445,6 +461,7 @@ fn scanning_op_has_no_bogus_numbers() {
         snapshot: snapshot("op-scan", LifecycleStatus::Running),
         progress: Some(scanning),
         pending_conflict: None,
+        tree: None,
         pending_sources_gone: None,
     }];
     let yaml = build_operations_yaml(&rows, 10_500);

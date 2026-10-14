@@ -5,6 +5,7 @@ mod request_response_tests;
 mod resource_indexing_tests;
 mod resource_log_tests;
 mod resource_operations_tests;
+mod resource_operations_tree_tests;
 mod resource_state_tests;
 mod resource_tests;
 mod security_tests;

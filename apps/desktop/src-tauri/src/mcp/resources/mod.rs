@@ -54,7 +54,8 @@ pub fn get_all_resources() -> Vec<Resource> {
             uri: "cmdr://state".to_string(),
             name: "App state".to_string(),
             description: "Complete app state (both panes, volumes, dialogs, listings, recent listing errors, \
-                          queued/running/paused operations with progress/speed/ETA, favorites). Supports \
+                          queued/running/paused operations with progress/speed/ETA and the folders and files in \
+                          flight, favorites). Supports \
                           `?include=panes,volumes,dialogs,listings,recentErrors,operations,favorites` to project \
                           only listed sections, and `?compact=true` to drop the per-pane file lists. Examples: \
                           `cmdr://state?include=operations` or `cmdr://state?compact=true`. File entries carry a \

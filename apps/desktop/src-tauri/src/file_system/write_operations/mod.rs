@@ -74,8 +74,10 @@ mod unique_name;
 mod validation;
 
 // The live transfer tree's one IPC answer: a window of rows for the dialog and
-// the queue (`transfer_tree/CLAUDE.md`).
-pub(crate) use transfer_tree::{TransferTreeView, TransferTreeViewRequest};
+// the queue (`transfer_tree/CLAUDE.md`), whose rows `cmdr://state` reads too.
+#[cfg(test)]
+pub(crate) use transfer_tree::TransferTreeAncestor;
+pub(crate) use transfer_tree::{TransferTreeRow, TransferTreeView, TransferTreeViewRequest, TreeRowKind, TreeRowState};
 pub(crate) use tree_view::{TransferTreeViewError, transfer_tree_view};
 
 // Re-export `trash` at this level so `crate::file_system::write_operations::trash`
@@ -199,7 +201,7 @@ pub(crate) use state::{register_external_volume_op, release_external_volume_op};
 #[allow(unused_imports, reason = "Public API re-exports for consumers of this module")]
 pub use types::{
     ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
-    MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
+    MoveLeftoversKeptEvent, OperationStatus, ProgressAxis, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
     ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
     ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome,
     SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason, WriteCancelledEvent, WriteCompleteEvent,

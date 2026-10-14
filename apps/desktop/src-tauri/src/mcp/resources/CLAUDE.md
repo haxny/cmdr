@@ -18,7 +18,8 @@ dispatch, and the `cmdr://state` builder); the independently-evolving builders s
   renders a zero that reads as a full disk.
 - **`cmdr://state` and `cmdr://logs` redact with unsalted `crate::redact::redact_line`**: the report policy with bare
   tokens (`<dir>`, `<host>`), ❌ never a `RedactionContext` (its tokens are report-scoped). `logs` `filter` matches the
-  RAW line. `favorites:` and `pendingConflict:` deliberately render verbatim because an agent must name them to act.
+  RAW line. `favorites:`, `pendingConflict:`, and `activeFolders:` deliberately render verbatim because an agent must
+  name them to act.
 - **Builders are pure over an injected snapshot** (`snapshot_volumes`, `snapshot_indexing`, and friends, with `now_*`
   passed in), so formatting is unit-tested off fixtures without a live app. Keep new builders on that seam.
 - **A missing store reads as empty or unknown, ❌ never an error and ❌ never a `0`.** An absent index, an unscored

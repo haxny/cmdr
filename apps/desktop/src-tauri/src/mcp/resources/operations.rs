@@ -28,11 +28,17 @@
 //! be parked on: a queued operation whose sources left while it waited. No
 //! `write-progress` subscription required: the wait rides
 //! `OperationStatus` and is classified at read time.
+//!
+//! **Where the work is.** A transfer's row also names the folders it's in and
+//! the files in flight (`activeFolders:`), read off the live transfer tree's
+//! follow-the-work window, the third source of the join.
 
 use crate::file_system::write_operations::{
-    LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, WriteConflictEvent, WriteSourcesGoneEvent,
-    get_operation_status, list_operations, pending_sources_gone, pending_write_conflict,
+    LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, TransferTreeRow, TransferTreeView,
+    TransferTreeViewRequest, TreeRowKind, TreeRowState, WriteConflictEvent, WriteSourcesGoneEvent,
+    get_operation_status, list_operations, pending_sources_gone, pending_write_conflict, transfer_tree_view,
 };
+use crate::pluralize::pluralize;
 use crate::search::query::format_size;
 
 /// One row of the `operations:` section: the registry's membership / status /
@@ -44,6 +50,9 @@ pub(crate) struct OperationRow {
     pub pending_conflict: Option<WriteConflictEvent>,
     /// The sources-gone question a queued operation is parked on, if any.
     pub pending_sources_gone: Option<WriteSourcesGoneEvent>,
+    /// The live transfer tree, following the work: absent for an operation
+    /// that builds none or isn't underway.
+    pub tree: Option<TransferTreeView>,
 }
 
 /// Snapshot every registered operation (queued / running / paused), joining the
@@ -56,11 +65,20 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
             let progress = get_operation_status(&snapshot.operation_id);
             let pending_conflict = pending_write_conflict(&snapshot.operation_id);
             let pending_sources_gone = pending_sources_gone(&snapshot.operation_id);
+            // Only while it runs or is paused: a queued or failed op has no tree to
+            // show, and asking would take a lock for nothing.
+            let tree = progress
+                .is_some()
+                .then(|| {
+                    transfer_tree_view(&snapshot.operation_id, &TransferTreeViewRequest::following_the_work()).ok()
+                })
+                .flatten();
             OperationRow {
                 snapshot,
                 progress,
                 pending_conflict,
                 pending_sources_gone,
+                tree,
             }
         })
         .collect()
@@ -142,6 +160,9 @@ pub(crate) fn build_operations_yaml(rows: &[OperationRow], now_ms: u64) -> Strin
         // has to name.
         if let Some(conflict) = &row.pending_conflict {
             yaml.push_str(&pending_conflict_yaml(conflict));
+        }
+        if let Some(tree) = &row.tree {
+            yaml.push_str(&active_folders_yaml(tree));
         }
         if let Some(question) = &row.pending_sources_gone {
             yaml.push_str(&pending_sources_gone_yaml(question));
@@ -261,26 +282,132 @@ fn optional_size(size: Option<u64>) -> String {
 /// One human line: bytes and file counters, with a percent when totals are known.
 /// Totals are 0 while scanning, so each part only renders once it's meaningful.
 fn progress_line(op: &OperationStatus) -> String {
+    counts_line(
+        op.bytes_done,
+        op.bytes_total,
+        op.files_done as u64,
+        op.files_total as u64,
+    )
+    .unwrap_or_else(|| "scanning".to_string())
+}
+
+/// The bytes and files parts of a progress line, `None` when neither is known
+/// yet. Shared by the operation's line and each active folder's, so the two
+/// read alike.
+fn counts_line(bytes_done: u64, bytes_total: u64, files_done: u64, files_total: u64) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
-    if op.bytes_total > 0 {
-        let percent = ((op.bytes_done as f64 / op.bytes_total as f64) * 100.0).min(100.0) as u8;
+    if bytes_total > 0 {
+        let percent = ((bytes_done as f64 / bytes_total as f64) * 100.0).min(100.0) as u8;
         parts.push(format!(
             "{} / {} ({percent}%)",
-            format_size(op.bytes_done),
-            format_size(op.bytes_total)
+            format_size(bytes_done),
+            format_size(bytes_total)
         ));
-    } else if op.bytes_done > 0 {
-        parts.push(format!("{} so far", format_size(op.bytes_done)));
+    } else if bytes_done > 0 {
+        parts.push(format!("{} so far", format_size(bytes_done)));
     }
-    if op.files_total > 0 {
-        parts.push(format!("{}/{} files", op.files_done, op.files_total));
-    } else if op.files_done > 0 {
-        parts.push(format!("{} files so far", op.files_done));
+    if files_total > 0 {
+        parts.push(format!("{files_done}/{}", pluralize(files_total, "file")));
+    } else if files_done > 0 {
+        parts.push(format!("{} so far", pluralize(files_done, "file")));
     }
-    if parts.is_empty() {
-        return "scanning".to_string();
+    (!parts.is_empty()).then(|| parts.join(", "))
+}
+
+/// The most in-flight files one row lists. A parallel SMB copy can have dozens
+/// moving at once, and `cmdr://state` is read constantly; the rest are counted.
+const MAX_ACTIVE_FILES: usize = 8;
+
+/// The `activeFolders:` block: the folders the work is in, each with its own
+/// progress and its files in flight, so an agent can say "it's in
+/// `Photos 2024/Prague`, 47 of 60 files done".
+///
+/// Read off the transfer tree's follow-the-work window (the same
+/// `get_transfer_tree_view` answer the progress dialog renders): the window
+/// starts at the topmost active row, and its `ancestors` name the folders above
+/// that row, so walking the rows with a by-depth stack gives every active file
+/// its folder path. Names render verbatim, like `pendingConflict:`'s paths: a
+/// redacted `<dir>/<file>.jpg` answers nothing, and they're the relative names
+/// of what the user selected, which `panes:` already lists by name.
+///
+/// Empty while the tree isn't built and between files. Files in flight past the
+/// cap count into `moreActiveFiles`, a floor (`≥`) when the window stopped
+/// before the tree's end and more could sit below it.
+fn active_folders_yaml(tree: &TransferTreeView) -> String {
+    if !tree.ready {
+        return String::new();
     }
-    parts.join(", ")
+    // The open folder rows above the current row, outermost first: index is depth.
+    let mut folders: Vec<&TransferTreeRow> = tree.ancestors.iter().map(|ancestor| &ancestor.row).collect();
+    // Per folder holding active files (`None` for the top level): its folder
+    // chain and its listed files, in tree order.
+    let mut groups: Vec<(Vec<&TransferTreeRow>, Vec<&TransferTreeRow>)> = Vec::new();
+    let mut listed = 0;
+    let mut unlisted = 0;
+    for row in &tree.rows {
+        folders.truncate(usize::from(row.depth));
+        if row.kind == TreeRowKind::Folder {
+            folders.push(row);
+            continue;
+        }
+        if row.state != TreeRowState::Active {
+            continue;
+        }
+        if listed == MAX_ACTIVE_FILES {
+            unlisted += 1;
+            continue;
+        }
+        listed += 1;
+        let holder = folders.last().map(|folder| folder.id);
+        match groups
+            .iter_mut()
+            .find(|(chain, _)| chain.last().map(|folder| folder.id) == holder)
+        {
+            Some((_, files)) => files.push(row),
+            None => groups.push((folders.clone(), vec![row])),
+        }
+    }
+    if groups.is_empty() {
+        return String::new();
+    }
+
+    let mut yaml = String::from("    activeFolders:\n");
+    for (chain, files) in &groups {
+        match chain.last() {
+            Some(holder) => {
+                let path: Vec<&str> = chain.iter().map(|folder| folder.label.as_str()).collect();
+                yaml.push_str(&format!("      - folder: {:?}\n", path.join("/")));
+                if let Some(counts) = counts_line(
+                    holder.bytes_done,
+                    holder.bytes_total,
+                    holder.files_done,
+                    holder.files_total,
+                ) {
+                    yaml.push_str(&format!("        progress: {counts}\n"));
+                }
+            }
+            // The operation's own `progress:` already speaks for the top level.
+            None => yaml.push_str("      - folder: (top level)\n"),
+        }
+        yaml.push_str("        files:\n");
+        for file in files {
+            yaml.push_str(&format!("          - {:?}", file.label));
+            if file.bytes_total > 0 {
+                yaml.push_str(&format!(
+                    " ({} / {})",
+                    format_size(file.bytes_done),
+                    format_size(file.bytes_total)
+                ));
+            }
+            yaml.push('\n');
+        }
+    }
+    if unlisted > 0 {
+        let window_end = tree.offset + tree.rows.len() as u32;
+        let floor = if window_end < tree.total_rows { "≥" } else { "" };
+        yaml.push_str(&format!("    moreActiveFiles: {floor}{unlisted}\n"));
+    }
+    yaml
 }
 
 /// The failure's typed variant name (`source_not_found`, `insufficient_space`,

@@ -27,10 +27,12 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 pub(crate) use build::{TreeRecorder, from_archive_plan, from_local_scan, from_per_path, from_sources, sort_sources};
-pub(crate) use model::{NodeId, TreeLanding, TreeModel};
+pub(crate) use model::{NodeId, TreeLanding, TreeModel, TreeRowState};
 pub(crate) use order::TreeOrder;
 pub(crate) use report::{TreeLeaf, TreeReporter};
-pub(crate) use view::{TransferTreeView, TransferTreeViewRequest};
+#[cfg(test)]
+pub(crate) use view::TransferTreeAncestor;
+pub(crate) use view::{TransferTreeRow, TransferTreeView, TransferTreeViewRequest, TreeRowKind};
 
 use super::types::{ProgressAxis, WriteOperationError};
 

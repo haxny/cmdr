@@ -24,6 +24,20 @@ pub(crate) struct TransferTreeViewRequest {
     pub(crate) limit: u32,
 }
 
+impl TransferTreeViewRequest {
+    /// The window a reader with no view of its own asks for (`cmdr://state`):
+    /// no hand toggles, starting at the topmost active row, as many rows as one
+    /// response carries.
+    pub(crate) fn following_the_work() -> Self {
+        Self {
+            expanded: Vec::new(),
+            collapsed: Vec::new(),
+            window: TreeWindow::Follow { lead: 0 },
+            limit: MAX_LIMIT,
+        }
+    }
+}
+
 /// Where the window sits.
 #[derive(Debug, Clone, Copy, Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
