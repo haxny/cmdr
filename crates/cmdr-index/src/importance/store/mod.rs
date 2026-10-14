@@ -86,6 +86,18 @@ pub(crate) const RECOMPUTE_GENERATION_KEY: &str = "recompute_generation";
 /// thing here that ISN'T regenerable. Navigation history is real user data.
 pub(crate) const SCORING_POLICY_KEY: &str = "scoring_policy";
 
+/// Meta key for the index scan the stored weights were computed against: the drive
+/// index's `scan_completed_at` as the last full pass read it before walking, stamped
+/// by that pass alongside the generation bump. Absent when the pass walked an index
+/// with no completed scan.
+///
+/// It's what tells "scored" from "scored against the CURRENT scan". A scan's own pass
+/// that never landed (the app quit, the memory watchdog stopped it) leaves the store
+/// at a generation from an older scan, and a volume that loads `Fresh` at the next
+/// launch never fires `ScanCompleted` again, so without this nothing but the hourly
+/// tick would redo it.
+pub(crate) const SCORED_SCAN_KEY: &str = "scored_scan_completed_at";
+
 // `path_folded` is the BINARY primary key (the precomputed `normalize_for_comparison`
 // fold of the path), so equality and range lookups are index-served without the
 // custom `platform_case` collation defeating the b-tree optimization. `path` keeps the
@@ -113,7 +125,7 @@ const CREATE_TABLES_SQL: &str = "
 ";
 
 /// Whether a volume's store needs a full recompute before its weights may be
-/// trusted. Two independent reasons, either one enough:
+/// trusted. Three independent reasons, any one enough:
 ///
 /// - It carries no [`RECOMPUTE_GENERATION_KEY`] — a fresh install, a
 ///   schema-recreated store (the prod schema-3 upgrade path), or one maintained
@@ -121,6 +133,8 @@ const CREATE_TABLES_SQL: &str = "
 /// - Its [`SCORING_POLICY_KEY`] doesn't match this build's
 ///   `classify::scoring_policy_fingerprint`, so every row was computed under
 ///   classification rules we no longer apply.
+/// - It trails `index_scan`, the drive index's `scan_completed_at` (see
+///   [`ImportanceStore::trails_index_scan`]).
 ///
 /// **The decision binds to the write-path open, deliberately.** The schema
 /// delete-and-recreate happens lazily, ONLY inside [`ImportanceStore::open`] on a
@@ -132,9 +146,17 @@ const CREATE_TABLES_SQL: &str = "
 /// the recreate FIRST, so the generation we read reflects the CURRENT schema. This is
 /// the exact prod-upgrade ordering; a sweep-time read probe is the trap this
 /// avoids.
-pub(crate) fn needs_full_pass(data_dir: &Path, volume_id: &str) -> Result<bool, ImportanceStoreError> {
+pub(crate) fn needs_full_pass(
+    data_dir: &Path,
+    volume_id: &str,
+    index_scan: Option<&str>,
+) -> Result<bool, ImportanceStoreError> {
     let store = ImportanceStore::open(&importance_db_path(data_dir, volume_id))?;
-    Ok(store.recompute_generation()? == 0 || store.predates_scoring_policy()?)
+    Ok(
+        store.recompute_generation()? == 0
+            || store.predates_scoring_policy()?
+            || store.trails_index_scan(index_scan)?,
+    )
 }
 
 /// Resolve the `importance.db` path for a volume, beside the drive index's DB in
@@ -301,6 +323,23 @@ impl ImportanceStore {
     pub fn predates_scoring_policy(&self) -> Result<bool, ImportanceStoreError> {
         let stored = read_meta_value(&self.read_conn, SCORING_POLICY_KEY)?;
         Ok(stored.as_deref() != Some(&super::classify::scoring_policy_fingerprint()))
+    }
+
+    /// Whether the stored weights were computed against an older scan than the one
+    /// the drive index holds (`index_scan`, its `scan_completed_at`; see
+    /// [`SCORED_SCAN_KEY`]).
+    ///
+    /// An index with no completed scan owes nothing here: it's mid-scan or was never
+    /// scanned, and the scan's own `ScanCompleted` drives the pass, so answering yes
+    /// would stack a pass on a cold-start scan. An absent stamp beside a completed
+    /// scan counts as trailing, the way an absent policy stamp does: a store written
+    /// before the stamp existed can't say which scan it saw, and a redundant pass costs
+    /// one pass while a skipped one leaves stale scores until the hourly tick.
+    pub fn trails_index_scan(&self, index_scan: Option<&str>) -> Result<bool, ImportanceStoreError> {
+        let Some(index_scan) = index_scan else {
+            return Ok(false);
+        };
+        Ok(read_meta_value(&self.read_conn, SCORED_SCAN_KEY)?.as_deref() != Some(index_scan))
     }
 
     /// Read one folder's stored weight, or `None` if unscored. Keyed by the folded

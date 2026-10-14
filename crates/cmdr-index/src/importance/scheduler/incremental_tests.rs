@@ -396,6 +396,7 @@ fn incremental_rescore_rescopes_and_preserves_untouched_generation() {
     let outcome = recompute_folders(
         &RecomputeInputs {
             writer: &writer,
+            scored_scan: None,
             weights: &weights,
             home: &home.home,
             now_secs: now,

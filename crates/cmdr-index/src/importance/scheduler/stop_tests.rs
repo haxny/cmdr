@@ -67,6 +67,7 @@ fn full_pass(
     recompute_folders(
         &RecomputeInputs {
             writer,
+            scored_scan: None,
             weights: &Weights::default(),
             home,
             now_secs: 1_000_000_000,
@@ -289,7 +290,7 @@ fn a_stopped_first_pass_is_still_owed() {
     assert_eq!(stopped.err(), Some(PassError::Cancelled));
     assert!(stored_rows(dir.path(), ROOT_VOLUME_ID).is_empty());
     assert!(
-        needs_full_pass(dir.path(), ROOT_VOLUME_ID).expect("probe"),
+        needs_full_pass(dir.path(), ROOT_VOLUME_ID, None).expect("probe"),
         "a stopped first pass leaves the store reading as never scored, so the next wiring redoes it"
     );
 
@@ -301,7 +302,7 @@ fn a_stopped_first_pass_is_still_owed() {
     )
     .expect("the redone pass finishes");
     assert!(
-        !needs_full_pass(dir.path(), ROOT_VOLUME_ID).expect("probe"),
+        !needs_full_pass(dir.path(), ROOT_VOLUME_ID, None).expect("probe"),
         "a finished pass is what settles it"
     );
 
@@ -329,7 +330,7 @@ fn a_stopped_pass_announces_nothing_and_the_next_one_does() {
     assert_eq!(stopped, Err(PassError::Cancelled));
     assert!(notices.try_recv().is_err(), "a stopped pass announces nothing");
     assert!(
-        needs_full_pass(dir.path(), VOLUME).expect("probe"),
+        needs_full_pass(dir.path(), VOLUME, None).expect("probe"),
         "and the store still reads as unscored"
     );
 
@@ -416,4 +417,69 @@ fn a_volume_nothing_wired_reads_as_stopped() {
         scheduler.run_pass_under_current_stop("never-wired", SignalSet::listing_only(), 1_000_000_000),
         Err(PassError::Cancelled)
     );
+}
+
+/// Stamp the volume's index as having completed a scan at `at`, the way the scan
+/// completion does.
+fn complete_a_scan(data_dir: &std::path::Path, volume_id: &str, at: &str) {
+    let conn = IndexStore::open_write_connection(&data_dir.join(format!("index-{volume_id}.db"))).expect("index conn");
+    IndexStore::update_meta(&conn, "scan_completed_at", at).expect("stamp the scan");
+}
+
+/// The red test of issue #344: a scan completes, the pass it drives is stopped (a
+/// quit, the memory watchdog), and the app launches again. The volume loads `Fresh`,
+/// so no `ScanCompleted` re-fires, and the store already has a generation from an
+/// earlier pass. The probe still owes the volume a full pass, because the scores
+/// trail the scan the index now holds.
+#[test]
+fn a_scan_whose_pass_was_stopped_is_still_owed_after_a_relaunch() {
+    const VOLUME: &str = "stop-tests-scan-stamp";
+    let dir = tempfile::tempdir().expect("temp");
+    install_index_for(dir.path(), VOLUME);
+
+    // One life: a scan completes and its pass finishes.
+    complete_a_scan(dir.path(), VOLUME, "1000");
+    let scheduler = ImportanceScheduler::new(dir.path().to_path_buf());
+    scheduler.adopt_stop(VOLUME, CancellationToken::new());
+    scheduler
+        .run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000)
+        .expect("the first pass finishes");
+    assert!(
+        !wiring::should_enqueue_full_pass(IndexVolumeKind::Local, dir.path(), VOLUME).expect("probe"),
+        "scores that match the index's scan owe nothing"
+    );
+
+    // A newer scan completes, and the pass it drives is stopped before it lands.
+    complete_a_scan(dir.path(), VOLUME, "2000");
+    let volume_root = CancellationToken::new();
+    scheduler.adopt_stop(VOLUME, volume_root.child_token());
+    volume_root.cancel();
+    assert_eq!(
+        scheduler.run_pass_under_current_stop(VOLUME, SignalSet::listing_only(), 1_000_000_000),
+        Err(PassError::Cancelled)
+    );
+    assert_eq!(
+        stamps(dir.path(), VOLUME),
+        (1, true),
+        "the store still holds the first pass"
+    );
+
+    // The relaunch: a new scheduler wires the volume, whose scan bus stays `Pending`
+    // (the Fresh-at-launch shape). Nothing but the probe can score it now.
+    let relaunched = Arc::new(ImportanceScheduler::new(dir.path().to_path_buf()));
+    let life = CancellationToken::new();
+    wiring::wire_volume(
+        Arc::clone(&relaunched),
+        VOLUME.to_string(),
+        IndexVolumeKind::Local,
+        life.child_token(),
+    );
+    cmdr_fs::testing::wait_until(
+        std::time::Duration::from_secs(15),
+        "the relaunch to owe the volume a full pass over its newer scan",
+        || stamps(dir.path(), VOLUME).0 == 2,
+    );
+
+    life.cancel();
+    crate::indexing::read::enrichment::uninstall_read_pool(VOLUME);
 }

@@ -468,6 +468,7 @@ fn offline_unmounted_read_returns_stored_weights_after_index_gone() {
     let outcome = recompute_folders(
         &RecomputeInputs {
             writer: &writer,
+            scored_scan: None,
             weights: &weights,
             home: &home.home,
             now_secs: now,
@@ -555,6 +556,7 @@ fn multi_volume_recompute_scores_each_volume_into_its_own_store() {
         let outcome = recompute_folders(
             &RecomputeInputs {
                 writer: &writer,
+                scored_scan: None,
                 weights: &weights,
                 home: &home.home,
                 now_secs: now,

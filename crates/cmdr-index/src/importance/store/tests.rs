@@ -444,7 +444,7 @@ fn needs_full_pass_binds_to_the_write_path_open_not_a_read_probe() {
     // The fix: the write-path-bound probe forces the delete-and-recreate first
     // (schema 2 → 3), so it reads generation 0 and reports "needs a full pass".
     assert!(
-        needs_full_pass(dir.path(), "root").expect("probe"),
+        needs_full_pass(dir.path(), "root", None).expect("probe"),
         "binding to the write-path open recreates the store, so no generation remains ⇒ full pass needed"
     );
 
@@ -474,7 +474,7 @@ fn needs_full_pass_is_false_for_an_already_scored_store() {
     write_one_full_pass(&path);
 
     assert!(
-        !needs_full_pass(dir.path(), "root").expect("probe"),
+        !needs_full_pass(dir.path(), "root", None).expect("probe"),
         "a generation-stamped store scored under the current policy is done ⇒ no full pass"
     );
 }
@@ -531,7 +531,7 @@ fn a_store_scored_under_a_superseded_policy_needs_a_full_pass() {
     let path = importance_db_path(dir.path(), "root");
     write_one_full_pass(&path);
     assert!(
-        !needs_full_pass(dir.path(), "root").expect("probe"),
+        !needs_full_pass(dir.path(), "root", None).expect("probe"),
         "test setup: freshly scored, so no pass is due yet"
     );
 
@@ -547,7 +547,7 @@ fn a_store_scored_under_a_superseded_policy_needs_a_full_pass() {
     }
 
     assert!(
-        needs_full_pass(dir.path(), "root").expect("probe"),
+        needs_full_pass(dir.path(), "root", None).expect("probe"),
         "rows computed under a policy we no longer apply can't be trusted ⇒ full pass"
     );
 }
@@ -569,7 +569,7 @@ fn an_unstamped_store_needs_a_full_pass() {
     }
 
     assert!(
-        needs_full_pass(dir.path(), "root").expect("probe"),
+        needs_full_pass(dir.path(), "root", None).expect("probe"),
         "an absent stamp is stale, not trusted"
     );
 }
@@ -596,7 +596,10 @@ fn re_arming_the_scoring_policy_keeps_the_visit_history() {
         )
         .expect("rewind stamp");
     }
-    assert!(needs_full_pass(dir.path(), "root").expect("probe"), "a pass is due");
+    assert!(
+        needs_full_pass(dir.path(), "root", None).expect("probe"),
+        "a pass is due"
+    );
 
     let store = ImportanceStore::open(&path).expect("reopen");
     assert_eq!(
@@ -622,4 +625,74 @@ fn read_connections_get_a_smaller_page_cache_than_write_connections() {
 
     assert_eq!(page_cache_kib(&write), WRITE_PAGE_CACHE_KIB);
     assert_eq!(page_cache_kib(&read), READ_PAGE_CACHE_KIB);
+}
+
+/// One full pass over a store, stamped as scored against the index scan `scan`.
+fn write_a_pass_against(path: &Path, scan: Option<&str>) {
+    let writer = ImportanceWriter::spawn(path).expect("spawn");
+    let rows = vec![WeightRow {
+        path: "/p".to_string(),
+        score: 0.5,
+        signals_json: "{}".to_string(),
+    }];
+    let generation = writer.next_generation().expect("generation");
+    writer
+        .write_full_pass(
+            generation,
+            rows,
+            scan.map(str::to_owned),
+            &tokio_util::sync::CancellationToken::new(),
+        )
+        .expect("write");
+    writer.shutdown();
+}
+
+/// Scores owe a pass exactly when the index holds a completed scan they weren't
+/// computed against (issue #344). An index with no completed scan owes nothing: it's
+/// mid-scan or never scanned, and that scan's own `ScanCompleted` drives the pass, so
+/// owing one here would stack a pass on a cold-start scan.
+#[test]
+fn needs_full_pass_owes_a_pass_when_the_scores_trail_the_index_scan() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = importance_db_path(dir.path(), "root");
+    write_a_pass_against(&path, Some("1000"));
+
+    assert!(
+        !needs_full_pass(dir.path(), "root", Some("1000")).expect("probe"),
+        "the scan it scored"
+    );
+    assert!(
+        needs_full_pass(dir.path(), "root", Some("2000")).expect("probe"),
+        "a newer scan"
+    );
+    assert!(
+        !needs_full_pass(dir.path(), "root", None).expect("probe"),
+        "no completed scan"
+    );
+}
+
+/// A store scored before the scan stamp existed can't say which scan it saw, so a
+/// completed scan beside it owes one pass (the same call as an absent policy stamp).
+#[test]
+fn a_store_with_no_scan_stamp_owes_a_pass_once_the_index_has_a_scan() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = importance_db_path(dir.path(), "root");
+    write_one_full_pass(&path);
+
+    assert!(needs_full_pass(dir.path(), "root", Some("1000")).expect("probe"));
+    assert!(!needs_full_pass(dir.path(), "root", None).expect("probe"));
+}
+
+/// A pass over an index with no completed scan CLEARS the stamp: an older scan's stamp
+/// left behind would vouch for rows this pass computed from a half-scanned index.
+#[test]
+fn a_pass_over_an_index_with_no_completed_scan_clears_the_stamp() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = importance_db_path(dir.path(), "root");
+    write_a_pass_against(&path, Some("1000"));
+    write_a_pass_against(&path, None);
+
+    let store = ImportanceStore::open(&path).expect("open");
+    assert_eq!(read_meta_value(store.read_conn(), SCORED_SCAN_KEY).expect("meta"), None);
+    assert!(needs_full_pass(dir.path(), "root", Some("1000")).expect("probe"));
 }

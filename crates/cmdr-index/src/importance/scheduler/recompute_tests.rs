@@ -39,6 +39,7 @@ fn full_recompute_ranks_meaningful_folders_above_machine_output() {
     let outcome = recompute_folders(
         &RecomputeInputs {
             writer: &writer,
+            scored_scan: None,
             weights: &weights,
             home: &home.home,
             now_secs: now,
@@ -311,6 +312,7 @@ fn descendants_of_a_floored_folder_floor_too() {
     recompute_folders(
         &RecomputeInputs {
             writer: &writer,
+            scored_scan: None,
             weights: &weights,
             home,
             now_secs: 1_000_000_000,

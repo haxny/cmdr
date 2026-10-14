@@ -14,10 +14,10 @@
 //!    bus subscription alone would never score it — the common restart case (its
 //!    retained bus value stays `Pending`). The probe forces the write-path store open
 //!    (triggering any lazy schema recreate) and enqueues a full recompute IFF the store
-//!    then carries no generation or a superseded scoring policy. Gating on those two
-//!    (not an unconditional kick) means an already-scored volume isn't rescored on
-//!    every launch, while a fresh / schema-recreated / incremental-only store finally
-//!    gets its full pass.
+//!    then carries no generation, a superseded scoring policy, or scores older than the
+//!    index's last completed scan. Gating on those (not an unconditional kick) means
+//!    an already-scored volume isn't rescored on every launch, while a fresh /
+//!    schema-recreated / incremental-only / behind-its-scan store gets its full pass.
 //!
 //! Two paths wire a volume, both through the one [`wiring::wire_volume`] body, each
 //! carrying the typed kind (MTP excluded, SMB degraded): the **startup registry sweep**
@@ -294,6 +294,13 @@ impl ImportanceScheduler {
     }
 }
 
+/// The drive index's `scan_completed_at`: which completed scan it holds, or `None`
+/// while it holds none (mid-scan, or never scanned). A full pass stamps it, and the
+/// launch probe compares against it (`store::SCORED_SCAN_KEY`).
+fn index_scan_stamp(conn: &rusqlite::Connection) -> Result<Option<String>, crate::indexing::store::IndexStoreError> {
+    crate::indexing::store::IndexStore::get_meta(conn, "scan_completed_at")
+}
+
 #[cfg(test)]
 mod coalescing_tests;
 #[cfg(test)]
@@ -470,9 +477,13 @@ impl ImportanceScheduler {
         let read_started = Instant::now();
 
         // Walk the index ONCE; reuse the result for both the `kMDItemLastUsedDate`
-        // path-set and the score (no second traversal — M2 cleanup).
-        let mut folders = pool
-            .with_conn(|conn| walk_index_folders(conn, &home, stop))
+        // path-set and the score (no second traversal — M2 cleanup). Which scan it
+        // walks is read first, on the same connection (see `RecomputeInputs::scored_scan`).
+        let (scored_scan, mut folders) = pool
+            .with_conn(|conn| {
+                let scan = index_scan_stamp(conn).map_err(|e| format!("index scan stamp read failed: {e}"))?;
+                Ok::<_, PassError>((scan, walk_index_folders(conn, &home, stop)?))
+            })
             .map_err(|e| format!("read pool error: {e}"))??;
         if folders.is_empty() {
             return Ok(0);
@@ -511,6 +522,7 @@ impl ImportanceScheduler {
         let outcome = recompute_folders(
             &RecomputeInputs {
                 writer: &writer,
+                scored_scan: scored_scan.as_deref(),
                 weights: &self.weights,
                 home: &home,
                 now_secs,

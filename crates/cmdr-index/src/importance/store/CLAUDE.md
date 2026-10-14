@@ -26,6 +26,9 @@ rule and the floor doctrine are in `../CLAUDE.md`.
   an incremental only touches changed folders. ❌ Write it in `apply_full_pass` and nowhere else: an incremental can't
   vouch for the rows it didn't touch. A `SCHEMA_VERSION` bump would force a rescore too, but it deletes the DB and
   `visits` with it, which is real user data. Details: `DETAILS.md` § The scoring-policy stamp.
+- **`SCORED_SCAN_KEY` is what makes a scan whose pass never landed get redone** at the next launch (the index's
+  `scan_completed_at`, compared by inequality). Same rule: ❌ write it in `apply_full_pass` only. `DETAILS.md` § The
+  scan stamp.
 - **A floored folder gets NO row**, and a kept row's `FolderSignals` JSON is trimmed to its non-default fields. A read
   that assumes one row per folder is the bug; the read side re-derives floored-ness (`../read/CLAUDE.md`).
 

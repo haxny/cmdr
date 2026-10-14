@@ -337,7 +337,7 @@ fn a_full_pass_stopped_mid_write_rolls_back_to_the_previous_pass() {
 
     // The previous, finished pass.
     let previous: Vec<WeightRow> = (0..20).map(|i| row(&format!("/previous/{i:02}"), 0.5)).collect();
-    apply_full_pass(&mut conn, 1, &previous, &never).expect("the previous pass commits");
+    apply_full_pass(&mut conn, 1, &previous, None, &never).expect("the previous pass commits");
     let before = table_and_generation(&db_path);
     assert_eq!((before.0.len(), before.1), (20, 1));
 
@@ -361,7 +361,7 @@ fn a_full_pass_stopped_mid_write_rolls_back_to_the_previous_pass() {
     // `total_changes` counts every row the connection touched, rolled back or not,
     // so it says how far the write got before it left.
     let changes_before = conn.total_changes();
-    let stopped = apply_full_pass(&mut conn, 2, &next, &stop);
+    let stopped = apply_full_pass(&mut conn, 2, &next, None, &stop);
     conn.progress_handler(0, None::<fn() -> bool>).expect("clear handler");
     let rows_inserted = (conn.total_changes() - changes_before) as usize - previous.len();
 
@@ -377,7 +377,7 @@ fn a_full_pass_stopped_mid_write_rolls_back_to_the_previous_pass() {
     );
 
     // Nothing is left half-open: the very next pass commits on the same connection.
-    apply_full_pass(&mut conn, 2, &next, &never).expect("the next pass commits");
+    apply_full_pass(&mut conn, 2, &next, None, &never).expect("the next pass commits");
     let after = table_and_generation(&db_path);
     assert_eq!((after.0.len(), after.1), (total, 2));
 }

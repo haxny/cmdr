@@ -87,9 +87,10 @@ rows.
 
 ## `needs_full_pass` and the recreate ordering
 
-`needs_full_pass(data_dir, volume_id)` answers "can this store's weights be trusted, or does it owe a full recompute?"
-and is the gate the scheduler's `wire_volume` probe uses. Two independent reasons say yes: no `RECOMPUTE_GENERATION_KEY`
-at all, or a `SCORING_POLICY_KEY` that doesn't match this build (below).
+`needs_full_pass(data_dir, volume_id, index_scan)` answers "can this store's weights be trusted, or does it owe a full
+recompute?" and is the gate the scheduler's `wire_volume` probe uses. Three independent reasons say yes: no
+`RECOMPUTE_GENERATION_KEY` at all, a `SCORING_POLICY_KEY` that doesn't match this build, or a `SCORED_SCAN_KEY` that
+trails the index's `scan_completed_at` (both below).
 
 It opens the store on the WRITE path first, which is where the lazy schema delete-and-recreate fires, and only then
 reads the meta table. A read-path probe would read the outgoing schema's stamped generation and skip the pass, after
@@ -122,6 +123,23 @@ only ever sent right after a `TruncateData`.
 The mixing function is shared with that stamp: `crate::fingerprint::fingerprint_of`, FNV-1a, one golden test behind
 both. ❌ Don't fold the scorer's `Weights` into the fingerprint: every row persists the `FolderSignals` it was computed
 from, so a weight change re-weights stored signals without a rescan; only a change to the SIGNALS invalidates a row.
+
+## The scan stamp
+
+`SCORED_SCAN_KEY` holds the drive index's `scan_completed_at` as the last full pass read it BEFORE walking, written by
+`apply_full_pass` in the same transaction as the rows (and DELETED when the pass walked an index with no completed
+scan). `ImportanceStore::trails_index_scan` compares it against the index's current value:
+
+- **Index has no completed scan** (mid-scan, never scanned): owes nothing. That scan's own `ScanCompleted` drives the
+  pass, and owing one here would stack a pass on a cold-start scan.
+- **Stamp equals the index's**: owes nothing.
+- **Stamp differs, or is absent**: owes a pass. Absent covers a store written before the stamp existed, the same call as
+  an absent policy stamp: one redundant pass per volume on the first launch of a build that has it, against stale scores
+  until the hourly tick otherwise.
+
+Inequality, ❌ never "newer than": the index's stamp is a wall-clock timestamp, and a clock step back would hide a real
+rescan from an ordering compare. Why it exists and what it closes: `../scheduler/DETAILS.md` § "How a pass stops".
+Pinned by `needs_full_pass_owes_a_pass_when_the_scores_trail_the_index_scan` and its two siblings.
 
 ## Connection pragmas
 

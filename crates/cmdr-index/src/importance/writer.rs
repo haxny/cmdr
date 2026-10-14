@@ -40,7 +40,9 @@ use rusqlite::{Connection, OptionalExtension};
 use tokio_util::sync::CancellationToken;
 
 use super::stop::{PassError, STOP_CHECK_INTERVAL, check};
-use super::store::{ImportanceStoreError, RECOMPUTE_GENERATION_KEY, SCORING_POLICY_KEY, open_write_connection};
+use super::store::{
+    ImportanceStoreError, RECOMPUTE_GENERATION_KEY, SCORED_SCAN_KEY, SCORING_POLICY_KEY, open_write_connection,
+};
 use crate::indexing::store::normalize_for_comparison;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::pluralize::pluralize;
@@ -82,6 +84,9 @@ enum WriteMessage {
     /// Write a recompute pass's weights at `generation`, advancing the stored
     /// recompute generation to it. Rows upsert on the folded-path PK.
     ///
+    /// `scored_scan` is the index scan the rows were computed against, stamped as
+    /// `SCORED_SCAN_KEY` (`None` clears it).
+    ///
     /// `stop` is the pass's stop signal: the transaction polls it and rolls back
     /// when it fires, leaving the store exactly as it was. `reply` carries what the
     /// transaction came to, for a caller that must know before it announces the
@@ -89,6 +94,7 @@ enum WriteMessage {
     WriteWeights {
         generation: u64,
         rows: Vec<WeightRow>,
+        scored_scan: Option<String>,
         stop: CancellationToken,
         reply: Option<mpsc::Sender<Result<(), PassError>>>,
     },
@@ -180,6 +186,7 @@ impl ImportanceWriter {
         self.send(WriteMessage::WriteWeights {
             generation,
             rows,
+            scored_scan: None,
             stop: CancellationToken::new(),
             reply: None,
         })
@@ -189,21 +196,24 @@ impl ImportanceWriter {
     /// transaction came to.
     ///
     /// **Blocks until the transaction commits or rolls back**, so it's the flush too.
-    /// `Ok` means the table was replaced and the generation and scoring policy were
-    /// stamped, all in one transaction. [`PassError::Cancelled`] means `stop` fired
-    /// first and the transaction rolled back: the store holds the previous pass's
-    /// rows and stamps, untouched. ❌ Don't announce a pass, or log it as scored,
-    /// off anything but that `Ok`.
+    /// `Ok` means the table was replaced and the generation, scoring policy, and
+    /// `scored_scan` (the index scan the rows were computed against) were stamped,
+    /// all in one transaction. [`PassError::Cancelled`] means `stop` fired first and
+    /// the transaction rolled back: the store holds the previous pass's rows and
+    /// stamps, untouched. ❌ Don't announce a pass, or log it as scored, off anything
+    /// but that `Ok`.
     pub(crate) fn write_full_pass(
         &self,
         generation: u64,
         rows: Vec<WeightRow>,
+        scored_scan: Option<String>,
         stop: &CancellationToken,
     ) -> Result<(), PassError> {
         let (tx, rx) = mpsc::channel();
         self.send(WriteMessage::WriteWeights {
             generation,
             rows,
+            scored_scan,
             stop: stop.clone(),
             reply: Some(tx),
         })
@@ -332,10 +342,11 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>) {
             WriteMessage::WriteWeights {
                 generation,
                 rows,
+                scored_scan,
                 stop,
                 reply,
             } => {
-                let outcome = apply_full_pass(&mut conn, generation, &rows, &stop);
+                let outcome = apply_full_pass(&mut conn, generation, &rows, scored_scan.as_deref(), &stop);
                 match reply {
                     // The caller reports it (and knows a stop from a failure).
                     Some(reply) => {
@@ -393,7 +404,8 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>) {
 
 /// Apply a FULL recompute pass under one transaction: REPLACE the whole weights
 /// table with `rows` (stamped at `generation`), bump the stored generation, and
-/// stamp the scoring policy the rows were computed under.
+/// stamp the scoring policy and the index scan (`scored_scan`, cleared when `None`)
+/// the rows were computed under.
 ///
 /// A full pass rewrites every folder, so it clears the table first — otherwise a
 /// folder that was scored last pass but now floors (or vanished from the index)
@@ -402,22 +414,23 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>) {
 /// the generation and the rows consistent — a reader never sees a bumped generation
 /// with un-written (or stale) rows.
 ///
-/// ❌ Stamp [`SCORING_POLICY_KEY`] HERE and nowhere else. A full pass is the one
-/// moment the table provably holds nothing but rows this build's classifiers
-/// produced; an incremental only touches the folders the filesystem changed, so it
-/// can't vouch for the rest and stamping there would strand every untouched row
-/// under a policy it was never scored by.
+/// ❌ Stamp [`SCORING_POLICY_KEY`] and [`SCORED_SCAN_KEY`] HERE and nowhere else. A
+/// full pass is the one moment the table provably holds nothing but rows this
+/// build's classifiers produced from one scan; an incremental only touches the
+/// folders the filesystem changed, so it can't vouch for the rest and stamping there
+/// would strand every untouched row under a policy or scan it was never scored by.
 ///
 /// **`stop` is polled between row chunks, and a stop rolls the whole thing back.**
 /// The table is already empty inside the transaction by then, which is exactly why
 /// the answer is a rollback and never a partial commit: the previous pass's rows and
-/// both stamps come back together, so a stopped pass can't be told from one that
-/// never started. The last look is just before the stamps; past it the commit is two
-/// tiny writes and isn't worth interrupting.
+/// every stamp come back together, so a stopped pass can't be told from one that
+/// never started. The last look is just before the stamps; past it the commit is
+/// three tiny writes and isn't worth interrupting.
 fn apply_full_pass(
     conn: &mut Connection,
     generation: u64,
     rows: &[WeightRow],
+    scored_scan: Option<&str>,
     stop: &CancellationToken,
 ) -> Result<(), PassError> {
     let failed = |e: rusqlite::Error| PassError::from(ImportanceStoreError::from(e));
@@ -429,15 +442,15 @@ fn apply_full_pass(
         insert_rows(&tx, generation, chunk)?;
     }
     check(stop)?;
-    tx.execute(
-        "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
-        rusqlite::params![RECOMPUTE_GENERATION_KEY, generation.to_string()],
-    )
-    .map_err(failed)?;
-    tx.execute(
-        "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
-        rusqlite::params![SCORING_POLICY_KEY, super::classify::scoring_policy_fingerprint()],
-    )
+    let stamp =
+        |key: &str, value: &str| tx.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)", [key, value]);
+    stamp(RECOMPUTE_GENERATION_KEY, &generation.to_string()).map_err(failed)?;
+    stamp(SCORING_POLICY_KEY, &super::classify::scoring_policy_fingerprint()).map_err(failed)?;
+    match scored_scan {
+        Some(scan) => stamp(SCORED_SCAN_KEY, scan),
+        // A stamp from an older scan would vouch for rows this pass replaced.
+        None => tx.execute("DELETE FROM meta WHERE key = ?1", [SCORED_SCAN_KEY]),
+    }
     .map_err(failed)?;
     tx.commit().map_err(failed)
 }

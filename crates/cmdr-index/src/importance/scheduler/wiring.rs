@@ -113,11 +113,13 @@ pub(super) fn hold_the_importance_store(scheduler: &Arc<ImportanceScheduler>) {
 
 /// For a volume being wired, enqueue a full recompute IFF its store can't be trusted:
 /// no generation yet (a fresh install, a schema-recreated store, or one maintained only
-/// by incremental rescores, which never stamp a generation), or rows computed under a
-/// superseded scoring policy. This is what covers the Fresh-at-launch volume whose bus
-/// stays `Pending` and never re-fires `ScanCompleted`. A volume whose weights are
-/// current is left alone; an unconditional kick would rescore every volume on every
-/// launch (importance's policy differs from media's cheap unconditional kick).
+/// by incremental rescores, which never stamp a generation), rows computed under a
+/// superseded scoring policy, or rows computed against an older scan than the index
+/// holds (a scan whose own pass never landed before the app quit). This is what
+/// covers the Fresh-at-launch volume whose bus stays `Pending` and never re-fires
+/// `ScanCompleted`. A volume whose weights are current is left alone; an
+/// unconditional kick would rescore every volume on every launch (importance's policy
+/// differs from media's cheap unconditional kick).
 ///
 /// The decision binds to the WRITE-path store open via
 /// [`crate::importance::store::needs_full_pass`], which forces the lazy schema recreate
@@ -146,7 +148,7 @@ pub(super) fn enqueue_full_pass_if_needed(
             Ok(Ok(true)) => {
                 log::info!(
                     target: "importance",
-                    "volume '{volume_id}' has no generation or a superseded scoring policy; enqueuing a full recompute"
+                    "volume '{volume_id}' has no generation, a superseded scoring policy, or scores older than its index's last scan; enqueuing a full recompute"
                 );
                 spawn_recompute(scheduler, volume_id, available);
             }
@@ -159,7 +161,8 @@ pub(super) fn enqueue_full_pass_if_needed(
 
 /// Whether a volume ready at launch needs a full recompute enqueued: its kind is
 /// background-scored (not MTP) AND its store either carries no generation yet (fresh /
-/// schema-recreated / incremental-only) or holds rows from a superseded scoring policy.
+/// schema-recreated / incremental-only), holds rows from a superseded scoring policy, or
+/// trails the index's last completed scan.
 /// Binds that check to the write-path store open
 /// ([`crate::importance::store::needs_full_pass`]), which forces any lazy schema recreate
 /// before reading the meta table. Extracted from [`enqueue_full_pass_if_needed`] so the
@@ -173,7 +176,26 @@ pub(super) fn should_enqueue_full_pass(
     if matches!(ScoringPolicy::for_kind(kind), ScoringPolicy::Excluded) {
         return Ok(false); // MTP: on-demand only, never background-scored.
     }
-    crate::importance::store::needs_full_pass(data_dir, volume_id)
+    crate::importance::store::needs_full_pass(data_dir, volume_id, index_scan_now(volume_id).as_deref())
+}
+
+/// The volume's index scan stamp ([`super::index_scan_stamp`]) through its read
+/// pool. `None` when there's no pool or the read fails: the probe then asks only
+/// the generation and policy questions, and the next `ScanCompleted` or hourly tick
+/// still scores the volume.
+fn index_scan_now(volume_id: &str) -> Option<String> {
+    let pool = crate::indexing::get_read_pool_for(volume_id)?;
+    match pool.with_conn(super::index_scan_stamp) {
+        Ok(Ok(scan)) => scan,
+        Ok(Err(e)) => {
+            log::warn!(target: "importance", "index scan stamp read for '{volume_id}' failed: {e}");
+            None
+        }
+        Err(e) => {
+            log::warn!(target: "importance", "read pool for '{volume_id}' failed: {e}");
+            None
+        }
+    }
 }
 
 /// Wire one volume into the scheduler by its typed kind: skip MTP (on-demand

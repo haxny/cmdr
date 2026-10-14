@@ -29,6 +29,7 @@ pub(super) fn full_pass_walk(dir: &std::path::Path, home: &str, folders: &mut Wa
     recompute_folders(
         &RecomputeInputs {
             writer: &writer,
+            scored_scan: None,
             weights: &Weights::default(),
             home,
             now_secs: 1_000_000_000,

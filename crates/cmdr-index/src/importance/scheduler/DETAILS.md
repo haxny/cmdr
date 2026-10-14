@@ -48,7 +48,8 @@ not the generation (`ImportanceIndex::is_scored`).
 **A fresh, recreated, or policy-superseded store must get a full pass — the invariant.** Because a Fresh-at-launch
 volume never fires `ScanCompleted`, the bus subscription alone never scores it. So `wire_volume` runs
 `enqueue_full_pass_if_needed` for every volume it wires: it enqueues a full recompute IFF the store carries no
-generation, or its `SCORING_POLICY_KEY` doesn't match this build's classifiers.
+generation, its `SCORING_POLICY_KEY` doesn't match this build's classifiers, or its `SCORED_SCAN_KEY` trails the index's
+`scan_completed_at` (read through the volume's read pool; `../store/DETAILS.md` § The scan stamp).
 
 ❌ **The probe belongs in `wire_volume`, never in the startup sweep alone.** The root index starts on a spawned task
 while `ImportanceScheduler::start()` runs synchronously right after it (`apps/desktop/src-tauri/src/lib.rs`), so on a
@@ -58,10 +59,11 @@ store looking alive, and a classifier fix stays inert over the volume's existing
 with the root store holding no `scoring_policy` row after an hour of uptime on the fixed binary). `wiring_tests.rs` pins
 both halves: the registration path probes, and an already-scored volume still isn't kicked.
 
-That policy-superseded reason is the ONLY thing that ever re-scores rows a scored volume already holds; see
-`../store/DETAILS.md` § The scoring-policy stamp. Gating on those two conditions rather than kicking unconditionally is
-deliberate — importance is expensive, so an unconditional kick would rescore every volume on every launch; media's kick
-is unconditional because a redundant enrichment pass is a cheap staleness no-op. The policies differ on purpose.
+That policy-superseded reason is the ONLY thing that ever re-scores rows a scored volume already holds for a CODE
+change; see `../store/DETAILS.md` § The scoring-policy stamp. Gating on those conditions rather than kicking
+unconditionally is deliberate — importance is expensive, so an unconditional kick would rescore every volume on every
+launch; media's kick is unconditional because a redundant enrichment pass is a cheap staleness no-op. The policies
+differ on purpose.
 
 **The recreate-ordering trap, and why the decision binds to the write-path open.** The schema delete-and-recreate
 happens LAZILY, only inside `ImportanceStore::open` on a WRITE-path open (`open_write_connection`); the read path never
@@ -179,15 +181,15 @@ slowest polled item: 1,024 store inserts, a few milliseconds. ❌ Don't look per
 ### What a stopped pass leaves behind
 
 **Nothing, which is the whole design.** `PassError::Cancelled` is an error variant, and everything that records a
-finished pass sits behind an `Ok`: the table replace, the `recompute_generation` stamp, the `SCORING_POLICY_KEY` stamp
-(all one transaction, `../writer.rs` `apply_full_pass`), the `recompute of … scored` log line, and
-`notify_recompute_completed`. So a stop can't be taken for a finished pass by a caller that forgets to check.
+finished pass sits behind an `Ok`: the table replace, the `recompute_generation`, `SCORING_POLICY_KEY`, and
+`SCORED_SCAN_KEY` stamps (all one transaction, `../writer.rs` `apply_full_pass`), the `recompute of … scored` log line,
+and `notify_recompute_completed`. So a stop can't be taken for a finished pass by a caller that forgets to check.
 
 - **Stopped while walking or scoring**: nothing was written. The walk and the rows live in memory and are dropped.
   `score_folders` returns no rows at all, never the ones it had, because a partial row set handed to a full-pass write
   would replace the table with part of a volume.
 - **Stopped during the write**: the transaction has already emptied the table and inserted some rows, so it ROLLS BACK.
-  The previous pass's rows and both stamps come back together. `ImportanceWriter::write_full_pass` blocks for that
+  The previous pass's rows and every stamp come back together. `ImportanceWriter::write_full_pass` blocks for that
   outcome, so a write that FAILS is an `Err` to the pass too. ❌ Don't send a live pass through the fire-and-forget
   `write_weights`: its failure only logs, and the pass would announce a generation that was never stamped.
 - **Either way** the store holds exactly what the last finished pass left: stale by one pass, consistent, at its own
@@ -196,17 +198,26 @@ finished pass sits behind an `Ok`: the table replace, the `recompute_generation`
 - **A stopped incremental** wrote nothing either (it looks up to its write and never inside it), and its batch goes back
   into the pending set (`run_incremental_under_current_stop`), so the volume's next rescore folds it in.
 
-**What redoes it.** No marker says "a pass is owed", because the absence of the finished-pass stamps already does:
+**What redoes it.** No marker says "a pass is owed", because the finished-pass stamps already do, by being absent or by
+naming an older scan than the index holds:
 
 - A FIRST pass, or a scoring-policy re-arm, that was stopped leaves `needs_full_pass` true, so the next `wire_volume`
   (every registration runs the probe) enqueues it again. `a_stopped_first_pass_is_still_owed` pins this.
-- A pass over an already-scored volume that was stopped is redone by whatever scores the volume next: the retained
+- A scan's own pass that was stopped, or never landed before a quit, leaves `SCORED_SCAN_KEY` naming the PREVIOUS scan,
+  so it trails the index's `scan_completed_at` and the next `wire_volume` probe enqueues it. This is the case that needs
+  the stamp: a volume that loads `Fresh` fires no `ScanCompleted`, and the store already has a generation.
+  `a_scan_whose_pass_was_stopped_is_still_owed_after_a_relaunch` pins it end to end (complete a scan, stop its pass,
+  re-wire on a fresh scheduler with the bus `Pending`, and the owed pass lands).
+- Any other stopped pass over an already-scored volume is redone by whatever scores the volume next: the retained
   `ScanCompleted` a re-wire observes, a new `ScanCompleted`, or the hourly `FULL_REFRESH_INTERVAL` tick.
 
-⚠️ **The one staleness left, and it predates stopping.** A `ScanCompleted`-driven pass that doesn't land before the app
-quits isn't redone at the next launch when the volume loads `Fresh` (no `ScanCompleted` re-fires, and the store already
-has a generation), so the scores trail the index until the hourly tick. Closing it means stamping which scan a pass
-scored (compare the index's `scan_completed_at` in `needs_full_pass`), which is a design change of its own.
+**The launch cost.** The stamp owes a pass only beside a COMPLETED index scan, so a cold start (no index, or one still
+mid-scan) never gets a probe pass on top of its scan. A launch that rescans a completed index (a `LocalExternal` at
+every mount, a journal gap too wide, an exclusion-policy rebuild) can overlap the two, because registration publishes
+before `start_scan` clears `scan_completed_at`: only when the previous scan's pass never landed, and the scan's own
+`ScanCompleted` then coalesces into one re-run (`PassCoordinator`). Accepted: a rare extra pass, never a lost one. A
+store written before the stamp existed owes one pass per volume on the first launch that has it, the same call the
+policy stamp makes.
 
 ## The measurement entry point
 

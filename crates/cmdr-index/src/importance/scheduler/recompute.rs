@@ -88,6 +88,10 @@ pub(super) struct RecomputeInputs<'a> {
     /// The shared long-lived writer for this volume's `importance.db` (one writer
     /// thread per DB). Reads the current generation and writes the pass through it.
     pub(super) writer: &'a ImportanceWriter,
+    /// The index's `scan_completed_at` as read BEFORE the walk, stamped with the
+    /// pass (`store::SCORED_SCAN_KEY`). Read before, so a scan that completes
+    /// mid-walk leaves the pass stamped with the older scan, still owing one.
+    pub(super) scored_scan: Option<&'a str>,
     pub(super) weights: &'a Weights,
     pub(super) home: &'a str,
     pub(super) now_secs: u64,
@@ -144,7 +148,7 @@ pub(super) fn recompute_folders(
 
     let writer = inputs.writer;
     let generation = writer.next_generation()?;
-    writer.write_full_pass(generation, rows, inputs.stop)?;
+    writer.write_full_pass(generation, rows, inputs.scored_scan.map(str::to_owned), inputs.stop)?;
     // A full pass REPLACES the whole `weights` table, so the WAL just grew to ~DB size.
     // Truncate it now that the pass is committed (a quiet point). Best-effort: it never
     // fails the recompute.

@@ -183,6 +183,7 @@ impl TestVolume {
         recompute_folders(
             &RecomputeInputs {
                 writer: &self.writer,
+                scored_scan: None,
                 weights: &Weights::default(),
                 home: HOME,
                 now_secs: NOW_SECS,
